@@ -1,7 +1,8 @@
 ---
 id: "{{id}}"
 title: "{{title}}"
-storyId: "{{storyId}}"
+{{#if storyId}}storyId: "{{storyId}}"{{/if}}
+{{#if featureId}}featureId: "{{featureId}}"{{/if}}
 created: "{{date}}"
 updated: "{{date}}"
 status: "pending"
@@ -9,7 +10,15 @@ status: "pending"
 
 # {{id}}: {{title}}
 
-**User Story:** [{{storyId}}](../stories/{{storyId}}.md)
+{{#if storyId}}**User Story:** [{{storyId}}](../stories/{{storyFilename}}.md){{/if}}
+{{#if featureId}}**Feature:** [{{featureId}}](../features/{{featureFilename}}.md){{/if}}
+
+{{#if artifactSources}}
+## Artifact Sources
+{{#each artifactSources}}
+- **{{this.type}}:** `{{this.path}}`
+{{/each}}
+{{/if}}
 
 ## Tasks
 
@@ -19,6 +28,20 @@ status: "pending"
   - [ ] {{this.id}} {{this.title}}
 {{/each}}
 {{/each}}
+
+{{#if acceptanceCriteriaMapping}}
+## Acceptance Criteria Mapping
+{{#each acceptanceCriteriaMapping}}
+- [ ] {{this.criterion}} ({{this.sourceStoryId}}) → Tasks {{join this.taskIds ", "}}
+{{/each}}
+{{/if}}
+
+{{#if relevantFiles}}
+## Relevant Files
+{{#each relevantFiles}}
+- `{{this.path}}` — {{this.reason}}
+{{/each}}
+{{/if}}
 
 ## Notes
 _Mark tasks complete by checking the boxes above, or run `planr task implement {{id}}`._
