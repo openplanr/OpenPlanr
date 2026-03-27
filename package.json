@@ -6,8 +6,8 @@
   "main": "./dist/cli/index.js",
   "types": "./dist/cli/index.d.ts",
   "bin": {
-    "planr": "bin/planr.js",
-    "opr": "bin/planr.js"
+    "planr": "./bin/planr.js",
+    "opr": "./bin/planr.js"
   },
   "files": [
     "dist/",

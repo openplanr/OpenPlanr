@@ -1,4 +1,4 @@
-import { input, password, select, confirm, editor } from '@inquirer/prompts';
+import { input, password, select, confirm, editor, checkbox } from '@inquirer/prompts';
 
 export async function promptText(message: string, defaultValue?: string): Promise<string> {
   return input({ message, default: defaultValue });
@@ -21,6 +21,13 @@ export async function promptEditor(message: string, defaultValue?: string): Prom
 
 export async function promptSecret(message: string): Promise<string> {
   return password({ message, mask: '*' });
+}
+
+export async function promptCheckbox<T extends string>(
+  message: string,
+  choices: Array<{ name: string; value: T; checked?: boolean }>
+): Promise<T[]> {
+  return checkbox({ message, choices });
 }
 
 export async function promptMultiText(message: string, hint?: string): Promise<string[]> {
