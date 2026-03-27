@@ -116,5 +116,6 @@ Your task is to review and improve an existing agile artifact. Analyze the conte
 You MUST respond with a valid JSON object containing:
 - "suggestions": Array of improvement suggestions (strings)
 - "improved": The improved artifact data as a JSON object with the same fields as the original
+- "improvedMarkdown": The complete improved artifact as a markdown string (including YAML frontmatter delimited by ---). This must be the full file content ready to write to disk.
 
 Respond with JSON only, no markdown or explanation.`;

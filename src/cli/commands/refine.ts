@@ -67,6 +67,7 @@ export function registerRefineCommand(program: Command) {
         console.log(chalk.dim('━'.repeat(50)));
 
         const action = await promptSelect('Action:', [
+          { name: 'Apply improved version', value: 'apply' },
           { name: 'View improved version', value: 'view' },
           { name: 'Skip (keep original)', value: 'skip' },
         ]);
@@ -76,14 +77,25 @@ export function registerRefineCommand(program: Command) {
           return;
         }
 
-        // Show improved content
-        const improvedStr = JSON.stringify(result.improved, null, 2);
-        console.log(chalk.dim('━'.repeat(50)));
-        console.log(chalk.green(improvedStr));
-        console.log(chalk.dim('━'.repeat(50)));
+        if (action === 'view') {
+          console.log(chalk.dim('━'.repeat(50)));
+          console.log(chalk.green(result.improvedMarkdown));
+          console.log(chalk.dim('━'.repeat(50)));
 
-        logger.info('Note: Full apply functionality coming in a future release.');
-        logger.dim('You can manually apply these suggestions to the artifact file.');
+          const applyAfterView = await promptSelect('Apply this version?', [
+            { name: 'Yes, apply', value: 'apply' },
+            { name: 'No, keep original', value: 'skip' },
+          ]);
+
+          if (applyAfterView === 'skip') {
+            logger.info('Artifact unchanged.');
+            return;
+          }
+        }
+
+        // Apply the improved version
+        await updateArtifact(projectDir, config, type, artifactId, result.improvedMarkdown);
+        logger.success(`Applied improvements to ${artifactId}.`);
       } catch (err) {
         spinner.stop();
         const { AIError } = await import('../../ai/errors.js');
