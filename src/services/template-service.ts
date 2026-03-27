@@ -2,6 +2,7 @@ import path from 'node:path';
 import Handlebars from 'handlebars';
 import { readFile, fileExists } from '../utils/fs.js';
 import { getTemplatesDir } from '../utils/constants.js';
+import { logger } from '../utils/logger.js';
 
 const compiledCache = new Map<string, HandlebarsTemplateDelegate>();
 
@@ -28,9 +29,12 @@ export async function renderTemplate(
   const fullPath = await resolveTemplatePath(templatePath, overrideDir);
   let compiled = compiledCache.get(fullPath);
   if (!compiled) {
+    logger.debug(`Compiling template: ${fullPath}`);
     const raw = await readFile(fullPath);
     compiled = Handlebars.compile(raw, { noEscape: true });
     compiledCache.set(fullPath, compiled);
+  } else {
+    logger.debug(`Using cached template: ${fullPath}`);
   }
   return compiled(data);
 }

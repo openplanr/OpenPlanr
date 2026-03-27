@@ -4,6 +4,7 @@ import { slugify } from '../utils/slugify.js';
 import { parseMarkdown } from '../utils/markdown.js';
 import { getNextId } from './id-service.js';
 import { renderTemplate } from './template-service.js';
+import { logger } from '../utils/logger.js';
 import type { OpenPlanrConfig, ArtifactType } from '../models/types.js';
 
 const ARTIFACT_DIR_MAP: Record<string, string> = {
@@ -45,6 +46,7 @@ export async function createArtifact(
   }, config.templateOverrides);
 
   await writeFile(filePath, content);
+  logger.debug(`Created ${type} artifact: ${id} → ${filePath}`);
   return { id, filePath };
 }
 
@@ -81,6 +83,7 @@ export async function readArtifact(
   if (files.length === 0) return null;
 
   const filePath = path.join(dir, files[0]);
+  logger.debug(`Reading ${type} artifact: ${id} ← ${filePath}`);
   const raw = await readFile(filePath);
   const parsed = parseMarkdown(raw);
   return { ...parsed, filePath };

@@ -1,5 +1,15 @@
 import chalk from 'chalk';
 
+let verboseEnabled = false;
+
+export function setVerbose(enabled: boolean): void {
+  verboseEnabled = enabled;
+}
+
+export function isVerbose(): boolean {
+  return verboseEnabled;
+}
+
 export const logger = {
   info(msg: string) {
     console.log(chalk.blue('ℹ'), msg);
@@ -18,5 +28,10 @@ export const logger = {
   },
   dim(msg: string) {
     console.log(chalk.dim(msg));
+  },
+  debug(msg: string) {
+    if (verboseEnabled) {
+      console.log(chalk.gray(`[DEBUG] ${msg}`));
+    }
   },
 };
