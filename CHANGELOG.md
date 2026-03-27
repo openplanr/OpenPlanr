@@ -5,6 +5,64 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-28
+
+### Added
+
+- **`planr story create --epic <ID>`** — batch-generate stories for all features under an epic
+- **`planr checklist toggle`** — interactively toggle checklist items with multi-select prompt
+- **`planr config set-provider/set-key/set-model/set-agent`** — full AI configuration commands
+- **`--verbose` global flag** — debug logging across all commands
+- **`--all` flag on `planr status`** — show all items without truncation
+- **`--manual` flag** on epic, feature, story, and task create commands
+- **`--feature` filter** on `planr story list`
+- **Integration test suite** with real file system tests for artifact lifecycle and sync
+- **Test helpers** (`createTestProject`, `writeSampleEpic/Feature/Story`) for integration testing
+- **Pre-commit hooks** with husky + lint-staged (runs related tests on commit)
+- **Coverage reporting** with `@vitest/coverage-v8` and CI artifact upload
+- **CODEOWNERS** file for automatic review assignment
+- **Architecture guide** (`docs/ARCHITECTURE.md`)
+- **Troubleshooting guide** (`docs/TROUBLESHOOTING.md`)
+- **Security policy**, issue templates, and PR template
+
+### Changed
+
+- **`planr status`** — enhanced with tree view (epic → features → stories), task completion metrics with color-coded progress, and overall completion summary
+- **`planr refine`** — apply action now works: writes improved markdown to disk with view/apply/skip options
+- **`planr checklist show`** — now displays color-coded completion progress
+- **Documentation** — CLI.md now covers all 25 command variants with complete option tables
+- **README commands table** — expanded from 19 to 25 entries
+
+### Fixed
+
+- **Refine command** returning JSON instead of markdown in `improvedMarkdown` field — added explicit prompt instructions and JSON-detection fallback
+- **ID gap-filling** — `getNextId()` now reuses gaps (e.g., TASK-001 if only TASK-002 exists)
+- **npm bin paths** — added `./` prefix to suppress publish warnings
+
+### Security
+
+- Bumped `handlebars` from 4.7.8 to 4.7.9 (fixes critical vulnerability)
+- Dropped Node 18 support (EOL) — minimum Node 20
+
+### Developer Experience
+
+- Test coverage: 3 → 15 test files, 167 tests passing
+- Unit tests for: task-parser, markdown, fs, id-service, artifact-service, config-service, template-service, prompt-builder, logger, checklist-service
+- Integration tests for: artifact lifecycle, sync command
+- CI runs coverage on Node 22 with summary artifact upload
+- Upgraded to vitest 4.x
+
+## [0.2.0] - 2026-03-27
+
+### Added
+
+- **`planr plan`** — full automated flow (Epic → Features → Stories → Tasks)
+- **`planr refine <ID>`** — AI-powered review and improvement suggestions
+- **`planr sync`** — validate and fix cross-references across artifacts
+- **`planr config show`** — display current configuration
+- **`planr task create --feature <ID>`** — create tasks from all stories in a feature
+- Feature-level task generation with comprehensive context gathering
+
 ## [0.1.0] - 2026-03-26
 
 ### Added
