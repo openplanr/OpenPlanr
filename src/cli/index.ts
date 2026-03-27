@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { setVerbose } from '../utils/logger.js';
 import { registerInitCommand } from './commands/init.js';
 import { registerEpicCommand } from './commands/epic.js';
 import { registerFeatureCommand } from './commands/feature.js';
@@ -21,6 +22,12 @@ program
   .option('--project-dir <path>', 'project root directory', process.cwd())
   .option('--verbose', 'verbose output', false)
   .option('--no-interactive', 'skip interactive prompts');
+
+program.hook('preAction', () => {
+  if (program.opts().verbose) {
+    setVerbose(true);
+  }
+});
 
 registerInitCommand(program);
 registerEpicCommand(program);

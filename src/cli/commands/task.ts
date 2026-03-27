@@ -279,6 +279,7 @@ async function createTasksWithAI(
     const provider = await getAIProvider(config);
     ctx.scope = { type: 'story', id: storyId };
     const messages = buildTasksPrompt(ctx);
+    logger.debug(`Task prompt: ${messages.length} messages, user content ${messages[1]?.content.length ?? 0} chars`);
     const result = await generateStreamingJSON(provider, messages, aiTasksResponseSchema);
 
     displayTaskPreview(result);
@@ -378,6 +379,7 @@ async function createTasksFromFeature(
     const provider = await getAIProvider(config);
     ctx.scope = { type: 'feature', id: featureId };
     const messages = buildTasksPrompt(ctx);
+    logger.debug(`Task prompt: ${messages.length} messages, user content ${messages[1]?.content.length ?? 0} chars`);
     const result = await generateStreamingJSON(provider, messages, aiTasksResponseSchema);
 
     displayTaskPreview(result);
