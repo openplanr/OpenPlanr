@@ -40,6 +40,8 @@ export function registerSyncCommand(program: Command) {
 
       let totalFixes = 0;
 
+      logger.debug('Starting cross-reference validation...');
+
       // 1. Sync epics → features
       totalFixes += await syncParentChildLinks(projectDir, config, {
         parentType: 'epic',
