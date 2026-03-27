@@ -31,14 +31,91 @@ export function registerStoryCommand(program: Command) {
 
   story
     .command('create')
-    .description('Create user stories from a feature')
-    .requiredOption('--feature <featureId>', 'parent feature ID (e.g., FEAT-001)')
-    .option('--title <title>', 'story title')
+    .description('Create user stories from a feature or all features under an epic')
+    .option('--feature <featureId>', 'parent feature ID (e.g., FEAT-001)')
+    .option('--epic <epicId>', 'parent epic ID — generates stories for ALL features under this epic')
+    .option('--title <title>', 'story title (manual mode only)')
     .option('--manual', 'use manual interactive prompts instead of AI')
     .action(async (opts) => {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
 
+      // Validate: exactly one of --feature or --epic must be provided
+      if (opts.feature && opts.epic) {
+        logger.error('Cannot use both --feature and --epic. Choose one.');
+        process.exit(1);
+      }
+      if (!opts.feature && !opts.epic) {
+        logger.error('Must provide --feature <featureId> or --epic <epicId>.');
+        process.exit(1);
+      }
+
+      if (opts.epic) {
+        // Batch mode: generate stories for all features under the epic
+        if (opts.manual) {
+          logger.error('--manual is not supported with --epic. Use --feature for manual mode.');
+          process.exit(1);
+        }
+        if (!isAIConfigured(config)) {
+          logger.error('AI not configured. Run `planr config set-provider` to enable AI.');
+          process.exit(1);
+        }
+
+        const epicData = await readArtifact(projectDir, config, 'epic', opts.epic);
+        if (!epicData) {
+          logger.error(`Epic ${opts.epic} not found.`);
+          process.exit(1);
+        }
+
+        // Find all features under this epic
+        const allFeatures = await listArtifacts(projectDir, config, 'feature');
+        const epicFeatures: Array<{ id: string; title: string }> = [];
+        for (const f of allFeatures) {
+          const data = await readArtifact(projectDir, config, 'feature', f.id);
+          if (data && data.data.epicId === opts.epic) {
+            epicFeatures.push({ id: f.id, title: (data.data.title as string) || f.title });
+          }
+        }
+
+        if (epicFeatures.length === 0) {
+          logger.error(`No features found under ${opts.epic}. Create features first with \`planr feature create --epic ${opts.epic}\`.`);
+          process.exit(1);
+        }
+
+        logger.heading(`Batch Story Generation for ${opts.epic}`);
+        console.log(chalk.dim(`Found ${epicFeatures.length} feature(s):`));
+        for (const f of epicFeatures) {
+          console.log(chalk.dim(`  ${f.id}: ${f.title}`));
+        }
+        console.log('');
+
+        const confirmBatch = await promptConfirm(
+          `Generate stories for all ${epicFeatures.length} features?`,
+          true
+        );
+        if (!confirmBatch) {
+          logger.info('Batch story generation cancelled.');
+          return;
+        }
+
+        let totalCreated = 0;
+        for (const feature of epicFeatures) {
+          const count = await createStoriesWithAI(projectDir, config, feature.id);
+          totalCreated += count;
+        }
+
+        console.log('');
+        console.log(chalk.dim('━'.repeat(50)));
+        logger.success(`Batch complete: created ${totalCreated} stories across ${epicFeatures.length} features.`);
+        logger.dim('');
+        logger.heading('Next steps:');
+        logger.dim('  1. planr story list                          — View all stories');
+        logger.dim('  2. planr task create --story <ID>            — Generate tasks for a story');
+        logger.dim('  3. planr task create --feature <ID>          — Generate tasks for a feature');
+        return;
+      }
+
+      // Single feature mode
       const featureData = await readArtifact(projectDir, config, 'feature', opts.feature);
       if (!featureData) {
         logger.error(`Feature ${opts.feature} not found.`);
@@ -61,7 +138,7 @@ export function registerStoryCommand(program: Command) {
     .command('list')
     .description('List user stories')
     .option('--feature <featureId>', 'filter by feature ID')
-    .action(async () => {
+    .action(async (opts) => {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
       const stories = await listArtifacts(projectDir, config, 'story');
@@ -71,24 +148,43 @@ export function registerStoryCommand(program: Command) {
         return;
       }
 
+      // Filter by feature if specified
+      let filtered = stories;
+      if (opts.feature) {
+        filtered = [];
+        for (const s of stories) {
+          const data = await readArtifact(projectDir, config, 'story', s.id);
+          if (data && data.data.featureId === opts.feature) {
+            filtered.push(s);
+          }
+        }
+        if (filtered.length === 0) {
+          logger.info(`No stories found for feature ${opts.feature}.`);
+          return;
+        }
+      }
+
       logger.heading('User Stories');
-      for (const s of stories) {
+      for (const s of filtered) {
         console.log(`  ${s.id}  ${s.title}`);
       }
     });
 }
 
+/**
+ * Generate stories with AI for a single feature. Returns the number of stories created.
+ */
 async function createStoriesWithAI(
   projectDir: string,
   config: import('../../models/types.js').OpenPlanrConfig,
   featureId: string
-) {
+): Promise<number> {
   logger.heading(`Create User Stories (AI-powered from ${featureId})`);
 
   const featureRaw = await readArtifactRaw(projectDir, config, 'feature', featureId);
   if (!featureRaw) {
     logger.error(`Could not read feature ${featureId}.`);
-    return;
+    return 0;
   }
 
   // Read parent epic for context
@@ -120,7 +216,7 @@ async function createStoriesWithAI(
     );
     if (!continueCreate) {
       logger.info('Story creation cancelled.');
-      return;
+      return 0;
     }
   }
 
@@ -150,7 +246,7 @@ async function createStoriesWithAI(
 
     if (!confirmAll) {
       logger.info('Story creation cancelled.');
-      return;
+      return 0;
     }
 
     const createdIds: string[] = [];
@@ -206,6 +302,8 @@ async function createStoriesWithAI(
     logger.heading('Next steps:');
     logger.dim(`  1. planr task create --story ${createdIds[0]}      — Generate implementation tasks`);
     logger.dim(`  2. planr task implement TASK-*              — Implement with your coding agent`);
+
+    return createdIds.length;
   } catch (err) {
     const { AIError } = await import('../../ai/errors.js');
     if (err instanceof AIError) {
@@ -213,6 +311,7 @@ async function createStoriesWithAI(
     } else {
       throw err;
     }
+    return 0;
   }
 }
 

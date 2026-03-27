@@ -158,17 +158,24 @@ planr feature list --epic EPIC-001    # filter by epic
 
 ### `planr story create`
 
-Create a user story from a feature. Generates both a markdown file and a Gherkin acceptance criteria file.
+Create user stories from a feature, or batch-generate stories for all features under an epic.
 
 ```bash
+# Single feature:
 planr story create --feature FEAT-001
 planr story create --feature FEAT-001 --title "Login with Google"
+planr story create --feature FEAT-001 --manual
+
+# Batch — all features under an epic:
+planr story create --epic EPIC-001
 ```
 
 | Option | Description | Required |
 |--------|-------------|----------|
-| `--feature <featureId>` | Parent feature ID | **Yes** |
-| `--title <title>` | Story title | No (prompts) |
+| `--feature <featureId>` | Parent feature ID | One of `--feature` or `--epic` |
+| `--epic <epicId>` | Parent epic ID — generates stories for all features | One of `--feature` or `--epic` |
+| `--title <title>` | Story title (manual mode only) | No |
+| `--manual` | Use manual prompts instead of AI (single feature only) | No |
 
 **Interactive prompts:**
 
@@ -430,7 +437,8 @@ The typical agile planning flow follows this hierarchy:
 planr init
   └─ planr epic create
        └─ planr feature create --epic EPIC-001
-            └─ planr story create --feature FEAT-001
+            └─ planr story create --feature FEAT-001   (single feature)
+            └─ planr story create --epic EPIC-001     (all features at once)
                  └─ planr task create --story US-001
                       └─ planr task implement TASK-001
 
