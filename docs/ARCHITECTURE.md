@@ -19,7 +19,7 @@ src/
 │   ├── id-service.ts       # Sequential ID generation with gap-filling
 │   ├── template-service.ts # Handlebars template rendering with caching
 │   ├── prompt-service.ts   # Interactive prompt wrappers (@inquirer/prompts)
-│   └── checklist-service.ts # Checklist read/reset operations
+│   └── checklist-service.ts # Checklist CRUD, interactive toggle, and progress tracking
 │
 ├── ai/                     # AI integration layer
 │   ├── prompts/            # Prompt builders for each artifact type
@@ -57,7 +57,7 @@ src/
     ├── markdown.ts          # Frontmatter parsing via gray-matter
     ├── slugify.ts          # Text to kebab-case slugs
     ├── constants.ts        # Config filename, directory constants
-    └── logger.ts           # Colored console output (info, success, warn, error)
+    └── logger.ts           # Colored console output (info, success, warn, error, debug) with --verbose support
 ```
 
 ## Data Flow

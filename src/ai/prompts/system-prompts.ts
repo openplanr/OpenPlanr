@@ -115,7 +115,15 @@ Your task is to review and improve an existing agile artifact. Analyze the conte
 
 You MUST respond with a valid JSON object containing:
 - "suggestions": Array of improvement suggestions (strings)
-- "improved": The improved artifact data as a JSON object with the same fields as the original
-- "improvedMarkdown": The complete improved artifact as a markdown string (including YAML frontmatter delimited by ---). This must be the full file content ready to write to disk.
+- "improved": The improved artifact data as a JSON object with the same fields as the original frontmatter
+- "improvedMarkdown": A raw markdown string that will be written directly to a .md file. It MUST preserve the original file format: YAML frontmatter between --- delimiters followed by the markdown body. Do NOT put JSON in this field.
+
+CRITICAL: The "improvedMarkdown" field must be a plain markdown string, NOT a JSON object. It should look exactly like the original artifact the user provided, but with improvements applied. For example, if the original starts with:
+---
+id: "EPIC-001"
+title: "My Epic"
+---
+# EPIC-001: My Epic
+...then "improvedMarkdown" must also start with --- frontmatter and contain markdown content. Keep the same structure and sections as the original.
 
 Respond with JSON only, no markdown or explanation.`;

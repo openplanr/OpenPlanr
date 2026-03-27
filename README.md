@@ -82,22 +82,28 @@ planr rules generate --dry-run        # preview
 | `planr init` | Initialize project with config and directory structure |
 | `planr epic create` | Create a new epic |
 | `planr epic list` | List all epics |
-| `planr feature create --epic <ID>` | Create a feature from an epic |
+| `planr feature create --epic <ID>` | Create features from an epic |
 | `planr feature list` | List all features |
-| `planr story create --feature <ID>` | Create a user story with Gherkin criteria |
+| `planr story create --feature <ID>` | Create user stories from a feature |
+| `planr story create --epic <ID>` | Batch-generate stories for all features under an epic |
 | `planr story list` | List all user stories |
 | `planr task create --story <ID>` | Create a task list from a single story |
 | `planr task create --feature <ID>` | Create a task list from all stories in a feature |
 | `planr task list` | List all task lists |
 | `planr task implement <ID>` | View tasks and start implementing |
 | `planr plan` | Full automated flow: Epic → Features → Stories → Tasks |
-| `planr refine <ID>` | AI-powered review and improvement suggestions |
+| `planr refine <ID>` | AI-powered review and apply improvements |
 | `planr sync` | Validate and fix cross-references across artifacts |
 | `planr checklist show` | View the agile development checklist |
+| `planr checklist toggle` | Interactively toggle checklist items |
 | `planr checklist reset` | Reset checklist to initial state |
 | `planr rules generate` | Generate AI agent rule files |
-| `planr status` | Show planning progress overview |
+| `planr status` | Show planning progress with tree view and metrics |
 | `planr config show` | Display current configuration |
+| `planr config set-provider` | Set AI provider (anthropic, openai, ollama) |
+| `planr config set-key` | Store API key securely |
+| `planr config set-model` | Set AI model |
+| `planr config set-agent` | Set default coding agent |
 
 See [docs/CLI.md](docs/CLI.md) for the full command reference with all options and flags.
 

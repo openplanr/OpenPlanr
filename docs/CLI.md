@@ -39,11 +39,13 @@ Initialize Planr in the current project.
 ```bash
 planr init
 planr init --name "my-project"
+planr init --no-ai
 ```
 
 | Option | Description | Required |
 |--------|-------------|----------|
 | `--name <name>` | Project name | No (prompts) |
+| `--no-ai` | Skip AI provider setup | No |
 
 **What it creates:**
 
@@ -65,17 +67,19 @@ project-root/
 
 ### `planr epic create`
 
-Create a new epic.
+Create a new epic. With AI configured, provide a brief description and the AI expands it into a full epic.
 
 ```bash
 planr epic create
 planr epic create --title "User Authentication" --owner "Engineering"
+planr epic create --manual
 ```
 
 | Option | Description | Required |
 |--------|-------------|----------|
 | `--title <title>` | Epic title | No (prompts) |
 | `--owner <owner>` | Epic owner | No (prompts) |
+| `--manual` | Use manual interactive prompts instead of AI | No |
 
 **Interactive prompts:**
 
@@ -114,17 +118,21 @@ Epics
 
 ### `planr feature create`
 
-Create a feature from an epic.
+Create features from an epic. With AI configured, the AI reads the epic and generates multiple features automatically.
 
 ```bash
 planr feature create --epic EPIC-001
 planr feature create --epic EPIC-001 --title "OAuth Login"
+planr feature create --epic EPIC-001 --count 5
+planr feature create --epic EPIC-001 --manual
 ```
 
 | Option | Description | Required |
 |--------|-------------|----------|
 | `--epic <epicId>` | Parent epic ID | **Yes** |
-| `--title <title>` | Feature title | No (prompts) |
+| `--title <title>` | Feature title (manual mode) | No (prompts) |
+| `--count <n>` | Number of features to generate (AI mode) | No (AI decides) |
+| `--manual` | Use manual interactive prompts instead of AI | No |
 
 **Interactive prompts:**
 
@@ -158,17 +166,24 @@ planr feature list --epic EPIC-001    # filter by epic
 
 ### `planr story create`
 
-Create a user story from a feature. Generates both a markdown file and a Gherkin acceptance criteria file.
+Create user stories from a feature, or batch-generate stories for all features under an epic.
 
 ```bash
+# Single feature:
 planr story create --feature FEAT-001
 planr story create --feature FEAT-001 --title "Login with Google"
+planr story create --feature FEAT-001 --manual
+
+# Batch — all features under an epic:
+planr story create --epic EPIC-001
 ```
 
 | Option | Description | Required |
 |--------|-------------|----------|
-| `--feature <featureId>` | Parent feature ID | **Yes** |
-| `--title <title>` | Story title | No (prompts) |
+| `--feature <featureId>` | Parent feature ID | One of `--feature` or `--epic` |
+| `--epic <epicId>` | Parent epic ID — generates stories for all features | One of `--feature` or `--epic` |
+| `--title <title>` | Story title (manual mode only) | No |
+| `--manual` | Use manual prompts instead of AI (single feature only) | No |
 
 **Interactive prompts:**
 
@@ -205,12 +220,13 @@ planr story list --feature FEAT-001    # filter by feature
 
 ### `planr task create`
 
-Create an AI-powered implementation task list from a story or feature.
+Create an implementation task list from a story or feature. With AI configured, gathers comprehensive context for intelligent task generation.
 
 ```bash
 planr task create --story US-001                    # from a single story
 planr task create --feature FEAT-001                # from all stories in a feature
 planr task create --story US-001 --title "Tasks"    # with custom title
+planr task create --story US-001 --manual           # manual mode
 ```
 
 | Option | Description | Required |
@@ -218,6 +234,7 @@ planr task create --story US-001 --title "Tasks"    # with custom title
 | `--story <storyId>` | Create tasks from a single story | One of `--story` or `--feature` |
 | `--feature <featureId>` | Create tasks from all stories in a feature | One of `--story` or `--feature` |
 | `--title <title>` | Task list title | No (AI generates it) |
+| `--manual` | Use manual interactive prompts instead of AI | No |
 
 **What it gathers (AI mode):**
 
@@ -281,6 +298,16 @@ Shows the full 5-phase checklist:
 3. Architecture Decision Records
 4. Solution Planning
 5. Solution Review
+
+---
+
+### `planr checklist toggle`
+
+Interactively toggle checklist items. Presents a multi-select prompt where you can check/uncheck items, then writes changes back to the file with a progress summary.
+
+```bash
+planr checklist toggle
+```
 
 ---
 
@@ -360,7 +387,10 @@ The AI analyzes the artifact and provides:
 1. A list of improvement suggestions
 2. An improved version of the artifact
 
-After review, you can choose to view the improved version or skip.
+After review, you can:
+- **Apply** — write the improved version to disk
+- **View** — preview the improved version, then choose to apply or skip
+- **Skip** — keep the original unchanged
 
 Requires AI to be configured.
 
@@ -390,35 +420,95 @@ Handles both story-level and feature-level task relationships.
 
 ### `planr status`
 
-Show project planning progress at a glance.
+Show project planning progress with tree view, completion metrics, and color-coded progress.
 
 ```bash
 planr status
+planr status --all
 ```
 
-**Example output:**
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--all` | Show all items without truncation | `false` (truncates to 5 items per level) |
 
+**Features:**
+- Tree view grouping: epics → features → stories
+- Task completion metrics: `(8/24 subtasks, 33%)`
+- Color-coded progress: green (>75%), yellow (25-75%), red (<25%)
+- Overall completion summary across all task lists
+- Unlinked artifact detection (features/stories without parents)
+
+---
+
+### `planr config show`
+
+Display the current project configuration including AI provider, model, and API key status.
+
+```bash
+planr config show
 ```
-Planr Status — my-project
 
-  ● Epics: 2
-    EPIC-001  User Authentication
-    EPIC-002  Payment Integration
-  ● Features: 3
-    FEAT-001  OAuth Login
-    FEAT-002  Email/Password Auth
-    FEAT-003  Stripe Checkout
-  ● User Stories: 5
-    US-001  Login with Google
-    US-002  Login with GitHub
-    ... and 3 more
-  ○ Task Lists: 0
+---
 
-Targets: cursor, claude, codex
-Artifacts: docs/agile/
+### `planr config set-provider`
+
+Set the AI provider for content generation.
+
+```bash
+planr config set-provider                # interactive prompt
+planr config set-provider anthropic      # set directly
 ```
 
-`●` = has items | `○` = empty
+| Argument | Description | Required |
+|----------|-------------|----------|
+| `[provider]` | `anthropic`, `openai`, or `ollama` | No (prompts) |
+
+---
+
+### `planr config set-key`
+
+Store an API key securely in `~/.planr/credentials.json`.
+
+```bash
+planr config set-key                     # interactive prompt
+planr config set-key anthropic           # set for specific provider
+```
+
+| Argument | Description | Required |
+|----------|-------------|----------|
+| `[provider]` | `anthropic` or `openai` | No (prompts) |
+
+---
+
+### `planr config set-model`
+
+Set the AI model to use for content generation.
+
+```bash
+planr config set-model claude-sonnet-4-20250514
+planr config set-model gpt-4o
+```
+
+| Argument | Description | Required |
+|----------|-------------|----------|
+| `<model>` | Model name (e.g., `claude-sonnet-4-20250514`, `gpt-4o`, `llama3.1`) | **Yes** |
+
+Requires AI provider to be configured first (`planr config set-provider`).
+
+---
+
+### `planr config set-agent`
+
+Set the default coding agent for task implementation guidance.
+
+```bash
+planr config set-agent                   # interactive prompt
+planr config set-agent cursor            # set directly
+```
+
+| Argument | Description | Required |
+|----------|-------------|----------|
+| `[agent]` | `claude`, `cursor`, or `codex` | No (prompts) |
 
 ---
 
@@ -430,7 +520,8 @@ The typical agile planning flow follows this hierarchy:
 planr init
   └─ planr epic create
        └─ planr feature create --epic EPIC-001
-            └─ planr story create --feature FEAT-001
+            └─ planr story create --feature FEAT-001   (single feature)
+            └─ planr story create --epic EPIC-001     (all features at once)
                  └─ planr task create --story US-001
                       └─ planr task implement TASK-001
 

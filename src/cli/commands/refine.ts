@@ -15,6 +15,7 @@ import {
 import { isAIConfigured, getAIProvider, generateJSON } from '../../services/ai-service.js';
 import { buildRefinePrompt } from '../../ai/prompts/prompt-builder.js';
 import { aiRefineResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
+import { toMarkdownWithFrontmatter } from '../../utils/markdown.js';
 import { promptSelect } from '../../services/prompt-service.js';
 import { logger } from '../../utils/logger.js';
 import chalk from 'chalk';
@@ -58,6 +59,19 @@ export function registerRefineCommand(program: Command) {
 
         spinner.stop();
 
+        // Resolve improvedMarkdown — if AI returned JSON instead of markdown, reconstruct it
+        let markdown = result.improvedMarkdown;
+        const trimmed = markdown.trim();
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+          logger.warn('AI returned JSON instead of markdown. Reconstructing from improved data...');
+          const improved = result.improved as Record<string, unknown>;
+          const { id, title, ...frontmatterFields } = improved;
+          markdown = toMarkdownWithFrontmatter(
+            improved,
+            rawContent.split('---').slice(2).join('---').trim()
+          );
+        }
+
         // Display suggestions
         console.log(chalk.dim('━'.repeat(50)));
         console.log(chalk.bold('  Suggestions:'));
@@ -79,7 +93,7 @@ export function registerRefineCommand(program: Command) {
 
         if (action === 'view') {
           console.log(chalk.dim('━'.repeat(50)));
-          console.log(chalk.green(result.improvedMarkdown));
+          console.log(chalk.green(markdown));
           console.log(chalk.dim('━'.repeat(50)));
 
           const applyAfterView = await promptSelect('Apply this version?', [
@@ -94,7 +108,7 @@ export function registerRefineCommand(program: Command) {
         }
 
         // Apply the improved version
-        await updateArtifact(projectDir, config, type, artifactId, result.improvedMarkdown);
+        await updateArtifact(projectDir, config, type, artifactId, markdown);
         logger.success(`Applied improvements to ${artifactId}.`);
       } catch (err) {
         spinner.stop();

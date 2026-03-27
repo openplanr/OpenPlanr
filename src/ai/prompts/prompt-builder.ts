@@ -143,7 +143,7 @@ export function buildRefinePrompt(
   artifactContent: string,
   artifactType: string
 ): AIMessage[] {
-  const userContent = `Review and improve this ${artifactType} artifact:\n\n${artifactContent}`;
+  const userContent = `Review and improve this ${artifactType} artifact. The "improvedMarkdown" in your response must preserve the same file format (YAML frontmatter + markdown body) as shown below:\n\n${artifactContent}`;
 
   return [
     { role: 'system', content: REFINE_SYSTEM_PROMPT },
