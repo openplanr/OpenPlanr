@@ -52,7 +52,14 @@ planr init
 planr rules generate   # Generate .cursor/rules, CLAUDE.md, AGENTS.md
 ```
 
-Each command creates markdown artifacts in `docs/agile/` and interactively prompts for the details. The hierarchy is enforced — features require an epic, stories require a feature, tasks require a story.
+Each command creates markdown artifacts in `docs/agile/` and interactively prompts for the details. The hierarchy is enforced — features require an epic, stories require a feature, tasks require a story or feature.
+
+Or use `planr plan` to run the full flow in a single command:
+
+```bash
+planr plan                          # start from scratch
+planr plan --epic EPIC-001          # cascade from an existing epic
+```
 
 ## Supported AI Targets
 
@@ -79,13 +86,18 @@ planr rules generate --dry-run        # preview
 | `planr feature list` | List all features |
 | `planr story create --feature <ID>` | Create a user story with Gherkin criteria |
 | `planr story list` | List all user stories |
-| `planr task create --story <ID>` | Create a task list from a story |
+| `planr task create --story <ID>` | Create a task list from a single story |
+| `planr task create --feature <ID>` | Create a task list from all stories in a feature |
 | `planr task list` | List all task lists |
 | `planr task implement <ID>` | View tasks and start implementing |
+| `planr plan` | Full automated flow: Epic → Features → Stories → Tasks |
+| `planr refine <ID>` | AI-powered review and improvement suggestions |
+| `planr sync` | Validate and fix cross-references across artifacts |
 | `planr checklist show` | View the agile development checklist |
 | `planr checklist reset` | Reset checklist to initial state |
 | `planr rules generate` | Generate AI agent rule files |
 | `planr status` | Show planning progress overview |
+| `planr config show` | Display current configuration |
 
 See [docs/CLI.md](docs/CLI.md) for the full command reference with all options and flags.
 

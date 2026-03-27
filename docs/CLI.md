@@ -205,24 +205,32 @@ planr story list --feature FEAT-001    # filter by feature
 
 ### `planr task create`
 
-Create a task list from a user story.
+Create an AI-powered implementation task list from a story or feature.
 
 ```bash
-planr task create --story US-001
-planr task create --story US-001 --title "Implementation tasks"
+planr task create --story US-001                    # from a single story
+planr task create --feature FEAT-001                # from all stories in a feature
+planr task create --story US-001 --title "Tasks"    # with custom title
 ```
 
 | Option | Description | Required |
 |--------|-------------|----------|
-| `--story <storyId>` | Parent user story ID | **Yes** |
-| `--title <title>` | Task list title | No (defaults to "Tasks for {storyId}") |
+| `--story <storyId>` | Create tasks from a single story | One of `--story` or `--feature` |
+| `--feature <featureId>` | Create tasks from all stories in a feature | One of `--story` or `--feature` |
+| `--title <title>` | Task list title | No (AI generates it) |
 
-**Interactive prompts:**
+**What it gathers (AI mode):**
 
-1. Task list title
-2. Task names (comma-separated, e.g.: "Setup, Implement API, Write tests")
+When AI is configured, the command gathers comprehensive context:
+- User stories (one or all under a feature)
+- Gherkin acceptance criteria files
+- Parent feature and epic content
+- Architecture Decision Records (ADRs)
+- Codebase structure and tech stack
 
-Tasks are auto-numbered as `1.0`, `2.0`, `3.0`, etc.
+The AI generates grouped subtasks with acceptance criteria mapping and relevant files.
+
+**Manual mode:** If AI is not configured, prompts for task names (comma-separated).
 
 **Output:** `docs/agile/tasks/TASK-001-<slug>.md`
 
@@ -311,6 +319,75 @@ planr rules generate --dry-run        # preview without writing
 
 ---
 
+### `planr plan`
+
+Full agile planning flow in a single command. Cascades through the hierarchy: Epic → Features → Stories → Tasks.
+
+```bash
+planr plan                          # start from scratch (creates epic first)
+planr plan --epic EPIC-001          # start from existing epic → features → stories → tasks
+planr plan --feature FEAT-001       # start from existing feature → stories → tasks
+planr plan --story US-001           # start from existing story → tasks only
+```
+
+| Option | Description | Required |
+|--------|-------------|----------|
+| `--epic <epicId>` | Start from an existing epic | No |
+| `--feature <featureId>` | Start from an existing feature | No |
+| `--story <storyId>` | Start from an existing story | No |
+
+When no flag is provided, the command prompts for an epic brief and cascades through the full hierarchy. Each step asks for confirmation before proceeding to the next level.
+
+Requires AI to be configured (`planr config set-provider`).
+
+---
+
+### `planr refine`
+
+AI-powered review and improvement suggestions for any existing artifact.
+
+```bash
+planr refine EPIC-001               # review an epic
+planr refine FEAT-002               # review a feature
+planr refine US-003                  # review a user story
+```
+
+| Argument | Description | Required |
+|----------|-------------|----------|
+| `<artifactId>` | Any artifact ID (EPIC-001, FEAT-002, US-003, TASK-004) | **Yes** |
+
+The AI analyzes the artifact and provides:
+1. A list of improvement suggestions
+2. An improved version of the artifact
+
+After review, you can choose to view the improved version or skip.
+
+Requires AI to be configured.
+
+---
+
+### `planr sync`
+
+Validate and repair cross-references across all artifacts.
+
+```bash
+planr sync                          # fix broken cross-references
+planr sync --dry-run                # preview changes without writing
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--dry-run` | Show what would change without writing files | `false` |
+
+**What it checks:**
+- **Stale links:** Parent links to a child file that doesn't exist on disk
+- **Missing links:** Child references a parent, but parent doesn't list the child
+- **Duplicates:** Same child linked more than once in a parent
+
+Handles both story-level and feature-level task relationships.
+
+---
+
 ### `planr status`
 
 Show project planning progress at a glance.
@@ -357,8 +434,11 @@ planr init
                  └─ planr task create --story US-001
                       └─ planr task implement TASK-001
 
-planr rules generate    ← generates AI rules from your artifacts
-planr status            ← see progress overview
+planr plan                  ← full automated flow (Epic → Features → Stories → Tasks)
+planr refine EPIC-001       ← AI review and improvement suggestions
+planr sync                  ← validate and fix cross-references
+planr rules generate        ← generate AI rules from your artifacts
+planr status                ← see progress overview
 ```
 
 ---
