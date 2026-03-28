@@ -1,6 +1,6 @@
 {
   "name": "openplanr",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "CLI tool for agile planning with AI agents — generates epics, features, stories, tasks, and AI rule files for Cursor, Claude Code, and Codex",
   "type": "module",
   "main": "./dist/cli/index.js",

@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-03-28
+
+### Added
+
+- **Secure credential storage** — API keys are now stored in the OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service) via `@napi-rs/keyring`, with AES-256-GCM encrypted file fallback for environments without a keychain (CI, Docker, SSH)
+- **Automatic credential migration** — existing plaintext `~/.planr/credentials.json` keys are migrated to the secure backend on first access, then the plaintext file is deleted
+- **Credential source display** — `planr config show` now shows where the API key is stored: `(OS keychain)`, `(encrypted file)`, or `(env: ANTHROPIC_API_KEY)`
+- **Per-command token budgets** — each command uses a tuned `maxTokens` limit (epic: 4K, feature/story/refine: 8K, task: 16K, task --feature: 32K) instead of a one-size-fits-all default
+- **Definitive truncation detection** — uses `stop_reason` (Anthropic) / `finish_reason` (OpenAI) to detect truncated responses instead of heuristic token thresholds
+- **8 new truncation unit tests** covering skip-retry, per-attempt token reporting, and streaming truncation
+
+### Changed
+
+- **`planr config set-key`** now shows the storage backend: `"saved to OS keychain"` or `"saved to encrypted file"`
+- **AI service refactored** — `generateJSON` and `generateStreamingJSON` now share a common `generateCore()` function, eliminating duplicated validation/retry/truncation logic
+- **GitHub Actions** updated to v6 (checkout, setup-node) and v7 (upload-artifact) with Node.js 24
+
+### Fixed
+
+- **Task generation from features failing** — `planr task create --feature` was truncating AI responses at 4,096 tokens, producing invalid JSON. Now uses 32K budget
+- **Spinner not stopping on API errors** — spinner animation no longer mixes with error messages when the AI provider throws
+- **Spinner showing ✓ before validation** — `succeed()` now only fires after successful parse/validation, not before
+- **Truncation error over-reporting tokens** — error messages now show per-attempt output tokens instead of cumulative totals
+- **Keychain write failures crashing** — `saveCredential` now catches keychain errors and falls back to encrypted file
+- **Migration flag set before completion** — `migrateCredentials` now resets the flag on failure so it retries next invocation
+- **`resolveApiKeySource` skipping migration** — `config show` now properly triggers legacy credential migration
+
+### Security
+
+- API keys no longer stored in plaintext on disk
+- Encrypted file uses AES-256-GCM with machine-derived key (hostname + username + per-installation salt via scrypt)
+- File permissions set to `0o600` on all credential files
+
+### Developer Experience
+
+- Test coverage: 261 → 269 tests across 23 test files
+- Added `tests/unit/ai-service-truncation.test.ts` (8 tests)
+- Added `tests/unit/credential-backends.test.ts` (8 tests)
+- Expanded `tests/unit/credentials-service.test.ts` with mocked backends (13 tests)
+
 ## [0.4.0] - 2026-03-28
 
 ### Added
