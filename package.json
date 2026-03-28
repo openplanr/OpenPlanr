@@ -28,12 +28,6 @@
     "prepare": "husky",
     "prepublishOnly": "npm run build"
   },
-  "lint-staged": {
-    "*.ts": [
-      "eslint --fix",
-      "prettier --write"
-    ]
-  },
   "engines": {
     "node": ">=20.0.0"
   },
