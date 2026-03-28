@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-03-28
+
+### Added
+
+- **Token usage display** — shows input/output token counts after every AI call (`✓ Done (1,240 in → 860 out tokens)`)
+- **`planr refine --cascade`** — refines an artifact then cascades to all children down the full hierarchy (epic → features → stories → tasks)
+- **Parent-aligned refinements** — child refinements receive updated parent content as context so AI aligns changes with the parent
+- **Post-refine next steps** — after applying without `--cascade`, suggests which children may need re-alignment
+- **Cumulative token usage** for cascade operations (`Cascade complete: 7 artifacts refined (12,400 in → 8,200 out tokens total)`)
+- **Spinner `succeed()` method** — shows green checkmark with completion message instead of silently clearing
+
+### Changed
+
+- **Updated all dependencies** to latest major versions: `@anthropic-ai/sdk` 0.80, `openai` 6.x, `zod` 4.x, `commander` 14.x, `@inquirer/prompts` 8.x, `typescript` 6.x, `vitest` 4.x
+- **Removed `fs-extra`** dependency — replaced with Node.js built-in `fs/promises`
+- **Removed `ora`** dependency — replaced with lightweight built-in spinner
+- **Dropped Node 18 support** — minimum Node version is now 20
+- **Refine prompt** now preserves existing cross-reference links instead of adding phantom references
+- **"Suggestions" renamed to "Improvements"** in refine output for clearer UX
+
+### Fixed
+
+- **Refine command** no longer adds feature/story references that don't exist on disk
+- **CI publish workflow** — fixed npm trusted publishing with bypass 2FA token
+
 ## [0.3.0] - 2026-03-28
 
 ### Added
