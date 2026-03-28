@@ -51,25 +51,22 @@
     "url": "https://github.com/TechArc-io/OpenPlanr/issues"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
-    "@inquirer/prompts": "^7.0.0",
+    "@anthropic-ai/sdk": "^0.80.0",
+    "@inquirer/prompts": "^8.3.2",
     "chalk": "^5.3.0",
-    "commander": "^12.1.0",
-    "fs-extra": "^11.2.0",
+    "commander": "^14.0.3",
     "gray-matter": "^4.0.3",
-    "handlebars": "^4.7.8",
-    "openai": "^4.77.0",
-    "ora": "^8.1.0",
-    "zod": "^3.23.0"
+    "handlebars": "^4.7.9",
+    "openai": "^6.33.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/fs-extra": "^11.0.4",
-    "@types/node": "^22.0.0",
+    "@types/node": "^25.5.0",
     "@vitest/coverage-v8": "^4.1.2",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.0",
+    "typescript": "^6.0.2",
     "vitest": "^4.1.2"
   }
 }

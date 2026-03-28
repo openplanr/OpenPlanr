@@ -107,7 +107,7 @@ export type AITasksResponse = z.infer<typeof aiTasksResponseSchema>;
 
 export const aiRefineResponseSchema = z.object({
   suggestions: z.array(z.string().min(1)).min(1),
-  improved: z.record(z.unknown()),
+  improved: z.record(z.string(), z.unknown()),
   improvedMarkdown: z.string().min(1),
 });
 

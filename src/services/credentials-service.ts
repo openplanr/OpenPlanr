@@ -8,7 +8,7 @@
 
 import path from 'node:path';
 import os from 'node:os';
-import fse from 'fs-extra';
+import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
 import { ENV_KEY_MAP } from '../ai/types.js';
 
 const CREDENTIALS_DIR = path.join(os.homedir(), '.planr');
@@ -18,11 +18,15 @@ interface Credentials {
   [provider: string]: string;
 }
 
+async function pathExists(p: string): Promise<boolean> {
+  return access(p).then(() => true).catch(() => false);
+}
+
 export async function loadCredentials(): Promise<Credentials> {
-  if (!(await fse.pathExists(CREDENTIALS_FILE))) return {};
+  if (!(await pathExists(CREDENTIALS_FILE))) return {};
 
   try {
-    const raw = await fse.readFile(CREDENTIALS_FILE, 'utf-8');
+    const raw = await readFile(CREDENTIALS_FILE, 'utf-8');
     return JSON.parse(raw) as Credentials;
   } catch {
     return {};
@@ -30,12 +34,12 @@ export async function loadCredentials(): Promise<Credentials> {
 }
 
 export async function saveCredential(provider: string, apiKey: string): Promise<void> {
-  await fse.ensureDir(CREDENTIALS_DIR);
+  await mkdir(CREDENTIALS_DIR, { recursive: true });
 
   const credentials = await loadCredentials();
   credentials[provider] = apiKey;
 
-  await fse.writeFile(CREDENTIALS_FILE, JSON.stringify(credentials, null, 2), {
+  await writeFile(CREDENTIALS_FILE, JSON.stringify(credentials, null, 2), {
     encoding: 'utf-8',
     mode: 0o600,
   });
@@ -45,7 +49,7 @@ export async function clearCredential(provider: string): Promise<void> {
   const credentials = await loadCredentials();
   delete credentials[provider];
 
-  await fse.writeFile(CREDENTIALS_FILE, JSON.stringify(credentials, null, 2), {
+  await writeFile(CREDENTIALS_FILE, JSON.stringify(credentials, null, 2), {
     encoding: 'utf-8',
     mode: 0o600,
   });

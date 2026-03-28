@@ -11,6 +11,7 @@ import type { AIProvider, AIMessage, AIRequestOptions, AIProviderConfig } from '
 import type { OpenPlanrConfig } from '../models/types.js';
 import { AIError } from '../ai/errors.js';
 import { resolveApiKey } from './credentials-service.js';
+import { createSpinner } from '../utils/logger.js';
 
 /**
  * Initialize an AI provider from project config.
@@ -84,12 +85,17 @@ export async function generateJSON<T>(
     jsonMode: true,
   };
 
+  const spinner = createSpinner('Generating...');
   let rawResponse = await provider.chatSync(messages, requestOptions);
   let parsed = tryParseAndValidate(rawResponse, schema);
 
-  if (parsed.success) return parsed.data;
+  if (parsed.success) {
+    spinner.stop();
+    return parsed.data;
+  }
 
   // Retry once with error feedback
+  spinner.update('Retrying...');
   const retryMessages: AIMessage[] = [
     ...messages,
     { role: 'assistant', content: rawResponse },
@@ -100,6 +106,7 @@ export async function generateJSON<T>(
   ];
 
   rawResponse = await provider.chatSync(retryMessages, requestOptions);
+  spinner.stop();
   parsed = tryParseAndValidate(rawResponse, schema);
 
   if (parsed.success) return parsed.data;
@@ -126,20 +133,15 @@ export async function generateStreamingJSON<T>(
     jsonMode: true,
   };
 
-  // Stream the response, showing dots for progress
+  // Stream the response, showing spinner for progress
   const chunks: string[] = [];
-  let dotCount = 0;
+  const spinner = createSpinner('Generating...');
   const stream = provider.chat(messages, requestOptions);
 
   for await (const chunk of stream) {
     chunks.push(chunk);
-    // Show a dot every ~200 chars of content
-    if (chunks.join('').length > (dotCount + 1) * 200) {
-      process.stdout.write('.');
-      dotCount++;
-    }
   }
-  if (dotCount > 0) process.stdout.write('\n');
+  spinner.stop();
 
   const rawResponse = chunks.join('');
   let parsed = tryParseAndValidate(rawResponse, schema);
