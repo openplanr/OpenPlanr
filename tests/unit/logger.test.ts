@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { logger, setVerbose, isVerbose } from '../../src/utils/logger.js';
+import { logger, setVerbose, isVerbose, formatUsage } from '../../src/utils/logger.js';
 
 beforeEach(() => {
   setVerbose(false);
@@ -41,6 +41,37 @@ describe('logger.debug', () => {
     const output = (console.log as any).mock.calls[0][0];
     expect(output).toContain('[DEBUG]');
     expect(output).toContain('visible message');
+  });
+});
+
+describe('formatUsage', () => {
+  it('returns empty string for undefined', () => {
+    expect(formatUsage(undefined)).toBe('');
+  });
+
+  it('returns empty string for null', () => {
+    expect(formatUsage(null)).toBe('');
+  });
+
+  it('formats usage with locale-separated numbers', () => {
+    const result = formatUsage({ inputTokens: 1240, outputTokens: 860 });
+    expect(result).toContain('1,240');
+    expect(result).toContain('860');
+    expect(result).toContain('in');
+    expect(result).toContain('out');
+    expect(result).toContain('tokens');
+  });
+
+  it('handles zero tokens', () => {
+    const result = formatUsage({ inputTokens: 0, outputTokens: 0 });
+    expect(result).toContain('0');
+    expect(result).toContain('tokens');
+  });
+
+  it('formats large numbers with commas', () => {
+    const result = formatUsage({ inputTokens: 12400, outputTokens: 8200 });
+    expect(result).toContain('12,400');
+    expect(result).toContain('8,200');
   });
 });
 

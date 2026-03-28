@@ -5,7 +5,7 @@
  * Also serves as the base for the Ollama provider (OpenAI-compatible API).
  */
 
-import type { AIProvider, AIMessage, AIRequestOptions, AIProviderName } from '../types.js';
+import type { AIProvider, AIMessage, AIRequestOptions, AIProviderName, AIUsage } from '../types.js';
 import { wrapProviderError } from '../errors.js';
 
 export class OpenAIProvider implements AIProvider {
@@ -13,6 +13,7 @@ export class OpenAIProvider implements AIProvider {
   readonly model: string;
 
   protected clientPromise: Promise<InstanceType<typeof import('openai').default>>;
+  private lastUsageData: AIUsage | undefined;
 
   constructor(apiKey: string, model?: string, baseUrl?: string) {
     this.model = model || 'gpt-4o';
@@ -31,6 +32,7 @@ export class OpenAIProvider implements AIProvider {
       const stream = await client.chat.completions.create({
         model: this.model,
         stream: true,
+        stream_options: { include_usage: true },
         temperature: options?.temperature ?? 0.7,
         max_tokens: options?.maxTokens || 4096,
         messages: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -40,6 +42,13 @@ export class OpenAIProvider implements AIProvider {
       for await (const chunk of stream) {
         const delta = chunk.choices[0]?.delta?.content;
         if (delta) yield delta;
+        // Capture usage from the final chunk (OpenAI includes it when stream ends)
+        if (chunk.usage) {
+          this.lastUsageData = {
+            inputTokens: chunk.usage.prompt_tokens ?? 0,
+            outputTokens: chunk.usage.completion_tokens ?? 0,
+          };
+        }
       }
     } catch (err) {
       throw wrapProviderError(err, this.name);
@@ -58,9 +67,20 @@ export class OpenAIProvider implements AIProvider {
         ...(options?.jsonMode && { response_format: { type: 'json_object' as const } }),
       });
 
+      if (response.usage) {
+        this.lastUsageData = {
+          inputTokens: response.usage.prompt_tokens ?? 0,
+          outputTokens: response.usage.completion_tokens ?? 0,
+        };
+      }
+
       return response.choices[0]?.message?.content || '';
     } catch (err) {
       throw wrapProviderError(err, this.name);
     }
+  }
+
+  getLastUsage(): AIUsage | undefined {
+    return this.lastUsageData;
   }
 }

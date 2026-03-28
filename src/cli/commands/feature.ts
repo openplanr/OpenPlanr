@@ -121,7 +121,7 @@ async function createFeaturesWithAI(
   try {
     const provider = await getAIProvider(config);
     const messages = buildFeaturesPrompt(epicRaw, existingTitles, featureCount);
-    const result = await generateStreamingJSON(provider, messages, aiFeaturesResponseSchema);
+    const { result } = await generateStreamingJSON(provider, messages, aiFeaturesResponseSchema);
 
     // Display generated features
     console.log(chalk.dim('━'.repeat(50)));

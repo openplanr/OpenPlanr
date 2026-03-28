@@ -5,7 +5,7 @@
  * Lazily imported to avoid loading the SDK until actually needed.
  */
 
-import type { AIProvider, AIMessage, AIRequestOptions, AIProviderName } from '../types.js';
+import type { AIProvider, AIMessage, AIRequestOptions, AIProviderName, AIUsage } from '../types.js';
 import { wrapProviderError } from '../errors.js';
 
 export class AnthropicProvider implements AIProvider {
@@ -13,6 +13,7 @@ export class AnthropicProvider implements AIProvider {
   readonly model: string;
 
   private clientPromise: Promise<InstanceType<typeof import('@anthropic-ai/sdk').default>>;
+  private lastUsageData: AIUsage | undefined;
 
   constructor(apiKey: string, model?: string) {
     this.model = model || 'claude-sonnet-4-20250514';
@@ -48,6 +49,12 @@ export class AnthropicProvider implements AIProvider {
           yield event.delta.text;
         }
       }
+
+      const finalMessage = await stream.finalMessage();
+      this.lastUsageData = {
+        inputTokens: finalMessage.usage.input_tokens,
+        outputTokens: finalMessage.usage.output_tokens,
+      };
     } catch (err) {
       throw wrapProviderError(err, 'anthropic');
     }
@@ -69,6 +76,11 @@ export class AnthropicProvider implements AIProvider {
         })),
       });
 
+      this.lastUsageData = {
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+      };
+
       return response.content
         .filter((block) => block.type === 'text')
         .map((block) => {
@@ -79,6 +91,10 @@ export class AnthropicProvider implements AIProvider {
     } catch (err) {
       throw wrapProviderError(err, 'anthropic');
     }
+  }
+
+  getLastUsage(): AIUsage | undefined {
+    return this.lastUsageData;
   }
 
   /**

@@ -26,6 +26,12 @@ export interface AIProviderConfig {
 export type AIProviderName = 'anthropic' | 'openai' | 'ollama';
 export type CodingAgentName = 'claude' | 'cursor' | 'codex';
 
+/** Token usage returned by AI providers after a call. */
+export interface AIUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export interface AIProvider {
   readonly name: AIProviderName;
   readonly model: string;
@@ -41,6 +47,12 @@ export interface AIProvider {
    * Use this when you need the full response before processing (e.g., JSON parsing).
    */
   chatSync(messages: AIMessage[], options?: AIRequestOptions): Promise<string>;
+
+  /**
+   * Get token usage from the most recent call (chat or chatSync).
+   * Returns undefined if the provider doesn't support usage reporting.
+   */
+  getLastUsage(): AIUsage | undefined;
 }
 
 export const DEFAULT_MODELS: Record<AIProviderName, string> = {
