@@ -6,7 +6,7 @@
  */
 
 import path from 'node:path';
-import fse from 'fs-extra';
+import { readFile, readdir, stat } from 'node:fs/promises';
 
 const MAX_FILE_SIZE = 50_000; // 50KB per file
 const MAX_SNIPPET_CHARS = 3_000; // Truncate snippets to this length
@@ -37,9 +37,9 @@ export async function readProjectFile(
   const fullPath = path.join(projectDir, relativePath);
 
   try {
-    const stat = await fse.stat(fullPath);
-    if (stat.size > MAX_FILE_SIZE) return null;
-    return await fse.readFile(fullPath, 'utf-8');
+    const fileStat = await stat(fullPath);
+    if (fileStat.size > MAX_FILE_SIZE) return null;
+    return await readFile(fullPath, 'utf-8');
   } catch {
     return null;
   }
@@ -75,7 +75,7 @@ async function searchDir(
 
   let entries: string[];
   try {
-    entries = await fse.readdir(currentDir);
+    entries = await readdir(currentDir);
   } catch {
     return;
   }
@@ -87,9 +87,9 @@ async function searchDir(
     const fullPath = path.join(currentDir, entry);
 
     try {
-      const stat = await fse.stat(fullPath);
+      const entryStat = await stat(fullPath);
 
-      if (stat.isDirectory()) {
+      if (entryStat.isDirectory()) {
         await searchDir(rootDir, fullPath, keywords, matches, maxResults, depth + 1);
       } else if (isSourceFile(entry)) {
         const lowerEntry = entry.toLowerCase();

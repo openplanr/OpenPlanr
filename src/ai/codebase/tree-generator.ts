@@ -6,7 +6,7 @@
  */
 
 import path from 'node:path';
-import fse from 'fs-extra';
+import { readdir, stat } from 'node:fs/promises';
 
 const IGNORED_DIRS = new Set([
   'node_modules',
@@ -61,7 +61,7 @@ async function walkDir(
 
   let entries: string[];
   try {
-    entries = await fse.readdir(dirPath);
+    entries = await readdir(dirPath);
   } catch {
     return;
   }
@@ -77,8 +77,8 @@ async function walkDir(
   for (const entry of filtered) {
     const fullPath = path.join(dirPath, entry);
     try {
-      const stat = await fse.stat(fullPath);
-      if (stat.isDirectory()) dirs.push(entry);
+      const entryStat = await stat(fullPath);
+      if (entryStat.isDirectory()) dirs.push(entry);
       else files.push(entry);
     } catch {
       // Skip inaccessible entries

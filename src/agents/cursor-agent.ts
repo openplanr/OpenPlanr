@@ -6,6 +6,7 @@
  */
 
 import path from 'node:path';
+import { access } from 'node:fs/promises';
 import { writeFile, ensureDir } from '../utils/fs.js';
 import type { CodingAgent, AgentOptions, AgentResult } from './types.js';
 
@@ -15,8 +16,7 @@ export class CursorAgent implements CodingAgent {
   async isAvailable(): Promise<boolean> {
     // Cursor is available if the project has a .cursor directory
     // or the cursor binary exists
-    const fse = await import('fs-extra');
-    return fse.pathExists(path.join(process.cwd(), '.cursor'));
+    return access(path.join(process.cwd(), '.cursor')).then(() => true).catch(() => false);
   }
 
   async execute(prompt: string, options: AgentOptions): Promise<AgentResult> {

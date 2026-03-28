@@ -87,8 +87,7 @@ export async function executeImplementation(
   }
 
   // 4. Gather parent chain context
-  const ora = (await import('ora')).default;
-  const spinner = ora('Preparing implementation context...').start();
+  logger.info('Preparing implementation context...');
 
   const parents = await getParentChain(projectDir, config, 'task', taskId);
 
@@ -99,14 +98,14 @@ export async function executeImplementation(
   const storyId = taskData.data.storyId as string | undefined;
   if (storyId) {
     storyContent = (await readArtifactRaw(projectDir, config, 'story', storyId)) || undefined;
-    spinner.text = `Read parent story ${storyId}`;
+    logger.debug(`Read parent story ${storyId}`);
   }
 
   if (parents.feature) {
     const featureId = parents.story?.data?.featureId as string | undefined;
     if (featureId) {
       featureContent = (await readArtifactRaw(projectDir, config, 'feature', featureId)) || undefined;
-      spinner.text = `Read parent feature ${featureId}`;
+      logger.debug(`Read parent feature ${featureId}`);
     }
   }
 
@@ -114,12 +113,12 @@ export async function executeImplementation(
     const epicId = parents.feature?.data?.epicId as string | undefined;
     if (epicId) {
       epicContent = (await readArtifactRaw(projectDir, config, 'epic', epicId)) || undefined;
-      spinner.text = `Read parent epic ${epicId}`;
+      logger.debug(`Read parent epic ${epicId}`);
     }
   }
 
   // 5. Build codebase context
-  spinner.text = 'Scanning codebase...';
+  logger.debug('Scanning codebase...');
   let codebaseContext: string | undefined;
   try {
     const { buildCodebaseContext, formatCodebaseContext, extractKeywords } =
@@ -136,13 +135,11 @@ export async function executeImplementation(
     codebaseContext = formatCodebaseContext(ctx);
 
     if (ctx.techStack) {
-      spinner.text = `Stack: ${ctx.techStack.language}${ctx.techStack.framework ? ' + ' + ctx.techStack.framework : ''}`;
+      logger.debug(`Stack: ${ctx.techStack.language}${ctx.techStack.framework ? ' + ' + ctx.techStack.framework : ''}`);
     }
   } catch {
     // Codebase scanning is best-effort
   }
-
-  spinner.stop();
 
   // Show context summary
   logger.success(`Read ${taskId} (${allSubtasks.length} subtasks)`);

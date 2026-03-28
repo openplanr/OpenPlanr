@@ -49,15 +49,10 @@ export function registerRefineCommand(program: Command) {
 
       logger.heading(`Refine ${artifactId}`);
 
-      const ora = (await import('ora')).default;
-      const spinner = ora('AI is reviewing your artifact...').start();
-
       try {
         const provider = await getAIProvider(config);
         const messages = buildRefinePrompt(rawContent, type);
         const result = await generateJSON(provider, messages, aiRefineResponseSchema);
-
-        spinner.stop();
 
         // Resolve improvedMarkdown — if AI returned JSON instead of markdown, reconstruct it
         let markdown = result.improvedMarkdown;
@@ -111,7 +106,6 @@ export function registerRefineCommand(program: Command) {
         await updateArtifact(projectDir, config, type, artifactId, markdown);
         logger.success(`Applied improvements to ${artifactId}.`);
       } catch (err) {
-        spinner.stop();
         const { AIError } = await import('../../ai/errors.js');
         if (err instanceof AIError) {
           logger.error(err.userMessage);

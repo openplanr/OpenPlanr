@@ -1,28 +1,28 @@
-import fse from 'fs-extra';
+import { mkdir, writeFile as fsWriteFile, readFile as fsReadFile, readdir, access } from 'node:fs/promises';
 import path from 'node:path';
 
 export async function ensureDir(dirPath: string): Promise<void> {
-  await fse.ensureDir(dirPath);
+  await mkdir(dirPath, { recursive: true });
 }
 
 export async function writeFile(filePath: string, content: string): Promise<void> {
-  await fse.ensureDir(path.dirname(filePath));
-  await fse.writeFile(filePath, content, 'utf-8');
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await fsWriteFile(filePath, content, 'utf-8');
 }
 
 export async function readFile(filePath: string): Promise<string> {
-  return fse.readFile(filePath, 'utf-8');
+  return fsReadFile(filePath, 'utf-8');
 }
 
 export async function fileExists(filePath: string): Promise<boolean> {
-  return fse.pathExists(filePath);
+  return access(filePath).then(() => true).catch(() => false);
 }
 
 export async function listFiles(dirPath: string, pattern?: RegExp): Promise<string[]> {
-  const exists = await fse.pathExists(dirPath);
+  const exists = await access(dirPath).then(() => true).catch(() => false);
   if (!exists) return [];
 
-  const entries = await fse.readdir(dirPath);
+  const entries = await readdir(dirPath);
   if (pattern) {
     return entries.filter((e) => pattern.test(e));
   }
