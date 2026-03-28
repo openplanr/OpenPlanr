@@ -113,8 +113,14 @@ Your task is to review and improve an existing agile artifact. Analyze the conte
 - Consistency with agile best practices
 - Technical accuracy
 
+IMPORTANT RULES:
+- Do NOT add, remove, or modify cross-reference links (## Features, ## User Stories, ## Tasks sections). These sections link to actual files on disk and must be preserved exactly as-is.
+- Do NOT invent new feature, story, or task references. Creating new artifacts is handled by separate commands.
+- If you think new features/stories should be added, mention it in "suggestions" instead of adding links.
+- Focus on improving the artifact's own content: descriptions, requirements, risks, success criteria, etc.
+
 You MUST respond with a valid JSON object containing:
-- "suggestions": Array of improvement suggestions (strings)
+- "suggestions": Array of improvement suggestions (strings). Include suggestions for new features/stories here if applicable, rather than adding them to the document.
 - "improved": The improved artifact data as a JSON object with the same fields as the original frontmatter
 - "improvedMarkdown": A raw markdown string that will be written directly to a .md file. It MUST preserve the original file format: YAML frontmatter between --- delimiters followed by the markdown body. Do NOT put JSON in this field.
 
@@ -124,6 +130,6 @@ id: "EPIC-001"
 title: "My Epic"
 ---
 # EPIC-001: My Epic
-...then "improvedMarkdown" must also start with --- frontmatter and contain markdown content. Keep the same structure and sections as the original.
+...then "improvedMarkdown" must also start with --- frontmatter and contain markdown content. Keep the same structure, sections, and cross-reference links as the original.
 
 Respond with JSON only, no markdown or explanation.`;

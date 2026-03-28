@@ -141,9 +141,15 @@ export function buildTasksPrompt(ctx: TasksPromptInput): AIMessage[] {
 
 export function buildRefinePrompt(
   artifactContent: string,
-  artifactType: string
+  artifactType: string,
+  parentContext?: { type: string; content: string }
 ): AIMessage[] {
-  const userContent = `Review and improve this ${artifactType} artifact. The "improvedMarkdown" in your response must preserve the same file format (YAML frontmatter + markdown body) as shown below:\n\n${artifactContent}`;
+  let userContent = `Review and improve this ${artifactType} artifact. The "improvedMarkdown" in your response must preserve the same file format (YAML frontmatter + markdown body) as shown below:\n\n${artifactContent}`;
+
+  if (parentContext) {
+    userContent += `\n\n--- Updated Parent ${parentContext.type} (align with this) ---\n${parentContext.content}`;
+    userContent += `\n\nIMPORTANT: The parent ${parentContext.type} above was just refined. Ensure this ${artifactType} is aligned with the updated parent — its scope, terminology, requirements, and priorities should be consistent.`;
+  }
 
   return [
     { role: 'system', content: REFINE_SYSTEM_PROMPT },

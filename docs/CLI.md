@@ -377,11 +377,13 @@ AI-powered review and improvement suggestions for any existing artifact.
 planr refine EPIC-001               # review an epic
 planr refine FEAT-002               # review a feature
 planr refine US-003                  # review a user story
+planr refine EPIC-001 --cascade     # refine epic + all features → stories → tasks
 ```
 
-| Argument | Description | Required |
-|----------|-------------|----------|
+| Argument/Option | Description | Required |
+|-----------------|-------------|----------|
 | `<artifactId>` | Any artifact ID (EPIC-001, FEAT-002, US-003, TASK-004) | **Yes** |
+| `--cascade` | Refine all children down the hierarchy after this artifact | No |
 
 The AI analyzes the artifact and provides:
 1. A list of improvement suggestions
@@ -391,6 +393,10 @@ After review, you can:
 - **Apply** — write the improved version to disk
 - **View** — preview the improved version, then choose to apply or skip
 - **Skip** — keep the original unchanged
+
+With `--cascade`, the command automatically proceeds to refine all child artifacts after the parent. The cascade follows the full hierarchy: epic → features → stories → tasks. Each child still gets its own view/apply/skip prompt.
+
+Without `--cascade`, the command suggests next steps after applying (shows child artifacts that may need re-alignment).
 
 Requires AI to be configured.
 
