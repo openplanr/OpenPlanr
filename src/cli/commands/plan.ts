@@ -288,7 +288,7 @@ async function generateTasksForStory(
   logger.dim(`\n[4/4] Generating tasks for ${storyId}...`);
   ctx.scope = { type: 'story', id: storyId };
   const taskMessages = buildTasksPrompt(ctx);
-  const { result } = await generateStreamingJSON(provider, taskMessages, aiTasksResponseSchema, { maxTokens: TOKEN_BUDGETS.task });
+  const { result } = await generateStreamingJSON(provider, taskMessages, aiTasksResponseSchema, { maxTokens: TOKEN_BUDGETS.plan });
 
   const tasks = result.tasks.map((tg) => ({
     id: tg.id,
