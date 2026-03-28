@@ -62,8 +62,9 @@ export function registerInitCommand(program: Command) {
               `API key (or press Enter to set ${keyHint} env var later):`
             );
             if (apiKey.trim()) {
-              await saveCredential(provider, apiKey.trim());
-              logger.success(`API key saved to ~/.planr/credentials.json`);
+              const storage = await saveCredential(provider, apiKey.trim());
+              const where = storage === 'keychain' ? 'OS keychain' : 'encrypted file (~/.planr/credentials.enc)';
+              logger.success(`API key saved to ${where}`);
             } else {
               logger.dim(`  No key provided. Set ${keyHint} env var or run \`planr config set-key ${provider}\`.`);
             }

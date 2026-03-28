@@ -6,7 +6,8 @@
 
 import { Command } from 'commander';
 import { loadConfig, saveConfig } from '../../services/config-service.js';
-import { saveCredential, resolveApiKey } from '../../services/credentials-service.js';
+import { saveCredential, resolveApiKeySource } from '../../services/credentials-service.js';
+import { ENV_KEY_MAP } from '../../ai/types.js';
 import { promptSelect, promptSecret } from '../../services/prompt-service.js';
 import { logger } from '../../utils/logger.js';
 import type { AIProviderName, CodingAgentName } from '../../models/types.js';
@@ -31,10 +32,16 @@ export function registerConfigCommand(program: Command) {
         console.log(`  AI Provider:  ${cfg.ai.provider}`);
         console.log(`  AI Model:     ${cfg.ai.model || '(default)'}`);
 
-        const key = await resolveApiKey(cfg.ai.provider);
-        if (key) {
-          const masked = key.slice(0, 8) + '...' + key.slice(-4);
-          console.log(`  API Key:      ${masked}`);
+        const resolved = await resolveApiKeySource(cfg.ai.provider);
+        if (resolved) {
+          const masked = resolved.key.slice(0, 8) + '...' + resolved.key.slice(-4);
+          const sourceLabel =
+            resolved.source === 'env'
+              ? `env: ${ENV_KEY_MAP[cfg.ai.provider] ?? 'env'}`
+              : resolved.source === 'keychain'
+                ? 'OS keychain'
+                : 'encrypted file';
+          console.log(`  API Key:      ${masked} (${sourceLabel})`);
         } else {
           console.log(`  API Key:      (not set)`);
         }
@@ -86,8 +93,9 @@ export function registerConfigCommand(program: Command) {
         return;
       }
 
-      await saveCredential(selected, key.trim());
-      logger.success(`API key for ${selected} saved to ~/.planr/credentials.json`);
+      const storage = await saveCredential(selected, key.trim());
+      const where = storage === 'keychain' ? 'OS keychain' : 'encrypted file (~/.planr/credentials.enc)';
+      logger.success(`API key for ${selected} saved to ${where}`);
     });
 
   config

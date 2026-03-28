@@ -1,74 +1,159 @@
 /**
- * Manages API key storage in the user's home directory.
+ * Manages API key storage with a secure fallback chain.
  *
- * Keys are stored in ~/.planr/credentials.json with restricted
- * file permissions (0o600). Environment variables take precedence
- * over stored credentials.
+ * Resolution order:
+ * 1. Environment variable (ANTHROPIC_API_KEY, OPENAI_API_KEY)
+ * 2. OS Keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service)
+ * 3. Encrypted file (~/.planr/credentials.enc) with AES-256-GCM
+ * 4. undefined (caller decides how to handle)
+ *
+ * Keys are automatically migrated from the legacy plaintext
+ * ~/.planr/credentials.json on first access.
  */
 
-import path from 'node:path';
-import os from 'node:os';
-import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
 import { ENV_KEY_MAP } from '../ai/types.js';
+import type { CredentialSource } from './credential-backends.js';
+import {
+  keychainBackend,
+  encryptedFileBackend,
+  legacyBackend,
+} from './credential-backends.js';
 
-const CREDENTIALS_DIR = path.join(os.homedir(), '.planr');
-const CREDENTIALS_FILE = path.join(CREDENTIALS_DIR, 'credentials.json');
+// ---------------------------------------------------------------------------
+// Migration
+// ---------------------------------------------------------------------------
 
-interface Credentials {
-  [provider: string]: string;
-}
-
-async function pathExists(p: string): Promise<boolean> {
-  return access(p).then(() => true).catch(() => false);
-}
-
-export async function loadCredentials(): Promise<Credentials> {
-  if (!(await pathExists(CREDENTIALS_FILE))) return {};
-
-  try {
-    const raw = await readFile(CREDENTIALS_FILE, 'utf-8');
-    return JSON.parse(raw) as Credentials;
-  } catch {
-    return {};
-  }
-}
-
-export async function saveCredential(provider: string, apiKey: string): Promise<void> {
-  await mkdir(CREDENTIALS_DIR, { recursive: true });
-
-  const credentials = await loadCredentials();
-  credentials[provider] = apiKey;
-
-  await writeFile(CREDENTIALS_FILE, JSON.stringify(credentials, null, 2), {
-    encoding: 'utf-8',
-    mode: 0o600,
-  });
-}
-
-export async function clearCredential(provider: string): Promise<void> {
-  const credentials = await loadCredentials();
-  delete credentials[provider];
-
-  await writeFile(CREDENTIALS_FILE, JSON.stringify(credentials, null, 2), {
-    encoding: 'utf-8',
-    mode: 0o600,
-  });
-}
+let migrationDone = false;
 
 /**
- * Resolve API key for a provider using the fallback chain:
+ * Migrate credentials from legacy plaintext file to the preferred backend.
+ * Runs once per process, transparently on first key resolution.
+ */
+export async function migrateCredentials(): Promise<boolean> {
+  if (migrationDone) return false;
+  migrationDone = true;
+
+  if (!(await legacyBackend.exists())) return false;
+
+  const credentials = await legacyBackend.loadAll();
+  const providers = Object.keys(credentials);
+  if (providers.length === 0) {
+    await legacyBackend.remove();
+    return false;
+  }
+
+  // Migrate each key to the best available backend
+  for (const provider of providers) {
+    await saveCredential(provider, credentials[provider]);
+  }
+
+  // Remove the plaintext file
+  await legacyBackend.remove();
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve API key for a provider using the secure fallback chain:
  * 1. Environment variable (ANTHROPIC_API_KEY, OPENAI_API_KEY)
- * 2. ~/.planr/credentials.json
- * 3. undefined (caller decides how to handle)
+ * 2. OS Keychain
+ * 3. Encrypted file (~/.planr/credentials.enc)
+ * 4. undefined
  */
 export async function resolveApiKey(provider: string): Promise<string | undefined> {
-  // Check environment variable first
+  // Run one-time migration from legacy plaintext file
+  await migrateCredentials();
+
+  // 1. Environment variable
   const envVar = ENV_KEY_MAP[provider];
   if (envVar && process.env[envVar]) {
     return process.env[envVar];
   }
 
-  // Fall back to stored credentials
-  const credentials = await loadCredentials();
-  return credentials[provider];
+  // 2. OS Keychain
+  if (await keychainBackend.isAvailable()) {
+    const key = await keychainBackend.get(provider);
+    if (key) return key;
+  }
+
+  // 3. Encrypted file
+  const key = await encryptedFileBackend.get(provider);
+  if (key) return key;
+
+  return undefined;
+}
+
+/** Resolve the source where the API key is stored. */
+export async function resolveApiKeySource(
+  provider: string
+): Promise<{ key: string; source: CredentialSource } | undefined> {
+  // 1. Environment variable
+  const envVar = ENV_KEY_MAP[provider];
+  if (envVar && process.env[envVar]) {
+    return { key: process.env[envVar]!, source: 'env' };
+  }
+
+  // 2. OS Keychain
+  if (await keychainBackend.isAvailable()) {
+    const key = await keychainBackend.get(provider);
+    if (key) return { key, source: 'keychain' };
+  }
+
+  // 3. Encrypted file
+  const key = await encryptedFileBackend.get(provider);
+  if (key) return { key, source: 'encrypted-file' };
+
+  return undefined;
+}
+
+/**
+ * Save an API key to the best available secure backend.
+ * Prefers OS keychain; falls back to encrypted file.
+ */
+export async function saveCredential(provider: string, apiKey: string): Promise<CredentialSource> {
+  if (await keychainBackend.isAvailable()) {
+    await keychainBackend.set(provider, apiKey);
+    return 'keychain';
+  }
+
+  await encryptedFileBackend.set(provider, apiKey);
+  return 'encrypted-file';
+}
+
+/** Delete a stored credential from all backends. */
+export async function clearCredential(provider: string): Promise<void> {
+  await keychainBackend.delete(provider);
+  await encryptedFileBackend.delete(provider);
+}
+
+/**
+ * Load all stored credentials (for display/diagnostic purposes).
+ * Aggregates from keychain and encrypted file.
+ */
+export async function loadCredentials(): Promise<Record<string, string>> {
+  const result: Record<string, string> = {};
+
+  // Load from encrypted file first
+  for (const provider of ['anthropic', 'openai']) {
+    const key = await encryptedFileBackend.get(provider);
+    if (key) result[provider] = key;
+  }
+
+  // Keychain entries override (they're the preferred backend)
+  if (await keychainBackend.isAvailable()) {
+    for (const provider of ['anthropic', 'openai']) {
+      const key = await keychainBackend.get(provider);
+      if (key) result[provider] = key;
+    }
+  }
+
+  return result;
+}
+
+/** Reset migration flag — only used in tests. */
+export function _resetMigration(): void {
+  migrationDone = false;
 }
