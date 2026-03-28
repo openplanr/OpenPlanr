@@ -94,37 +94,42 @@ export async function generateJSON<T>(
   let totalUsage: AIUsage = { inputTokens: 0, outputTokens: 0 };
 
   const spinner = createSpinner('Generating...');
-  let rawResponse = await provider.chatSync(messages, requestOptions);
-  accumulateUsage(totalUsage, provider.getLastUsage());
-  let parsed = tryParseAndValidate(rawResponse, schema);
+  try {
+    let rawResponse = await provider.chatSync(messages, requestOptions);
+    accumulateUsage(totalUsage, provider.getLastUsage());
+    let parsed = tryParseAndValidate(rawResponse, schema);
 
-  if (parsed.success) {
+    if (parsed.success) {
+      spinner.succeed(`Done${formatUsage(totalUsage)}`);
+      return { result: parsed.data, usage: totalUsage };
+    }
+
+    // Retry once with error feedback
+    spinner.update('Retrying...');
+    const retryMessages: AIMessage[] = [
+      ...messages,
+      { role: 'assistant', content: rawResponse },
+      {
+        role: 'user',
+        content: `Your response was not valid JSON or failed validation:\n${parsed.error}\n\nPlease fix and return valid JSON only.`,
+      },
+    ];
+
+    rawResponse = await provider.chatSync(retryMessages, requestOptions);
+    accumulateUsage(totalUsage, provider.getLastUsage());
     spinner.succeed(`Done${formatUsage(totalUsage)}`);
-    return { result: parsed.data, usage: totalUsage };
+    parsed = tryParseAndValidate(rawResponse, schema);
+
+    if (parsed.success) return { result: parsed.data, usage: totalUsage };
+
+    throw new AIError(
+      `AI returned invalid JSON after retry: ${parsed.error}`,
+      'invalid_response'
+    );
+  } catch (err) {
+    spinner.stop();
+    throw err;
   }
-
-  // Retry once with error feedback
-  spinner.update('Retrying...');
-  const retryMessages: AIMessage[] = [
-    ...messages,
-    { role: 'assistant', content: rawResponse },
-    {
-      role: 'user',
-      content: `Your response was not valid JSON or failed validation:\n${parsed.error}\n\nPlease fix and return valid JSON only.`,
-    },
-  ];
-
-  rawResponse = await provider.chatSync(retryMessages, requestOptions);
-  accumulateUsage(totalUsage, provider.getLastUsage());
-  spinner.succeed(`Done${formatUsage(totalUsage)}`);
-  parsed = tryParseAndValidate(rawResponse, schema);
-
-  if (parsed.success) return { result: parsed.data, usage: totalUsage };
-
-  throw new AIError(
-    `AI returned invalid JSON after retry: ${parsed.error}`,
-    'invalid_response'
-  );
 }
 
 /**
@@ -148,39 +153,48 @@ export async function generateStreamingJSON<T>(
   // Stream the response, showing spinner for progress
   const chunks: string[] = [];
   const spinner = createSpinner('Generating...');
-  const stream = provider.chat(messages, requestOptions);
+  try {
+    const stream = provider.chat(messages, requestOptions);
 
-  for await (const chunk of stream) {
-    chunks.push(chunk);
+    for await (const chunk of stream) {
+      chunks.push(chunk);
+    }
+    accumulateUsage(totalUsage, provider.getLastUsage());
+
+    const rawResponse = chunks.join('');
+    let parsed = tryParseAndValidate(rawResponse, schema);
+
+    if (parsed.success) {
+      spinner.succeed(`Done${formatUsage(totalUsage)}`);
+      return { result: parsed.data, usage: totalUsage };
+    }
+
+    // Retry once with error feedback (non-streaming for retry)
+    spinner.update('Retrying...');
+    const retryMessages: AIMessage[] = [
+      ...messages,
+      { role: 'assistant', content: rawResponse },
+      {
+        role: 'user',
+        content: `Your response was not valid JSON or failed validation:\n${parsed.error}\n\nPlease fix and return valid JSON only.`,
+      },
+    ];
+
+    const retryResponse = await provider.chatSync(retryMessages, requestOptions);
+    accumulateUsage(totalUsage, provider.getLastUsage());
+    spinner.succeed(`Done${formatUsage(totalUsage)}`);
+    parsed = tryParseAndValidate(retryResponse, schema);
+
+    if (parsed.success) return { result: parsed.data, usage: totalUsage };
+
+    throw new AIError(
+      `AI returned invalid JSON after retry: ${parsed.error}`,
+      'invalid_response'
+    );
+  } catch (err) {
+    spinner.stop();
+    throw err;
   }
-  accumulateUsage(totalUsage, provider.getLastUsage());
-  spinner.succeed(`Done${formatUsage(totalUsage)}`);
-
-  const rawResponse = chunks.join('');
-  let parsed = tryParseAndValidate(rawResponse, schema);
-
-  if (parsed.success) return { result: parsed.data, usage: totalUsage };
-
-  // Retry once with error feedback (non-streaming for retry)
-  const retryMessages: AIMessage[] = [
-    ...messages,
-    { role: 'assistant', content: rawResponse },
-    {
-      role: 'user',
-      content: `Your response was not valid JSON or failed validation:\n${parsed.error}\n\nPlease fix and return valid JSON only.`,
-    },
-  ];
-
-  const retryResponse = await provider.chatSync(retryMessages, requestOptions);
-  accumulateUsage(totalUsage, provider.getLastUsage());
-  parsed = tryParseAndValidate(retryResponse, schema);
-
-  if (parsed.success) return { result: parsed.data, usage: totalUsage };
-
-  throw new AIError(
-    `AI returned invalid JSON after retry: ${parsed.error}`,
-    'invalid_response'
-  );
 }
 
 /** Extract JSON from a response that might contain markdown code fences. */
