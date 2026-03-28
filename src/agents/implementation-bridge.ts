@@ -190,6 +190,9 @@ export async function executeImplementation(
     return;
   }
 
+  logger.dim(
+    `Prompt: ${prompt.length.toLocaleString()} chars (~${Math.ceil(prompt.length / 4).toLocaleString()} tokens)`,
+  );
   logger.heading(`Launching ${agentName}...`);
   console.log(chalk.dim('━'.repeat(60)));
 
