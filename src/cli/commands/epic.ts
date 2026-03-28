@@ -13,6 +13,7 @@ import { isAIConfigured, getAIProvider, generateStreamingJSON } from '../../serv
 import { promptText, promptMultiText, promptSelect, promptEditor } from '../../services/prompt-service.js';
 import { buildEpicPrompt } from '../../ai/prompts/prompt-builder.js';
 import { aiEpicResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
+import { TOKEN_BUDGETS } from '../../ai/types.js';
 import { logger } from '../../utils/logger.js';
 import chalk from 'chalk';
 
@@ -113,7 +114,7 @@ async function createEpicWithAI(
   try {
     const provider = await getAIProvider(config);
     const messages = buildEpicPrompt(brief, existingTitles);
-    let { result: epicData } = await generateStreamingJSON(provider, messages, aiEpicResponseSchema);
+    let { result: epicData } = await generateStreamingJSON(provider, messages, aiEpicResponseSchema, { maxTokens: TOKEN_BUDGETS.epic });
 
     displayEpic(epicData);
 
@@ -134,7 +135,7 @@ async function createEpicWithAI(
 
       if (action === 'regenerate') {
         logger.dim('Regenerating...');
-        ({ result: epicData } = await generateStreamingJSON(provider, messages, aiEpicResponseSchema));
+        ({ result: epicData } = await generateStreamingJSON(provider, messages, aiEpicResponseSchema, { maxTokens: TOKEN_BUDGETS.epic }));
         displayEpic(epicData);
         continue;
       }

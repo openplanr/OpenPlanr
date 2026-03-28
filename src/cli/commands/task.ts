@@ -22,6 +22,7 @@ import { isAIConfigured, getAIProvider, generateStreamingJSON } from '../../serv
 import { promptText, promptMultiText, promptConfirm } from '../../services/prompt-service.js';
 import { buildTasksPrompt } from '../../ai/prompts/prompt-builder.js';
 import { aiTasksResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
+import { TOKEN_BUDGETS } from '../../ai/types.js';
 import { gatherStoryArtifacts, gatherFeatureArtifacts } from '../../services/artifact-gathering.js';
 import { logger } from '../../utils/logger.js';
 import chalk from 'chalk';
@@ -280,7 +281,7 @@ async function createTasksWithAI(
     ctx.scope = { type: 'story', id: storyId };
     const messages = buildTasksPrompt(ctx);
     logger.debug(`Task prompt: ${messages.length} messages, user content ${messages[1]?.content.length ?? 0} chars`);
-    const { result } = await generateStreamingJSON(provider, messages, aiTasksResponseSchema);
+    const { result } = await generateStreamingJSON(provider, messages, aiTasksResponseSchema, { maxTokens: TOKEN_BUDGETS.task });
 
     displayTaskPreview(result);
 
@@ -380,7 +381,7 @@ async function createTasksFromFeature(
     ctx.scope = { type: 'feature', id: featureId };
     const messages = buildTasksPrompt(ctx);
     logger.debug(`Task prompt: ${messages.length} messages, user content ${messages[1]?.content.length ?? 0} chars`);
-    const { result } = await generateStreamingJSON(provider, messages, aiTasksResponseSchema);
+    const { result } = await generateStreamingJSON(provider, messages, aiTasksResponseSchema, { maxTokens: TOKEN_BUDGETS.taskFeature });
 
     displayTaskPreview(result);
 

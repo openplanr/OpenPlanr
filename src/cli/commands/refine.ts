@@ -19,6 +19,7 @@ import {
 } from '../../services/artifact-service.js';
 import { isAIConfigured, getAIProvider, generateJSON, accumulateUsage } from '../../services/ai-service.js';
 import type { AIUsage } from '../../ai/types.js';
+import { TOKEN_BUDGETS } from '../../ai/types.js';
 import { buildRefinePrompt } from '../../ai/prompts/prompt-builder.js';
 import { aiRefineResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
 import { toMarkdownWithFrontmatter } from '../../utils/markdown.js';
@@ -98,7 +99,7 @@ async function refineOne(
   logger.heading(`Refine ${artifactId}`);
 
   const messages = buildRefinePrompt(rawContent, type, parentContext);
-  const { result } = await generateJSON(provider, messages, aiRefineResponseSchema);
+  const { result } = await generateJSON(provider, messages, aiRefineResponseSchema, { maxTokens: TOKEN_BUDGETS.refine });
 
   // Resolve improvedMarkdown — if AI returned JSON instead of markdown, reconstruct it
   let markdown = result.improvedMarkdown;

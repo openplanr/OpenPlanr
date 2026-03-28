@@ -19,6 +19,7 @@ import { isAIConfigured, getAIProvider, generateStreamingJSON } from '../../serv
 import { promptText, promptMultiText, promptConfirm } from '../../services/prompt-service.js';
 import { buildFeaturesPrompt } from '../../ai/prompts/prompt-builder.js';
 import { aiFeaturesResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
+import { TOKEN_BUDGETS } from '../../ai/types.js';
 import { logger } from '../../utils/logger.js';
 import chalk from 'chalk';
 
@@ -121,7 +122,7 @@ async function createFeaturesWithAI(
   try {
     const provider = await getAIProvider(config);
     const messages = buildFeaturesPrompt(epicRaw, existingTitles, featureCount);
-    const { result } = await generateStreamingJSON(provider, messages, aiFeaturesResponseSchema);
+    const { result } = await generateStreamingJSON(provider, messages, aiFeaturesResponseSchema, { maxTokens: TOKEN_BUDGETS.feature });
 
     // Display generated features
     console.log(chalk.dim('━'.repeat(50)));

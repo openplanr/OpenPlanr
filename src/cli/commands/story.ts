@@ -23,6 +23,7 @@ import { renderTemplate } from '../../services/template-service.js';
 import { writeFile } from '../../utils/fs.js';
 import { buildStoriesPrompt } from '../../ai/prompts/prompt-builder.js';
 import { aiStoriesResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
+import { TOKEN_BUDGETS } from '../../ai/types.js';
 import { logger } from '../../utils/logger.js';
 import chalk from 'chalk';
 
@@ -227,7 +228,7 @@ async function createStoriesWithAI(
   try {
     const provider = await getAIProvider(config);
     const messages = buildStoriesPrompt(featureRaw, epicRaw, existingTitles);
-    const { result } = await generateStreamingJSON(provider, messages, aiStoriesResponseSchema);
+    const { result } = await generateStreamingJSON(provider, messages, aiStoriesResponseSchema, { maxTokens: TOKEN_BUDGETS.story });
 
     // Display generated stories
     console.log(chalk.dim('━'.repeat(50)));

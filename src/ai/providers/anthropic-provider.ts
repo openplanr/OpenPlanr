@@ -6,6 +6,7 @@
  */
 
 import type { AIProvider, AIMessage, AIRequestOptions, AIProviderName, AIUsage } from '../types.js';
+import { DEFAULT_MAX_TOKENS } from '../types.js';
 import { wrapProviderError } from '../errors.js';
 
 export class AnthropicProvider implements AIProvider {
@@ -32,7 +33,7 @@ export class AnthropicProvider implements AIProvider {
     try {
       const stream = client.messages.stream({
         model: this.model,
-        max_tokens: options?.maxTokens || 4096,
+        max_tokens: options?.maxTokens ?? DEFAULT_MAX_TOKENS,
         temperature: options?.temperature ?? 0.7,
         system: system || undefined,
         messages: userMessages.map((m) => ({
@@ -54,6 +55,7 @@ export class AnthropicProvider implements AIProvider {
       this.lastUsageData = {
         inputTokens: finalMessage.usage.input_tokens,
         outputTokens: finalMessage.usage.output_tokens,
+        truncated: finalMessage.stop_reason === 'max_tokens',
       };
     } catch (err) {
       throw wrapProviderError(err, 'anthropic');
@@ -67,7 +69,7 @@ export class AnthropicProvider implements AIProvider {
     try {
       const response = await client.messages.create({
         model: this.model,
-        max_tokens: options?.maxTokens || 4096,
+        max_tokens: options?.maxTokens ?? DEFAULT_MAX_TOKENS,
         temperature: options?.temperature ?? 0.7,
         system: system || undefined,
         messages: userMessages.map((m) => ({
@@ -79,6 +81,7 @@ export class AnthropicProvider implements AIProvider {
       this.lastUsageData = {
         inputTokens: response.usage.input_tokens,
         outputTokens: response.usage.output_tokens,
+        truncated: response.stop_reason === 'max_tokens',
       };
 
       return response.content

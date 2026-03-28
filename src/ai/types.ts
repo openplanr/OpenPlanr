@@ -30,7 +30,30 @@ export type CodingAgentName = 'claude' | 'cursor' | 'codex';
 export interface AIUsage {
   inputTokens: number;
   outputTokens: number;
+  /** Whether the response was truncated because it hit the max_tokens limit. */
+  truncated?: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Token budget constants
+// ---------------------------------------------------------------------------
+
+/** Default max output tokens when no command-specific budget is set. */
+export const DEFAULT_MAX_TOKENS = 8192;
+
+/**
+ * Per-command token budgets tuned to typical output sizes.
+ * Commands producing larger outputs get higher budgets.
+ */
+export const TOKEN_BUDGETS = {
+  epic: 4096,
+  feature: 8192,
+  story: 8192,
+  task: 16384,
+  taskFeature: 32768,
+  refine: 8192,
+  plan: 16384,
+} as const;
 
 export interface AIProvider {
   readonly name: AIProviderName;

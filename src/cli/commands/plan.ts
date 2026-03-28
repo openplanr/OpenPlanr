@@ -38,6 +38,7 @@ import { logger } from '../../utils/logger.js';
 import chalk from 'chalk';
 import type { OpenPlanrConfig } from '../../models/types.js';
 import type { AIProvider } from '../../ai/types.js';
+import { TOKEN_BUDGETS } from '../../ai/types.js';
 
 export function registerPlanCommand(program: Command) {
   program
@@ -98,7 +99,7 @@ async function planFromScratch(
 
   logger.dim('\n[1/4] Generating epic...');
   const epicMessages = buildEpicPrompt(brief, existingTitles);
-  const { result: epicData } = await generateStreamingJSON(provider, epicMessages, aiEpicResponseSchema);
+  const { result: epicData } = await generateStreamingJSON(provider, epicMessages, aiEpicResponseSchema, { maxTokens: TOKEN_BUDGETS.epic });
 
   console.log(chalk.bold(`\n  Epic: ${epicData.title}`));
   console.log(chalk.dim(`  ${epicData.solutionOverview}`));
@@ -142,7 +143,7 @@ async function planFromEpic(
 
   logger.dim('\n[2/4] Generating features...');
   const featureMessages = buildFeaturesPrompt(epicRaw, existingFeatureTitles);
-  const { result: featureResult } = await generateStreamingJSON(provider, featureMessages, aiFeaturesResponseSchema);
+  const { result: featureResult } = await generateStreamingJSON(provider, featureMessages, aiFeaturesResponseSchema, { maxTokens: TOKEN_BUDGETS.feature });
 
   console.log(chalk.bold(`\n  Generated ${featureResult.features.length} features:`));
   featureResult.features.forEach((f, i) => {
@@ -221,7 +222,7 @@ async function planFromFeature(
 
   logger.dim(`\n[3/4] Generating stories for ${featureId}...`);
   const storyMessages = buildStoriesPrompt(featureRaw, epicRaw, existingStoryTitles);
-  const { result: storyResult } = await generateStreamingJSON(provider, storyMessages, aiStoriesResponseSchema);
+  const { result: storyResult } = await generateStreamingJSON(provider, storyMessages, aiStoriesResponseSchema, { maxTokens: TOKEN_BUDGETS.story });
 
   console.log(chalk.dim(`  Generated ${storyResult.stories.length} stories for ${featureId}`));
 
@@ -287,7 +288,7 @@ async function generateTasksForStory(
   logger.dim(`\n[4/4] Generating tasks for ${storyId}...`);
   ctx.scope = { type: 'story', id: storyId };
   const taskMessages = buildTasksPrompt(ctx);
-  const { result } = await generateStreamingJSON(provider, taskMessages, aiTasksResponseSchema);
+  const { result } = await generateStreamingJSON(provider, taskMessages, aiTasksResponseSchema, { maxTokens: TOKEN_BUDGETS.plan });
 
   const tasks = result.tasks.map((tg) => ({
     id: tg.id,

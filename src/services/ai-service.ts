@@ -92,38 +92,55 @@ export async function generateJSON<T>(
   };
 
   let totalUsage: AIUsage = { inputTokens: 0, outputTokens: 0 };
+  let wasTruncated = false;
 
   const spinner = createSpinner('Generating...');
   try {
     let rawResponse = await provider.chatSync(messages, requestOptions);
-    accumulateUsage(totalUsage, provider.getLastUsage());
-    let parsed = tryParseAndValidate(rawResponse, schema);
+    const firstUsage = provider.getLastUsage();
+    accumulateUsage(totalUsage, firstUsage);
+    wasTruncated = firstUsage?.truncated === true;
 
-    if (parsed.success) {
+    // If truncated, skip validation — JSON is guaranteed to be incomplete
+    if (!wasTruncated) {
+      const parsed = tryParseAndValidate(rawResponse, schema);
+      if (parsed.success) {
+        spinner.succeed(`Done${formatUsage(totalUsage)}`);
+        return { result: parsed.data, usage: totalUsage };
+      }
+
+      // Retry once with error feedback
+      spinner.update('Retrying...');
+      const retryMessages: AIMessage[] = [
+        ...messages,
+        { role: 'assistant', content: rawResponse },
+        {
+          role: 'user',
+          content: `Your response was not valid JSON or failed validation:\n${parsed.error}\n\nPlease fix and return valid JSON only.`,
+        },
+      ];
+
+      rawResponse = await provider.chatSync(retryMessages, requestOptions);
+      const retryUsage = provider.getLastUsage();
+      accumulateUsage(totalUsage, retryUsage);
+      wasTruncated = retryUsage?.truncated === true;
       spinner.succeed(`Done${formatUsage(totalUsage)}`);
-      return { result: parsed.data, usage: totalUsage };
+
+      if (!wasTruncated) {
+        const retryParsed = tryParseAndValidate(rawResponse, schema);
+        if (retryParsed.success) return { result: retryParsed.data, usage: totalUsage };
+
+        throw new AIError(
+          `AI returned invalid JSON after retry: ${retryParsed.error}`,
+          'invalid_response'
+        );
+      }
     }
 
-    // Retry once with error feedback
-    spinner.update('Retrying...');
-    const retryMessages: AIMessage[] = [
-      ...messages,
-      { role: 'assistant', content: rawResponse },
-      {
-        role: 'user',
-        content: `Your response was not valid JSON or failed validation:\n${parsed.error}\n\nPlease fix and return valid JSON only.`,
-      },
-    ];
-
-    rawResponse = await provider.chatSync(retryMessages, requestOptions);
-    accumulateUsage(totalUsage, provider.getLastUsage());
-    spinner.succeed(`Done${formatUsage(totalUsage)}`);
-    parsed = tryParseAndValidate(rawResponse, schema);
-
-    if (parsed.success) return { result: parsed.data, usage: totalUsage };
-
+    // Response was truncated — provide actionable error
+    spinner.stop();
     throw new AIError(
-      `AI returned invalid JSON after retry: ${parsed.error}`,
+      `AI response was truncated at ${totalUsage.outputTokens.toLocaleString()} output tokens (hit max_tokens limit). Try a smaller scope (e.g., --story instead of --feature).`,
       'invalid_response'
     );
   } catch (err) {
@@ -149,6 +166,7 @@ export async function generateStreamingJSON<T>(
   };
 
   let totalUsage: AIUsage = { inputTokens: 0, outputTokens: 0 };
+  let wasTruncated = false;
 
   // Stream the response, showing spinner for progress
   const chunks: string[] = [];
@@ -159,36 +177,52 @@ export async function generateStreamingJSON<T>(
     for await (const chunk of stream) {
       chunks.push(chunk);
     }
-    accumulateUsage(totalUsage, provider.getLastUsage());
+    const firstUsage = provider.getLastUsage();
+    accumulateUsage(totalUsage, firstUsage);
+    wasTruncated = firstUsage?.truncated === true;
 
     const rawResponse = chunks.join('');
-    let parsed = tryParseAndValidate(rawResponse, schema);
 
-    if (parsed.success) {
+    if (!wasTruncated) {
+      const parsed = tryParseAndValidate(rawResponse, schema);
+
+      if (parsed.success) {
+        spinner.succeed(`Done${formatUsage(totalUsage)}`);
+        return { result: parsed.data, usage: totalUsage };
+      }
+
+      // Retry once with error feedback (non-streaming for retry)
+      spinner.update('Retrying...');
+      const retryMessages: AIMessage[] = [
+        ...messages,
+        { role: 'assistant', content: rawResponse },
+        {
+          role: 'user',
+          content: `Your response was not valid JSON or failed validation:\n${parsed.error}\n\nPlease fix and return valid JSON only.`,
+        },
+      ];
+
+      const retryResponse = await provider.chatSync(retryMessages, requestOptions);
+      const retryUsage = provider.getLastUsage();
+      accumulateUsage(totalUsage, retryUsage);
+      wasTruncated = retryUsage?.truncated === true;
       spinner.succeed(`Done${formatUsage(totalUsage)}`);
-      return { result: parsed.data, usage: totalUsage };
+
+      if (!wasTruncated) {
+        const retryParsed = tryParseAndValidate(retryResponse, schema);
+        if (retryParsed.success) return { result: retryParsed.data, usage: totalUsage };
+
+        throw new AIError(
+          `AI returned invalid JSON after retry: ${retryParsed.error}`,
+          'invalid_response'
+        );
+      }
     }
 
-    // Retry once with error feedback (non-streaming for retry)
-    spinner.update('Retrying...');
-    const retryMessages: AIMessage[] = [
-      ...messages,
-      { role: 'assistant', content: rawResponse },
-      {
-        role: 'user',
-        content: `Your response was not valid JSON or failed validation:\n${parsed.error}\n\nPlease fix and return valid JSON only.`,
-      },
-    ];
-
-    const retryResponse = await provider.chatSync(retryMessages, requestOptions);
-    accumulateUsage(totalUsage, provider.getLastUsage());
-    spinner.succeed(`Done${formatUsage(totalUsage)}`);
-    parsed = tryParseAndValidate(retryResponse, schema);
-
-    if (parsed.success) return { result: parsed.data, usage: totalUsage };
-
+    // Response was truncated — provide actionable error
+    spinner.stop();
     throw new AIError(
-      `AI returned invalid JSON after retry: ${parsed.error}`,
+      `AI response was truncated at ${totalUsage.outputTokens.toLocaleString()} output tokens (hit max_tokens limit). Try a smaller scope (e.g., --story instead of --feature).`,
       'invalid_response'
     );
   } catch (err) {
