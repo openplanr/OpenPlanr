@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import type { AIUsage } from '../ai/types.js';
 
 let verboseEnabled = false;
 
@@ -7,6 +8,13 @@ const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', 
 export interface Spinner {
   update(msg: string): void;
   stop(): void;
+  succeed(msg: string): void;
+}
+
+/** Format token usage for display. Returns empty string if no usage data. */
+export function formatUsage(usage?: AIUsage | null): string {
+  if (!usage) return '';
+  return ` (${usage.inputTokens.toLocaleString()} in → ${usage.outputTokens.toLocaleString()} out tokens)`;
 }
 
 export function createSpinner(message: string): Spinner {
@@ -29,6 +37,11 @@ export function createSpinner(message: string): Spinner {
     stop() {
       clearInterval(interval);
       process.stdout.write('\r' + ' '.repeat(currentMsg.length + 4) + '\r');
+    },
+    succeed(msg: string) {
+      clearInterval(interval);
+      process.stdout.write('\r' + ' '.repeat(currentMsg.length + 4) + '\r');
+      console.log(chalk.green('✓'), msg);
     },
   };
 }

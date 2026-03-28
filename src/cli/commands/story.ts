@@ -227,7 +227,7 @@ async function createStoriesWithAI(
   try {
     const provider = await getAIProvider(config);
     const messages = buildStoriesPrompt(featureRaw, epicRaw, existingTitles);
-    const result = await generateStreamingJSON(provider, messages, aiStoriesResponseSchema);
+    const { result } = await generateStreamingJSON(provider, messages, aiStoriesResponseSchema);
 
     // Display generated stories
     console.log(chalk.dim('━'.repeat(50)));

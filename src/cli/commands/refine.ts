@@ -17,7 +17,8 @@ import {
   findArtifactTypeById,
   listArtifacts,
 } from '../../services/artifact-service.js';
-import { isAIConfigured, getAIProvider, generateJSON } from '../../services/ai-service.js';
+import { isAIConfigured, getAIProvider, generateJSON, accumulateUsage } from '../../services/ai-service.js';
+import type { AIUsage } from '../../ai/types.js';
 import { buildRefinePrompt } from '../../ai/prompts/prompt-builder.js';
 import { aiRefineResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
 import { toMarkdownWithFrontmatter } from '../../utils/markdown.js';
@@ -57,7 +58,11 @@ export function registerRefineCommand(program: Command) {
         const provider = await getAIProvider(config);
 
         if (opts.cascade) {
-          await refineCascade(projectDir, config, provider, type, artifactId);
+          const totalUsage: AIUsage = { inputTokens: 0, outputTokens: 0 };
+          const count = await refineCascade(projectDir, config, provider, type, artifactId, undefined, totalUsage);
+          if (totalUsage.inputTokens > 0) {
+            logger.dim(`\nCascade complete: ${count} artifact(s) refined (${totalUsage.inputTokens.toLocaleString()} in → ${totalUsage.outputTokens.toLocaleString()} out tokens total)`);
+          }
         } else {
           await refineOne(projectDir, config, provider, type, artifactId);
           await suggestNextSteps(projectDir, config, type, artifactId);
@@ -93,7 +98,7 @@ async function refineOne(
   logger.heading(`Refine ${artifactId}`);
 
   const messages = buildRefinePrompt(rawContent, type, parentContext);
-  const result = await generateJSON(provider, messages, aiRefineResponseSchema);
+  const { result } = await generateJSON(provider, messages, aiRefineResponseSchema);
 
   // Resolve improvedMarkdown — if AI returned JSON instead of markdown, reconstruct it
   let markdown = result.improvedMarkdown;
@@ -156,14 +161,19 @@ async function refineCascade(
   provider: AIProvider,
   type: ArtifactType,
   artifactId: string,
-  parentContext?: { type: string; content: string }
-): Promise<void> {
+  parentContext?: { type: string; content: string },
+  totalUsage?: AIUsage
+): Promise<number> {
+  let count = 0;
+
   // Refine this artifact first
   await refineOne(projectDir, config, provider, type, artifactId, parentContext);
+  count++;
+  if (totalUsage) accumulateUsage(totalUsage, provider.getLastUsage());
 
   // Find and refine children
   const children = await findChildren(projectDir, config, type, artifactId);
-  if (children.length === 0) return;
+  if (children.length === 0) return count;
 
   // Read the updated parent content to pass as context to children
   const updatedContent = await readArtifactRaw(projectDir, config, type, artifactId);
@@ -175,8 +185,10 @@ async function refineCascade(
   logger.heading(`Cascading to ${children.length} ${mapping.label}...`);
 
   for (const childId of children) {
-    await refineCascade(projectDir, config, provider, mapping.childType, childId, childParentContext);
+    count += await refineCascade(projectDir, config, provider, mapping.childType, childId, childParentContext, totalUsage);
   }
+
+  return count;
 }
 
 /**

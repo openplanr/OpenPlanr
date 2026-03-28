@@ -113,7 +113,7 @@ async function createEpicWithAI(
   try {
     const provider = await getAIProvider(config);
     const messages = buildEpicPrompt(brief, existingTitles);
-    let epicData = await generateStreamingJSON(provider, messages, aiEpicResponseSchema);
+    let { result: epicData } = await generateStreamingJSON(provider, messages, aiEpicResponseSchema);
 
     displayEpic(epicData);
 
@@ -134,7 +134,7 @@ async function createEpicWithAI(
 
       if (action === 'regenerate') {
         logger.dim('Regenerating...');
-        epicData = await generateStreamingJSON(provider, messages, aiEpicResponseSchema);
+        ({ result: epicData } = await generateStreamingJSON(provider, messages, aiEpicResponseSchema));
         displayEpic(epicData);
         continue;
       }

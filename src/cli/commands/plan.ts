@@ -98,7 +98,7 @@ async function planFromScratch(
 
   logger.dim('\n[1/4] Generating epic...');
   const epicMessages = buildEpicPrompt(brief, existingTitles);
-  const epicData = await generateStreamingJSON(provider, epicMessages, aiEpicResponseSchema);
+  const { result: epicData } = await generateStreamingJSON(provider, epicMessages, aiEpicResponseSchema);
 
   console.log(chalk.bold(`\n  Epic: ${epicData.title}`));
   console.log(chalk.dim(`  ${epicData.solutionOverview}`));
@@ -142,7 +142,7 @@ async function planFromEpic(
 
   logger.dim('\n[2/4] Generating features...');
   const featureMessages = buildFeaturesPrompt(epicRaw, existingFeatureTitles);
-  const featureResult = await generateStreamingJSON(provider, featureMessages, aiFeaturesResponseSchema);
+  const { result: featureResult } = await generateStreamingJSON(provider, featureMessages, aiFeaturesResponseSchema);
 
   console.log(chalk.bold(`\n  Generated ${featureResult.features.length} features:`));
   featureResult.features.forEach((f, i) => {
@@ -221,7 +221,7 @@ async function planFromFeature(
 
   logger.dim(`\n[3/4] Generating stories for ${featureId}...`);
   const storyMessages = buildStoriesPrompt(featureRaw, epicRaw, existingStoryTitles);
-  const storyResult = await generateStreamingJSON(provider, storyMessages, aiStoriesResponseSchema);
+  const { result: storyResult } = await generateStreamingJSON(provider, storyMessages, aiStoriesResponseSchema);
 
   console.log(chalk.dim(`  Generated ${storyResult.stories.length} stories for ${featureId}`));
 
@@ -287,7 +287,7 @@ async function generateTasksForStory(
   logger.dim(`\n[4/4] Generating tasks for ${storyId}...`);
   ctx.scope = { type: 'story', id: storyId };
   const taskMessages = buildTasksPrompt(ctx);
-  const result = await generateStreamingJSON(provider, taskMessages, aiTasksResponseSchema);
+  const { result } = await generateStreamingJSON(provider, taskMessages, aiTasksResponseSchema);
 
   const tasks = result.tasks.map((tg) => ({
     id: tg.id,
