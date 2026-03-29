@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-03-29
+
+### Added
+
+- **`planr task fix`** — feedback loop for tasks with piped stdin support
+- **Agent progress UI** — real-time spinner with stream-json / JSONL parsing for Claude and Codex
+- **Shared retry utilities** for agent adapters (`isRetryableError`, exponential backoff for transient API errors)
+- **Error context helper** — truncates large build logs for clearer failure output
+
+### Fixed
+
+- **Agent hangs on large prompts** — implementation prompt is delivered via temp file + stdin pipe instead of a giant CLI argument (avoids OS argv limits and interactive “wait forever” behavior)
+- **Stream backpressure** — prompt delivery uses `createReadStream` → `stdin` pipe instead of buffered `stdin.write`
+- **Codex sandbox** — `--full-auto` and `--json` so Codex can write files and emit structured events (matches Claude-style progress output)
+- **Claude stderr** — retryable 400/429/5xx errors detected while still showing output in real time
+
+### Changed
+
+- **Agent stdout/stderr** — `stdio: inherit` for live agent output where applicable
+- **Safety** — system prompt guidance to reduce destructive cross-project commands
+
+### Developer Experience
+
+- **Linting and formatting** — ESLint and Prettier replaced with [Biome](https://biomejs.dev/) (`biome check` / `biome format`)
+
 ## [0.5.0] - 2026-03-28
 
 ### Added
