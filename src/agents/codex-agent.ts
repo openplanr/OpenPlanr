@@ -1,9 +1,9 @@
 /**
  * OpenAI Codex CLI agent adapter.
  *
- * Invokes `codex exec` (non-interactive mode) with the prompt via stdin.
- * Uses --json for structured output and shows a progress spinner while
- * Codex works. Includes retry logic for transient errors.
+ * Invokes `codex exec --full-auto --json` for non-interactive mode with
+ * write access. Parses JSONL events for real-time progress display.
+ * Includes retry logic for transient errors.
  */
 
 import { spawn } from 'node:child_process';
@@ -11,7 +11,8 @@ import { createReadStream } from 'node:fs';
 import { unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { createProgressSpinner } from './progress.js';
+import chalk from 'chalk';
+import { type CodexEvent, createProgressSpinner, describeCodexActivity } from './progress.js';
 import type { AgentOptions, AgentResult, CodingAgent } from './types.js';
 import { isRetryableError, MAX_RETRIES, RETRY_DELAY_MS, sleep, which } from './utils.js';
 
@@ -57,9 +58,7 @@ export class CodexAgent implements CodingAgent {
     options: AgentOptions,
   ): Promise<AgentResult & { stderr: string }> {
     return new Promise((resolve, reject) => {
-      // Use `codex exec` for non-interactive mode, reading prompt from stdin.
-      // `codex exec resume --last` continues the previous session (like --continue).
-      const args = options.continueSession ? ['exec', 'resume', '--last'] : ['exec'];
+      const args = this.buildArgs(options);
 
       const child = spawn('codex', args, {
         cwd: options.cwd,
@@ -71,34 +70,7 @@ export class CodexAgent implements CodingAgent {
       const fileStream = createReadStream(tmpFile, 'utf-8');
       fileStream.pipe(child.stdin);
 
-      const spinner = createProgressSpinner();
-      const outputChunks: string[] = [];
-      const stderrChunks: string[] = [];
-      let gotFirstOutput = false;
-
-      child.stdout?.on('data', (data: Buffer) => {
-        const text = data.toString();
-        outputChunks.push(text);
-
-        if (!gotFirstOutput) {
-          gotFirstOutput = true;
-          spinner.stop();
-        }
-
-        // Stream to terminal in real-time
-        process.stdout.write(text);
-      });
-
-      child.stderr?.on('data', (data: Buffer) => {
-        const text = data.toString();
-        stderrChunks.push(text);
-
-        if (!gotFirstOutput) {
-          gotFirstOutput = true;
-          spinner.stop();
-        }
-        process.stderr.write(text);
-      });
+      const { spinner, stderrChunks, resultRef } = this.attachListeners(child);
 
       child.on('error', (err) => {
         spinner.stop();
@@ -108,19 +80,74 @@ export class CodexAgent implements CodingAgent {
       child.on('close', (code) => {
         spinner.stop();
 
-        const output = outputChunks.join('');
-        const stderr = stderrChunks.join('');
+        if (resultRef.text) {
+          console.log(resultRef.text);
+        }
 
-        if (code !== 0 && stderr && !gotFirstOutput) {
-          process.stderr.write(stderr);
+        if (code !== 0) {
+          const stderr = stderrChunks.join('');
+          if (stderr) process.stderr.write(stderr);
         }
 
         resolve({
-          output,
+          output: resultRef.text,
           exitCode: code ?? 1,
-          stderr,
+          stderr: stderrChunks.join(''),
         });
       });
     });
+  }
+
+  private buildArgs(options: AgentOptions): string[] {
+    if (options.continueSession) {
+      return ['exec', 'resume', '--last'];
+    }
+
+    return ['exec', '--full-auto', '--json'];
+  }
+
+  private attachListeners(child: ReturnType<typeof spawn>) {
+    const spinner = createProgressSpinner();
+    const stderrChunks: string[] = [];
+    const resultRef = { text: '' };
+    let jsonBuffer = '';
+
+    child.stdout?.on('data', (data: Buffer) => {
+      jsonBuffer += data.toString();
+      const lines = jsonBuffer.split('\n');
+      jsonBuffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        try {
+          const event = JSON.parse(trimmed) as CodexEvent;
+
+          const activity = describeCodexActivity(event);
+          if (activity) {
+            spinner.setActivity(activity);
+            process.stderr.write(`\r\x1b[K${chalk.green('✓')} ${chalk.dim(activity)}\n`);
+          }
+
+          // Capture the last agent message as the result text
+          if (
+            event.type === 'item.completed' &&
+            event.item?.type === 'agent_message' &&
+            event.item.text
+          ) {
+            resultRef.text = event.item.text;
+          }
+        } catch {
+          // Incomplete JSON line — skip
+        }
+      }
+    });
+
+    child.stderr?.on('data', (data: Buffer) => {
+      stderrChunks.push(data.toString());
+    });
+
+    return { spinner, stderrChunks, resultRef };
   }
 }

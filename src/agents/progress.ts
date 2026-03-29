@@ -156,3 +156,61 @@ function shortPath(filePath: string | undefined): string {
   const parts = filePath.split('/');
   return parts.length > 2 ? parts.slice(-2).join('/') : filePath;
 }
+
+// ---------------------------------------------------------------------------
+// Codex JSONL event parsing
+// ---------------------------------------------------------------------------
+
+/** Minimal shape of Codex exec --json events */
+export interface CodexEvent {
+  type: string;
+  item?: {
+    id?: string;
+    type?: string;
+    text?: string;
+    command?: string;
+    aggregated_output?: string;
+    exit_code?: number | null;
+    status?: string;
+  };
+  usage?: {
+    input_tokens?: number;
+    cached_input_tokens?: number;
+    output_tokens?: number;
+  };
+}
+
+/**
+ * Parse a Codex JSONL event into a human-readable activity description.
+ * Returns `null` for events that don't represent a notable action.
+ */
+export function describeCodexActivity(event: CodexEvent): string | null {
+  if (!event.item) return null;
+
+  if (event.type === 'item.started' && event.item.type === 'command_execution') {
+    const cmd = event.item.command || '';
+    // Strip the shell wrapper (e.g., `/bin/zsh -lc "..."`)
+    const inner = cmd.replace(/^\/bin\/\w+\s+-\w+\s+/, '').replace(/^["']|["']$/g, '');
+    const firstLine = inner.split('\n')[0] || 'command';
+    const display = firstLine.length > 80 ? `${firstLine.slice(0, 77)}...` : firstLine;
+    return `$ ${display}`;
+  }
+
+  if (event.type === 'item.completed' && event.item.type === 'command_execution') {
+    const code = event.item.exit_code;
+    if (code !== null && code !== undefined && code !== 0) {
+      return `Command exited with code ${code}`;
+    }
+    return null; // Successful command completion — already shown at start
+  }
+
+  if (event.type === 'item.completed' && event.item.type === 'agent_message') {
+    const text = event.item.text || '';
+    // Show a brief preview of what the agent is saying
+    const firstLine = text.split('\n')[0] || '';
+    if (firstLine.length > 80) return `${firstLine.slice(0, 77)}...`;
+    return firstLine || null;
+  }
+
+  return null;
+}
