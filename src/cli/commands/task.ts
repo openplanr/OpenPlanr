@@ -25,6 +25,7 @@ import {
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
+import { extractErrorContext, readMultilineInput } from '../../utils/error-context.js';
 import { logger } from '../../utils/logger.js';
 
 export function registerTaskCommand(program: Command) {
@@ -103,6 +104,62 @@ export function registerTaskCommand(program: Command) {
       for (const t of tasks) {
         console.log(`  ${t.id}  ${t.title}`);
       }
+    });
+
+  task
+    .command('fix')
+    .description('Send a follow-up prompt to fix issues from the last implementation')
+    .argument('[message...]', 'describe the issue (or pipe error output)')
+    .option('--agent <name>', 'override coding agent (claude, cursor, codex)')
+    .action(async (messageParts: string[], opts) => {
+      const projectDir = program.opts().projectDir as string;
+      const config = await loadConfig(projectDir);
+
+      const { executeFollowUp } = await import('../../agents/implementation-bridge.js');
+
+      // Collect the message from args, or prompt for it
+      let message = messageParts.join(' ').trim();
+
+      if (!message) {
+        // Check if stdin has piped data
+        if (!process.stdin.isTTY) {
+          const chunks: string[] = [];
+          for await (const chunk of process.stdin) {
+            chunks.push(chunk.toString());
+          }
+          const rawInput = chunks.join('');
+
+          // Smart truncation: keep only the error-relevant tail
+          // Build logs can be thousands of lines; Claude only needs the error
+          message = extractErrorContext(rawInput);
+
+          if (rawInput.length !== message.length) {
+            logger.dim(
+              `Piped input: ${rawInput.split('\n').length} lines → trimmed to ${message.split('\n').length} relevant lines`,
+            );
+          }
+        }
+      }
+
+      if (!message) {
+        logger.info('Describe the issue or paste error output.');
+        logger.dim('Type your message, then press Enter twice (empty line) to submit:\n');
+        message = await readMultilineInput();
+      }
+
+      if (!message.trim()) {
+        logger.error('No message provided. Describe the issue to fix.');
+        logger.dim('');
+        logger.dim('Usage:');
+        logger.dim('  planr task fix "Docker build fails with onnxruntime-gpu not found"');
+        logger.dim('  make build 2>&1 | planr task fix');
+        logger.dim('  planr task fix   (interactive prompt)');
+        return;
+      }
+
+      await executeFollowUp(projectDir, config, message, {
+        agent: opts.agent,
+      });
     });
 
   task

@@ -44,8 +44,6 @@ export async function executeImplementation(
     process.exit(1);
   }
 
-  const _taskRaw = await readArtifactRaw(projectDir, config, 'task', taskId);
-
   logger.heading(`Implement: ${taskId}`);
 
   // 2. Parse subtasks
@@ -91,6 +89,7 @@ export async function executeImplementation(
   logger.info('Preparing implementation context...');
 
   const parents = await getParentChain(projectDir, config, 'task', taskId);
+  logger.success(`Read ${taskId} (${allSubtasks.length} subtasks)`);
 
   let storyContent: string | undefined;
   let featureContent: string | undefined;
@@ -99,7 +98,7 @@ export async function executeImplementation(
   const storyId = taskData.data.storyId as string | undefined;
   if (storyId) {
     storyContent = (await readArtifactRaw(projectDir, config, 'story', storyId)) || undefined;
-    logger.debug(`Read parent story ${storyId}`);
+    if (storyContent) logger.success(`Read parent story (${storyId})`);
   }
 
   if (parents.feature) {
@@ -107,7 +106,7 @@ export async function executeImplementation(
     if (featureId) {
       featureContent =
         (await readArtifactRaw(projectDir, config, 'feature', featureId)) || undefined;
-      logger.debug(`Read parent feature ${featureId}`);
+      if (featureContent) logger.success(`Read parent feature (${featureId})`);
     }
   }
 
@@ -115,12 +114,11 @@ export async function executeImplementation(
     const epicId = parents.feature?.data?.epicId as string | undefined;
     if (epicId) {
       epicContent = (await readArtifactRaw(projectDir, config, 'epic', epicId)) || undefined;
-      logger.debug(`Read parent epic ${epicId}`);
+      if (epicContent) logger.success(`Read parent epic (${epicId})`);
     }
   }
 
   // 5. Build codebase context
-  logger.debug('Scanning codebase...');
   let codebaseContext: string | undefined;
   try {
     const { buildCodebaseContext, formatCodebaseContext, extractKeywords } = await import(
@@ -133,21 +131,13 @@ export async function executeImplementation(
     const ctx = await buildCodebaseContext(projectDir, keywords);
     codebaseContext = formatCodebaseContext(ctx);
 
-    if (ctx.techStack) {
-      logger.debug(
-        `Stack: ${ctx.techStack.language}${ctx.techStack.framework ? ` + ${ctx.techStack.framework}` : ''}`,
-      );
-    }
+    const stackInfo = ctx.techStack
+      ? ` — ${ctx.techStack.language}${ctx.techStack.framework ? ` + ${ctx.techStack.framework}` : ''}`
+      : '';
+    logger.success(`Scanned codebase${stackInfo}`);
   } catch {
     // Codebase scanning is best-effort
   }
-
-  // Show context summary
-  logger.success(`Read ${taskId} (${allSubtasks.length} subtasks)`);
-  if (storyContent) logger.success(`Read parent story`);
-  if (featureContent) logger.success(`Read parent feature`);
-  if (epicContent) logger.success(`Read parent epic`);
-  if (codebaseContext) logger.success(`Scanned codebase`);
 
   // 6. Compose prompt
   const prompt = composeImplementationPrompt({
@@ -190,6 +180,9 @@ export async function executeImplementation(
     return;
   }
 
+  logger.dim(
+    `Prompt: ${prompt.length.toLocaleString()} chars (~${Math.ceil(prompt.length / 4).toLocaleString()} tokens)`,
+  );
   logger.heading(`Launching ${agentName}...`);
   console.log(chalk.dim('━'.repeat(60)));
 
@@ -203,7 +196,107 @@ export async function executeImplementation(
 
   if (result.exitCode === 0) {
     logger.success(`${agentName} completed successfully.`);
+    logger.dim('');
+    logger.dim('If something needs fixing, run:');
+    logger.dim('  planr task fix "describe the issue"');
+    logger.dim('  make build 2>&1 | planr task fix');
   } else {
     logger.warn(`${agentName} exited with code ${result.exitCode}.`);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Follow-up / Fix — continue the last Claude session
+// ---------------------------------------------------------------------------
+
+export interface FollowUpOptions {
+  agent?: string;
+}
+
+/**
+ * Send a follow-up message to the coding agent, continuing the
+ * previous session. This is the feedback loop for fixing issues
+ * found after implementation.
+ */
+export async function executeFollowUp(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  message: string,
+  opts: FollowUpOptions,
+): Promise<void> {
+  logger.heading('Fix / Follow-up');
+
+  // Compose a focused fix prompt
+  const prompt = composeFixPrompt(message);
+
+  logger.dim(
+    `Prompt: ${prompt.length.toLocaleString()} chars (~${Math.ceil(prompt.length / 4).toLocaleString()} tokens)`,
+  );
+
+  const agentName = (opts.agent || config.defaultAgent || 'claude') as CodingAgentName;
+  const agent = await createAgent(agentName);
+
+  const available = await agent.isAvailable();
+  if (!available) {
+    logger.error(`Coding agent "${agentName}" is not available.`);
+    return;
+  }
+
+  logger.heading(`Continuing ${agentName} session...`);
+  console.log(chalk.dim('━'.repeat(60)));
+
+  const result = await agent.execute(prompt, {
+    cwd: projectDir,
+    stream: true,
+    dryRun: false,
+    continueSession: true,
+  });
+
+  console.log(chalk.dim('━'.repeat(60)));
+
+  if (result.exitCode === 0) {
+    logger.success(`${agentName} completed fix successfully.`);
+    logger.dim('');
+    logger.dim('Still broken? Run planr task fix again with the new error.');
+  } else {
+    logger.warn(`${agentName} exited with code ${result.exitCode}.`);
+  }
+}
+
+/**
+ * Compose a follow-up prompt that includes the error/issue context
+ * and clear instructions to fix the previously implemented code.
+ */
+function composeFixPrompt(userMessage: string): string {
+  const sections: string[] = [];
+
+  sections.push('# Fix Required\n');
+  sections.push('The previously implemented code has an issue that needs fixing.\n');
+
+  // Detect if the message looks like error output (long, has stack traces, etc.)
+  const isErrorOutput =
+    userMessage.length > 200 ||
+    userMessage.includes('Error:') ||
+    userMessage.includes('error:') ||
+    userMessage.includes('FAIL') ||
+    userMessage.includes('exit code');
+
+  if (isErrorOutput) {
+    sections.push('## Error Output\n');
+    sections.push('```');
+    sections.push(userMessage.trim());
+    sections.push('```');
+  } else {
+    sections.push('## Issue Description\n');
+    sections.push(userMessage.trim());
+  }
+
+  sections.push('\n## Instructions\n');
+  sections.push('1. Analyze the error/issue above.');
+  sections.push('2. Identify the root cause in the code you previously created.');
+  sections.push('3. Fix ONLY what is needed — do not rewrite unrelated code.');
+  sections.push('4. Verify the fix addresses the reported issue.');
+  sections.push('5. If the error involves missing dependencies, use compatible versions.');
+
+  return sections.join('\n');
 }

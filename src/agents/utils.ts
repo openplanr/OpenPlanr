@@ -20,3 +20,31 @@ export async function which(command: string): Promise<string | null> {
     return null;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Retry helpers (shared across agent adapters)
+// ---------------------------------------------------------------------------
+
+export const MAX_RETRIES = 2;
+export const RETRY_DELAY_MS = 3000;
+
+/** Patterns in stderr that indicate a transient/retryable API error */
+const RETRYABLE_PATTERNS = [
+  'tool use concurrency',
+  'overloaded',
+  '429',
+  '500',
+  '503',
+  'rate limit',
+  'econnreset',
+  'socket hang up',
+];
+
+export function isRetryableError(stderr: string): boolean {
+  const lower = stderr.toLowerCase();
+  return RETRYABLE_PATTERNS.some((p) => lower.includes(p));
+}
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

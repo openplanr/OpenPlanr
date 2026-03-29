@@ -9,6 +9,8 @@ export interface AgentOptions {
   cwd: string;
   stream: boolean;
   dryRun: boolean;
+  /** Continue a previous session instead of starting fresh */
+  continueSession?: boolean;
 }
 
 export interface AgentResult {
