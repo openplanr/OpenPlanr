@@ -1,0 +1,29 @@
+---
+id: "{{id}}"
+title: "{{title}}"
+created: "{{date}}"
+updated: "{{date}}"
+status: "pending"
+---
+
+# {{id}}: {{title}}
+
+## Tasks
+
+{{#each tasks}}
+- [ ] **{{this.id}}** {{this.title}}
+{{#each this.subtasks}}
+  - [ ] {{this.id}} {{this.title}}
+{{/each}}
+{{/each}}
+
+{{#if relevantFiles}}
+## Relevant Files
+{{#each relevantFiles}}
+- `{{this.path}}` — {{this.reason}}
+{{/each}}
+{{/if}}
+
+## Notes
+_Mark tasks complete by checking the boxes above, or run `planr quick implement {{id}}`._
+_To move this into your agile hierarchy, run `planr quick promote {{id}} --story <storyId>`._

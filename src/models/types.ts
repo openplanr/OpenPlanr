@@ -1,4 +1,4 @@
-export type ArtifactType = 'epic' | 'feature' | 'story' | 'task' | 'adr' | 'checklist';
+export type ArtifactType = 'epic' | 'feature' | 'story' | 'task' | 'quick' | 'adr' | 'checklist';
 export type TargetCLI = 'cursor' | 'claude' | 'codex';
 export type TaskStatus = 'pending' | 'in-progress' | 'done';
 export type AIProviderName = 'anthropic' | 'openai' | 'ollama';
@@ -24,6 +24,7 @@ export interface OpenPlanrConfig {
     feature: string;
     story: string;
     task: string;
+    quick: string;
   };
   ai?: AIConfig;
   defaultAgent?: CodingAgentName;
@@ -79,7 +80,7 @@ export interface TaskItem {
 }
 
 export interface TaskList extends BaseArtifact {
-  storyId: string;
+  storyId?: string;
   tasks: TaskItem[];
 }
 

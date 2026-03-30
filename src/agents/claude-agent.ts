@@ -118,10 +118,15 @@ export class ClaudeAgent implements CodingAgent {
         spinner.stop();
         this.printSummary(resultRef.text, statsRef, stderrChunks, code);
 
+        // Combine stderr and stdout for retry detection — Claude sometimes
+        // emits API errors (e.g. "tool use concurrency") via stdout stream
+        const stderr = stderrChunks.join('');
+        const combinedOutput = `${stderr}\n${resultRef.text}`;
+
         resolve({
           output: resultRef.text,
           exitCode: code ?? 1,
-          stderr: stderrChunks.join(''),
+          stderr: combinedOutput,
         });
       });
     });
