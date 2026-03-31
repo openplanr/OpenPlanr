@@ -318,6 +318,26 @@ async function estimateEpicRollup(
   if (results.length > 1) {
     displayRollupTable(results);
   }
+
+  // Interactive save prompt if not already saving
+  if (!opts.save && results.length > 0) {
+    const action = await promptSelect<string>('Action:', [
+      { name: 'Save all estimates to artifacts', value: 'save' },
+      { name: 'Discard all', value: 'discard' },
+    ]);
+
+    if (action === 'save') {
+      for (const { id, estimate } of results) {
+        const type = findArtifactTypeById(id);
+        if (!type) continue;
+        const raw = await readArtifactRaw(projectDir, config, type, id);
+        if (!raw) continue;
+        await saveEstimateToArtifact(raw, estimate, projectDir, config, type, id);
+      }
+    } else {
+      logger.info('Estimates discarded.');
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
