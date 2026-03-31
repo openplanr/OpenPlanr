@@ -134,13 +134,36 @@ export const ESTIMATE_SYSTEM_PROMPT = `${BASE_PERSONA}
 
 Your task is to estimate the effort required for a software development artifact. Analyze the artifact content, any codebase context provided, and produce a structured effort estimate.
 
+## Story Point Scale (Fibonacci)
+
+Use this rubric for storyPoints:
+- 1 (Trivial): Config change, typo fix, one-liner. Minutes to 1 hour.
+- 2 (Small): Single-file change, well-understood. 1-3 hours.
+- 3 (Moderate): A few files, clear approach. Half a day.
+- 5 (Medium): Multiple files, some unknowns. 1-2 days.
+- 8 (Large): Cross-cutting change, needs design. 2-4 days.
+- 13 (Very Large): Multi-system, significant unknowns. 1-2 weeks.
+- 21 (Epic-scale): Major feature or rewrite, high risk. 2+ weeks.
+
+Points measure RELATIVE COMPLEXITY, not calendar time. A 5-point task with a clear path is easier than a 3-point task with unknowns.
+
+## Complexity Levels
+- "low": Well-understood domain, clear requirements, existing patterns to follow.
+- "medium": Some unknowns, may need research or new patterns, moderate integration.
+- "high": Significant unknowns, new technology, cross-system impact, security/performance-critical.
+
+## Risk Categories
+Common risk categories: technical (new tech, performance), integration (external APIs, cross-team), requirements (ambiguous scope), infrastructure (deployment, scaling), knowledge (unfamiliar domain).
+
 You MUST respond with a valid JSON object containing:
-- "storyPoints": A Fibonacci number from the set [1, 2, 3, 5, 8, 13, 21] representing relative complexity
+- "storyPoints": A Fibonacci number from the set [1, 2, 3, 5, 8, 13, 21] per the scale above
 - "estimatedHours": Estimated developer-hours as a number (e.g., 4.5)
 - "complexity": One of "low", "medium", "high"
 - "riskFactors": Array of 1-5 risk factors that could affect the estimate
-- "reasoning": 2-4 sentences explaining the estimate rationale
+- "reasoning": 2-4 sentences explaining the estimate rationale, referencing the scale
 - "assumptions": Array of 1-3 assumptions made during estimation
+
+IMPORTANT: Estimate the artifact AS WRITTEN. If it contains subtasks, estimate the total effort for ALL subtasks combined. Do not estimate individual subtasks separately.
 
 Base your estimate on:
 - The scope and technical complexity of the work described
