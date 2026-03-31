@@ -13,6 +13,7 @@ import type { AIMessage } from '../types.js';
 import {
   EPIC_SYSTEM_PROMPT,
   FEATURES_SYSTEM_PROMPT,
+  QUICK_TASKS_SYSTEM_PROMPT,
   REFINE_SYSTEM_PROMPT,
   STORIES_SYSTEM_PROMPT,
   TASKS_SYSTEM_PROMPT,
@@ -132,6 +133,19 @@ export function buildTasksPrompt(ctx: TasksPromptInput): AIMessage[] {
 
   return [
     { role: 'system', content: TASKS_SYSTEM_PROMPT },
+    { role: 'user', content: userContent },
+  ];
+}
+
+export function buildQuickTasksPrompt(description: string, codebaseContext?: string): AIMessage[] {
+  let userContent = `Generate an implementation task list for the following:\n\n"${description}"`;
+
+  if (codebaseContext) {
+    userContent += `\n\n--- Codebase Context ---\n${codebaseContext}`;
+  }
+
+  return [
+    { role: 'system', content: QUICK_TASKS_SYSTEM_PROMPT },
     { role: 'user', content: userContent },
   ];
 }

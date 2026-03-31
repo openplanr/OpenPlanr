@@ -35,6 +35,7 @@ export function createDefaultConfig(projectName: string): OpenPlanrConfig {
       feature: 'FEAT',
       story: 'US',
       task: 'TASK',
+      quick: 'QT',
     },
     createdAt: new Date().toISOString().split('T')[0],
   };

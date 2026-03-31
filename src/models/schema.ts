@@ -24,6 +24,7 @@ export const configSchema = z.object({
     feature: z.string().default('FEAT'),
     story: z.string().default('US'),
     task: z.string().default('TASK'),
+    quick: z.string().default('QT'),
   }),
   ai: aiConfigSchema.optional(),
   defaultAgent: codingAgentSchema.optional(),

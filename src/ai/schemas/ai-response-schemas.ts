@@ -111,6 +111,16 @@ export const aiTasksResponseSchema = z.object({
 
 export type AITasksResponse = z.infer<typeof aiTasksResponseSchema>;
 
+// --- Quick Tasks (standalone, no acceptance criteria mapping) ---
+
+export const aiQuickTasksResponseSchema = z.object({
+  title: z.string().min(1),
+  tasks: z.array(aiTaskGroupSchema).min(1),
+  relevantFiles: z.array(aiRelevantFileSchema).default([]),
+});
+
+export type AIQuickTasksResponse = z.infer<typeof aiQuickTasksResponseSchema>;
+
 // --- Refine ---
 
 export const aiRefineResponseSchema = z.object({

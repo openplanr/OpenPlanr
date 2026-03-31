@@ -12,7 +12,12 @@
 
 import chalk from 'chalk';
 import type { CodingAgentName, OpenPlanrConfig } from '../models/types.js';
-import { getParentChain, readArtifact, readArtifactRaw } from '../services/artifact-service.js';
+import {
+  getParentChain,
+  readArtifact,
+  readArtifactRaw,
+  updateArtifact,
+} from '../services/artifact-service.js';
 import { logger } from '../utils/logger.js';
 import { createAgent } from './agent-factory.js';
 import { composeImplementationPrompt } from './prompt-composer.js';
@@ -37,8 +42,9 @@ export async function executeImplementation(
   taskId: string,
   opts: ImplementOptions,
 ): Promise<void> {
-  // 1. Read the task artifact
-  const taskData = await readArtifact(projectDir, config, 'task', taskId);
+  // 1. Read the task artifact (supports both TASK-xxx and QT-xxx)
+  const artifactType = taskId.startsWith('QT-') ? 'quick' : 'task';
+  const taskData = await readArtifact(projectDir, config, artifactType as 'task', taskId);
   if (!taskData) {
     logger.error(`Task list ${taskId} not found.`);
     process.exit(1);
@@ -88,7 +94,7 @@ export async function executeImplementation(
   // 4. Gather parent chain context
   logger.info('Preparing implementation context...');
 
-  const parents = await getParentChain(projectDir, config, 'task', taskId);
+  const parents = await getParentChain(projectDir, config, artifactType as 'task', taskId);
   logger.success(`Read ${taskId} (${allSubtasks.length} subtasks)`);
 
   let storyContent: string | undefined;
@@ -195,6 +201,9 @@ export async function executeImplementation(
   console.log(chalk.dim('━'.repeat(60)));
 
   if (result.exitCode === 0) {
+    // Mark implemented subtasks as done in the task file
+    await markSubtasksDone(projectDir, config, artifactType, taskId, targetSubtasks);
+
     logger.success(`${agentName} completed successfully.`);
     logger.dim('');
     logger.dim('If something needs fixing, run:');
@@ -202,6 +211,36 @@ export async function executeImplementation(
     logger.dim('  make build 2>&1 | planr task fix');
   } else {
     logger.warn(`${agentName} exited with code ${result.exitCode}.`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mark subtasks as done
+// ---------------------------------------------------------------------------
+
+async function markSubtasksDone(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  artifactType: string,
+  taskId: string,
+  subtasks: import('./task-parser.js').ParsedSubtask[],
+): Promise<void> {
+  const raw = await readArtifactRaw(projectDir, config, artifactType as 'task', taskId);
+  if (!raw) return;
+
+  const ids = new Set(subtasks.map((s) => s.id));
+  let updated = raw;
+
+  for (const id of ids) {
+    // Match: `- [ ] 1.1 Title` (with optional leading whitespace for indented subtasks)
+    const pattern = new RegExp(`^(\\s*- )\\[ \\](\\s+${id.replace('.', '\\.')}\\s)`, 'm');
+    updated = updated.replace(pattern, '$1[x]$2');
+  }
+
+  if (updated !== raw) {
+    await updateArtifact(projectDir, config, artifactType as 'task', taskId, updated);
+    const count = ids.size;
+    logger.success(`Marked ${count} subtask${count > 1 ? 's' : ''} as done in ${taskId}`);
   }
 }
 

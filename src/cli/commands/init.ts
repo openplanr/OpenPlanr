@@ -118,6 +118,7 @@ export function registerInitCommand(program: Command) {
       logger.dim('');
       logger.dim('Next steps:');
       logger.dim('  planr epic create        — Create your first epic');
+      logger.dim('  planr quick "description" — Quick standalone task list (no agile ceremony)');
       logger.dim('  planr rules generate     — Generate AI agent rules');
       logger.dim('  planr config show        — View configuration');
     });

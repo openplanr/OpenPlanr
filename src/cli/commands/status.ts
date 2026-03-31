@@ -151,11 +151,42 @@ export function registerStatusCommand(program: Command) {
         }
       }
 
+      // Quick tasks (standalone, outside hierarchy)
+      const quickTasks = await listArtifacts(projectDir, config, 'quick');
+      if (quickTasks.length > 0) {
+        console.log('');
+        console.log(`  ● Quick Tasks: ${quickTasks.length}`);
+        const quickList = showAll ? quickTasks : quickTasks.slice(0, 5);
+        for (const qt of quickList) {
+          const raw = await readArtifactRaw(projectDir, config, 'quick', qt.id);
+          if (raw) {
+            const parsed = parseTaskMarkdown(raw);
+            const subtasks = parsed.filter((s) => s.depth > 0);
+            const total = subtasks.length || parsed.length;
+            const done = (subtasks.length > 0 ? subtasks : parsed).filter((s) => s.done).length;
+            if (total > 0) {
+              const pct = Math.round((done / total) * 100);
+              console.log(
+                `    ${qt.id}  ${qt.title}  ${colorByPercent(`(${done}/${total}, ${pct}%)`, pct)}`,
+              );
+            } else {
+              console.log(`    ${qt.id}  ${qt.title}`);
+            }
+          } else {
+            console.log(`    ${qt.id}  ${qt.title}`);
+          }
+        }
+        if (!showAll && quickTasks.length > 5) {
+          console.log(chalk.dim(`    ... and ${quickTasks.length - 5} more`));
+        }
+      }
+
       // Summary counts
+      const quickCount = quickTasks.length > 0 ? `, ${quickTasks.length} quick tasks` : '';
       console.log('');
       console.log(
         chalk.dim(
-          `  Totals: ${epics.length} epics, ${features.length} features, ${stories.length} stories, ${tasks.length} task lists`,
+          `  Totals: ${epics.length} epics, ${features.length} features, ${stories.length} stories, ${tasks.length} task lists${quickCount}`,
         ),
       );
       logger.dim(`Targets: ${config.targets.join(', ')}`);

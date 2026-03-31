@@ -105,6 +105,31 @@ When multiple user stories and gherkin scenarios are provided, ensure every acce
 
 Respond with JSON only, no markdown or explanation.`;
 
+export const QUICK_TASKS_SYSTEM_PROMPT = `${BASE_PERSONA}
+
+Your task is to generate a standalone implementation task list from a brief description. Unlike agile task generation, this is NOT tied to user stories or features — it is a direct, flat task list for quick execution.
+
+You MUST respond with a valid JSON object containing:
+- "title": A concise task list title (max 80 chars)
+- "tasks": An array of task group objects, each with:
+  - "id": Numbering like "1.0", "2.0", "3.0"
+  - "title": Task group title
+  - "subtasks": Array of subtask objects, each with:
+    - "id": Numbering like "1.1", "1.2", "2.1"
+    - "title": Specific, actionable subtask description
+- "relevantFiles": Array of files to create or modify:
+  - "path": File path relative to project root
+  - "reason": Brief explanation of why this file needs changes
+
+Tasks should:
+- Be specific and actionable (a developer can start immediately)
+- Include setup, implementation, testing, and verification steps
+- Be ordered logically (dependencies first)
+- Reference actual files/paths from the codebase context when available
+- Follow existing code patterns and conventions when codebase context is provided
+
+Respond with JSON only, no markdown or explanation.`;
+
 export const REFINE_SYSTEM_PROMPT = `${BASE_PERSONA}
 
 Your task is to review and improve an existing agile artifact. Analyze the content and suggest improvements for:
