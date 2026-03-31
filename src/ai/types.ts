@@ -54,6 +54,7 @@ export const TOKEN_BUDGETS = {
   refine: 8192,
   /** Used by the `planr plan` pipeline for task generation per story. */
   plan: 16384,
+  estimate: 4096,
 } as const;
 
 export interface AIProvider {

@@ -121,6 +121,26 @@ export const aiQuickTasksResponseSchema = z.object({
 
 export type AIQuickTasksResponse = z.infer<typeof aiQuickTasksResponseSchema>;
 
+// --- Estimate ---
+
+const FIBONACCI_POINTS = [1, 2, 3, 5, 8, 13, 21] as const;
+
+export const aiEstimateResponseSchema = z.object({
+  storyPoints: z
+    .number()
+    .int()
+    .refine((v) => (FIBONACCI_POINTS as readonly number[]).includes(v), {
+      message: `Must be a Fibonacci number: ${FIBONACCI_POINTS.join(', ')}`,
+    }),
+  estimatedHours: z.number().positive(),
+  complexity: z.enum(['low', 'medium', 'high']),
+  riskFactors: z.array(z.string().min(1)).min(1).max(5),
+  reasoning: z.string().min(1),
+  assumptions: z.array(z.string().min(1)).default([]),
+});
+
+export type AIEstimateResponse = z.infer<typeof aiEstimateResponseSchema>;
+
 // --- Refine ---
 
 export const aiRefineResponseSchema = z.object({

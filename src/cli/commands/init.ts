@@ -17,8 +17,9 @@ import {
   promptSelect,
   promptText,
 } from '../../services/prompt-service.js';
+import { renderTemplate } from '../../services/template-service.js';
 import { ARTIFACT_DIRS, CONFIG_FILENAME } from '../../utils/constants.js';
-import { ensureDir, fileExists } from '../../utils/fs.js';
+import { ensureDir, fileExists, writeFile } from '../../utils/fs.js';
 import { logger } from '../../utils/logger.js';
 
 export function registerInitCommand(program: Command) {
@@ -104,6 +105,14 @@ export function registerInitCommand(program: Command) {
       // Create checklist
       await createChecklist(projectDir, config);
       logger.success(`Created agile development checklist`);
+
+      // Create estimation guide
+      const estimationPath = path.join(agileDir, 'ESTIMATION.md');
+      if (!(await fileExists(estimationPath))) {
+        const estimationContent = await renderTemplate('guides/estimation.md.hbs', {});
+        await writeFile(estimationPath, estimationContent);
+        logger.success('Created estimation guide');
+      }
 
       // Summary
       logger.heading('Planr initialized!');

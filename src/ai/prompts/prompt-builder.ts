@@ -12,6 +12,7 @@
 import type { AIMessage } from '../types.js';
 import {
   EPIC_SYSTEM_PROMPT,
+  ESTIMATE_SYSTEM_PROMPT,
   FEATURES_SYSTEM_PROMPT,
   QUICK_TASKS_SYSTEM_PROMPT,
   REFINE_SYSTEM_PROMPT,
@@ -146,6 +147,23 @@ export function buildQuickTasksPrompt(description: string, codebaseContext?: str
 
   return [
     { role: 'system', content: QUICK_TASKS_SYSTEM_PROMPT },
+    { role: 'user', content: userContent },
+  ];
+}
+
+export function buildEstimatePrompt(
+  artifactContent: string,
+  artifactType: string,
+  codebaseContext?: string,
+): AIMessage[] {
+  let userContent = `Estimate the effort for this ${artifactType} artifact:\n\n${artifactContent}`;
+
+  if (codebaseContext) {
+    userContent += `\n\n--- Codebase Context ---\n${codebaseContext}`;
+  }
+
+  return [
+    { role: 'system', content: ESTIMATE_SYSTEM_PROMPT },
     { role: 'user', content: userContent },
   ];
 }
