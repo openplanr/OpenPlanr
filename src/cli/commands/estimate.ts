@@ -16,7 +16,7 @@ import {
 import { loadConfig } from '../../services/config-service.js';
 import { promptSelect } from '../../services/prompt-service.js';
 import { createSpinner, logger } from '../../utils/logger.js';
-import { parseMarkdown, toMarkdownWithFrontmatter } from '../../utils/markdown.js';
+import { parseMarkdown } from '../../utils/markdown.js';
 
 // ---------------------------------------------------------------------------
 // Display helpers
@@ -125,23 +125,36 @@ async function saveEstimateToArtifact(
   type: ArtifactType,
   artifactId: string,
 ): Promise<void> {
-  const { data, content } = parseMarkdown(raw);
-  data.estimatedPoints = result.storyPoints;
-  data.estimatedHours = result.estimatedHours;
-  data.complexity = result.complexity;
+  let updated = raw;
 
-  const estimateSection = buildEstimateSection(result);
+  // --- Inject estimate fields into frontmatter (preserving original formatting) ---
+  // Remove old estimate fields if present, then add fresh ones before closing ---
+  updated = updated.replace(/^estimatedPoints:.*\n/m, '');
+  updated = updated.replace(/^estimatedHours:.*\n/m, '');
+  updated = updated.replace(/^complexity:.*\n/m, '');
 
-  // Replace existing ## Estimate section if present, otherwise append
-  const sectionRegex = /\n## Estimate\n[\s\S]*?(?=\n## |\n*$)/;
-  let updatedContent: string;
-  if (sectionRegex.test(content)) {
-    updatedContent = content.replace(sectionRegex, `\n${estimateSection}`);
-  } else {
-    updatedContent = `${content.trimEnd()}\n\n${estimateSection}\n`;
+  const estimateFields = [
+    `estimatedPoints: ${result.storyPoints}`,
+    `estimatedHours: ${result.estimatedHours}`,
+    `complexity: "${result.complexity}"`,
+  ].join('\n');
+
+  // Insert before the closing --- of frontmatter (second occurrence)
+  const closingIdx = updated.indexOf('\n---', updated.indexOf('---') + 3);
+  if (closingIdx !== -1) {
+    updated = `${updated.slice(0, closingIdx)}\n${estimateFields}${updated.slice(closingIdx)}`;
   }
 
-  const updated = toMarkdownWithFrontmatter(data, updatedContent);
+  // --- Append or replace ## Estimate section in body ---
+  const estimateSection = buildEstimateSection(result);
+  const sectionRegex = /\n## Estimate\n[\s\S]*?(?=\n## |\n*$)/;
+
+  if (sectionRegex.test(updated)) {
+    updated = updated.replace(sectionRegex, `\n${estimateSection}`);
+  } else {
+    updated = `${updated.trimEnd()}\n\n${estimateSection}\n`;
+  }
+
   await updateArtifact(projectDir, config, type, artifactId, updated);
   logger.success(`Saved estimate to ${artifactId}`);
 }
