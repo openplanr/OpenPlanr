@@ -129,6 +129,7 @@ async function saveEstimateToArtifact(
 
   // --- Inject estimate fields into frontmatter (preserving original formatting) ---
   // Remove old estimate fields if present, then add fresh ones before closing ---
+  updated = updated.replace(/^estimatedEffort:.*\n/m, '');
   updated = updated.replace(/^estimatedPoints:.*\n/m, '');
   updated = updated.replace(/^estimatedHours:.*\n/m, '');
   updated = updated.replace(/^complexity:.*\n/m, '');
