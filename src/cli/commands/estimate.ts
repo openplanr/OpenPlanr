@@ -85,6 +85,34 @@ function displayRollupTable(estimates: Array<{ id: string; estimate: AIEstimateR
 }
 
 // ---------------------------------------------------------------------------
+// Markdown persistence
+// ---------------------------------------------------------------------------
+
+function buildEstimateSection(estimate: AIEstimateResponse): string {
+  const lines: string[] = [];
+  lines.push('## Estimate');
+  lines.push(`- **Story Points:** ${estimate.storyPoints}`);
+  lines.push(`- **Hours:** ${estimate.estimatedHours}h`);
+  lines.push(`- **Complexity:** ${estimate.complexity}`);
+  lines.push('');
+  lines.push('### Risk Factors');
+  for (const risk of estimate.riskFactors) {
+    lines.push(`- ${risk}`);
+  }
+  lines.push('');
+  lines.push('### Reasoning');
+  lines.push(estimate.reasoning);
+  if (estimate.assumptions.length > 0) {
+    lines.push('');
+    lines.push('### Assumptions');
+    for (const a of estimate.assumptions) {
+      lines.push(`- ${a}`);
+    }
+  }
+  return lines.join('\n');
+}
+
+// ---------------------------------------------------------------------------
 // Core estimation
 // ---------------------------------------------------------------------------
 
@@ -132,15 +160,28 @@ async function estimateSingle(
   spinner.stop();
   displayEstimate(artifactId, result);
 
-  // Save to frontmatter if requested
+  // Save to frontmatter + append full estimate section to body
   if (opts.save) {
     const { data, content } = parseMarkdown(raw);
     data.estimatedPoints = result.storyPoints;
     data.estimatedHours = result.estimatedHours;
     data.complexity = result.complexity;
-    const updated = toMarkdownWithFrontmatter(data, content);
+
+    // Build the estimate markdown section
+    const estimateSection = buildEstimateSection(result);
+
+    // Replace existing ## Estimate section if present, otherwise append
+    const sectionRegex = /\n## Estimate\n[\s\S]*?(?=\n## |\n*$)/;
+    let updatedContent: string;
+    if (sectionRegex.test(content)) {
+      updatedContent = content.replace(sectionRegex, `\n${estimateSection}`);
+    } else {
+      updatedContent = `${content.trimEnd()}\n\n${estimateSection}\n`;
+    }
+
+    const updated = toMarkdownWithFrontmatter(data, updatedContent);
     await updateArtifact(projectDir, config, type, artifactId, updated);
-    logger.success(`Saved estimate to ${artifactId} frontmatter`);
+    logger.success(`Saved estimate to ${artifactId}`);
   }
 
   return result;
