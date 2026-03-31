@@ -14,6 +14,7 @@ import {
   updateArtifact,
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { promptSelect } from '../../services/prompt-service.js';
 import { createSpinner, logger } from '../../utils/logger.js';
 import { parseMarkdown, toMarkdownWithFrontmatter } from '../../utils/markdown.js';
 
@@ -113,6 +114,39 @@ function buildEstimateSection(estimate: AIEstimateResponse): string {
 }
 
 // ---------------------------------------------------------------------------
+// Save helper
+// ---------------------------------------------------------------------------
+
+async function saveEstimateToArtifact(
+  raw: string,
+  result: AIEstimateResponse,
+  projectDir: string,
+  config: OpenPlanrConfig,
+  type: ArtifactType,
+  artifactId: string,
+): Promise<void> {
+  const { data, content } = parseMarkdown(raw);
+  data.estimatedPoints = result.storyPoints;
+  data.estimatedHours = result.estimatedHours;
+  data.complexity = result.complexity;
+
+  const estimateSection = buildEstimateSection(result);
+
+  // Replace existing ## Estimate section if present, otherwise append
+  const sectionRegex = /\n## Estimate\n[\s\S]*?(?=\n## |\n*$)/;
+  let updatedContent: string;
+  if (sectionRegex.test(content)) {
+    updatedContent = content.replace(sectionRegex, `\n${estimateSection}`);
+  } else {
+    updatedContent = `${content.trimEnd()}\n\n${estimateSection}\n`;
+  }
+
+  const updated = toMarkdownWithFrontmatter(data, updatedContent);
+  await updateArtifact(projectDir, config, type, artifactId, updated);
+  logger.success(`Saved estimate to ${artifactId}`);
+}
+
+// ---------------------------------------------------------------------------
 // Core estimation
 // ---------------------------------------------------------------------------
 
@@ -120,7 +154,7 @@ async function estimateSingle(
   projectDir: string,
   config: OpenPlanrConfig,
   artifactId: string,
-  opts: { save?: boolean },
+  opts: { save?: boolean; silent?: boolean },
 ): Promise<AIEstimateResponse | null> {
   const type = findArtifactTypeById(artifactId);
   if (!type) {
@@ -160,28 +194,27 @@ async function estimateSingle(
   spinner.stop();
   displayEstimate(artifactId, result);
 
-  // Save to frontmatter + append full estimate section to body
-  if (opts.save) {
-    const { data, content } = parseMarkdown(raw);
-    data.estimatedPoints = result.storyPoints;
-    data.estimatedHours = result.estimatedHours;
-    data.complexity = result.complexity;
+  // Interactive action prompt (skip in non-interactive / epic rollup mode)
+  if (!opts.save && !opts.silent) {
+    const action = await promptSelect<string>('Action:', [
+      { name: 'Save estimate to artifact', value: 'save' },
+      { name: 'Re-estimate', value: 'retry' },
+      { name: 'Discard', value: 'discard' },
+    ]);
 
-    // Build the estimate markdown section
-    const estimateSection = buildEstimateSection(result);
-
-    // Replace existing ## Estimate section if present, otherwise append
-    const sectionRegex = /\n## Estimate\n[\s\S]*?(?=\n## |\n*$)/;
-    let updatedContent: string;
-    if (sectionRegex.test(content)) {
-      updatedContent = content.replace(sectionRegex, `\n${estimateSection}`);
-    } else {
-      updatedContent = `${content.trimEnd()}\n\n${estimateSection}\n`;
+    if (action === 'retry') {
+      return estimateSingle(projectDir, config, artifactId, opts);
     }
+    if (action === 'discard') {
+      logger.info('Estimate discarded.');
+      return result;
+    }
+    // action === 'save' → fall through
+    opts.save = true;
+  }
 
-    const updated = toMarkdownWithFrontmatter(data, updatedContent);
-    await updateArtifact(projectDir, config, type, artifactId, updated);
-    logger.success(`Saved estimate to ${artifactId}`);
+  if (opts.save) {
+    saveEstimateToArtifact(raw, result, projectDir, config, type, artifactId);
   }
 
   return result;
@@ -259,7 +292,10 @@ async function estimateEpicRollup(
   for (let i = 0; i < leafTasks.length; i++) {
     const { id } = leafTasks[i];
     logger.dim(`  [${i + 1}/${leafTasks.length}] Estimating ${id}...`);
-    const estimate = await estimateSingle(projectDir, config, id, { save: opts.save });
+    const estimate = await estimateSingle(projectDir, config, id, {
+      save: opts.save,
+      silent: true,
+    });
     if (estimate) {
       results.push({ id, estimate });
     }
