@@ -46,7 +46,7 @@ export const DEFAULT_MAX_TOKENS = 8192;
  * Commands producing larger outputs get higher budgets.
  */
 export const TOKEN_BUDGETS = {
-  epic: 4096,
+  epic: 8192,
   feature: 8192,
   story: 8192,
   task: 16384,

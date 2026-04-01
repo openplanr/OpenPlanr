@@ -21,7 +21,14 @@ import {
 } from './system-prompts.js';
 
 export function buildEpicPrompt(brief: string, existingEpics: string[] = []): AIMessage[] {
-  let userContent = `Create an epic from this brief:\n\n"${brief}"`;
+  const isDetailed = brief.split('\n').length > 5;
+
+  let userContent: string;
+  if (isDetailed) {
+    userContent = `Create an epic from this detailed requirements document. Extract ALL key requirements, features, and success criteria from the full document:\n\n${brief}`;
+  } else {
+    userContent = `Create an epic from this brief:\n\n"${brief}"`;
+  }
 
   if (existingEpics.length > 0) {
     userContent += `\n\nExisting epics in this project (do NOT duplicate):\n${existingEpics.map((e) => `- ${e}`).join('\n')}`;

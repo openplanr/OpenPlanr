@@ -24,7 +24,8 @@ You MUST respond with a valid JSON object containing these fields:
 - "dependencies": Known dependencies or "None"
 - "risks": Known risks or "None"
 
-Be specific, avoid generic filler. Ground the epic in the user's brief.
+Be specific, avoid generic filler. Ground the epic in the user's input.
+If the input is a detailed PRD or requirements document, extract and incorporate ALL sections — do not summarize or ignore content. Every key requirement should be reflected in the epic fields.
 Respond with JSON only, no markdown or explanation.`;
 
 export const FEATURES_SYSTEM_PROMPT = `${BASE_PERSONA}

@@ -64,7 +64,7 @@ planr config set-provider    # choose anthropic, openai, or ollama
 planr config set-key         # enter your API key
 ```
 
-Manual mode (no AI) is available for `planr epic create`, `planr feature create`, `planr story create`, and `planr task create`.
+Manual mode (no AI) is available for `planr epic create`, `planr feature create`, `planr story create`, and `planr task create --story`. `planr task create --feature` always requires AI.
 
 ---
 
@@ -102,6 +102,49 @@ Make sure `templateOverrides` in `planr.config.json` points to the correct direc
 ```
 
 The override directory must mirror the default template structure (e.g., `my-templates/epics/epic.md.hbs`). Only files that exist in the override directory will be used — all others fall back to defaults.
+
+---
+
+## GitHub integration issues
+
+### "GitHub CLI (gh) is not installed"
+
+The `planr github` commands require the GitHub CLI. Install it:
+
+```bash
+# macOS
+brew install gh
+
+# Other platforms: https://cli.github.com/
+```
+
+### "Not authenticated with GitHub"
+
+You need to log in with `gh`:
+
+```bash
+gh auth login
+```
+
+### "No GitHub remote found"
+
+Your repository doesn't have a GitHub remote configured. Add one:
+
+```bash
+git remote add origin https://github.com/your-org/your-repo.git
+```
+
+### "Could not resolve to an issue"
+
+The linked GitHub issue was deleted. Planr handles this gracefully — it will create a new issue on the next push. If you see this error during sync, re-push the artifact:
+
+```bash
+planr github push EPIC-001
+```
+
+### Push creates duplicate issues
+
+Each artifact stores its linked issue number in frontmatter (`githubIssue: 123`). If you manually delete this field, a new issue will be created on the next push. Don't edit `githubIssue` fields manually.
 
 ---
 

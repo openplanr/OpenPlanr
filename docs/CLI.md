@@ -67,19 +67,23 @@ project-root/
 
 ### `planr epic create`
 
-Create a new epic. With AI configured, provide a brief description and the AI expands it into a full epic.
+Create a new epic. With AI configured, provide a brief description and the AI expands it into a full epic. Use `--file` to feed a detailed PRD or requirements document.
 
 ```bash
 planr epic create
 planr epic create --title "User Authentication" --owner "Engineering"
+planr epic create --file ./prd.md
 planr epic create --manual
 ```
 
 | Option | Description | Required |
 |--------|-------------|----------|
-| `--title <title>` | Epic title | No (prompts) |
+| `--title <title>` | Epic title or brief description | No (prompts) |
+| `--file <path>` | Read epic description from a file (e.g., a PRD) | No |
 | `--owner <owner>` | Epic owner | No (prompts) |
 | `--manual` | Use manual interactive prompts instead of AI | No |
+
+When `--file` is provided, the full file content is sent to the AI with document-extraction framing so that all requirements, features, and success criteria are incorporated into the generated epic.
 
 **Interactive prompts:**
 
@@ -223,31 +227,34 @@ planr story list --feature FEAT-001    # filter by feature
 Create an implementation task list from a story or feature. With AI configured, gathers comprehensive context for intelligent task generation.
 
 ```bash
-planr task create --story US-001                    # from a single story
-planr task create --feature FEAT-001                # from all stories in a feature
+planr task create --story US-001                    # AI: one story + full planning context
+planr task create --feature FEAT-001                # AI: every story under feature + full context (higher output token budget)
 planr task create --story US-001 --title "Tasks"    # with custom title
-planr task create --story US-001 --manual           # manual mode
+planr task create --story US-001 --manual           # manual mode (story only; no AI)
 ```
 
 | Option | Description | Required |
 |--------|-------------|----------|
-| `--story <storyId>` | Create tasks from a single story | One of `--story` or `--feature` |
-| `--feature <featureId>` | Create tasks from all stories in a feature | One of `--story` or `--feature` |
+| `--story <storyId>` | AI tasks from one story | One of `--story` or `--feature` |
+| `--feature <featureId>` | AI tasks from **all** stories under the feature (single task list, linked from each story) | One of `--story` or `--feature` |
 | `--title <title>` | Task list title | No (AI generates it) |
-| `--manual` | Use manual interactive prompts instead of AI | No |
+| `--manual` | Manual interactive prompts instead of AI | No (`--story` only; `--feature` requires AI) |
 
 **What it gathers (AI mode):**
 
-When AI is configured, the command gathers comprehensive context:
-- User stories (one or all under a feature)
-- Gherkin acceptance criteria files
-- Parent feature and epic content
-- Architecture Decision Records (ADRs)
-- Codebase structure and tech stack
+Context is built by `gatherStoryArtifacts` / `gatherFeatureArtifacts` and passed to the same task-generation prompt. In both modes the model sees:
+
+- **User stories** — one story (`--story`) or every story linked to the feature (`--feature`)
+- **Gherkin** — `*-gherkin.feature` for each story included
+- **Parent feature** and **parent epic** markdown
+- **ADRs** — all architecture decision records in the project
+- **Codebase context** — tech stack / tree / related files derived from story text (and for `--feature`, from **all** story bodies plus the feature)
+
+`--feature` uses a larger completion budget (`taskFeature`, 32K tokens) than `--story` (`task`, 16K tokens) because the prompt and expected task list are typically bigger.
 
 The AI generates grouped subtasks with acceptance criteria mapping and relevant files.
 
-**Manual mode:** If AI is not configured, prompts for task names (comma-separated).
+**Manual mode:** If AI is not configured, `planr task create --story` prompts for task names (comma-separated). `--feature` always requires AI.
 
 **Output:** `docs/agile/tasks/TASK-001-<slug>.md`
 
@@ -518,6 +525,91 @@ planr config set-agent cursor            # set directly
 
 ---
 
+### `planr github push`
+
+Push planning artifacts to GitHub Issues. Requires `gh` CLI to be installed and authenticated (`gh auth login`).
+
+```bash
+planr github push EPIC-001              # push a single artifact
+planr github push --epic EPIC-001       # push all artifacts under an epic
+planr github push --all                 # push all artifacts
+```
+
+| Argument/Option | Description | Required |
+|-----------------|-------------|----------|
+| `[artifactId]` | Single artifact ID to push | One of `[artifactId]`, `--epic`, or `--all` |
+| `--epic <epicId>` | Push all artifacts under an epic | One of `[artifactId]`, `--epic`, or `--all` |
+| `--all` | Push all artifacts across all types | One of `[artifactId]`, `--epic`, or `--all` |
+
+**What it does:**
+- Creates a GitHub Issue for each artifact with type-specific formatting (metadata tables, section ordering, collapsible details)
+- Labels issues automatically (`planr:epic`, `planr:feature`, `planr:story`, `planr:task`)
+- Stores the GitHub issue number in artifact frontmatter (`githubIssue: 123`) for future syncing
+- On subsequent pushes, updates the existing issue instead of creating a duplicate
+- If a linked issue was deleted on GitHub, gracefully creates a new one
+
+---
+
+### `planr github sync`
+
+Bi-directional status sync between local artifacts and GitHub Issues.
+
+```bash
+planr github sync                       # interactive conflict resolution (both directions)
+planr github sync --direction pull      # GitHub → local (update local status from issue state)
+planr github sync --direction push      # local → GitHub (update issue state from local status)
+planr github sync --direction both      # both with interactive conflict resolution (default)
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--direction <dir>` | `pull`, `push`, or `both` | `both` |
+
+**Status mapping:**
+- GitHub `open` → local `in-progress` / `draft`
+- GitHub `closed` → local `done` / `accepted`
+- Local `done` → closes the GitHub issue
+- Conflicts (both changed) → interactive prompt to choose which side wins
+
+---
+
+### `planr github status`
+
+Show sync status of all linked artifacts.
+
+```bash
+planr github status
+```
+
+Displays a table of all artifacts that have a `githubIssue` field, showing local status vs GitHub issue state and whether they are in sync.
+
+---
+
+### `planr export`
+
+Generate a consolidated planning report in markdown, JSON, or HTML format.
+
+```bash
+planr export                                    # markdown report in current directory
+planr export --format html                      # self-contained HTML report
+planr export --format json                      # machine-readable JSON
+planr export --format html --scope EPIC-001     # only artifacts under one epic
+planr export --output ./reports                 # custom output directory
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--format <format>` | Output format: `markdown`, `json`, or `html` | `markdown` |
+| `--scope <epicId>` | Only export artifacts under a specific epic | All artifacts |
+| `--output <path>` | Output file or directory | `.` (current directory) |
+
+**Output formats:**
+- **Markdown** — hierarchical report with all artifact details, nested under epics → features → stories → tasks
+- **JSON** — structured data with full hierarchy, counts, and metadata for programmatic consumption
+- **HTML** — self-contained file with inline CSS, collapsible `<details>` sections, color-coded status badges, and full hierarchy rendering
+
+---
+
 ## Workflow
 
 The typical agile planning flow follows this hierarchy:
@@ -528,14 +620,18 @@ planr init
        └─ planr feature create --epic EPIC-001
             └─ planr story create --feature FEAT-001   (single feature)
             └─ planr story create --epic EPIC-001     (all features at once)
-                 └─ planr task create --story US-001
-                      └─ planr task implement TASK-001
+                 ├─ planr task create --story US-001   (one story + feature/epic/Gherkin/ADRs/codebase)
+                 ├─ planr task create --feature FEAT-001   (all stories in feature + same artifact context; larger AI budget)
+                 └─ planr task implement TASK-001
 
 planr plan                  ← full automated flow (Epic → Features → Stories → Tasks)
 planr refine EPIC-001       ← AI review and improvement suggestions
 planr sync                  ← validate and fix cross-references
 planr rules generate        ← generate AI rules from your artifacts
 planr status                ← see progress overview
+planr github push --all     ← push artifacts to GitHub Issues
+planr github sync           ← bi-directional status sync with GitHub
+planr export --format html  ← generate planning report
 ```
 
 ---

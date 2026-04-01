@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{projectName}} — Planning Report</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a2e;
+      --muted: #6c757d;
+      --border: #dee2e6;
+      --accent: #4169E1;
+      --done: #2E8B57;
+      --progress: #DAA520;
+      --pending: #6c757d;
+      --epic-bg: #f0edff;
+      --feature-bg: #eef3ff;
+      --story-bg: #f0faf4;
+      --task-bg: #fffcf0;
+      --quick-bg: #fdf0ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--fg);
+      background: var(--bg);
+      line-height: 1.6;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
+    h2 { font-size: 1.4rem; margin: 2rem 0 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.3rem; }
+    h3 { font-size: 1.1rem; margin: 0; }
+    .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 1.5rem; }
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .badge-done { background: var(--done); color: #fff; }
+    .badge-in-progress { background: var(--progress); color: #fff; }
+    .badge-pending { background: var(--pending); color: #fff; }
+    .estimate { font-size: 0.8rem; color: var(--muted); margin-left: 0.5rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    td { font-size: 0.95rem; }
+    details { margin: 0.5rem 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+    details[open] > summary { border-bottom: 1px solid var(--border); }
+    summary {
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      user-select: none;
+    }
+    summary:hover { background: #f8f9fa; }
+    summary::marker { color: var(--muted); }
+    .artifact-body { padding: 0.75rem 1rem 1rem; font-size: 0.9rem; }
+    .artifact-body p { margin: 0.5rem 0; }
+    .artifact-body ul, .artifact-body ol { margin: 0.5rem 0 0.5rem 1.5rem; }
+    .artifact-body li { margin: 0.2rem 0; }
+    .artifact-body h1, .artifact-body h2, .artifact-body h3, .artifact-body h4 { margin: 1rem 0 0.5rem; }
+    .artifact-body pre { background: #f4f4f5; padding: 0.75rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem; }
+    .artifact-body code { background: #f4f4f5; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.85em; }
+    .level-epic > summary { background: var(--epic-bg); }
+    .level-feature > summary { background: var(--feature-bg); }
+    .level-story > summary { background: var(--story-bg); }
+    .level-task > summary { background: var(--task-bg); }
+    .level-quick > summary { background: var(--quick-bg); }
+    .nested { padding-left: 1.25rem; padding-bottom: 0.5rem; }
+    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--muted); }
+    @media print {
+      details { border: none; }
+      details[open] > summary { border-bottom: 1px solid var(--border); }
+      summary { pointer-events: none; }
+      summary::marker { display: none; }
+      .nested { padding-left: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>{{projectName}}</h1>
+<p class="subtitle">Planning Report &mdash; {{date}}</p>
+
+<h2>Summary</h2>
+<table>
+  <thead>
+    <tr><th>Type</th><th>Count</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Epics</td><td>{{counts.epics}}</td></tr>
+    <tr><td>Features</td><td>{{counts.features}}</td></tr>
+    <tr><td>Stories</td><td>{{counts.stories}}</td></tr>
+    <tr><td>Tasks</td><td>{{counts.tasks}}</td></tr>
+    <tr><td>Quick Tasks</td><td>{{counts.quick}}</td></tr>
+  </tbody>
+</table>
+
+{{#if epics.length}}
+<h2>Epics</h2>
+
+{{#each epics}}
+<details class="level-epic" open>
+  <summary>
+    <h3>{{this.id}}: {{this.title}}</h3>
+    <span class="badge {{#if (eq this.status 'done')}}badge-done{{else}}{{#if (eq this.status 'in-progress')}}badge-in-progress{{else}}badge-pending{{/if}}{{/if}}">{{this.status}}</span>
+    {{#if this.data.estimatedPoints}}<span class="estimate">{{this.data.estimatedPoints}} pts &middot; {{this.data.estimatedHours}}h</span>{{/if}}
+  </summary>
+  <div class="artifact-body">
+    {{{this.body}}}
+  </div>
+  {{#if this.features.length}}
+  <div class="nested">
+    {{#each this.features}}
+    <details class="level-feature">
+      <summary>
+        <h3>{{this.id}}: {{this.title}}</h3>
+        <span class="badge {{#if (eq this.status 'done')}}badge-done{{else}}{{#if (eq this.status 'in-progress')}}badge-in-progress{{else}}badge-pending{{/if}}{{/if}}">{{this.status}}</span>
+        {{#if this.data.estimatedPoints}}<span class="estimate">{{this.data.estimatedPoints}} pts</span>{{/if}}
+      </summary>
+      <div class="artifact-body">
+        {{{this.body}}}
+      </div>
+      {{#if this.stories.length}}
+      <div class="nested">
+        {{#each this.stories}}
+        <details class="level-story">
+          <summary>
+            <h3>{{this.id}}: {{this.title}}</h3>
+            <span class="badge {{#if (eq this.status 'done')}}badge-done{{else}}{{#if (eq this.status 'in-progress')}}badge-in-progress{{else}}badge-pending{{/if}}{{/if}}">{{this.status}}</span>
+            {{#if this.data.estimatedPoints}}<span class="estimate">{{this.data.estimatedPoints}} pts</span>{{/if}}
+          </summary>
+          <div class="artifact-body">
+            {{{this.body}}}
+          </div>
+          {{#if this.tasks.length}}
+          <div class="nested">
+            {{#each this.tasks}}
+            <details class="level-task">
+              <summary>
+                <h3>{{this.id}}: {{this.title}}</h3>
+                <span class="badge {{#if (eq this.status 'done')}}badge-done{{else}}{{#if (eq this.status 'in-progress')}}badge-in-progress{{else}}badge-pending{{/if}}{{/if}}">{{this.status}}</span>
+              </summary>
+              <div class="artifact-body">
+                {{{this.body}}}
+              </div>
+            </details>
+            {{/each}}
+          </div>
+          {{/if}}
+        </details>
+        {{/each}}
+      </div>
+      {{/if}}
+    </details>
+    {{/each}}
+  </div>
+  {{/if}}
+</details>
+{{/each}}
+{{/if}}
+
+{{#if orphanFeatures.length}}
+<h2>Unlinked Features</h2>
+{{#each orphanFeatures}}
+<details class="level-feature">
+  <summary>
+    <h3>{{this.id}}: {{this.title}}</h3>
+    <span class="badge {{#if (eq this.status 'done')}}badge-done{{else}}{{#if (eq this.status 'in-progress')}}badge-in-progress{{else}}badge-pending{{/if}}{{/if}}">{{this.status}}</span>
+  </summary>
+  <div class="artifact-body">{{{this.body}}}</div>
+</details>
+{{/each}}
+{{/if}}
+
+{{#if orphanStories.length}}
+<h2>Unlinked Stories</h2>
+{{#each orphanStories}}
+<details class="level-story">
+  <summary>
+    <h3>{{this.id}}: {{this.title}}</h3>
+    <span class="badge {{#if (eq this.status 'done')}}badge-done{{else}}{{#if (eq this.status 'in-progress')}}badge-in-progress{{else}}badge-pending{{/if}}{{/if}}">{{this.status}}</span>
+  </summary>
+  <div class="artifact-body">{{{this.body}}}</div>
+</details>
+{{/each}}
+{{/if}}
+
+{{#if orphanTasks.length}}
+<h2>Unlinked Tasks</h2>
+{{#each orphanTasks}}
+<details class="level-task">
+  <summary>
+    <h3>{{this.id}}: {{this.title}}</h3>
+    <span class="badge {{#if (eq this.status 'done')}}badge-done{{else}}{{#if (eq this.status 'in-progress')}}badge-in-progress{{else}}badge-pending{{/if}}{{/if}}">{{this.status}}</span>
+  </summary>
+  <div class="artifact-body">{{{this.body}}}</div>
+</details>
+{{/each}}
+{{/if}}
+
+{{#if quickTasks.length}}
+<h2>Quick Tasks</h2>
+{{#each quickTasks}}
+<details class="level-quick">
+  <summary>
+    <h3>{{this.id}}: {{this.title}}</h3>
+    <span class="badge {{#if (eq this.status 'done')}}badge-done{{else}}{{#if (eq this.status 'in-progress')}}badge-in-progress{{else}}badge-pending{{/if}}{{/if}}">{{this.status}}</span>
+  </summary>
+  <div class="artifact-body">{{{this.body}}}</div>
+</details>
+{{/each}}
+{{/if}}
+
+<footer>
+  Exported by <code>planr export</code> on {{date}}.
+</footer>
+
+</body>
+</html>

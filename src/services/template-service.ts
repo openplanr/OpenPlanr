@@ -21,6 +21,8 @@ Handlebars.registerHelper('join', (arr: string[], sep: unknown) =>
   Array.isArray(arr) ? arr.join(typeof sep === 'string' ? sep : ', ') : '',
 );
 
+Handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
+
 export async function renderTemplate(
   templatePath: string,
   data: Record<string, unknown>,

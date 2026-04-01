@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-04-01
+
+### Added
+
+- **`planr github push`** — push planning artifacts to GitHub Issues. Supports single artifact (`planr github push EPIC-001`), all artifacts under an epic (`--epic EPIC-001`), or everything (`--all`). Creates labeled issues with type-aware formatting, metadata tables, and collapsible artifact sources. Stores the GitHub issue number in artifact frontmatter for bi-directional linking
+- **`planr github sync`** — bi-directional status sync between local artifacts and GitHub Issues. Supports `--direction pull` (GitHub→local), `push` (local→GitHub), or `both` (interactive conflict resolution). Detects open/closed state changes and maps them to artifact status fields
+- **`planr github status`** — show sync status of all linked artifacts (local status vs GitHub issue state)
+- **`planr export`** — generate consolidated planning reports in markdown (`--format markdown`), JSON (`--format json`), or HTML (`--format html`). Supports epic scoping (`--scope EPIC-001`) and custom output path (`--output ./reports`). HTML reports are self-contained with collapsible sections, status badges, and inline CSS
+- **`planr epic create --file <path>`** — read epic description from a file (e.g., a PRD or requirements document) instead of single-line input. Supports multi-line documents of any size
+- **Type-aware GitHub issue formatting** — different body builders for task, epic, feature, and story artifacts with metadata tables, section reordering, and collapsible details
+- **Temp file body delivery** — uses `--body-file` for GitHub issue creation/update to avoid OS argument length limits on large artifacts
+- **Graceful deleted issue handling** — when a linked GitHub issue has been deleted, falls back to creating a new one instead of failing
+- **HTML export template** — self-contained Handlebars template with collapsible `<details>` sections, color-coded status badges, and full hierarchy rendering
+
+### Changed
+
+- **Epic prompt framing** — `buildEpicPrompt()` detects detailed input (>5 lines) and uses document extraction framing instead of "brief description" framing, so AI faithfully processes large PRDs
+- **Epic system prompt** — updated to explicitly handle detailed PRD input: "extract and incorporate ALL sections — do not summarize or ignore content"
+- **Epic token budget** — increased from 4096 to 8192 to support richer output from detailed PRD input
+
 ## [0.8.0] - 2026-03-31
 
 ### Added
@@ -197,8 +217,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`planr refine <ID>`** — AI-powered review and improvement suggestions
 - **`planr sync`** — validate and fix cross-references across artifacts
 - **`planr config show`** — display current configuration
-- **`planr task create --feature <ID>`** — create tasks from all stories in a feature
-- Feature-level task generation with comprehensive context gathering
+- **`planr task create --feature <ID>`** — AI task list from every story under the feature, with parent feature and epic, all Gherkin files for those stories, all ADRs, and codebase-derived context (higher output token budget than per-story task create)
+- Feature-level task generation shares the same rich context model as `--story`, aggregated across the feature
 
 ## [0.1.0] - 2026-03-26
 
@@ -209,7 +229,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`planr epic create/list`** — create and list epics
 - **`planr feature create/list`** — create features from epics
 - **`planr story create/list`** — create user stories with Gherkin acceptance criteria
-- **`planr task create/list/implement`** — create task lists from stories
+- **`planr task create/list/implement`** — task lists from a story or from all stories in a feature (AI mode includes epic, feature, Gherkin, ADRs, codebase context)
 - **`planr checklist show/reset`** — agile development checklist
 - **`planr rules generate`** — generate AI agent rule files
   - Cursor (`.cursor/rules/*.mdc`)

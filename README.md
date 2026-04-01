@@ -35,6 +35,7 @@ planr epic create
 planr feature create --epic EPIC-001
 planr story create --feature FEAT-001
 planr task create --story US-001
+# or: planr task create --feature FEAT-001  # one task list from every story + full planning context (AI)
 
 # Generate AI rules for your editor
 planr rules generate
@@ -47,12 +48,13 @@ planr init
   └── planr epic create                    # Define the big picture
        └── planr feature create --epic EPIC-001    # Break into features
             └── planr story create --feature FEAT-001  # User stories + Gherkin
-                 └── planr task create --story US-001      # Implementation tasks
+                 ├── planr task create --story US-001       # Tasks from one story (+ parent feature/epic, Gherkin, ADRs, codebase context)
+                 └── planr task create --feature FEAT-001  # Tasks from all stories in the feature (+ same context, wider scope; larger AI budget)
 
 planr rules generate   # Generate .cursor/rules, CLAUDE.md, AGENTS.md
 ```
 
-Each command creates markdown artifacts in `docs/agile/` and interactively prompts for the details. The hierarchy is enforced — features require an epic, stories require a feature, tasks require a story or feature.
+Each command creates markdown artifacts in `docs/agile/` and interactively prompts for the details. The hierarchy is enforced — features require an epic, stories require a feature, tasks require a story or feature. For AI-powered `task create`, context always includes parent feature and epic, Gherkin where present, all ADRs, and codebase-derived context; `--feature` aggregates every story under that feature and uses a higher output token limit than `--story`.
 
 Or use `planr plan` to run the full flow in a single command:
 
@@ -80,15 +82,15 @@ planr rules generate --dry-run        # preview
 | Command | Description |
 |---------|-------------|
 | `planr init` | Initialize project with config and directory structure |
-| `planr epic create` | Create a new epic |
+| `planr epic create` | Create a new epic (supports `--file <path>` for PRDs) |
 | `planr epic list` | List all epics |
 | `planr feature create --epic <ID>` | Create features from an epic |
 | `planr feature list` | List all features |
 | `planr story create --feature <ID>` | Create user stories from a feature |
 | `planr story create --epic <ID>` | Batch-generate stories for all features under an epic |
 | `planr story list` | List all user stories |
-| `planr task create --story <ID>` | Create a task list from a single story |
-| `planr task create --feature <ID>` | Create a task list from all stories in a feature |
+| `planr task create --story <ID>` | AI task list from one story (plus parent feature/epic, Gherkin, ADRs, codebase context) |
+| `planr task create --feature <ID>` | AI task list from **all** stories under the feature, with the same artifact context and a larger model output budget |
 | `planr task list` | List all task lists |
 | `planr task implement <ID>` | View tasks and start implementing |
 | `planr plan` | Full automated flow: Epic → Features → Stories → Tasks |
@@ -104,6 +106,10 @@ planr rules generate --dry-run        # preview
 | `planr config set-key` | Store API key securely |
 | `planr config set-model` | Set AI model |
 | `planr config set-agent` | Set default coding agent |
+| `planr github push [ID]` | Push artifacts to GitHub Issues (single, `--epic`, or `--all`) |
+| `planr github sync` | Bi-directional status sync with GitHub Issues |
+| `planr github status` | Show sync status of linked artifacts |
+| `planr export` | Export planning report (markdown, JSON, or HTML) |
 
 See [docs/CLI.md](docs/CLI.md) for the full command reference with all options and flags.
 

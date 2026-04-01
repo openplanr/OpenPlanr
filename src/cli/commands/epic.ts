@@ -28,7 +28,8 @@ export function registerEpicCommand(program: Command) {
   epic
     .command('create')
     .description('Create a new epic')
-    .option('--title <title>', 'epic title')
+    .option('--title <title>', 'epic title or brief description')
+    .option('--file <path>', 'read epic description from a file (e.g., a PRD)')
     .option('--owner <owner>', 'epic owner')
     .option('--manual', 'use manual interactive prompts instead of AI')
     .action(async (opts) => {
@@ -112,7 +113,17 @@ async function createEpicWithAI(
 ) {
   logger.heading('Create Epic (AI-powered)');
 
-  const brief = opts.title || (await promptText('Describe your epic in a sentence or two:'));
+  let brief: string;
+  if (opts.file) {
+    const { readFile } = await import('../../utils/fs.js');
+    const path = await import('node:path');
+    brief = await readFile(path.resolve(opts.file));
+    logger.dim(`Read ${brief.split('\n').length} lines from ${opts.file}`);
+  } else if (opts.title) {
+    brief = opts.title;
+  } else {
+    brief = await promptText('Describe your epic:');
+  }
 
   // Get existing epics for deduplication
   const existingEpics = await listArtifacts(projectDir, config, 'epic');
@@ -204,7 +215,7 @@ async function createEpicWithAI(
     logger.heading('Next steps:');
     logger.dim(`  1. planr feature create --epic ${id}    — Break epic into features`);
     logger.dim(`  2. planr story create --feature FEAT-*   — Create user stories per feature`);
-    logger.dim(`  3. planr task create --story US-*        — Generate implementation tasks`);
+    logger.dim(`  3. planr task create --feature FEAT-*    — Generate implementation tasks`);
     logger.dim(`  4. planr task implement TASK-*           — Implement with your coding agent`);
     logger.dim('');
     logger.dim(`  Or run the full flow at once:`);

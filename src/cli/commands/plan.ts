@@ -18,13 +18,11 @@ import {
   buildEpicPrompt,
   buildFeaturesPrompt,
   buildStoriesPrompt,
-  buildTasksPrompt,
 } from '../../ai/prompts/prompt-builder.js';
 import {
   aiEpicResponseSchema,
   aiFeaturesResponseSchema,
   aiStoriesResponseSchema,
-  aiTasksResponseSchema,
 } from '../../ai/schemas/ai-response-schemas.js';
 import type { AIProvider } from '../../ai/types.js';
 import { TOKEN_BUDGETS } from '../../ai/types.js';
@@ -67,8 +65,8 @@ export function registerPlanCommand(program: Command) {
 
       try {
         if (opts.story) {
-          // Start from story → generate tasks
-          await generateTasksForStory(projectDir, config, provider, opts.story);
+          // Start from story → generate tasks (find parent feature and generate at feature level)
+          await generateTasksForSingleStory(projectDir, config, provider, opts.story);
         } else if (opts.feature) {
           // Start from feature → stories → tasks
           await planFromFeature(projectDir, config, provider, opts.feature);
@@ -286,33 +284,34 @@ async function planFromFeature(
     logger.success(`Created ${id}: ${story.title}`);
   }
 
-  // Step 4: Generate tasks for each story
-  for (const storyId of storyIds) {
-    await generateTasksForStory(projectDir, config, provider, storyId);
-  }
+  // Step 4: Generate one task list per feature (all stories + full context)
+  await generateTasksForFeature(projectDir, config, provider, featureId, storyIds);
 }
 
-async function generateTasksForStory(
+async function generateTasksForFeature(
   projectDir: string,
   config: OpenPlanrConfig,
   provider: AIProvider,
-  storyId: string,
+  featureId: string,
+  storyIds: string[],
 ) {
-  const { gatherStoryArtifacts } = await import('../../services/artifact-gathering.js');
+  const { gatherFeatureArtifacts } = await import('../../services/artifact-gathering.js');
+  const { buildTasksPrompt } = await import('../../ai/prompts/prompt-builder.js');
+  const { aiTasksResponseSchema } = await import('../../ai/schemas/ai-response-schemas.js');
 
-  let ctx: Awaited<ReturnType<typeof gatherStoryArtifacts>> | undefined;
+  let ctx: Awaited<ReturnType<typeof gatherFeatureArtifacts>>;
   try {
-    ctx = await gatherStoryArtifacts(projectDir, config, storyId);
+    ctx = await gatherFeatureArtifacts(projectDir, config, featureId);
   } catch {
-    logger.error(`Story ${storyId} not found.`);
+    logger.error(`Feature ${featureId} not found.`);
     return;
   }
 
-  logger.dim(`\n[4/4] Generating tasks for ${storyId}...`);
-  ctx.scope = { type: 'story', id: storyId };
+  logger.dim(`\n[4/4] Generating tasks for ${featureId} (${ctx.stories.length} stories)...`);
+  ctx.scope = { type: 'feature', id: featureId };
   const taskMessages = buildTasksPrompt(ctx);
   const { result } = await generateStreamingJSON(provider, taskMessages, aiTasksResponseSchema, {
-    maxTokens: TOKEN_BUDGETS.plan,
+    maxTokens: TOKEN_BUDGETS.taskFeature,
   });
 
   const tasks = result.tasks.map((tg) => ({
@@ -327,7 +326,7 @@ async function generateTasksForStory(
     })),
   }));
 
-  const storyFilename = await resolveArtifactFilename(projectDir, config, 'story', storyId);
+  const featureFilename = await resolveArtifactFilename(projectDir, config, 'feature', featureId);
 
   // Build artifact sources for traceability
   const artifactSources: Array<{ type: string; path: string }> = [];
@@ -349,8 +348,8 @@ async function generateTasksForStory(
 
   const { id } = await createArtifact(projectDir, config, 'task', 'tasks/task-list.md.hbs', {
     title: result.title,
-    storyId,
-    storyFilename,
+    featureId,
+    featureFilename,
     tasks,
     artifactSources,
     acceptanceCriteriaMapping: result.acceptanceCriteriaMapping,
@@ -358,6 +357,90 @@ async function generateTasksForStory(
   });
 
   const total = tasks.reduce((sum, t) => sum + t.subtasks.length + 1, 0);
-  await addChildReference(projectDir, config, 'story', storyId, 'task', id, result.title);
-  logger.success(`Created ${id}: ${result.title} (${total} tasks)`);
+
+  // Link task list from each story
+  for (const sId of storyIds) {
+    await addChildReference(projectDir, config, 'story', sId, 'task', id, result.title);
+  }
+
+  logger.success(
+    `Created ${id}: ${result.title} (${total} tasks from ${ctx.stories.length} stories)`,
+  );
+}
+
+async function generateTasksForSingleStory(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  provider: AIProvider,
+  storyId: string,
+) {
+  // Find parent feature and generate tasks at feature level
+  const storyData = await readArtifact(projectDir, config, 'story', storyId);
+  if (!storyData) {
+    logger.error(`Story ${storyId} not found.`);
+    return;
+  }
+
+  const featureId = storyData.data.featureId as string | undefined;
+  if (featureId) {
+    logger.dim(`Story ${storyId} belongs to ${featureId} — generating tasks at feature level.`);
+    await generateTasksForFeature(projectDir, config, provider, featureId, [storyId]);
+  } else {
+    // Orphan story — fall back to story-level gathering
+    const { gatherStoryArtifacts } = await import('../../services/artifact-gathering.js');
+    const { buildTasksPrompt } = await import('../../ai/prompts/prompt-builder.js');
+    const { aiTasksResponseSchema } = await import('../../ai/schemas/ai-response-schemas.js');
+
+    const ctx = await gatherStoryArtifacts(projectDir, config, storyId);
+    logger.dim(`\nGenerating tasks for ${storyId}...`);
+    ctx.scope = { type: 'story', id: storyId };
+    const taskMessages = buildTasksPrompt(ctx);
+    const { result } = await generateStreamingJSON(provider, taskMessages, aiTasksResponseSchema, {
+      maxTokens: TOKEN_BUDGETS.plan,
+    });
+
+    const tasks = result.tasks.map((tg) => ({
+      id: tg.id,
+      title: tg.title,
+      status: 'pending' as const,
+      subtasks: (tg.subtasks || []).map((st) => ({
+        id: st.id,
+        title: st.title,
+        status: 'pending' as const,
+        subtasks: [],
+      })),
+    }));
+
+    const storyFilename = await resolveArtifactFilename(projectDir, config, 'story', storyId);
+    const artifactSources: Array<{ type: string; path: string }> = [];
+    for (const s of ctx.stories) {
+      artifactSources.push({
+        type: 'User Story',
+        path: `${config.outputPaths.agile}/stories/${s.id}`,
+      });
+    }
+    for (const g of ctx.gherkinScenarios) {
+      artifactSources.push({
+        type: 'Gherkin',
+        path: `${config.outputPaths.agile}/stories/${g.storyId}-gherkin.feature`,
+      });
+    }
+    for (const a of ctx.adrs) {
+      artifactSources.push({ type: 'ADR', path: `${config.outputPaths.agile}/adrs/${a.id}` });
+    }
+
+    const { id } = await createArtifact(projectDir, config, 'task', 'tasks/task-list.md.hbs', {
+      title: result.title,
+      storyId,
+      storyFilename,
+      tasks,
+      artifactSources,
+      acceptanceCriteriaMapping: result.acceptanceCriteriaMapping,
+      relevantFiles: result.relevantFiles,
+    });
+
+    const total = tasks.reduce((sum, t) => sum + t.subtasks.length + 1, 0);
+    await addChildReference(projectDir, config, 'story', storyId, 'task', id, result.title);
+    logger.success(`Created ${id}: ${result.title} (${total} tasks)`);
+  }
 }

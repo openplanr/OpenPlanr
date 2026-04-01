@@ -1,0 +1,136 @@
+# {{projectName}} — Planning Report
+
+> Generated on {{date}}
+
+---
+
+## Summary
+
+| Type | Count |
+|------|-------|
+| Epics | {{counts.epics}} |
+| Features | {{counts.features}} |
+| Stories | {{counts.stories}} |
+| Tasks | {{counts.tasks}} |
+| Quick Tasks | {{counts.quick}} |
+
+---
+
+{{#if epics.length}}
+## Epics
+
+{{#each epics}}
+### {{this.id}}: {{this.title}}
+
+**Status:** {{this.status}}
+{{#if this.data.estimatedPoints}}
+**Estimate:** {{this.data.estimatedPoints}} pts ({{this.data.estimatedHours}}h, {{this.data.complexity}} complexity)
+{{/if}}
+
+{{{this.body}}}
+
+{{#if this.features.length}}
+{{#each this.features}}
+#### {{this.id}}: {{this.title}}
+
+**Status:** {{this.status}}
+{{#if this.data.estimatedPoints}}
+**Estimate:** {{this.data.estimatedPoints}} pts ({{this.data.estimatedHours}}h)
+{{/if}}
+
+{{{this.body}}}
+
+{{#if this.stories.length}}
+{{#each this.stories}}
+##### {{this.id}}: {{this.title}}
+
+**Status:** {{this.status}}
+{{#if this.data.estimatedPoints}}
+**Estimate:** {{this.data.estimatedPoints}} pts ({{this.data.estimatedHours}}h)
+{{/if}}
+
+{{{this.body}}}
+
+{{#if this.tasks.length}}
+{{#each this.tasks}}
+###### {{this.id}}: {{this.title}}
+
+**Status:** {{this.status}}
+{{#if this.data.estimatedPoints}}
+**Estimate:** {{this.data.estimatedPoints}} pts ({{this.data.estimatedHours}}h)
+{{/if}}
+
+{{{this.body}}}
+
+{{/each}}
+{{/if}}
+{{/each}}
+{{/if}}
+{{/each}}
+{{/if}}
+
+---
+
+{{/each}}
+{{/if}}
+{{#if orphanFeatures.length}}
+## Unlinked Features
+
+{{#each orphanFeatures}}
+### {{this.id}}: {{this.title}}
+
+**Status:** {{this.status}}
+
+{{{this.body}}}
+
+{{#if this.stories.length}}
+{{#each this.stories}}
+#### {{this.id}}: {{this.title}}
+
+**Status:** {{this.status}}
+
+{{{this.body}}}
+
+{{/each}}
+{{/if}}
+{{/each}}
+{{/if}}
+{{#if orphanStories.length}}
+## Unlinked Stories
+
+{{#each orphanStories}}
+### {{this.id}}: {{this.title}}
+
+**Status:** {{this.status}}
+
+{{{this.body}}}
+
+{{/each}}
+{{/if}}
+{{#if orphanTasks.length}}
+## Unlinked Tasks
+
+{{#each orphanTasks}}
+### {{this.id}}: {{this.title}}
+
+**Status:** {{this.status}}
+
+{{{this.body}}}
+
+{{/each}}
+{{/if}}
+{{#if quickTasks.length}}
+## Quick Tasks
+
+{{#each quickTasks}}
+### {{this.id}}: {{this.title}}
+
+**Status:** {{this.status}}
+
+{{{this.body}}}
+
+{{/each}}
+{{/if}}
+---
+
+_Exported by `planr export` on {{date}}._
