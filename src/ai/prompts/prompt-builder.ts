@@ -20,8 +20,11 @@ import {
   TASKS_SYSTEM_PROMPT,
 } from './system-prompts.js';
 
+/** Input exceeding this many lines is treated as a detailed document (PRD, spec, etc.). */
+const DETAILED_INPUT_LINE_THRESHOLD = 5;
+
 export function buildEpicPrompt(brief: string, existingEpics: string[] = []): AIMessage[] {
-  const isDetailed = brief.split('\n').length > 5;
+  const isDetailed = brief.split('\n').length > DETAILED_INPUT_LINE_THRESHOLD;
 
   let userContent: string;
   if (isDetailed) {
@@ -146,7 +149,14 @@ export function buildTasksPrompt(ctx: TasksPromptInput): AIMessage[] {
 }
 
 export function buildQuickTasksPrompt(description: string, codebaseContext?: string): AIMessage[] {
-  let userContent = `Generate an implementation task list for the following:\n\n"${description}"`;
+  const isDetailed = description.split('\n').length > DETAILED_INPUT_LINE_THRESHOLD;
+  let userContent: string;
+
+  if (isDetailed) {
+    userContent = `Generate an implementation task list from this detailed requirements document. Extract ALL commands, data models, constraints, and features into concrete implementation tasks:\n\n${description}`;
+  } else {
+    userContent = `Generate an implementation task list for the following:\n\n"${description}"`;
+  }
 
   if (codebaseContext) {
     userContent += `\n\n--- Codebase Context ---\n${codebaseContext}`;

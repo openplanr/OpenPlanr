@@ -100,6 +100,7 @@ export const aiACMappingSchema = z.object({
 export const aiRelevantFileSchema = z.object({
   path: z.string().min(1),
   reason: z.string().min(1),
+  action: z.enum(['modify', 'create']).default('modify'),
 });
 
 export const aiTasksResponseSchema = z.object({

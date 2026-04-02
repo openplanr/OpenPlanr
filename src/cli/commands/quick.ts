@@ -46,6 +46,7 @@ export function registerQuickCommand(program: Command) {
     .command('create', { isDefault: true })
     .description('Create a standalone task list from a brief description')
     .argument('[description...]', 'what to build (one-line description)')
+    .option('--file <path>', 'read description from a file (PRD, spec, etc.)')
     .option('--manual', 'use manual interactive prompts instead of AI')
     .action(async (descriptionParts: string[], opts) => {
       const projectDir = program.opts().projectDir as string;
@@ -53,7 +54,11 @@ export function registerQuickCommand(program: Command) {
 
       let description = descriptionParts.join(' ').trim();
 
-      if (!description && !opts.manual) {
+      if (opts.file) {
+        const { readFile } = await import('../../utils/fs.js');
+        description = await readFile(path.resolve(opts.file));
+        logger.dim(`Read ${description.split('\n').length} lines from ${opts.file}`);
+      } else if (!description && !opts.manual) {
         description = await promptText('What do you want to build?');
       }
 
@@ -64,7 +69,7 @@ export function registerQuickCommand(program: Command) {
           logger.error('Please provide a description.');
           return;
         }
-        await createQuickWithAI(projectDir, config, description);
+        await createQuickWithAI(projectDir, config, description, !!opts.file);
       } else {
         if (!opts.manual && !isAIConfigured(config)) {
           logger.warn('AI not configured. Using manual mode.');
@@ -186,7 +191,12 @@ export function registerQuickCommand(program: Command) {
 // AI-powered quick task creation
 // ---------------------------------------------------------------------------
 
-async function createQuickWithAI(projectDir: string, config: OpenPlanrConfig, description: string) {
+async function createQuickWithAI(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  description: string,
+  fromFile = false,
+) {
   logger.heading('Quick Task (AI-powered)');
   logger.dim('Analyzing description and codebase...');
 
@@ -213,8 +223,9 @@ async function createQuickWithAI(projectDir: string, config: OpenPlanrConfig, de
     const messages = buildQuickTasksPrompt(description, codebaseContext);
     logger.dim('AI is generating tasks...');
 
+    const maxTokens = fromFile ? TOKEN_BUDGETS.taskFeature : TOKEN_BUDGETS.task;
     const { result } = await generateStreamingJSON(provider, messages, aiQuickTasksResponseSchema, {
-      maxTokens: TOKEN_BUDGETS.task,
+      maxTokens,
     });
 
     // Display preview

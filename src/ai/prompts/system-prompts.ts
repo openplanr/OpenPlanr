@@ -89,26 +89,36 @@ You MUST respond with a valid JSON object containing:
   - "criterion": The acceptance criterion text (from gherkin scenarios or story requirements)
   - "sourceStoryId": Which user story this criterion comes from (e.g., "US-001")
   - "taskIds": Array of task/subtask IDs that satisfy this criterion (e.g., ["1.1", "2.3"])
-- "relevantFiles": Array of files to create or modify:
-  - "path": File path relative to project root (e.g., "src/auth/login.ts")
+- "relevantFiles": Array of files to create or modify. Each object MUST have:
+  - "path": File path relative to project root — MUST match a file from the "Existing Source Files" section, or follow the exact naming convention of files in the same directory
   - "reason": Brief explanation of why this file needs changes
+  - "action": REQUIRED — "modify" if the file exists in the "Existing Source Files" list, "create" if it is a new file that does not exist yet
+
+## CRITICAL: Codebase-Aware Task Generation
+
+When codebase context is provided, you MUST:
+
+1. **Verify file paths against the "Existing Source Files" section.** NEVER invent file paths. If a file is not listed there, it does not exist. Do NOT assume files like "export-service.ts" exist just because "export" is a feature — check the inventory.
+2. **Follow existing patterns exactly.** Study the Architecture section. If there is a central CRUD service, new features MUST use it — do NOT create parallel services for the same operations.
+3. **Extend, don't reinvent.** Types go in the existing types file. New CRUD operations use the existing service. New commands follow the existing command pattern shown in Architecture.
+4. **Match the registration pattern.** If commands are registered in an index file, your tasks must include registering new commands the same way.
+5. **Use real interfaces.** Reference exact function signatures from the Architecture section in task descriptions (e.g., "call createArtifact(projectDir, config, 'backlog', 'backlog/backlog-item.md.hbs', data)").
 
 Tasks should:
-- Reference actual files/paths from the codebase when possible
-- Follow existing code patterns and conventions
+- Be specific and actionable with exact file paths and function names from the codebase
+- Follow existing code patterns and conventions shown in the Architecture section
 - Include setup, implementation, testing, and cleanup steps
 - Be ordered logically (dependencies first)
 - Address specific acceptance criteria from gherkin scenarios
 - Respect architectural decisions from ADRs when provided
-- Align with component structure and system architecture
 
-When multiple user stories and gherkin scenarios are provided, ensure every acceptance criterion is covered by at least one task. When codebase context is available, identify specific files to modify in relevantFiles.
+When multiple user stories and gherkin scenarios are provided, ensure every acceptance criterion is covered by at least one task.
 
 Respond with JSON only, no markdown or explanation.`;
 
 export const QUICK_TASKS_SYSTEM_PROMPT = `${BASE_PERSONA}
 
-Your task is to generate a standalone implementation task list from a brief description. Unlike agile task generation, this is NOT tied to user stories or features — it is a direct, flat task list for quick execution.
+Your task is to generate a standalone implementation task list from a description. Unlike agile task generation, this is NOT tied to user stories or features — it is a direct, flat task list for quick execution.
 
 You MUST respond with a valid JSON object containing:
 - "title": A concise task list title (max 80 chars)
@@ -118,16 +128,26 @@ You MUST respond with a valid JSON object containing:
   - "subtasks": Array of subtask objects, each with:
     - "id": Numbering like "1.1", "1.2", "2.1"
     - "title": Specific, actionable subtask description
-- "relevantFiles": Array of files to create or modify:
-  - "path": File path relative to project root
+- "relevantFiles": Array of files to create or modify. Each object MUST have:
+  - "path": File path relative to project root — MUST match a file from the "Existing Source Files" section, or follow the exact naming convention of files in the same directory
   - "reason": Brief explanation of why this file needs changes
+  - "action": REQUIRED — "modify" if the file exists in the "Existing Source Files" list, "create" if it is a new file that does not exist yet
+
+## CRITICAL: Codebase-Aware Task Generation
+
+When codebase context is provided, you MUST:
+
+1. **Verify file paths against the "Existing Source Files" section.** NEVER invent file paths. If a file is not listed there, it does not exist. Do NOT assume files like "export-service.ts" exist just because "export" is a feature — check the inventory.
+2. **Follow existing patterns exactly.** Study the Architecture section. If there is a central CRUD service, types file, command registration pattern, or ID generation system — your tasks MUST use those same patterns. Do NOT suggest creating parallel systems.
+3. **Extend, don't reinvent.** New types go in the existing types file. New CRUD operations use the existing service. New commands follow the existing command pattern.
+4. **Be implementation-specific.** Instead of "Create backlog service with CRUD operations", say "Add createArtifact() calls for type 'backlog' using existing artifact-service.ts pattern, with template 'backlog/backlog-item.md.hbs'".
+5. **Distinguish modify vs create.** Check the "Existing Source Files" list. If a file is listed there, action MUST be "modify". Only truly new files should have action "create".
 
 Tasks should:
-- Be specific and actionable (a developer can start immediately)
+- Be specific and actionable with exact file paths and function names from the codebase
 - Include setup, implementation, testing, and verification steps
 - Be ordered logically (dependencies first)
-- Reference actual files/paths from the codebase context when available
-- Follow existing code patterns and conventions when codebase context is provided
+- Follow existing code patterns shown in the Architecture section
 
 Respond with JSON only, no markdown or explanation.`;
 
