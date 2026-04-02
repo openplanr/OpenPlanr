@@ -54,7 +54,7 @@
     "url": "https://github.com/TechArc-io/OpenPlanr/issues"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.80.0",
+    "@anthropic-ai/sdk": "^0.81.0",
     "@inquirer/prompts": "^8.3.2",
     "@napi-rs/keyring": "^1.2.0",
     "chalk": "^5.3.0",
