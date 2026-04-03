@@ -1,0 +1,42 @@
+---
+id: "{{id}}"
+name: "{{name}}"
+startDate: "{{startDate}}"
+endDate: "{{endDate}}"
+duration: "{{duration}}"
+status: "{{status}}"
+created: "{{date}}"
+updated: "{{date}}"
+taskIds: [{{#each taskIds}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
+---
+
+# {{id}}: {{name}}
+
+## Sprint Details
+- **Duration:** {{duration}}
+- **Start:** {{startDate}}
+- **End:** {{endDate}}
+- **Status:** {{uppercase status}}
+
+{{#if goals}}
+## Goals
+{{#each goals}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+## Tasks
+{{#if taskIds}}
+{{#each taskIds}}
+- [ ] {{this}}
+{{/each}}
+{{else}}
+_No tasks assigned yet. Run `planr sprint add <taskId>` to assign tasks._
+{{/if}}
+
+## Retrospective
+_Complete this section when closing the sprint with `planr sprint close`._
+
+---
+_View progress: `planr sprint status`_
+_Close sprint: `planr sprint close`_

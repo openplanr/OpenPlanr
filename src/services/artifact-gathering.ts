@@ -28,6 +28,8 @@ export interface TasksPromptContext {
   adrs: Array<{ id: string; content: string }>;
   /** Formatted codebase context (tech stack, folder tree, related files). */
   codebaseContext?: string;
+  /** Raw codebase context for post-generation validation. */
+  codebaseRawContext?: import('../ai/codebase/context-builder.js').CodebaseContext;
   /** Creation scope hint for AI task naming. */
   scope?: { type: 'feature'; id: string } | { type: 'story'; id: string };
 }
@@ -72,9 +74,17 @@ export async function gatherStoryArtifacts(
   const adrs = await readAllADRs(projectDir, config);
 
   // Build codebase context
-  const codebaseContext = await buildCodebaseStr(projectDir, storyRaw + (featureRaw || ''));
+  const codebaseResult = await buildCodebaseStr(projectDir, storyRaw + (featureRaw || ''));
 
-  return { stories, gherkinScenarios, featureRaw, epicRaw, adrs, codebaseContext };
+  return {
+    stories,
+    gherkinScenarios,
+    featureRaw,
+    epicRaw,
+    adrs,
+    codebaseContext: codebaseResult?.formatted,
+    codebaseRawContext: codebaseResult?.context,
+  };
 }
 
 /**
@@ -127,9 +137,17 @@ export async function gatherFeatureArtifacts(
 
   // Build codebase context from all story + feature content
   const allText = `${stories.map((s) => s.raw).join('\n')}\n${featureRaw}`;
-  const codebaseContext = await buildCodebaseStr(projectDir, allText);
+  const codebaseResult = await buildCodebaseStr(projectDir, allText);
 
-  return { stories, gherkinScenarios, featureRaw, epicRaw, adrs, codebaseContext };
+  return {
+    stories,
+    gherkinScenarios,
+    featureRaw,
+    epicRaw,
+    adrs,
+    codebaseContext: codebaseResult?.formatted,
+    codebaseRawContext: codebaseResult?.context,
+  };
 }
 
 /**
@@ -166,20 +184,25 @@ async function readAllADRs(
   return adrs;
 }
 
+interface CodebaseResult {
+  formatted: string;
+  context: import('../ai/codebase/context-builder.js').CodebaseContext;
+}
+
 /**
  * Build formatted codebase context string from text content.
  */
 async function buildCodebaseStr(
   projectDir: string,
   textContent: string,
-): Promise<string | undefined> {
+): Promise<CodebaseResult | undefined> {
   try {
     const { buildCodebaseContext, formatCodebaseContext, extractKeywords } = await import(
       '../ai/codebase/index.js'
     );
     const keywords = extractKeywords(textContent);
     const ctx = await buildCodebaseContext(projectDir, keywords);
-    return formatCodebaseContext(ctx);
+    return { formatted: formatCodebaseContext(ctx), context: ctx };
   } catch {
     return undefined;
   }

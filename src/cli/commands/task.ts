@@ -257,6 +257,30 @@ function displayTaskPreview(result: {
   console.log(chalk.dim('━'.repeat(50)));
 }
 
+async function displayValidationWarnings(
+  relevantFiles: Array<{ path: string; reason: string; action: 'modify' | 'create' }> | undefined,
+  rawContext: import('../../ai/codebase/context-builder.js').CodebaseContext | undefined,
+) {
+  if (!rawContext || !relevantFiles?.length) return;
+  try {
+    const { validateRelevantFiles, detectDependencyHints } = await import(
+      '../../ai/validation/index.js'
+    );
+    const hints = detectDependencyHints(rawContext.architectureFiles);
+    const validation = validateRelevantFiles(relevantFiles, rawContext.sourceInventory, hints);
+    if (validation.warnings.length > 0) {
+      console.log('');
+      logger.warn('Quality warnings:');
+      for (const w of validation.warnings) {
+        console.log(chalk.yellow(`  ⚠ ${w}`));
+      }
+      console.log('');
+    }
+  } catch {
+    // Validation is best-effort
+  }
+}
+
 function buildTaskItems(result: {
   tasks: Array<{ id: string; title: string; subtasks?: Array<{ id: string; title: string }> }>;
 }) {
@@ -354,6 +378,7 @@ async function createTasksWithAI(projectDir: string, config: OpenPlanrConfig, st
     });
 
     displayTaskPreview(result);
+    await displayValidationWarnings(result.relevantFiles, ctx.codebaseRawContext);
 
     const total = result.tasks.reduce((sum, t) => sum + (t.subtasks || []).length + 1, 0);
     const confirmCreate = await promptConfirm(`Create task list with ${total} items?`, true);
@@ -464,6 +489,7 @@ async function createTasksFromFeature(
     });
 
     displayTaskPreview(result);
+    await displayValidationWarnings(result.relevantFiles, ctx.codebaseRawContext);
 
     const total = result.tasks.reduce((sum, t) => sum + (t.subtasks || []).length + 1, 0);
     const confirmCreate = await promptConfirm(`Create task list with ${total} items?`, true);

@@ -1,0 +1,44 @@
+{
+  "name": "database-migration",
+  "description": "Schema change with migration, rollback, and seed data",
+  "variables": ["tableName", "changeDescription"],
+  "tasks": [
+    {
+      "id": "1.0",
+      "title": "Plan schema change",
+      "subtasks": [
+        { "id": "1.1", "title": "Document {{changeDescription}} for {{tableName}} table" },
+        { "id": "1.2", "title": "Review impact on existing queries and indexes" },
+        { "id": "1.3", "title": "Check for foreign key constraints and cascading effects" }
+      ]
+    },
+    {
+      "id": "2.0",
+      "title": "Create migration",
+      "subtasks": [
+        { "id": "2.1", "title": "Write up migration for {{tableName}}" },
+        { "id": "2.2", "title": "Write down migration (rollback)" },
+        { "id": "2.3", "title": "Test migration on local database" }
+      ]
+    },
+    {
+      "id": "3.0",
+      "title": "Update application code",
+      "subtasks": [
+        { "id": "3.1", "title": "Update ORM models/types for {{tableName}}" },
+        { "id": "3.2", "title": "Update queries and repository layer" },
+        { "id": "3.3", "title": "Update API serialization if schema changed" }
+      ]
+    },
+    {
+      "id": "4.0",
+      "title": "Testing and validation",
+      "subtasks": [
+        { "id": "4.1", "title": "Update seed data for {{tableName}}" },
+        { "id": "4.2", "title": "Run existing tests and fix breakages" },
+        { "id": "4.3", "title": "Test rollback migration works correctly" },
+        { "id": "4.4", "title": "Verify data integrity after migration" }
+      ]
+    }
+  ]
+}

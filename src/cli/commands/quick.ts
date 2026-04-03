@@ -46,6 +46,7 @@ export function registerQuickCommand(program: Command) {
     .command('create', { isDefault: true })
     .description('Create a standalone task list from a brief description')
     .argument('[description...]', 'what to build (one-line description)')
+    .option('--file <path>', 'read description from a file (PRD, spec, etc.)')
     .option('--manual', 'use manual interactive prompts instead of AI')
     .action(async (descriptionParts: string[], opts) => {
       const projectDir = program.opts().projectDir as string;
@@ -53,7 +54,16 @@ export function registerQuickCommand(program: Command) {
 
       let description = descriptionParts.join(' ').trim();
 
-      if (!description && !opts.manual) {
+      if (opts.file) {
+        try {
+          const { readFile } = await import('../../utils/fs.js');
+          description = await readFile(path.resolve(opts.file));
+          logger.dim(`Read ${description.split('\n').length} lines from ${opts.file}`);
+        } catch {
+          logger.error(`Failed to read file: ${opts.file}`);
+          return;
+        }
+      } else if (!description && !opts.manual) {
         description = await promptText('What do you want to build?');
       }
 
@@ -64,7 +74,7 @@ export function registerQuickCommand(program: Command) {
           logger.error('Please provide a description.');
           return;
         }
-        await createQuickWithAI(projectDir, config, description);
+        await createQuickWithAI(projectDir, config, description, !!opts.file);
       } else {
         if (!opts.manual && !isAIConfigured(config)) {
           logger.warn('AI not configured. Using manual mode.');
@@ -186,19 +196,26 @@ export function registerQuickCommand(program: Command) {
 // AI-powered quick task creation
 // ---------------------------------------------------------------------------
 
-async function createQuickWithAI(projectDir: string, config: OpenPlanrConfig, description: string) {
+async function createQuickWithAI(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  description: string,
+  fromFile = false,
+) {
   logger.heading('Quick Task (AI-powered)');
   logger.dim('Analyzing description and codebase...');
 
   try {
     // Build optional codebase context
     let codebaseContext: string | undefined;
+    let rawCodebaseContext: import('../../ai/codebase/index.js').CodebaseContext | undefined;
     try {
       const { buildCodebaseContext, extractKeywords, formatCodebaseContext } = await import(
         '../../ai/codebase/index.js'
       );
       const keywords = extractKeywords(description);
       const ctx = await buildCodebaseContext(projectDir, keywords);
+      rawCodebaseContext = ctx;
       codebaseContext = formatCodebaseContext(ctx);
 
       const stackInfo = ctx.techStack
@@ -213,8 +230,9 @@ async function createQuickWithAI(projectDir: string, config: OpenPlanrConfig, de
     const messages = buildQuickTasksPrompt(description, codebaseContext);
     logger.dim('AI is generating tasks...');
 
+    const maxTokens = fromFile ? TOKEN_BUDGETS.taskFeature : TOKEN_BUDGETS.task;
     const { result } = await generateStreamingJSON(provider, messages, aiQuickTasksResponseSchema, {
-      maxTokens: TOKEN_BUDGETS.task,
+      maxTokens,
     });
 
     // Display preview
@@ -233,6 +251,31 @@ async function createQuickWithAI(projectDir: string, config: OpenPlanrConfig, de
       }
     }
     console.log(chalk.dim('━'.repeat(50)));
+
+    // Validate AI output against codebase
+    if (rawCodebaseContext && result.relevantFiles?.length) {
+      try {
+        const { validateRelevantFiles, detectDependencyHints } = await import(
+          '../../ai/validation/index.js'
+        );
+        const hints = detectDependencyHints(rawCodebaseContext.architectureFiles);
+        const validation = validateRelevantFiles(
+          result.relevantFiles,
+          rawCodebaseContext.sourceInventory,
+          hints,
+        );
+        if (validation.warnings.length > 0) {
+          console.log('');
+          logger.warn('Quality warnings:');
+          for (const w of validation.warnings) {
+            console.log(chalk.yellow(`  ⚠ ${w}`));
+          }
+          console.log('');
+        }
+      } catch {
+        // Validation is best-effort
+      }
+    }
 
     const total = result.tasks.reduce((sum, t) => sum + (t.subtasks || []).length + 1, 0);
     const confirmCreate = await promptConfirm(`Create quick task list with ${total} items?`, true);

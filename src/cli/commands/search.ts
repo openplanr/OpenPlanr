@@ -13,7 +13,16 @@ interface SearchResult {
   snippet: string;
 }
 
-const SEARCHABLE_TYPES: ArtifactType[] = ['epic', 'feature', 'story', 'task', 'quick', 'adr'];
+const SEARCHABLE_TYPES: ArtifactType[] = [
+  'epic',
+  'feature',
+  'story',
+  'task',
+  'quick',
+  'backlog',
+  'sprint',
+  'adr',
+];
 
 const TYPE_COLORS: Record<string, (text: string) => string> = {
   epic: chalk.cyan,
@@ -21,6 +30,8 @@ const TYPE_COLORS: Record<string, (text: string) => string> = {
   story: chalk.green,
   task: chalk.yellow,
   quick: chalk.magenta,
+  backlog: chalk.red,
+  sprint: chalk.blueBright,
   adr: chalk.blue,
 };
 

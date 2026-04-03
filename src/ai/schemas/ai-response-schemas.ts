@@ -100,6 +100,7 @@ export const aiACMappingSchema = z.object({
 export const aiRelevantFileSchema = z.object({
   path: z.string().min(1),
   reason: z.string().min(1),
+  action: z.enum(['modify', 'create']).default('modify'),
 });
 
 export const aiTasksResponseSchema = z.object({
@@ -140,6 +141,33 @@ export const aiEstimateResponseSchema = z.object({
 });
 
 export type AIEstimateResponse = z.infer<typeof aiEstimateResponseSchema>;
+
+// --- Backlog Prioritization ---
+
+export const aiBacklogPrioritizedItemSchema = z.object({
+  id: z.string().min(1),
+  priority: z.enum(['critical', 'high', 'medium', 'low']),
+  impactScore: z.number().int().min(1).max(10),
+  effortScore: z.number().int().min(1).max(10),
+  reasoning: z.string().min(1),
+});
+
+export const aiBacklogPrioritizeResponseSchema = z.object({
+  items: z.array(aiBacklogPrioritizedItemSchema).min(1),
+  summary: z.string().min(1),
+});
+
+export type AIBacklogPrioritizeResponse = z.infer<typeof aiBacklogPrioritizeResponseSchema>;
+
+// --- Sprint Auto-Select ---
+
+export const aiSprintAutoSelectResponseSchema = z.object({
+  selectedTaskIds: z.array(z.string().min(1)).min(1),
+  totalPoints: z.number().int().min(0),
+  reasoning: z.string().min(1),
+});
+
+export type AISprintAutoSelectResponse = z.infer<typeof aiSprintAutoSelectResponseSchema>;
 
 // --- Refine ---
 

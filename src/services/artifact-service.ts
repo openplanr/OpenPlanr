@@ -13,6 +13,8 @@ const ARTIFACT_DIR_MAP: Record<string, string> = {
   story: 'stories',
   task: 'tasks',
   quick: 'quick',
+  backlog: 'backlog',
+  sprint: 'sprints',
   adr: 'adrs',
   checklist: 'checklists',
 };
@@ -230,6 +232,8 @@ export function findArtifactTypeById(id: string): ArtifactType | null {
     US: 'story',
     TASK: 'task',
     QT: 'quick',
+    BL: 'backlog',
+    SPRINT: 'sprint',
     ADR: 'adr',
   };
   return map[prefix] || null;

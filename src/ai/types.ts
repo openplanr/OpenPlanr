@@ -55,6 +55,8 @@ export const TOKEN_BUDGETS = {
   /** Used by the `planr plan` pipeline for task generation per story. */
   plan: 16384,
   estimate: 4096,
+  backlogPrioritize: 8192,
+  sprintAutoSelect: 8192,
 } as const;
 
 export interface AIProvider {

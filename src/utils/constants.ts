@@ -15,6 +15,8 @@ export const ARTIFACT_DIRS = {
   stories: 'stories',
   tasks: 'tasks',
   quick: 'quick',
+  backlog: 'backlog',
+  sprints: 'sprints',
   adrs: 'adrs',
   checklists: 'checklists',
 } as const;
@@ -25,6 +27,8 @@ export const ID_PREFIXES = {
   story: 'US',
   task: 'TASK',
   quick: 'QT',
+  backlog: 'BL',
+  sprint: 'SPRINT',
   adr: 'ADR',
 } as const;
 
