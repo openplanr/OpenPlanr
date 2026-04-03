@@ -71,7 +71,7 @@ export function validateRelevantFiles(
 
     if (mentioned.length > 0 && missing.length > 0) {
       warnings.push(
-        `${mentioned.join(', ')} modified but ${missing.join(', ')} not included — ${hint.reason}`,
+        `${mentioned.join(', ')} referenced but ${missing.join(', ')} not included — ${hint.reason}`,
       );
     }
   }

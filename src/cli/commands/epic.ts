@@ -115,10 +115,15 @@ async function createEpicWithAI(
 
   let brief: string;
   if (opts.file) {
-    const { readFile } = await import('../../utils/fs.js');
-    const path = await import('node:path');
-    brief = await readFile(path.resolve(opts.file));
-    logger.dim(`Read ${brief.split('\n').length} lines from ${opts.file}`);
+    try {
+      const { readFile } = await import('../../utils/fs.js');
+      const path = await import('node:path');
+      brief = await readFile(path.resolve(opts.file));
+      logger.dim(`Read ${brief.split('\n').length} lines from ${opts.file}`);
+    } catch {
+      logger.error(`Failed to read file: ${opts.file}`);
+      return;
+    }
   } else if (opts.title) {
     brief = opts.title;
   } else {

@@ -258,7 +258,7 @@ function displayTaskPreview(result: {
 }
 
 async function displayValidationWarnings(
-  relevantFiles: Array<{ path: string; reason: string; action?: string }> | undefined,
+  relevantFiles: Array<{ path: string; reason: string; action: 'modify' | 'create' }> | undefined,
   rawContext: import('../../ai/codebase/context-builder.js').CodebaseContext | undefined,
 ) {
   if (!rawContext || !relevantFiles?.length) return;
@@ -267,12 +267,7 @@ async function displayValidationWarnings(
       '../../ai/validation/index.js'
     );
     const hints = detectDependencyHints(rawContext.architectureFiles);
-    const typed = relevantFiles.map((f) => ({
-      path: f.path,
-      reason: f.reason,
-      action: (f.action ?? 'modify') as 'modify' | 'create',
-    }));
-    const validation = validateRelevantFiles(typed, rawContext.sourceInventory, hints);
+    const validation = validateRelevantFiles(relevantFiles, rawContext.sourceInventory, hints);
     if (validation.warnings.length > 0) {
       console.log('');
       logger.warn('Quality warnings:');

@@ -37,9 +37,18 @@ function extractExportedTypes(content: string): string[] {
   return [...content.matchAll(/export\s+(?:type|interface)\s+(\w+)/g)].map((m) => m[1]);
 }
 
-/** Count files matching a pattern in the source inventory. */
+/** Count individual files matching a pattern in the source inventory. */
 function countInventoryMatches(inventory: string, pattern: RegExp): number {
-  return inventory.split('\n').filter((line) => pattern.test(line)).length;
+  let count = 0;
+  for (const line of inventory.split('\n')) {
+    const colonIdx = line.indexOf(':');
+    if (colonIdx === -1) continue;
+    const fileList = line.slice(colonIdx + 1);
+    for (const file of fileList.split(',')) {
+      if (pattern.test(file.trim())) count++;
+    }
+  }
+  return count;
 }
 
 // ---------------------------------------------------------------------------

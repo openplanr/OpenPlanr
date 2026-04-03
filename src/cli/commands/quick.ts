@@ -55,9 +55,14 @@ export function registerQuickCommand(program: Command) {
       let description = descriptionParts.join(' ').trim();
 
       if (opts.file) {
-        const { readFile } = await import('../../utils/fs.js');
-        description = await readFile(path.resolve(opts.file));
-        logger.dim(`Read ${description.split('\n').length} lines from ${opts.file}`);
+        try {
+          const { readFile } = await import('../../utils/fs.js');
+          description = await readFile(path.resolve(opts.file));
+          logger.dim(`Read ${description.split('\n').length} lines from ${opts.file}`);
+        } catch {
+          logger.error(`Failed to read file: ${opts.file}`);
+          return;
+        }
       } else if (!description && !opts.manual) {
         description = await promptText('What do you want to build?');
       }

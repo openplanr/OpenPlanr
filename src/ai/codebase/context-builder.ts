@@ -123,23 +123,53 @@ export async function findArchitectureFiles(projectDir: string): Promise<Map<str
  * Unlike the folder tree, this is NEVER truncated — it's the source of truth.
  */
 async function buildSourceInventory(projectDir: string): Promise<string> {
-  const keyDirs = [
-    'src/services',
-    'src/cli/commands',
-    'src/models',
-    'src/ai/prompts',
-    'src/ai/schemas',
-    'src/utils',
-    'src/templates',
-  ];
+  // Discover all src/ subdirectories dynamically instead of a hardcoded list
+  const srcDir = path.join(projectDir, 'src');
+  let topLevelDirs: string[] = [];
+  try {
+    const entries = await readdir(srcDir, { withFileTypes: true });
+    topLevelDirs = entries
+      .filter((e) => e.isDirectory() && !e.name.startsWith('.'))
+      .map((e) => `src/${e.name}`);
+  } catch {
+    return '';
+  }
+
+  // Expand into leaf directories (one level deep for nested dirs like src/ai/prompts)
+  const keyDirs: string[] = [];
+  for (const dir of topLevelDirs) {
+    const fullDir = path.join(projectDir, dir);
+    try {
+      const entries = await readdir(fullDir, { withFileTypes: true });
+      const hasSubDirs = entries.some((e) => e.isDirectory() && !e.name.startsWith('.'));
+      if (hasSubDirs) {
+        // Add subdirectories (e.g., src/ai/prompts, src/ai/schemas)
+        for (const e of entries) {
+          if (e.isDirectory() && !e.name.startsWith('.')) {
+            keyDirs.push(`${dir}/${e.name}`);
+          }
+        }
+        // Also add files directly in this dir (e.g., src/ai/types.ts)
+        const hasFiles = entries.some((e) => e.isFile() && !e.name.startsWith('.'));
+        if (hasFiles) keyDirs.push(dir);
+      } else {
+        keyDirs.push(dir);
+      }
+    } catch {
+      keyDirs.push(dir);
+    }
+  }
 
   const lines: string[] = [];
 
-  for (const dir of keyDirs) {
+  for (const dir of keyDirs.sort()) {
     const fullDir = path.join(projectDir, dir);
     try {
-      const entries = await readdir(fullDir);
-      const files = entries.filter((e) => !e.startsWith('.')).sort();
+      const entries = await readdir(fullDir, { withFileTypes: true });
+      const files = entries
+        .filter((e) => e.isFile() && !e.name.startsWith('.'))
+        .map((e) => e.name)
+        .sort();
       if (files.length > 0) {
         lines.push(`${dir}/: ${files.join(', ')}`);
       }
@@ -230,7 +260,7 @@ export function formatCodebaseContext(ctx: CodebaseContext): string {
     sections.push(`## Detected Project Patterns (MUST follow)\n${ruleBlocks.join('\n\n')}`);
   }
 
-  // Priority 3: Source file inventory (compact, never truncated)
+  // Priority 3: Source file inventory (compact, may be truncated by final budget cap)
   if (ctx.sourceInventory) {
     sections.push(
       `## Existing Source Files (ONLY reference files listed here or follow their naming pattern)\n${ctx.sourceInventory}`,

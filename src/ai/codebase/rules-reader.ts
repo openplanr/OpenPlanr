@@ -14,10 +14,12 @@ const MAX_RULES_CHARS = 8_000;
 /**
  * Read `.planr/rules.md` from the project directory.
  *
- * @returns The trimmed rules content, or `null` if the file doesn't exist.
+ * @returns The trimmed rules content, or `null` if the file doesn't exist or is empty.
  */
 export async function readProjectRules(projectDir: string): Promise<string | null> {
   const content = await readProjectFile(projectDir, '.planr/rules.md');
-  if (!content) return null;
-  return content.trim().slice(0, MAX_RULES_CHARS);
+  if (content === null) return null;
+  const trimmed = content.trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, MAX_RULES_CHARS);
 }
