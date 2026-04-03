@@ -6,8 +6,8 @@ Thank you for your interest in contributing to Planr! This guide will help you g
 
 ### Prerequisites
 
-- Node.js >= 18.0.0
-- npm >= 9.0.0
+- Node.js >= 20.0.0
+- npm >= 10.0.0
 
 ### Getting Started
 
@@ -32,7 +32,7 @@ planr --help
 
 ## Project Structure
 
-```
+```text
 src/
 ├── cli/
 │   ├── index.ts              # CLI entry point (commander setup)
@@ -42,11 +42,24 @@ src/
 │       ├── feature.ts
 │       ├── story.ts
 │       ├── task.ts
+│       ├── quick.ts
+│       ├── backlog.ts
+│       ├── sprint.ts
+│       ├── template.ts
 │       ├── checklist.ts
 │       ├── rules.ts
+│       ├── config.ts
+│       ├── plan.ts
+│       ├── refine.ts
+│       ├── estimate.ts
+│       ├── search.ts
+│       ├── sync.ts
+│       ├── github.ts
+│       ├── export.ts
 │       └── status.ts
 ├── services/                 # Business logic
-│   ├── artifact-service.ts   # CRUD for agile artifacts
+│   ├── artifact-service.ts   # Generic CRUD for all artifact types
+│   ├── artifact-gathering.ts # Context gathering for AI prompts
 │   ├── config-service.ts     # Config file management
 │   ├── checklist-service.ts  # Checklist operations
 │   ├── id-service.ts         # Auto-incrementing ID generation

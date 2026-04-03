@@ -5,6 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-04-03
+
+### Added
+
+- **`planr backlog`** — capture, prioritize, and promote work items from a lightweight backlog
+  - `planr backlog add` — capture ideas with priority and tags without breaking your flow
+  - `planr backlog list` — filter by tag, priority, or status; sorted by priority
+  - `planr backlog prioritize` — AI scores items by impact/effort and reorders them
+  - `planr backlog promote` — promote to quick task (`--quick`) or story (`--story --feature`)
+  - `planr backlog close` — archive completed or irrelevant items
+- **`planr sprint`** — time-boxed iterations with velocity tracking
+  - `planr sprint create` — create a sprint with name and duration (1–4 weeks); enforces one-active-at-a-time
+  - `planr sprint add` — assign tasks manually or with `--auto` AI selection based on priority and velocity
+  - `planr sprint status` — progress dashboard with per-task completion, progress bars, and days remaining
+  - `planr sprint close` — archive sprint, list incomplete tasks, optional retrospective
+  - `planr sprint list` — all sprints with status badges and task counts
+  - `planr sprint history` — velocity chart with bar visualization across closed sprints
+- **`planr template`** — reusable task templates for common development workflows
+  - `planr template list` — list built-in and custom templates with task counts
+  - `planr template show` — preview template contents and variables
+  - `planr template use` — generate task list from a template with variable substitution
+  - `planr template save` — save an existing task list as a reusable custom template
+  - `planr template delete` — remove a custom template
+- **5 built-in task templates** — `rest-endpoint`, `react-component`, `database-migration`, `api-integration`, `auth-flow`
+- **User-defined AI rules** — `.planr/rules.md` injected into AI prompts as mandatory project rules
+- **Auto-extracted pattern rules** — 5 heuristic detectors (generic CRUD, command registration, central types, ID generation, template rendering) produce explicit rules from architecture files
+- **Post-generation validation** — warns about modify-on-missing, create-on-existing, dependency gaps, and unknown directories before user accepts AI output
+- **Dependency chain detection** — import-based file dependency hints injected into AI context
+
+### Changed
+
+- **Version** — bumped to 1.0.0
+- **Package description** — updated to reflect full planning platform: backlog, sprints, task templates, estimation, GitHub sync, and AI agent rules
+- **README** — complete rewrite with expanded feature list, backlog/sprint/template quick start, and organized command tables
+- **CLI.md** — added backlog, sprint, template, and quick task command sections; updated ID convention table, config example, workflow diagram
+- **`planr status`** — now shows backlog items with priority badges and active sprint with days remaining
+- **`planr search`** — now searches backlog and sprint artifacts
+- **Codebase context builder** — dynamic `src/` subdirectory discovery instead of hardcoded directory list; pattern rules and dependency hints injected into AI prompts
+
+### Fixed
+
+- **Hardcoded source inventory directories** — replaced 7-directory list with dynamic `readdir` discovery that expands into leaf directories
+- **Source inventory listing directories as files** — uses `readdir` with `withFileTypes` and `.isFile()` filter
+- **`countInventoryMatches` counting lines** — now parses comma-separated file names per inventory line
+- **Dependency chain warning wording** — "modified but" changed to "referenced but" for accuracy
+- **`displayValidationWarnings` loose typing** — `action?: string` replaced with `action: 'modify' | 'create'`
+- **`--file` flag error handling** — stack trace on bad file path replaced with user-friendly error message in quick.ts and epic.ts
+- **Rules reader empty vs missing** — `!content` replaced with explicit `content === null` check
+
 ## [0.9.0] - 2026-04-01
 
 ### Added

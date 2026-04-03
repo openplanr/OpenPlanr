@@ -25,8 +25,8 @@ const program = new Command();
 
 program
   .name('planr')
-  .description('AI-powered agile planning CLI for Cursor, Claude Code, and Codex')
-  .version('0.2.0')
+  .description('AI-powered planning CLI — backlog, sprints, tasks, estimation, and AI agent rules')
+  .version('0.9.0')
   .option('--project-dir <path>', 'project root directory', process.cwd())
   .option('--verbose', 'verbose output', false)
   .option('--no-interactive', 'skip interactive prompts');
