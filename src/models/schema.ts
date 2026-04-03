@@ -25,6 +25,8 @@ export const configSchema = z.object({
     story: z.string().default('US'),
     task: z.string().default('TASK'),
     quick: z.string().default('QT'),
+    backlog: z.string().default('BL'),
+    sprint: z.string().default('SPRINT'),
   }),
   ai: aiConfigSchema.optional(),
   defaultAgent: codingAgentSchema.optional(),

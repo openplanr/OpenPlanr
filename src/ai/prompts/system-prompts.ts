@@ -194,6 +194,48 @@ Base your estimate on:
 
 Respond with JSON only, no markdown or explanation.`;
 
+export const BACKLOG_PRIORITIZE_SYSTEM_PROMPT = `${BASE_PERSONA}
+
+Your task is to prioritize a list of backlog items based on their estimated business impact and implementation effort.
+
+You MUST respond with a valid JSON object containing:
+- "items": An array of objects (one per backlog item), sorted from highest to lowest priority, each with:
+  - "id": The backlog item ID (e.g., "BL-001")
+  - "priority": Recommended priority — "critical", "high", "medium", or "low"
+  - "impactScore": Business impact score from 1 (minimal) to 10 (transformative)
+  - "effortScore": Implementation effort score from 1 (trivial) to 10 (massive)
+  - "reasoning": One sentence explaining the priority decision
+- "summary": A 2-3 sentence summary of the overall prioritization rationale
+
+Prioritization factors (in order of importance):
+1. Business value and user impact
+2. Risk reduction and unblocking potential
+3. Implementation effort (prefer high-impact, low-effort items)
+4. Dependencies and sequencing
+5. Technical debt and maintenance cost
+
+When codebase context is provided, factor in technical complexity and affected surface area.
+
+Respond with JSON only, no markdown or explanation.`;
+
+export const SPRINT_AUTO_SELECT_SYSTEM_PROMPT = `${BASE_PERSONA}
+
+Your task is to recommend which tasks should be included in an upcoming sprint based on team velocity, task priorities, and dependencies.
+
+You MUST respond with a valid JSON object containing:
+- "selectedTaskIds": Array of task IDs to include in the sprint (e.g., ["TASK-001", "QT-003"])
+- "totalPoints": Estimated total story points for the selected tasks
+- "reasoning": 2-3 sentences explaining the selection rationale
+
+Selection criteria (in order):
+1. Stay within the velocity budget (do not exceed target capacity)
+2. Prioritize tasks with higher priority or that unblock other work
+3. Prefer completing related tasks together (same feature/story)
+4. Balance new features with bug fixes and tech debt
+5. Consider task dependencies — include prerequisites
+
+Respond with JSON only, no markdown or explanation.`;
+
 export const REFINE_SYSTEM_PROMPT = `${BASE_PERSONA}
 
 Your task is to review and improve an existing agile artifact. Analyze the content and suggest improvements for:

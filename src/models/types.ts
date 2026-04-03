@@ -1,4 +1,13 @@
-export type ArtifactType = 'epic' | 'feature' | 'story' | 'task' | 'quick' | 'adr' | 'checklist';
+export type ArtifactType =
+  | 'epic'
+  | 'feature'
+  | 'story'
+  | 'task'
+  | 'quick'
+  | 'backlog'
+  | 'sprint'
+  | 'adr'
+  | 'checklist';
 export type TargetCLI = 'cursor' | 'claude' | 'codex';
 export type TaskStatus = 'pending' | 'in-progress' | 'done';
 export type AIProviderName = 'anthropic' | 'openai' | 'ollama';
@@ -25,6 +34,8 @@ export interface OpenPlanrConfig {
     story: string;
     task: string;
     quick: string;
+    backlog: string;
+    sprint: string;
   };
   ai?: AIConfig;
   defaultAgent?: CodingAgentName;
@@ -82,6 +93,30 @@ export interface TaskItem {
 export interface TaskList extends BaseArtifact {
   storyId?: string;
   tasks: TaskItem[];
+}
+
+export type BacklogPriority = 'critical' | 'high' | 'medium' | 'low';
+export type BacklogStatus = 'open' | 'promoted' | 'closed';
+export type SprintStatus = 'planned' | 'active' | 'closed';
+
+export interface BacklogItem extends BaseArtifact {
+  priority: BacklogPriority;
+  tags: string[];
+  status: BacklogStatus;
+  description: string;
+  acceptanceCriteria?: string;
+  notes?: string;
+}
+
+export interface Sprint extends BaseArtifact {
+  name: string;
+  startDate: string;
+  endDate: string;
+  duration: string;
+  status: SprintStatus;
+  goals: string[];
+  taskIds: string[];
+  retrospective?: string;
 }
 
 export interface ArtifactCollection {

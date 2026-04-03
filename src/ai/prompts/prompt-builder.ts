@@ -11,11 +11,13 @@
 
 import type { AIMessage } from '../types.js';
 import {
+  BACKLOG_PRIORITIZE_SYSTEM_PROMPT,
   EPIC_SYSTEM_PROMPT,
   ESTIMATE_SYSTEM_PROMPT,
   FEATURES_SYSTEM_PROMPT,
   QUICK_TASKS_SYSTEM_PROMPT,
   REFINE_SYSTEM_PROMPT,
+  SPRINT_AUTO_SELECT_SYSTEM_PROMPT,
   STORIES_SYSTEM_PROMPT,
   TASKS_SYSTEM_PROMPT,
 } from './system-prompts.js';
@@ -181,6 +183,56 @@ export function buildEstimatePrompt(
 
   return [
     { role: 'system', content: ESTIMATE_SYSTEM_PROMPT },
+    { role: 'user', content: userContent },
+  ];
+}
+
+export function buildBacklogPrioritizePrompt(
+  items: Array<{
+    id: string;
+    title: string;
+    priority: string;
+    tags: string[];
+    description: string;
+  }>,
+  codebaseContext?: string,
+): AIMessage[] {
+  const itemsList = items
+    .map(
+      (item) =>
+        `- ${item.id}: "${item.title}" (current: ${item.priority}, tags: ${item.tags.join(', ') || 'none'})`,
+    )
+    .join('\n');
+
+  let userContent = `Prioritize these open backlog items by business impact and effort:\n\n${itemsList}`;
+
+  if (codebaseContext) {
+    userContent += `\n\n--- Codebase Context ---\n${codebaseContext}`;
+  }
+
+  return [
+    { role: 'system', content: BACKLOG_PRIORITIZE_SYSTEM_PROMPT },
+    { role: 'user', content: userContent },
+  ];
+}
+
+export function buildSprintAutoSelectPrompt(
+  availableTasks: Array<{ id: string; title: string; points?: number }>,
+  velocity: number,
+  codebaseContext?: string,
+): AIMessage[] {
+  const taskList = availableTasks
+    .map((t) => `- ${t.id}: "${t.title}"${t.points ? ` (${t.points} pts)` : ''}`)
+    .join('\n');
+
+  let userContent = `Select tasks for the next sprint.\n\nTarget velocity: ${velocity} story points\n\nAvailable tasks:\n${taskList}`;
+
+  if (codebaseContext) {
+    userContent += `\n\n--- Codebase Context ---\n${codebaseContext}`;
+  }
+
+  return [
+    { role: 'system', content: SPRINT_AUTO_SELECT_SYSTEM_PROMPT },
     { role: 'user', content: userContent },
   ];
 }

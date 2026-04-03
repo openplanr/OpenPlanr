@@ -4,6 +4,7 @@ import { parseTaskMarkdown } from '../../agents/task-parser.js';
 import { listArtifacts, readArtifact, readArtifactRaw } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { logger } from '../../utils/logger.js';
+import { parseMarkdown } from '../../utils/markdown.js';
 
 export function registerStatusCommand(program: Command) {
   program
@@ -151,6 +152,57 @@ export function registerStatusCommand(program: Command) {
         }
       }
 
+      // Backlog items
+      const backlogItems = await listArtifacts(projectDir, config, 'backlog');
+      if (backlogItems.length > 0) {
+        console.log('');
+        console.log(`  ${chalk.red('●')} Backlog: ${backlogItems.length}`);
+        const blList = showAll ? backlogItems : backlogItems.slice(0, 5);
+        for (const bl of blList) {
+          const blRaw = await readArtifactRaw(projectDir, config, 'backlog', bl.id);
+          const priority = blRaw
+            ? (parseMarkdown(blRaw).data.priority as string) || 'medium'
+            : 'medium';
+          const priorityColor =
+            priority === 'critical' ? chalk.red : priority === 'high' ? chalk.yellow : chalk.dim;
+          console.log(`    ${bl.id}  ${bl.title}  ${priorityColor(`[${priority}]`)}`);
+        }
+        if (!showAll && backlogItems.length > 5) {
+          console.log(chalk.dim(`    ... and ${backlogItems.length - 5} more`));
+        }
+      }
+
+      // Sprint
+      const sprints = await listArtifacts(projectDir, config, 'sprint');
+      const activeSprint =
+        sprints.length > 0
+          ? await (async () => {
+              for (const s of sprints) {
+                const sRaw = await readArtifactRaw(projectDir, config, 'sprint', s.id);
+                if (sRaw && (parseMarkdown(sRaw).data.status as string) === 'active') {
+                  return { ...s, data: parseMarkdown(sRaw).data };
+                }
+              }
+              return null;
+            })()
+          : null;
+
+      if (activeSprint) {
+        console.log('');
+        const sprintName = (activeSprint.data.name as string) || activeSprint.title;
+        const endDate = activeSprint.data.endDate as string | undefined;
+        let remaining = '';
+        if (endDate) {
+          const daysLeft = Math.ceil(
+            (new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+          );
+          remaining = daysLeft > 0 ? chalk.yellow(` (${daysLeft}d left)`) : chalk.red(' (ended)');
+        }
+        console.log(
+          `  ${chalk.blueBright('●')} Active Sprint: ${activeSprint.id} — ${sprintName}${remaining}`,
+        );
+      }
+
       // Quick tasks (standalone, outside hierarchy)
       const quickTasks = await listArtifacts(projectDir, config, 'quick');
       if (quickTasks.length > 0) {
@@ -183,10 +235,13 @@ export function registerStatusCommand(program: Command) {
 
       // Summary counts
       const quickCount = quickTasks.length > 0 ? `, ${quickTasks.length} quick tasks` : '';
+      const blCount = backlogItems.length > 0 ? `, ${backlogItems.length} backlog` : '';
+      const sprintCount =
+        sprints.length > 0 ? `, ${sprints.length} sprint${sprints.length !== 1 ? 's' : ''}` : '';
       console.log('');
       console.log(
         chalk.dim(
-          `  Totals: ${epics.length} epics, ${features.length} features, ${stories.length} stories, ${tasks.length} task lists${quickCount}`,
+          `  Totals: ${epics.length} epics, ${features.length} features, ${stories.length} stories, ${tasks.length} task lists${quickCount}${blCount}${sprintCount}`,
         ),
       );
       logger.dim(`Targets: ${config.targets.join(', ')}`);

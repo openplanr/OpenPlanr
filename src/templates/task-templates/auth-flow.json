@@ -1,0 +1,48 @@
+{
+  "name": "auth-flow",
+  "description": "Authentication flow with login, signup, and password reset",
+  "variables": ["authProvider"],
+  "tasks": [
+    {
+      "id": "1.0",
+      "title": "Authentication infrastructure",
+      "subtasks": [
+        { "id": "1.1", "title": "Set up {{authProvider}} authentication provider" },
+        { "id": "1.2", "title": "Configure session/token management (JWT or session)" },
+        { "id": "1.3", "title": "Add auth middleware for protected routes" }
+      ]
+    },
+    {
+      "id": "2.0",
+      "title": "Implement auth endpoints",
+      "subtasks": [
+        { "id": "2.1", "title": "POST /auth/signup — user registration" },
+        { "id": "2.2", "title": "POST /auth/login — user login" },
+        { "id": "2.3", "title": "POST /auth/logout — session termination" },
+        { "id": "2.4", "title": "POST /auth/forgot-password — password reset request" },
+        { "id": "2.5", "title": "POST /auth/reset-password — password reset confirmation" }
+      ]
+    },
+    {
+      "id": "3.0",
+      "title": "Security hardening",
+      "subtasks": [
+        { "id": "3.1", "title": "Add input validation and sanitization" },
+        { "id": "3.2", "title": "Implement rate limiting on auth endpoints" },
+        { "id": "3.3", "title": "Add password strength requirements" },
+        { "id": "3.4", "title": "Secure token storage and rotation" }
+      ]
+    },
+    {
+      "id": "4.0",
+      "title": "Testing",
+      "subtasks": [
+        { "id": "4.1", "title": "Test signup flow (valid input, duplicate email, weak password)" },
+        { "id": "4.2", "title": "Test login flow (valid credentials, invalid, locked account)" },
+        { "id": "4.3", "title": "Test password reset flow end-to-end" },
+        { "id": "4.4", "title": "Test auth middleware (valid token, expired, missing)" },
+        { "id": "4.5", "title": "Test rate limiting on auth endpoints" }
+      ]
+    }
+  ]
+}
