@@ -168,8 +168,8 @@ describe('readArtifact', () => {
 
     const result = await readArtifact('/project', config, 'epic', 'EPIC-001');
     expect(result).not.toBeNull();
-    expect(result!.data.id).toBe('EPIC-001');
-    expect(result!.filePath).toContain('EPIC-001-test-epic.md');
+    expect(result?.data.id).toBe('EPIC-001');
+    expect(result?.filePath).toContain('EPIC-001-test-epic.md');
   });
 
   it('returns null when no matching file', async () => {

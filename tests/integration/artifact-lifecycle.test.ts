@@ -44,10 +44,10 @@ describe('artifact lifecycle', () => {
 
     const result = await readArtifact(project.dir, project.config, 'epic', 'EPIC-001');
     expect(result).not.toBeNull();
-    expect(result!.data.id).toBe('EPIC-001');
-    expect(result!.data.title).toBe('Test Epic');
-    expect(result!.data.status).toBe('planning');
-    expect(result!.content).toContain('## Business Value');
+    expect(result?.data.id).toBe('EPIC-001');
+    expect(result?.data.title).toBe('Test Epic');
+    expect(result?.data.status).toBe('planning');
+    expect(result?.content).toContain('## Business Value');
   });
 
   it('should read raw artifact content', async () => {
@@ -98,8 +98,8 @@ Updated business value.
     await updateArtifact(project.dir, project.config, 'epic', 'EPIC-001', newContent);
 
     const result = await readArtifact(project.dir, project.config, 'epic', 'EPIC-001');
-    expect(result!.data.title).toBe('Updated Epic');
-    expect(result!.data.status).toBe('active');
+    expect(result?.data.title).toBe('Updated Epic');
+    expect(result?.data.status).toBe('active');
   });
 
   it('should add child reference to parent artifact', async () => {
@@ -167,7 +167,7 @@ describe('parent-child hierarchy', () => {
 
     // Verify story references feature
     const storyData = await readArtifact(project.dir, project.config, 'story', 'US-001');
-    expect(storyData!.data.featureId).toBe('FEAT-001');
+    expect(storyData?.data.featureId).toBe('FEAT-001');
   });
 
   it('should handle multiple children under same parent', async () => {

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { setVerbose } from '../utils/logger.js';
 import { registerBacklogCommand } from './commands/backlog.js';
@@ -21,12 +24,15 @@ import { registerSyncCommand } from './commands/sync.js';
 import { registerTaskCommand } from './commands/task.js';
 import { registerTemplateCommand } from './commands/template.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf-8'));
+
 const program = new Command();
 
 program
   .name('planr')
   .description('AI-powered planning CLI — backlog, sprints, tasks, estimation, and AI agent rules')
-  .version('0.9.0')
+  .version(pkg.version as string)
   .option('--project-dir <path>', 'project root directory', process.cwd())
   .option('--verbose', 'verbose output', false)
   .option('--no-interactive', 'skip interactive prompts');

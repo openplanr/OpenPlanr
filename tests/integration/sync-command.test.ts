@@ -79,7 +79,7 @@ describe('sync: missing link detection', () => {
     expect(epicRaw).not.toContain('FEAT-001');
 
     const featureData = await readArtifact(project.dir, project.config, 'feature', 'FEAT-001');
-    expect(featureData!.data.epicId).toBe('EPIC-001');
+    expect(featureData?.data.epicId).toBe('EPIC-001');
   });
 
   it('should detect when story references feature but feature has no link to it', async () => {
@@ -91,7 +91,7 @@ describe('sync: missing link detection', () => {
     expect(featureRaw).not.toContain('US-001');
 
     const storyData = await readArtifact(project.dir, project.config, 'story', 'US-001');
-    expect(storyData!.data.featureId).toBe('FEAT-001');
+    expect(storyData?.data.featureId).toBe('FEAT-001');
   });
 });
 
@@ -186,7 +186,7 @@ describe('sync: update artifact content', () => {
     expect(raw).toContain('US-999');
 
     // Replace stale link section
-    const fixed = raw!.replace(
+    const fixed = raw?.replace(
       '- [US-999: Ghost](../stories/US-999-ghost.md)',
       '_No user stories created yet. Run `planr story create --feature FEAT-001` to create user stories._',
     );
