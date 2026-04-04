@@ -51,6 +51,6 @@ describe('readProjectRules', () => {
 
     const result = await readProjectRules(tmpDir);
     expect(result).not.toBeNull();
-    expect(result!.length).toBe(8_000);
+    expect(result?.length).toBe(8_000);
   });
 });

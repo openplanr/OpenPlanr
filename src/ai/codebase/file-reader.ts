@@ -7,6 +7,7 @@
 
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { logger } from '../../utils/logger.js';
 
 const MAX_FILE_SIZE = 50_000; // 50KB per file
 const MAX_SNIPPET_CHARS = 3_000; // Truncate snippets to this length
@@ -69,7 +70,8 @@ export async function readProjectFile(
     const fileStat = await stat(fullPath);
     if (fileStat.size > MAX_FILE_SIZE) return null;
     return await readFile(fullPath, 'utf-8');
-  } catch {
+  } catch (err) {
+    logger.debug('Failed to read project file', err);
     return null;
   }
 }
@@ -105,7 +107,8 @@ async function searchDir(
   let entries: string[];
   try {
     entries = await readdir(currentDir);
-  } catch {
+  } catch (err) {
+    logger.debug('Failed to read directory during file search', err);
     return;
   }
 
@@ -130,7 +133,8 @@ async function searchDir(
           matches.push(relativePath);
         }
       }
-    } catch {
+    } catch (err) {
+      logger.debug('Failed to stat file entry', err);
       // Skip inaccessible entries
     }
   }

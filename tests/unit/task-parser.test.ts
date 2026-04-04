@@ -43,6 +43,22 @@ describe('parseTaskMarkdown', () => {
     expect(tasks).toEqual([]);
   });
 
+  it('parses bold group IDs (**1.0**) from AI-generated task lists', () => {
+    const boldContent = `## Tasks
+
+- [ ] **1.0** Database Schema Setup
+  - [ ] 1.1 Create user table
+  - [ ] 1.2 Create recipe table
+- [ ] **2.0** API Endpoints
+  - [ ] 2.1 Create GET /recipes
+`;
+    const tasks = parseTaskMarkdown(boldContent);
+    expect(tasks).toHaveLength(5);
+    expect(tasks[0]).toMatchObject({ id: '1.0', title: 'Database Schema Setup', depth: 0 });
+    expect(tasks[1]).toMatchObject({ id: '1.1', parentId: '1.0', depth: 1 });
+    expect(tasks[3]).toMatchObject({ id: '2.0', title: 'API Endpoints', depth: 0 });
+  });
+
   it('parses task titles correctly', () => {
     const tasks = parseTaskMarkdown(fixtureContent);
     expect(tasks[0].title).toBe('Setup authentication module');
@@ -87,8 +103,8 @@ describe('getNextPending', () => {
     const tasks = parseTaskMarkdown(fixtureContent);
     const next = getNextPending(tasks);
     expect(next).not.toBeNull();
-    expect(next!.id).toBe('1.2'); // first unchecked subtask
-    expect(next!.done).toBe(false);
+    expect(next?.id).toBe('1.2'); // first unchecked subtask
+    expect(next?.done).toBe(false);
   });
 
   it('returns null when all tasks are done', () => {
@@ -105,7 +121,7 @@ describe('getNextPending', () => {
       { id: '1.1', title: 'Subtask', done: false, parentId: '1.0', depth: 1 },
     ];
     const next = getNextPending(mixed);
-    expect(next!.id).toBe('1.1');
+    expect(next?.id).toBe('1.1');
   });
 
   it('falls back to depth 0 if all subtasks are done', () => {
@@ -114,7 +130,7 @@ describe('getNextPending', () => {
       { id: '1.1', title: 'Subtask', done: true, parentId: '1.0', depth: 1 },
     ];
     const next = getNextPending(onlyGroup);
-    expect(next!.id).toBe('1.0');
+    expect(next?.id).toBe('1.0');
   });
 });
 

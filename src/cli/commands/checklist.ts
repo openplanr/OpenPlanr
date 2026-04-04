@@ -12,7 +12,7 @@ import {
 import { loadConfig } from '../../services/config-service.js';
 import { promptCheckbox } from '../../services/prompt-service.js';
 import { writeFile } from '../../utils/fs.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 
 export function registerChecklistCommand(program: Command) {
   const checklist = program
@@ -34,13 +34,13 @@ export function registerChecklistCommand(program: Command) {
       }
 
       if (content) {
-        console.log(content);
+        display.line(content);
 
         const items = parseChecklistItems(content);
         if (items.length > 0) {
           const { done, total, percent } = getChecklistProgress(items);
           const color = percent >= 75 ? chalk.green : percent >= 25 ? chalk.yellow : chalk.red;
-          console.log(color(`\nProgress: ${done}/${total} complete (${percent}%)`));
+          display.line(color(`\nProgress: ${done}/${total} complete (${percent}%)`));
         }
       }
     });
@@ -106,7 +106,7 @@ export function registerChecklistCommand(program: Command) {
       const color = percent >= 75 ? chalk.green : percent >= 25 ? chalk.yellow : chalk.red;
 
       logger.success(`Updated ${toToggle.size} item(s).`);
-      console.log(color(`Progress: ${done}/${total} complete (${percent}%)`));
+      display.line(color(`Progress: ${done}/${total} complete (${percent}%)`));
     });
 
   checklist

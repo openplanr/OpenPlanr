@@ -81,6 +81,7 @@ describe('createAIProvider', () => {
 
   it('throws for unknown provider', async () => {
     try {
+      // biome-ignore lint/suspicious/noExplicitAny: testing invalid input intentionally
       await createAIProvider({ provider: 'unknown' as any });
       expect.unreachable('Should have thrown');
     } catch (err) {

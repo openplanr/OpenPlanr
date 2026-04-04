@@ -126,6 +126,15 @@ export interface ArtifactCollection {
   tasks: TaskList[];
 }
 
+/** Frontmatter fields common to all artifact types. */
+export interface ArtifactFrontmatter {
+  id: string;
+  title: string;
+  status?: string;
+  createdAt?: string;
+  [key: string]: unknown; // allow extra fields per artifact type
+}
+
 export interface GeneratedFile {
   path: string;
   content: string;

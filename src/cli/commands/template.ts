@@ -15,7 +15,7 @@ import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptText } from '../../services/prompt-service.js';
 import { getTemplatesDir } from '../../utils/constants.js';
 import { ensureDir, fileExists, listFiles, readFile, writeFile } from '../../utils/fs.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 
 interface TaskTemplate {
   name: string;
@@ -52,33 +52,33 @@ export function registerTemplateCommand(program: Command) {
       }
 
       logger.heading('Task Templates');
-      console.log('');
+      display.blank();
 
       const builtIn = templates.filter((t) => t.source === 'built-in');
       const custom = templates.filter((t) => t.source === 'custom');
 
       if (builtIn.length > 0) {
-        console.log(chalk.bold('  Built-in:'));
+        display.heading('  Built-in:');
         for (const t of builtIn) {
           const taskCount = t.tasks.reduce((sum, tg) => sum + tg.subtasks.length + 1, 0);
-          console.log(
+          display.line(
             `    ${chalk.cyan(t.name)}  ${chalk.dim(`— ${t.description} (${taskCount} tasks)`)}`,
           );
         }
       }
 
       if (custom.length > 0) {
-        console.log('');
-        console.log(chalk.bold('  Custom:'));
+        display.blank();
+        display.heading('  Custom:');
         for (const t of custom) {
           const taskCount = t.tasks.reduce((sum, tg) => sum + tg.subtasks.length + 1, 0);
-          console.log(
+          display.line(
             `    ${chalk.green(t.name)}  ${chalk.dim(`— ${t.description} (${taskCount} tasks)`)}`,
           );
         }
       }
 
-      console.log('');
+      display.blank();
       logger.dim('Use: planr template use <name> --title "My Task"');
     });
 
@@ -102,19 +102,19 @@ export function registerTemplateCommand(program: Command) {
       }
 
       logger.heading(`Template: ${tpl.name}`);
-      console.log(chalk.dim(`  ${tpl.description}`));
+      display.line(chalk.dim(`  ${tpl.description}`));
       if (tpl.variables.length > 0) {
-        console.log(chalk.dim(`  Variables: ${tpl.variables.join(', ')}`));
+        display.line(chalk.dim(`  Variables: ${tpl.variables.join(', ')}`));
       }
-      console.log('');
+      display.blank();
 
       for (const taskGroup of tpl.tasks) {
-        console.log(chalk.bold(`  ${taskGroup.id} ${taskGroup.title}`));
+        display.heading(`  ${taskGroup.id} ${taskGroup.title}`);
         for (const sub of taskGroup.subtasks) {
-          console.log(chalk.dim(`    ${sub.id} ${sub.title}`));
+          display.line(chalk.dim(`    ${sub.id} ${sub.title}`));
         }
       }
-      console.log('');
+      display.blank();
     });
 
   // -----------------------------------------------------------------------
@@ -157,14 +157,14 @@ export function registerTemplateCommand(program: Command) {
       }));
 
       // Preview
-      console.log(chalk.dim('━'.repeat(50)));
+      display.separator(50);
       for (const tg of tasks) {
-        console.log(chalk.bold(`  ${tg.id} ${tg.title}`));
+        display.heading(`  ${tg.id} ${tg.title}`);
         for (const sub of tg.subtasks) {
-          console.log(chalk.dim(`    ${sub.id} ${sub.title}`));
+          display.line(chalk.dim(`    ${sub.id} ${sub.title}`));
         }
       }
-      console.log(chalk.dim('━'.repeat(50)));
+      display.separator(50);
 
       const totalItems = tasks.reduce((sum, t) => sum + t.subtasks.length + 1, 0);
       const confirm = await promptConfirm(`Create quick task list with ${totalItems} items?`, true);
@@ -185,7 +185,7 @@ export function registerTemplateCommand(program: Command) {
       logger.dim(`  ${filePath}`);
       logger.dim(`  Template: ${tpl.name}`);
       logger.dim('');
-      logger.dim(`  Next: planr quick implement ${id}`);
+      logger.dim(`  Next: Open ${id} in your coding agent for implementation`);
     });
 
   // -----------------------------------------------------------------------

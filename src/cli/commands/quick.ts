@@ -10,7 +10,6 @@
  */
 
 import path from 'node:path';
-import chalk from 'chalk';
 import type { Command } from 'commander';
 import { buildQuickTasksPrompt } from '../../ai/prompts/prompt-builder.js';
 import { aiQuickTasksResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
@@ -31,8 +30,16 @@ import { loadConfig } from '../../services/config-service.js';
 import { getNextId } from '../../services/id-service.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
 import { ensureDir, writeFile } from '../../utils/fs.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 import { slugify } from '../../utils/slugify.js';
+import {
+  buildTaskItems,
+  countTaskItems,
+  displayNextSteps,
+  displayTaskPreview,
+  displayValidationWarnings,
+  handleAIError,
+} from '../helpers/task-creation.js';
 
 export function registerQuickCommand(program: Command) {
   const quick = program
@@ -59,7 +66,8 @@ export function registerQuickCommand(program: Command) {
           const { readFile } = await import('../../utils/fs.js');
           description = await readFile(path.resolve(opts.file));
           logger.dim(`Read ${description.split('\n').length} lines from ${opts.file}`);
-        } catch {
+        } catch (err) {
+          logger.debug('Failed to read quick task input file', err);
           logger.error(`Failed to read file: ${opts.file}`);
           return;
         }
@@ -101,73 +109,8 @@ export function registerQuickCommand(program: Command) {
 
       logger.heading('Quick Tasks');
       for (const t of tasks) {
-        console.log(`  ${t.id}  ${t.title}`);
+        display.line(`  ${t.id}  ${t.title}`);
       }
-    });
-
-  // -----------------------------------------------------------------------
-  // planr quick implement <qtId>
-  // -----------------------------------------------------------------------
-  quick
-    .command('implement')
-    .description('Implement a quick task using a coding agent')
-    .argument('<qtId>', 'quick task ID (e.g., QT-001)')
-    .option('-s, --subtask <id>', 'specific subtask ID or search term')
-    .option('--next', 'implement the next unchecked subtask')
-    .option('--agent <name>', 'override coding agent (claude, cursor, codex)')
-    .option('--dry-run', 'show the composed prompt without executing')
-    .action(async (qtId: string, opts) => {
-      const projectDir = program.opts().projectDir as string;
-      const config = await loadConfig(projectDir);
-
-      const { executeImplementation } = await import('../../agents/implementation-bridge.js');
-      await executeImplementation(projectDir, config, qtId, {
-        subtask: opts.subtask,
-        next: opts.next,
-        agent: opts.agent,
-        dryRun: opts.dryRun,
-      });
-    });
-
-  // -----------------------------------------------------------------------
-  // planr quick fix <message>
-  // -----------------------------------------------------------------------
-  quick
-    .command('fix')
-    .description('Send a follow-up prompt to fix issues')
-    .argument('[message...]', 'describe the issue (or pipe error output)')
-    .option('--agent <name>', 'override coding agent (claude, cursor, codex)')
-    .action(async (messageParts: string[], opts) => {
-      const projectDir = program.opts().projectDir as string;
-      const config = await loadConfig(projectDir);
-
-      const { extractErrorContext, readMultilineInput } = await import(
-        '../../utils/error-context.js'
-      );
-      const { executeFollowUp } = await import('../../agents/implementation-bridge.js');
-
-      let message = messageParts.join(' ').trim();
-
-      if (!message && !process.stdin.isTTY) {
-        const chunks: string[] = [];
-        for await (const chunk of process.stdin) {
-          chunks.push(chunk.toString());
-        }
-        message = extractErrorContext(chunks.join(''));
-      }
-
-      if (!message) {
-        logger.info('Describe the issue or paste error output.');
-        logger.dim('Type your message, then press Enter twice (empty line) to submit:\n');
-        message = await readMultilineInput();
-      }
-
-      if (!message.trim()) {
-        logger.error('No message provided.');
-        return;
-      }
-
-      await executeFollowUp(projectDir, config, message, { agent: opts.agent });
     });
 
   // -----------------------------------------------------------------------
@@ -222,7 +165,8 @@ async function createQuickWithAI(
         ? ` — ${ctx.techStack.language}${ctx.techStack.framework ? ` + ${ctx.techStack.framework}` : ''}`
         : '';
       logger.success(`Scanned codebase${stackInfo}`);
-    } catch {
+    } catch (err) {
+      logger.debug('Codebase scanning failed during quick task creation', err);
       // Codebase scanning is best-effort
     }
 
@@ -236,48 +180,10 @@ async function createQuickWithAI(
     });
 
     // Display preview
-    console.log(chalk.dim('━'.repeat(50)));
-    for (const taskGroup of result.tasks) {
-      console.log(chalk.bold(`  ${taskGroup.id} ${taskGroup.title}`));
-      for (const sub of taskGroup.subtasks || []) {
-        console.log(chalk.dim(`    ${sub.id} ${sub.title}`));
-      }
-    }
-    if (result.relevantFiles && result.relevantFiles.length > 0) {
-      console.log('');
-      console.log(chalk.bold('  Relevant Files:'));
-      for (const f of result.relevantFiles) {
-        console.log(chalk.dim(`    ${f.path} — ${f.reason}`));
-      }
-    }
-    console.log(chalk.dim('━'.repeat(50)));
+    displayTaskPreview(result);
+    await displayValidationWarnings(result.relevantFiles, rawCodebaseContext);
 
-    // Validate AI output against codebase
-    if (rawCodebaseContext && result.relevantFiles?.length) {
-      try {
-        const { validateRelevantFiles, detectDependencyHints } = await import(
-          '../../ai/validation/index.js'
-        );
-        const hints = detectDependencyHints(rawCodebaseContext.architectureFiles);
-        const validation = validateRelevantFiles(
-          result.relevantFiles,
-          rawCodebaseContext.sourceInventory,
-          hints,
-        );
-        if (validation.warnings.length > 0) {
-          console.log('');
-          logger.warn('Quality warnings:');
-          for (const w of validation.warnings) {
-            console.log(chalk.yellow(`  ⚠ ${w}`));
-          }
-          console.log('');
-        }
-      } catch {
-        // Validation is best-effort
-      }
-    }
-
-    const total = result.tasks.reduce((sum, t) => sum + (t.subtasks || []).length + 1, 0);
+    const total = countTaskItems(result.tasks);
     const confirmCreate = await promptConfirm(`Create quick task list with ${total} items?`, true);
 
     if (!confirmCreate) {
@@ -285,17 +191,7 @@ async function createQuickWithAI(
       return;
     }
 
-    const tasks = result.tasks.map((tg) => ({
-      id: tg.id,
-      title: tg.title,
-      status: 'pending' as const,
-      subtasks: (tg.subtasks || []).map((st) => ({
-        id: st.id,
-        title: st.title,
-        status: 'pending' as const,
-        subtasks: [],
-      })),
-    }));
+    const tasks = buildTaskItems(result);
 
     const { id, filePath } = await createArtifact(
       projectDir,
@@ -309,21 +205,13 @@ async function createQuickWithAI(
     logger.dim(`  ${filePath}`);
     logger.dim(`  ${total} tasks`);
     logger.dim('');
-    logger.heading('Next steps:');
-    logger.dim(`  planr quick implement ${id}            — Implement all tasks`);
-    logger.dim(`  planr quick implement ${id} --next     — Implement next pending subtask`);
-    logger.dim(`  planr quick implement ${id} -s 1.1     — Implement specific subtask`);
-    logger.dim(`  planr quick implement ${id} --dry-run  — Preview the implementation prompt`);
-    logger.dim(`  planr quick promote ${id} --story US-001 — Move into agile hierarchy`);
+    displayNextSteps({
+      command: 'quick',
+      id,
+      extras: [`planr quick promote ${id} --story US-001 — Move into agile hierarchy`],
+    });
   } catch (err) {
-    const { AIError } = await import('../../ai/errors.js');
-    if (err instanceof AIError) {
-      logger.error(err.userMessage);
-    } else if (err instanceof Error) {
-      logger.error(err.message);
-    } else {
-      throw err;
-    }
+    await handleAIError(err);
   }
 }
 
@@ -363,7 +251,7 @@ async function createQuickManually(
   logger.dim(`  ${filePath}`);
   logger.dim(`  ${tasks.length} tasks`);
   logger.dim('');
-  logger.dim(`Next: planr quick implement ${id}`);
+  logger.dim(`Next: planr quick list`);
 }
 
 // ---------------------------------------------------------------------------
@@ -457,5 +345,5 @@ async function promoteQuickTask(
   if (opts.story) logger.dim(`  Linked to story ${opts.story}`);
   if (opts.feature) logger.dim(`  Linked to feature ${opts.feature}`);
   logger.dim('');
-  logger.dim(`Next: planr task implement ${newId}`);
+  logger.dim(`Next: planr task list`);
 }

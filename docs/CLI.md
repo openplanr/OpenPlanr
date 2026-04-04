@@ -279,22 +279,6 @@ planr task list --story US-001    # filter by story
 
 ---
 
-### `planr task implement`
-
-Display a task list and guidance on implementing with AI agents.
-
-```bash
-planr task implement TASK-001
-```
-
-| Argument   | Description  | Required |
-| ---------- | ------------ | -------- |
-| `<taskId>` | Task list ID | **Yes**  |
-
-**Output:** Prints the full task list content and recommends using your AI assistant with generated rules.
-
----
-
 ### `planr backlog add`
 
 Capture a backlog item — a quick way to record ideas, bugs, or work items without breaking your flow.
@@ -496,20 +480,6 @@ List all quick task lists.
 ```bash
 planr quick list
 ```
-
----
-
-### `planr quick implement`
-
-Delegate quick tasks to your coding agent.
-
-```bash
-planr quick implement QT-001
-```
-
-| Argument   | Description   | Required |
-| ---------- | ------------- | -------- |
-| `<taskId>` | Quick task ID | **Yes**  |
 
 ---
 
@@ -959,7 +929,7 @@ planr init
             └─ planr story create --epic EPIC-001     (all features at once)
                  ├─ planr task create --story US-001   (one story + feature/epic/Gherkin/ADRs/codebase)
                  ├─ planr task create --feature FEAT-001   (all stories in feature + same artifact context; larger AI budget)
-                 └─ planr task implement TASK-001
+                 └─ planr rules generate           (generate agent rules for implementation)
 
 planr plan                  ← full automated flow (Epic → Features → Stories → Tasks)
 

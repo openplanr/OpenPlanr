@@ -129,15 +129,12 @@ planr rules generate --dry-run        # preview
 | `planr task create --story <ID>`    | AI task list from one story                           |
 | `planr task create --feature <ID>`  | AI task list from all stories under a feature         |
 | `planr task list`                   | List all task lists                                   |
-| `planr task implement <ID>`         | Implement tasks with your coding agent                |
-
 ### Quick Tasks & Templates
 
 | Command                                               | Description                        |
 | ----------------------------------------------------- | ---------------------------------- |
 | `planr quick create "description"`                    | AI-generated standalone task list  |
 | `planr quick create --file spec.md`                   | Task list from a PRD or spec file  |
-| `planr quick implement <ID>`                          | Implement with coding agent        |
 | `planr quick promote <ID> --story US-001`             | Move into agile hierarchy          |
 | `planr template list`                                 | List built-in and custom templates |
 | `planr template use rest-endpoint --title "User API"` | Generate tasks from a template     |

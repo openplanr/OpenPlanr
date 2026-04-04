@@ -3,7 +3,7 @@ import type { Command } from 'commander';
 import { parseTaskMarkdown } from '../../agents/task-parser.js';
 import { listArtifacts, readArtifact, readArtifactRaw } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 import { parseMarkdown } from '../../utils/markdown.js';
 
 export function registerStatusCommand(program: Command) {
@@ -17,7 +17,7 @@ export function registerStatusCommand(program: Command) {
       const showAll = !!opts.all;
 
       logger.heading(`OpenPlanr Status — ${config.projectName}`);
-      console.log('');
+      display.blank();
 
       // Gather all artifacts
       const epics = await listArtifacts(projectDir, config, 'epic');
@@ -64,28 +64,28 @@ export function registerStatusCommand(program: Command) {
         printSection('Epics', epics, showAll);
 
         for (const epic of epics) {
-          console.log('');
-          console.log(chalk.bold.cyan(`  ${epic.id}: ${epic.title}`));
+          display.blank();
+          display.line(chalk.bold.cyan(`  ${epic.id}: ${epic.title}`));
 
           // Features under this epic
           const epicFeatures = features.filter((f) => featureToEpic.get(f.id) === epic.id);
           if (epicFeatures.length > 0) {
             const featureList = showAll ? epicFeatures : epicFeatures.slice(0, 5);
             for (const f of featureList) {
-              console.log(chalk.white(`    ${f.id}  ${f.title}`));
+              display.line(chalk.white(`    ${f.id}  ${f.title}`));
 
               // Stories under this feature
               const featureStories = stories.filter((s) => storyToFeature.get(s.id) === f.id);
               const storyList = showAll ? featureStories : featureStories.slice(0, 3);
               for (const s of storyList) {
-                console.log(chalk.dim(`      ${s.id}  ${s.title}`));
+                display.line(chalk.dim(`      ${s.id}  ${s.title}`));
               }
               if (!showAll && featureStories.length > 3) {
-                console.log(chalk.dim(`      ... and ${featureStories.length - 3} more stories`));
+                display.line(chalk.dim(`      ... and ${featureStories.length - 3} more stories`));
               }
             }
             if (!showAll && epicFeatures.length > 5) {
-              console.log(chalk.dim(`    ... and ${epicFeatures.length - 5} more features`));
+              display.line(chalk.dim(`    ... and ${epicFeatures.length - 5} more features`));
             }
           }
         }
@@ -93,20 +93,20 @@ export function registerStatusCommand(program: Command) {
         // Show orphaned features (no epic parent)
         const orphanFeatures = features.filter((f) => !featureToEpic.has(f.id));
         if (orphanFeatures.length > 0) {
-          console.log('');
-          console.log(chalk.yellow(`  Unlinked Features: ${orphanFeatures.length}`));
+          display.blank();
+          display.line(chalk.yellow(`  Unlinked Features: ${orphanFeatures.length}`));
           for (const f of showAll ? orphanFeatures : orphanFeatures.slice(0, 5)) {
-            console.log(chalk.dim(`    ${f.id}  ${f.title}`));
+            display.line(chalk.dim(`    ${f.id}  ${f.title}`));
           }
         }
 
         // Show orphaned stories (no feature parent)
         const orphanStories = stories.filter((s) => !storyToFeature.has(s.id));
         if (orphanStories.length > 0) {
-          console.log('');
-          console.log(chalk.yellow(`  Unlinked Stories: ${orphanStories.length}`));
+          display.blank();
+          display.line(chalk.yellow(`  Unlinked Stories: ${orphanStories.length}`));
           for (const s of showAll ? orphanStories : orphanStories.slice(0, 5)) {
-            console.log(chalk.dim(`    ${s.id}  ${s.title}`));
+            display.line(chalk.dim(`    ${s.id}  ${s.title}`));
           }
         }
       } else {
@@ -116,9 +116,9 @@ export function registerStatusCommand(program: Command) {
       }
 
       // Task lists with completion metrics
-      console.log('');
+      display.blank();
       const taskIcon = tasks.length > 0 ? '●' : '○';
-      console.log(`  ${taskIcon} Task Lists: ${tasks.length}`);
+      display.line(`  ${taskIcon} Task Lists: ${tasks.length}`);
       if (tasks.length > 0) {
         const taskList = showAll ? tasks : tasks.slice(0, 5);
         for (const t of taskList) {
@@ -127,13 +127,13 @@ export function registerStatusCommand(program: Command) {
             const pct = Math.round((metrics.done / metrics.total) * 100);
             const progressText = `(${metrics.done}/${metrics.total} subtasks, ${pct}%)`;
             const coloredProgress = colorByPercent(progressText, pct);
-            console.log(`    ${t.id}  ${t.title}  ${coloredProgress}`);
+            display.line(`    ${t.id}  ${t.title}  ${coloredProgress}`);
           } else {
-            console.log(`    ${t.id}  ${t.title}`);
+            display.line(`    ${t.id}  ${t.title}`);
           }
         }
         if (!showAll && tasks.length > 5) {
-          console.log(chalk.dim(`    ... and ${tasks.length - 5} more`));
+          display.line(chalk.dim(`    ... and ${tasks.length - 5} more`));
         }
 
         // Overall task completion summary
@@ -145,8 +145,8 @@ export function registerStatusCommand(program: Command) {
         }
         if (totalSubtasks > 0) {
           const overallPct = Math.round((totalDone / totalSubtasks) * 100);
-          console.log('');
-          console.log(
+          display.blank();
+          display.line(
             `  ${colorByPercent(`Overall: ${totalDone}/${totalSubtasks} subtasks complete (${overallPct}%)`, overallPct)}`,
           );
         }
@@ -155,8 +155,8 @@ export function registerStatusCommand(program: Command) {
       // Backlog items
       const backlogItems = await listArtifacts(projectDir, config, 'backlog');
       if (backlogItems.length > 0) {
-        console.log('');
-        console.log(`  ${chalk.red('●')} Backlog: ${backlogItems.length}`);
+        display.blank();
+        display.line(`  ${chalk.red('●')} Backlog: ${backlogItems.length}`);
         const blList = showAll ? backlogItems : backlogItems.slice(0, 5);
         for (const bl of blList) {
           const blRaw = await readArtifactRaw(projectDir, config, 'backlog', bl.id);
@@ -165,10 +165,10 @@ export function registerStatusCommand(program: Command) {
             : 'medium';
           const priorityColor =
             priority === 'critical' ? chalk.red : priority === 'high' ? chalk.yellow : chalk.dim;
-          console.log(`    ${bl.id}  ${bl.title}  ${priorityColor(`[${priority}]`)}`);
+          display.line(`    ${bl.id}  ${bl.title}  ${priorityColor(`[${priority}]`)}`);
         }
         if (!showAll && backlogItems.length > 5) {
-          console.log(chalk.dim(`    ... and ${backlogItems.length - 5} more`));
+          display.line(chalk.dim(`    ... and ${backlogItems.length - 5} more`));
         }
       }
 
@@ -188,7 +188,7 @@ export function registerStatusCommand(program: Command) {
           : null;
 
       if (activeSprint) {
-        console.log('');
+        display.blank();
         const sprintName = (activeSprint.data.name as string) || activeSprint.title;
         const endDate = activeSprint.data.endDate as string | undefined;
         let remaining = '';
@@ -198,7 +198,7 @@ export function registerStatusCommand(program: Command) {
           );
           remaining = daysLeft > 0 ? chalk.yellow(` (${daysLeft}d left)`) : chalk.red(' (ended)');
         }
-        console.log(
+        display.line(
           `  ${chalk.blueBright('●')} Active Sprint: ${activeSprint.id} — ${sprintName}${remaining}`,
         );
       }
@@ -206,8 +206,8 @@ export function registerStatusCommand(program: Command) {
       // Quick tasks (standalone, outside hierarchy)
       const quickTasks = await listArtifacts(projectDir, config, 'quick');
       if (quickTasks.length > 0) {
-        console.log('');
-        console.log(`  ● Quick Tasks: ${quickTasks.length}`);
+        display.blank();
+        display.line(`  ● Quick Tasks: ${quickTasks.length}`);
         const quickList = showAll ? quickTasks : quickTasks.slice(0, 5);
         for (const qt of quickList) {
           const raw = await readArtifactRaw(projectDir, config, 'quick', qt.id);
@@ -218,18 +218,18 @@ export function registerStatusCommand(program: Command) {
             const done = (subtasks.length > 0 ? subtasks : parsed).filter((s) => s.done).length;
             if (total > 0) {
               const pct = Math.round((done / total) * 100);
-              console.log(
+              display.line(
                 `    ${qt.id}  ${qt.title}  ${colorByPercent(`(${done}/${total}, ${pct}%)`, pct)}`,
               );
             } else {
-              console.log(`    ${qt.id}  ${qt.title}`);
+              display.line(`    ${qt.id}  ${qt.title}`);
             }
           } else {
-            console.log(`    ${qt.id}  ${qt.title}`);
+            display.line(`    ${qt.id}  ${qt.title}`);
           }
         }
         if (!showAll && quickTasks.length > 5) {
-          console.log(chalk.dim(`    ... and ${quickTasks.length - 5} more`));
+          display.line(chalk.dim(`    ... and ${quickTasks.length - 5} more`));
         }
       }
 
@@ -238,8 +238,8 @@ export function registerStatusCommand(program: Command) {
       const blCount = backlogItems.length > 0 ? `, ${backlogItems.length} backlog` : '';
       const sprintCount =
         sprints.length > 0 ? `, ${sprints.length} sprint${sprints.length !== 1 ? 's' : ''}` : '';
-      console.log('');
-      console.log(
+      display.blank();
+      display.line(
         chalk.dim(
           `  Totals: ${epics.length} epics, ${features.length} features, ${stories.length} stories, ${tasks.length} task lists${quickCount}${blCount}${sprintCount}`,
         ),
@@ -256,14 +256,14 @@ function printSection(
 ) {
   const count = items.length;
   const icon = count > 0 ? '●' : '○';
-  console.log(`  ${icon} ${label}: ${count}`);
+  display.line(`  ${icon} ${label}: ${count}`);
   if (count > 0) {
     const list = showAll ? items : items.slice(0, 5);
     for (const item of list) {
-      console.log(`    ${item.id}  ${item.title}`);
+      display.line(`    ${item.id}  ${item.title}`);
     }
     if (!showAll && count > 5) {
-      console.log(chalk.dim(`    ... and ${count - 5} more`));
+      display.line(chalk.dim(`    ... and ${count - 5} more`));
     }
   }
 }

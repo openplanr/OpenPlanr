@@ -11,6 +11,7 @@
 
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { logger } from '../../utils/logger.js';
 import { findRelatedFiles, readFileSnippets, readProjectFile } from './file-reader.js';
 import { detectPatternRules, type PatternRule } from './pattern-rules.js';
 import { readProjectRules } from './rules-reader.js';
@@ -131,7 +132,8 @@ async function buildSourceInventory(projectDir: string): Promise<string> {
     topLevelDirs = entries
       .filter((e) => e.isDirectory() && !e.name.startsWith('.'))
       .map((e) => `src/${e.name}`);
-  } catch {
+  } catch (err) {
+    logger.debug('Failed to read src directory for inventory', err);
     return '';
   }
 
@@ -155,7 +157,8 @@ async function buildSourceInventory(projectDir: string): Promise<string> {
       } else {
         keyDirs.push(dir);
       }
-    } catch {
+    } catch (err) {
+      logger.debug('Failed to expand subdirectories for inventory', err);
       keyDirs.push(dir);
     }
   }
@@ -173,7 +176,8 @@ async function buildSourceInventory(projectDir: string): Promise<string> {
       if (files.length > 0) {
         lines.push(`${dir}/: ${files.join(', ')}`);
       }
-    } catch {
+    } catch (err) {
+      logger.debug('Failed to list directory files for inventory', err);
       // Directory doesn't exist, skip
     }
   }

@@ -21,7 +21,7 @@ import {
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 
 export function registerFeatureCommand(program: Command) {
   const feature = program.command('feature').description('Manage features');
@@ -71,7 +71,7 @@ export function registerFeatureCommand(program: Command) {
 
       logger.heading('Features');
       for (const f of features) {
-        console.log(`  ${f.id}  ${f.title}`);
+        display.line(`  ${f.id}  ${f.title}`);
       }
     });
 }
@@ -103,7 +103,7 @@ async function createFeaturesWithAI(
   if (epicFeatures.length > 0) {
     logger.warn(`${epicId} already has ${epicFeatures.length} feature(s):`);
     for (const f of epicFeatures) {
-      console.log(chalk.dim(`  ${f.id}: ${f.title}`));
+      display.line(chalk.dim(`  ${f.id}: ${f.title}`));
     }
     const continueCreate = await promptConfirm(
       'Generate additional features? (AI will avoid duplicates)',
@@ -127,13 +127,13 @@ async function createFeaturesWithAI(
     });
 
     // Display generated features
-    console.log(chalk.dim('━'.repeat(50)));
+    display.separator(50);
     result.features.forEach((feat, i) => {
-      console.log(chalk.bold(`  ${i + 1}. ${feat.title}`));
-      console.log(chalk.dim(`     ${feat.overview}`));
-      console.log(`     Requirements: ${feat.functionalRequirements.length} items`);
+      display.line(chalk.bold(`  ${i + 1}. ${feat.title}`));
+      display.line(chalk.dim(`     ${feat.overview}`));
+      display.line(`     Requirements: ${feat.functionalRequirements.length} items`);
     });
-    console.log(chalk.dim('━'.repeat(50)));
+    display.separator(50);
 
     const confirmAll = await promptConfirm(`Create all ${result.features.length} features?`, true);
 
@@ -175,7 +175,9 @@ async function createFeaturesWithAI(
     logger.heading('Next steps:');
     logger.dim(`  1. planr story create --feature ${createdIds[0]}   — Create user stories`);
     logger.dim(`  2. planr task create --story US-*            — Generate implementation tasks`);
-    logger.dim(`  3. planr task implement TASK-*               — Implement with your coding agent`);
+    logger.dim(
+      `  3. planr rules generate                     — Generate rules for your coding agent`,
+    );
     logger.dim('');
     logger.dim(`  Or generate stories for all features at once:`);
     logger.dim(`  planr plan --epic ${epicId}                   — Auto-generate stories → tasks`);

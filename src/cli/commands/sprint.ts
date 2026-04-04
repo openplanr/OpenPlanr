@@ -5,6 +5,7 @@
  * metrics, and carryover management.
  */
 
+import path from 'node:path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
 import { buildSprintAutoSelectPrompt } from '../../ai/prompts/prompt-builder.js';
@@ -21,7 +22,7 @@ import {
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptEditor, promptText } from '../../services/prompt-service.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 import { parseMarkdown } from '../../utils/markdown.js';
 
 export function registerSprintCommand(program: Command) {
@@ -65,6 +66,7 @@ export function registerSprintCommand(program: Command) {
         'sprint',
         'sprints/sprint.md.hbs',
         {
+          title: name,
           name,
           startDate,
           endDate,
@@ -110,8 +112,9 @@ export function registerSprintCommand(program: Command) {
         return;
       }
 
-      // Validate task IDs exist
+      // Validate task IDs exist and collect metadata for display
       const validIds: string[] = [];
+      const taskMeta: Record<string, { title: string; filename: string }> = {};
       for (const taskId of taskIds) {
         const prefix = taskId.split('-')[0];
         const type = prefix === 'QT' ? 'quick' : prefix === 'TASK' ? 'task' : null;
@@ -119,12 +122,17 @@ export function registerSprintCommand(program: Command) {
           logger.warn(`Skipping ${taskId} — only TASK-* and QT-* IDs are supported.`);
           continue;
         }
-        const exists = await readArtifact(projectDir, config, type, taskId);
-        if (!exists) {
+        const artifact = await readArtifact(projectDir, config, type, taskId);
+        if (!artifact) {
           logger.warn(`Skipping ${taskId} — not found.`);
           continue;
         }
         validIds.push(taskId);
+        const filename = path.basename(artifact.filePath);
+        taskMeta[taskId] = {
+          title: (artifact.data.title as string) || taskId,
+          filename,
+        };
       }
 
       if (validIds.length === 0) {
@@ -156,8 +164,18 @@ export function registerSprintCommand(program: Command) {
         `taskIds: [${allIds.map((id) => `"${id}"`).join(', ')}]`,
       );
 
-      // Also add task checkboxes to the ## Tasks section
-      const taskLines = newIds.map((id) => `- [ ] ${id}`).join('\n');
+      // Also add task checkboxes to the ## Tasks section (with title + link)
+      const taskLines = newIds
+        .map((id) => {
+          const meta = taskMeta[id];
+          const prefix = id.split('-')[0];
+          const dir = prefix === 'QT' ? 'quick' : 'tasks';
+          if (meta) {
+            return `- [ ] **${id}** ${meta.title} — [view](../${dir}/${meta.filename})`;
+          }
+          return `- [ ] ${id}`;
+        })
+        .join('\n');
       updated = updated.replace(/^_No tasks assigned yet\..*$/m, taskLines);
       // If tasks section already has items, append
       if (!updated.includes(taskLines)) {
@@ -193,9 +211,9 @@ export function registerSprintCommand(program: Command) {
       const taskIds = Array.isArray(data.taskIds) ? (data.taskIds as string[]) : [];
 
       logger.heading(`${active.id}: ${data.name || active.title}`);
-      console.log('');
-      console.log(`  Duration:  ${data.duration || 'N/A'}`);
-      console.log(`  Period:    ${data.startDate || '?'} -> ${data.endDate || '?'}`);
+      display.blank();
+      display.line(`  Duration:  ${data.duration || 'N/A'}`);
+      display.line(`  Period:    ${data.startDate || '?'} -> ${data.endDate || '?'}`);
 
       // Calculate days remaining
       if (data.endDate) {
@@ -203,14 +221,14 @@ export function registerSprintCommand(program: Command) {
         const now = new Date();
         const daysLeft = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
         if (daysLeft > 0) {
-          console.log(`  Remaining: ${chalk.yellow(`${daysLeft} days`)}`);
+          display.line(`  Remaining: ${chalk.yellow(`${daysLeft} days`)}`);
         } else {
-          console.log(`  Remaining: ${chalk.red('Sprint ended')}`);
+          display.line(`  Remaining: ${chalk.red('Sprint ended')}`);
         }
       }
 
-      console.log(`  Tasks:     ${taskIds.length}`);
-      console.log('');
+      display.line(`  Tasks:     ${taskIds.length}`);
+      display.blank();
 
       if (taskIds.length === 0) {
         logger.dim('  No tasks assigned. Run `planr sprint add` to add tasks.');
@@ -227,7 +245,7 @@ export function registerSprintCommand(program: Command) {
         const type = prefix === 'QT' ? 'quick' : 'task';
         const taskRaw = await readArtifactRaw(projectDir, config, type as 'task' | 'quick', taskId);
         if (!taskRaw) {
-          console.log(`  ${chalk.red('?')} ${taskId}  ${chalk.dim('not found')}`);
+          display.line(`  ${chalk.red('?')} ${taskId}  ${chalk.dim('not found')}`);
           continue;
         }
 
@@ -241,22 +259,22 @@ export function registerSprintCommand(program: Command) {
         const pct = total > 0 ? Math.round((done / total) * 100) : 0;
         const icon = pct === 100 ? chalk.green('✓') : pct > 0 ? chalk.yellow('◐') : chalk.dim('○');
         const progress = total > 0 ? colorByPercent(`(${done}/${total}, ${pct}%)`, pct) : '';
-        console.log(`  ${icon} ${chalk.bold(taskId)}  ${progress}`);
+        display.line(`  ${icon} ${chalk.bold(taskId)}  ${progress}`);
       }
 
       if (totalSubtasks > 0) {
         const overallPct = Math.round((totalDone / totalSubtasks) * 100);
-        console.log('');
+        display.blank();
 
         // Simple progress bar
         const barWidth = 30;
         const filled = Math.round((overallPct / 100) * barWidth);
         const bar = chalk.green('█'.repeat(filled)) + chalk.dim('░'.repeat(barWidth - filled));
-        console.log(`  ${bar} ${colorByPercent(`${overallPct}%`, overallPct)}`);
-        console.log(chalk.dim(`  ${totalDone}/${totalSubtasks} subtasks complete`));
+        display.line(`  ${bar} ${colorByPercent(`${overallPct}%`, overallPct)}`);
+        display.line(chalk.dim(`  ${totalDone}/${totalSubtasks} subtasks complete`));
       }
 
-      console.log('');
+      display.blank();
     });
 
   // -----------------------------------------------------------------------
@@ -314,7 +332,7 @@ export function registerSprintCommand(program: Command) {
       logger.dim(`  Completed: ${completedCount}/${taskIds.length} tasks`);
 
       if (incomplete.length > 0) {
-        console.log('');
+        display.blank();
         logger.heading('Incomplete tasks (carry over to next sprint):');
         for (const id of incomplete) {
           logger.dim(`  ${id}`);
@@ -329,7 +347,7 @@ export function registerSprintCommand(program: Command) {
       const sprints = await loadSprints(projectDir, config);
       const closedSprints = sprints.filter((s) => s.status === 'closed');
       if (closedSprints.length >= 2) {
-        console.log('');
+        display.blank();
         displayVelocityHistory(closedSprints);
       }
     });
@@ -351,19 +369,19 @@ export function registerSprintCommand(program: Command) {
       }
 
       logger.heading('Sprints');
-      console.log('');
+      display.blank();
 
       for (const s of sprints) {
         const statusColor =
           s.status === 'active' ? chalk.green : s.status === 'closed' ? chalk.dim : chalk.yellow;
         const badge = statusColor(`[${s.status.toUpperCase()}]`);
         const taskCount = chalk.dim(`(${s.taskCount} tasks)`);
-        console.log(`  ${chalk.bold(s.id)}  ${s.name}  ${badge}  ${taskCount}`);
+        display.line(`  ${chalk.bold(s.id)}  ${s.name}  ${badge}  ${taskCount}`);
         if (s.startDate && s.endDate) {
-          console.log(chalk.dim(`    ${s.startDate} -> ${s.endDate}`));
+          display.line(chalk.dim(`    ${s.startDate} -> ${s.endDate}`));
         }
       }
-      console.log('');
+      display.blank();
     });
 
   // -----------------------------------------------------------------------
@@ -385,7 +403,7 @@ export function registerSprintCommand(program: Command) {
       }
 
       logger.heading('Sprint Velocity History');
-      console.log('');
+      display.blank();
       displayVelocityHistory(closed);
     });
 }
@@ -483,10 +501,24 @@ async function autoSelectTasks(
   try {
     const provider = await getAIProvider(config);
 
-    const taskSummaries = allTasks.map((t) => ({
-      id: t.id,
-      title: t.title,
-    }));
+    // Enrich task summaries with subtask count and parent context
+    const taskSummaries: Array<{ id: string; title: string; points?: number }> = [];
+    for (const t of allTasks) {
+      const raw = await readArtifactRaw(projectDir, config, t.type, t.id);
+      let subtaskCount = 0;
+      let parentInfo = '';
+      if (raw) {
+        const checkboxes = raw.match(/- \[[ x]\]/g);
+        subtaskCount = checkboxes ? checkboxes.length : 0;
+        const parentMatch = raw.match(/(?:storyId|featureId):\s*"([^"]+)"/);
+        if (parentMatch) parentInfo = ` (parent: ${parentMatch[1]})`;
+      }
+      taskSummaries.push({
+        id: t.id,
+        title: `${t.title}${parentInfo} [${subtaskCount} subtasks]`,
+        points: subtaskCount || 1,
+      });
+    }
 
     const messages = buildSprintAutoSelectPrompt(taskSummaries, velocity);
     const { result } = await generateStreamingJSON(
@@ -497,19 +529,19 @@ async function autoSelectTasks(
     );
 
     // Display recommendation
-    console.log(chalk.dim('━'.repeat(50)));
-    console.log(chalk.bold('  AI Sprint Selection:'));
-    console.log('');
+    display.separator(50);
+    display.heading('  AI Sprint Selection:');
+    display.blank();
 
     for (const taskId of result.selectedTaskIds) {
       const task = allTasks.find((t) => t.id === taskId);
-      console.log(`  + ${chalk.bold(taskId)}  ${task?.title || ''}`);
+      display.line(`  + ${chalk.bold(taskId)}  ${task?.title || ''}`);
     }
 
-    console.log('');
-    console.log(chalk.dim(`  Total: ~${result.totalPoints} points`));
-    console.log(chalk.dim(`  ${result.reasoning}`));
-    console.log(chalk.dim('━'.repeat(50)));
+    display.blank();
+    display.line(chalk.dim(`  Total: ~${result.totalPoints} points`));
+    display.line(chalk.dim(`  ${result.reasoning}`));
+    display.separator(50);
 
     const apply = await promptConfirm('Add these tasks to the sprint?', true);
     if (!apply) {
@@ -531,7 +563,22 @@ async function autoSelectTasks(
       `taskIds: [${allIds.map((id) => `"${id}"`).join(', ')}]`,
     );
 
-    const taskLines = newIds.map((id) => `- [ ] ${id}`).join('\n');
+    // Build rich task lines with title + link
+    const taskLineEntries: string[] = [];
+    for (const id of newIds) {
+      const task = allTasks.find((t) => t.id === id);
+      const prefix = id.split('-')[0];
+      const type = prefix === 'QT' ? 'quick' : 'task';
+      const dir = prefix === 'QT' ? 'quick' : 'tasks';
+      const artifact = await readArtifact(projectDir, config, type, id);
+      if (artifact) {
+        const fname = path.basename(artifact.filePath);
+        taskLineEntries.push(`- [ ] **${id}** ${task?.title || ''} — [view](../${dir}/${fname})`);
+      } else {
+        taskLineEntries.push(`- [ ] ${id}`);
+      }
+    }
+    const taskLines = taskLineEntries.join('\n');
     updated = updated.replace(/^_No tasks assigned yet\..*$/m, taskLines);
     if (!updated.includes(taskLines)) {
       updated = updated.replace(/(## Tasks\n(?:- \[[ x]\] .+\n)*)/, `$1${taskLines}\n`);
@@ -565,12 +612,12 @@ function displayVelocityHistory(closedSprints: SprintSummary[]): void {
   for (const s of closedSprints) {
     const filled = Math.round((s.taskCount / maxTasks) * barWidth);
     const bar = chalk.cyan('█'.repeat(filled)) + chalk.dim('░'.repeat(barWidth - filled));
-    console.log(`  ${chalk.bold(s.id)}  ${bar}  ${s.taskCount} tasks`);
+    display.line(`  ${chalk.bold(s.id)}  ${bar}  ${s.taskCount} tasks`);
   }
 
   const avg = calculateAverageVelocity(closedSprints);
-  console.log('');
-  console.log(chalk.dim(`  Average velocity: ${avg} tasks/sprint`));
+  display.blank();
+  display.line(chalk.dim(`  Average velocity: ${avg} tasks/sprint`));
 }
 
 function parseDuration(input: string): { weeks: number; days: number } | null {

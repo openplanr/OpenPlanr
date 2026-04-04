@@ -15,7 +15,7 @@ import {
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptSelect } from '../../services/prompt-service.js';
-import { createSpinner, logger } from '../../utils/logger.js';
+import { createSpinner, display, logger } from '../../utils/logger.js';
 import { parseMarkdown } from '../../utils/markdown.js';
 
 // ---------------------------------------------------------------------------
@@ -29,38 +29,38 @@ function complexityColor(complexity: string): string {
 }
 
 function displayEstimate(id: string, estimate: AIEstimateResponse): void {
-  console.log('');
-  console.log(chalk.bold(`  ${id} — Effort Estimate`));
-  console.log(`  ${'─'.repeat(40)}`);
-  console.log(`  Story Points:  ${chalk.bold(String(estimate.storyPoints))}`);
-  console.log(`  Hours:         ${estimate.estimatedHours}h`);
-  console.log(`  Complexity:    ${complexityColor(estimate.complexity)}`);
-  console.log('');
-  console.log(`  ${chalk.dim('Risk Factors:')}`);
+  display.blank();
+  display.heading(`  ${id} — Effort Estimate`);
+  display.tableSeparator(40);
+  display.line(`  Story Points:  ${chalk.bold(String(estimate.storyPoints))}`);
+  display.line(`  Hours:         ${estimate.estimatedHours}h`);
+  display.line(`  Complexity:    ${complexityColor(estimate.complexity)}`);
+  display.blank();
+  display.line(`  ${chalk.dim('Risk Factors:')}`);
   for (const risk of estimate.riskFactors) {
-    console.log(`    • ${risk}`);
+    display.bullet(risk);
   }
-  console.log('');
-  console.log(`  ${chalk.dim('Reasoning:')}`);
-  console.log(`    ${estimate.reasoning}`);
+  display.blank();
+  display.line(`  ${chalk.dim('Reasoning:')}`);
+  display.line(`    ${estimate.reasoning}`);
   if (estimate.assumptions.length > 0) {
-    console.log('');
-    console.log(`  ${chalk.dim('Assumptions:')}`);
+    display.blank();
+    display.line(`  ${chalk.dim('Assumptions:')}`);
     for (const a of estimate.assumptions) {
-      console.log(`    • ${a}`);
+      display.bullet(a);
     }
   }
-  console.log('');
+  display.blank();
 }
 
 function displayRollupTable(estimates: Array<{ id: string; estimate: AIEstimateResponse }>): void {
-  console.log('');
-  console.log(chalk.bold('  Rollup Summary'));
-  console.log(`  ${'─'.repeat(55)}`);
-  console.log(
+  display.blank();
+  display.heading('  Rollup Summary');
+  display.tableSeparator(55);
+  display.line(
     `  ${chalk.dim('ID'.padEnd(12))} ${chalk.dim('Points'.padEnd(8))} ${chalk.dim('Hours'.padEnd(8))} ${chalk.dim('Complexity')}`,
   );
-  console.log(`  ${'─'.repeat(55)}`);
+  display.tableSeparator(55);
 
   let totalPoints = 0;
   let totalHours = 0;
@@ -73,16 +73,16 @@ function displayRollupTable(estimates: Array<{ id: string; estimate: AIEstimateR
     if (complexityOrder[estimate.complexity] > complexityOrder[maxComplexity]) {
       maxComplexity = estimate.complexity;
     }
-    console.log(
+    display.line(
       `  ${id.padEnd(12)} ${String(estimate.storyPoints).padEnd(8)} ${(`${estimate.estimatedHours}h`).padEnd(8)} ${complexityColor(estimate.complexity)}`,
     );
   }
 
-  console.log(`  ${'─'.repeat(55)}`);
-  console.log(
+  display.tableSeparator(55);
+  display.line(
     `  ${chalk.bold('TOTAL'.padEnd(12))} ${chalk.bold(String(totalPoints).padEnd(8))} ${chalk.bold(`${totalHours}h`.padEnd(8))} ${complexityColor(maxComplexity)}`,
   );
-  console.log('');
+  display.blank();
 }
 
 // ---------------------------------------------------------------------------
@@ -192,7 +192,8 @@ async function estimateSingle(
     const keywords = extractKeywords(raw);
     const ctx = await buildCodebaseContext(projectDir, keywords);
     codebaseContext = formatCodebaseContext(ctx);
-  } catch {
+  } catch (err) {
+    logger.debug('Codebase scanning failed during estimation', err);
     // Codebase scanning is best-effort
   }
 
@@ -299,7 +300,7 @@ async function estimateEpicRollup(
   }
 
   logger.dim(`Found ${leafTasks.length} artifact${leafTasks.length !== 1 ? 's' : ''} to estimate`);
-  console.log('');
+  display.blank();
 
   const results: Array<{ id: string; estimate: AIEstimateResponse }> = [];
 
@@ -346,7 +347,7 @@ async function estimateEpicRollup(
 
 async function calibrate(projectDir: string, config: OpenPlanrConfig): Promise<void> {
   logger.heading('Estimate Calibration Report');
-  console.log('');
+  display.blank();
 
   const types: ArtifactType[] = ['task', 'quick'];
   const calibrationData: Array<{
@@ -383,10 +384,10 @@ async function calibrate(projectDir: string, config: OpenPlanrConfig): Promise<v
   }
 
   // Display table
-  console.log(
+  display.line(
     `  ${chalk.dim('ID'.padEnd(12))} ${chalk.dim('Status'.padEnd(14))} ${chalk.dim('Points'.padEnd(8))} ${chalk.dim('Hours'.padEnd(8))} ${chalk.dim('Complexity')}`,
   );
-  console.log(`  ${'─'.repeat(60)}`);
+  display.tableSeparator(60);
 
   for (const item of calibrationData) {
     const statusColor =
@@ -395,7 +396,7 @@ async function calibrate(projectDir: string, config: OpenPlanrConfig): Promise<v
         : item.status === 'in-progress'
           ? chalk.yellow
           : chalk.dim;
-    console.log(
+    display.line(
       `  ${item.id.padEnd(12)} ${statusColor(item.status.padEnd(14))} ${String(item.points).padEnd(8)} ${(`${item.hours}h`).padEnd(8)} ${complexityColor(item.complexity)}`,
     );
   }
@@ -405,19 +406,19 @@ async function calibrate(projectDir: string, config: OpenPlanrConfig): Promise<v
   const totalPoints = calibrationData.reduce((s, d) => s + d.points, 0);
   const totalHours = calibrationData.reduce((s, d) => s + d.hours, 0);
 
-  console.log(`  ${'─'.repeat(60)}`);
-  console.log('');
-  console.log(`  ${chalk.bold('Summary')}`);
-  console.log(`  Total estimated:   ${totalPoints} points, ${totalHours}h`);
-  console.log(
+  display.tableSeparator(60);
+  display.blank();
+  display.heading(`  Summary`);
+  display.line(`  Total estimated:   ${totalPoints} points, ${totalHours}h`);
+  display.line(
     `  Artifacts:         ${calibrationData.length} estimated, ${doneItems.length} completed`,
   );
   if (doneItems.length > 0) {
     const donePoints = doneItems.reduce((s, d) => s + d.points, 0);
     const avgPoints = (donePoints / doneItems.length).toFixed(1);
-    console.log(`  Avg points/done:   ${avgPoints}`);
+    display.line(`  Avg points/done:   ${avgPoints}`);
   }
-  console.log('');
+  display.blank();
 }
 
 // ---------------------------------------------------------------------------

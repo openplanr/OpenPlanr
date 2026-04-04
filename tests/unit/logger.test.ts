@@ -7,15 +7,26 @@ import {
   setVerbose,
 } from '../../src/utils/logger.js';
 
+const logSpy = () => vi.spyOn(console, 'log').mockImplementation(() => {});
+const errSpy = () => vi.spyOn(console, 'error').mockImplementation(() => {});
+
+let spyLog: ReturnType<typeof vi.spyOn>;
+let spyErr: ReturnType<typeof vi.spyOn>;
+
 beforeEach(() => {
   setVerbose(false);
-  vi.spyOn(console, 'log').mockImplementation(() => {});
-  vi.spyOn(console, 'error').mockImplementation(() => {});
+  spyLog = logSpy();
+  spyErr = errSpy();
 });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
+
+/** Extract output from a spied console.log call. */
+function mockLogOutput(callIndex = 0, argIndex = 0): string {
+  return spyLog.mock.calls[callIndex][argIndex] as string;
+}
 
 describe('setVerbose / isVerbose', () => {
   it('defaults to false', () => {
@@ -37,14 +48,14 @@ describe('setVerbose / isVerbose', () => {
 describe('logger.debug', () => {
   it('does not output when verbose is off', () => {
     logger.debug('hidden message');
-    expect(console.log).not.toHaveBeenCalled();
+    expect(spyLog).not.toHaveBeenCalled();
   });
 
   it('outputs when verbose is on', () => {
     setVerbose(true);
     logger.debug('visible message');
-    expect(console.log).toHaveBeenCalledTimes(1);
-    const output = (console.log as any).mock.calls[0][0];
+    expect(spyLog).toHaveBeenCalledTimes(1);
+    const output = mockLogOutput();
     expect(output).toContain('[DEBUG]');
     expect(output).toContain('visible message');
   });
@@ -84,32 +95,32 @@ describe('formatUsage', () => {
 describe('logger standard methods', () => {
   it('info outputs to console.log', () => {
     logger.info('test info');
-    expect(console.log).toHaveBeenCalledTimes(1);
+    expect(spyLog).toHaveBeenCalledTimes(1);
   });
 
   it('success outputs to console.log', () => {
     logger.success('test success');
-    expect(console.log).toHaveBeenCalledTimes(1);
+    expect(spyLog).toHaveBeenCalledTimes(1);
   });
 
   it('warn outputs to console.log', () => {
     logger.warn('test warn');
-    expect(console.log).toHaveBeenCalledTimes(1);
+    expect(spyLog).toHaveBeenCalledTimes(1);
   });
 
   it('error outputs to console.error', () => {
     logger.error('test error');
-    expect(console.error).toHaveBeenCalledTimes(1);
+    expect(spyErr).toHaveBeenCalledTimes(1);
   });
 
   it('heading outputs to console.log', () => {
     logger.heading('test heading');
-    expect(console.log).toHaveBeenCalledTimes(1);
+    expect(spyLog).toHaveBeenCalledTimes(1);
   });
 
   it('dim outputs to console.log', () => {
     logger.dim('test dim');
-    expect(console.log).toHaveBeenCalledTimes(1);
+    expect(spyLog).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -149,9 +160,8 @@ describe('createSpinner', () => {
   it('succeed prints green checkmark message', () => {
     const spinner = createSpinner('Loading...');
     spinner.succeed('Done!');
-    // succeed should call console.log with checkmark
-    expect(console.log).toHaveBeenCalled();
-    const output = (console.log as any).mock.calls[0][1];
+    expect(spyLog).toHaveBeenCalled();
+    const output = mockLogOutput(0, 1);
     expect(output).toContain('Done!');
   });
 });

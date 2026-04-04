@@ -18,7 +18,10 @@ export interface ParsedSubtask {
 
 /**
  * Parse a task list markdown file into structured subtasks.
- * Expected format: `- [x] 1.0 Task title` or `  - [ ] 1.1 Subtask title`
+ * Expected format:
+ *   `- [x] **1.0** Task title`  (bold group IDs)
+ *   `- [x] 1.0 Task title`     (plain group IDs)
+ *   `  - [ ] 1.1 Subtask title` (indented subtasks)
  */
 export function parseTaskMarkdown(content: string): ParsedSubtask[] {
   const tasks: ParsedSubtask[] = [];
@@ -27,8 +30,8 @@ export function parseTaskMarkdown(content: string): ParsedSubtask[] {
   let currentGroupId: string | null = null;
 
   for (const line of lines) {
-    // Match: - [x] 1.0 Task title  OR  - [ ] 1.1 Subtask title
-    const match = line.match(/^(\s*)- \[(x| )\]\s+(\d+\.\d+)\s+(.+)$/);
+    // Match: - [x] **1.0** Task title  OR  - [x] 1.0 Task title  OR  - [ ] 1.1 Subtask title
+    const match = line.match(/^(\s*)- \[(x| )\]\s+\*{0,2}(\d+\.\d+)\*{0,2}\s+(.+)$/);
     if (!match) continue;
 
     const indent = match[1].length;

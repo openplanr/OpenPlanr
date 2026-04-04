@@ -105,8 +105,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`planr quick create`** — AI generates a structured task list from a one-line description, with codebase-aware context and relevant file detection
 - **`planr quick --manual`** — interactive task entry without AI
 - **`planr quick list`** — list all quick task lists
-- **`planr quick implement`** — delegate to coding agent with `--next`, `-s <id>`, and all-at-once modes
-- **`planr quick fix`** — follow-up fix flow for quick tasks
 - **`planr quick promote`** — graduate a quick task into the agile hierarchy by attaching to a story or feature
 - **Auto-mark subtasks as done** — after a coding agent completes successfully, implemented subtask checkboxes are automatically checked off in the task markdown
 - **Quick tasks in `planr status`** — standalone quick tasks shown in their own section with completion metrics
@@ -125,9 +123,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`planr task fix`** — feedback loop for tasks with piped stdin support
-- **Agent progress UI** — real-time spinner with stream-json / JSONL parsing for Claude and Codex
-- **Shared retry utilities** for agent adapters (`isRetryableError`, exponential backoff for transient API errors)
 - **Error context helper** — truncates large build logs for clearer failure output
 
 ### Fixed
@@ -278,7 +273,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`planr epic create/list`** — create and list epics
 - **`planr feature create/list`** — create features from epics
 - **`planr story create/list`** — create user stories with Gherkin acceptance criteria
-- **`planr task create/list/implement`** — task lists from a story or from all stories in a feature (AI mode includes epic, feature, Gherkin, ADRs, codebase context)
+- **`planr task create/list`** — task lists from a story or from all stories in a feature (AI mode includes epic, feature, Gherkin, ADRs, codebase context)
 - **`planr checklist show/reset`** — agile development checklist
 - **`planr rules generate`** — generate AI agent rule files
   - Cursor (`.cursor/rules/*.mdc`)

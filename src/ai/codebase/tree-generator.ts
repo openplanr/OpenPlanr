@@ -7,6 +7,7 @@
 
 import { readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { logger } from '../../utils/logger.js';
 
 const IGNORED_DIRS = new Set([
   'node_modules',
@@ -58,7 +59,8 @@ async function walkDir(
   let entries: string[];
   try {
     entries = await readdir(dirPath);
-  } catch {
+  } catch (err) {
+    logger.debug('Failed to read directory for tree generation', err);
     return;
   }
 
@@ -76,7 +78,8 @@ async function walkDir(
       const entryStat = await stat(fullPath);
       if (entryStat.isDirectory()) dirs.push(entry);
       else files.push(entry);
-    } catch {
+    } catch (err) {
+      logger.debug('Failed to stat entry during tree generation', err);
       // Skip inaccessible entries
     }
   }

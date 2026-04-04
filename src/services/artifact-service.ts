@@ -1,5 +1,5 @@
 import path from 'node:path';
-import type { ArtifactType, OpenPlanrConfig } from '../models/types.js';
+import type { ArtifactFrontmatter, ArtifactType, OpenPlanrConfig } from '../models/types.js';
 import { ensureDir, listFiles, readFile, writeFile } from '../utils/fs.js';
 import { logger } from '../utils/logger.js';
 import { parseMarkdown } from '../utils/markdown.js';
@@ -28,7 +28,7 @@ export async function createArtifact(
   config: OpenPlanrConfig,
   type: ArtifactType,
   templateFile: string,
-  data: Record<string, unknown>,
+  data: Record<string, unknown>, // Pre-creation template data; id is generated below
 ): Promise<{ id: string; filePath: string }> {
   const dir = path.join(projectDir, getArtifactDir(config, type));
   await ensureDir(dir);
@@ -84,7 +84,7 @@ export async function readArtifact(
   config: OpenPlanrConfig,
   type: ArtifactType,
   id: string,
-): Promise<{ data: Record<string, unknown>; content: string; filePath: string } | null> {
+): Promise<{ data: ArtifactFrontmatter; content: string; filePath: string } | null> {
   const dir = path.join(projectDir, getArtifactDir(config, type));
   const files = await listFiles(dir, new RegExp(`^${id}-.*\\.md$`));
   if (files.length === 0) return null;
@@ -248,14 +248,14 @@ export async function getParentChain(
   type: ArtifactType,
   id: string,
 ): Promise<{
-  epic?: { data: Record<string, unknown>; content: string };
-  feature?: { data: Record<string, unknown>; content: string };
-  story?: { data: Record<string, unknown>; content: string };
+  epic?: { data: ArtifactFrontmatter; content: string };
+  feature?: { data: ArtifactFrontmatter; content: string };
+  story?: { data: ArtifactFrontmatter; content: string };
 }> {
   const result: {
-    epic?: { data: Record<string, unknown>; content: string };
-    feature?: { data: Record<string, unknown>; content: string };
-    story?: { data: Record<string, unknown>; content: string };
+    epic?: { data: ArtifactFrontmatter; content: string };
+    feature?: { data: ArtifactFrontmatter; content: string };
+    story?: { data: ArtifactFrontmatter; content: string };
   } = {};
 
   const artifact = await readArtifact(projectDir, config, type, id);

@@ -17,8 +17,8 @@ export async function updateArtifact(dir, config, type, id, content) {}`,
       const rules = detectPatternRules(arch, '');
       const crud = rules.find((r) => r.name === 'generic-crud');
       expect(crud).toBeDefined();
-      expect(crud!.rule).toContain('artifact-service.ts');
-      expect(crud!.antiPattern).toContain('Do NOT create entity-specific');
+      expect(crud?.rule).toContain('artifact-service.ts');
+      expect(crud?.antiPattern).toContain('Do NOT create entity-specific');
     });
 
     it('does not emit rule when service has entity-specific functions', () => {
@@ -58,8 +58,8 @@ registerStoryCommand(program);`,
       const rules = detectPatternRules(arch, '');
       const cmd = rules.find((r) => r.name === 'command-registration');
       expect(cmd).toBeDefined();
-      expect(cmd!.rule).toContain('registerEpicCommand');
-      expect(cmd!.rule).toContain('src/cli/index.ts');
+      expect(cmd?.rule).toContain('registerEpicCommand');
+      expect(cmd?.rule).toContain('src/cli/index.ts');
     });
 
     it('does not emit rule with fewer than 2 register calls', () => {
@@ -89,8 +89,8 @@ export type TaskStatus = 'pending' | 'done';`,
       const rules = detectPatternRules(arch, inventory);
       const types = rules.find((r) => r.name === 'central-types');
       expect(types).toBeDefined();
-      expect(types!.rule).toContain('src/models/types.ts');
-      expect(types!.rule).toContain('6 exports');
+      expect(types?.rule).toContain('src/models/types.ts');
+      expect(types?.rule).toContain('6 exports');
     });
 
     it('does not emit rule when fewer than 5 type exports', () => {
@@ -121,8 +121,8 @@ export function parseId(id: string) {}`,
       const rules = detectPatternRules(arch, '');
       const id = rules.find((r) => r.name === 'id-generation');
       expect(id).toBeDefined();
-      expect(id!.rule).toContain('getNextId');
-      expect(id!.rule).toContain('prefix');
+      expect(id?.rule).toContain('getNextId');
+      expect(id?.rule).toContain('prefix');
     });
 
     it('does not emit rule without prefix concept', () => {
@@ -141,8 +141,8 @@ export function parseId(id: string) {}`,
       const rules = detectPatternRules(new Map(), inventory);
       const tpl = rules.find((r) => r.name === 'template-rendering');
       expect(tpl).toBeDefined();
-      expect(tpl!.rule).toContain('Handlebars');
-      expect(tpl!.antiPattern).toContain('.md.hbs');
+      expect(tpl?.rule).toContain('Handlebars');
+      expect(tpl?.antiPattern).toContain('.md.hbs');
     });
 
     it('does not emit rule without template files', () => {

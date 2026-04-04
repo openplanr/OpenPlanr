@@ -72,6 +72,7 @@ describe('loadConfig', () => {
 
 describe('saveConfig', () => {
   it('writes pretty-printed JSON with trailing newline', async () => {
+    // biome-ignore lint/suspicious/noExplicitAny: test passes partial config intentionally
     await saveConfig('/project', validConfig as any);
     expect(mockWriteFile).toHaveBeenCalledTimes(1);
     const writtenContent = mockWriteFile.mock.calls[0][1];
@@ -80,6 +81,7 @@ describe('saveConfig', () => {
   });
 
   it('writes to correct path', async () => {
+    // biome-ignore lint/suspicious/noExplicitAny: test passes partial config intentionally
     await saveConfig('/my-project', validConfig as any);
     const writtenPath = mockWriteFile.mock.calls[0][0];
     expect(writtenPath).toContain('/my-project');

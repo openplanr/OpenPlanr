@@ -6,7 +6,6 @@
  * interactive prompt flow.
  */
 
-import chalk from 'chalk';
 import type { Command } from 'commander';
 import { buildEpicPrompt } from '../../ai/prompts/prompt-builder.js';
 import { aiEpicResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
@@ -20,7 +19,7 @@ import {
   promptSelect,
   promptText,
 } from '../../services/prompt-service.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 
 export function registerEpicCommand(program: Command) {
   const epic = program.command('epic').description('Manage epics');
@@ -64,7 +63,7 @@ export function registerEpicCommand(program: Command) {
 
       logger.heading('Epics');
       for (const e of epics) {
-        console.log(`  ${e.id}  ${e.title}`);
+        display.line(`  ${e.id}  ${e.title}`);
       }
     });
 }
@@ -83,27 +82,27 @@ interface DisplayableEpic {
 }
 
 function displayEpic(epicData: DisplayableEpic) {
-  console.log(chalk.dim('━'.repeat(50)));
-  console.log(chalk.bold(`  Title:            ${epicData.title}`));
-  console.log(`  Owner:            ${epicData.owner}`);
-  console.log(`  Business Value:   ${epicData.businessValue}`);
-  console.log(`  Target Users:     ${epicData.targetUsers}`);
-  console.log(`  Problem:          ${epicData.problemStatement}`);
-  console.log(`  Solution:         ${epicData.solutionOverview}`);
-  console.log(`  Success Criteria:`);
+  display.separator(50);
+  display.heading(`  Title:            ${epicData.title}`);
+  display.line(`  Owner:            ${epicData.owner}`);
+  display.line(`  Business Value:   ${epicData.businessValue}`);
+  display.line(`  Target Users:     ${epicData.targetUsers}`);
+  display.line(`  Problem:          ${epicData.problemStatement}`);
+  display.line(`  Solution:         ${epicData.solutionOverview}`);
+  display.line(`  Success Criteria:`);
   const criteria = Array.isArray(epicData.successCriteria)
     ? epicData.successCriteria
     : [epicData.successCriteria];
   for (const c of criteria) {
-    console.log(`    • ${c}`);
+    display.line(`    • ${c}`);
   }
-  console.log(`  Key Features:`);
+  display.line(`  Key Features:`);
   for (const f of epicData.keyFeatures) {
-    console.log(`    • ${f}`);
+    display.line(`    • ${f}`);
   }
-  console.log(`  Dependencies:     ${epicData.dependencies || 'None'}`);
-  console.log(`  Risks:            ${epicData.risks || 'None'}`);
-  console.log(chalk.dim('━'.repeat(50)));
+  display.line(`  Dependencies:     ${epicData.dependencies || 'None'}`);
+  display.line(`  Risks:            ${epicData.risks || 'None'}`);
+  display.separator(50);
 }
 
 async function createEpicWithAI(
@@ -120,7 +119,8 @@ async function createEpicWithAI(
       const path = await import('node:path');
       brief = await readFile(path.resolve(opts.file));
       logger.dim(`Read ${brief.split('\n').length} lines from ${opts.file}`);
-    } catch {
+    } catch (err) {
+      logger.debug('Failed to read epic input file', err);
       logger.error(`Failed to read file: ${opts.file}`);
       return;
     }
@@ -221,7 +221,7 @@ async function createEpicWithAI(
     logger.dim(`  1. planr feature create --epic ${id}    — Break epic into features`);
     logger.dim(`  2. planr story create --feature FEAT-*   — Create user stories per feature`);
     logger.dim(`  3. planr task create --feature FEAT-*    — Generate implementation tasks`);
-    logger.dim(`  4. planr task implement TASK-*           — Implement with your coding agent`);
+    logger.dim(`  4. planr rules generate                 — Generate rules for your coding agent`);
     logger.dim('');
     logger.dim(`  Or run the full flow at once:`);
     logger.dim(
@@ -276,5 +276,5 @@ async function createEpicManually(
   logger.dim(`  1. planr feature create --epic ${id}    — Break epic into features`);
   logger.dim(`  2. planr story create --feature FEAT-*   — Create user stories per feature`);
   logger.dim(`  3. planr task create --story US-*        — Generate implementation tasks`);
-  logger.dim(`  4. planr task implement TASK-*           — Implement with your coding agent`);
+  logger.dim(`  4. planr rules generate                 — Generate rules for your coding agent`);
 }

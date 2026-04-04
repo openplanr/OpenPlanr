@@ -51,7 +51,7 @@ export class AIError extends Error {
 export function wrapProviderError(err: unknown, provider: string): AIError {
   if (err instanceof AIError) return err;
 
-  const error = err as Record<string, unknown>;
+  const error = err as Record<string, unknown>; // Unknown error shape requires index access
   const status = error?.status as number | undefined;
   const code = error?.code as string | undefined;
   const message = (error?.message as string) || String(err);

@@ -8,6 +8,7 @@
 import path from 'node:path';
 import type { OpenPlanrConfig } from '../models/types.js';
 import { listFiles, readFile } from '../utils/fs.js';
+import { logger } from '../utils/logger.js';
 import {
   getArtifactDir,
   listArtifacts,
@@ -178,7 +179,8 @@ async function readAllADRs(
       const raw = await readArtifactRaw(projectDir, config, 'adr', a.id);
       if (raw) adrs.push({ id: a.id, content: raw });
     }
-  } catch {
+  } catch (err) {
+    logger.debug('Failed to read ADR artifacts', err);
     // ADRs may not exist — graceful fallback
   }
   return adrs;
@@ -203,7 +205,8 @@ async function buildCodebaseStr(
     const keywords = extractKeywords(textContent);
     const ctx = await buildCodebaseContext(projectDir, keywords);
     return { formatted: formatCodebaseContext(ctx), context: ctx };
-  } catch {
+  } catch (err) {
+    logger.debug('Failed to build codebase context', err);
     return undefined;
   }
 }

@@ -36,6 +36,7 @@ describe('createGenerator', () => {
   });
 
   it('throws for unknown target', () => {
+    // biome-ignore lint/suspicious/noExplicitAny: testing invalid input intentionally
     expect(() => createGenerator('unknown' as any, mockConfig, '/tmp')).toThrow('Unknown target');
   });
 });

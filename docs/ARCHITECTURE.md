@@ -15,7 +15,7 @@ src/
 │   ├── artifact-gathering.ts # Gathers related artifacts for AI context
 │   ├── ai-service.ts       # AI provider orchestration (streaming, JSON generation)
 │   ├── config-service.ts   # Load/save planr.config.json
-│   ├── credentials-service.ts # API key storage (~/.planr/credentials.json)
+│   ├── credentials-service.ts # API key storage (OS keychain with encrypted file fallback)
 │   ├── id-service.ts       # Sequential ID generation with gap-filling
 │   ├── template-service.ts # Handlebars template rendering with caching
 │   ├── prompt-service.ts   # Interactive prompt wrappers (@inquirer/prompts)

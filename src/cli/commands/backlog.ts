@@ -22,7 +22,7 @@ import {
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm } from '../../services/prompt-service.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 import { parseMarkdown } from '../../utils/markdown.js';
 
 const PRIORITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -54,16 +54,17 @@ export function registerBacklogCommand(program: Command) {
       if (!priority) return;
 
       const tags: string[] = opts.tag || [];
+      const title = truncateTitle(description);
 
       const { id, filePath } = await createArtifact(
         projectDir,
         config,
         'backlog',
         'backlog/backlog-item.md.hbs',
-        { title: description, priority, tags, description },
+        { title, priority, tags, description },
       );
 
-      logger.success(`Added ${id}: ${description}`);
+      logger.success(`Added ${id}: ${title}`);
       logger.dim(`  Priority: ${priority} | Tags: ${tags.join(', ') || 'none'}`);
       logger.dim(`  ${filePath}`);
     });
@@ -105,16 +106,16 @@ export function registerBacklogCommand(program: Command) {
       );
 
       logger.heading(`Backlog (${filtered.length} items)`);
-      console.log('');
+      display.blank();
 
       for (const item of filtered) {
         const colorFn = PRIORITY_COLORS[item.priority] || chalk.white;
         const priorityBadge = colorFn(`[${item.priority.toUpperCase()}]`);
         const tagStr =
           item.tags.length > 0 ? chalk.dim(` ${item.tags.map((t) => `#${t}`).join(' ')}`) : '';
-        console.log(`  ${chalk.bold(item.id)}  ${item.title}  ${priorityBadge}${tagStr}`);
+        display.line(`  ${chalk.bold(item.id)}  ${item.title}  ${priorityBadge}${tagStr}`);
       }
-      console.log('');
+      display.blank();
     });
 
   // -----------------------------------------------------------------------
@@ -155,22 +156,22 @@ export function registerBacklogCommand(program: Command) {
         );
 
         // Display prioritized list
-        console.log(chalk.dim('━'.repeat(60)));
-        console.log(chalk.bold('  Recommended Priority Order:'));
-        console.log('');
+        display.separator(60);
+        display.heading('  Recommended Priority Order:');
+        display.blank();
 
         for (const item of result.items) {
           const colorFn = PRIORITY_COLORS[item.priority] || chalk.white;
           const badge = colorFn(`[${item.priority.toUpperCase()}]`);
           const impact = chalk.green(`impact:${item.impactScore}`);
           const effort = chalk.yellow(`effort:${item.effortScore}`);
-          console.log(`  ${chalk.bold(item.id)}  ${badge}  ${impact}  ${effort}`);
-          console.log(chalk.dim(`    ${item.reasoning}`));
+          display.line(`  ${chalk.bold(item.id)}  ${badge}  ${impact}  ${effort}`);
+          display.line(chalk.dim(`    ${item.reasoning}`));
         }
 
-        console.log('');
-        console.log(chalk.dim(`  ${result.summary}`));
-        console.log(chalk.dim('━'.repeat(60)));
+        display.blank();
+        display.line(chalk.dim(`  ${result.summary}`));
+        display.separator(60);
 
         const apply = await promptConfirm('Apply these priority changes?', true);
         if (!apply) {
@@ -247,7 +248,7 @@ export function registerBacklogCommand(program: Command) {
         await markPromoted(projectDir, config, blId, id);
         logger.success(`Promoted ${blId} -> ${id}`);
         logger.dim(`  ${filePath}`);
-        logger.dim(`  Next: planr quick implement ${id}`);
+        logger.dim(`  Next: Open ${id} in your coding agent for implementation`);
       } else if (opts.story) {
         if (!opts.feature) {
           logger.error('Story promotion requires --feature <featureId>.');
@@ -375,4 +376,14 @@ function validatePriority(input: string): BacklogPriority | null {
   if (valid.includes(input as BacklogPriority)) return input as BacklogPriority;
   logger.error(`Invalid priority: ${input}. Must be: ${valid.join(', ')}`);
   return null;
+}
+
+/** Extract a short title (max 60 chars at word boundary) from a long description. */
+function truncateTitle(description: string, maxLength = 60): string {
+  // If it's already short, use as-is
+  if (description.length <= maxLength) return description;
+
+  const truncated = description.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(' ');
+  return lastSpace > 20 ? `${truncated.slice(0, lastSpace)}...` : `${truncated}...`;
 }

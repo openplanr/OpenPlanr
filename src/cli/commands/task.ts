@@ -4,8 +4,6 @@
  * AI-powered by default for creation. Supports:
  *   --story US-001     → tasks from a single story
  *   --feature FEAT-001 → tasks from all stories in a feature
- *
- * The `implement` subcommand delegates to a configured coding agent.
  */
 
 import chalk from 'chalk';
@@ -25,8 +23,15 @@ import {
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
-import { extractErrorContext, readMultilineInput } from '../../utils/error-context.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
+import {
+  buildTaskItems,
+  countTaskItems,
+  displayNextSteps,
+  displayTaskPreview,
+  displayValidationWarnings,
+  handleAIError,
+} from '../helpers/task-creation.js';
 
 export function registerTaskCommand(program: Command) {
   const task = program.command('task').description('Manage tasks');
@@ -102,116 +107,7 @@ export function registerTaskCommand(program: Command) {
 
       logger.heading('Task Lists');
       for (const t of tasks) {
-        console.log(`  ${t.id}  ${t.title}`);
-      }
-    });
-
-  task
-    .command('fix')
-    .description('Send a follow-up prompt to fix issues from the last implementation')
-    .argument('[message...]', 'describe the issue (or pipe error output)')
-    .option('--agent <name>', 'override coding agent (claude, cursor, codex)')
-    .action(async (messageParts: string[], opts) => {
-      const projectDir = program.opts().projectDir as string;
-      const config = await loadConfig(projectDir);
-
-      const { executeFollowUp } = await import('../../agents/implementation-bridge.js');
-
-      // Collect the message from args, or prompt for it
-      let message = messageParts.join(' ').trim();
-
-      if (!message) {
-        // Check if stdin has piped data
-        if (!process.stdin.isTTY) {
-          const chunks: string[] = [];
-          for await (const chunk of process.stdin) {
-            chunks.push(chunk.toString());
-          }
-          const rawInput = chunks.join('');
-
-          // Smart truncation: keep only the error-relevant tail
-          // Build logs can be thousands of lines; Claude only needs the error
-          message = extractErrorContext(rawInput);
-
-          if (rawInput.length !== message.length) {
-            logger.dim(
-              `Piped input: ${rawInput.split('\n').length} lines → trimmed to ${message.split('\n').length} relevant lines`,
-            );
-          }
-        }
-      }
-
-      if (!message) {
-        logger.info('Describe the issue or paste error output.');
-        logger.dim('Type your message, then press Enter twice (empty line) to submit:\n');
-        message = await readMultilineInput();
-      }
-
-      if (!message.trim()) {
-        logger.error('No message provided. Describe the issue to fix.');
-        logger.dim('');
-        logger.dim('Usage:');
-        logger.dim('  planr task fix "Docker build fails with onnxruntime-gpu not found"');
-        logger.dim('  make build 2>&1 | planr task fix');
-        logger.dim('  planr task fix   (interactive prompt)');
-        return;
-      }
-
-      await executeFollowUp(projectDir, config, message, {
-        agent: opts.agent,
-      });
-    });
-
-  task
-    .command('implement')
-    .description('Implement a task using a coding agent')
-    .argument('<taskId>', 'task list ID (e.g., TASK-001) or story ID with --all (e.g., US-001)')
-    .option('-s, --subtask <id>', 'specific subtask ID or search term (e.g., 2.1 or "auth")')
-    .option('--next', 'implement the next unchecked subtask')
-    .option('--all', 'implement all task lists for the given story ID sequentially')
-    .option('--agent <name>', 'override coding agent (claude, cursor, codex)')
-    .option('--dry-run', 'show the composed prompt without executing')
-    .option('--mark-done', 'mark subtask as done after implementation')
-    .action(async (taskId: string, opts) => {
-      const projectDir = program.opts().projectDir as string;
-      const config = await loadConfig(projectDir);
-
-      const { executeImplementation } = await import('../../agents/implementation-bridge.js');
-
-      if (opts.all) {
-        const allTasks = await listArtifacts(projectDir, config, 'task');
-        const storyTasks: string[] = [];
-
-        for (const t of allTasks) {
-          const data = await readArtifact(projectDir, config, 'task', t.id);
-          if (data && data.data.storyId === taskId) {
-            storyTasks.push(t.id);
-          }
-        }
-
-        if (storyTasks.length === 0) {
-          logger.error(`No task lists found for story ${taskId}.`);
-          return;
-        }
-
-        logger.heading(`Implementing all ${storyTasks.length} task lists for ${taskId}`);
-
-        for (const tid of storyTasks) {
-          logger.heading(`\n--- ${tid} ---`);
-          await executeImplementation(projectDir, config, tid, {
-            agent: opts.agent,
-            dryRun: opts.dryRun,
-            markDone: opts.markDone,
-          });
-        }
-      } else {
-        await executeImplementation(projectDir, config, taskId, {
-          subtask: opts.subtask,
-          next: opts.next,
-          agent: opts.agent,
-          dryRun: opts.dryRun,
-          markDone: opts.markDone,
-        });
+        display.line(`  ${t.id}  ${t.title}`);
       }
     });
 }
@@ -219,83 +115,6 @@ export function registerTaskCommand(program: Command) {
 // ---------------------------------------------------------------------------
 // Display helpers
 // ---------------------------------------------------------------------------
-
-function displayTaskPreview(result: {
-  tasks: Array<{ id: string; title: string; subtasks?: Array<{ id: string; title: string }> }>;
-  acceptanceCriteriaMapping?: Array<{
-    criterion: string;
-    sourceStoryId: string;
-    taskIds: string[];
-  }>;
-  relevantFiles?: Array<{ path: string; reason: string }>;
-}) {
-  console.log(chalk.dim('━'.repeat(50)));
-  for (const taskGroup of result.tasks) {
-    console.log(chalk.bold(`  ${taskGroup.id} ${taskGroup.title}`));
-    for (const sub of taskGroup.subtasks || []) {
-      console.log(chalk.dim(`    ${sub.id} ${sub.title}`));
-    }
-  }
-
-  if (result.acceptanceCriteriaMapping && result.acceptanceCriteriaMapping.length > 0) {
-    console.log('');
-    console.log(chalk.bold('  Acceptance Criteria Mapping:'));
-    for (const ac of result.acceptanceCriteriaMapping) {
-      console.log(
-        chalk.dim(`    ${ac.criterion} (${ac.sourceStoryId}) → [${ac.taskIds.join(', ')}]`),
-      );
-    }
-  }
-
-  if (result.relevantFiles && result.relevantFiles.length > 0) {
-    console.log('');
-    console.log(chalk.bold('  Relevant Files:'));
-    for (const f of result.relevantFiles) {
-      console.log(chalk.dim(`    ${f.path} — ${f.reason}`));
-    }
-  }
-  console.log(chalk.dim('━'.repeat(50)));
-}
-
-async function displayValidationWarnings(
-  relevantFiles: Array<{ path: string; reason: string; action: 'modify' | 'create' }> | undefined,
-  rawContext: import('../../ai/codebase/context-builder.js').CodebaseContext | undefined,
-) {
-  if (!rawContext || !relevantFiles?.length) return;
-  try {
-    const { validateRelevantFiles, detectDependencyHints } = await import(
-      '../../ai/validation/index.js'
-    );
-    const hints = detectDependencyHints(rawContext.architectureFiles);
-    const validation = validateRelevantFiles(relevantFiles, rawContext.sourceInventory, hints);
-    if (validation.warnings.length > 0) {
-      console.log('');
-      logger.warn('Quality warnings:');
-      for (const w of validation.warnings) {
-        console.log(chalk.yellow(`  ⚠ ${w}`));
-      }
-      console.log('');
-    }
-  } catch {
-    // Validation is best-effort
-  }
-}
-
-function buildTaskItems(result: {
-  tasks: Array<{ id: string; title: string; subtasks?: Array<{ id: string; title: string }> }>;
-}) {
-  return result.tasks.map((tg) => ({
-    id: tg.id,
-    title: tg.title,
-    status: 'pending' as const,
-    subtasks: (tg.subtasks || []).map((st) => ({
-      id: st.id,
-      title: st.title,
-      status: 'pending' as const,
-      subtasks: [],
-    })),
-  }));
-}
 
 function buildArtifactSources(
   ctx: import('../../services/artifact-gathering.js').TasksPromptContext,
@@ -342,7 +161,7 @@ async function createTasksWithAI(projectDir: string, config: OpenPlanrConfig, st
   if (storyTasks.length > 0) {
     logger.warn(`${storyId} already has ${storyTasks.length} task list(s):`);
     for (const t of storyTasks) {
-      console.log(chalk.dim(`  ${t.id}: ${t.title}`));
+      display.line(chalk.dim(`  ${t.id}: ${t.title}`));
     }
     const continueCreate = await promptConfirm('Generate additional tasks?', false);
     if (!continueCreate) {
@@ -380,7 +199,7 @@ async function createTasksWithAI(projectDir: string, config: OpenPlanrConfig, st
     displayTaskPreview(result);
     await displayValidationWarnings(result.relevantFiles, ctx.codebaseRawContext);
 
-    const total = result.tasks.reduce((sum, t) => sum + (t.subtasks || []).length + 1, 0);
+    const total = countTaskItems(result.tasks);
     const confirmCreate = await promptConfirm(`Create task list with ${total} items?`, true);
 
     if (!confirmCreate) {
@@ -413,20 +232,9 @@ async function createTasksWithAI(projectDir: string, config: OpenPlanrConfig, st
     logger.dim(`  ${filePath}`);
     logger.dim(`  ${total} tasks created`);
     logger.dim('');
-    logger.heading('Next steps:');
-    logger.dim(`  planr task implement ${id}            — Implement all tasks`);
-    logger.dim(`  planr task implement ${id} --next     — Implement next pending subtask`);
-    logger.dim(`  planr task implement ${id} -s 1.1     — Implement specific subtask`);
-    logger.dim(`  planr task implement ${id} --dry-run  — Preview the implementation prompt`);
+    displayNextSteps({ command: 'task', id });
   } catch (err) {
-    const { AIError } = await import('../../ai/errors.js');
-    if (err instanceof AIError) {
-      logger.error(err.userMessage);
-    } else if (err instanceof Error) {
-      logger.error(err.message);
-    } else {
-      throw err;
-    }
+    await handleAIError(err);
   }
 }
 
@@ -453,7 +261,7 @@ async function createTasksFromFeature(
   if (featureTasks.length > 0) {
     logger.warn(`${featureId} already has ${featureTasks.length} task list(s):`);
     for (const t of featureTasks) {
-      console.log(chalk.dim(`  ${t.id}: ${t.title}`));
+      display.line(chalk.dim(`  ${t.id}: ${t.title}`));
     }
     const continueCreate = await promptConfirm('Generate additional tasks?', false);
     if (!continueCreate) {
@@ -491,7 +299,7 @@ async function createTasksFromFeature(
     displayTaskPreview(result);
     await displayValidationWarnings(result.relevantFiles, ctx.codebaseRawContext);
 
-    const total = result.tasks.reduce((sum, t) => sum + (t.subtasks || []).length + 1, 0);
+    const total = countTaskItems(result.tasks);
     const confirmCreate = await promptConfirm(`Create task list with ${total} items?`, true);
 
     if (!confirmCreate) {
@@ -528,20 +336,9 @@ async function createTasksFromFeature(
     logger.dim(`  ${filePath}`);
     logger.dim(`  ${total} tasks from ${ctx.stories.length} stories`);
     logger.dim('');
-    logger.heading('Next steps:');
-    logger.dim(`  planr task implement ${id}            — Implement all tasks`);
-    logger.dim(`  planr task implement ${id} --next     — Implement next pending subtask`);
-    logger.dim(`  planr task implement ${id} -s 1.1     — Implement specific subtask`);
-    logger.dim(`  planr task implement ${id} --dry-run  — Preview the implementation prompt`);
+    displayNextSteps({ command: 'task', id });
   } catch (err) {
-    const { AIError } = await import('../../ai/errors.js');
-    if (err instanceof AIError) {
-      logger.error(err.userMessage);
-    } else if (err instanceof Error) {
-      logger.error(err.message);
-    } else {
-      throw err;
-    }
+    await handleAIError(err);
   }
 }
 
@@ -588,5 +385,5 @@ async function createTasksManually(
   logger.dim(`  ${filePath}`);
   logger.dim(`  ${tasks.length} tasks created`);
   logger.dim('');
-  logger.dim(`Next: planr task implement ${id}`);
+  logger.dim(`Next: planr task list`);
 }

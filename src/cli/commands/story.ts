@@ -25,7 +25,7 @@ import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptText } from '../../services/prompt-service.js';
 import { renderTemplate } from '../../services/template-service.js';
 import { writeFile } from '../../utils/fs.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 
 export function registerStoryCommand(program: Command) {
   const story = program.command('story').description('Manage user stories');
@@ -89,11 +89,11 @@ export function registerStoryCommand(program: Command) {
         }
 
         logger.heading(`Batch Story Generation for ${opts.epic}`);
-        console.log(chalk.dim(`Found ${epicFeatures.length} feature(s):`));
+        display.line(chalk.dim(`Found ${epicFeatures.length} feature(s):`));
         for (const f of epicFeatures) {
-          console.log(chalk.dim(`  ${f.id}: ${f.title}`));
+          display.line(chalk.dim(`  ${f.id}: ${f.title}`));
         }
-        console.log('');
+        display.blank();
 
         const confirmBatch = await promptConfirm(
           `Generate stories for all ${epicFeatures.length} features?`,
@@ -110,8 +110,8 @@ export function registerStoryCommand(program: Command) {
           totalCreated += count;
         }
 
-        console.log('');
-        console.log(chalk.dim('━'.repeat(50)));
+        display.blank();
+        display.separator(50);
         logger.success(
           `Batch complete: created ${totalCreated} stories across ${epicFeatures.length} features.`,
         );
@@ -174,7 +174,7 @@ export function registerStoryCommand(program: Command) {
 
       logger.heading('User Stories');
       for (const s of filtered) {
-        console.log(`  ${s.id}  ${s.title}`);
+        display.line(`  ${s.id}  ${s.title}`);
       }
     });
 }
@@ -216,7 +216,7 @@ async function createStoriesWithAI(
   if (featureStories.length > 0) {
     logger.warn(`${featureId} already has ${featureStories.length} story/stories:`);
     for (const s of featureStories) {
-      console.log(chalk.dim(`  ${s.id}: ${s.title}`));
+      display.line(chalk.dim(`  ${s.id}: ${s.title}`));
     }
     const continueCreate = await promptConfirm(
       'Generate additional stories? (AI will avoid duplicates)',
@@ -240,14 +240,14 @@ async function createStoriesWithAI(
     });
 
     // Display generated stories
-    console.log(chalk.dim('━'.repeat(50)));
+    display.separator(50);
     result.stories.forEach((story, i) => {
-      console.log(chalk.bold(`  ${i + 1}. ${story.title}`));
-      console.log(chalk.dim(`     As a ${story.role}, I want to ${story.goal}`));
-      console.log(chalk.dim(`     So that ${story.benefit}`));
-      console.log(`     Scenarios: ${story.gherkinScenarios.length}`);
+      display.heading(`  ${i + 1}. ${story.title}`);
+      display.line(chalk.dim(`     As a ${story.role}, I want to ${story.goal}`));
+      display.line(chalk.dim(`     So that ${story.benefit}`));
+      display.line(`     Scenarios: ${story.gherkinScenarios.length}`);
     });
-    console.log(chalk.dim('━'.repeat(50)));
+    display.separator(50);
 
     const confirmAll = await promptConfirm(
       `Create all ${result.stories.length} user stories?`,
@@ -313,7 +313,9 @@ async function createStoriesWithAI(
     logger.dim(
       `  1. planr task create --story ${createdIds[0]}      — Generate implementation tasks`,
     );
-    logger.dim(`  2. planr task implement TASK-*              — Implement with your coding agent`);
+    logger.dim(
+      `  2. planr rules generate                    — Generate rules for your coding agent`,
+    );
 
     return createdIds.length;
   } catch (err) {

@@ -20,8 +20,10 @@ updated: "{{date}}"
 {{/each}}
 {{/if}}
 
+{{#unless (eq title description)}}
 ## Description
 {{description}}
+{{/unless}}
 
 {{#if acceptanceCriteria}}
 ## Acceptance Criteria

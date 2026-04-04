@@ -41,7 +41,7 @@ import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptText } from '../../services/prompt-service.js';
 import { renderTemplate } from '../../services/template-service.js';
 import { writeFile } from '../../utils/fs.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 
 export function registerPlanCommand(program: Command) {
   program
@@ -107,8 +107,8 @@ async function planFromScratch(projectDir: string, config: OpenPlanrConfig, prov
     { maxTokens: TOKEN_BUDGETS.epic },
   );
 
-  console.log(chalk.bold(`\n  Epic: ${epicData.title}`));
-  console.log(chalk.dim(`  ${epicData.solutionOverview}`));
+  display.line(chalk.bold(`\n  Epic: ${epicData.title}`));
+  display.line(chalk.dim(`  ${epicData.solutionOverview}`));
 
   const continueFlow = await promptConfirm('Save epic and continue planning?', true);
   if (!continueFlow) {
@@ -155,9 +155,9 @@ async function planFromEpic(
     { maxTokens: TOKEN_BUDGETS.feature },
   );
 
-  console.log(chalk.bold(`\n  Generated ${featureResult.features.length} features:`));
+  display.line(chalk.bold(`\n  Generated ${featureResult.features.length} features:`));
   featureResult.features.forEach((f, i) => {
-    console.log(chalk.dim(`    ${i + 1}. ${f.title}`));
+    display.line(chalk.dim(`    ${i + 1}. ${f.title}`));
   });
 
   const continueFeatures = await promptConfirm(
@@ -191,22 +191,23 @@ async function planFromEpic(
   }
 
   // Step 3+4: Stories and tasks for each feature
+  let totalStories = 0;
+  let totalTasks = 0;
   for (const featureId of featureIds) {
-    await planFromFeature(projectDir, config, provider, featureId);
+    const counts = await planFromFeature(projectDir, config, provider, featureId);
+    totalStories += counts.stories;
+    totalTasks += counts.tasks;
   }
 
-  // Final summary
+  // Final summary — only count artifacts created in this run
   logger.heading('\nPlanning Complete!');
-  const allFeatures = await listArtifacts(projectDir, config, 'feature');
-  const allStories = await listArtifacts(projectDir, config, 'story');
-  const allTasks = await listArtifacts(projectDir, config, 'task');
-  console.log(`  Epic:     ${epicId}`);
-  console.log(`  Features: ${allFeatures.length}`);
-  console.log(`  Stories:  ${allStories.length}`);
-  console.log(`  Tasks:    ${allTasks.length}`);
+  display.line(`  Epic:     ${epicId}`);
+  display.line(`  Features: ${featureIds.length}`);
+  display.line(`  Stories:  ${totalStories}`);
+  display.line(`  Tasks:    ${totalTasks}`);
   logger.dim('');
   logger.dim('Start implementing:');
-  logger.dim('  planr task implement TASK-001 --next');
+  logger.dim('  planr rules generate              — Generate rules for your coding agent');
   logger.dim('  planr status');
 }
 
@@ -215,12 +216,12 @@ async function planFromFeature(
   config: OpenPlanrConfig,
   provider: AIProvider,
   featureId: string,
-) {
+): Promise<{ stories: number; tasks: number }> {
   // Step 3: Generate Stories
   const featureRaw = await readArtifactRaw(projectDir, config, 'feature', featureId);
   if (!featureRaw) {
     logger.error(`Feature ${featureId} not found.`);
-    return;
+    return { stories: 0, tasks: 0 };
   }
 
   const featureData = await readArtifact(projectDir, config, 'feature', featureId);
@@ -242,7 +243,7 @@ async function planFromFeature(
     { maxTokens: TOKEN_BUDGETS.story },
   );
 
-  console.log(chalk.dim(`  Generated ${storyResult.stories.length} stories for ${featureId}`));
+  display.line(chalk.dim(`  Generated ${storyResult.stories.length} stories for ${featureId}`));
 
   const storyDir = path.join(projectDir, getArtifactDir(config, 'story'));
   const storyIds: string[] = [];
@@ -286,6 +287,7 @@ async function planFromFeature(
 
   // Step 4: Generate one task list per feature (all stories + full context)
   await generateTasksForFeature(projectDir, config, provider, featureId, storyIds);
+  return { stories: storyIds.length, tasks: 1 };
 }
 
 async function generateTasksForFeature(
@@ -302,7 +304,8 @@ async function generateTasksForFeature(
   let ctx: Awaited<ReturnType<typeof gatherFeatureArtifacts>>;
   try {
     ctx = await gatherFeatureArtifacts(projectDir, config, featureId);
-  } catch {
+  } catch (err) {
+    logger.debug('Failed to gather feature artifacts', err);
     logger.error(`Feature ${featureId} not found.`);
     return;
   }
