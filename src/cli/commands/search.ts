@@ -3,7 +3,7 @@ import type { Command } from 'commander';
 import type { ArtifactType } from '../../models/types.js';
 import { listArtifacts, readArtifactRaw } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 import { parseMarkdown } from '../../utils/markdown.js';
 
 interface SearchResult {
@@ -129,7 +129,7 @@ export function registerSearchCommand(program: Command) {
       }
 
       logger.heading(`Search results for "${query}"`);
-      console.log('');
+      display.blank();
 
       // Group results by type
       const grouped = new Map<string, SearchResult[]>();
@@ -141,16 +141,16 @@ export function registerSearchCommand(program: Command) {
 
       for (const [type, items] of grouped) {
         const colorFn = TYPE_COLORS[type] || chalk.white;
-        console.log(colorFn(`  ${type.toUpperCase()} (${items.length})`));
+        display.line(colorFn(`  ${type.toUpperCase()} (${items.length})`));
 
         for (const item of items) {
-          console.log(`    ${chalk.bold(item.id)}  ${item.title}`);
+          display.line(`    ${chalk.bold(item.id)}  ${item.title}`);
           if (item.snippet) {
             for (const line of item.snippet.split('\n')) {
-              console.log(`      ${line}`);
+              display.line(`      ${line}`);
             }
           }
-          console.log('');
+          display.blank();
         }
       }
 

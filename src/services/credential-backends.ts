@@ -11,6 +11,7 @@ import crypto from 'node:crypto';
 import { access, mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { logger } from '../utils/logger.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -63,7 +64,8 @@ export class KeychainBackend implements CredentialBackend {
       testEntry.setPassword('probe');
       testEntry.deleteCredential();
       keychainAvailable = true;
-    } catch {
+    } catch (err) {
+      logger.debug('Keychain availability probe failed', err);
       keychainAvailable = false;
     }
 
@@ -75,7 +77,8 @@ export class KeychainBackend implements CredentialBackend {
       const mod = await import('@napi-rs/keyring');
       const entry = new mod.Entry(KEYCHAIN_SERVICE, provider);
       return entry.getPassword() ?? undefined;
-    } catch {
+    } catch (err) {
+      logger.debug('Keychain read failed', err);
       return undefined;
     }
   }
@@ -91,7 +94,8 @@ export class KeychainBackend implements CredentialBackend {
       const mod = await import('@napi-rs/keyring');
       const entry = new mod.Entry(KEYCHAIN_SERVICE, provider);
       return entry.deleteCredential();
-    } catch {
+    } catch (err) {
+      logger.debug('Keychain delete failed', err);
       return false;
     }
   }
@@ -169,14 +173,16 @@ export class EncryptedFileBackend implements CredentialBackend {
       const key = deriveKey(salt);
       const json = decrypt(envelope, key);
       return JSON.parse(json) as Record<string, string>;
-    } catch {
+    } catch (err) {
+      logger.debug('Failed to decrypt credentials file', err);
       // Backup corrupted/unreadable file before it gets overwritten by a
       // subsequent set() call — avoids silent credential loss.
       try {
         const backupPath = `${ENC_FILE}.bak`;
         const raw = await readFile(ENC_FILE);
         await writeFile(backupPath, raw, { mode: 0o600 });
-      } catch {
+      } catch (err) {
+        logger.debug('Failed to backup corrupted credentials file', err);
         // Best-effort backup; ignore if it fails too
       }
       return {};
@@ -231,7 +237,8 @@ export class LegacyPlaintextBackend {
     try {
       const raw = await readFile(LEGACY_FILE, 'utf-8');
       return JSON.parse(raw) as Record<string, string>;
-    } catch {
+    } catch (err) {
+      logger.debug('Failed to parse legacy credentials file', err);
       return {};
     }
   }
@@ -239,7 +246,8 @@ export class LegacyPlaintextBackend {
   async remove(): Promise<void> {
     try {
       await unlink(LEGACY_FILE);
-    } catch {
+    } catch (err) {
+      logger.debug('Failed to remove legacy credentials file', err);
       // Ignore if already gone
     }
   }

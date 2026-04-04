@@ -32,7 +32,7 @@ export function detectDependencyHints(architectureFiles: Map<string, string>): D
       const resolved = resolveImportToArchFile(imp, filePath, archPaths);
       if (resolved) {
         if (!importGraph.has(filePath)) importGraph.set(filePath, new Set());
-        importGraph.get(filePath)!.add(resolved);
+        importGraph.get(filePath)?.add(resolved);
       }
     }
   }
@@ -42,7 +42,7 @@ export function detectDependencyHints(architectureFiles: Map<string, string>): D
   for (const [importer, imports] of importGraph) {
     for (const imported of imports) {
       if (!importCounts.has(imported)) importCounts.set(imported, []);
-      importCounts.get(imported)!.push(importer);
+      importCounts.get(imported)?.push(importer);
     }
   }
 

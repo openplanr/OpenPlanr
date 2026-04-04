@@ -6,12 +6,12 @@
 
 import path from 'node:path';
 import type { Command } from 'commander';
-import type { ArtifactType, OpenPlanrConfig } from '../../models/types.js';
+import type { ArtifactFrontmatter, ArtifactType, OpenPlanrConfig } from '../../models/types.js';
 import { listArtifacts, readArtifact } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { renderTemplate } from '../../services/template-service.js';
 import { writeFile } from '../../utils/fs.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -22,7 +22,7 @@ interface ExportArtifact {
   title: string;
   type: ArtifactType;
   status: string;
-  data: Record<string, unknown>;
+  data: ArtifactFrontmatter;
   body: string;
 }
 
@@ -291,7 +291,7 @@ async function exportMarkdown(
 ): Promise<string> {
   const content = await renderTemplate(
     'export/planning-report.md.hbs',
-    data as unknown as Record<string, unknown>,
+    data as unknown as Record<string, unknown>, // Template data is inherently untyped
     overrideDir,
   );
   const filePath = outputPath.endsWith('.md') ? outputPath : path.join(outputPath, 'PLANNING.md');
@@ -314,7 +314,7 @@ async function exportHTML(
 ): Promise<string> {
   const content = await renderTemplate(
     'export/planning-report.html.hbs',
-    data as unknown as Record<string, unknown>,
+    data as unknown as Record<string, unknown>, // Template data is inherently untyped
     overrideDir,
   );
   const filePath = outputPath.endsWith('.html')
@@ -390,7 +390,7 @@ export function registerExportCommand(program: Command) {
           filePath = await exportMarkdown(data, outputPath, config.templateOverrides);
       }
 
-      console.log('');
+      display.blank();
       logger.success(
         `Exported ${total} artifacts → ${path.relative(projectDir, filePath) || filePath}`,
       );

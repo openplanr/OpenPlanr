@@ -10,7 +10,7 @@ import type { AIProviderName, CodingAgentName } from '../../models/types.js';
 import { loadConfig, saveConfig } from '../../services/config-service.js';
 import { resolveApiKeySource, saveCredential } from '../../services/credentials-service.js';
 import { promptSecret, promptSelect } from '../../services/prompt-service.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 
 export function registerConfigCommand(program: Command) {
   const config = program.command('config').description('Manage Planr configuration');
@@ -23,14 +23,14 @@ export function registerConfigCommand(program: Command) {
       const cfg = await loadConfig(projectDir);
 
       logger.heading('Planr Configuration');
-      console.log(`  Project:    ${cfg.projectName}`);
-      console.log(`  Targets:    ${cfg.targets.join(', ')}`);
-      console.log(`  Artifacts:  ${cfg.outputPaths.agile}/`);
+      display.line(`  Project:    ${cfg.projectName}`);
+      display.line(`  Targets:    ${cfg.targets.join(', ')}`);
+      display.line(`  Artifacts:  ${cfg.outputPaths.agile}/`);
 
       if (cfg.ai) {
-        console.log('');
-        console.log(`  AI Provider:  ${cfg.ai.provider}`);
-        console.log(`  AI Model:     ${cfg.ai.model || '(default)'}`);
+        display.blank();
+        display.line(`  AI Provider:  ${cfg.ai.provider}`);
+        display.line(`  AI Model:     ${cfg.ai.model || '(default)'}`);
 
         const resolved = await resolveApiKeySource(cfg.ai.provider);
         if (resolved) {
@@ -41,18 +41,18 @@ export function registerConfigCommand(program: Command) {
               : resolved.source === 'keychain'
                 ? 'OS keychain'
                 : 'encrypted file';
-          console.log(`  API Key:      ${masked} (${sourceLabel})`);
+          display.line(`  API Key:      ${masked} (${sourceLabel})`);
         } else {
-          console.log(`  API Key:      (not set)`);
+          display.line(`  API Key:      (not set)`);
         }
       } else {
-        console.log('');
-        console.log('  AI:           Not configured');
+        display.blank();
+        display.line('  AI:           Not configured');
         logger.dim('  Run `planr config set-provider <name>` to enable AI.');
       }
 
       if (cfg.defaultAgent) {
-        console.log(`  Agent:        ${cfg.defaultAgent}`);
+        display.line(`  Agent:        ${cfg.defaultAgent}`);
       }
     });
 

@@ -12,7 +12,7 @@ import { buildRefinePrompt } from '../../ai/prompts/prompt-builder.js';
 import { aiRefineResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
 import type { AIProvider, AIUsage } from '../../ai/types.js';
 import { TOKEN_BUDGETS } from '../../ai/types.js';
-import type { ArtifactType, OpenPlanrConfig } from '../../models/types.js';
+import type { ArtifactFrontmatter, ArtifactType, OpenPlanrConfig } from '../../models/types.js';
 import {
   accumulateUsage,
   generateJSON,
@@ -28,7 +28,7 @@ import {
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptSelect } from '../../services/prompt-service.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 import { toMarkdownWithFrontmatter } from '../../utils/markdown.js';
 
 const CHILD_MAP: Record<string, { childType: ArtifactType; label: string; parentField: string }> = {
@@ -122,7 +122,7 @@ async function refineOne(
   const trimmed = markdown.trim();
   if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
     logger.warn('AI returned JSON instead of markdown. Reconstructing from improved data...');
-    const improved = result.improved as Record<string, unknown>;
+    const improved = result.improved as ArtifactFrontmatter;
     markdown = toMarkdownWithFrontmatter(
       improved,
       rawContent.split('---').slice(2).join('---').trim(),
@@ -130,12 +130,12 @@ async function refineOne(
   }
 
   // Display improvements summary
-  console.log(chalk.dim('━'.repeat(50)));
-  console.log(chalk.bold('  Improvements:'));
+  display.separator(50);
+  display.heading('  Improvements:');
   for (const suggestion of result.suggestions) {
-    console.log(chalk.yellow(`    • ${suggestion}`));
+    display.line(chalk.yellow(`    • ${suggestion}`));
   }
-  console.log(chalk.dim('━'.repeat(50)));
+  display.separator(50);
 
   const action = await promptSelect('Action:', [
     { name: 'Apply improved version', value: 'apply' },
@@ -149,9 +149,9 @@ async function refineOne(
   }
 
   if (action === 'view') {
-    console.log(chalk.dim('━'.repeat(50)));
-    console.log(chalk.green(markdown));
-    console.log(chalk.dim('━'.repeat(50)));
+    display.separator(50);
+    display.line(chalk.green(markdown));
+    display.separator(50);
 
     const applyAfterView = await promptSelect('Apply this version?', [
       { name: 'Yes, apply', value: 'apply' },
@@ -253,21 +253,21 @@ async function suggestNextSteps(
 
   const mapping = CHILD_MAP[type];
 
-  console.log('');
-  console.log(chalk.dim('━'.repeat(50)));
-  console.log(chalk.bold('  Next steps'));
-  console.log(
+  display.blank();
+  display.separator(50);
+  display.heading('  Next steps');
+  display.line(
     chalk.dim(`  This ${type} has ${children.length} ${mapping.label} that may need re-alignment:`),
   );
-  console.log('');
-  console.log(chalk.cyan(`    planr refine ${artifactId} --cascade`));
-  console.log(chalk.dim('    Refines this artifact and all children down the hierarchy.'));
-  console.log('');
-  console.log(chalk.dim('  Or refine individually:'));
+  display.blank();
+  display.line(chalk.cyan(`    planr refine ${artifactId} --cascade`));
+  display.line(chalk.dim('    Refines this artifact and all children down the hierarchy.'));
+  display.blank();
+  display.line(chalk.dim('  Or refine individually:'));
   for (const childId of children) {
-    console.log(chalk.cyan(`    planr refine ${childId}`));
+    display.line(chalk.cyan(`    planr refine ${childId}`));
   }
-  console.log('');
-  console.log(chalk.dim(`  Run ${chalk.cyan('planr sync')} to check cross-references.`));
-  console.log(chalk.dim('━'.repeat(50)));
+  display.blank();
+  display.line(chalk.dim(`  Run ${chalk.cyan('planr sync')} to check cross-references.`));
+  display.separator(50);
 }

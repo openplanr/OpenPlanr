@@ -8,6 +8,7 @@
 
 import path from 'node:path';
 import { fileExists, readFile } from '../../utils/fs.js';
+import { logger } from '../../utils/logger.js';
 
 export interface TechStack {
   language: string;
@@ -155,7 +156,9 @@ export async function detectTechStack(projectDir: string): Promise<TechStack | n
       try {
         const content = await readFile(filePath);
         return await detector.detect(content, projectDir);
-      } catch {}
+      } catch (err) {
+        logger.debug('Tech stack detection failed for detector', err);
+      }
     }
   }
   return null;

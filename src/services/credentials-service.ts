@@ -12,6 +12,7 @@
  */
 
 import { ENV_KEY_MAP } from '../ai/types.js';
+import { logger } from '../utils/logger.js';
 import type { CredentialSource } from './credential-backends.js';
 import { encryptedFileBackend, keychainBackend, legacyBackend } from './credential-backends.js';
 
@@ -49,7 +50,8 @@ export async function migrateCredentials(): Promise<boolean> {
     // Remove the plaintext file only after all keys migrated successfully
     await legacyBackend.remove();
     return true;
-  } catch {
+  } catch (err) {
+    logger.debug('Credential migration failed', err);
     // Migration failed — reset flag so it retries next time
     migrationDone = false;
     return false;
@@ -100,7 +102,7 @@ export async function resolveApiKeySource(
   // 1. Environment variable
   const envVar = ENV_KEY_MAP[provider];
   if (envVar && process.env[envVar]) {
-    return { key: process.env[envVar]!, source: 'env' };
+    return { key: process.env[envVar] ?? '', source: 'env' };
   }
 
   // 2. OS Keychain
@@ -125,7 +127,8 @@ export async function saveCredential(provider: string, apiKey: string): Promise<
     try {
       await keychainBackend.set(provider, apiKey);
       return 'keychain';
-    } catch {
+    } catch (err) {
+      logger.debug('Keychain write failed, falling back to encrypted file', err);
       // Keychain write failed (locked, permission error, transient failure).
       // Fall through to encrypted file backend.
     }

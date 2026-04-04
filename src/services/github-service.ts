@@ -12,7 +12,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { which } from '../agents/utils.js';
-import type { ArtifactType } from '../models/types.js';
+import type { ArtifactFrontmatter, ArtifactType } from '../models/types.js';
+import { logger } from '../utils/logger.js';
 import { parseMarkdown } from '../utils/markdown.js';
 
 const execFileAsync = promisify(execFile);
@@ -80,7 +81,8 @@ async function ensureGhCli(): Promise<string> {
 async function ensureGhAuth(ghPath: string): Promise<void> {
   try {
     await execFileAsync(ghPath, ['auth', 'status'], { maxBuffer: 1024 * 1024 });
-  } catch {
+  } catch (err) {
+    logger.debug('GitHub CLI auth check failed', err);
     throw new Error(
       'GitHub CLI is not authenticated.\n\n' +
         '  Run `gh auth login` to sign in, then re-run your planr github command.',
@@ -172,7 +174,8 @@ export async function ensureLabel(label: string): Promise<void> {
       `OpenPlanr ${label}`,
       '--force',
     ]);
-  } catch {
+  } catch (err) {
+    logger.debug('Failed to ensure GitHub label', err);
     // Label already exists or permissions issue — safe to continue
   }
 }
@@ -259,7 +262,7 @@ export function cleanTitle(artifactId: string, rawTitle: string): string {
 // Type-specific body builders
 // ---------------------------------------------------------------------------
 
-function buildTaskBody(content: string, frontmatter: Record<string, unknown>): string {
+function buildTaskBody(content: string, frontmatter: ArtifactFrontmatter): string {
   const meta = buildMetadataTable([
     ['Status', frontmatter.status as string | undefined],
     ['Story', frontmatter.storyId as string | undefined],
@@ -303,7 +306,7 @@ function buildTaskBody(content: string, frontmatter: Record<string, unknown>): s
   return parts.join('\n\n');
 }
 
-function buildEpicBody(content: string, frontmatter: Record<string, unknown>): string {
+function buildEpicBody(content: string, frontmatter: ArtifactFrontmatter): string {
   const meta = buildMetadataTable([
     ['Status', frontmatter.status as string | undefined],
     ['Owner', frontmatter.owner as string | undefined],
@@ -311,7 +314,7 @@ function buildEpicBody(content: string, frontmatter: Record<string, unknown>): s
   return `${meta}\n${content.trim()}`;
 }
 
-function buildFeatureBody(content: string, frontmatter: Record<string, unknown>): string {
+function buildFeatureBody(content: string, frontmatter: ArtifactFrontmatter): string {
   const meta = buildMetadataTable([
     ['Status', frontmatter.status as string | undefined],
     ['Epic', frontmatter.epicId as string | undefined],
@@ -320,7 +323,7 @@ function buildFeatureBody(content: string, frontmatter: Record<string, unknown>)
   return `${meta}\n${content.trim()}`;
 }
 
-function buildStoryBody(content: string, frontmatter: Record<string, unknown>): string {
+function buildStoryBody(content: string, frontmatter: ArtifactFrontmatter): string {
   const meta = buildMetadataTable([
     ['Status', frontmatter.status as string | undefined],
     ['Feature', frontmatter.featureId as string | undefined],
@@ -340,7 +343,7 @@ export function buildIssueBody(
   raw: string,
   artifactId: string,
   artifactType: string,
-  frontmatter: Record<string, unknown>,
+  frontmatter: ArtifactFrontmatter,
 ): string {
   const { content } = parseMarkdown(raw);
   let cleaned = removeH1(content);
@@ -467,7 +470,8 @@ export async function ensureMilestone(title: string): Promise<string> {
     if (Array.isArray(milestones) && milestones.some((m) => m.title === title)) {
       return title;
     }
-  } catch {
+  } catch (err) {
+    logger.debug('Failed to list GitHub milestones', err);
     // Milestone listing failed, try to create
   }
 
@@ -481,7 +485,8 @@ export async function ensureMilestone(title: string): Promise<string> {
       '-f',
       'state=open',
     ]);
-  } catch {
+  } catch (err) {
+    logger.debug('Failed to create GitHub milestone', err);
     // May already exist, that's fine
   }
 

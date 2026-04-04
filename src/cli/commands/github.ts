@@ -29,7 +29,7 @@ import {
   verifyGitHubRepo,
 } from '../../services/github-service.js';
 import { promptSelect } from '../../services/prompt-service.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 import { parseMarkdown, toMarkdownWithFrontmatter } from '../../utils/markdown.js';
 
 // ---------------------------------------------------------------------------
@@ -102,7 +102,8 @@ async function pushSingleArtifact(
       issueNumber = existingIssueNumber;
       issueUrl = currentIssue.url;
       action = 'updated';
-    } catch {
+    } catch (err) {
+      logger.debug('Failed to update existing GitHub issue, creating new one', err);
       // Issue was deleted on GitHub — create a fresh one
       const result = await createIssue(title, body, labels, opts.milestone);
       issueNumber = result.number;
@@ -202,7 +203,7 @@ export function registerGitHubCommand(program: Command) {
       }
 
       logger.heading(`GitHub Push — ${repoInfo.owner}/${repoInfo.repo}`);
-      console.log('');
+      display.blank();
 
       let artifactIds: string[] = [];
 
@@ -225,7 +226,8 @@ export function registerGitHubCommand(program: Command) {
         try {
           await ensureMilestone(milestoneTitle);
           logger.success(`Milestone: ${milestoneTitle}`);
-        } catch {
+        } catch (err) {
+          logger.debug('Failed to create milestone', err);
           logger.warn('Could not create milestone, pushing without it');
         }
 
@@ -246,7 +248,7 @@ export function registerGitHubCommand(program: Command) {
       }
 
       logger.dim(`Pushing ${artifactIds.length} artifact${artifactIds.length !== 1 ? 's' : ''}...`);
-      console.log('');
+      display.blank();
 
       let created = 0;
       let updated = 0;
@@ -261,7 +263,7 @@ export function registerGitHubCommand(program: Command) {
           });
           if (result) {
             const icon = result.action === 'created' ? chalk.green('+') : chalk.yellow('~');
-            console.log(`  ${icon} ${id} → #${result.issueNumber} (${result.action})`);
+            display.line(`  ${icon} ${id} → #${result.issueNumber} (${result.action})`);
             if (result.action === 'created') created++;
             else updated++;
           }
@@ -270,7 +272,7 @@ export function registerGitHubCommand(program: Command) {
         }
       }
 
-      console.log('');
+      display.blank();
       logger.success(`Done: ${created} created, ${updated} updated`);
     });
 
@@ -296,7 +298,7 @@ export function registerGitHubCommand(program: Command) {
       }
 
       logger.heading(`GitHub Sync — ${repoInfo.owner}/${repoInfo.repo}`);
-      console.log('');
+      display.blank();
 
       // Find all artifacts with githubIssue field
       const types: ArtifactType[] = ['epic', 'feature', 'story', 'task', 'quick'];
@@ -330,7 +332,7 @@ export function registerGitHubCommand(program: Command) {
       logger.dim(
         `Found ${linkedArtifacts.length} linked artifact${linkedArtifacts.length !== 1 ? 's' : ''}`,
       );
-      console.log('');
+      display.blank();
 
       let synced = 0;
       const conflicts: Array<{
@@ -354,7 +356,7 @@ export function registerGitHubCommand(program: Command) {
           if (opts.direction === 'pull') {
             // GitHub → local
             await updateLocalStatus(projectDir, config, artifact.type, artifact.id, remoteStatus);
-            console.log(
+            display.line(
               `  ${chalk.blue('←')} ${artifact.id}: ${chalk.dim(localStatus)} → ${chalk.green(remoteStatus)} (from #${artifact.issueNumber})`,
             );
             synced++;
@@ -364,7 +366,7 @@ export function registerGitHubCommand(program: Command) {
             if (issue.state !== targetState) {
               await updateIssue(artifact.issueNumber, { state: targetState });
             }
-            console.log(
+            display.line(
               `  ${chalk.yellow('→')} ${artifact.id}: #${artifact.issueNumber} ${chalk.dim(issue.state)} → ${chalk.green(targetState)}`,
             );
             synced++;
@@ -384,13 +386,13 @@ export function registerGitHubCommand(program: Command) {
 
       // Handle conflicts for bi-directional sync
       if (conflicts.length > 0) {
-        console.log('');
+        display.blank();
         logger.heading('Conflicts detected');
-        console.log('');
+        display.blank();
 
         for (const conflict of conflicts) {
           const remoteStatus = issueStateToStatus(conflict.remoteState);
-          console.log(
+          display.line(
             `  ${chalk.red('!')} ${conflict.id} — local: ${chalk.yellow(conflict.localStatus)}, GitHub #${conflict.issueNumber}: ${chalk.cyan(conflict.remoteState)} (${remoteStatus})`,
           );
 
@@ -414,20 +416,20 @@ export function registerGitHubCommand(program: Command) {
               conflict.id,
               remoteStatus,
             );
-            console.log(`    ${chalk.blue('←')} Updated local to ${remoteStatus}`);
+            display.line(`    ${chalk.blue('←')} Updated local to ${remoteStatus}`);
             synced++;
           } else if (action === 'push') {
             const targetState = statusToIssueState(conflict.localStatus);
             await updateIssue(conflict.issueNumber, { state: targetState });
-            console.log(`    ${chalk.yellow('→')} Updated GitHub to ${targetState}`);
+            display.line(`    ${chalk.yellow('→')} Updated GitHub to ${targetState}`);
             synced++;
           } else {
-            console.log(`    ${chalk.dim('Skipped')}`);
+            display.line(`    ${chalk.dim('Skipped')}`);
           }
         }
       }
 
-      console.log('');
+      display.blank();
       if (synced > 0) {
         logger.success(`Synced ${synced} artifact${synced !== 1 ? 's' : ''}`);
       } else {
@@ -451,16 +453,16 @@ export function registerGitHubCommand(program: Command) {
       }
 
       logger.heading('GitHub Sync Status');
-      console.log('');
+      display.blank();
 
       const types: ArtifactType[] = ['epic', 'feature', 'story', 'task', 'quick'];
       let linked = 0;
       let unlinked = 0;
 
-      console.log(
+      display.line(
         `  ${chalk.dim('Artifact'.padEnd(14))} ${chalk.dim('Status'.padEnd(14))} ${chalk.dim('Issue'.padEnd(10))} ${chalk.dim('State')}`,
       );
-      console.log(`  ${'─'.repeat(50)}`);
+      display.tableSeparator(50);
 
       for (const type of types) {
         const artifacts = await listArtifacts(projectDir, config, type);
@@ -474,7 +476,8 @@ export function registerGitHubCommand(program: Command) {
             try {
               const issue = await getIssue(issueNumber);
               issueState = issue.state;
-            } catch {
+            } catch (err) {
+              logger.debug('Failed to fetch GitHub issue state', err);
               issueState = 'error';
             }
 
@@ -483,12 +486,12 @@ export function registerGitHubCommand(program: Command) {
               statusToIssueState(status) === issueState;
             const syncIcon = inSync ? chalk.green('✓') : chalk.red('✗');
 
-            console.log(
+            display.line(
               `  ${a.id.padEnd(14)} ${status.padEnd(14)} #${String(issueNumber).padEnd(8)} ${issueState} ${syncIcon}`,
             );
             linked++;
           } else {
-            console.log(
+            display.line(
               `  ${a.id.padEnd(14)} ${status.padEnd(14)} ${chalk.dim('—'.padEnd(10))} ${chalk.dim('not linked')}`,
             );
             unlinked++;
@@ -496,9 +499,9 @@ export function registerGitHubCommand(program: Command) {
         }
       }
 
-      console.log(`  ${'─'.repeat(50)}`);
-      console.log('');
-      console.log(`  Linked: ${linked}, Unlinked: ${unlinked}`);
+      display.tableSeparator(50);
+      display.blank();
+      display.line(`  Linked: ${linked}, Unlinked: ${unlinked}`);
     });
 }
 

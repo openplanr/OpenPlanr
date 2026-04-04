@@ -19,7 +19,7 @@ import {
   updateArtifact,
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
-import { logger } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 
 export function registerSyncCommand(program: Command) {
   program
@@ -111,7 +111,7 @@ async function syncParentChildLinks(
         if (!storiesByFeature.has(featureId)) {
           storiesByFeature.set(featureId, []);
         }
-        storiesByFeature.get(featureId)!.push(parent.id);
+        storiesByFeature.get(featureId)?.push(parent.id);
       }
     }
   }
@@ -129,7 +129,7 @@ async function syncParentChildLinks(
       if (!actualChildrenByParent.has(parentId)) {
         actualChildrenByParent.set(parentId, new Set());
       }
-      actualChildrenByParent.get(parentId)!.add(child.id);
+      actualChildrenByParent.get(parentId)?.add(child.id);
     }
 
     // Handle feature-level tasks: task has featureId but no storyId
@@ -142,7 +142,7 @@ async function syncParentChildLinks(
           if (!actualChildrenByParent.has(storyId)) {
             actualChildrenByParent.set(storyId, new Set());
           }
-          actualChildrenByParent.get(storyId)!.add(child.id);
+          actualChildrenByParent.get(storyId)?.add(child.id);
         }
       }
     }
@@ -174,17 +174,17 @@ async function syncParentChildLinks(
     // Report issues
     for (const id of staleIds) {
       const label = opts.dryRun ? chalk.yellow('would remove') : chalk.red('removed');
-      console.log(`  ${label} stale link ${id} from ${parent.id}`);
+      display.line(`  ${label} stale link ${id} from ${parent.id}`);
       fixes++;
     }
     for (const id of missingIds) {
       const label = opts.dryRun ? chalk.yellow('would add') : chalk.green('added');
-      console.log(`  ${label} missing link ${id} to ${parent.id}`);
+      display.line(`  ${label} missing link ${id} to ${parent.id}`);
       fixes++;
     }
     if (hasDuplicates) {
       const label = opts.dryRun ? chalk.yellow('would deduplicate') : chalk.blue('deduplicated');
-      console.log(`  ${label} links in ${parent.id}`);
+      display.line(`  ${label} links in ${parent.id}`);
       fixes++;
     }
 

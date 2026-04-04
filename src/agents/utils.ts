@@ -4,6 +4,7 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { logger } from '../utils/logger.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -16,7 +17,8 @@ export async function which(command: string): Promise<string | null> {
     const cmd = process.platform === 'win32' ? 'where' : 'which';
     const { stdout } = await execFileAsync(cmd, [command]);
     return stdout.trim() || null;
-  } catch {
+  } catch (err) {
+    logger.debug('Command lookup failed', err);
     return null;
   }
 }

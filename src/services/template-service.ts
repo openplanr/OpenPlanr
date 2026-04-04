@@ -25,7 +25,7 @@ Handlebars.registerHelper('eq', (a: unknown, b: unknown) => a === b);
 
 export async function renderTemplate(
   templatePath: string,
-  data: Record<string, unknown>,
+  data: Record<string, unknown>, // Template data is inherently untyped
   overrideDir?: string,
 ): Promise<string> {
   const fullPath = await resolveTemplatePath(templatePath, overrideDir);
