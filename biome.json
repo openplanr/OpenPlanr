@@ -27,13 +27,13 @@
         "noUnusedImports": "warn"
       },
       "style": {
-        "noNonNullAssertion": "off",
+        "noNonNullAssertion": "error",
         "useConst": "warn",
         "noParameterAssign": "off"
       },
       "suspicious": {
-        "noExplicitAny": "off",
-        "noConsole": "off",
+        "noExplicitAny": "error",
+        "noConsole": "error",
         "noThenProperty": "off"
       }
     }
