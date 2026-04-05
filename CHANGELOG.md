@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2026-04-03
+## [1.0.0] - 2026-04-05
 
 ### Added
 
@@ -33,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Auto-extracted pattern rules** — 5 heuristic detectors (generic CRUD, command registration, central types, ID generation, template rendering) produce explicit rules from architecture files
 - **Post-generation validation** — warns about modify-on-missing, create-on-existing, dependency gaps, and unknown directories before user accepts AI output
 - **Dependency chain detection** — import-based file dependency hints injected into AI context
+- **`display` utility** — 13 methods for formatted user-facing output (tables, progress bars, key-value pairs, status badges)
+- **`ArtifactFrontmatter` type** — shared typed interface for artifact frontmatter across all parsers
+- **Shared task-creation helpers** — extracted `buildTaskItems`, `displayTaskPreview`, `displayValidationWarnings`, and related helpers into reusable module
+- **ESM `exports` field** — `package.json` now declares explicit ESM entry point
+- **Dynamic CLI version** — `planr --version` reads version from `package.json` at runtime instead of hardcoding
 
 ### Changed
 
@@ -43,6 +48,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`planr status`** — now shows backlog items with priority badges and active sprint with days remaining
 - **`planr search`** — now searches backlog and sprint artifacts
 - **Codebase context builder** — dynamic `src/` subdirectory discovery instead of hardcoded directory list; pattern rules and dependency hints injected into AI prompts
+- **Rules templates rewritten** — Cursor, Claude Code, and Codex templates replaced with 4-step context-gathering protocol (read task → walk parent chain → read ADRs → scan codebase)
+- **Sprint task entries** — now include task title and relative file link (`- [ ] **TASK-001** title — [view](...)`)
+- **Sprint auto-select** — sends subtask counts and parent feature context to AI for smarter velocity-aware selection
+- **Bare catch blocks eliminated** — 39 bare `catch {}` blocks converted to `catch (err) { logger.debug(..., err) }` for `--verbose` debuggability
+- **Strict Biome rules** — enabled `noExplicitAny`, `noNonNullAssertion`, `noConsole` as errors
+- **`@anthropic-ai/sdk`** — bumped from 0.80.0 to 0.81.0
+
+### Removed
+
+- **`planr task implement` and `planr quick implement`** — coding agents (Claude Code, Cursor, Codex) handle implementation directly via generated rules
+- **`planr task fix` and `planr quick fix`** — replaced by iterative agent workflows
+- **8 agent adapter files** (~1,150 lines) — `agent-factory`, `claude-agent`, `codex-agent`, `cursor-agent`, `implementation-bridge`, `progress`, `prompt-composer`, `types`
+- **Orphaned retry utilities** — dead `MAX_RETRIES`, `isRetryableError`, `sleep` removed after agent deletion
+- **Duplicate `CodingAgentName` type** — consolidated to single definition in `models/types.ts`
 
 ### Fixed
 
@@ -53,6 +72,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`displayValidationWarnings` loose typing** — `action?: string` replaced with `action: 'modify' | 'create'`
 - **`--file` flag error handling** — stack trace on bad file path replaced with user-friendly error message in quick.ts and epic.ts
 - **Rules reader empty vs missing** — `!content` replaced with explicit `content === null` check
+- **Slugify `ENAMETOOLONG` crash** — filenames truncated at 80 chars with word-boundary trimming
+- **Backlog title triplication** — title no longer repeated three times in generated backlog items
+- **Task parser bold ID regex** — fixed regex that caused empty template saves when IDs were bold-formatted
+- **Sprint "untitled" filename** — sprint creation now uses sprint name for slug instead of falling back to "untitled"
+- **Plan summary overcounting** — reports only artifacts created in current run; task generation failures no longer miscounted
+- **`truncateTitle` empty input** — guards against empty description producing empty artifact titles
+- **`progressBar` percent clamping** — clamps to [0,100] to prevent `String.repeat()` with negative count
+- **`logger.debug` Error formatting** — formats Error instances with stack traces instead of `[object Object]`
+- **Safer Map access patterns** — guarded `Map.get()` returns in sync and dependency-chains to prevent silent no-ops
+
+### Developer Experience
+
+- **47 new tests** — display utility (22), task-creation helpers (21), E2E smoke (4), edge cases
+- **Coverage thresholds raised** — from 3% to 14% (lines, functions, branches, statements)
+- **`display.*` / `logger.*` separation** — formatted user-facing output vs operational messages
 
 ## [0.9.0] - 2026-04-01
 
