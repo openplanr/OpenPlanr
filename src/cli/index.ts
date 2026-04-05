@@ -2,7 +2,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
-import { setVerbose } from '../utils/logger.js';
+import { ConfigNotFoundError } from '../services/config-service.js';
+import { display, logger, setVerbose } from '../utils/logger.js';
 import { registerBacklogCommand } from './commands/backlog.js';
 import { registerChecklistCommand } from './commands/checklist.js';
 import { registerConfigCommand } from './commands/config.js';
@@ -76,4 +77,14 @@ registerSprintCommand(program);
 registerSyncCommand(program);
 registerTemplateCommand(program);
 
-program.parse(process.argv);
+program.parseAsync(process.argv).catch((err) => {
+  if (err instanceof ConfigNotFoundError) {
+    display.line('');
+    logger.warn('No OpenPlanr project found in this directory.');
+    display.line('');
+    display.line('  Run `planr init` to get started.');
+    display.line('');
+    process.exit(1);
+  }
+  throw err;
+});

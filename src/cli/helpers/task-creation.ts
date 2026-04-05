@@ -97,11 +97,8 @@ export async function displayValidationWarnings(
 ): Promise<void> {
   if (!rawContext || !relevantFiles?.length) return;
   try {
-    const { validateRelevantFiles, detectDependencyHints } = await import(
-      '../../ai/validation/index.js'
-    );
-    const hints = detectDependencyHints(rawContext.architectureFiles);
-    const validation = validateRelevantFiles(relevantFiles, rawContext.sourceInventory, hints);
+    const { validateRelevantFiles } = await import('../../ai/validation/index.js');
+    const validation = validateRelevantFiles(relevantFiles, rawContext.sourceInventory);
     if (validation.warnings.length > 0) {
       display.blank();
       logger.warn('Quality warnings:');

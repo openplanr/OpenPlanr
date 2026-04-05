@@ -6,8 +6,6 @@
  * missing dependency chain files, and hallucinated paths.
  */
 
-import type { DependencyHint } from './dependency-chains.js';
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -29,19 +27,17 @@ export interface RelevantFile {
 /**
  * Validate AI-generated relevant files against the actual codebase.
  *
+ * Checks for wrong modify/create actions and hallucinated paths.
+ *
  * @param relevantFiles - Files from the AI response
  * @param sourceInventory - Raw source inventory string from CodebaseContext
- * @param dependencyHints - Auto-detected dependency chains
  */
 export function validateRelevantFiles(
   relevantFiles: RelevantFile[],
   sourceInventory: string,
-  dependencyHints: DependencyHint[],
 ): ValidationResult {
   const warnings: string[] = [];
   const existingFiles = parseSourceInventory(sourceInventory);
-  const referencedPaths = new Set(relevantFiles.map((f) => f.path));
-
   for (const file of relevantFiles) {
     const exists = existingFiles.has(file.path);
 
@@ -61,18 +57,6 @@ export function validateRelevantFiles(
     const dir = file.path.split('/').slice(0, -1).join('/');
     if (dir && !directoryExistsInInventory(dir, sourceInventory) && file.action === 'modify') {
       warnings.push(`${file.path} references directory "${dir}" not found in source inventory`);
-    }
-  }
-
-  // Check 4: Dependency chain gaps
-  for (const hint of dependencyHints) {
-    const mentioned = hint.files.filter((f) => referencedPaths.has(f));
-    const missing = hint.files.filter((f) => !referencedPaths.has(f));
-
-    if (mentioned.length > 0 && missing.length > 0) {
-      warnings.push(
-        `${mentioned.join(', ')} referenced but ${missing.join(', ')} not included — ${hint.reason}`,
-      );
     }
   }
 

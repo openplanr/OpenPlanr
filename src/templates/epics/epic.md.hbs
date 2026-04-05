@@ -23,6 +23,7 @@ project: "{{projectName}}"
 {{solutionOverview}}
 
 ## Success Criteria
+
 {{#if successCriteriaList}}
 {{#each successCriteriaList}}
 - {{this}}
@@ -32,6 +33,7 @@ project: "{{projectName}}"
 {{/if}}
 
 ## Key Features
+
 {{#each keyFeatures}}
 - {{this}}
 {{/each}}
@@ -43,6 +45,7 @@ project: "{{projectName}}"
 {{risks}}
 
 ## Features
+
 {{#if featureIds}}
 {{#each featureIds}}
 - [{{this.id}}](../features/{{this.filename}}.md)

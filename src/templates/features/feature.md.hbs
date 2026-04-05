@@ -16,11 +16,13 @@ status: "planning"
 {{overview}}
 
 ## Functional Requirements
+
 {{#each functionalRequirements}}
 - {{this}}
 {{/each}}
 
 ## User Stories
+
 {{#if storyIds}}
 {{#each storyIds}}
 - [{{this.id}}](../stories/{{this.filename}}.md)
