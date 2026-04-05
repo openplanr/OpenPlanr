@@ -1,4 +1,3 @@
-export { type DependencyHint, detectDependencyHints } from './dependency-chains.js';
 export {
   parseSourceInventory,
   type RelevantFile,

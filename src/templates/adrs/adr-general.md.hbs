@@ -11,36 +11,45 @@ status: "proposed"
 {{context}}
 
 ## Decision Drivers
+
 {{#each decisionDrivers}}
 - {{this}}
 {{/each}}
 
 ## Considered Options
+
 {{#each options}}
 ### Option {{@index}}: {{this.name}}
+
 {{this.description}}
 
 **Pros:**
+
 {{#each this.pros}}
 - {{this}}
 {{/each}}
 
 **Cons:**
+
 {{#each this.cons}}
 - {{this}}
 {{/each}}
 {{/each}}
 
 ## Decision
+
 {{decision}}
 
 ## Consequences
+
 ### Positive
+
 {{#each positiveConsequences}}
 - {{this}}
 {{/each}}
 
 ### Negative
+
 {{#each negativeConsequences}}
 - {{this}}
 {{/each}}

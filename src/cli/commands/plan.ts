@@ -51,6 +51,7 @@ export function registerPlanCommand(program: Command) {
     .option('--epic <epicId>', 'start from an existing epic')
     .option('--feature <featureId>', 'start from an existing feature')
     .option('--story <storyId>', 'start from an existing story (generates tasks only)')
+    .option('--continue', 'continue an interrupted plan from where it left off')
     .action(async (opts) => {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
@@ -71,6 +72,9 @@ export function registerPlanCommand(program: Command) {
         } else if (opts.feature) {
           // Start from feature → stories → tasks
           await planFromFeature(projectDir, config, provider, opts.feature);
+        } else if (opts.epic && opts.continue) {
+          // Continue an interrupted plan from where it left off
+          await continuePlanFromEpic(projectDir, config, provider, opts.epic);
         } else if (opts.epic) {
           // Start from epic → features → stories → tasks
           await planFromEpic(projectDir, config, provider, opts.epic);
@@ -206,6 +210,142 @@ async function planFromEpic(
   display.line(`  Features: ${featureIds.length}`);
   display.line(`  Stories:  ${totalStories}`);
   display.line(`  Tasks:    ${totalTasks}`);
+  logger.dim('');
+  logger.dim('Start implementing:');
+  logger.dim('  planr rules generate              — Generate rules for your coding agent');
+  logger.dim('  planr status');
+}
+
+async function continuePlanFromEpic(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  provider: AIProvider,
+  epicId: string,
+) {
+  const epicRaw = await readArtifactRaw(projectDir, config, 'epic', epicId);
+  if (!epicRaw) {
+    logger.error(`Epic ${epicId} not found.`);
+    return;
+  }
+
+  logger.heading('Continuing Interrupted Plan');
+  logger.dim(`Scanning existing artifacts for ${epicId}...\n`);
+
+  // Discover existing features for this epic
+  const allFeatures = await listArtifacts(projectDir, config, 'feature');
+  const epicFeatureIds: string[] = [];
+  for (const feat of allFeatures) {
+    const data = await readArtifact(projectDir, config, 'feature', feat.id);
+    if (data?.data.epicId === epicId) {
+      epicFeatureIds.push(feat.id);
+    }
+  }
+
+  if (epicFeatureIds.length === 0) {
+    logger.info('No features found — running full plan from epic.');
+    await planFromEpic(projectDir, config, provider, epicId);
+    return;
+  }
+
+  display.line(`  Found ${epicFeatureIds.length} existing feature(s)`);
+
+  // Discover existing stories and tasks, grouped by feature
+  const allStories = await listArtifacts(projectDir, config, 'story');
+  const allTasks = await listArtifacts(projectDir, config, 'task');
+
+  const storiesByFeature = new Map<string, string[]>();
+  for (const story of allStories) {
+    const data = await readArtifact(projectDir, config, 'story', story.id);
+    const fId = data?.data.featureId as string | undefined;
+    if (fId && epicFeatureIds.includes(fId)) {
+      const list = storiesByFeature.get(fId);
+      if (list) {
+        list.push(story.id);
+      } else {
+        storiesByFeature.set(fId, [story.id]);
+      }
+    }
+  }
+
+  const tasksByFeature = new Map<string, string[]>();
+  for (const task of allTasks) {
+    const data = await readArtifact(projectDir, config, 'task', task.id);
+    const fId = data?.data.featureId as string | undefined;
+    if (fId && epicFeatureIds.includes(fId)) {
+      const list = tasksByFeature.get(fId);
+      if (list) {
+        list.push(task.id);
+      } else {
+        tasksByFeature.set(fId, [task.id]);
+      }
+    }
+  }
+
+  // Classify each feature
+  const needsStoriesAndTasks: string[] = [];
+  const needsTasksOnly: { featureId: string; storyIds: string[] }[] = [];
+  let skipped = 0;
+
+  for (const featureId of epicFeatureIds) {
+    const stories = storiesByFeature.get(featureId);
+    const tasks = tasksByFeature.get(featureId);
+
+    if (!stories || stories.length === 0) {
+      needsStoriesAndTasks.push(featureId);
+    } else if (!tasks || tasks.length === 0) {
+      needsTasksOnly.push({ featureId, storyIds: stories });
+    } else {
+      skipped++;
+    }
+  }
+
+  display.line(`  ${skipped} feature(s) already complete — skipping`);
+  if (needsStoriesAndTasks.length > 0) {
+    display.line(`  ${needsStoriesAndTasks.length} feature(s) need stories + tasks`);
+  }
+  if (needsTasksOnly.length > 0) {
+    display.line(`  ${needsTasksOnly.length} feature(s) need tasks only`);
+  }
+
+  if (needsStoriesAndTasks.length === 0 && needsTasksOnly.length === 0) {
+    logger.success('\nAll features already have stories and tasks — nothing to continue.');
+    return;
+  }
+
+  const proceed = await promptConfirm('Continue generating missing artifacts?', true);
+  if (!proceed) {
+    logger.info('Cancelled.');
+    return;
+  }
+
+  let totalStories = 0;
+  let totalTasks = 0;
+
+  // Generate stories + tasks for features that have neither
+  for (const featureId of needsStoriesAndTasks) {
+    const counts = await planFromFeature(projectDir, config, provider, featureId);
+    totalStories += counts.stories;
+    totalTasks += counts.tasks;
+  }
+
+  // Generate tasks only for features that already have stories
+  for (const { featureId, storyIds } of needsTasksOnly) {
+    logger.dim(`\nGenerating tasks for ${featureId} (${storyIds.length} existing stories)...`);
+    const created = await generateTasksForFeature(
+      projectDir,
+      config,
+      provider,
+      featureId,
+      storyIds,
+    );
+    if (created) totalTasks++;
+  }
+
+  logger.heading('\nContinue Complete!');
+  display.line(`  Epic:     ${epicId}`);
+  display.line(`  Features: ${epicFeatureIds.length} (${skipped} already done)`);
+  display.line(`  Stories:  ${totalStories} new`);
+  display.line(`  Tasks:    ${totalTasks} new`);
   logger.dim('');
   logger.dim('Start implementing:');
   logger.dim('  planr rules generate              — Generate rules for your coding agent');

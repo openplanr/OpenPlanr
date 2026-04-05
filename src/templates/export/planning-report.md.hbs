@@ -6,13 +6,13 @@
 
 ## Summary
 
-| Type | Count |
-|------|-------|
-| Epics | {{counts.epics}} |
-| Features | {{counts.features}} |
-| Stories | {{counts.stories}} |
-| Tasks | {{counts.tasks}} |
-| Quick Tasks | {{counts.quick}} |
+| Type        | Count              |
+| ----------- | ------------------ |
+| Epics       | {{counts.epics}}   |
+| Features    | {{counts.features}} |
+| Stories     | {{counts.stories}} |
+| Tasks       | {{counts.tasks}}   |
+| Quick Tasks | {{counts.quick}}   |
 
 ---
 
@@ -74,6 +74,7 @@
 {{/each}}
 {{/if}}
 {{#if orphanFeatures.length}}
+
 ## Unlinked Features
 
 {{#each orphanFeatures}}
@@ -96,6 +97,7 @@
 {{/each}}
 {{/if}}
 {{#if orphanStories.length}}
+
 ## Unlinked Stories
 
 {{#each orphanStories}}
@@ -108,6 +110,7 @@
 {{/each}}
 {{/if}}
 {{#if orphanTasks.length}}
+
 ## Unlinked Tasks
 
 {{#each orphanTasks}}
@@ -120,6 +123,7 @@
 {{/each}}
 {{/if}}
 {{#if quickTasks.length}}
+
 ## Quick Tasks
 
 {{#each quickTasks}}

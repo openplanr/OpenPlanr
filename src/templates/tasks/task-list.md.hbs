@@ -15,6 +15,7 @@ status: "pending"
 
 {{#if artifactSources}}
 ## Artifact Sources
+
 {{#each artifactSources}}
 - **{{this.type}}:** `{{this.path}}`
 {{/each}}
@@ -31,6 +32,7 @@ status: "pending"
 
 {{#if acceptanceCriteriaMapping}}
 ## Acceptance Criteria Mapping
+
 {{#each acceptanceCriteriaMapping}}
 - [ ] {{this.criterion}} ({{this.sourceStoryId}}) → Tasks {{join this.taskIds ", "}}
 {{/each}}
@@ -38,6 +40,7 @@ status: "pending"
 
 {{#if relevantFiles}}
 ## Relevant Files
+
 {{#each relevantFiles}}
 - `{{this.path}}` — {{this.reason}}
 {{/each}}

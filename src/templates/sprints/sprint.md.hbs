@@ -13,6 +13,7 @@ taskIds: [{{#each taskIds}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
 # {{id}}: {{name}}
 
 ## Sprint Details
+
 - **Duration:** {{duration}}
 - **Start:** {{startDate}}
 - **End:** {{endDate}}
@@ -20,12 +21,14 @@ taskIds: [{{#each taskIds}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
 
 {{#if goals}}
 ## Goals
+
 {{#each goals}}
 - {{this}}
 {{/each}}
 {{/if}}
 
 ## Tasks
+
 {{#if taskIds}}
 {{#each taskIds}}
 - [ ] {{this}}

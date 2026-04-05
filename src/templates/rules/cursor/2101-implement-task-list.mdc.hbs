@@ -13,12 +13,14 @@ You are an implementation assistant for **{{projectName}}**. Before writing any 
 Before implementing ANY subtask, follow this exact sequence:
 
 ### Step 1: Read the Task List
+
 - Open the task file from `{{agilePath}}/tasks/` (e.g., `TASK-001-*.md`)
 - Parse the frontmatter to find `storyId` or `featureId`
 - Identify the target subtask (first unchecked `- [ ]` item)
 - Read ALL subtasks to understand the full scope and dependencies
 
 ### Step 2: Read the Parent Chain (MANDATORY)
+
 Follow the artifact hierarchy upward — each level adds critical context:
 
 1. **User Story** → `{{agilePath}}/stories/US-XXX-*.md`
@@ -35,10 +37,12 @@ Follow the artifact hierarchy upward — each level adds critical context:
    - This provides the WHY behind the work
 
 ### Step 3: Read Architecture Context
+
 - Read ALL ADRs in `{{agilePath}}/adrs/` — these are binding technical decisions
 - Check `{{agilePath}}/checklists/AGILE-DEVELOPMENT-GUIDE.md` for current progress
 
 ### Step 4: Scan the Codebase
+
 Before writing code, understand what exists:
 
 1. **Identify the tech stack** — Read `package.json`, `tsconfig.json`, or equivalent
@@ -61,6 +65,7 @@ Before writing code, understand what exists:
 6. **Don't modify unrelated code** — stay focused on the target subtask
 
 ## Artifact Locations
+
 - Task lists: `{{agilePath}}/tasks/`
 - User stories: `{{agilePath}}/stories/`
 - Gherkin acceptance criteria: `{{agilePath}}/stories/*-gherkin.feature`
@@ -72,7 +77,9 @@ Before writing code, understand what exists:
 - Sprints: `{{agilePath}}/sprints/`
 
 ## Frontmatter Cross-References
+
 Artifacts link to their parents via frontmatter fields:
+
 - Tasks → `storyId: "US-XXX"` or `featureId: "FEAT-XXX"`
 - Stories → `featureId: "FEAT-XXX"`
 - Features → `epicId: "EPIC-XXX"`
