@@ -21,7 +21,7 @@ const validConfig = {
   projectName: 'test-project',
   targets: ['cursor', 'claude'],
   outputPaths: {
-    agile: 'docs/agile',
+    agile: '.planr',
     cursorRules: '.cursor/rules',
     claudeConfig: '.',
     codexConfig: '.',
@@ -47,7 +47,7 @@ describe('loadConfig', () => {
 
   it('throws when config file does not exist', async () => {
     mockFileExists.mockResolvedValue(false);
-    await expect(loadConfig('/project')).rejects.toThrow('No planr.config.json found');
+    await expect(loadConfig('/project')).rejects.toThrow('No .planr/config.json found');
   });
 
   it('throws on invalid JSON', async () => {
@@ -85,7 +85,7 @@ describe('saveConfig', () => {
     await saveConfig('/my-project', validConfig as any);
     const writtenPath = mockWriteFile.mock.calls[0][0];
     expect(writtenPath).toContain('/my-project');
-    expect(writtenPath).toContain('planr.config.json');
+    expect(writtenPath).toContain('.planr/config.json');
   });
 });
 
@@ -94,7 +94,7 @@ describe('createDefaultConfig', () => {
     const config = createDefaultConfig('my-app');
     expect(config.projectName).toBe('my-app');
     expect(config.targets).toEqual(['cursor', 'claude', 'codex']);
-    expect(config.outputPaths.agile).toBe('docs/agile');
+    expect(config.outputPaths.agile).toBe('.planr');
     expect(config.idPrefix.epic).toBe('EPIC');
     expect(config.idPrefix.feature).toBe('FEAT');
     expect(config.idPrefix.story).toBe('US');

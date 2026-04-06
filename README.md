@@ -184,8 +184,8 @@ After running `planr init` and creating artifacts:
 
 ```text
 my-project/
-├── planr.config.json
-├── docs/agile/
+├── .planr/
+│   ├── config.json     # Project configuration
 │   ├── epics/          # EPIC-001-*.md
 │   ├── features/       # FEAT-001-*.md
 │   ├── stories/        # US-001-*.md + US-001-gherkin.feature
@@ -204,14 +204,14 @@ my-project/
 
 ## Configuration
 
-`planr.config.json` is created by `planr init`:
+`.planr/config.json` is created by `planr init`:
 
 ```json
 {
   "projectName": "my-project",
   "targets": ["cursor", "claude", "codex"],
   "outputPaths": {
-    "agile": "docs/agile",
+    "agile": ".planr",
     "cursorRules": ".cursor/rules",
     "claudeConfig": ".",
     "codexConfig": "."

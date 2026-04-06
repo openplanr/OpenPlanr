@@ -4,7 +4,7 @@
 
 ## Directory Structure
 
-```
+```text
 src/
 ├── cli/                    # CLI entry point and command definitions
 │   ├── index.ts            # Commander.js program setup, registers all commands
@@ -14,7 +14,7 @@ src/
 │   ├── artifact-service.ts # CRUD for markdown artifacts (create, read, list, update)
 │   ├── artifact-gathering.ts # Gathers related artifacts for AI context
 │   ├── ai-service.ts       # AI provider orchestration (streaming, JSON generation)
-│   ├── config-service.ts   # Load/save planr.config.json
+│   ├── config-service.ts   # Load/save .planr/config.json
 │   ├── credentials-service.ts # API key storage (OS keychain with encrypted file fallback)
 │   ├── id-service.ts       # Sequential ID generation with gap-filling
 │   ├── template-service.ts # Handlebars template rendering with caching
@@ -64,7 +64,7 @@ src/
 
 ### Artifact Creation
 
-```
+```text
 CLI Command (e.g., planr epic create)
   → Prompts user for input (prompt-service)
   → Calls AI provider to generate structured data (ai-service → provider)
@@ -76,7 +76,7 @@ CLI Command (e.g., planr epic create)
 
 ### AI Integration
 
-```
+```text
 prompt-builder.ts           Composes system + user messages
   → ai-service.ts           Selects provider, handles streaming
     → provider (anthropic/openai/ollama)   Makes API call
@@ -87,6 +87,7 @@ prompt-builder.ts           Composes system + user messages
 ### Cross-Reference System
 
 Artifacts link to each other via markdown:
+
 - Epics list their features under `## Features`
 - Features list their stories under `## User Stories`
 - Stories/features list their tasks under `## Tasks`
@@ -100,7 +101,7 @@ IDs follow the pattern `PREFIX-NNN` (e.g., EPIC-001, FEAT-002).
 
 - `getNextId()` scans existing files and finds the first available gap
 - IDs are global per artifact type (not scoped to parent)
-- Configurable prefixes via `planr.config.json` → `idPrefix`
+- Configurable prefixes via `.planr/config.json` → `idPrefix`
 
 ## Template System
 
@@ -120,11 +121,11 @@ interface AIProvider {
 }
 ```
 
-| Provider | SDK | Models |
-|----------|-----|--------|
+| Provider  | SDK | Models |
+|-----------|-----|--------|
 | Anthropic | `@anthropic-ai/sdk` | claude-sonnet-4-20250514, etc. |
-| OpenAI | `openai` | gpt-4o, etc. |
-| Ollama | HTTP API | Any local model |
+| OpenAI    | `openai` | gpt-4o, etc. |
+| Ollama    | HTTP API | Any local model |
 
 ## Testing
 

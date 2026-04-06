@@ -21,6 +21,7 @@ import {
   readArtifact,
   resolveArtifactFilename,
 } from '../../services/artifact-service.js';
+import { checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
@@ -228,6 +229,7 @@ async function createTasksWithAI(projectDir: string, config: OpenPlanrConfig, st
     );
 
     await addChildReference(projectDir, config, 'story', storyId, 'task', id, result.title);
+    await checkItem(projectDir, config, 10);
     logger.success(`Created task list ${id}: ${result.title}`);
     logger.dim(`  ${filePath}`);
     logger.dim(`  ${total} tasks created`);
@@ -332,6 +334,7 @@ async function createTasksFromFeature(
       await addChildReference(projectDir, config, 'story', story.id, 'task', id, result.title);
     }
 
+    await checkItem(projectDir, config, 10);
     logger.success(`Created task list ${id}: ${result.title}`);
     logger.dim(`  ${filePath}`);
     logger.dim(`  ${total} tasks from ${ctx.stories.length} stories`);
@@ -381,6 +384,7 @@ async function createTasksManually(
   );
 
   await addChildReference(projectDir, config, 'story', opts.story, 'task', id, title);
+  await checkItem(projectDir, config, 10);
   logger.success(`Created task list ${id}: ${title}`);
   logger.dim(`  ${filePath}`);
   logger.dim(`  ${tasks.length} tasks created`);

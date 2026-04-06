@@ -12,6 +12,7 @@ import { aiEpicResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
 import { TOKEN_BUDGETS } from '../../ai/types.js';
 import { generateStreamingJSON, getAIProvider, isAIConfigured } from '../../services/ai-service.js';
 import { createArtifact, listArtifacts } from '../../services/artifact-service.js';
+import { checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import {
   promptEditor,
@@ -216,6 +217,7 @@ async function createEpicWithAI(
 
     logger.success(`Created epic ${id}: ${epicData.title}`);
     logger.dim(`  ${filePath}`);
+    await checkItem(projectDir, config, 1);
     logger.dim('');
     logger.heading('Next steps:');
     logger.dim(`  1. planr feature create --epic ${id}    — Break epic into features`);
@@ -271,6 +273,7 @@ async function createEpicManually(
 
   logger.success(`Created epic ${id}: ${title}`);
   logger.dim(`  ${filePath}`);
+  await checkItem(projectDir, config, 1);
   logger.dim('');
   logger.heading('Next steps:');
   logger.dim(`  1. planr feature create --epic ${id}    — Break epic into features`);

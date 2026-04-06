@@ -45,8 +45,8 @@ describe('CLI smoke tests', () => {
     const dir = makeTempDir();
     run('init --name test-project --no-ai', { cwd: dir });
 
-    expect(existsSync(join(dir, 'planr.config.json'))).toBe(true);
-    expect(existsSync(join(dir, 'docs', 'agile'))).toBe(true);
+    expect(existsSync(join(dir, '.planr', 'config.json'))).toBe(true);
+    expect(existsSync(join(dir, '.planr', 'epics'))).toBe(true);
   });
 
   it('runs planr status in an initialized project without error', () => {

@@ -51,8 +51,8 @@ planr init --no-ai
 
 ```text
 project-root/
-├── planr.config.json          # Project configuration
-└── docs/agile/
+└── .planr/
+    ├── config.json            # Project configuration
     ├── epics/
     ├── features/
     ├── stories/
@@ -102,7 +102,7 @@ When `--file` is provided, the full file content is sent to the AI with document
 9. Dependencies (default: "None")
 10. Risks (default: "None")
 
-**Output:** `docs/agile/epics/EPIC-001-<slug>.md`
+**Output:** `.planr/epics/EPIC-001-<slug>.md`
 
 ---
 
@@ -153,7 +153,7 @@ planr feature create --epic EPIC-001 --manual
 7. Risks (default: "None")
 8. Success metrics
 
-**Output:** `docs/agile/features/FEAT-001-<slug>.md`
+**Output:** `.planr/features/FEAT-001-<slug>.md`
 
 ---
 
@@ -204,7 +204,7 @@ planr story create --epic EPIC-001
 **Output — two files:**
 
 ```text
-docs/agile/stories/
+.planr/stories/
 ├── US-001-<slug>.md              # User story markdown
 └── US-001-gherkin.feature        # Gherkin acceptance criteria
 ```
@@ -260,7 +260,7 @@ The AI generates grouped subtasks with acceptance criteria mapping and relevant 
 
 **Manual mode:** If AI is not configured, `planr task create --story` prompts for task names (comma-separated). `--feature` always requires AI.
 
-**Output:** `docs/agile/tasks/TASK-001-<slug>.md`
+**Output:** `.planr/tasks/TASK-001-<slug>.md`
 
 ---
 
@@ -295,7 +295,7 @@ planr backlog add "refactor auth middleware" --priority low --tag tech-debt
 | `--priority <level>` | `critical`, `high`, `medium`, or `low`                       | `medium`     |
 | `--tag <tag>`        | Tag for categorization (e.g., `bug`, `feature`, `tech-debt`) | None         |
 
-**Output:** `docs/agile/backlog/BL-001-<slug>.md`
+**Output:** `.planr/backlog/BL-001-<slug>.md`
 
 ---
 
@@ -380,7 +380,7 @@ planr sprint create --name "Sprint 2" --duration 1w
 | `--name <name>`         | Sprint name                                | **Yes**  |
 | `--duration <duration>` | Sprint duration: `1w`, `2w`, `3w`, or `4w` | **Yes**  |
 
-**Output:** `docs/agile/sprints/SPRINT-001-<slug>.md`
+**Output:** `.planr/sprints/SPRINT-001-<slug>.md`
 
 ---
 
@@ -469,7 +469,7 @@ planr quick create --manual
 | `--file <path>` | Generate tasks from a PRD or spec file | No           |
 | `--manual`      | Interactive task entry without AI      | No           |
 
-**Output:** `docs/agile/quick/QT-001-<slug>.md`
+**Output:** `.planr/quick/QT-001-<slug>.md`
 
 ---
 
@@ -552,7 +552,7 @@ Template variables (e.g., `{{entityName}}`, `{{componentName}}`) are prompted in
 | `api-integration`    | External API client, retry logic, error handling       | `serviceName`, `baseUrl`         |
 | `auth-flow`          | Authentication flow with login, signup, password reset | `authProvider`                   |
 
-**Output:** `docs/agile/tasks/TASK-001-<slug>.md`
+**Output:** `.planr/tasks/TASK-001-<slug>.md`
 
 ---
 
@@ -569,7 +569,7 @@ planr template save TASK-001 --name my-pattern
 | `<taskId>`      | Task list ID to save as template | **Yes**  |
 | `--name <name>` | Template name                    | **Yes**  |
 
-**Output:** `docs/agile/templates/<name>.json`
+**Output:** `.planr/templates/<name>.json`
 
 ---
 
@@ -975,14 +975,14 @@ planr export --format html  ← generate planning report
 
 ## Config File
 
-`planr.config.json` stores project settings:
+`.planr/config.json` stores project settings:
 
 ```json
 {
   "projectName": "my-project",
   "targets": ["cursor", "claude", "codex"],
   "outputPaths": {
-    "agile": "docs/agile",
+    "agile": ".planr",
     "cursorRules": ".cursor/rules",
     "claudeConfig": ".",
     "codexConfig": "."

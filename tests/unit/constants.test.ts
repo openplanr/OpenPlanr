@@ -10,12 +10,12 @@ import {
 } from '../../src/utils/constants.js';
 
 describe('constants', () => {
-  it('CONFIG_FILENAME is planr.config.json', () => {
-    expect(CONFIG_FILENAME).toBe('planr.config.json');
+  it('CONFIG_FILENAME is .planr/config.json', () => {
+    expect(CONFIG_FILENAME).toBe('.planr/config.json');
   });
 
-  it('DEFAULT_AGILE_DIR is docs/agile', () => {
-    expect(DEFAULT_AGILE_DIR).toBe('docs/agile');
+  it('DEFAULT_AGILE_DIR is .planr', () => {
+    expect(DEFAULT_AGILE_DIR).toBe('.planr');
   });
 
   it('DEFAULT_CURSOR_RULES_DIR is .cursor/rules', () => {

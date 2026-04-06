@@ -9,7 +9,7 @@ const mockConfig: OpenPlanrConfig = {
   projectName: 'test-project',
   targets: ['cursor', 'claude', 'codex'],
   outputPaths: {
-    agile: 'docs/agile',
+    agile: '.planr',
     cursorRules: '.cursor/rules',
     claudeConfig: '.',
     codexConfig: '.',

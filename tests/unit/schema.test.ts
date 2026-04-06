@@ -6,7 +6,7 @@ describe('configSchema', () => {
     projectName: 'test-project',
     targets: ['cursor', 'claude'],
     outputPaths: {
-      agile: 'docs/agile',
+      agile: '.planr',
       cursorRules: '.cursor/rules',
       claudeConfig: '.',
       codexConfig: '.',

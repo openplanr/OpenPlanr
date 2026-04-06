@@ -48,7 +48,7 @@ const config: OpenPlanrConfig = {
   projectName: 'test-project',
   targets: ['cursor'],
   outputPaths: {
-    agile: 'docs/agile',
+    agile: '.planr',
     cursorRules: '.cursor/rules',
     claudeConfig: '.',
     codexConfig: '.',
@@ -68,27 +68,27 @@ beforeEach(() => {
 
 describe('getArtifactDir', () => {
   it('returns correct path for epic', () => {
-    expect(getArtifactDir(config, 'epic')).toBe('docs/agile/epics');
+    expect(getArtifactDir(config, 'epic')).toBe('.planr/epics');
   });
 
   it('returns correct path for feature', () => {
-    expect(getArtifactDir(config, 'feature')).toBe('docs/agile/features');
+    expect(getArtifactDir(config, 'feature')).toBe('.planr/features');
   });
 
   it('returns correct path for story', () => {
-    expect(getArtifactDir(config, 'story')).toBe('docs/agile/stories');
+    expect(getArtifactDir(config, 'story')).toBe('.planr/stories');
   });
 
   it('returns correct path for task', () => {
-    expect(getArtifactDir(config, 'task')).toBe('docs/agile/tasks');
+    expect(getArtifactDir(config, 'task')).toBe('.planr/tasks');
   });
 
   it('returns correct path for adr', () => {
-    expect(getArtifactDir(config, 'adr')).toBe('docs/agile/adrs');
+    expect(getArtifactDir(config, 'adr')).toBe('.planr/adrs');
   });
 
   it('returns correct path for checklist', () => {
-    expect(getArtifactDir(config, 'checklist')).toBe('docs/agile/checklists');
+    expect(getArtifactDir(config, 'checklist')).toBe('.planr/checklists');
   });
 });
 

@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export const CONFIG_FILENAME = 'planr.config.json';
+export const CONFIG_FILENAME = '.planr/config.json';
 
-export const DEFAULT_AGILE_DIR = 'docs/agile';
+export const DEFAULT_AGILE_DIR = '.planr';
 export const DEFAULT_CURSOR_RULES_DIR = '.cursor/rules';
 
 export const ARTIFACT_DIRS = {

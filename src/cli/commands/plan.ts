@@ -37,6 +37,7 @@ import {
   readArtifactRaw,
   resolveArtifactFilename,
 } from '../../services/artifact-service.js';
+import { checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptText } from '../../services/prompt-service.js';
 import { renderTemplate } from '../../services/template-service.js';
@@ -131,6 +132,7 @@ async function planFromScratch(projectDir: string, config: OpenPlanrConfig, prov
     featureIds: [],
   });
   logger.success(`Created ${epicId}: ${epicData.title}`);
+  await checkItem(projectDir, config, 1);
 
   await planFromEpic(projectDir, config, provider, epicId);
 }
@@ -194,6 +196,7 @@ async function planFromEpic(
     await addChildReference(projectDir, config, 'epic', epicId, 'feature', id, feat.title);
     logger.success(`Created ${id}: ${feat.title}`);
   }
+  await checkItem(projectDir, config, 2);
 
   // Step 3+4: Stories and tasks for each feature
   let totalStories = 0;
@@ -425,6 +428,7 @@ async function planFromFeature(
     await addChildReference(projectDir, config, 'feature', featureId, 'story', id, story.title);
     logger.success(`Created ${id}: ${story.title}`);
   }
+  await checkItem(projectDir, config, 3);
 
   // Step 4: Generate one task list per feature (all stories + full context)
   const taskCreated = await generateTasksForFeature(
@@ -503,6 +507,7 @@ async function generateTasksForFeature(
     await addChildReference(projectDir, config, 'story', sId, 'task', id, result.title);
   }
 
+  await checkItem(projectDir, config, 10);
   logger.success(
     `Created ${id}: ${result.title} (${total} tasks from ${ctx.stories.length} stories)`,
   );
@@ -572,6 +577,7 @@ async function generateTasksForSingleStory(
 
     const total = tasks.reduce((sum, t) => sum + t.subtasks.length + 1, 0);
     await addChildReference(projectDir, config, 'story', storyId, 'task', id, result.title);
+    await checkItem(projectDir, config, 10);
     logger.success(`Created ${id}: ${result.title} (${total} tasks)`);
   }
 }

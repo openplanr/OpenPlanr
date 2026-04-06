@@ -32,7 +32,7 @@ export function createDefaultConfig(projectName: string): OpenPlanrConfig {
     projectName,
     targets: ['cursor', 'claude', 'codex'],
     outputPaths: {
-      agile: 'docs/agile',
+      agile: '.planr',
       cursorRules: '.cursor/rules',
       claudeConfig: '.',
       codexConfig: '.',

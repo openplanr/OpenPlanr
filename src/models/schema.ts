@@ -14,7 +14,7 @@ export const configSchema = z.object({
   projectName: z.string().min(1),
   targets: z.array(targetCLISchema).min(1),
   outputPaths: z.object({
-    agile: z.string().default('docs/agile'),
+    agile: z.string().default('.planr'),
     cursorRules: z.string().default('.cursor/rules'),
     claudeConfig: z.string().default('.'),
     codexConfig: z.string().default('.'),

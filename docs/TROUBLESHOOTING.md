@@ -4,7 +4,7 @@ Common issues and how to resolve them.
 
 ---
 
-## "No planr.config.json found"
+## "No .planr/config.json found"
 
 You need to initialize Planr in your project first:
 
@@ -93,7 +93,7 @@ A child artifact references a parent, but the parent doesn't list the child. `pl
 
 ### Custom templates not loading
 
-Make sure `templateOverrides` in `planr.config.json` points to the correct directory:
+Make sure `templateOverrides` in `.planr/config.json` points to the correct directory:
 
 ```json
 {
@@ -180,6 +180,7 @@ npm test
 ## Still stuck?
 
 Open an issue at [github.com/openplanr/OpenPlanr/issues](https://github.com/openplanr/OpenPlanr/issues) with:
+
 - The command you ran
 - The full error output
 - Your Node.js version (`node --version`)

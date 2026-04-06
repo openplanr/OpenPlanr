@@ -8,7 +8,7 @@ vi.mock('../../src/utils/fs.js', () => ({
 }));
 
 vi.mock('../../src/utils/constants.js', () => ({
-  CONFIG_FILENAME: 'planr.config.json',
+  CONFIG_FILENAME: '.planr/config.json',
   getTemplatesDir: vi.fn(() => '/default/templates'),
 }));
 

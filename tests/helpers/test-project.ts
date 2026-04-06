@@ -17,14 +17,14 @@ export interface TestProject {
 }
 
 /**
- * Create a temporary project with planr.config.json and artifact directories.
+ * Create a temporary project with .planr/config.json and artifact directories.
  */
 export async function createTestProject(projectName = 'test-project'): Promise<TestProject> {
   const dir = mkdtempSync(join(tmpdir(), 'planr-integration-'));
   const config = createDefaultConfig(projectName);
 
   // Write config
-  await writeFile(join(dir, 'planr.config.json'), `${JSON.stringify(config, null, 2)}\n`);
+  await writeFile(join(dir, '.planr', 'config.json'), `${JSON.stringify(config, null, 2)}\n`);
 
   // Create artifact directories
   const agileDir = join(dir, config.outputPaths.agile);

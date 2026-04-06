@@ -19,6 +19,7 @@ import {
   readArtifactRaw,
   resolveArtifactFilename,
 } from '../../services/artifact-service.js';
+import { checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
@@ -171,6 +172,7 @@ async function createFeaturesWithAI(
       logger.dim(`  ${filePath}`);
     }
 
+    await checkItem(projectDir, config, 2);
     logger.dim('');
     logger.heading('Next steps:');
     logger.dim(`  1. planr story create --feature ${createdIds[0]}   — Create user stories`);
@@ -234,6 +236,7 @@ async function createFeatureManually(
   await addChildReference(projectDir, config, 'epic', opts.epic, 'feature', id, title);
   logger.success(`Created feature ${id}: ${title}`);
   logger.dim(`  ${filePath}`);
+  await checkItem(projectDir, config, 2);
   logger.dim('');
   logger.dim(`Next: planr story create --feature ${id}`);
 }

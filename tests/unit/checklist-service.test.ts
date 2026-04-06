@@ -30,14 +30,14 @@ const SAMPLE_CHECKLIST = `# Agile Development Guide — TestProject
 
 | # | Activity | Artifact | Status |
 |---|----------|----------|--------|
-| 4 | UML Sequence Diagrams | \`docs/agile/diagrams/\` | [ ] |
-| 5 | C4 Architecture Diagrams | \`docs/agile/diagrams/\` | [ ] |`;
+| 4 | UML Sequence Diagrams | \`.planr/diagrams/\` | [ ] |
+| 5 | C4 Architecture Diagrams | \`.planr/diagrams/\` | [ ] |`;
 
 describe('getChecklistPath', () => {
   it('returns path ending in checklists/AGILE-DEVELOPMENT-GUIDE.md', () => {
     const config = createDefaultConfig('test');
     const p = getChecklistPath('/project', config);
-    expect(p).toBe('/project/docs/agile/checklists/AGILE-DEVELOPMENT-GUIDE.md');
+    expect(p).toBe('/project/.planr/checklists/AGILE-DEVELOPMENT-GUIDE.md');
   });
 });
 

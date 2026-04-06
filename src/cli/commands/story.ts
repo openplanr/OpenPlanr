@@ -21,6 +21,7 @@ import {
   readArtifactRaw,
   resolveArtifactFilename,
 } from '../../services/artifact-service.js';
+import { checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm, promptText } from '../../services/prompt-service.js';
 import { renderTemplate } from '../../services/template-service.js';
@@ -308,6 +309,7 @@ async function createStoriesWithAI(
       logger.dim(`  ${filePath}`);
     }
 
+    await checkItem(projectDir, config, 3);
     logger.dim('');
     logger.heading('Next steps:');
     logger.dim(
@@ -389,6 +391,7 @@ async function createStoryManually(
   await writeFile(gherkinPath, gherkinContent);
 
   await addChildReference(projectDir, config, 'feature', opts.feature, 'story', id, title);
+  await checkItem(projectDir, config, 3);
   logger.success(`Created user story ${id}: ${title}`);
   logger.dim(`  ${filePath}`);
   logger.dim(`  ${gherkinPath}`);

@@ -4,12 +4,12 @@ import { renderTemplate } from '../services/template-service.js';
 import { BaseGenerator } from './base-generator.js';
 
 const CURSOR_RULE_TEMPLATES = [
-  '2000-agile-checklist.mdc.hbs',
-  '2001-agile-create-epic.mdc.hbs',
-  '2002-agile-create-features.mdc.hbs',
-  '2003-agile-create-user-story.mdc.hbs',
-  '2100-create-task-list.mdc.hbs',
-  '2101-implement-task-list.mdc.hbs',
+  'agile-checklist.mdc.hbs',
+  'create-epic.mdc.hbs',
+  'create-features.mdc.hbs',
+  'create-user-story.mdc.hbs',
+  'create-task-list.mdc.hbs',
+  'implement-task-list.mdc.hbs',
 ];
 
 export class CursorGenerator extends BaseGenerator {

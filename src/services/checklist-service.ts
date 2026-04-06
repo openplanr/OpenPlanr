@@ -25,6 +25,7 @@ export async function createChecklist(
     'checklists/agile-checklist.md.hbs',
     {
       projectName: config.projectName,
+      agilePath: config.outputPaths.agile,
       date: new Date().toISOString().split('T')[0],
     },
     config.templateOverrides,
@@ -89,6 +90,26 @@ export function toggleChecklistItems(
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Mark a checklist item as done by its index number.
+ * No-op if the checklist doesn't exist or the item is already checked.
+ */
+export async function checkItem(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  itemIndex: number,
+): Promise<void> {
+  const content = await readChecklist(projectDir, config);
+  if (!content) return;
+
+  const items = parseChecklistItems(content);
+  const item = items.find((i) => i.index === itemIndex);
+  if (!item || item.done) return;
+
+  const updated = toggleChecklistItems(content, new Set([itemIndex]), items);
+  await writeFile(getChecklistPath(projectDir, config), updated);
 }
 
 /**

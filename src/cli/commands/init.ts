@@ -7,6 +7,7 @@
 
 import path from 'node:path';
 import type { Command } from 'commander';
+import { createGenerators } from '../../generators/generator-factory.js';
 import type { AIProviderName, CodingAgentName } from '../../models/types.js';
 import { createChecklist } from '../../services/checklist-service.js';
 import { createDefaultConfig, saveConfig } from '../../services/config-service.js';
@@ -33,10 +34,7 @@ export function registerInitCommand(program: Command) {
       const configPath = path.join(projectDir, CONFIG_FILENAME);
 
       if (await fileExists(configPath)) {
-        const overwrite = await promptConfirm(
-          `${CONFIG_FILENAME} already exists. Overwrite?`,
-          false,
-        );
+        const overwrite = await promptConfirm('Planr is already initialized. Overwrite?', false);
         if (!overwrite) {
           logger.info('Init cancelled.');
           return;
@@ -114,6 +112,25 @@ export function registerInitCommand(program: Command) {
         logger.success('Created estimation guide');
       }
 
+      // Generate AI agent rules
+      const generators = createGenerators(config, projectDir);
+      let ruleFiles = 0;
+      for (const generator of generators) {
+        const files = await generator.generate({
+          epics: [],
+          features: [],
+          stories: [],
+          tasks: [],
+        });
+        for (const file of files) {
+          const fullPath = path.join(projectDir, file.path);
+          await ensureDir(path.dirname(fullPath));
+          await writeFile(fullPath, file.content);
+          ruleFiles++;
+        }
+      }
+      logger.success(`Generated ${ruleFiles} AI agent rule file(s)`);
+
       // Summary
       logger.heading('Planr initialized!');
       logger.info(`Project: ${projectName}`);
@@ -128,7 +145,7 @@ export function registerInitCommand(program: Command) {
       logger.dim('Next steps:');
       logger.dim('  planr epic create        — Create your first epic');
       logger.dim('  planr quick "description" — Quick standalone task list (no agile ceremony)');
-      logger.dim('  planr rules generate     — Generate AI agent rules');
+      logger.dim('  planr rules generate     — Regenerate AI agent rules after changes');
       logger.dim('  planr config show        — View configuration');
     });
 }
