@@ -74,9 +74,15 @@ export function registerChecklistCommand(program: Command) {
 
       if (itemArgs.length > 0) {
         // Direct toggle: planr checklist toggle 1 3 5
-        toToggle = new Set(itemArgs.map(Number).filter((n) => !Number.isNaN(n)));
+        const validIndices = new Set(items.map((i) => i.index));
+        const parsed = itemArgs.map(Number).filter((n) => !Number.isNaN(n));
+        const invalid = parsed.filter((n) => !validIndices.has(n));
+        toToggle = new Set(parsed.filter((n) => validIndices.has(n)));
+        if (invalid.length > 0) {
+          logger.warn(`Ignored invalid item(s): ${invalid.join(', ')}`);
+        }
         if (toToggle.size === 0) {
-          logger.error('Invalid item numbers. Use: planr checklist toggle 1 3 5');
+          logger.error('No valid item numbers. Use: planr checklist toggle 1 3 5');
           return;
         }
       } else {

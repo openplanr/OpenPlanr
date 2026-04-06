@@ -124,6 +124,10 @@ export function registerInitCommand(program: Command) {
         });
         for (const file of files) {
           const fullPath = path.join(projectDir, file.path);
+          if (await fileExists(fullPath)) {
+            logger.dim(`  Skipped ${file.path} (already exists)`);
+            continue;
+          }
           await ensureDir(path.dirname(fullPath));
           await writeFile(fullPath, file.content);
           ruleFiles++;
