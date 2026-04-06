@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-04-06
+
+### Added
+
+- **`.planr/` directory** — all config and planning artifacts now live under `.planr/` instead of polluting the project root with `planr.config.json` and `docs/agile/`. IDE-required files (`CLAUDE.md`, `AGENTS.md`, `.cursor/rules/`) remain at their mandated locations
+- **Auto-generate AI agent rules on `planr init`** — creates `CLAUDE.md`, `AGENTS.md`, and `.cursor/rules/` immediately so users get working agent rules without a separate `planr rules generate` step
+- **`planr checklist toggle 1 3 5`** — direct argument support alongside interactive mode, with validation of item indices
+- **Auto-check checklist items** — `checkItem()` automatically marks checklist items as done when relevant commands complete (epic→1, feature→2, story→3, task→10)
+
+### Changed
+
+- **Config path** — `planr.config.json` → `.planr/config.json`
+- **Artifact root** — `docs/agile/` → `.planr/`
+- **Cursor rule templates** — renamed from numeric prefixes (`2000-agile-checklist.mdc`) to clean descriptive names (`agile-checklist.mdc`) to avoid colliding with user's existing rule files
+
+### Fixed
+
+- **Broken checklist paths** — `{{agilePath}}` template variable was missing from `createChecklist()` template data, producing broken file references
+- **Checklist toggle reporting** — direct-args mode now validates indices against actual checklist items and reports accurate update counts
+
+### Breaking Changes
+
+- Existing v1.0.x projects need to re-run `planr init`
+
 ## [1.0.0] - 2026-04-05
 
 ### Added
