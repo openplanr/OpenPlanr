@@ -28,6 +28,7 @@ import {
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { getNextId } from '../../services/id-service.js';
+import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
 import { ensureDir, writeFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
@@ -74,6 +75,8 @@ export function registerQuickCommand(program: Command) {
       } else if (!description && !opts.manual) {
         description = await promptText('What do you want to build?');
       }
+
+      requireInteractiveForManual(opts.manual);
 
       const useAI = !opts.manual && isAIConfigured(config);
 

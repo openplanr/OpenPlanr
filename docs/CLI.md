@@ -16,6 +16,28 @@ planr --version
 
 ---
 
+## Agent-Friendly / Non-Interactive Mode
+
+Planr auto-detects non-TTY environments (CI, coding agents) and skips interactive prompts by using sensible defaults. You can also opt in explicitly:
+
+```bash
+# Explicit flag
+planr epic create --title "My App" --yes
+planr plan --epic EPIC-001 -y
+
+# Auto-detected (no TTY)
+echo "" | planr epic create --title "My App"
+```
+
+**Behavior in non-interactive mode:**
+
+- Confirmations return their default value (usually `yes`)
+- Select menus pick the first/primary option (e.g., "Save" for epics)
+- `--manual` mode exits with an error (requires interactive input)
+- All skipped prompts are logged with `[auto]` prefix in dim output
+
+---
+
 ## Global Options
 
 These options apply to **all** commands:
@@ -25,6 +47,7 @@ These options apply to **all** commands:
 | `--project-dir <path>` | Set project root directory              | Current directory |
 | `--verbose`            | Enable verbose output                   | `false`           |
 | `--no-interactive`     | Skip interactive prompts (use defaults) | `false`           |
+| `-y, --yes`            | Auto-accept all prompts (alias for `--no-interactive`) | `false` |
 | `-V, --version`        | Print version                           | —                 |
 | `-h, --help`           | Show help                               | —                 |
 

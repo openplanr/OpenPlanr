@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { ConfigNotFoundError } from '../services/config-service.js';
+import { setNonInteractive } from '../services/interactive-state.js';
 import { display, logger, setVerbose } from '../utils/logger.js';
 import { registerBacklogCommand } from './commands/backlog.js';
 import { registerChecklistCommand } from './commands/checklist.js';
@@ -48,11 +49,15 @@ program
   .version(version)
   .option('--project-dir <path>', 'project root directory', process.cwd())
   .option('--verbose', 'verbose output', false)
-  .option('--no-interactive', 'skip interactive prompts');
+  .option('--no-interactive', 'skip interactive prompts')
+  .option('-y, --yes', 'auto-accept all prompts (alias for --no-interactive)');
 
 program.hook('preAction', () => {
   if (program.opts().verbose) {
     setVerbose(true);
+  }
+  if (!program.opts().interactive || program.opts().yes) {
+    setNonInteractive(true);
   }
 });
 

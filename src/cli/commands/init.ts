@@ -7,11 +7,12 @@
 
 import path from 'node:path';
 import type { Command } from 'commander';
+import { ENV_KEY_MAP, PROVIDER_LABELS } from '../../ai/types.js';
 import { createGenerators } from '../../generators/generator-factory.js';
 import type { AIProviderName, CodingAgentName } from '../../models/types.js';
 import { createChecklist } from '../../services/checklist-service.js';
 import { createDefaultConfig, saveConfig } from '../../services/config-service.js';
-import { saveCredential } from '../../services/credentials-service.js';
+import { resolveApiKeySource, saveCredential } from '../../services/credentials-service.js';
 import {
   promptConfirm,
   promptSecret,
@@ -45,46 +46,65 @@ export function registerInitCommand(program: Command) {
         opts.name || (await promptText('Project name:', path.basename(projectDir)));
 
       const config = createDefaultConfig(projectName);
+      let apiKeyConfigured = false;
 
       // --- AI Provider Setup ---
       if (opts.ai !== false) {
         const enableAI = await promptConfirm('Enable AI-powered planning?', true);
 
         if (enableAI) {
-          const provider = await promptSelect<AIProviderName>('AI provider:', [
-            { name: 'Anthropic (Claude)', value: 'anthropic' },
-            { name: 'OpenAI (GPT-4o)', value: 'openai' },
-            { name: 'Ollama (Local — free, no API key)', value: 'ollama' },
-          ]);
+          const provider = await promptSelect<AIProviderName>(
+            'AI provider:',
+            [
+              { name: 'Anthropic (Claude)', value: 'anthropic' },
+              { name: 'OpenAI (GPT-4o)', value: 'openai' },
+              { name: 'Ollama (Local — free, no API key)', value: 'ollama' },
+            ],
+            'anthropic',
+          );
 
           config.ai = { provider };
 
           // Collect API key for cloud providers
-          if (provider === 'anthropic' || provider === 'openai') {
-            const keyHint = provider === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
-            const apiKey = await promptSecret(
-              `API key (or press Enter to set ${keyHint} env var later):`,
-            );
-            if (apiKey.trim()) {
-              const storage = await saveCredential(provider, apiKey.trim());
-              const where =
-                storage === 'keychain'
-                  ? 'OS keychain'
-                  : 'encrypted file (~/.planr/credentials.enc)';
-              logger.success(`API key saved to ${where}`);
+          const envVar = ENV_KEY_MAP[provider];
+          if (envVar) {
+            const existing = await resolveApiKeySource(provider);
+            if (existing) {
+              // Key already available (env var, keychain, or encrypted file)
+              apiKeyConfigured = true;
+              const sourceLabel =
+                existing.source === 'env'
+                  ? `${envVar} environment variable`
+                  : existing.source === 'keychain'
+                    ? 'OS keychain'
+                    : 'encrypted file';
+              logger.success(`API key found in ${sourceLabel}`);
             } else {
-              logger.dim(
-                `  No key provided. Set ${keyHint} env var or run \`planr config set-key ${provider}\`.`,
+              const apiKey = await promptSecret(
+                `API key (or press Enter to set ${envVar} env var later):`,
               );
+              if (apiKey.trim()) {
+                const storage = await saveCredential(provider, apiKey.trim());
+                const where =
+                  storage === 'keychain'
+                    ? 'OS keychain'
+                    : 'encrypted file (~/.planr/credentials.enc)';
+                logger.success(`API key saved to ${where}`);
+                apiKeyConfigured = true;
+              }
             }
           }
 
           // Coding agent preference
-          const agent = await promptSelect<CodingAgentName>('Default coding agent:', [
-            { name: 'Claude Code CLI', value: 'claude' },
-            { name: 'Cursor', value: 'cursor' },
-            { name: 'Codex', value: 'codex' },
-          ]);
+          const agent = await promptSelect<CodingAgentName>(
+            'Default coding agent:',
+            [
+              { name: 'Claude Code CLI', value: 'claude' },
+              { name: 'Cursor', value: 'cursor' },
+              { name: 'Codex', value: 'codex' },
+            ],
+            'claude',
+          );
           config.defaultAgent = agent;
         }
       }
@@ -137,12 +157,25 @@ export function registerInitCommand(program: Command) {
       logger.info(`Artifacts: ${config.outputPaths.agile}/`);
 
       if (config.ai) {
-        logger.info(`AI: ${config.ai.provider} (every command is AI-powered)`);
+        const label = PROVIDER_LABELS[config.ai.provider] ?? config.ai.provider;
+        logger.info(`AI: ${label} (every command is AI-powered)`);
         logger.info(`Agent: ${config.defaultAgent || 'claude'}`);
+      }
+
+      // Warn if AI is enabled but no key was provided
+      if (config.ai && ENV_KEY_MAP[config.ai.provider] && !apiKeyConfigured) {
+        logger.dim('');
+        logger.warn('No API key configured. Before planning, run:');
+        logger.dim('');
+        logger.dim(`    planr config set-key ${config.ai.provider}`);
+        logger.dim('');
       }
 
       logger.dim('');
       logger.dim('Next steps:');
+      if (config.ai && ENV_KEY_MAP[config.ai.provider] && !apiKeyConfigured) {
+        logger.dim('  planr config set-key     — Configure your AI provider key');
+      }
       logger.dim('  planr epic create        — Create your first epic');
       logger.dim('  planr quick "description" — Quick standalone task list (no agile ceremony)');
       logger.dim('  planr rules generate     — Regenerate AI agent rules after changes');

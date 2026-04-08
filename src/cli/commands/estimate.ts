@@ -211,11 +211,15 @@ async function estimateSingle(
 
   // Interactive action prompt (skip in non-interactive / epic rollup mode)
   if (!opts.save && !opts.silent) {
-    const action = await promptSelect<string>('Action:', [
-      { name: 'Save estimate to artifact', value: 'save' },
-      { name: 'Re-estimate', value: 'retry' },
-      { name: 'Discard', value: 'discard' },
-    ]);
+    const action = await promptSelect<string>(
+      'Action:',
+      [
+        { name: 'Save estimate to artifact', value: 'save' },
+        { name: 'Re-estimate', value: 'retry' },
+        { name: 'Discard', value: 'discard' },
+      ],
+      'save',
+    );
 
     if (action === 'retry') {
       return estimateSingle(projectDir, config, artifactId, opts);
@@ -322,10 +326,14 @@ async function estimateEpicRollup(
 
   // Interactive save prompt if not already saving
   if (!opts.save && results.length > 0) {
-    const action = await promptSelect<string>('Action:', [
-      { name: 'Save all estimates to artifacts', value: 'save' },
-      { name: 'Discard all', value: 'discard' },
-    ]);
+    const action = await promptSelect<string>(
+      'Action:',
+      [
+        { name: 'Save all estimates to artifacts', value: 'save' },
+        { name: 'Discard all', value: 'discard' },
+      ],
+      'save',
+    );
 
     if (action === 'save') {
       for (const { id, estimate } of results) {

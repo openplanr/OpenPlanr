@@ -8,7 +8,11 @@ import type { Command } from 'commander';
 import { ENV_KEY_MAP } from '../../ai/types.js';
 import type { AIProviderName, CodingAgentName } from '../../models/types.js';
 import { loadConfig, saveConfig } from '../../services/config-service.js';
-import { resolveApiKeySource, saveCredential } from '../../services/credentials-service.js';
+import {
+  clearCredential,
+  resolveApiKeySource,
+  saveCredential,
+} from '../../services/credentials-service.js';
 import { promptSecret, promptSelect } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
 
@@ -66,11 +70,15 @@ export function registerConfigCommand(program: Command) {
 
       const selected =
         (provider as AIProviderName) ||
-        (await promptSelect<AIProviderName>('AI provider:', [
-          { name: 'Anthropic (Claude)', value: 'anthropic' },
-          { name: 'OpenAI (GPT-4o)', value: 'openai' },
-          { name: 'Ollama (Local)', value: 'ollama' },
-        ]));
+        (await promptSelect<AIProviderName>(
+          'AI provider:',
+          [
+            { name: 'Anthropic (Claude)', value: 'anthropic' },
+            { name: 'OpenAI (GPT-4o)', value: 'openai' },
+            { name: 'Ollama (Local)', value: 'ollama' },
+          ],
+          'anthropic',
+        ));
 
       cfg.ai = { ...cfg.ai, provider: selected };
       await saveConfig(projectDir, cfg);
@@ -84,10 +92,14 @@ export function registerConfigCommand(program: Command) {
     .action(async (provider?: string) => {
       const selected =
         provider ||
-        (await promptSelect('Provider:', [
-          { name: 'Anthropic', value: 'anthropic' },
-          { name: 'OpenAI', value: 'openai' },
-        ]));
+        (await promptSelect(
+          'Provider:',
+          [
+            { name: 'Anthropic', value: 'anthropic' },
+            { name: 'OpenAI', value: 'openai' },
+          ],
+          'anthropic',
+        ));
 
       const key = await promptSecret(`API key for ${selected}:`);
       if (!key.trim()) {
@@ -99,6 +111,46 @@ export function registerConfigCommand(program: Command) {
       const where =
         storage === 'keychain' ? 'OS keychain' : 'encrypted file (~/.planr/credentials.enc)';
       logger.success(`API key for ${selected} saved to ${where}`);
+    });
+
+  config
+    .command('remove-key')
+    .description('Remove a stored API key')
+    .argument('[provider]', 'anthropic or openai')
+    .action(async (provider?: string) => {
+      const validProviders = ['anthropic', 'openai'];
+      const selected =
+        provider ||
+        (await promptSelect(
+          'Provider:',
+          [
+            { name: 'Anthropic', value: 'anthropic' },
+            { name: 'OpenAI', value: 'openai' },
+          ],
+          'anthropic',
+        ));
+
+      if (!validProviders.includes(selected)) {
+        logger.error(`Unknown provider "${selected}". Supported: ${validProviders.join(', ')}.`);
+        return;
+      }
+
+      const existing = await resolveApiKeySource(selected);
+      if (!existing) {
+        logger.info(`No stored API key found for ${selected}.`);
+        return;
+      }
+
+      if (existing.source === 'env') {
+        const envVar = ENV_KEY_MAP[selected];
+        logger.warn(
+          `API key for ${selected} is set via ${envVar} environment variable — unset it in your shell.`,
+        );
+        return;
+      }
+
+      await clearCredential(selected);
+      logger.success(`API key for ${selected} removed.`);
     });
 
   config
@@ -129,11 +181,15 @@ export function registerConfigCommand(program: Command) {
 
       const selected =
         (agent as CodingAgentName) ||
-        (await promptSelect<CodingAgentName>('Default coding agent:', [
-          { name: 'Claude Code CLI', value: 'claude' },
-          { name: 'Cursor', value: 'cursor' },
-          { name: 'Codex', value: 'codex' },
-        ]));
+        (await promptSelect<CodingAgentName>(
+          'Default coding agent:',
+          [
+            { name: 'Claude Code CLI', value: 'claude' },
+            { name: 'Cursor', value: 'cursor' },
+            { name: 'Codex', value: 'codex' },
+          ],
+          'claude',
+        ));
 
       cfg.defaultAgent = selected;
       await saveConfig(projectDir, cfg);

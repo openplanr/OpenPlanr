@@ -44,13 +44,13 @@ describe('createAIProvider', () => {
     expect(provider.name).toBe('anthropic');
   });
 
-  it('throws auth error for anthropic without API key', async () => {
+  it('throws missing_key error for anthropic without API key', async () => {
     try {
       await createAIProvider({ provider: 'anthropic' });
       expect.unreachable('Should have thrown');
     } catch (err) {
       expect(err).toBeInstanceOf(AIError);
-      expect((err as AIError).code).toBe('auth');
+      expect((err as AIError).code).toBe('missing_key');
       expect((err as AIError).message).toContain('Anthropic');
     }
   });
@@ -63,13 +63,13 @@ describe('createAIProvider', () => {
     expect(provider.name).toBe('openai');
   });
 
-  it('throws auth error for openai without API key', async () => {
+  it('throws missing_key error for openai without API key', async () => {
     try {
       await createAIProvider({ provider: 'openai' });
       expect.unreachable('Should have thrown');
     } catch (err) {
       expect(err).toBeInstanceOf(AIError);
-      expect((err as AIError).code).toBe('auth');
+      expect((err as AIError).code).toBe('missing_key');
       expect((err as AIError).message).toContain('OpenAI');
     }
   });

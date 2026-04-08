@@ -137,11 +137,15 @@ async function refineOne(
   }
   display.separator(50);
 
-  const action = await promptSelect('Action:', [
-    { name: 'Apply improved version', value: 'apply' },
-    { name: 'View improved version', value: 'view' },
-    { name: 'Skip (keep original)', value: 'skip' },
-  ]);
+  const action = await promptSelect(
+    'Action:',
+    [
+      { name: 'Apply improved version', value: 'apply' },
+      { name: 'View improved version', value: 'view' },
+      { name: 'Skip (keep original)', value: 'skip' },
+    ],
+    'apply',
+  );
 
   if (action === 'skip') {
     logger.info('Artifact unchanged.');
@@ -153,10 +157,14 @@ async function refineOne(
     display.line(chalk.green(markdown));
     display.separator(50);
 
-    const applyAfterView = await promptSelect('Apply this version?', [
-      { name: 'Yes, apply', value: 'apply' },
-      { name: 'No, keep original', value: 'skip' },
-    ]);
+    const applyAfterView = await promptSelect(
+      'Apply this version?',
+      [
+        { name: 'Yes, apply', value: 'apply' },
+        { name: 'No, keep original', value: 'skip' },
+      ],
+      'apply',
+    );
 
     if (applyAfterView === 'skip') {
       logger.info('Artifact unchanged.');

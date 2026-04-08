@@ -1,9 +1,17 @@
 import path from 'node:path';
 import type { OpenPlanrConfig } from '../models/types.js';
-import { fileExists, readFile, writeFile } from '../utils/fs.js';
+import { readFile, writeFile } from '../utils/fs.js';
 import { renderTemplate } from './template-service.js';
 
 const CHECKLIST_FILENAME = 'AGILE-DEVELOPMENT-GUIDE.md';
+
+/** Checklist item indices matching the agile-checklist template. */
+export const CHECKLIST = {
+  CREATE_EPIC: 1,
+  CREATE_FEATURES: 2,
+  CREATE_STORIES: 3,
+  CREATE_TASKS: 10,
+} as const;
 
 export interface ChecklistItem {
   index: number;
@@ -38,9 +46,14 @@ export async function readChecklist(
   projectDir: string,
   config: OpenPlanrConfig,
 ): Promise<string | null> {
-  const filePath = getChecklistPath(projectDir, config);
-  if (!(await fileExists(filePath))) return null;
-  return readFile(filePath);
+  try {
+    return await readFile(getChecklistPath(projectDir, config));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function resetChecklist(projectDir: string, config: OpenPlanrConfig): Promise<string> {

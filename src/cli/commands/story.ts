@@ -21,8 +21,9 @@ import {
   readArtifactRaw,
   resolveArtifactFilename,
 } from '../../services/artifact-service.js';
-import { checkItem } from '../../services/checklist-service.js';
+import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptText } from '../../services/prompt-service.js';
 import { renderTemplate } from '../../services/template-service.js';
 import { writeFile } from '../../utils/fs.js';
@@ -130,6 +131,8 @@ export function registerStoryCommand(program: Command) {
         logger.error(`Feature ${opts.feature} not found.`);
         process.exit(1);
       }
+
+      requireInteractiveForManual(opts.manual);
 
       const useAI = !opts.manual && isAIConfigured(config);
 
@@ -309,7 +312,7 @@ async function createStoriesWithAI(
       logger.dim(`  ${filePath}`);
     }
 
-    await checkItem(projectDir, config, 3);
+    await checkItem(projectDir, config, CHECKLIST.CREATE_STORIES);
     logger.dim('');
     logger.heading('Next steps:');
     logger.dim(
@@ -391,7 +394,7 @@ async function createStoryManually(
   await writeFile(gherkinPath, gherkinContent);
 
   await addChildReference(projectDir, config, 'feature', opts.feature, 'story', id, title);
-  await checkItem(projectDir, config, 3);
+  await checkItem(projectDir, config, CHECKLIST.CREATE_STORIES);
   logger.success(`Created user story ${id}: ${title}`);
   logger.dim(`  ${filePath}`);
   logger.dim(`  ${gherkinPath}`);

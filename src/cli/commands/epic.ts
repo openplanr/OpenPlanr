@@ -12,8 +12,9 @@ import { aiEpicResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
 import { TOKEN_BUDGETS } from '../../ai/types.js';
 import { generateStreamingJSON, getAIProvider, isAIConfigured } from '../../services/ai-service.js';
 import { createArtifact, listArtifacts } from '../../services/artifact-service.js';
-import { checkItem } from '../../services/checklist-service.js';
+import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import {
   promptEditor,
   promptMultiText,
@@ -36,6 +37,8 @@ export function registerEpicCommand(program: Command) {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
       const useAI = !opts.manual && isAIConfigured(config);
+
+      requireInteractiveForManual(opts.manual);
 
       if (useAI) {
         await createEpicWithAI(projectDir, config, opts);
@@ -152,12 +155,16 @@ async function createEpicWithAI(
     // Action loop: save, edit, regenerate, cancel
     let saved = false;
     while (!saved) {
-      const action = await promptSelect('Action:', [
-        { name: 'Save this epic', value: 'save' },
-        { name: 'Edit before saving', value: 'edit' },
-        { name: 'Regenerate', value: 'regenerate' },
-        { name: 'Cancel', value: 'cancel' },
-      ]);
+      const action = await promptSelect(
+        'Action:',
+        [
+          { name: 'Save this epic', value: 'save' },
+          { name: 'Edit before saving', value: 'edit' },
+          { name: 'Regenerate', value: 'regenerate' },
+          { name: 'Cancel', value: 'cancel' },
+        ],
+        'save',
+      );
 
       if (action === 'cancel') {
         logger.info('Epic creation cancelled.');
@@ -217,7 +224,7 @@ async function createEpicWithAI(
 
     logger.success(`Created epic ${id}: ${epicData.title}`);
     logger.dim(`  ${filePath}`);
-    await checkItem(projectDir, config, 1);
+    await checkItem(projectDir, config, CHECKLIST.CREATE_EPIC);
     logger.dim('');
     logger.heading('Next steps:');
     logger.dim(`  1. planr feature create --epic ${id}    — Break epic into features`);
@@ -273,7 +280,7 @@ async function createEpicManually(
 
   logger.success(`Created epic ${id}: ${title}`);
   logger.dim(`  ${filePath}`);
-  await checkItem(projectDir, config, 1);
+  await checkItem(projectDir, config, CHECKLIST.CREATE_EPIC);
   logger.dim('');
   logger.heading('Next steps:');
   logger.dim(`  1. planr feature create --epic ${id}    — Break epic into features`);

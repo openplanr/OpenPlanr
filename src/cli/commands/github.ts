@@ -396,17 +396,21 @@ export function registerGitHubCommand(program: Command) {
             `  ${chalk.red('!')} ${conflict.id} — local: ${chalk.yellow(conflict.localStatus)}, GitHub #${conflict.issueNumber}: ${chalk.cyan(conflict.remoteState)} (${remoteStatus})`,
           );
 
-          const action = await promptSelect<string>(`  Resolve ${conflict.id}:`, [
-            {
-              name: `Use GitHub status (${remoteStatus})`,
-              value: 'pull',
-            },
-            {
-              name: `Use local status (${conflict.localStatus})`,
-              value: 'push',
-            },
-            { name: 'Skip', value: 'skip' },
-          ]);
+          const action = await promptSelect<string>(
+            `  Resolve ${conflict.id}:`,
+            [
+              {
+                name: `Use GitHub status (${remoteStatus})`,
+                value: 'pull',
+              },
+              {
+                name: `Use local status (${conflict.localStatus})`,
+                value: 'push',
+              },
+              { name: 'Skip', value: 'skip' },
+            ],
+            'skip',
+          );
 
           if (action === 'pull') {
             await updateLocalStatus(

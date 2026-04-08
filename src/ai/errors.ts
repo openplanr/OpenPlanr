@@ -7,6 +7,7 @@
 
 export type AIErrorCode =
   | 'auth'
+  | 'missing_key'
   | 'rate_limit'
   | 'overloaded'
   | 'connection'
@@ -28,6 +29,8 @@ export class AIError extends Error {
   /** User-friendly description with actionable guidance. */
   get userMessage(): string {
     switch (this.code) {
+      case 'missing_key':
+        return this.message; // Pre-formatted multi-line guidance from provider-factory
       case 'auth':
         return 'Invalid API key. Run `planr config set-key <provider>` to update.';
       case 'rate_limit':

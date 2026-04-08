@@ -21,8 +21,9 @@ import {
   readArtifact,
   resolveArtifactFilename,
 } from '../../services/artifact-service.js';
-import { checkItem } from '../../services/checklist-service.js';
+import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
 import {
@@ -79,6 +80,8 @@ export function registerTaskCommand(program: Command) {
         logger.error(`User story ${opts.story} not found.`);
         process.exit(1);
       }
+
+      requireInteractiveForManual(opts.manual);
 
       const useAI = !opts.manual && isAIConfigured(config);
 
@@ -229,7 +232,7 @@ async function createTasksWithAI(projectDir: string, config: OpenPlanrConfig, st
     );
 
     await addChildReference(projectDir, config, 'story', storyId, 'task', id, result.title);
-    await checkItem(projectDir, config, 10);
+    await checkItem(projectDir, config, CHECKLIST.CREATE_TASKS);
     logger.success(`Created task list ${id}: ${result.title}`);
     logger.dim(`  ${filePath}`);
     logger.dim(`  ${total} tasks created`);
@@ -334,7 +337,7 @@ async function createTasksFromFeature(
       await addChildReference(projectDir, config, 'story', story.id, 'task', id, result.title);
     }
 
-    await checkItem(projectDir, config, 10);
+    await checkItem(projectDir, config, CHECKLIST.CREATE_TASKS);
     logger.success(`Created task list ${id}: ${result.title}`);
     logger.dim(`  ${filePath}`);
     logger.dim(`  ${total} tasks from ${ctx.stories.length} stories`);
@@ -384,7 +387,7 @@ async function createTasksManually(
   );
 
   await addChildReference(projectDir, config, 'story', opts.story, 'task', id, title);
-  await checkItem(projectDir, config, 10);
+  await checkItem(projectDir, config, CHECKLIST.CREATE_TASKS);
   logger.success(`Created task list ${id}: ${title}`);
   logger.dim(`  ${filePath}`);
   logger.dim(`  ${tasks.length} tasks created`);
