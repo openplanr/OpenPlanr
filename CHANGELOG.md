@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.2.0
+
+### Minor Changes
+
+- [`3f47e3c`](https://github.com/openplanr/OpenPlanr/commit/3f47e3c7524cd54827cc4e63830de4bacb9f2df6) Thanks [@AsemDevs](https://github.com/AsemDevs)! - Add agent-friendly non-interactive mode and API key UX improvements
+
+  - Add `--yes`/`-y` flag for fully unattended planning workflows (Claude Code, Cursor, Codex)
+  - Auto-detect non-interactive terminals via TTY detection
+  - All prompts return sensible defaults when non-interactive
+  - Add `planr config remove-key` command to delete stored API keys
+  - Show clear multi-line guidance when API key is not configured
+  - Detect existing API keys (env var, OS keychain, encrypted file) during init
+  - Replace magic numbers with named CHECKLIST constants
+  - Fix TOCTOU race condition in checklist reads
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
