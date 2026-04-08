@@ -1,6 +1,6 @@
 {
   "name": "openplanr",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "AI-powered planning CLI — backlog, sprints, task templates, estimation, GitHub sync, and AI agent rules for Cursor, Claude Code, and Codex",
   "type": "module",
   "main": "./dist/cli/index.js",
