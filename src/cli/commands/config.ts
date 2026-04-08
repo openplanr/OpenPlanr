@@ -118,6 +118,7 @@ export function registerConfigCommand(program: Command) {
     .description('Remove a stored API key')
     .argument('[provider]', 'anthropic or openai')
     .action(async (provider?: string) => {
+      const validProviders = ['anthropic', 'openai'];
       const selected =
         provider ||
         (await promptSelect(
@@ -128,6 +129,11 @@ export function registerConfigCommand(program: Command) {
           ],
           'anthropic',
         ));
+
+      if (!validProviders.includes(selected)) {
+        logger.error(`Unknown provider "${selected}". Supported: ${validProviders.join(', ')}.`);
+        return;
+      }
 
       const existing = await resolveApiKeySource(selected);
       if (!existing) {

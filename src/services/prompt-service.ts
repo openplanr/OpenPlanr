@@ -23,7 +23,7 @@ export async function promptSelect<T extends string>(
     logger.dim(`  [auto] ${message} → "${value}"`);
     return value;
   }
-  return select({ message, choices });
+  return select({ message, choices, default: defaultValue });
 }
 
 export async function promptConfirm(message: string, defaultValue = true): Promise<boolean> {

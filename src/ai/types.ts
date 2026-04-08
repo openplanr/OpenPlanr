@@ -88,6 +88,7 @@ export const DEFAULT_MODELS: Record<AIProviderName, string> = {
   ollama: 'llama3.1',
 } as const;
 
+/** Environment variable names for API keys. Only cloud providers have entries; Ollama needs no key. */
 export const ENV_KEY_MAP: Record<string, string> = {
   anthropic: 'ANTHROPIC_API_KEY',
   openai: 'OPENAI_API_KEY',

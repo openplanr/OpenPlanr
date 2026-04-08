@@ -23,7 +23,7 @@ function throwMissingKeyError(provider: string): never {
     `    planr config set-key ${provider}`,
     ...(envVar ? [`    export ${envVar}=<your-key>`] : []),
     '',
-    '  Your key is stored securely in the OS keychain.',
+    '  Your key is stored securely in the OS keychain or encrypted file.',
     '',
   ];
 

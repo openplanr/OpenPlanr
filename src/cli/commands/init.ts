@@ -12,7 +12,7 @@ import { createGenerators } from '../../generators/generator-factory.js';
 import type { AIProviderName, CodingAgentName } from '../../models/types.js';
 import { createChecklist } from '../../services/checklist-service.js';
 import { createDefaultConfig, saveConfig } from '../../services/config-service.js';
-import { resolveApiKey, saveCredential } from '../../services/credentials-service.js';
+import { resolveApiKeySource, saveCredential } from '../../services/credentials-service.js';
 import {
   promptConfirm,
   promptSecret,
@@ -68,12 +68,17 @@ export function registerInitCommand(program: Command) {
           // Collect API key for cloud providers
           const envVar = ENV_KEY_MAP[provider];
           if (envVar) {
-            const existingKey = await resolveApiKey(provider);
-            if (existingKey) {
+            const existing = await resolveApiKeySource(provider);
+            if (existing) {
               // Key already available (env var, keychain, or encrypted file)
               apiKeyConfigured = true;
-              const source = process.env[envVar] ? `${envVar} environment variable` : 'OS keychain';
-              logger.success(`API key found in ${source}`);
+              const sourceLabel =
+                existing.source === 'env'
+                  ? `${envVar} environment variable`
+                  : existing.source === 'keychain'
+                    ? 'OS keychain'
+                    : 'encrypted file';
+              logger.success(`API key found in ${sourceLabel}`);
             } else {
               const apiKey = await promptSecret(
                 `API key (or press Enter to set ${envVar} env var later):`,

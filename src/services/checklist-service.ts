@@ -48,8 +48,11 @@ export async function readChecklist(
 ): Promise<string | null> {
   try {
     return await readFile(getChecklistPath(projectDir, config));
-  } catch {
-    return null;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null;
+    }
+    throw error;
   }
 }
 
