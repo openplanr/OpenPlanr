@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+### Patch Changes
+
+- [#55](https://github.com/openplanr/OpenPlanr/pull/55) [`696da73`](https://github.com/openplanr/OpenPlanr/commit/696da735d7cdb88c3d11022233d2b17bb274ca02) Thanks [@AsemDevs](https://github.com/AsemDevs)! - Fix project root resolution for monorepos — planr now walks up the directory tree to find `.planr/config.json`, so commands work from any subdirectory
+
 ## 1.2.0
 
 ### Minor Changes
