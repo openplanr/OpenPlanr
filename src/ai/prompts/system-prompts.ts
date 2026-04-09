@@ -20,7 +20,8 @@ const SCOPE_DISCIPLINE = `
 - Prefer modifying existing files over creating new ones. Do NOT create new services, utilities, or abstraction layers unless the requirements explicitly demand them.
 - Fewer well-scoped items are ALWAYS better than many vague ones. If you can cover the requirements in 3 tasks, do not generate 10.
 - Do NOT pad output with boilerplate like "create documentation", "add logging", "set up monitoring", or "establish coding standards" unless the user specifically requested those things.
-- Do NOT treat every concern as needing its own service/module. A helper function in an existing file is usually the right answer.`;
+- Do NOT treat every concern as needing its own service/module. A helper function in an existing file is usually the right answer.
+- Do NOT enumerate every file as a separate subtask. Batch similar work into one subtask (e.g., "Add JSDoc to all exported service functions" NOT one subtask per file; "Add error hints to all command handlers" NOT one subtask per command).`;
 
 export const EPIC_SYSTEM_PROMPT = `${BASE_PERSONA}
 
