@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -35,21 +34,4 @@ export const ID_PREFIXES = {
 
 export function getTemplatesDir(): string {
   return path.resolve(__dirname, '..', 'templates');
-}
-
-/**
- * Walk up from `startDir` looking for a directory containing `.planr/config.json`.
- * Returns the first match, or `startDir` if none found (so `planr init` still works).
- */
-export function findProjectRoot(startDir: string = process.cwd()): string {
-  let dir = path.resolve(startDir);
-  const { root } = path.parse(dir);
-  while (true) {
-    if (existsSync(path.join(dir, CONFIG_FILENAME))) {
-      return dir;
-    }
-    if (dir === root) break;
-    dir = path.dirname(dir);
-  }
-  return startDir;
 }

@@ -1,8 +1,10 @@
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { configSchema } from '../models/schema.js';
 import type { OpenPlanrConfig } from '../models/types.js';
 import { CONFIG_FILENAME } from '../utils/constants.js';
 import { fileExists, readFile, writeFile } from '../utils/fs.js';
+import { logger } from '../utils/logger.js';
 
 export class ConfigNotFoundError extends Error {
   constructor(projectDir: string) {
@@ -25,6 +27,26 @@ export async function loadConfig(projectDir: string): Promise<OpenPlanrConfig> {
 export async function saveConfig(projectDir: string, config: OpenPlanrConfig): Promise<void> {
   const configPath = path.join(projectDir, CONFIG_FILENAME);
   await writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`);
+}
+
+/**
+ * Walk up from `startDir` looking for a directory containing `.planr/config.json`.
+ * Returns the first match, or `startDir` if none found (so `planr init` still works).
+ */
+export function findProjectRoot(startDir: string = process.cwd()): string {
+  let dir = path.resolve(startDir);
+  const { root } = path.parse(dir);
+  while (true) {
+    if (existsSync(path.join(dir, CONFIG_FILENAME))) {
+      if (dir !== startDir) {
+        logger.debug(`Resolved project root: ${dir}`);
+      }
+      return dir;
+    }
+    if (dir === root) break;
+    dir = path.dirname(dir);
+  }
+  return startDir;
 }
 
 export function createDefaultConfig(projectName: string): OpenPlanrConfig {
