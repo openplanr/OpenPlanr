@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.3
+
+### Patch Changes
+
+- [`5551aea`](https://github.com/openplanr/OpenPlanr/commit/5551aea8113ae17af67306219c9eb22bd5405667) Add prompt injection protection with input boundary delimiters and file size validation for --file arguments
+
 ## 1.2.2
 
 - [`45836f9`](https://github.com/openplanr/OpenPlanr/commit/45836f99ad88605ba4aac5fab4f318b20badf5b0) Reduce AI over-engineering in plan generation with scope discipline rules, count guidance per artifact level, and anti-enumeration batching ([#62](https://github.com/openplanr/OpenPlanr/pull/62))
