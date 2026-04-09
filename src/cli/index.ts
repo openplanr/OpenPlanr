@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { ConfigNotFoundError } from '../services/config-service.js';
 import { setNonInteractive } from '../services/interactive-state.js';
+import { findProjectRoot } from '../utils/constants.js';
 import { display, logger, setVerbose } from '../utils/logger.js';
 import { registerBacklogCommand } from './commands/backlog.js';
 import { registerChecklistCommand } from './commands/checklist.js';
@@ -47,7 +48,7 @@ program
   .name('planr')
   .description('AI-powered planning CLI — backlog, sprints, tasks, estimation, and AI agent rules')
   .version(version)
-  .option('--project-dir <path>', 'project root directory', process.cwd())
+  .option('--project-dir <path>', 'project root directory', findProjectRoot())
   .option('--verbose', 'verbose output', false)
   .option('--no-interactive', 'skip interactive prompts')
   .option('-y, --yes', 'auto-accept all prompts (alias for --no-interactive)');
