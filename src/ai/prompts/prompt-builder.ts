@@ -155,7 +155,18 @@ export function buildQuickTasksPrompt(description: string, codebaseContext?: str
   let userContent: string;
 
   if (isDetailed) {
-    userContent = `Generate an implementation task list from this detailed requirements document. Extract ALL commands, data models, constraints, and features into concrete implementation tasks:\n\n${description}`;
+    userContent = `Generate a comprehensive implementation task list from this requirements document.
+
+CRITICAL — Completeness rules:
+1. Walk through EVERY numbered section of the document. Do NOT skip or summarize sections.
+2. For each API endpoint, data model, integration point, and workflow described, there MUST be a corresponding task or subtask.
+3. Open questions and undecided items in the document should become investigation/spike subtasks.
+4. If the document describes retry logic, error handling, auth flows, webhooks, or queue mechanisms — each needs its own subtask, not a bullet inside another task.
+5. After generating tasks, mentally re-read the document and verify no section was left uncovered.
+
+Requirements document:
+
+${description}`;
   } else {
     userContent = `Generate an implementation task list for the following:\n\n"${description}"`;
   }
