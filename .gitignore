@@ -32,8 +32,12 @@ Thumbs.db
 *.swo
 *~
 
-# Optional: local tool settings (machine-specific)
-.claude/settings.local.json
+# Planning artifacts (this repo is the tool, not the user project)
+.planr/
+
+# Machine-specific AI agent settings
+.claude/
+.cursor/
 
 # Debug / misc
 .cache/
