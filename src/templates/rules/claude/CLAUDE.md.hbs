@@ -57,7 +57,11 @@ Before writing code, understand what exists:
 2. **Wait for user approval** before moving to the next subtask
 3. **Follow existing patterns** — match the code style, naming conventions, and architecture from Step 4
 4. **Map to acceptance criteria** — every implementation must satisfy the Gherkin scenarios from Step 2
-5. **Update the task file** — check the box `- [x]` for completed subtasks
+5. **Mark completed work** — after implementing a subtask, update the task file:
+   - Change `- [ ]` to `- [x]` for the completed subtask
+   - When ALL subtasks in a task group are done, also mark the parent group `- [x]`
+   - When ALL groups in the file are done, update frontmatter `status: "done"`
+   - This applies to both `{{agilePath}}/tasks/` and `{{agilePath}}/quick/` files
 6. **Don't modify unrelated code** — stay focused on the target subtask
 
 ## Agile Workflow Phases
