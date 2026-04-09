@@ -64,9 +64,10 @@ export function registerQuickCommand(program: Command) {
 
       if (opts.file) {
         try {
-          const { readFile } = await import('../../utils/fs.js');
-          description = await readFile(path.resolve(opts.file));
-          logger.dim(`Read ${description.split('\n').length} lines from ${opts.file}`);
+          const { readInputFile } = await import('../../utils/fs.js');
+          const content = await readInputFile(path.resolve(opts.file), logger);
+          if (!content) return;
+          description = content;
         } catch (err) {
           logger.debug('Failed to read quick task input file', err);
           logger.error(`Failed to read file: ${opts.file}`);

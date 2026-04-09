@@ -119,10 +119,11 @@ async function createEpicWithAI(
   let brief: string;
   if (opts.file) {
     try {
-      const { readFile } = await import('../../utils/fs.js');
+      const { readInputFile } = await import('../../utils/fs.js');
       const path = await import('node:path');
-      brief = await readFile(path.resolve(opts.file));
-      logger.dim(`Read ${brief.split('\n').length} lines from ${opts.file}`);
+      const content = await readInputFile(path.resolve(opts.file), logger);
+      if (!content) return;
+      brief = content;
     } catch (err) {
       logger.debug('Failed to read epic input file', err);
       logger.error(`Failed to read file: ${opts.file}`);
