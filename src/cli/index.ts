@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
-import { ConfigNotFoundError } from '../services/config-service.js';
+import { ConfigNotFoundError, findProjectRoot } from '../services/config-service.js';
 import { setNonInteractive } from '../services/interactive-state.js';
 import { display, logger, setVerbose } from '../utils/logger.js';
 import { registerBacklogCommand } from './commands/backlog.js';
@@ -47,7 +47,7 @@ program
   .name('planr')
   .description('AI-powered planning CLI — backlog, sprints, tasks, estimation, and AI agent rules')
   .version(version)
-  .option('--project-dir <path>', 'project root directory', process.cwd())
+  .option('--project-dir <path>', 'project root directory', findProjectRoot())
   .option('--verbose', 'verbose output', false)
   .option('--no-interactive', 'skip interactive prompts')
   .option('-y, --yes', 'auto-accept all prompts (alias for --no-interactive)');
