@@ -2,22 +2,15 @@
 
 ## 1.2.2
 
-### Patch Changes
-
-- [#62](https://github.com/openplanr/OpenPlanr/pull/62) [`45836f9`](https://github.com/openplanr/OpenPlanr/commit/45836f99ad88605ba4aac5fab4f318b20badf5b0) Thanks [@AsemDevs](https://github.com/AsemDevs)! - Reduce AI over-engineering in plan generation with scope discipline rules, count guidance per artifact level, and anti-enumeration batching
+- [`45836f9`](https://github.com/openplanr/OpenPlanr/commit/45836f99ad88605ba4aac5fab4f318b20badf5b0) Reduce AI over-engineering in plan generation with scope discipline rules, count guidance per artifact level, and anti-enumeration batching ([#62](https://github.com/openplanr/OpenPlanr/pull/62))
 
 ## 1.2.1
 
-### Patch Changes
-
-- [#55](https://github.com/openplanr/OpenPlanr/pull/55) [`696da73`](https://github.com/openplanr/OpenPlanr/commit/696da735d7cdb88c3d11022233d2b17bb274ca02) Thanks [@AsemDevs](https://github.com/AsemDevs)! - Fix project root resolution for monorepos — planr now walks up the directory tree to find `.planr/config.json`, so commands work from any subdirectory
+- [`696da73`](https://github.com/openplanr/OpenPlanr/commit/696da735d7cdb88c3d11022233d2b17bb274ca02) Fix project root resolution for monorepos — planr now walks up the directory tree to find `.planr/config.json`, so commands work from any subdirectory ([#55](https://github.com/openplanr/OpenPlanr/pull/55))
 
 ## 1.2.0
 
-### Minor Changes
-
-- [`3f47e3c`](https://github.com/openplanr/OpenPlanr/commit/3f47e3c7524cd54827cc4e63830de4bacb9f2df6) Thanks [@AsemDevs](https://github.com/AsemDevs)! - Add agent-friendly non-interactive mode and API key UX improvements
-
+- [`3f47e3c`](https://github.com/openplanr/OpenPlanr/commit/3f47e3c7524cd54827cc4e63830de4bacb9f2df6) Add agent-friendly non-interactive mode and API key UX improvements
   - Add `--yes`/`-y` flag for fully unattended planning workflows (Claude Code, Cursor, Codex)
   - Auto-detect non-interactive terminals via TTY detection
   - All prompts return sensible defaults when non-interactive
