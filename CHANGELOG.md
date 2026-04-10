@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.4
+
+### Patch Changes
+
+- [`64a0f80`](https://github.com/openplanr/OpenPlanr/commit/64a0f80fda6d6d44faff957d7064a55d6833682c) Code quality and performance improvements
+
+- Faster sprint and sync commands via parallelized artifact loading
+- Consistent error messages across all AI-powered commands
+- Shared formatting utilities to reduce internal code duplication
+- JSDoc documentation added to all core service functions
+
 ## 1.2.3
 
 ### Patch Changes
