@@ -1,4 +1,4 @@
-import matter from 'gray-matter';
+import YAML from 'yaml';
 import type { ArtifactFrontmatter } from '../models/types.js';
 
 export interface ParsedMarkdown {
@@ -6,13 +6,22 @@ export interface ParsedMarkdown {
   content: string;
 }
 
+const FRONTMATTER_REGEX = /^---[^\S\r\n]*\r?\n([\s\S]*?)\r?\n---[^\S\r\n]*\r?\n?([\s\S]*)$/;
+
 export function parseMarkdown(raw: string): ParsedMarkdown {
-  // gray-matter returns Record<string, unknown>; we cast to ArtifactFrontmatter
-  // which is safe because the index signature accepts extra fields.
-  const { data, content } = matter(raw);
+  const match = FRONTMATTER_REGEX.exec(raw);
+  if (!match) {
+    return { data: {} as ArtifactFrontmatter, content: raw };
+  }
+
+  const yamlStr = match[1];
+  const content = match[2];
+
+  const data = YAML.parse(yamlStr) ?? {};
   return { data: data as ArtifactFrontmatter, content };
 }
 
 export function toMarkdownWithFrontmatter(data: ArtifactFrontmatter, content: string): string {
-  return matter.stringify(content, data);
+  const yamlStr = YAML.stringify(data).trimEnd();
+  return `---\n${yamlStr}\n---\n${content}`;
 }
