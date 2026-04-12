@@ -25,11 +25,13 @@ import {
   readArtifactRaw,
   resolveArtifactFilename,
   updateArtifact,
+  updateArtifactFields,
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { getNextId } from '../../services/id-service.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
+import { VALID_STATUSES } from '../../utils/constants.js';
 import { ensureDir, writeFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
 import { slugify } from '../../utils/slugify.js';
@@ -136,6 +138,38 @@ export function registerQuickCommand(program: Command) {
       }
 
       await promoteQuickTask(projectDir, config, qtId, opts);
+    });
+
+  // -----------------------------------------------------------------------
+  // planr quick update <qtId>
+  // -----------------------------------------------------------------------
+  quick
+    .command('update')
+    .description('Update a quick task')
+    .argument('<qtId>', 'quick task ID (e.g., QT-001)')
+    .option('--status <status>', 'new status (pending, in-progress, done)')
+    .action(async (qtId: string, opts: { status?: string }) => {
+      const projectDir = program.opts().projectDir as string;
+      const config = await loadConfig(projectDir);
+
+      if (!opts.status) {
+        logger.error('Provide --status <value>.');
+        process.exit(1);
+      }
+
+      const allowed = VALID_STATUSES.quick;
+      if (allowed && !allowed.includes(opts.status)) {
+        logger.error(`Invalid status "${opts.status}". Valid: ${allowed.join(', ')}`);
+        process.exit(1);
+      }
+
+      try {
+        await updateArtifactFields(projectDir, config, 'quick', qtId, { status: opts.status });
+        logger.success(`Updated ${qtId}: status=${opts.status}`);
+      } catch (err) {
+        logger.error(`Failed to update ${qtId}: ${(err as Error).message}`);
+        process.exit(1);
+      }
     });
 }
 

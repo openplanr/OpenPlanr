@@ -11,7 +11,11 @@ import { buildEpicPrompt } from '../../ai/prompts/prompt-builder.js';
 import { aiEpicResponseSchema } from '../../ai/schemas/ai-response-schemas.js';
 import { TOKEN_BUDGETS } from '../../ai/types.js';
 import { generateStreamingJSON, getAIProvider, isAIConfigured } from '../../services/ai-service.js';
-import { createArtifact, listArtifacts } from '../../services/artifact-service.js';
+import {
+  createArtifact,
+  listArtifacts,
+  updateArtifactFields,
+} from '../../services/artifact-service.js';
 import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
@@ -21,6 +25,7 @@ import {
   promptSelect,
   promptText,
 } from '../../services/prompt-service.js';
+import { VALID_STATUSES } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
 
 export function registerEpicCommand(program: Command) {
@@ -68,6 +73,45 @@ export function registerEpicCommand(program: Command) {
       logger.heading('Epics');
       for (const e of epics) {
         display.line(`  ${e.id}  ${e.title}`);
+      }
+    });
+
+  epic
+    .command('update')
+    .description('Update an epic')
+    .argument('<epicId>', 'epic ID (e.g., EPIC-001)')
+    .option('--status <status>', 'new status (planning, in-progress, done)')
+    .option('--owner <owner>', 'new owner')
+    .action(async (epicId: string, opts: { status?: string; owner?: string }) => {
+      const projectDir = program.opts().projectDir as string;
+      const config = await loadConfig(projectDir);
+
+      if (!opts.status && !opts.owner) {
+        logger.error('Provide --status <value> and/or --owner <value>.');
+        process.exit(1);
+      }
+
+      if (opts.status) {
+        const allowed = VALID_STATUSES.epic;
+        if (allowed && !allowed.includes(opts.status)) {
+          logger.error(`Invalid status "${opts.status}". Valid: ${allowed.join(', ')}`);
+          process.exit(1);
+        }
+      }
+
+      const fields: Record<string, unknown> = {};
+      if (opts.status) fields.status = opts.status;
+      if (opts.owner) fields.owner = opts.owner;
+
+      try {
+        await updateArtifactFields(projectDir, config, 'epic', epicId, fields);
+        const summary = Object.entries(fields)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(', ');
+        logger.success(`Updated ${epicId}: ${summary}`);
+      } catch (err) {
+        logger.error(`Failed to update ${epicId}: ${(err as Error).message}`);
+        process.exit(1);
       }
     });
 }

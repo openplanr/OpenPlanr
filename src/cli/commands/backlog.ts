@@ -19,9 +19,11 @@ import {
   readArtifact,
   readArtifactRaw,
   updateArtifact,
+  updateArtifactFields,
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { promptConfirm } from '../../services/prompt-service.js';
+import { VALID_STATUSES } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
 import { parseMarkdown } from '../../utils/markdown.js';
 
@@ -313,6 +315,56 @@ export function registerBacklogCommand(program: Command) {
 
       await updateArtifact(projectDir, config, 'backlog', blId, updated);
       logger.success(`Closed ${blId}`);
+    });
+
+  // -----------------------------------------------------------------------
+  // planr backlog update <blId>
+  // -----------------------------------------------------------------------
+  backlog
+    .command('update')
+    .description('Update a backlog item')
+    .argument('<blId>', 'backlog item ID (e.g., BL-001)')
+    .option('--status <status>', 'new status (open, closed, promoted)')
+    .option('--priority <priority>', 'new priority (critical, high, medium, low)')
+    .action(async (blId: string, opts: { status?: string; priority?: string }) => {
+      const projectDir = program.opts().projectDir as string;
+      const config = await loadConfig(projectDir);
+
+      if (!opts.status && !opts.priority) {
+        logger.error('Provide --status <value> and/or --priority <value>.');
+        process.exit(1);
+      }
+
+      if (opts.status) {
+        const allowed = VALID_STATUSES.backlog;
+        if (allowed && !allowed.includes(opts.status)) {
+          logger.error(`Invalid status "${opts.status}". Valid: ${allowed.join(', ')}`);
+          process.exit(1);
+        }
+      }
+
+      if (opts.priority) {
+        const validPriorities = ['critical', 'high', 'medium', 'low'];
+        if (!validPriorities.includes(opts.priority)) {
+          logger.error(`Invalid priority "${opts.priority}". Valid: ${validPriorities.join(', ')}`);
+          process.exit(1);
+        }
+      }
+
+      const fields: Record<string, unknown> = {};
+      if (opts.status) fields.status = opts.status;
+      if (opts.priority) fields.priority = opts.priority;
+
+      try {
+        await updateArtifactFields(projectDir, config, 'backlog', blId, fields);
+        const summary = Object.entries(fields)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(', ');
+        logger.success(`Updated ${blId}: ${summary}`);
+      } catch (err) {
+        logger.error(`Failed to update ${blId}: ${(err as Error).message}`);
+        process.exit(1);
+      }
     });
 }
 

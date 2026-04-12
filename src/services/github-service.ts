@@ -50,6 +50,16 @@ const LABEL_COLORS: Record<string, string> = {
   'planr:quick': 'DA70D6',
 };
 
+/**
+ * Maps artifact types to GitHub issue type names.
+ * Only types with a matching GitHub issue type are included.
+ */
+const ARTIFACT_TO_ISSUE_TYPE: Record<string, string> = {
+  task: 'Task',
+  quick: 'Task',
+  feature: 'Feature',
+};
+
 const ISSUE_STATE_TO_STATUS: Record<string, string> = {
   open: 'pending',
   closed: 'done',
@@ -62,6 +72,13 @@ const STATUS_TO_ISSUE_STATE: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Error message constants
+// ---------------------------------------------------------------------------
+
+const GH_CLI_INSTALL_URL = 'https://cli.github.com/';
+const GH_REMOTE_EXAMPLE = 'https://github.com/<owner>/<repo>.git';
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -70,7 +87,7 @@ async function ensureGhCli(): Promise<string> {
   if (!ghPath) {
     throw new Error(
       'GitHub CLI (gh) is not installed.\n\n' +
-        '  1. Install it from https://cli.github.com/\n' +
+        `  1. Install it from ${GH_CLI_INSTALL_URL}\n` +
         '  2. Run `gh auth login` to authenticate\n' +
         '  3. Re-run your planr github command',
     );
@@ -114,7 +131,7 @@ async function gh(args: string[]): Promise<string> {
     if (stderr.includes('no git remotes') || stderr.includes('no github remotes')) {
       throw new Error(
         'No GitHub remote found in this repository.\n\n' +
-          '  Add one with: git remote add origin https://github.com/<owner>/<repo>.git',
+          `  Add one with: git remote add origin ${GH_REMOTE_EXAMPLE}`,
       );
     }
     throw err;
@@ -519,4 +536,89 @@ export function getTypeFromLabels(labels: Array<{ name: string }>): ArtifactType
     if (reverseMap[label.name]) return reverseMap[label.name];
   }
   return null;
+}
+
+/**
+ * Get the GitHub issue type name for an artifact type, if applicable.
+ */
+export function getIssueTypeForArtifact(type: ArtifactType): string | null {
+  return ARTIFACT_TO_ISSUE_TYPE[type] || null;
+}
+
+// ---------------------------------------------------------------------------
+// GitHub Issue Types (GraphQL)
+// ---------------------------------------------------------------------------
+
+/** Cached repo issue types keyed by "owner/repo". */
+const issueTypeCache = new Map<string, Record<string, string>>();
+
+/**
+ * Fetch available issue types for a repo and cache them.
+ * Returns a map of issue type name → node ID.
+ */
+export async function fetchIssueTypes(
+  owner: string,
+  repo: string,
+): Promise<Record<string, string>> {
+  const cacheKey = `${owner}/${repo}`;
+  const cached = issueTypeCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const query = `query { repository(owner: "${owner}", name: "${repo}") { issueTypes(first: 20) { nodes { id name } } } }`;
+    const result = await gh(['api', 'graphql', '-f', `query=${query}`]);
+    const parsed = JSON.parse(result);
+    const nodes = parsed?.data?.repository?.issueTypes?.nodes;
+    if (Array.isArray(nodes)) {
+      const types: Record<string, string> = {};
+      for (const node of nodes) {
+        types[node.name] = node.id;
+      }
+      issueTypeCache.set(cacheKey, types);
+      return types;
+    }
+  } catch (err) {
+    logger.debug('Failed to fetch GitHub issue types', err);
+  }
+
+  const empty: Record<string, string> = {};
+  issueTypeCache.set(cacheKey, empty);
+  return empty;
+}
+
+/**
+ * Set the issue type on a GitHub issue via GraphQL.
+ * Requires the issue's node ID and the issue type's node ID.
+ */
+export async function setIssueType(
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  issueTypeName: string,
+): Promise<void> {
+  try {
+    const issueTypes = await fetchIssueTypes(owner, repo);
+    const issueTypeId = issueTypes[issueTypeName];
+    if (!issueTypeId) {
+      logger.debug(
+        `Issue type "${issueTypeName}" not found in repo. Available: ${Object.keys(issueTypes).join(', ')}`,
+      );
+      return;
+    }
+
+    // Get the issue's node ID
+    const issueData = await gh(['issue', 'view', String(issueNumber), '--json', 'id']);
+    const { id: issueNodeId } = JSON.parse(issueData);
+
+    // Set the issue type
+    await gh([
+      'api',
+      'graphql',
+      '-f',
+      `query=mutation { updateIssueIssueType(input: { issueId: "${issueNodeId}", issueTypeId: "${issueTypeId}" }) { issue { id } } }`,
+    ]);
+  } catch (err) {
+    logger.debug(`Failed to set issue type "${issueTypeName}" on #${issueNumber}`, err);
+    // Non-fatal — issue was created, just type wasn't set
+  }
 }

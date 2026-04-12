@@ -20,11 +20,13 @@ import {
   listArtifacts,
   readArtifact,
   resolveArtifactFilename,
+  updateArtifactFields,
 } from '../../services/artifact-service.js';
 import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
+import { VALID_STATUSES } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
 import {
   buildTaskItems,
@@ -112,6 +114,35 @@ export function registerTaskCommand(program: Command) {
       logger.heading('Task Lists');
       for (const t of tasks) {
         display.line(`  ${t.id}  ${t.title}`);
+      }
+    });
+
+  task
+    .command('update')
+    .description('Update a task')
+    .argument('<taskId>', 'task ID (e.g., TASK-001)')
+    .option('--status <status>', 'new status (pending, in-progress, done)')
+    .action(async (taskId: string, opts: { status?: string }) => {
+      const projectDir = program.opts().projectDir as string;
+      const config = await loadConfig(projectDir);
+
+      if (!opts.status) {
+        logger.error('Provide --status <value>.');
+        process.exit(1);
+      }
+
+      const allowed = VALID_STATUSES.task;
+      if (allowed && !allowed.includes(opts.status)) {
+        logger.error(`Invalid status "${opts.status}". Valid: ${allowed.join(', ')}`);
+        process.exit(1);
+      }
+
+      try {
+        await updateArtifactFields(projectDir, config, 'task', taskId, { status: opts.status });
+        logger.success(`Updated ${taskId}: status=${opts.status}`);
+      } catch (err) {
+        logger.error(`Failed to update ${taskId}: ${(err as Error).message}`);
+        process.exit(1);
       }
     });
 }

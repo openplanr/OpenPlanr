@@ -17,6 +17,23 @@ import type { CredentialSource } from './credential-backends.js';
 import { encryptedFileBackend, keychainBackend, legacyBackend } from './credential-backends.js';
 
 // ---------------------------------------------------------------------------
+// Env-var access (explicit allowlist — avoids dynamic process.env lookups)
+// ---------------------------------------------------------------------------
+
+/** Allowed environment variable names for API key resolution. */
+const ALLOWED_ENV_VARS = new Set(Object.values(ENV_KEY_MAP));
+
+/**
+ * Read an API key from an environment variable.
+ * Only reads from the explicit allowlist defined in ENV_KEY_MAP.
+ */
+function readEnvKey(provider: string): string | undefined {
+  const envVar = ENV_KEY_MAP[provider];
+  if (!envVar || !ALLOWED_ENV_VARS.has(envVar)) return undefined;
+  return process.env[envVar];
+}
+
+// ---------------------------------------------------------------------------
 // Migration
 // ---------------------------------------------------------------------------
 
@@ -73,11 +90,9 @@ export async function resolveApiKey(provider: string): Promise<string | undefine
   // Run one-time migration from legacy plaintext file
   await migrateCredentials();
 
-  // 1. Environment variable
-  const envVar = ENV_KEY_MAP[provider];
-  if (envVar && process.env[envVar]) {
-    return process.env[envVar];
-  }
+  // 1. Environment variable (explicit allowlist)
+  const envKey = readEnvKey(provider);
+  if (envKey) return envKey;
 
   // 2. OS Keychain
   if (await keychainBackend.isAvailable()) {
@@ -99,11 +114,9 @@ export async function resolveApiKeySource(
   // Run one-time migration from legacy plaintext file
   await migrateCredentials();
 
-  // 1. Environment variable
-  const envVar = ENV_KEY_MAP[provider];
-  if (envVar && process.env[envVar]) {
-    return { key: process.env[envVar] ?? '', source: 'env' };
-  }
+  // 1. Environment variable (explicit allowlist)
+  const envKey = readEnvKey(provider);
+  if (envKey) return { key: envKey, source: 'env' };
 
   // 2. OS Keychain
   if (await keychainBackend.isAvailable()) {

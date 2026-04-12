@@ -20,12 +20,14 @@ import {
   readArtifact,
   readArtifactRaw,
   resolveArtifactFilename,
+  updateArtifactFields,
 } from '../../services/artifact-service.js';
 import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptText } from '../../services/prompt-service.js';
 import { renderTemplate } from '../../services/template-service.js';
+import { VALID_STATUSES } from '../../utils/constants.js';
 import { writeFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
 import { handleAIError } from '../helpers/task-creation.js';
@@ -180,6 +182,35 @@ export function registerStoryCommand(program: Command) {
       logger.heading('User Stories');
       for (const s of filtered) {
         display.line(`  ${s.id}  ${s.title}`);
+      }
+    });
+
+  story
+    .command('update')
+    .description('Update a user story')
+    .argument('<storyId>', 'story ID (e.g., US-001)')
+    .option('--status <status>', 'new status (planning, in-progress, done)')
+    .action(async (storyId: string, opts: { status?: string }) => {
+      const projectDir = program.opts().projectDir as string;
+      const config = await loadConfig(projectDir);
+
+      if (!opts.status) {
+        logger.error('Provide --status <value>.');
+        process.exit(1);
+      }
+
+      const allowed = VALID_STATUSES.story;
+      if (allowed && !allowed.includes(opts.status)) {
+        logger.error(`Invalid status "${opts.status}". Valid: ${allowed.join(', ')}`);
+        process.exit(1);
+      }
+
+      try {
+        await updateArtifactFields(projectDir, config, 'story', storyId, { status: opts.status });
+        logger.success(`Updated ${storyId}: status=${opts.status}`);
+      } catch (err) {
+        logger.error(`Failed to update ${storyId}: ${(err as Error).message}`);
+        process.exit(1);
       }
     });
 }

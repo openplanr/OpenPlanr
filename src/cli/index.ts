@@ -25,6 +25,7 @@ import { registerStoryCommand } from './commands/story.js';
 import { registerSyncCommand } from './commands/sync.js';
 import { registerTaskCommand } from './commands/task.js';
 import { registerTemplateCommand } from './commands/template.js';
+import { registerUpdateCommand } from './commands/update.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -81,6 +82,7 @@ registerPlanCommand(program);
 registerSprintCommand(program);
 registerSyncCommand(program);
 registerTemplateCommand(program);
+registerUpdateCommand(program);
 
 program.parseAsync(process.argv).catch((err) => {
   if (err instanceof ConfigNotFoundError) {

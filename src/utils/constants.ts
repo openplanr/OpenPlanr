@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { ArtifactType } from '../models/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,6 +32,16 @@ export const ID_PREFIXES = {
   sprint: 'SPRINT',
   adr: 'ADR',
 } as const;
+
+export const VALID_STATUSES: Partial<Record<ArtifactType, readonly string[]>> = {
+  epic: ['planning', 'in-progress', 'done'],
+  feature: ['planning', 'in-progress', 'done'],
+  story: ['planning', 'in-progress', 'done'],
+  task: ['pending', 'in-progress', 'done'],
+  quick: ['pending', 'in-progress', 'done'],
+  backlog: ['open', 'closed', 'promoted'],
+  sprint: ['planning', 'active', 'completed'],
+};
 
 export function getTemplatesDir(): string {
   return path.resolve(__dirname, '..', 'templates');

@@ -13,6 +13,7 @@ import {
   readArtifact,
   readArtifactRaw,
   updateArtifact,
+  updateArtifactFields,
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import {
@@ -22,15 +23,16 @@ import {
   ensureLabel,
   ensureMilestone,
   getIssue,
+  getIssueTypeForArtifact,
   getLabelForType,
   issueStateToStatus,
+  setIssueType,
   statusToIssueState,
   updateIssue,
   verifyGitHubRepo,
 } from '../../services/github-service.js';
 import { promptSelect } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
-import { parseMarkdown, toMarkdownWithFrontmatter } from '../../utils/markdown.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -56,7 +58,7 @@ async function pushSingleArtifact(
   projectDir: string,
   config: OpenPlanrConfig,
   artifactId: string,
-  opts: { milestone?: string },
+  opts: { milestone?: string; repoInfo: { owner: string; repo: string } },
 ): Promise<{ issueNumber: number; issueUrl: string; action: 'created' | 'updated' } | null> {
   const type = findArtifactTypeById(artifactId);
   if (!type) {
@@ -123,6 +125,12 @@ async function pushSingleArtifact(
     // Store issue number in artifact frontmatter
     const updatedRaw = setFrontmatterField(raw, 'githubIssue', issueNumber);
     await updateArtifact(projectDir, config, type, artifactId, updatedRaw);
+  }
+
+  // Set GitHub issue type (Task, Feature, etc.) if applicable
+  const issueTypeName = getIssueTypeForArtifact(type);
+  if (issueTypeName) {
+    await setIssueType(opts.repoInfo.owner, opts.repoInfo.repo, issueNumber, issueTypeName);
   }
 
   return { issueNumber, issueUrl, action };
@@ -260,6 +268,7 @@ export function registerGitHubCommand(program: Command) {
         try {
           const result = await pushSingleArtifact(projectDir, config, id, {
             milestone: milestoneTitle,
+            repoInfo,
           });
           if (result) {
             const icon = result.action === 'created' ? chalk.green('+') : chalk.yellow('~');
@@ -355,7 +364,9 @@ export function registerGitHubCommand(program: Command) {
 
           if (opts.direction === 'pull') {
             // GitHub → local
-            await updateLocalStatus(projectDir, config, artifact.type, artifact.id, remoteStatus);
+            await updateArtifactFields(projectDir, config, artifact.type, artifact.id, {
+              status: remoteStatus,
+            });
             display.line(
               `  ${chalk.blue('←')} ${artifact.id}: ${chalk.dim(localStatus)} → ${chalk.green(remoteStatus)} (from #${artifact.issueNumber})`,
             );
@@ -413,12 +424,12 @@ export function registerGitHubCommand(program: Command) {
           );
 
           if (action === 'pull') {
-            await updateLocalStatus(
+            await updateArtifactFields(
               projectDir,
               config,
               findArtifactTypeById(conflict.id) || 'task',
               conflict.id,
-              remoteStatus,
+              { status: remoteStatus },
             );
             display.line(`    ${chalk.blue('←')} Updated local to ${remoteStatus}`);
             synced++;
@@ -507,25 +518,4 @@ export function registerGitHubCommand(program: Command) {
       display.blank();
       display.line(`  Linked: ${linked}, Unlinked: ${unlinked}`);
     });
-}
-
-// ---------------------------------------------------------------------------
-// Local status update
-// ---------------------------------------------------------------------------
-
-async function updateLocalStatus(
-  projectDir: string,
-  config: OpenPlanrConfig,
-  type: ArtifactType,
-  id: string,
-  newStatus: string,
-): Promise<void> {
-  const raw = await readArtifactRaw(projectDir, config, type, id);
-  if (!raw) return;
-
-  const { data, content } = parseMarkdown(raw);
-  data.status = newStatus;
-  data.updated = new Date().toISOString().split('T')[0];
-  const updated = toMarkdownWithFrontmatter(data, content);
-  await updateArtifact(projectDir, config, type, id, updated);
 }
