@@ -72,6 +72,13 @@ const STATUS_TO_ISSUE_STATE: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Error message constants
+// ---------------------------------------------------------------------------
+
+const GH_CLI_INSTALL_URL = 'https://cli.github.com/';
+const GH_REMOTE_EXAMPLE = 'https://github.com/<owner>/<repo>.git';
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -80,7 +87,7 @@ async function ensureGhCli(): Promise<string> {
   if (!ghPath) {
     throw new Error(
       'GitHub CLI (gh) is not installed.\n\n' +
-        '  1. Install it from https://cli.github.com/\n' +
+        `  1. Install it from ${GH_CLI_INSTALL_URL}\n` +
         '  2. Run `gh auth login` to authenticate\n' +
         '  3. Re-run your planr github command',
     );
@@ -124,7 +131,7 @@ async function gh(args: string[]): Promise<string> {
     if (stderr.includes('no git remotes') || stderr.includes('no github remotes')) {
       throw new Error(
         'No GitHub remote found in this repository.\n\n' +
-          '  Add one with: git remote add origin https://github.com/<owner>/<repo>.git',
+          `  Add one with: git remote add origin ${GH_REMOTE_EXAMPLE}`,
       );
     }
     throw err;
