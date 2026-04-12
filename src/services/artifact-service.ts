@@ -136,6 +136,35 @@ export async function updateArtifact(
 }
 
 /**
+ * Update specific frontmatter fields on an artifact.
+ * Uses regex replacement to preserve original file formatting (quote style, key order).
+ * Automatically sets the `updated` field to today's date.
+ */
+export async function updateArtifactFields(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  type: ArtifactType,
+  id: string,
+  fields: Partial<Record<string, unknown>>,
+): Promise<void> {
+  const raw = await readArtifactRaw(projectDir, config, type, id);
+  if (!raw) throw new Error(`Artifact ${id} not found.`);
+
+  const today = new Date().toISOString().split('T')[0];
+  const allFields = { ...fields, updated: today };
+
+  let updated = raw;
+  for (const [key, value] of Object.entries(allFields)) {
+    const pattern = new RegExp(`^${key}:\\s*.*$`, 'm');
+    if (pattern.test(updated)) {
+      updated = updated.replace(pattern, `${key}: "${value}"`);
+    }
+  }
+
+  await updateArtifact(projectDir, config, type, id, updated);
+}
+
+/**
  * Resolve an artifact ID to its actual filename (without path).
  * Returns the filename like "EPIC-002-markdown-to-kanban-board.md"
  * or falls back to "ID.md" if the file can't be found.

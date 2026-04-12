@@ -18,11 +18,13 @@ import {
   readArtifact,
   readArtifactRaw,
   resolveArtifactFilename,
+  updateArtifactFields,
 } from '../../services/artifact-service.js';
 import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
+import { VALID_STATUSES } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
 import { handleAIError } from '../helpers/task-creation.js';
 
@@ -77,6 +79,45 @@ export function registerFeatureCommand(program: Command) {
       logger.heading('Features');
       for (const f of features) {
         display.line(`  ${f.id}  ${f.title}`);
+      }
+    });
+
+  feature
+    .command('update')
+    .description('Update a feature')
+    .argument('<featureId>', 'feature ID (e.g., FEAT-001)')
+    .option('--status <status>', 'new status (planning, in-progress, done)')
+    .option('--owner <owner>', 'new owner')
+    .action(async (featureId: string, opts: { status?: string; owner?: string }) => {
+      const projectDir = program.opts().projectDir as string;
+      const config = await loadConfig(projectDir);
+
+      if (!opts.status && !opts.owner) {
+        logger.error('Provide --status <value> and/or --owner <value>.');
+        process.exit(1);
+      }
+
+      if (opts.status) {
+        const allowed = VALID_STATUSES.feature;
+        if (!allowed.includes(opts.status)) {
+          logger.error(`Invalid status "${opts.status}". Valid: ${allowed.join(', ')}`);
+          process.exit(1);
+        }
+      }
+
+      const fields: Record<string, unknown> = {};
+      if (opts.status) fields.status = opts.status;
+      if (opts.owner) fields.owner = opts.owner;
+
+      try {
+        await updateArtifactFields(projectDir, config, 'feature', featureId, fields);
+        const summary = Object.entries(fields)
+          .map(([k, v]) => `${k}=${v}`)
+          .join(', ');
+        logger.success(`Updated ${featureId}: ${summary}`);
+      } catch (err) {
+        logger.error(`Failed to update ${featureId}: ${(err as Error).message}`);
+        process.exit(1);
       }
     });
 }

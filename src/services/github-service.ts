@@ -50,6 +50,16 @@ const LABEL_COLORS: Record<string, string> = {
   'planr:quick': 'DA70D6',
 };
 
+/**
+ * Maps artifact types to GitHub issue type names.
+ * Only types with a matching GitHub issue type are included.
+ */
+const ARTIFACT_TO_ISSUE_TYPE: Record<string, string> = {
+  task: 'Task',
+  quick: 'Task',
+  feature: 'Feature',
+};
+
 const ISSUE_STATE_TO_STATUS: Record<string, string> = {
   open: 'pending',
   closed: 'done',
@@ -519,4 +529,85 @@ export function getTypeFromLabels(labels: Array<{ name: string }>): ArtifactType
     if (reverseMap[label.name]) return reverseMap[label.name];
   }
   return null;
+}
+
+/**
+ * Get the GitHub issue type name for an artifact type, if applicable.
+ */
+export function getIssueTypeForArtifact(type: ArtifactType): string | null {
+  return ARTIFACT_TO_ISSUE_TYPE[type] || null;
+}
+
+// ---------------------------------------------------------------------------
+// GitHub Issue Types (GraphQL)
+// ---------------------------------------------------------------------------
+
+/** Cached repo issue types for the current session. */
+let issueTypeCache: Record<string, string> | null = null;
+
+/**
+ * Fetch available issue types for the current repo and cache them.
+ * Returns a map of issue type name → node ID.
+ */
+export async function fetchIssueTypes(
+  owner: string,
+  repo: string,
+): Promise<Record<string, string>> {
+  if (issueTypeCache) return issueTypeCache;
+
+  try {
+    const query = `query { repository(owner: "${owner}", name: "${repo}") { issueTypes(first: 20) { nodes { id name } } } }`;
+    const result = await gh(['api', 'graphql', '-f', `query=${query}`]);
+    const parsed = JSON.parse(result);
+    const nodes = parsed?.data?.repository?.issueTypes?.nodes;
+    if (Array.isArray(nodes)) {
+      issueTypeCache = {};
+      for (const node of nodes) {
+        issueTypeCache[node.name] = node.id;
+      }
+      return issueTypeCache;
+    }
+  } catch (err) {
+    logger.debug('Failed to fetch GitHub issue types', err);
+  }
+
+  issueTypeCache = {};
+  return issueTypeCache;
+}
+
+/**
+ * Set the issue type on a GitHub issue via GraphQL.
+ * Requires the issue's node ID and the issue type's node ID.
+ */
+export async function setIssueType(
+  owner: string,
+  repo: string,
+  issueNumber: number,
+  issueTypeName: string,
+): Promise<void> {
+  try {
+    const issueTypes = await fetchIssueTypes(owner, repo);
+    const issueTypeId = issueTypes[issueTypeName];
+    if (!issueTypeId) {
+      logger.debug(
+        `Issue type "${issueTypeName}" not found in repo. Available: ${Object.keys(issueTypes).join(', ')}`,
+      );
+      return;
+    }
+
+    // Get the issue's node ID
+    const issueData = await gh(['issue', 'view', String(issueNumber), '--json', 'id']);
+    const { id: issueNodeId } = JSON.parse(issueData);
+
+    // Set the issue type
+    await gh([
+      'api',
+      'graphql',
+      '-f',
+      `query=mutation { updateIssueIssueType(input: { issueId: "${issueNodeId}", issueTypeId: "${issueTypeId}" }) { issue { id } } }`,
+    ]);
+  } catch (err) {
+    logger.debug(`Failed to set issue type "${issueTypeName}" on #${issueNumber}`, err);
+    // Non-fatal — issue was created, just type wasn't set
+  }
 }

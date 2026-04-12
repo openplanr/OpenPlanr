@@ -32,6 +32,16 @@ export const ID_PREFIXES = {
   adr: 'ADR',
 } as const;
 
+export const VALID_STATUSES: Record<string, string[]> = {
+  epic: ['planning', 'in-progress', 'done'],
+  feature: ['planning', 'in-progress', 'done'],
+  story: ['planning', 'in-progress', 'done'],
+  task: ['pending', 'in-progress', 'done'],
+  quick: ['pending', 'in-progress', 'done'],
+  backlog: ['open', 'closed', 'promoted'],
+  sprint: ['planning', 'active', 'completed'],
+};
+
 export function getTemplatesDir(): string {
   return path.resolve(__dirname, '..', 'templates');
 }
