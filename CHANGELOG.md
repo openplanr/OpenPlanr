@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.6
+
+### Patch Changes
+
+- [`4cf5bcc`](https://github.com/openplanr/OpenPlanr/commit/4cf5bcc5e6e4f56bb0d59cda9cb9ba7f57115277) Replace gray-matter with yaml package to eliminate eval() vulnerability
+
+- Remove gray-matter dependency (+ 6 transitive deps including js-yaml with eval)
+- Add yaml package (zero deps, YAML 1.2 spec, no eval, maintained by YAML spec editors)
+- Custom frontmatter parse/stringify in ~15 lines with robust regex handling
+
 ## 1.2.5
 
 ### Patch Changes
