@@ -12,7 +12,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { which } from '../agents/utils.js';
-import type { ArtifactFrontmatter, ArtifactType } from '../models/types.js';
+import type {
+  ArtifactFrontmatter,
+  ArtifactType,
+  GitHubCommitSummary,
+  GitHubPullRequestSummary,
+} from '../models/types.js';
 import { logger } from '../utils/logger.js';
 import { parseMarkdown } from '../utils/markdown.js';
 
@@ -620,5 +625,121 @@ export async function setIssueType(
   } catch (err) {
     logger.debug(`Failed to set issue type "${issueTypeName}" on #${issueNumber}`, err);
     // Non-fatal — issue was created, just type wasn't set
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Repository activity (stakeholder reports)
+// ---------------------------------------------------------------------------
+
+function isoDaysAgo(days: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString();
+}
+
+/**
+ * Recent commits on the default branch (best-effort via GitHub API).
+ */
+export async function fetchRecentCommits(args: {
+  days: number;
+  limit: number;
+}): Promise<{ commits: GitHubCommitSummary[]; warning?: string }> {
+  try {
+    await verifyGitHubRepo();
+    const since = isoDaysAgo(args.days);
+    const perPage = Math.min(args.limit, 100);
+    const raw = await gh([
+      'api',
+      `repos/{owner}/{repo}/commits?per_page=${perPage}&since=${encodeURIComponent(since)}`,
+    ]);
+    const parsed = JSON.parse(raw) as Array<{
+      sha: string;
+      commit: { message: string; author?: { date?: string } };
+      author?: { login?: string };
+      html_url: string;
+    }>;
+    if (!Array.isArray(parsed))
+      return { commits: [], warning: 'Unexpected commits response from GitHub.' };
+
+    const commits: GitHubCommitSummary[] = parsed.map((c) => ({
+      sha: c.sha,
+      shortSha: c.sha.slice(0, 7),
+      message: (c.commit?.message || '').split('\n')[0].trim(),
+      authorLogin: c.author?.login || 'unknown',
+      committedDate: c.commit?.author?.date || '',
+      url: c.html_url,
+    }));
+    return { commits };
+  } catch (err) {
+    logger.debug('fetchRecentCommits failed', err);
+    return {
+      commits: [],
+      warning: `Could not load commits: ${(err as Error).message}`,
+    };
+  }
+}
+
+/**
+ * Recently updated pull requests (all states), filtered client-side by `updated_at`.
+ */
+export async function fetchRecentPullRequests(args: {
+  days: number;
+  limit: number;
+}): Promise<{ pullRequests: GitHubPullRequestSummary[]; warning?: string }> {
+  try {
+    await verifyGitHubRepo();
+    const sinceMs = Date.now() - args.days * 86_400_000;
+    const perPage = Math.min(args.limit, 100);
+    const raw = await gh([
+      'api',
+      `repos/{owner}/{repo}/pulls?state=all&sort=updated&direction=desc&per_page=${perPage}`,
+    ]);
+    const parsed = JSON.parse(raw) as Array<{
+      number: number;
+      title: string;
+      state: string;
+      html_url: string;
+      user?: { login?: string };
+      updated_at: string;
+      merged_at: string | null;
+    }>;
+    if (!Array.isArray(parsed))
+      return { pullRequests: [], warning: 'Unexpected PR response from GitHub.' };
+
+    const pullRequests: GitHubPullRequestSummary[] = [];
+    for (const p of parsed) {
+      const updated = Date.parse(p.updated_at);
+      if (Number.isFinite(updated) && updated < sinceMs) break;
+      pullRequests.push({
+        number: p.number,
+        title: p.title,
+        state: p.state,
+        url: p.html_url,
+        authorLogin: p.user?.login || 'unknown',
+        updatedAt: p.updated_at,
+        mergedAt: p.merged_at,
+      });
+      if (pullRequests.length >= args.limit) break;
+    }
+    return { pullRequests };
+  } catch (err) {
+    logger.debug('fetchRecentPullRequests failed', err);
+    return {
+      pullRequests: [],
+      warning: `Could not load pull requests: ${(err as Error).message}`,
+    };
+  }
+}
+
+/**
+ * Best-effort check that `gh` can read the repo (already implied by verifyGitHubRepo).
+ */
+export async function validateRepoAccessible(): Promise<{ ok: boolean; message: string }> {
+  try {
+    await verifyGitHubRepo();
+    return { ok: true, message: 'GitHub repository is reachable.' };
+  } catch (err) {
+    return { ok: false, message: (err as Error).message };
   }
 }

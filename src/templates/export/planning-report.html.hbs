@@ -222,6 +222,16 @@
 {{/each}}
 {{/if}}
 
+{{#if evidence.length}}
+<h2>Evidence index</h2>
+<p class="subtitle">Flat references for traceability (stories and tasks in this export).</p>
+<ul>
+{{#each evidence}}
+  <li><span class="badge badge-pending">{{this.kind}}</span> {{this.label}}{{#if this.detail}} — <em>{{this.detail}}</em>{{/if}}</li>
+{{/each}}
+</ul>
+{{/if}}
+
 <footer>
   Exported by <code>planr export</code> on {{date}}.
 </footer>

@@ -135,6 +135,17 @@
 
 {{/each}}
 {{/if}}
+
+{{#if evidence.length}}
+## Evidence index
+
+Flat references for traceability (stories and tasks in this export):
+
+{{#each evidence}}
+- **{{this.kind}}** — {{this.label}}{{#if this.detail}} — _{{this.detail}}_{{/if}}
+{{/each}}
+
+{{/if}}
 ---
 
 _Exported by `planr export` on {{date}}._

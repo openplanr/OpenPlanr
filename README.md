@@ -163,6 +163,26 @@ planr rules generate --dry-run        # preview
 | `planr github status`        | Show sync status of linked artifacts             |
 | `planr export --format html` | Export planning report (markdown, JSON, or HTML) |
 
+### Stakeholder reporting
+
+Generate evidence-linked status reports from your `.planr/` artifacts and (optionally) GitHub activity. See [docs/EPIC-PM-REPORTING-LAYER.md](docs/EPIC-PM-REPORTING-LAYER.md) for the full design and what is shipped vs deferred.
+
+| Command                                            | Description                                                                                       |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `planr report <type>`                              | Generate a report (`sprint`, `weekly`, `executive`, `standup`, `retro`, `release`)                |
+| `planr report weekly --lint`                       | Generate and run the report quality linter before saving                                          |
+| `planr report sprint --push slack --dry-run`       | Show what would be posted to Slack (no webhook required for dry runs)                             |
+| `planr report-linter [file]`                       | Lint an existing markdown report (vague language, evidence density, required sections)            |
+| `planr context --report-type weekly`               | Print the report context pack (artifacts + GitHub + evidence) as JSON for piping                  |
+| `planr voice standup --file transcript.txt --lint` | Convert a transcript into a structured standup, optionally linted, edited, or appended to a story |
+| `planr story standup --story US-001 --file t.txt`  | Append linted standup notes from a transcript onto an existing user story                         |
+
+**Output:** Markdown + HTML, written to `.planr/reports/<type>-<timestamp>.{md,html}` (override with `--output`). PDF rendering is intentionally out of scope for v1; `--format pdf` exits with a clear message.
+
+**Distribution:** `--push slack` posts via an [Incoming Webhook](https://api.slack.com/messaging/webhooks) configured at `distribution.slackWebhookUrl` in `.planr/config.json`. `--push github` opens a `planr:report` issue using the local `gh` CLI.
+
+**Quality gates:** `--strict-evidence` fails when bullets under `##` headings are missing URLs or `#issue` refs; `--lint` runs configurable rules (extend or override via `reportLinter` in `.planr/config.json`).
+
 ### Setup & config commands
 
 | Command                             | Description                                            |

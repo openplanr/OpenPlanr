@@ -913,6 +913,161 @@ Displays a table of all artifacts that have a `githubIssue` field, showing local
 
 ---
 
+### `planr report`
+
+Generate a stakeholder report from `.planr/` artifacts and (optionally) recent GitHub activity. Templates live in `src/templates/reports/`. See [docs/EPIC-PM-REPORTING-LAYER.md](EPIC-PM-REPORTING-LAYER.md) for the design and what is shipped vs deferred.
+
+```bash
+planr report weekly                                   # markdown to .planr/reports/
+planr report sprint --sprint SPRINT-001               # sprint summary for one sprint
+planr report executive --format html                  # HTML wrapper around the markdown
+planr report weekly --stdout                          # print to stdout, no file
+planr report weekly --no-github                       # skip the gh API calls
+planr report weekly --lint                            # run the quality linter on the output
+planr report weekly --strict-evidence                 # fail if bullet claims lack URLs or #issue refs
+planr report weekly --push slack --dry-run            # show what would be posted to Slack
+planr report sprint --push github                     # archive as a planr:report GitHub issue
+```
+
+| Option                | Description                                                                              | Default            |
+| --------------------- | ---------------------------------------------------------------------------------------- | ------------------ |
+| `<type>`              | `sprint`, `weekly`, `executive`, `standup`, `retro`, `release`                           | **Required**       |
+| `--sprint <id>`       | Sprint id for sprint-scoped reports (e.g. `SPRINT-001`)                                  | Active sprint      |
+| `--days <n>`          | GitHub commit/PR lookback window                                                         | `7`                |
+| `--no-github`         | Skip the GitHub signal collection                                                        | GitHub enabled     |
+| `--format <fmt>`      | `markdown` or `html`. `pdf` exits with a clear "not bundled" message.                    | `markdown`         |
+| `--output <dir>`      | Write outputs under this directory (relative to project)                                 | `.planr/reports`   |
+| `--stdout`            | Print markdown to stdout instead of writing a file                                       | `false`            |
+| `--lint`              | Run the report quality linter on the generated markdown                                  | `false`            |
+| `--strict-evidence`   | Fail if bullets under `##` headings are missing URLs or `#NNN` refs                      | `false`            |
+| `--push <targets>`    | Comma-separated channels: `github`, `slack`                                              | None               |
+| `--dry-run`           | With `--push`, show actions without sending (Slack dry-run works without a webhook)      | `false`            |
+
+**Output files:** `.planr/reports/<type>-<YYYY-MM-DD-HHMM>.md` (and `.html` when `--format html`).
+
+**Configuration (`.planr/config.json`):**
+
+```json
+{
+  "reports": {
+    "orgName": "Acme",
+    "primaryColor": "#0a84ff",
+    "logoUrl": "https://example.com/logo.png",
+    "templateOverrides": "./reports-overrides",
+    "extraSections": [
+      { "title": "Compliance", "body": "SOC2 controls verified weekly." }
+    ]
+  },
+  "distribution": {
+    "slackWebhookUrl": "https://hooks.slack.com/services/...",
+    "slackChannel": "#eng-updates"
+  }
+}
+```
+
+All blocks are optional; the command works against a freshly initialized project.
+
+---
+
+### `planr report-linter`
+
+Lint an existing stakeholder markdown file (or stdin) against the same rules `planr report --lint` runs.
+
+```bash
+planr report-linter ./drafts/weekly.md --type weekly
+cat drafts/sprint.md | planr report-linter --type sprint
+```
+
+| Option         | Description                                                                          | Default    |
+| -------------- | ------------------------------------------------------------------------------------ | ---------- |
+| `[file]`       | Markdown file to lint. If omitted, the command reads from stdin.                     | stdin      |
+| `--type <t>`   | Report type for rule selection: `sprint`, `weekly`, `executive`, `standup`, `retro`, `release` | `weekly` |
+
+Findings include rule id, severity, message, and an optional suggestion. Coaching hints are emitted alongside. Exit code is non-zero when any error-severity finding is produced.
+
+Default rules cover vague language, evidence density (URLs / `#issue` refs), and required sections per report type. Extend or override via `reportLinter` in `.planr/config.json`:
+
+```json
+{
+  "reportLinter": {
+    "rules": [
+      { "id": "evidence-density", "enabled": true, "minEvidenceLinks": 1 },
+      { "id": "weekly-structure", "enabled": true, "requireSections": ["Wins", "Risks", "Ask"] }
+    ],
+    "vaguePhrases": [
+      { "pattern": "\\balmost done\\b", "alternatives": ["Completed 3 of 5 stories"] }
+    ]
+  }
+}
+```
+
+---
+
+### `planr context`
+
+Print the report context pack — artifacts, sprint state, GitHub signals, and the flat evidence index — as JSON for piping into other tools.
+
+```bash
+planr context --report-type weekly
+planr context --report-type sprint --sprint SPRINT-001 --days 14
+planr context --report-type weekly | jq '.evidence | length'
+```
+
+| Option                 | Description                                                                  | Default    |
+| ---------------------- | ---------------------------------------------------------------------------- | ---------- |
+| `--report-type <type>` | Logical report type for placeholders (`sprint`, `weekly`, …, `release`)      | `weekly`   |
+| `--sprint <id>`        | Sprint id when relevant                                                      | Active     |
+| `--days <n>`           | GitHub lookback window                                                       | `7`        |
+| `--no-github`          | Omit GitHub signals from the context pack                                    | Enabled    |
+
+The JSON payload is written to stdout; a one-line summary (`context: <n> evidence items`) is logged to stderr.
+
+---
+
+### `planr voice standup`
+
+Convert a transcript file (or stdin) into structured standup markdown using a heuristic Yesterday / Today / Blockers parser. Live microphone capture and bundled speech-to-text are intentionally **not** part of v1 — pair this with any STT or OS dictation tool that produces text.
+
+```bash
+planr voice standup --file standups/2026-04-19.txt
+planr voice standup --file t.txt --lint
+planr voice standup --file t.txt --append-story US-029
+planr voice standup --file t.txt --edit          # interactive: open $EDITOR before saving
+planr voice standup --file t.txt --reload-file   # interactive: re-read file after editing externally
+```
+
+| Option                       | Description                                                                                  | Default       |
+| ---------------------------- | -------------------------------------------------------------------------------------------- | ------------- |
+| `--file <path>`              | Transcript text file. If omitted, the command reads stdin.                                   | stdin         |
+| `--write <path>`             | Write the generated markdown to this path (relative to project, or absolute)                 | None          |
+| `--edit`                     | Open the generated markdown in `$EDITOR` before output / save (interactive sessions only)    | `false`       |
+| `--reload-file`              | After generating, offer to re-read `--file` from disk (interactive + `--file` only)          | `false`       |
+| `--append-story <storyId>`   | Append the standup under `## Standup notes` on this story                                    | None          |
+| `--lint`                     | Run the standup through the report linter                                                    | `false`       |
+
+Per-segment audio replay is reserved (`TranscriptSegment.audioOffsetMs` exists in the schema) but not implemented in v1.
+
+---
+
+### `planr story standup`
+
+Append linted standup notes from a transcript directly onto an existing user story. This is the convenience entry point when you already know which story the standup belongs to.
+
+```bash
+planr story standup --story US-029 --file standups/2026-04-19.txt --lint
+cat ramble.txt | planr story standup --story US-029
+```
+
+| Option                 | Description                                                          | Required     |
+| ---------------------- | -------------------------------------------------------------------- | ------------ |
+| `--story <storyId>`    | Target story (e.g. `US-029`)                                         | **Yes**      |
+| `--file <path>`        | Transcript file. If omitted, the command reads stdin.                | No (stdin)   |
+| `--lint`               | Run the report linter before appending; non-zero exit on errors      | `false`      |
+
+Notes are appended under a `## Standup notes` section; existing content is preserved.
+
+---
+
 ### `planr export`
 
 Generate a consolidated planning report in markdown, JSON, or HTML format.

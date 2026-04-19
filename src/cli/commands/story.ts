@@ -26,7 +26,13 @@ import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptText } from '../../services/prompt-service.js';
+import { lintWithProjectConfig } from '../../services/report-linter-service.js';
+import { appendStandupToStory } from '../../services/story-standup-service.js';
 import { renderTemplate } from '../../services/template-service.js';
+import {
+  readStandupTranscriptSource,
+  transcriptToStandupMarkdown,
+} from '../../services/voice-service.js';
 import { VALID_STATUSES } from '../../utils/constants.js';
 import { writeFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
@@ -210,6 +216,34 @@ export function registerStoryCommand(program: Command) {
         logger.success(`Updated ${storyId}: status=${opts.status}`);
       } catch (err) {
         logger.error(`Failed to update ${storyId}: ${(err as Error).message}`);
+        process.exit(1);
+      }
+    });
+
+  story
+    .command('standup')
+    .description('Append standup notes from a transcript (file or stdin) to a user story')
+    .requiredOption('--story <storyId>', 'target story, e.g. US-028')
+    .option('--file <path>', 'transcript text file (else read stdin)')
+    .option('--lint', 'run report linter before appending')
+    .action(async (opts: { story: string; file?: string; lint?: boolean }) => {
+      const projectDir = program.opts().projectDir as string;
+      const config = await loadConfig(projectDir);
+
+      try {
+        const text = await readStandupTranscriptSource({ file: opts.file });
+        const md = transcriptToStandupMarkdown(text);
+        if (opts.lint) {
+          const lint = lintWithProjectConfig(md, 'standup', config);
+          for (const f of lint.findings) {
+            display.line(`[${f.severity}] ${f.message}`);
+          }
+          if (!lint.ok) process.exit(1);
+        }
+        await appendStandupToStory(projectDir, config, opts.story, md);
+        logger.success(`Appended standup notes to ${opts.story}`);
+      } catch (err) {
+        logger.error((err as Error).message);
         process.exit(1);
       }
     });

@@ -1,0 +1,27 @@
+# Standup — {{projectName}}
+
+> {{generatedAt}}
+
+## Yesterday
+
+{{#if github.commits.length}}
+{{#each github.commits}}
+- [{{this.shortSha}}]({{this.url}}) {{this.message}}
+{{/each}}
+{{else}}
+- _No commits in lookback — describe what you finished manually._
+{{/if}}
+
+## Today
+
+- _Planned work — link tasks `TASK-___` or stories `US-___`._
+
+## Blockers
+
+- _None / list with owner_
+
+## Evidence
+
+{{#each evidence}}
+- **{{this.kind}}** — {{this.label}}{{#if this.url}} — {{this.url}}{{/if}}
+{{/each}}

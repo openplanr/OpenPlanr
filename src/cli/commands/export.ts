@@ -46,6 +46,8 @@ interface ExportData {
   orphanStories: ExportStory[];
   orphanTasks: ExportArtifact[];
   quickTasks: ExportArtifact[];
+  /** Flat index for evidence-style links in export templates */
+  evidence: Array<{ kind: string; label: string; detail?: string }>;
   counts: {
     epics: number;
     features: number;
@@ -262,6 +264,14 @@ async function collectArtifacts(
     }
   }
 
+  const evidence: Array<{ kind: string; label: string; detail?: string }> = [];
+  for (const [, s] of storyMap) {
+    evidence.push({ kind: 'story', label: `${s.id}: ${s.title}`, detail: `Status: ${s.status}` });
+  }
+  for (const [, t] of taskMap) {
+    evidence.push({ kind: 'task', label: `${t.id}: ${t.title}`, detail: `Status: ${t.status}` });
+  }
+
   return {
     projectName: config.projectName,
     date: new Date().toISOString().split('T')[0],
@@ -270,6 +280,7 @@ async function collectArtifacts(
     orphanStories,
     orphanTasks,
     quickTasks,
+    evidence,
     counts: {
       epics: epics.length,
       features: usedFeatureIds.size + orphanFeatures.length,
