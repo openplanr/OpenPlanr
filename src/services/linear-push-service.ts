@@ -1,6 +1,6 @@
 /**
- * `planr linear push` — map Epic → Linear Project, Feature → top-level project issue,
- * Story and TaskList → sub-issues of the feature issue (FEAT-016).
+ * `planr linear push` — map Epic → Linear Project, Feature → top-level
+ * project issue, Story and TaskList → sub-issues of the feature issue.
  */
 
 import type { LinearClient } from '@linear/sdk';
@@ -89,7 +89,7 @@ export {
 };
 
 /**
- * H1 — Decide whether a stored `linearIssueId` frontmatter value should be
+ * Decide whether a stored `linearIssueId` frontmatter value should be
  * trusted for an update call, or treated as stale/corrupted so we fall
  * through to the create path instead. Logs a warning either way so the user
  * can spot the repair.
@@ -118,10 +118,11 @@ export interface LinearPushOptions {
    */
   pushParents?: boolean;
   /**
-   * Phase 2: first-time epic mapping override — used when the user passes
-   * `--as project|milestone-of:<id>|label-on:<id>` or picks a strategy at the
-   * interactive first-push prompt. Ignored on subsequent pushes when the
-   * epic already has `linearMappingStrategy` stored (re-strategize is Phase 5).
+   * First-time epic mapping override — used when the user passes
+   * `--as project|milestone-of:<id>|label-on:<id>` or picks a strategy at
+   * the interactive first-push prompt. Ignored on subsequent pushes when
+   * the epic already has `linearMappingStrategy` stored (re-strategize is
+   * a separate flow, not supported in this release).
    */
   strategyOverride?: {
     strategy: LinearMappingStrategy;
@@ -141,7 +142,7 @@ function asTaskStatus(s: unknown): TaskStatus {
   return 'pending';
 }
 
-/** OpenPlanr status → Linear `stateId` for create/update (FEAT-016). Prefer `linear.pushStateIds`. */
+/** OpenPlanr status → Linear `stateId` for create/update. Prefer `linear.pushStateIds`. */
 function resolveStateIdForPush(
   config: OpenPlanrConfig,
   status: string | undefined,
@@ -493,11 +494,11 @@ async function pushEpicScope(
   const chosen: LinearMappingStrategy =
     stored ?? override?.strategy ?? config.linear?.defaultEpicStrategy ?? 'project';
 
-  // Phase 5 (re-strategize) is out of scope for this release — refuse to
-  // silently migrate an epic to a different mapping.
+  // Re-strategizing is out of scope for this release — refuse to silently
+  // migrate an epic to a different mapping.
   if (stored && override?.strategy && override.strategy !== stored) {
     throw new Error(
-      `Epic ${epic.id} is already mapped as '${stored}'. Re-strategizing to '${override.strategy}' is not supported in this release (planned for Phase 5). Use \`planr linear unlink ${epic.id}\` + re-push once that arrives.`,
+      `Epic ${epic.id} is already mapped as '${stored}'. Re-strategizing to '${override.strategy}' is not supported in this release. Use \`planr linear unlink ${epic.id}\` + re-push once that command arrives.`,
     );
   }
 
@@ -1138,7 +1139,7 @@ async function pushBacklogItemScope(
  * Granular push entry point: dispatches on the artifact-id prefix. Accepts any
  * supported artifact type (EPIC/FEAT/US/TASK); errors with an actionable
  * message for types that are not pushable (ADR/SPRINT/checklist) or not yet
- * supported in this release (QT/BL — arrives in Phase 3).
+ * supported (QT/BL go through the same router too).
  */
 export async function runLinearPush(
   projectDir: string,

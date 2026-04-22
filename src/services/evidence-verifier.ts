@@ -1,5 +1,5 @@
 /**
- * Post-flight evidence verification for `planr revise` (EPIC-003, FEAT-011).
+ * Post-flight evidence verification for `planr revise`.
  *
  * The revise agent emits a ReviseDecision with typed evidence citations. Before
  * the user ever sees a diff, this verifier checks each citation against the
@@ -43,7 +43,7 @@ export interface EvidenceVerifierContext {
   config: OpenPlanrConfig;
   /**
    * Directory of the artifact being verified. Used to resolve relative
-   * evidence refs like `../features/FEAT-001-slug.md` that appear in
+   * evidence refs like `../features/-slug.md` that appear in
    * markdown cross-reference links (those paths are relative to the
    * artifact's file location, not to projectDir). Falls back to projectDir
    * when omitted.
@@ -218,7 +218,7 @@ async function pathExists(projectDir: string, ref: string, artifactDir?: string)
   // Choose resolution base:
   // - Relative refs (`./` or `../`) resolve against the artifact's directory
   //   when available, because OpenPlanr's cross-reference convention writes
-  //   paths like `../features/FEAT-001-slug.md` relative to the artifact file.
+  //   paths like `../features/-slug.md` relative to the artifact file.
   // - Everything else (repo-root-style refs like `src/services/foo.ts`) resolves
   //   against projectDir.
   const looksRelative = ref.startsWith('./') || ref.startsWith('../');

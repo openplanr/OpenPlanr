@@ -179,7 +179,7 @@ export const aiRefineResponseSchema = z.object({
 
 export type AIRefineResponse = z.infer<typeof aiRefineResponseSchema>;
 
-// --- Revise (EPIC-003) ---
+// --- Revise ---
 
 export const aiReviseActionSchema = z.enum(['revise', 'skip', 'flag']);
 

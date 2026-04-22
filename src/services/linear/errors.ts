@@ -6,7 +6,7 @@
  *      auth / network / rate-limit; surfaced friendly SDK message for other
  *      classified types; sanitized fallback for unclassified errors).
  *   2. Wrap Linear calls with small exponential backoff that honours
- *      `RatelimitedLinearError.retryAfter` (review finding M3).
+ *      `RatelimitedLinearError.retryAfter`.
  */
 
 import { LinearError, LinearErrorType, RatelimitedLinearError } from '@linear/sdk';

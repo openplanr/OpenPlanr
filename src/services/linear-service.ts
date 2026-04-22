@@ -1,7 +1,7 @@
 /**
- * Linear API wrapper (EPIC-004) — auth + SDK mutations wrapped with
- * retry/error-mapping and input-safety guards. Constants/validators live
- * in `linear/constants.ts`; retry + error mapping in `linear/errors.ts`.
+ * Linear API wrapper — auth + SDK mutations wrapped with retry, error
+ * mapping, and input-safety guards. Constants/validators live in
+ * `linear/constants.ts`; retry + error mapping in `linear/errors.ts`.
  */
 
 import { LinearClient } from '@linear/sdk';

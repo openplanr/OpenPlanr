@@ -1,6 +1,7 @@
 /**
- * `planr linear` — Linear integration (EPIC-004, FEAT-015).
- * `init` stores a PAT, validates it, and saves the default team in `.planr/config.json`.
+ * `planr linear` — Linear.app integration command tree.
+ * `init` stores a PAT, validates it, and saves the default team in
+ * `.planr/config.json`. See `planr linear --help` for the full subcommand list.
  */
 
 import chalk from 'chalk';
@@ -83,7 +84,7 @@ ${chalk.dim('Examples:')}
   planr linear sync
   planr linear sync --dry-run
   planr linear push EPIC-001 --dry-run
-  planr linear push FEAT-015 --dry-run
+  planr linear push FEAT-XXX --dry-run
   planr linear push US-054
   planr linear push TASK-015 --push-parents
   planr linear status --scope EPIC-001
@@ -525,7 +526,7 @@ export function registerLinearCommand(program: Command) {
           }
         }
 
-        // Phase 3: first-time standalone-project prompt for QT / BL pushes.
+        // First-time standalone-project prompt for QT / BL pushes.
         // Runs only when no standalone project is configured yet and the user
         // is on an interactive TTY. Non-interactive runs fall through to the
         // service's actionable "set linear.standaloneProjectId" error.

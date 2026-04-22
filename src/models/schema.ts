@@ -74,7 +74,7 @@ export const linearConfigSchema = z.object({
     )
     .optional(),
   /**
-   * Phase 3: target Linear project for `QT-*` / `BL-*` pushes. Must be a valid
+   * Target Linear project for `QT-*` / `BL-*` pushes. Must be a valid
    * Linear project UUID — fails fast at config-load time so a typo never
    * reaches the API.
    */
@@ -83,7 +83,7 @@ export const linearConfigSchema = z.object({
     .regex(LINEAR_UUID_REGEX, 'linear.standaloneProjectId must be a Linear project UUID')
     .optional(),
   standaloneProjectName: z.string().optional(),
-  /** Phase 2: pre-pick the mapping strategy to skip the first-push prompt. */
+  /** Pre-pick the mapping strategy to skip the first-push prompt. */
   defaultEpicStrategy: z.enum(['project', 'milestone-of', 'label-on']).optional(),
   /** Override the auto-applied type-label names. Any missing key falls back to the default. */
   typeLabels: z

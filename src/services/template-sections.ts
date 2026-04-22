@@ -1,5 +1,5 @@
 /**
- * Canonical section lists per artifact type (EPIC-003, FEAT-014 follow-up).
+ * Canonical section lists per artifact type.
  *
  * The revise prompt uses these to give the agent a *soft* conformance hint:
  * "these are the sections a ${type} artifact canonically has — don't invent

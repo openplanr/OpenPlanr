@@ -1,7 +1,7 @@
 /**
  * Replay a previously-written revise audit to disk without any model calls.
  *
- * Implements BL-005 — after `planr revise --dry-run` produces an audit log
+ * Implements after `planr revise --dry-run` produces an audit log
  * with the proposed diffs, `planr revise --apply-from <audit>` reads those
  * diffs and writes them to the corresponding artifacts. Zero tokens spent
  * in this mode.

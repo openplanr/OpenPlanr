@@ -1,5 +1,5 @@
 /**
- * Minimal line-based unified diff for revise preview (EPIC-003, FEAT-011 §4.0).
+ * Minimal line-based unified diff for revise preview.
  *
  * Implements a Wagner–Fischer LCS over lines, then prints hunks with
  * `+` / `-` prefixes. Not a general-purpose diff tool — scoped to small
@@ -113,7 +113,7 @@ function lcsDiff(a: string[], b: string[]): DiffItem[] {
 }
 
 // ---------------------------------------------------------------------------
-// Apply a unified diff (BL-005 — revise apply-from-audit, avoid double token spend)
+// Apply a unified diff
 // ---------------------------------------------------------------------------
 
 export interface ApplyDiffResult {

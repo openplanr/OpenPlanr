@@ -1,11 +1,9 @@
 /**
- * `planr revise` — core service (EPIC-003, FEAT-010 + FEAT-011).
+ * `planr revise` — core service.
  *
- * Exposes composable primitives; the CLI and future cascade service
- * orchestrate them. Phase 1 (FEAT-010) ships `reviseArtifact` for dry-run
- * decision generation; Phase 2 (FEAT-011) adds `applyDecision` for the
- * write path and exposes the verifier context so callers can run
- * `verifyDecision` against the same inputs the agent saw.
+ * Exposes composable primitives. `reviseArtifact` produces dry-run decisions;
+ * `applyDecision` writes them to disk. The verifier context is exposed so
+ * callers can run `verifyDecision` against the same inputs the agent saw.
  */
 
 import path from 'node:path';
@@ -46,7 +44,7 @@ import type { EvidenceVerifierContext } from './evidence-verifier.js';
 import { getCanonicalSections } from './template-sections.js';
 
 export interface ReviseArtifactOptions {
-  /** Must be `true` in Phase 1; reserved for future write path (FEAT-011). */
+  /** Must be `true` in this release; reserved for future write path. */
   dryRun: true;
   /** Which parts of the artifact the agent may modify. Default: 'all'. */
   writableScope?: ReviseWritableScope;
@@ -92,12 +90,12 @@ export class ReviseArtifactNotFoundError extends Error {
 }
 
 /**
- * Revise a single artifact — Phase 1 dry-run.
+ * Revise a single artifact (dry-run).
  *
  * Does NOT write any files. The returned decision is the agent output after
- * schema validation; evidence verification, diff preview, and write are all
- * Phase 2 responsibilities (FEAT-011). Cascade, siblings, and declared
- * sources are Phase 3 (FEAT-012) and onwards.
+ * schema validation; evidence verification, diff preview, and write live in
+ * the CLI / apply path. Cascade, siblings, and declared sources are future
+ * extensions.
  */
 export async function reviseArtifact(
   projectDir: string,
@@ -110,7 +108,7 @@ export async function reviseArtifact(
   if (!artifactType) {
     throw new ReviseArtifactNotFoundError(
       artifactId,
-      `Cannot determine artifact type from ID: ${artifactId}. Expected format: EPIC-001, FEAT-001, US-001, TASK-001.`,
+      `Cannot determine artifact type from ID: ${artifactId}. Expected format: EPIC-001, , US-001, TASK-001.`,
     );
   }
 
@@ -170,7 +168,7 @@ export async function reviseArtifact(
     config,
     artifactDir: path.dirname(artifactPath),
     codebaseContextFormatted,
-    knownSourceRefs: [], // Phase 2 sources loader will populate
+    knownSourceRefs: [], // sources loader (future extension) will populate
     knownPatternRuleIds: codebaseCtx ? codebaseCtx.patternRules.map((r) => r.name) : [],
   };
 
@@ -190,7 +188,7 @@ export async function reviseArtifact(
 }
 
 // ---------------------------------------------------------------------------
-// Apply path (FEAT-011 §3 + §6 integration)
+// Apply path
 // ---------------------------------------------------------------------------
 
 export interface ApplyDecisionOptions {

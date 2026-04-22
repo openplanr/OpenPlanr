@@ -1,16 +1,15 @@
 /**
- * Linear → OpenPlanr pull-direction sync (FEAT-017 + FEAT-018).
+ * Linear → OpenPlanr pull-direction sync.
  *
  * Two concerns consolidated here because both are strictly pull and share
  * the same client lifecycle and auth surface:
  *
- *   1. **Workflow-status sync** (FEAT-017, was `linear-status-sync-service.ts`):
- *      for Features and Stories with a stored `linearIssueId`, fetch the
- *      current Linear workflow state name and write OpenPlanr `status`
- *      frontmatter when mapped.
+ *   1. **Workflow-status sync**: for Features and Stories with a stored
+ *      `linearIssueId`, fetch the current Linear workflow state name and
+ *      write OpenPlanr `status` frontmatter when mapped.
  *
- *   2. **Task checkbox sync** (FEAT-018): bidirectional 3-way merge between
- *      local TASK markdown and Linear TaskList issue description bodies.
+ *   2. **Task checkbox sync**: bidirectional 3-way merge between local
+ *      TASK markdown and Linear TaskList issue description bodies.
  *      Pull-side lives here; push-side lives in `linear-push-service.ts`.
  *
  * Keeping them in one module reduces call-site noise for
@@ -48,7 +47,7 @@ import {
 import { promptSelect } from './prompt-service.js';
 
 // ---------------------------------------------------------------------------
-// Workflow-status sync (FEAT-017 — formerly linear-status-sync-service.ts)
+// Workflow-status sync
 // ---------------------------------------------------------------------------
 
 function asTaskStatus(s: unknown): TaskStatus {
@@ -147,7 +146,7 @@ export async function syncLinearStatusIntoArtifacts(
         summary.skippedNoId++;
         continue;
       }
-      // H1 — Same validation as checkbox sync: don't feed malformed ids to the API.
+      // Same validation as checkbox sync: don't feed malformed ids to the API.
       if (!isLikelyLinearIssueId(linearId)) {
         logger.warn(
           `${type} ${row.id}: linearIssueId "${linearId}" is not a valid Linear id (expected uuid or \`ENG-42\` identifier). Skipping status sync — re-run \`planr linear push\` to repair.`,
@@ -210,7 +209,7 @@ export function formatLinearStatusSyncLine(s: LinearStatusSyncSummary): string {
 }
 
 // ---------------------------------------------------------------------------
-// Task checkbox sync (FEAT-018 — three-way merge between local TASK markdown and Linear issue body)
+// Task checkbox sync — three-way merge between local TASK markdown and Linear issue body
 // ---------------------------------------------------------------------------
 
 export type TaskCheckboxConflictStrategy = 'prompt' | 'local' | 'linear';
@@ -407,7 +406,7 @@ export async function resolveTaskCheckboxFinalStates(
       final.set(id, r);
     }
     conflictDecisions++;
-    // M4 — Record non-interactive auto-resolutions for the audit log. We
+    // Record non-interactive auto-resolutions for the audit log. We
     // only record when strategy was 'prompt' AND we're non-interactive (i.e.
     // the default was picked without human input); explicit `--on-conflict
     // local|linear` choices are user intent, not silent defaults.
@@ -510,7 +509,7 @@ export async function runLinearTaskCheckboxSync(
     skippedNoIssue: 0,
     skippedStaleId: 0,
   };
-  // M4 — Collect non-interactive auto-resolutions so we can audit them to
+  // Collect non-interactive auto-resolutions so we can audit them to
   // disk after the run (CI-friendly — logger.dim lines don't survive long).
   const autoResolvedConflicts: AutoResolvedConflict[] = [];
 
@@ -522,7 +521,7 @@ export async function runLinearTaskCheckboxSync(
     if (!issueId) {
       continue;
     }
-    // H1 — Catch both known corruption modes before calling the Linear API:
+    // Catch both known corruption modes before calling the Linear API:
     // (a) a workflow state UUID accidentally stored in the issue-id slot, and
     // (b) any value that doesn't match a valid Linear issue form (UUID or `ENG-42`).
     if (isLikelyLinearWorkflowStateId(issueId)) {
@@ -585,7 +584,7 @@ export async function runLinearTaskCheckboxSync(
       const baseStr = (data?.linearChecklistReconciled as string) ?? undefined;
       const baseMap = parseTaskCheckboxReconciled(baseStr);
 
-      // M5 — A baseline was persisted but parses to ~nothing: it's likely
+      // A baseline was persisted but parses to ~nothing: it's likely
       // corrupted (hand-edited frontmatter, truncated write, format drift).
       // Warn because without a reliable base the 3-way merge degrades
       // silently to a 2-way merge, losing the "last agreed" reference.
@@ -642,7 +641,7 @@ export async function runLinearTaskCheckboxSync(
     }
   }
 
-  // M4 — Persist any non-interactive auto-resolutions to a Markdown audit log.
+  // Persist any non-interactive auto-resolutions to a Markdown audit log.
   // Matches the filename convention used by revise's audit-log-service so users
   // find it in the same `.planr/reports/` directory they already look at.
   // Never mutates anything in dry-run mode.

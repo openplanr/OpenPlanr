@@ -315,7 +315,7 @@ title: "My Epic"
 Respond with JSON only, no markdown or explanation.`;
 
 /**
- * System prompt for `planr revise` — the agentic revision command (EPIC-003).
+ * System prompt for `planr revise` — the agentic revision command.
  *
  * Unlike REFINE_SYSTEM_PROMPT (which improves prose quality of one artifact
  * in isolation and is forbidden from touching cross-references), the revise

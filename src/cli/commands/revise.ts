@@ -1,22 +1,22 @@
 /**
- * `planr revise` command (EPIC-003, FEAT-010 → FEAT-012).
+ * `planr revise` command.
  *
  * Runs the revise safety pipeline for a single artifact or a cascade:
  *
- *   1. **Clean-tree gate** (FEAT-011 §2.0) — unless --allow-dirty.
- *   2. **Agent decision** (FEAT-010) — per artifact.
- *   3. **Evidence verification** (FEAT-011 §1.0) — unverifiable evidence
+ *   1. **Clean-tree gate** — unless --allow-dirty.
+ *   2. **Agent decision** — per artifact.
+ *   3. **Evidence verification** — unverifiable evidence
  *      is dropped; revise → flag demotion when nothing survives.
- *   4. **Diff preview + confirmation** (FEAT-011 §4.0 + §5.0) — per artifact.
- *   5. **Atomic write + audit log** (FEAT-011 §3.0 + §6.0).
+ *   4. **Diff preview + confirmation** — per artifact.
+ *   5. **Atomic write + audit log**.
  *
- * In `--cascade` mode, the cascade service (FEAT-012) drives the pipeline
+ * In `--cascade` mode, the cascade service drives the pipeline
  * top-down (epic → features → stories → tasks). Children always see the
  * *revised* parent because they are loaded fresh from disk between steps.
  * `[q]uit` and SIGINT stop the cascade gracefully — already-applied
  * artifacts stay applied, audit entries flush immediately.
  *
- * FEAT-013 (--all + post-flight rollback) layers on top of this command.
+ *  layers on top of this command.
  */
 
 import path from 'node:path';
@@ -80,7 +80,7 @@ interface ReviseCommandOptions {
   siblingContext: boolean;
   audit?: string;
   auditFormat: string;
-  /** BL-005: replay a previously-written audit report with zero model calls. */
+  /** replay a previously-written audit report with zero model calls. */
   applyFrom?: string;
 }
 
@@ -89,12 +89,10 @@ const DEFAULT_MAX_WRITES_PER_RUN = 50;
 export function registerReviseCommand(program: Command) {
   program
     .command('revise')
-    .description(
-      'AI-driven revision of planning artifacts against codebase reality (FEAT-010 → FEAT-012: single or cascade)',
-    )
+    .description('AI-driven revision of planning artifacts against codebase reality')
     .argument(
       '[artifactId]',
-      'artifact ID (e.g., EPIC-001, FEAT-002, US-003, TASK-004). Omit and pass --all to revise every epic in the project.',
+      'artifact ID (e.g., EPIC-001, , US-003, TASK-004). Omit and pass --all to revise every epic in the project.',
     )
     .option(
       '--dry-run',
@@ -135,13 +133,13 @@ export function registerReviseCommand(program: Command) {
     .option('--audit-format <format>', `audit log format: ${AUDIT_FORMATS.join(', ')}`, 'md')
     .option(
       '--apply-from <report-path>',
-      'replay an existing dry-run audit report to disk without any model calls (BL-005). Ignores --dry-run, --cascade, --all, and AI flags; other safety gates (clean-tree, atomic write, graph integrity) still run.',
+      'replay an existing dry-run audit report to disk without any model calls. Ignores --dry-run, --cascade, --all, and AI flags; other safety gates (clean-tree, atomic write, graph integrity) still run.',
     )
     .action(async (artifactId: string | undefined, opts: ReviseCommandOptions) => {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
 
-      // BL-005: apply-from-audit short-circuits the whole AI pipeline.
+      // apply-from-audit short-circuits the whole AI pipeline.
       // Runs before all AI-path validation because this mode makes no model calls.
       if (opts.applyFrom) {
         const { runApplyFromAudit } = await import('../../services/revise-apply-service.js');
@@ -196,7 +194,7 @@ export function registerReviseCommand(program: Command) {
       const rootType = artifactId ? findArtifactTypeById(artifactId) : undefined;
       if (artifactId && !rootType) {
         logger.error(`Cannot determine artifact type from ID: ${artifactId}`);
-        logger.dim('Expected format: EPIC-001, FEAT-001, US-001, TASK-001');
+        logger.dim('Expected format: EPIC-001, , US-001, TASK-001');
         process.exit(1);
       }
 
@@ -287,7 +285,7 @@ export function registerReviseCommand(program: Command) {
           );
         }
 
-        // --- Post-flight graph integrity + rollback (FEAT-013 §3.0 + §4.0)
+        // --- Post-flight graph integrity + rollback
         if (!opts.dryRun) {
           const report = await checkGraphIntegrity(projectDir, config);
           if (!report.ok) {
@@ -317,7 +315,7 @@ export function registerReviseCommand(program: Command) {
         writer.close();
         if (err instanceof ReviseArtifactNotFoundError) {
           logger.error(err.message);
-          logger.dim('Expected format: EPIC-001, FEAT-001, US-001, TASK-001');
+          logger.dim('Expected format: EPIC-001, , US-001, TASK-001');
           process.exit(1);
         }
         const { AIError } = await import('../../ai/errors.js');
@@ -369,7 +367,7 @@ async function runSingle(
 }
 
 // ---------------------------------------------------------------------------
-// --- All-epics path (FEAT-013 §1.0)
+// --- All-epics path
 // ---------------------------------------------------------------------------
 
 async function runAll(

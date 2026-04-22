@@ -4,7 +4,7 @@
  * All field-limit values here are enforced at the SDK-wrapper layer in
  * `src/services/linear-service.ts` so that every caller gets the guard for
  * free. Shape validators (`isLikelyLinear*Id`) fence off stale frontmatter
- * before it reaches the Linear API (review finding H1).
+ * before it reaches the Linear API.
  */
 
 import { logger } from '../../utils/logger.js';
@@ -83,7 +83,7 @@ export function isLikelyLinearWorkflowStateId(s: string): boolean {
  *   1. UUIDv4 (e.g. `9b2f4c3e-...`) — canonical API form
  *   2. Linear identifier (e.g. `ENG-42`) — human-readable, also accepted by `client.issue()`
  * Anything else is treated as stale/corrupted frontmatter and skipped before
- * hitting the API (review finding H1 — prevents 404s and wrong-issue updates).
+ * hitting the API.
  */
 export function isLikelyLinearIssueId(s: string): boolean {
   const trimmed = s.trim();

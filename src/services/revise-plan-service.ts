@@ -1,5 +1,5 @@
 /**
- * Revise plan parser (BL-005 — apply-from-audit, avoid double token spend).
+ * Revise plan parser.
  *
  * A "plan" is a previously-written revise audit log that we replay to disk
  * without any model calls. This service parses a Markdown audit file
@@ -12,11 +12,10 @@
  * hand-edited the audit, the parser surfaces specific errors so the user
  * can fix or discard the file rather than silently getting bad replays.
  *
- * Future extension (flagged in BL-005 AC#4): we may emit a sidecar
- * `.plan.json` next to the Markdown audit to carry content hashes and
- * `revisedMarkdown` without parsing overhead. The Markdown path remains
- * supported indefinitely because older audits (like EPIC-004-2026-04-22)
- * predate that change and still need replay support.
+ * Future extension: we may emit a sidecar `.plan.json` next to the
+ * Markdown audit to carry content hashes and `revisedMarkdown` without
+ * parsing overhead. The Markdown path remains supported indefinitely —
+ * older audits predate any sidecar format and still need replay support.
  */
 
 import { readFileSync } from 'node:fs';
@@ -30,7 +29,7 @@ import type {
 export interface ReplayablePlan {
   /** Absolute path of the audit file this plan was parsed from. */
   sourcePath: string;
-  /** Scope recorded in the audit header (e.g., "EPIC-004"). */
+  /** Scope recorded in the audit header (e.g., "EPIC-001"). */
   scope: string;
   /** When the dry-run was started, from the audit header. */
   startedAt?: string;

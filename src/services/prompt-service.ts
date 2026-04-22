@@ -93,7 +93,7 @@ export async function promptMultiText(message: string, hint?: string): Promise<s
 }
 
 // ---------------------------------------------------------------------------
-// Revise command prompts (EPIC-003, FEAT-011 §5.0)
+// Revise command prompts
 // ---------------------------------------------------------------------------
 
 /** One action the user can take at the diff-preview prompt for a proposed revise. */
@@ -125,7 +125,7 @@ export async function promptReviseConfirm(artifactId: string): Promise<ReviseCon
 }
 
 // ---------------------------------------------------------------------------
-// Linear integration prompts (Phase 2 / Phase 3 of EPIC-LINEAR-GRANULAR-PUSH)
+// Linear integration prompts
 // ---------------------------------------------------------------------------
 
 /**

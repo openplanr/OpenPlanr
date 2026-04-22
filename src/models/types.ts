@@ -14,9 +14,9 @@ export type AIProviderName = 'anthropic' | 'openai' | 'ollama';
 export type CodingAgentName = 'claude' | 'cursor' | 'codex';
 
 /**
- * How an OpenPlanr Epic is mapped into Linear's object model (Phase 2 of
- * EPIC-LINEAR-GRANULAR-PUSH). Stored per-epic in frontmatter; missing =
- * `'project'` for backward compatibility with v1 pushes.
+ * How an OpenPlanr Epic is mapped into Linear's object model. Stored
+ * per-epic in frontmatter; missing = `'project'` (one-to-one Epic →
+ * Linear Project, the default).
  */
 export type LinearMappingStrategy = 'project' | 'milestone-of' | 'label-on';
 
@@ -27,9 +27,10 @@ export interface AIConfig {
 }
 
 /**
- * Linear integration (EPIC-004). `teamId` is persisted in `.planr/config.json` after
- * `planr linear init`. The PAT is stored via `credentials-service` (provider key
- * `linear`), never in the config file — use optional `token` only for in-memory flows.
+ * Linear integration config. `teamId` is persisted in `.planr/config.json`
+ * after `planr linear init`. The PAT is stored via `credentials-service`
+ * (provider key `linear`), never in the config file — use optional `token`
+ * only for in-memory flows.
  */
 export interface LinearConfig {
   teamId: string;
@@ -38,25 +39,27 @@ export interface LinearConfig {
   /** Optional Linear user id to set as project lead on created/updated projects. */
   defaultProjectLead?: string;
   /**
-   * Pull (FEAT-017): Linear **workflow state name** (any casing) → `pending` | `in-progress` | `done`.
-   * Merged with built-in defaults. For legacy projects, the same key previously held **push** UUIDs
-   * keyed by OpenPlanr status; those `uuid`-shaped values are ignored for pull and handled via `pushStateIds` / legacy push heuristics.
+   * Pull: Linear **workflow state name** (any casing) → `pending` |
+   * `in-progress` | `done`. Merged with built-in defaults. For legacy
+   * projects, the same key previously held **push** UUIDs keyed by
+   * OpenPlanr status; those `uuid`-shaped values are ignored for pull and
+   * handled via `pushStateIds` / legacy push heuristics.
    */
   statusMap?: Record<string, string>;
   /**
-   * Push (FEAT-016): OpenPlanr status key → Linear workflow **state id** (UUID).
+   * Push: OpenPlanr status key → Linear workflow **state id** (UUID).
    */
   pushStateIds?: Record<string, string>;
   /**
-   * Phase 3: Linear project (UUID) that hosts `QT-*` and `BL-*` pushes. When
-   * unset, the first QT/BL push prompts for a project (or to create one).
+   * Linear project (UUID) that hosts `QT-*` and `BL-*` pushes. When unset,
+   * the first QT/BL push prompts for a project (or to create one).
    */
   standaloneProjectId?: string;
   /** Display-only name for the standalone project (shown in logs + prompts). */
   standaloneProjectName?: string;
   /**
-   * Phase 2: skip the first-push mapping-strategy prompt by supplying a
-   * default. Useful for CI / non-interactive consumers.
+   * Skip the first-push mapping-strategy prompt by supplying a default.
+   * Useful for CI / non-interactive consumers.
    */
   defaultEpicStrategy?: LinearMappingStrategy;
   /**
@@ -78,7 +81,7 @@ export interface LinearConfig {
   token?: string;
 }
 
-/** Options for `planr linear sync` and related flows (FEAT-019). */
+/** Options for `planr linear sync` and related flows. */
 export interface LinearSyncOptions {
   /**
    * When true, compute and print what would change without writing local files or mutating Linear issue bodies.
@@ -94,7 +97,7 @@ export interface LinearSyncOptions {
   onConflict?: 'prompt' | 'local' | 'linear';
 }
 
-/** One row for `planr linear status` (local mapping table, FEAT-019). */
+/** One row for `planr linear status` (local mapping table). */
 export interface LinearMappingTableRow {
   kind: 'epic' | 'feature' | 'story' | 'task' | 'quick' | 'backlog';
   openPlanrId: string;
@@ -171,7 +174,7 @@ export interface Epic extends BaseArtifact {
   linearProjectIdentifier?: string;
   linearProjectUrl?: string;
   /**
-   * Phase 2: how this epic maps into Linear. Missing ⇒ treated as `'project'`
+   * How this epic maps into Linear. Missing ⇒ treated as `'project'`
    * for backward compatibility with v1 pushes.
    */
   linearMappingStrategy?: LinearMappingStrategy;
@@ -192,9 +195,9 @@ export interface Feature extends BaseArtifact {
   linearIssueId?: string;
   linearIssueIdentifier?: string;
   linearIssueUrl?: string;
-  /** Phase 2: set when the parent epic's strategy is `'milestone-of'`. */
+  /** Set when the parent epic's strategy is `'milestone-of'`. */
   linearProjectMilestoneId?: string;
-  /** Phase 2: set when the parent epic's strategy is `'label-on'`. */
+  /** Set when the parent epic's strategy is `'label-on'`. */
   linearLabelIds?: string[];
 }
 
@@ -211,9 +214,9 @@ export interface UserStory extends BaseArtifact {
   linearIssueUrl?: string;
   /** Parent feature issue id in Linear (sub-issues). */
   linearParentIssueId?: string;
-  /** Phase 2: set when the containing epic's strategy is `'milestone-of'`. */
+  /** Set when the containing epic's strategy is `'milestone-of'`. */
   linearProjectMilestoneId?: string;
-  /** Phase 2: set when the containing epic's strategy is `'label-on'`. */
+  /** Set when the containing epic's strategy is `'label-on'`. */
   linearLabelIds?: string[];
 }
 
@@ -235,13 +238,13 @@ export interface TaskList extends BaseArtifact {
   /** ISO date-time of last task checklist sync to Linear. */
   linearTaskChecklistSyncedAt?: string;
   /**
-   * Last agreed checkbox state for this file (FEAT-018), compact: `1.0:1,1.1:0,2.0:1` (sorted by id).
+   * Last agreed checkbox state for this file, compact: `1.0:1,1.1:0,2.0:1` (sorted by id).
    * Used for three-way sync between local markdown and the Linear tasklist issue.
    */
   linearChecklistReconciled?: string;
-  /** Phase 2: set when the containing epic's strategy is `'milestone-of'`. */
+  /** Set when the containing epic's strategy is `'milestone-of'`. */
   linearProjectMilestoneId?: string;
-  /** Phase 2: set when the containing epic's strategy is `'label-on'`. */
+  /** Set when the containing epic's strategy is `'label-on'`. */
   linearLabelIds?: string[];
 }
 
@@ -304,7 +307,7 @@ export interface GeneratedFile {
 }
 
 // ---------------------------------------------------------------------------
-// Stakeholder reports (EPIC-002)
+// Stakeholder reports
 // ---------------------------------------------------------------------------
 
 export type StakeholderReportType =
@@ -495,12 +498,10 @@ export interface VoiceStandupSession {
 }
 
 // ---------------------------------------------------------------------------
-// Plan revision (EPIC-003)
+// Plan revision
 //
 // Types for `planr revise` — the agentic revision command that aligns
-// planning artifacts with codebase reality. See
-// .planr/EPIC-REVISE-COMMAND.md for the design brief and
-// .planr/epics/EPIC-003-plan-revision-layer-revise-command.md for scope.
+// planning artifacts with codebase reality.
 // ---------------------------------------------------------------------------
 
 export type ReviseAction = 'revise' | 'skip' | 'flag';
@@ -574,14 +575,14 @@ export type ReviseAuditOutcome =
   | 'flagged'
   | 'failed'
   | 'demoted' // evidence verifier flipped revise → flag
-  | 'applied-from-plan' // BL-005: written by the apply-from-audit replay path
-  | 'stale-skipped' // BL-005: replay found artifact changed since dry-run; entry skipped
-  | 'conflict-skipped'; // BL-005: replay diff did not apply cleanly; entry skipped
+  | 'applied-from-plan' // written by the apply-from-audit replay path
+  | 'stale-skipped' // replay found artifact changed since dry-run; entry skipped
+  | 'conflict-skipped'; // replay diff did not apply cleanly; entry skipped
 
 /**
  * One row in the revise audit log. Flushed to disk as soon as it is
- * produced (FEAT-012 §4.1) so an interrupted run still leaves an accurate
- * on-disk record of what was written.
+ * produced so an interrupted run still leaves an accurate on-disk record
+ * of what was written.
  */
 export interface ReviseAuditEntry {
   artifactId: string;

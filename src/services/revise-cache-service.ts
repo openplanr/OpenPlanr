@@ -1,5 +1,5 @@
 /**
- * Content-hash run cache for `planr revise` (EPIC-003, FEAT-014 §2.0).
+ * Content-hash run cache for `planr revise`.
  *
  * Between runs, we hash each artifact's raw content (+ the codebase-digest
  * input, when present) and skip artifacts whose hash matches the last
