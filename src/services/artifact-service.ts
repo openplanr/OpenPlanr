@@ -83,7 +83,26 @@ export async function listArtifacts(
   return results;
 }
 
-/** Read and parse an artifact's frontmatter and markdown body by ID. Returns null if not found. */
+/**
+ * Per-process set of file paths for which we've already emitted a parse
+ * warning. Batch commands (push / status / sync) call `readArtifact` twice
+ * for the same file (once during plan-build, once during the real pass) and
+ * shouldn't log the same warning twice.
+ */
+const parseWarningsEmitted = new Set<string>();
+
+/**
+ * Read and parse an artifact's frontmatter and markdown body by ID.
+ *
+ * Returns `null` in two cases — both treated identically by callers:
+ *   1. The file doesn't exist.
+ *   2. The file exists but its frontmatter can't be parsed (malformed YAML,
+ *      duplicate keys, stray `---` markers, etc.). A clear warning is emitted
+ *      so the operator knows which file is broken and why; batch commands
+ *      (`planr linear push`, `status`, `sync`) continue past the skip
+ *      instead of aborting the whole run. The warning is deduped per file
+ *      so re-reading the same broken file doesn't log twice.
+ */
 export async function readArtifact(
   projectDir: string,
   config: OpenPlanrConfig,
@@ -97,8 +116,19 @@ export async function readArtifact(
   const filePath = path.join(dir, files[0]);
   logger.debug(`Reading ${type} artifact: ${id} ← ${filePath}`);
   const raw = await readFile(filePath);
-  const parsed = parseMarkdown(raw);
-  return { ...parsed, filePath };
+  try {
+    const parsed = parseMarkdown(raw);
+    return { ...parsed, filePath };
+  } catch (err) {
+    if (!parseWarningsEmitted.has(filePath)) {
+      parseWarningsEmitted.add(filePath);
+      const reason = err instanceof Error ? err.message : String(err);
+      logger.warn(
+        `Skipping ${type} ${id}: frontmatter parse error.\n  ${filePath}\n  ${reason}\n  Fix the frontmatter (usually a duplicate key or stray \`---\` marker) and re-run.`,
+      );
+    }
+    return null;
+  }
 }
 
 /**

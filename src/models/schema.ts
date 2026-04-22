@@ -85,6 +85,16 @@ export const linearConfigSchema = z.object({
   standaloneProjectName: z.string().optional(),
   /** Phase 2: pre-pick the mapping strategy to skip the first-push prompt. */
   defaultEpicStrategy: z.enum(['project', 'milestone-of', 'label-on']).optional(),
+  /** Override the auto-applied type-label names. Any missing key falls back to the default. */
+  typeLabels: z
+    .object({
+      feature: z.string().min(1).optional(),
+      story: z.string().min(1).optional(),
+      task: z.string().min(1).optional(),
+      quick: z.string().min(1).optional(),
+      backlog: z.string().min(1).optional(),
+    })
+    .optional(),
 });
 
 export const configSchema = z.object({

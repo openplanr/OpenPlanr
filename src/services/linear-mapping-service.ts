@@ -5,18 +5,23 @@
 import type { LinearMappingTableRow, OpenPlanrConfig } from '../models/types.js';
 import { listArtifacts, readArtifact } from './artifact-service.js';
 import { buildCascadeOrder } from './cascade-service.js';
-import { isLikelyLinearIssueId, isLikelyLinearWorkflowStateId } from './linear-service.js';
+import { isLikelyLinearIssueId } from './linear-service.js';
 
+/**
+ * Flag frontmatter values that don't parse as a plausible Linear issue id —
+ * typos like `ENG42` (no hyphen), truncations, or values copied from other
+ * tools. Linear issue ids accept two legitimate shapes: UUID v4 (canonical
+ * API form) and `ENG-42` identifier form; both return `undefined` here.
+ * Anything else gets flagged so the status table highlights it clearly.
+ *
+ * Note: earlier versions also flagged UUID-shaped values as "looks like a
+ * workflow state id" — removed in Gap D because every pushed Linear issue id
+ * is a UUID, so that check fired on healthy data.
+ */
 function staleNoteForIssueId(raw: string | undefined): string | undefined {
   if (!raw?.trim()) {
     return undefined;
   }
-  if (isLikelyLinearWorkflowStateId(raw)) {
-    return 'stale-id (value looks like a workflow state id; re-run `planr linear push`)';
-  }
-  // H1 — Catch non-UUID, non-identifier corruption too (typos like "ENG42",
-  // truncation, ids from other tools). Anything not matching a valid Linear
-  // id form is flagged here so the mapping table highlights it clearly.
   if (!isLikelyLinearIssueId(raw)) {
     return 'stale-id (value does not look like a Linear issue id; re-run `planr linear push`)';
   }
@@ -28,68 +33,67 @@ function cell(s: string, max = 48): string {
   return t.length <= max ? t : `${t.slice(0, max - 1)}…`;
 }
 
+function toStr(v: unknown): string | undefined {
+  if (typeof v !== 'string') return undefined;
+  const t = v.trim();
+  return t.length > 0 ? t : undefined;
+}
+
 function rowForEpic(openPlanrId: string, d: Record<string, unknown>): LinearMappingTableRow {
-  const pid = (d.linearProjectId as string | undefined)?.trim();
+  const pid = toStr(d.linearProjectId);
+  if (!pid) {
+    return {
+      kind: 'epic',
+      openPlanrId,
+      linearIdentifier: '(not pushed)',
+      linearUrl: '—',
+      lastKnownState: '—',
+    };
+  }
+  const strategy = toStr(d.linearMappingStrategy) ?? 'project';
+  const url = toStr(d.linearProjectUrl) ?? '—';
+  let identifier: string;
+  if (strategy === 'milestone-of') {
+    const mid = toStr(d.linearMilestoneId);
+    identifier = mid ? `milestone:${mid.slice(0, 8)}` : 'milestone:(pending)';
+  } else if (strategy === 'label-on') {
+    const lid = toStr(d.linearLabelId);
+    identifier = lid ? `label:${lid.slice(0, 8)}` : 'label:(pending)';
+  } else {
+    identifier = toStr(d.linearProjectIdentifier) ?? `project:${pid.slice(0, 8)}`;
+  }
   return {
     kind: 'epic',
     openPlanrId,
-    linearIdentifier: pid
-      ? (d.linearProjectIdentifier as string)?.trim() || '(no identifier)'
-      : '(not pushed)',
-    linearUrl: pid ? (d.linearProjectUrl as string)?.trim() || '—' : '—',
+    linearIdentifier: identifier,
+    linearUrl: url,
     lastKnownState: '—',
   };
 }
 
-function rowForFeature(openPlanrId: string, d: Record<string, unknown>): LinearMappingTableRow {
-  const issueId = (d.linearIssueId as string | undefined)?.trim();
+/**
+ * Generic row builder for issue-shaped artifacts (feature / story / task /
+ * quick / backlog). All five have the same frontmatter fields
+ * (`linearIssueId`, `linearIssueIdentifier`, `linearIssueUrl`) so a single
+ * implementation handles them — only the `kind` label differs.
+ */
+function rowForIssueArtifact(
+  kind: 'feature' | 'story' | 'task' | 'quick' | 'backlog',
+  openPlanrId: string,
+  d: Record<string, unknown>,
+): LinearMappingTableRow {
+  const issueId = toStr(d.linearIssueId);
   const stale = staleNoteForIssueId(issueId);
+  const usable = Boolean(issueId && !stale);
   return {
-    kind: 'feature',
+    kind,
     openPlanrId,
-    linearIdentifier:
-      issueId && !stale
-        ? (d.linearIssueIdentifier as string)?.trim() || issueId.slice(0, 8)
-        : issueId
-          ? issueId.slice(0, 8)
-          : '(not pushed)',
-    linearUrl: issueId && !stale ? (d.linearIssueUrl as string)?.trim() || '—' : '—',
-    lastKnownState: String(d.status ?? '—'),
-    note: stale,
-  };
-}
-
-function rowForStory(openPlanrId: string, d: Record<string, unknown>): LinearMappingTableRow {
-  const issueId = (d.linearIssueId as string | undefined)?.trim();
-  const stale = staleNoteForIssueId(issueId);
-  return {
-    kind: 'story',
-    openPlanrId,
-    linearIdentifier:
-      issueId && !stale
-        ? (d.linearIssueIdentifier as string)?.trim() || issueId.slice(0, 8)
-        : issueId
-          ? issueId.slice(0, 8)
-          : '(not pushed)',
-    linearUrl: issueId && !stale ? (d.linearIssueUrl as string)?.trim() || '—' : '—',
-    lastKnownState: String(d.status ?? '—'),
-    note: stale,
-  };
-}
-
-function rowForTask(openPlanrId: string, d: Record<string, unknown>): LinearMappingTableRow {
-  const issueId = (d.linearIssueId as string | undefined)?.trim();
-  const stale = staleNoteForIssueId(issueId);
-  return {
-    kind: 'task',
-    openPlanrId,
-    linearIdentifier:
-      issueId && !stale
-        ? (d.linearIssueIdentifier as string)?.trim() || issueId.slice(0, 8)
-        : issueId
-          ? issueId.slice(0, 8)
-          : '(not pushed)',
-    linearUrl: issueId && !stale ? (d.linearIssueUrl as string)?.trim() || '—' : '—',
+    linearIdentifier: usable
+      ? (toStr(d.linearIssueIdentifier) ?? (issueId as string).slice(0, 8))
+      : issueId
+        ? issueId.slice(0, 8)
+        : '(not pushed)',
+    linearUrl: usable ? (toStr(d.linearIssueUrl) ?? '—') : '—',
     lastKnownState: String(d.status ?? '—'),
     note: stale,
   };
@@ -103,7 +107,7 @@ async function pushTaskRow(
 ): Promise<void> {
   const a = await readArtifact(projectDir, config, 'task', taskId);
   if (!a) return;
-  rows.push(rowForTask(taskId, a.data as Record<string, unknown>));
+  rows.push(rowForIssueArtifact('task', taskId, a.data as Record<string, unknown>));
 }
 
 /**
@@ -133,7 +137,7 @@ export async function collectLinearMappingTable(
     )) {
       const a = await readArtifact(projectDir, config, 'feature', fid);
       if (a) {
-        rows.push(rowForFeature(fid, a.data as Record<string, unknown>));
+        rows.push(rowForIssueArtifact('feature', fid, a.data as Record<string, unknown>));
       }
     }
 
@@ -142,7 +146,7 @@ export async function collectLinearMappingTable(
     )) {
       const a = await readArtifact(projectDir, config, 'story', sid);
       if (a) {
-        rows.push(rowForStory(sid, a.data as Record<string, unknown>));
+        rows.push(rowForIssueArtifact('story', sid, a.data as Record<string, unknown>));
       }
     }
 
@@ -164,6 +168,28 @@ export async function collectLinearMappingTable(
       }
     }
 
+    // Linked QT / BL artifacts (`epicId` or `parentEpic` pointing at this epic).
+    const quicks = await listArtifacts(projectDir, config, 'quick');
+    for (const q of quicks.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))) {
+      const a = await readArtifact(projectDir, config, 'quick', q.id);
+      if (!a) continue;
+      const linked = toStr(a.data.epicId) ?? toStr(a.data.parentEpic);
+      if (linked === scopeEpicId) {
+        rows.push(rowForIssueArtifact('quick', q.id, a.data as Record<string, unknown>));
+      }
+    }
+    const backlogs = await listArtifacts(projectDir, config, 'backlog');
+    for (const b of backlogs.sort((a, b) =>
+      a.id.localeCompare(b.id, undefined, { numeric: true }),
+    )) {
+      const a = await readArtifact(projectDir, config, 'backlog', b.id);
+      if (!a) continue;
+      const linked = toStr(a.data.epicId) ?? toStr(a.data.parentEpic);
+      if (linked === scopeEpicId) {
+        rows.push(rowForIssueArtifact('backlog', b.id, a.data as Record<string, unknown>));
+      }
+    }
+
     return rows;
   }
 
@@ -179,7 +205,7 @@ export async function collectLinearMappingTable(
   for (const f of features.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))) {
     const a = await readArtifact(projectDir, config, 'feature', f.id);
     if (a) {
-      rows.push(rowForFeature(f.id, a.data as Record<string, unknown>));
+      rows.push(rowForIssueArtifact('feature', f.id, a.data as Record<string, unknown>));
     }
   }
 
@@ -187,13 +213,25 @@ export async function collectLinearMappingTable(
   for (const s of stories.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))) {
     const a = await readArtifact(projectDir, config, 'story', s.id);
     if (a) {
-      rows.push(rowForStory(s.id, a.data as Record<string, unknown>));
+      rows.push(rowForIssueArtifact('story', s.id, a.data as Record<string, unknown>));
     }
   }
 
   const tasks = await listArtifacts(projectDir, config, 'task');
   for (const t of tasks.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))) {
     await pushTaskRow(projectDir, config, rows, t.id);
+  }
+
+  const quicks = await listArtifacts(projectDir, config, 'quick');
+  for (const q of quicks.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))) {
+    const a = await readArtifact(projectDir, config, 'quick', q.id);
+    if (a) rows.push(rowForIssueArtifact('quick', q.id, a.data as Record<string, unknown>));
+  }
+
+  const backlogs = await listArtifacts(projectDir, config, 'backlog');
+  for (const b of backlogs.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))) {
+    const a = await readArtifact(projectDir, config, 'backlog', b.id);
+    if (a) rows.push(rowForIssueArtifact('backlog', b.id, a.data as Record<string, unknown>));
   }
 
   return rows;

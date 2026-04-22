@@ -6,6 +6,9 @@ tags: [{{#each tags}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
 status: "open"
 created: "{{date}}"
 updated: "{{date}}"
+{{#if epicId}}
+epicId: "{{epicId}}"
+{{/if}}
 ---
 
 # {{id}}: {{title}}

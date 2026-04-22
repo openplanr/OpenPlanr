@@ -149,7 +149,10 @@ describe('runLinearPush — QT push', () => {
     const input = fake.lastIssueInput();
     expect(input?.projectId).toBe('9b2f4c3e-1234-4abc-89de-0123456789ab');
     expect(input?.parentId).toBeUndefined(); // top-level, no parent
-    expect(input?.labelIds).toBeUndefined(); // QT doesn't auto-label
+    // Auto-labels: every QT gets the `quick-task` type label.
+    expect(input?.labelIds).toEqual(expect.arrayContaining(['label-uuid-1']));
+    // Title no longer includes the QT-XXX prefix — just the clean title.
+    expect(input?.title).toBe('QT-007 title');
     // Description includes our task checkboxes (parsed + re-rendered).
     expect(String(input?.description)).toContain('- [ ] **1.0** First task');
     expect(String(input?.description)).toContain('  - [x] 1.1 Subtask done');
@@ -195,11 +198,13 @@ describe('runLinearPush — BL push', () => {
     const plan = await runLinearPush(projectDir, config, fake.client, 'BL-001');
     expect(plan?.scope).toBe('backlog');
     expect(fake.calls.issueLabels).toHaveBeenCalled(); // label lookup fires first
-    expect(fake.calls.createIssueLabel).toHaveBeenCalledTimes(1); // not pre-existing
+    expect(fake.calls.createIssueLabel).toHaveBeenCalledTimes(1); // the backlog type label
     expect(fake.calls.createIssue).toHaveBeenCalledTimes(1);
     const input = fake.lastIssueInput();
     expect(input?.projectId).toBe('9b2f4c3e-1234-4abc-89de-0123456789ab');
-    expect(input?.labelIds).toEqual(['label-uuid-1']);
+    expect(input?.labelIds).toEqual(expect.arrayContaining(['label-uuid-1']));
+    // Title no longer includes the BL-XXX prefix.
+    expect(input?.title).toBe('BL-001 title');
     // Body includes priority + tags + description.
     expect(String(input?.description)).toContain('**Priority:** high');
     expect(String(input?.description)).toContain('**Tags:** feature, dx');

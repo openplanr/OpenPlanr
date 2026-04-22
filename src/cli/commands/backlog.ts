@@ -48,6 +48,10 @@ export function registerBacklogCommand(program: Command) {
     .argument('<description>', 'brief description of the work')
     .option('-p, --priority <level>', 'priority: critical, high, medium, low', 'medium')
     .option('-t, --tag <tags...>', 'tags (e.g., bug, feature, tech-debt)')
+    .option(
+      '--epic <epicId>',
+      'link this backlog item to an epic so `planr linear push EPIC-XXX` cascades to it',
+    )
     .action(async (description: string, opts) => {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
@@ -58,12 +62,22 @@ export function registerBacklogCommand(program: Command) {
       const tags: string[] = opts.tag || [];
       const title = truncateTitle(description);
 
+      const epicId = typeof opts.epic === 'string' ? opts.epic.trim() : undefined;
+      if (epicId) {
+        const epicArt = await readArtifact(projectDir, config, 'epic', epicId);
+        if (!epicArt) {
+          logger.warn(
+            `--epic ${epicId}: no such epic found locally yet. Linking anyway; create the epic before \`planr linear push\` or the link will fail there.`,
+          );
+        }
+      }
+
       const { id, filePath } = await createArtifact(
         projectDir,
         config,
         'backlog',
         'backlog/backlog-item.md.hbs',
-        { title, priority, tags, description },
+        { title, priority, tags, description, epicId },
       );
 
       logger.success(`Added ${id}: ${title}`);

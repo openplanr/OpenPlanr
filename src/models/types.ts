@@ -59,6 +59,21 @@ export interface LinearConfig {
    * default. Useful for CI / non-interactive consumers.
    */
   defaultEpicStrategy?: LinearMappingStrategy;
+  /**
+   * Override the auto-applied type label names. Linear push attaches one
+   * label per artifact (GitHub-style filtering) — `feature` for features,
+   * `story` for user stories, `task` for tasklists, `quick-task` for QTs,
+   * `backlog` for backlog items. Users can rename them here without
+   * breaking anything (e.g., `{ story: "user-story" }`). Missing keys fall
+   * back to the defaults.
+   */
+  typeLabels?: {
+    feature?: string;
+    story?: string;
+    task?: string;
+    quick?: string;
+    backlog?: string;
+  };
   /** In-memory / tests only; not persisted in `config.json`. */
   token?: string;
 }
@@ -81,7 +96,7 @@ export interface LinearSyncOptions {
 
 /** One row for `planr linear status` (local mapping table, FEAT-019). */
 export interface LinearMappingTableRow {
-  kind: 'epic' | 'feature' | 'story' | 'task';
+  kind: 'epic' | 'feature' | 'story' | 'task' | 'quick' | 'backlog';
   openPlanrId: string;
   linearIdentifier: string;
   linearUrl: string;
@@ -241,6 +256,19 @@ export interface BacklogItem extends BaseArtifact {
   description: string;
   acceptanceCriteria?: string;
   notes?: string;
+  /**
+   * Optional parent epic link. When set, `planr linear push` attaches this
+   * backlog item to the epic's Linear container (project / milestone / label)
+   * instead of the standalone bucket.
+   */
+  epicId?: string;
+  linearIssueId?: string;
+  linearIssueIdentifier?: string;
+  linearIssueUrl?: string;
+  /** Set when the containing epic's strategy is `'milestone-of'`. */
+  linearProjectMilestoneId?: string;
+  /** Set when the containing epic's strategy is `'label-on'` — includes the `backlog` label plus any epic label. */
+  linearLabelIds?: string[];
 }
 
 export interface Sprint extends BaseArtifact {

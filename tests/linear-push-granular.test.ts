@@ -119,6 +119,7 @@ interface FakeLinearClient {
 function makeFakeClient(): FakeLinearClient {
   let projectCounter = 0;
   let issueCounter = 0;
+  let labelCounter = 0;
   const createProject = vi.fn(async () => {
     projectCounter += 1;
     return { success: true, projectId: `proj-uuid-${projectCounter}` };
@@ -129,6 +130,11 @@ function makeFakeClient(): FakeLinearClient {
     return { success: true, issueId: `issue-uuid-${issueCounter}` };
   });
   const updateIssue = vi.fn(async () => ({ success: true }));
+  const issueLabels = vi.fn(async () => ({ nodes: [] }));
+  const createIssueLabel = vi.fn(async () => {
+    labelCounter += 1;
+    return { success: true, issueLabelId: `label-uuid-${labelCounter}` };
+  });
   const project = vi.fn(async (id: string) => ({
     id,
     slugId: `slug-${id}`,
@@ -139,12 +145,15 @@ function makeFakeClient(): FakeLinearClient {
     id,
     identifier: `ENG-${id.replace(/\D/g, '') || '0'}`,
     url: `https://linear.app/test/issue/${id}`,
+    labelIds: [] as string[],
   }));
   const client = {
     createProject,
     updateProject,
     createIssue,
     updateIssue,
+    issueLabels,
+    createIssueLabel,
     project,
     issue,
   } as unknown as LinearClient;
@@ -351,15 +360,16 @@ describe('runLinearPush — unsupported prefixes', () => {
     expect(fake.calls.createProject).not.toHaveBeenCalled();
   });
 
-  it('rejects QT- / BL- ids when standaloneProjectId is not configured', async () => {
+  it('rejects QT- / BL- ids when the artifact file is missing', async () => {
     const fake = makeFakeClient();
-    // Phase 3 handlers require linear.standaloneProjectId. Without it they
-    // throw a clear pointer to interactive setup or manual config edit.
+    // The new resolver loads the artifact first (to read `epicId`). A
+    // non-existent QT/BL file short-circuits with a clear "not found" before
+    // any container-resolution step runs.
     await expect(runLinearPush(projectDir, config, fake.client, 'QT-001')).rejects.toThrow(
-      /standaloneProjectId/,
+      /Quick task not found/,
     );
     await expect(runLinearPush(projectDir, config, fake.client, 'BL-001')).rejects.toThrow(
-      /standaloneProjectId/,
+      /Backlog item not found/,
     );
     expect(fake.calls.createIssue).not.toHaveBeenCalled();
   });

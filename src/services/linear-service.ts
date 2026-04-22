@@ -1,10 +1,12 @@
 /**
- * Linear API wrapper (EPIC-004, FEAT-015/016) — auth, teams, mutations, and permission checks
- * using the official @linear/sdk client.
+ * Linear API wrapper (EPIC-004) — auth + SDK mutations wrapped with
+ * retry/error-mapping and input-safety guards. Constants/validators live
+ * in `linear/constants.ts`; retry + error mapping in `linear/errors.ts`.
  */
 
-import { LinearClient, LinearError, LinearErrorType, RatelimitedLinearError } from '@linear/sdk';
-import { logger } from '../utils/logger.js';
+import { LinearClient } from '@linear/sdk';
+import { LINEAR_FIELD_LIMITS, requireNonEmpty, truncateForLinear } from './linear/constants.js';
+import { mapLinearError, withLinearRetry } from './linear/errors.js';
 
 type LinearIssueCreate = Parameters<LinearClient['createIssue']>[0];
 type LinearIssueUpdate = Parameters<LinearClient['updateIssue']>[1];
@@ -13,7 +15,12 @@ type LinearProjectUpdate = Parameters<LinearClient['updateProject']>[1];
 type LinearProjectMilestoneCreate = Parameters<LinearClient['createProjectMilestone']>[0];
 type LinearIssueLabelCreate = Parameters<LinearClient['createIssueLabel']>[0];
 
-export const LINEAR_CREDENTIAL_KEY = 'linear' as const;
+export {
+  isLikelyLinearIssueId,
+  isLikelyLinearWorkflowStateId,
+  LINEAR_CREDENTIAL_KEY,
+} from './linear/constants.js';
+export { mapLinearError, withLinearRetry } from './linear/errors.js';
 
 export interface LinearViewerSummary {
   id: string;
@@ -25,36 +32,6 @@ export interface LinearTeamOption {
   id: string;
   name: string;
   key: string;
-}
-
-export function createLinearClient(apiKey: string): LinearClient {
-  return new LinearClient({ apiKey });
-}
-
-/**
- * Heuristic: Linear API workflow state id (uuid) vs human-readable state name.
- * The `/i` flag is intentional — Linear's API canonicalizes UUIDs to lowercase,
- * but defensive acceptance of uppercase hex matches RFC 4122 and protects
- * against tools that normalize differently.
- */
-export function isLikelyLinearWorkflowStateId(s: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    s.trim(),
-  );
-}
-
-/**
- * Validate a value plausibly identifies a Linear issue. Two valid shapes:
- *   1. UUIDv4 (e.g. `9b2f4c3e-...`) — canonical API form
- *   2. Linear identifier (e.g. `ENG-42`) — human-readable, also accepted by `client.issue()`
- * Anything else is treated as stale/corrupted frontmatter and skipped before
- * hitting the API (BL H1 — prevents 404s and wrong-issue updates).
- */
-export function isLikelyLinearIssueId(s: string): boolean {
-  const trimmed = s.trim();
-  if (trimmed.length === 0) return false;
-  if (isLikelyLinearWorkflowStateId(trimmed)) return true;
-  return /^[A-Z]{2,}-\d+$/.test(trimmed);
 }
 
 export interface LinearProjectSummary {
@@ -80,58 +57,37 @@ export interface LinearLabelSummary {
   name: string;
 }
 
-const DEFAULT_RETRIES = 3;
-
-function isRetriableLinearError(err: unknown): boolean {
-  if (err instanceof LinearError) {
-    const t = (err as { type?: string }).type ?? LinearErrorType.Unknown;
-    return t === LinearErrorType.Ratelimited || t === LinearErrorType.NetworkError;
-  }
-  if (err instanceof Error && err.name === 'AbortError') return true;
-  return false;
+export function createLinearClient(apiKey: string): LinearClient {
+  return new LinearClient({ apiKey });
 }
 
-/** Wraps a Linear call with small exponential backoff on rate limit / network errors. */
-export async function withLinearRetry<T>(
-  op: string,
-  fn: () => Promise<T>,
-  retries: number = DEFAULT_RETRIES,
-): Promise<T> {
-  let last: unknown;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      return await fn();
-    } catch (err) {
-      last = err;
-      if (attempt < retries && isRetriableLinearError(err)) {
-        // Prefer Linear's own `Retry-After` when the error is a rate-limit
-        // (surfaced on the `RatelimitedLinearError` subclass as a seconds value).
-        // Fall back to exponential backoff for network errors and when the
-        // server didn't advertise a retry hint. Use `Math.max` so we respect
-        // both: never retry sooner than Linear asked, never faster than our
-        // own backoff schedule.
-        const retryAfterMs =
-          err instanceof RatelimitedLinearError && typeof err.retryAfter === 'number'
-            ? Math.max(0, err.retryAfter) * 1000
-            : 0;
-        const backoffMs = Math.min(30_000, 500 * 2 ** attempt);
-        const waitMs = Math.max(retryAfterMs, backoffMs);
-        logger.dim(`Linear ${op}: retrying in ${waitMs}ms (attempt ${attempt + 1}/${retries})...`);
-        await new Promise((r) => setTimeout(r, waitMs));
-        continue;
-      }
-      throw mapLinearError(err, op);
-    }
-  }
-  throw mapLinearError(last, op);
-}
+// ---------------------------------------------------------------------------
+// Project / Issue / Milestone / Label mutations
+// ---------------------------------------------------------------------------
 
 export async function createLinearProject(
   client: LinearClient,
   input: LinearProjectCreate,
 ): Promise<LinearProjectSummary> {
+  const safeInput: LinearProjectCreate = {
+    ...input,
+    name: truncateForLinear(
+      requireNonEmpty(input.name, 'Linear project name'),
+      LINEAR_FIELD_LIMITS.projectName,
+      'Linear project name',
+    ),
+    ...(typeof input.description === 'string'
+      ? {
+          description: truncateForLinear(
+            input.description,
+            LINEAR_FIELD_LIMITS.projectDescription,
+            'Linear project description',
+          ),
+        }
+      : {}),
+  };
   return withLinearRetry('create project', async () => {
-    const payload = await client.createProject(input);
+    const payload = await client.createProject(safeInput);
     if (!payload?.success) {
       throw new Error('Linear did not return success when creating a project.');
     }
@@ -157,8 +113,29 @@ export async function updateLinearProject(
   projectId: string,
   input: LinearProjectUpdate,
 ): Promise<LinearProjectSummary> {
+  const safeInput: LinearProjectUpdate = {
+    ...input,
+    ...(typeof input.name === 'string'
+      ? {
+          name: truncateForLinear(
+            requireNonEmpty(input.name, 'Linear project name'),
+            LINEAR_FIELD_LIMITS.projectName,
+            'Linear project name',
+          ),
+        }
+      : {}),
+    ...(typeof input.description === 'string'
+      ? {
+          description: truncateForLinear(
+            input.description,
+            LINEAR_FIELD_LIMITS.projectDescription,
+            'Linear project description',
+          ),
+        }
+      : {}),
+  };
   return withLinearRetry('update project', async () => {
-    const payload = await client.updateProject(projectId, input);
+    const payload = await client.updateProject(projectId, safeInput);
     if (!payload?.success) {
       throw new Error('Linear did not return success when updating a project.');
     }
@@ -179,8 +156,25 @@ export async function createLinearIssue(
   client: LinearClient,
   input: LinearIssueCreate,
 ): Promise<LinearIssueSummary> {
+  const safeInput: LinearIssueCreate = {
+    ...input,
+    title: truncateForLinear(
+      requireNonEmpty(input.title, 'Linear issue title'),
+      LINEAR_FIELD_LIMITS.issueTitle,
+      'Linear issue title',
+    ),
+    ...(typeof input.description === 'string'
+      ? {
+          description: truncateForLinear(
+            input.description,
+            LINEAR_FIELD_LIMITS.issueDescription,
+            'Linear issue description',
+          ),
+        }
+      : {}),
+  };
   return withLinearRetry('create issue', async () => {
-    const payload = await client.createIssue(input);
+    const payload = await client.createIssue(safeInput);
     if (!payload?.success) {
       throw new Error('Linear did not return success when creating an issue.');
     }
@@ -205,8 +199,29 @@ export async function updateLinearIssue(
   issueId: string,
   input: LinearIssueUpdate,
 ): Promise<LinearIssueSummary> {
+  const safeInput: LinearIssueUpdate = {
+    ...input,
+    ...(typeof input.title === 'string'
+      ? {
+          title: truncateForLinear(
+            requireNonEmpty(input.title, 'Linear issue title'),
+            LINEAR_FIELD_LIMITS.issueTitle,
+            'Linear issue title',
+          ),
+        }
+      : {}),
+    ...(typeof input.description === 'string'
+      ? {
+          description: truncateForLinear(
+            input.description,
+            LINEAR_FIELD_LIMITS.issueDescription,
+            'Linear issue description',
+          ),
+        }
+      : {}),
+  };
   return withLinearRetry('update issue', async () => {
-    const payload = await client.updateIssue(issueId, input);
+    const payload = await client.updateIssue(issueId, safeInput);
     if (!payload?.success) {
       throw new Error('Linear did not return success when updating an issue.');
     }
@@ -223,7 +238,7 @@ export async function updateLinearIssue(
 }
 
 /**
- * Phase 2: create a new ProjectMilestone inside an existing Linear project. Returned
+ * Create a new ProjectMilestone inside an existing Linear project. Returned
  * id is what we store on the epic's `linearMilestoneId` and propagate as
  * `projectMilestoneId` on every descendant issue.
  */
@@ -231,8 +246,26 @@ export async function createProjectMilestone(
   client: LinearClient,
   input: LinearProjectMilestoneCreate,
 ): Promise<LinearMilestoneSummary> {
+  const safeName = truncateForLinear(
+    requireNonEmpty(input.name, 'Linear milestone name'),
+    LINEAR_FIELD_LIMITS.milestoneName,
+    'Linear milestone name',
+  );
+  const safeInput: LinearProjectMilestoneCreate = {
+    ...input,
+    name: safeName,
+    ...(typeof input.description === 'string'
+      ? {
+          description: truncateForLinear(
+            input.description,
+            LINEAR_FIELD_LIMITS.milestoneDescription,
+            'Linear milestone description',
+          ),
+        }
+      : {}),
+  };
   return withLinearRetry('create milestone', async () => {
-    const payload = await client.createProjectMilestone(input);
+    const payload = await client.createProjectMilestone(safeInput);
     if (!payload?.success) {
       throw new Error('Linear did not return success when creating a project milestone.');
     }
@@ -240,25 +273,37 @@ export async function createProjectMilestone(
     if (!id) {
       throw new Error('Linear did not return a milestone id when creating a project milestone.');
     }
-    return { id, name: input.name };
+    return { id, name: safeName };
   });
 }
 
 /**
- * Phase 2: idempotent team-scoped label creation. Looks up an existing label by
- * exact name + team before creating, so re-running push is a no-op on the
- * label side. Matches the "Push re-applies the label idempotently" contract
- * from EPIC-LINEAR-GRANULAR-PUSH.
+ * Idempotent team-scoped label creation. Looks up an existing label by exact
+ * name + team before creating, so re-running push is a no-op on the label
+ * side. Matches the "Push re-applies the label idempotently" contract.
  */
 export async function ensureIssueLabel(
   client: LinearClient,
   input: { teamId: string; name: string; color?: string; description?: string },
 ): Promise<LinearLabelSummary> {
+  const safeName = truncateForLinear(
+    requireNonEmpty(input.name, 'Linear label name'),
+    LINEAR_FIELD_LIMITS.labelName,
+    'Linear label name',
+  );
+  const safeDescription =
+    typeof input.description === 'string'
+      ? truncateForLinear(
+          input.description,
+          LINEAR_FIELD_LIMITS.labelDescription,
+          'Linear label description',
+        )
+      : undefined;
   return withLinearRetry('ensure label', async () => {
     const existing = await client.issueLabels({
       filter: {
         team: { id: { eq: input.teamId } },
-        name: { eq: input.name },
+        name: { eq: safeName },
       },
       first: 1,
     });
@@ -268,9 +313,9 @@ export async function ensureIssueLabel(
     }
     const created: LinearIssueLabelCreate = {
       teamId: input.teamId,
-      name: input.name,
+      name: safeName,
       color: input.color,
-      description: input.description,
+      ...(safeDescription !== undefined ? { description: safeDescription } : {}),
     };
     const payload = await client.createIssueLabel(created);
     if (!payload?.success) {
@@ -280,13 +325,13 @@ export async function ensureIssueLabel(
     if (!id) {
       throw new Error('Linear did not return a label id when creating an issue label.');
     }
-    return { id, name: input.name };
+    return { id, name: safeName };
   });
 }
 
 /**
- * Phase 2 helper for the mapping-strategy prompt: list the team's projects so
- * the user can pick a target for `milestone-of` / `label-on`.
+ * List the team's projects so the user can pick a target for
+ * `milestone-of` / `label-on` mapping strategies.
  */
 export async function getTeamProjects(
   client: LinearClient,
@@ -303,10 +348,15 @@ export async function getTeamProjects(
   });
 }
 
+// ---------------------------------------------------------------------------
+// Batched reads
+// ---------------------------------------------------------------------------
+
 const ISSUE_STATE_FETCH_CHUNK = 50;
 
 /**
- * Batched: load each issue’s current workflow state **name** (one GraphQL round-trip per chunk).
+ * Batched: load each issue's current workflow state **name** (one GraphQL
+ * round-trip per chunk).
  */
 export async function fetchLinearIssueStateNames(
   client: LinearClient,
@@ -344,6 +394,10 @@ export async function getLinearIssueDescription(
   });
 }
 
+// ---------------------------------------------------------------------------
+// Auth / team validation
+// ---------------------------------------------------------------------------
+
 /** Resolves the current user; throws if the token is invalid or lacks API access. */
 export async function validateToken(client: LinearClient): Promise<LinearViewerSummary> {
   try {
@@ -374,8 +428,8 @@ export async function getAvailableTeams(client: LinearClient): Promise<LinearTea
 
 /**
  * Verifies the team exists and the token can read it (incl. project listing).
- * A missing project-create permission is surfaced via GraphQL on later mutations;
- * this catches inaccessible teams and read failures early.
+ * Catches inaccessible teams and read failures before write mutations fail
+ * mid-flight with confusing GraphQL errors.
  */
 export async function validateTeamAccess(
   client: LinearClient,
@@ -393,42 +447,4 @@ export async function validateTeamAccess(
   } catch (err) {
     throw mapLinearError(err, 'checking team access');
   }
-}
-
-function mapLinearError(err: unknown, context: string): Error {
-  if (err instanceof Error && err.name === 'AbortError') {
-    return new Error(`Network error while ${context}: request was cancelled or timed out.`);
-  }
-  if (err instanceof LinearError) {
-    const t = (err as { type?: string }).type ?? LinearErrorType.Unknown;
-    if (t === LinearErrorType.AuthenticationError) {
-      return new Error(
-        `Linear rejected this token while ${context}. Create a new PAT at https://linear.app/settings/account/security (app, read, write as needed) and run \`planr linear init\` again.`,
-      );
-    }
-    if (t === LinearErrorType.Forbidden) {
-      return new Error(
-        `Permission denied while ${context}. The token may be missing required OAuth scopes, or your user cannot access this resource.`,
-      );
-    }
-    if (t === LinearErrorType.NetworkError) {
-      return new Error(
-        `Cannot reach Linear while ${context}. Check your network connection, try again, and see https://status.linear.app for outages.`,
-      );
-    }
-    if (t === LinearErrorType.Ratelimited) {
-      return new Error(
-        'Linear rate limit reached. Wait about 1–2 minutes (longer if you are polling heavily), then retry. See https://status.linear.app if issues persist.',
-      );
-    }
-  }
-  // Unknown / unclassified error: log the full object at debug level so
-  // operators can inspect it with `--verbose`, but do NOT surface the raw
-  // message to end users — LinearError bodies can contain the failed GraphQL
-  // query, its variables, or raw response content we shouldn't echo.
-  logger.debug(`Linear error (${context})`, err);
-  const klass = err instanceof Error ? err.constructor.name : 'Unknown';
-  return new Error(
-    `Linear error while ${context} (${klass}). Re-run with --verbose for diagnostic details.`,
-  );
 }

@@ -198,13 +198,13 @@ describe('Epic push — project strategy (default, v1)', () => {
     });
     expect(fake.calls.createProject).toHaveBeenCalledTimes(1);
     expect(fake.calls.createProjectMilestone).not.toHaveBeenCalled();
-    expect(fake.calls.createIssueLabel).not.toHaveBeenCalled();
     // One feature + one story issue.
     expect(fake.calls.createIssue).toHaveBeenCalledTimes(2);
-    // No descendant issue carries projectMilestoneId or labelIds (for 'project' strategy).
+    // Type labels (`feature`, `story`) are always ensured — but no epic/milestone attribute.
     for (const input of fake.createIssueInputs()) {
       expect(input.projectMilestoneId).toBeUndefined();
-      expect(input.labelIds).toBeUndefined();
+      // Every issue carries exactly one label: its type label.
+      expect((input.labelIds as string[])?.length).toBe(1);
     }
   });
 });
@@ -232,7 +232,6 @@ describe('Epic push — milestone-of strategy', () => {
     // Milestone is created; Linear project is NOT (we're attaching into an existing project).
     expect(fake.calls.createProject).not.toHaveBeenCalled();
     expect(fake.calls.createProjectMilestone).toHaveBeenCalledTimes(1);
-    expect(fake.calls.createIssueLabel).not.toHaveBeenCalled();
     // Each descendant issue was told its milestone.
     for (const input of fake.createIssueInputs()) {
       expect(input.projectMilestoneId).toBe('milestone-uuid-1');
@@ -280,12 +279,14 @@ describe('Epic push — label-on strategy', () => {
     });
     expect(fake.calls.createProject).not.toHaveBeenCalled();
     expect(fake.calls.createProjectMilestone).not.toHaveBeenCalled();
-    // issueLabels is queried once (lookup), then createIssueLabel (since none pre-existed).
+    // issueLabels is queried (once per distinct label: the epic label + each type label).
     expect(fake.calls.issueLabels).toHaveBeenCalled();
-    expect(fake.calls.createIssueLabel).toHaveBeenCalledTimes(1);
-    // Each descendant issue's labelIds includes the created label.
+    // Every descendant issue carries the epic label plus its type label.
     for (const input of fake.createIssueInputs()) {
-      expect(input.labelIds).toEqual(['label-uuid-1']);
+      const labelIds = input.labelIds as string[];
+      expect(labelIds.length).toBeGreaterThanOrEqual(2); // type label + epic label
+      // One of the label uuids is the epic label — created first (label-uuid-1).
+      expect(labelIds).toContain('label-uuid-1');
     }
   });
 
@@ -294,7 +295,8 @@ describe('Epic push — label-on strategy', () => {
     await runLinearPush(projectDir, config, fake.client, 'EPIC-001', {
       strategyOverride: { strategy: 'label-on', targetProjectId: 'existing-proj-1' },
     });
-    // No new label was created.
+    // No new labels were created — everything existed already (the fake returns
+    // `label-uuid-preexisting` for every lookup).
     expect(fake.calls.createIssueLabel).not.toHaveBeenCalled();
     for (const input of fake.createIssueInputs()) {
       expect(input.labelIds).toEqual(['label-uuid-preexisting']);

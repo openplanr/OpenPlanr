@@ -185,6 +185,18 @@ describe('readArtifact', () => {
     const result = await readArtifact('/project', config, 'epic', 'EPIC-999');
     expect(result).toBeNull();
   });
+
+  it('returns null (not throw) when frontmatter YAML is malformed — lets batch commands continue past skip', async () => {
+    mockListFiles.mockResolvedValue(['QT-008-broken.md']);
+    mockReadFile.mockResolvedValue('---\nbroken-yaml\n---\n');
+    // Make parseMarkdown simulate a YAML failure for this one call.
+    const { parseMarkdown } = await import('../../src/utils/markdown.js');
+    vi.mocked(parseMarkdown).mockImplementationOnce(() => {
+      throw new Error('Map keys must be unique at line 13, column 1');
+    });
+    const result = await readArtifact('/project', config, 'quick', 'QT-008');
+    expect(result).toBeNull();
+  });
 });
 
 describe('readArtifactRaw', () => {
