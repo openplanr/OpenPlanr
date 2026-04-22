@@ -16,7 +16,8 @@
  * `[q]uit` and SIGINT stop the cascade gracefully — already-applied
  * artifacts stay applied, audit entries flush immediately.
  *
- *  layers on top of this command.
+ * The `--all` flag + post-flight rollback extension layers on top of this
+ * command.
  */
 
 import path from 'node:path';
@@ -92,7 +93,7 @@ export function registerReviseCommand(program: Command) {
     .description('AI-driven revision of planning artifacts against codebase reality')
     .argument(
       '[artifactId]',
-      'artifact ID (e.g., EPIC-001, , US-003, TASK-004). Omit and pass --all to revise every epic in the project.',
+      'artifact ID (e.g., EPIC-001, FEAT-002, US-003, TASK-004). Omit and pass --all to revise every epic in the project.',
     )
     .option(
       '--dry-run',
@@ -133,7 +134,7 @@ export function registerReviseCommand(program: Command) {
     .option('--audit-format <format>', `audit log format: ${AUDIT_FORMATS.join(', ')}`, 'md')
     .option(
       '--apply-from <report-path>',
-      'replay an existing dry-run audit report to disk without any model calls. Ignores --dry-run, --cascade, --all, and AI flags; other safety gates (clean-tree, atomic write, graph integrity) still run.',
+      'replay an existing dry-run audit report to disk without any model calls. Supports --dry-run for previewing the replay; ignores --cascade, --all, and AI flags; other safety gates (clean-tree, atomic write, graph integrity) still run.',
     )
     .action(async (artifactId: string | undefined, opts: ReviseCommandOptions) => {
       const projectDir = program.opts().projectDir as string;
@@ -194,7 +195,7 @@ export function registerReviseCommand(program: Command) {
       const rootType = artifactId ? findArtifactTypeById(artifactId) : undefined;
       if (artifactId && !rootType) {
         logger.error(`Cannot determine artifact type from ID: ${artifactId}`);
-        logger.dim('Expected format: EPIC-001, , US-001, TASK-001');
+        logger.dim('Expected format: EPIC-001, FEAT-001, US-001, TASK-001');
         process.exit(1);
       }
 
@@ -315,7 +316,7 @@ export function registerReviseCommand(program: Command) {
         writer.close();
         if (err instanceof ReviseArtifactNotFoundError) {
           logger.error(err.message);
-          logger.dim('Expected format: EPIC-001, , US-001, TASK-001');
+          logger.dim('Expected format: EPIC-001, FEAT-001, US-001, TASK-001');
           process.exit(1);
         }
         const { AIError } = await import('../../ai/errors.js');

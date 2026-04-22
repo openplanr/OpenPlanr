@@ -108,7 +108,7 @@ export async function reviseArtifact(
   if (!artifactType) {
     throw new ReviseArtifactNotFoundError(
       artifactId,
-      `Cannot determine artifact type from ID: ${artifactId}. Expected format: EPIC-001, , US-001, TASK-001.`,
+      `Cannot determine artifact type from ID: ${artifactId}. Expected format: EPIC-001, FEAT-001, US-001, TASK-001.`,
     );
   }
 

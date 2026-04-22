@@ -1,8 +1,7 @@
 /**
- * Read-only artifact-graph integrity check for `planr revise` post-flight
+ * Read-only artifact-graph integrity check for `planr revise` post-flight.
  *
- *
- * Detects broken parent/child links after a revise run so  can
+ * Detects broken parent/child links after a revise run so the caller can
  * trigger automatic rollback if the writes left the tree inconsistent. This
  * is deliberately narrower than `planr sync`: it does not fix anything, does
  * not write to the logger, and only looks at the relationships revise might

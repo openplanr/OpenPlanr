@@ -28,7 +28,7 @@ import { logger } from '../utils/logger.js';
 import { listArtifacts, readArtifact } from './artifact-service.js';
 
 // ---------------------------------------------------------------------------
-// Cascade order ()
+// Cascade order
 // ---------------------------------------------------------------------------
 
 /**
@@ -118,7 +118,7 @@ export async function buildCascadeOrder(
 }
 
 // ---------------------------------------------------------------------------
-// Cascade execution ( +)
+// Cascade execution + progress reporting
 // ---------------------------------------------------------------------------
 
 export interface CascadeProcessOutcome {

@@ -40,7 +40,7 @@ export function toMarkdownWithFrontmatter(data: ArtifactFrontmatter, content: st
 
 /**
  * Parse OpenPlanr task list checkbox lines (same format as `parseTaskMarkdown` in `task-parser.ts`).
- * Exposes 1-based `lineIndex` in the full `content` string.
+ * Exposes 0-based `lineIndex` (the array index into `content.split('\n')`).
  */
 export function parseTaskCheckboxLines(content: string): TaskCheckboxLine[] {
   const lines = content.split('\n');
