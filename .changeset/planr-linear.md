@@ -42,6 +42,9 @@ Quick tasks and backlog items push as top-level issues in a user-chosen Linear p
 - Three-way checkbox merge warns when a baseline looks corrupted.
 - PATs stored via keychain-first credentials service, never in `config.json`.
 
+### BL → QT promote is now AI-driven
+`planr backlog promote BL-XXX --quick` feeds the full BL markdown body (description, acceptance criteria, notes, threat models) through the same AI pipeline used by `planr quick create`, producing a realistic task breakdown instead of a single checkbox that restates the title. The new QT carries `sourceBacklog: "BL-XXX"` as provenance and inherits `epicId` from the BL (or an explicit `--epic` override) so `planr linear push EPIC-XXX` cascades to it. Use `--manual` to opt out of AI and keep the legacy single-task behavior.
+
 ### Config additions
 ```jsonc
 {

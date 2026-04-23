@@ -23,7 +23,7 @@ AI coding assistants are powerful but lack structured planning. Without a clear 
 5. **AI-powered estimation** — story points, effort hours, and complexity analysis
 6. **Generating AI rules** — rule files that give your AI assistant context about the plan
 7. **GitHub integration** — push artifacts to issues, bi-directional sync, export reports
-8. **Linear integration** — push an epic to a Linear project (features, stories, task checklists) with `planr linear push`
+8. **Linear integration** — push any artifact (epic / feature / story / task / quick-task / backlog) to Linear with `planr linear push <id>`, with flexible epic mappings (project / milestone / label) and bidirectional status + checkbox sync
 9. **Keeping everything in your repo** — artifacts live alongside your code, version-controlled
 
 ## Quick Start

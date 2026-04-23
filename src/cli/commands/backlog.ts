@@ -26,6 +26,7 @@ import { promptConfirm } from '../../services/prompt-service.js';
 import { VALID_STATUSES } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
 import { parseMarkdown } from '../../utils/markdown.js';
+import { createQuickWithAI } from './quick.js';
 
 const PRIORITY_ORDER: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
 
@@ -230,6 +231,14 @@ export function registerBacklogCommand(program: Command) {
     .option('--story', 'promote to a new user story (requires --feature)')
     .option('--quick', 'promote to a standalone quick task')
     .option('--feature <featureId>', 'parent feature for story promotion')
+    .option(
+      '--epic <epicId>',
+      "(--quick only) link the new QT to an epic. Overrides any epicId/parentEpic on the BL; without --epic, the BL's own link is inherited. Stories chain through --feature's epic and ignore this flag.",
+    )
+    .option(
+      '--manual',
+      '(--quick only) create a single-task QT from the BL title instead of AI-generating a task breakdown from the full BL body',
+    )
     .action(async (blId: string, opts) => {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
@@ -248,8 +257,64 @@ export function registerBacklogCommand(program: Command) {
       const title = (data.data.title as string) || blId;
       const description = (data.data.description as string) || title;
 
+      // Explicit --epic wins; otherwise inherit the BL's linked epic if any.
+      // Accept both `epicId` (canonical) and `parentEpic` (legacy alias).
+      const bldataStr = (v: unknown): string | undefined =>
+        typeof v === 'string' && v.trim() ? v.trim() : undefined;
+      const epicIdOverride = opts.epic ? String(opts.epic).trim() : undefined;
+      const inheritedEpicId = bldataStr(data.data.epicId) ?? bldataStr(data.data.parentEpic);
+      const epicId = epicIdOverride ?? inheritedEpicId;
+
+      // Soft-validate: warn (don't error) if the epic doesn't exist locally yet.
+      if (epicId) {
+        const epicArt = await readArtifact(projectDir, config, 'epic', epicId);
+        if (!epicArt) {
+          logger.warn(
+            `epicId "${epicId}" references an epic that does not exist locally. Linking anyway; create the epic before \`planr linear push\` or the link will fail there.`,
+          );
+        }
+      }
+
       if (opts.quick) {
-        // Promote to quick task
+        const useAI = !opts.manual && isAIConfigured(config);
+
+        if (useAI) {
+          const raw = await readArtifactRaw(projectDir, config, 'backlog', blId);
+          const spec = extractBacklogSpec(raw ?? '', blId, title, description);
+
+          const result = await createQuickWithAI(projectDir, config, spec, {
+            fromFile: true,
+            epicId,
+            sourceBacklog: blId,
+            headingLabel: `Promote ${blId} → Quick Task (AI-powered)`,
+            confirmLabel: `Promote ${blId} to a quick task with these items?`,
+          });
+
+          if (!result) {
+            // User cancelled at the confirm prompt, or AI errored. The AI
+            // path already logged what happened; leave the BL untouched so
+            // the user can retry.
+            return;
+          }
+
+          await markPromoted(projectDir, config, blId, result.id);
+          logger.success(`Promoted ${blId} → ${result.id}`);
+          logger.dim(`  ${result.filePath}`);
+          if (epicId) {
+            logger.dim(
+              `  Linked to epic ${epicId}${epicIdOverride ? ' (from --epic)' : ' (inherited from BL)'}`,
+            );
+          }
+          logger.dim(`  Next: Open ${result.id} in your coding agent for implementation`);
+          return;
+        }
+
+        if (!opts.manual && !isAIConfigured(config)) {
+          logger.warn(
+            'AI not configured — falling back to single-task promote. Run `planr config set-provider` to enable AI-driven task breakdowns.',
+          );
+        }
+
         const { id, filePath } = await createArtifact(
           projectDir,
           config,
@@ -258,12 +323,19 @@ export function registerBacklogCommand(program: Command) {
           {
             title,
             tasks: [{ id: '1.0', title: description, status: 'pending', subtasks: [] }],
+            epicId,
+            sourceBacklog: blId,
           },
         );
 
         await markPromoted(projectDir, config, blId, id);
         logger.success(`Promoted ${blId} -> ${id}`);
         logger.dim(`  ${filePath}`);
+        if (epicId) {
+          logger.dim(
+            `  Linked to epic ${epicId}${epicIdOverride ? ' (from --epic)' : ' (inherited from BL)'}`,
+          );
+        }
         logger.dim(`  Next: Open ${id} in your coding agent for implementation`);
       } else if (opts.story) {
         if (!opts.feature) {
@@ -453,4 +525,44 @@ function truncateTitle(description: string, maxLength = 60): string {
   const truncated = description.slice(0, maxLength);
   const lastSpace = truncated.lastIndexOf(' ');
   return lastSpace > 20 ? `${truncated.slice(0, lastSpace)}...` : `${truncated}...`;
+}
+
+/**
+ * Build the spec string fed to the quick-task AI prompt when promoting a BL.
+ *
+ * The goal: preserve every byte of user-authored context (acceptance criteria,
+ * threat models, decision notes, etc.) without leaking planning meta lines
+ * that only make sense in the backlog file itself — the leading `# BL-XXX:
+ * Title` heading and the trailing `_Promote to agile hierarchy..._` helper.
+ *
+ * Falls back gracefully when the raw file is missing or the BL has no body
+ * beyond its frontmatter.
+ */
+export function extractBacklogSpec(
+  raw: string,
+  blId: string,
+  title: string,
+  descriptionFallback: string,
+): string {
+  const trimmedRaw = raw?.trim();
+  if (!trimmedRaw) {
+    return descriptionFallback || title;
+  }
+
+  const { content } = parseMarkdown(trimmedRaw);
+  let body = content.trim();
+
+  // Drop the `# BL-XXX: <title>` heading — the AI only needs the spec, not
+  // the artifact's self-identifying header.
+  body = body.replace(/^#\s+.*\n+/, '');
+
+  // Strip the trailing "Promote to agile hierarchy..." helper lines. They're
+  // authored by the backlog template and have no value in a task prompt.
+  body = body.replace(/\n*---\n+_Promote to agile hierarchy:[\s\S]*$/, '').trim();
+
+  if (!body) {
+    return descriptionFallback || title;
+  }
+
+  return `Promote backlog item ${blId} ("${title}") into a quick task list.\n\nBacklog spec:\n\n${body}`;
 }
