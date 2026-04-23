@@ -215,6 +215,15 @@ export interface Feature extends BaseArtifact {
   linearProjectMilestoneId?: string;
   /** Set when the parent epic's strategy is `'label-on'`. */
   linearLabelIds?: string[];
+  /**
+   * Last reconciled status value, used as the `base` in the three-way status
+   * merge run by `planr linear sync`. Missing = no prior sync; the merge
+   * treats that as a conflict when local and Linear disagree, resolved per
+   * `--on-conflict`.
+   */
+  linearStatusReconciled?: string;
+  /** ISO date-time of the last status reconciliation with Linear. */
+  linearStatusSyncedAt?: string;
 }
 
 export interface UserStory extends BaseArtifact {
@@ -234,6 +243,10 @@ export interface UserStory extends BaseArtifact {
   linearProjectMilestoneId?: string;
   /** Set when the containing epic's strategy is `'label-on'`. */
   linearLabelIds?: string[];
+  /** Last reconciled status, used as `base` in the three-way status merge. */
+  linearStatusReconciled?: string;
+  /** ISO date-time of the last status reconciliation with Linear. */
+  linearStatusSyncedAt?: string;
 }
 
 export interface TaskItem {
@@ -288,6 +301,10 @@ export interface BacklogItem extends BaseArtifact {
   linearProjectMilestoneId?: string;
   /** Set when the containing epic's strategy is `'label-on'` — includes the `backlog` label plus any epic label. */
   linearLabelIds?: string[];
+  /** Last reconciled status, used as `base` in the three-way status merge. */
+  linearStatusReconciled?: string;
+  /** ISO date-time of the last status reconciliation with Linear. */
+  linearStatusSyncedAt?: string;
 }
 
 export interface Sprint extends BaseArtifact {

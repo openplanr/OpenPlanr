@@ -880,7 +880,7 @@ planr linear init
 
 ### `planr linear sync`
 
-**Two steps in one command:** (1) fetch the current **workflow state name** for every Feature, Story, Quick task, and Backlog item with a `linearIssueId` and map it to OpenPlanr `status` (same rules as `linear.statusMap`); (2) run **task checklist** sync (`TASK-*.md` ↔ Linear) for all task files that share a `linearIssueId` (see `planr linear tasklist-sync`). Use `--verbose` to log per-artifact work.
+**Two steps in one command:** (1) **bidirectional workflow status sync** for every Feature, Story, Quick task, and Backlog item with a `linearIssueId` — three-way merge between local frontmatter, Linear's workflow state, and a stored baseline; (2) run **task checklist** sync (`TASK-*.md` ↔ Linear) for all task files that share a `linearIssueId` (see `planr linear tasklist-sync`). Use `--verbose` to log per-artifact work.
 
 ```bash
 planr linear sync
@@ -892,18 +892,39 @@ planr --verbose linear sync
 | Option | Description |
 | ------ | ----------- |
 | `--dry-run` | Read from Linear to compare, but do **not** write local frontmatter or Linear issue bodies. |
-| `--on-conflict` | `prompt` (default), `local`, or `linear` for checkbox merge (same as `tasklist-sync`). |
+| `--on-conflict` | `prompt` (default), `local`, or `linear`. Applies to **both** status and checkbox conflicts. Non-interactive runs default to `linear` regardless of flag. |
+
+**Three-way status merge**
+
+Each artifact's status decision considers three values: `local` (current frontmatter), `remote` (Linear's current workflow state, mapped), and `base` (the last-synced value, stored in `linearStatusReconciled`). Outcomes:
+
+| Situation | Action |
+|---|---|
+| `local == remote` | No change (`unchanged` counter). |
+| `base == local` and `local != remote` | Linear changed since last sync → **pull** to local. |
+| `base == remote` and `local != remote` | Local changed since last sync → **push** to Linear. |
+| Both diverged from `base` (or `base` missing and they disagree) | **Conflict** → resolve per `--on-conflict`. |
+| Backlog local is `promoted` | Never overwritten (`promoted` is local-only and implies a target pointer Linear can't know about). |
+
+`planr quick update --status <v>` and `planr backlog update --status <v>` automatically clear `linearStatusReconciled` so the next sync sees a local change and pushes it up.
 
 **Status sync coverage**
 
-| Artifact | Local values | Pull direction | Push direction |
-|---|---|---|---|
-| feature / story | `planning` · `in-progress` · `done` | ✅ | ✅ (via `linear.pushStateIds`) |
-| quick (`QT-`) | `pending` · `in-progress` · `done` | ✅ | ✅ |
-| backlog (`BL-`) | `open` · `closed` · `promoted` | ✅ (never auto-overwrites `promoted`) | ✅ |
-| task (`TASK-`) | — | ❌ see below | ❌ |
+| Artifact | Local values | Bidirectional sync |
+|---|---|---|
+| feature / story | `planning` · `in-progress` · `done` | ✅ |
+| quick (`QT-`) | `pending` · `in-progress` · `done` | ✅ |
+| backlog (`BL-`) | `open` · `closed` · `promoted` | ✅ (never auto-overwrites `promoted`) |
+| task (`TASK-`) | — | ❌ see below |
 
 Task files aren't status-synced: a single Linear TaskList issue aggregates many local `TASK-*.md` files, so 1:1 status mapping doesn't apply. Use `planr linear tasklist-sync` instead — it mirrors individual checkboxes.
+
+**Baseline frontmatter fields** (written by sync, optional; missing = no prior sync):
+
+- `linearStatusReconciled: "done"` — the last agreed-upon status.
+- `linearStatusSyncedAt: "2026-04-23T12:34:56Z"` — ISO timestamp of the last sync.
+
+**Audit log.** Non-interactive conflict auto-resolutions are recorded to `.planr/reports/linear-sync-conflicts-<date>.md` (same file as checkbox conflicts; each row tagged with `kind: status` or `kind: checkbox`).
 
 **Estimate sync**
 

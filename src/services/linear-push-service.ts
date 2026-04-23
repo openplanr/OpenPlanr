@@ -194,7 +194,7 @@ export function buildAutoPushStateIdMap(
  * `done`, `todo` → `pending`, …) are normalized before lookup so hand-edited
  * frontmatter using Linear-native vocabulary keeps working.
  */
-function resolveTaskStateIdForPush(
+export function resolveTaskStateIdForPush(
   config: OpenPlanrConfig,
   status: string | undefined,
   autoMap?: Record<string, string>,
@@ -225,7 +225,7 @@ function resolveTaskStateIdForPush(
  * vocabulary. We look up the raw key in `pushStateIds` → `statusMap` →
  * auto-derived team map. No coercion into task vocabulary.
  */
-function resolveBacklogStateIdForPush(
+export function resolveBacklogStateIdForPush(
   config: OpenPlanrConfig,
   status: string | undefined,
   autoMap?: Record<string, string>,
@@ -280,7 +280,7 @@ const tShirtWarningLatch = new WeakSet<LinearClient>();
  * team-states query, the map stays empty and status updates become opt-in
  * via `linear.pushStateIds` as before.
  */
-async function ensureAutoStateIdMap(client: LinearClient, teamId: string): Promise<void> {
+export async function ensureAutoStateIdMap(client: LinearClient, teamId: string): Promise<void> {
   if (autoStateIdMapCache.has(client)) return;
   try {
     const states = await fetchTeamWorkflowStates(client, teamId);
@@ -295,7 +295,10 @@ async function ensureAutoStateIdMap(client: LinearClient, teamId: string): Promi
  * Populate the per-client estimation-type cache. Failures degrade to
  * `'notUsed'` so estimate is simply omitted rather than blocking the push.
  */
-async function ensureTeamEstimationType(client: LinearClient, teamId: string): Promise<void> {
+export async function ensureTeamEstimationType(
+  client: LinearClient,
+  teamId: string,
+): Promise<void> {
   if (teamEstimationTypeCache.has(client)) return;
   try {
     const scale = await fetchTeamIssueEstimationType(client, teamId);
@@ -306,7 +309,9 @@ async function ensureTeamEstimationType(client: LinearClient, teamId: string): P
   }
 }
 
-function getAutoStateIdMap(client: LinearClient | undefined): Record<string, string> | undefined {
+export function getAutoStateIdMap(
+  client: LinearClient | undefined,
+): Record<string, string> | undefined {
   if (!client) return undefined;
   return autoStateIdMapCache.get(client);
 }

@@ -238,7 +238,7 @@ export function registerLinearCommand(program: Command) {
     )
     .option(
       '--on-conflict <mode>',
-      'Task checkbox conflicts: prompt | local | linear (default: prompt)',
+      'Status + task-checkbox conflicts: prompt | local | linear (default: prompt; non-interactive runs default to linear)',
       'prompt',
     )
     .action(
@@ -299,10 +299,11 @@ export function registerLinearCommand(program: Command) {
 
         try {
           display.line(
-            `${chalk.cyan('[1/2]')} Workflow status: Linear → OpenPlanr features, stories, quick tasks, backlog`,
+            `${chalk.cyan('[1/2]')} Workflow status: Linear ↔ OpenPlanr (features, stories, quick tasks, backlog)`,
           );
           const statusSummary = await syncLinearStatusIntoArtifacts(projectDir, config, client, {
             dryRun,
+            onConflict,
           });
           display.line(formatLinearStatusSyncLine(statusSummary));
           if (dryRun) {

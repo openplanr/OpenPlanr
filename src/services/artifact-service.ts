@@ -193,7 +193,17 @@ export async function updateArtifactFields(
   if (!raw) throw new Error(`Artifact ${id} not found.`);
 
   const today = new Date().toISOString().split('T')[0];
-  const allFields = { ...fields, updated: today };
+  // When a caller changes `status`, invalidate the Linear-status sync
+  // baseline so the next `planr linear sync` recognizes the local change
+  // and pushes it up (or flags as a conflict if Linear also changed).
+  // The sync itself opts out by passing its own `linearStatusReconciled`
+  // value — we honor that over the auto-clear.
+  const shouldInvalidateBaseline = 'status' in fields && !('linearStatusReconciled' in fields);
+  const allFields: Partial<Record<string, unknown>> = {
+    ...fields,
+    updated: today,
+    ...(shouldInvalidateBaseline ? { linearStatusReconciled: '' } : {}),
+  };
 
   // Split into frontmatter and body to avoid modifying markdown content
   const openIdx = raw.indexOf('---');

@@ -9,6 +9,7 @@ import {
   mapLinearNameToTaskStatus,
   mergeByIdForFormat,
   replaceTaskSectionInMergedDescription,
+  resolveStatusFinalState,
   resolveTaskCheckboxFinalStates,
 } from '../src/services/linear-pull-service.js';
 import { isLikelyLinearWorkflowStateId } from '../src/services/linear-service.js';
@@ -184,5 +185,97 @@ describe('linear-pull-service backlog status map', () => {
   it('returns undefined for unknown state names', () => {
     const m = buildNameToBacklogStatusMap(undefined);
     expect(mapLinearNameToBacklogStatus('Lunar Phase Gate', m)).toBeUndefined();
+  });
+});
+
+describe('resolveStatusFinalState — three-way merge decision matrix', () => {
+  it('returns side=unchanged when local and remote already agree', () => {
+    const r = resolveStatusFinalState(
+      { base: 'in-progress', local: 'in-progress', remote: 'in-progress' },
+      'prompt',
+    );
+    expect(r.side).toBe('unchanged');
+    expect(r.final).toBe('in-progress');
+    expect(r.conflictDecisions).toBe(0);
+    expect(r.isTrueConflict).toBe(false);
+  });
+
+  it('pulls remote when base matches local (Linear changed since last sync)', () => {
+    const r = resolveStatusFinalState(
+      { base: 'pending', local: 'pending', remote: 'done' },
+      'prompt',
+    );
+    expect(r.side).toBe('linear');
+    expect(r.final).toBe('done');
+    expect(r.conflictDecisions).toBe(0);
+    expect(r.isTrueConflict).toBe(false);
+  });
+
+  it('pushes local when base matches remote (local changed since last sync)', () => {
+    // This is the whole point of the fix: `planr quick update --status done`
+    // followed by `planr linear sync` no longer silently loses the local
+    // change.
+    const r = resolveStatusFinalState(
+      { base: 'in-progress', local: 'done', remote: 'in-progress' },
+      'prompt',
+    );
+    expect(r.side).toBe('local');
+    expect(r.final).toBe('done');
+    expect(r.conflictDecisions).toBe(0);
+    expect(r.isTrueConflict).toBe(false);
+  });
+
+  it('true conflict with strategy=local keeps local and counts a decision', () => {
+    const r = resolveStatusFinalState(
+      { base: 'pending', local: 'done', remote: 'in-progress' },
+      'local',
+    );
+    expect(r.side).toBe('local');
+    expect(r.final).toBe('done');
+    expect(r.conflictDecisions).toBe(1);
+    expect(r.isTrueConflict).toBe(true);
+  });
+
+  it('true conflict with strategy=linear takes remote and counts a decision', () => {
+    const r = resolveStatusFinalState(
+      { base: 'pending', local: 'done', remote: 'in-progress' },
+      'linear',
+    );
+    expect(r.side).toBe('linear');
+    expect(r.final).toBe('in-progress');
+    expect(r.conflictDecisions).toBe(1);
+    expect(r.isTrueConflict).toBe(true);
+  });
+
+  it('no base + disagreement is treated as a true conflict (migration path)', () => {
+    // Artifacts pushed before the bidirectional sync shipped have no
+    // `linearStatusReconciled`. When their local and Linear values disagree
+    // we can't tell which side changed — conservative: treat as conflict
+    // so the user's --on-conflict choice applies.
+    const r = resolveStatusFinalState(
+      { base: undefined, local: 'done', remote: 'in-progress' },
+      'local',
+    );
+    expect(r.side).toBe('local');
+    expect(r.final).toBe('done');
+    expect(r.isTrueConflict).toBe(true);
+    const rl = resolveStatusFinalState(
+      { base: undefined, local: 'done', remote: 'in-progress' },
+      'linear',
+    );
+    expect(rl.side).toBe('linear');
+    expect(rl.final).toBe('in-progress');
+  });
+
+  it('strategy=prompt on a true conflict reports isTrueConflict so the caller can prompt', () => {
+    // Prompt strategy defers to the caller for the real decision. The pure
+    // helper returns a placeholder (`local` by default), with
+    // `isTrueConflict: true` so the sync loop knows to run `promptSelect`.
+    const r = resolveStatusFinalState(
+      { base: 'pending', local: 'done', remote: 'in-progress' },
+      'prompt',
+    );
+    expect(r.isTrueConflict).toBe(true);
+    expect(r.conflictDecisions).toBe(1);
   });
 });

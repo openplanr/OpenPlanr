@@ -36,7 +36,14 @@ import {
   updateArtifactFields,
 } from './artifact-service.js';
 import { isNonInteractive } from './interactive-state.js';
-import { formatTaskCheckboxBody } from './linear-push-service.js';
+import {
+  ensureAutoStateIdMap,
+  ensureTeamEstimationType,
+  formatTaskCheckboxBody,
+  getAutoStateIdMap,
+  resolveBacklogStateIdForPush,
+  resolveTaskStateIdForPush,
+} from './linear-push-service.js';
 import {
   fetchLinearIssueStateNames,
   getLinearIssueDescription,
@@ -150,11 +157,93 @@ export function mapLinearNameToBacklogStatus(
 }
 
 export interface LinearStatusSyncSummary {
+  /** Local artifacts overwritten with Linear's state (the pull direction). */
   updated: number;
+  /** Linear issues updated from local state (the push-on-sync direction). */
+  pushedToLinear: number;
+  /** Local and Linear already agree — no write either direction. */
   unchanged: number;
+  /** Per-artifact conflicts resolved via `--on-conflict` (includes non-interactive defaults). */
+  conflictDecisions: number;
+  /** Linear returned a state name we don't know how to map. */
   unmapped: number;
+  /** Artifact had no `linearIssueId` or an unparseable one. */
   skippedNoId: number;
+  /** Linear didn't return the issue (deleted / no access). */
   missingFromApi: number;
+  /** Push-back to Linear failed (API error); local frontmatter left unchanged. */
+  pushFailures: number;
+}
+
+/**
+ * Shared three-way merge strategy — governs how both checkbox sync and
+ * status sync resolve conflicts. Reused from the existing checkbox merge
+ * so users get one flag (`--on-conflict`) for both.
+ */
+export type ConflictStrategy = 'prompt' | 'local' | 'linear';
+
+/**
+ * One side of a three-way status decision. Analogous to the `CheckboxConflict`
+ * record used by the task-checkbox merge, but scalar (single `status` value
+ * per artifact, not per-checkbox).
+ */
+export interface StatusConflict {
+  base: string | undefined; // last-synced value from `linearStatusReconciled`
+  local: string; // current frontmatter status
+  remote: string; // mapped Linear state (via mapLinearNameTo{Task,Backlog}Status)
+}
+
+/**
+ * Pure three-way merge decision for a single artifact's workflow status.
+ *
+ * Mirrors `resolveTaskCheckboxFinalStates` but on a scalar. Returns
+ * `side='unchanged'` when local and remote already agree (counter path),
+ * `side='linear'` when the remote changed and should be pulled, `side='local'`
+ * when the local changed and should be pushed back to Linear. True
+ * conflicts (both diverged from base, or no base and they disagree) are
+ * resolved per `strategy`.
+ */
+export function resolveStatusFinalState(
+  c: StatusConflict,
+  strategy: ConflictStrategy,
+): {
+  final: string;
+  side: 'unchanged' | 'local' | 'linear';
+  conflictDecisions: number;
+  isTrueConflict: boolean;
+} {
+  const { base, local, remote } = c;
+
+  // Fast path: nothing to do.
+  if (local === remote) {
+    return { final: local, side: 'unchanged', conflictDecisions: 0, isTrueConflict: false };
+  }
+
+  // Only one side diverged from base — propagate its change.
+  if (base !== undefined) {
+    if (base === local && local !== remote) {
+      // Linear changed since last sync → pull.
+      return { final: remote, side: 'linear', conflictDecisions: 0, isTrueConflict: false };
+    }
+    if (base === remote && local !== remote) {
+      // Local changed since last sync → push.
+      return { final: local, side: 'local', conflictDecisions: 0, isTrueConflict: false };
+    }
+  }
+
+  // True conflict: both changed, or no base and they disagree.
+  // Strategy dictates which wins; we always record a conflict decision so
+  // the summary + audit log reflect reality.
+  if (strategy === 'local') {
+    return { final: local, side: 'local', conflictDecisions: 1, isTrueConflict: true };
+  }
+  if (strategy === 'linear') {
+    return { final: remote, side: 'linear', conflictDecisions: 1, isTrueConflict: true };
+  }
+  // strategy === 'prompt': caller resolves interactively after seeing the
+  // conflict. Report the true-conflict marker so the sync loop can dispatch
+  // to promptSelect and increment the counter.
+  return { final: local, side: 'local', conflictDecisions: 1, isTrueConflict: true };
 }
 
 type Tracked = {
@@ -162,22 +251,57 @@ type Tracked = {
   id: string;
   linearIssueId: string;
   localStatus: string;
+  baseStatus: string | undefined;
 };
+
+/**
+ * Non-interactive auto-resolution audit entry for a status conflict —
+ * parallel to `AutoResolvedConflict` for checkboxes. Keys are strings, not
+ * booleans, so we keep this as a separate type instead of reusing the
+ * checkbox one.
+ */
+interface AutoResolvedStatusConflict {
+  kind: 'feature' | 'story' | 'quick' | 'backlog';
+  id: string;
+  base: string | undefined;
+  local: string;
+  remote: string;
+  chosen: 'local' | 'linear';
+  timestamp: string;
+}
 
 export async function syncLinearStatusIntoArtifacts(
   projectDir: string,
   config: OpenPlanrConfig,
   client: LinearClient,
-  options?: { dryRun?: boolean },
+  options?: { dryRun?: boolean; onConflict?: ConflictStrategy },
 ): Promise<LinearStatusSyncSummary> {
   const dryRun = options?.dryRun === true;
+  const strategy: ConflictStrategy = options?.onConflict ?? 'prompt';
   const summary: LinearStatusSyncSummary = {
     updated: 0,
+    pushedToLinear: 0,
     unchanged: 0,
+    conflictDecisions: 0,
     unmapped: 0,
     skippedNoId: 0,
     missingFromApi: 0,
+    pushFailures: 0,
   };
+
+  const teamId = config.linear?.teamId;
+  if (!teamId) {
+    // Without a team id we can't push back. Fall back to pull-only behavior
+    // — the rest of the function handles `side: 'local'` as best-effort
+    // (skipping the API call when teamId is missing).
+    logger.debug('linear sync: no linear.teamId configured; skipping push-back path');
+  } else {
+    // Prime the auto-derived state-id map + estimation-type cache the same
+    // way `runLinearPush` does, so conflict resolutions that flip to `local`
+    // can call `updateLinearIssue(stateId)` without a separate fetch.
+    await ensureAutoStateIdMap(client, teamId);
+    await ensureTeamEstimationType(client, teamId);
+  }
 
   const byNameTask = buildNameToStatusMap(config.linear?.statusMap);
   const byNameBacklog = buildNameToBacklogStatusMap(config.linear?.statusMap);
@@ -207,7 +331,10 @@ export async function syncLinearStatusIntoArtifacts(
       // the task-status coercion preserves existing behavior.
       const localStatus =
         type === 'backlog' ? String(art.data.status ?? 'open') : asTaskStatus(art.data.status);
-      tracked.push({ type, id: row.id, linearIssueId: linearId, localStatus });
+      const rawBase = art.data.linearStatusReconciled;
+      const baseStatus =
+        typeof rawBase === 'string' && rawBase.trim().length > 0 ? rawBase.trim() : undefined;
+      tracked.push({ type, id: row.id, linearIssueId: linearId, localStatus, baseStatus });
     }
   }
 
@@ -217,6 +344,7 @@ export async function syncLinearStatusIntoArtifacts(
 
   const ids = tracked.map((t) => t.linearIssueId);
   const fromLinear = await fetchLinearIssueStateNames(client, ids);
+  const autoResolvedConflicts: AutoResolvedStatusConflict[] = [];
 
   for (const t of tracked) {
     const stateName = fromLinear.get(t.linearIssueId);
@@ -249,29 +377,154 @@ export async function syncLinearStatusIntoArtifacts(
       summary.unchanged++;
       continue;
     }
-    if (mapped === t.localStatus) {
+
+    // Three-way merge: local vs remote vs base (`linearStatusReconciled`).
+    const decision = resolveStatusFinalState(
+      { base: t.baseStatus, local: t.localStatus, remote: mapped },
+      strategy,
+    );
+
+    if (decision.side === 'unchanged') {
       if (isVerbose()) {
         logger.debug(`linear sync: ${t.type} ${t.id} unchanged (${mapped})`);
       }
       summary.unchanged++;
       continue;
     }
-    if (!dryRun) {
-      await updateArtifactFields(projectDir, config, t.type, t.id, { status: mapped });
+
+    // For true conflicts under `prompt`, ask the user. The pure helper
+    // returned a placeholder; `promptSelect` picks the real winner here.
+    let resolvedSide: 'local' | 'linear' = decision.side;
+    let resolvedFinal = decision.final;
+    if (decision.isTrueConflict) {
+      summary.conflictDecisions++;
+      const label = `${t.type} ${t.id}`;
+      if (strategy === 'prompt' && !isNonInteractive()) {
+        const picked = await promptSelect(
+          `${label}: status conflict (base=${t.baseStatus ?? '—'} local=${t.localStatus} remote=${mapped}). Use which side?`,
+          [
+            { name: 'Local file', value: 'local' as const },
+            { name: 'Linear', value: 'linear' as const },
+          ],
+          'linear',
+        );
+        resolvedSide = picked;
+        resolvedFinal = picked === 'local' ? t.localStatus : mapped;
+      } else if (strategy === 'prompt' && isNonInteractive()) {
+        logger.dim(
+          `  [auto] ${label} status conflict (base=${t.baseStatus ?? '—'} local=${t.localStatus} remote=${mapped}): using Linear (set --on-conflict local|linear to override)`,
+        );
+        resolvedSide = 'linear';
+        resolvedFinal = mapped;
+        autoResolvedConflicts.push({
+          kind: t.type,
+          id: t.id,
+          base: t.baseStatus,
+          local: t.localStatus,
+          remote: mapped,
+          chosen: 'linear',
+          timestamp: new Date().toISOString(),
+        });
+      }
     }
-    if (isVerbose()) {
-      logger.debug(
-        `linear sync: ${t.type} ${t.id} status ${t.localStatus} → ${mapped} (Linear: "${stateName}")`,
-      );
+
+    // Apply the resolution.
+    if (resolvedSide === 'linear') {
+      // Pull: write local frontmatter to match Linear.
+      if (!dryRun) {
+        await updateArtifactFields(projectDir, config, t.type, t.id, {
+          status: resolvedFinal,
+          linearStatusReconciled: resolvedFinal,
+          linearStatusSyncedAt: new Date().toISOString(),
+        });
+      }
+      if (isVerbose()) {
+        logger.debug(
+          `linear sync: ${t.type} ${t.id} pulled Linear → local: ${t.localStatus} → ${resolvedFinal} (Linear: "${stateName}")`,
+        );
+      }
+      summary.updated++;
+    } else {
+      // Push: write Linear's state to match local.
+      if (!teamId) {
+        logger.warn(
+          `linear sync: ${t.type} ${t.id} has local change (${t.localStatus}) but no linear.teamId configured — skipping push-back.`,
+        );
+        summary.pushFailures++;
+        continue;
+      }
+      const stateId =
+        t.type === 'backlog'
+          ? resolveBacklogStateIdForPush(config, resolvedFinal, getAutoStateIdMap(client))
+          : resolveTaskStateIdForPush(config, resolvedFinal, getAutoStateIdMap(client));
+      if (!stateId) {
+        logger.warn(
+          `linear sync: ${t.type} ${t.id} local status "${resolvedFinal}" has no matching Linear state (check linear.pushStateIds or team workflow states). Skipping push-back.`,
+        );
+        summary.pushFailures++;
+        continue;
+      }
+      if (!dryRun) {
+        try {
+          await updateLinearIssue(client, t.linearIssueId, { stateId });
+          await updateArtifactFields(projectDir, config, t.type, t.id, {
+            linearStatusReconciled: resolvedFinal,
+            linearStatusSyncedAt: new Date().toISOString(),
+          });
+        } catch (err) {
+          logger.warn(
+            `linear sync: push-back failed for ${t.type} ${t.id} (${(err as Error).message}) — local frontmatter unchanged, will retry on next sync.`,
+          );
+          summary.pushFailures++;
+          continue;
+        }
+      }
+      if (isVerbose()) {
+        logger.debug(
+          `linear sync: ${t.type} ${t.id} pushed local → Linear: ${resolvedFinal} (was Linear: "${stateName}")`,
+        );
+      }
+      summary.pushedToLinear++;
     }
-    summary.updated++;
+  }
+
+  if (!dryRun && autoResolvedConflicts.length > 0) {
+    await appendStatusSyncConflictAudit(projectDir, autoResolvedConflicts);
   }
 
   return summary;
 }
 
+async function appendStatusSyncConflictAudit(
+  projectDir: string,
+  entries: readonly AutoResolvedStatusConflict[],
+): Promise<void> {
+  const { appendFile, mkdir } = await import('node:fs/promises');
+  const path = await import('node:path');
+  const { existsSync } = await import('node:fs');
+  const today = new Date().toISOString().slice(0, 10);
+  const dir = path.join(projectDir, '.planr', 'reports');
+  await mkdir(dir, { recursive: true });
+  const file = path.join(dir, `linear-sync-conflicts-${today}.md`);
+  const isNew = !existsSync(file);
+  const fmt = (v: string | undefined): string => (v === undefined ? '—' : v);
+  const rows = entries
+    .map(
+      (e) =>
+        `| ${e.timestamp} | status | ${e.kind} ${e.id} | ${fmt(e.base)} | ${e.local} | ${e.remote} | ${e.chosen} |`,
+    )
+    .join('\n');
+  const header = isNew
+    ? `# Linear sync conflict audit — ${today}\n\n> Auto-resolved conflicts from non-interactive \`planr linear sync\` runs. Each row is one artifact where local and Linear disagreed and the default resolution was picked without human confirmation.\n\n| timestamp | kind | artifact | base | local | remote | chosen |\n| --- | --- | --- | --- | --- | --- | --- |\n`
+    : '';
+  await appendFile(file, `${header}${rows}\n`, 'utf-8');
+  logger.dim(
+    `Recorded ${entries.length} auto-resolved status conflict(s) to ${path.relative(projectDir, file)}`,
+  );
+}
+
 export function formatLinearStatusSyncLine(s: LinearStatusSyncSummary): string {
-  return `${s.updated} status update(s), ${s.unchanged} unchanged, ${s.unmapped} unmapped, ${s.skippedNoId} skipped (no linearIssueId), ${s.missingFromApi} not returned by API`;
+  return `${s.updated} pulled from Linear, ${s.pushedToLinear} pushed to Linear, ${s.unchanged} unchanged, ${s.conflictDecisions} conflict(s), ${s.unmapped} unmapped, ${s.skippedNoId} skipped (no linearIssueId), ${s.missingFromApi} not returned by API${s.pushFailures > 0 ? `, ${s.pushFailures} push failure(s)` : ''}`;
 }
 
 // ---------------------------------------------------------------------------
