@@ -880,7 +880,7 @@ planr linear init
 
 ### `planr linear sync`
 
-**Two steps in one command:** (1) fetch the current **workflow state name** for every Feature and Story with a `linearIssueId` and map it to OpenPlanr `status` (same rules as `linear.statusMap`); (2) run **task checklist** sync (`TASK-*.md` ↔ Linear) for all task files that share a `linearIssueId` (see `planr linear tasklist-sync`). Use `--verbose` to log per-artifact work.
+**Two steps in one command:** (1) fetch the current **workflow state name** for every Feature, Story, Quick task, and Backlog item with a `linearIssueId` and map it to OpenPlanr `status` (same rules as `linear.statusMap`); (2) run **task checklist** sync (`TASK-*.md` ↔ Linear) for all task files that share a `linearIssueId` (see `planr linear tasklist-sync`). Use `--verbose` to log per-artifact work.
 
 ```bash
 planr linear sync
@@ -894,7 +894,39 @@ planr --verbose linear sync
 | `--dry-run` | Read from Linear to compare, but do **not** write local frontmatter or Linear issue bodies. |
 | `--on-conflict` | `prompt` (default), `local`, or `linear` for checkbox merge (same as `tasklist-sync`). |
 
-**Config:** `linear.statusMap` — keys are Linear state names (e.g. `"Code Review"`), values are one of `pending`, `in-progress`, `done`. Custom teams merge with built-in defaults. See `planr linear status` (below) to inspect which artifacts have Linear ids.
+**Status sync coverage**
+
+| Artifact | Local values | Pull direction | Push direction |
+|---|---|---|---|
+| feature / story | `planning` · `in-progress` · `done` | ✅ | ✅ (via `linear.pushStateIds`) |
+| quick (`QT-`) | `pending` · `in-progress` · `done` | ✅ | ✅ |
+| backlog (`BL-`) | `open` · `closed` · `promoted` | ✅ (never auto-overwrites `promoted`) | ✅ |
+| task (`TASK-`) | — | ❌ see below | ❌ |
+
+Task files aren't status-synced: a single Linear TaskList issue aggregates many local `TASK-*.md` files, so 1:1 status mapping doesn't apply. Use `planr linear tasklist-sync` instead — it mirrors individual checkboxes.
+
+**Status-name aliases (push side):** values like `completed`, `cancelled`, `canceled`, and `todo` on a QT/feature/story are transparently treated as `done`/`pending` so hand-edited frontmatter using Linear's native vocabulary still works.
+
+**Zero-config auto-derive:** on every push run, `planr linear push` fetches the team's workflow states once and auto-derives a status→stateId map from Linear's canonical state **types** (`backlog` / `unstarted` / `started` / `completed` / `canceled`). You don't need to configure anything for basic status sync to work — the first `pending`/`open` state of each canonical type becomes the default. Configure `linear.pushStateIds` only when you want non-default routing (e.g., push `done` to "Released" instead of the first `completed` state).
+
+**Config:** `linear.statusMap` — keys are Linear state names (e.g. `"Code Review"`), values are one of `pending`, `in-progress`, `done` for tasks/stories/features/QT, or one of `open`, `closed`, `promoted` for BL. `linear.pushStateIds` — local status → Linear workflow state UUID; takes precedence over the auto-derived defaults. For backlog, use `open`/`closed`/`promoted` keys directly (BL has no implicit coercion to the task vocabulary).
+
+```jsonc
+{
+  "linear": {
+    "pushStateIds": {
+      "pending":     "uuid-of-Todo",
+      "in-progress": "uuid-of-In-Progress",
+      "done":        "uuid-of-Done",
+      "open":        "uuid-of-Todo",
+      "closed":      "uuid-of-Done"
+    },
+    "statusMap": {
+      "In Review": "in-progress"
+    }
+  }
+}
+```
 
 ### `planr linear status`
 

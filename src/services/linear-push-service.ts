@@ -59,6 +59,7 @@ import {
   createLinearProject,
   createProjectMilestone,
   ensureIssueLabel,
+  fetchTeamWorkflowStates,
   isLikelyLinearIssueId,
   isLikelyLinearWorkflowStateId,
   updateLinearIssue,
@@ -137,15 +138,67 @@ function sortByArtifactId(a: { id: string }, b: { id: string }): number {
   return a.id.localeCompare(b.id, undefined, { numeric: true });
 }
 
+const STATUS_ALIASES: Record<string, TaskStatus> = {
+  completed: 'done',
+  cancelled: 'done',
+  canceled: 'done',
+  todo: 'pending',
+};
+
 function asTaskStatus(s: unknown): TaskStatus {
   if (s === 'pending' || s === 'in-progress' || s === 'done') return s;
+  if (typeof s === 'string') {
+    const alias = STATUS_ALIASES[s.toLowerCase()];
+    if (alias) return alias;
+  }
   return 'pending';
 }
 
-/** OpenPlanr status → Linear `stateId` for create/update. Prefer `linear.pushStateIds`. */
-function resolveStateIdForPush(
+/**
+ * Derive a default status→stateId map from a team's workflow states. Used
+ * when the user hasn't configured `linear.pushStateIds` — lets `planr linear
+ * push` set workflow state out of the box.
+ *
+ * We pick the first state of each canonical Linear type so a team with
+ * multiple "unstarted" lanes (Todo + Backlog) or multiple "completed" lanes
+ * (Done + Released) gets a sensible default. Users who need different
+ * routing can override via `linear.pushStateIds` (which takes precedence).
+ */
+export function buildAutoPushStateIdMap(
+  states: readonly { id: string; type: string; name: string }[],
+): Record<string, string> {
+  const firstByType: Record<string, string> = {};
+  for (const s of states) {
+    if (!firstByType[s.type]) firstByType[s.type] = s.id;
+  }
+  const out: Record<string, string> = {};
+  // Task vocabulary (feature/story/quick/task — via asTaskStatus normalization).
+  const pendingStateId = firstByType.unstarted ?? firstByType.backlog;
+  if (pendingStateId) out.pending = pendingStateId;
+  if (firstByType.started) out['in-progress'] = firstByType.started;
+  const doneStateId = firstByType.completed ?? firstByType.canceled;
+  if (doneStateId) out.done = doneStateId;
+  // Backlog vocabulary — separate so BL push doesn't accidentally inherit
+  // task-shape defaults if a user has only `in-progress` mapped etc.
+  const openStateId = firstByType.backlog ?? firstByType.unstarted;
+  if (openStateId) out.open = openStateId;
+  const closedStateId = firstByType.completed ?? firstByType.canceled;
+  if (closedStateId) out.closed = closedStateId;
+  return out;
+}
+
+/**
+ * OpenPlanr status → Linear `stateId` for feature/story/quick/task push.
+ *
+ * Precedence: user config (`linear.pushStateIds` > `linear.statusMap` with
+ * uuid values) > auto-derived team map. Common aliases (`completed` →
+ * `done`, `todo` → `pending`, …) are normalized before lookup so hand-edited
+ * frontmatter using Linear-native vocabulary keeps working.
+ */
+function resolveTaskStateIdForPush(
   config: OpenPlanrConfig,
   status: string | undefined,
+  autoMap?: Record<string, string>,
 ): string | undefined {
   if (!status) return undefined;
   const s = asTaskStatus(status);
@@ -159,7 +212,75 @@ function resolveStateIdForPush(
     const v = m[s] ?? m[status];
     if (v && isLikelyLinearWorkflowStateId(v)) return v;
   }
+  if (autoMap) {
+    const v = autoMap[s] ?? autoMap[status];
+    if (v) return v;
+  }
   return undefined;
+}
+
+/**
+ * OpenPlanr status → Linear `stateId` for backlog push.
+ *
+ * BL uses `open | closed | promoted`, which don't map onto Linear's workflow
+ * vocabulary. We look up the raw key in `pushStateIds` → `statusMap` →
+ * auto-derived team map. No coercion into task vocabulary.
+ */
+function resolveBacklogStateIdForPush(
+  config: OpenPlanrConfig,
+  status: string | undefined,
+  autoMap?: Record<string, string>,
+): string | undefined {
+  if (!status) return undefined;
+  const push = config.linear?.pushStateIds;
+  if (push?.[status]) return push[status];
+  const m = config.linear?.statusMap;
+  const raw = m?.[status];
+  if (raw && isLikelyLinearWorkflowStateId(raw)) return raw;
+  if (autoMap?.[status]) return autoMap[status];
+  return undefined;
+}
+
+/**
+ * Back-compat alias: the original name used by feature/story call sites.
+ * New code should prefer `resolveTaskStateIdForPush` for clarity.
+ */
+const resolveStateIdForPush = resolveTaskStateIdForPush;
+
+/**
+ * Per-client cache for the auto-derived status→stateId map. Populated once
+ * per push run by `ensureAutoStateIdMap` and read by every resolver call
+ * site. Scoped to the LinearClient instance so tests that construct fresh
+ * clients get fresh caches; production CLI creates one client per command
+ * invocation so the map is effectively per-run.
+ *
+ * Using a WeakMap (instead of threading the value through every pushOne*
+ * signature) keeps the surface area minimal and matches the existing
+ * `ensureIssueLabel` cache pattern at the StrategyContext layer.
+ */
+const autoStateIdMapCache = new WeakMap<LinearClient, Record<string, string>>();
+
+/**
+ * Populate the per-client auto-map. Called once at the top of
+ * `runLinearPush` — a single extra API round-trip buys zero-config status
+ * sync. Failures are swallowed to keep push working: if Linear rejects the
+ * team-states query, the map stays empty and status updates become opt-in
+ * via `linear.pushStateIds` as before.
+ */
+async function ensureAutoStateIdMap(client: LinearClient, teamId: string): Promise<void> {
+  if (autoStateIdMapCache.has(client)) return;
+  try {
+    const states = await fetchTeamWorkflowStates(client, teamId);
+    autoStateIdMapCache.set(client, buildAutoPushStateIdMap(states));
+  } catch (err) {
+    logger.debug('linear push: could not auto-derive pushStateIds from team workflow states', err);
+    autoStateIdMapCache.set(client, {});
+  }
+}
+
+function getAutoStateIdMap(client: LinearClient | undefined): Record<string, string> | undefined {
+  if (!client) return undefined;
+  return autoStateIdMapCache.get(client);
 }
 
 // Plan builders live in `./linear/plan-builders.ts` and are re-exported above.
@@ -193,7 +314,7 @@ async function pushOneFeatureAndDescendants(
   const f = sf.data;
   const featureTitle = f.title.trim();
   const featureBody = buildFeatureIssueBody(f);
-  const stateF = resolveStateIdForPush(config, f.status);
+  const stateF = resolveStateIdForPush(config, f.status, getAutoStateIdMap(client));
   const { projectId } = strategyCtx;
   const typeLabelId = await typeLabelCache('feature');
 
@@ -209,7 +330,9 @@ async function pushOneFeatureAndDescendants(
       description: featureBody,
       projectId,
       teamId,
-      stateId: stateF ?? null,
+      // Linear rejects `stateId: null` on update (InvalidInput). Omit when
+      // unmapped so the issue keeps its current state.
+      ...(stateF ? { stateId: stateF } : {}),
       projectMilestoneId: strategyCtx.milestoneId ?? null,
       labelIds,
     });
@@ -238,7 +361,7 @@ async function pushOneFeatureAndDescendants(
       projectId,
       title: featureTitle,
       description: featureBody,
-      stateId: stateF ?? null,
+      ...(stateF ? { stateId: stateF } : {}),
       ...(strategyCtx.milestoneId ? { projectMilestoneId: strategyCtx.milestoneId } : {}),
       labelIds: initialLabelIds,
     });
@@ -299,7 +422,7 @@ async function pushOneStoryUnderFeature(
 ): Promise<void> {
   const storyTitle = s.title.trim();
   const storyBody = buildStoryIssueBody(s);
-  const stateS = resolveStateIdForPush(config, s.status);
+  const stateS = resolveStateIdForPush(config, s.status, getAutoStateIdMap(client));
   const { projectId } = strategyCtx;
   const typeLabelId = await typeLabelCache('story');
   if (isUsableLinearIssueId(s.linearIssueId, `Story ${s.id}`)) {
@@ -314,7 +437,9 @@ async function pushOneStoryUnderFeature(
       projectId,
       teamId,
       parentId: featureIssueId,
-      stateId: stateS ?? null,
+      // Linear rejects `stateId: null` on update (InvalidInput). Omit when
+      // unmapped so the issue keeps its current state.
+      ...(stateS ? { stateId: stateS } : {}),
       projectMilestoneId: strategyCtx.milestoneId ?? null,
       labelIds,
     });
@@ -343,7 +468,7 @@ async function pushOneStoryUnderFeature(
     parentId: featureIssueId,
     title: storyTitle,
     description: storyBody,
-    stateId: stateS ?? null,
+    ...(stateS ? { stateId: stateS } : {}),
     ...(strategyCtx.milestoneId ? { projectMilestoneId: strategyCtx.milestoneId } : {}),
     labelIds: initialLabelIds,
   });
@@ -929,6 +1054,11 @@ async function pushOneQuickTaskWithContext(
   const body = buildStandaloneArtifactBody(qt.raw, qt.id);
   const title = qt.title.trim();
   const typeLabelId = await typeLabelCache('quick');
+  const stateId = resolveTaskStateIdForPush(
+    config,
+    toOptionalString(qt.frontmatter.status),
+    getAutoStateIdMap(client),
+  );
   const rawExistingId = toOptionalString(qt.frontmatter.linearIssueId);
   const existingId = isUsableLinearIssueId(rawExistingId, `QuickTask ${qt.id}`)
     ? rawExistingId
@@ -945,6 +1075,9 @@ async function pushOneQuickTaskWithContext(
       description: body,
       projectId: ctx.projectId,
       teamId,
+      // Linear rejects `stateId: null` on update (InvalidInput). Omit the
+      // field entirely when unmapped so the issue keeps its current state.
+      ...(stateId ? { stateId } : {}),
       projectMilestoneId: ctx.milestoneId ?? null,
       labelIds,
     });
@@ -971,6 +1104,7 @@ async function pushOneQuickTaskWithContext(
     projectId: ctx.projectId,
     title,
     description: body,
+    ...(stateId ? { stateId } : {}),
     ...(ctx.milestoneId ? { projectMilestoneId: ctx.milestoneId } : {}),
     labelIds: initialLabelIds,
   });
@@ -1002,6 +1136,11 @@ async function pushOneBacklogItemWithContext(
   const title = bl.title.trim();
   const body = buildBacklogItemBody(bl);
   const typeLabelId = await typeLabelCache('backlog');
+  const stateId = resolveBacklogStateIdForPush(
+    config,
+    toOptionalString(bl.frontmatter.status),
+    getAutoStateIdMap(client),
+  );
   const rawExistingId = toOptionalString(bl.frontmatter.linearIssueId);
   const existingId = isUsableLinearIssueId(rawExistingId, `Backlog ${bl.id}`)
     ? rawExistingId
@@ -1018,6 +1157,9 @@ async function pushOneBacklogItemWithContext(
       description: body,
       projectId: ctx.projectId,
       teamId,
+      // Linear rejects `stateId: null` on update (InvalidInput). Omit the
+      // field entirely when unmapped so the issue keeps its current state.
+      ...(stateId ? { stateId } : {}),
       labelIds,
       projectMilestoneId: ctx.milestoneId ?? null,
     });
@@ -1045,6 +1187,7 @@ async function pushOneBacklogItemWithContext(
     title,
     description: body,
     labelIds: initialLabelIds,
+    ...(stateId ? { stateId } : {}),
     ...(ctx.milestoneId ? { projectMilestoneId: ctx.milestoneId } : {}),
   });
   const fmUpdate: Record<string, string | string[]> = {
@@ -1170,6 +1313,11 @@ export async function runLinearPush(
   const leadId = config.linear?.defaultProjectLead;
   const opts: LinearPushOptions = options ?? {};
   const updateOnly = opts.updateOnly === true;
+
+  // One API round-trip per push to cache the team's workflow states. Lets
+  // every resolver (feature/story/QT/BL) map local status → Linear stateId
+  // even when the user hasn't configured `linear.pushStateIds` explicitly.
+  await ensureAutoStateIdMap(client, teamId);
 
   const type = findArtifactTypeById(artifactId);
   if (!type) {

@@ -242,18 +242,22 @@ export function formatLinearMappingTable(rows: LinearMappingTableRow[]): string 
   const kindW = 7;
   const idW = 14;
   const idenW = 22;
-  const urlW = 28;
   const stW = 14;
+  const noteW = 40;
+  // URL goes LAST and is printed in full (no truncation). Clickable URLs are
+  // the primary value of this table; truncating them to a fixed width made
+  // them useless for copy-paste. Rows with long URLs now trail off freely
+  // without disturbing earlier columns.
   lines.push(
-    `${'Kind'.padEnd(kindW)}  ${'OpenPlanr id'.padEnd(idW)}  ${'Linear id'.padEnd(idenW)}  ${'URL'.padEnd(urlW)}  ${'State'.padEnd(stW)}  Note`,
+    `${'Kind'.padEnd(kindW)}  ${'OpenPlanr id'.padEnd(idW)}  ${'Linear id'.padEnd(idenW)}  ${'State'.padEnd(stW)}  ${'Note'.padEnd(noteW)}  URL`,
   );
   lines.push(
-    `${'─'.repeat(kindW)}  ${'─'.repeat(idW)}  ${'─'.repeat(idenW)}  ${'─'.repeat(urlW)}  ${'─'.repeat(stW)}  ──`,
+    `${'─'.repeat(kindW)}  ${'─'.repeat(idW)}  ${'─'.repeat(idenW)}  ${'─'.repeat(stW)}  ${'─'.repeat(noteW)}  ───`,
   );
   for (const r of rows) {
-    const note = r.note ? cell(r.note, 40) : '';
+    const note = r.note ? cell(r.note, noteW) : '';
     lines.push(
-      `${r.kind.padEnd(kindW)}  ${r.openPlanrId.padEnd(idW)}  ${cell(r.linearIdentifier, idenW).padEnd(idenW)}  ${cell(r.linearUrl, urlW).padEnd(urlW)}  ${cell(r.lastKnownState, stW).padEnd(stW)}  ${note}`,
+      `${r.kind.padEnd(kindW)}  ${r.openPlanrId.padEnd(idW)}  ${cell(r.linearIdentifier, idenW).padEnd(idenW)}  ${cell(r.lastKnownState, stW).padEnd(stW)}  ${note.padEnd(noteW)}  ${r.linearUrl}`,
     );
   }
   return lines.join('\n');

@@ -55,9 +55,9 @@ function baseConfig(withStandalone: boolean): OpenPlanrConfig {
 async function writeQuickTask(
   dir: string,
   id: string,
-  opts: { linearIssueId?: string } = {},
+  opts: { linearIssueId?: string; status?: string } = {},
 ): Promise<void> {
-  const fm = [`id: "${id}"`, `title: "${id} title"`, 'status: "pending"'];
+  const fm = [`id: "${id}"`, `title: "${id} title"`, `status: "${opts.status ?? 'pending'}"`];
   if (opts.linearIssueId) fm.push(`linearIssueId: "${opts.linearIssueId}"`);
   const body = `---\n${fm.join('\n')}\n---\n\n# ${id}: ${id} title\n\n## Tasks\n\n- [ ] **1.0** First task\n  - [x] 1.1 Subtask done\n- [ ] **2.0** Second task\n`;
   await writeFile(join(dir, '.planr', 'quick', `${id}-test.md`), body);
@@ -66,14 +66,14 @@ async function writeQuickTask(
 async function writeBacklogItem(
   dir: string,
   id: string,
-  opts: { linearIssueId?: string } = {},
+  opts: { linearIssueId?: string; status?: string } = {},
 ): Promise<void> {
   const fm = [
     `id: "${id}"`,
     `title: "${id} title"`,
     'priority: "high"',
     'tags: ["feature","dx"]',
-    'status: "open"',
+    `status: "${opts.status ?? 'open'}"`,
     'description: "Backlog item description text."',
   ];
   if (opts.linearIssueId) fm.push(`linearIssueId: "${opts.linearIssueId}"`);
@@ -81,7 +81,9 @@ async function writeBacklogItem(
   await writeFile(join(dir, '.planr', 'backlog', `${id}-test.md`), body);
 }
 
-function makeFakeClient() {
+function makeFakeClient(
+  opts: { teamStates?: Array<{ id: string; name: string; type: string }> } = {},
+) {
   let issueCounter = 0;
   let labelCounter = 0;
   const issueInputs: Array<Record<string, unknown>> = [];
@@ -102,16 +104,21 @@ function makeFakeClient() {
     url: `https://linear.app/test/issue/${id}`,
     labelIds: [] as string[],
   }));
+  const teamStates = opts.teamStates ?? [];
+  const team = vi.fn(async () => ({
+    states: async () => ({ nodes: teamStates }),
+  }));
   const client = {
     createIssue,
     updateIssue,
     issueLabels,
     createIssueLabel,
     issue,
+    team,
   } as unknown as LinearClient;
   return {
     client,
-    calls: { createIssue, updateIssue, issueLabels, createIssueLabel, issue },
+    calls: { createIssue, updateIssue, issueLabels, createIssueLabel, issue, team },
     lastIssueInput: () => issueInputs[issueInputs.length - 1],
     allIssueInputs: () => issueInputs,
   };
@@ -275,5 +282,256 @@ describe('runLinearPush — standalone-project config missing', () => {
     );
     expect(fake.calls.createIssue).not.toHaveBeenCalled();
     expect(fake.calls.createIssueLabel).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Status → stateId push coverage for QT and BL
+// ---------------------------------------------------------------------------
+
+const STATE_UUIDS = {
+  todo: 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
+  inProgress: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+  done: 'cccccccc-cccc-4ccc-cccc-cccccccccccc',
+  closed: 'dddddddd-dddd-4ddd-dddd-dddddddddddd',
+} as const;
+
+function configWithStates(): OpenPlanrConfig {
+  return {
+    ...baseConfig(true),
+    linear: {
+      ...baseConfig(true).linear,
+      pushStateIds: {
+        pending: STATE_UUIDS.todo,
+        'in-progress': STATE_UUIDS.inProgress,
+        done: STATE_UUIDS.done,
+        open: STATE_UUIDS.todo,
+        closed: STATE_UUIDS.closed,
+      },
+    },
+  };
+}
+
+describe('runLinearPush — QT status → Linear stateId', () => {
+  let projectDir: string;
+  beforeEach(async () => {
+    const p = await setupProject(true);
+    projectDir = p.dir;
+  });
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it('sends stateId on create when local status matches pushStateIds', async () => {
+    const config = configWithStates();
+    await writeQuickTask(projectDir, 'QT-030', { status: 'in-progress' });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'QT-030');
+    expect(fake.lastIssueInput()?.stateId).toBe(STATE_UUIDS.inProgress);
+  });
+
+  it('sends stateId on update when local status matches pushStateIds', async () => {
+    const config = configWithStates();
+    await writeQuickTask(projectDir, 'QT-031', {
+      status: 'done',
+      linearIssueId: '9b2f4c3e-1234-4abc-89de-000000000001',
+    });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'QT-031');
+    expect(fake.calls.updateIssue).toHaveBeenCalledTimes(1);
+    const updateArgs = fake.calls.updateIssue.mock.calls[0];
+    expect(updateArgs[1]?.stateId).toBe(STATE_UUIDS.done);
+  });
+
+  it('resolves "completed" alias to the done stateId (Linear-native vocabulary)', async () => {
+    const config = configWithStates();
+    await writeQuickTask(projectDir, 'QT-032', { status: 'completed' });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'QT-032');
+    expect(fake.lastIssueInput()?.stateId).toBe(STATE_UUIDS.done);
+  });
+
+  it('omits stateId on create when pushStateIds is not configured', async () => {
+    const config = baseConfig(true); // no pushStateIds
+    await writeQuickTask(projectDir, 'QT-033', { status: 'in-progress' });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'QT-033');
+    expect(fake.lastIssueInput()?.stateId).toBeUndefined();
+  });
+
+  it('omits stateId on update when pushStateIds is not configured', async () => {
+    // Regression: Linear's API rejects `stateId: null` on update with
+    // InvalidInput. The field must be absent entirely so the issue keeps
+    // whatever state it already has.
+    const config = baseConfig(true);
+    await writeQuickTask(projectDir, 'QT-034', {
+      status: 'in-progress',
+      linearIssueId: '9b2f4c3e-1234-4abc-89de-000000000002',
+    });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'QT-034');
+    const updateArgs = fake.calls.updateIssue.mock.calls[0];
+    expect(updateArgs[1]).not.toHaveProperty('stateId');
+  });
+});
+
+describe('runLinearPush — BL status → Linear stateId', () => {
+  let projectDir: string;
+  beforeEach(async () => {
+    const p = await setupProject(true);
+    projectDir = p.dir;
+  });
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it('sends stateId on create when BL status key is in pushStateIds', async () => {
+    const config = configWithStates();
+    await writeBacklogItem(projectDir, 'BL-030', { status: 'closed' });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'BL-030');
+    expect(fake.lastIssueInput()?.stateId).toBe(STATE_UUIDS.closed);
+  });
+
+  it('omits stateId on create when BL key is not in pushStateIds', async () => {
+    // `open` is intentionally NOT in this config; BL should still push fine
+    // without a stateId (no silent coercion into task vocabulary).
+    const config = {
+      ...baseConfig(true),
+      linear: {
+        ...baseConfig(true).linear,
+        pushStateIds: {
+          // Only task keys — no `open` mapping. BL push must not pick up
+          // `pushStateIds.pending` by accident.
+          pending: STATE_UUIDS.todo,
+          done: STATE_UUIDS.done,
+        },
+      },
+    } satisfies OpenPlanrConfig;
+    await writeBacklogItem(projectDir, 'BL-031', { status: 'open' });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'BL-031');
+    expect(fake.lastIssueInput()?.stateId).toBeUndefined();
+  });
+
+  it('sends stateId on update when BL status maps to pushStateIds', async () => {
+    const config = configWithStates();
+    await writeBacklogItem(projectDir, 'BL-032', {
+      status: 'closed',
+      linearIssueId: '9b2f4c3e-1234-4abc-89de-000000000003',
+    });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'BL-032');
+    const updateArgs = fake.calls.updateIssue.mock.calls[0];
+    expect(updateArgs[1]?.stateId).toBe(STATE_UUIDS.closed);
+  });
+
+  it('omits stateId on update when BL pushStateIds is not configured (Linear rejects null)', async () => {
+    // Regression: re-pushing BL-020 after the first successful push hit
+    // `InvalidInput: stateId should not be null` because we were sending
+    // `stateId: null`. Linear requires the field absent in that case.
+    const config = baseConfig(true);
+    await writeBacklogItem(projectDir, 'BL-033', {
+      status: 'open',
+      linearIssueId: '9b2f4c3e-1234-4abc-89de-000000000004',
+    });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'BL-033');
+    const updateArgs = fake.calls.updateIssue.mock.calls[0];
+    expect(updateArgs[1]).not.toHaveProperty('stateId');
+  });
+});
+
+describe('runLinearPush — zero-config auto-derived stateIds', () => {
+  let projectDir: string;
+  beforeEach(async () => {
+    const p = await setupProject(true);
+    projectDir = p.dir;
+  });
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  const teamStatesFixture = [
+    { id: 'st-backlog-uuid', name: 'Backlog', type: 'backlog' },
+    { id: 'st-todo-uuid', name: 'Todo', type: 'unstarted' },
+    { id: 'st-inprog-uuid', name: 'In Progress', type: 'started' },
+    { id: 'st-done-uuid', name: 'Done', type: 'completed' },
+    { id: 'st-canceled-uuid', name: 'Canceled', type: 'canceled' },
+  ];
+
+  it('QT status "done" auto-resolves to the team\'s completed state when pushStateIds is missing', async () => {
+    // This closes the zero-config UX cliff: a fresh project with no
+    // pushStateIds config still gets working status sync on push.
+    const config = baseConfig(true); // no pushStateIds
+    await writeQuickTask(projectDir, 'QT-040', { status: 'done' });
+    const fake = makeFakeClient({ teamStates: teamStatesFixture });
+    await runLinearPush(projectDir, config, fake.client, 'QT-040');
+    expect(fake.lastIssueInput()?.stateId).toBe('st-done-uuid');
+    expect(fake.calls.team).toHaveBeenCalledTimes(1);
+  });
+
+  it('QT status "in-progress" auto-resolves to the team\'s started state', async () => {
+    const config = baseConfig(true);
+    await writeQuickTask(projectDir, 'QT-041', { status: 'in-progress' });
+    const fake = makeFakeClient({ teamStates: teamStatesFixture });
+    await runLinearPush(projectDir, config, fake.client, 'QT-041');
+    expect(fake.lastIssueInput()?.stateId).toBe('st-inprog-uuid');
+  });
+
+  it('QT "completed" alias still resolves through auto-map (alias → done → completed type)', async () => {
+    const config = baseConfig(true);
+    await writeQuickTask(projectDir, 'QT-042', { status: 'completed' });
+    const fake = makeFakeClient({ teamStates: teamStatesFixture });
+    await runLinearPush(projectDir, config, fake.client, 'QT-042');
+    expect(fake.lastIssueInput()?.stateId).toBe('st-done-uuid');
+  });
+
+  it('BL status "closed" auto-resolves to the team\'s completed state', async () => {
+    const config = baseConfig(true);
+    await writeBacklogItem(projectDir, 'BL-040', { status: 'closed' });
+    const fake = makeFakeClient({ teamStates: teamStatesFixture });
+    await runLinearPush(projectDir, config, fake.client, 'BL-040');
+    expect(fake.lastIssueInput()?.stateId).toBe('st-done-uuid');
+  });
+
+  it('BL status "open" auto-resolves to the team\'s backlog state (preferred over unstarted)', async () => {
+    const config = baseConfig(true);
+    await writeBacklogItem(projectDir, 'BL-041', { status: 'open' });
+    const fake = makeFakeClient({ teamStates: teamStatesFixture });
+    await runLinearPush(projectDir, config, fake.client, 'BL-041');
+    expect(fake.lastIssueInput()?.stateId).toBe('st-backlog-uuid');
+  });
+
+  it('user pushStateIds override the auto-derived defaults', async () => {
+    // pushStateIds.done points at a DIFFERENT uuid than the team's completed
+    // state; the explicit config must win.
+    const configOverride: OpenPlanrConfig = {
+      ...baseConfig(true),
+      linear: {
+        ...baseConfig(true).linear,
+        pushStateIds: {
+          done: 'user-override-uuid',
+        },
+      },
+    };
+    await writeQuickTask(projectDir, 'QT-043', { status: 'done' });
+    const fake = makeFakeClient({ teamStates: teamStatesFixture });
+    await runLinearPush(projectDir, configOverride, fake.client, 'QT-043');
+    expect(fake.lastIssueInput()?.stateId).toBe('user-override-uuid');
+  });
+
+  it('push still succeeds when the team-states fetch throws (graceful degradation)', async () => {
+    // Simulate a Linear API error on team.states() — push must continue;
+    // stateId is simply omitted (back to pre-status-sync behavior).
+    const config = baseConfig(true);
+    await writeQuickTask(projectDir, 'QT-044', { status: 'done' });
+    const fake = makeFakeClient({ teamStates: teamStatesFixture });
+    (fake.client.team as unknown as ReturnType<typeof vi.fn>).mockImplementationOnce(async () => {
+      throw new Error('Network error');
+    });
+    await runLinearPush(projectDir, config, fake.client, 'QT-044');
+    expect(fake.lastIssueInput()?.stateId).toBeUndefined();
+    expect(fake.calls.createIssue).toHaveBeenCalledTimes(1);
   });
 });

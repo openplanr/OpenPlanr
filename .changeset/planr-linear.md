@@ -42,6 +42,16 @@ Quick tasks and backlog items push as top-level issues in a user-chosen Linear p
 - Three-way checkbox merge warns when a baseline looks corrupted.
 - PATs stored via keychain-first credentials service, never in `config.json`.
 
+### Status sync now covers QT + BL (zero-config)
+`planr linear push QT-XXX` and `planr linear push BL-XXX` now write local status to Linear's workflow state. `planr linear sync` pulls state changes back into QT and BL frontmatter alongside features and stories.
+
+- **Zero-config:** push auto-derives the status→stateId map from Linear's canonical state types (`backlog` / `unstarted` / `started` / `completed` / `canceled`) on every run. `linear.pushStateIds` is now an optional override, not a requirement.
+- Quick tasks use the task vocabulary (`pending` / `in-progress` / `done`), plus transparent aliases for Linear-native wording (`completed` / `cancelled` / `canceled` / `todo`).
+- Backlog items use their own vocabulary (`open` / `closed` / `promoted`). Pull is asymmetric by design: any Linear "in flight" state maps to `open`, `Done`/`Cancelled` maps to `closed`, and local `promoted` is never overwritten (it implies a target pointer Linear can't know about).
+- TASK status sync stays on the TODO list. One Linear TaskList issue aggregates many task files, so a 1:1 status mapping doesn't apply; use `planr linear tasklist-sync` for per-checkbox state.
+
+**Fix:** Linear's API rejects `stateId: null` on update (`InvalidInput`). All push paths — feature, story, QT, BL — now omit the `stateId` field entirely when unmapped instead of sending an explicit null, so pushes without any state configuration continue to succeed.
+
 ### BL → QT promote is now AI-driven
 `planr backlog promote BL-XXX --quick` feeds the full BL markdown body (description, acceptance criteria, notes, threat models) through the same AI pipeline used by `planr quick create`, producing a realistic task breakdown instead of a single checkbox that restates the title. The new QT carries `sourceBacklog: "BL-XXX"` as provenance and inherits `epicId` from the BL (or an explicit `--epic` override) so `planr linear push EPIC-XXX` cascades to it. Use `--manual` to opt out of AI and keep the legacy single-task behavior.
 

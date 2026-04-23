@@ -20,7 +20,7 @@
 import type { LinearClient } from '@linear/sdk';
 import type { ParsedSubtask } from '../agents/task-parser.js';
 import { parseTaskMarkdown } from '../agents/task-parser.js';
-import type { OpenPlanrConfig, TaskStatus } from '../models/types.js';
+import type { BacklogStatus, OpenPlanrConfig, TaskStatus } from '../models/types.js';
 import { isVerbose, logger } from '../utils/logger.js';
 import {
   applyTaskCheckboxStateMap,
@@ -102,6 +102,53 @@ export function mapLinearNameToTaskStatus(
   return byName.get(normalizeStateKey(stateName));
 }
 
+/**
+ * Linear state name → BacklogStatus. Backlog items use a different vocabulary
+ * from tasks/stories/features: any "in flight" Linear state (Todo, In Progress,
+ * In Review) maps to `open`, while Linear "done" states (Done, Completed,
+ * Canceled) map to `closed`. We deliberately never emit `promoted` from the
+ * pull path — that state implies a local target pointer we don't have from
+ * Linear. User `linear.statusMap` can override defaults.
+ */
+const DEFAULT_LINEAR_STATE_TO_BACKLOG: [string, BacklogStatus][] = [
+  ['backlog', 'open'],
+  ['triage', 'open'],
+  ['unstarted', 'open'],
+  ['todo', 'open'],
+  ['in progress', 'open'],
+  ['in development', 'open'],
+  ['in review', 'open'],
+  ['canceled', 'closed'],
+  ['cancelled', 'closed'],
+  ['done', 'closed'],
+  ['completed', 'closed'],
+];
+
+export function buildNameToBacklogStatusMap(
+  user: Record<string, string> | undefined,
+): Map<string, BacklogStatus> {
+  const m = new Map<string, BacklogStatus>();
+  for (const [k, v] of DEFAULT_LINEAR_STATE_TO_BACKLOG) {
+    m.set(normalizeStateKey(k), v);
+  }
+  if (user) {
+    for (const [linearName, raw] of Object.entries(user)) {
+      if (isLikelyLinearWorkflowStateId(raw)) continue;
+      if (raw === 'open' || raw === 'closed' || raw === 'promoted') {
+        m.set(normalizeStateKey(linearName), raw);
+      }
+    }
+  }
+  return m;
+}
+
+export function mapLinearNameToBacklogStatus(
+  stateName: string,
+  byName: Map<string, BacklogStatus>,
+): BacklogStatus | undefined {
+  return byName.get(normalizeStateKey(stateName));
+}
+
 export interface LinearStatusSyncSummary {
   updated: number;
   unchanged: number;
@@ -111,10 +158,10 @@ export interface LinearStatusSyncSummary {
 }
 
 type Tracked = {
-  type: 'feature' | 'story';
+  type: 'feature' | 'story' | 'quick' | 'backlog';
   id: string;
   linearIssueId: string;
-  localStatus: TaskStatus;
+  localStatus: string;
 };
 
 export async function syncLinearStatusIntoArtifacts(
@@ -132,10 +179,11 @@ export async function syncLinearStatusIntoArtifacts(
     missingFromApi: 0,
   };
 
-  const byName = buildNameToStatusMap(config.linear?.statusMap);
+  const byNameTask = buildNameToStatusMap(config.linear?.statusMap);
+  const byNameBacklog = buildNameToBacklogStatusMap(config.linear?.statusMap);
   const tracked: Tracked[] = [];
 
-  for (const type of ['feature', 'story'] as const) {
+  for (const type of ['feature', 'story', 'quick', 'backlog'] as const) {
     const list = await listArtifacts(projectDir, config, type);
     for (const row of list) {
       const art = await readArtifact(projectDir, config, type, row.id);
@@ -154,7 +202,11 @@ export async function syncLinearStatusIntoArtifacts(
         summary.skippedNoId++;
         continue;
       }
-      const localStatus = asTaskStatus(art.data.status);
+      // For backlog items we keep the raw status so the `promoted` guard and
+      // `open/closed/promoted` comparisons stay honest. For the other types,
+      // the task-status coercion preserves existing behavior.
+      const localStatus =
+        type === 'backlog' ? String(art.data.status ?? 'open') : asTaskStatus(art.data.status);
       tracked.push({ type, id: row.id, linearIssueId: linearId, localStatus });
     }
   }
@@ -175,12 +227,26 @@ export async function syncLinearStatusIntoArtifacts(
       summary.missingFromApi++;
       continue;
     }
-    const mapped = mapLinearNameToTaskStatus(stateName, byName);
+    const mapped: string | undefined =
+      t.type === 'backlog'
+        ? mapLinearNameToBacklogStatus(stateName, byNameBacklog)
+        : mapLinearNameToTaskStatus(stateName, byNameTask);
     if (mapped === undefined) {
       logger.warn(
         `linear sync: unmapped Linear state "${stateName}" for ${t.type} ${t.id} — left unchanged.`,
       );
       summary.unmapped++;
+      continue;
+    }
+    // `promoted` is a local-only BL state (the BL was promoted to a QT/story
+    // with a target pointer recorded in the BL body). Linear has no equivalent
+    // signal, so pulling `Done` back would destroy the `promoted → target`
+    // linkage. Treat as unchanged.
+    if (t.type === 'backlog' && t.localStatus === 'promoted') {
+      if (isVerbose()) {
+        logger.debug(`linear sync: backlog ${t.id} kept as "promoted" (local-only state)`);
+      }
+      summary.unchanged++;
       continue;
     }
     if (mapped === t.localStatus) {

@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { ParsedSubtask } from '../src/agents/task-parser.js';
 import {
   applyCheckboxMergeToLocalBody,
+  buildNameToBacklogStatusMap,
   buildNameToStatusMap,
   extractTaskSectionFromMergedDescription,
+  mapLinearNameToBacklogStatus,
   mapLinearNameToTaskStatus,
   mergeByIdForFormat,
   replaceTaskSectionInMergedDescription,
@@ -139,5 +141,48 @@ describe('applyCheckboxMergeToLocalBody', () => {
     expect(out).toMatch(/- \[x\].*1\.0/);
     expect(out).toMatch(/- \[ \].*1\.1/);
     expect(out).toMatch(/- \[x\].*2\.0/);
+  });
+});
+
+describe('linear-pull-service backlog status map', () => {
+  it('maps Linear "in flight" states to open (not in-progress)', () => {
+    const m = buildNameToBacklogStatusMap(undefined);
+    expect(mapLinearNameToBacklogStatus('Todo', m)).toBe('open');
+    expect(mapLinearNameToBacklogStatus('In Progress', m)).toBe('open');
+    expect(mapLinearNameToBacklogStatus('In Review', m)).toBe('open');
+    expect(mapLinearNameToBacklogStatus('Backlog', m)).toBe('open');
+  });
+
+  it('maps Done and Canceled to closed', () => {
+    const m = buildNameToBacklogStatusMap(undefined);
+    expect(mapLinearNameToBacklogStatus('Done', m)).toBe('closed');
+    expect(mapLinearNameToBacklogStatus('Completed', m)).toBe('closed');
+    expect(mapLinearNameToBacklogStatus('Cancelled', m)).toBe('closed');
+    expect(mapLinearNameToBacklogStatus('Canceled', m)).toBe('closed');
+  });
+
+  it('user statusMap can override defaults with backlog vocabulary', () => {
+    const m = buildNameToBacklogStatusMap({ 'Ready For Pickup': 'open', Archived: 'closed' });
+    expect(mapLinearNameToBacklogStatus('Ready For Pickup', m)).toBe('open');
+    expect(mapLinearNameToBacklogStatus('Archived', m)).toBe('closed');
+  });
+
+  it('ignores user statusMap values that are task vocabulary (pending/in-progress/done)', () => {
+    // Task vocabulary doesn't belong in a backlog map — filtered out so the
+    // default `Todo → open` still wins instead of `Todo → pending`.
+    const m = buildNameToBacklogStatusMap({ Todo: 'pending' });
+    expect(mapLinearNameToBacklogStatus('Todo', m)).toBe('open');
+  });
+
+  it('ignores uuid-shaped values', () => {
+    const m = buildNameToBacklogStatusMap({
+      'Custom Lane': '8c4d4c4e-0e0e-4c4c-8c4c-4c4c4c4c4c4c',
+    });
+    expect(mapLinearNameToBacklogStatus('Custom Lane', m)).toBeUndefined();
+  });
+
+  it('returns undefined for unknown state names', () => {
+    const m = buildNameToBacklogStatusMap(undefined);
+    expect(mapLinearNameToBacklogStatus('Lunar Phase Gate', m)).toBeUndefined();
   });
 });

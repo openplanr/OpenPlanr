@@ -34,6 +34,23 @@ describe('formatLinearMappingTable', () => {
     expect(out).toContain('OpenPlanr id');
     expect(out).toContain('stale-id');
   });
+
+  it('prints full URLs without ellipsis truncation (copy-paste needs exact URL)', async () => {
+    const longUrl =
+      'https://linear.app/moduluniversity/issue/MUV-18/muvi-notification-preferences-per-user-toggles-digest-mode-quiet-hours';
+    const rows: LinearMappingTableRow[] = [
+      {
+        kind: 'quick',
+        openPlanrId: 'QT-001',
+        linearIdentifier: 'MUV-18',
+        linearUrl: longUrl,
+        lastKnownState: 'pending',
+      },
+    ];
+    const out = formatLinearMappingTable(rows);
+    expect(out).toContain(longUrl);
+    expect(out).not.toContain('…'); // no ellipsis anywhere — URL fits or overflows, never truncated
+  });
 });
 
 // ---------------------------------------------------------------------------

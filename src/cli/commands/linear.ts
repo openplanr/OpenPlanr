@@ -299,7 +299,7 @@ export function registerLinearCommand(program: Command) {
 
         try {
           display.line(
-            `${chalk.cyan('[1/2]')} Workflow status: Linear → OpenPlanr features & stories`,
+            `${chalk.cyan('[1/2]')} Workflow status: Linear → OpenPlanr features, stories, quick tasks, backlog`,
           );
           const statusSummary = await syncLinearStatusIntoArtifacts(projectDir, config, client, {
             dryRun,

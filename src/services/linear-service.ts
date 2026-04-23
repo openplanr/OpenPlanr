@@ -355,6 +355,41 @@ export async function getTeamProjects(
 const ISSUE_STATE_FETCH_CHUNK = 50;
 
 /**
+ * One team workflow state — the minimum Linear metadata we need to auto-map
+ * OpenPlanr statuses to state UUIDs when the user hasn't configured
+ * `linear.pushStateIds`.
+ *
+ * `type` is Linear's canonical classification (`backlog` / `unstarted` /
+ * `started` / `completed` / `canceled`) and is robust against teams renaming
+ * states — unlike `name`, which varies per team.
+ */
+export interface LinearWorkflowStateSummary {
+  id: string;
+  name: string;
+  type: string;
+}
+
+/**
+ * Fetch the team's workflow states in one round-trip. Used by `planr linear
+ * push` to auto-derive a status→stateId map when the user has no explicit
+ * `linear.pushStateIds` config.
+ */
+export async function fetchTeamWorkflowStates(
+  client: LinearClient,
+  teamId: string,
+): Promise<LinearWorkflowStateSummary[]> {
+  return withLinearRetry('fetch team workflow states', async () => {
+    const team = await client.team(teamId);
+    const states = await team.states();
+    return states.nodes.map((s) => ({
+      id: s.id,
+      name: s.name,
+      type: s.type,
+    }));
+  });
+}
+
+/**
  * Batched: load each issue's current workflow state **name** (one GraphQL
  * round-trip per chunk).
  */
