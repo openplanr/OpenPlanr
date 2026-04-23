@@ -92,7 +92,11 @@ function makeFakeClient(
     issueInputs.push(input);
     return { success: true, issueId: `issue-uuid-${issueCounter}` };
   });
-  const updateIssue = vi.fn(async () => ({ success: true }));
+  // Typed so `mock.calls[n][1]` is accessible without tuple-length errors
+  // under strict TS (the `updateLinearIssue` call passes id + input).
+  const updateIssue = vi.fn<
+    (id: string, input: Record<string, unknown>) => Promise<{ success: boolean }>
+  >(async () => ({ success: true }));
   const issueLabels = vi.fn(async () => ({ nodes: [] }));
   const createIssueLabel = vi.fn(async () => {
     labelCounter += 1;
@@ -106,6 +110,10 @@ function makeFakeClient(
   }));
   const teamStates = opts.teamStates ?? [];
   const team = vi.fn(async () => ({
+    // `notUsed` by default so estimate sync cleanly omits the field in
+    // tests that don't care about BL-007. Estimate-specific tests live in
+    // tests/linear-estimate-sync.test.ts and use their own client mock.
+    issueEstimationType: 'notUsed',
     states: async () => ({ nodes: teamStates }),
   }));
   const client = {
@@ -297,10 +305,15 @@ const STATE_UUIDS = {
 } as const;
 
 function configWithStates(): OpenPlanrConfig {
+  const base = baseConfig(true);
+  // `LinearConfig` requires `teamId` — baseConfig always sets it, but TS can't
+  // narrow the optional through a spread. Access the non-optional parent
+  // directly to keep strict TS happy.
+  const baseLinear = base.linear ?? { teamId: '' };
   return {
-    ...baseConfig(true),
+    ...base,
     linear: {
-      ...baseConfig(true).linear,
+      ...baseLinear,
       pushStateIds: {
         pending: STATE_UUIDS.todo,
         'in-progress': STATE_UUIDS.inProgress,
@@ -396,10 +409,12 @@ describe('runLinearPush — BL status → Linear stateId', () => {
   it('omits stateId on create when BL key is not in pushStateIds', async () => {
     // `open` is intentionally NOT in this config; BL should still push fine
     // without a stateId (no silent coercion into task vocabulary).
-    const config = {
-      ...baseConfig(true),
+    const base = baseConfig(true);
+    const baseLinear = base.linear ?? { teamId: '' };
+    const config: OpenPlanrConfig = {
+      ...base,
       linear: {
-        ...baseConfig(true).linear,
+        ...baseLinear,
         pushStateIds: {
           // Only task keys — no `open` mapping. BL push must not pick up
           // `pushStateIds.pending` by accident.
@@ -407,7 +422,7 @@ describe('runLinearPush — BL status → Linear stateId', () => {
           done: STATE_UUIDS.done,
         },
       },
-    } satisfies OpenPlanrConfig;
+    };
     await writeBacklogItem(projectDir, 'BL-031', { status: 'open' });
     const fake = makeFakeClient();
     await runLinearPush(projectDir, config, fake.client, 'BL-031');
@@ -468,7 +483,9 @@ describe('runLinearPush — zero-config auto-derived stateIds', () => {
     const fake = makeFakeClient({ teamStates: teamStatesFixture });
     await runLinearPush(projectDir, config, fake.client, 'QT-040');
     expect(fake.lastIssueInput()?.stateId).toBe('st-done-uuid');
-    expect(fake.calls.team).toHaveBeenCalledTimes(1);
+    // team() is called twice per run: once for workflow states, once for
+    // the issue estimation type (BL-007). Both are cached for cascades.
+    expect(fake.calls.team).toHaveBeenCalledTimes(2);
   });
 
   it('QT status "in-progress" auto-resolves to the team\'s started state', async () => {
@@ -506,10 +523,12 @@ describe('runLinearPush — zero-config auto-derived stateIds', () => {
   it('user pushStateIds override the auto-derived defaults', async () => {
     // pushStateIds.done points at a DIFFERENT uuid than the team's completed
     // state; the explicit config must win.
+    const base = baseConfig(true);
+    const baseLinear = base.linear ?? { teamId: '' };
     const configOverride: OpenPlanrConfig = {
-      ...baseConfig(true),
+      ...base,
       linear: {
-        ...baseConfig(true).linear,
+        ...baseLinear,
         pushStateIds: {
           done: 'user-override-uuid',
         },

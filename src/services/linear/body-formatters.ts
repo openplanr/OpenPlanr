@@ -24,16 +24,20 @@ export function toOptionalStringArray(v: unknown): string[] | undefined {
   return out.length > 0 ? out : undefined;
 }
 
-/** Epic → Linear Project `description` (markdown). */
+/** Epic → Linear Project `description` (markdown). Skips whitespace-only sections. */
 export function buildEpicProjectDescription(epic: Epic): string {
   const lines: string[] = [];
-  if (epic.businessValue) lines.push(`**Business value**\n\n${epic.businessValue.trim()}`);
-  if (epic.problemStatement) lines.push(`**Problem**\n\n${epic.problemStatement.trim()}`);
-  if (epic.solutionOverview) lines.push(`**Solution**\n\n${epic.solutionOverview.trim()}`);
-  if (epic.successCriteria) lines.push(`**Success criteria**\n\n${epic.successCriteria.trim()}`);
-  if (epic.targetUsers) lines.push(`**Target users**\n\n${epic.targetUsers.trim()}`);
-  if (epic.risks) lines.push(`**Risks**\n\n${epic.risks.trim()}`);
-  if (epic.dependencies) lines.push(`**Dependencies**\n\n${epic.dependencies.trim()}`);
+  const section = (label: string, value: string | undefined): void => {
+    const trimmed = value?.trim();
+    if (trimmed) lines.push(`**${label}**\n\n${trimmed}`);
+  };
+  section('Business value', epic.businessValue);
+  section('Problem', epic.problemStatement);
+  section('Solution', epic.solutionOverview);
+  section('Success criteria', epic.successCriteria);
+  section('Target users', epic.targetUsers);
+  section('Risks', epic.risks);
+  section('Dependencies', epic.dependencies);
   return lines.join('\n\n');
 }
 
@@ -49,12 +53,34 @@ export function buildFeatureIssueBody(feature: Feature): string {
   return lines.filter(Boolean).join('\n\n');
 }
 
-/** User story → Linear sub-issue body (As a / I want / So that + acceptance criteria). */
-export function buildStoryIssueBody(story: UserStory): string {
-  const head = `As a **${story.role}**, I want **${story.goal}** so that **${story.benefit}**.`;
+/**
+ * User story → Linear sub-issue body.
+ *
+ * Composes, in order:
+ *   1. The "As a / I want / So that" sentence — only when all three fields
+ *      are present (otherwise rendering with blanks produces visible
+ *      garbage in Linear).
+ *   2. The frontmatter `acceptanceCriteria` prose — if set.
+ *   3. The Gherkin scenarios from `<storyId>-gherkin.feature` — if the
+ *      caller provides them. Stories in the OpenPlanr convention store
+ *      their real acceptance criteria as Gherkin in a sibling `.feature`
+ *      file; without this, the Linear issue was empty for every story
+ *      that followed the convention.
+ */
+export function buildStoryIssueBody(story: UserStory, gherkinContent?: string | null): string {
+  const role = story.role?.trim();
+  const goal = story.goal?.trim();
+  const benefit = story.benefit?.trim();
   const ac = story.acceptanceCriteria?.trim();
-  if (!ac) return head;
-  return `${head}\n\n**Acceptance criteria**\n\n${ac}`;
+  const gherkin = gherkinContent?.trim();
+  const hasFullUserStoryLine = Boolean(role && goal && benefit);
+  const sections: string[] = [];
+  if (hasFullUserStoryLine) {
+    sections.push(`As a **${role}**, I want **${goal}** so that **${benefit}**.`);
+  }
+  if (ac) sections.push(`**Acceptance criteria**\n\n${ac}`);
+  if (gherkin) sections.push(`**Gherkin scenarios**\n\n\`\`\`gherkin\n${gherkin}\n\`\`\``);
+  return sections.join('\n\n');
 }
 
 /** Render parsed task lines to markdown checkboxes (Linear description). */

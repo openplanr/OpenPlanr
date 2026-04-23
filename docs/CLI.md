@@ -905,6 +905,22 @@ planr --verbose linear sync
 
 Task files aren't status-synced: a single Linear TaskList issue aggregates many local `TASK-*.md` files, so 1:1 status mapping doesn't apply. Use `planr linear tasklist-sync` instead — it mirrors individual checkboxes.
 
+**Estimate sync**
+
+`planr linear push` also writes OpenPlanr's `estimatedPoints` (from `planr estimate --save`, or hand-edited `storyPoints`) to Linear's native Issue estimation field, per the team's configured scale:
+
+| Team scale | Behavior |
+|---|---|
+| `fibonacci` | local values snap to nearest of `{0, 1, 2, 3, 5, 8, 13, 21}`; e.g. `4 → 5`, `7 → 8` |
+| `linear` | snap to `{0, 1, 2, 3, 4, 5}` |
+| `exponential` | snap to `{0, 1, 2, 4, 8, 16}` |
+| `tShirt` | skipped (no reliable numeric → XS/S/M/L/XL mapping); one-per-run warning |
+| `notUsed` | skipped silently |
+
+Applies to FEAT / US / QT / BL pushes. TASK is intentionally out of scope — one Linear TaskList issue aggregates multiple local `TASK-*.md` files (same rationale as the TASK status deferral), so estimate aggregation rules are tracked as a follow-up.
+
+The team scale is auto-detected per push run (one extra API round-trip, cached); no config needed. Set `estimatedPoints: <n>` in the artifact's frontmatter (or run `planr estimate <id> --save` to generate it from AI), then `planr linear push` will send it.
+
 **Status-name aliases (push side):** values like `completed`, `cancelled`, `canceled`, and `todo` on a QT/feature/story are transparently treated as `done`/`pending` so hand-edited frontmatter using Linear's native vocabulary still works.
 
 **Zero-config auto-derive:** on every push run, `planr linear push` fetches the team's workflow states once and auto-derives a status→stateId map from Linear's canonical state **types** (`backlog` / `unstarted` / `started` / `completed` / `canceled`). You don't need to configure anything for basic status sync to work — the first `pending`/`open` state of each canonical type becomes the default. Configure `linear.pushStateIds` only when you want non-default routing (e.g., push `done` to "Released" instead of the first `completed` state).

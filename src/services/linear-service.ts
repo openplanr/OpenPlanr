@@ -300,16 +300,38 @@ export async function ensureIssueLabel(
         )
       : undefined;
   return withLinearRetry('ensure label', async () => {
-    const existing = await client.issueLabels({
+    // Linear enforces label uniqueness **case-insensitively** and at the
+    // **workspace** level (not per-team): creating `feature` fails with
+    // "Label 'Feature' already exists in the workspace" when a capitalized
+    // version exists, even if it's owned by a different team. Our lookup
+    // must match Linear's own uniqueness rule or we'll try to create
+    // duplicates that the API rejects.
+    //
+    // Strategy:
+    //   1. Prefer a team-scoped match (usable for issue labels on this team).
+    //   2. Fall back to any workspace-wide match with the same name — adopt
+    //      it as the label we'll apply. The issue can reference workspace
+    //      labels across teams.
+    const teamScoped = await client.issueLabels({
       filter: {
         team: { id: { eq: input.teamId } },
-        name: { eq: safeName },
+        name: { eqIgnoreCase: safeName },
       },
       first: 1,
     });
-    const hit = existing.nodes?.[0];
-    if (hit?.id) {
-      return { id: hit.id, name: hit.name };
+    const teamHit = teamScoped.nodes?.[0];
+    if (teamHit?.id) {
+      return { id: teamHit.id, name: teamHit.name };
+    }
+    const workspaceWide = await client.issueLabels({
+      filter: {
+        name: { eqIgnoreCase: safeName },
+      },
+      first: 1,
+    });
+    const workspaceHit = workspaceWide.nodes?.[0];
+    if (workspaceHit?.id) {
+      return { id: workspaceHit.id, name: workspaceHit.name };
     }
     const created: LinearIssueLabelCreate = {
       teamId: input.teamId,
@@ -386,6 +408,28 @@ export async function fetchTeamWorkflowStates(
       name: s.name,
       type: s.type,
     }));
+  });
+}
+
+/**
+ * Fetch the team's `issueEstimationType` in one round-trip. Used by `planr
+ * linear push` to decide whether (and how) to map OpenPlanr `storyPoints` to
+ * Linear's native estimate field.
+ *
+ * Returns `'notUsed'` when the team has estimation disabled — push then
+ * skips the field silently.
+ */
+export async function fetchTeamIssueEstimationType(
+  client: LinearClient,
+  teamId: string,
+): Promise<string> {
+  return withLinearRetry('fetch team estimation type', async () => {
+    const team = await client.team(teamId);
+    // Linear's SDK exposes this as `issueEstimationType` on Team; defensive
+    // fallback to `'notUsed'` keeps push safe when the team shape is
+    // unfamiliar (older SDK, mocked client, etc.).
+    const value = (team as unknown as { issueEstimationType?: string }).issueEstimationType;
+    return value ?? 'notUsed';
   });
 }
 

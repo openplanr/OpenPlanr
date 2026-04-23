@@ -81,6 +81,22 @@ export interface LinearConfig {
   token?: string;
 }
 
+/**
+ * Linear's issue estimation scale per team. Mirrors the string values
+ * returned by the Linear SDK's `Team.issueEstimationType`:
+ *   - `notUsed` — team has estimation disabled; push skips the field silently.
+ *   - `fibonacci` — 0, 1, 2, 3, 5, 8, 13, 21.
+ *   - `linear` — 0, 1, 2, 3, 4, 5.
+ *   - `exponential` — 0, 1, 2, 4, 8, 16.
+ *   - `tShirt` — categorical XS/S/M/L/XL; no reliable numeric mapping, push skips with one-per-run warning.
+ */
+export type LinearIssueEstimationType =
+  | 'notUsed'
+  | 'fibonacci'
+  | 'linear'
+  | 'exponential'
+  | 'tShirt';
+
 /** Options for `planr linear sync` and related flows. */
 export interface LinearSyncOptions {
   /**

@@ -4,13 +4,9 @@
  */
 
 import type { LinearClient } from '@linear/sdk';
-import type {
-  LinearMappingStrategy,
-  OpenPlanrConfig,
-  TaskStatus,
-  UserStory,
-} from '../models/types.js';
+import type { LinearMappingStrategy, OpenPlanrConfig, TaskStatus } from '../models/types.js';
 import { logger } from '../utils/logger.js';
+import { findGherkinContent } from './artifact-gathering.js';
 import {
   findArtifactTypeById,
   listArtifacts,
@@ -27,6 +23,7 @@ import {
   formatTaskCheckboxBody,
   toOptionalString,
 } from './linear/body-formatters.js';
+import { type EstimateResolution, resolveEstimateForPush } from './linear/estimate-resolver.js';
 import {
   buildLinearPushPlan,
   getLinkedEpicId,
@@ -45,6 +42,7 @@ import {
   loadLinearPushScope,
   type ScopedFeature,
   type ScopedStandaloneArtifact,
+  type ScopedStory,
 } from './linear/scope-loaders.js';
 import {
   contextFromMappedEpic,
@@ -59,6 +57,7 @@ import {
   createLinearProject,
   createProjectMilestone,
   ensureIssueLabel,
+  fetchTeamIssueEstimationType,
   fetchTeamWorkflowStates,
   isLikelyLinearIssueId,
   isLikelyLinearWorkflowStateId,
@@ -261,6 +260,20 @@ const resolveStateIdForPush = resolveTaskStateIdForPush;
 const autoStateIdMapCache = new WeakMap<LinearClient, Record<string, string>>();
 
 /**
+ * Per-client cache for the team's issue estimation type (fibonacci / linear /
+ * exponential / tShirt / notUsed). Populated once per push run alongside the
+ * state-id map; read by every resolver call site that wants to set an
+ * estimate on the Linear issue.
+ */
+const teamEstimationTypeCache = new WeakMap<LinearClient, string>();
+
+/**
+ * Per-client latch so the "t-shirt scale — estimates skipped" warning fires
+ * exactly once per push run, no matter how many artifacts are in the scope.
+ */
+const tShirtWarningLatch = new WeakSet<LinearClient>();
+
+/**
  * Populate the per-client auto-map. Called once at the top of
  * `runLinearPush` — a single extra API round-trip buys zero-config status
  * sync. Failures are swallowed to keep push working: if Linear rejects the
@@ -278,9 +291,66 @@ async function ensureAutoStateIdMap(client: LinearClient, teamId: string): Promi
   }
 }
 
+/**
+ * Populate the per-client estimation-type cache. Failures degrade to
+ * `'notUsed'` so estimate is simply omitted rather than blocking the push.
+ */
+async function ensureTeamEstimationType(client: LinearClient, teamId: string): Promise<void> {
+  if (teamEstimationTypeCache.has(client)) return;
+  try {
+    const scale = await fetchTeamIssueEstimationType(client, teamId);
+    teamEstimationTypeCache.set(client, scale);
+  } catch (err) {
+    logger.debug('linear push: could not fetch team estimation type', err);
+    teamEstimationTypeCache.set(client, 'notUsed');
+  }
+}
+
 function getAutoStateIdMap(client: LinearClient | undefined): Record<string, string> | undefined {
   if (!client) return undefined;
   return autoStateIdMapCache.get(client);
+}
+
+function getTeamEstimationType(client: LinearClient | undefined): string | undefined {
+  if (!client) return undefined;
+  return teamEstimationTypeCache.get(client);
+}
+
+/**
+ * Resolve an artifact's estimate for push against the team's scale. Emits
+ * debug logs for snap transformations and a single-shot warning for t-shirt
+ * teams; centralizes call-site boilerplate so every push path (FEAT / US /
+ * QT / BL) can be one `buildEstimateInput(...)` call.
+ */
+function buildEstimateInput(
+  client: LinearClient,
+  frontmatter: Record<string, unknown>,
+  artifactId: string,
+): { resolution: EstimateResolution; fieldPatch: { estimate?: number } } {
+  const scale = getTeamEstimationType(client);
+  const resolution = resolveEstimateForPush(frontmatter, scale);
+
+  if (resolution.kind === 'mapped') {
+    if (resolution.snapped) {
+      logger.debug(
+        `linear push: ${artifactId} estimate snapped ${resolution.originalValue} → ${resolution.estimate} (scale=${scale})`,
+      );
+    }
+    return { resolution, fieldPatch: { estimate: resolution.estimate } };
+  }
+
+  if (resolution.kind === 'skip-t-shirt' && !tShirtWarningLatch.has(client)) {
+    tShirtWarningLatch.add(client);
+    logger.warn(
+      'linear push: team uses t-shirt estimation scale — skipping estimate field on all artifacts (no reliable numeric → XS/S/M/L/XL mapping). Configure `linear.pushStateIds` with explicit values to override.',
+    );
+  }
+  if (resolution.kind === 'skip-invalid-value') {
+    logger.debug(
+      `linear push: ${artifactId} has unparseable estimate "${String(resolution.rawValue)}" — skipping field`,
+    );
+  }
+  return { resolution, fieldPatch: {} };
 }
 
 // Plan builders live in `./linear/plan-builders.ts` and are re-exported above.
@@ -315,6 +385,7 @@ async function pushOneFeatureAndDescendants(
   const featureTitle = f.title.trim();
   const featureBody = buildFeatureIssueBody(f);
   const stateF = resolveStateIdForPush(config, f.status, getAutoStateIdMap(client));
+  const estimatePatch = buildEstimateInput(client, sf.frontmatter, f.id).fieldPatch;
   const { projectId } = strategyCtx;
   const typeLabelId = await typeLabelCache('feature');
 
@@ -333,6 +404,7 @@ async function pushOneFeatureAndDescendants(
       // Linear rejects `stateId: null` on update (InvalidInput). Omit when
       // unmapped so the issue keeps its current state.
       ...(stateF ? { stateId: stateF } : {}),
+      ...estimatePatch,
       projectMilestoneId: strategyCtx.milestoneId ?? null,
       labelIds,
     });
@@ -362,6 +434,7 @@ async function pushOneFeatureAndDescendants(
       title: featureTitle,
       description: featureBody,
       ...(stateF ? { stateId: stateF } : {}),
+      ...estimatePatch,
       ...(strategyCtx.milestoneId ? { projectMilestoneId: strategyCtx.milestoneId } : {}),
       labelIds: initialLabelIds,
     });
@@ -381,7 +454,7 @@ async function pushOneFeatureAndDescendants(
       projectDir,
       config,
       client,
-      st.data,
+      st,
       featureIssueId,
       strategyCtx,
       typeLabelCache,
@@ -413,16 +486,23 @@ async function pushOneStoryUnderFeature(
   projectDir: string,
   config: OpenPlanrConfig,
   client: LinearClient,
-  s: UserStory,
+  scopedStory: ScopedStory,
   featureIssueId: string,
   strategyCtx: StrategyContext,
   typeLabelCache: (type: LinearLabeledArtifactType) => Promise<string>,
   teamId: string,
   updateOnly: boolean,
 ): Promise<void> {
+  const s = scopedStory.data;
   const storyTitle = s.title.trim();
-  const storyBody = buildStoryIssueBody(s);
+  // Load the story's Gherkin scenarios from `<storyId>-gherkin.feature` if
+  // it exists. OpenPlanr's convention stores real acceptance criteria as
+  // Gherkin in a sibling file; without this, stories followed-by-convention
+  // pushed empty bodies to Linear.
+  const gherkinContent = await findGherkinContent(projectDir, config, s.id);
+  const storyBody = buildStoryIssueBody(s, gherkinContent);
   const stateS = resolveStateIdForPush(config, s.status, getAutoStateIdMap(client));
+  const estimatePatch = buildEstimateInput(client, scopedStory.frontmatter, s.id).fieldPatch;
   const { projectId } = strategyCtx;
   const typeLabelId = await typeLabelCache('story');
   if (isUsableLinearIssueId(s.linearIssueId, `Story ${s.id}`)) {
@@ -440,6 +520,7 @@ async function pushOneStoryUnderFeature(
       // Linear rejects `stateId: null` on update (InvalidInput). Omit when
       // unmapped so the issue keeps its current state.
       ...(stateS ? { stateId: stateS } : {}),
+      ...estimatePatch,
       projectMilestoneId: strategyCtx.milestoneId ?? null,
       labelIds,
     });
@@ -469,6 +550,7 @@ async function pushOneStoryUnderFeature(
     title: storyTitle,
     description: storyBody,
     ...(stateS ? { stateId: stateS } : {}),
+    ...estimatePatch,
     ...(strategyCtx.milestoneId ? { projectMilestoneId: strategyCtx.milestoneId } : {}),
     labelIds: initialLabelIds,
   });
@@ -500,6 +582,11 @@ async function pushOneTaskListForFeature(
   teamId: string,
   updateOnly: boolean,
 ): Promise<void> {
+  // TASK estimate sync is deliberately deferred here (BL-007 / QT-004 §3.5):
+  // one Linear TaskList issue aggregates `sf.taskFiles` — multiple TASK-*.md
+  // files — so a 1:1 estimate mapping doesn't apply. Aggregation rules
+  // (sum? max? per-file-section?) need their own slice and are tracked as
+  // a follow-up to BL-007.
   const f = sf.data;
   const { projectId } = strategyCtx;
   const mergedBody = await buildMergedTaskListBody(projectDir, config, f.id, sf.taskFiles);
@@ -889,7 +976,7 @@ async function pushStoryScope(
     projectDir,
     config,
     client,
-    ctx.story.data,
+    ctx.story,
     featureIssueId,
     strategyCtx,
     typeLabelCache,
@@ -1059,6 +1146,7 @@ async function pushOneQuickTaskWithContext(
     toOptionalString(qt.frontmatter.status),
     getAutoStateIdMap(client),
   );
+  const estimatePatch = buildEstimateInput(client, qt.frontmatter, qt.id).fieldPatch;
   const rawExistingId = toOptionalString(qt.frontmatter.linearIssueId);
   const existingId = isUsableLinearIssueId(rawExistingId, `QuickTask ${qt.id}`)
     ? rawExistingId
@@ -1078,6 +1166,7 @@ async function pushOneQuickTaskWithContext(
       // Linear rejects `stateId: null` on update (InvalidInput). Omit the
       // field entirely when unmapped so the issue keeps its current state.
       ...(stateId ? { stateId } : {}),
+      ...estimatePatch,
       projectMilestoneId: ctx.milestoneId ?? null,
       labelIds,
     });
@@ -1105,6 +1194,7 @@ async function pushOneQuickTaskWithContext(
     title,
     description: body,
     ...(stateId ? { stateId } : {}),
+    ...estimatePatch,
     ...(ctx.milestoneId ? { projectMilestoneId: ctx.milestoneId } : {}),
     labelIds: initialLabelIds,
   });
@@ -1141,6 +1231,7 @@ async function pushOneBacklogItemWithContext(
     toOptionalString(bl.frontmatter.status),
     getAutoStateIdMap(client),
   );
+  const estimatePatch = buildEstimateInput(client, bl.frontmatter, bl.id).fieldPatch;
   const rawExistingId = toOptionalString(bl.frontmatter.linearIssueId);
   const existingId = isUsableLinearIssueId(rawExistingId, `Backlog ${bl.id}`)
     ? rawExistingId
@@ -1160,6 +1251,7 @@ async function pushOneBacklogItemWithContext(
       // Linear rejects `stateId: null` on update (InvalidInput). Omit the
       // field entirely when unmapped so the issue keeps its current state.
       ...(stateId ? { stateId } : {}),
+      ...estimatePatch,
       labelIds,
       projectMilestoneId: ctx.milestoneId ?? null,
     });
@@ -1188,6 +1280,7 @@ async function pushOneBacklogItemWithContext(
     description: body,
     labelIds: initialLabelIds,
     ...(stateId ? { stateId } : {}),
+    ...estimatePatch,
     ...(ctx.milestoneId ? { projectMilestoneId: ctx.milestoneId } : {}),
   });
   const fmUpdate: Record<string, string | string[]> = {
@@ -1318,6 +1411,10 @@ export async function runLinearPush(
   // every resolver (feature/story/QT/BL) map local status → Linear stateId
   // even when the user hasn't configured `linear.pushStateIds` explicitly.
   await ensureAutoStateIdMap(client, teamId);
+  // Second round-trip for the team's issue estimation type — used by every
+  // resolver to snap local `storyPoints` to Linear's native estimate field.
+  // Cheap, non-blocking on failure (falls back to `'notUsed'`).
+  await ensureTeamEstimationType(client, teamId);
 
   const type = findArtifactTypeById(artifactId);
   if (!type) {

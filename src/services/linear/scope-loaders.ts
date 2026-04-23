@@ -32,12 +32,17 @@ export interface ScopedStory {
   id: string;
   title: string;
   data: UserStory;
+  /** Raw YAML frontmatter — carries fields not mapped onto the typed `data`
+   * (e.g. `estimatedPoints`, `storyPoints` for Linear estimate sync). */
+  frontmatter: Record<string, unknown>;
 }
 
 export interface ScopedFeature {
   id: string;
   title: string;
   data: Feature;
+  /** Raw YAML frontmatter — same purpose as ScopedStory.frontmatter. */
+  frontmatter: Record<string, unknown>;
   stories: ScopedStory[];
   taskFiles: ScopedTaskFile[];
 }
@@ -145,7 +150,12 @@ export async function loadLinearPushScope(
         linearProjectMilestoneId: toOptionalString(sd.linearProjectMilestoneId),
         linearLabelIds: toOptionalStringArray(sd.linearLabelIds),
       };
-      stories.push({ id: story.id, title: story.title, data: story });
+      stories.push({
+        id: story.id,
+        title: story.title,
+        data: story,
+        frontmatter: sd as Record<string, unknown>,
+      });
     }
 
     const taskFiles: ScopedTaskFile[] = [];
@@ -161,6 +171,7 @@ export async function loadLinearPushScope(
       id: feature.id,
       title: feature.title,
       data: feature,
+      frontmatter: fd as Record<string, unknown>,
       stories,
       taskFiles,
     });
