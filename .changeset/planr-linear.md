@@ -63,6 +63,29 @@ Prevents the confusing `Outcome: applied` report when the only on-disk delta was
 ### `planr linear status` — full URLs, no truncation
 Reordered the table so the URL column is last and never truncated. Clickable URLs are the primary value of the table; the previous 28-char ellipsis made them useless for copy-paste.
 
+### Estimate sync for FEAT / US / QT / BL
+`planr linear push` now writes local `estimatedPoints` (from `planr estimate --save`, or hand-edited `storyPoints`) to Linear's native Issue estimation field, snapped to the team's configured scale:
+
+- **Fibonacci** — snap to `{0, 1, 2, 3, 5, 8, 13, 21}` (e.g. `4 → 5`, `7 → 8`).
+- **Linear** — snap to `{0, 1, 2, 3, 4, 5}`.
+- **Exponential** — snap to `{0, 1, 2, 4, 8, 16}`.
+- **tShirt** — skipped with one-per-run warning (no reliable numeric → XS/S/M/L/XL mapping).
+- **notUsed** — skipped silently.
+
+Zero-config: the team's `issueEstimationType` is auto-detected per push run (one extra API round-trip, cached). TASK is deferred — one Linear TaskList issue aggregates multiple task files, so 1:1 estimate mapping doesn't apply.
+
+### Story body fixes
+- **Empty role/goal/benefit no longer renders `As a ****, I want **** so that ****.`** Suppresses the "As a" sentence entirely when any of the three fields is blank (or whitespace-only).
+- **Gherkin scenarios now push to Linear.** Stories following the OpenPlanr convention store acceptance criteria as Gherkin in a sibling `<storyId>-gherkin.feature` file. Before this fix the push path never loaded the `.feature` content and Linear stories rendered empty for convention-following teams.
+- **Epic project description trims whitespace-only fields** — no more empty `**Risks**` headers.
+
+### Linear label case + workspace-scope fix
+`ensureIssueLabel` lookup is now **case-insensitive and workspace-wide** (matching Linear's own uniqueness rule). Previously a workspace with a `Feature` label blocked creation of `feature` with an `InvalidInput: Label already exists` error. Push now adopts the existing cross-team label instead of failing.
+
+### Revise — next-step guidance + rejected-proposal preservation
+- Flagged outcomes now print actionable next steps (read the audit log, hand-edit, re-run with `--scope-to prose`, re-run with `--no-code-context`) instead of leaving users in a dead end.
+- Demoted `revise → flag` decisions preserve the agent's rejected rewrite in the audit log as a `REJECTED by verifier` diff so users can inspect and hand-apply the parts that make sense. The file is still not written (action remains `flag`); the markdown is kept for audit purposes only.
+
 ### BL → QT promote is now AI-driven
 `planr backlog promote BL-XXX --quick` feeds the full BL markdown body (description, acceptance criteria, notes, threat models) through the same AI pipeline used by `planr quick create`, producing a realistic task breakdown instead of a single checkbox that restates the title. The new QT carries `sourceBacklog: "BL-XXX"` as provenance and inherits `epicId` from the BL (or an explicit `--epic` override) so `planr linear push EPIC-XXX` cascades to it. Use `--manual` to opt out of AI and keep the legacy single-task behavior.
 

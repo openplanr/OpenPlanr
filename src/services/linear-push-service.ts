@@ -582,11 +582,10 @@ async function pushOneTaskListForFeature(
   teamId: string,
   updateOnly: boolean,
 ): Promise<void> {
-  // TASK estimate sync is deliberately deferred here (BL-007 / QT-004 §3.5):
-  // one Linear TaskList issue aggregates `sf.taskFiles` — multiple TASK-*.md
-  // files — so a 1:1 estimate mapping doesn't apply. Aggregation rules
-  // (sum? max? per-file-section?) need their own slice and are tracked as
-  // a follow-up to BL-007.
+  // Note: estimate sync is intentionally not applied here. A single Linear
+  // TaskList issue aggregates `sf.taskFiles` — multiple TASK-*.md files —
+  // so a 1:1 numeric estimate mapping doesn't apply. Aggregation rules
+  // (sum? max? per-file-section?) are their own concern.
   const f = sf.data;
   const { projectId } = strategyCtx;
   const mergedBody = await buildMergedTaskListBody(projectDir, config, f.id, sf.taskFiles);
