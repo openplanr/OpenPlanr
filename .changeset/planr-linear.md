@@ -52,6 +52,17 @@ Quick tasks and backlog items push as top-level issues in a user-chosen Linear p
 
 **Fix:** Linear's API rejects `stateId: null` on update (`InvalidInput`). All push paths — feature, story, QT, BL — now omit the `stateId` field entirely when unmapped instead of sending an explicit null, so pushes without any state configuration continue to succeed.
 
+### `planr revise` — unchanged-content short-circuit
+Revise now detects when the agent returns content that is effectively identical to the original (byte-exact, or differs only in trailing whitespace that LLM markdown serializers routinely strip). Behavior in that case:
+- No file write, no backup sidecar produced, no confirm prompt.
+- New audit outcome `unchanged-by-agent` (distinct from `skipped-by-agent` / `flagged`).
+- UI renders "(no changes — agent's revised output matches the current file; nothing to apply)" in place of an empty diff block.
+
+Prevents the confusing `Outcome: applied` report when the only on-disk delta was a trailing newline strip.
+
+### `planr linear status` — full URLs, no truncation
+Reordered the table so the URL column is last and never truncated. Clickable URLs are the primary value of the table; the previous 28-char ellipsis made them useless for copy-paste.
+
 ### BL → QT promote is now AI-driven
 `planr backlog promote BL-XXX --quick` feeds the full BL markdown body (description, acceptance criteria, notes, threat models) through the same AI pipeline used by `planr quick create`, producing a realistic task breakdown instead of a single checkbox that restates the title. The new QT carries `sourceBacklog: "BL-XXX"` as provenance and inherits `epicId` from the BL (or an explicit `--epic` override) so `planr linear push EPIC-XXX` cascades to it. Use `--manual` to opt out of AI and keep the legacy single-task behavior.
 

@@ -570,6 +570,7 @@ export type ReviseAuditFormat = 'md' | 'json';
 export type ReviseAuditOutcome =
   | 'applied'
   | 'would-apply' // dry-run equivalent of 'applied'
+  | 'unchanged-by-agent' // agent returned revisedMarkdown equal to the original; no write
   | 'skipped-by-agent'
   | 'skipped-by-user'
   | 'flagged'

@@ -5,7 +5,7 @@
  */
 
 import type { Command } from 'commander';
-import { ENV_KEY_MAP } from '../../ai/types.js';
+import { DEFAULT_MODELS, ENV_KEY_MAP } from '../../ai/types.js';
 import type { AIProviderName, CodingAgentName } from '../../models/types.js';
 import { loadConfig, saveConfig } from '../../services/config-service.js';
 import {
@@ -34,7 +34,13 @@ export function registerConfigCommand(program: Command) {
       if (cfg.ai) {
         display.blank();
         display.line(`  AI Provider:  ${cfg.ai.provider}`);
-        display.line(`  AI Model:     ${cfg.ai.model || '(default)'}`);
+        // When no explicit model is set, show the actual default that will
+        // be used — annotated so users can tell it came from the default
+        // map rather than their config.
+        const modelLabel = cfg.ai.model
+          ? cfg.ai.model
+          : `${DEFAULT_MODELS[cfg.ai.provider]} (default)`;
+        display.line(`  AI Model:     ${modelLabel}`);
 
         const resolved = await resolveApiKeySource(cfg.ai.provider);
         if (resolved) {

@@ -263,6 +263,27 @@ export async function applyDecision(options: ApplyDecisionOptions): Promise<Appl
       })
     : '';
 
+  // Short-circuit: if the agent returned content that is effectively
+  // identical to the original (byte-exact, or only trailing-whitespace
+  // differences from markdown serializer normalization), skip the write
+  // and report `unchanged-by-agent`. Prevents the "Proposed diff: <empty>
+  // → applied" UX bug where a trivial newline-strip got reported as a
+  // successful revise even though the agent explicitly said the artifact
+  // was already well-structured.
+  if (isEffectivelyUnchanged(originalContent, decision.revisedMarkdown)) {
+    audit.appendEntry({
+      artifactId: decision.artifactId,
+      artifactPath,
+      outcome: 'unchanged-by-agent',
+      rationale: decision.rationale,
+      evidence: decision.evidence,
+      ambiguous: decision.ambiguous,
+      cascadeLevel: options.cascadeLevel,
+      timestamp,
+    });
+    return { outcome: 'unchanged-by-agent', wrote: false, diff: '' };
+  }
+
   if (dryRun) {
     audit.appendEntry({
       artifactId: decision.artifactId,
@@ -294,6 +315,20 @@ export async function applyDecision(options: ApplyDecisionOptions): Promise<Appl
     timestamp,
   });
   return { outcome: 'applied', wrote: true, diff };
+}
+
+/**
+ * `true` when the agent's `revisedMarkdown` is byte-identical to `original`,
+ * or differs only in trailing whitespace/newlines (LLM markdown serializers
+ * routinely drop or add one trailing newline without changing semantics).
+ *
+ * Exported so the `--apply-from <audit>` replay path and the interactive
+ * UI can share the same unchanged-detection rule.
+ */
+export function isEffectivelyUnchanged(original: string, revised: string | undefined): boolean {
+  if (revised === undefined) return true;
+  if (revised === original) return true;
+  return revised.replace(/\s+$/, '') === original.replace(/\s+$/, '');
 }
 
 /**

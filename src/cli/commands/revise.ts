@@ -59,6 +59,7 @@ import {
 import {
   type ApplyDecisionResult,
   applyDecision,
+  isEffectivelyUnchanged,
   ReviseArtifactNotFoundError,
   reviseArtifact,
 } from '../../services/revise-service.js';
@@ -658,6 +659,9 @@ async function confirmAndMaybeEditRationale(
   if (decision.action !== 'revise') return decision;
   if (opts.dryRun) return decision;
   if (opts.yes) return decision;
+  // Nothing to apply — skip the prompt, the apply path will emit an
+  // `unchanged-by-agent` audit entry instead of writing.
+  if (isEffectivelyUnchanged(originalContent, decision.revisedMarkdown)) return decision;
 
   let current: DecisionWithUserState = { ...decision };
   for (;;) {
@@ -717,18 +721,28 @@ function renderDecision(decision: ReviseDecision, originalContent: string): void
   }
 
   if (decision.action === 'revise' && decision.revisedMarkdown) {
-    display.line('');
-    display.heading('  Proposed diff:');
-    const diff = renderDiff(originalContent, decision.revisedMarkdown, {
-      oldLabel: `${decision.artifactId} (before)`,
-      newLabel: `${decision.artifactId} (proposed)`,
-    });
-    display.line(
-      diff
-        .split('\n')
-        .map((l) => `    ${l}`)
-        .join('\n'),
-    );
+    if (isEffectivelyUnchanged(originalContent, decision.revisedMarkdown)) {
+      display.line('');
+      display.heading('  Proposed diff:');
+      display.line(
+        chalk.dim(
+          `    (no changes — agent's revised output matches the current file; nothing to apply)`,
+        ),
+      );
+    } else {
+      display.line('');
+      display.heading('  Proposed diff:');
+      const diff = renderDiff(originalContent, decision.revisedMarkdown, {
+        oldLabel: `${decision.artifactId} (before)`,
+        newLabel: `${decision.artifactId} (proposed)`,
+      });
+      display.line(
+        diff
+          .split('\n')
+          .map((l) => `    ${l}`)
+          .join('\n'),
+      );
+    }
   }
 
   display.separator(60);
@@ -742,7 +756,9 @@ function renderFinalOutcome(result: ProcessOneResult, artifactId: string): void 
         ? chalk.yellow('would-apply')
         : result.outcome === 'flagged'
           ? chalk.magenta('flagged')
-          : chalk.dim(result.outcome);
+          : result.outcome === 'unchanged-by-agent'
+            ? chalk.dim('unchanged — no diff to apply')
+            : chalk.dim(result.outcome);
   logger.info(`\nOutcome: ${badge}`);
   if (result.wrote) {
     logger.dim(
