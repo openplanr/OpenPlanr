@@ -1,0 +1,22 @@
+{
+  "name": "openplanr-skills",
+  "owner": {
+    "name": "OpenPlanr",
+    "email": "asem@techarc.io"
+  },
+  "metadata": {
+    "description": "Agent skills for OpenPlanr — agile planning for AI coding agents",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "openplanr",
+      "description": "Agile planning CLI for AI coding agents — epics, features, stories, tasks, sprints, backlog, and agent rule generation",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/openplanr"
+      ]
+    }
+  ]
+}

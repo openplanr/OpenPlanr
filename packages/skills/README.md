@@ -2,23 +2,19 @@
 
 # OpenPlanr Skill
 
-**Agile planning, built for AI coding agents.**
+**Agile planning for AI coding agents.**
 
-Install this skill once — any Claude-powered agent can now plan your project before writing a line of code.
+Install once — any Claude-powered agent can now plan your project before writing a line of code.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
-[![Status](https://img.shields.io/badge/status-alpha-orange.svg)](#status)
+[![npm](https://img.shields.io/npm/v/openplanr.svg?label=openplanr%20CLI)](https://www.npmjs.com/package/openplanr)
 [![Agent Skills Spec](https://img.shields.io/badge/Agent%20Skills-compatible-8A2BE2)](https://agentskills.io/specification)
 
-[Main CLI](https://github.com/openplanr/openplanr) · [npm](https://www.npmjs.com/package/openplanr) · [Docs](https://github.com/openplanr/openplanr/blob/main/docs/CLI.md) · [Issues](https://github.com/openplanr/skills/issues)
+[Main CLI](https://github.com/openplanr/openplanr) · [npm](https://www.npmjs.com/package/openplanr) · [Command reference](https://github.com/openplanr/openplanr/blob/main/docs/CLI.md) · [Issues](https://github.com/openplanr/skills/issues)
 
 </div>
 
 ---
-
-## Status
-
-> **Alpha.** This is the public home of the OpenPlanr agent skill. The v1.0 release is being built out from the PRD. Watch this repo to be notified when it ships. Install instructions below will become live with the v1.0.0 release.
 
 ## The problem
 
@@ -26,66 +22,64 @@ AI coding agents are great at writing code — and bad at planning it. They jump
 
 [OpenPlanr](https://github.com/openplanr/openplanr) is a CLI that fixes this. It turns a brief or a PRD into a full agile plan — markdown artifacts your team and your agents can read, refine, and implement against.
 
-The CLI works from a terminal. This **skill** teaches Claude to run the CLI on your behalf, without you having to memorize commands.
+This **skill** teaches Claude to drive the CLI on your behalf. You stay in the conversation; Claude runs the commands and reads back the results.
 
-## What you get
+## What you can ask
 
-Once installed, you can ask any Claude agent:
+Once installed, any Claude agent understands:
 
 > *"Plan out the authentication feature from this PRD."*
-> *"Break this story into tasks."*
+> *"Break this user story into tasks."*
 > *"Estimate story points for everything in Sprint 4."*
-> *"Generate agent rules from our planning artifacts."*
+> *"Prioritize the backlog by impact and effort."*
+> *"Generate `CLAUDE.md` and `AGENTS.md` from our planning artifacts."*
 
-The skill detects the intent, runs the right `planr` command with the right flags, and reads back the result — no manual CLI invocation required. You stay in the flow of talking to the agent.
+The skill detects the planning intent, runs the right `planr` command with the right flags (always in non-interactive `--yes` mode), and summarizes the artifacts it produced.
 
 ## How it works
 
 ```
  You  ───►  Claude (with skill)  ───►  planr CLI  ───►  .planr/*.md
-                                                       │
-                                                       ▼
-                                          artifacts the agent
-                                          then implements against
+                                                         │
+                                                         ▼
+                                            artifacts the agent
+                                            then implements against
 ```
 
-Installing the skill adds a `SKILL.md` instruction file that Claude loads when it detects a planning intent. The skill tells Claude to run OpenPlanr via `npx openplanr@latest` (no global install needed), always with `--yes` for agent-friendly non-interactive execution.
+Installing the skill adds a `SKILL.md` instruction file plus references and worked examples. Claude loads the instructions on demand when it detects a planning intent and calls OpenPlanr via `npx openplanr@latest` (no global install required).
 
-## Installation
+## Install
 
-All three channels will be live with the v1.0.0 release.
+### Claude Code
 
-<details>
-<summary><b>Claude Code</b></summary>
-
-Two commands — the first registers this repo as a plugin marketplace, the second installs the OpenPlanr plugin from it.
+Two commands — the first registers this repo as a plugin marketplace, the second installs the OpenPlanr plugin from it:
 
 ```bash
 /plugin marketplace add openplanr/skills
 /plugin install openplanr@openplanr-skills
 ```
 
-Alternatively, after adding the marketplace, use `/plugin` to browse and install interactively. Claude Code activates the skill automatically when it detects planning intent.
+Alternatively, after adding the marketplace, run `/plugin` to browse and install interactively. Claude Code activates the skill automatically when it detects planning intent.
 
-</details>
+### Claude.ai (Pro, Max, Team, Enterprise)
 
-<details>
-<summary><b>Claude.ai (Pro, Max, Team, Enterprise)</b></summary>
+Download the skill folder and upload it as a custom skill:
 
-Download the skill folder and upload it as a custom skill via the Claude.ai settings panel. Full walkthrough coming in `docs/INSTALL.md`.
+```bash
+git clone https://github.com/openplanr/skills
+cd skills/skills/openplanr
+zip -r ../../openplanr-skill.zip .
+```
 
-</details>
+Upload the resulting `openplanr-skill.zip` via the Claude.ai skill upload UI. Full walkthrough in [`docs/INSTALL.md`](./docs/INSTALL.md).
 
-<details>
-<summary><b>Claude API</b></summary>
+### Claude API
 
-Upload via the Skills API — see the [Skills API Quickstart](https://docs.claude.com/en/api/skills-guide).
+Upload via the Skills API — see the [Skills API Quickstart](https://docs.claude.com/en/api/skills-guide). Full example in [`docs/INSTALL.md`](./docs/INSTALL.md).
 
-</details>
+## Use OpenPlanr directly
 
-## What about the OpenPlanr CLI?
-
-The CLI is the actual planning engine — this skill is a thin instruction layer. You can use OpenPlanr today without the skill:
+The CLI is the planning engine — this skill is a thin instruction layer. You can use OpenPlanr today without the skill:
 
 ```bash
 npx openplanr@latest init
@@ -100,28 +94,30 @@ See the [CLI repo](https://github.com/openplanr/openplanr) and the [command refe
 - **Small teams** standardizing on an agile hierarchy their agents can read
 - **Enterprises** that need auditable, file-based planning that lives in git
 
-## Roadmap
+## What's in this repo
 
-| Milestone | Status |
-|-----------|--------|
-| PRD drafted | Done |
-| Repo scaffold | Done |
-| `SKILL.md` + references | In progress |
-| Worked examples | Planned |
-| Installation docs | Planned |
-| v1.0.0 release | Planned |
-| Claude Code marketplace listing | Planned |
-| MCP server (separate repo) | Planned |
+```
+skills/openplanr/
+├── SKILL.md                    # The skill entry point (loaded by Claude)
+├── references/
+│   ├── commands.md             # Full ~40-command catalog
+│   ├── workflows.md            # 7 canonical end-to-end workflows
+│   ├── artifacts.md            # Frontmatter schema + hierarchy guide
+│   └── troubleshooting.md      # Symptom → fix FAQ
+└── examples/
+    ├── plan-from-prd.md        # PRD → full agile hierarchy
+    ├── quick-task.md           # Standalone checklist (no hierarchy)
+    └── sprint-cycle.md         # Sprint create → track → close
+```
 
-## Contributing
-
-Contribution guidelines will be published alongside v1.0.0 in `docs/CONTRIBUTING.md`. In the meantime, [open an issue](https://github.com/openplanr/skills/issues) with feedback, ideas, or activation test cases you'd like the skill to handle.
+See [`docs/INSTALL.md`](./docs/INSTALL.md) for install details, [`docs/CONTRIBUTING.md`](./docs/CONTRIBUTING.md) for how to propose changes, and [`docs/PUBLISHING.md`](./docs/PUBLISHING.md) for the release process.
 
 ## Related
 
 - [OpenPlanr CLI](https://github.com/openplanr/openplanr) — the planning engine this skill drives
 - [Agent Skills specification](https://agentskills.io/specification)
 - [Anthropic skills examples](https://github.com/anthropics/skills)
+- [Claude Code plugin marketplaces](https://docs.claude.com/en/docs/claude-code/plugins)
 
 ## License
 
