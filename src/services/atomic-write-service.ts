@@ -1,10 +1,10 @@
 /**
- * Atomic artifact writes with sidecar backup (EPIC-003, FEAT-011 §3.0).
+ * Atomic artifact writes with sidecar backup.
  *
  * Atomicity = temp file → fsync → rename. If any step fails mid-write, the
  * original file was never modified and the temp file is removed. There is
  * nothing to "roll back" at the file level — atomicity is the guarantee.
- * The word "rollback" is reserved for FEAT-013's post-flight git mechanism.
+ * The word "rollback" is reserved for the post-flight git mechanism.
  *
  * The sidecar backup copy is for *manual* recovery (e.g., if a user wants
  * to diff an already-written artifact against what was there before). It is

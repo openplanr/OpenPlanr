@@ -55,5 +55,5 @@ describe('CLI smoke tests', () => {
 
     const output = run('status', { cwd: dir });
     expect(output).toBeDefined();
-  });
+  }, 20_000);
 });

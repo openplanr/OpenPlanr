@@ -58,6 +58,10 @@ export function registerQuickCommand(program: Command) {
     .argument('[description...]', 'what to build (one-line description)')
     .option('--file <path>', 'read description from a file (PRD, spec, etc.)')
     .option('--manual', 'use manual interactive prompts instead of AI')
+    .option(
+      '--epic <epicId>',
+      'link this quick task to an epic so `planr linear push EPIC-XXX` cascades to it',
+    )
     .action(async (descriptionParts: string[], opts) => {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
@@ -81,6 +85,18 @@ export function registerQuickCommand(program: Command) {
 
       requireInteractiveForManual(opts.manual);
 
+      // --epic soft-validates: warn if the epic doesn't exist locally, but still
+      // write the linkage so the user can author QT before the epic lands.
+      const epicId = typeof opts.epic === 'string' ? opts.epic.trim() : undefined;
+      if (epicId) {
+        const epicArt = await readArtifact(projectDir, config, 'epic', epicId);
+        if (!epicArt) {
+          logger.warn(
+            `--epic ${epicId}: no such epic found locally yet. Linking anyway; create the epic before \`planr linear push\` or the link will fail there.`,
+          );
+        }
+      }
+
       const useAI = !opts.manual && isAIConfigured(config);
 
       if (useAI) {
@@ -88,12 +104,15 @@ export function registerQuickCommand(program: Command) {
           logger.error('Please provide a description.');
           return;
         }
-        await createQuickWithAI(projectDir, config, description, !!opts.file);
+        await createQuickWithAI(projectDir, config, description, {
+          fromFile: !!opts.file,
+          epicId,
+        });
       } else {
         if (!opts.manual && !isAIConfigured(config)) {
           logger.warn('AI not configured. Using manual mode.');
         }
-        await createQuickManually(projectDir, config, description);
+        await createQuickManually(projectDir, config, description, epicId);
       }
     });
 
@@ -177,17 +196,31 @@ export function registerQuickCommand(program: Command) {
 // AI-powered quick task creation
 // ---------------------------------------------------------------------------
 
-async function createQuickWithAI(
+export interface CreateQuickWithAIOptions {
+  /** When true, use the larger token budget (for spec/PRD input). */
+  fromFile?: boolean;
+  /** Link the new QT to this epic (frontmatter `epicId`). */
+  epicId?: string;
+  /** Provenance: which BL-XXX this QT was promoted from (frontmatter `sourceBacklog`). */
+  sourceBacklog?: string;
+  /** Optional override of the heading shown in the CLI preview. */
+  headingLabel?: string;
+  /** Optional override for the confirm prompt text. */
+  confirmLabel?: string;
+}
+
+export async function createQuickWithAI(
   projectDir: string,
   config: OpenPlanrConfig,
   description: string,
-  fromFile = false,
-) {
-  logger.heading('Quick Task (AI-powered)');
+  options: CreateQuickWithAIOptions = {},
+): Promise<{ id: string; filePath: string } | undefined> {
+  const { fromFile = false, epicId, sourceBacklog, headingLabel, confirmLabel } = options;
+
+  logger.heading(headingLabel ?? 'Quick Task (AI-powered)');
   logger.dim('Analyzing description and codebase...');
 
   try {
-    // Build optional codebase context
     let codebaseContext: string | undefined;
     let rawCodebaseContext: import('../../ai/codebase/index.js').CodebaseContext | undefined;
     try {
@@ -205,7 +238,6 @@ async function createQuickWithAI(
       logger.success(`Scanned codebase${stackInfo}`);
     } catch (err) {
       logger.debug('Codebase scanning failed during quick task creation', err);
-      // Codebase scanning is best-effort
     }
 
     const provider = await getAIProvider(config);
@@ -217,16 +249,18 @@ async function createQuickWithAI(
       maxTokens,
     });
 
-    // Display preview
     displayTaskPreview(result);
     await displayValidationWarnings(result.relevantFiles, rawCodebaseContext);
 
     const total = countTaskItems(result.tasks);
-    const confirmCreate = await promptConfirm(`Create quick task list with ${total} items?`, true);
+    const confirmCreate = await promptConfirm(
+      confirmLabel ?? `Create quick task list with ${total} items?`,
+      true,
+    );
 
     if (!confirmCreate) {
       logger.info('Cancelled.');
-      return;
+      return undefined;
     }
 
     const tasks = buildTaskItems(result);
@@ -236,7 +270,13 @@ async function createQuickWithAI(
       config,
       'quick',
       'quick/quick-task.md.hbs',
-      { title: result.title, tasks, relevantFiles: result.relevantFiles },
+      {
+        title: result.title,
+        tasks,
+        relevantFiles: result.relevantFiles,
+        epicId,
+        sourceBacklog,
+      },
     );
 
     logger.success(`Created ${id}: ${result.title}`);
@@ -248,8 +288,10 @@ async function createQuickWithAI(
       id,
       extras: [`planr quick promote ${id} --story US-001 — Move into agile hierarchy`],
     });
+    return { id, filePath };
   } catch (err) {
     await handleAIError(err);
+    return undefined;
   }
 }
 
@@ -261,6 +303,7 @@ async function createQuickManually(
   projectDir: string,
   config: OpenPlanrConfig,
   description?: string,
+  epicId?: string,
 ) {
   logger.heading('Quick Task (manual)');
 
@@ -282,7 +325,7 @@ async function createQuickManually(
     config,
     'quick',
     'quick/quick-task.md.hbs',
-    { title, tasks },
+    { title, tasks, epicId },
   );
 
   logger.success(`Created ${id}: ${title}`);

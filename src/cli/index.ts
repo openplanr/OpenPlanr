@@ -15,6 +15,7 @@ import { registerExportCommand } from './commands/export.js';
 import { registerFeatureCommand } from './commands/feature.js';
 import { registerGitHubCommand } from './commands/github.js';
 import { registerInitCommand } from './commands/init.js';
+import { registerLinearCommand } from './commands/linear.js';
 import { registerPlanCommand } from './commands/plan.js';
 import { registerQuickCommand } from './commands/quick.js';
 import { registerRefineCommand } from './commands/refine.js';
@@ -68,6 +69,7 @@ program.hook('preAction', () => {
 });
 
 registerInitCommand(program);
+registerLinearCommand(program);
 registerBacklogCommand(program);
 registerEpicCommand(program);
 registerFeatureCommand(program);

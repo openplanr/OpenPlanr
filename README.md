@@ -6,7 +6,7 @@
 
 **Website:** [openplanr.dev](https://openplanr.dev)
 
-**AI-powered planning CLI for developers.** Capture ideas, plan sprints, generate tasks, estimate effort, and sync with GitHub — all from your terminal.
+**AI-powered planning CLI for developers.** Capture ideas, plan sprints, generate tasks, estimate effort, and sync with GitHub or Linear — all from your terminal.
 
 Planr replaces heavyweight project management tools with a fast, file-based workflow. Artifacts live in your repo as markdown, version-controlled alongside your code. AI generates structured plans and teaches your coding agent (Cursor, Claude Code, Codex) how to follow them.
 
@@ -23,7 +23,8 @@ AI coding assistants are powerful but lack structured planning. Without a clear 
 5. **AI-powered estimation** — story points, effort hours, and complexity analysis
 6. **Generating AI rules** — rule files that give your AI assistant context about the plan
 7. **GitHub integration** — push artifacts to issues, bi-directional sync, export reports
-8. **Keeping everything in your repo** — artifacts live alongside your code, version-controlled
+8. **Linear integration** — push any artifact (epic / feature / story / task / quick-task / backlog) to Linear with `planr linear push <id>`, with flexible epic mappings (project / milestone / label) and bidirectional status + checkbox sync
+9. **Keeping everything in your repo** — artifacts live alongside your code, version-controlled
 
 ## Quick Start
 
@@ -187,10 +188,13 @@ git commit -am "chore(plan): revise EPIC-003 against codebase"
 
 Post-flight graph-integrity check runs after every non-dry-run revise. If the writes leave parent/child links broken, revise automatically rolls back via `git checkout` (which is why clean-tree is required by default). Full design in [.planr/EPIC-REVISE-COMMAND.md](.planr/EPIC-REVISE-COMMAND.md).
 
-### GitHub & Export
+### GitHub, Linear & export
 
 | Command                      | Description                                      |
 | ---------------------------- | ------------------------------------------------ |
+| `planr linear init`          | Save Linear team + token (PAT) for API access    |
+| `planr linear sync`          | Pull Linear workflow state into Feature/Story `status` (one-way)                |
+| `planr linear push <epicId>` | Epic → Linear project, features → issues, stories and task lists → sub-issues |
 | `planr github push [ID]`     | Push artifacts to GitHub Issues                  |
 | `planr github sync`          | Bi-directional status sync with GitHub           |
 | `planr github status`        | Show sync status of linked artifacts             |

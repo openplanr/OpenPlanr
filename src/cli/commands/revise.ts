@@ -1,22 +1,23 @@
 /**
- * `planr revise` command (EPIC-003, FEAT-010 → FEAT-012).
+ * `planr revise` command.
  *
  * Runs the revise safety pipeline for a single artifact or a cascade:
  *
- *   1. **Clean-tree gate** (FEAT-011 §2.0) — unless --allow-dirty.
- *   2. **Agent decision** (FEAT-010) — per artifact.
- *   3. **Evidence verification** (FEAT-011 §1.0) — unverifiable evidence
+ *   1. **Clean-tree gate** — unless --allow-dirty.
+ *   2. **Agent decision** — per artifact.
+ *   3. **Evidence verification** — unverifiable evidence
  *      is dropped; revise → flag demotion when nothing survives.
- *   4. **Diff preview + confirmation** (FEAT-011 §4.0 + §5.0) — per artifact.
- *   5. **Atomic write + audit log** (FEAT-011 §3.0 + §6.0).
+ *   4. **Diff preview + confirmation** — per artifact.
+ *   5. **Atomic write + audit log**.
  *
- * In `--cascade` mode, the cascade service (FEAT-012) drives the pipeline
+ * In `--cascade` mode, the cascade service drives the pipeline
  * top-down (epic → features → stories → tasks). Children always see the
  * *revised* parent because they are loaded fresh from disk between steps.
  * `[q]uit` and SIGINT stop the cascade gracefully — already-applied
  * artifacts stay applied, audit entries flush immediately.
  *
- * FEAT-013 (--all + post-flight rollback) layers on top of this command.
+ * The `--all` flag + post-flight rollback extension layers on top of this
+ * command.
  */
 
 import path from 'node:path';
@@ -58,6 +59,7 @@ import {
 import {
   type ApplyDecisionResult,
   applyDecision,
+  isEffectivelyUnchanged,
   ReviseArtifactNotFoundError,
   reviseArtifact,
 } from '../../services/revise-service.js';
@@ -80,6 +82,8 @@ interface ReviseCommandOptions {
   siblingContext: boolean;
   audit?: string;
   auditFormat: string;
+  /** replay a previously-written audit report with zero model calls. */
+  applyFrom?: string;
 }
 
 const DEFAULT_MAX_WRITES_PER_RUN = 50;
@@ -87,9 +91,7 @@ const DEFAULT_MAX_WRITES_PER_RUN = 50;
 export function registerReviseCommand(program: Command) {
   program
     .command('revise')
-    .description(
-      'AI-driven revision of planning artifacts against codebase reality (FEAT-010 → FEAT-012: single or cascade)',
-    )
+    .description('AI-driven revision of planning artifacts against codebase reality')
     .argument(
       '[artifactId]',
       'artifact ID (e.g., EPIC-001, FEAT-002, US-003, TASK-004). Omit and pass --all to revise every epic in the project.',
@@ -131,9 +133,28 @@ export function registerReviseCommand(program: Command) {
     .option('--no-sibling-context', 'skip immediate-sibling context gathering')
     .option('--audit <path>', 'override the default audit log path')
     .option('--audit-format <format>', `audit log format: ${AUDIT_FORMATS.join(', ')}`, 'md')
+    .option(
+      '--apply-from <report-path>',
+      'replay an existing dry-run audit report to disk without any model calls. Supports --dry-run for previewing the replay; ignores --cascade, --all, and AI flags; other safety gates (clean-tree, atomic write, graph integrity) still run.',
+    )
     .action(async (artifactId: string | undefined, opts: ReviseCommandOptions) => {
       const projectDir = program.opts().projectDir as string;
       const config = await loadConfig(projectDir);
+
+      // apply-from-audit short-circuits the whole AI pipeline.
+      // Runs before all AI-path validation because this mode makes no model calls.
+      if (opts.applyFrom) {
+        const { runApplyFromAudit } = await import('../../services/revise-apply-service.js');
+        const exitCode = await runApplyFromAudit({
+          projectDir,
+          config,
+          auditPath: opts.applyFrom,
+          allowDirty: opts.allowDirty,
+          dryRun: opts.dryRun,
+          yes: opts.yes,
+        });
+        process.exit(exitCode);
+      }
 
       // Mutually-exclusive: --all vs explicit artifact id.
       if (opts.all && artifactId) {
@@ -266,7 +287,7 @@ export function registerReviseCommand(program: Command) {
           );
         }
 
-        // --- Post-flight graph integrity + rollback (FEAT-013 §3.0 + §4.0)
+        // --- Post-flight graph integrity + rollback
         if (!opts.dryRun) {
           const report = await checkGraphIntegrity(projectDir, config);
           if (!report.ok) {
@@ -344,11 +365,11 @@ async function runSingle(
     interrupted: result.quit ? { reason: 'q', atArtifactId: artifactId } : undefined,
   });
 
-  renderFinalOutcome(result, artifactId);
+  renderFinalOutcome(result, artifactId, writer.path);
 }
 
 // ---------------------------------------------------------------------------
-// --- All-epics path (FEAT-013 §1.0)
+// --- All-epics path
 // ---------------------------------------------------------------------------
 
 async function runAll(
@@ -638,6 +659,9 @@ async function confirmAndMaybeEditRationale(
   if (decision.action !== 'revise') return decision;
   if (opts.dryRun) return decision;
   if (opts.yes) return decision;
+  // Nothing to apply — skip the prompt, the apply path will emit an
+  // `unchanged-by-agent` audit entry instead of writing.
+  if (isEffectivelyUnchanged(originalContent, decision.revisedMarkdown)) return decision;
 
   let current: DecisionWithUserState = { ...decision };
   for (;;) {
@@ -697,24 +721,96 @@ function renderDecision(decision: ReviseDecision, originalContent: string): void
   }
 
   if (decision.action === 'revise' && decision.revisedMarkdown) {
-    display.line('');
-    display.heading('  Proposed diff:');
-    const diff = renderDiff(originalContent, decision.revisedMarkdown, {
-      oldLabel: `${decision.artifactId} (before)`,
-      newLabel: `${decision.artifactId} (proposed)`,
-    });
-    display.line(
-      diff
-        .split('\n')
-        .map((l) => `    ${l}`)
-        .join('\n'),
-    );
+    if (isEffectivelyUnchanged(originalContent, decision.revisedMarkdown)) {
+      display.line('');
+      display.heading('  Proposed diff:');
+      display.line(
+        chalk.dim(
+          `    (no changes — agent's revised output matches the current file; nothing to apply)`,
+        ),
+      );
+    } else {
+      display.line('');
+      display.heading('  Proposed diff:');
+      const diff = renderDiff(originalContent, decision.revisedMarkdown, {
+        oldLabel: `${decision.artifactId} (before)`,
+        newLabel: `${decision.artifactId} (proposed)`,
+      });
+      display.line(
+        diff
+          .split('\n')
+          .map((l) => `    ${l}`)
+          .join('\n'),
+      );
+    }
   }
 
   display.separator(60);
 }
 
-function renderFinalOutcome(result: ProcessOneResult, artifactId: string): void {
+/**
+ * Print actionable next-step guidance for each terminal outcome.
+ *
+ * Users shouldn't be left wondering "now what?" after a non-trivial outcome.
+ * The most common confusion is `flagged` — the agent produced something but
+ * the safety pipeline refused to write it, and nothing in the terminal
+ * tells the user how to proceed.
+ */
+function renderNextSteps(
+  result: ProcessOneResult,
+  artifactId: string,
+  auditPath: string | undefined,
+): void {
+  const auditHint = auditPath ? `\n  Audit log (full proposal + evidence): ${auditPath}` : '';
+
+  if (result.outcome === 'flagged') {
+    logger.dim(
+      `\nNext steps for flagged revise:` +
+        `${auditHint}` +
+        `\n  1. Read the audit log — it includes the agent's proposed rewrite and rationale.` +
+        `\n  2. If the proposal is right but evidence is weak, edit ${artifactId} manually to apply the fix.` +
+        `\n  3. To narrow what the agent touches, re-run with \`--scope-to prose\` (preserves references and paths).` +
+        `\n  4. To let the agent retry without stale context, re-run with \`--no-code-context\` (faster, less grounded).`,
+    );
+    return;
+  }
+
+  if (result.outcome === 'would-apply') {
+    logger.dim(
+      `\nNext steps for dry-run:` +
+        `${auditHint}` +
+        `\n  Re-run without \`--dry-run\` to apply the proposed changes to ${artifactId}.`,
+    );
+    return;
+  }
+
+  if (result.outcome === 'unchanged-by-agent') {
+    logger.dim(
+      `\nNo action needed — ${artifactId} already matches the agent's reading of the codebase.`,
+    );
+    return;
+  }
+
+  if (result.outcome === 'skipped-by-agent') {
+    logger.dim(
+      `\nAgent said no drift detected. If you disagree, edit ${artifactId} manually or re-run with` +
+        ` a narrower \`--scope-to\` to prompt the agent toward the section you expected it to touch.`,
+    );
+    return;
+  }
+
+  if (result.outcome === 'skipped-by-user') {
+    logger.dim(
+      `\nSkipped — re-run \`planr revise ${artifactId}\` when you're ready to reconsider.`,
+    );
+  }
+}
+
+function renderFinalOutcome(
+  result: ProcessOneResult,
+  artifactId: string,
+  auditPath: string | undefined,
+): void {
   const badge =
     result.outcome === 'applied'
       ? chalk.green('applied')
@@ -722,13 +818,16 @@ function renderFinalOutcome(result: ProcessOneResult, artifactId: string): void 
         ? chalk.yellow('would-apply')
         : result.outcome === 'flagged'
           ? chalk.magenta('flagged')
-          : chalk.dim(result.outcome);
+          : result.outcome === 'unchanged-by-agent'
+            ? chalk.dim('unchanged — no diff to apply')
+            : chalk.dim(result.outcome);
   logger.info(`\nOutcome: ${badge}`);
   if (result.wrote) {
     logger.dim(
       `\nWrote ${result.artifactPath}\nSuggested commit: git commit -am "chore(plan): revise ${artifactId} against codebase"`,
     );
   }
+  renderNextSteps(result, artifactId, auditPath);
   if (result.usage.inputTokens > 0) {
     logger.dim(
       `Tokens: ${result.usage.inputTokens.toLocaleString()} in → ${result.usage.outputTokens.toLocaleString()} out`,

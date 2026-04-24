@@ -285,7 +285,11 @@ describe('verifyDecision', () => {
     const result = await verifyDecision(decision, ctx);
     expect(result.demoted).toBe(true);
     expect(result.decision.action).toBe('flag');
-    expect(result.decision.revisedMarkdown).toBeUndefined();
+    // `revisedMarkdown` is now PRESERVED on demoted decisions so the audit
+    // log can include the rejected-proposal diff — see apply-path tests.
+    // The file is still not written (action=flag); the markdown is retained
+    // for audit/explain purposes only.
+    expect(result.decision.revisedMarkdown).toBe('---\nid: "EPIC-001"\n---\n# body');
     expect(result.decision.ambiguous[0].reason).toContain('majority');
     expect(result.decision.ambiguous[0].reason).toContain('5/6');
     expect(result.decision.rationale).toContain('[demoted: majority evidence unverifiable]');
@@ -309,7 +313,8 @@ describe('verifyDecision', () => {
     const result = await verifyDecision(decision, ctx);
     expect(result.demoted).toBe(true);
     expect(result.decision.action).toBe('flag');
-    expect(result.decision.revisedMarkdown).toBeUndefined();
+    // Preserved for the rejected-proposal diff in the audit log.
+    expect(result.decision.revisedMarkdown).toBe('---\nid: "TASK-007"\n---\n# body');
     expect(result.decision.evidence).toHaveLength(0);
     expect(result.decision.ambiguous).toHaveLength(1);
     expect(result.decision.ambiguous[0].reason).toContain('none of its evidence');

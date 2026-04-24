@@ -30,6 +30,14 @@ vi.mock('../../src/utils/markdown.js', () => ({
   })),
 }));
 
+vi.mock('../../src/services/atomic-write-service.js', () => ({
+  atomicWriteFile: async (targetPath: string, content: string) => {
+    const { writeFile: wf } = await import('../../src/utils/fs.js');
+    await wf(targetPath, content);
+    return { targetPath };
+  },
+}));
+
 vi.mock('../../src/services/id-service.js', () => ({
   getNextId: vi.fn(() => 'EPIC-001'),
 }));
@@ -175,6 +183,18 @@ describe('readArtifact', () => {
   it('returns null when no matching file', async () => {
     mockListFiles.mockResolvedValue([]);
     const result = await readArtifact('/project', config, 'epic', 'EPIC-999');
+    expect(result).toBeNull();
+  });
+
+  it('returns null (not throw) when frontmatter YAML is malformed — lets batch commands continue past skip', async () => {
+    mockListFiles.mockResolvedValue(['QT-008-broken.md']);
+    mockReadFile.mockResolvedValue('---\nbroken-yaml\n---\n');
+    // Make parseMarkdown simulate a YAML failure for this one call.
+    const { parseMarkdown } = await import('../../src/utils/markdown.js');
+    vi.mocked(parseMarkdown).mockImplementationOnce(() => {
+      throw new Error('Map keys must be unique at line 13, column 1');
+    });
+    const result = await readArtifact('/project', config, 'quick', 'QT-008');
     expect(result).toBeNull();
   });
 });

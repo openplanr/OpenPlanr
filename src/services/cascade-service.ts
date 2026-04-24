@@ -1,5 +1,5 @@
 /**
- * Cascade execution for `planr revise` (EPIC-003, FEAT-012).
+ * Cascade execution for `planr revise`.
  *
  * Responsibilities:
  *
@@ -14,7 +14,7 @@
  *      each artifact, with a rolling ETA.
  *
  * This service owns NO rollback logic. Partial cascades that break the
- * artifact graph are the concern of FEAT-013's post-flight rollback.
+ * artifact graph are the concern of the post-flight rollback.
  */
 
 import type {
@@ -28,7 +28,7 @@ import { logger } from '../utils/logger.js';
 import { listArtifacts, readArtifact } from './artifact-service.js';
 
 // ---------------------------------------------------------------------------
-// Cascade order (§1.0)
+// Cascade order
 // ---------------------------------------------------------------------------
 
 /**
@@ -118,7 +118,7 @@ export async function buildCascadeOrder(
 }
 
 // ---------------------------------------------------------------------------
-// Cascade execution (§4.0 + §5.0)
+// Cascade execution + progress reporting
 // ---------------------------------------------------------------------------
 
 export interface CascadeProcessOutcome {

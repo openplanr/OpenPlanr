@@ -4,6 +4,7 @@ import { ensureDir, listFiles, readFile, writeFile } from '../utils/fs.js';
 import { logger } from '../utils/logger.js';
 import { parseMarkdown } from '../utils/markdown.js';
 import { slugify } from '../utils/slugify.js';
+import { atomicWriteFile } from './atomic-write-service.js';
 import { getNextId } from './id-service.js';
 import { renderTemplate } from './template-service.js';
 
@@ -82,7 +83,26 @@ export async function listArtifacts(
   return results;
 }
 
-/** Read and parse an artifact's frontmatter and markdown body by ID. Returns null if not found. */
+/**
+ * Per-process set of file paths for which we've already emitted a parse
+ * warning. Batch commands (push / status / sync) call `readArtifact` twice
+ * for the same file (once during plan-build, once during the real pass) and
+ * shouldn't log the same warning twice.
+ */
+const parseWarningsEmitted = new Set<string>();
+
+/**
+ * Read and parse an artifact's frontmatter and markdown body by ID.
+ *
+ * Returns `null` in two cases — both treated identically by callers:
+ *   1. The file doesn't exist.
+ *   2. The file exists but its frontmatter can't be parsed (malformed YAML,
+ *      duplicate keys, stray `---` markers, etc.). A clear warning is emitted
+ *      so the operator knows which file is broken and why; batch commands
+ *      (`planr linear push`, `status`, `sync`) continue past the skip
+ *      instead of aborting the whole run. The warning is deduped per file
+ *      so re-reading the same broken file doesn't log twice.
+ */
 export async function readArtifact(
   projectDir: string,
   config: OpenPlanrConfig,
@@ -96,8 +116,19 @@ export async function readArtifact(
   const filePath = path.join(dir, files[0]);
   logger.debug(`Reading ${type} artifact: ${id} ← ${filePath}`);
   const raw = await readFile(filePath);
-  const parsed = parseMarkdown(raw);
-  return { ...parsed, filePath };
+  try {
+    const parsed = parseMarkdown(raw);
+    return { ...parsed, filePath };
+  } catch (err) {
+    if (!parseWarningsEmitted.has(filePath)) {
+      parseWarningsEmitted.add(filePath);
+      const reason = err instanceof Error ? err.message : String(err);
+      logger.warn(
+        `Skipping ${type} ${id}: frontmatter parse error.\n  ${filePath}\n  ${reason}\n  Fix the frontmatter (usually a duplicate key or stray \`---\` marker) and re-run.`,
+      );
+    }
+    return null;
+  }
 }
 
 /**
@@ -132,7 +163,7 @@ export async function updateArtifact(
   if (files.length === 0) throw new Error(`Artifact ${id} not found.`);
 
   const filePath = path.join(dir, files[0]);
-  await writeFile(filePath, content);
+  await atomicWriteFile(filePath, content);
 }
 
 /**
@@ -162,7 +193,17 @@ export async function updateArtifactFields(
   if (!raw) throw new Error(`Artifact ${id} not found.`);
 
   const today = new Date().toISOString().split('T')[0];
-  const allFields = { ...fields, updated: today };
+  // When a caller changes `status`, invalidate the Linear-status sync
+  // baseline so the next `planr linear sync` recognizes the local change
+  // and pushes it up (or flags as a conflict if Linear also changed).
+  // The sync itself opts out by passing its own `linearStatusReconciled`
+  // value — we honor that over the auto-clear.
+  const shouldInvalidateBaseline = 'status' in fields && !('linearStatusReconciled' in fields);
+  const allFields: Partial<Record<string, unknown>> = {
+    ...fields,
+    updated: today,
+    ...(shouldInvalidateBaseline ? { linearStatusReconciled: '' } : {}),
+  };
 
   // Split into frontmatter and body to avoid modifying markdown content
   const openIdx = raw.indexOf('---');
@@ -180,7 +221,11 @@ export async function updateArtifactFields(
     const replacement = `${key}: ${yamlEscape(value)}`;
 
     if (pattern.test(frontmatter)) {
-      frontmatter = frontmatter.replace(pattern, replacement);
+      // Function form bypasses regex replacement specials (`$1`, `$&`, `` $` ``,
+      // `$'`, `$$`) in the replacement string. Needed because `yamlEscape`
+      // only escapes `\` and `"`; a value containing `$1` would otherwise be
+      // interpreted as a backreference and silently corrupt the frontmatter.
+      frontmatter = frontmatter.replace(pattern, () => replacement);
     } else {
       // Insert missing field before the closing ---
       frontmatter += `\n${replacement}`;

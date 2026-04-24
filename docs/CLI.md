@@ -310,13 +310,15 @@ Capture a backlog item — a quick way to record ideas, bugs, or work items with
 planr backlog add "add user profiles"
 planr backlog add "fix login redirect" --priority critical --tag bug
 planr backlog add "refactor auth middleware" --priority low --tag tech-debt
+planr backlog add "rate-limit the upload API" --epic EPIC-001        # link at capture time
 ```
 
-| Option               | Description                                                  | Default      |
-| -------------------- | ------------------------------------------------------------ | ------------ |
-| `<description>`      | Item description                                             | **Required** |
-| `--priority <level>` | `critical`, `high`, `medium`, or `low`                       | `medium`     |
-| `--tag <tag>`        | Tag for categorization (e.g., `bug`, `feature`, `tech-debt`) | None         |
+| Option               | Description                                                                                                  | Default      |
+| -------------------- | ------------------------------------------------------------------------------------------------------------ | ------------ |
+| `<description>`      | Item description                                                                                             | **Required** |
+| `--priority <level>` | `critical`, `high`, `medium`, or `low`                                                                       | `medium`     |
+| `--tag <tag>`        | Tag for categorization (e.g., `bug`, `feature`, `tech-debt`)                                                 | None         |
+| `--epic <epicId>`    | Link the BL to an epic. `planr linear push EPIC-XXX` will cascade into this BL and include it in that epic's Linear container. | None         |
 
 **Output:** `.planr/backlog/BL-001-<slug>.md`
 
@@ -360,16 +362,31 @@ Requires AI to be configured. After scoring, displays the reordered list with im
 Promote a backlog item into the agile hierarchy or a quick task.
 
 ```bash
-planr backlog promote BL-001 --quick              # promote to quick task
-planr backlog promote BL-001 --story --feature FEAT-001   # promote to story
+planr backlog promote BL-001 --quick                           # AI-generate a task breakdown from the BL body
+planr backlog promote BL-001 --quick --manual                  # single-task QT from the BL title (skip AI)
+planr backlog promote BL-001 --quick --epic EPIC-001           # AI-generated + linked to an epic
+planr backlog promote BL-001 --story --feature FEAT-001        # promote to story
 ```
 
-| Option                  | Description                              | Required                      |
-| ----------------------- | ---------------------------------------- | ----------------------------- |
-| `<itemId>`              | Backlog item ID                          | **Yes**                       |
-| `--quick`               | Promote to a quick task                  | One of `--quick` or `--story` |
-| `--story`               | Promote to a user story                  | One of `--quick` or `--story` |
-| `--feature <featureId>` | Parent feature (required with `--story`) | With `--story`                |
+| Option                  | Description                                                                                                                                        | Required                      |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `<itemId>`              | Backlog item ID                                                                                                                                    | **Yes**                       |
+| `--quick`               | Promote to a quick task                                                                                                                            | One of `--quick` or `--story` |
+| `--story`               | Promote to a user story                                                                                                                            | One of `--quick` or `--story` |
+| `--feature <featureId>` | Parent feature (required with `--story`)                                                                                                           | With `--story`                |
+| `--epic <epicId>`       | (`--quick` only) Link the new QT to an epic. Overrides the BL's own `epicId`/`parentEpic`; stories chain through `--feature` and ignore this.      | No                            |
+| `--manual`              | (`--quick` only) Skip the AI pass and create a single-task QT from the BL title (legacy behavior). Useful for trivial BLs or when AI isn't configured. | No                            |
+
+**AI-driven task breakdown (default with `--quick`)**
+
+When AI is configured, `--quick` reads the BL's full markdown body — description, acceptance criteria, notes, threat models, links — and feeds it through the same AI pipeline as `planr quick create`. The resulting QT contains a realistic task breakdown that a coding agent can execute step by step, not just a restated title. The new QT's frontmatter carries `sourceBacklog: "BL-XXX"` as provenance.
+
+If AI is not configured, `--quick` falls back to the single-task behavior with a warning (equivalent to `--manual`). Use `--manual` explicitly when you want the single-task behavior even with AI configured (e.g., for one-liner BLs that don't need a breakdown).
+
+**Epic linkage**
+
+- `--quick`: if the BL has `epicId` (or legacy `parentEpic`) in its frontmatter, the new QT inherits it automatically. `--epic EPIC-XXX` overrides that inheritance. With an epic link, `planr linear push EPIC-XXX` cascades into the new QT (it lands inside the epic's Linear container instead of the standalone project).
+- `--story`: the story's chain to an epic runs through its parent feature's `epicId`, so `--epic` is not needed here.
 
 The original backlog item is marked as `promoted` with a link to the created artifact.
 
@@ -484,13 +501,15 @@ Create a standalone task list with AI or manually — without the full agile hie
 planr quick create "add user profiles"
 planr quick create --file spec.md
 planr quick create --manual
+planr quick create "add webhook retry" --epic EPIC-001      # link at creation time
 ```
 
-| Option          | Description                            | Required     |
-| --------------- | -------------------------------------- | ------------ |
-| `<description>` | Task description                       | No (prompts) |
-| `--file <path>` | Generate tasks from a PRD or spec file | No           |
-| `--manual`      | Interactive task entry without AI      | No           |
+| Option            | Description                                                                                                                     | Required     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `<description>`   | Task description                                                                                                                | No (prompts) |
+| `--file <path>`   | Generate tasks from a PRD or spec file                                                                                          | No           |
+| `--manual`        | Interactive task entry without AI                                                                                               | No           |
+| `--epic <epicId>` | Link the QT to an epic. `planr linear push EPIC-XXX` will cascade into this QT and create it inside the epic's Linear container. | No           |
 
 **Output:** `.planr/quick/QT-001-<slug>.md`
 
@@ -848,6 +867,180 @@ planr config set-agent cursor            # set directly
 | Argument  | Description                    | Required     |
 | --------- | ------------------------------ | ------------ |
 | `[agent]` | `claude`, `cursor`, or `codex` | No (prompts) |
+
+---
+
+### `planr linear init`
+
+Authenticate to [Linear](https://linear.app) with a personal access token, choose a team, and save `linear.teamId` and `linear.teamKey` in `.planr/config.json`. The token is stored via the credentials service (or the `PLANR_LINEAR_TOKEN` environment variable) and is never written into `config.json`.
+
+```bash
+planr linear init
+```
+
+### `planr linear sync`
+
+**Two steps in one command:** (1) **bidirectional workflow status sync** for every Feature, Story, Quick task, and Backlog item with a `linearIssueId` — three-way merge between local frontmatter, Linear's workflow state, and a stored baseline; (2) run **task checklist** sync (`TASK-*.md` ↔ Linear) for all task files that share a `linearIssueId` (see `planr linear tasklist-sync`). Use `--verbose` to log per-artifact work.
+
+```bash
+planr linear sync
+planr linear sync --dry-run
+planr linear sync --on-conflict linear
+planr --verbose linear sync
+```
+
+| Option | Description |
+| ------ | ----------- |
+| `--dry-run` | Read from Linear to compare, but do **not** write local frontmatter or Linear issue bodies. |
+| `--on-conflict` | `prompt` (default), `local`, or `linear`. Applies to **both** status and checkbox conflicts. Non-interactive runs default to `linear` regardless of flag. |
+
+**Three-way status merge**
+
+Each artifact's status decision considers three values: `local` (current frontmatter), `remote` (Linear's current workflow state, mapped), and `base` (the last-synced value, stored in `linearStatusReconciled`). Outcomes:
+
+| Situation | Action |
+|---|---|
+| `local == remote` | No change (`unchanged` counter). |
+| `base == local` and `local != remote` | Linear changed since last sync → **pull** to local. |
+| `base == remote` and `local != remote` | Local changed since last sync → **push** to Linear. |
+| Both diverged from `base` (or `base` missing and they disagree) | **Conflict** → resolve per `--on-conflict`. |
+| Backlog local is `promoted` | Never overwritten (`promoted` is local-only and implies a target pointer Linear can't know about). |
+
+`planr quick update --status <v>` and `planr backlog update --status <v>` automatically clear `linearStatusReconciled` so the next sync sees a local change and pushes it up.
+
+**Status sync coverage**
+
+| Artifact | Local values | Bidirectional sync |
+|---|---|---|
+| feature / story | `planning` · `in-progress` · `done` | ✅ |
+| quick (`QT-`) | `pending` · `in-progress` · `done` | ✅ |
+| backlog (`BL-`) | `open` · `closed` · `promoted` | ✅ (never auto-overwrites `promoted`) |
+| task (`TASK-`) | — | ❌ see below |
+
+Task files aren't status-synced: a single Linear TaskList issue aggregates many local `TASK-*.md` files, so 1:1 status mapping doesn't apply. Use `planr linear tasklist-sync` instead — it mirrors individual checkboxes.
+
+**Baseline frontmatter fields** (written by sync, optional; missing = no prior sync):
+
+- `linearStatusReconciled: "done"` — the last agreed-upon status.
+- `linearStatusSyncedAt: "2026-04-23T12:34:56Z"` — ISO timestamp of the last sync.
+
+**Audit log.** Non-interactive conflict auto-resolutions are recorded to `.planr/reports/linear-sync-conflicts-<date>.md` (same file as checkbox conflicts; each row tagged with `kind: status` or `kind: checkbox`).
+
+**Estimate sync**
+
+`planr linear push` also writes OpenPlanr's `estimatedPoints` (from `planr estimate --save`, or hand-edited `storyPoints`) to Linear's native Issue estimation field, per the team's configured scale:
+
+| Team scale | Behavior |
+|---|---|
+| `fibonacci` | local values snap to nearest of `{0, 1, 2, 3, 5, 8, 13, 21}`; e.g. `4 → 5`, `7 → 8` |
+| `linear` | snap to `{0, 1, 2, 3, 4, 5}` |
+| `exponential` | snap to `{0, 1, 2, 4, 8, 16}` |
+| `tShirt` | skipped (no reliable numeric → XS/S/M/L/XL mapping); one-per-run warning |
+| `notUsed` | skipped silently |
+
+Applies to FEAT / US / QT / BL pushes. TASK is intentionally out of scope — one Linear TaskList issue aggregates multiple local `TASK-*.md` files (same rationale as the TASK status deferral), so estimate aggregation rules are tracked as a follow-up.
+
+The team scale is auto-detected per push run (one extra API round-trip, cached); no config needed. Set `estimatedPoints: <n>` in the artifact's frontmatter (or run `planr estimate <id> --save` to generate it from AI), then `planr linear push` will send it.
+
+**Status-name aliases (push side):** values like `completed`, `cancelled`, `canceled`, and `todo` on a QT/feature/story are transparently treated as `done`/`pending` so hand-edited frontmatter using Linear's native vocabulary still works.
+
+**Zero-config auto-derive:** on every push run, `planr linear push` fetches the team's workflow states once and auto-derives a status→stateId map from Linear's canonical state **types** (`backlog` / `unstarted` / `started` / `completed` / `canceled`). You don't need to configure anything for basic status sync to work — the first `pending`/`open` state of each canonical type becomes the default. Configure `linear.pushStateIds` only when you want non-default routing (e.g., push `done` to "Released" instead of the first `completed` state).
+
+**Config:** `linear.statusMap` — keys are Linear state names (e.g. `"Code Review"`), values are one of `pending`, `in-progress`, `done` for tasks/stories/features/QT, or one of `open`, `closed`, `promoted` for BL. `linear.pushStateIds` — local status → Linear workflow state UUID; takes precedence over the auto-derived defaults. For backlog, use `open`/`closed`/`promoted` keys directly (BL has no implicit coercion to the task vocabulary).
+
+```jsonc
+{
+  "linear": {
+    "pushStateIds": {
+      "pending":     "uuid-of-Todo",
+      "in-progress": "uuid-of-In-Progress",
+      "done":        "uuid-of-Done",
+      "open":        "uuid-of-Todo",
+      "closed":      "uuid-of-Done"
+    },
+    "statusMap": {
+      "In Review": "in-progress"
+    }
+  }
+}
+```
+
+### `planr linear status`
+
+**Local only** — no Linear API. Prints a text table: OpenPlanr id, Linear identifier, URL, last-known `status` (or em dash for epics), and a note for malformed or stale `linearIssueId` values (e.g. a workflow state uuid mistaken for an issue id).
+
+```bash
+planr linear status
+planr linear status --scope EPIC-001
+```
+
+### `planr linear push`
+
+Create or update Linear entities for any planning artifact, at the smallest scope the id implies. Accepts any supported prefix — `EPIC-`, `FEAT-`, `US-`, `TASK-`, `QT-`, `BL-` — and writes `linearProject*` / `linearIssue*` / `linearMilestoneId` / `linearLabelId` / `linearProjectMilestoneId` / `linearLabelIds` / `linearTaskChecklistSyncedAt` back to artifact frontmatter. Requires `planr linear init` and a team id in config.
+
+```bash
+planr linear push EPIC-001                              # full subtree: project + features + stories + tasklists + linked QT/BL
+planr linear push FEAT-015                              # just one feature + its stories + its tasklist
+planr linear push US-054                                # just one story
+planr linear push TASK-015                              # just one tasklist sub-issue
+planr linear push QT-007                                # standalone quick task (or epic-linked if QT has epicId)
+planr linear push BL-001                                # backlog item (auto `backlog` label)
+planr linear push EPIC-001 --dry-run                    # local preview only; no Linear API calls
+planr linear push EPIC-001 --update-only                # only update existing linked entities
+planr linear push FEAT-015 --push-parents               # if the parent epic isn't pushed yet, push it first without prompting
+planr linear push EPIC-001 --as milestone-of:<projectId># first-time mapping strategy override
+```
+
+| Argument / option           | Description                                                                                                                                    | Required |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `<artifactId>`              | Any supported prefix — `EPIC-`, `FEAT-`, `US-`, `TASK-`, `QT-`, `BL-`                                                                          | **Yes**  |
+| `--dry-run`                 | Print planned creates/updates/skips from disk; does not read credentials or call Linear                                                        | No       |
+| `--update-only`             | Update only objects that already have a Linear id in frontmatter; do not create new project or issues                                          | No       |
+| `--push-parents`            | If a parent in the chain is not yet pushed to Linear, push it first without prompting                                                          | No       |
+| `--as <strategy>`           | Epic-only: mapping strategy. One of `project` \| `milestone-of:<projectId>` \| `label-on:<projectId>`                                          | No       |
+
+**Epic mapping strategies**
+
+Every epic is mapped to Linear in one of three shapes, chosen once and stored in `linearMappingStrategy` on the epic's frontmatter:
+
+| Strategy                    | Linear shape                                                                 | When it fits                                                                                  |
+| --------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `project` (default)         | Epic = Linear Project (one-to-one, the v1 behavior)                          | Large epic with its own roadmap + independent lifecycle                                       |
+| `milestone-of:<projectId>`  | Epic becomes a `ProjectMilestone` inside an existing Linear project; descendants carry `projectMilestoneId` | Epic is a phase of a larger initiative; keeps cross-epic visibility on one Linear board       |
+| `label-on:<projectId>`      | Epic becomes a team-scoped label; descendants carry `labelIds` (merged with user-added labels, never stomped) | Small epic / mini-initiative that shouldn't own its own project scaffolding                   |
+
+First-time push prompts interactively; CI consumers use `--as` or `linear.defaultEpicStrategy` in config. Re-strategizing an already-mapped epic is a separate flow and not supported here.
+
+**Parent-chain pre-flight**
+
+Granular pushes (`FEAT-`, `US-`, `TASK-`) refuse to run when their parent chain isn't mapped to Linear yet, with a pointer to the command that fixes it. `--push-parents` cascades up instead of bailing. `ADR-` and `SPRINT-` aren't pushable (they're not synced to Linear); the router errors with a pointer to the parent epic.
+
+**Standalone project for QT / BL**
+
+Quick tasks and backlog items push as top-level issues in a user-chosen standalone Linear project (`linear.standaloneProjectId`). First-time QT/BL push prompts you to pick or create one; after that it's silent. Backlog items automatically get a team-scoped `backlog` label; every issue type gets its kind label (`feature`, `story`, `task`, `quick-task`, `backlog` — overridable via `linear.typeLabels`).
+
+**Epic-linked QT / BL**
+
+A QT or BL file with `epicId: "EPIC-XXX"` (or legacy `parentEpic`) in frontmatter is pulled into that epic's Linear container instead of the standalone project. `planr linear push EPIC-XXX` cascades to every linked QT/BL. Unlinked ones stay in the standalone project. `planr quick create --epic`, `planr backlog add --epic`, and `planr backlog promote --quick --epic` set the link at creation time.
+
+**Mapping:** Epic → Linear project (or milestone / label — see strategies above); feature → top-level issue; story → sub-issue of the feature issue; per-feature merged task list → sub-issue; linked QT/BL → top-level issue in the epic's container. Optional `linear.pushStateIds` maps `pending` / `in-progress` / `done` to Linear workflow **state id** (uuid). Optional `linear.defaultProjectLead` is the Linear user id for project `leadId`. See `planr linear sync` for pulling status **from** Linear into frontmatter.
+
+**Idempotency:** Re-running the command updates the same project and issues when Linear ids are already stored in frontmatter. No duplicate creates.
+
+**Resilience:** A malformed artifact file (unparseable frontmatter, missing title, broken YAML) is skipped with a clear warning and the rest of the push proceeds — one broken file no longer aborts the whole run.
+
+### `planr linear tasklist-sync`
+
+Bidirectionally sync **checkbox** state between local `TASK-*.md` files and the corresponding Linear **TaskList** issues (`linearIssueId` in frontmatter). OpenPlanr reuses a single Linear issue for multiple task files in the same feature by using `## TASK-...` sections; a single file maps to the whole description. A three-way merge uses `linearChecklistReconciled` in each task’s frontmatter as the last known agreement; on divergence you can be prompted, or set `--on-conflict local` or `--on-conflict linear` (e.g. in CI).
+
+```bash
+planr linear tasklist-sync
+planr linear tasklist-sync --on-conflict linear
+```
+
+| Argument / option        | Description | Required |
+| ------------------------ | ----------- | -------- |
+| `--on-conflict <mode>`   | `prompt` (default), `local`, or `linear` when local and Linear disagree | No |
 
 ---
 

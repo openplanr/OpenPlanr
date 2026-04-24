@@ -165,14 +165,14 @@ export async function loadCredentials(): Promise<Record<string, string>> {
   const result: Record<string, string> = {};
 
   // Load from encrypted file first
-  for (const provider of ['anthropic', 'openai']) {
+  for (const provider of ['anthropic', 'openai', 'linear']) {
     const key = await encryptedFileBackend.get(provider);
     if (key) result[provider] = key;
   }
 
   // Keychain entries override (they're the preferred backend)
   if (await keychainBackend.isAvailable()) {
-    for (const provider of ['anthropic', 'openai']) {
+    for (const provider of ['anthropic', 'openai', 'linear']) {
       const key = await keychainBackend.get(provider);
       if (key) result[provider] = key;
     }

@@ -94,6 +94,8 @@ export const DEFAULT_MODELS: Record<AIProviderName, string> = {
 export const ENV_KEY_MAP: Record<string, string> = {
   anthropic: 'ANTHROPIC_API_KEY',
   openai: 'OPENAI_API_KEY',
+  /** Linear personal access token (`planr linear init`). */
+  linear: 'PLANR_LINEAR_TOKEN',
 } as const;
 
 /** Human-readable display names for AI providers. */

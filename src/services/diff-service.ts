@@ -1,5 +1,5 @@
 /**
- * Colored diff preview for revise (EPIC-003, FEAT-011 §4.2).
+ * Colored diff preview for revise.
  *
  * Wraps the pure `unifiedDiff` utility with chalk formatting. The returned
  * string is what the CLI prints before asking the user to apply / skip /

@@ -1,11 +1,9 @@
 /**
- * `planr revise` — core service (EPIC-003, FEAT-010 + FEAT-011).
+ * `planr revise` — core service.
  *
- * Exposes composable primitives; the CLI and future cascade service
- * orchestrate them. Phase 1 (FEAT-010) ships `reviseArtifact` for dry-run
- * decision generation; Phase 2 (FEAT-011) adds `applyDecision` for the
- * write path and exposes the verifier context so callers can run
- * `verifyDecision` against the same inputs the agent saw.
+ * Exposes composable primitives. `reviseArtifact` produces dry-run decisions;
+ * `applyDecision` writes them to disk. The verifier context is exposed so
+ * callers can run `verifyDecision` against the same inputs the agent saw.
  */
 
 import path from 'node:path';
@@ -46,7 +44,7 @@ import type { EvidenceVerifierContext } from './evidence-verifier.js';
 import { getCanonicalSections } from './template-sections.js';
 
 export interface ReviseArtifactOptions {
-  /** Must be `true` in Phase 1; reserved for future write path (FEAT-011). */
+  /** Must be `true` in this release; reserved for future write path. */
   dryRun: true;
   /** Which parts of the artifact the agent may modify. Default: 'all'. */
   writableScope?: ReviseWritableScope;
@@ -92,12 +90,12 @@ export class ReviseArtifactNotFoundError extends Error {
 }
 
 /**
- * Revise a single artifact — Phase 1 dry-run.
+ * Revise a single artifact (dry-run).
  *
  * Does NOT write any files. The returned decision is the agent output after
- * schema validation; evidence verification, diff preview, and write are all
- * Phase 2 responsibilities (FEAT-011). Cascade, siblings, and declared
- * sources are Phase 3 (FEAT-012) and onwards.
+ * schema validation; evidence verification, diff preview, and write live in
+ * the CLI / apply path. Cascade, siblings, and declared sources are future
+ * extensions.
  */
 export async function reviseArtifact(
   projectDir: string,
@@ -170,7 +168,7 @@ export async function reviseArtifact(
     config,
     artifactDir: path.dirname(artifactPath),
     codebaseContextFormatted,
-    knownSourceRefs: [], // Phase 2 sources loader will populate
+    knownSourceRefs: [], // sources loader (future extension) will populate
     knownPatternRuleIds: codebaseCtx ? codebaseCtx.patternRules.map((r) => r.name) : [],
   };
 
@@ -190,7 +188,7 @@ export async function reviseArtifact(
 }
 
 // ---------------------------------------------------------------------------
-// Apply path (FEAT-011 §3 + §6 integration)
+// Apply path
 // ---------------------------------------------------------------------------
 
 export interface ApplyDecisionOptions {
@@ -243,6 +241,17 @@ export async function applyDecision(options: ApplyDecisionOptions): Promise<Appl
   }
 
   if (decision.action === 'flag') {
+    // When a revise → flag demotion happened upstream, `revisedMarkdown`
+    // still holds the agent's proposed rewrite. Include the would-have-been
+    // diff in the audit entry so users can see what was rejected and decide
+    // whether to hand-apply it.
+    const proposedDiff = decision.revisedMarkdown
+      ? renderDiff(originalContent, decision.revisedMarkdown, {
+          color: false,
+          oldLabel: `${decision.artifactId} (before)`,
+          newLabel: `${decision.artifactId} (proposed — REJECTED by verifier)`,
+        })
+      : undefined;
     audit.appendEntry({
       artifactId: decision.artifactId,
       artifactPath,
@@ -251,9 +260,10 @@ export async function applyDecision(options: ApplyDecisionOptions): Promise<Appl
       evidence: decision.evidence,
       ambiguous: decision.ambiguous,
       cascadeLevel: options.cascadeLevel,
+      ...(proposedDiff ? { diff: proposedDiff } : {}),
       timestamp,
     });
-    return { outcome: 'flagged', wrote: false, diff: '' };
+    return { outcome: 'flagged', wrote: false, diff: proposedDiff ?? '' };
   }
 
   // action === 'revise'
@@ -264,6 +274,27 @@ export async function applyDecision(options: ApplyDecisionOptions): Promise<Appl
         newLabel: `${decision.artifactId} (proposed)`,
       })
     : '';
+
+  // Short-circuit: if the agent returned content that is effectively
+  // identical to the original (byte-exact, or only trailing-whitespace
+  // differences from markdown serializer normalization), skip the write
+  // and report `unchanged-by-agent`. Prevents the "Proposed diff: <empty>
+  // → applied" UX bug where a trivial newline-strip got reported as a
+  // successful revise even though the agent explicitly said the artifact
+  // was already well-structured.
+  if (isEffectivelyUnchanged(originalContent, decision.revisedMarkdown)) {
+    audit.appendEntry({
+      artifactId: decision.artifactId,
+      artifactPath,
+      outcome: 'unchanged-by-agent',
+      rationale: decision.rationale,
+      evidence: decision.evidence,
+      ambiguous: decision.ambiguous,
+      cascadeLevel: options.cascadeLevel,
+      timestamp,
+    });
+    return { outcome: 'unchanged-by-agent', wrote: false, diff: '' };
+  }
 
   if (dryRun) {
     audit.appendEntry({
@@ -296,6 +327,20 @@ export async function applyDecision(options: ApplyDecisionOptions): Promise<Appl
     timestamp,
   });
   return { outcome: 'applied', wrote: true, diff };
+}
+
+/**
+ * `true` when the agent's `revisedMarkdown` is byte-identical to `original`,
+ * or differs only in trailing whitespace/newlines (LLM markdown serializers
+ * routinely drop or add one trailing newline without changing semantics).
+ *
+ * Exported so the `--apply-from <audit>` replay path and the interactive
+ * UI can share the same unchanged-detection rule.
+ */
+export function isEffectivelyUnchanged(original: string, revised: string | undefined): boolean {
+  if (revised === undefined) return true;
+  if (revised === original) return true;
+  return revised.replace(/\s+$/, '') === original.replace(/\s+$/, '');
 }
 
 /**

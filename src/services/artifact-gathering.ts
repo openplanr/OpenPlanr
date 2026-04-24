@@ -154,7 +154,7 @@ export async function gatherFeatureArtifacts(
 /**
  * Read a gherkin file for a given story ID. Returns content or null.
  */
-async function findGherkinContent(
+export async function findGherkinContent(
   projectDir: string,
   config: OpenPlanrConfig,
   storyId: string,

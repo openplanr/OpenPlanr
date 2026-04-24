@@ -77,15 +77,15 @@ Your task is to break a feature into user stories. Read the feature and its pare
 You MUST respond with a valid JSON object containing:
 - "stories": An array of story objects, each with:
   - "title": Concise story title (max 80 chars)
-  - "role": The user role ("As a <role>")
-  - "goal": What they want to do ("I want to <goal>")
-  - "benefit": Why ("So that <benefit>")
+  - "role": The user role ONLY — do NOT include the "As a" prefix. Example: "product manager", NOT "As a product manager". The rendering template will prepend "As a " itself.
+  - "goal": The verb phrase describing what the user wants to do ONLY — do NOT include the "I want to" prefix. Start with a verb. Example: "preview the complete Linear structure before creating it", NOT "I want to preview ...". The template prepends "I want to " itself.
+  - "benefit": The outcome ONLY — do NOT include the "So that" prefix. Start with "I" or a noun phrase that makes grammatical sense after "So that ". Example: "I can verify the hierarchy before API calls", NOT "So that I can verify ...". The template prepends "So that " itself.
   - "additionalNotes": Implementation notes or edge cases (optional, can be empty string)
   - "gherkinScenarios": Array of scenario objects, each with:
     - "name": Scenario name
-    - "given": Given precondition
-    - "when": When action
-    - "then": Then expected outcome
+    - "given": The precondition ONLY — do NOT include the "Given" keyword. Example: "a Linear PAT is stored in credentials-service", NOT "Given a Linear PAT ...". The gherkin template prepends "Given " itself.
+    - "when": The action ONLY — do NOT include the "When" keyword. Example: 'I run the command "planr linear init"', NOT "When I run ...". The template prepends "When " itself.
+    - "then": The expected outcome ONLY — do NOT include the "Then" keyword. Example: "the team selection prompt appears", NOT "Then the team selection prompt ...". The template prepends "Then " itself.
 
 Each story should:
 - Follow INVEST principles (Independent, Negotiable, Valuable, Estimable, Small, Testable)
@@ -315,7 +315,7 @@ title: "My Epic"
 Respond with JSON only, no markdown or explanation.`;
 
 /**
- * System prompt for `planr revise` — the agentic revision command (EPIC-003).
+ * System prompt for `planr revise` — the agentic revision command.
  *
  * Unlike REFINE_SYSTEM_PROMPT (which improves prose quality of one artifact
  * in isolation and is forbidden from touching cross-references), the revise

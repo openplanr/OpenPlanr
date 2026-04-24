@@ -1,14 +1,14 @@
 /**
- * Git integration for `planr revise` (EPIC-003, FEAT-011 + FEAT-013).
+ * Git integration for `planr revise`.
  *
  * Two responsibilities:
  *
- * 1. **Clean-tree gate (FEAT-011 §2.0):** revise refuses to run with a dirty
+ * 1. **Clean-tree gate:** revise refuses to run with a dirty
  *    working tree by default. Users can override with `--allow-dirty`, but
  *    post-flight rollback depends on a clean pre-run state, so the gate is
  *    the load-bearing safety net.
  *
- * 2. **Capture + rollback anchor (FEAT-013 §4.0):** before bulk writes,
+ * 2. **Capture + rollback anchor:** before bulk writes,
  *    revise captures HEAD and the set of touched paths so a post-flight
  *    graph-integrity failure can restore via `git checkout`.
  *
@@ -155,7 +155,7 @@ export async function checkCleanTree(
 }
 
 /**
- * Restore a set of paths from HEAD — the primitive FEAT-013's post-flight
+ * Restore a set of paths from HEAD — the primitive the post-flight
  * rollback invokes when graph integrity breaks after writes. Paths are
  * relative to `projectDir`. Empty list is a no-op.
  */

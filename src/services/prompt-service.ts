@@ -1,6 +1,9 @@
 import { checkbox, confirm, editor, input, password, select } from '@inquirer/prompts';
+import type { LinearClient } from '@linear/sdk';
+import type { LinearMappingStrategy } from '../models/types.js';
 import { logger } from '../utils/logger.js';
 import { isNonInteractive } from './interactive-state.js';
+import { getTeamProjects } from './linear-service.js';
 
 /** Prompt the user for a single line of text input. Falls back to defaultValue in non-interactive mode. */
 export async function promptText(message: string, defaultValue?: string): Promise<string> {
@@ -90,7 +93,7 @@ export async function promptMultiText(message: string, hint?: string): Promise<s
 }
 
 // ---------------------------------------------------------------------------
-// Revise command prompts (EPIC-003, FEAT-011 §5.0)
+// Revise command prompts
 // ---------------------------------------------------------------------------
 
 /** One action the user can take at the diff-preview prompt for a proposed revise. */
@@ -119,6 +122,79 @@ export async function promptReviseConfirm(artifactId: string): Promise<ReviseCon
     choices: REVISE_CONFIRM_CHOICES,
     default: 'apply',
   });
+}
+
+// ---------------------------------------------------------------------------
+// Linear integration prompts
+// ---------------------------------------------------------------------------
+
+/**
+ * First-time epic-push: offer the three mapping strategies and (for
+ * `milestone-of` / `label-on`) let the user pick an existing Linear project
+ * to attach into. Pure UI + one read-only SDK call (`getTeamProjects`).
+ */
+export async function promptMappingStrategy(
+  client: LinearClient,
+  teamId: string,
+  epicId: string,
+): Promise<{ strategy: LinearMappingStrategy; targetProjectId?: string } | null> {
+  if (isNonInteractive()) return null;
+  const strategy = await select<LinearMappingStrategy>({
+    message: `How should ${epicId} map to Linear?`,
+    choices: [
+      {
+        name: '[a] Create a new Linear project (recommended — Epic = Project, v1 behavior)',
+        value: 'project',
+      },
+      { name: '[b] Attach as a milestone of an existing Linear project', value: 'milestone-of' },
+      { name: '[c] Attach as a label on an existing Linear project', value: 'label-on' },
+    ],
+    default: 'project',
+  });
+  if (strategy === 'project') {
+    return { strategy };
+  }
+  const projects = await getTeamProjects(client, teamId);
+  if (projects.length === 0) {
+    logger.warn(
+      'This team has no Linear projects yet — falling back to creating a new one (strategy: project).',
+    );
+    return { strategy: 'project' };
+  }
+  const targetProjectId = await select<string>({
+    message: `Pick the target Linear project for ${epicId}:`,
+    choices: projects.map((p) => ({ name: `${p.name}  (${p.url})`, value: p.id })),
+  });
+  return { strategy, targetProjectId };
+}
+
+/**
+ * First-time QT / BL push: let the user pick the Linear project that will
+ * host `QT-*` and `BL-*` issues (stored in `linear.standaloneProjectId`).
+ */
+export async function promptStandaloneProject(
+  client: LinearClient,
+  teamId: string,
+): Promise<{ projectId: string; projectName: string } | null> {
+  if (isNonInteractive()) return null;
+  const projects = await getTeamProjects(client, teamId);
+  if (projects.length === 0) {
+    logger.warn(
+      'This team has no Linear projects yet — create one in Linear first, then re-run the push.',
+    );
+    return null;
+  }
+  const choice = await select<string>({
+    message: 'Pick the Linear project that will host Planr quick tasks & backlog items:',
+    choices: [
+      ...projects.map((p) => ({ name: `${p.name}  (${p.url})`, value: p.id })),
+      { name: '[cancel]', value: '__cancel__' },
+    ],
+  });
+  if (choice === '__cancel__') return null;
+  const picked = projects.find((p) => p.id === choice);
+  if (!picked) return null;
+  return { projectId: picked.id, projectName: picked.name };
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * Audit log writer for `planr revise` (EPIC-003, FEAT-011 §6.0).
+ * Audit log writer for `planr revise`.
  *
  * Every revise run — dry-run included — produces an audit log capturing
  * applied / skipped / flagged / failed artifacts with rationale, evidence,
@@ -9,11 +9,8 @@
  * what was written.
  *
  * Two output formats: Markdown (human-readable, default) and JSON (for CI /
- * tooling / the `planr revise feedback` telemetry workflow planned in
- * Phase 5).
- *
- * FEAT-014 §4.5 extends this writer with token-usage and cache-hit/miss
- * stats; core structure lives here so those extensions are additive.
+ * tooling / future telemetry workflows). Core structure lives here so
+ * token-usage and cache-hit/miss stats can layer on additively.
  */
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -246,7 +243,7 @@ function truncate(s: string, n: number): string {
 // ---------------------------------------------------------------------------
 // Convenience: load an audit log back into a ReviseAudit (for tooling).
 // Not used by the revise command itself but required by future `planr
-// revise feedback <finding-id>` in Phase 5.
+// revise feedback <finding-id>` in this release.
 // ---------------------------------------------------------------------------
 
 export function readAuditJson(logPath: string): ReviseAudit {

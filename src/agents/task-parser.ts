@@ -1,3 +1,5 @@
+import { parseTaskCheckboxLines } from '../utils/markdown.js';
+
 /**
  * Parses task list markdown files to extract subtask structure.
  *
@@ -24,36 +26,15 @@ export interface ParsedSubtask {
  *   `  - [ ] 1.1 Subtask title` (indented subtasks)
  */
 export function parseTaskMarkdown(content: string): ParsedSubtask[] {
-  const tasks: ParsedSubtask[] = [];
-  const lines = content.split('\n');
-
-  let currentGroupId: string | null = null;
-
-  for (const line of lines) {
-    // Match: - [x] **1.0** Task title  OR  - [x] 1.0 Task title  OR  - [ ] 1.1 Subtask title
-    const match = line.match(/^(\s*)- \[(x| )\]\s+\*{0,2}(\d+\.\d+)\*{0,2}\s+(.+)$/);
-    if (!match) continue;
-
-    const indent = match[1].length;
-    const done = match[2] === 'x';
-    const id = match[3];
-    const title = match[4].trim();
-    const depth = indent > 0 ? 1 : 0;
-
-    if (depth === 0) {
-      currentGroupId = id;
-    }
-
-    tasks.push({
+  return parseTaskCheckboxLines(content).map(
+    ({ id, title, done, parentId, depth }): ParsedSubtask => ({
       id,
       title,
       done,
-      parentId: depth === 0 ? null : currentGroupId,
+      parentId,
       depth,
-    });
-  }
-
-  return tasks;
+    }),
+  );
 }
 
 /**
