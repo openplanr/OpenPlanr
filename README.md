@@ -157,6 +157,9 @@ See [`docs/proposals/spec-driven-mode.md`](docs/proposals/spec-driven-mode.md).
 | ------------------------------------------------------- | ------------------------------------------------- |
 | `planr spec init`                                       | Activate spec-driven mode (creates `.planr/specs/`) |
 | `planr spec create "Auth flow"`                         | Create a self-contained `SPEC-NNN-{slug}/` directory |
+| `planr spec shape <SPEC-id>`                            | Interactive 4-question authoring (Context, Functional Reqs, Business Rules, Acceptance) |
+| `planr spec decompose <SPEC-id>`                        | AI-driven decomposition into User Stories + Tasks (matches openplanr-pipeline schema) |
+| `planr spec sync [<SPEC-id>]`                           | Validate integrity (orphaned tasks, missing `specId`, schema drift); auto-fixes safe issues |
 | `planr spec list`                                       | List all specs with status + decomposition counts |
 | `planr spec show <SPEC-id>`                             | Print a spec + its US/Task tree                   |
 | `planr spec status [<SPEC-id>]`                         | Decomposition state across one/all specs         |

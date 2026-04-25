@@ -581,6 +581,82 @@ planr spec create "User Onboarding" --po @AsemDevs
 
 ---
 
+#### `planr spec shape`
+
+Interactive 4-question authoring of a spec's body. Walks the PO through Context, Functional Requirements, Business Rules, and Acceptance Criteria. Optionally captures Out-of-Scope items and Decomposition Notes. Updates `status: pending → shaping`.
+
+```bash
+planr spec shape SPEC-001
+```
+
+**Refused in `--no-interactive` mode** — this command is interactive by design (it asks 4 sequential questions).
+
+| Behavior | Detail |
+| --- | --- |
+| Question 1 | Context (opens your `$EDITOR`) |
+| Question 2 | Functional Requirements (comma-separated) |
+| Question 3 | Business Rules / Constraints (optional, opens `$EDITOR`) |
+| Question 4 | Acceptance Criteria (comma-separated) |
+| Optional | Out-of-Scope items + Decomposition Notes |
+| Output | Regenerates `SPEC-NNN-{slug}.md` body from answers; preserves frontmatter (priority, milestone, po, ui_files) |
+
+---
+
+#### `planr spec decompose`
+
+AI-driven decomposition of a spec into User Stories and Tasks matching the openplanr-pipeline schema (file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment). The heart of spec-driven mode.
+
+```bash
+planr spec decompose SPEC-001
+planr spec decompose SPEC-001 --no-code-context     # skip codebase scan, faster
+planr spec decompose SPEC-001 --max-stories 4       # cap at 4 stories
+planr spec decompose SPEC-001 --force               # overwrite existing decomposition
+```
+
+| Option              | Description                                                            | Required |
+| ------------------- | ---------------------------------------------------------------------- | -------- |
+| `<specId>`          | Spec ID (e.g., `SPEC-001`)                                             | **Yes**  |
+| `--force`           | Overwrite existing US/Task files (default: refuse if any exist)        | No       |
+| `--no-code-context` | Skip the codebase scanner (tasks reference generic paths the user must edit) | No       |
+| `--max-stories <n>` | Cap the number of stories the AI emits (1-8)                          | No       |
+
+**Behavior:**
+- Always scans the codebase via the existing `buildCodebaseContext()` so generated tasks reference real file paths matching your stack
+- Reads `input/tech/stack.md` (best-effort) for stack-specific hints
+- Detects `ui_files` in SPEC frontmatter — emits 2 tasks per US (UI + Tech) when PNGs are attached, otherwise 1 task per US (Tech) per openplanr-pipeline rule R2
+- Status: `pending|shaping → decomposing → decomposed`
+- Refuses to overwrite existing US/Task files unless `--force` is passed (matches `planr quick create` UX)
+- Validates AI output via Zod schema (rejects malformed responses; surfaces clear validation errors)
+
+Works with all three AI providers (Anthropic, OpenAI, Ollama) via planr's existing `AIProvider` abstraction.
+
+**Output:** populates `.planr/specs/SPEC-NNN-{slug}/{stories,tasks}/` with the generated artifacts.
+
+---
+
+#### `planr spec sync`
+
+Validate spec integrity and auto-fix safe inconsistencies. Use after manual edits, after a failed `decompose`, or when in doubt.
+
+```bash
+planr spec sync                       # scan all specs
+planr spec sync SPEC-001              # scope to one spec
+planr spec sync --dry-run             # report findings without writing fixes
+```
+
+| Option        | Description                                          | Required |
+| ------------- | ---------------------------------------------------- | -------- |
+| `[specId]`    | Optional spec ID to scope; default: scan all         | No       |
+| `--dry-run`   | Report findings without writing fixes                | No       |
+
+**Detection rules:**
+1. **Orphaned task** — `task.storyId` points to a non-existent US in the same spec → WARN (don't auto-delete; user reviews)
+2. **Story without tasks** — decomposition incomplete → WARN
+3. **Missing `specId` frontmatter** on US/Task files → AUTO-FIX (insert from path)
+4. **Schema version drift** — artifact's `schemaVersion` older than current → WARN (no auto-migration in v1)
+
+---
+
 #### `planr spec list`
 
 List all specs with title, status, and decomposition counts.

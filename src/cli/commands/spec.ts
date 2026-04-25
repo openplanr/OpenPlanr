@@ -10,20 +10,18 @@
  *
  * See `docs/proposals/spec-driven-mode.md` for the full design.
  *
- * Subcommands shipped in this scaffolding release:
- *   - planr spec init           Activate spec-driven mode in this project
- *   - planr spec create <title> Create a new SPEC artifact
- *   - planr spec list           List all specs in the project
- *   - planr spec show <id>      Print a spec + its US/Task tree
- *   - planr spec status [id]    Decomposition state per spec
- *   - planr spec destroy <id>   Remove a spec entirely (clean rm -rf of one dir)
+ * Subcommands:
+ *   - planr spec init                    Activate spec-driven mode
+ *   - planr spec create <title>          Create a new SPEC artifact (self-contained dir)
+ *   - planr spec shape <id>              Interactive 4-question SPEC authoring
+ *   - planr spec decompose <id>          AI-driven US + Task generation
+ *   - planr spec sync [id]               Validate integrity + auto-fix safe issues
+ *   - planr spec list                    List all specs
+ *   - planr spec show <id>               Print a spec + its US/Task tree
+ *   - planr spec status [id]             Decomposition state per spec
+ *   - planr spec destroy <id>            rm -rf one self-contained spec dir
  *   - planr spec attach-design <id> --files <png>...   Attach UI mockups
- *   - planr spec promote <id>   Validate + print pipeline handoff command
- *
- * Deferred to follow-up PRs (per the design doc):
- *   - planr spec shape <id>     Interactive 4-question SPEC authoring
- *   - planr spec decompose <id> AI-driven US + Task generation
- *   - planr spec sync           Repair orphaned/dangling artifacts
+ *   - planr spec promote <id>            Validate + print pipeline handoff
  */
 
 import path from 'node:path';
