@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -f .claude/.snapshot-pending && rm -f .claude/.snapshot-pending && echo '[openplanr-pipeline] /dev-phase finished — please run /openplanr-pipeline:snapshot to refresh CLAUDE.md' || true"
+          }
+        ]
+      }
+    ]
+  }
+}
