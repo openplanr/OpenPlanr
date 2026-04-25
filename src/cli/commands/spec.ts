@@ -28,12 +28,7 @@ import path from 'node:path';
 import type { Command } from 'commander';
 import { loadConfig, saveConfig } from '../../services/config-service.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
-import {
-  promptConfirm,
-  promptEditor,
-  promptMultiText,
-  promptText,
-} from '../../services/prompt-service.js';
+import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
 import {
   attachSpecDesigns,
   createSpec,
@@ -182,20 +177,34 @@ export function registerSpecCommand(program: Command) {
       }
 
       logger.heading(`Shape ${spec.id}: ${spec.data.title || spec.slug}`);
-      logger.dim('4 questions. Answers populate the spec body.');
+      logger.dim('A few short questions. Each answer is a single line.');
+      logger.dim('For longer-form prose, edit the spec markdown file directly afterwards.');
       logger.dim('Press Ctrl+C at any time to abort without saving.');
       logger.dim('');
 
-      // ── Question 1 — Context ────────────────────────────────────────────
-      logger.dim('Question 1 of 4 — Context');
-      const context = await promptEditor(
-        'What problem does this feature solve? Who is the primary user? (opens your $EDITOR)',
-        '',
+      // ── Question 1 — Context (3 short questions, NOT $EDITOR) ───────────
+      // Replaces a single `promptEditor` call (which opened vim/nano and was
+      // hostile to use) with three focused single-line prompts. Each is
+      // optional — provide what you can, leave blank to skip. We require
+      // *some* context but not all three subfields.
+      logger.dim('Question 1 of 4 — Context (3 quick questions)');
+      const userRole = await promptText(
+        '  Who is the primary user? (e.g., "PMs", "founders", "engineering leads")',
       );
-      if (!context.trim()) {
-        logger.error('Context cannot be empty. Aborting.');
+      const problem = await promptText(
+        '  What problem are they trying to solve today? (one sentence)',
+      );
+      const outcome = await promptText('  What does success look like? (one sentence)');
+      const contextParts = [
+        userRole.trim() && `**Primary user:** ${userRole.trim()}`,
+        problem.trim() && `**Problem today:** ${problem.trim()}`,
+        outcome.trim() && `**Outcome:** ${outcome.trim()}`,
+      ].filter(Boolean) as string[];
+      if (contextParts.length === 0) {
+        logger.error('At least one context answer is required. Aborting.');
         process.exit(1);
       }
+      const context = contextParts.join('\n\n');
 
       // ── Question 2 — Functional requirements ────────────────────────────
       logger.dim('');
@@ -209,12 +218,11 @@ export function registerSpecCommand(program: Command) {
         process.exit(1);
       }
 
-      // ── Question 3 — Business rules / constraints ───────────────────────
+      // ── Question 3 — Business rules / constraints (single line, optional) ──
       logger.dim('');
       logger.dim('Question 3 of 4 — Business Rules & Constraints (optional)');
-      const businessRules = await promptEditor(
-        'Any rules, limits, or constraints? (permissions, validations, dependencies — leave empty if none)',
-        '',
+      const businessRules = await promptText(
+        '  Key rule or constraint? (one line; leave empty if none — edit spec file later for longer)',
       );
 
       // ── Question 4 — Acceptance criteria ────────────────────────────────
@@ -242,9 +250,8 @@ export function registerSpecCommand(program: Command) {
           'Out of Scope (comma-separated; what this feature does NOT include)',
           'e.g., "email notifications (covered in feat-notifications)"',
         );
-        decompositionNotes = await promptEditor(
-          'Notes for `planr spec decompose` (hints to guide the AI; not business requirements)',
-          '',
+        decompositionNotes = await promptText(
+          '  Decomposition note (one line; hint for `planr spec decompose` — leave empty if none)',
         );
       }
 
