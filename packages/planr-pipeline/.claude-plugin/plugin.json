@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "openplanr-pipeline",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Spec-driven AI software factory for Claude Code. Two-phase pipeline (PO → review → DEV) with 8 specialized subagents, stack-aware code generation, and hard rules enforced at the tool layer.",
   "author": {
     "name": "OpenPlanr",
