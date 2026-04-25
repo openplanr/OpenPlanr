@@ -2,7 +2,12 @@
 
 All notable changes to `openplanr-pipeline` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/) — with the caveat that pre-1.0 releases may contain breaking changes in minor bumps.
 
-## [0.1.0] — 2026-04-25
+## [0.1.1] — 2026-04-25
+
+### Fixed
+- `plugin.json` `repository` field reverted to plain string (Claude Code plugin schema validator rejects the `{type, url}` object shape that the npm/package.json convention uses). v0.1.0 was tagged but uninstallable due to this validation error.
+
+## [0.1.0] — 2026-04-25 (yanked — broken plugin.json schema)
 
 ### Added
 
