@@ -5,10 +5,13 @@
   "description": "Spec-driven AI software factory for Claude Code. Two-phase pipeline (PO → review → DEV) with 8 specialized subagents, stack-aware code generation, and hard rules enforced at the tool layer.",
   "author": {
     "name": "OpenPlanr",
-    "url": "https://github.com/OpenPlanr"
+    "url": "https://github.com/openplanr"
   },
-  "homepage": "https://github.com/OpenPlanr/openplanr-pipeline",
-  "repository": "https://github.com/OpenPlanr/openplanr-pipeline",
+  "homepage": "https://github.com/openplanr/openplanr-pipeline",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openplanr/openplanr-pipeline.git"
+  },
   "license": "MIT",
   "keywords": [
     "spec-driven",
