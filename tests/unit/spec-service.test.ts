@@ -18,6 +18,7 @@ import {
   createSpec,
   createSpecStory,
   createSpecTask,
+  decomposeSpec,
   destroySpec,
   getSpecDir,
   getSpecStatus,
@@ -562,6 +563,233 @@ describe('shapeSpec', () => {
     // Should fall back to placeholder when business rules empty
     expect(content).toContain('_None specified._');
     expect(content).toContain('_Nothing explicitly out of scope yet._');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// decomposeSpec tests — uses vi.mock to stub the AI provider + codebase scanner
+// ---------------------------------------------------------------------------
+
+vi.mock('../../src/services/ai-service.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    isAIConfigured: vi.fn(() => true),
+    getAIProvider: vi.fn(async () => ({
+      name: 'mock',
+      model: 'test',
+      chat: async function* () {
+        yield (globalThis as unknown as { __mockAIResponse?: string }).__mockAIResponse ?? '{}';
+      },
+      chatSync: async () =>
+        (globalThis as unknown as { __mockAIResponse?: string }).__mockAIResponse ?? '{}',
+      getLastUsage: () => undefined,
+    })),
+  };
+});
+
+vi.mock('../../src/ai/codebase/index.js', () => ({
+  buildCodebaseContext: vi.fn(async () => ({
+    techStack: { language: 'TypeScript', framework: 'NestJS' },
+    folderTree: 'src/\n  features/\n',
+    sourceInventory: '',
+    architectureFiles: new Map(),
+    relatedFiles: new Map(),
+    projectRules: null,
+    patternRules: [],
+  })),
+  extractKeywords: vi.fn(() => ['auth', 'login']),
+  formatCodebaseContext: vi.fn(
+    () => 'Tech Stack: TypeScript + NestJS\nFolder tree:\nsrc/\n  features/',
+  ),
+}));
+
+vi.mock('../../src/utils/logger.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    createSpinner: () => ({ stop: vi.fn(), succeed: vi.fn(), update: vi.fn() }),
+    formatUsage: () => '',
+  };
+});
+
+/**
+ * Helper: stash a fake AI JSON response so the mocked provider returns it
+ * on the next call. The mock's `chat` generator reads from globalThis to
+ * keep the mock factory simple.
+ */
+function setMockAIResponse(json: string): void {
+  (globalThis as unknown as { __mockAIResponse?: string }).__mockAIResponse = json;
+}
+
+const validDecomposition = {
+  stories: [
+    {
+      title: 'Login form submission',
+      roleAction: 'a returning user, I want to submit valid credentials',
+      benefit: 'I can access my dashboard',
+      scope: 'Login form on /login route. Out of scope: SSO, password reset.',
+      acceptanceCriteria: [
+        'Given valid credentials, when submitting, then user reaches /dashboard',
+        'Given invalid credentials, when submitting, then error is shown',
+      ],
+      tasks: [
+        {
+          title: 'Build login form component',
+          type: 'UI' as const,
+          agent: 'frontend-agent',
+          filesCreate: ['src/features/auth/components/LoginForm.tsx'],
+          filesModify: ['src/app/layout.tsx'],
+          filesPreserve: ['src/lib/auth/legacy.ts'],
+          objective: 'Implement the LoginForm component with email/password fields.',
+          technicalSpec: 'Use react-hook-form. Submit via POST /auth/login.',
+          testRequirements: 'Unit tests for happy path + invalid creds.',
+        },
+      ],
+    },
+    {
+      title: 'Auth service backend',
+      roleAction: 'the system, I want to validate credentials',
+      benefit: 'only authorized users access protected routes',
+      scope: 'Auth service + JWT issuance. Out of scope: refresh tokens.',
+      acceptanceCriteria: ['Given valid creds, the service issues a JWT'],
+      tasks: [
+        {
+          title: 'Implement AuthService.login',
+          type: 'Tech' as const,
+          agent: 'backend-agent',
+          filesCreate: ['src/features/auth/auth.service.ts'],
+          filesModify: ['src/app.module.ts'],
+          filesPreserve: ['package.json'],
+          objective: 'Implement the login method that returns a JWT.',
+          technicalSpec: 'Use bcrypt for password hash compare.',
+          testRequirements: 'Unit tests for valid/invalid creds.',
+        },
+      ],
+    },
+  ],
+  decompositionNotes: 'Single-screen feature; 2-story decomposition is appropriate.',
+};
+
+describe('decomposeSpec', () => {
+  beforeEach(() => {
+    setMockAIResponse(JSON.stringify(validDecomposition));
+  });
+
+  it('writes US + Task files matching the AI response', async () => {
+    await createSpec(projectDir, config, 'Auth Flow', { slug: 'auth' });
+    const result = await decomposeSpec(projectDir, config, 'SPEC-001', { noCodeContext: true });
+
+    expect(result.storiesCreated).toBe(2);
+    expect(result.tasksCreated).toBe(2);
+    expect(result.decompositionNotes).toContain('Single-screen');
+
+    const specDir = getSpecDir(projectDir, config, 'SPEC-001', 'auth');
+    const stories = await listSpecStories(specDir);
+    const tasks = await listSpecTasks(specDir);
+
+    expect(stories).toHaveLength(2);
+    expect(stories[0].id).toBe('US-001');
+    expect(stories[0].title).toBe('Login form submission');
+    expect(stories[1].id).toBe('US-002');
+
+    expect(tasks).toHaveLength(2);
+    expect(tasks[0].id).toBe('T-001');
+    expect(tasks[0].type).toBe('UI');
+    expect(tasks[0].agent).toBe('frontend-agent');
+    expect(tasks[0].storyId).toBe('US-001');
+    expect(tasks[1].type).toBe('Tech');
+    expect(tasks[1].agent).toBe('backend-agent');
+  });
+
+  it('updates SPEC frontmatter status to "decomposed"', async () => {
+    await createSpec(projectDir, config, 'Auth');
+    await decomposeSpec(projectDir, config, 'SPEC-001', { noCodeContext: true });
+    const spec = await readSpec(projectDir, config, 'SPEC-001');
+    expect(spec?.data.status).toBe('decomposed');
+  });
+
+  it('writes file Create/Modify/Preserve lists into task body', async () => {
+    await createSpec(projectDir, config, 'Auth');
+    await decomposeSpec(projectDir, config, 'SPEC-001', { noCodeContext: true });
+
+    const specDir = getSpecDir(projectDir, config, 'SPEC-001', 'auth');
+    const tasks = await listSpecTasks(specDir);
+    const taskContent = await fs.readFile(tasks[0].filePath, 'utf-8');
+    expect(taskContent).toContain('src/features/auth/components/LoginForm.tsx');
+    expect(taskContent).toContain('src/app/layout.tsx');
+    expect(taskContent).toContain('src/lib/auth/legacy.ts');
+  });
+
+  it('refuses to overwrite existing decomposition without --force', async () => {
+    await createSpec(projectDir, config, 'Auth');
+    await decomposeSpec(projectDir, config, 'SPEC-001', { noCodeContext: true });
+    await expect(
+      decomposeSpec(projectDir, config, 'SPEC-001', { noCodeContext: true }),
+    ).rejects.toThrow(/already has \d+/);
+  });
+
+  it('overwrites existing decomposition with --force', async () => {
+    await createSpec(projectDir, config, 'Auth');
+    await decomposeSpec(projectDir, config, 'SPEC-001', { noCodeContext: true });
+    // Call again with force; should succeed and produce same result
+    const result = await decomposeSpec(projectDir, config, 'SPEC-001', {
+      noCodeContext: true,
+      force: true,
+    });
+    expect(result.storiesCreated).toBe(2);
+  });
+
+  it('rejects malformed AI output (Zod schema)', async () => {
+    setMockAIResponse(JSON.stringify({ stories: [] })); // empty stories — violates min(1)
+    await createSpec(projectDir, config, 'Auth');
+    await expect(
+      decomposeSpec(projectDir, config, 'SPEC-001', { noCodeContext: true }),
+    ).rejects.toThrow();
+  });
+
+  it('rejects AI output with > 2 tasks per story', async () => {
+    const tooManyTasks = {
+      stories: [
+        {
+          title: 'X',
+          roleAction: 'a user',
+          benefit: 'reason',
+          acceptanceCriteria: ['ac'],
+          tasks: [
+            { title: 't1', type: 'UI', agent: 'a', objective: 'o' },
+            { title: 't2', type: 'Tech', agent: 'a', objective: 'o' },
+            { title: 't3', type: 'Tech', agent: 'a', objective: 'o' }, // exceeds max(2)
+          ],
+        },
+      ],
+    };
+    setMockAIResponse(JSON.stringify(tooManyTasks));
+    await createSpec(projectDir, config, 'Auth');
+    await expect(
+      decomposeSpec(projectDir, config, 'SPEC-001', { noCodeContext: true }),
+    ).rejects.toThrow();
+  });
+
+  it('throws on unknown spec ID', async () => {
+    await expect(
+      decomposeSpec(projectDir, config, 'SPEC-999', { noCodeContext: true }),
+    ).rejects.toThrow(/not found/);
+  });
+
+  it('per-spec ID scoping: each spec gets its own US-001 + T-001', async () => {
+    await createSpec(projectDir, config, 'Auth', { slug: 'auth' });
+    await createSpec(projectDir, config, 'Checkout', { slug: 'checkout' });
+
+    await decomposeSpec(projectDir, config, 'SPEC-001', { noCodeContext: true });
+    await decomposeSpec(projectDir, config, 'SPEC-002', { noCodeContext: true });
+
+    const authStories = await listSpecStories(getSpecDir(projectDir, config, 'SPEC-001', 'auth'));
+    const checkoutStories = await listSpecStories(
+      getSpecDir(projectDir, config, 'SPEC-002', 'checkout'),
+    );
+    expect(authStories[0].id).toBe('US-001');
+    expect(checkoutStories[0].id).toBe('US-001'); // each spec scopes its own US-NNN
   });
 });
 

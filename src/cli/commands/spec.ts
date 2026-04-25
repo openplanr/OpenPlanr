@@ -39,6 +39,7 @@ import {
 import {
   attachSpecDesigns,
   createSpec,
+  decomposeSpec,
   destroySpec,
   getSpecStatus,
   listSpecStories,
@@ -280,6 +281,86 @@ export function registerSpecCommand(program: Command) {
         process.exit(1);
       }
     });
+
+  // ------------------------------------------------------------------------
+  // planr spec decompose <id>
+  // ------------------------------------------------------------------------
+  spec
+    .command('decompose')
+    .description(
+      'AI-driven decomposition of a SPEC into User Stories + Tasks (matches openplanr-pipeline schema)',
+    )
+    .argument('<specId>', 'spec ID (e.g., SPEC-001)')
+    .option('--force', 'overwrite existing US/Task files (use after `planr spec destroy` failed)')
+    .option(
+      '--no-code-context',
+      'skip the codebase scanner (faster; tasks reference generic paths)',
+    )
+    .option('--max-stories <n>', 'cap the number of stories the AI emits (1-8)', (v) =>
+      Number.parseInt(v, 10),
+    )
+    .action(
+      async (
+        specId: string,
+        opts: { force?: boolean; codeContext?: boolean; maxStories?: number },
+      ) => {
+        const projectDir = program.opts().projectDir as string;
+        const config = await loadConfig(projectDir);
+
+        const spec = await readSpec(projectDir, config, specId);
+        if (!spec) {
+          logger.error(`Spec ${specId} not found.`);
+          process.exit(1);
+        }
+
+        const { isAIConfigured } = await import('../../services/ai-service.js');
+        if (!isAIConfigured(config)) {
+          logger.error(
+            'AI is not configured. Set ANTHROPIC_API_KEY (or another provider key) and `planr config set-provider`.',
+          );
+          process.exit(1);
+        }
+
+        logger.heading(`Decompose ${spec.id}: ${spec.data.title || spec.slug}`);
+        logger.dim(
+          opts.codeContext === false
+            ? '  (--no-code-context: skipping codebase scan)'
+            : '  Analyzing spec + codebase...',
+        );
+
+        try {
+          const result = await decomposeSpec(projectDir, config, specId, {
+            force: opts.force ?? false,
+            // commander stores boolean negation as `codeContext` (default true; --no-code-context → false)
+            noCodeContext: opts.codeContext === false,
+            maxStories: opts.maxStories,
+          });
+
+          logger.success(
+            `Decomposed ${spec.id}: ${result.storiesCreated} stor${
+              result.storiesCreated === 1 ? 'y' : 'ies'
+            }, ${result.tasksCreated} tasks.`,
+          );
+          if (result.decompositionNotes) {
+            logger.dim('');
+            logger.dim(`AI notes: ${result.decompositionNotes}`);
+          }
+          logger.dim('');
+          display.line('Next steps:');
+          display.line(`  - Review the tree:   planr spec show ${spec.id}`);
+          display.line(`  - Validate + handoff: planr spec promote ${spec.id}`);
+        } catch (err) {
+          // Try to surface AI errors with friendly messaging if applicable
+          try {
+            const { handleAIError } = await import('../helpers/task-creation.js');
+            await handleAIError(err);
+          } catch {
+            logger.error((err as Error).message);
+          }
+          process.exit(1);
+        }
+      },
+    );
 
   // ------------------------------------------------------------------------
   // planr spec list

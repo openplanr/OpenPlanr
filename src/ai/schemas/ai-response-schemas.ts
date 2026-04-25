@@ -267,3 +267,63 @@ export const aiReviseDecisionSchema = z
   });
 
 export type AIReviseDecisionResponse = z.infer<typeof aiReviseDecisionSchema>;
+
+// --- Spec-driven decomposition ---
+// Schemas for `planr spec decompose <SPEC-id>`. Output matches the
+// openplanr-pipeline plugin's specification-agent contract: User Stories
+// each containing 1-2 Tasks with explicit file Create/Modify/Preserve lists,
+// Type=UI|Tech, agent assignment, and DoD-grade test requirements.
+
+export const aiSpecTaskSchema = z.object({
+  title: z.string().min(1),
+  /**
+   * Per docs/proposals/spec-driven-mode.md and openplanr-pipeline rule R2:
+   * task-1 is UI when PNGs present, otherwise Tech. task-2 is always Tech
+   * and is only emitted when PNGs were attached to the spec.
+   */
+  type: z.enum(['UI', 'Tech']),
+  /**
+   * Free-form agent label. Defaults match openplanr-pipeline subagent names
+   * (`frontend-agent`, `backend-agent`) so the pipeline can route directly,
+   * but the field is open so other tools (Cursor, Codex) can use their own
+   * vocabularies.
+   */
+  agent: z.string().min(1),
+  filesCreate: z.array(z.string().min(1)).default([]),
+  filesModify: z.array(z.string().min(1)).default([]),
+  filesPreserve: z.array(z.string().min(1)).default([]),
+  objective: z.string().min(1),
+  technicalSpec: z.string().default(''),
+  testRequirements: z.string().default(''),
+});
+
+export type AISpecTask = z.infer<typeof aiSpecTaskSchema>;
+
+export const aiSpecStorySchema = z.object({
+  title: z.string().min(1),
+  /** "As a {role}, I want to {action}" — first half of the User Story sentence. */
+  roleAction: z.string().min(1),
+  /** "so that {benefit}" — second half. */
+  benefit: z.string().min(1),
+  scope: z.string().default(''),
+  acceptanceCriteria: z.array(z.string().min(1)).min(1),
+  /**
+   * 1 task if no PNG attached; 2 tasks if PNG present (UI + Tech).
+   * Hard cap at 2 to match openplanr-pipeline rule R2.
+   */
+  tasks: z.array(aiSpecTaskSchema).min(1).max(2),
+});
+
+export type AISpecStory = z.infer<typeof aiSpecStorySchema>;
+
+export const aiSpecDecomposeResponseSchema = z.object({
+  /**
+   * 1-8 stories. Soft cap at 8 to keep within the taskFeature token budget
+   * (32k); larger specs should be split or use --max-stories N to chunk.
+   */
+  stories: z.array(aiSpecStorySchema).min(1).max(8),
+  /** Optional notes from the AI about its decomposition decisions. */
+  decompositionNotes: z.string().default(''),
+});
+
+export type AISpecDecomposeResponse = z.infer<typeof aiSpecDecomposeResponseSchema>;

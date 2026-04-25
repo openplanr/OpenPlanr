@@ -404,6 +404,170 @@ function formatYamlValue(value: unknown): string {
 }
 
 // ---------------------------------------------------------------------------
+// Decompose — AI-driven US + Task generation
+// ---------------------------------------------------------------------------
+
+export interface DecomposeSpecOptions {
+  /** When true, overwrite existing US/Task files. Default false. */
+  force?: boolean;
+  /**
+   * When true, skip the codebase scanner. Faster but generated tasks
+   * reference generic paths the user must edit afterwards.
+   */
+  noCodeContext?: boolean;
+  /** Cap the number of stories the AI emits (1-8, default 6 from prompt). */
+  maxStories?: number;
+}
+
+export interface DecomposeSpecResult {
+  storiesCreated: number;
+  tasksCreated: number;
+  decompositionNotes: string;
+}
+
+/**
+ * Decompose a SPEC into User Stories + Tasks via AI.
+ *
+ * High-level flow:
+ *   1. Read the spec; refuse if stories/ or tasks/ already populated
+ *      (unless `opts.force === true`)
+ *   2. Read `input/tech/stack.md` (best-effort; passed as a hint to the AI)
+ *   3. Build codebase context via planr's existing scanner (skipped if
+ *      `opts.noCodeContext === true`)
+ *   4. Build prompt + call AI provider via `generateStreamingJSON`
+ *   5. Validate the response with `aiSpecDecomposeResponseSchema`
+ *   6. Write each US via `createSpecStory` and each Task via `createSpecTask`
+ *   7. Update SPEC frontmatter status: pending|shaping → decomposing → decomposed
+ */
+export async function decomposeSpec(
+  projectDir: string,
+  config: OpenPlanrConfig,
+  specId: string,
+  opts: DecomposeSpecOptions = {},
+): Promise<DecomposeSpecResult> {
+  const spec = await readSpec(projectDir, config, specId);
+  if (!spec) throw new Error(`Spec ${specId} not found.`);
+
+  // ── Guard: refuse to overwrite existing decomposition ─────────────────
+  const existingStories = await listSpecStories(spec.specDir);
+  const existingTasks = await listSpecTasks(spec.specDir);
+  if ((existingStories.length > 0 || existingTasks.length > 0) && !opts.force) {
+    throw new Error(
+      `Spec ${specId} already has ${existingStories.length} stor${
+        existingStories.length === 1 ? 'y' : 'ies'
+      } and ${existingTasks.length} task${existingTasks.length === 1 ? '' : 's'}. ` +
+        `Pass --force to overwrite, or \`planr spec destroy ${specId}\` to start fresh.`,
+    );
+  }
+  // If forcing, wipe existing US + Task files BEFORE the AI call so a failed
+  // decomposition doesn't leave a half-overwritten tree.
+  if (opts.force && (existingStories.length > 0 || existingTasks.length > 0)) {
+    const fs = await import('node:fs/promises');
+    for (const s of existingStories) await fs.rm(s.filePath, { force: true });
+    for (const t of existingTasks) await fs.rm(t.filePath, { force: true });
+  }
+
+  // ── Determine PNG presence (drives 1-vs-2 tasks per US per rules.md R2) ─
+  const uiFilesData = spec.data.ui_files;
+  const hasPNGs = Array.isArray(uiFilesData) && uiFilesData.length > 0;
+
+  // ── Read stack.md (best-effort) ───────────────────────────────────────
+  let stackInfo: string | undefined;
+  try {
+    const stackPath = path.join(projectDir, 'input/tech/stack.md');
+    if (await fileExists(stackPath)) {
+      stackInfo = await readFile(stackPath);
+    }
+  } catch {
+    // best-effort
+  }
+
+  // ── Build codebase context (lazy import keeps startup fast) ───────────
+  let codebaseContext: string | undefined;
+  if (!opts.noCodeContext) {
+    try {
+      const { buildCodebaseContext, extractKeywords, formatCodebaseContext } = await import(
+        '../ai/codebase/index.js'
+      );
+      const keywordSource = `${typeof spec.data.title === 'string' ? spec.data.title : ''}\n${spec.content}`;
+      const keywords = extractKeywords(keywordSource);
+      const ctx = await buildCodebaseContext(projectDir, keywords);
+      codebaseContext = formatCodebaseContext(ctx);
+      const stackHint = ctx.techStack
+        ? ` — ${ctx.techStack.language}${ctx.techStack.framework ? ` + ${ctx.techStack.framework}` : ''}`
+        : '';
+      logger.dim(`  Scanned codebase${stackHint}`);
+    } catch (err) {
+      logger.debug('Codebase scanning failed during spec decompose', err);
+    }
+  }
+
+  // ── Update status to "decomposing" so observers see in-progress state ─
+  await updateSpecFields(projectDir, config, specId, { status: 'decomposing' });
+
+  // ── Call AI (lazy imports — keep heavy deps off startup path) ─────────
+  const { buildSpecDecomposePrompt } = await import('../ai/prompts/prompt-builder.js');
+  const { aiSpecDecomposeResponseSchema } = await import('../ai/schemas/ai-response-schemas.js');
+  const { generateStreamingJSON, getAIProvider } = await import('./ai-service.js');
+  const { TOKEN_BUDGETS } = await import('../ai/types.js');
+
+  const provider = await getAIProvider(config);
+  const messages = buildSpecDecomposePrompt(
+    spec.content,
+    hasPNGs,
+    stackInfo,
+    codebaseContext,
+    opts.maxStories,
+  );
+  const { result } = await generateStreamingJSON(
+    provider,
+    messages,
+    aiSpecDecomposeResponseSchema,
+    { maxTokens: TOKEN_BUDGETS.taskFeature },
+  );
+
+  // ── Persist stories + tasks ────────────────────────────────────────────
+  let storiesCreated = 0;
+  let tasksCreated = 0;
+  for (const aiStory of result.stories) {
+    const created = await createSpecStory(projectDir, config, specId, aiStory.title, {
+      roleAction: aiStory.roleAction,
+      benefit: aiStory.benefit,
+      scope: aiStory.scope,
+      acceptanceCriteria: aiStory.acceptanceCriteria,
+    });
+    storiesCreated++;
+
+    for (const aiTask of aiStory.tasks) {
+      await createSpecTask(projectDir, config, specId, {
+        storyId: created.id,
+        title: aiTask.title,
+        type: aiTask.type,
+        agent: aiTask.agent,
+        filesCreate: aiTask.filesCreate,
+        filesModify: aiTask.filesModify,
+        filesPreserve: aiTask.filesPreserve,
+        objective: aiTask.objective,
+        technicalSpec: aiTask.technicalSpec,
+        testRequirements: aiTask.testRequirements,
+      });
+      tasksCreated++;
+    }
+  }
+
+  // ── Final status: decomposed ──────────────────────────────────────────
+  await updateSpecFields(projectDir, config, specId, { status: 'decomposed' });
+
+  logger.debug(`Decomposed ${specId}: ${storiesCreated} stories, ${tasksCreated} tasks written`);
+
+  return {
+    storiesCreated,
+    tasksCreated,
+    decompositionNotes: result.decompositionNotes,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Shape — guided 4-question SPEC body authoring
 // ---------------------------------------------------------------------------
 

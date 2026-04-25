@@ -18,6 +18,7 @@ import {
   QUICK_TASKS_SYSTEM_PROMPT,
   REFINE_SYSTEM_PROMPT,
   REVISE_SYSTEM_PROMPT,
+  SPEC_DECOMPOSE_SYSTEM_PROMPT,
   SPRINT_AUTO_SELECT_SYSTEM_PROMPT,
   STORIES_SYSTEM_PROMPT,
   TASKS_SYSTEM_PROMPT,
@@ -414,6 +415,53 @@ export function buildRevisePrompt(ctx: RevisePromptContext): AIMessage[] {
 
   return [
     { role: 'system', content: REVISE_SYSTEM_PROMPT },
+    { role: 'user', content: sections.join('\n\n') },
+  ];
+}
+
+/**
+ * Build the prompt for `planr spec decompose <SPEC-id>`.
+ *
+ * Produces a 2-message conversation that asks the AI to decompose a spec
+ * body into N User Stories with 1-2 Tasks each, matching the
+ * openplanr-pipeline plugin's specification-agent contract.
+ *
+ * @param specBody    Raw spec markdown (PO-authored, untrusted — wrapped via wrapUserInput)
+ * @param hasPNGs     If true, instructs the AI to emit 2 tasks per US (UI + Tech)
+ * @param stackInfo   Optional tech stack hints from input/tech/stack.md (untrusted, wrapped)
+ * @param codebaseContext  Optional preformatted codebase context (system-generated, NOT wrapped)
+ * @param maxStories  Soft cap on story count (1-8); included as a directive in the user prompt
+ */
+export function buildSpecDecomposePrompt(
+  specBody: string,
+  hasPNGs: boolean,
+  stackInfo?: string,
+  codebaseContext?: string,
+  maxStories?: number,
+): AIMessage[] {
+  const sections: string[] = [];
+
+  sections.push(
+    `Decompose the following Detailed Functional Spec into User Stories and Tasks.\n\n${
+      hasPNGs
+        ? 'PNG mockups ARE attached to this spec — emit **2 tasks per US** (task-1 = UI, task-2 = Tech).'
+        : 'No PNG mockups attached — emit **1 task per US** (Type=Tech) per RULE 1.'
+    }${maxStories ? `\n\nCap your output at ${maxStories} stories.` : ''}`,
+  );
+
+  sections.push(`--- Spec body ---\n${wrapUserInput(specBody)}`);
+
+  if (stackInfo?.trim()) {
+    sections.push(`--- Tech Stack (from input/tech/stack.md) ---\n${wrapUserInput(stackInfo)}`);
+  }
+
+  if (codebaseContext?.trim()) {
+    // Codebase context is system-generated (not user-supplied), so it's NOT wrapped.
+    sections.push(`--- Codebase Context ---\n${codebaseContext}`);
+  }
+
+  return [
+    { role: 'system', content: SPEC_DECOMPOSE_SYSTEM_PROMPT },
     { role: 'user', content: sections.join('\n\n') },
   ];
 }
