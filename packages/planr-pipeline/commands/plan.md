@@ -44,7 +44,27 @@ Required (default mode):
 
 Required (spec-driven mode):
 - `<SPEC_DIR>/SPEC-NNN-${ARGUMENTS}.md` — fail with: "Spec for slug '$ARGUMENTS' not found under .planr/specs/. Run \`planr spec create --slug $ARGUMENTS\` first."
-- `input/tech/stack.md` (still — both modes) — same fail message.
+- `input/tech/stack.md` — see **Self-healing in spec mode** below.
+
+### Self-healing in spec mode (NEW in v0.3.1)
+
+In spec-driven mode, users typically arrive here via planr CLI (`planr spec init` + `planr spec create`), which scaffolds `.planr/specs/` but does NOT create `input/tech/stack.md` (that's the pipeline's territory). Failing on a missing stack file would force them to switch tools mid-flow and run `/openplanr-pipeline:init` just to get one file.
+
+Instead, when MODE is `spec-driven` AND `input/tech/stack.md` is missing:
+
+1. **Copy the template:** read `${CLAUDE_PLUGIN_ROOT}/templates/stack.md.tpl` and write it verbatim to `input/tech/stack.md`. Create the `input/tech/` directory if absent.
+2. **Print a clear status message:**
+   ```
+   ✓ Created input/tech/stack.md from template (.claude-plugin pipeline self-heal)
+     Why: spec-driven mode detected via .planr/config.json, but input/tech/stack.md was missing.
+     Next: edit input/tech/stack.md to declare your real stack:
+           - AppName, Language, Framework, ORM (or DatabaseType if no ORM)
+           - BuildCommand, TestCommand (used by the 3-iteration correction loop)
+     Then re-run: /openplanr-pipeline:plan $ARGUMENTS
+   ```
+3. **Abort gracefully** — exit Step 1 here. Do NOT invoke any subagent. Do NOT proceed to Step 2.
+
+This self-heal applies only in **spec-driven mode**. In default mode, missing `stack.md` still aborts with the existing "Run `/openplanr-pipeline:init`" guidance — because in default mode, missing stack typically means missing the entire scaffolding, and `/init` is the right answer.
 
 Conditional inputs (presence triggers a subagent; absence skips it silently):
 - **Default mode:** `input/ui/feat-$ARGUMENTS/*.png` OR PNGs listed in the spec's `UIFiles:` section → triggers designer-agent

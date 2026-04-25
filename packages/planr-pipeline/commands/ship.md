@@ -52,7 +52,25 @@ Required (spec-driven mode):
 - `<SPEC_DIR>/` — fail with: "Spec for slug '$ARGUMENTS' not found under .planr/specs/. Run \`planr spec create --slug $ARGUMENTS\` then \`planr spec decompose\` first."
 - At least one `<SPEC_DIR>/stories/US-*.md`
 - At least one `<SPEC_DIR>/tasks/T-*.md`
-- `input/tech/stack.md`
+- `input/tech/stack.md` — see **Self-healing in spec mode** below.
+
+### Self-healing in spec mode (NEW in v0.3.1)
+
+Same logic as `/plan`: when MODE is `spec-driven` AND `input/tech/stack.md` is missing, do not abort with a stack-missing error. Instead:
+
+1. **Copy** `${CLAUDE_PLUGIN_ROOT}/templates/stack.md.tpl` to `input/tech/stack.md` (creating `input/tech/` if absent).
+2. **Print:**
+   ```
+   ✓ Created input/tech/stack.md from template (pipeline self-heal)
+     Why: spec-driven mode detected, but input/tech/stack.md was missing.
+     Critical: BuildCommand and TestCommand drive the 3-iteration correction loop.
+               You MUST fill these in before /ship will work — empty values mean DEV
+               agents cannot validate their generated code.
+     Next: edit input/tech/stack.md, then re-run: /openplanr-pipeline:ship $ARGUMENTS
+   ```
+3. **Abort gracefully.** Do NOT invoke any subagent. Do NOT touch the source tree.
+
+In default mode, missing `stack.md` continues to abort with "Run `/openplanr-pipeline:init`" guidance — no change.
 
 Recommended (mode-specific):
 - `output/db/schema.json` — warn if missing, continue (mode-agnostic).

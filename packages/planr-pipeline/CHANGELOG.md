@@ -2,6 +2,36 @@
 
 All notable changes to `openplanr-pipeline` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/) — with the caveat that pre-1.0 releases may contain breaking changes in minor bumps.
 
+## [0.3.1] — 2026-04-26
+
+### Fixed — Self-healing in spec-driven mode
+
+When a project enters spec-driven mode via planr CLI (`planr spec init` + `planr spec create`), `.planr/specs/` is created but `input/tech/stack.md` is NOT (planr doesn't own that file). Previously, running `/openplanr-pipeline:plan {slug}` against this state aborted with "input/tech/stack.md not found", forcing the user to switch tools and run `/openplanr-pipeline:init` just to get one file.
+
+In v0.3.1, when spec mode is active AND `input/tech/stack.md` is missing, the pipeline:
+
+1. Copies `${CLAUDE_PLUGIN_ROOT}/templates/stack.md.tpl` to `input/tech/stack.md`
+2. Prints a clear "edit and re-run" message
+3. Aborts gracefully — no subagent is invoked, no source code is touched
+
+Same self-heal behavior applies to `/openplanr-pipeline:ship` (which is even more critical since the DEV phase needs `BuildCommand`/`TestCommand` from stack.md).
+
+**Default mode is unchanged.** Missing `stack.md` in default mode still aborts with the existing "Run `/openplanr-pipeline:init`" guidance — because there, missing stack typically means missing the entire scaffolding and `/init` is the right answer.
+
+### Why
+
+Coordination gap surfaced by real-world testing: planr authors specs, pipeline executes them, but neither side bootstrapped the file the pipeline requires from the user. v0.3.1 closes this gap with friendly self-heal rather than hard failure.
+
+### Files updated
+
+- `commands/plan.md` — Self-healing block added under Step 1b spec-mode requirements
+- `commands/ship.md` — Same
+- `.claude-plugin/plugin.json` — version 0.3.0 → 0.3.1
+
+### Migration
+
+No action required. v0.3.1 is a strict superset of v0.3.0 behavior.
+
 ## [0.3.0] — 2026-04-25
 
 ### Added — Bridge to planr spec-driven mode
