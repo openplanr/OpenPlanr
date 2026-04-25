@@ -3,7 +3,7 @@
 > **Category:** devops
 > **Version:** Compose v2 (docker compose)
 > **Docs:** https://docs.docker.com/compose/
-> **Created:** Template — edit via /discover-stack devops
+> **Created:** Template — edit via /openplanr-pipeline:stack devops
 
 ---
 

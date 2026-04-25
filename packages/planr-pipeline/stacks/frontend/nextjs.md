@@ -3,7 +3,7 @@
 > **Category:** frontend
 > **Version:** 14.x / 15.x
 > **Docs:** https://nextjs.org/docs
-> **Created:** Template — edit via /discover-stack frontend
+> **Created:** Template — edit via /openplanr-pipeline:stack frontend
 
 ---
 

@@ -115,7 +115,7 @@ You must NOT:
 
 > **Examples below match the shipped stacks (NestJS + Prisma).**
 > If `input/tech/stack.md` selects a different stack, the agent MUST defer to the
-> conventions documented in that stack's file under `${CLAUDE_PLUGIN_ROOT}/stacks/ (or .claude/stacks/ for user overrides) backend/*.md`.
+> conventions documented in that stack's file under `${CLAUDE_PLUGIN_ROOT}/stacks/backend/*.md`.
 > Always read the files listed in `ActiveStackFiles` before generating code.
 
 ### Entity (Prisma — append to schema.prisma, do not overwrite)
@@ -208,7 +208,7 @@ For each table in schema.json:
      - Drizzle:     pgTable / mysqlTable with column builders
      - EF Core:     [Table], [Column], [Required], [MaxLength], [ForeignKey]
      - SQLAlchemy:  class with mapped_column(), relationship()
-  7. The chosen ORM's stack file in ${CLAUDE_PLUGIN_ROOT}/stacks/ (or .claude/stacks/ for user overrides) database/{orm}.md is authoritative
+  7. The chosen ORM's stack file in ${CLAUDE_PLUGIN_ROOT}/stacks/database/{orm}.md is authoritative
      for any conflict between this list and the actual stack conventions.
 ```
 
@@ -220,7 +220,7 @@ For each table in schema.json:
 1. Load task-2.md → extract file lists + technical spec
 2. Load input/tech/stack.md → extract Language, Framework, ORM, APIStyle
    2a. For each path in ActiveStackFiles → load that stack file's conventions
-       (e.g. ${CLAUDE_PLUGIN_ROOT}/stacks/ (or .claude/stacks/ for user overrides) backend/nestjs.md, ${CLAUDE_PLUGIN_ROOT}/stacks/ (or .claude/stacks/ for user overrides) database/prisma.md)
+       (e.g. ${CLAUDE_PLUGIN_ROOT}/stacks/backend/nestjs.md, ${CLAUDE_PLUGIN_ROOT}/stacks/database/prisma.md)
    2b. Stack file conventions OVERRIDE generic templates in this AGENT.md
 3. Load output/db/schema.json → validate table/column references in task
 4. For each file in "Create":

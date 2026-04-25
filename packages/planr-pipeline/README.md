@@ -42,22 +42,22 @@ That's it. Three commands and you have an opinionated, multi-agent code factory 
 #    (Language, Framework, ORM, BuildCommand, TestCommand)
 
 # 3. Author your first spec interactively
-/openplanr-pipeline:shape-spec todo
+/openplanr-pipeline:spec todo
 #    → 4 guided questions → input/specs/spec-todo.md
 
 # 4. (Optional) Drop UI mockups for the Designer Agent
 cp ~/Designs/todo-*.png input/ui/feat-todo/
 
 # 5. Run the PO Phase — decomposes into User Stories + tasks
-/openplanr-pipeline:po-phase todo
+/openplanr-pipeline:plan todo
 #    → output/feats/feat-todo/ with us-1/, us-2/, ... and tasks per US
 
 # 6. Review the decomposition before any code is written
-/openplanr-pipeline:review-tasks todo
+/openplanr-pipeline:review todo
 #    → walk a structured checklist; edit US/task files if needed
 
 # 7. Run the DEV Phase — generates code, tests, infra config, docs
-/openplanr-pipeline:dev-phase todo
+/openplanr-pipeline:ship todo
 #    → src/features/todo/ with components, services, tests
 #    → docker-compose.yml updated
 #    → Docs/feat-todo/ generated
@@ -73,18 +73,18 @@ Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, y
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │  PO PHASE  (Sonnet 4.6 agents — fast, structured)                   │
-│  /openplanr-pipeline:po-phase {name}                                │
+│  /openplanr-pipeline:plan {name}                                │
 │                                                                     │
 │  db-agent (if DB) → designer-agent (if PNG) → specification-agent   │
 │  → output/feats/feat-{name}/ (US + tasks + design-spec)             │
 └────────────────────────────┬────────────────────────────────────────┘
                              ▼
                    🛑 HUMAN REVIEW (mandatory)
-                   /openplanr-pipeline:review-tasks {name}
+                   /openplanr-pipeline:review {name}
                              ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │  DEV PHASE  (Opus 4.7 codegen + Sonnet 4.6 verifiers)               │
-│  /openplanr-pipeline:dev-phase {name}                               │
+│  /openplanr-pipeline:ship {name}                               │
 │                                                                     │
 │  frontend-agent + backend-agent (per task, parallel) →              │
 │  qa-agent (gate) → devops-agent + doc-gen-agent →                   │
@@ -102,12 +102,12 @@ Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, y
 
 | Type | Name | Purpose |
 |---|---|---|
-| Command | `/openplanr-pipeline:po-phase` | Run PO Phase orchestration for a feature |
-| Command | `/openplanr-pipeline:dev-phase` | Run DEV Phase orchestration for a feature |
+| Command | `/openplanr-pipeline:plan` | Run PO Phase orchestration for a feature |
+| Command | `/openplanr-pipeline:ship` | Run DEV Phase orchestration for a feature |
 | Skill | `/openplanr-pipeline:init` | Bootstrap a fresh project (idempotent) |
-| Skill | `/openplanr-pipeline:shape-spec` | 4-question guided spec authoring |
-| Skill | `/openplanr-pipeline:discover-stack` | Add a new stack file to `.claude/stacks/` |
-| Skill | `/openplanr-pipeline:review-tasks` | Pre-DEV checklist walkthrough |
+| Skill | `/openplanr-pipeline:spec` | 4-question guided spec authoring |
+| Skill | `/openplanr-pipeline:stack` | Add a new stack file to `.claude/stacks/` |
+| Skill | `/openplanr-pipeline:review` | Pre-DEV checklist walkthrough |
 | Skill | `/openplanr-pipeline:snapshot` | Refresh `CLAUDE.md` with project state |
 
 ---
@@ -150,7 +150,7 @@ ActiveStackFiles:
 
 ### Stack files (defaults + user overrides)
 
-The plugin ships defaults at `${CLAUDE_PLUGIN_ROOT}/stacks/{frontend,backend,database,devops}/*.md`. You can override or extend by adding files to your project at `.claude/stacks/...` — **user files always win on filename collision**. Use `/openplanr-pipeline:discover-stack` to scaffold a new stack file interactively.
+The plugin ships defaults at `${CLAUDE_PLUGIN_ROOT}/stacks/{frontend,backend,database,devops}/*.md`. You can override or extend by adding files to your project at `.claude/stacks/...` — **user files always win on filename collision**. Use `/openplanr-pipeline:stack` to scaffold a new stack file interactively.
 
 ### Default stacks shipped
 

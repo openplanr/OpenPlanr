@@ -3,11 +3,11 @@ description: Run the PO Phase pipeline for a single feature (db-agent → design
 argument-hint: <feature-name>
 ---
 
-# /openplanr-pipeline:po-phase {feature-name}
+# /openplanr-pipeline:plan {feature-name}
 
 Orchestrates the PO Phase for `feat-$ARGUMENTS`. Decomposes a functional spec into User Stories + Tasks, optionally with a design spec from PNG mockups and a DB schema snapshot.
 
-**The PO Phase NEVER auto-chains to the DEV Phase.** This command stops after writing US/task files to `output/feats/feat-$ARGUMENTS/`. A human must review (use `/openplanr-pipeline:review-tasks $ARGUMENTS`) before invoking `/openplanr-pipeline:dev-phase $ARGUMENTS`. This is enforced by `${CLAUDE_PLUGIN_ROOT}/docs/rules.md` R1.
+**The PO Phase NEVER auto-chains to the DEV Phase.** This command stops after writing US/task files to `output/feats/feat-$ARGUMENTS/`. A human must review (use `/openplanr-pipeline:review $ARGUMENTS`) before invoking `/openplanr-pipeline:ship $ARGUMENTS`. This is enforced by `${CLAUDE_PLUGIN_ROOT}/docs/rules.md` R1.
 
 ---
 
@@ -18,8 +18,8 @@ The argument `$ARGUMENTS` is the feature name (without the `feat-` prefix or `sp
 Verify these files/dirs exist. If any required input is missing, **abort with a clear error** and do not invoke any subagent.
 
 Required:
-- `input/specs/spec-$ARGUMENTS.md` — fail with: "spec-$ARGUMENTS.md not found in input/specs/. Run /openplanr-pipeline:shape-spec $ARGUMENTS first."
-- `input/tech/stack.md` — fail with: "input/tech/stack.md not found. Run /openplanr-pipeline:init then /openplanr-pipeline:discover-stack to bootstrap."
+- `input/specs/spec-$ARGUMENTS.md` — fail with: "spec-$ARGUMENTS.md not found in input/specs/. Run /openplanr-pipeline:spec $ARGUMENTS first."
+- `input/tech/stack.md` — fail with: "input/tech/stack.md not found. Run /openplanr-pipeline:init then /openplanr-pipeline:stack to bootstrap."
 
 Conditional inputs (presence triggers a subagent; absence skips it silently):
 - `input/ui/feat-$ARGUMENTS/*.png` OR PNGs listed in the spec's `UIFiles:` section → triggers designer-agent
@@ -65,7 +65,7 @@ Print a summary to the user:
   DB schema:   <created | reused | skipped>
   US created:  N
   Tasks:       M
-  Next step:   /openplanr-pipeline:review-tasks $ARGUMENTS, then /openplanr-pipeline:dev-phase $ARGUMENTS
+  Next step:   /openplanr-pipeline:review $ARGUMENTS, then /openplanr-pipeline:ship $ARGUMENTS
 ```
 
 ---
@@ -74,7 +74,7 @@ Print a summary to the user:
 
 | Condition | Action |
 |-----------|--------|
-| Spec missing | Abort, suggest `/openplanr-pipeline:shape-spec $ARGUMENTS` |
+| Spec missing | Abort, suggest `/openplanr-pipeline:spec $ARGUMENTS` |
 | stack.md missing | Abort, suggest `/openplanr-pipeline:init` |
 | db-agent fails (connection) | Continue without schema, flag in summary |
 | designer-agent fails (corrupt PNG) | Continue without design-spec, flag in summary |

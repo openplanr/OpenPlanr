@@ -1,7 +1,7 @@
 # Framework Rules
 
 > All hard constraints and soft guidelines governing the PO → DEV Pipeline.
-> These rules are enforced by the agents and checked by `/review-tasks`.
+> These rules are enforced by the agents and checked by `/openplanr-pipeline:review`.
 
 ---
 
@@ -132,7 +132,7 @@ Avoid: 1 mega-US (too broad) or 10+ micro-US (too fragmented)
 ### G2 — Spec Quality Before Running
 ```
 A spec that is vague or incomplete will produce poor decomposition.
-Use /shape-spec to guide POs through writing complete specs.
+Use /openplanr-pipeline:spec to guide POs through writing complete specs.
 The Specification Agent's output quality is directly proportional
 to the input spec quality.
 ```
@@ -156,7 +156,7 @@ All agents read this file — stale stack.md = wrong generated code.
 ### G5 — Human Review Is Not Optional
 ```
 Step 2 (Manual Review) exists for a reason.
-Even if the decomposition looks correct at a glance, run /review-tasks.
+Even if the decomposition looks correct at a glance, run /openplanr-pipeline:review.
 The checklist often surfaces issues invisible in a quick read.
 ```
 

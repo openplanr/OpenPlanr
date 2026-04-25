@@ -19,7 +19,7 @@ allowed-tools: Read, Glob, Grep, Write, Edit
 
 Three invocation paths, in priority order:
 
-1. **Explicit call from `/dev-phase` (primary).** Step 5 of `commands/dev-phase.md` invokes this skill after qa-agent + devops-agent + doc-gen-agent complete.
+1. **Explicit call from `/openplanr-pipeline:ship` (primary).** Step 5 of `commands/ship.md` invokes this skill after qa-agent + devops-agent + doc-gen-agent complete.
 2. **Stop hook reminder (safety net).** `hooks/hooks.json` registers a Stop hook that prints a reminder if `.claude/.snapshot-pending` exists when the session ends. Stop hooks cannot directly invoke slash commands, so this is advisory only.
 3. **Manual.** Any time the Tech Lead wants a fresh snapshot — after editing a US, hand-fixing generated code, or running db-agent in isolation.
 
@@ -94,4 +94,4 @@ On successful write, remove `.claude/.snapshot-pending` if it exists (silences t
 
 *Reads: entire project filesystem · `${CLAUDE_PLUGIN_ROOT}/templates/CLAUDE.md.tpl`*
 *Writes: `CLAUDE.md` only*
-*Auto-invoked by: `/openplanr-pipeline:dev-phase` Step 5*
+*Auto-invoked by: `/openplanr-pipeline:ship` Step 5*

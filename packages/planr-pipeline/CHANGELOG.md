@@ -2,6 +2,36 @@
 
 All notable changes to `openplanr-pipeline` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/) — with the caveat that pre-1.0 releases may contain breaking changes in minor bumps.
 
+## [0.2.0] — 2026-04-25
+
+### ⚠️ Breaking changes — slash command rename
+
+All slash commands were renamed to single-verb form for ergonomics. The old names no longer exist. Per pre-1.0 semver, this minor bump signals a breaking change. Update any docs or scripts referencing the old names.
+
+| v0.1.x (removed) | v0.2.0 (new) |
+|---|---|
+| `/openplanr-pipeline:po-phase` | `/openplanr-pipeline:plan` |
+| `/openplanr-pipeline:dev-phase` | `/openplanr-pipeline:ship` |
+| `/openplanr-pipeline:shape-spec` | `/openplanr-pipeline:spec` |
+| `/openplanr-pipeline:discover-stack` | `/openplanr-pipeline:stack` |
+| `/openplanr-pipeline:review-tasks` | `/openplanr-pipeline:review` |
+
+Unchanged: `/openplanr-pipeline:init`, `/openplanr-pipeline:snapshot`.
+
+### Why
+
+The new names compose into a clean three-verb narrative — **plan, review, ship** — that reads naturally with the plugin namespace. They also drop the redundant `-phase` and `-spec`/`-stack`/`-tasks` suffixes that were carrying no information once the namespace prefix was applied.
+
+### Migration
+
+If you ran `/openplanr-pipeline:init` on v0.1.x, no change is needed in your project — the `input/`, `output/`, `Docs/` structure and seeded files are unchanged. Just use the new slash command names going forward.
+
+### Other changes
+- Skill directory layout follows the new names: `skills/spec/`, `skills/stack/`, `skills/review/` (was `shape-spec/`, `discover-stack/`, `review-tasks/`).
+- Subagent names (`db-agent`, `specification-agent`, etc.) are unchanged — they're internal references, never typed by users.
+- Stop hook message simplified: `[openplanr-pipeline] DEV phase finished` instead of redundant `/openplanr-pipeline:ship finished`.
+- Cleaned up several legacy regex artifacts in agent prompts (`${CLAUDE_PLUGIN_ROOT}/stacks/ (or .claude/stacks/...)` collapsed to `${CLAUDE_PLUGIN_ROOT}/stacks/` with cleaner override semantics described once).
+
 ## [0.1.2] — 2026-04-25
 
 ### Fixed

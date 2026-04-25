@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "test -f .claude/.snapshot-pending && rm -f .claude/.snapshot-pending && echo '[openplanr-pipeline] /dev-phase finished — please run /openplanr-pipeline:snapshot to refresh CLAUDE.md' || true"
+            "command": "test -f .claude/.snapshot-pending && rm -f .claude/.snapshot-pending && echo '[openplanr-pipeline] DEV phase finished — run /openplanr-pipeline:snapshot to refresh CLAUDE.md' || true"
           }
         ]
       }

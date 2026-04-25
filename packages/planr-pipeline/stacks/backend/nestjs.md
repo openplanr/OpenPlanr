@@ -3,7 +3,7 @@
 > **Category:** backend
 > **Version:** 10.x
 > **Docs:** https://docs.nestjs.com
-> **Created:** Template — edit via /discover-stack backend
+> **Created:** Template — edit via /openplanr-pipeline:stack backend
 
 ---
 

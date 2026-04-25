@@ -1,11 +1,11 @@
 ---
-name: review-tasks
-description: Use this skill before invoking dev-phase. Walks the human reviewer through a structured checklist of design-spec, US, and task files for feat-{name}, and gates the DEV phase on all-clear.
+name: review
+description: Use this skill before invoking ship. Walks the human reviewer through a structured checklist of design-spec, US, and task files for feat-{name}, and gates the DEV phase on all-clear.
 argument-hint: <feature-name>
 allowed-tools: Read, Glob, Grep
 ---
 
-# Skill: review-tasks
+# Skill: review
 
 > **Type:** Pre-DEV validation checklist
 > **Owner:** Human (Tech Lead or PO)
@@ -15,7 +15,7 @@ allowed-tools: Read, Glob, Grep
 ## Trigger
 
 ```
-/openplanr-pipeline:review-tasks {feat}
+/openplanr-pipeline:review {feat}
 ```
 
 Where `{feat}` is the feature name (e.g. `auth`, `dashboard`).
@@ -82,7 +82,7 @@ For each `us-{N}/tasks/task-{M}.md`:
 After completing all checks:
 
 ```
-/openplanr-pipeline:review-tasks feat-{name} — Summary
+/openplanr-pipeline:review feat-{name} — Summary
 ────────────────────────────────────────
 Total US:      N
 Total Tasks:   M
@@ -99,13 +99,13 @@ Status: [✅ READY FOR DEV PHASE | ❌ REQUIRES FIXES]
 If all checks pass:
 ```
 ✅ All checks passed. You may now run:
-   /openplanr-pipeline:dev-phase {feat}
+   /openplanr-pipeline:ship {feat}
 ```
 
 If any checks fail:
 ```
 ❌ Fix the items above, then re-run:
-   /openplanr-pipeline:review-tasks {feat}
+   /openplanr-pipeline:review {feat}
 ```
 
 ---

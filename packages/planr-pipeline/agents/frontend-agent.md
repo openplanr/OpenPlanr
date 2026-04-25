@@ -142,7 +142,7 @@ When `design-spec.md` exists, the Frontend Agent must:
 2. Load design-spec.md if it exists
 3. Load input/tech/stack.md → extract UIFramework, CSSStrategy, ComponentLibrary
    3a. For each path in ActiveStackFiles → load that stack file's conventions
-       (e.g. ${CLAUDE_PLUGIN_ROOT}/stacks/ (or .claude/stacks/ for user overrides) frontend/nextjs.md)
+       (e.g. ${CLAUDE_PLUGIN_ROOT}/stacks/frontend/nextjs.md)
    3b. Stack file conventions OVERRIDE generic templates in this AGENT.md
 4. For each file in "Create":
    a. Generate the full implementation

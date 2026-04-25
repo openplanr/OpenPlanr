@@ -3,7 +3,7 @@
 > **Category:** database
 > **Version:** 5.x / 6.x
 > **Docs:** https://www.prisma.io/docs
-> **Created:** Template — edit via /discover-stack database
+> **Created:** Template — edit via /openplanr-pipeline:stack database
 
 ---
 

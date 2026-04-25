@@ -3,11 +3,11 @@ description: Run the DEV Phase pipeline for a feature (frontend + backend agents
 argument-hint: <feature-name>
 ---
 
-# /openplanr-pipeline:dev-phase {feature-name}
+# /openplanr-pipeline:ship {feature-name}
 
 Orchestrates the DEV Phase for `feat-$ARGUMENTS`. Generates production code from PO-Phase task files, runs the qa-agent gate, optionally generates infra and docs, then refreshes `CLAUDE.md` via the snapshot skill.
 
-**Per `${CLAUDE_PLUGIN_ROOT}/docs/rules.md` R1, this command MUST NOT be auto-chained from `/po-phase`.** A human review step is mandatory between PO Phase and DEV Phase.
+**Per `${CLAUDE_PLUGIN_ROOT}/docs/rules.md` R1, this command MUST NOT be auto-chained from `/openplanr-pipeline:plan`.** A human review step is mandatory between PO Phase and DEV Phase.
 
 ---
 
@@ -22,9 +22,9 @@ Touch `.claude/.snapshot-pending` so the Stop hook (in `${CLAUDE_PLUGIN_ROOT}/ho
 Verify these exist. Abort with a clear error if any are missing.
 
 Required:
-- `output/feats/feat-$ARGUMENTS/` — fail with: "feat-$ARGUMENTS/ not found. Run /openplanr-pipeline:po-phase $ARGUMENTS first."
-- At least one `output/feats/feat-$ARGUMENTS/us-*/us-*.md` — fail with: "No User Stories found. Re-run /openplanr-pipeline:po-phase $ARGUMENTS."
-- At least one `output/feats/feat-$ARGUMENTS/us-*/tasks/task-*.md` — fail with: "No tasks found. Re-run /openplanr-pipeline:po-phase $ARGUMENTS."
+- `output/feats/feat-$ARGUMENTS/` — fail with: "feat-$ARGUMENTS/ not found. Run /openplanr-pipeline:plan $ARGUMENTS first."
+- At least one `output/feats/feat-$ARGUMENTS/us-*/us-*.md` — fail with: "No User Stories found. Re-run /openplanr-pipeline:plan $ARGUMENTS."
+- At least one `output/feats/feat-$ARGUMENTS/us-*/tasks/task-*.md` — fail with: "No tasks found. Re-run /openplanr-pipeline:plan $ARGUMENTS."
 - `input/tech/stack.md` — fail with: "stack.md missing."
 
 Recommended:
@@ -48,7 +48,7 @@ For each `us-{N}` directory under `output/feats/feat-$ARGUMENTS/` (sorted by US 
    - Iteration 2: re-read task spec + design-spec/schema, fix holistically.
    - Iteration 3: minimal safe fix, flag remaining issues.
    - On 3rd failure: write `${CLAUDE_PLUGIN_ROOT}/templates/error-report.md`-shaped report to `output/feats/feat-$ARGUMENTS/us-{N}/tasks/error-report.md` and STOP that task.
-4. If a task fails after 3 iterations, dev-phase continues with other independent tasks but flags the failed task in the final summary.
+4. If a task fails after 3 iterations, ship continues with other independent tasks but flags the failed task in the final summary.
 
 ---
 
@@ -104,7 +104,7 @@ If any task failed, list paths to the error-report.md files.
 
 | Condition | Action |
 |-----------|--------|
-| feat folder missing | Abort, suggest `/openplanr-pipeline:po-phase $ARGUMENTS` |
+| feat folder missing | Abort, suggest `/openplanr-pipeline:plan $ARGUMENTS` |
 | No tasks | Abort, suggest re-run of PO Phase |
 | Single task fails 3x | Continue with other tasks, surface in summary |
 | All tasks fail | Skip QA + DevOps + Doc-Gen; still run snapshot to record state |

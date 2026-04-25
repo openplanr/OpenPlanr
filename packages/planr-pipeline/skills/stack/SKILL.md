@@ -1,11 +1,11 @@
 ---
-name: discover-stack
+name: stack
 description: Use this skill when a technology referenced in stack.md has no corresponding file in the stack library. Walks the Tech Lead through 4 questions and writes .claude/stacks/{category}/{name}.md as a user-side override.
 argument-hint: <category: frontend|backend|database|devops>
 allowed-tools: Read, Write, Edit, Glob
 ---
 
-# Skill: discover-stack
+# Skill: stack
 
 > **Type:** Interactive dialogue
 > **Owner:** Tech Lead
@@ -15,7 +15,7 @@ allowed-tools: Read, Write, Edit, Glob
 ## Trigger
 
 ```
-/openplanr-pipeline:discover-stack {category}
+/openplanr-pipeline:stack {category}
 ```
 
 Where `{category}` is one of: `frontend` | `backend` | `database` | `devops`
@@ -29,7 +29,7 @@ Use this skill when `input/tech/stack.md` references a technology that has no co
 The specification-agent will warn:
 ```
 ⚠️ Stack file not found: stacks/backend/django.md
-   Run /openplanr-pipeline:discover-stack backend to create it.
+   Run /openplanr-pipeline:stack backend to create it.
 ```
 
 The new file is written to `.claude/stacks/...` in the user's project. The plugin's defaults remain untouched. User project files always win on filename collision.
@@ -87,7 +87,7 @@ Describe:
 > **Category:** {category}
 > **Version:** {version}
 > **Docs:** {official URL}
-> **Created:** {date} via /openplanr-pipeline:discover-stack
+> **Created:** {date} via /openplanr-pipeline:stack
 
 ---
 
@@ -126,7 +126,7 @@ Stack definition created: .claude/stacks/{category}/{stack-name}.md
 
 Next steps:
 1. Add it to input/tech/stack.md under ActiveStackFiles
-2. Re-run your spec: /openplanr-pipeline:po-phase {name}
+2. Re-run your spec: /openplanr-pipeline:plan {name}
 
 The specification-agent will now use this stack definition
 when decomposing features (user override takes precedence over plugin defaults).

@@ -1,11 +1,11 @@
 ---
-name: shape-spec
+name: spec
 description: Use this skill when the Product Owner needs guided help authoring a feature spec. Walks them through 4 questions and produces input/specs/spec-{name}.md from the template. Trigger on requests like "shape a spec for X" or "help me write a spec".
 argument-hint: <feature-name>
 allowed-tools: Read, Write, Edit
 ---
 
-# Skill: shape-spec
+# Skill: spec
 
 > **Type:** Interactive dialogue
 > **Owner:** Product Owner
@@ -15,7 +15,7 @@ allowed-tools: Read, Write, Edit
 ## Trigger
 
 ```
-/openplanr-pipeline:shape-spec {name}
+/openplanr-pipeline:spec {name}
 ```
 
 Where `{name}` becomes the feature folder name (e.g. `auth`, `dashboard`, `checkout`).
@@ -79,9 +79,9 @@ After all 4 answers:
 4. Add a summary at the top:
 
 ```markdown
-> ✅ Generated via /openplanr-pipeline:shape-spec on [date]
+> ✅ Generated via /openplanr-pipeline:spec on [date]
 > Completeness: [X/4 sections answered]
-> Review before running: /openplanr-pipeline:po-phase {name}
+> Review before running: /openplanr-pipeline:plan {name}
 ```
 
 5. Write to `input/specs/spec-{name}.md` (in the user's project root).
@@ -94,7 +94,7 @@ Your spec has been created at input/specs/spec-{name}.md
 Next steps:
 1. Review and edit the file if needed
 2. Drop any UI PNGs into input/ui/feat-{name}/ (optional)
-3. When ready: /openplanr-pipeline:po-phase {name}
+3. When ready: /openplanr-pipeline:plan {name}
 
 Tip: If you have screen mockups, add them now — the designer-agent
      will generate a full design spec automatically.

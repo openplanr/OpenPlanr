@@ -10,7 +10,7 @@ allowed-tools: Read, Write, Bash(mkdir:*), Bash(test:*), Bash(touch:*)
 > **Type:** Project bootstrap
 > **Owner:** Anyone (run once per project)
 > **Output:** Creates `input/`, `output/`, `Docs/`, plus seed files (`CLAUDE.md`, `input/tech/stack.md`, `input/specs/spec-example.md`)
-> **Purpose:** One-command setup so a fresh project can immediately use `/po-phase` and `/dev-phase`
+> **Purpose:** One-command setup so a fresh project can immediately use `/openplanr-pipeline:plan` and `/openplanr-pipeline:ship`
 
 ## Trigger
 
@@ -79,12 +79,12 @@ If `input/specs/` already contains any spec files: skip silently.
 
 Next steps:
   1. Edit input/tech/stack.md to match your real stack (Language, Framework, ORM, build/test commands)
-  2. Author your first spec: /openplanr-pipeline:shape-spec {feature-name}
+  2. Author your first spec: /openplanr-pipeline:spec {feature-name}
      OR copy input/specs/spec-example.md and edit
   3. (Optional) Drop UI mockups into input/ui/feat-{feature-name}/*.png
-  4. Run the PO Phase: /openplanr-pipeline:po-phase {feature-name}
-  5. Review the decomposition: /openplanr-pipeline:review-tasks {feature-name}
-  6. Run the DEV Phase: /openplanr-pipeline:dev-phase {feature-name}
+  4. Run the PO Phase: /openplanr-pipeline:plan {feature-name}
+  5. Review the decomposition: /openplanr-pipeline:review {feature-name}
+  6. Run the DEV Phase: /openplanr-pipeline:ship {feature-name}
 
 Recommended .gitignore additions (NOT applied automatically — left to you):
   output/        # if your output/ folder is purely generated artifacts
