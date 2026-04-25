@@ -3,7 +3,7 @@
   "name": "openplanr",
   "owner": {
     "name": "OpenPlanr",
-    "url": "https://github.com/OpenPlanr"
+    "url": "https://github.com/openplanr"
   },
   "description": "OpenPlanr's official Claude Code plugin marketplace. Hosts the agile-planning and code-generation tools that go from spec to ship.",
   "plugins": [
@@ -12,7 +12,7 @@
       "description": "Spec-driven AI factory. Two-phase pipeline (PO Phase → human review → DEV Phase) with 8 specialized subagents and tool-layer rule enforcement.",
       "source": {
         "source": "github",
-        "repo": "OpenPlanr/openplanr-pipeline"
+        "repo": "openplanr/openplanr-pipeline"
       },
       "version": "0.1.0"
     }
