@@ -5,13 +5,13 @@
     "email": "asem@techarc.io"
   },
   "metadata": {
-    "description": "Agent skills for OpenPlanr — agile planning for AI coding agents",
-    "version": "1.0.0"
+    "description": "Agent skills for OpenPlanr — agile, quick, and spec-driven planning for AI coding agents",
+    "version": "1.1.0"
   },
   "plugins": [
     {
       "name": "openplanr",
-      "description": "Agile planning CLI for AI coding agents — epics, features, stories, tasks, sprints, backlog, and agent rule generation",
+      "description": "Agile + spec-driven planning CLI for AI coding agents — epics, features, stories, tasks, sprints, backlog, agent rules, and spec-driven mode that bridges to the openplanr-pipeline Claude Code plugin",
       "source": "./",
       "strict": false,
       "skills": [
