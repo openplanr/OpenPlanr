@@ -10,6 +10,15 @@ model: claude-opus-4-7
 > **Phase:** Step 3 — DEV Phase (runs in parallel with backend-agent)
 > **Trigger:** Task files where `Type: UI` — i.e. task-1.md files (when PNG was present)
 > **Parallelism:** Runs simultaneously with backend-agent at topological level
+## Path Resolution (NEW in pipeline v0.3.0)
+
+The orchestrator (`/ship`) passes the absolute task file path (and a MODE flag) when invoking this agent:
+
+- **Default mode:** Task file lives at `output/feats/feat-{name}/us-{N}/tasks/task-{M}.md`. On 3-iteration failure, write `error-report.md` to `output/feats/feat-{name}/us-{N}/tasks/error-report.md`.
+- **Spec-driven mode (planr CLI):** Task file lives at `<SPEC_DIR>/tasks/T-NNN-{slug}.md` (flat tasks/ directory; `storyId` frontmatter links it to its parent US). On 3-iteration failure, write `error-report.md` to `<SPEC_DIR>/tasks/error-report.md`.
+
+The task content (Create/Modify/Preserve, Type, agent, DoD) is schema-identical in both modes — your behavior doesn't change, only the output paths.
+
 
 ---
 

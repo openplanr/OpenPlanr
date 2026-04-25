@@ -10,6 +10,15 @@ model: claude-opus-4-7
 > **Phase:** Step 0.2 (scaffold) + Step 3 DEV Phase (task-2 or sole task-1 when no PNG)
 > **Trigger:** Step 0.2: invoked manually for entity scaffolding · Step 3: tasks where `Type: Tech`
 > **Parallelism:** Runs simultaneously with frontend-agent at topological level
+## Path Resolution (NEW in pipeline v0.3.0)
+
+Same dual-mode behavior as frontend-agent:
+
+- **Default mode:** Task file at `output/feats/feat-{name}/us-{N}/tasks/task-{M}.md`. Error-report path: `output/feats/feat-{name}/us-{N}/tasks/error-report.md`.
+- **Spec-driven mode (planr CLI):** Task file at `<SPEC_DIR>/tasks/T-NNN-{slug}.md` (flat tasks/ directory). Error-report path: `<SPEC_DIR>/tasks/error-report.md`.
+
+`<SPEC_DIR> = .planr/specs/SPEC-NNN-${ARGUMENTS}/`. The 0.2 scaffold mode (Entities + DbContext) is mode-agnostic — output stays at `output/src/` regardless.
+
 
 ---
 

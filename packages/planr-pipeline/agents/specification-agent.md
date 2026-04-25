@@ -12,6 +12,15 @@ model: claude-sonnet-4-6
 > **Chained after:** db-agent (if DatabaseType configured) → designer-agent (if PNGs present)
 > **Input feature name:** Passed by `/openplanr-pipeline:plan` as `$ARGUMENTS` (e.g. `auth` → operates on `feat-auth`)
 
+## Path Resolution (NEW in pipeline v0.3.0)
+
+This agent runs in one of two modes, determined by the orchestrator command (`/plan`):
+
+- **Default mode:** Output goes to `output/feats/feat-$ARGUMENTS/us-{N}/{us-{N}.md, tasks/task-{M}.md}`
+- **Spec-driven mode:** Output goes to `.planr/specs/SPEC-NNN-${ARGUMENTS}/{stories/US-NNN-{slug}.md, tasks/T-NNN-{slug}.md}` (slug-based filenames; flat tasks/ directory; per-spec ID scoping)
+
+The orchestrator passes `MODE = "spec-driven"` and `SPEC_DIR` in the invocation context when planr's `.planr/config.json` declares spec mode. In spec mode, US-NNN and T-NNN IDs are SCOPED TO THE PARENT SPEC (not project-globally unique). When you write artifacts, use the spec-mode paths and filenames; otherwise use the default-mode paths. Schema content (frontmatter + body) is identical in both modes.
+
 ---
 
 ## Purpose

@@ -10,6 +10,23 @@ model: claude-sonnet-4-6
 > **Phase:** Step 3.5 — Post-build (after qa-agent verdict is PASS)
 > **Trigger:** Invoked by `/openplanr-pipeline:ship` if `--no-docs` not set
 > **Mode:** Generates Markdown docs from US, tasks, and generated source code
+## Path Resolution (NEW in pipeline v0.3.0)
+
+The orchestrator (`/ship`) passes a MODE flag determining where to read inputs:
+
+- **Default mode:**
+  - Read US: `output/feats/feat-${ARGUMENTS}/us-*/us-*.md`
+  - Read tasks: `output/feats/feat-${ARGUMENTS}/us-*/tasks/task-*.md`
+  - Read QA report: `output/feats/feat-${ARGUMENTS}/qa-report.md`
+  - Read design-spec (optional): `output/feats/feat-${ARGUMENTS}/design-spec.md`
+- **Spec-driven mode (planr CLI):**
+  - Read US: `<SPEC_DIR>/stories/US-*.md`
+  - Read tasks: `<SPEC_DIR>/tasks/T-*.md`
+  - Read QA report: `<SPEC_DIR>/qa-report.md`
+  - Read design-spec (optional): `<SPEC_DIR>/design/design-spec.md`
+
+`<SPEC_DIR> = .planr/specs/SPEC-NNN-${ARGUMENTS}/`. Output to `Docs/feat-${ARGUMENTS}/` is mode-agnostic.
+
 
 ---
 

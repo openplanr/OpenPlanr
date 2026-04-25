@@ -11,6 +11,19 @@ model: claude-sonnet-4-6
 > **Trigger:** Conditional — only if ≥1 PNG resolves for the target feature (see PNG Resolution below). Invoked by `/openplanr-pipeline:plan`.
 > **Chained by:** specification-agent (reads this output)
 > **Input feature name:** Passed by `/openplanr-pipeline:plan` as `$ARGUMENTS` (e.g. `auth` → writes to `feat-auth`)
+## Path Resolution (NEW in pipeline v0.3.0)
+
+The orchestrator (`/plan`) passes a MODE flag determining where to read PNGs and write `design-spec.md`:
+
+- **Default mode:**
+  - Read PNGs via the priority order below (UIFiles → input/ui/feat-{name}/ → input/ui/*.png)
+  - Write `output/feats/feat-${ARGUMENTS}/design-spec.md`
+- **Spec-driven mode (planr CLI):**
+  - Read PNGs from `<SPEC_DIR>/design/*.png` (the user attached them via `planr spec attach-design`)
+  - Write `<SPEC_DIR>/design/design-spec.md` (same `design/` subfolder)
+
+Where `<SPEC_DIR> = .planr/specs/SPEC-NNN-${ARGUMENTS}/`. The 10-section design-spec content is identical in both modes.
+
 
 ## Purpose
 

@@ -10,6 +10,21 @@ model: claude-sonnet-4-6
 > **Phase:** Step 3.5 — DEV Phase post-build gate
 > **Trigger:** Invoked by `/openplanr-pipeline:ship` after all DEV tasks settle (success or 3-fail)
 > **Mode:** READ-ONLY on source (Write granted only for `output/feats/feat-{name}/qa-report.md`)
+## Path Resolution (NEW in pipeline v0.3.0)
+
+The orchestrator (`/ship`) passes a MODE flag and the corresponding feature root:
+
+- **Default mode:**
+  - Read tasks from `output/feats/feat-${ARGUMENTS}/us-*/tasks/task-*.md`
+  - Read error-reports from `output/feats/feat-${ARGUMENTS}/us-*/tasks/error-report.md`
+  - Write QA report to `output/feats/feat-${ARGUMENTS}/qa-report.md`
+- **Spec-driven mode (planr CLI):**
+  - Read tasks from `<SPEC_DIR>/tasks/T-*.md` (flat directory)
+  - Read error-reports from `<SPEC_DIR>/tasks/error-report.md`
+  - Write QA report to `<SPEC_DIR>/qa-report.md`
+
+`<SPEC_DIR> = .planr/specs/SPEC-NNN-${ARGUMENTS}/`. Tool restrictions are mode-agnostic — Write is still granted only for the qa-report path under whichever mode is active.
+
 
 ---
 

@@ -177,11 +177,21 @@ Read the full rule set in [`docs/rules.md`](docs/rules.md).
 
 ## Relationship to planr
 
-[planr](https://github.com/OpenPlanr/planr) is OpenPlanr's agile planning CLI (epics, features, user stories, sprints, backlog). It owns the **planning** verb.
+[planr](https://github.com/openplanr/OpenPlanr) is OpenPlanr's agile + spec-driven planning CLI. It owns the **planning** verb.
 
 `openplanr-pipeline` owns the **execution** verb. The two are complementary: planr plans, pipeline ships.
 
-A v0.2 release will add `/openplanr-pipeline:from-planr {TASK-id}` — a bridge that converts a planr task into a pipeline task spec. v0.1 ships the standalone pipeline only.
+### Bridge to planr spec-driven mode (v0.3.0+)
+
+When a project uses planr's **spec-driven mode** (the third planning posture, see `planr spec init`), this plugin reads `.planr/specs/SPEC-NNN-{slug}/` directly — no conversion adapter, no copy step. Both products share the same artifact schema:
+
+- planr authors specs and runs `planr spec decompose` to generate User Stories + Tasks
+- The pipeline plugin (`/openplanr-pipeline:plan {slug}` and `/openplanr-pipeline:ship {slug}`) reads from the planr spec directory and executes
+- planr is the **authoring surface**; openplanr-pipeline is the **executor**
+
+The pipeline auto-detects spec mode by looking for `.planr/config.json` with `idPrefix.spec` set. If absent, it falls back to the default `output/feats/feat-{name}/` layout — existing pipeline-only workflows are unchanged.
+
+See [planr's spec-driven proposal](https://github.com/openplanr/OpenPlanr/blob/main/docs/proposals/spec-driven-mode.md) for the design.
 
 ---
 

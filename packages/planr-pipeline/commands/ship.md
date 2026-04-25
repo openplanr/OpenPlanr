@@ -17,37 +17,72 @@ Touch `.claude/.snapshot-pending` so the Stop hook (in `${CLAUDE_PLUGIN_ROOT}/ho
 
 ---
 
-## Step 1 — Validate inputs
+## Step 1 — Mode detection + input validation
 
-Verify these exist. Abort with a clear error if any are missing.
+### 1a — Detect planr spec mode (NEW in v0.3.0)
 
-Required:
+**Before any other checks**, look for `.planr/config.json` at the project root:
+
+1. If `.planr/config.json` exists AND its `idPrefix.spec` field is set, assume **planr spec-driven mode**.
+2. In spec-driven mode, scan `.planr/specs/` for a directory matching `^[A-Z]+-\d{3}-${ARGUMENTS}$`. The first match resolves to `SPEC_DIR = .planr/specs/<that-dir>`.
+3. Otherwise, fall through to **default mode** (`output/feats/feat-$ARGUMENTS/`).
+
+For the rest of this command, internally maintain `MODE = "spec-driven"` or `"default"`. All path references below switch based on MODE:
+
+| Concept | Default mode | Spec-driven mode |
+|---|---|---|
+| Feature root | `output/feats/feat-$ARGUMENTS/` | `<SPEC_DIR>/` |
+| US files | `output/feats/feat-$ARGUMENTS/us-*/us-*.md` | `<SPEC_DIR>/stories/US-*.md` |
+| Task files | `output/feats/feat-$ARGUMENTS/us-*/tasks/task-*.md` | `<SPEC_DIR>/tasks/T-*.md` |
+| Design spec | `output/feats/feat-$ARGUMENTS/design-spec.md` | `<SPEC_DIR>/design/design-spec.md` |
+| Error report | `output/feats/feat-$ARGUMENTS/us-{N}/tasks/error-report.md` | `<SPEC_DIR>/tasks/error-report.md` |
+| QA report | `output/feats/feat-$ARGUMENTS/qa-report.md` | `<SPEC_DIR>/qa-report.md` |
+
+### 1b — Validate required inputs
+
+Verify these exist (using mode-appropriate paths). Abort with a clear error if any are missing.
+
+Required (default mode):
 - `output/feats/feat-$ARGUMENTS/` — fail with: "feat-$ARGUMENTS/ not found. Run /openplanr-pipeline:plan $ARGUMENTS first."
-- At least one `output/feats/feat-$ARGUMENTS/us-*/us-*.md` — fail with: "No User Stories found. Re-run /openplanr-pipeline:plan $ARGUMENTS."
-- At least one `output/feats/feat-$ARGUMENTS/us-*/tasks/task-*.md` — fail with: "No tasks found. Re-run /openplanr-pipeline:plan $ARGUMENTS."
-- `input/tech/stack.md` — fail with: "stack.md missing."
+- At least one `output/feats/feat-$ARGUMENTS/us-*/us-*.md`
+- At least one `output/feats/feat-$ARGUMENTS/us-*/tasks/task-*.md`
+- `input/tech/stack.md`
 
-Recommended:
-- `output/db/schema.json` — warn if missing, continue (some features don't touch DB).
-- `output/feats/feat-$ARGUMENTS/design-spec.md` — warn if missing, continue (no UI tasks if no design spec).
+Required (spec-driven mode):
+- `<SPEC_DIR>/` — fail with: "Spec for slug '$ARGUMENTS' not found under .planr/specs/. Run \`planr spec create --slug $ARGUMENTS\` then \`planr spec decompose\` first."
+- At least one `<SPEC_DIR>/stories/US-*.md`
+- At least one `<SPEC_DIR>/tasks/T-*.md`
+- `input/tech/stack.md`
+
+Recommended (mode-specific):
+- `output/db/schema.json` — warn if missing, continue (mode-agnostic).
+- Default mode: `output/feats/feat-$ARGUMENTS/design-spec.md` — warn if missing.
+- Spec-driven mode: `<SPEC_DIR>/design/design-spec.md` — warn if missing.
 
 ---
 
 ## Step 2 — Iterate User Stories in topological order
 
-For each `us-{N}` directory under `output/feats/feat-$ARGUMENTS/` (sorted by US number):
+In default mode, iterate each `us-{N}` directory under `output/feats/feat-$ARGUMENTS/` (sorted by US number).
+In spec-driven mode, iterate each `<SPEC_DIR>/stories/US-*.md` (sorted by ID); the corresponding tasks live in the *flat* `<SPEC_DIR>/tasks/` directory and reference their parent story via the `storyId` frontmatter field.
 
-1. Read `us-{N}/us-{N}.md` to determine task ownership.
-2. For each `tasks/task-{M}.md`:
-   - Read the task's frontmatter `Type` field.
+For each story, run its tasks:
+
+1. Read the US file to identify which tasks belong to it (via `storyId` frontmatter on each task in spec-driven mode; via directory containment in default mode).
+2. For each task:
+   - Read the task's frontmatter `Type` field (always present in spec-driven mode; present as `Type: UI|Tech` in default mode).
    - If `Type: UI` → delegate to the **frontend-agent** subagent (Opus 4.7).
    - If `Type: Tech` → delegate to the **backend-agent** subagent (Opus 4.7).
+   - The subagent receives MODE/SPEC_DIR context so it knows where to write the error-report on failure.
    - frontend-agent and backend-agent tasks within the SAME US may run in parallel (per `${CLAUDE_PLUGIN_ROOT}/docs/pipeline-overview.md`).
 3. Each subagent applies the **3-iteration correction loop** (see `${CLAUDE_PLUGIN_ROOT}/docs/rules.md` R6):
    - Iteration 1: direct fix on build/test failure.
    - Iteration 2: re-read task spec + design-spec/schema, fix holistically.
    - Iteration 3: minimal safe fix, flag remaining issues.
-   - On 3rd failure: write `${CLAUDE_PLUGIN_ROOT}/templates/error-report.md`-shaped report to `output/feats/feat-$ARGUMENTS/us-{N}/tasks/error-report.md` and STOP that task.
+   - On 3rd failure: write `${CLAUDE_PLUGIN_ROOT}/templates/error-report.md`-shaped report:
+     - **Default mode:** `output/feats/feat-$ARGUMENTS/us-{N}/tasks/error-report.md`
+     - **Spec-driven mode:** `<SPEC_DIR>/tasks/error-report.md` (flat, since spec-driven tasks live in a single flat tasks/ dir)
+     - Then STOP that task.
 4. If a task fails after 3 iterations, ship continues with other independent tasks but flags the failed task in the final summary.
 
 ---
@@ -88,6 +123,8 @@ The Stop hook in `${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json` is a backup: if this c
 
 ```
 ✓ DEV Phase complete for feat-$ARGUMENTS
+  Mode:            <default | spec-driven>
+  Output dir:      <output/feats/feat-$ARGUMENTS/ | .planr/specs/SPEC-NNN-$ARGUMENTS/>
   Tasks succeeded: X / Y
   Tasks failed:    Z (see error-report.md files)
   QA gate:         <passed | failed>
@@ -95,6 +132,8 @@ The Stop hook in `${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json` is a backup: if this c
   Docs:            <generated | skipped>
   CLAUDE.md:       refreshed
 ```
+
+If spec-driven mode was active, the spec's frontmatter `status` is updated to `in-pipeline` while ship runs and to `done` on full success.
 
 If any task failed, list paths to the error-report.md files.
 
@@ -112,6 +151,9 @@ If any task failed, list paths to the error-report.md files.
 
 ---
 
-*Reads: output/feats/feat-{name}/, stack.md, schema.json, design-spec.md*
-*Writes: src/features/{name}/, tests, docker-compose.yml (optional), Docs/ (optional), CLAUDE.md (via snapshot)*
+*Reads (default mode): `output/feats/feat-{name}/`, `stack.md`, `schema.json`, `design-spec.md`*
+*Reads (spec-driven mode): `.planr/specs/SPEC-NNN-{slug}/`, `stack.md`, `schema.json`, `design-spec.md`*
+*Writes: `src/features/{name}/`, tests, `docker-compose.yml` (optional), `Docs/` (optional), `CLAUDE.md` (via snapshot)*
 *Per `${CLAUDE_PLUGIN_ROOT}/docs/rules.md` R1: must be invoked manually after human review of PO Phase output.*
+
+**Bridge to planr CLI:** in spec-driven mode, this command reads/writes `.planr/specs/` directly — no conversion. The planr CLI is the *authoring* surface; openplanr-pipeline is the *executor*.

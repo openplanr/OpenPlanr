@@ -2,6 +2,55 @@
 
 All notable changes to `openplanr-pipeline` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/) — with the caveat that pre-1.0 releases may contain breaking changes in minor bumps.
 
+## [0.3.0] — 2026-04-25
+
+### Added — Bridge to planr spec-driven mode
+
+The pipeline now reads `.planr/specs/SPEC-NNN-{slug}/` directly when planr's spec-driven mode is active in the project. No conversion adapter, no copy step — both products share one artifact schema.
+
+**Detection:** If `.planr/config.json` exists AND `idPrefix.spec` is set, the orchestrator commands (`/plan`, `/ship`) switch to spec-driven mode. Otherwise they fall through to the default `output/feats/feat-{name}/` layout.
+
+**Path mapping (default mode → spec-driven mode):**
+
+| Concept | Default | Spec-driven |
+|---|---|---|
+| Feature root | `output/feats/feat-{name}/` | `.planr/specs/SPEC-NNN-{slug}/` |
+| US files | `output/feats/.../us-{N}/us-{N}.md` | `<SPEC_DIR>/stories/US-NNN-{slug}.md` |
+| Task files | `output/feats/.../tasks/task-{M}.md` | `<SPEC_DIR>/tasks/T-NNN-{slug}.md` |
+| Design spec | `output/feats/.../design-spec.md` | `<SPEC_DIR>/design/design-spec.md` |
+| Error report | `output/feats/.../tasks/error-report.md` | `<SPEC_DIR>/tasks/error-report.md` |
+| QA report | `output/feats/.../qa-report.md` | `<SPEC_DIR>/qa-report.md` |
+
+In spec-driven mode, US-NNN and T-NNN IDs are scoped to their parent SPEC (not project-globally unique). Two specs can each have their own US-001.
+
+**Optimization:** if `<SPEC_DIR>/stories/` is non-empty (the user already ran `planr spec decompose`), `/plan` skips the specification-agent step and treats the existing decomposition as authoritative.
+
+### Files updated
+
+- `commands/plan.md`, `commands/ship.md` — Mode-detection block + conditional path resolution
+- `agents/specification-agent.md`, `designer-agent.md`, `frontend-agent.md`, `backend-agent.md`, `qa-agent.md`, `doc-gen-agent.md` — "Path Resolution" section explaining dual-mode behavior
+- `agents/db-agent.md`, `devops-agent.md` — UNCHANGED (mode-agnostic by nature)
+- `templates/error-report.md` — Header documents both possible "Lives at" paths
+- `README.md` — "Bridge to planr spec-driven mode" subsection added
+- `.claude-plugin/plugin.json` — version 0.2.0 → 0.3.0
+
+### Migration
+
+**No change required** for existing projects using the default `output/feats/` layout. Detection is conservative: spec mode activates ONLY when `.planr/config.json` exists with `idPrefix.spec` set.
+
+To opt into spec-driven mode:
+1. Install planr CLI: `npm i -g openplanr` (or `npx openplanr` ad hoc)
+2. In your project: `planr spec init` then `planr spec create "<title>" --slug <slug>`
+3. (Optional) `planr spec shape <SPEC-id>` for guided authoring
+4. (Optional) `planr spec decompose <SPEC-id>` for AI-driven US + Task generation
+5. From Claude Code: `/openplanr-pipeline:plan {slug}` — pipeline picks up `.planr/specs/SPEC-NNN-{slug}/` automatically
+
+### Why this matters
+
+Without this bridge, planr's spec-driven mode would require a conversion step before invoking the pipeline (translate `.planr/specs/` into `output/feats/`). Sharing the schema eliminates that drift permanently — planr is the authoring surface, openplanr-pipeline is the executor, both speak the same contract.
+
+See https://github.com/openplanr/OpenPlanr/blob/main/docs/proposals/spec-driven-mode.md for the full design.
+
 ## [0.2.0] — 2026-04-25
 
 ### ⚠️ Breaking changes — slash command rename
