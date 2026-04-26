@@ -320,9 +320,12 @@ export function registerSpecCommand(program: Command) {
 
         const { isAIConfigured } = await import('../../services/ai-service.js');
         if (!isAIConfigured(config)) {
-          logger.error(
-            'AI is not configured. Set ANTHROPIC_API_KEY (or another provider key) and `planr config set-provider`.',
-          );
+          logger.error('AI decomposition unavailable: no provider configured.');
+          display.line('');
+          display.line('Choose one:');
+          display.line(`  1. Configure AI:  planr config set-provider anthropic`);
+          display.line(`                    planr config set-key anthropic`);
+          display.line(`  2. Hand-author:   https://openplanr.dev/docs/reference/spec-schema`);
           process.exit(1);
         }
 

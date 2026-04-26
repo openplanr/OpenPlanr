@@ -62,7 +62,17 @@ _Optional hints to guide `planr spec decompose`. Not business requirements._
 
 ---
 
-> **Pipeline handoff:** Once decomposed and reviewed, run from Claude Code:
-> `/openplanr-pipeline:plan {{slug}}` — see [docs/proposals/spec-driven-mode.md](../../docs/proposals/spec-driven-mode.md).
+> **Next steps:**
 >
-> _Edit this spec, then run `planr spec decompose {{id}}` to generate User Stories + Tasks under `stories/` and `tasks/` (when AI decomposition ships in v0.x.0+1)._
+> In Claude Code with the `openplanr-pipeline` plugin:
+> ```
+> /openplanr-pipeline:plan {{slug}}     # decompose + human review
+> /openplanr-pipeline:ship {{slug}}     # full DEV phase
+> ```
+>
+> Bare CLI:
+> ```
+> planr spec decompose {{id}}           # AI-driven
+> ```
+>
+> Schema: `https://openplanr.dev/docs/reference/spec-schema`

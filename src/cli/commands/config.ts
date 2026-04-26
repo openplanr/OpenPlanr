@@ -64,6 +64,22 @@ export function registerConfigCommand(program: Command) {
       if (cfg.defaultAgent) {
         display.line(`  Agent:        ${cfg.defaultAgent}`);
       }
+
+      // Spec-driven readiness check.
+      display.blank();
+      display.line('Spec-driven readiness:');
+      const aiReady =
+        cfg.ai !== undefined &&
+        (cfg.ai.provider === 'ollama' || (await resolveApiKeySource(cfg.ai.provider)) !== null);
+      if (aiReady) {
+        display.line('  ✓ planr spec decompose       (AI configured)');
+      } else if (cfg.ai === undefined) {
+        display.line('  ✗ planr spec decompose       (AI disabled)');
+      } else {
+        display.line(`  ✗ planr spec decompose       (${cfg.ai.provider}: API key missing)`);
+      }
+      display.line('  ✓ planr spec create + shape  (no AI required)');
+      logger.dim('  Schema reference: https://openplanr.dev/docs/reference/spec-schema');
     });
 
   config
