@@ -49,6 +49,15 @@ export function registerInitCommand(program: Command) {
       let apiKeyConfigured = false;
 
       // --- AI Provider Setup ---
+      if (opts.ai === false) {
+        // Explicit --no-ai. Warn so the user knows what they lose.
+        logger.warn(
+          'AI features disabled (--no-ai). `planr spec decompose`, `planr refine`, ' +
+            'and `planr backlog prioritize` will be unavailable. ' +
+            'Re-enable later with: planr config set-provider <provider>',
+        );
+      }
+
       if (opts.ai !== false) {
         const enableAI = await promptConfirm('Enable AI-powered planning?', true);
 
