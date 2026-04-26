@@ -19,7 +19,7 @@ Touch `.claude/.snapshot-pending` so the Stop hook (in `${CLAUDE_PLUGIN_ROOT}/ho
 
 ## Step 1 — Mode detection + input validation
 
-### 1a — Detect planr spec mode (NEW in v0.3.0)
+### 1a — Detect planr spec mode
 
 **Before any other checks**, look for `.planr/config.json` at the project root:
 
@@ -54,7 +54,7 @@ Required (spec-driven mode):
 - At least one `<SPEC_DIR>/tasks/T-*.md`
 - `input/tech/stack.md` — see **Self-healing in spec mode** below.
 
-### Self-healing in spec mode (NEW in v0.3.1)
+### Self-healing in spec mode
 
 Same logic as `/plan`: when MODE is `spec-driven` AND `input/tech/stack.md` is missing, do not abort with a stack-missing error. Instead:
 
@@ -137,6 +137,42 @@ The Stop hook in `${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json` is a backup: if this c
 
 ---
 
+## Step 5.5 — Write the `.pipeline-shipped` marker
+
+After Step 5 succeeds, write a marker file recording the pipeline run.
+
+**Default mode:** `output/feats/feat-$ARGUMENTS/.pipeline-shipped`
+**Spec-driven mode:** `<SPEC_DIR>/.pipeline-shipped`
+
+Contents (YAML):
+
+```yaml
+shipped_at: "<ISO 8601 UTC timestamp>"
+pipeline_version: "<from ${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json>"
+mode: "<default | spec-driven>"
+feature: "$ARGUMENTS"
+tasks_executed: <integer>
+tasks_failed: <integer>
+qa_gate_status: "<passed | failed | skipped>"
+duration_seconds: <integer>
+agents_invoked:
+  - frontend-agent          # only list agents that actually ran this run
+  - backend-agent
+  - qa-agent
+  - devops-agent
+  - doc-gen-agent
+devops_status: "<generated | skipped>"
+docs_status: "<generated | skipped>"
+snapshot_status: "<refreshed | skipped>"
+error_reports:               # paths to any error-report.md files; empty list if none
+  - <path>
+```
+
+If Step 5 (snapshot) failed but tasks shipped, still write the marker with
+`snapshot_status: skipped` so the partial-success state is recorded.
+
+---
+
 ## Step 6 — Print summary
 
 ```
@@ -149,6 +185,7 @@ The Stop hook in `${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json` is a backup: if this c
   DevOps config:   <generated | skipped>
   Docs:            <generated | skipped>
   CLAUDE.md:       refreshed
+  Marker:          <output dir>/.pipeline-shipped     ← proof of pipeline execution
 ```
 
 If spec-driven mode was active, the spec's frontmatter `status` is updated to `in-pipeline` while ship runs and to `done` on full success.

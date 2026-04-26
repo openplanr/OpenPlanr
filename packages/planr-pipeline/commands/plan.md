@@ -15,7 +15,7 @@ Orchestrates the PO Phase for `feat-$ARGUMENTS`. Decomposes a functional spec in
 
 The argument `$ARGUMENTS` is the feature name / slug (without any `feat-` or `spec-` prefix).
 
-### 1a — Detect planr spec mode (NEW in v0.3.0)
+### 1a — Detect planr spec mode
 
 **Before any other checks**, look for `.planr/config.json` at the project root:
 
@@ -43,10 +43,37 @@ Required (default mode):
 - `input/tech/stack.md` — fail with: "input/tech/stack.md not found. Run /openplanr-pipeline:init then /openplanr-pipeline:stack to bootstrap."
 
 Required (spec-driven mode):
-- `<SPEC_DIR>/SPEC-NNN-${ARGUMENTS}.md` — fail with: "Spec for slug '$ARGUMENTS' not found under .planr/specs/. Run \`planr spec create --slug $ARGUMENTS\` first."
+- `<SPEC_DIR>/SPEC-NNN-${ARGUMENTS}.md` — if missing, auto-scaffold (see **Auto-scaffolding** below). The pipeline plugin is self-sufficient; no planr CLI required.
 - `input/tech/stack.md` — see **Self-healing in spec mode** below.
 
-### Self-healing in spec mode (NEW in v0.3.1)
+### Auto-scaffolding the spec shell
+
+When `<SPEC_DIR>/SPEC-NNN-${ARGUMENTS}.md` is missing, scaffold it instead of aborting:
+
+1. **Ensure `.planr/config.json` exists.** If absent, write:
+   ```json
+   {
+     "projectName": "<derive from package.json name or repo dir name>",
+     "outputPaths": { "agile": ".planr" },
+     "idPrefix": { "spec": "SPEC" }
+   }
+   ```
+2. **Ensure `.planr/specs/` exists.** Create if absent.
+3. **Determine the next SPEC ID.** Scan `.planr/specs/` for `SPEC-NNN-*/` directories, take the highest NNN, increment. Three-digit format (e.g., `SPEC-001`).
+4. **Create the spec directory + subdirs:** `.planr/specs/SPEC-NNN-${ARGUMENTS}/{stories,tasks,design}`.
+5. **Write the spec body.** Read `${CLAUDE_PLUGIN_ROOT}/templates/spec-driven.md.tpl`, substitute `{{SPEC_ID}}`, `{{TITLE}}`, `{{SLUG}}`, `{{DATE}}` (use the slug as fallback title). Write to `<SPEC_DIR>/SPEC-NNN-${ARGUMENTS}.md`.
+6. **Print and abort gracefully:**
+   ```
+   ✓ Scaffolded SPEC-NNN-${ARGUMENTS} at .planr/specs/SPEC-NNN-${ARGUMENTS}/
+     Edit the spec body, then re-run: /openplanr-pipeline:plan ${ARGUMENTS}
+   ```
+7. **Do not invoke any subagent on this run.** Decomposition runs only on the second invocation, after the user has filled in the spec body.
+
+If the spec body already exists but contains only placeholder text (detect via the literal token `_Describe the problem this feature solves` or any unfilled `_…_` template hint), apply the same abort.
+
+Schema reference: `OpenPlanr/docs/reference/spec-schema.md` v1.0.0. Specs scaffolded here are interchangeable with `planr spec create` output.
+
+### Self-healing in spec mode
 
 In spec-driven mode, users typically arrive here via planr CLI (`planr spec init` + `planr spec create`), which scaffolds `.planr/specs/` but does NOT create `input/tech/stack.md` (that's the pipeline's territory). Failing on a missing stack file would force them to switch tools mid-flow and run `/openplanr-pipeline:init` just to get one file.
 

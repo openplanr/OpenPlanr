@@ -2,6 +2,45 @@
 
 All notable changes to `openplanr-pipeline` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/) — with the caveat that pre-1.0 releases may contain breaking changes in minor bumps.
 
+## [0.4.0] — 2026-04-27
+
+### Added — Self-sufficient spec scaffolding
+
+`/openplanr-pipeline:plan {slug}` now scaffolds its own `.planr/specs/SPEC-NNN-{slug}/` directory when missing. The pipeline plugin is a complete standalone Claude Code plugin — install from the marketplace, ship features end-to-end without external dependencies.
+
+```
+# First run — scaffolds the spec shell if missing, stops for editing
+/openplanr-pipeline:plan auth
+
+# (user fills in the spec body)
+
+# Second run — decomposes with designer + specification agents
+/openplanr-pipeline:plan auth
+
+# Ship
+/openplanr-pipeline:ship auth
+```
+
+planr CLI remains the canonical surface for agile mode, quick tasks, multi-spec management (`list`, `status`, `sync`, `destroy`), and bare-CLI workflows. Both products share the v1.0.0 spec schema verbatim — specs scaffolded by the pipeline can be managed by planr CLI and vice versa.
+
+### Added — `.pipeline-shipped` execution marker
+
+`/openplanr-pipeline:ship` writes a YAML marker file at the end of every run, recording shipped_at, pipeline version, mode, tasks executed, QA status, and which agents were invoked.
+
+- **Default mode:** `output/feats/feat-{name}/.pipeline-shipped`
+- **Spec-driven mode:** `.planr/specs/SPEC-NNN-{slug}/.pipeline-shipped`
+
+### Files updated
+
+- `commands/plan.md` — auto-scaffolding logic in Step 1b
+- `commands/ship.md` — marker write step in Step 5.5
+- `templates/spec-driven.md.tpl` (new) — minimal v1.0.0 spec template
+- `.claude-plugin/plugin.json`
+
+### Migration
+
+No action required. Existing `.planr/specs/` directories continue to work; the pipeline now scaffolds new ones on demand.
+
 ## [0.3.1] — 2026-04-26
 
 ### Fixed — Self-healing in spec-driven mode
