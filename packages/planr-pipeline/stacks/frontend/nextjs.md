@@ -3,7 +3,7 @@
 > **Category:** frontend
 > **Version:** 14.x / 15.x
 > **Docs:** https://nextjs.org/docs
-> **Created:** Template — edit via /openplanr-pipeline:stack frontend
+> **Created:** Template — copy to `.claude/stacks/frontend/nextjs.md` in your project to override.
 
 ---
 

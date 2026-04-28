@@ -23,45 +23,44 @@ The split is non-negotiable. **The plugin refuses to auto-chain PO Phase → DEV
 ## Install
 
 ```
-/plugin marketplace add OpenPlanr/marketplace
+/plugin marketplace add openplanr/marketplace
 /plugin install openplanr-pipeline@openplanr
-/openplanr-pipeline:init
 ```
 
-That's it. Three commands and you have an opinionated, multi-agent code factory in any Claude Code project.
+Two commands and you have an opinionated, multi-agent code factory in any Claude Code project.
 
 ---
 
 ## 5-minute walkthrough — build a "todo list" feature
 
 ```bash
-# 1. Initialize the framework in your project
-/openplanr-pipeline:init my-app
-
-# 2. Edit input/tech/stack.md to match your real stack
-#    (Language, Framework, ORM, BuildCommand, TestCommand)
-
-# 3. Author your first spec interactively
-/openplanr-pipeline:spec todo
-#    → 4 guided questions → input/specs/spec-todo.md
-
-# 4. (Optional) Drop UI mockups for the Designer Agent
-cp ~/Designs/todo-*.png input/ui/feat-todo/
-
-# 5. Run the PO Phase — decomposes into User Stories + tasks
+# 1. Run the PO Phase — auto-scaffolds the spec shell on first run
 /openplanr-pipeline:plan todo
-#    → output/feats/feat-todo/ with us-1/, us-2/, ... and tasks per US
+#    → .planr/specs/SPEC-001-todo/ created with placeholder body
+#    → pipeline stops with "edit and re-run" message
 
-# 6. Review the decomposition before any code is written
-/openplanr-pipeline:review todo
-#    → walk a structured checklist; edit US/task files if needed
+# 2. Edit .planr/specs/SPEC-001-todo/SPEC-001-todo.md to fill in
+#    Context, Functional Requirements, Business Rules, Acceptance Criteria
+#    (Or use planr CLI: `planr spec shape SPEC-001` for guided 4-question authoring.)
 
-# 7. Run the DEV Phase — generates code, tests, infra config, docs
+# 3. (Optional) Drop UI mockups for the designer-agent
+cp ~/Designs/todo-*.png .planr/specs/SPEC-001-todo/design/
+
+# 4. Re-run the PO Phase — decomposes into User Stories + tasks
+/openplanr-pipeline:plan todo
+#    → designer-agent + specification-agent decompose
+#    → .planr/specs/SPEC-001-todo/{stories,tasks}/ populated
+
+# 5. Review the decomposition before any code is written
+#    → open .planr/specs/SPEC-001-todo/tasks/T-*.md and verify
+
+# 6. Run the DEV Phase — generates code, tests, infra config, docs
 /openplanr-pipeline:ship todo
-#    → src/features/todo/ with components, services, tests
-#    → docker-compose.yml updated
+#    → src/ updated
+#    → docker-compose.yml + CI workflow generated
 #    → Docs/feat-todo/ generated
 #    → CLAUDE.md refreshed
+#    → .planr/specs/SPEC-001-todo/.pipeline-shipped marker written
 ```
 
 Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, you ship.
@@ -80,15 +79,15 @@ Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, y
 └────────────────────────────┬────────────────────────────────────────┘
                              ▼
                    🛑 HUMAN REVIEW (mandatory)
-                   /openplanr-pipeline:review {name}
+                   open the generated US/task files, edit if needed
                              ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │  DEV PHASE  (Opus 4.7 codegen + Sonnet 4.6 verifiers)               │
-│  /openplanr-pipeline:ship {name}                               │
+│  /openplanr-pipeline:ship {name}                                    │
 │                                                                     │
 │  frontend-agent + backend-agent (per task, parallel) →              │
 │  qa-agent (gate) → devops-agent + doc-gen-agent →                   │
-│  /openplanr-pipeline:snapshot                                       │
+│  CLAUDE.md snapshot → .pipeline-shipped marker                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -98,17 +97,14 @@ Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, y
 
 ---
 
-## Slash commands & skills
+## Slash commands
 
-| Type | Name | Purpose |
-|---|---|---|
-| Command | `/openplanr-pipeline:plan` | Run PO Phase orchestration for a feature |
-| Command | `/openplanr-pipeline:ship` | Run DEV Phase orchestration for a feature |
-| Skill | `/openplanr-pipeline:init` | Bootstrap a fresh project (idempotent) |
-| Skill | `/openplanr-pipeline:spec` | 4-question guided spec authoring |
-| Skill | `/openplanr-pipeline:stack` | Add a new stack file to `.claude/stacks/` |
-| Skill | `/openplanr-pipeline:review` | Pre-DEV checklist walkthrough |
-| Skill | `/openplanr-pipeline:snapshot` | Refresh `CLAUDE.md` with project state |
+| Name | Purpose |
+|---|---|
+| `/openplanr-pipeline:plan {slug}` | PO Phase — auto-scaffolds the spec shell if missing, then decomposes into User Stories + tasks via designer-agent + specification-agent |
+| `/openplanr-pipeline:ship {slug}` | DEV Phase — frontend ‖ backend → qa → devops ‖ doc-gen → snapshot, with `.pipeline-shipped` marker at the end |
+
+Two commands. Everything else is automatic — auto-scaffolding when a spec is missing, auto-snapshot at the end of `/ship`, auto-self-heal of `input/tech/stack.md` in spec-driven mode.
 
 ---
 
@@ -150,7 +146,7 @@ ActiveStackFiles:
 
 ### Stack files (defaults + user overrides)
 
-The plugin ships defaults at `${CLAUDE_PLUGIN_ROOT}/stacks/{frontend,backend,database,devops}/*.md`. You can override or extend by adding files to your project at `.claude/stacks/...` — **user files always win on filename collision**. Use `/openplanr-pipeline:stack` to scaffold a new stack file interactively.
+The plugin ships defaults at `${CLAUDE_PLUGIN_ROOT}/stacks/{frontend,backend,database,devops}/*.md`. You can override or extend by adding files to your project at `.claude/stacks/...` — **user files always win on filename collision**. Copy a default stack file as a starting template and edit to taste.
 
 ### Default stacks shipped
 

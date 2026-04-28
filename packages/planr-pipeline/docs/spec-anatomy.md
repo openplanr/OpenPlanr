@@ -1,7 +1,7 @@
 # Spec Anatomy
 
 > What every valid `spec-{name}.md` file must contain for the Specification Agent to decompose it correctly.
-> Written by: Product Owner (manually or via /openplanr-pipeline:spec)
+> Written by: Product Owner — manually, or via the planr CLI (`planr spec create + shape` for spec-driven mode).
 
 ---
 
@@ -125,10 +125,10 @@ The Specification Agent evaluates spec completeness before decomposing:
 |-------|-----------|----------------|
 | ✅ Complete | All required sections present and non-empty | Full decomposition |
 | ⚠️ Partial | 1–2 required sections missing | Decompose with best-effort, flag gaps in US Notes |
-| ❌ Incomplete | More than 2 required sections missing | Output error, suggest running /openplanr-pipeline:spec |
+| ❌ Incomplete | More than 2 required sections missing | Output error, ask the user to fill in the spec body |
 
 ---
 
 *Written by: Product Owner*
-*Template: `input/specs/spec-example.md`*
-*Shortcut: `/openplanr-pipeline:spec {name}` for guided creation*
+*Default-mode template: `${CLAUDE_PLUGIN_ROOT}/templates/spec.md.tpl`*
+*Spec-driven mode: `planr spec create + shape` produces a body that satisfies this anatomy.*

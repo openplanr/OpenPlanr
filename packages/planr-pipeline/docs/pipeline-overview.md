@@ -87,7 +87,7 @@ The framework refuses to auto-chain PO Phase → DEV Phase.
 │                                                                             │
 │  Manual edits are allowed.                                                  │
 │  Tech Lead never edits task-{M}.md directly.                               │
-│  Use /openplanr-pipeline:review {feat} for structured walkthrough.                      │
+│  Open the generated US/task files and walk them before approving /ship.                │
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                    │
                                    ▼

@@ -3,7 +3,7 @@
 > **Category:** database
 > **Version:** 7.x
 > **Docs:** https://www.mongodb.com/docs/
-> **Created:** Template — edit via /openplanr-pipeline:stack database
+> **Created:** Template — copy to `.claude/stacks/database/mongodb.md` in your project to override.
 
 ---
 

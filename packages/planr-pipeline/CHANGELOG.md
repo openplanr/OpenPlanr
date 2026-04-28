@@ -2,6 +2,47 @@
 
 All notable changes to `openplanr-pipeline` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/) — with the caveat that pre-1.0 releases may contain breaking changes in minor bumps.
 
+## [0.5.0] — 2026-04-28
+
+### Changed — Consolidated under `/plan` + `/ship`
+
+The plugin's user-facing surface is now exactly two slash commands. Auxiliary skills (`init`, `snapshot`, `spec`, `review`, `stack`) have been removed; their value is delivered inline:
+
+- **Spec scaffolding** runs inside `/openplanr-pipeline:plan` (auto-scaffolds `.planr/specs/SPEC-NNN-{slug}/` when missing).
+- **CLAUDE.md snapshot** runs inside `/openplanr-pipeline:ship` Step 5.
+- **Spec authoring** is owned by the planr CLI (`planr spec create + shape`) for spec-driven mode, or by direct edits to the placeholder body the pipeline scaffolds.
+- **Review** is direct inspection of `.planr/specs/SPEC-NNN-{slug}/{stories,tasks}/*.md` — no command needed.
+- **Stack files** live at `${CLAUDE_PLUGIN_ROOT}/stacks/` and `.claude/stacks/` — copy a default to your project to override.
+
+### Why
+
+Two-command surface eliminates namespace collisions with Claude Code built-ins (`/init`, `/review`) and removes redundancy with the planr CLI's spec authoring commands. Cleaner mental model: install the plugin, run `/plan`, run `/ship`.
+
+### Files updated
+
+- Removed `skills/{init,snapshot,spec,review,stack}/` directories
+- `commands/plan.md`, `commands/ship.md` — references to the removed skills replaced with inline behaviour or direct file edits
+- `templates/CLAUDE.md.tpl` — points to `/ship` for refresh
+- `hooks/hooks.json` — Stop hook reminder updated
+- `docs/{rules,spec-anatomy,task-anatomy,us-anatomy,pipeline-overview}.md` — references updated
+- `stacks/{frontend,backend,database,devops}/*.md` — header notes point to copy-to-project pattern
+- `README.md` — install + walkthrough rewritten around the two commands
+- `.claude-plugin/plugin.json` — version 0.4.0 → 0.5.0
+
+### Migration
+
+No action required for new installs.
+
+For projects that previously ran the deleted skills:
+
+| Old | Replacement |
+|---|---|
+| `/openplanr-pipeline:init {name}` | `/openplanr-pipeline:plan {name}` (auto-scaffolds spec shell) |
+| `/openplanr-pipeline:snapshot` | Runs automatically at end of `/openplanr-pipeline:ship` |
+| `/openplanr-pipeline:spec {name}` | `planr spec create + shape` (planr CLI) — or fill in the auto-scaffolded body manually |
+| `/openplanr-pipeline:review {name}` | Open `.planr/specs/SPEC-NNN-{slug}/{stories,tasks}/*.md` directly |
+| `/openplanr-pipeline:stack {category}` | Copy `${CLAUDE_PLUGIN_ROOT}/stacks/{category}/*.md` to `.claude/stacks/{category}/` and edit |
+
 ## [0.4.0] — 2026-04-27
 
 ### Added — Self-sufficient spec scaffolding

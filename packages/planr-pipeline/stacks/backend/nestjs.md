@@ -3,7 +3,7 @@
 > **Category:** backend
 > **Version:** 10.x
 > **Docs:** https://docs.nestjs.com
-> **Created:** Template — edit via /openplanr-pipeline:stack backend
+> **Created:** Template — copy to `.claude/stacks/backend/nestjs.md` in your project to override.
 
 ---
 

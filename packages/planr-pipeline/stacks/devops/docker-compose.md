@@ -3,7 +3,7 @@
 > **Category:** devops
 > **Version:** Compose v2 (docker compose)
 > **Docs:** https://docs.docker.com/compose/
-> **Created:** Template — edit via /openplanr-pipeline:stack devops
+> **Created:** Template — copy to `.claude/stacks/devops/docker-compose.md` in your project to override.
 
 ---
 
