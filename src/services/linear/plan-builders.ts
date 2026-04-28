@@ -185,9 +185,11 @@ export async function buildFeaturePlanRows(
   projectDir: string,
   config: OpenPlanrConfig,
   sf: ScopedFeature,
+  noCascade = false,
 ): Promise<LinearPushPlanRow[]> {
   const rows: LinearPushPlanRow[] = [];
   rows.push(featureRow(sf.data));
+  if (noCascade) return rows;
   for (const st of sf.stories) {
     rows.push(storyRow(st.data));
   }
@@ -208,9 +210,11 @@ export async function buildEpicPlanRows(
   projectDir: string,
   config: OpenPlanrConfig,
   epicScope: { epic: Epic; features: ScopedFeature[] },
+  noCascade = false,
 ): Promise<LinearPushPlanRow[]> {
   const rows: LinearPushPlanRow[] = [];
   rows.push(projectRow(epicScope.epic));
+  if (noCascade) return rows;
   for (const sf of epicScope.features) {
     rows.push(...(await buildFeaturePlanRows(projectDir, config, sf)));
   }
@@ -253,16 +257,20 @@ export async function buildLinearPushPlan(
   projectDir: string,
   config: OpenPlanrConfig,
   artifactId: string,
-  options?: { updateOnly?: boolean },
+  options?: { updateOnly?: boolean; noCascade?: boolean },
 ): Promise<LinearPushPlan | null> {
   const updateOnly = options?.updateOnly === true;
+  const noCascade = options?.noCascade === true;
   const type = findArtifactTypeById(artifactId);
   if (!type) return null;
 
   if (type === 'epic') {
     const scope = await loadLinearPushScope(projectDir, config, artifactId);
     if (!scope) return null;
-    const rows = applyUpdateOnly(await buildEpicPlanRows(projectDir, config, scope), updateOnly);
+    const rows = applyUpdateOnly(
+      await buildEpicPlanRows(projectDir, config, scope, noCascade),
+      updateOnly,
+    );
     return summarizePlan(artifactId, scope.epic.id, 'epic', rows);
   }
 
@@ -270,7 +278,7 @@ export async function buildLinearPushPlan(
     const ctx = await loadForFeature(projectDir, config, artifactId);
     if (!ctx) return null;
     const rows = applyUpdateOnly(
-      await buildFeaturePlanRows(projectDir, config, ctx.sf),
+      await buildFeaturePlanRows(projectDir, config, ctx.sf, noCascade),
       updateOnly,
     );
     return summarizePlan(artifactId, ctx.epic.id, 'feature', rows);

@@ -381,3 +381,126 @@ describe('runLinearPush — unsupported prefixes', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// --no-cascade behavior matrix (BL-012)
+// ---------------------------------------------------------------------------
+
+describe('runLinearPush — --no-cascade (granular scope control)', () => {
+  let projectDir: string;
+  let config: OpenPlanrConfig;
+  beforeEach(async () => {
+    const p = await setupProject();
+    projectDir = p.dir;
+    config = p.config;
+    await writeEpic(projectDir, 'EPIC-001', { linearProjectId: 'proj-existing' });
+    await writeFeature(projectDir, 'FEAT-001', 'EPIC-001');
+    await writeStory(projectDir, 'US-001', 'FEAT-001');
+    await writeStory(projectDir, 'US-002', 'FEAT-001');
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001');
+  });
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it('FEAT push with --no-cascade creates only the feature issue (no stories, no tasklist)', async () => {
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'FEAT-001', { noCascade: true });
+    // Feature is the only issue created — not the 2 stories, not the tasklist.
+    expect(fake.calls.createIssue).toHaveBeenCalledTimes(1);
+  });
+
+  it('FEAT push without --no-cascade still cascades to stories + tasklist (default unchanged)', async () => {
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'FEAT-001');
+    // 1 feature + 2 stories + 1 tasklist = 4
+    expect(fake.calls.createIssue).toHaveBeenCalledTimes(4);
+  });
+
+  it('EPIC push with --no-cascade creates only the project (no features, no stories)', async () => {
+    // Override the existing epic so the project is freshly created (not just updated).
+    rmSync(join(projectDir, '.planr', 'epics'), { recursive: true });
+    await ensureDir(join(projectDir, '.planr', 'epics'));
+    await writeEpic(projectDir, 'EPIC-001'); // no linearProjectId
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'EPIC-001', { noCascade: true });
+    expect(fake.calls.createProject).toHaveBeenCalledTimes(1);
+    expect(fake.calls.createIssue).not.toHaveBeenCalled();
+  });
+
+  it('--push-parents pushes only the ancestor chain (TASK-only push, no sibling stories)', async () => {
+    // FEAT-001 is NOT yet pushed; TASK-001 needs the parent. With --push-parents
+    // we expect: FEAT-001 issue + TASK-001 tasklist. NOT US-001, NOT US-002.
+    rmSync(join(projectDir, '.planr', 'features'), { recursive: true });
+    await ensureDir(join(projectDir, '.planr', 'features'));
+    await writeFeature(projectDir, 'FEAT-001', 'EPIC-001'); // no linearIssueId
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'TASK-001', { pushParents: true });
+    // 1 feature + 1 tasklist = 2 issues. NOT 1 feature + 2 stories + 1 tasklist (4).
+    expect(fake.calls.createIssue).toHaveBeenCalledTimes(2);
+  });
+
+  it('--push-parents on a US-only push pushes feature + this story only (not sibling stories or tasklist)', async () => {
+    rmSync(join(projectDir, '.planr', 'features'), { recursive: true });
+    await ensureDir(join(projectDir, '.planr', 'features'));
+    await writeFeature(projectDir, 'FEAT-001', 'EPIC-001'); // no linearIssueId
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'US-001', { pushParents: true });
+    // 1 feature + 1 story = 2 issues. NOT US-002, NOT the tasklist.
+    expect(fake.calls.createIssue).toHaveBeenCalledTimes(2);
+  });
+
+  it('--no-cascade is a no-op for leaf artifacts (story push)', async () => {
+    // FEAT-001 has linearIssueId so US-001 attaches normally.
+    rmSync(join(projectDir, '.planr', 'features'), { recursive: true });
+    await ensureDir(join(projectDir, '.planr', 'features'));
+    await writeFeature(projectDir, 'FEAT-001', 'EPIC-001', {
+      linearIssueId: 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
+    });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'US-001', { noCascade: true });
+    expect(fake.calls.createIssue).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dry-run plan with --no-cascade
+// ---------------------------------------------------------------------------
+
+describe('buildLinearPushPlan — --no-cascade row counts', () => {
+  let projectDir: string;
+  beforeEach(async () => {
+    const p = await setupProject();
+    projectDir = p.dir;
+    await writeEpic(projectDir, 'EPIC-001', { linearProjectId: 'proj-existing' });
+    await writeFeature(projectDir, 'FEAT-001', 'EPIC-001');
+    await writeStory(projectDir, 'US-001', 'FEAT-001');
+    await writeStory(projectDir, 'US-002', 'FEAT-001');
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001');
+  });
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it('FEAT plan with --no-cascade lists only the feature row', async () => {
+    const config = baseConfig();
+    const plan = await buildLinearPushPlan(projectDir, config, 'FEAT-001', { noCascade: true });
+    expect(plan?.rows).toHaveLength(1);
+    expect(plan?.rows[0]?.kind).toBe('feature');
+  });
+
+  it('FEAT plan without --no-cascade lists feature + stories + tasklist (default unchanged)', async () => {
+    const config = baseConfig();
+    const plan = await buildLinearPushPlan(projectDir, config, 'FEAT-001');
+    expect(plan?.rows.length).toBeGreaterThan(1);
+    expect(plan?.rows.map((r) => r.kind)).toContain('story');
+    expect(plan?.rows.map((r) => r.kind)).toContain('taskList');
+  });
+
+  it('EPIC plan with --no-cascade lists only the project row', async () => {
+    const config = baseConfig();
+    const plan = await buildLinearPushPlan(projectDir, config, 'EPIC-001', { noCascade: true });
+    expect(plan?.rows).toHaveLength(1);
+    expect(plan?.rows[0]?.kind).toBe('project');
+  });
+});

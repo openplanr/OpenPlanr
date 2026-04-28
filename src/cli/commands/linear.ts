@@ -396,7 +396,12 @@ export function registerLinearCommand(program: Command) {
     )
     .option(
       '--push-parents',
-      'If a parent in the chain is not yet pushed to Linear, push it first without prompting',
+      "If a parent in the chain is not yet pushed to Linear, push it first (upward attachment only — does NOT push the parent's siblings)",
+      false,
+    )
+    .option(
+      '--no-cascade',
+      'Push only the target artifact (and minimum parent chain when --push-parents is set). EPIC/FEAT pushes skip their descendants.',
       false,
     )
     .option(
@@ -406,7 +411,17 @@ export function registerLinearCommand(program: Command) {
     .action(
       async (
         artifactId: string,
-        o: { dryRun: boolean; updateOnly: boolean; pushParents: boolean; as?: string },
+        o: {
+          dryRun: boolean;
+          updateOnly: boolean;
+          pushParents: boolean;
+          // Commander wires `--no-cascade` to a `cascade: false` toggle.
+          // Without `--cascade` declared as a sibling, the flag only fires
+          // when the user explicitly passes `--no-cascade`; otherwise it
+          // defaults to true (today's behavior unchanged).
+          cascade: boolean;
+          as?: string;
+        },
       ) => {
         const projectDir = program.opts().projectDir as string;
         let config: OpenPlanrConfig;
@@ -431,6 +446,7 @@ export function registerLinearCommand(program: Command) {
           try {
             const plan = await buildLinearPushPlan(projectDir, config, artifactId, {
               updateOnly: o.updateOnly,
+              noCascade: o.cascade === false,
             });
             if (!plan) {
               logger.error(
@@ -565,6 +581,8 @@ export function registerLinearCommand(program: Command) {
           const plan = await runLinearPush(projectDir, config, client, artifactId, {
             updateOnly: o.updateOnly,
             pushParents: o.pushParents,
+            // Commander: o.cascade is true by default, false when --no-cascade.
+            noCascade: o.cascade === false,
             strategyOverride: strategyOverride ?? undefined,
           });
           if (!plan) {
