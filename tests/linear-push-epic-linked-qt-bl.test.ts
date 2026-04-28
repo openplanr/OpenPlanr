@@ -37,6 +37,7 @@ function baseConfig(withStandalone = false): OpenPlanrConfig {
       quick: 'QT',
       backlog: 'BL',
       sprint: 'SPRINT',
+      spec: 'SPEC',
     },
     createdAt: '2026-04-22',
     linear: {
