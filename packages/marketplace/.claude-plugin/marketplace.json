@@ -14,7 +14,16 @@
         "source": "github",
         "repo": "openplanr/openplanr-pipeline"
       },
-      "version": "0.4.0"
+      "version": "0.5.0"
+    },
+    {
+      "name": "openplanr",
+      "description": "Claude Code skill that teaches Claude when to reach for planr CLI vs the openplanr-pipeline plugin — explicit Path A / B / C routing for agile, quick task, and spec-driven workflows.",
+      "source": {
+        "source": "github",
+        "repo": "openplanr/skills"
+      },
+      "version": "1.2.0"
     }
   ]
 }
