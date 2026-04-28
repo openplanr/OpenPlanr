@@ -38,6 +38,7 @@ function baseConfig(withStandalone: boolean): OpenPlanrConfig {
       quick: 'QT',
       backlog: 'BL',
       sprint: 'SPRINT',
+      spec: 'SPEC',
     },
     createdAt: '2026-04-22',
     linear: {
@@ -68,16 +69,19 @@ async function writeBacklogItem(
   id: string,
   opts: { linearIssueId?: string; status?: string } = {},
 ): Promise<void> {
+  // Match the real `planr backlog add` template: description / acceptance
+  // criteria / notes live in the BODY, not in frontmatter. The fixture
+  // intentionally does NOT put `description:` in frontmatter so we don't
+  // mask the bug where the push reader was looking in the wrong place.
   const fm = [
     `id: "${id}"`,
     `title: "${id} title"`,
     'priority: "high"',
     'tags: ["feature","dx"]',
     `status: "${opts.status ?? 'open'}"`,
-    'description: "Backlog item description text."',
   ];
   if (opts.linearIssueId) fm.push(`linearIssueId: "${opts.linearIssueId}"`);
-  const body = `---\n${fm.join('\n')}\n---\n\n# ${id}\n\n## Description\nBacklog item description text.\n`;
+  const body = `---\n${fm.join('\n')}\n---\n\n# ${id}: ${id} title\n\n## Priority\nHIGH\n\n## Tags\n\n- feature\n- dx\n\n## Description\nBacklog item description text.\n\n## Acceptance Criteria\n- AC line 1\n- AC line 2\n\n## Notes\nSome notes.\n\n---\n_Promote to agile hierarchy: \`planr backlog promote ${id} --story\` or \`planr backlog promote ${id} --quick\`_\n_Close when done: \`planr backlog close ${id}\`_\n`;
   await writeFile(join(dir, '.planr', 'backlog', `${id}-test.md`), body);
 }
 
@@ -243,9 +247,39 @@ describe('runLinearPush — BL push', () => {
     expect(input?.labelIds).toEqual(expect.arrayContaining(['label-uuid-1']));
     // Title no longer includes the BL-XXX prefix.
     expect(input?.title).toBe('BL-001 title');
-    // Body includes priority + tags + description.
-    expect(String(input?.description)).toContain('**Priority:** high');
-    expect(String(input?.description)).toContain('**Tags:** feature, dx');
+    // Body content (sections from the BL template body, not frontmatter).
+    const description = String(input?.description);
+    expect(description).toContain('## Priority');
+    expect(description).toContain('HIGH');
+    expect(description).toContain('## Tags');
+    expect(description).toContain('## Description');
+    expect(description).toContain('Backlog item description text.');
+  });
+
+  it('pushes the full body — description, acceptance criteria, and notes (regression for empty-Linear-issue bug)', async () => {
+    // Real-world bug: BL push to Linear created an issue with only the
+    // title because `buildBacklogItemBody` was reading description / AC /
+    // notes from frontmatter, but the BL template writes them into the
+    // body. This locks in that the FULL body content reaches Linear.
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'BL-001');
+    const description = String(fake.lastIssueInput()?.description);
+    // Description body section (the section the user actually wrote).
+    expect(description).toContain('Backlog item description text.');
+    // Acceptance criteria section.
+    expect(description).toContain('## Acceptance Criteria');
+    expect(description).toContain('- AC line 1');
+    expect(description).toContain('- AC line 2');
+    // Notes section.
+    expect(description).toContain('## Notes');
+    expect(description).toContain('Some notes.');
+    // The trailing "_Promote to agile hierarchy_" helper is internal to
+    // OpenPlanr — should NOT leak into the Linear issue body.
+    expect(description).not.toContain('Promote to agile hierarchy');
+    expect(description).not.toContain('Close when done');
+    // The top-level `# BL-001: <title>` heading is also stripped — Linear
+    // shows the title in its own field, no need to repeat it.
+    expect(description).not.toMatch(/^#\s+BL-001:/m);
   });
 
   it('re-run is idempotent (update + label already exists)', async () => {

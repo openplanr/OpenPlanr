@@ -163,24 +163,22 @@ export function buildStandaloneArtifactBody(raw: string, id: string): string {
 }
 
 /**
- * Backlog item → Linear issue body. Priority + tags + description + optional
- * acceptance criteria + notes. Accepts the generic frontmatter record shape
- * because backlog items aren't currently loaded via a typed interface.
+ * Backlog item → Linear issue body.
+ *
+ * Mirrors the QT push pattern: take the full markdown body (minus
+ * frontmatter and the top-level `# <ID>: <title>` heading) so the
+ * description, acceptance criteria, and notes the user authored under
+ * `## Description` / `## Acceptance Criteria` / `## Notes` all land in
+ * Linear. The previous version of this function read those sections from
+ * frontmatter — but the BL template only writes them into the body —
+ * so Linear issues consistently arrived with just Priority + Tags and
+ * nothing else.
+ *
+ * Also strips the trailing `_Promote to agile hierarchy:..._` helper,
+ * which has no value in the Linear issue.
  */
-export function buildBacklogItemBody(bl: { frontmatter: Record<string, unknown> }): string {
-  const fm = bl.frontmatter;
-  const lines: string[] = [];
-  const priority = toOptionalString(fm.priority);
-  if (priority) lines.push(`**Priority:** ${priority}`);
-  if (Array.isArray(fm.tags) && fm.tags.length > 0) {
-    const tags = (fm.tags as unknown[]).filter((t): t is string => typeof t === 'string');
-    if (tags.length) lines.push(`**Tags:** ${tags.join(', ')}`);
-  }
-  const description = toOptionalString(fm.description);
-  if (description) lines.push(description.trim());
-  const ac = toOptionalString(fm.acceptanceCriteria);
-  if (ac) lines.push(`**Acceptance criteria**\n\n${ac.trim()}`);
-  const notes = toOptionalString(fm.notes);
-  if (notes) lines.push(`**Notes**\n\n${notes.trim()}`);
-  return lines.join('\n\n');
+export function buildBacklogItemBody(bl: { id: string; raw: string }): string {
+  const fullBody = buildStandaloneArtifactBody(bl.raw, bl.id);
+  const withoutPromoteHint = fullBody.replace(/\n*---\n+_Promote to agile hierarchy:[\s\S]*$/, '');
+  return withoutPromoteHint.trim();
 }
