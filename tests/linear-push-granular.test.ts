@@ -92,9 +92,10 @@ async function writeTaskFile(
   dir: string,
   id: string,
   featureId: string,
-  opts: { linearIssueId?: string } = {},
+  opts: { linearIssueId?: string; status?: string } = {},
 ): Promise<void> {
   const fm = [`id: "${id}"`, `title: "${id} title"`, `featureId: "${featureId}"`];
+  if (opts.status) fm.push(`status: "${opts.status}"`);
   if (opts.linearIssueId) fm.push(`linearIssueId: "${opts.linearIssueId}"`);
   const body = `---\n${fm.join('\n')}\n---\n\n# ${id}\n\n## Tasks\n\n- [ ] **1.0** Task one\n  - [ ] 1.1 Subtask\n- [ ] **2.0** Task two\n`;
   await writeFile(join(dir, '.planr', 'tasks', `${id}-test.md`), body);
@@ -115,9 +116,27 @@ interface FakeLinearClient {
     project: ReturnType<typeof vi.fn>;
     issue: ReturnType<typeof vi.fn>;
   };
+  /** The most recent input passed to `createIssue` — set when any test asserts on issue payload shape. */
+  lastCreatedIssueInput: () => Record<string, unknown> | undefined;
 }
 
-function makeFakeClient(): FakeLinearClient {
+type TeamState = { id: string; name: string; type: string };
+
+const DEFAULT_TEAM_STATES: TeamState[] = [
+  { id: 'state-backlog-uuid', name: 'Backlog', type: 'backlog' },
+  { id: 'state-todo-uuid', name: 'Todo', type: 'unstarted' },
+  { id: 'state-inprog-uuid', name: 'In Progress', type: 'started' },
+  { id: 'state-done-uuid', name: 'Done', type: 'completed' },
+];
+
+/**
+ * Single fake-LinearClient factory. Pass `{ teamStates }` to enable the
+ * `team()` mock used by `runLinearPush`'s status-id auto-derive cache.
+ * Without it, `runLinearPush` degrades gracefully (no stateId on push) —
+ * which is what most tests want.
+ */
+function makeFakeClient(opts: { teamStates?: TeamState[] } = {}): FakeLinearClient {
+  const issueInputs: Array<Record<string, unknown>> = [];
   let projectCounter = 0;
   let issueCounter = 0;
   let labelCounter = 0;
@@ -126,11 +145,14 @@ function makeFakeClient(): FakeLinearClient {
     return { success: true, projectId: `proj-uuid-${projectCounter}` };
   });
   const updateProject = vi.fn(async () => ({ success: true }));
-  const createIssue = vi.fn(async () => {
+  const createIssue = vi.fn(async (input: Record<string, unknown>) => {
     issueCounter += 1;
+    issueInputs.push(input);
     return { success: true, issueId: `issue-uuid-${issueCounter}` };
   });
-  const updateIssue = vi.fn(async () => ({ success: true }));
+  const updateIssue = vi.fn<
+    (id: string, input: Record<string, unknown>) => Promise<{ success: boolean }>
+  >(async () => ({ success: true }));
   const issueLabels = vi.fn(async () => ({ nodes: [] }));
   const createIssueLabel = vi.fn(async () => {
     labelCounter += 1;
@@ -148,7 +170,7 @@ function makeFakeClient(): FakeLinearClient {
     url: `https://linear.app/test/issue/${id}`,
     labelIds: [] as string[],
   }));
-  const client = {
+  const clientShape: Record<string, unknown> = {
     createProject,
     updateProject,
     createIssue,
@@ -157,10 +179,18 @@ function makeFakeClient(): FakeLinearClient {
     createIssueLabel,
     project,
     issue,
-  } as unknown as LinearClient;
+  };
+  if (opts.teamStates) {
+    const states = opts.teamStates;
+    clientShape.team = vi.fn(async () => ({
+      issueEstimationType: 'notUsed',
+      states: async () => ({ nodes: states }),
+    }));
+  }
   return {
-    client,
+    client: clientShape as unknown as LinearClient,
     calls: { createProject, updateProject, createIssue, updateIssue, project, issue },
+    lastCreatedIssueInput: () => issueInputs[issueInputs.length - 1],
   };
 }
 
@@ -503,5 +533,76 @@ describe('buildLinearPushPlan — --no-cascade row counts', () => {
     const plan = await buildLinearPushPlan(projectDir, config, 'EPIC-001', { noCascade: true });
     expect(plan?.rows).toHaveLength(1);
     expect(plan?.rows[0]?.kind).toBe('project');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BL-014: TASK aggregation → TaskList stateId on push
+// ---------------------------------------------------------------------------
+
+describe('runLinearPush — TASK status aggregates to merged TaskList stateId', () => {
+  let projectDir: string;
+  let config: OpenPlanrConfig;
+  beforeEach(async () => {
+    const p = await setupProject();
+    projectDir = p.dir;
+    config = p.config;
+    await writeEpic(projectDir, 'EPIC-001', { linearProjectId: 'proj-existing' });
+    await writeFeature(projectDir, 'FEAT-001', 'EPIC-001', {
+      linearIssueId: 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
+    });
+  });
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it('all task files done → TaskList stateId = team.completed (Done)', async () => {
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001', { status: 'done' });
+    await writeTaskFile(projectDir, 'TASK-002', 'FEAT-001', { status: 'done' });
+    const fake = makeFakeClient({ teamStates: DEFAULT_TEAM_STATES });
+    await runLinearPush(projectDir, config, fake.client, 'TASK-001');
+    // The TaskList Linear issue (created here) gets stateId=Done.
+    expect(fake.lastCreatedIssueInput()?.stateId).toBe('state-done-uuid');
+  });
+
+  it('any task in-progress → TaskList stateId = team.started (In Progress)', async () => {
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001', { status: 'in-progress' });
+    await writeTaskFile(projectDir, 'TASK-002', 'FEAT-001', { status: 'pending' });
+    const fake = makeFakeClient({ teamStates: DEFAULT_TEAM_STATES });
+    await runLinearPush(projectDir, config, fake.client, 'TASK-001');
+    expect(fake.lastCreatedIssueInput()?.stateId).toBe('state-inprog-uuid');
+  });
+
+  it('mix of done + pending (no in-progress) → TaskList stateId = started (work has begun)', async () => {
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001', { status: 'done' });
+    await writeTaskFile(projectDir, 'TASK-002', 'FEAT-001', { status: 'pending' });
+    const fake = makeFakeClient({ teamStates: DEFAULT_TEAM_STATES });
+    await runLinearPush(projectDir, config, fake.client, 'TASK-001');
+    expect(fake.lastCreatedIssueInput()?.stateId).toBe('state-inprog-uuid');
+  });
+
+  it('all task files pending → TaskList stateId = team.unstarted (Todo)', async () => {
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001', { status: 'pending' });
+    await writeTaskFile(projectDir, 'TASK-002', 'FEAT-001', { status: 'pending' });
+    const fake = makeFakeClient({ teamStates: DEFAULT_TEAM_STATES });
+    await runLinearPush(projectDir, config, fake.client, 'TASK-001');
+    expect(fake.lastCreatedIssueInput()?.stateId).toBe('state-todo-uuid');
+  });
+
+  it('omits stateId on update when team-state lookup fails (no auto-map cached)', async () => {
+    // No `team()` mock — the auto-state-id-map fetch fails gracefully and
+    // caches an empty map. The aggregated status resolves but maps to no
+    // stateId; push must omit the field, not send `null`.
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001', {
+      status: 'done',
+      linearIssueId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+    });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'TASK-001');
+    const updateArgs = fake.calls.updateIssue.mock.calls[0] as
+      | [string, Record<string, unknown>]
+      | undefined;
+    expect(updateArgs?.[1]).toBeDefined();
+    expect(updateArgs?.[1]).not.toHaveProperty('stateId');
   });
 });

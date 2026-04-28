@@ -52,6 +52,7 @@ import {
   readExistingLabelIds,
   type StrategyContext,
 } from './linear/strategy-context.js';
+import { aggregateTaskStatus } from './linear/task-status-aggregation.js';
 import {
   createLinearIssue,
   createLinearProject,
@@ -612,19 +613,25 @@ async function pushOneTaskListForFeature(
   teamId: string,
   updateOnly: boolean,
 ): Promise<void> {
-  // Note: estimate sync is intentionally not applied here. A single Linear
-  // TaskList issue aggregates `sf.taskFiles` — multiple TASK-*.md files —
-  // so a 1:1 numeric estimate mapping doesn't apply. Aggregation rules
-  // (sum? max? per-file-section?) are their own concern.
+  // Note: estimate sync is intentionally not applied here — see BL-014's
+  // out-of-scope note. The merged TaskList issue still gets a stateId via
+  // the aggregation rule below (BL-014), but no `estimate` field.
   const f = sf.data;
   const { projectId } = strategyCtx;
   const mergedBody = await buildMergedTaskListBody(projectDir, config, f.id, sf.taskFiles);
-  const issueFromFiles = await Promise.all(
+  // Read each task file's linearIssueId AND status in one pass — status is
+  // used for the aggregation rule that drives the merged TaskList stateId.
+  const taskFileMeta = await Promise.all(
     sf.taskFiles.map(async (tf) => {
       const a = await readArtifact(projectDir, config, 'task', tf.id);
-      return toOptionalString(a?.data.linearIssueId);
+      return {
+        id: tf.id,
+        linearIssueId: toOptionalString(a?.data.linearIssueId),
+        status: asTaskStatus(a?.data.status),
+      };
     }),
   );
+  const issueFromFiles = taskFileMeta.map((t) => t.linearIssueId);
   const rawExistingTaskIssueId = issueFromFiles.find(Boolean);
   const existingTaskIssueId = isUsableLinearIssueId(
     rawExistingTaskIssueId,
@@ -642,6 +649,15 @@ async function pushOneTaskListForFeature(
       : `Tasks: ${f.title}`;
   const typeLabelId = await typeLabelCache('task');
 
+  // BL-014: aggregate per-task-file statuses into a canonical TaskStatus,
+  // then resolve the Linear stateId via the existing pipeline (config
+  // pushStateIds → statusMap → auto-derived team map). Omit when unmapped
+  // — Linear rejects `stateId: null` on update.
+  const aggregatedStatus = aggregateTaskStatus(taskFileMeta.map((t) => t.status));
+  const taskListStateId = aggregatedStatus
+    ? resolveTaskStateIdForPush(config, aggregatedStatus, getAutoStateIdMap(client))
+    : undefined;
+
   if (existingTaskIssueId) {
     const existingLabels = await readExistingLabelIds(client, existingTaskIssueId);
     const labelIds = mergeLabelIds(
@@ -654,6 +670,7 @@ async function pushOneTaskListForFeature(
       projectId,
       teamId,
       parentId: featureIssueId,
+      ...(taskListStateId ? { stateId: taskListStateId } : {}),
       projectMilestoneId: strategyCtx.milestoneId ?? null,
       labelIds,
     });
@@ -689,6 +706,7 @@ async function pushOneTaskListForFeature(
     parentId: featureIssueId,
     title,
     description: mergedBody,
+    ...(taskListStateId ? { stateId: taskListStateId } : {}),
     ...(strategyCtx.milestoneId ? { projectMilestoneId: strategyCtx.milestoneId } : {}),
     labelIds: initialLabelIds,
   });

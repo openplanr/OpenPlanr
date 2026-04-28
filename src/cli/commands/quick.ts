@@ -35,6 +35,7 @@ import { VALID_STATUSES } from '../../utils/constants.js';
 import { ensureDir, writeFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
 import { slugify } from '../../utils/slugify.js';
+import { applyBulkCheckboxes, resolveBulkStatusIntent } from '../helpers/bulk-checkbox-update.js';
 import {
   buildTaskItems,
   countTaskItems,
@@ -167,29 +168,63 @@ export function registerQuickCommand(program: Command) {
     .description('Update a quick task')
     .argument('<qtId>', 'quick task ID (e.g., QT-001)')
     .option('--status <status>', 'new status (pending, in-progress, done)')
-    .action(async (qtId: string, opts: { status?: string }) => {
-      const projectDir = program.opts().projectDir as string;
-      const config = await loadConfig(projectDir);
+    .option('--all-done', 'set status=done AND flip every `N.M` task checkbox to `[x]` in the body')
+    .option(
+      '--all-pending',
+      'set status=pending AND flip every `N.M` task checkbox to `[ ]` in the body',
+    )
+    .action(
+      async (qtId: string, opts: { status?: string; allDone?: boolean; allPending?: boolean }) => {
+        const projectDir = program.opts().projectDir as string;
+        const config = await loadConfig(projectDir);
 
-      if (!opts.status) {
-        logger.error('Provide --status <value>.');
-        process.exit(1);
-      }
+        let intent: ReturnType<typeof resolveBulkStatusIntent>;
+        try {
+          intent = resolveBulkStatusIntent(opts);
+        } catch (err) {
+          logger.error((err as Error).message);
+          process.exit(1);
+          return;
+        }
 
-      const allowed = VALID_STATUSES.quick;
-      if (allowed && !allowed.includes(opts.status)) {
-        logger.error(`Invalid status "${opts.status}". Valid: ${allowed.join(', ')}`);
-        process.exit(1);
-      }
+        if (intent.useBulk) {
+          try {
+            const result = await applyBulkCheckboxes(
+              projectDir,
+              config,
+              'quick',
+              qtId,
+              intent.bulkStatus,
+            );
+            const checkboxNote = result.flippedAny ? ' (subtasks flipped)' : '';
+            logger.success(`Updated ${qtId}: status=${result.status}${checkboxNote}`);
+          } catch (err) {
+            logger.error(`Failed to update ${qtId}: ${(err as Error).message}`);
+            process.exit(1);
+          }
+          return;
+        }
 
-      try {
-        await updateArtifactFields(projectDir, config, 'quick', qtId, { status: opts.status });
-        logger.success(`Updated ${qtId}: status=${opts.status}`);
-      } catch (err) {
-        logger.error(`Failed to update ${qtId}: ${(err as Error).message}`);
-        process.exit(1);
-      }
-    });
+        if (!intent.status) {
+          logger.error('Provide --status <value>, --all-done, or --all-pending.');
+          process.exit(1);
+        }
+
+        const allowed = VALID_STATUSES.quick;
+        if (allowed && !allowed.includes(intent.status)) {
+          logger.error(`Invalid status "${intent.status}". Valid: ${allowed.join(', ')}`);
+          process.exit(1);
+        }
+
+        try {
+          await updateArtifactFields(projectDir, config, 'quick', qtId, { status: intent.status });
+          logger.success(`Updated ${qtId}: status=${intent.status}`);
+        } catch (err) {
+          logger.error(`Failed to update ${qtId}: ${(err as Error).message}`);
+          process.exit(1);
+        }
+      },
+    );
 }
 
 // ---------------------------------------------------------------------------
