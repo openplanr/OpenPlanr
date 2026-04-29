@@ -873,6 +873,30 @@ planr checklist reset
 
 ---
 
+### `planr init`
+
+Initialize Planr in the current project. Sets up `.planr/`, picks an AI provider, asks for your default coding agent, and **auto-generates AI agent rule files for the runtime(s) you target**.
+
+```bash
+planr init                                # interactive — defaults include pipeline rules
+planr init --name my-project --yes        # non-interactive — accepts all defaults (incl. pipeline rules)
+planr init --no-pipeline-rules --yes      # non-interactive, agile-only (skip pipeline rules)
+planr init --no-ai --yes                  # non-interactive, no AI provider, agile + pipeline rules
+```
+
+| Option                  | Description                                                                | Default                     |
+| ----------------------- | -------------------------------------------------------------------------- | --------------------------- |
+| `--name <name>`         | Project name                                                               | basename of cwd             |
+| `--no-ai`               | Skip AI provider setup                                                     | AI prompt enabled           |
+| `--no-pipeline-rules`   | Skip openplanr-pipeline rules (agile rules only)                           | Pipeline rules generated    |
+| `--yes` / `-y`          | Non-interactive mode (accept all defaults)                                 | Interactive                 |
+
+**Why pipeline rules are on by default:** with them, `planr init` produces a complete, ready-to-use cross-runtime project. Cursor picks up `.cursor/rules/openplanr-pipeline.mdc` automatically; Codex's `AGENTS.md` includes the pipeline orchestration section; Claude Code's `CLAUDE.md` gets the pipeline block. **One command — every runtime activates the spec-driven workflow without further setup.**
+
+If you only want agile mode (epic → feature → story → task), pass `--no-pipeline-rules` to skip the pipeline file set.
+
+---
+
 ### `planr rules generate`
 
 Generate AI agent rule files for Cursor, Claude Code, and/or Codex. Two flags: **`--target`** (which runtime) and **`--scope`** (which workflow — agile or pipeline).

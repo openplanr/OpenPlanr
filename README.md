@@ -93,6 +93,19 @@ planr plan --epic EPIC-001          # cascade from an existing epic
 | Claude | `CLAUDE.md`           | Claude Code CLI  |
 | Codex  | `AGENTS.md`           | OpenAI Codex CLI |
 
+`planr init` **auto-generates rules for all three runtimes by default** — including the openplanr-pipeline spec-driven workflow rules. Single command, every runtime activated:
+
+```bash
+npm i -g openplanr
+cd my-project
+planr init                                  # interactive — defaults include pipeline rules
+# ✓ Created .planr/config.json
+# ✓ Generated 17 AI agent rule file(s) (scope: all)
+# ✓ Open Cursor / Codex / Claude Code — pipeline workflow is live
+```
+
+If you want to regenerate later or scope to one runtime / workflow:
+
 ```bash
 planr rules generate                                  # all targets, agile scope (default)
 planr rules generate --target cursor                  # cursor only

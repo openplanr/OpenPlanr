@@ -23,4 +23,6 @@ Multi-runtime rules: extend `planr rules generate` with a `--scope` flag for cro
 
 **Compatibility matrix and OpenPlanr Protocol v1.0.0** documented in `openplanr-pipeline/docs/protocol/` and `openplanr-pipeline/docs/compatibility-matrix.md` (pipeline plugin v0.6.0+).
 
-**Migration:** none. Default `--scope agile` keeps the existing 6 Cursor `.mdc` files, single CLAUDE.md, single AGENTS.md outputs unchanged.
+**`planr init` now auto-generates pipeline rules by default.** The init flow asks "Generate openplanr-pipeline rules?" with default `Yes` — meaning a single `planr init` produces a complete, ready-to-use cross-runtime project (Cursor + Codex pipeline rules pre-installed; Claude Code skill activates the same workflow via the plugin). Opt out with `planr init --no-pipeline-rules` to preserve the previous agile-only behaviour. This closes the cross-runtime DX gap so each tool (Cursor, Codex, Claude Code) is self-sufficient after a single command — no manual `planr rules generate --scope pipeline` step required for the common case.
+
+**Migration:** none. Existing projects can either re-run `planr init` (it auto-detects existing config and asks to overwrite) or run `planr rules generate --scope all` to add pipeline rules without touching config. `--scope agile` (the previous default for `planr rules generate`) keeps producing the existing 6 Cursor `.mdc` files, single CLAUDE.md, single AGENTS.md outputs unchanged.

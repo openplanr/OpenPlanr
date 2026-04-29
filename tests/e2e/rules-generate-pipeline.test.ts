@@ -30,6 +30,50 @@ afterEach(() => {
 // `npx tsx` cold-start can take 5-7s on the first invocation; budget generously.
 const TIMEOUT_MS = 25_000;
 
+describe('planr init auto-generates pipeline rules by default', () => {
+  it(
+    'init --yes (non-interactive default) produces both agile + pipeline rules for cursor',
+    () => {
+      const dir = makeTempDir();
+      run('init --name pipe-init-default --no-ai --yes', { cwd: dir });
+
+      const rulesRoot = join(dir, '.cursor', 'rules');
+      // Agile rules (existing default)
+      expect(existsSync(join(rulesRoot, 'agile-checklist.mdc'))).toBe(true);
+      // Pipeline rules (NEW default — closes the cross-runtime DX gap)
+      expect(existsSync(join(rulesRoot, 'openplanr-pipeline.mdc'))).toBe(true);
+      expect(existsSync(join(rulesRoot, 'agents', 'frontend-agent.md'))).toBe(true);
+      // CLAUDE.md gets the pipeline block + sibling reference card
+      expect(existsSync(join(dir, 'openplanr-pipeline.md'))).toBe(true);
+      // Codex AGENTS.md gets the pipeline orchestration section
+      const agents = readFileSync(join(dir, 'AGENTS.md'), 'utf-8');
+      expect(agents).toContain('OpenPlanr Pipeline Orchestration');
+    },
+    TIMEOUT_MS,
+  );
+
+  it(
+    'init --no-pipeline-rules opts out, producing only agile rules',
+    () => {
+      const dir = makeTempDir();
+      run('init --name pipe-init-optout --no-ai --no-pipeline-rules --yes', { cwd: dir });
+
+      const rulesRoot = join(dir, '.cursor', 'rules');
+      // Agile rules still generated
+      expect(existsSync(join(rulesRoot, 'agile-checklist.mdc'))).toBe(true);
+      // Pipeline rules NOT generated (explicit opt-out)
+      expect(existsSync(join(rulesRoot, 'openplanr-pipeline.mdc'))).toBe(false);
+      expect(existsSync(join(rulesRoot, 'agents'))).toBe(false);
+      // No sibling Claude reference card
+      expect(existsSync(join(dir, 'openplanr-pipeline.md'))).toBe(false);
+      // Codex AGENTS.md has agile content but NOT the pipeline section
+      const agents = readFileSync(join(dir, 'AGENTS.md'), 'utf-8');
+      expect(agents).not.toContain('OpenPlanr Pipeline Orchestration');
+    },
+    TIMEOUT_MS,
+  );
+});
+
 describe('rules generate --scope pipeline', () => {
   it(
     'cursor + scope=pipeline produces 3 .mdc rules + 8 agent body files',
@@ -162,10 +206,12 @@ describe('rules generate --scope pipeline', () => {
   );
 
   it(
-    'claude + scope=agile (default) does NOT produce sibling openplanr-pipeline.md',
+    'claude + scope=agile produces only CLAUDE.md (no sibling pipeline reference card)',
     () => {
       const dir = makeTempDir();
-      run('init --name pipe-claude-agile --no-ai --yes', { cwd: dir });
+      // Use --no-pipeline-rules so init produces a clean agile-only baseline.
+      // Without this, init's default-on auto-gen would write the sibling card pre-test.
+      run('init --name pipe-claude-agile --no-ai --no-pipeline-rules --yes', { cwd: dir });
       run('rules generate --target claude --scope agile', { cwd: dir });
 
       expect(existsSync(join(dir, 'openplanr-pipeline.md'))).toBe(false);
