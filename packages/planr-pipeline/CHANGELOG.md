@@ -2,6 +2,53 @@
 
 All notable changes to `openplanr-pipeline` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/) — with the caveat that pre-1.0 releases may contain breaking changes in minor bumps.
 
+## [0.6.0] — 2026-04-29
+
+### Added — OpenPlanr Protocol v1.0.0 + cross-runtime parity
+
+The pipeline plugin is now formally **one of three runtime adapters** to the OpenPlanr Protocol. The protocol is the contract; runtimes are adapters.
+
+**New protocol docs at `docs/protocol/`:**
+
+- `README.md` — protocol overview, version, and the runtime-as-adapter principle
+- `spec-artifacts.md` — canonical schema for SPEC, US, Task, design-spec, error-report, qa-report, `.pipeline-shipped` marker
+- `agent-roles.md` — 8 named role contracts (inputs, outputs, tool guardrails, model tier)
+- `commands.md` — PLAN and SHIP as runtime-agnostic command contracts (R1 normative)
+- `runtime-adapters.md` — per-adapter specs for Claude Code (canonical), Cursor, Codex
+
+**New compatibility matrix at `docs/compatibility-matrix.md`** — full per-capability parity table, including caveats around tool restrictions, Stop hook absence on Cursor/Codex, and Cursor subagent dispatch versioning.
+
+**New `runtime` field in the `.pipeline-shipped` marker** identifies which runtime executed (`claude-code`, `cursor`, or `codex`).
+
+### How to use it
+
+The plugin itself doesn't change behaviour — `/openplanr-pipeline:plan` and `/openplanr-pipeline:ship` work exactly as in v0.5.0. What's new is that other runtimes can now run the same pipeline:
+
+```bash
+# Generate Cursor pipeline rules
+planr rules generate --target cursor --scope pipeline
+
+# Generate Codex AGENTS.md pipeline section
+planr rules generate --target codex --scope pipeline
+```
+
+(Requires planr CLI v1.5.0+.)
+
+### Files updated
+
+- `docs/protocol/{README,spec-artifacts,agent-roles,commands,runtime-adapters}.md` (new)
+- `docs/compatibility-matrix.md` (new)
+- `.claude-plugin/plugin.json` — version 0.5.0 → 0.6.0
+
+### Migration
+
+No action required. The plugin's behaviour is unchanged. The new docs are reference material for users adopting Cursor or Codex alongside Claude Code.
+
+### Pairs with
+
+- `OpenPlanr` (planr CLI) v1.5.0 — `planr rules generate --scope pipeline` ships the Cursor + Codex adapter rules
+- `openplanr-skills` v1.3.0 — SKILL.md routing tree extended to multi-runtime
+
 ## [0.5.0] — 2026-04-28
 
 ### Changed — Consolidated under `/plan` + `/ship`

@@ -1,0 +1,67 @@
+{
+  "_comment": "Expected post-PO state for the feat-todo fixture. Asserted by runner.mjs --verify-po. Schema: each top-level key describes one assertion the runner checks; the runner prints PASS/FAIL per key.",
+  "_protocolVersion": "1.0.0",
+  "_fixtureSpecId": "SPEC-001",
+  "_fixtureSlug": "todo-feature",
+
+  "specDirectoryExists": {
+    "_description": "After PLAN, the spec-driven mode directory must exist with stories/ and tasks/ subdirs populated.",
+    "path": ".planr/specs/SPEC-001-todo-feature/",
+    "subdirsRequired": ["stories", "tasks"]
+  },
+
+  "specBodyValid": {
+    "_description": "The spec body file is unchanged from the fixture (PO phase doesn't rewrite it).",
+    "path": ".planr/specs/SPEC-001-todo-feature/SPEC-001-todo-feature.md",
+    "frontmatterRequired": {
+      "id": "SPEC-001",
+      "slug": "todo-feature",
+      "schemaVersion": "1.0.0"
+    }
+  },
+
+  "exactlyOneStory": {
+    "_description": "specification-agent should produce exactly 1 US for this fixture (1 functional requirement, no UI).",
+    "globPattern": ".planr/specs/SPEC-001-todo-feature/stories/US-*.md",
+    "expectedCount": 1,
+    "frontmatterRequired": {
+      "specId": "SPEC-001",
+      "schemaVersion": "1.0.0"
+    }
+  },
+
+  "exactlyOneTask": {
+    "_description": "Per protocol R2: 1 task per US when no PNG. The single task must be Type=Tech (no UI in this fixture).",
+    "globPattern": ".planr/specs/SPEC-001-todo-feature/tasks/T-*.md",
+    "expectedCount": 1,
+    "frontmatterRequired": {
+      "specId": "SPEC-001",
+      "type": "Tech",
+      "agent": "backend-agent",
+      "schemaVersion": "1.0.0"
+    }
+  },
+
+  "noUITask": {
+    "_description": "Anti-assertion: there must NOT be any task with Type=UI (no PNG in fixture, designer-agent skipped, frontend-agent should not be invoked).",
+    "globPattern": ".planr/specs/SPEC-001-todo-feature/tasks/T-*.md",
+    "frontmatterMustNotMatch": {
+      "type": "UI"
+    }
+  },
+
+  "noDesignSpec": {
+    "_description": "Anti-assertion: no PNGs → no design-spec.md should be generated.",
+    "pathMustNotExist": ".planr/specs/SPEC-001-todo-feature/design/design-spec.md"
+  },
+
+  "noErrorReportYet": {
+    "_description": "PO phase doesn't run the correction loop; no error-report.md should exist after PLAN.",
+    "pathMustNotExist": ".planr/specs/SPEC-001-todo-feature/tasks/error-report.md"
+  },
+
+  "noShipMarkerYet": {
+    "_description": "Anti-assertion: PLAN must NOT write the .pipeline-shipped marker (R1: PLAN/SHIP separation).",
+    "pathMustNotExist": ".planr/specs/SPEC-001-todo-feature/.pipeline-shipped"
+  }
+}

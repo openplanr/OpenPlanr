@@ -2,7 +2,9 @@
 
 > **Spec-driven AI factory.** Two-phase pipeline. Human checkpoint between phases. Plugin for Claude Code.
 
-A Claude Code plugin that turns functional specs into production code via a structured pipeline. Eight specialized subagents (Sonnet 4.6 for analysis, Opus 4.7 for code generation), stack-aware decomposition, and hard rules enforced at the *tool* layer — not just in prompts.
+The **canonical Claude Code adapter** for the [OpenPlanr Protocol v1.0.0](docs/protocol/README.md) — a runtime-agnostic spec-driven workflow that turns functional specs into production code. Eight specialized subagents (Sonnet 4.6 for analysis, Opus 4.7 for code generation), stack-aware decomposition, and hard rules enforced at the *tool* layer — not just in prompts.
+
+The same protocol runs on Cursor and Codex via planr-generated rule files (see [Runtime support](#runtime-support) below). Same artifacts. Same workflow. Same `.pipeline-shipped` proof markers.
 
 ---
 
@@ -19,6 +21,18 @@ You write WHAT (spec) → Agents decompose HOW (US + tasks) → You review → A
 The split is non-negotiable. **The plugin refuses to auto-chain PO Phase → DEV Phase.** That's the feature, not a limitation. The review gate is where you catch decomposition errors before they become expensive code.
 
 ---
+
+## Runtime support
+
+`openplanr-pipeline` is the **canonical Claude Code adapter** for the OpenPlanr Protocol v1.0.0. The same protocol runs on Cursor and Codex via planr-generated rule files:
+
+| Runtime | Adapter | Install |
+|---|---|---|
+| **Claude Code** *(canonical)* | This plugin (manifest-enforced subagents) | `/plugin marketplace add openplanr/marketplace && /plugin install openplanr-pipeline@openplanr` |
+| **Cursor** | `.cursor/rules/openplanr-pipeline.mdc` + agent body files | `npm i -g openplanr && planr rules generate --target cursor --scope pipeline` |
+| **Codex** | `AGENTS.md` with pipeline section | `npm i -g openplanr && planr rules generate --target codex --scope pipeline` |
+
+All three adapters share the same `.planr/specs/SPEC-NNN-{slug}/` artifact contract — a SPEC authored on one runtime is consumable by any other. See [`docs/compatibility-matrix.md`](docs/compatibility-matrix.md) for the full parity table and per-runtime caveats; see [`docs/protocol/`](docs/protocol/) for the runtime-agnostic protocol spec.
 
 ## Install
 
