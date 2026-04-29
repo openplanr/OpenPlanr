@@ -28,6 +28,7 @@ import { requireInteractiveForManual } from '../../services/interactive-state.js
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
 import { VALID_STATUSES } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
+import { applyBulkCheckboxes, resolveBulkStatusIntent } from '../helpers/bulk-checkbox-update.js';
 import {
   buildTaskItems,
   countTaskItems,
@@ -122,29 +123,68 @@ export function registerTaskCommand(program: Command) {
     .description('Update a task')
     .argument('<taskId>', 'task ID (e.g., TASK-001)')
     .option('--status <status>', 'new status (pending, in-progress, done)')
-    .action(async (taskId: string, opts: { status?: string }) => {
-      const projectDir = program.opts().projectDir as string;
-      const config = await loadConfig(projectDir);
+    .option('--all-done', 'set status=done AND flip every `N.M` task checkbox to `[x]` in the body')
+    .option(
+      '--all-pending',
+      'set status=pending AND flip every `N.M` task checkbox to `[ ]` in the body',
+    )
+    .action(
+      async (
+        taskId: string,
+        opts: { status?: string; allDone?: boolean; allPending?: boolean },
+      ) => {
+        const projectDir = program.opts().projectDir as string;
+        const config = await loadConfig(projectDir);
 
-      if (!opts.status) {
-        logger.error('Provide --status <value>.');
-        process.exit(1);
-      }
+        let intent: ReturnType<typeof resolveBulkStatusIntent>;
+        try {
+          intent = resolveBulkStatusIntent(opts);
+        } catch (err) {
+          logger.error((err as Error).message);
+          process.exit(1);
+          return;
+        }
 
-      const allowed = VALID_STATUSES.task;
-      if (allowed && !allowed.includes(opts.status)) {
-        logger.error(`Invalid status "${opts.status}". Valid: ${allowed.join(', ')}`);
-        process.exit(1);
-      }
+        if (intent.useBulk) {
+          try {
+            const result = await applyBulkCheckboxes(
+              projectDir,
+              config,
+              'task',
+              taskId,
+              intent.bulkStatus,
+            );
+            const checkboxNote = result.flippedAny ? ' (subtasks flipped)' : '';
+            logger.success(`Updated ${taskId}: status=${result.status}${checkboxNote}`);
+          } catch (err) {
+            logger.error(`Failed to update ${taskId}: ${(err as Error).message}`);
+            process.exit(1);
+          }
+          return;
+        }
 
-      try {
-        await updateArtifactFields(projectDir, config, 'task', taskId, { status: opts.status });
-        logger.success(`Updated ${taskId}: status=${opts.status}`);
-      } catch (err) {
-        logger.error(`Failed to update ${taskId}: ${(err as Error).message}`);
-        process.exit(1);
-      }
-    });
+        if (!intent.status) {
+          logger.error('Provide --status <value>, --all-done, or --all-pending.');
+          process.exit(1);
+        }
+
+        const allowed = VALID_STATUSES.task;
+        if (allowed && !allowed.includes(intent.status)) {
+          logger.error(`Invalid status "${intent.status}". Valid: ${allowed.join(', ')}`);
+          process.exit(1);
+        }
+
+        try {
+          await updateArtifactFields(projectDir, config, 'task', taskId, {
+            status: intent.status,
+          });
+          logger.success(`Updated ${taskId}: status=${intent.status}`);
+        } catch (err) {
+          logger.error(`Failed to update ${taskId}: ${(err as Error).message}`);
+          process.exit(1);
+        }
+      },
+    );
 }
 
 // ---------------------------------------------------------------------------

@@ -127,7 +127,7 @@ export function registerSpecCommand(program: Command) {
       }
 
       try {
-        const { id, slug, specDir, specFile } = await createSpec(projectDir, config, title, {
+        const { id, specDir, specFile } = await createSpec(projectDir, config, title, {
           slug: opts.slug,
           priority: opts.priority,
           milestone: opts.milestone,

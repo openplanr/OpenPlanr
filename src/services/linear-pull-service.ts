@@ -840,16 +840,11 @@ export async function runLinearTaskCheckboxSync(
     if (!issueId) {
       continue;
     }
-    // Catch both known corruption modes before calling the Linear API:
-    // (a) a workflow state UUID accidentally stored in the issue-id slot, and
-    // (b) any value that doesn't match a valid Linear issue form (UUID or `ENG-42`).
-    if (isLikelyLinearWorkflowStateId(issueId)) {
-      summary.skippedStaleId++;
-      logger.warn(
-        `Task ${t.id}: linearIssueId "${issueId}" looks like a workflow state uuid, not an issue id. Re-run \`planr linear push\` to repair.`,
-      );
-      continue;
-    }
+    // Reject only values that don't match a valid Linear issue form
+    // (UUID or `ENG-42` identifier). We deliberately do NOT pre-screen for
+    // "looks like a workflow state UUID" — Linear issue ids and workflow-state
+    // ids are both UUIDv4, so shape alone cannot distinguish them. Healthy
+    // pushed issue ids are UUIDs and must pass through (BL-016).
     if (!isLikelyLinearIssueId(issueId)) {
       summary.skippedStaleId++;
       logger.warn(

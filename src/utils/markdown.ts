@@ -122,3 +122,25 @@ export function applyTaskCheckboxStateMap(
     })
     .join('\n');
 }
+
+/**
+ * Flip every `N.M` task checkbox in `content` to a single state. Preserves
+ * line structure, indentation, ids, titles, and every non-checkbox line.
+ *
+ * Used by `--all-done` / `--all-pending` flags on artifact updates so users
+ * can ship an artifact without hand-flipping each subtask.
+ */
+export function applyAllCheckboxes(content: string, done: boolean): string {
+  const want = done ? 'x' : ' ';
+  return content
+    .split('\n')
+    .map((line) => {
+      // Match the same shape as applyTaskCheckboxStateMap so we touch only
+      // the canonical N.M task lines and never accidentally edit prose,
+      // links, or backticked checkbox-like text.
+      const m = line.match(/^(\s*)- \[(x| )]\s+\*{0,2}(\d+\.\d+)\*{0,2}\s+(.+)$/);
+      if (!m) return line;
+      return line.replace(/- \[(x| )]/, `- [${want}]`);
+    })
+    .join('\n');
+}

@@ -20,6 +20,7 @@ function baseConfig(overrides: Partial<OpenPlanrConfig> = {}): OpenPlanrConfig {
       quick: 'QUICK',
       backlog: 'BACKLOG',
       sprint: 'SPRINT',
+      spec: 'SPEC',
     },
     createdAt: '2026-01-01',
     ...overrides,

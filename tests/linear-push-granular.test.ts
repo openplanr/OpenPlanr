@@ -41,6 +41,7 @@ function baseConfig(): OpenPlanrConfig {
       quick: 'QT',
       backlog: 'BL',
       sprint: 'SPRINT',
+      spec: 'SPEC',
     },
     createdAt: '2026-04-22',
     linear: { teamId: 'team-uuid-abc' },
@@ -91,9 +92,10 @@ async function writeTaskFile(
   dir: string,
   id: string,
   featureId: string,
-  opts: { linearIssueId?: string } = {},
+  opts: { linearIssueId?: string; status?: string } = {},
 ): Promise<void> {
   const fm = [`id: "${id}"`, `title: "${id} title"`, `featureId: "${featureId}"`];
+  if (opts.status) fm.push(`status: "${opts.status}"`);
   if (opts.linearIssueId) fm.push(`linearIssueId: "${opts.linearIssueId}"`);
   const body = `---\n${fm.join('\n')}\n---\n\n# ${id}\n\n## Tasks\n\n- [ ] **1.0** Task one\n  - [ ] 1.1 Subtask\n- [ ] **2.0** Task two\n`;
   await writeFile(join(dir, '.planr', 'tasks', `${id}-test.md`), body);
@@ -114,9 +116,27 @@ interface FakeLinearClient {
     project: ReturnType<typeof vi.fn>;
     issue: ReturnType<typeof vi.fn>;
   };
+  /** The most recent input passed to `createIssue` — set when any test asserts on issue payload shape. */
+  lastCreatedIssueInput: () => Record<string, unknown> | undefined;
 }
 
-function makeFakeClient(): FakeLinearClient {
+type TeamState = { id: string; name: string; type: string };
+
+const DEFAULT_TEAM_STATES: TeamState[] = [
+  { id: 'state-backlog-uuid', name: 'Backlog', type: 'backlog' },
+  { id: 'state-todo-uuid', name: 'Todo', type: 'unstarted' },
+  { id: 'state-inprog-uuid', name: 'In Progress', type: 'started' },
+  { id: 'state-done-uuid', name: 'Done', type: 'completed' },
+];
+
+/**
+ * Single fake-LinearClient factory. Pass `{ teamStates }` to enable the
+ * `team()` mock used by `runLinearPush`'s status-id auto-derive cache.
+ * Without it, `runLinearPush` degrades gracefully (no stateId on push) —
+ * which is what most tests want.
+ */
+function makeFakeClient(opts: { teamStates?: TeamState[] } = {}): FakeLinearClient {
+  const issueInputs: Array<Record<string, unknown>> = [];
   let projectCounter = 0;
   let issueCounter = 0;
   let labelCounter = 0;
@@ -125,11 +145,14 @@ function makeFakeClient(): FakeLinearClient {
     return { success: true, projectId: `proj-uuid-${projectCounter}` };
   });
   const updateProject = vi.fn(async () => ({ success: true }));
-  const createIssue = vi.fn(async () => {
+  const createIssue = vi.fn(async (input: Record<string, unknown>) => {
     issueCounter += 1;
+    issueInputs.push(input);
     return { success: true, issueId: `issue-uuid-${issueCounter}` };
   });
-  const updateIssue = vi.fn(async () => ({ success: true }));
+  const updateIssue = vi.fn<
+    (id: string, input: Record<string, unknown>) => Promise<{ success: boolean }>
+  >(async () => ({ success: true }));
   const issueLabels = vi.fn(async () => ({ nodes: [] }));
   const createIssueLabel = vi.fn(async () => {
     labelCounter += 1;
@@ -147,7 +170,7 @@ function makeFakeClient(): FakeLinearClient {
     url: `https://linear.app/test/issue/${id}`,
     labelIds: [] as string[],
   }));
-  const client = {
+  const clientShape: Record<string, unknown> = {
     createProject,
     updateProject,
     createIssue,
@@ -156,10 +179,18 @@ function makeFakeClient(): FakeLinearClient {
     createIssueLabel,
     project,
     issue,
-  } as unknown as LinearClient;
+  };
+  if (opts.teamStates) {
+    const states = opts.teamStates;
+    clientShape.team = vi.fn(async () => ({
+      issueEstimationType: 'notUsed',
+      states: async () => ({ nodes: states }),
+    }));
+  }
   return {
-    client,
+    client: clientShape as unknown as LinearClient,
     calls: { createProject, updateProject, createIssue, updateIssue, project, issue },
+    lastCreatedIssueInput: () => issueInputs[issueInputs.length - 1],
   };
 }
 
@@ -379,5 +410,199 @@ describe('runLinearPush — unsupported prefixes', () => {
     await expect(runLinearPush(projectDir, config, fake.client, 'ZZZ-001')).rejects.toThrow(
       /Unknown artifact id/,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// --no-cascade behavior matrix (BL-012)
+// ---------------------------------------------------------------------------
+
+describe('runLinearPush — --no-cascade (granular scope control)', () => {
+  let projectDir: string;
+  let config: OpenPlanrConfig;
+  beforeEach(async () => {
+    const p = await setupProject();
+    projectDir = p.dir;
+    config = p.config;
+    await writeEpic(projectDir, 'EPIC-001', { linearProjectId: 'proj-existing' });
+    await writeFeature(projectDir, 'FEAT-001', 'EPIC-001');
+    await writeStory(projectDir, 'US-001', 'FEAT-001');
+    await writeStory(projectDir, 'US-002', 'FEAT-001');
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001');
+  });
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it('FEAT push with --no-cascade creates only the feature issue (no stories, no tasklist)', async () => {
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'FEAT-001', { noCascade: true });
+    // Feature is the only issue created — not the 2 stories, not the tasklist.
+    expect(fake.calls.createIssue).toHaveBeenCalledTimes(1);
+  });
+
+  it('FEAT push without --no-cascade still cascades to stories + tasklist (default unchanged)', async () => {
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'FEAT-001');
+    // 1 feature + 2 stories + 1 tasklist = 4
+    expect(fake.calls.createIssue).toHaveBeenCalledTimes(4);
+  });
+
+  it('EPIC push with --no-cascade creates only the project (no features, no stories)', async () => {
+    // Override the existing epic so the project is freshly created (not just updated).
+    rmSync(join(projectDir, '.planr', 'epics'), { recursive: true });
+    await ensureDir(join(projectDir, '.planr', 'epics'));
+    await writeEpic(projectDir, 'EPIC-001'); // no linearProjectId
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'EPIC-001', { noCascade: true });
+    expect(fake.calls.createProject).toHaveBeenCalledTimes(1);
+    expect(fake.calls.createIssue).not.toHaveBeenCalled();
+  });
+
+  it('--push-parents pushes only the ancestor chain (TASK-only push, no sibling stories)', async () => {
+    // FEAT-001 is NOT yet pushed; TASK-001 needs the parent. With --push-parents
+    // we expect: FEAT-001 issue + TASK-001 tasklist. NOT US-001, NOT US-002.
+    rmSync(join(projectDir, '.planr', 'features'), { recursive: true });
+    await ensureDir(join(projectDir, '.planr', 'features'));
+    await writeFeature(projectDir, 'FEAT-001', 'EPIC-001'); // no linearIssueId
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'TASK-001', { pushParents: true });
+    // 1 feature + 1 tasklist = 2 issues. NOT 1 feature + 2 stories + 1 tasklist (4).
+    expect(fake.calls.createIssue).toHaveBeenCalledTimes(2);
+  });
+
+  it('--push-parents on a US-only push pushes feature + this story only (not sibling stories or tasklist)', async () => {
+    rmSync(join(projectDir, '.planr', 'features'), { recursive: true });
+    await ensureDir(join(projectDir, '.planr', 'features'));
+    await writeFeature(projectDir, 'FEAT-001', 'EPIC-001'); // no linearIssueId
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'US-001', { pushParents: true });
+    // 1 feature + 1 story = 2 issues. NOT US-002, NOT the tasklist.
+    expect(fake.calls.createIssue).toHaveBeenCalledTimes(2);
+  });
+
+  it('--no-cascade is a no-op for leaf artifacts (story push)', async () => {
+    // FEAT-001 has linearIssueId so US-001 attaches normally.
+    rmSync(join(projectDir, '.planr', 'features'), { recursive: true });
+    await ensureDir(join(projectDir, '.planr', 'features'));
+    await writeFeature(projectDir, 'FEAT-001', 'EPIC-001', {
+      linearIssueId: 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
+    });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'US-001', { noCascade: true });
+    expect(fake.calls.createIssue).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dry-run plan with --no-cascade
+// ---------------------------------------------------------------------------
+
+describe('buildLinearPushPlan — --no-cascade row counts', () => {
+  let projectDir: string;
+  beforeEach(async () => {
+    const p = await setupProject();
+    projectDir = p.dir;
+    await writeEpic(projectDir, 'EPIC-001', { linearProjectId: 'proj-existing' });
+    await writeFeature(projectDir, 'FEAT-001', 'EPIC-001');
+    await writeStory(projectDir, 'US-001', 'FEAT-001');
+    await writeStory(projectDir, 'US-002', 'FEAT-001');
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001');
+  });
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it('FEAT plan with --no-cascade lists only the feature row', async () => {
+    const config = baseConfig();
+    const plan = await buildLinearPushPlan(projectDir, config, 'FEAT-001', { noCascade: true });
+    expect(plan?.rows).toHaveLength(1);
+    expect(plan?.rows[0]?.kind).toBe('feature');
+  });
+
+  it('FEAT plan without --no-cascade lists feature + stories + tasklist (default unchanged)', async () => {
+    const config = baseConfig();
+    const plan = await buildLinearPushPlan(projectDir, config, 'FEAT-001');
+    expect(plan?.rows.length).toBeGreaterThan(1);
+    expect(plan?.rows.map((r) => r.kind)).toContain('story');
+    expect(plan?.rows.map((r) => r.kind)).toContain('taskList');
+  });
+
+  it('EPIC plan with --no-cascade lists only the project row', async () => {
+    const config = baseConfig();
+    const plan = await buildLinearPushPlan(projectDir, config, 'EPIC-001', { noCascade: true });
+    expect(plan?.rows).toHaveLength(1);
+    expect(plan?.rows[0]?.kind).toBe('project');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BL-014: TASK aggregation → TaskList stateId on push
+// ---------------------------------------------------------------------------
+
+describe('runLinearPush — TASK status aggregates to merged TaskList stateId', () => {
+  let projectDir: string;
+  let config: OpenPlanrConfig;
+  beforeEach(async () => {
+    const p = await setupProject();
+    projectDir = p.dir;
+    config = p.config;
+    await writeEpic(projectDir, 'EPIC-001', { linearProjectId: 'proj-existing' });
+    await writeFeature(projectDir, 'FEAT-001', 'EPIC-001', {
+      linearIssueId: 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
+    });
+  });
+  afterEach(() => {
+    rmSync(projectDir, { recursive: true, force: true });
+  });
+
+  it('all task files done → TaskList stateId = team.completed (Done)', async () => {
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001', { status: 'done' });
+    await writeTaskFile(projectDir, 'TASK-002', 'FEAT-001', { status: 'done' });
+    const fake = makeFakeClient({ teamStates: DEFAULT_TEAM_STATES });
+    await runLinearPush(projectDir, config, fake.client, 'TASK-001');
+    // The TaskList Linear issue (created here) gets stateId=Done.
+    expect(fake.lastCreatedIssueInput()?.stateId).toBe('state-done-uuid');
+  });
+
+  it('any task in-progress → TaskList stateId = team.started (In Progress)', async () => {
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001', { status: 'in-progress' });
+    await writeTaskFile(projectDir, 'TASK-002', 'FEAT-001', { status: 'pending' });
+    const fake = makeFakeClient({ teamStates: DEFAULT_TEAM_STATES });
+    await runLinearPush(projectDir, config, fake.client, 'TASK-001');
+    expect(fake.lastCreatedIssueInput()?.stateId).toBe('state-inprog-uuid');
+  });
+
+  it('mix of done + pending (no in-progress) → TaskList stateId = started (work has begun)', async () => {
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001', { status: 'done' });
+    await writeTaskFile(projectDir, 'TASK-002', 'FEAT-001', { status: 'pending' });
+    const fake = makeFakeClient({ teamStates: DEFAULT_TEAM_STATES });
+    await runLinearPush(projectDir, config, fake.client, 'TASK-001');
+    expect(fake.lastCreatedIssueInput()?.stateId).toBe('state-inprog-uuid');
+  });
+
+  it('all task files pending → TaskList stateId = team.unstarted (Todo)', async () => {
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001', { status: 'pending' });
+    await writeTaskFile(projectDir, 'TASK-002', 'FEAT-001', { status: 'pending' });
+    const fake = makeFakeClient({ teamStates: DEFAULT_TEAM_STATES });
+    await runLinearPush(projectDir, config, fake.client, 'TASK-001');
+    expect(fake.lastCreatedIssueInput()?.stateId).toBe('state-todo-uuid');
+  });
+
+  it('omits stateId on update when team-state lookup fails (no auto-map cached)', async () => {
+    // No `team()` mock — the auto-state-id-map fetch fails gracefully and
+    // caches an empty map. The aggregated status resolves but maps to no
+    // stateId; push must omit the field, not send `null`.
+    await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001', {
+      status: 'done',
+      linearIssueId: 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+    });
+    const fake = makeFakeClient();
+    await runLinearPush(projectDir, config, fake.client, 'TASK-001');
+    const updateArgs = fake.calls.updateIssue.mock.calls[0] as
+      | [string, Record<string, unknown>]
+      | undefined;
+    expect(updateArgs?.[1]).toBeDefined();
+    expect(updateArgs?.[1]).not.toHaveProperty('stateId');
   });
 });

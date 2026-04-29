@@ -11,7 +11,7 @@ import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OpenPlanrConfig } from '../../src/models/types.js';
 import {
   attachSpecDesigns,
@@ -35,7 +35,7 @@ import {
 } from '../../src/services/spec-service.js';
 
 // Test fixture: minimal valid OpenPlanrConfig.
-function makeConfig(projectDir: string): OpenPlanrConfig {
+function makeConfig(_projectDir: string): OpenPlanrConfig {
   return {
     projectName: 'test-project',
     targets: ['claude'],

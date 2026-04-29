@@ -302,6 +302,28 @@ planr task list --story US-001    # filter by story
 
 ---
 
+### `planr task update` / `planr quick update` / `planr update`
+
+Set status and (optionally) flip every `N.M` task checkbox in the body.
+
+```bash
+planr task update TASK-001 --status done                # frontmatter status only
+planr task update TASK-001 --all-done                   # status=done AND every checkbox → [x]
+planr task update TASK-001 --all-pending                # status=pending AND every checkbox → [ ]
+planr quick update QT-001 --all-done                    # same flag works on QT
+planr update TASK-001 TASK-002 --all-done               # bulk across multiple ids
+```
+
+| Option           | Description                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `--status`       | Set frontmatter status only                                                                                              |
+| `--all-done`     | Set `status: done` AND flip every `N.M` checkbox in the body to `[x]`. Implies status — combining with `--status` errors. |
+| `--all-pending`  | Set `status: pending` AND flip every `N.M` checkbox to `[ ]`. Mutually exclusive with `--all-done` and `--status`.       |
+
+`--all-done` / `--all-pending` only flip canonical `- [ ] **N.M**` task lines — prose, headings, frontmatter, and non-task bullets are preserved byte-for-byte. The flag is the recommended way to mark "feature shipped" because it leaves the task body in the state that `planr linear push` and `planr linear tasklist-sync` will mirror to Linear.
+
+---
+
 ### `planr backlog add`
 
 Capture a backlog item — a quick way to record ideas, bugs, or work items without breaking your flow.
@@ -1097,9 +1119,20 @@ Each artifact's status decision considers three values: `local` (current frontma
 | feature / story | `planning` · `in-progress` · `done` | ✅ |
 | quick (`QT-`) | `pending` · `in-progress` · `done` | ✅ |
 | backlog (`BL-`) | `open` · `closed` · `promoted` | ✅ (never auto-overwrites `promoted`) |
-| task (`TASK-`) | — | ❌ see below |
+| task (`TASK-`) | `pending` · `in-progress` · `done` (per-file) | ✅ push (aggregated to merged TaskList issue); pull deferred — see below |
 
-Task files aren't status-synced: a single Linear TaskList issue aggregates many local `TASK-*.md` files, so 1:1 status mapping doesn't apply. Use `planr linear tasklist-sync` instead — it mirrors individual checkboxes.
+**TASK aggregation on push.** A single Linear TaskList issue aggregates every `TASK-NNN.md` file under one feature (one issue, multiple checkbox lists merged). `planr linear push` resolves a single workflow stateId for that issue using the rule:
+
+| Local task-file statuses | Linear TaskList state |
+|---|---|
+| All `done` | Done (`completed`) |
+| Any `in-progress` | In Progress (`started`) |
+| Mix of `done` + `pending` (no in-progress) | In Progress (`started`) — work has begun |
+| All `pending` | Todo (`unstarted`) |
+
+The `--all-done` flag on `planr task update` (see above) is the recommended path: flipping every checkbox in a task file to `[x]` and setting `status: done` makes the next `planr linear push FEAT-XXX` move the merged TaskList issue to Done.
+
+**Pull-side TASK propagation** (Linear → all task files under feature) is tracked separately — partial-disagreement guards aren't trivial. `planr linear tasklist-sync` continues to handle per-checkbox sync as today.
 
 **Baseline frontmatter fields** (written by sync, optional; missing = no prior sync):
 
@@ -1169,7 +1202,10 @@ planr linear push QT-007                                # standalone quick task 
 planr linear push BL-001                                # backlog item (auto `backlog` label)
 planr linear push EPIC-001 --dry-run                    # local preview only; no Linear API calls
 planr linear push EPIC-001 --update-only                # only update existing linked entities
-planr linear push FEAT-015 --push-parents               # if the parent epic isn't pushed yet, push it first without prompting
+planr linear push FEAT-015 --push-parents               # if the parent epic isn't pushed yet, push it first (upward attachment only)
+planr linear push FEAT-015 --no-cascade                 # push only this feature — skip its stories and tasklist
+planr linear push EPIC-001 --no-cascade                 # push only the epic project — no features
+planr linear push TASK-004 --push-parents               # push parent feature (no sibling stories) + this tasklist
 planr linear push EPIC-001 --as milestone-of:<projectId># first-time mapping strategy override
 ```
 
@@ -1178,8 +1214,23 @@ planr linear push EPIC-001 --as milestone-of:<projectId># first-time mapping str
 | `<artifactId>`              | Any supported prefix — `EPIC-`, `FEAT-`, `US-`, `TASK-`, `QT-`, `BL-`                                                                          | **Yes**  |
 | `--dry-run`                 | Print planned creates/updates/skips from disk; does not read credentials or call Linear                                                        | No       |
 | `--update-only`             | Update only objects that already have a Linear id in frontmatter; do not create new project or issues                                          | No       |
-| `--push-parents`            | If a parent in the chain is not yet pushed to Linear, push it first without prompting                                                          | No       |
+| `--push-parents`            | If a parent in the chain is not yet pushed to Linear, push it first — **upward attachment only** (does NOT push the parent's siblings)         | No       |
+| `--no-cascade`              | Push only the target artifact (and minimum parent chain when `--push-parents` is set). EPIC/FEAT pushes skip their descendants. No-op for leaves. | No       |
 | `--as <strategy>`           | Epic-only: mapping strategy. One of `project` \| `milestone-of:<projectId>` \| `label-on:<projectId>`                                          | No       |
+
+**Granular vs cascading push**
+
+| Command | Pushes |
+|---|---|
+| `push EPIC-001` | EPIC + all features + all stories + all tasklists + linked QT/BL (today's default) |
+| `push EPIC-001 --no-cascade` | EPIC project only |
+| `push FEAT-006` | FEAT + its stories + its tasklist (today's default) |
+| `push FEAT-006 --no-cascade` | FEAT issue only |
+| `push US-014` (parent FEAT in Linear) | US-014 sub-issue, linked to FEAT |
+| `push US-014 --push-parents` (parent FEAT not in Linear) | EPIC + FEAT + US-014. **No sibling stories. No tasklist.** |
+| `push TASK-004 --push-parents` (parent FEAT not in Linear) | EPIC + FEAT + this tasklist. **No stories.** |
+
+`--push-parents` is now strictly upward attachment — pushes only what's needed for the target to land in Linear, never the parent's other children. Combine with `--no-cascade` (default for leaves) for the tightest possible push scope.
 
 **Epic mapping strategies**
 

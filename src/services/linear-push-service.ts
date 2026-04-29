@@ -52,6 +52,7 @@ import {
   readExistingLabelIds,
   type StrategyContext,
 } from './linear/strategy-context.js';
+import { aggregateTaskStatus } from './linear/task-status-aggregation.js';
 import {
   createLinearIssue,
   createLinearProject,
@@ -113,10 +114,26 @@ export interface LinearPushOptions {
   updateOnly?: boolean;
   /**
    * When true and a FEAT/US/TASK push's parent chain is not yet in Linear,
-   * push the missing parents first without prompting. Non-interactive mode
-   * requires this to be set explicitly to auto-cascade.
+   * push the **ancestor chain only** (not the ancestors' other children) so
+   * the target artifact has somewhere to attach. With `--no-cascade` this
+   * means parents are pushed empty (FEAT without its stories, EPIC without
+   * its features). Non-interactive mode requires this to be set explicitly
+   * to auto-cascade upward.
    */
   pushParents?: boolean;
+  /**
+   * Push only the target artifact (and the minimum ancestor chain when
+   * `pushParents` is set) — skip the descendant cascade that EPIC and FEAT
+   * pushes do by default. Mutually exclusive with `cascade`. No-op for
+   * leaf artifacts (US / TASK / QT / BL).
+   */
+  noCascade?: boolean;
+  /**
+   * Explicitly opt into descendant cascade. Today this is the default for
+   * EPIC and FEAT pushes; the flag exists so users can write the explicit
+   * intent (and so `--cascade --no-cascade` errors out as a clear signal).
+   */
+  cascade?: boolean;
   /**
    * First-time epic mapping override — used when the user passes
    * `--as project|milestone-of:<id>|label-on:<id>` or picks a strategy at
@@ -385,6 +402,7 @@ async function pushOneFeatureAndDescendants(
   typeLabelCache: (type: LinearLabeledArtifactType) => Promise<string>,
   teamId: string,
   updateOnly: boolean,
+  noCascade = false,
 ): Promise<string | null> {
   const f = sf.data;
   const featureTitle = f.title.trim();
@@ -452,6 +470,14 @@ async function pushOneFeatureAndDescendants(
     };
     if (strategyCtx.milestoneId) fmUpdate.linearProjectMilestoneId = strategyCtx.milestoneId;
     await updateArtifactFields(projectDir, config, 'feature', f.id, fmUpdate);
+  }
+
+  // `--no-cascade` short-circuits the downward push of stories and the
+  // merged tasklist. The feature itself is still created/updated; users
+  // can push individual stories/tasks later and they'll auto-link via the
+  // parent's `linearIssueId`.
+  if (noCascade) {
+    return featureIssueId;
   }
 
   for (const st of sf.stories) {
@@ -587,19 +613,25 @@ async function pushOneTaskListForFeature(
   teamId: string,
   updateOnly: boolean,
 ): Promise<void> {
-  // Note: estimate sync is intentionally not applied here. A single Linear
-  // TaskList issue aggregates `sf.taskFiles` — multiple TASK-*.md files —
-  // so a 1:1 numeric estimate mapping doesn't apply. Aggregation rules
-  // (sum? max? per-file-section?) are their own concern.
+  // Note: estimate sync is intentionally not applied here — see BL-014's
+  // out-of-scope note. The merged TaskList issue still gets a stateId via
+  // the aggregation rule below (BL-014), but no `estimate` field.
   const f = sf.data;
   const { projectId } = strategyCtx;
   const mergedBody = await buildMergedTaskListBody(projectDir, config, f.id, sf.taskFiles);
-  const issueFromFiles = await Promise.all(
+  // Read each task file's linearIssueId AND status in one pass — status is
+  // used for the aggregation rule that drives the merged TaskList stateId.
+  const taskFileMeta = await Promise.all(
     sf.taskFiles.map(async (tf) => {
       const a = await readArtifact(projectDir, config, 'task', tf.id);
-      return toOptionalString(a?.data.linearIssueId);
+      return {
+        id: tf.id,
+        linearIssueId: toOptionalString(a?.data.linearIssueId),
+        status: asTaskStatus(a?.data.status),
+      };
     }),
   );
+  const issueFromFiles = taskFileMeta.map((t) => t.linearIssueId);
   const rawExistingTaskIssueId = issueFromFiles.find(Boolean);
   const existingTaskIssueId = isUsableLinearIssueId(
     rawExistingTaskIssueId,
@@ -617,6 +649,15 @@ async function pushOneTaskListForFeature(
       : `Tasks: ${f.title}`;
   const typeLabelId = await typeLabelCache('task');
 
+  // BL-014: aggregate per-task-file statuses into a canonical TaskStatus,
+  // then resolve the Linear stateId via the existing pipeline (config
+  // pushStateIds → statusMap → auto-derived team map). Omit when unmapped
+  // — Linear rejects `stateId: null` on update.
+  const aggregatedStatus = aggregateTaskStatus(taskFileMeta.map((t) => t.status));
+  const taskListStateId = aggregatedStatus
+    ? resolveTaskStateIdForPush(config, aggregatedStatus, getAutoStateIdMap(client))
+    : undefined;
+
   if (existingTaskIssueId) {
     const existingLabels = await readExistingLabelIds(client, existingTaskIssueId);
     const labelIds = mergeLabelIds(
@@ -629,6 +670,7 @@ async function pushOneTaskListForFeature(
       projectId,
       teamId,
       parentId: featureIssueId,
+      ...(taskListStateId ? { stateId: taskListStateId } : {}),
       projectMilestoneId: strategyCtx.milestoneId ?? null,
       labelIds,
     });
@@ -664,6 +706,7 @@ async function pushOneTaskListForFeature(
     parentId: featureIssueId,
     title,
     description: mergedBody,
+    ...(taskListStateId ? { stateId: taskListStateId } : {}),
     ...(strategyCtx.milestoneId ? { projectMilestoneId: strategyCtx.milestoneId } : {}),
     labelIds: initialLabelIds,
   });
@@ -696,6 +739,7 @@ async function pushEpicScope(
   teamId: string,
   leadId: string | undefined,
   override: LinearPushOptions['strategyOverride'],
+  noCascade = false,
 ): Promise<LinearPushPlan | null> {
   const scope = await loadLinearPushScope(projectDir, config, epicId);
   if (!scope) {
@@ -804,6 +848,14 @@ async function pushEpicScope(
     strategyCtx = { strategy: 'label-on', projectId: targetProjectId, labelId: label.id };
   }
 
+  // `--no-cascade` short-circuits the downward push of features (and the
+  // QT/BL cascade below). The epic's Linear project is still created/updated
+  // so descendants can attach to it later via individual `planr linear push
+  // FEAT-XXX` / `US-XXX` calls.
+  if (noCascade) {
+    return plan;
+  }
+
   for (const sf of features) {
     await pushOneFeatureAndDescendants(
       projectDir,
@@ -890,13 +942,17 @@ async function pushFeatureScope(
     throw new Error(`Feature not found or has no \`epicId\`: ${featureId}`);
   }
   const updateOnly = options.updateOnly === true;
+  const noCascade = options.noCascade === true;
 
   if (!ctx.epic.linearProjectId) {
     if (options.pushParents) {
       logger.info(
-        `Parent epic ${ctx.epic.id} is not in Linear yet — pushing the full epic first (--push-parents).`,
+        `Parent epic ${ctx.epic.id} is not in Linear yet — pushing the epic only (--push-parents).`,
       );
-      return pushEpicScope(
+      // Push the parent epic with noCascade=true so we don't accidentally
+      // push the epic's *other* features. `--push-parents` is upward-only;
+      // attachment, not subtree shipping.
+      const epicPlan = await pushEpicScope(
         projectDir,
         config,
         client,
@@ -905,11 +961,21 @@ async function pushFeatureScope(
         teamId,
         leadId,
         options.strategyOverride,
+        true, // noCascade — push the project only
+      );
+      if (!epicPlan) return null;
+      // Now reload the feature with the freshly-pushed epic and continue
+      // into the feature push below.
+      const refreshed = await loadForFeature(projectDir, config, featureId);
+      if (refreshed) {
+        ctx.epic = refreshed.epic;
+        ctx.sf = refreshed.sf;
+      }
+    } else {
+      throw new Error(
+        `Parent epic ${ctx.epic.id} has not been pushed to Linear yet. Run \`planr linear push ${ctx.epic.id}\` first, or re-run with \`--push-parents\`.`,
       );
     }
-    throw new Error(
-      `Parent epic ${ctx.epic.id} has not been pushed to Linear yet. Run \`planr linear push ${ctx.epic.id}\` first, or re-run with \`--push-parents\`.`,
-    );
   }
 
   const strategyCtx = contextFromMappedEpic(ctx.epic, config);
@@ -923,6 +989,7 @@ async function pushFeatureScope(
     typeLabelCache,
     teamId,
     updateOnly,
+    noCascade,
   );
 
   return buildLinearPushPlan(projectDir, config, featureId, { updateOnly });
@@ -949,21 +1016,32 @@ async function pushStoryScope(
   if (!isUsableLinearIssueId(ctx.sf.data.linearIssueId, `Feature ${ctx.sf.data.id}`)) {
     if (options.pushParents) {
       logger.info(
-        `Parent feature ${ctx.sf.data.id} is not in Linear yet — pushing the feature subtree first (--push-parents).`,
+        `Parent feature ${ctx.sf.data.id} is not in Linear yet — pushing the feature only (--push-parents).`,
       );
-      return pushFeatureScope(
+      // Push the parent feature with noCascade=true so we don't drag in
+      // sibling stories or the merged tasklist. `--push-parents` is upward
+      // attachment only.
+      const parentPlan = await pushFeatureScope(
         projectDir,
         config,
         client,
         ctx.sf.data.id,
-        { ...options, pushParents: true },
+        { ...options, pushParents: true, noCascade: true },
         teamId,
         leadId,
       );
+      if (!parentPlan) return null;
+      const refreshed = await loadForStory(projectDir, config, storyId);
+      if (refreshed) {
+        ctx.epic = refreshed.epic;
+        ctx.sf = refreshed.sf;
+        ctx.story = refreshed.story;
+      }
+    } else {
+      throw new Error(
+        `Parent feature ${ctx.sf.data.id} has not been pushed to Linear yet. Run \`planr linear push ${ctx.sf.data.id}\` first, or re-run with \`--push-parents\`.`,
+      );
     }
-    throw new Error(
-      `Parent feature ${ctx.sf.data.id} has not been pushed to Linear yet. Run \`planr linear push ${ctx.sf.data.id}\` first, or re-run with \`--push-parents\`.`,
-    );
   }
 
   // Ensure parent epic also has a Linear project — required for the story's `projectId`.
@@ -976,6 +1054,11 @@ async function pushStoryScope(
   const strategyCtx = contextFromMappedEpic(ctx.epic, config);
   const typeLabelCache = createTypeLabelCache(client, teamId, config);
   const featureIssueId = ctx.sf.data.linearIssueId;
+  if (!featureIssueId) {
+    throw new Error(
+      `Parent feature ${ctx.sf.data.id} has no Linear issue id after the parent push — this is a bug.`,
+    );
+  }
   await pushOneStoryUnderFeature(
     projectDir,
     config,
@@ -1014,21 +1097,31 @@ async function pushTaskFileScope(
   if (!isUsableLinearIssueId(ctx.sf.data.linearIssueId, `Feature ${ctx.sf.data.id}`)) {
     if (options.pushParents) {
       logger.info(
-        `Parent feature ${ctx.sf.data.id} is not in Linear yet — pushing the feature subtree first (--push-parents).`,
+        `Parent feature ${ctx.sf.data.id} is not in Linear yet — pushing the feature only (--push-parents).`,
       );
-      return pushFeatureScope(
+      // Push parent feature with noCascade=true so sibling stories aren't
+      // dragged in. The merged tasklist will be (re)created in this scope's
+      // own pushOneTaskListForFeature call below.
+      const parentPlan = await pushFeatureScope(
         projectDir,
         config,
         client,
         ctx.sf.data.id,
-        { ...options, pushParents: true },
+        { ...options, pushParents: true, noCascade: true },
         teamId,
         leadId,
       );
+      if (!parentPlan) return null;
+      const refreshed = await loadForTaskFile(projectDir, config, taskId);
+      if (refreshed) {
+        ctx.epic = refreshed.epic;
+        ctx.sf = refreshed.sf;
+      }
+    } else {
+      throw new Error(
+        `Parent feature ${ctx.sf.data.id} has not been pushed to Linear yet. Run \`planr linear push ${ctx.sf.data.id}\` first, or re-run with \`--push-parents\`.`,
+      );
     }
-    throw new Error(
-      `Parent feature ${ctx.sf.data.id} has not been pushed to Linear yet. Run \`planr linear push ${ctx.sf.data.id}\` first, or re-run with \`--push-parents\`.`,
-    );
   }
   if (!ctx.epic.linearProjectId) {
     throw new Error(
@@ -1039,6 +1132,11 @@ async function pushTaskFileScope(
   const strategyCtx = contextFromMappedEpic(ctx.epic, config);
   const typeLabelCache = createTypeLabelCache(client, teamId, config);
   const featureIssueId = ctx.sf.data.linearIssueId;
+  if (!featureIssueId) {
+    throw new Error(
+      `Parent feature ${ctx.sf.data.id} has no Linear issue id after the parent push — this is a bug.`,
+    );
+  }
   await pushOneTaskListForFeature(
     projectDir,
     config,
@@ -1093,8 +1191,11 @@ async function resolveQuickOrBacklogContext(
     if (!epicScope.epic.linearProjectId) {
       if (options.pushParents) {
         logger.info(
-          `Parent epic ${linkedEpicId} is not in Linear yet — pushing the full epic first (--push-parents).`,
+          `Parent epic ${linkedEpicId} is not in Linear yet — pushing the epic only (--push-parents).`,
         );
+        // Push the parent epic with noCascade=true so we don't drag in
+        // the epic's other features/stories/tasklists. This QT/BL will
+        // attach to the epic's project on its own push below.
         await pushEpicScope(
           projectDir,
           config,
@@ -1104,9 +1205,17 @@ async function resolveQuickOrBacklogContext(
           teamId,
           leadId,
           options.strategyOverride,
+          true, // noCascade — upward attachment only
         );
-        // The cascade re-pushes every linked QT/BL, including this one.
-        return { kind: 'cascaded' };
+        // Reload epic so its newly-written linearProjectId is picked up by
+        // the caller's resolved context, then continue (don't short-circuit).
+        const refreshed = await loadLinearPushScope(projectDir, config, linkedEpicId);
+        if (!refreshed?.epic.linearProjectId) {
+          throw new Error(
+            `Pushed epic ${linkedEpicId} via --push-parents but no linearProjectId was written back. Re-run \`planr linear push ${linkedEpicId}\` to repair.`,
+          );
+        }
+        return { kind: 'resolved', ctx: contextFromMappedEpic(refreshed.epic, config) };
       }
       throw new Error(
         `${artifactId} is linked to epic ${linkedEpicId}, which has not been pushed to Linear yet. Run \`planr linear push ${linkedEpicId}\` first, or re-run with \`--push-parents\`.`,
@@ -1432,6 +1541,13 @@ export async function runLinearPush(
     );
   }
 
+  // Mutual exclusion at the API boundary — also enforced at the CLI layer
+  // for a friendlier error, but defense-in-depth catches programmatic callers.
+  if (opts.cascade === true && opts.noCascade === true) {
+    throw new Error('--cascade and --no-cascade are mutually exclusive.');
+  }
+  const noCascade = opts.noCascade === true;
+
   if (type === 'epic') {
     return pushEpicScope(
       projectDir,
@@ -1442,6 +1558,7 @@ export async function runLinearPush(
       teamId,
       leadId,
       opts.strategyOverride,
+      noCascade,
     );
   }
   if (type === 'feature') {
