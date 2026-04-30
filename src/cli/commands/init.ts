@@ -32,7 +32,7 @@ export function registerInitCommand(program: Command) {
     .option('--no-ai', 'skip AI setup')
     .option(
       '--no-pipeline-rules',
-      'skip openplanr-pipeline rules (generates agile rules only — equivalent to running `planr rules generate --scope agile` post-init)',
+      'skip planr-pipeline rules (generates agile rules only — equivalent to running `planr rules generate --scope agile` post-init)',
     )
     .action(async (opts) => {
       const projectDir = program.opts().projectDir as string;
@@ -146,14 +146,14 @@ export function registerInitCommand(program: Command) {
       }
 
       // Decide rule scope: agile (default agile workflow rules) or all (agile +
-      // openplanr-pipeline rules so Cursor/Codex/Claude pick up the spec-driven
+      // planr-pipeline rules so Cursor/Codex/Claude pick up the spec-driven
       // workflow automatically). Interactive default is `true` to give every new
       // project a complete cross-runtime experience without an extra command.
       const includePipelineRules =
         opts.pipelineRules === false
           ? false
           : await promptConfirm(
-              'Generate openplanr-pipeline rules (auto-activates spec-driven workflow in Cursor and Codex)?',
+              'Generate planr-pipeline rules (auto-activates spec-driven workflow in Cursor and Codex)?',
               true,
             );
       const ruleScope: GenerationScope = includePipelineRules ? 'all' : 'agile';
@@ -206,9 +206,7 @@ export function registerInitCommand(program: Command) {
       logger.dim('  planr epic create        — Create your first epic');
       logger.dim('  planr quick "description" — Quick standalone task list (no agile ceremony)');
       if (includePipelineRules) {
-        logger.dim(
-          '  planr spec create        — Author a spec for the openplanr-pipeline workflow',
-        );
+        logger.dim('  planr spec create        — Author a spec for the planr-pipeline workflow');
       }
       logger.dim('  planr rules generate     — Regenerate AI agent rules after changes');
       logger.dim('  planr config show        — View configuration');

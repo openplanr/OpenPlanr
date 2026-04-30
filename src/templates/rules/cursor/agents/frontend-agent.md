@@ -1,5 +1,5 @@
-> **Cursor adapter — synthesized from openplanr-pipeline.** Agent role system prompt (body-only). Used by `/cursor/rules/openplanr-pipeline.mdc` for Composer subagent dispatch.
-> Source: `openplanr-pipeline/agents/frontend-agent.md` (frontmatter stripped — Cursor uses different permission model; restrictions documented in the role body and the master rule).
+> **Cursor adapter — synthesized from planr-pipeline.** Agent role system prompt (body-only). Used by `/cursor/rules/planr-pipeline.mdc` for Composer subagent dispatch.
+> Source: `planr-pipeline/agents/frontend-agent.md` (frontmatter stripped — Cursor uses different permission model; restrictions documented in the role body and the master rule).
 
 
 # Frontend Agent

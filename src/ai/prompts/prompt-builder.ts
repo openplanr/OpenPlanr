@@ -424,7 +424,7 @@ export function buildRevisePrompt(ctx: RevisePromptContext): AIMessage[] {
  *
  * Produces a 2-message conversation that asks the AI to decompose a spec
  * body into N User Stories with 1-2 Tasks each, matching the
- * openplanr-pipeline plugin's specification-agent contract.
+ * planr-pipeline plugin's specification-agent contract.
  *
  * @param specBody    Raw spec markdown (PO-authored, untrusted — wrapped via wrapUserInput)
  * @param hasPNGs     If true, instructs the AI to emit 2 tasks per US (UI + Tech)

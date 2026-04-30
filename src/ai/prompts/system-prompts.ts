@@ -416,7 +416,7 @@ Respond with JSON only, no markdown or explanation outside the JSON.`;
 // ---------------------------------------------------------------------------
 // Spec-driven decomposition (planr spec decompose)
 //
-// Ports the openplanr-pipeline plugin's specification-agent prompt into a
+// Ports the planr-pipeline plugin's specification-agent prompt into a
 // planr-CLI execution context (no Claude Code Task tool — direct provider
 // call via ai-service.ts). Output is validated against
 // aiSpecDecomposeResponseSchema. See docs/proposals/spec-driven-mode.md.
@@ -435,7 +435,7 @@ typical agile tasks:
 - Every task names **specific files** to Create / Modify / Preserve
 - Every task is classified as Type **UI** or **Tech**
 - Every task is assigned to an **agent** (default subagent names from the
-  openplanr-pipeline plugin: \`frontend-agent\` for UI, \`backend-agent\` for Tech)
+  planr-pipeline plugin: \`frontend-agent\` for UI, \`backend-agent\` for Tech)
 - Every task has concrete **objective**, **technicalSpec**, and **testRequirements**
 
 ## Hard rules (do not violate)

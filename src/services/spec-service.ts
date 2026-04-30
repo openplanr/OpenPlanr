@@ -8,7 +8,7 @@
  *   ├── SPEC-NNN-{slug}.md              ← the spec document
  *   ├── design/                         ← UI mockups + design-spec.md (if any)
  *   │   ├── *.png
- *   │   └── design-spec.md              ← reserved path (written by openplanr-pipeline's designer-agent)
+ *   │   └── design-spec.md              ← reserved path (written by planr-pipeline's designer-agent)
  *   ├── stories/
  *   │   └── US-NNN-{slug}.md            ← US-NNN scoped to this spec
  *   └── tasks/
@@ -20,11 +20,11 @@
  *  - US-NNN and T-NNN are SCOPED TO THE PARENT SPEC (not project-globally
  *    unique). Two specs can each have their own US-001. Disambiguation is
  *    via the path or via `specId` frontmatter.
- *  - Schema matches openplanr-pipeline plugin verbatim — both products
- *    share one contract. See https://github.com/openplanr/openplanr-pipeline
+ *  - Schema matches planr-pipeline plugin verbatim — both products
+ *    share one contract. See https://github.com/openplanr/planr-pipeline
  *
  * This service owns spec authoring inside the planr CLI. The
- * openplanr-pipeline plugin is the executor: it reads `.planr/specs/` (when
+ * planr-pipeline plugin is the executor: it reads `.planr/specs/` (when
  * spec mode is active) and runs the PO/DEV phases to ship code.
  */
 
@@ -210,7 +210,7 @@ export async function createSpec(
   await ensureDir(specsRoot);
 
   // Cross-spec slug-collision check. Two specs with the same slug would be
-  // ambiguous in pipeline handoffs (`/openplanr-pipeline:plan {slug}` —
+  // ambiguous in pipeline handoffs (`/planr-pipeline:plan {slug}` —
   // which spec?), and they'd be hard to distinguish in `planr spec list`.
   // Refuse early with a clear suggestion.
   {
@@ -953,7 +953,7 @@ export interface CreateSpecTaskInput {
   storyId: string; // US-NNN this task belongs to
   title: string;
   type: 'UI' | 'Tech';
-  agent: string; // free-form: matches openplanr-pipeline subagent names by default
+  agent: string; // free-form: matches planr-pipeline subagent names by default
   filesCreate?: string[];
   filesModify?: string[];
   filesPreserve?: string[];
@@ -977,7 +977,7 @@ export async function createSpecTask(
 
   const slug = slugify(input.title);
   // Task ID prefix: 'T' (single letter) by convention in spec mode
-  // (vs agile mode's 'TASK'). Matches openplanr-pipeline schema.
+  // (vs agile mode's 'TASK'). Matches planr-pipeline schema.
   const id = await getNextId(tasksDir, 'T');
   const filename = `${id}-${slug}.md`;
   const filePath = path.join(tasksDir, filename);
@@ -1084,7 +1084,7 @@ export async function getSpecStatus(
 }
 
 /**
- * Validate that a spec is ready to hand off to openplanr-pipeline.
+ * Validate that a spec is ready to hand off to planr-pipeline.
  * Returns the list of issues, or empty array if ready.
  */
 export async function validateSpecForPromotion(

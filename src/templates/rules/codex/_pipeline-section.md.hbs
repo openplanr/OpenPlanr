@@ -1,4 +1,4 @@
-## OpenPlanr Pipeline Orchestration
+## Planr Pipeline Orchestration
 
 This project conforms to the **OpenPlanr Protocol v{{protocolVersion}}** — a runtime-agnostic contract for spec-driven AI workflows. As a Codex agent you are both planner and executor across two distinct phases.
 
@@ -138,12 +138,12 @@ Note: tool restrictions on Codex are advisory (prompt-level only), not enforced 
 
 ### Conformance proof
 
-The OpenPlanr Protocol v1.0.0 conformance test (in `openplanr-pipeline/conformance/runner.mjs`) verifies:
+The OpenPlanr Protocol v1.0.0 conformance test (in `planr-pipeline/conformance/runner.mjs`) verifies:
 - Post-PO state (US + Task files exist with valid frontmatter)
 - Post-DEV state (`src/` populated, build/test green, `.pipeline-shipped` marker present)
 - Preserve list integrity (`git diff` on each task's Preserve paths returns empty)
 
-Compatibility matrix: see `openplanr-pipeline/docs/compatibility-matrix.md` for the full Codex parity table.
+Compatibility matrix: see `planr-pipeline/docs/compatibility-matrix.md` for the full Codex parity table.
 
 ---
 

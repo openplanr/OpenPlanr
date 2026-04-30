@@ -1,13 +1,13 @@
-> **Cursor adapter — synthesized from openplanr-pipeline.** Agent role system prompt (body-only). Used by `/cursor/rules/openplanr-pipeline.mdc` for Composer subagent dispatch.
-> Source: `openplanr-pipeline/agents/specification-agent.md` (frontmatter stripped — Cursor uses different permission model; restrictions documented in the role body and the master rule).
+> **Cursor adapter — synthesized from planr-pipeline.** Agent role system prompt (body-only). Used by `/cursor/rules/planr-pipeline.mdc` for Composer subagent dispatch.
+> Source: `planr-pipeline/agents/specification-agent.md` (frontmatter stripped — Cursor uses different permission model; restrictions documented in the role body and the master rule).
 
 
 # Specification Agent
 
 > **Phase:** Step 1 — PO Phase (terminal agent in the PO chain)
-> **Trigger:** Invoked by `/openplanr-pipeline:plan` after upstream agents complete
+> **Trigger:** Invoked by `/planr-pipeline:plan` after upstream agents complete
 > **Chained after:** db-agent (if DatabaseType configured) → designer-agent (if PNGs present)
-> **Input feature name:** Passed by `/openplanr-pipeline:plan` as `$ARGUMENTS` (e.g. `auth` → operates on `feat-auth`)
+> **Input feature name:** Passed by `/planr-pipeline:plan` as `$ARGUMENTS` (e.g. `auth` → operates on `feat-auth`)
 
 ## Path Resolution (NEW in pipeline v0.3.0)
 
@@ -242,7 +242,7 @@ RULE 5 — DB alignment:
 ## Execution Steps
 
 ```
-0. Receive feature name from /openplanr-pipeline:plan as $ARGUMENTS (the {name} in feat-{name})
+0. Receive feature name from /planr-pipeline:plan as $ARGUMENTS (the {name} in feat-{name})
 1. Load input/specs/spec-$ARGUMENTS.md
 2. Load input/tech/stack.md
    2a. For each path in stack.md's ActiveStackFiles list → load that stack file
@@ -251,9 +251,9 @@ RULE 5 — DB alignment:
        (e.g. ${CLAUDE_PLUGIN_ROOT}/stacks/frontend/nextjs.md, .claude/stacks/backend/custom.md)
    2b. Use stack-file conventions (folder layout, naming) when filling task file paths
 3. Check if output/feats/feat-$ARGUMENTS/design-spec.md exists → set has_design = true/false
-   (Designer Agent should have run first via /openplanr-pipeline:plan if PNGs were present)
+   (Designer Agent should have run first via /planr-pipeline:plan if PNGs were present)
 4. Check if output/db/schema.json exists → load if relevant
-   (DB Agent should have run first via /openplanr-pipeline:plan if DatabaseType is configured)
+   (DB Agent should have run first via /planr-pipeline:plan if DatabaseType is configured)
 5. Decompose spec into N User Stories
 6. For each US:
    a. Write us-{N}/us-{N}.md
@@ -261,7 +261,7 @@ RULE 5 — DB alignment:
    c. If has_design: write task-1.md (UI, Frontend Agent) + task-2.md (Tech, Backend Agent)
    d. If !has_design: write task-1.md (Tech only, Backend Agent) — per docs/rules.md R2
 7. Log: "Specification Agent complete. N US, M tasks → output/feats/feat-$ARGUMENTS/"
-8. STOP. Do not proceed to DEV phase. The /openplanr-pipeline:plan orchestrator stops here for human review.
+8. STOP. Do not proceed to DEV phase. The /planr-pipeline:plan orchestrator stops here for human review.
 ```
 
 ---

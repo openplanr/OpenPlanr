@@ -270,20 +270,20 @@ export type AIReviseDecisionResponse = z.infer<typeof aiReviseDecisionSchema>;
 
 // --- Spec-driven decomposition ---
 // Schemas for `planr spec decompose <SPEC-id>`. Output matches the
-// openplanr-pipeline plugin's specification-agent contract: User Stories
+// planr-pipeline plugin's specification-agent contract: User Stories
 // each containing 1-2 Tasks with explicit file Create/Modify/Preserve lists,
 // Type=UI|Tech, agent assignment, and DoD-grade test requirements.
 
 export const aiSpecTaskSchema = z.object({
   title: z.string().min(1),
   /**
-   * Per docs/proposals/spec-driven-mode.md and openplanr-pipeline rule R2:
+   * Per docs/proposals/spec-driven-mode.md and planr-pipeline rule R2:
    * task-1 is UI when PNGs present, otherwise Tech. task-2 is always Tech
    * and is only emitted when PNGs were attached to the spec.
    */
   type: z.enum(['UI', 'Tech']),
   /**
-   * Free-form agent label. Defaults match openplanr-pipeline subagent names
+   * Free-form agent label. Defaults match planr-pipeline subagent names
    * (`frontend-agent`, `backend-agent`) so the pipeline can route directly,
    * but the field is open so other tools (Cursor, Codex) can use their own
    * vocabularies.
@@ -309,7 +309,7 @@ export const aiSpecStorySchema = z.object({
   acceptanceCriteria: z.array(z.string().min(1)).min(1),
   /**
    * 1 task if no PNG attached; 2 tasks if PNG present (UI + Tech).
-   * Hard cap at 2 to match openplanr-pipeline rule R2.
+   * Hard cap at 2 to match planr-pipeline rule R2.
    */
   tasks: z.array(aiSpecTaskSchema).min(1).max(2),
 });

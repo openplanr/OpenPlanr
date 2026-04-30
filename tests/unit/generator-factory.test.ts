@@ -111,14 +111,14 @@ describe('ClaudeGenerator.generate file-list per scope', () => {
     expect(files[0].path).toMatch(/CLAUDE\.md$/);
   });
 
-  it('pipeline or all scope produces 2 files (CLAUDE.md + openplanr-pipeline.md)', async () => {
+  it('pipeline or all scope produces 2 files (CLAUDE.md + planr-pipeline.md)', async () => {
     for (const scope of ['pipeline', 'all'] as const) {
       const gen = new ClaudeGenerator(mockConfig, '/tmp');
       gen.setScope(scope);
       const files = await gen.generate(emptyArtifacts);
       expect(files).toHaveLength(2);
       expect(files[0].path).toMatch(/CLAUDE\.md$/);
-      expect(files[1].path).toMatch(/openplanr-pipeline\.md$/);
+      expect(files[1].path).toMatch(/planr-pipeline\.md$/);
     }
   });
 });
@@ -130,7 +130,7 @@ describe('CodexGenerator.generate file-list per scope', () => {
     const files = await gen.generate(emptyArtifacts);
     expect(files).toHaveLength(1);
     expect(files[0].path).toMatch(/AGENTS\.md$/);
-    expect(files[0].content).not.toContain('OpenPlanr Pipeline Orchestration');
+    expect(files[0].content).not.toContain('Planr Pipeline Orchestration');
   });
 
   it('pipeline scope produces 1 file (AGENTS.md, pipeline content only)', async () => {
@@ -139,7 +139,7 @@ describe('CodexGenerator.generate file-list per scope', () => {
     const files = await gen.generate(emptyArtifacts);
     expect(files).toHaveLength(1);
     expect(files[0].path).toMatch(/AGENTS\.md$/);
-    expect(files[0].content).toContain('OpenPlanr Pipeline Orchestration');
+    expect(files[0].content).toContain('Planr Pipeline Orchestration');
   });
 
   it('all scope produces 1 file (AGENTS.md with both sections concatenated)', async () => {
@@ -148,6 +148,6 @@ describe('CodexGenerator.generate file-list per scope', () => {
     const files = await gen.generate(emptyArtifacts);
     expect(files).toHaveLength(1);
     expect(files[0].content).toContain('Agent Instructions');
-    expect(files[0].content).toContain('OpenPlanr Pipeline Orchestration');
+    expect(files[0].content).toContain('Planr Pipeline Orchestration');
   });
 });

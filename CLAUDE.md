@@ -45,7 +45,7 @@ If the project uses **spec-driven mode** (see `.planr/config.json` `idPrefix.spe
 2. **User Story (in spec)** → `.planr/specs/SPEC-NNN-{slug}/stories/US-NNN-{slug}.md` (US-NNN scoped to parent spec — not project-globally unique)
 3. **Task (in spec)** → `.planr/specs/SPEC-NNN-{slug}/tasks/T-NNN-{slug}.md` with file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment, DoD referencing build/test commands
 
-Spec-mode artifacts use the same schema as the [`openplanr-pipeline`](https://github.com/openplanr/openplanr-pipeline) Claude Code plugin. If the spec is `ready-for-pipeline` (or `in-pipeline`), the user is shipping via `/openplanr-pipeline:ship {slug}` — coordinate accordingly.
+Spec-mode artifacts use the same schema as the [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) Claude Code plugin. If the spec is `ready-for-pipeline` (or `in-pipeline`), the user is shipping via `/planr-pipeline:ship {slug}` — coordinate accordingly.
 
 See `docs/proposals/spec-driven-mode.md` for full reference.
 

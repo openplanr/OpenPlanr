@@ -37,7 +37,7 @@ export class ClaudeGenerator extends BaseGenerator {
     // When scope ⊇ pipeline, also write the sibling reference card.
     if (this.includesPipeline()) {
       const pipelineRefContent = await renderTemplate(
-        'rules/claude/openplanr-pipeline.md.hbs',
+        'rules/claude/planr-pipeline.md.hbs',
         {
           projectName: this.config.projectName,
           agilePath: this.config.outputPaths.agile,
@@ -47,7 +47,7 @@ export class ClaudeGenerator extends BaseGenerator {
         this.config.templateOverrides,
       );
       files.push({
-        path: path.join(this.config.outputPaths.claudeConfig, 'openplanr-pipeline.md'),
+        path: path.join(this.config.outputPaths.claudeConfig, 'planr-pipeline.md'),
         content: pipelineRefContent,
       });
     }
