@@ -18,8 +18,8 @@ Then install any of the plugins below:
 
 | Plugin | Version | Description |
 |---|---|---|
-| [`openplanr-pipeline`](https://github.com/openplanr/openplanr-pipeline) | 0.6.0 | Spec-driven AI factory with 8 subagents and tool-layer rule enforcement. Canonical Claude Code adapter for [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/openplanr-pipeline/tree/main/docs/protocol); same workflow runs on Cursor + Codex via `planr rules generate --scope pipeline`. |
-| [`openplanr`](https://github.com/openplanr/skills) | 1.3.0 | OpenPlanr skill — multi-runtime routing playbook teaching Claude when to use which surface (Path A: Claude Code, A2: Cursor, A3: Codex, B: skill-driven, C: bare CLI). |
+| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.7.0 | Spec-driven AI factory with 8 subagents and tool-layer rule enforcement. Canonical Claude Code adapter for [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol); same workflow runs on Cursor + Codex via `planr rules generate --scope pipeline`. |
+| [`openplanr`](https://github.com/openplanr/skills) | 1.4.0 | OpenPlanr skill — multi-runtime routing playbook teaching Claude when to use which surface (Path A: Claude Code, A2: Cursor, A3: Codex, B: skill-driven, C: bare CLI). |
 
 ## Cross-runtime support
 
@@ -34,7 +34,7 @@ planr rules generate --target cursor --scope pipeline
 planr rules generate --target codex --scope pipeline
 ```
 
-Compatibility matrix: [`openplanr/openplanr-pipeline/docs/compatibility-matrix.md`](https://github.com/openplanr/openplanr-pipeline/blob/main/docs/compatibility-matrix.md). Protocol spec: [`openplanr/openplanr-pipeline/docs/protocol/`](https://github.com/openplanr/openplanr-pipeline/tree/main/docs/protocol).
+Compatibility matrix: [`openplanr/planr-pipeline/docs/compatibility-matrix.md`](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md). Protocol spec: [`openplanr/planr-pipeline/docs/protocol/`](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol).
 
 ## License
 

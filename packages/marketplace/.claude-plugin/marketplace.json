@@ -8,22 +8,22 @@
   "description": "OpenPlanr's official Claude Code plugin marketplace. Hosts the agile-planning and code-generation tools that go from spec to ship.",
   "plugins": [
     {
-      "name": "openplanr-pipeline",
-      "description": "Spec-driven AI factory. Two-phase pipeline (PO Phase → human review → DEV Phase) with 8 specialized subagents and tool-layer rule enforcement.",
+      "name": "planr-pipeline",
+      "description": "Spec-driven AI factory. Two-phase pipeline (PO Phase → human review → DEV Phase) with 8 specialized subagents and tool-layer rule enforcement. Canonical Claude Code adapter for OpenPlanr Protocol v1.0.0.",
       "source": {
         "source": "github",
-        "repo": "openplanr/openplanr-pipeline"
+        "repo": "openplanr/planr-pipeline"
       },
-      "version": "0.6.0"
+      "version": "0.7.0"
     },
     {
       "name": "openplanr",
-      "description": "Claude Code skill that teaches Claude when to reach for planr CLI vs the openplanr-pipeline plugin — explicit Path A / B / C routing for agile, quick task, and spec-driven workflows.",
+      "description": "Claude Code skill that teaches Claude when to reach for planr CLI vs the planr-pipeline plugin — multi-runtime routing (Path A: Claude Code, A2: Cursor, A3: Codex, B: skill-driven, C: bare CLI).",
       "source": {
         "source": "github",
         "repo": "openplanr/skills"
       },
-      "version": "1.2.0"
+      "version": "1.4.0"
     }
   ]
 }
