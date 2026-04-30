@@ -2,6 +2,17 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] — 2026-04-30
+
+### Changed — Aligned with `planr-pipeline` rename
+
+`skills/openplanr/SKILL.md` routing tree updated: install commands, slash commands, and generated rule filenames now reference `planr-pipeline` (was `openplanr-pipeline`). No behavioural change in the skill's logic — pure text/identifier alignment with the upstream plugin rename.
+
+### Pairs with
+
+- `planr-pipeline` v0.7.0 — Claude Code plugin (renamed from `openplanr-pipeline` v0.6.0; brand convergence on the `planr` CLI binary)
+- `openplanr` (planr CLI) v1.5.1 — generated rule filenames + slash command references updated
+
 ## [1.3.0] — 2026-04-29
 
 ### Changed — Routing tree extended to multi-runtime
