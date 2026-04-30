@@ -8,9 +8,9 @@ model: claude-sonnet-4-6
 # Designer Agent
 
 > **Phase:** Step 1 — PO Phase (between db-agent and specification-agent)
-> **Trigger:** Conditional — only if ≥1 PNG resolves for the target feature (see PNG Resolution below). Invoked by `/openplanr-pipeline:plan`.
+> **Trigger:** Conditional — only if ≥1 PNG resolves for the target feature (see PNG Resolution below). Invoked by `/planr-pipeline:plan`.
 > **Chained by:** specification-agent (reads this output)
-> **Input feature name:** Passed by `/openplanr-pipeline:plan` as `$ARGUMENTS` (e.g. `auth` → writes to `feat-auth`)
+> **Input feature name:** Passed by `/planr-pipeline:plan` as `$ARGUMENTS` (e.g. `auth` → writes to `feat-auth`)
 ## Path Resolution (NEW in pipeline v0.3.0)
 
 The orchestrator (`/plan`) passes a MODE flag determining where to read PNGs and write `design-spec.md`:
@@ -37,7 +37,7 @@ If no PNGs resolve for the target feature, this agent is skipped entirely.
 
 | Input | Source | Required |
 |-------|--------|----------|
-| Feature name (`$ARGUMENTS`) | `/openplanr-pipeline:plan` orchestrator | ✅ Yes |
+| Feature name (`$ARGUMENTS`) | `/planr-pipeline:plan` orchestrator | ✅ Yes |
 | `input/specs/spec-{feat}.md` | Product Owner | ✅ Yes (for `UIFiles:` resolution) |
 | Resolved PNGs (see PNG Resolution) | UX Designer | ✅ Yes (triggers this agent) |
 | `input/tech/stack.md` | Tech Lead | ✅ Yes (for component library awareness) |
@@ -186,7 +186,7 @@ For each component observed:
 ## Execution Steps
 
 ```
-0. Receive feature name from /openplanr-pipeline:plan as $ARGUMENTS (the {name} in feat-{name})
+0. Receive feature name from /planr-pipeline:plan as $ARGUMENTS (the {name} in feat-{name})
 1. Resolve PNGs via the PNG Resolution priority list above
    → If 0 PNGs resolve: skip silently and exit (no design-spec.md written)
 2. For each resolved PNG: analyze via Vision — extract colors, layout, components

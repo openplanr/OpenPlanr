@@ -122,8 +122,8 @@ Print summary including: mode, tasks succeeded, tasks failed, qa status, devops 
 
 | Runtime | PLAN invocation | SHIP invocation |
 |---|---|---|
-| **Claude Code (canonical)** | `/openplanr-pipeline:plan {feature}` | `/openplanr-pipeline:ship {feature}` |
-| **Cursor** | User says `plan {feature}` (or "decompose {feature}") — `.cursor/rules/openplanr-pipeline-plan.mdc` activates | User says `ship {feature}` — `openplanr-pipeline-ship.mdc` activates |
+| **Claude Code (canonical)** | `/planr-pipeline:plan {feature}` | `/planr-pipeline:ship {feature}` |
+| **Cursor** | User says `plan {feature}` (or "decompose {feature}") — `.cursor/rules/planr-pipeline-plan.mdc` activates | User says `ship {feature}` — `planr-pipeline-ship.mdc` activates |
 | **Codex** | User says `plan {feature}` — AGENTS.md persona triggers | User says `ship {feature}` — same |
 
 In all three runtimes, R1 must be respected: PLAN exits without invoking SHIP, and SHIP requires a separate explicit user invocation.

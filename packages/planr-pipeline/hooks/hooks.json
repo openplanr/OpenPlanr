@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "test -f .claude/.snapshot-pending && rm -f .claude/.snapshot-pending && echo '[openplanr-pipeline] /ship aborted before snapshot — re-run /openplanr-pipeline:ship to refresh CLAUDE.md' || true"
+            "command": "test -f .claude/.snapshot-pending && rm -f .claude/.snapshot-pending && echo '[planr-pipeline] /ship aborted before snapshot — re-run /planr-pipeline:ship to refresh CLAUDE.md' || true"
           }
         ]
       }

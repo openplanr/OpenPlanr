@@ -1,6 +1,36 @@
 # Changelog
 
-All notable changes to `openplanr-pipeline` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/) — with the caveat that pre-1.0 releases may contain breaking changes in minor bumps.
+All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/) — with the caveat that pre-1.0 releases may contain breaking changes in minor bumps.
+
+> **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
+
+## [0.7.0] — 2026-04-30
+
+### Changed — Plugin renamed to `planr-pipeline`
+
+Plugin name: `openplanr-pipeline` → `planr-pipeline`. Slash commands: `/openplanr-pipeline:plan` → `/planr-pipeline:plan` (same for `:ship`). GitHub repo: `openplanr/openplanr-pipeline` → `openplanr/planr-pipeline` (auto-redirected by GitHub).
+
+### Why
+
+Brand convergence on `planr` (the CLI binary). The `openplanr-` prefix was a vestige of an earlier naming era and created cognitive friction for users typing slash commands daily — your CLI is `planr`, your slash commands now match.
+
+### Migration
+
+Install via:
+
+```
+/plugin install planr-pipeline@openplanr
+```
+
+The old install command (`/plugin install openplanr-pipeline@openplanr`) continues to resolve via the v0.6.1 deprecation stub which prints a one-line redirect message to the new plugin.
+
+The plugin's behaviour is **byte-for-byte identical** to v0.6.0. Only the name changed.
+
+### Pairs with
+
+- `openplanr` (planr CLI) v1.5.1 — generated rule filenames + slash command references updated
+- `openplanr-skills` v1.4.0 — SKILL.md routing tree aligned with the new plugin name
+- `marketplace` — pin updated to v0.7.0
 
 ## [0.6.0] — 2026-04-29
 

@@ -60,5 +60,5 @@ _Optional hints to guide decomposition. Not business requirements._
 
 ---
 
-> Edit this body, then run `/openplanr-pipeline:plan {{SLUG}}` to decompose into stories + tasks.
+> Edit this body, then run `/planr-pipeline:plan {{SLUG}}` to decompose into stories + tasks.
 > Schema: `https://openplanr.dev/docs/reference/spec-schema`

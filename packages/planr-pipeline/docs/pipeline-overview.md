@@ -47,7 +47,7 @@ The framework refuses to auto-chain PO Phase → DEV Phase.
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  STEP 1 — PO PHASE (Functional → Technical Decomposition)                   │
 │                                                                             │
-│  Trigger: /openplanr-pipeline:plan {name}                                │
+│  Trigger: /planr-pipeline:plan {name}                                │
 │                                                                             │
 │  Chain (in order):                                                          │
 │  ① DB Agent (Sonnet 4.6) — conditional: DatabaseType set, no fresh schema  │
@@ -94,7 +94,7 @@ The framework refuses to auto-chain PO Phase → DEV Phase.
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  STEP 3 — DEV PHASE (Code Generation)                                       │
 │                                                                             │
-│  Trigger: /openplanr-pipeline:ship {name}                               │
+│  Trigger: /planr-pipeline:ship {name}                               │
 │                                                                             │
 │  Parallel execution per US (Frontend ‖ Backend within same US):            │
 │                                                                             │

@@ -74,9 +74,9 @@ Stack: [language/framework/orm pulled from stack.md]
 
 Pick one and elaborate:
 
-- [ ] **Fix the spec.** Edit `us-{N}.md` or the parent spec, then re-run `/openplanr-pipeline:plan {name}` to regenerate tasks.
+- [ ] **Fix the spec.** Edit `us-{N}.md` or the parent spec, then re-run `/planr-pipeline:plan {name}` to regenerate tasks.
 - [ ] **Fix the environment.** Install missing dependency / add env var / update stack.md, then re-run only this task.
-- [ ] **Fix the schema.** Re-run DB Agent (`/openplanr-pipeline:plan {name} --rescan`) and re-run this task.
+- [ ] **Fix the schema.** Re-run DB Agent (`/planr-pipeline:plan {name} --rescan`) and re-run this task.
 - [ ] **Override.** This task spec is unrealistic for the current codebase; revise scope manually.
 
 ---

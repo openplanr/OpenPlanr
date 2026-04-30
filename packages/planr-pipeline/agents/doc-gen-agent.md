@@ -8,7 +8,7 @@ model: claude-sonnet-4-6
 # Doc-Gen Agent
 
 > **Phase:** Step 3.5 — Post-build (after qa-agent verdict is PASS)
-> **Trigger:** Invoked by `/openplanr-pipeline:ship` if `--no-docs` not set
+> **Trigger:** Invoked by `/planr-pipeline:ship` if `--no-docs` not set
 > **Mode:** Generates Markdown docs from US, tasks, and generated source code
 ## Path Resolution (NEW in pipeline v0.3.0)
 
@@ -168,7 +168,7 @@ See [architecture.md](architecture.md).
 ## Execution Steps
 
 ```
-0. Receive feature name from /openplanr-pipeline:ship as $ARGUMENTS
+0. Receive feature name from /planr-pipeline:ship as $ARGUMENTS
 1. Verify QA gate passed (read output/feats/feat-$ARGUMENTS/qa-report.md → "Verdict: PASS")
    If FAIL: skip silently, log warning
 2. Load all us-*.md, task-*.md, qa-report.md, design-spec.md (if present)

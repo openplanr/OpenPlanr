@@ -9,7 +9,7 @@ model: claude-sonnet-4-6
 
 > **Phase:** Step 0.1 — Database Scan
 > **Mode:** READ-ONLY (no writes, no migrations, no schema changes)
-> **Trigger:** Invoked by `/openplanr-pipeline:plan` if `DatabaseType` is configured and `output/db/schema.json` is missing or stale; can also be invoked manually.
+> **Trigger:** Invoked by `/planr-pipeline:plan` if `DatabaseType` is configured and `output/db/schema.json` is missing or stale; can also be invoked manually.
 
 ## Purpose
 

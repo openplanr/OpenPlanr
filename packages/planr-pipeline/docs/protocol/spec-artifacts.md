@@ -143,7 +143,7 @@ error_reports:                               # paths to any error-report.md file
 
 ## Schema version compatibility
 
-Both planr CLI and openplanr-pipeline produce and consume schema `1.0.0`. Future breaking changes will bump `schemaVersion` in lockstep across all runtime adapters. Keep them aligned via:
+Both planr CLI and planr-pipeline produce and consume schema `1.0.0`. Future breaking changes will bump `schemaVersion` in lockstep across all runtime adapters. Keep them aligned via:
 
 ```bash
 /plugin marketplace update openplanr           # for the pipeline plugin (Claude Code)

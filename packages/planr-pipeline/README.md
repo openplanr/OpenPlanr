@@ -1,4 +1,4 @@
-# openplanr-pipeline
+# planr-pipeline
 
 > **Spec-driven AI factory.** Two-phase pipeline. Human checkpoint between phases. Plugin for Claude Code.
 
@@ -24,12 +24,12 @@ The split is non-negotiable. **The plugin refuses to auto-chain PO Phase → DEV
 
 ## Runtime support
 
-`openplanr-pipeline` is the **canonical Claude Code adapter** for the OpenPlanr Protocol v1.0.0. The same protocol runs on Cursor and Codex via planr-generated rule files:
+`planr-pipeline` is the **canonical Claude Code adapter** for the OpenPlanr Protocol v1.0.0. The same protocol runs on Cursor and Codex via planr-generated rule files:
 
 | Runtime | Adapter | Install |
 |---|---|---|
-| **Claude Code** *(canonical)* | This plugin (manifest-enforced subagents) | `/plugin marketplace add openplanr/marketplace && /plugin install openplanr-pipeline@openplanr` |
-| **Cursor** | `.cursor/rules/openplanr-pipeline.mdc` + agent body files | `npm i -g openplanr && planr rules generate --target cursor --scope pipeline` |
+| **Claude Code** *(canonical)* | This plugin (manifest-enforced subagents) | `/plugin marketplace add openplanr/marketplace && /plugin install planr-pipeline@openplanr` |
+| **Cursor** | `.cursor/rules/planr-pipeline.mdc` + agent body files | `npm i -g openplanr && planr rules generate --target cursor --scope pipeline` |
 | **Codex** | `AGENTS.md` with pipeline section | `npm i -g openplanr && planr rules generate --target codex --scope pipeline` |
 
 All three adapters share the same `.planr/specs/SPEC-NNN-{slug}/` artifact contract — a SPEC authored on one runtime is consumable by any other. See [`docs/compatibility-matrix.md`](docs/compatibility-matrix.md) for the full parity table and per-runtime caveats; see [`docs/protocol/`](docs/protocol/) for the runtime-agnostic protocol spec.
@@ -38,7 +38,7 @@ All three adapters share the same `.planr/specs/SPEC-NNN-{slug}/` artifact contr
 
 ```
 /plugin marketplace add openplanr/marketplace
-/plugin install openplanr-pipeline@openplanr
+/plugin install planr-pipeline@openplanr
 ```
 
 Two commands and you have an opinionated, multi-agent code factory in any Claude Code project.
@@ -49,7 +49,7 @@ Two commands and you have an opinionated, multi-agent code factory in any Claude
 
 ```bash
 # 1. Run the PO Phase — auto-scaffolds the spec shell on first run
-/openplanr-pipeline:plan todo
+/planr-pipeline:plan todo
 #    → .planr/specs/SPEC-001-todo/ created with placeholder body
 #    → pipeline stops with "edit and re-run" message
 
@@ -61,7 +61,7 @@ Two commands and you have an opinionated, multi-agent code factory in any Claude
 cp ~/Designs/todo-*.png .planr/specs/SPEC-001-todo/design/
 
 # 4. Re-run the PO Phase — decomposes into User Stories + tasks
-/openplanr-pipeline:plan todo
+/planr-pipeline:plan todo
 #    → designer-agent + specification-agent decompose
 #    → .planr/specs/SPEC-001-todo/{stories,tasks}/ populated
 
@@ -69,7 +69,7 @@ cp ~/Designs/todo-*.png .planr/specs/SPEC-001-todo/design/
 #    → open .planr/specs/SPEC-001-todo/tasks/T-*.md and verify
 
 # 6. Run the DEV Phase — generates code, tests, infra config, docs
-/openplanr-pipeline:ship todo
+/planr-pipeline:ship todo
 #    → src/ updated
 #    → docker-compose.yml + CI workflow generated
 #    → Docs/feat-todo/ generated
@@ -86,7 +86,7 @@ Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, y
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │  PO PHASE  (Sonnet 4.6 agents — fast, structured)                   │
-│  /openplanr-pipeline:plan {name}                                │
+│  /planr-pipeline:plan {name}                                │
 │                                                                     │
 │  db-agent (if DB) → designer-agent (if PNG) → specification-agent   │
 │  → output/feats/feat-{name}/ (US + tasks + design-spec)             │
@@ -97,7 +97,7 @@ Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, y
                              ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │  DEV PHASE  (Opus 4.7 codegen + Sonnet 4.6 verifiers)               │
-│  /openplanr-pipeline:ship {name}                                    │
+│  /planr-pipeline:ship {name}                                    │
 │                                                                     │
 │  frontend-agent + backend-agent (per task, parallel) →              │
 │  qa-agent (gate) → devops-agent + doc-gen-agent →                   │
@@ -115,8 +115,8 @@ Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, y
 
 | Name | Purpose |
 |---|---|
-| `/openplanr-pipeline:plan {slug}` | PO Phase — auto-scaffolds the spec shell if missing, then decomposes into User Stories + tasks via designer-agent + specification-agent |
-| `/openplanr-pipeline:ship {slug}` | DEV Phase — frontend ‖ backend → qa → devops ‖ doc-gen → snapshot, with `.pipeline-shipped` marker at the end |
+| `/planr-pipeline:plan {slug}` | PO Phase — auto-scaffolds the spec shell if missing, then decomposes into User Stories + tasks via designer-agent + specification-agent |
+| `/planr-pipeline:ship {slug}` | DEV Phase — frontend ‖ backend → qa → devops ‖ doc-gen → snapshot, with `.pipeline-shipped` marker at the end |
 
 Two commands. Everything else is automatic — auto-scaffolding when a spec is missing, auto-snapshot at the end of `/ship`, auto-self-heal of `input/tech/stack.md` in spec-driven mode.
 
@@ -189,15 +189,15 @@ Read the full rule set in [`docs/rules.md`](docs/rules.md).
 
 [planr](https://github.com/openplanr/OpenPlanr) is OpenPlanr's agile + spec-driven planning CLI. It owns the **planning** verb.
 
-`openplanr-pipeline` owns the **execution** verb. The two are complementary: planr plans, pipeline ships.
+`planr-pipeline` owns the **execution** verb. The two are complementary: planr plans, pipeline ships.
 
 ### Bridge to planr spec-driven mode (v0.3.0+)
 
 When a project uses planr's **spec-driven mode** (the third planning posture, see `planr spec init`), this plugin reads `.planr/specs/SPEC-NNN-{slug}/` directly — no conversion adapter, no copy step. Both products share the same artifact schema:
 
 - planr authors specs and runs `planr spec decompose` to generate User Stories + Tasks
-- The pipeline plugin (`/openplanr-pipeline:plan {slug}` and `/openplanr-pipeline:ship {slug}`) reads from the planr spec directory and executes
-- planr is the **authoring surface**; openplanr-pipeline is the **executor**
+- The pipeline plugin (`/planr-pipeline:plan {slug}` and `/planr-pipeline:ship {slug}`) reads from the planr spec directory and executes
+- planr is the **authoring surface**; planr-pipeline is the **executor**
 
 The pipeline auto-detects spec mode by looking for `.planr/config.json` with `idPrefix.spec` set. If absent, it falls back to the default `output/feats/feat-{name}/` layout — existing pipeline-only workflows are unchanged.
 

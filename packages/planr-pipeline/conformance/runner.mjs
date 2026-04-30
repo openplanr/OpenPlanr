@@ -143,13 +143,13 @@ if (wantSetup) {
   log(`  1. cd ${dir}`);
   log(`  2. Open the project in your runtime (${runtime})`);
   if (runtime === 'claude-code') {
-    log('  3. Run: /openplanr-pipeline:plan todo-feature');
+    log('  3. Run: /planr-pipeline:plan todo-feature');
   } else {
     log('  3. Say: "plan todo-feature"');
   }
   log(`  4. node ${__dirname}/runner.mjs --runtime ${runtime} --verify-po --dir ${dir}`);
   if (runtime === 'claude-code') {
-    log('  5. Run: /openplanr-pipeline:ship todo-feature');
+    log('  5. Run: /planr-pipeline:ship todo-feature');
   } else {
     log('  5. Say: "ship todo-feature"');
   }

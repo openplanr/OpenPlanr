@@ -3,11 +3,11 @@ description: Run the DEV Phase pipeline for a feature (frontend + backend agents
 argument-hint: <feature-name>
 ---
 
-# /openplanr-pipeline:ship {feature-name}
+# /planr-pipeline:ship {feature-name}
 
 Orchestrates the DEV Phase for `feat-$ARGUMENTS`. Generates production code from PO-Phase task files, runs the qa-agent gate, optionally generates infra and docs, then refreshes `CLAUDE.md` via the snapshot skill.
 
-**Per `${CLAUDE_PLUGIN_ROOT}/docs/rules.md` R1, this command MUST NOT be auto-chained from `/openplanr-pipeline:plan`.** A human review step is mandatory between PO Phase and DEV Phase.
+**Per `${CLAUDE_PLUGIN_ROOT}/docs/rules.md` R1, this command MUST NOT be auto-chained from `/planr-pipeline:plan`.** A human review step is mandatory between PO Phase and DEV Phase.
 
 ---
 
@@ -43,7 +43,7 @@ For the rest of this command, internally maintain `MODE = "spec-driven"` or `"de
 Verify these exist (using mode-appropriate paths). Abort with a clear error if any are missing.
 
 Required (default mode):
-- `output/feats/feat-$ARGUMENTS/` — fail with: "feat-$ARGUMENTS/ not found. Run /openplanr-pipeline:plan $ARGUMENTS first."
+- `output/feats/feat-$ARGUMENTS/` — fail with: "feat-$ARGUMENTS/ not found. Run /planr-pipeline:plan $ARGUMENTS first."
 - At least one `output/feats/feat-$ARGUMENTS/us-*/us-*.md`
 - At least one `output/feats/feat-$ARGUMENTS/us-*/tasks/task-*.md`
 - `input/tech/stack.md`
@@ -66,7 +66,7 @@ Same logic as `/plan`: when MODE is `spec-driven` AND `input/tech/stack.md` is m
      Critical: BuildCommand and TestCommand drive the 3-iteration correction loop.
                You MUST fill these in before /ship will work — empty values mean DEV
                agents cannot validate their generated code.
-     Next: edit input/tech/stack.md, then re-run: /openplanr-pipeline:ship $ARGUMENTS
+     Next: edit input/tech/stack.md, then re-run: /planr-pipeline:ship $ARGUMENTS
    ```
 3. **Abort gracefully.** Do NOT invoke any subagent. Do NOT touch the source tree.
 
@@ -233,7 +233,7 @@ If any task failed, list paths to the error-report.md files.
 
 | Condition | Action |
 |-----------|--------|
-| feat folder missing | Abort, suggest `/openplanr-pipeline:plan $ARGUMENTS` |
+| feat folder missing | Abort, suggest `/planr-pipeline:plan $ARGUMENTS` |
 | No tasks | Abort, suggest re-run of PO Phase |
 | Single task fails 3x | Continue with other tasks, surface in summary |
 | All tasks fail | Skip QA + DevOps + Doc-Gen; still run snapshot to record state |
@@ -246,4 +246,4 @@ If any task failed, list paths to the error-report.md files.
 *Writes: `src/features/{name}/`, tests, `docker-compose.yml` (optional), `Docs/` (optional), `CLAUDE.md` (via snapshot)*
 *Per `${CLAUDE_PLUGIN_ROOT}/docs/rules.md` R1: must be invoked manually after human review of PO Phase output.*
 
-**Bridge to planr CLI:** in spec-driven mode, this command reads/writes `.planr/specs/` directly — no conversion. The planr CLI is the *authoring* surface; openplanr-pipeline is the *executor*.
+**Bridge to planr CLI:** in spec-driven mode, this command reads/writes `.planr/specs/` directly — no conversion. The planr CLI is the *authoring* surface; planr-pipeline is the *executor*.

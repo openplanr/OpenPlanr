@@ -1,7 +1,7 @@
 # Framework Rules
 
 > All hard constraints and soft guidelines governing the PO → DEV Pipeline.
-> These rules are enforced by the agents (manifest-level tool restrictions) and checked during the human-review checkpoint between `/openplanr-pipeline:plan` and `/openplanr-pipeline:ship`.
+> These rules are enforced by the agents (manifest-level tool restrictions) and checked during the human-review checkpoint between `/planr-pipeline:plan` and `/planr-pipeline:ship`.
 
 ---
 
@@ -132,7 +132,7 @@ Avoid: 1 mega-US (too broad) or 10+ micro-US (too fragmented)
 ### G2 — Spec Quality Before Running
 ```
 A spec that is vague or incomplete will produce poor decomposition.
-Use `planr spec create + shape` (planr CLI) to guide POs through writing complete specs, or fill in the placeholder body the pipeline auto-scaffolds on the first `/openplanr-pipeline:plan` invocation.
+Use `planr spec create + shape` (planr CLI) to guide POs through writing complete specs, or fill in the placeholder body the pipeline auto-scaffolds on the first `/planr-pipeline:plan` invocation.
 The Specification Agent's output quality is directly proportional
 to the input spec quality.
 ```

@@ -1,6 +1,6 @@
 # Compatibility Matrix — OpenPlanr Protocol v1.0.0
 
-> Per-capability parity across the three first-class runtime adapters. Updated for openplanr-pipeline v0.6.0.
+> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.6.0.
 
 ## TL;DR
 
@@ -8,8 +8,8 @@ OpenPlanr ships three runtime adapters that all implement the same artifact cont
 
 | Runtime | Install | Adapter |
 |---|---|---|
-| **Claude Code** *(canonical)* | `/plugin install openplanr-pipeline@openplanr` | This plugin (manifest-enforced subagents) |
-| **Cursor** | `npm i -g openplanr && planr rules generate --target cursor --scope pipeline` | `.cursor/rules/openplanr-pipeline.mdc` + agent body files |
+| **Claude Code** *(canonical)* | `/plugin install planr-pipeline@openplanr` | This plugin (manifest-enforced subagents) |
+| **Cursor** | `npm i -g openplanr && planr rules generate --target cursor --scope pipeline` | `.cursor/rules/planr-pipeline.mdc` + agent body files |
 | **Codex** | `npm i -g openplanr && planr rules generate --target codex --scope pipeline` | `AGENTS.md` with pipeline section |
 
 Same `.planr/specs/` directories. Same SPEC / US / Task schema. Same `.pipeline-shipped` marker. The pipeline shells the contract; runtimes are interchangeable adapters.
@@ -18,8 +18,8 @@ Same `.planr/specs/` directories. Same SPEC / US / Task schema. Same `.pipeline-
 
 | Capability | Claude Code (A) | Cursor (A2) | Codex (A3) |
 |---|---|---|---|
-| **PLAN orchestration** | ✅ slash command (`/openplanr-pipeline:plan`) | ✅ rule auto-attach on glob match | ✅ persona-triggered ("plan {feature}") |
-| **SHIP orchestration** | ✅ slash command (`/openplanr-pipeline:ship`) | ✅ rule | ✅ persona |
+| **PLAN orchestration** | ✅ slash command (`/planr-pipeline:plan`) | ✅ rule auto-attach on glob match | ✅ persona-triggered ("plan {feature}") |
+| **SHIP orchestration** | ✅ slash command (`/planr-pipeline:ship`) | ✅ rule | ✅ persona |
 | **8 named subagents** | ✅ manifest-declared, model pinned | ⚠️ Composer subagent dispatch (Cursor 1.x) | ⚠️ persona role-shift only (no isolation) |
 | **Tool restrictions** (`Bash(psql:*)` etc.) | ✅ enforced at manifest layer | ❌ prompt-level only — model honours voluntarily | ❌ prompt-level only |
 | **Spec-driven mode** (`.planr/specs/`) | ✅ | ✅ | ✅ |
@@ -62,7 +62,7 @@ Cursor 1.x's Composer dispatches subagents from rule files containing system pro
 
 **Mitigation:** the Cursor adapter pins to Cursor 1.x. If the runtime changes the dispatch model in 2.x+, the adapter may need an update. The conformance test will catch the regression.
 
-**Implication:** treat Cursor compatibility as a soft contract that evolves with Cursor. The protocol is stable; the adapter ships with a "best supported as of openplanr-pipeline v0.6.0" warranty.
+**Implication:** treat Cursor compatibility as a soft contract that evolves with Cursor. The protocol is stable; the adapter ships with a "best supported as of planr-pipeline v0.6.0" warranty.
 
 ### Codex 2.0 persona quality not yet measured
 
@@ -83,7 +83,7 @@ planr spec create "User auth" --slug auth --priority P0
 
 # Move the project to a teammate using Claude Code:
 git pull
-/openplanr-pipeline:plan auth
+/planr-pipeline:plan auth
 # the Claude Code plugin reads the same SPEC-001-auth directory
 ```
 

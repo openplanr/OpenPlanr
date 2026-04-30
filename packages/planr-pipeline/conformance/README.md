@@ -21,7 +21,7 @@ node runner.mjs --runtime claude-code --setup
 # 2. Open the dir in your runtime of choice (Claude Code / Cursor / Codex)
 
 # 3. Drive the runtime through the prompts the runner emits
-# Runner prints: "Run /openplanr-pipeline:plan todo (Claude Code) OR say 'plan todo' (Cursor/Codex)"
+# Runner prints: "Run /planr-pipeline:plan todo (Claude Code) OR say 'plan todo' (Cursor/Codex)"
 
 # 4. Once you've completed PLAN, run:
 node runner.mjs --runtime claude-code --verify-po --dir <temp-dir>

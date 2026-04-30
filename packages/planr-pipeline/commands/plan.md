@@ -3,11 +3,11 @@ description: Run the PO Phase pipeline for a single feature (db-agent → design
 argument-hint: <feature-name>
 ---
 
-# /openplanr-pipeline:plan {feature-name}
+# /planr-pipeline:plan {feature-name}
 
 Orchestrates the PO Phase for `feat-$ARGUMENTS`. Decomposes a functional spec into User Stories + Tasks, optionally with a design spec from PNG mockups and a DB schema snapshot.
 
-**The PO Phase NEVER auto-chains to the DEV Phase.** This command stops after writing US/task files. A human must review the generated stories + tasks before invoking `/openplanr-pipeline:ship $ARGUMENTS`. This is enforced by `${CLAUDE_PLUGIN_ROOT}/docs/rules.md` R1.
+**The PO Phase NEVER auto-chains to the DEV Phase.** This command stops after writing US/task files. A human must review the generated stories + tasks before invoking `/planr-pipeline:ship $ARGUMENTS`. This is enforced by `${CLAUDE_PLUGIN_ROOT}/docs/rules.md` R1.
 
 ---
 
@@ -65,7 +65,7 @@ When `<SPEC_DIR>/SPEC-NNN-${ARGUMENTS}.md` is missing, scaffold it instead of ab
 6. **Print and abort gracefully:**
    ```
    ✓ Scaffolded SPEC-NNN-${ARGUMENTS} at .planr/specs/SPEC-NNN-${ARGUMENTS}/
-     Edit the spec body, then re-run: /openplanr-pipeline:plan ${ARGUMENTS}
+     Edit the spec body, then re-run: /planr-pipeline:plan ${ARGUMENTS}
    ```
 7. **Do not invoke any subagent on this run.** Decomposition runs only on the second invocation, after the user has filled in the spec body.
 
@@ -87,7 +87,7 @@ Instead, when MODE is `spec-driven` AND `input/tech/stack.md` is missing:
      Next: edit input/tech/stack.md to declare your real stack:
            - AppName, Language, Framework, ORM (or DatabaseType if no ORM)
            - BuildCommand, TestCommand (used by the 3-iteration correction loop)
-     Then re-run: /openplanr-pipeline:plan $ARGUMENTS
+     Then re-run: /planr-pipeline:plan $ARGUMENTS
    ```
 3. **Abort gracefully** — exit Step 1 here. Do NOT invoke any subagent. Do NOT proceed to Step 2.
 
@@ -148,7 +148,7 @@ Print a summary to the user:
   DB schema:   <created | reused | skipped>
   US created:  N
   Tasks:       M
-  Next step:   review the generated US/task files, then /openplanr-pipeline:ship $ARGUMENTS
+  Next step:   review the generated US/task files, then /planr-pipeline:ship $ARGUMENTS
 ```
 
 ---

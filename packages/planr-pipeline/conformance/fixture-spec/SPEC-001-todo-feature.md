@@ -69,4 +69,4 @@ The fixture exercises the minimum viable PLAN + SHIP path: 1 functional requirem
 
 ---
 
-*Conformance test fixture. Used by `openplanr-pipeline/conformance/runner.mjs`. Do not modify without updating `expected/*.json` accordingly.*
+*Conformance test fixture. Used by `planr-pipeline/conformance/runner.mjs`. Do not modify without updating `expected/*.json` accordingly.*

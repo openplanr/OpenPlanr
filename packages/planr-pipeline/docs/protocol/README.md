@@ -1,7 +1,7 @@
 # OpenPlanr Protocol
 
 > Version: **1.0.0**
-> Status: **stable** — pinned across planr CLI v1.5.0+, openplanr-pipeline v0.6.0+, openplanr skill v1.3.0+
+> Status: **stable** — pinned across planr CLI v1.5.0+, planr-pipeline v0.6.0+, openplanr skill v1.3.0+
 
 The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI development. It defines:
 
@@ -17,11 +17,11 @@ OpenPlanr ships across multiple repos and three first-class AI coding agent runt
 | Component | Role | Repo |
 |---|---|---|
 | `planr` CLI | Authoring surface — generates `.planr/` markdown artifacts | `openplanr/OpenPlanr` |
-| `openplanr-pipeline` | Claude Code plugin — canonical pipeline executor (8 subagents) | `openplanr/openplanr-pipeline` |
+| `planr-pipeline` | Claude Code plugin — canonical pipeline executor (8 subagents) | `openplanr/planr-pipeline` |
 | `openplanr` skill | Routing playbook — teaches Claude when to use which surface | `openplanr/skills` |
 | `openplanr/marketplace` | Distribution — Claude Code plugin registry pinned to v0.6.0 | `openplanr/marketplace` |
 
-The same workflow runs on **Claude Code** (canonical), **Cursor** (via planr-generated `.cursor/rules/openplanr-pipeline.mdc` + agent body files), and **Codex** (via `AGENTS.md` with a pipeline section). All three runtimes share the same artifact contract — a SPEC authored on one runtime is consumable by any other.
+The same workflow runs on **Claude Code** (canonical), **Cursor** (via planr-generated `.cursor/rules/planr-pipeline.mdc` + agent body files), and **Codex** (via `AGENTS.md` with a pipeline section). All three runtimes share the same artifact contract — a SPEC authored on one runtime is consumable by any other.
 
 The protocol is the contract. Runtimes are adapters.
 
@@ -44,7 +44,7 @@ See [`../compatibility-matrix.md`](../compatibility-matrix.md) for the per-capab
 
 ## Conformance
 
-The `openplanr-pipeline/conformance/` directory ships a runtime-agnostic test fixture (`feat-todo`) and verifier (`runner.mjs`). Each runtime adapter is tested against the same fixture. Pass criteria: post-PO state matches expected decomposition, post-DEV state has `.pipeline-shipped` marker validating against schema, no Preserve files mutated.
+The `planr-pipeline/conformance/` directory ships a runtime-agnostic test fixture (`feat-todo`) and verifier (`runner.mjs`). Each runtime adapter is tested against the same fixture. Pass criteria: post-PO state matches expected decomposition, post-DEV state has `.pipeline-shipped` marker validating against schema, no Preserve files mutated.
 
 ---
 
