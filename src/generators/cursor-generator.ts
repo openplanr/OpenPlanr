@@ -15,20 +15,20 @@ const AGILE_CURSOR_TEMPLATES = [
   'implement-task-list.mdc.hbs',
 ];
 
-/** Pipeline-mode rules — 3 `.mdc` files driving the openplanr-pipeline two-phase flow on Cursor. */
+/** Pipeline-mode rules — 3 `.mdc` files driving the planr-pipeline two-phase flow on Cursor. */
 const PIPELINE_MDC_TEMPLATES = [
-  'openplanr-pipeline.mdc.hbs',
-  'openplanr-pipeline-plan.mdc.hbs',
-  'openplanr-pipeline-ship.mdc.hbs',
+  'planr-pipeline.mdc.hbs',
+  'planr-pipeline-plan.mdc.hbs',
+  'planr-pipeline-ship.mdc.hbs',
 ];
 
 /**
  * 8 named subagent roles dispatched by the pipeline rules. Body files (system
- * prompts) are vendored from `openplanr-pipeline/agents/` at build time and
+ * prompts) are vendored from `planr-pipeline/agents/` at build time and
  * copied verbatim to `.cursor/rules/agents/` at generation time. They are NOT
  * Handlebars templates — Cursor's Composer reads them as plain system prompts.
  *
- * Keep in sync with `openplanr-pipeline/agents/{name}.md` body content.
+ * Keep in sync with `planr-pipeline/agents/{name}.md` body content.
  */
 const PIPELINE_AGENT_NAMES = [
   'db-agent',
@@ -63,7 +63,7 @@ export class CursorGenerator extends BaseGenerator {
       files.push(...(await this.renderMdcTemplates(AGILE_CURSOR_TEMPLATES, baseData, rulesDir)));
     }
 
-    // ── Pipeline-mode rules (Cursor adapter for openplanr-pipeline) ──────
+    // ── Pipeline-mode rules (Cursor adapter for planr-pipeline) ──────
     if (this.includesPipeline()) {
       const pipelineData = {
         ...baseData,

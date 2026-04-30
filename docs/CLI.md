@@ -566,7 +566,7 @@ planr quick promote QT-001 --feature FEAT-001
 
 ### `planr spec`
 
-Spec-driven planning mode — third posture alongside agile + QT, designed for **planning *for* AI coding agents**. Each spec is a self-contained directory at `.planr/specs/SPEC-NNN-{slug}/` containing the spec doc, decomposed User Stories, decomposed Tasks, and any UI design assets. The artifact schema **matches the [openplanr-pipeline](https://github.com/openplanr/openplanr-pipeline) Claude Code plugin verbatim** — file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment, DoD with build/test commands. The two products share one schema; no conversion adapter ever.
+Spec-driven planning mode — third posture alongside agile + QT, designed for **planning *for* AI coding agents**. Each spec is a self-contained directory at `.planr/specs/SPEC-NNN-{slug}/` containing the spec doc, decomposed User Stories, decomposed Tasks, and any UI design assets. The artifact schema **matches the [planr-pipeline](https://github.com/openplanr/planr-pipeline) Claude Code plugin verbatim** — file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment, DoD with build/test commands. The two products share one schema; no conversion adapter ever.
 
 See [`docs/proposals/spec-driven-mode.md`](proposals/spec-driven-mode.md) for the full design.
 
@@ -626,7 +626,7 @@ planr spec shape SPEC-001
 
 #### `planr spec decompose`
 
-AI-driven decomposition of a spec into User Stories and Tasks matching the openplanr-pipeline schema (file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment). The heart of spec-driven mode.
+AI-driven decomposition of a spec into User Stories and Tasks matching the planr-pipeline schema (file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment). The heart of spec-driven mode.
 
 ```bash
 planr spec decompose SPEC-001
@@ -645,7 +645,7 @@ planr spec decompose SPEC-001 --force               # overwrite existing decompo
 **Behavior:**
 - Always scans the codebase via the existing `buildCodebaseContext()` so generated tasks reference real file paths matching your stack
 - Reads `input/tech/stack.md` (best-effort) for stack-specific hints
-- Detects `ui_files` in SPEC frontmatter — emits 2 tasks per US (UI + Tech) when PNGs are attached, otherwise 1 task per US (Tech) per openplanr-pipeline rule R2
+- Detects `ui_files` in SPEC frontmatter — emits 2 tasks per US (UI + Tech) when PNGs are attached, otherwise 1 task per US (Tech) per planr-pipeline rule R2
 - Status: `pending|shaping → decomposing → decomposed`
 - Refuses to overwrite existing US/Task files unless `--force` is passed (matches `planr quick create` UX)
 - Validates AI output via Zod schema (rejects malformed responses; surfaces clear validation errors)
@@ -723,7 +723,7 @@ planr spec destroy SPEC-001 --yes
 
 #### `planr spec attach-design`
 
-Copy PNG mockup files into the spec's `design/` subdirectory and update `ui_files` frontmatter on the SPEC. The `openplanr-pipeline` `designer-agent` reads these PNGs to generate `design/design-spec.md` when `/openplanr-pipeline:plan` runs.
+Copy PNG mockup files into the spec's `design/` subdirectory and update `ui_files` frontmatter on the SPEC. The `planr-pipeline` `designer-agent` reads these PNGs to generate `design/design-spec.md` when `/planr-pipeline:plan` runs.
 
 ```bash
 planr spec attach-design SPEC-001 --files login.png signup.png
@@ -733,7 +733,7 @@ planr spec attach-design SPEC-001 --files login.png signup.png
 
 #### `planr spec promote`
 
-Validate that a spec is ready for handoff to `openplanr-pipeline` (has stories, tasks, non-trivial body) and print the next-step pipeline command. Updates SPEC frontmatter `status: ready-for-pipeline`.
+Validate that a spec is ready for handoff to `planr-pipeline` (has stories, tasks, non-trivial body) and print the next-step pipeline command. Updates SPEC frontmatter `status: ready-for-pipeline`.
 
 ```bash
 planr spec promote SPEC-001
@@ -741,7 +741,7 @@ planr spec promote SPEC-001
 
 After promotion, run from Claude Code:
 ```
-/openplanr-pipeline:plan {slug}
+/planr-pipeline:plan {slug}
 ```
 
 ---
@@ -888,10 +888,10 @@ planr init --no-ai --yes                  # non-interactive, no AI provider, agi
 | ----------------------- | -------------------------------------------------------------------------- | --------------------------- |
 | `--name <name>`         | Project name                                                               | basename of cwd             |
 | `--no-ai`               | Skip AI provider setup                                                     | AI prompt enabled           |
-| `--no-pipeline-rules`   | Skip openplanr-pipeline rules (agile rules only)                           | Pipeline rules generated    |
+| `--no-pipeline-rules`   | Skip planr-pipeline rules (agile rules only)                           | Pipeline rules generated    |
 | `--yes` / `-y`          | Non-interactive mode (accept all defaults)                                 | Interactive                 |
 
-**Why pipeline rules are on by default:** with them, `planr init` produces a complete, ready-to-use cross-runtime project. Cursor picks up `.cursor/rules/openplanr-pipeline.mdc` automatically; Codex's `AGENTS.md` includes the pipeline orchestration section; Claude Code's `CLAUDE.md` gets the pipeline block. **One command — every runtime activates the spec-driven workflow without further setup.**
+**Why pipeline rules are on by default:** with them, `planr init` produces a complete, ready-to-use cross-runtime project. Cursor picks up `.cursor/rules/planr-pipeline.mdc` automatically; Codex's `AGENTS.md` includes the pipeline orchestration section; Claude Code's `CLAUDE.md` gets the pipeline block. **One command — every runtime activates the spec-driven workflow without further setup.**
 
 If you only want agile mode (epic → feature → story → task), pass `--no-pipeline-rules` to skip the pipeline file set.
 
@@ -904,7 +904,7 @@ Generate AI agent rule files for Cursor, Claude Code, and/or Codex. Two flags: *
 ```bash
 planr rules generate                                       # all targets, agile scope (default)
 planr rules generate --target cursor                       # cursor only, agile scope
-planr rules generate --target cursor --scope pipeline      # cursor pipeline rules (Cursor adapter for openplanr-pipeline)
+planr rules generate --target cursor --scope pipeline      # cursor pipeline rules (Cursor adapter for planr-pipeline)
 planr rules generate --target codex --scope pipeline       # AGENTS.md with pipeline orchestration section
 planr rules generate --target all --scope all              # everything for everyone
 planr rules generate --dry-run                             # preview without writing
@@ -918,21 +918,21 @@ planr rules generate --dry-run                             # preview without wri
 
 **`--scope agile` (default — preserves existing behaviour):** generates the agile-mode rules for epic → feature → story → task workflows.
 
-**`--scope pipeline`:** generates rule files that drive the [openplanr-pipeline](https://github.com/openplanr/openplanr-pipeline) two-phase spec-driven workflow on the chosen runtime. Cross-runtime parity with the Claude Code plugin.
+**`--scope pipeline`:** generates rule files that drive the [planr-pipeline](https://github.com/openplanr/planr-pipeline) two-phase spec-driven workflow on the chosen runtime. Cross-runtime parity with the Claude Code plugin.
 
 **Generated files by `target × scope`:**
 
 | Target × Scope          | Output                                                                                                        |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `cursor` × `agile`      | `.cursor/rules/{agile-checklist,create-epic,create-features,create-user-story,create-task-list,implement-task-list}.mdc` (6 files) |
-| `cursor` × `pipeline`   | `.cursor/rules/openplanr-pipeline.mdc` + `openplanr-pipeline-{plan,ship}.mdc` + `agents/{8 role bodies}.md`   |
+| `cursor` × `pipeline`   | `.cursor/rules/planr-pipeline.mdc` + `planr-pipeline-{plan,ship}.mdc` + `agents/{8 role bodies}.md`   |
 | `claude` × `agile`      | `CLAUDE.md` (agile context-gathering protocol)                                                                |
-| `claude` × `pipeline`   | `CLAUDE.md` (with pipeline block) + sibling `openplanr-pipeline.md` reference card                            |
+| `claude` × `pipeline`   | `CLAUDE.md` (with pipeline block) + sibling `planr-pipeline.md` reference card                            |
 | `codex` × `agile`       | `AGENTS.md` (agile context)                                                                                   |
-| `codex` × `pipeline`    | `AGENTS.md` with `## OpenPlanr Pipeline Orchestration` section                                                |
+| `codex` × `pipeline`    | `AGENTS.md` with `## Planr Pipeline Orchestration` section                                                |
 | `* × all`               | Both scopes side-by-side                                                                                      |
 
-**Cross-runtime support:** the same OpenPlanr Protocol v1.0.0 runs on Claude Code (canonical, with manifest-enforced subagents), Cursor (via Composer subagent dispatch), and Codex (via persona role-shift). See [`openplanr-pipeline/docs/compatibility-matrix.md`](https://github.com/openplanr/openplanr-pipeline/blob/main/docs/compatibility-matrix.md) for the full parity table.
+**Cross-runtime support:** the same OpenPlanr Protocol v1.0.0 runs on Claude Code (canonical, with manifest-enforced subagents), Cursor (via Composer subagent dispatch), and Codex (via persona role-shift). See [`planr-pipeline/docs/compatibility-matrix.md`](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md) for the full parity table.
 
 ---
 

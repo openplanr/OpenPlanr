@@ -3,7 +3,7 @@
  *
  * The third planning posture alongside agile (epic/feature/story/task) and
  * QT (quick task). Specs decompose into nested User Stories and Tasks with
- * the same artifact contract as the `openplanr-pipeline` Claude Code plugin
+ * the same artifact contract as the `planr-pipeline` Claude Code plugin
  * (file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment, DoD
  * with build/test commands). Pairs with the pipeline plugin via shared
  * schema — no conversion layer ever.
@@ -53,7 +53,7 @@ export function registerSpecCommand(program: Command) {
   const spec = program
     .command('spec')
     .description(
-      'Spec-driven planning mode — author specs that decompose into agent-executable tasks. Pairs with openplanr-pipeline.',
+      'Spec-driven planning mode — author specs that decompose into agent-executable tasks. Pairs with planr-pipeline.',
     );
 
   // ------------------------------------------------------------------------
@@ -101,7 +101,7 @@ export function registerSpecCommand(program: Command) {
       );
       display.line('  4. Review:           planr spec show <SPEC-id>');
       display.line('  5. Promote:          planr spec promote <SPEC-id>');
-      display.line('  6. Ship via plugin:  /openplanr-pipeline:plan <slug>     (in Claude Code)');
+      display.line('  6. Ship via plugin:  /planr-pipeline:plan <slug>     (in Claude Code)');
     });
 
   // ------------------------------------------------------------------------
@@ -293,7 +293,7 @@ export function registerSpecCommand(program: Command) {
   spec
     .command('decompose')
     .description(
-      'AI-driven decomposition of a SPEC into User Stories + Tasks (matches openplanr-pipeline schema)',
+      'AI-driven decomposition of a SPEC into User Stories + Tasks (matches planr-pipeline schema)',
     )
     .argument('<specId>', 'spec ID (e.g., SPEC-001)')
     .option('--force', 'overwrite existing US/Task files (use after `planr spec destroy` failed)')
@@ -444,7 +444,7 @@ export function registerSpecCommand(program: Command) {
         }
       }
       display.line('');
-      display.line(`  Pipeline handoff: /openplanr-pipeline:plan ${spec.slug}`);
+      display.line(`  Pipeline handoff: /planr-pipeline:plan ${spec.slug}`);
     });
 
   // ------------------------------------------------------------------------
@@ -552,7 +552,7 @@ export function registerSpecCommand(program: Command) {
         logger.dim('');
         logger.dim(`Design directory: ${designDir}`);
         logger.dim(
-          `When you run /openplanr-pipeline:plan, the designer-agent will analyze these PNGs into design/design-spec.md.`,
+          `When you run /planr-pipeline:plan, the designer-agent will analyze these PNGs into design/design-spec.md.`,
         );
       } catch (err) {
         logger.error((err as Error).message);
@@ -585,13 +585,13 @@ export function registerSpecCommand(program: Command) {
 
       await updateSpecFields(projectDir, config, specId, { status: 'ready-for-pipeline' });
 
-      logger.success(`${specId} is ready for openplanr-pipeline.`);
+      logger.success(`${specId} is ready for planr-pipeline.`);
       logger.dim('');
       display.line('Next: in Claude Code, run:');
-      display.line(`  /openplanr-pipeline:plan ${spec.slug}`);
+      display.line(`  /planr-pipeline:plan ${spec.slug}`);
       display.line('');
       display.line('After human review of the decomposition:');
-      display.line(`  /openplanr-pipeline:ship ${spec.slug}`);
+      display.line(`  /planr-pipeline:ship ${spec.slug}`);
       display.line('');
       logger.dim(
         `(The pipeline plugin reads .planr/specs/${spec.id}-${spec.slug}/ directly when spec mode is active.)`,

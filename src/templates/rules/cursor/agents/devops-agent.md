@@ -1,11 +1,11 @@
-> **Cursor adapter — synthesized from openplanr-pipeline.** Agent role system prompt (body-only). Used by `/cursor/rules/openplanr-pipeline.mdc` for Composer subagent dispatch.
-> Source: `openplanr-pipeline/agents/devops-agent.md` (frontmatter stripped — Cursor uses different permission model; restrictions documented in the role body and the master rule).
+> **Cursor adapter — synthesized from planr-pipeline.** Agent role system prompt (body-only). Used by `/cursor/rules/planr-pipeline.mdc` for Composer subagent dispatch.
+> Source: `planr-pipeline/agents/devops-agent.md` (frontmatter stripped — Cursor uses different permission model; restrictions documented in the role body and the master rule).
 
 
 # DevOps Agent
 
 > **Phase:** Step 3.5 — Post-build (after qa-agent verdict is PASS)
-> **Trigger:** Invoked by `/openplanr-pipeline:ship` if `--no-devops` not set
+> **Trigger:** Invoked by `/planr-pipeline:ship` if `--no-devops` not set
 > **Mode:** Generates infrastructure config files only — **does NOT deploy**
 >
 > **Tool-layer enforcement:** This agent's `tools` frontmatter grants `Read`, `Glob`, `Write`, `Edit` only. It has **no Bash access**, period — no `docker`, `kubectl`, `gh`, `aws`, `gcloud`, `terraform`. The non-deploy rule is enforced by the harness, not just the prompt.
@@ -155,7 +155,7 @@ jobs:
 ## Execution Steps
 
 ```
-0. Receive feature name from /openplanr-pipeline:ship as $ARGUMENTS (used for log context only)
+0. Receive feature name from /planr-pipeline:ship as $ARGUMENTS (used for log context only)
 1. Verify QA gate passed (read output/feats/feat-$ARGUMENTS/qa-report.md → "Verdict: PASS")
    If FAIL: skip silently, log warning
 2. Load input/tech/stack.md

@@ -41,13 +41,13 @@ describe('planr init auto-generates pipeline rules by default', () => {
       // Agile rules (existing default)
       expect(existsSync(join(rulesRoot, 'agile-checklist.mdc'))).toBe(true);
       // Pipeline rules (NEW default — closes the cross-runtime DX gap)
-      expect(existsSync(join(rulesRoot, 'openplanr-pipeline.mdc'))).toBe(true);
+      expect(existsSync(join(rulesRoot, 'planr-pipeline.mdc'))).toBe(true);
       expect(existsSync(join(rulesRoot, 'agents', 'frontend-agent.md'))).toBe(true);
       // CLAUDE.md gets the pipeline block + sibling reference card
-      expect(existsSync(join(dir, 'openplanr-pipeline.md'))).toBe(true);
+      expect(existsSync(join(dir, 'planr-pipeline.md'))).toBe(true);
       // Codex AGENTS.md gets the pipeline orchestration section
       const agents = readFileSync(join(dir, 'AGENTS.md'), 'utf-8');
-      expect(agents).toContain('OpenPlanr Pipeline Orchestration');
+      expect(agents).toContain('Planr Pipeline Orchestration');
     },
     TIMEOUT_MS,
   );
@@ -62,13 +62,13 @@ describe('planr init auto-generates pipeline rules by default', () => {
       // Agile rules still generated
       expect(existsSync(join(rulesRoot, 'agile-checklist.mdc'))).toBe(true);
       // Pipeline rules NOT generated (explicit opt-out)
-      expect(existsSync(join(rulesRoot, 'openplanr-pipeline.mdc'))).toBe(false);
+      expect(existsSync(join(rulesRoot, 'planr-pipeline.mdc'))).toBe(false);
       expect(existsSync(join(rulesRoot, 'agents'))).toBe(false);
       // No sibling Claude reference card
-      expect(existsSync(join(dir, 'openplanr-pipeline.md'))).toBe(false);
+      expect(existsSync(join(dir, 'planr-pipeline.md'))).toBe(false);
       // Codex AGENTS.md has agile content but NOT the pipeline section
       const agents = readFileSync(join(dir, 'AGENTS.md'), 'utf-8');
-      expect(agents).not.toContain('OpenPlanr Pipeline Orchestration');
+      expect(agents).not.toContain('Planr Pipeline Orchestration');
     },
     TIMEOUT_MS,
   );
@@ -85,9 +85,9 @@ describe('rules generate --scope pipeline', () => {
       const rulesRoot = join(dir, '.cursor', 'rules');
       // 3 .mdc files
       for (const name of [
-        'openplanr-pipeline.mdc',
-        'openplanr-pipeline-plan.mdc',
-        'openplanr-pipeline-ship.mdc',
+        'planr-pipeline.mdc',
+        'planr-pipeline-plan.mdc',
+        'planr-pipeline-ship.mdc',
       ]) {
         expect(existsSync(join(rulesRoot, name))).toBe(true);
       }
@@ -135,7 +135,7 @@ describe('rules generate --scope pipeline', () => {
         expect(existsSync(join(rulesRoot, name))).toBe(false);
       }
       // ...and pipeline files must exist.
-      expect(existsSync(join(rulesRoot, 'openplanr-pipeline.mdc'))).toBe(true);
+      expect(existsSync(join(rulesRoot, 'planr-pipeline.mdc'))).toBe(true);
     },
     TIMEOUT_MS,
   );
@@ -150,7 +150,7 @@ describe('rules generate --scope pipeline', () => {
       const rulesRoot = join(dir, '.cursor', 'rules');
       // Spot-check both sets
       expect(existsSync(join(rulesRoot, 'agile-checklist.mdc'))).toBe(true);
-      expect(existsSync(join(rulesRoot, 'openplanr-pipeline.mdc'))).toBe(true);
+      expect(existsSync(join(rulesRoot, 'planr-pipeline.mdc'))).toBe(true);
       expect(existsSync(join(rulesRoot, 'agents', 'frontend-agent.md'))).toBe(true);
     },
     TIMEOUT_MS,
@@ -166,7 +166,7 @@ describe('rules generate --scope pipeline', () => {
       const agents = join(dir, 'AGENTS.md');
       expect(existsSync(agents)).toBe(true);
       const content = readFileSync(agents, 'utf-8');
-      expect(content).toContain('OpenPlanr Pipeline Orchestration');
+      expect(content).toContain('Planr Pipeline Orchestration');
       // Agile section header should NOT be present (scope=pipeline)
       expect(content).not.toContain('Agent Instructions');
     },
@@ -182,25 +182,25 @@ describe('rules generate --scope pipeline', () => {
 
       const content = readFileSync(join(dir, 'AGENTS.md'), 'utf-8');
       expect(content).toContain('Agent Instructions');
-      expect(content).toContain('OpenPlanr Pipeline Orchestration');
+      expect(content).toContain('Planr Pipeline Orchestration');
     },
     TIMEOUT_MS,
   );
 
   it(
-    'claude + scope=pipeline produces CLAUDE.md (with pipeline block) + sibling openplanr-pipeline.md',
+    'claude + scope=pipeline produces CLAUDE.md (with pipeline block) + sibling planr-pipeline.md',
     () => {
       const dir = makeTempDir();
       run('init --name pipe-claude --no-ai --yes', { cwd: dir });
       run('rules generate --target claude --scope pipeline', { cwd: dir });
 
       const claude = readFileSync(join(dir, 'CLAUDE.md'), 'utf-8');
-      const ref = join(dir, 'openplanr-pipeline.md');
-      expect(claude).toContain('OpenPlanr Pipeline (Path A)');
+      const ref = join(dir, 'planr-pipeline.md');
+      expect(claude).toContain('Planr Pipeline (Path A)');
       expect(existsSync(ref)).toBe(true);
       const refContent = readFileSync(ref, 'utf-8');
-      expect(refContent).toContain('/openplanr-pipeline:plan');
-      expect(refContent).toContain('/openplanr-pipeline:ship');
+      expect(refContent).toContain('/planr-pipeline:plan');
+      expect(refContent).toContain('/planr-pipeline:ship');
     },
     TIMEOUT_MS,
   );
@@ -214,10 +214,10 @@ describe('rules generate --scope pipeline', () => {
       run('init --name pipe-claude-agile --no-ai --no-pipeline-rules --yes', { cwd: dir });
       run('rules generate --target claude --scope agile', { cwd: dir });
 
-      expect(existsSync(join(dir, 'openplanr-pipeline.md'))).toBe(false);
+      expect(existsSync(join(dir, 'planr-pipeline.md'))).toBe(false);
       const claude = readFileSync(join(dir, 'CLAUDE.md'), 'utf-8');
       // The {{#if pipelineScope}} block must NOT render in agile scope
-      expect(claude).not.toContain('OpenPlanr Pipeline (Path A)');
+      expect(claude).not.toContain('Planr Pipeline (Path A)');
     },
     TIMEOUT_MS,
   );
@@ -248,7 +248,7 @@ describe('rules generate --scope pipeline', () => {
 
       const rulesRoot = join(dir, '.cursor', 'rules');
       // Spot-check the master rule
-      const master = readFileSync(join(rulesRoot, 'openplanr-pipeline.mdc'), 'utf-8');
+      const master = readFileSync(join(rulesRoot, 'planr-pipeline.mdc'), 'utf-8');
       // biome-ignore lint/suspicious/noTemplateCurlyInString: literal token under test
       expect(master).not.toContain('${CLAUDE_PLUGIN_ROOT}');
       // Note: the vendored agent body files DO retain Claude-Code-specific

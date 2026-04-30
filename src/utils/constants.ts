@@ -17,7 +17,7 @@ export const DEFAULT_CURSOR_RULES_DIR = '.cursor/rules';
  * roles). Bumps RARELY — only on artifact-schema breaks or workflow
  * contract changes, NOT on pipeline plugin patches.
  *
- * NOT to be confused with the openplanr-pipeline plugin version (which moves
+ * NOT to be confused with the planr-pipeline plugin version (which moves
  * fast and is tracked in the marketplace pin file, not here). Generated rule
  * files reference the protocol contract; the runtime adapter (Claude Code
  * plugin / Cursor MDC / Codex AGENTS.md) writes its own actual version into
@@ -25,10 +25,10 @@ export const DEFAULT_CURSOR_RULES_DIR = '.cursor/rules';
  *
  * Read by:
  *   - CursorGenerator (renders into Cursor MDC headers)
- *   - ClaudeGenerator (renders into the sibling `openplanr-pipeline.md` reference card)
+ *   - ClaudeGenerator (renders into the sibling `planr-pipeline.md` reference card)
  *   - CodexGenerator  (renders into the AGENTS.md pipeline section)
  *
- * See `openplanr-pipeline/docs/protocol/` for the full protocol spec.
+ * See `planr-pipeline/docs/protocol/` for the full protocol spec.
  */
 export const OPENPLANR_PROTOCOL_VERSION = '1.0.0';
 
@@ -68,14 +68,14 @@ export const VALID_STATUSES: Partial<Record<ArtifactType, readonly string[]>> = 
 /**
  * Spec-driven mode (third planning posture) uses a richer status lifecycle
  * because each phase corresponds to a different role transition:
- * PO authoring → AI decomposition → human review → handoff to openplanr-pipeline.
+ * PO authoring → AI decomposition → human review → handoff to planr-pipeline.
  *
  * - pending             — SPEC created, body not yet written
  * - shaping             — SPEC body authored (manually or via `planr spec shape`)
  * - decomposing         — `planr spec decompose` is running (AI generating US + tasks)
  * - decomposed          — US + Task files written, awaiting human review
- * - ready-for-pipeline  — `planr spec promote` validated; ready for openplanr-pipeline
- * - in-pipeline         — openplanr-pipeline `/plan` or `/ship` is running
+ * - ready-for-pipeline  — `planr spec promote` validated; ready for planr-pipeline
+ * - in-pipeline         — planr-pipeline `/plan` or `/ship` is running
  * - done                — DEV phase complete, code shipped
  */
 export const VALID_SPEC_STATUSES = [

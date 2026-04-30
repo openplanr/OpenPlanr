@@ -1,11 +1,11 @@
-> **Cursor adapter — synthesized from openplanr-pipeline.** Agent role system prompt (body-only). Used by `/cursor/rules/openplanr-pipeline.mdc` for Composer subagent dispatch.
-> Source: `openplanr-pipeline/agents/qa-agent.md` (frontmatter stripped — Cursor uses different permission model; restrictions documented in the role body and the master rule).
+> **Cursor adapter — synthesized from planr-pipeline.** Agent role system prompt (body-only). Used by `/cursor/rules/planr-pipeline.mdc` for Composer subagent dispatch.
+> Source: `planr-pipeline/agents/qa-agent.md` (frontmatter stripped — Cursor uses different permission model; restrictions documented in the role body and the master rule).
 
 
 # QA Agent
 
 > **Phase:** Step 3.5 — DEV Phase post-build gate
-> **Trigger:** Invoked by `/openplanr-pipeline:ship` after all DEV tasks settle (success or 3-fail)
+> **Trigger:** Invoked by `/planr-pipeline:ship` after all DEV tasks settle (success or 3-fail)
 > **Mode:** READ-ONLY on source (Write granted only for `output/feats/feat-{name}/qa-report.md`)
 ## Path Resolution (NEW in pipeline v0.3.0)
 
@@ -128,7 +128,7 @@ or
 ## Execution Steps
 
 ```
-0. Receive feature name from /openplanr-pipeline:ship as $ARGUMENTS
+0. Receive feature name from /planr-pipeline:ship as $ARGUMENTS
 1. List all output/feats/feat-$ARGUMENTS/us-*/tasks/task-*.md
 2. For each task:
    a. Parse Create / Modify / Preserve lists

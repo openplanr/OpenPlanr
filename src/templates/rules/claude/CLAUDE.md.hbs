@@ -105,15 +105,15 @@ All artifacts follow `PREFIX-NNN-slug.md` format:
 - TASK-001, TASK-002, ...
 {{#if pipelineScope}}
 
-## OpenPlanr Pipeline (Path A)
+## Planr Pipeline (Path A)
 
-This project pairs with the **openplanr-pipeline** Claude Code plugin.
-See `openplanr-pipeline.md` (sibling file) for command reference and install instructions.
+This project pairs with the **planr-pipeline** Claude Code plugin.
+See `planr-pipeline.md` (sibling file) for command reference and install instructions.
 
 Active commands when the plugin is loaded:
 
-- `/openplanr-pipeline:plan {feature}` — PO Phase (designer + specification agents, STOPS for human review)
-- `/openplanr-pipeline:ship {feature}` — DEV Phase (frontend ‖ backend → qa → devops ‖ doc-gen → snapshot → marker)
+- `/planr-pipeline:plan {feature}` — PO Phase (designer + specification agents, STOPS for human review)
+- `/planr-pipeline:ship {feature}` — DEV Phase (frontend ‖ backend → qa → devops ‖ doc-gen → snapshot → marker)
 
 Spec-driven mode artifacts live under `.planr/specs/SPEC-NNN-{slug}/` — same schema the planr CLI authors. Hard rule R1: never auto-chain plan → ship.
 {{/if}}

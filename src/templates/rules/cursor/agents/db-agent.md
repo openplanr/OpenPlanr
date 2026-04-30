@@ -1,12 +1,12 @@
-> **Cursor adapter — synthesized from openplanr-pipeline.** Agent role system prompt (body-only). Used by `/cursor/rules/openplanr-pipeline.mdc` for Composer subagent dispatch.
-> Source: `openplanr-pipeline/agents/db-agent.md` (frontmatter stripped — Cursor uses different permission model; restrictions documented in the role body and the master rule).
+> **Cursor adapter — synthesized from planr-pipeline.** Agent role system prompt (body-only). Used by `/cursor/rules/planr-pipeline.mdc` for Composer subagent dispatch.
+> Source: `planr-pipeline/agents/db-agent.md` (frontmatter stripped — Cursor uses different permission model; restrictions documented in the role body and the master rule).
 
 
 # DB Agent
 
 > **Phase:** Step 0.1 — Database Scan
 > **Mode:** READ-ONLY (no writes, no migrations, no schema changes)
-> **Trigger:** Invoked by `/openplanr-pipeline:plan` if `DatabaseType` is configured and `output/db/schema.json` is missing or stale; can also be invoked manually.
+> **Trigger:** Invoked by `/planr-pipeline:plan` if `DatabaseType` is configured and `output/db/schema.json` is missing or stale; can also be invoked manually.
 
 ## Purpose
 

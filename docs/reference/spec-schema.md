@@ -1,7 +1,7 @@
 # Spec Schema Reference (v1.0.0)
 
 This document is the canonical, version-pinned schema for spec-driven mode
-artifacts. Both **planr CLI** and the **openplanr-pipeline** Claude Code plugin
+artifacts. Both **planr CLI** and the **planr-pipeline** Claude Code plugin
 read and write to this exact schema — no conversion adapter, no glue scripts.
 
 When hand-authoring spec artifacts (e.g. AI is unavailable), use the templates
@@ -9,7 +9,7 @@ below verbatim.
 
 > **Schema version:** `1.0.0`
 > **Pinning rule:** the `schemaVersion` field on every artifact MUST match the
-> reader's expected version. Both planr CLI and openplanr-pipeline currently
+> reader's expected version. Both planr CLI and planr-pipeline currently
 > require `1.0.0`. Future breaking changes will bump in lockstep across both.
 
 ---
@@ -23,14 +23,14 @@ Every spec is a self-contained directory under `.planr/specs/`:
 ├── SPEC-NNN-{slug}.md            # the functional spec (one per directory)
 ├── design/                       # optional — UI mockups + design-spec
 │   ├── *.png                     # PNG mockups attached via `planr spec attach-design`
-│   └── design-spec.md            # written by openplanr-pipeline's designer-agent
+│   └── design-spec.md            # written by planr-pipeline's designer-agent
 ├── stories/
 │   └── US-NNN-{slug}.md          # user stories scoped to this spec
 ├── tasks/
 │   └── T-NNN-{slug}.md           # tasks scoped to this spec
-├── qa-report.md                  # written by qa-agent after /openplanr-pipeline:ship
+├── qa-report.md                  # written by qa-agent after /planr-pipeline:ship
 ├── error-report.md               # written if a task fails 3 iterations
-└── .pipeline-shipped             # written by /openplanr-pipeline:ship — proof of execution
+└── .pipeline-shipped             # written by /planr-pipeline:ship — proof of execution
 ```
 
 **ID scoping rule:** in spec-driven mode, `US-NNN` and `T-NNN` are scoped to
@@ -64,7 +64,7 @@ tech_dependencies: []             # required · array of strings; informational 
 |---|---|---|
 | `id` | string | Project-globally unique. Format `SPEC-NNN` (3-digit). The directory MUST be `SPEC-NNN-{slug}/`. |
 | `title` | string | Display title. Human-readable. |
-| `slug` | string | URL-safe lowercase. Used in path, in `/openplanr-pipeline:plan {slug}`, and in story/task slugs. |
+| `slug` | string | URL-safe lowercase. Used in path, in `/planr-pipeline:plan {slug}`, and in story/task slugs. |
 | `schemaVersion` | string | Pinned schema version. `1.0.0` currently. Readers MUST refuse mismatched versions. |
 | `status` | enum | Lifecycle marker: `pending` (just created) → `shaping` (Q&A in progress) → `shaped` (body authored) → `decomposing` (AI in progress) → `decomposed` (US/T files written) → `in-pipeline` (ship in progress) → `done` (shipped). |
 | `priority` | enum | `P0` (must) / `P1` (should) / `P2` (nice) / `P3` (defer). |
@@ -225,7 +225,7 @@ A task that touches files outside these lists fails QA.
 
 ## `.pipeline-shipped` marker
 
-Written by `/openplanr-pipeline:ship` at the end of a successful (or
+Written by `/planr-pipeline:ship` at the end of a successful (or
 partially-successful) run. This is the canonical proof that the pipeline
 executed — not a hand-authored markdown file.
 
@@ -271,8 +271,8 @@ pending → shaping → shaped → decomposing → decomposed → in-pipeline �
 | `shaped` | `planr spec shape` (complete) | Spec body has Context/FRs/Rules/AC sections filled |
 | `decomposing` | `planr spec decompose` (in progress) OR pipeline's specification-agent | AI is generating US + tasks |
 | `decomposed` | `planr spec decompose` (complete) | stories/ and tasks/ are populated |
-| `in-pipeline` | `/openplanr-pipeline:ship` (in progress) | Pipeline DEV phase running |
-| `done` | `/openplanr-pipeline:ship` (complete) | Tasks executed, QA passed, marker written |
+| `in-pipeline` | `/planr-pipeline:ship` (in progress) | Pipeline DEV phase running |
+| `done` | `/planr-pipeline:ship` (complete) | Tasks executed, QA passed, marker written |
 
 The pipeline can ingest a `shaped` spec and decompose it itself; in that case
 the spec moves directly from `shaped` to `decomposed` without going through
@@ -282,7 +282,7 @@ the spec moves directly from `shaped` to `decomposed` without going through
 
 ## Schema version compatibility
 
-Both planr CLI and openplanr-pipeline produce and consume schema `1.0.0`.
+Both planr CLI and planr-pipeline produce and consume schema `1.0.0`.
 Future breaking changes will bump `schemaVersion` in lockstep across both
 products. Keep them aligned via:
 
@@ -298,5 +298,5 @@ npm i -g openplanr@latest
 - [planr CLI README](../../README.md)
 - [planr CLI command reference](../CLI.md)
 - [Spec-driven mode design proposal](../proposals/spec-driven-mode.md)
-- [openplanr-pipeline plugin docs](https://github.com/openplanr/openplanr-pipeline)
-- [openplanr-pipeline rules.md (R1-R6)](https://github.com/openplanr/openplanr-pipeline/blob/main/docs/rules.md)
+- [planr-pipeline plugin docs](https://github.com/openplanr/planr-pipeline)
+- [planr-pipeline rules.md (R1-R6)](https://github.com/openplanr/planr-pipeline/blob/main/docs/rules.md)

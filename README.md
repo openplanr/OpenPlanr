@@ -4,15 +4,15 @@
 
 ### The planning layer for AI coding agents
 
-**Plan once. Ship with agents.** Works natively on **Claude Code**, **Cursor**, and **Codex** via the runtime-agnostic [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/openplanr-pipeline/tree/main/docs/protocol).
+**Plan once. Ship with agents.** Works natively on **Claude Code**, **Cursor**, and **Codex** via the runtime-agnostic [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol).
 
 [![npm version](https://img.shields.io/npm/v/openplanr.svg?style=flat-square&color=cb3837&logo=npm)](https://www.npmjs.com/package/openplanr)
 [![node](https://img.shields.io/node/v/openplanr.svg?style=flat-square&color=339933&logo=node.js&logoColor=white)](https://nodejs.org)
 [![license](https://img.shields.io/npm/l/openplanr.svg?style=flat-square&color=blue)](https://github.com/openplanr/OpenPlanr/blob/main/LICENSE)
-[![protocol](https://img.shields.io/badge/protocol-v1.0.0-7c3aed?style=flat-square)](https://github.com/openplanr/openplanr-pipeline/tree/main/docs/protocol)
-[![runtimes](https://img.shields.io/badge/runtimes-Claude%20Code%20%7C%20Cursor%20%7C%20Codex-f97316?style=flat-square)](https://github.com/openplanr/openplanr-pipeline/blob/main/docs/compatibility-matrix.md)
+[![protocol](https://img.shields.io/badge/protocol-v1.0.0-7c3aed?style=flat-square)](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol)
+[![runtimes](https://img.shields.io/badge/runtimes-Claude%20Code%20%7C%20Cursor%20%7C%20Codex-f97316?style=flat-square)](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md)
 
-**[Website](https://openplanr.dev)** · **[Pipeline plugin](https://github.com/openplanr/openplanr-pipeline)** · **[Compatibility matrix](https://github.com/openplanr/openplanr-pipeline/blob/main/docs/compatibility-matrix.md)** · **[Protocol spec](https://github.com/openplanr/openplanr-pipeline/tree/main/docs/protocol)** · **[CLI reference](docs/CLI.md)**
+**[Website](https://openplanr.dev)** · **[Pipeline plugin](https://github.com/openplanr/planr-pipeline)** · **[Compatibility matrix](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md)** · **[Protocol spec](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol)** · **[CLI reference](docs/CLI.md)**
 
 </div>
 
@@ -38,9 +38,9 @@ That's the whole onboarding.
 AI coding agents are powerful but lack structured planning context. Without a clear plan, they generate code that drifts from requirements, churn on the same problem across sessions, and can't be audited. OpenPlanr fixes this with four properties:
 
 1. **Markdown artifacts in your repo** — plans live next to your code, version-controlled, gittable, gradable. No external SaaS, no DB.
-2. **One contract, every runtime** — author once; Claude Code, Cursor, and Codex all consume the same artifacts via [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/openplanr-pipeline/tree/main/docs/protocol).
+2. **One contract, every runtime** — author once; Claude Code, Cursor, and Codex all consume the same artifacts via [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol).
 3. **Three planning postures** — pick the ceremony level that matches the work: agile (epic → feature → story → task), quick task (one-off chores), or spec-driven (handoff to an AI factory).
-4. **Hard rules at the tool layer** — when paired with the [openplanr-pipeline](https://github.com/openplanr/openplanr-pipeline) Claude Code plugin, agent tool restrictions are enforced in the manifest, not just the prompt. Production-grade audit trail via the `.pipeline-shipped` execution marker.
+4. **Hard rules at the tool layer** — when paired with the [planr-pipeline](https://github.com/openplanr/planr-pipeline) Claude Code plugin, agent tool restrictions are enforced in the manifest, not just the prompt. Production-grade audit trail via the `.pipeline-shipped` execution marker.
 
 ---
 
@@ -52,7 +52,7 @@ AI coding agents are powerful but lack structured planning context. Without a cl
 | **Quick task** | Solo dev, one-off chores, no ceremony | `.planr/quick/QT-NNN-*.md` (a single checklist file) |
 | **Spec-driven** | Handing a feature to an AI agent factory | `.planr/specs/SPEC-NNN-{slug}/{stories,tasks,design}/` |
 
-Pick one per project, mix per task. The spec-driven posture is the bridge to the [openplanr-pipeline](https://github.com/openplanr/openplanr-pipeline) — same artifact contract, no conversion adapter.
+Pick one per project, mix per task. The spec-driven posture is the bridge to the [planr-pipeline](https://github.com/openplanr/planr-pipeline) — same artifact contract, no conversion adapter.
 
 ---
 
@@ -62,11 +62,11 @@ Pick one per project, mix per task. The spec-driven posture is the bridge to the
 
 | Runtime | What gets installed | How the workflow activates |
 |---|---|---|
-| **Claude Code** | `CLAUDE.md` + sibling `openplanr-pipeline.md` reference card. Optional: install the `openplanr-pipeline` plugin for full manifest-enforced subagents. | `/openplanr-pipeline:plan {feature}` and `/openplanr-pipeline:ship {feature}` slash commands |
-| **Cursor** | `.cursor/rules/openplanr-pipeline.mdc` + `agents/{8 role bodies}.md` | User says "plan {feature}" or "ship {feature}" — Composer dispatches the pipeline subagents |
-| **Codex** | `AGENTS.md` with `## OpenPlanr Pipeline Orchestration` section | User says "plan {feature}" — Codex adopts the role personas |
+| **Claude Code** | `CLAUDE.md` + sibling `planr-pipeline.md` reference card. Optional: install the `planr-pipeline` plugin for full manifest-enforced subagents. | `/planr-pipeline:plan {feature}` and `/planr-pipeline:ship {feature}` slash commands |
+| **Cursor** | `.cursor/rules/planr-pipeline.mdc` + `agents/{8 role bodies}.md` | User says "plan {feature}" or "ship {feature}" — Composer dispatches the pipeline subagents |
+| **Codex** | `AGENTS.md` with `## Planr Pipeline Orchestration` section | User says "plan {feature}" — Codex adopts the role personas |
 
-Same artifacts (`.planr/specs/SPEC-NNN-{slug}/`). Same `.pipeline-shipped` proof markers. Cross-runtime spec portability works out of the box. See the [compatibility matrix](https://github.com/openplanr/openplanr-pipeline/blob/main/docs/compatibility-matrix.md) for per-capability parity.
+Same artifacts (`.planr/specs/SPEC-NNN-{slug}/`). Same `.pipeline-shipped` proof markers. Cross-runtime spec portability works out of the box. See the [compatibility matrix](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md) for per-capability parity.
 
 ---
 
@@ -119,7 +119,7 @@ planr quick create "add OAuth login"
 planr spec create "Auth flow" --slug auth
 planr spec shape SPEC-001              # 4 questions, no $EDITOR
 # Then in Claude Code / Cursor / Codex:
-#   /openplanr-pipeline:plan auth      → human review → /openplanr-pipeline:ship auth
+#   /planr-pipeline:plan auth      → human review → /planr-pipeline:ship auth
 ```
 
 ---
@@ -128,7 +128,7 @@ planr spec shape SPEC-001              # 4 questions, no $EDITOR
 
 ### Spec-driven mode
 
-Third planning posture — designed for handing features to AI coding agents. Specs decompose into User Stories and Tasks with explicit file Create / Modify / Preserve lists, `Type: UI | Tech`, agent assignment, and DoD with build / test commands. Schema matches [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/openplanr-pipeline/tree/main/docs/protocol).
+Third planning posture — designed for handing features to AI coding agents. Specs decompose into User Stories and Tasks with explicit file Create / Modify / Preserve lists, `Type: UI | Tech`, agent assignment, and DoD with build / test commands. Schema matches [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol).
 
 | Command | Description |
 |---|---|
@@ -200,7 +200,7 @@ Built-in templates: `rest-endpoint`, `react-component`, `database-migration`, `a
 | `planr rules generate --target all --scope all` | Everything for every runtime |
 | `planr rules generate --dry-run` | Preview without writing |
 
-`--scope agile` (default) writes the agile workflow rules. `--scope pipeline` writes the rule files that drive the [openplanr-pipeline](https://github.com/openplanr/openplanr-pipeline) two-phase spec-driven flow on the chosen runtime. `--scope all` produces both. `planr init` auto-runs `--scope all` by default — opt out with `planr init --no-pipeline-rules`.
+`--scope agile` (default) writes the agile workflow rules. `--scope pipeline` writes the rule files that drive the [planr-pipeline](https://github.com/openplanr/planr-pipeline) two-phase spec-driven flow on the chosen runtime. `--scope all` produces both. `planr init` auto-runs `--scope all` by default — opt out with `planr init --no-pipeline-rules`.
 
 ### Integrations
 
@@ -259,10 +259,10 @@ my-project/
 │   └── checklists/              # Agile development checklist
 ├── .cursor/rules/
 │   ├── agile-checklist.mdc      # Agile workflow rules
-│   ├── openplanr-pipeline.mdc   # Pipeline rules (default-on)
+│   ├── planr-pipeline.mdc   # Pipeline rules (default-on)
 │   └── agents/                  # 8 subagent body files
 ├── CLAUDE.md                    # Claude Code rules
-├── openplanr-pipeline.md        # Pipeline reference card (Claude Code)
+├── planr-pipeline.md        # Pipeline reference card (Claude Code)
 └── AGENTS.md                    # Codex rules + pipeline orchestration
 ```
 
@@ -318,7 +318,7 @@ OpenPlanr is one of four components:
 | Component | Role | Repo |
 |---|---|---|
 | **`planr` CLI** | Authoring surface — generates `.planr/` artifacts and runtime rule files | this repo |
-| **`openplanr-pipeline`** | Claude Code plugin — canonical executor (8 subagents, manifest-enforced tool restrictions) | [openplanr/openplanr-pipeline](https://github.com/openplanr/openplanr-pipeline) |
+| **`planr-pipeline`** | Claude Code plugin — canonical executor (8 subagents, manifest-enforced tool restrictions) | [openplanr/planr-pipeline](https://github.com/openplanr/planr-pipeline) |
 | **`openplanr` skill** | Routing playbook — teaches Claude when to use which surface | [openplanr/skills](https://github.com/openplanr/skills) |
 | **`openplanr/marketplace`** | Distribution — Claude Code plugin registry | [openplanr/marketplace](https://github.com/openplanr/marketplace) |
 

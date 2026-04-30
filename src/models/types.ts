@@ -14,8 +14,8 @@ export type TargetCLI = 'cursor' | 'claude' | 'codex';
  *
  *  - `agile`    — the existing agile-mode templates (epic → feature → story → task,
  *                 sprint, backlog). Default; preserves byte-for-byte legacy output.
- *  - `pipeline` — additional rule files that drive the openplanr-pipeline two-phase
- *                 spec-driven flow (`/openplanr-pipeline:plan`, `/openplanr-pipeline:ship`)
+ *  - `pipeline` — additional rule files that drive the planr-pipeline two-phase
+ *                 spec-driven flow (`/planr-pipeline:plan`, `/planr-pipeline:ship`)
  *                 on the chosen runtime. Cross-runtime parity with the Claude Code plugin.
  *  - `all`      — both sets, side-by-side.
  */
@@ -159,7 +159,7 @@ export interface OpenPlanrConfig {
      * agent-execution contracts (file Create/Modify/Preserve lists,
      * Type=UI|Tech, agent assignment, build/test DoD). See
      * `docs/proposals/spec-driven-mode.md` and
-     * https://github.com/openplanr/openplanr-pipeline for the schema.
+     * https://github.com/openplanr/planr-pipeline for the schema.
      */
     spec: string;
   };
