@@ -11,9 +11,131 @@ Orchestrates the PO Phase for `feat-$ARGUMENTS`. Decomposes a functional spec in
 
 ---
 
+## Step 0 — Pre-flight (greenfield bootstrap, plan mode, brief interpretation)
+
+This step runs **before** mode detection so the pipeline works on greenfield directories and accepts natural-language briefs in `$ARGUMENTS`.
+
+### 0a — Parse `$ARGUMENTS` (slug + optional brief)
+
+`$ARGUMENTS` may take two shapes:
+
+1. **Slug only:** `support-inbox` — feature slug, no extra context.
+2. **Slug + brief:** the first whitespace-or-newline-separated token is the slug; everything after is a free-text **BRIEF** (a short natural-language description of the feature, stack, and references).
+
+Internally bind:
+- `SLUG = first token of $ARGUMENTS` (kebab-case, no spaces)
+- `BRIEF = remainder of $ARGUMENTS` (may be empty)
+
+Use `BRIEF` content during Auto-scaffolding (Step 1b) to populate the spec body's Context, Functional Requirements, Business Rules, and Acceptance Criteria sections — instead of leaving template placeholder text. Use stack hints inside `BRIEF` (mentions of Next.js, Prisma, Postgres, Redis, Anthropic SDK, Vitest, Django, Rails, etc.) to populate `input/tech/stack.md` during Self-healing if missing.
+
+### 0b — Path expansion (universal)
+
+Wherever `BRIEF` or any frontmatter field references a filesystem path, expand:
+
+- `~/foo` → `$HOME/foo` (use the runtime `$HOME` env var)
+- `~user/foo` → `/Users/user/foo` (Mac) or `/home/user/foo` (Linux)
+- Bare relative paths (e.g. `Designs/file.png`) → resolve against the **project root** (the working directory), NOT against `${CLAUDE_PLUGIN_ROOT}`
+
+If a referenced path doesn't exist after expansion, try the unexpanded form as a fallback (handles cases where users put files in the working dir AND wrote `~/`). If neither resolves, log the expected path and continue — agents that depend on it will skip silently per existing conditional logic (e.g. designer-agent skips if no PNGs).
+
+### 0c — Plan mode awareness
+
+If the user's Claude Code session is in **Plan Mode** (a session-level read-only research mode):
+
+1. **Do NOT bootstrap directories.** Do NOT scaffold the spec. Do NOT dispatch any subagent.
+2. Write a markdown plan describing what the pipeline **would** do given the current state:
+   - Detected mode (greenfield / spec-driven / default)
+   - Files that would be created (`.planr/config.json`, `input/tech/stack.md`, `<SPEC_DIR>/SPEC-NNN-${SLUG}.md`, etc.)
+   - Subagents that would fire (db-agent / designer-agent / specification-agent) and the conditions
+   - The expected output (`<SPEC_DIR>/stories/`, `<SPEC_DIR>/tasks/`)
+3. End the plan with: *"Plan mode is active. Exit Plan Mode and re-run `/planr-pipeline:plan ${SLUG}` to execute."*
+4. Stop here. Do not write any files.
+
+### 0d — Greenfield bootstrap
+
+If `.planr/config.json` is missing, write a minimal one. Derive `projectName` from `package.json#name` if present, else from the working directory's basename:
+
+```json
+{
+  "projectName": "<derived>",
+  "outputPaths": { "agile": ".planr" },
+  "idPrefix": { "spec": "SPEC" }
+}
+```
+
+Create these directories if absent:
+
+- `.planr/specs/`
+- `input/tech/`
+
+Print:
+
+```
+✓ Bootstrapped .planr/ and input/tech/ for greenfield project
+```
+
+### 0e — Greenfield Node project ask (CONDITIONAL)
+
+If `package.json` is missing AND `BRIEF` (or `input/tech/stack.md`, if it exists) implies a Node-based stack (mentions Next.js, React, NestJS, Express, etc.):
+
+1. **Ask the user explicitly** — do NOT auto-scaffold without consent:
+
+   ```
+   ⚠ Greenfield directory detected (no package.json).
+
+   The pipeline ships FEATURE code on top of an existing project shape.
+   To proceed, choose one:
+
+   (a) Reply "scaffold first" — I will run create-next-app (or your stack
+       equivalent) + npm install + prisma init, then continue with PO Phase.
+
+   (b) Run the scaffold yourself, then re-run /planr-pipeline:plan ${SLUG}.
+
+   (c) If you only want a plan written and no code generated, exit and
+       re-run with Plan Mode active.
+   ```
+
+2. Stop here. Wait for the user's reply in the next message.
+
+3. **On user reply `scaffold first`:**
+   - Read the brief's stack hints. Default to Next.js 14 (App Router, TypeScript, Tailwind) if not specified, but always prefer what the brief says.
+   - Run scaffolding commands sequentially (use Bash):
+     - `npx create-next-app@latest . --ts --tailwind --app --src-dir --import-alias "@/*" --no-eslint`
+     - `npm i` for declared production deps from BRIEF stack (e.g., `prisma @prisma/client @anthropic-ai/sdk zod ioredis`)
+     - `npm i -D` for declared dev deps (e.g., `vitest msw`)
+     - `npx prisma init --datasource-provider postgresql` if Prisma is in the stack
+   - Print: `✓ Project scaffolded. Continuing to PO Phase.`
+   - Then proceed to Step 1.
+
+4. **On user reply other than `scaffold first`:** abort gracefully with a clear message instructing them to scaffold and re-run.
+
+If `package.json` exists already, skip 0e entirely — the project is established.
+
+### 0f — Stack inference from brief (NEW)
+
+After 0d (and 0e if it ran), if `input/tech/stack.md` is missing AND `BRIEF` mentions stack components, author `input/tech/stack.md` from the template at `${CLAUDE_PLUGIN_ROOT}/templates/stack.md.tpl`, populating:
+
+- `AppName` — derive from `projectName` in `.planr/config.json`
+- `Language` — from brief (TypeScript, Python, Ruby, etc.)
+- `Framework` — from brief (Next.js 14, Django, Rails, NestJS, etc.)
+- `DatabaseType` — from brief (PostgreSQL, MongoDB, MySQL, etc.)
+- `ORM` — from brief (Prisma, SQLAlchemy, ActiveRecord, etc.)
+- `TestFramework` — from brief (Vitest, Jest, pytest, etc.)
+- `BuildCommand`, `TestCommand` — sane defaults for the chosen stack
+
+Print:
+
+```
+✓ Authored input/tech/stack.md from your brief
+```
+
+If `BRIEF` is empty or has no stack hints, fall back to the existing self-heal behavior in Step 1 (copy template verbatim, prompt user to fill it in).
+
+---
+
 ## Step 1 — Mode detection + input validation
 
-The argument `$ARGUMENTS` is the feature name / slug (without any `feat-` or `spec-` prefix).
+The argument `$ARGUMENTS` is the feature name / slug (without any `feat-` or `spec-` prefix). At this point Step 0 has already split it into `SLUG` and `BRIEF`. Use `SLUG` for path resolution; use `BRIEF` for content authoring during auto-scaffolding.
 
 ### 1a — Detect planr spec mode
 
@@ -48,28 +170,33 @@ Required (spec-driven mode):
 
 ### Auto-scaffolding the spec shell
 
-When `<SPEC_DIR>/SPEC-NNN-${ARGUMENTS}.md` is missing, scaffold it instead of aborting:
+When `<SPEC_DIR>/SPEC-NNN-${SLUG}.md` is missing, scaffold it instead of aborting:
 
-1. **Ensure `.planr/config.json` exists.** If absent, write:
-   ```json
-   {
-     "projectName": "<derive from package.json name or repo dir name>",
-     "outputPaths": { "agile": ".planr" },
-     "idPrefix": { "spec": "SPEC" }
-   }
-   ```
-2. **Ensure `.planr/specs/` exists.** Create if absent.
+1. **Ensure `.planr/config.json` exists.** Step 0d already handled this in greenfield projects. If still absent (rare), write the minimal config from Step 0d.
+2. **Ensure `.planr/specs/` exists.** Step 0d already handled this. Create if absent.
 3. **Determine the next SPEC ID.** Scan `.planr/specs/` for `SPEC-NNN-*/` directories, take the highest NNN, increment. Three-digit format (e.g., `SPEC-001`).
-4. **Create the spec directory + subdirs:** `.planr/specs/SPEC-NNN-${ARGUMENTS}/{stories,tasks,design}`.
-5. **Write the spec body.** Read `${CLAUDE_PLUGIN_ROOT}/templates/spec-driven.md.tpl`, substitute `{{SPEC_ID}}`, `{{TITLE}}`, `{{SLUG}}`, `{{DATE}}` (use the slug as fallback title). Write to `<SPEC_DIR>/SPEC-NNN-${ARGUMENTS}.md`.
-6. **Print and abort gracefully:**
+4. **Create the spec directory + subdirs:** `.planr/specs/SPEC-NNN-${SLUG}/{stories,tasks,design}`.
+5. **Write the spec body using `BRIEF` if present** (otherwise fall back to the template):
+   - **If `BRIEF` is non-empty** (a natural-language description was provided in `$ARGUMENTS`):
+     - Use the brief content to populate the spec body sections. The model interprets the brief and writes substantive Context, Functional Requirements, Business Rules, and Acceptance Criteria — NOT placeholder TODOs.
+     - Acceptance Criteria must be in Given/When/Then format.
+     - Functional Requirements must be specific enough that the specification-agent can decompose into 3-10 tasks.
+     - If the brief is short, infer reasonable defaults from the stack and feature name (e.g., a "support inbox" feature implies CRUD + state machine + notifications).
+   - **If `BRIEF` is empty:**
+     - Read `${CLAUDE_PLUGIN_ROOT}/templates/spec-driven.md.tpl`, substitute `{{SPEC_ID}}`, `{{TITLE}}`, `{{SLUG}}`, `{{DATE}}` (use the slug as fallback title).
+     - Write to `<SPEC_DIR>/SPEC-NNN-${SLUG}.md` with placeholder TODOs.
+     - Abort with the existing message asking the user to fill it in.
+6. **Copy any referenced PNG mockups** from the brief into `<SPEC_DIR>/design/`. Use the path expansion rules from Step 0b. If a referenced PNG doesn't exist, log it and continue (designer-agent will skip silently).
+7. **Print and abort gracefully (only when `BRIEF` is empty):**
    ```
-   ✓ Scaffolded SPEC-NNN-${ARGUMENTS} at .planr/specs/SPEC-NNN-${ARGUMENTS}/
-     Edit the spec body, then re-run: /planr-pipeline:plan ${ARGUMENTS}
+   ✓ Scaffolded SPEC-NNN-${SLUG} at .planr/specs/SPEC-NNN-${SLUG}/
+     Edit the spec body, then re-run: /planr-pipeline:plan ${SLUG}
    ```
-7. **Do not invoke any subagent on this run.** Decomposition runs only on the second invocation, after the user has filled in the spec body.
+8. **Decision: continue or abort:**
+   - **If `BRIEF` was provided AND substantively populated the spec sections:** continue to Step 2 (subagent dispatch). The user expressed intent via the brief; don't force them to confirm again.
+   - **If `BRIEF` was empty (template placeholder body written):** abort gracefully and wait for the user to fill in the spec body, then re-run.
 
-If the spec body already exists but contains only placeholder text (detect via the literal token `_Describe the problem this feature solves` or any unfilled `_…_` template hint), apply the same abort.
+If the spec body already exists but contains only placeholder text (detect via the literal token `_Describe the problem this feature solves` or any unfilled `_…_` template hint), apply the same abort — the user authored the spec themselves and left it incomplete; respect that.
 
 Schema reference: `OpenPlanr/docs/reference/spec-schema.md` v1.0.0. Specs scaffolded here are interchangeable with `planr spec create` output.
 

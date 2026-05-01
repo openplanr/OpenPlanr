@@ -42,15 +42,26 @@ If no PNGs resolve for the target feature, this agent is skipped entirely.
 | Resolved PNGs (see PNG Resolution) | UX Designer | ✅ Yes (triggers this agent) |
 | `input/tech/stack.md` | Tech Lead | ✅ Yes (for component library awareness) |
 
+## Path expansion (universal)
+
+Before resolving any PNG path from `UIFiles:`, frontmatter, the orchestrator's brief, or an explicit argument:
+
+- Expand `~/foo` → `$HOME/foo` (read the runtime `$HOME` env var)
+- Expand `~user/foo` → `/Users/user/foo` (Mac) or `/home/user/foo` (Linux)
+- Resolve bare relative paths against the **project root** (working directory), NOT against `${CLAUDE_PLUGIN_ROOT}`
+
+If a referenced path doesn't exist after expansion, try the unexpanded form as a fallback (handles cases where users put files in the working dir AND wrote `~/`). If neither resolves, log the expected path and continue with the next priority source — do not error.
+
 ## PNG Resolution (avoids cross-feature collisions)
 
-Resolve PNGs for the target feature `feat-{name}` in this priority order. The first non-empty source wins.
+Resolve PNGs for the target feature `feat-{name}` in this priority order. The first non-empty source wins. Apply path expansion (above) to every candidate path.
 
 1. **Explicit list in spec.** Read `input/specs/spec-{name}.md` and parse the `UIFiles:` YAML block. If present and non-empty, use exactly those paths.
 2. **Feature-namespaced folder.** If `input/ui/feat-{name}/` exists and contains `*.png`, use all PNGs there.
-3. **Single-feature fallback.** If the project has exactly one feature spec AND `input/ui/*.png` exists at the top level, use those PNGs and log a warning recommending migration to `input/ui/feat-{name}/`.
+3. **Spec design folder (spec-driven mode).** If `<SPEC_DIR>/design/*.png` exists, use those PNGs.
+4. **Single-feature fallback.** If the project has exactly one feature spec AND `input/ui/*.png` exists at the top level, use those PNGs and log a warning recommending migration to `input/ui/feat-{name}/`.
 
-If all three sources are empty: **skip silently** (do not write design-spec.md, do not error).
+If all sources are empty: **skip silently** (do not write design-spec.md, do not error).
 
 If multiple specs share `input/ui/*.png` (collision risk), the orchestrator MUST refuse to invoke designer-agent for any of them and surface an error advising migration to feature-namespaced folders.
 

@@ -4,6 +4,60 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.7.1] — 2026-05-01
+
+### Added — Greenfield bootstrap, brief interpretation, plan-mode awareness, path expansion
+
+`/planr-pipeline:plan` now works on greenfield directories with a single natural-language brief in `$ARGUMENTS`. Four improvements, all in a new **Step 0 — Pre-flight** block (runs before mode detection + input validation):
+
+#### 0a — Brief interpretation
+
+`$ARGUMENTS` accepts two shapes:
+
+1. Slug only: `support-inbox`
+2. Slug + brief: `support-inbox\n\nAI-augmented customer support inbox.\nTickets auto-classified by Claude (budget cap + retry).\nStack: Next.js + Prisma + Postgres + Redis.\nMockups: ~/Designs/inbox-list.png`
+
+When a brief is present, the auto-scaffolded SPEC body is populated from the brief content (substantive Context, Functional Requirements, Business Rules, Acceptance Criteria) instead of leaving template placeholder TODOs. The pipeline then continues straight through to subagent dispatch — no second invocation needed.
+
+#### 0b — Path expansion (universal)
+
+`~/foo` and `~user/foo` are expanded to absolute paths via `$HOME`. Bare relative paths resolve against the project root (working directory), not `${CLAUDE_PLUGIN_ROOT}`. Fallback to unexpanded form if expansion misses. Applied in:
+
+- `commands/plan.md` Step 0b
+- `agents/designer-agent.md` PNG resolution (now also reads `<SPEC_DIR>/design/*.png` as a first-class source)
+
+Closes the `~/Designs/` path resolution issue users hit on greenfield projects.
+
+#### 0c — Plan Mode awareness
+
+When the user's Claude Code session is in **Plan Mode** (read-only research mode), the pipeline writes a markdown plan describing what it WOULD do — without bootstrapping directories, scaffolding the spec, or dispatching subagents. Ends with: *"Plan mode is active. Exit Plan Mode and re-run to execute."*
+
+#### 0d — Greenfield directory bootstrap
+
+When `.planr/config.json` is missing, the pipeline writes a minimal config (deriving `projectName` from `package.json#name` or the directory basename) and creates `.planr/specs/` + `input/tech/` directories. No more "no `.planr/`, no DB" failures on first run.
+
+#### 0e — Greenfield Node project ask (CONDITIONAL)
+
+When `package.json` is missing AND the brief implies a Node-based stack, the pipeline **asks the user explicitly** before scaffolding:
+
+> ⚠ Greenfield directory detected. Reply "scaffold first" to bootstrap the project + dependencies, OR run create-next-app yourself and re-run.
+
+On `scaffold first`, the pipeline runs `create-next-app`, `npm install` for declared deps, and `prisma init` — then continues to PO Phase. No surprise scaffolds without consent.
+
+#### 0f — Stack inference from brief
+
+When `input/tech/stack.md` is missing AND the brief mentions stack components (Next.js, Prisma, Postgres, Redis, Anthropic SDK, Vitest, etc.), the pipeline auto-authors `stack.md` from the template populated with the brief's hints. Falls back to existing self-heal (template + abort) when the brief is empty or stack-less.
+
+### Migration
+
+None. Existing v0.7.0 invocations (slug-only `$ARGUMENTS`, pre-existing `.planr/`) work identically. The new behaviors only fire on missing inputs or natural-language briefs.
+
+### Pairs with
+
+- `openplanr` (planr CLI) v1.5.1+ — unchanged
+- `openplanr-skills` v1.4.0 — unchanged
+- `marketplace` pin — no update needed (uses tag, not specific commit)
+
 ## [0.7.0] — 2026-04-30
 
 ### Changed — Plugin renamed to `planr-pipeline`
