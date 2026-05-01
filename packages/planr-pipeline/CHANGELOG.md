@@ -4,6 +4,62 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.7.3] — 2026-05-02
+
+### Fixed — Pipeline cannot silently abandon mid-execution
+
+A real greenfield smoke test on v0.7.2 exposed three classes of bug:
+
+1. **Mid-task abandonment.** After the scaffolder ran (and surfaced an asset-folder conflict), the pipeline silently exited without continuing to bootstrap, spec authoring, or subagent dispatch. The user was left with a Next.js project but no `.planr/`, no spec, no PO Phase agents fired.
+2. **Pre-existing design assets blocking the scaffolder.** A user-staged `Designs/` folder in the project root caused `create-next-app .` to refuse the directory.
+3. **Silent path-expansion fallback.** `~/Designs/foo.png` from BRIEF, when not found at `$HOME`, fell back to project-local `Designs/` — which is what created the scaffolder block in the first place.
+
+### Changed — Orchestration Contract + per-phase verification gates
+
+The command now opens with a mandatory **Orchestration Contract** that names exactly four phases (A: Pre-flight, B: Mode + spec body, C: Subagent dispatch, D: R1 stop) and enforces:
+
+- **TodoWrite is mandatory** at the start of execution. Phase progress is tracked as 4 todo items; each is checked complete only after on-disk verification.
+- **You are NOT done when a Bash command succeeds.** Bash success is a step result, not a phase result. The model is explicitly instructed to return to the strategy and continue with the next sub-step.
+- **Per-phase verification gates** between Step 0 → Step 1, Step 1 → Step 2, Step 2 → Step 3. Each gate enumerates required on-disk outputs.
+- **A Completion Contract** at Step 3 with bootstrap / spec / decomposition / subagent-dispatch / stash-cleanup checkboxes. The model cannot print success unless every checkbox passes.
+
+### Added — Designed asset stash (`STAGE_DESIGN_ASSETS` / `RESTORE_DESIGN_ASSETS`)
+
+`SCAFFOLD_NODE` now has an explicit pair of common procedures (Steps 0.9 and 0.10) that:
+
+- Detect known design-asset patterns at the project root (`Designs/`, `design/`, `mockups/`, `assets/`, `wireframes/`, top-level `*.png|jpg|jpeg|svg|gif|webp`)
+- Move them to `/tmp/planr-pipeline-stash/<slug>-<unix-ts>/` before the scaffolder runs
+- Copy them into `<SPEC_DIR>/design/` after Step 1 creates the spec design folder
+- Delete the stash dir after restore-and-verify
+
+If the project root contains files outside the recognized patterns, the strategy aborts with a clear message asking the user to clean the directory. The pipeline does NOT improvise around unknown files — and the `/tmp` stash is no longer an emergent recovery, it's a designed step the user can audit.
+
+On scaffolder failure between stage and restore, the recovery flow moves the stash back to its original location for clean rollback (no half-state).
+
+### Changed — Path expansion is fail-fast, not silent-fallback
+
+When a path from BRIEF (e.g., `~/Designs/inbox.png`) doesn't resolve to an existing file after `$HOME` expansion, the command now logs a clear warning and continues — it does NOT silently fall back to a project-local path. Silent fallback is what created the scaffolder-block bug; loud warning is product-grade.
+
+### Added — `$ARGUMENTS` sanitization (Step 0.0)
+
+Defensive check before any other processing:
+
+- `$ARGUMENTS` exceeding 5,000 chars → abort (prior conversation likely got pasted in)
+- `$ARGUMENTS` containing literal `/planr-pipeline:` → abort (nested invocation paste)
+- `$ARGUMENTS` empty → abort with usage hint
+
+These cost nothing on normal invocations and prevent the "wall of nested narrative" rendering observed when a user pasted prior conversation content into the slash command.
+
+### Migration
+
+None. v0.7.0 / v0.7.1 / v0.7.2 invocations behave identically — the new contract + gates are additive checks the model runs internally. Existing planr projects (with `.planr/` already present) hit the `CONTINUE` strategy and skip Step 0 entirely.
+
+### Pairs with
+
+- `openplanr` (planr CLI) v1.5.2 — unchanged
+- `openplanr-skills` v1.4.0 — unchanged
+- `marketplace` pin — bumped to v0.7.3 in a follow-on PR
+
 ## [0.7.2] — 2026-05-01
 
 ### Changed — Step 0 redesigned as a state machine

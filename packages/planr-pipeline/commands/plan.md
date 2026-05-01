@@ -11,6 +11,42 @@ Orchestrates the PO Phase for `feat-$ARGUMENTS`. Decomposes a functional spec in
 
 ---
 
+## ORCHESTRATION CONTRACT (read this first, mandatory)
+
+This command has **EXACTLY** these phases, in order:
+
+| Phase | Purpose | Outputs |
+|---|---|---|
+| **A — Pre-flight** | Parse args, set up project state | `.planr/config.json`, `input/tech/stack.md` (when applicable) |
+| **B — Mode + spec body** | Detect mode, author spec body from BRIEF | `<SPEC_DIR>/SPEC-NNN-${SLUG}.md` with substantive content |
+| **C — Subagent dispatch** | Run db-agent → designer-agent → specification-agent | DB snapshot, design-spec.md, US/Task files |
+| **D — R1 gate (stop)** | Verify completion + print summary + stop | Console summary, NO `/ship` chain |
+
+### Termination rule
+
+**You are NOT done when a Bash command succeeds. You are NOT done when scaffolding completes. You are NOT done when bootstrap files are written.**
+
+You are done ONLY when the **Completion Contract** at the bottom of this document is satisfied — every checkbox verified on disk.
+
+If you cannot complete a phase (subagent fails, scaffolder fails, missing dep), abort with a clear error identifying which phase failed and what state was reached. **Do not print success.** Do not silently exit.
+
+### TodoWrite is mandatory
+
+At the **start** of execution, immediately create a TodoWrite list with these 4 items:
+
+1. `Phase A — Pre-flight (state strategy + bootstrap)`
+2. `Phase B — Mode detection + spec body authored`
+3. `Phase C — Subagent dispatch (db, designer, specification)`
+4. `Phase D — Verify completion contract + print summary`
+
+Mark each item `in_progress` before starting it, `completed` only after on-disk verification of its outputs (per the per-phase verification gates inline below). This is non-negotiable — without it, the model loses track on long executions and silently abandons mid-task.
+
+### After every Bash tool call, ask: "did this complete the phase, or just one step?"
+
+Bash success is a step result, not a phase result. After every successful Bash command, return to the strategy you're executing and continue with the next sub-step. Only the Completion Contract can mark the command done.
+
+---
+
 ## Step 0 — Pre-flight (state machine)
 
 Step 0 runs **before** mode detection. Its job is to bring the project to a state where Step 1 can run unconditionally.
@@ -26,6 +62,16 @@ It is structured as a state machine, not an imperative sequence. The model:
 
 Each strategy is internally consistent — there is no ordering ambiguity, and the model never has to improvise around contradictions between substeps.
 
+### 0.0 — Sanitize `$ARGUMENTS` (defensive)
+
+Before any other processing, validate that `$ARGUMENTS` is a sane invocation:
+
+- If `$ARGUMENTS` exceeds **5,000 characters**, abort with: `⚠ $ARGUMENTS is unexpectedly long (>5000 chars). This usually means a previous conversation was accidentally pasted in. Re-invoke with: /planr-pipeline:plan {slug} {short brief}`
+- If `$ARGUMENTS` contains the literal substring `/planr-pipeline:` (suggesting a nested invocation got pasted), abort with the same message.
+- If `$ARGUMENTS` is empty, abort with: `⚠ Missing slug. Usage: /planr-pipeline:plan {slug} [brief]`
+
+These are pure defensive checks against the rare case where a user pastes prior conversation content into the command. They cost nothing on normal invocations and prevent the model from operating on garbage input.
+
 ### 0.1 — Parse `$ARGUMENTS`
 
 `$ARGUMENTS` may take two shapes:
@@ -35,20 +81,32 @@ Each strategy is internally consistent — there is no ordering ambiguity, and t
 
 Bind:
 
-- `SLUG` = first token of `$ARGUMENTS` (kebab-case, no spaces)
+- `SLUG` = first token of `$ARGUMENTS` (kebab-case; reject if it contains spaces or special characters other than `-` and digits)
 - `BRIEF` = remainder of `$ARGUMENTS` (may be empty)
 
 `BRIEF` is used downstream for: spec body authoring, stack inference, and PNG path resolution. `SLUG` is used for path resolution and ID derivation.
 
 ### 0.2 — Path expansion (applies throughout this command)
 
-Wherever a filesystem path is read from `BRIEF`, frontmatter, or any other source, apply this expansion:
+Wherever a filesystem path is read from `BRIEF`, frontmatter, or any other source, apply this expansion in order:
 
-- `~/foo` → `$HOME/foo` (use the runtime `$HOME` env var)
-- `~user/foo` → `/Users/user/foo` (Mac) or `/home/user/foo` (Linux)
-- Bare relative paths → resolve against the **project root** (working directory), NOT `${CLAUDE_PLUGIN_ROOT}`
+1. **Tilde expansion:** `~/foo` → `$HOME/foo`. `~user/foo` → user's home + `/foo` (`/Users/user/foo` on Mac, `/home/user/foo` on Linux).
+2. **Bare relative paths:** resolve against the **project root** (working directory), NOT `${CLAUDE_PLUGIN_ROOT}`.
 
-Fallback: if the expanded path doesn't resolve, try the unexpanded form. If neither resolves, log the expected path and continue — downstream conditional logic will skip cleanly (e.g., designer-agent skips silently when no PNGs found).
+**Resolution rule (no silent dangerous fallback):**
+
+- If the **expanded path** resolves to an existing file → use it.
+- If the expanded path doesn't exist, **do NOT silently fall back** to a different location. Log a warning of the form:
+
+  ```
+  ⚠ Path not found: <as-written-in-brief> (expanded: <expanded-path>).
+    The reference will be skipped; downstream agents that depend on it
+    will skip silently.
+  ```
+
+  Then continue. Downstream conditional logic (e.g., designer-agent) skips cleanly when its inputs aren't found.
+
+**Why no fallback:** silent fallback to project-local paths can pull in files that conflict with the scaffolder (e.g., a `Designs/` folder in the project root makes `create-next-app .` refuse to run). A loud warning is safer than a clever guess.
 
 ### 0.3 — Plan Mode short-circuit
 
@@ -121,18 +179,60 @@ Existing Node project, first-time planr install. **No scaffolding.**
 
 Greenfield directory + Node-stack brief. Intent is unambiguous. **Auto-scaffold without a consent prompt** — premium UX dictates the system act on clear intent.
 
-**1. Identify the primary framework from `BRIEF`.**
+**Execute as an explicit checklist.** Add these items to the TodoWrite list (under Phase A) and check them off as you complete each:
 
-The "primary" framework is the one that defines the project shape — typically the first one mentioned, or the one most prominently described. Examples:
+```
+SCAFFOLD_NODE checklist (each must complete before continuing):
+  1. Identify primary framework from BRIEF
+  2. Stage pre-existing assets via STAGE_DESIGN_ASSETS (Step 0.9)
+  3. Verify project root is now empty (or contains only hidden files)
+  4. Announce scaffolding
+  5. Run framework scaffolder
+  6. Install additional deps from BRIEF
+  7. Run post-scaffold init commands
+  8. Apply WRITE_PLANR_DIRS (Step 0.7)
+  9. Apply AUTHOR_STACK_FROM_BRIEF (Step 0.8)
+  10. Apply RESTORE_DESIGN_ASSETS (Step 0.10) — copy stash into the spec design folder later (after Step 1 spec scaffold)
+  11. Mark Phase A complete; continue to Phase B (Step 1)
+```
+
+Do not skip ahead. Do not return until item 11 is done.
+
+**1. Identify primary framework from `BRIEF`.**
+
+The "primary" framework is the one that defines the project shape — typically the first one mentioned, or the one most prominently described:
 
 - "Next.js + Prisma + Postgres" → primary is **Next.js**
 - "NestJS + TypeORM + Postgres + Redis" → primary is **NestJS**
 - "Vite + React + Tailwind" → primary is **Vite (React)**
 - "Astro + Solid" → primary is **Astro**
 
-If `BRIEF` mentions multiple top-level frameworks at the same level (rare hybrid), pick the one with a canonical CLI scaffolder. If still ambiguous, default to **Next.js** as the most common.
+If `BRIEF` mentions multiple top-level frameworks at the same level (rare hybrid), pick the one with a canonical CLI scaffolder. If still ambiguous, default to **Next.js**.
 
-**2. Announce.**
+**2. Stage pre-existing assets via `STAGE_DESIGN_ASSETS`.**
+
+Before running any scaffolder, invoke common procedure `STAGE_DESIGN_ASSETS` (Step 0.9 below). This moves any pre-existing design asset folders/files (e.g., a project-local `Designs/`) to a `/tmp` stash so the scaffolder sees an empty directory. The stash location is recorded in a session variable `STASH_DIR` for `RESTORE_DESIGN_ASSETS` later.
+
+**3. Verify project root is empty.**
+
+After `STAGE_DESIGN_ASSETS`, run `ls -A` on the project root. Acceptable contents:
+
+- Empty directory
+- Only hidden entries (`.git/`, `.gitignore`)
+
+If anything else remains (files we don't recognize), abort with:
+
+```
+⚠ Project root contains files we don't auto-stage: <list>
+  STAGE_DESIGN_ASSETS only handles known design asset patterns
+  (Designs/, design/, mockups/, *.png, *.jpg, *.svg, etc.).
+
+  Please move these aside or delete them, then re-run.
+```
+
+This is the **only** scaffolder-blocker recovery the pipeline owns. We do NOT improvise around unknown files.
+
+**4. Announce.**
 
 ```
 → State: scaffold-node
@@ -140,7 +240,7 @@ If `BRIEF` mentions multiple top-level frameworks at the same level (rare hybrid
   Press Esc to abort.
 ```
 
-**3. Run the framework's canonical scaffolder in the empty project root.**
+**5. Run the framework's canonical scaffolder in the (now empty) project root.**
 
 Apply these defaults (override only when `BRIEF` explicitly says otherwise):
 
@@ -169,31 +269,36 @@ For each scaffolder, apply the appropriate flag for each default above. If the b
 
 If the brief names a Node framework not on this list, the model should still attempt a sensible scaffold using the framework's documented quickstart commands — falling back to manual `npm init` if no clear pattern exists.
 
-**4. Install additional dependencies declared in `BRIEF`.**
+**6. Install additional dependencies declared in `BRIEF`.**
 
 - Production: `npm i <deps>` for packages beyond what the scaffolder installed (e.g., `prisma @prisma/client`, `@anthropic-ai/sdk`, `ioredis`, `zod`, `stripe`)
 - Dev: `npm i -D <deps>` for testing + tooling (e.g., `vitest @vitest/ui msw @testing-library/react`)
 
 Group dependencies into a single `npm i` call where possible to avoid redundant resolver runs.
 
-**5. Run post-scaffold init commands implied by `BRIEF`.**
+**7. Run post-scaffold init commands implied by `BRIEF`.**
 
 - Prisma in BRIEF → `npx prisma init --datasource-provider <postgresql|mysql|sqlite|mongodb>`
 - Drizzle in BRIEF → no init needed; the schema file is hand-authored later by the backend-agent
 - Other tooling that requires explicit init → run accordingly
 
-**6. Print:** `✓ Project scaffolded.`
+**8. Print:** `✓ Project scaffolded.`
 
-**7. Apply common procedures** (in order):
+**9. Apply common procedures** (in order):
 
 - `WRITE_PLANR_DIRS` (Step 0.7)
 - `AUTHOR_STACK_FROM_BRIEF` (Step 0.8)
 
-**8. Print:** `✓ Bootstrapped .planr/. Continuing to PO Phase.`
+**10. Print:** `✓ Bootstrapped .planr/. Continuing to PO Phase.`
 
-**9. Proceed to Step 1.**
+**11. Continue to Phase B (Step 1).** **You are not done. Mark this checklist complete only after Step 1 + Step 2 + Completion Contract all pass.** `RESTORE_DESIGN_ASSETS` runs inside Step 1 (auto-scaffolding the spec) once the spec's `design/` folder exists.
 
-**Error handling.** If any scaffolder command fails (network error, flag deprecation, package not found, unsupported Node version), abort with a clear error identifying the failed step + the underlying error message. **Do NOT improvise recovery** — no `mv to /tmp` stash, no force flags, no creative workarounds. The user fixes the underlying issue (network, Node version, etc.) and re-runs.
+**Error handling.** If any scaffolder command fails (network error, flag deprecation, package not found, unsupported Node version):
+
+1. Run `RESTORE_DESIGN_ASSETS` to move the stash back to the project root (cleanup, no half-state)
+2. Abort with a clear error identifying the failed step + the underlying error message
+
+**Do NOT improvise recovery** — no force flags, no second creative `mv` stash beyond the designed `STAGE_DESIGN_ASSETS` / `RESTORE_DESIGN_ASSETS` pair. The user fixes the underlying issue (network, Node version, etc.) and re-runs.
 
 #### Strategy: `ASK_MANUAL`
 
@@ -269,6 +374,70 @@ Referenced by `BOOTSTRAP_ONLY` and `SCAFFOLD_NODE`. Only runs if `BRIEF` is non-
 
 If `BRIEF` is empty or has no stack hints, leave `input/tech/stack.md` absent. The existing self-heal in Step 1 handles it (writes template verbatim, prompts user to fill in).
 
+### 0.9 — Common procedure: `STAGE_DESIGN_ASSETS`
+
+Referenced by `SCAFFOLD_NODE` (only). Used to safely move pre-existing design assets out of the project root before running a scaffolder that requires an empty directory.
+
+**Recognized patterns** (only these are touched — anything else aborts):
+
+- Folders: `Designs/`, `design/`, `designs/`, `mockups/`, `mocks/`, `assets/`, `wireframes/`
+- Top-level files: `*.png`, `*.jpg`, `*.jpeg`, `*.svg`, `*.gif`, `*.webp`
+
+**Steps:**
+
+1. Compute `STASH_DIR = /tmp/planr-pipeline-stash/<SLUG>-<unix-timestamp>/`. Bind it to a session variable so `RESTORE_DESIGN_ASSETS` can find it later.
+2. Scan the project root (top level only — do NOT recurse). Build two lists:
+   - `KNOWN_ASSETS` — paths matching the recognized patterns
+   - `UNKNOWN_FILES` — anything else that is not a hidden entry (`.git`, `.gitignore` are always allowed)
+3. If `UNKNOWN_FILES` is non-empty, **abort** with the message defined in `SCAFFOLD_NODE` step 3. Do NOT proceed with the scaffold.
+4. If `KNOWN_ASSETS` is empty, log `→ No pre-existing assets to stage.` and return.
+5. Otherwise, print exactly what will be moved:
+
+   ```
+   ⚠ Pre-existing design assets detected. Staging before scaffold:
+       Designs/ → /tmp/planr-pipeline-stash/<SLUG>-<ts>/Designs/
+       inbox.png → /tmp/planr-pipeline-stash/<SLUG>-<ts>/inbox.png
+     They will be restored to .planr/specs/SPEC-NNN-${SLUG}/design/
+     after scaffolding completes.
+   ```
+
+6. Create `STASH_DIR` (via `mkdir -p`) and `mv` each `KNOWN_ASSETS` entry into it, preserving names.
+7. Verify the project root is empty (or only hidden entries remain). If anything is still there, abort with: `⚠ STAGE_DESIGN_ASSETS could not clear the project root. Files still present: <list>`.
+
+**Failure mode:** if `mv` fails for any reason (permissions, disk full), abort and tell the user. Do NOT continue to scaffold a partially-empty directory.
+
+### 0.10 — Common procedure: `RESTORE_DESIGN_ASSETS`
+
+Referenced by `SCAFFOLD_NODE` (only). Used to copy stashed design assets into the spec's `design/` folder after the spec scaffold creates it.
+
+**Steps:**
+
+1. Read the session variable `STASH_DIR` set by `STAGE_DESIGN_ASSETS`. If unset or empty, return immediately (no stash was created).
+2. Verify the spec directory exists: `.planr/specs/SPEC-NNN-${SLUG}/design/`. If not, this procedure was called too early — abort with: `⚠ RESTORE_DESIGN_ASSETS called before spec scaffold. State error.`
+3. **Copy** (not move) every file from `STASH_DIR` into `.planr/specs/SPEC-NNN-${SLUG}/design/`. Flatten any nested folders (e.g., `Designs/inbox.png` → `design/inbox.png`).
+4. Verify each expected file landed (file count and sizes match the stash).
+5. Delete `STASH_DIR` only after the verification passes.
+6. Print:
+
+   ```
+   ✓ Restored N design asset(s) to .planr/specs/SPEC-NNN-${SLUG}/design/
+   ```
+
+**On scaffolder failure path:** if `SCAFFOLD_NODE` aborts after `STAGE_DESIGN_ASSETS` but before the spec scaffold exists, the recovery flow is to **move** (not copy) the stash back to the original locations in the project root, then delete the stash dir. This restores the pre-pipeline state cleanly with no half-state.
+
+---
+
+### Phase A verification gate (mark TodoWrite item 1 complete)
+
+Before continuing to Phase B, verify on disk:
+
+- [ ] If strategy was `ASK_MANUAL` or `ASK_STACK`: command should already have stopped — do NOT continue.
+- [ ] If strategy was `CONTINUE`: `.planr/config.json` exists, `input/tech/stack.md` exists or self-heals in Step 1.
+- [ ] If strategy was `BOOTSTRAP_ONLY`: `.planr/config.json` exists, `.planr/specs/` exists, `input/tech/` exists.
+- [ ] If strategy was `SCAFFOLD_NODE`: `package.json` exists at the project root, `.planr/config.json` exists, `input/tech/stack.md` exists.
+
+If any check fails, the strategy did not complete. Re-run the missing steps before proceeding to Phase B. Do NOT proceed to Step 1 with a half-built Phase A state.
+
 ---
 
 ## Step 1 — Mode detection + input validation
@@ -324,7 +493,9 @@ When `<SPEC_DIR>/SPEC-NNN-${SLUG}.md` is missing, scaffold it instead of abortin
      - Read `${CLAUDE_PLUGIN_ROOT}/templates/spec-driven.md.tpl`, substitute `{{SPEC_ID}}`, `{{TITLE}}`, `{{SLUG}}`, `{{DATE}}` (use the slug as fallback title).
      - Write to `<SPEC_DIR>/SPEC-NNN-${SLUG}.md` with placeholder TODOs.
      - Abort with the existing message asking the user to fill it in.
-6. **Copy any referenced PNG mockups** from the brief into `<SPEC_DIR>/design/`. Use the path expansion rules from Step 0b. If a referenced PNG doesn't exist, log it and continue (designer-agent will skip silently).
+6. **Restore staged assets and copy any other referenced PNG mockups** into `<SPEC_DIR>/design/`:
+   - **First**, if a stash exists from `STAGE_DESIGN_ASSETS` (Step 0.9), invoke `RESTORE_DESIGN_ASSETS` (Step 0.10) now. This is the moment the spec's `design/` folder exists, so this is the correct restore point.
+   - **Then**, for any additional PNGs referenced by `BRIEF` that were NOT in the stash, copy them into `<SPEC_DIR>/design/` using the path expansion rules from Step 0.2 (no silent dangerous fallback). If a referenced PNG doesn't exist, log it and continue (designer-agent will skip silently).
 7. **Print and abort gracefully (only when `BRIEF` is empty):**
    ```
    ✓ Scaffolded SPEC-NNN-${SLUG} at .planr/specs/SPEC-NNN-${SLUG}/
@@ -366,6 +537,20 @@ Conditional inputs (presence triggers a subagent; absence skips it silently):
 
 ---
 
+### Phase B verification gate (mark TodoWrite item 2 complete)
+
+Before continuing to Phase C, verify on disk:
+
+- [ ] `MODE` is determined and bound (`spec-driven` or `default`)
+- [ ] In spec mode: `<SPEC_DIR>/SPEC-NNN-${SLUG}.md` exists and contains substantive Context, Functional Requirements, Business Rules, Acceptance Criteria sections (no remaining `_TODO_` placeholders if `BRIEF` was provided)
+- [ ] In default mode: `input/specs/spec-${SLUG}.md` exists and is non-empty
+- [ ] `input/tech/stack.md` exists OR a clear self-heal abort message has been printed (Step 1's self-healing path)
+- [ ] If a stash from `STAGE_DESIGN_ASSETS` was created, `RESTORE_DESIGN_ASSETS` has run and the stash dir has been deleted
+
+If any check fails, the spec body has not been authored. Re-execute the missing path before proceeding to subagent dispatch. Do NOT dispatch subagents on a half-built spec.
+
+---
+
 ## Step 2 — Invoke subagents in dependency order
 
 Run subagents sequentially. Each subagent's output is consumed by the next.
@@ -400,33 +585,90 @@ Run subagents sequentially. Each subagent's output is consumed by the next.
 
 ---
 
-## Step 3 — Stop
+### Phase C verification gate (mark TodoWrite item 3 complete)
 
-After specification-agent completes, **STOP**. Do NOT invoke any DEV subagent.
+Before continuing to Phase D, verify on disk:
 
-Print a summary to the user:
+- [ ] db-agent has either run (output exists) OR was explicitly skipped per its conditional logic — log says which
+- [ ] designer-agent has either run (`design-spec.md` exists) OR was explicitly skipped (no PNGs) — log says which
+- [ ] specification-agent has either run (US + Task files exist) OR a pre-existing `<SPEC_DIR>/stories/` directory was reused
+- [ ] Output dir contains ≥1 US-*.md file
+- [ ] Output dir contains ≥1 Task file
+- [ ] No subagent abort message is unresolved
+
+If any check fails, surface the error to the user and abort. Do NOT print a success summary on a failed Phase C.
+
+---
+
+## Step 3 — Verify completion + summary + stop
+
+### 3.1 — Run the Completion Contract (mandatory)
+
+Before printing any summary, verify ALL of the following on disk. **The PO Phase is not complete until every checkbox passes.**
+
+#### Bootstrap layer
+
+- [ ] `.planr/config.json` exists and is valid JSON (or strategy was `ASK_MANUAL`/`ASK_STACK` — in which case the command should already have stopped before reaching here)
+- [ ] `input/tech/stack.md` exists OR a self-heal abort already printed (in default mode `stack.md` is hard-required; in spec mode it self-heals)
+
+#### Spec layer
+
+- [ ] Spec body file exists at the mode-appropriate path (`<SPEC_DIR>/SPEC-NNN-${SLUG}.md` or `input/specs/spec-${SLUG}.md`)
+- [ ] Spec body has **substantive** Context, Functional Requirements, Business Rules, Acceptance Criteria sections — verify by reading the file and confirming none of the strings `_TODO_`, `_Describe the problem`, `<feature description>` remain (if `BRIEF` was provided; if `BRIEF` was empty, the command should already have aborted gracefully at Step 1's auto-scaffold step 7)
+- [ ] `<SPEC_DIR>/design/` exists (may be empty, that's fine)
+
+#### Decomposition layer
+
+- [ ] Stories directory contains ≥1 file: `<SPEC_DIR>/stories/US-*.md` or `output/feats/feat-${SLUG}/us-*/`
+- [ ] Tasks directory contains ≥1 file: `<SPEC_DIR>/tasks/T-*.md` or `output/feats/feat-${SLUG}/us-*/tasks/`
+
+#### Subagent dispatch evidence
+
+- [ ] Phase C verification gate above has been satisfied (db-agent + designer-agent + specification-agent each ran or explicitly logged a skip)
+
+#### Stash cleanup
+
+- [ ] If `STAGE_DESIGN_ASSETS` ran, `RESTORE_DESIGN_ASSETS` also ran AND the stash dir has been deleted (verify `/tmp/planr-pipeline-stash/<SLUG>-*` no longer exists)
+
+### 3.2 — Termination policy
+
+- If ANY contract checkbox fails, you have NOT completed the PO Phase. Continue executing the missing steps. **Do NOT print success.**
+- If a check is genuinely unresolvable (e.g., specification-agent crashed), abort with a clear error message identifying which check failed and what state was reached. **Do NOT print the success summary.**
+- Only after all checks pass: mark the final TodoWrite item complete and continue to 3.3.
+
+### 3.3 — Print success summary + stop
+
+After the contract passes, print:
+
 ```
-✓ PO Phase complete for feat-$ARGUMENTS
-  Mode:        <default | spec-driven>     (NEW: shows which path tree was used)
-  Output dir:  <output/feats/feat-$ARGUMENTS/ | .planr/specs/SPEC-NNN-$ARGUMENTS/>
+✓ PO Phase complete for ${SLUG}
+  Mode:        <default | spec-driven>
+  Strategy:    <CONTINUE | BOOTSTRAP_ONLY | SCAFFOLD_NODE>
+  Output dir:  <output/feats/feat-${SLUG}/ | .planr/specs/SPEC-NNN-${SLUG}/>
   Design spec: <created | skipped (no PNGs) | reused (from planr spec decompose)>
   DB schema:   <created | reused | skipped>
   US created:  N
   Tasks:       M
-  Next step:   review the generated US/task files, then /planr-pipeline:ship $ARGUMENTS
+  Next step:   review the generated US/task files, then /planr-pipeline:ship ${SLUG}
 ```
+
+**STOP.** Do NOT invoke any DEV subagent. Do NOT auto-chain to `/ship`. Per R1 (`${CLAUDE_PLUGIN_ROOT}/docs/rules.md`), a human review step is mandatory.
 
 ---
 
 ## Failure modes
 
 | Condition | Action |
-|-----------|--------|
-| Spec missing (default mode) | Abort, suggest creating `input/specs/spec-$ARGUMENTS.md` or switching to spec-driven mode (`planr spec init`) |
-| stack.md missing (default mode) | Abort, suggest copying from `${CLAUDE_PLUGIN_ROOT}/templates/stack.md.tpl` |
+|---|---|
+| `$ARGUMENTS` malformed (>5000 chars or contains nested invocation) | Abort at Step 0.0 with sanitization message |
+| Project root contains unrecognized non-asset files (SCAFFOLD_NODE) | Abort at SCAFFOLD_NODE step 3, suggest cleanup |
+| Spec missing (default mode, no BRIEF) | Abort at Step 1, suggest creating `input/specs/spec-${SLUG}.md` or `planr spec init` |
+| `stack.md` missing (default mode) | Abort at Step 1, suggest copying from `${CLAUDE_PLUGIN_ROOT}/templates/stack.md.tpl` |
+| Scaffolder fails (SCAFFOLD_NODE) | Run `RESTORE_DESIGN_ASSETS` for cleanup; abort with underlying error |
 | db-agent fails (connection) | Continue without schema, flag in summary |
 | designer-agent fails (corrupt PNG) | Continue without design-spec, flag in summary |
-| specification-agent fails | Abort, surface the subagent error |
+| specification-agent fails | Abort, surface the subagent error; Phase C gate fails |
+| Completion Contract checkbox fails | Continue executing missing steps; do not print success |
 
 ---
 
