@@ -4,6 +4,46 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.7.2] — 2026-05-01
+
+### Changed — Step 0 redesigned as a state machine
+
+`commands/plan.md` Step 0 is rewritten from an imperative six-substep sequence (v0.7.1) into a state machine. Detect once, pick exactly one strategy from a five-row decision matrix, execute that strategy as a clean linear sequence.
+
+**Why:** v0.7.1's imperative ordering bootstrapped `.planr/` and `input/tech/` *before* asking the user "scaffold first?". On consent, `npx create-next-app .` then refused to run because the directory was no longer empty. The orchestrator was observed to recover by improvising a `mv to /tmp` stash on a real greenfield run — clever, but bad UX (scary, fragile). The plugin should never put the model in a position where it has to improvise around a contradiction.
+
+**The five strategies:**
+
+| `HAS_PLANR` | `HAS_PACKAGE_JSON` | `BRIEF_STACK` | Strategy |
+|---|---|---|---|
+| ✅ | any | any | `CONTINUE` — skip Step 0, go to Step 1 |
+| ❌ | ✅ | any | `BOOTSTRAP_ONLY` — write `.planr/` on top of existing project |
+| ❌ | ❌ | `node` | `SCAFFOLD_NODE` — identify framework from BRIEF, run its canonical scaffolder, then bootstrap `.planr/` on top |
+| ❌ | ❌ | `non-node` | `ASK_MANUAL` — clear instructions to scaffold + re-run |
+| ❌ | ❌ | `none` | `ASK_STACK` — clear instructions to declare a stack |
+
+`SCAFFOLD_NODE` is **framework-agnostic within the Node ecosystem.** It supports Next.js, NestJS, Vite (React/Vue/Svelte/Solid/Lit), Nuxt, Astro, Remix, SvelteKit, Hono, SolidStart, Fastify, Express, and any other Node framework the model identifies from BRIEF. The scaffolder command isn't hardcoded — the strategy documents the supported set + common defaults (TypeScript, no-git, npm), and the model picks the right canonical CLI for the framework BRIEF declares.
+
+### Removed
+
+- The "scaffold first?" consent prompt. When `BRIEF` declares a Node stack and the directory is empty, the intent is unambiguous; the system acts on it. Press Esc to abort during the announce phase.
+- The `/tmp` stash improvisation path. Structurally impossible now — `create-next-app .` runs first in an empty dir, before any planr files are written.
+
+### Added
+
+- Common procedures `WRITE_PLANR_DIRS` and `AUTHOR_STACK_FROM_BRIEF` factored out as their own subsections, reused by `BOOTSTRAP_ONLY` and `SCAFFOLD_NODE`. Clean code, no duplication.
+- Explicit `BRIEF_STACK` keyword classification table (Node / non-Node / none). Documented and easy to extend in a future patch.
+
+### Migration
+
+None. v0.7.1 invocations continue to work — the state machine subsumes the same behaviors with cleaner ordering. Existing planr projects (with `.planr/config.json` already written) hit `CONTINUE` and skip Step 0 entirely, identical to v0.7.0/v0.7.1's CONTINUE path.
+
+### Pairs with
+
+- `openplanr` (planr CLI) v1.5.2 — unchanged
+- `openplanr-skills` v1.4.0 — unchanged
+- `marketplace` pin — bumped to v0.7.2 in a follow-on PR
+
 ## [0.7.1] — 2026-05-01
 
 ### Added — Greenfield bootstrap, brief interpretation, plan-mode awareness, path expansion

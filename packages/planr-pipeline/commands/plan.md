@@ -11,125 +11,263 @@ Orchestrates the PO Phase for `feat-$ARGUMENTS`. Decomposes a functional spec in
 
 ---
 
-## Step 0 — Pre-flight (greenfield bootstrap, plan mode, brief interpretation)
+## Step 0 — Pre-flight (state machine)
 
-This step runs **before** mode detection so the pipeline works on greenfield directories and accepts natural-language briefs in `$ARGUMENTS`.
+Step 0 runs **before** mode detection. Its job is to bring the project to a state where Step 1 can run unconditionally.
 
-### 0a — Parse `$ARGUMENTS` (slug + optional brief)
+It is structured as a state machine, not an imperative sequence. The model:
+
+1. **Parses** `$ARGUMENTS` into `SLUG` + optional `BRIEF`
+2. **Resolves paths** universally (`~/foo` → `$HOME/foo`)
+3. **Short-circuits** if the session is in Plan Mode
+4. **Detects** project state via read-only signals (no writes during detection)
+5. **Picks** exactly one strategy from the decision matrix
+6. **Executes** the chosen strategy as a clean linear sequence
+
+Each strategy is internally consistent — there is no ordering ambiguity, and the model never has to improvise around contradictions between substeps.
+
+### 0.1 — Parse `$ARGUMENTS`
 
 `$ARGUMENTS` may take two shapes:
 
-1. **Slug only:** `support-inbox` — feature slug, no extra context.
-2. **Slug + brief:** the first whitespace-or-newline-separated token is the slug; everything after is a free-text **BRIEF** (a short natural-language description of the feature, stack, and references).
+1. **Slug only:** `support-inbox`
+2. **Slug + BRIEF:** first whitespace-or-newline-separated token is the slug; everything after is a free-text natural-language description (feature, stack, file references)
 
-Internally bind:
-- `SLUG = first token of $ARGUMENTS` (kebab-case, no spaces)
-- `BRIEF = remainder of $ARGUMENTS` (may be empty)
+Bind:
 
-Use `BRIEF` content during Auto-scaffolding (Step 1b) to populate the spec body's Context, Functional Requirements, Business Rules, and Acceptance Criteria sections — instead of leaving template placeholder text. Use stack hints inside `BRIEF` (mentions of Next.js, Prisma, Postgres, Redis, Anthropic SDK, Vitest, Django, Rails, etc.) to populate `input/tech/stack.md` during Self-healing if missing.
+- `SLUG` = first token of `$ARGUMENTS` (kebab-case, no spaces)
+- `BRIEF` = remainder of `$ARGUMENTS` (may be empty)
 
-### 0b — Path expansion (universal)
+`BRIEF` is used downstream for: spec body authoring, stack inference, and PNG path resolution. `SLUG` is used for path resolution and ID derivation.
 
-Wherever `BRIEF` or any frontmatter field references a filesystem path, expand:
+### 0.2 — Path expansion (applies throughout this command)
+
+Wherever a filesystem path is read from `BRIEF`, frontmatter, or any other source, apply this expansion:
 
 - `~/foo` → `$HOME/foo` (use the runtime `$HOME` env var)
 - `~user/foo` → `/Users/user/foo` (Mac) or `/home/user/foo` (Linux)
-- Bare relative paths (e.g. `Designs/file.png`) → resolve against the **project root** (the working directory), NOT against `${CLAUDE_PLUGIN_ROOT}`
+- Bare relative paths → resolve against the **project root** (working directory), NOT `${CLAUDE_PLUGIN_ROOT}`
 
-If a referenced path doesn't exist after expansion, try the unexpanded form as a fallback (handles cases where users put files in the working dir AND wrote `~/`). If neither resolves, log the expected path and continue — agents that depend on it will skip silently per existing conditional logic (e.g. designer-agent skips if no PNGs).
+Fallback: if the expanded path doesn't resolve, try the unexpanded form. If neither resolves, log the expected path and continue — downstream conditional logic will skip cleanly (e.g., designer-agent skips silently when no PNGs found).
 
-### 0c — Plan mode awareness
+### 0.3 — Plan Mode short-circuit
 
-If the user's Claude Code session is in **Plan Mode** (a session-level read-only research mode):
+If the user's Claude Code session is in **Plan Mode** (the read-only session mode):
 
-1. **Do NOT bootstrap directories.** Do NOT scaffold the spec. Do NOT dispatch any subagent.
-2. Write a markdown plan describing what the pipeline **would** do given the current state:
-   - Detected mode (greenfield / spec-driven / default)
-   - Files that would be created (`.planr/config.json`, `input/tech/stack.md`, `<SPEC_DIR>/SPEC-NNN-${SLUG}.md`, etc.)
-   - Subagents that would fire (db-agent / designer-agent / specification-agent) and the conditions
-   - The expected output (`<SPEC_DIR>/stories/`, `<SPEC_DIR>/tasks/`)
-3. End the plan with: *"Plan mode is active. Exit Plan Mode and re-run `/planr-pipeline:plan ${SLUG}` to execute."*
-4. Stop here. Do not write any files.
+1. Run state detection (Step 0.4) to determine what the pipeline **would** do
+2. Write a markdown plan describing the chosen strategy + each of its steps
+3. End with: *"Plan Mode is active. Exit Plan Mode and re-run `/planr-pipeline:plan ${SLUG}` to execute."*
+4. Stop. Do not write any other files. Do not dispatch any subagent. Do not run any Bash command.
 
-### 0d — Greenfield bootstrap
+### 0.4 — Detect project state (read-only)
 
-If `.planr/config.json` is missing, write a minimal one. Derive `projectName` from `package.json#name` if present, else from the working directory's basename:
+Read these signals **without writing anything**:
 
-```json
-{
-  "projectName": "<derived>",
-  "outputPaths": { "agile": ".planr" },
-  "idPrefix": { "spec": "SPEC" }
-}
+| Signal | Check |
+|---|---|
+| `HAS_PLANR` | `.planr/config.json` exists at the project root |
+| `HAS_PACKAGE_JSON` | `./package.json` exists at the project root |
+| `HAS_SPEC` | A directory matching `.planr/specs/SPEC-\d{3}-${SLUG}/` exists |
+| `HAS_STACK` | `input/tech/stack.md` exists |
+| `BRIEF_STACK` | Inspect `BRIEF` for stack keywords. Classify as `node` / `non-node` / `none` |
+
+**`BRIEF_STACK` keyword classification (case-insensitive substring match):**
+
+- `node` keywords:
+  - **Frameworks with canonical scaffolders:** `Next.js`, `NestJS`, `Vite`, `Nuxt`, `Astro`, `Remix`, `SvelteKit`, `Svelte`, `SolidStart`, `Solid`, `Hono`, `Fastify`, `Express`
+  - **Libraries / runtimes:** `React`, `Vue`, `Lit`, `tRPC`, `Node`, `Bun`, `Deno`
+  - **Tooling:** `npm`, `pnpm`, `yarn`, `Vitest`, `Jest`, `Playwright`, `Drizzle`
+- `non-node` keywords:
+  - `Django`, `FastAPI`, `Flask`, `Rails`, `Laravel`, `Spring`, `Phoenix`, `Gin`, `Echo`, `ASP.NET`, `.NET`, `Symfony`, `Sinatra`
+- `none`: BRIEF is empty OR contains neither set
+
+When BRIEF mentions a Node framework not in this list (e.g., a framework released after this list was authored), the model should still classify as `node` if the framework is clearly Node-ecosystem (built on Node runtime, distributed via npm). Reserve `non-node` for clearly non-JS-runtime stacks. The list is illustrative, not exhaustive.
+
+If `BRIEF` mentions both (rare hybrid stack), prefer `node` for the auto-scaffold path. Users on hybrid stacks can override by hand-authoring `stack.md` first.
+
+### 0.5 — Pick exactly one strategy
+
+| `HAS_PLANR` | `HAS_PACKAGE_JSON` | `BRIEF_STACK` | Strategy |
+|---|---|---|---|
+| ✅ | any | any | `CONTINUE` |
+| ❌ | ✅ | any | `BOOTSTRAP_ONLY` |
+| ❌ | ❌ | `node` | `SCAFFOLD_NODE` |
+| ❌ | ❌ | `non-node` | `ASK_MANUAL` |
+| ❌ | ❌ | `none` | `ASK_STACK` |
+
+Five rows. Five states. Mutually exclusive. Total coverage. No undefined behavior.
+
+### 0.6 — Execute the chosen strategy
+
+#### Strategy: `CONTINUE`
+
+Project is fully initialized. Step 0 has nothing to do.
+
+1. Print: `✓ State: continue (existing planr project)`
+2. Proceed to Step 1.
+
+If `HAS_SPEC` is true, Step 1 sees the existing spec and dispatches the agents. If `HAS_SPEC` is false, Step 1's auto-scaffolding (Step 1b below) handles spec body authoring — it uses `BRIEF` if present, falls back to the template otherwise.
+
+#### Strategy: `BOOTSTRAP_ONLY`
+
+Existing Node project, first-time planr install. **No scaffolding.**
+
+1. Print: `✓ State: bootstrap-only (existing project, first planr install)`
+2. Apply common procedure `WRITE_PLANR_DIRS` (Step 0.7 below)
+3. Apply common procedure `AUTHOR_STACK_FROM_BRIEF` if `BRIEF` mentions stack components (Step 0.8 below)
+4. Proceed to Step 1.
+
+#### Strategy: `SCAFFOLD_NODE`
+
+Greenfield directory + Node-stack brief. Intent is unambiguous. **Auto-scaffold without a consent prompt** — premium UX dictates the system act on clear intent.
+
+**1. Identify the primary framework from `BRIEF`.**
+
+The "primary" framework is the one that defines the project shape — typically the first one mentioned, or the one most prominently described. Examples:
+
+- "Next.js + Prisma + Postgres" → primary is **Next.js**
+- "NestJS + TypeORM + Postgres + Redis" → primary is **NestJS**
+- "Vite + React + Tailwind" → primary is **Vite (React)**
+- "Astro + Solid" → primary is **Astro**
+
+If `BRIEF` mentions multiple top-level frameworks at the same level (rare hybrid), pick the one with a canonical CLI scaffolder. If still ambiguous, default to **Next.js** as the most common.
+
+**2. Announce.**
+
+```
+→ State: scaffold-node
+  Scaffolding <framework> from your brief. ~2 min.
+  Press Esc to abort.
 ```
 
-Create these directories if absent:
+**3. Run the framework's canonical scaffolder in the empty project root.**
 
-- `.planr/specs/`
-- `input/tech/`
+Apply these defaults (override only when `BRIEF` explicitly says otherwise):
 
-Print:
+- TypeScript by default (`--ts`, `--typescript`, `--template <name>-ts`, etc.) — every modern Node project
+- Skip git init (`--no-git`, `--skip-git`) — git is already initialized at the project root
+- Pin npm (`--use-npm`, `--package-manager npm`) for consistency with the rest of the strategy
+- Skip auto-install (`--skip-install`) when the scaffolder offers it — we run `npm i` ourselves to be explicit about deps
+
+**Supported Node-ecosystem scaffolders** (the model is expected to know these from training, but they're documented here as the supported universe):
+
+| Framework | Canonical scaffold command |
+|---|---|
+| Next.js | `npx create-next-app@latest .` |
+| NestJS | `npx @nestjs/cli@latest new .` |
+| Vite (React / Vue / Svelte / Solid / Lit) | `npm create vite@latest .` |
+| Nuxt | `npx nuxi@latest init .` |
+| Astro | `npm create astro@latest .` |
+| Remix | `npx create-remix@latest .` |
+| SvelteKit | `npm create svelte@latest .` |
+| Hono | `npm create hono@latest .` |
+| SolidStart | `npm create solid@latest .` |
+| Fastify | (no canonical CLI — `npm init -y` + `npm i fastify` + minimal `src/server.ts`) |
+| Express (custom) | (no canonical CLI — `npm init -y` + `npm i express` + minimal `src/server.ts`) |
+
+For each scaffolder, apply the appropriate flag for each default above. If the brief mentions feature flags (e.g., "Tailwind", "App Router", "src dir"), include the corresponding scaffolder flag (`--tailwind`, `--app`, `--src-dir`). If the framework has no canonical CLI, fall back to the manual init pattern (npm init + install + minimal entry file).
+
+If the brief names a Node framework not on this list, the model should still attempt a sensible scaffold using the framework's documented quickstart commands — falling back to manual `npm init` if no clear pattern exists.
+
+**4. Install additional dependencies declared in `BRIEF`.**
+
+- Production: `npm i <deps>` for packages beyond what the scaffolder installed (e.g., `prisma @prisma/client`, `@anthropic-ai/sdk`, `ioredis`, `zod`, `stripe`)
+- Dev: `npm i -D <deps>` for testing + tooling (e.g., `vitest @vitest/ui msw @testing-library/react`)
+
+Group dependencies into a single `npm i` call where possible to avoid redundant resolver runs.
+
+**5. Run post-scaffold init commands implied by `BRIEF`.**
+
+- Prisma in BRIEF → `npx prisma init --datasource-provider <postgresql|mysql|sqlite|mongodb>`
+- Drizzle in BRIEF → no init needed; the schema file is hand-authored later by the backend-agent
+- Other tooling that requires explicit init → run accordingly
+
+**6. Print:** `✓ Project scaffolded.`
+
+**7. Apply common procedures** (in order):
+
+- `WRITE_PLANR_DIRS` (Step 0.7)
+- `AUTHOR_STACK_FROM_BRIEF` (Step 0.8)
+
+**8. Print:** `✓ Bootstrapped .planr/. Continuing to PO Phase.`
+
+**9. Proceed to Step 1.**
+
+**Error handling.** If any scaffolder command fails (network error, flag deprecation, package not found, unsupported Node version), abort with a clear error identifying the failed step + the underlying error message. **Do NOT improvise recovery** — no `mv to /tmp` stash, no force flags, no creative workarounds. The user fixes the underlying issue (network, Node version, etc.) and re-runs.
+
+#### Strategy: `ASK_MANUAL`
+
+Greenfield + non-Node brief. The pipeline does not ship scaffolders for non-Node stacks.
+
+Print and stop. Write nothing.
 
 ```
-✓ Bootstrapped .planr/ and input/tech/ for greenfield project
+⚠ State: ask-manual
+
+Greenfield directory + non-Node stack detected (<inferred-stack>).
+The pipeline doesn't ship scaffolders for non-Node stacks.
+
+Please:
+  1. Scaffold your project (django-admin startproject, rails new, etc.)
+  2. cd into the scaffolded directory
+  3. Re-run /planr-pipeline:plan ${SLUG} with your brief
 ```
 
-### 0e — Greenfield Node project ask (CONDITIONAL)
+#### Strategy: `ASK_STACK`
 
-If `package.json` is missing AND `BRIEF` (or `input/tech/stack.md`, if it exists) implies a Node-based stack (mentions Next.js, React, NestJS, Express, etc.):
+Greenfield + no stack hint in `BRIEF`. Pipeline cannot infer intent.
 
-1. **Ask the user explicitly** — do NOT auto-scaffold without consent:
+Print and stop. Write nothing.
 
+```
+⚠ State: ask-stack
+
+Greenfield directory detected, but no stack mentioned in your brief.
+
+Please re-run with one of:
+  (a) A brief that declares the stack:
+      /planr-pipeline:plan ${SLUG}
+      <feature description>
+      Stack: Next.js + Prisma + Postgres + Anthropic SDK + Vitest
+
+  (b) An existing input/tech/stack.md authored by hand from
+      ${CLAUDE_PLUGIN_ROOT}/templates/stack.md.tpl
+```
+
+### 0.7 — Common procedure: `WRITE_PLANR_DIRS`
+
+Referenced by `BOOTSTRAP_ONLY` and `SCAFFOLD_NODE`.
+
+1. Write `.planr/config.json` with derived values:
+
+   ```json
+   {
+     "projectName": "<package.json#name OR working dir basename>",
+     "outputPaths": { "agile": ".planr" },
+     "idPrefix": { "spec": "SPEC" }
+   }
    ```
-   ⚠ Greenfield directory detected (no package.json).
 
-   The pipeline ships FEATURE code on top of an existing project shape.
-   To proceed, choose one:
+2. Create `.planr/specs/` if absent
+3. Create `input/tech/` if absent
 
-   (a) Reply "scaffold first" — I will run create-next-app (or your stack
-       equivalent) + npm install + prisma init, then continue with PO Phase.
+### 0.8 — Common procedure: `AUTHOR_STACK_FROM_BRIEF`
 
-   (b) Run the scaffold yourself, then re-run /planr-pipeline:plan ${SLUG}.
+Referenced by `BOOTSTRAP_ONLY` and `SCAFFOLD_NODE`. Only runs if `BRIEF` is non-empty AND mentions stack components.
 
-   (c) If you only want a plan written and no code generated, exit and
-       re-run with Plan Mode active.
-   ```
+1. Read template: `${CLAUDE_PLUGIN_ROOT}/templates/stack.md.tpl`
+2. Populate fields from `BRIEF`:
+   - `AppName` from `.planr/config.json#projectName`
+   - `Language` (TypeScript / Python / Ruby / Go / etc.)
+   - `Framework` (Next.js / Django / Rails / NestJS / etc.)
+   - `DatabaseType` (PostgreSQL / MongoDB / MySQL / etc.)
+   - `ORM` (Prisma / SQLAlchemy / ActiveRecord / etc.)
+   - `TestFramework` (Vitest / Jest / pytest / etc.)
+   - `BuildCommand`, `TestCommand` — sane defaults for the chosen stack
+3. Write to `input/tech/stack.md`
+4. Print: `✓ Authored input/tech/stack.md from your brief`
 
-2. Stop here. Wait for the user's reply in the next message.
-
-3. **On user reply `scaffold first`:**
-   - Read the brief's stack hints. Default to Next.js 14 (App Router, TypeScript, Tailwind) if not specified, but always prefer what the brief says.
-   - Run scaffolding commands sequentially (use Bash):
-     - `npx create-next-app@latest . --ts --tailwind --app --src-dir --import-alias "@/*" --no-eslint`
-     - `npm i` for declared production deps from BRIEF stack (e.g., `prisma @prisma/client @anthropic-ai/sdk zod ioredis`)
-     - `npm i -D` for declared dev deps (e.g., `vitest msw`)
-     - `npx prisma init --datasource-provider postgresql` if Prisma is in the stack
-   - Print: `✓ Project scaffolded. Continuing to PO Phase.`
-   - Then proceed to Step 1.
-
-4. **On user reply other than `scaffold first`:** abort gracefully with a clear message instructing them to scaffold and re-run.
-
-If `package.json` exists already, skip 0e entirely — the project is established.
-
-### 0f — Stack inference from brief (NEW)
-
-After 0d (and 0e if it ran), if `input/tech/stack.md` is missing AND `BRIEF` mentions stack components, author `input/tech/stack.md` from the template at `${CLAUDE_PLUGIN_ROOT}/templates/stack.md.tpl`, populating:
-
-- `AppName` — derive from `projectName` in `.planr/config.json`
-- `Language` — from brief (TypeScript, Python, Ruby, etc.)
-- `Framework` — from brief (Next.js 14, Django, Rails, NestJS, etc.)
-- `DatabaseType` — from brief (PostgreSQL, MongoDB, MySQL, etc.)
-- `ORM` — from brief (Prisma, SQLAlchemy, ActiveRecord, etc.)
-- `TestFramework` — from brief (Vitest, Jest, pytest, etc.)
-- `BuildCommand`, `TestCommand` — sane defaults for the chosen stack
-
-Print:
-
-```
-✓ Authored input/tech/stack.md from your brief
-```
-
-If `BRIEF` is empty or has no stack hints, fall back to the existing self-heal behavior in Step 1 (copy template verbatim, prompt user to fill it in).
+If `BRIEF` is empty or has no stack hints, leave `input/tech/stack.md` absent. The existing self-heal in Step 1 handles it (writes template verbatim, prompts user to fill in).
 
 ---
 
