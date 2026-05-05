@@ -162,7 +162,7 @@ const STATUS_ALIASES: Record<string, TaskStatus> = {
 };
 
 function asTaskStatus(s: unknown): TaskStatus {
-  if (s === 'pending' || s === 'in-progress' || s === 'done') return s;
+  if (s === 'pending' || s === 'in-progress' || s === 'done' || s === 'blocked') return s;
   if (typeof s === 'string') {
     const alias = STATUS_ALIASES[s.toLowerCase()];
     if (alias) return alias;

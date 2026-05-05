@@ -15,7 +15,7 @@ function sortByArtifactId(a: { id: string }, b: { id: string }): number {
 }
 
 function asTaskStatus(s: unknown): TaskStatus {
-  if (s === 'pending' || s === 'in-progress' || s === 'done') return s;
+  if (s === 'pending' || s === 'in-progress' || s === 'done' || s === 'blocked') return s;
   return 'pending';
 }
 

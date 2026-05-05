@@ -58,7 +58,7 @@ import { promptSelect } from './prompt-service.js';
 // ---------------------------------------------------------------------------
 
 function asTaskStatus(s: unknown): TaskStatus {
-  if (s === 'pending' || s === 'in-progress' || s === 'done') return s;
+  if (s === 'pending' || s === 'in-progress' || s === 'done' || s === 'blocked') return s;
   return 'pending';
 }
 
@@ -82,6 +82,7 @@ const DEFAULT_LINEAR_STATE_TO_OP: [string, TaskStatus][] = [
   ['in progress', 'in-progress'],
   ['in development', 'in-progress'],
   ['in review', 'in-progress'],
+  ['blocked', 'blocked'],
 ];
 
 export function buildNameToStatusMap(
@@ -94,7 +95,7 @@ export function buildNameToStatusMap(
   if (user) {
     for (const [linearName, raw] of Object.entries(user)) {
       if (isLikelyLinearWorkflowStateId(raw)) continue;
-      if (raw === 'pending' || raw === 'in-progress' || raw === 'done') {
+      if (raw === 'pending' || raw === 'in-progress' || raw === 'done' || raw === 'blocked') {
         m.set(normalizeStateKey(linearName), raw);
       }
     }

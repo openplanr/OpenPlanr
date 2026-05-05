@@ -34,5 +34,15 @@ describe('aggregateTaskStatus', () => {
     expect(aggregateTaskStatus(['done'])).toBe('done');
     expect(aggregateTaskStatus(['pending'])).toBe('pending');
     expect(aggregateTaskStatus(['in-progress'])).toBe('in-progress');
+    expect(aggregateTaskStatus(['blocked'])).toBe('blocked');
+  });
+
+  it('any blocked → blocked (escalation: stuck child blocks parent)', () => {
+    // One blocked task surfaces as blocked at the parent — operators must
+    // see the failure, not have it averaged away into "in-progress".
+    expect(aggregateTaskStatus(['done', 'blocked', 'done'])).toBe('blocked');
+    expect(aggregateTaskStatus(['blocked', 'pending'])).toBe('blocked');
+    expect(aggregateTaskStatus(['blocked', 'in-progress'])).toBe('blocked');
+    expect(aggregateTaskStatus(['blocked'])).toBe('blocked');
   });
 });

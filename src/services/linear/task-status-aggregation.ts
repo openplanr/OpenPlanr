@@ -7,7 +7,8 @@
  * never propagated workflow state — Linear TaskList issues sat in
  * Backlog while local files said `done`.
  *
- * Aggregation rule:
+ * Aggregation rule (precedence top-down — first match wins):
+ *   - Any `blocked`           → 'blocked' (escalation: one stuck task blocks the parent)
  *   - All `done`              → 'done'
  *   - Any `in-progress`       → 'in-progress'
  *   - Mix of `done`+`pending` → 'in-progress' (work has started)
@@ -25,6 +26,13 @@ import type { TaskStatus } from '../../models/types.js';
  */
 export function aggregateTaskStatus(statuses: ReadonlyArray<TaskStatus>): TaskStatus | undefined {
   if (statuses.length === 0) return undefined;
+
+  // Escalation: a single blocked task blocks the parent. R6 failure on any
+  // child means the parent SPEC/feature can't be shipped without operator
+  // intervention — surface that visibly in Linear, not buried under a
+  // soothing "in-progress".
+  const anyBlocked = statuses.some((s) => s === 'blocked');
+  if (anyBlocked) return 'blocked';
 
   const allDone = statuses.every((s) => s === 'done');
   if (allDone) return 'done';

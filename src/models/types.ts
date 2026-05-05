@@ -20,7 +20,7 @@ export type TargetCLI = 'cursor' | 'claude' | 'codex';
  *  - `all`      — both sets, side-by-side.
  */
 export type GenerationScope = 'agile' | 'pipeline' | 'all';
-export type TaskStatus = 'pending' | 'in-progress' | 'done';
+export type TaskStatus = 'pending' | 'in-progress' | 'done' | 'blocked';
 export type AIProviderName = 'anthropic' | 'openai' | 'ollama';
 export type CodingAgentName = 'claude' | 'cursor' | 'codex';
 
