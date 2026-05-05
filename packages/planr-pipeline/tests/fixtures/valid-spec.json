@@ -1,0 +1,12 @@
+{
+  "id": "SPEC-007",
+  "title": "Tier 1 fixtures",
+  "slug": "fixtures",
+  "schemaVersion": "1.0.0",
+  "status": "ready-for-pipeline",
+  "priority": "P1",
+  "created": "2026-05-03",
+  "updated": "2026-05-03",
+  "ui_files": [],
+  "tech_dependencies": []
+}

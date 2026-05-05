@@ -1,0 +1,8 @@
+{
+  "shipped_at": "2026-05-04T00:00:00Z",
+  "pipeline_version": "0.7.3",
+  "runtime": "claude-code",
+  "feature": "todo-app",
+  "tasks_executed": 4,
+  "qa_gate_status": "passed"
+}

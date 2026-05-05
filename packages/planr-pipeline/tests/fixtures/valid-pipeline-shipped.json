@@ -1,0 +1,19 @@
+{
+  "shipped_at": "2026-05-04T00:00:00Z",
+  "pipeline_version": "0.7.3",
+  "runtime": "claude-code",
+  "mode": "spec-driven",
+  "feature": "todo-app",
+  "tasks_executed": 4,
+  "tasks_failed": 0,
+  "qa_gate_status": "passed",
+  "duration_seconds": 0,
+  "agents_invoked": [
+    "backend-agent",
+    "qa-agent"
+  ],
+  "devops_status": "skipped",
+  "docs_status": "skipped",
+  "snapshot_status": "skipped",
+  "error_reports": []
+}

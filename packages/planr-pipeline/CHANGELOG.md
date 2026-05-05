@@ -4,6 +4,145 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.8.0] — 2026-05-03
+
+### Changed — Mode isolation refactor
+
+Dual-mode prompt content has been extracted from each agent prompt body into per-mode files under `agents/modes/`. Each entry file at `agents/<role>-agent.md` is now a thin loader (≤60 lines) that preserves frontmatter (`name`, `description`, `tools`, `model`) verbatim and adds a `Read` directive listing the mode-specific files the agent should load before executing.
+
+**What stays the same:**
+
+- **Both modes remain first-class user surfaces.** Default mode is the lightweight solo-dev fast-feedback path; spec-driven mode is the formal team / PO-handoff path. Neither is a fallback for the other.
+- The security boundary at the `tools:` frontmatter is unchanged — manifest-enforced tool restrictions on Claude Code, advisory tool restrictions on Cursor and Codex, all carried verbatim from the previous entry-file frontmatter.
+- The protocol artifact contract is unchanged — SPEC, US, and Task frontmatter still conforms to v1.0.0 schema; the `.pipeline-shipped` marker is unchanged.
+- Existing user invocations of `/planr-pipeline:plan` and `/planr-pipeline:ship` continue to work in either mode with no observable behaviour change.
+
+**Token cost:** approximately 30% per-invocation reduction. Only the active mode's content loads — the entry file (small), the matched per-mode file, and any shared topics it references. The inactive mode's prompt body is not read into the agent's context.
+
+**New layout reference:** see the "Mode isolation (introduced in v0.8.0)" section in `docs/protocol/runtime-adapters.md` for the canonical file structure and adapter mirroring guidance.
+
+**Pairs with:** SPEC-001 (Schema Discipline v1.0.0) — shipped concurrently in v0.8.0.
+
+#### Files touched (mode isolation)
+
+- 7 agent entry files rewritten as thin loaders (`agents/{specification,designer,frontend,backend,qa,devops,doc-gen}-agent.md`). `agents/db-agent.md` is unchanged — it has no dual-mode content.
+- 14 new per-mode files at `agents/modes/{spec-driven,default}/<role>.md`.
+- 3 new shared files at `agents/modes/shared/{contract-create-modify-preserve.md, correction-loop-frontend.md, correction-loop-backend.md}`.
+- New `commands/procedures/mode-detection.md` shared between `/plan` and `/ship`.
+- Updated `commands/plan.md` and `commands/ship.md` to load the shared `mode-detection` procedure.
+- New `conformance/fixtures/default-mode/` fixture plus updated `conformance/runner.mjs` that auto-detects mode from fixture layout.
+- Harmonized `templates/spec.md.tpl` frontmatter to v1.0.0 schema.
+
+### Changed — Agent prompt slim-down (SPEC-004)
+
+**`docs/rules.md` § R6** is the only normative home for the DEV correction loop (command order, three passes, dual-mode error-report paths, pointer to future `T-<id>-error-report.md`). Agent prompts and `docs/pipeline-overview.md` link to R6 instead of duplicating multi-step loop prose. `agents/specification-agent.md` defers decomposition policy to **R2/R4/G1** and artifact shape to **`schemas/v1.0.0/{story,task}.schema.json`**. `templates/error-report.md` delegates pass semantics to R6. **`agents/modes/shared/correction-loop-*.md`** and per-mode **frontend/backend** tails were rewritten to reference R6 without `Iteration 1/2/3` blocks.
+
+#### Files touched (SPEC-004)
+
+- `docs/rules.md`, `docs/pipeline-overview.md`, `templates/error-report.md`
+- `agents/specification-agent.md`, `agents/frontend-agent.md`, `agents/backend-agent.md`
+- `agents/modes/shared/correction-loop-frontend.md`, `correction-loop-backend.md`
+- `agents/modes/{spec-driven,default}/{frontend,backend}.md`
+
+### Changed — Backend agent split (SPEC-005)
+
+**`entity-scaffold-agent`** (Sonnet 4.6) owns optional **Step 0.2** manual ORM scaffold from `output/db/schema.json` → `output/src/`. **`backend-agent`** (Opus 4.7) is **DEV-only** (Step 3 Tech tasks). **`docs/rules.md`** R3 and protocol docs list both; **`commands/plan.md`** documents Step 0.2 dispatch without changing the default `/plan` Step 2 chain.
+
+#### Files touched (SPEC-005)
+
+- **`agents/entity-scaffold-agent.md`** — Sonnet 4.6, Step 0.2 manual scaffold only (`output/src/`).
+- **`agents/backend-agent.md`** + **`agents/modes/{spec-driven,default}/backend.md`** — DEV-only (Step 3 Tech tasks); cross-link to entity-scaffold for 0.2.
+- **`commands/plan.md`** — optional Step 0.2 → **entity-scaffold-agent**.
+- **`docs/rules.md`** R3, **`docs/agent-model-map.md`**, **`docs/pipeline-overview.md`**, **`docs/protocol/agent-roles.md`**, **`README.md`**, **`agents/db-agent.md`** footer chain, **`.cursor/rules/planr-pipeline.mdc`**, **`.cursor/rules/agents/backend-agent.md`**, new **`.cursor/rules/agents/entity-scaffold-agent.md`**, **`.claude-plugin/plugin.json`**.
+
+### Changed — Split `commands/plan.md` into procedures (SPEC-003)
+
+`commands/plan.md` is a thin orchestrator (≤100 lines plus the immutable five-strategy matrix table bound to orchestration). PO Phase sequencing lives in `${CLAUDE_PLUGIN_ROOT}/commands/procedures/plan-step0-preflight.md`, `plan-step1-mode-and-spec.md`, and `plan-steps-2-through-completion.md`, alongside the existing `strategy-*.md`, `stage-design-assets.md`, and `restore-design-assets.md` procedures. Behaviour is intentionally unchanged versus the inlined v0.7.3 prose; conformance remains the state verifier for PLAN+SHIP workflows.
+
+Project root `input/tech/stack.md` now declares `schemaVersion: "1.0.0"` so schema validation exits clean.
+
+#### Files touched (plan split / SPEC-003)
+
+- Thin `commands/plan.md` plus new `commands/procedures/plan-step0-preflight.md`, `plan-step1-mode-and-spec.md`, `plan-steps-2-through-completion.md`.
+- Existing `strategy-*.md`, `stage-design-assets.md`, `restore-design-assets.md` procedure files finalized as authoritative strategy bodies extricated from `/plan`.
+
+### Added — Run manifest + per-task error reports (SPEC-008)
+
+`/planr-pipeline:ship` now appends a JSONL audit trail to `<SPEC_DIR>/.run-manifest.jsonl` (spec-driven) or `output/feats/feat-{slug}/.run-manifest.jsonl` (default). One record per orchestration boundary — `ship.bootstrap`, `ship.phase1`, `ship.task:T-NNN`, `qa-gate`, `devops-bundle`, `doc-gen-bundle`, `snapshot`, `marker-write` — with `started_at`, `ended_at`, `files_written`, `files_modified`, `exit_status`, `error_summary`, optional `cost_hint`. Manifest validates against `schemas/v1.0.0/run-manifest.schema.json` (additionalProperties: false, ISO-8601 timestamps).
+
+Per-task R6 failures now write to `<SPEC_DIR>/tasks/T-NNN-error-report.md` (matching the YAML `id` field) — never the legacy singleton `tasks/error-report.md`. `qa-agent` reads per-task reports by ID; `templates/error-report.md` documents the convention as canonical.
+
+`/planr-pipeline:status` reads the manifest when present and surfaces per-stage timing + cost cues. The manifest is git-ignored by default (`*.run-manifest.jsonl` in `.gitignore`).
+
+#### Files touched (SPEC-008)
+
+- `commands/ship.md` — Step 1.6 binds manifest path; emission contract documented.
+- `schemas/v1.0.0/run-manifest.schema.json` — JSON Schema draft 2020-12.
+- `agents/{frontend,backend,qa}-agent.md` + `templates/error-report.md` — per-task error filename convention.
+- `commands/plan.md` (status command) — manifest read + timing surface.
+- `.gitignore` — `*.run-manifest.jsonl`.
+
+### Added — Task status state machine + cross-runtime resume
+
+T-task frontmatter now carries a `status` field with enum `pending | in-progress | done | blocked` (validated by `schemas/v1.0.0/task.schema.json`). `/ship` Step 2 reads each task's status on entry, partitions the queue, and writes status updates inline as the pipeline progresses:
+
+- `done` → skip (already shipped)
+- `pending` → enqueue (fresh)
+- `in-progress` → enqueue + recover (prior run crashed mid-task)
+- `blocked` → enqueue + retry (prior R6 wrote `T-NNN-error-report.md`; new attempt re-reads it)
+
+Before dispatch: status flips to `in-progress` + `updated:` bumped. On success: `done`. On R6 failure: `blocked` with companion error report.
+
+This is the foundation for **resume semantics across invocations, sessions, machines, and runtimes**: re-running `/ship` on the same spec naturally picks up where the prior run left off — the source of truth is the task file frontmatter, not the orchestrator's memory.
+
+### Added — Runtime adapter detection + per-task dispatch mode (`DISPATCH_MODE`)
+
+`/ship` Step 1.7 binds `RUNTIME` from the environment:
+
+- `claude-code` — `${CLAUDE_PLUGIN_ROOT}` resolves
+- `cursor` — `.cursor/rules/planr-pipeline.mdc` exists at project root
+- `codex` — `AGENTS.md` at root contains `## Planr Pipeline Orchestration`
+- `unknown` — none of the above
+
+`/ship` Step 1.8 selects `DISPATCH_MODE` accordingly:
+
+| Runtime | Default `DISPATCH_MODE` |
+|---|---|
+| `claude-code` | `multi-task` (manifest-isolated subagents per task — no cumulative-context bias) |
+| `cursor` / `codex` | `per-task` (one task per invocation; the Composer/persona session can't safely isolate per-task context across many tasks) |
+
+In `per-task` mode, `/ship` dispatches one task (oldest `pending`, otherwise oldest `blocked`), closes its status to `done` or `blocked`, and prints:
+
+```
+⏸ Task T-NNN dispatched (success | blocked).
+  Remaining: N task(s) {pending: A, blocked: B}.
+  Run /planr-pipeline:ship {slug} again to continue.
+```
+
+The user re-invokes per task. The status field on each T-task naturally encodes "where to continue" without any state outside the spec directory.
+
+**Override:** `--all-tasks` forces `multi-task` regardless of runtime (advanced — only when the runtime supports isolated subagents).
+
+**Why this fix exists:** v0.7.x users on Cursor reported `/ship` producing a status rollup instead of generating code on partially-shipped specs. Root cause: Cursor's Composer is one continuous session — without per-task fresh invocation, prior tasks' context biased the model toward "this looks already shipped." The runtime-aware default is the architectural cure.
+
+#### Files touched (status + dispatch)
+
+- `commands/ship.md` — new Steps 1.7 (`RUNTIME`), 1.8 (`DISPATCH_MODE`), restructured Step 2 (status-aware queue + dispatch loop + status state machine).
+- `agents/{frontend,backend}-agent.md` — task isolation contract pushes back on cumulative-context bias ("you see ONE task spec, do not write status rollups, generate code not commentary").
+- `docs/compatibility-matrix.md` — new capability rows + dispatch-mode caveat section.
+
+### Migration
+
+None. No user action required. Existing projects continue to work in whichever mode they were using.
+
+T-task files written by older specification-agent runs that lack the `status` field will be treated as `pending` on first read in v0.8.0. The pipeline will not retroactively rewrite them — author your migration via `planr task status set <T-NNN> <state>` if you want explicit state, or just let `/ship` write the field on next dispatch.
+
+### Pairs with
+
+- `openplanr` (planr CLI) v1.5.2 — unchanged
+- `openplanr-skills` v1.4.0 — unchanged
+- `marketplace` pin — bumped to v0.8.0 in a follow-on PR
+
 ## [0.7.3] — 2026-05-02
 
 ### Fixed — Pipeline cannot silently abandon mid-execution

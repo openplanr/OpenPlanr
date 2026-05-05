@@ -88,6 +88,34 @@ The conformance test fixture (`planr-pipeline/conformance/`) verifies items 5 an
 - **No Stop hook equivalent.** Snapshot reminder is a soft prompt-level reminder.
 - **Codex 2.0 persona quality unmeasured against the conformance fixture.** Documented as a v2 polish item; v1 ships with this acknowledged gap.
 
+## Mode isolation (introduced in v0.8.0)
+
+### What it is
+
+Each agent prompt is now a thin **entry loader** (≤60 lines) at `agents/<role>-agent.md`. The entry file preserves frontmatter (`name`, `description`, `tools`, `model`) verbatim and adds a `Read` directive listing the mode-specific files to load.
+
+Per-mode prompt content lives at `agents/modes/{spec-driven,default}/<role>.md` (≤120 lines each). Truly identical content — the create/modify/preserve contract, the correction-loop protocols — lives at `agents/modes/shared/<topic>.md` and is referenced from both per-mode files.
+
+The mode-detection block used by both orchestrator commands lives at `commands/procedures/mode-detection.md` and is `Read` from `commands/plan.md` and `commands/ship.md`.
+
+### Why it exists
+
+Three motivations, in order:
+
+1. **Per-invocation token reduction (~30%).** Only the active mode's content loads into the agent's context — the entry file plus the matched per-mode file plus any shared topics it references. The inactive mode's prompt body is not read.
+2. **Clearer separation of mode-specific content.** Path mappings, ID-scoping rules, and artifact conventions that differ between modes now live in physically separate files instead of being interleaved with conditional language inside one prompt.
+3. **Both modes stay first-class.** Default mode remains the lightweight solo-dev fast-feedback path (`output/feats/feat-{name}/` layout, no planr CLI required); spec-driven mode remains the formal team / PO-handoff path (`.planr/specs/SPEC-NNN-{slug}/` layout, planr CLI compatible). The refactor preserves both as primary user surfaces — see `docs/audit/2026-05-audit.md` Errata for the framing rationale.
+
+### How adapters mirror it
+
+- **Claude Code (canonical):** the layout described above is what the plugin ships at `agents/<role>-agent.md` + `agents/modes/{spec-driven,default,shared}/`. Future updates are drop-ins to the per-mode and shared files; the entry file rarely changes.
+- **Cursor adapter:** `.cursor/rules/agents/<role>.md` should mirror the same thin-entry-loader pattern, with mode-specific content included via Cursor's `Read` equivalent. The recommended on-disk layout is `.cursor/rules/agents/modes/{shared,spec-driven,default}/<role>.md`. Frontmatter handling differs from Claude Code (Cursor uses `globs`, not manifest-enforced `tools`), but the mode-isolation file structure is portable.
+- **Codex adapter:** Codex's `AGENTS.md` persona section can either (a) replicate the loader pattern with mode-specific persona blocks if Codex supports per-persona file inclusion, or (b) keep the larger combined persona block as a Codex-specific tradeoff and document the bloat clearly. The conformance fixture coverage (the default-mode fixture under `conformance/fixtures/default-mode/` plus the mode-detecting runner) catches behaviour drift either way, so the adapter is free to choose based on Codex runtime constraints.
+
+### Conformance impact
+
+Two fixtures live under `conformance/fixtures/{spec-driven,default-mode}/`. The runner (`conformance/runner.mjs`) auto-detects the fixture's mode from its directory layout (`.planr/specs/` present → spec-driven; `output/feats/` present → default). Adapter conformance tests must pass against **both** fixtures, not just the spec-driven one — single-mode pass is no longer sufficient.
+
 ## Compatibility quick-reference
 
 | Capability | Claude Code | Cursor | Codex |

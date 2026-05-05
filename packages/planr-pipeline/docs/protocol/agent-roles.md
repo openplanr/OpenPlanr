@@ -1,16 +1,17 @@
 # OpenPlanr Protocol — Agent Roles (v1.0.0)
 
-> The 8 named roles defined as input/output contracts, runtime-agnostic. Each runtime adapter implements these as it can: Claude Code via manifest-enforced subagents, Cursor via Composer subagent dispatch, Codex via persona role-shift.
+> The 9 named roles defined as input/output contracts, runtime-agnostic. Each runtime adapter implements these as it can: Claude Code via manifest-enforced subagents, Cursor via Composer subagent dispatch, Codex via persona role-shift.
 
 ## Role index
 
 | Role | Phase | Tier | Reads | Writes |
 |---|---|---|---|---|
 | `db-agent` | PO Phase 0.1 | analysis | `input/tech/stack.md`, DB env vars | `output/db/schema.json` |
+| `entity-scaffold-agent` | Prep 0.2 (manual) | analysis | `output/db/schema.json`, stack.md | ORM scaffold under `output/src/` only |
 | `designer-agent` | PO Phase 1 | analysis | PNGs (per resolution priority), `input/tech/stack.md`, spec | `<feat>/design-spec.md` or `<SPEC_DIR>/design/design-spec.md` |
 | `specification-agent` | PO Phase 2 | analysis | spec body, stack.md, optional design-spec, optional schema.json | US + Task files |
 | `frontend-agent` | DEV Phase | codegen | task file, stack.md, design-spec | UI files in `src/features/{name}/` |
-| `backend-agent` | DEV Phase | codegen | task file, stack.md, schema.json | services, DTOs, entities, controllers |
+| `backend-agent` | DEV Phase | codegen | task file, stack.md, schema.json | services, DTOs, controllers (Step 3 Tech tasks — not 0.2 scaffold) |
 | `qa-agent` | DEV Phase 3.5 | analysis | all task files, generated source, stack.md | `qa-report.md` only |
 | `devops-agent` | DEV Phase 3.5 | analysis | stack.md, generated source | `docker-compose.yml`, `.env.example`, Dockerfiles, CI workflow stubs |
 | `doc-gen-agent` | DEV Phase 3.5 | analysis | US, tasks, generated source | `Docs/feat-{name}/` |
@@ -38,6 +39,11 @@ Each runtime adapter maps these tiers to its model picker. The contract is "use 
 
 - **Allowed:** Read, Glob, Grep, Write to US/Task files
 - **Forbidden:** shell, code generation, modifying spec body
+
+### `entity-scaffold-agent` — Step 0.2 ORM scaffold (manual)
+
+- **Allowed:** Read, Glob, Grep, Edit, Write, Bash limited to npm/npx/node (no arbitrary shell)
+- **Forbidden:** feature task driven output under `src/features/`, frontend/UI files, HTTP controllers/services (use `backend-agent` at ship time)
 
 ### `frontend-agent` — UI codegen
 

@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.0.0/task.schema.json",
+  "title": "OpenPlanr Task frontmatter (v1.0.0)",
+  "description": "JSON Schema for the YAML frontmatter of a task artifact. Encodes two orthogonal correlations via `allOf`: (1) type-to-agent — UI tasks use frontend-agent, Tech tasks use backend-agent or db-agent; (2) parent reference — spec-driven tasks (T-NNN-{slug}.md under <SPEC_DIR>/tasks/) carry `specId: \"SPEC-NNN\"` (with a `storyId` pointing at a US-NNN within that SPEC), default-mode tasks (output/feats/feat-{slug}/us-N/tasks/task-N.md) carry `featureSlug: \"<slug>\"` instead of specId. Exactly one of the two parent-reference fields must be present per task; the other must be absent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "storyId",
+    "slug",
+    "schemaVersion",
+    "type",
+    "agent",
+    "status",
+    "created",
+    "updated"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^T-\\d{3}$",
+      "description": "Task identifier (e.g. T-001). Scoped to the parent SPEC (spec-driven) or parent User Story (default mode)."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable task title."
+    },
+    "storyId": {
+      "type": "string",
+      "pattern": "^US-\\d{3}$",
+      "description": "ID of the parent User Story this task belongs to."
+    },
+    "specId": {
+      "type": "string",
+      "pattern": "^SPEC-\\d{3}$",
+      "description": "ID of the grandparent spec this task ultimately belongs to. Spec-driven mode only — must be absent in default mode."
+    },
+    "featureSlug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "minLength": 1,
+      "description": "Slug of the parent feature folder this task ultimately belongs to. Default mode only — must be absent in spec-driven mode."
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "minLength": 1,
+      "description": "URL-safe lowercase slug used in the task file name."
+    },
+    "schemaVersion": {
+      "const": "1.0.0",
+      "description": "Pinned to the OpenPlanr Protocol reader version."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["UI", "Tech"],
+      "description": "UI = frontend-bearing task; Tech = backend / data / infra task."
+    },
+    "agent": {
+      "type": "string",
+      "enum": ["frontend-agent", "backend-agent", "db-agent"],
+      "description": "DEV agent responsible for executing this task. Must correlate with `type` (see allOf type/agent branch)."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "in-progress", "done", "blocked"],
+      "description": "Current lifecycle state of the task."
+    },
+    "created": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "ISO date (YYYY-MM-DD) of task creation."
+    },
+    "updated": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "ISO date (YYYY-MM-DD) bumped on every edit."
+    }
+  },
+  "allOf": [
+    {
+      "title": "type-to-agent correlation",
+      "oneOf": [
+        {
+          "title": "UI task → frontend-agent",
+          "properties": {
+            "type": { "const": "UI" },
+            "agent": { "const": "frontend-agent" }
+          },
+          "required": ["type", "agent"]
+        },
+        {
+          "title": "Tech task → backend-agent or db-agent",
+          "properties": {
+            "type": { "const": "Tech" },
+            "agent": { "enum": ["backend-agent", "db-agent"] }
+          },
+          "required": ["type", "agent"]
+        }
+      ]
+    },
+    {
+      "title": "parent-reference correlation (mode-dependent)",
+      "oneOf": [
+        {
+          "title": "spec-driven task → requires specId, forbids featureSlug",
+          "required": ["specId"],
+          "not": { "required": ["featureSlug"] }
+        },
+        {
+          "title": "default-mode task → requires featureSlug, forbids specId",
+          "required": ["featureSlug"],
+          "not": { "required": ["specId"] }
+        }
+      ]
+    }
+  ]
+}

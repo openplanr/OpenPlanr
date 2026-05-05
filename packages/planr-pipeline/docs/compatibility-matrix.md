@@ -21,6 +21,8 @@ Same `.planr/specs/` directories. Same SPEC / US / Task schema. Same `.pipeline-
 | **PLAN orchestration** | ✅ slash command (`/planr-pipeline:plan`) | ✅ rule auto-attach on glob match | ✅ persona-triggered ("plan {feature}") |
 | **SHIP orchestration** | ✅ slash command (`/planr-pipeline:ship`) | ✅ rule | ✅ persona |
 | **8 named subagents** | ✅ manifest-declared, model pinned | ⚠️ Composer subagent dispatch (Cursor 1.x) | ⚠️ persona role-shift only (no isolation) |
+| **Multi-task `/ship` in one invocation** | ✅ `DISPATCH_MODE: multi-task` (manifest-isolated subagents per task) | ⚠️ `DISPATCH_MODE: per-task` default (override with `--all-tasks`) — see §Dispatch mode below | ⚠️ `DISPATCH_MODE: per-task` default — see §Dispatch mode below |
+| **Task `status` resume** (continue partially-shipped specs across multiple `/ship` invocations) | ✅ status read on entry, written on close-out | ✅ same — runtime-agnostic, lives in T-task frontmatter | ✅ same |
 | **Tool restrictions** (`Bash(psql:*)` etc.) | ✅ enforced at manifest layer | ❌ prompt-level only — model honours voluntarily | ❌ prompt-level only |
 | **Spec-driven mode** (`.planr/specs/`) | ✅ | ✅ | ✅ |
 | **Default mode** (`output/feats/`) | ✅ | ✅ | ✅ |
@@ -71,6 +73,31 @@ The Codex adapter ships v1 with the AGENTS.md format. Persona role-shift is the 
 **Mitigation:** for v1, document this as a known polish item. Run the conformance fixture against Codex pre-launch and document the result. If quality is significantly below Cursor parity, flag it explicitly in the matrix.
 
 **Implication:** Codex compatibility is "preview" until live measurement closes. Users wanting maximum quality should prefer Claude Code or Cursor.
+
+### Dispatch mode — multi-task vs per-task `/ship`
+
+`/planr-pipeline:ship` Step 1.8 binds `DISPATCH_MODE` based on the detected runtime. This controls whether a single invocation processes the **entire dispatch queue** (all `pending` + `blocked` tasks of the spec) or **one task at a time**.
+
+| Runtime | Default `DISPATCH_MODE` | Why |
+|---|---|---|
+| Claude Code | `multi-task` | Each subagent is dispatched via the Task tool with isolated context. No cumulative-context bias across tasks. |
+| Cursor | `per-task` | The Composer is one continuous session — without per-task fresh invocation, prior tasks' context biases the model toward "this looks already shipped, write a status rollup" instead of generating code. |
+| Codex | `per-task` | Same as Cursor — persona role-shift in one continuous session has the same cumulative-context risk. |
+
+**Override:** `--all-tasks` forces `multi-task` regardless of runtime (advanced — only use when you know your specific session supports isolated subagents).
+
+**Resume semantics:** the per-task mode is non-disruptive because **task `status` lives in the T-task frontmatter** (`schemas/v1.0.0/task.schema.json` enum: `pending`, `in-progress`, `done`, `blocked`). On entry, Step 2a reads every task's status:
+
+- `done` → skip
+- `pending` → enqueue
+- `in-progress` → enqueue + recover (prior run crashed mid-task)
+- `blocked` → enqueue + retry (prior R6 cycle wrote `T-NNN-error-report.md`; new attempt re-reads it)
+
+Each invocation in `per-task` mode dispatches **one** task, writes its closing status, and prints a clear "Remaining queue: N tasks. Run `/planr-pipeline:ship {slug}` again to continue." The user re-invokes the slash command per task; the status field lets the pipeline pick up exactly where it left off, even across sessions, machines, or runtimes.
+
+**For users:** if you're in Cursor and `/ship` produces a status rollup instead of generating code, the cause is Composer's cumulative-context bias on multi-task continuation runs. The default `per-task` dispatch mode in v0.8.0+ resolves this. If you're on an older plugin version, use `--task T-NNN` to force single-task targeting.
+
+**For mixed workflows:** plan in Cursor (read-friendly, ergonomic), ship in Claude Code (canonical isolation, fastest end-to-end). Both runtimes write the same `.planr/specs/` artifacts.
 
 ## Cross-runtime spec portability
 

@@ -38,8 +38,8 @@ The framework refuses to auto-chain PO Phase → DEV Phase.
 │       Mongo: driver-based collection introspection                          │
 │       → output/db/schema.json                                               │
 │                                                                             │
-│  0.2  Backend Agent (Opus 4.7) — scaffold mode                              │
-│       dotnet ef dbcontext scaffold (or ORM equivalent)                      │
+│  0.2  Entity Scaffold Agent (Sonnet 4.6) — optional manual dispatch          │
+│       ORM entity / DbContext skeleton from schema.json → output/src/      │
 │       → output/src/Entities/ + output/src/DbContext/                        │
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                    │
@@ -103,10 +103,9 @@ The framework refuses to auto-chain PO Phase → DEV Phase.
 │  ← OR task-1.md (Type=Tech)      OR task-1.md if no PNG (Type=Tech)         │
 │  UI layer only                  Services, DTOs, Entities, APIs             │
 │  Components, pages, routes      DB queries, middleware                      │
-│  Each: 3-iteration correction   Each: 3-iteration correction                │
-│  loop with build/test commands  loop with build/test commands               │
-│  from stack.md (BuildCommand,   from stack.md. On 3rd fail: write           │
-│  TestCommand)                   templates/error-report.md to task folder.   │
+│  Each DEV agent: **`docs/rules.md` § R6** correction passes + stack       │
+│  commands (`BuildCommand`, `TestCommand`, …); on exhaustion of R6 writes   │
+│  handoff **`T-<TASK_ID>-error-report.md`** per `templates/error-report.md`. │
 │                                                                             │
 │                         ▼                                                   │
 │  STEP 3.5 — POST-BUILD AGENTS (after all DEV tasks settle)                 │
@@ -138,7 +137,7 @@ The framework refuses to auto-chain PO Phase → DEV Phase.
 | From | To | Data | Condition |
 |------|----|------|-----------|
 | `input/tech/stack.md` | DB Agent | Connection config | Step 0.1 |
-| `output/db/schema.json` | Backend Agent | Entity scaffold data | Step 0.2 |
+| `output/db/schema.json` | Entity Scaffold Agent | Entity/DbContext scaffold inputs | Step 0.2 (optional) |
 | `input/specs/spec-{name}.md` | Designer Agent | Feature name | Step 1 (if PNG) |
 | `input/ui/*.png` | Designer Agent | Visual mockups | Step 1 (if PNG) |
 | `output/feats/../design-spec.md` | Specification Agent | Design constraints | Step 1 |
@@ -157,14 +156,6 @@ The framework refuses to auto-chain PO Phase → DEV Phase.
 
 ## Correction Protocol (Step 3)
 
-```
-If build fails:
-  Iteration 1 → Direct fix
-  Iteration 2 → Re-read spec + schema, fix holistically
-  Iteration 3 → Minimal safe fix, flag remaining issues
-  After 3     → STOP. Write error-report.md. Escalate to human.
-```
-
----
+Normative definition: **`docs/rules.md`** → **`### R6 — Max 3 Correction Iterations`**. This file does not duplicate R6 prose — read R6 before changing pipeline agent prompts.
 
 *See: `docs/rules.md` · `docs/agent-model-map.md` · `docs/task-anatomy.md`*

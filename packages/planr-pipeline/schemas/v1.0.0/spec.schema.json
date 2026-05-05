@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.0.0/spec.schema.json",
+  "title": "OpenPlanr SPEC frontmatter (v1.0.0)",
+  "description": "JSON Schema for the YAML frontmatter of a SPEC-NNN-{slug}.md artifact in spec-driven mode. Validates the canonical shape produced by `planr spec shape` / `planr spec decompose` and the planr-pipeline specification-agent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "slug",
+    "schemaVersion",
+    "status",
+    "priority",
+    "created",
+    "updated",
+    "ui_files",
+    "tech_dependencies"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(SPEC|FEAT)-\\d{3}$",
+      "description": "Feature/Spec identifier. SPEC-NNN in spec-driven mode (e.g. SPEC-001), FEAT-NNN in default mode (e.g. FEAT-001). Scoped to the parent project."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable spec title."
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "minLength": 1,
+      "description": "URL-safe lowercase slug used in the spec directory path."
+    },
+    "schemaVersion": {
+      "const": "1.0.0",
+      "description": "Pinned to the OpenPlanr Protocol reader version."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "shaping",
+        "shaped",
+        "decomposing",
+        "decomposed",
+        "ready-for-pipeline",
+        "in-pipeline",
+        "done"
+      ],
+      "description": "Current lifecycle state of the spec."
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["P0", "P1", "P2", "P3"],
+      "description": "Priority tier."
+    },
+    "milestone": {
+      "type": "string",
+      "description": "Optional milestone label (e.g. v1.0)."
+    },
+    "po": {
+      "type": "string",
+      "description": "Optional spec owner identifier (typically an email)."
+    },
+    "created": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "ISO date (YYYY-MM-DD) of spec creation."
+    },
+    "updated": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "description": "ISO date (YYYY-MM-DD) bumped on every edit."
+    },
+    "ui_files": {
+      "type": "array",
+      "description": "Array of PNG paths under design/ for UI-bearing specs. Empty array when the spec has no UI surface.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tech_dependencies": {
+      "type": "array",
+      "description": "Informational list of upstream technical dependencies. Empty array when none.",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

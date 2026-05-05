@@ -1,0 +1,260 @@
+---
+description: "Planr Pipeline — DEV Phase orchestration (ship {feature}). Frontend ‖ backend → qa → devops ‖ doc-gen → snapshot → marker."
+globs: []
+alwaysApply: false
+---
+
+# /ship {feature} — DEV Phase orchestration (Cursor)
+
+When the user says **"ship {feature}"** (or "implement {feature}", "build
+{feature}"), follow this rule end-to-end. The argument `{feature}` is the
+feature slug.
+
+**Per R1, this command MUST NOT be auto-chained from "plan {feature}".**
+The user must explicitly invoke it after reviewing the PO-phase output.
+
+Mirrored argv flags (**`--task T-NNN`**, **`--yes`**, **`--no-devops`**, **`--no-docs`**): see upstream `commands/ship.md` + `commands/procedures/ship-arguments-and-cost-gate.md`.
+
+---
+
+## Step 0 — Snapshot sentinel
+
+Cursor has no Stop hook (unlike Claude Code). To approximate the same
+"reminder if /ship aborts before snapshot" guarantee, write
+`.cursor/.snapshot-pending` (empty file) at the start of this rule. If a
+later run encounters this sentinel, surface a one-line reminder to refresh
+`CLAUDE.md` (Step 5) before proceeding.
+
+## Step 0.5 — Parse argv (**upstream Phase A only**)
+
+Strip flags first; leftover token is `{feature}` slug. Record `$SHIP_SKIP_DEVOPS`,
+`$SHIP_SKIP_DOCS`, `$SHIP_ASSUME_YES`, `$SHIP_TASK_ID`.
+
+Do **NOT** mutate disk here.
+
+---
+
+## Step 1 — Mode detection + input validation (+ Phase B COST gate)
+
+### 1a — Detect planr spec mode
+
+Same as `planr-pipeline-plan.mdc` Step 1a:
+
+1. If `.planr/config.json` has `idPrefix.spec` set, **spec-driven mode**.
+2. `SPEC_DIR = .planr/specs/<SPEC-NNN-{feature}>/`.
+3. Otherwise, **default mode** (`output/feats/feat-{feature}/`).
+
+| Concept | Default | Spec-driven |
+|---|---|---|
+| Feature root | `output/feats/feat-{feature}/` | `<SPEC_DIR>/` |
+| US files | `output/feats/feat-{feature}/us-*/us-*.md` | `<SPEC_DIR>/stories/US-*.md` |
+| Task files | `output/feats/feat-{feature}/us-*/tasks/task-*.md` | `<SPEC_DIR>/tasks/T-*.md` |
+| Failure handoff (per task **`id`**) | `…/feat-{feature}/us-{N}/tasks/T-<TASK_ID>-error-report.md` | `<SPEC_DIR>/tasks/T-<TASK_ID>-error-report.md` |
+| QA report | `output/feats/feat-{feature}/qa-report.md` | `<SPEC_DIR>/qa-report.md` |
+
+### 1b — Validate required inputs
+
+Verify these exist (mode-appropriate). Abort with clear errors if missing.
+
+Required (default mode):
+- `output/feats/feat-{feature}/` — fail: "feat-{feature}/ not found. Run plan {feature} first."
+- ≥1 `output/feats/feat-{feature}/us-*/us-*.md`
+- ≥1 `output/feats/feat-{feature}/us-*/tasks/task-*.md`
+- `input/tech/stack.md`
+
+Required (spec-driven mode):
+- `<SPEC_DIR>/` — fail: "Spec for slug '{feature}' not found under .planr/specs/. Run plan {feature} first."
+- ≥1 `<SPEC_DIR>/stories/US-*.md`
+- ≥1 `<SPEC_DIR>/tasks/T-*.md`
+- `input/tech/stack.md` — see self-heal below.
+
+### Self-healing in spec mode
+
+When MODE=spec-driven AND `input/tech/stack.md` is missing:
+
+1. Read `.cursor/rules/templates/stack.md.tpl` and write to `input/tech/stack.md`.
+2. Print "edit and re-run" message.
+3. Abort gracefully. Do NOT invoke any role.
+
+In default mode, missing `stack.md` aborts with the same template guidance.
+
+### 1c — Targeted TASK validation + COST **ESTIMATE** (**upstream Phase B**)
+
+After required inputs pass, confirm `--task` ids against real task frontmatter, glob **excluding** failure-handoff filenames, emit **non-binding COST** totals, optionally **halt** awaiting `proceed` unless `--yes` already suppressed the pause.
+
+---
+
+## Step 2 — Iterate User Stories in topological order
+
+In default mode, iterate each `us-{N}` directory under
+`output/feats/feat-{feature}/` (sorted by US number). In spec-driven mode,
+iterate each `<SPEC_DIR>/stories/US-*.md` (sorted by ID); tasks live in the
+**flat** `<SPEC_DIR>/tasks/` directory and link to their parent story via
+the `storyId` frontmatter field.
+
+**When `$SHIP_TASK_ID` bound**, only dispatch tasks matching that **`id`** (others untouched this turn).
+
+For each story, run its eligible tasks:
+
+1. Read the US file to identify which tasks belong to it.
+2. For each task:
+   - If `$SHIP_TASK_ID` set AND task `id ≠ $SHIP_TASK_ID` → **skip** (note in summary)
+   - Read frontmatter `Type` field.
+   - If `Type: UI` → dispatch the **frontend** subagent
+     (`.cursor/rules/agents/frontend-agent.md`).
+   - If `Type: Tech` → dispatch the **backend** subagent
+     (`.cursor/rules/agents/backend-agent.md`).
+   - frontend and backend tasks within the SAME US may run in parallel
+     (Cursor's Composer supports parallel subagent dispatch — use it).
+3. Each subagent applies the **3-iteration correction loop** (R6):
+   - Iteration 1: direct fix on build/test failure.
+   - Iteration 2: re-read task spec + design-spec/schema, fix holistically.
+   - Iteration 3: minimal safe fix, flag remaining issues.
+   - On 3rd failure: write **`T-<TASK_ID>-error-report.md`** co-located with that task (**YAML `id` mirror**).
+
+4. If a task fails after 3 iterations, ship continues with other independent
+   tasks but flags the failed task in the final summary.
+
+---
+
+## Step 3 — QA Gate
+
+After dispatched DEV tasks finish (successful or emitting `T-*-error-report.md`),
+dispatch the **qa** subagent (`qa-agent` — `.cursor/rules/agents/qa-agent.md`).
+
+The qa subagent verifies targeted tasks **(respect `/ship --task` scope)** for:
+- All "Create" files exist
+- All "Modify" files were updated (and only as described)
+- All "Preserve" files are unchanged (`git diff` vs base)
+- Tests pass (`BuildCommand` + `TestCommand` from `stack.md`)
+- DoD checklist items satisfied
+
+If QA fails: flag in summary; **still proceed to Step 5 snapshot** so state
+is recorded; skip Step 4 (devops + doc-gen) until the underlying task is fixed.
+
+---
+
+## Step 4 — devops + doc-gen subagents (parallel, optional)
+
+Honor `$SHIP_SKIP_DEVOPS` / `$SHIP_SKIP_DOCS`. Otherwise identical to Claude plugin.
+
+Run only if QA passes.
+
+- Dispatch **devops** subagent
+  (`.cursor/rules/agents/devops-agent.md`) — generates
+  `docker-compose.yml`, `.env.example`, Dockerfiles, CI workflow stubs.
+  **No `Bash` whatsoever** (prompt-level enforcement on Cursor).
+- Dispatch **doc-gen** subagent
+  (`.cursor/rules/agents/doc-gen-agent.md`) — writes
+  `Docs/feat-{feature}/` from US, tasks, generated source code.
+
+---
+
+## Step 5 — Snapshot
+
+Refresh `CLAUDE.md` at the project root. Read
+`.cursor/rules/templates/CLAUDE.md.tpl` and write a populated copy.
+
+Capture in this order:
+
+1. **Project Identity** — `AppName`, `Version`, `DatabaseType`, `Framework`,
+   `Language` from `input/tech/stack.md`. Include ISO 8601 UTC timestamp.
+2. **Phase Status** — scan filesystem to determine actual state.
+3. **Feature Registry** — for each feature folder.
+4. **Active Roles** — list the 8 roles with their model tier.
+5. **Build Log** — append latest build/test outcomes (append-only — never truncate).
+6. **Known Issues** — glob sibling `T-*-error-report.md` beside task trees (**no** legacy singleton `error-report.md`).
+
+7. **Stack Summary** — embed `input/tech/stack.md` content.
+
+### Snapshot integrity rules
+
+- ✅ Always write a complete, valid `CLAUDE.md` — never partial.
+- ✅ Always include the generation timestamp.
+- ✅ Preserve existing build log entries (append only).
+- ✅ If a scan section fails, write `[scan error]` rather than empty.
+- ❌ Never delete `CLAUDE.md`.
+- ❌ Never leave `CLAUDE.md` partially written.
+
+### Coexistence with planr-managed CLAUDE.md
+
+If the existing `CLAUDE.md` opens with `> Generated by OpenPlanr` or contains
+`## Context-Gathering Protocol`, do **not** overwrite. Print:
+*"CLAUDE.md is planr-managed; pipeline state recorded via .pipeline-shipped
+marker (Step 5.5) and qa-report.md."* Continue to Step 5.5.
+
+After writing (or skipping), remove `.cursor/.snapshot-pending`.
+
+---
+
+## Step 5.5 — Write the `.pipeline-shipped` marker
+
+After Step 5 succeeds, write a marker file recording the pipeline run.
+
+**Default mode:** `output/feats/feat-{feature}/.pipeline-shipped`
+**Spec-driven mode:** `<SPEC_DIR>/.pipeline-shipped`
+
+YAML contents:
+
+```yaml
+shipped_at: "<ISO 8601 UTC timestamp>"
+pipeline_version: "<runtime adapter writes its own version, e.g. 0.6.0>"
+protocol_version: "1.0.0"
+runtime: "cursor"
+mode: "<default | spec-driven>"
+feature: "{feature}"
+tasks_executed: <integer>
+tasks_failed: <integer>
+qa_gate_status: "<passed | failed | skipped>"
+duration_seconds: <integer>
+agents_invoked:
+  - frontend-agent          # only list roles that actually ran
+  - backend-agent
+  - qa-agent
+  - devops-agent
+  - doc-gen-agent
+devops_status: "<generated | skipped>"
+docs_status: "<generated | skipped>"
+snapshot_status: "<refreshed | skipped>"
+error_reports:               # `T-<NNN>-error-report.md` paths ([] if none)
+  - <path>
+```
+
+If Step 5 (snapshot) was skipped due to planr-managed CLAUDE.md, set
+`snapshot_status: skipped` so the partial-success state is recorded.
+
+---
+
+## Step 6 — Print summary
+
+```
+✓ DEV Phase complete for {feature}
+  Runtime:         cursor
+  Mode:            <default | spec-driven>
+  Output dir:      <output/feats/feat-{feature}/ | .planr/specs/SPEC-NNN-{feature}/>
+  Tasks succeeded: X / Y
+  Tasks failed:    Z (see `T-<NNN>-error-report.md` paths)
+  QA gate:         <passed | failed>
+  DevOps config:   <generated | skipped>
+  Docs:            <generated | skipped>
+  CLAUDE.md:       <refreshed | skipped (planr-managed)>
+  Marker:          <SPEC_DIR>/.pipeline-shipped
+```
+
+If any task failed, list every `T-<NNN>-error-report.md` artifact.
+
+---
+
+## Failure modes
+
+| Condition | Action |
+|---|---|
+| feat folder / spec dir missing | Abort, suggest plan {feature} first |
+| No tasks | Abort, suggest re-running plan |
+| Single task fails 3x | Continue with other tasks, surface in summary |
+| All tasks fail | Skip QA + DevOps + Doc-Gen; still run snapshot |
+| QA gate fails | Skip DevOps + Doc-Gen; still run snapshot |
+
+---
+
+*Generated by `planr rules generate --target cursor --scope pipeline`. Pairs with `planr-pipeline-plan.mdc` for the PO phase.*

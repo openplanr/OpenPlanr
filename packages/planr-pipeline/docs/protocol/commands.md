@@ -19,6 +19,7 @@ This rule is the differentiator of the OpenPlanr workflow. It is the reason the 
 - `input/tech/stack.md` (project tech stack)
 - Optional: PNGs for designer-agent
 - Optional: DB env vars for db-agent
+- Optional flag: **`--dry-run`** — read-only diagnostics (strategy + planned PO subagents). MUST NOT mutate disk as part of that branch beyond already-flushed scaffolding, and MUST NOT dispatch db/designer/spec agents.
 
 ### Mode detection
 
@@ -68,7 +69,10 @@ Auto-scaffolding and auto-healing produce no AI calls and no decomposition — t
 
 ### Inputs
 
-- `feature` — same slug as used for PLAN
+- `feature` slug + optional adapters:
+  - **`--task T-NNN`** — validates ID then runs DEV/QA/doc stages scoped to matching task `id` frontmatter (`^T-\\d{3}$`).
+  - **`--yes`** — bypass interactive COST ESTIMATE pause (estimate block still logged).
+  - **`--no-devops`**, **`--no-docs`** — opt out of infra/docs agents when QA succeeds.
 - Project root with PO-phase outputs (US + Task files)
 - `input/tech/stack.md` with `BuildCommand`, `TestCommand`, `LintCommand`
 
@@ -89,7 +93,7 @@ Auto-scaffolding and auto-healing produce no AI calls and no decomposition — t
    - Iter 1: direct fix on build/test failure.
    - Iter 2: re-read task spec + design-spec/schema, fix holistically.
    - Iter 3: minimal safe fix, flag remaining.
-   - On 3rd failure: write `error-report.md` to the task's directory, STOP that task, continue with independent tasks.
+   - On 3rd failure: write **`T-<TASK_ID>-error-report.md`** (YAML `id` match) beside the authoring task Markdown; STOP that task; continue independently.
 3. **qa-agent gate** — verify Create/Modify/Preserve lists, build, test, DoD. If failed: skip Step 4 + 5; still run Step 5 snapshot.
 4. **devops-agent + doc-gen-agent** (parallel, optional) — run only if QA passed.
 5. **Snapshot.** Refresh CLAUDE.md (or coexist with planr-managed CLAUDE.md). 7 capture sections: Project Identity, Phase Status, Feature Registry, Active Roles, Build Log (append-only), Known Issues, Stack Summary.
@@ -106,7 +110,7 @@ Auto-scaffolding and auto-healing produce no AI calls and no decomposition — t
 
 ### Exit
 
-Print summary including: mode, tasks succeeded, tasks failed, qa status, devops status, docs status, snapshot status, marker path. List error-report.md paths if any task failed.
+Print summary including: mode, tasks succeeded, tasks failed, qa status, devops status, docs status, snapshot status, marker path. List **`T-*-error-report.md`** artifacts if DEV iterations exhausted.
 
 ### Failure modes
 
@@ -118,13 +122,28 @@ Print summary including: mode, tasks succeeded, tasks failed, qa status, devops 
 | All tasks fail | Skip QA + DevOps + Doc-Gen; still run snapshot |
 | QA gate fails | Skip DevOps + Doc-Gen; still run snapshot |
 
+## STATUS — read-only rollup
+
+### Inputs
+
+- `feature` slug (same as PLAN/SHIP)
+- `.pipeline-shipped` *(optional — may be absent pre-SHIP)*
+
+### Behaviour
+
+- Runs **Mode detection** identical to PLAN/SHIP.
+- Prints a summary table covering **US/task counts**, **last ship timestamps** (zeros when untouched), **`tasks_*` totals from marker when present**, and **count of `T-*-error-report.md`** handoffs.
+- NEVER mutates files.
+
+---
+
 ## Per-runtime invocation
 
-| Runtime | PLAN invocation | SHIP invocation |
-|---|---|---|
-| **Claude Code (canonical)** | `/planr-pipeline:plan {feature}` | `/planr-pipeline:ship {feature}` |
-| **Cursor** | User says `plan {feature}` (or "decompose {feature}") — `.cursor/rules/planr-pipeline-plan.mdc` activates | User says `ship {feature}` — `planr-pipeline-ship.mdc` activates |
-| **Codex** | User says `plan {feature}` — AGENTS.md persona triggers | User says `ship {feature}` — same |
+| Runtime | PLAN invocation | SHIP invocation | STATUS invocation |
+|---|---|---|---|
+| **Claude Code (canonical)** | `/planr-pipeline:plan {feature}` | `/planr-pipeline:ship {feature}` | `/planr-pipeline:status {feature}` |
+| **Cursor** | User says `plan {feature}` (or "decompose {feature}") — `.cursor/rules/planr-pipeline-plan.mdc` activates | User says `ship {feature}` — `planr-pipeline-ship.mdc` activates | User says `status {feature}` (wire `commands/status.md` analogue) |
+| **Codex** | User says `plan {feature}` — AGENTS.md persona triggers | User says `ship {feature}` — same | Codex personas SHOULD mirror Claude Code wording |
 
 In all three runtimes, R1 must be respected: PLAN exits without invoking SHIP, and SHIP requires a separate explicit user invocation.
 

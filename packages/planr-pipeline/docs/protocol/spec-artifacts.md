@@ -1,6 +1,12 @@
 # OpenPlanr Protocol — Spec Artifacts (v1.0.0)
 
 > The runtime-agnostic schema for spec-driven mode artifacts. Identical bytes on Claude Code, Cursor, and Codex.
+>
+> **Canonical source of truth:** the JSON Schemas under [`schemas/v1.0.0/`](../../schemas/v1.0.0/).
+> The prose summaries and YAML examples in this document are illustrative —
+> if they ever drift from the schemas, the schemas win. Field-level descriptions,
+> enums, regex patterns, and required-key lists live in the schema files and
+> are validated by `node conformance/runner.mjs --validate-schema <spec-dir>`.
 
 ## Directory layout
 
@@ -15,9 +21,9 @@ Every spec is a self-contained directory under `.planr/specs/`:
 ├── stories/
 │   └── US-NNN-{slug}.md            # user stories scoped to this spec
 ├── tasks/
-│   └── T-NNN-{slug}.md             # tasks scoped to this spec
+│   ├── T-NNN-{slug}.md             # tasks scoped to this spec
+│   └── T-NNN-error-report.md      # optional DEV handoff when R6 exhausts (`id`-aligned basename)
 ├── qa-report.md                    # written by qa-agent after SHIP
-├── error-report.md                 # written if a task fails 3 iterations
 └── .pipeline-shipped               # written by SHIP — proof of execution
 ```
 
@@ -25,20 +31,27 @@ Every spec is a self-contained directory under `.planr/specs/`:
 
 ## SPEC frontmatter
 
+Identifies the functional spec and carries the lifecycle fields used by `planr spec shape`,
+`planr spec decompose`, and the planr-pipeline specification-agent.
+
+**Canonical schema:** [`spec.schema.json`](../../schemas/v1.0.0/spec.schema.json)
+
+Illustrative example:
+
 ```yaml
 ---
-id: "SPEC-001"                    # required · format: SPEC-\d{3}
-title: "User authentication"      # required · human-readable
-slug: "auth"                      # required · URL-safe lowercase, used in path
-schemaVersion: "1.0.0"            # required · pinned to reader version
-status: "pending"                 # required · pending | shaping | shaped | decomposing | decomposed | in-pipeline | done
-priority: "P0"                    # required · P0 | P1 | P2 | P3
-milestone: "v1.0"                 # optional
-po: "asem@techarc.io"             # optional · spec owner
-created: "2026-04-29"             # required · ISO date (YYYY-MM-DD)
-updated: "2026-04-29"             # required · bumped on edit
-ui_files: []                      # required · array of PNG paths under design/ (empty if none)
-tech_dependencies: []             # required · array of strings; informational only
+id: "SPEC-001"
+title: "User authentication"
+slug: "auth"
+schemaVersion: "1.0.0"
+status: "pending"
+priority: "P0"
+milestone: "v1.0"
+po: "asem@techarc.io"
+created: "2026-04-29"
+updated: "2026-04-29"
+ui_files: []
+tech_dependencies: []
 ---
 ```
 
@@ -56,6 +69,13 @@ The spec body uses these H2 sections. `planr spec shape` writes them from intera
 
 ## User Story frontmatter
 
+Scopes a story to its parent spec and carries the implementation-status lifecycle.
+US bodies follow the standard agile shape (`As a {role} I want {action} So that {benefit}`).
+
+**Canonical schema:** [`story.schema.json`](../../schemas/v1.0.0/story.schema.json)
+
+Illustrative example:
+
 ```yaml
 ---
 id: "US-001"
@@ -63,18 +83,23 @@ title: "Login form with email + password"
 specId: "SPEC-001"
 slug: "login-form"
 schemaVersion: "1.0.0"
-status: "pending"            # pending | implementing | done | blocked
+status: "pending"
 priority: "P0"
 created: "2026-04-29"
 updated: "2026-04-29"
 ---
 ```
 
-## User Story body
-
-Standard agile shape: `As a {role} I want {action} So that {benefit}`, plus scope, acceptance criteria (Given/When/Then), dependencies. Full anatomy: `../us-anatomy.md`.
+Full body anatomy (As-a / I-want / So-that, scope, AC, dependencies): `../us-anatomy.md`.
 
 ## Task frontmatter
+
+Identifies a single execution unit owned by exactly one DEV agent. The `type` discriminator
+selects UI vs. Tech routing; `agent` names the responsible subagent.
+
+**Canonical schema:** [`task.schema.json`](../../schemas/v1.0.0/task.schema.json)
+
+Illustrative example:
 
 ```yaml
 ---
@@ -84,9 +109,9 @@ storyId: "US-001"
 specId: "SPEC-001"
 slug: "loginform"
 schemaVersion: "1.0.0"
-type: "UI"                   # required · UI | Tech (UI → frontend role, Tech → backend role)
-agent: "frontend-agent"      # required · frontend-agent | backend-agent | (db-agent for migrations)
-status: "pending"            # pending | in-progress | done | blocked
+type: "UI"
+agent: "frontend-agent"
+status: "pending"
 created: "2026-04-29"
 updated: "2026-04-29"
 ---
@@ -109,37 +134,63 @@ Required:
 
 Full anatomy: `../task-anatomy.md`.
 
+## `stack.md` (project technical configuration)
+
+The Tech-Lead-owned single source of truth for technology choices, build/test commands,
+and active stack overlays. Read by every DEV agent at the start of every task.
+
+**Canonical schema:** [`stack.schema.json`](../../schemas/v1.0.0/stack.schema.json)
+
+The schema validates the YAML blocks embedded inside `input/tech/stack.md` (project identity,
+database, backend stack, frontend stack, devops, naming conventions, build/test commands,
+active stack files, exclusions). See `input/tech/stack.md` in this repo for a working example.
+
 ## `.pipeline-shipped` marker
 
-YAML written by SHIP at the end of every successful (or partially-successful) run. Path:
+YAML written by SHIP at the end of every successful (or partially-successful) run.
+
+**Canonical schema:** [`pipeline-shipped.schema.json`](../../schemas/v1.0.0/pipeline-shipped.schema.json)
+
+Path:
 
 - **Default mode:** `output/feats/feat-{name}/.pipeline-shipped`
 - **Spec-driven mode:** `.planr/specs/SPEC-NNN-{slug}/.pipeline-shipped`
 
-Schema:
+Illustrative example:
 
 ```yaml
-shipped_at: "<ISO 8601 UTC timestamp>"
-pipeline_version: "<semver, e.g. 0.6.0>"
-runtime: "<claude-code | cursor | codex>"   # NEW in v1.0.0 — identifies which runtime executed
-mode: "<default | spec-driven>"
-feature: "<feature-name>"
-tasks_executed: <integer>
-tasks_failed: <integer>
-qa_gate_status: "<passed | failed | skipped>"
-duration_seconds: <integer>
-agents_invoked:                              # only roles that actually ran this turn
+shipped_at: "2026-04-29T14:32:11Z"
+pipeline_version: "0.7.3"
+runtime: "claude-code"
+mode: "spec-driven"
+feature: "auth"
+tasks_executed: 6
+tasks_failed: 0
+qa_gate_status: "passed"
+duration_seconds: 412
+agents_invoked:
   - frontend-agent
   - backend-agent
   - qa-agent
   - devops-agent
   - doc-gen-agent
-devops_status: "<generated | skipped>"
-docs_status: "<generated | skipped>"
-snapshot_status: "<refreshed | skipped>"
-error_reports:                               # paths to any error-report.md files
-  - <path>
+devops_status: "generated"
+docs_status: "generated"
+snapshot_status: "refreshed"
+error_reports: []
 ```
+
+## How to validate
+
+Run the schema validator on any spec directory:
+
+```bash
+node conformance/runner.mjs --runtime claude-code --validate-schema .planr/specs/SPEC-NNN-{slug}
+```
+
+The runner walks the spec's frontmatter (SPEC, every story, every task), the project's
+`input/tech/stack.md`, and any `.pipeline-shipped` marker, validating each against its
+canonical schema under `schemas/v1.0.0/`. Exit code is 0 only when every artifact passes.
 
 ## Schema version compatibility
 
@@ -154,10 +205,11 @@ planr rules generate --target codex --scope pipeline    # regenerate AGENTS.md a
 
 ## See also
 
+- [`schemas/v1.0.0/`](../../schemas/v1.0.0/) — canonical JSON Schemas (spec, story, task, stack, pipeline-shipped)
 - `agent-roles.md` — 8 role contracts (inputs, outputs, tool guardrails)
 - `commands.md` — PLAN and SHIP command contracts
 - `runtime-adapters.md` — per-runtime adapter specs
-- `OpenPlanr/docs/reference/spec-schema.md` — canonical schema reference (mirror of this doc, lives with the planr CLI)
+- `OpenPlanr/docs/reference/spec-schema.md` — companion schema reference (mirror, lives with the planr CLI)
 
 ---
 

@@ -130,7 +130,8 @@ Two commands. Everything else is automatic — auto-scaffolding when a spec is m
 | **designer-agent** | Sonnet 4.6 | 1 | PNG → design-spec.md | `Read`, `Glob`, `Write` only |
 | **specification-agent** | Sonnet 4.6 | 1 | Spec → US + tasks | `Read`, `Glob`, `Grep`, `Write` |
 | **frontend-agent** | Opus 4.7 | 3 | UI codegen (task-1 UI) | `Read`, `Edit`, `Write`, `Bash(npm:*)` etc. |
-| **backend-agent** | Opus 4.7 | 0.2 + 3 | Backend codegen (task-2 Tech) | Same plus `Bash(prisma:*)`, `Bash(node:*)` |
+| **entity-scaffold-agent** | Sonnet 4.6 | 0.2 (manual) | Schema → `output/src/` ORM skeleton | `Read`, `Glob`, `Grep`, `Edit`, `Write`, `Bash(npm:*)`, `Bash(npx:*)`, `Bash(node:*)` |
+| **backend-agent** | Opus 4.7 | 3 | Backend codegen (task-2 Tech) | Same plus `Bash(prisma:*)`, `Bash(node:*)` |
 | **qa-agent** | Sonnet 4.6 | 3.5 | DoD gate, runs build/test | Read-only on src; `Write` only for qa-report.md |
 | **devops-agent** | Sonnet 4.6 | 3.5 | Docker, CI, env templates | `Read`, `Glob`, `Write`, `Edit`. **No Bash** — non-deploy enforced at tool layer. |
 | **doc-gen-agent** | Sonnet 4.6 | 3.5 | `Docs/feat-{name}/` from US + code | `Read`, `Glob`, `Grep`, `Write` |
@@ -217,7 +218,7 @@ Pinned model strings (`claude-sonnet-4-6`, `claude-opus-4-7`) are correct as of 
 
 - **Add a stack file:** drop a markdown file in `stacks/{category}/{name}.md` following the shape in existing files. Open a PR.
 - **Propose a new agent:** open an issue describing the role, model, and tool restrictions. Agents that would shrink scope (e.g., split backend-agent into api-agent + db-agent) need a strong case.
-- **Bug reports:** include the full failing command, the contents of the relevant `output/feats/feat-{name}/us-{N}/tasks/error-report.md`, and your `input/tech/stack.md`.
+- **Bug reports:** include the full failing command, the contents of any relevant **per-task** `tasks/T-<NNN>-error-report.md` (or legacy `error-report.md` if you are on an older plugin revision), and your `input/tech/stack.md`.
 
 ---
 

@@ -1,0 +1,43 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  tier1-tier2-node:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20.x", "22.x"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: node --check conformance/runner.mjs
+      - run: node --check conformance/json-schema-validate.mjs
+      - run: npm test
+      - name: Conformance fixtures (default + spec-driven)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # default-mode (pre-SHIP): schema validation + verify-po only; no npm needed
+          node conformance/runner.mjs --runtime cursor --validate-schema conformance/fixtures/default-mode
+          node conformance/runner.mjs --runtime cursor --verify-po --dir conformance/fixtures/default-mode
+
+          # default-mode-shipped (post-SHIP): npm ci, then schema validation + verify-ship
+          npm ci --prefix conformance/fixtures/default-mode-shipped
+          node conformance/runner.mjs --runtime cursor --validate-schema conformance/fixtures/default-mode-shipped
+          node conformance/runner.mjs --runtime cursor --verify-ship --dir conformance/fixtures/default-mode-shipped
+
+          # spec-driven-todo (pre-SHIP): schema validation + verify-po only
+          node conformance/runner.mjs --runtime cursor --validate-schema conformance/fixtures/spec-driven-todo
+          node conformance/runner.mjs --runtime cursor --verify-po --dir conformance/fixtures/spec-driven-todo
+
+          # spec-driven-todo-shipped (post-SHIP): npm ci, then schema validation + verify-ship
+          npm ci --prefix conformance/fixtures/spec-driven-todo-shipped
+          node conformance/runner.mjs --runtime cursor --validate-schema conformance/fixtures/spec-driven-todo-shipped
+          node conformance/runner.mjs --runtime cursor --verify-ship --dir conformance/fixtures/spec-driven-todo-shipped

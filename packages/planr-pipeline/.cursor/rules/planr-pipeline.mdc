@@ -1,0 +1,142 @@
+---
+description: "Planr Pipeline orchestration — PO/DEV phase rules, R1 human gate, mode detection, runtime parity for planr-pipeline"
+globs: [".planr/specs/**", "input/specs/**", "output/feats/**"]
+alwaysApply: false
+---
+
+# Planr Pipeline (Cursor edition — Protocol v1.0.0)
+
+You are operating inside a planr-pipeline-aware project on **Cursor**.
+The pipeline is a two-phase factory:
+
+```
+PO Phase (planning)  →  HUMAN REVIEW  →  DEV Phase (implementation)
+```
+
+**Hard rule R1: NEVER auto-chain PO Phase to DEV Phase.** A human review step
+gates them. Two distinct user invocations are required: "plan {feature}" and
+"ship {feature}".
+
+---
+
+## Mode detection
+
+Before doing anything, decide the project mode:
+
+1. If `.planr/config.json` exists AND its `idPrefix.spec` field is set,
+   the project is in **spec-driven mode**. Spec dir lives at
+   `.planr/specs/SPEC-NNN-{slug}/`.
+2. Otherwise, **default mode**: `output/feats/feat-{name}/`.
+
+| Concept | Default mode | Spec-driven mode |
+|---|---|---|
+| Spec source | `input/specs/spec-{name}.md` | `.planr/specs/SPEC-NNN-{slug}/SPEC-NNN-{slug}.md` |
+| Design spec | `output/feats/feat-{name}/design-spec.md` | `<SPEC_DIR>/design/design-spec.md` |
+| US output | `output/feats/feat-{name}/us-{N}/us-{N}.md` | `<SPEC_DIR>/stories/US-NNN-{slug}.md` |
+| Task output | `output/feats/feat-{name}/us-{N}/tasks/task-{M}.md` | `<SPEC_DIR>/tasks/T-NNN-{slug}.md` |
+
+---
+
+## Routing
+
+When the user says **"plan {feature}"** (or "decompose {feature}", "spec {feature}"):
+follow `.cursor/rules/planr-pipeline-plan.mdc`.
+
+When the user says **"ship {feature}"** (or "implement {feature}", "build {feature}"):
+follow `.cursor/rules/planr-pipeline-ship.mdc`.
+
+---
+
+## Subagents (9 named roles)
+
+The pipeline ships 9 specialised role prompts. On Cursor, dispatch each as a
+**Composer subagent** with the role's body as the system prompt. The bodies
+live in `.cursor/rules/agents/{role}.md`:
+
+- `db-agent` — see `.cursor/rules/agents/db-agent.md`
+- `entity-scaffold-agent` — see `.cursor/rules/agents/entity-scaffold-agent.md` (optional Step 0.2 manual)
+- `designer-agent` — see `.cursor/rules/agents/designer-agent.md`
+- `specification-agent` — see `.cursor/rules/agents/specification-agent.md`
+- `frontend-agent` — see `.cursor/rules/agents/frontend-agent.md`
+- `backend-agent` — see `.cursor/rules/agents/backend-agent.md`
+- `qa-agent` — see `.cursor/rules/agents/qa-agent.md`
+- `devops-agent` — see `.cursor/rules/agents/devops-agent.md`
+- `doc-gen-agent` — see `.cursor/rules/agents/doc-gen-agent.md`
+
+When invoking a role, prefix the dispatch with the project context:
+`MODE: {default|spec-driven}`, `SPEC_DIR` (if spec mode), `feature/slug`.
+
+---
+
+## Tool restrictions (Cursor parity)
+
+The Claude Code plugin enforces tool restrictions at the manifest layer
+(`tools: Read, Glob, Grep, Edit, Write, Bash(npm:*)` etc.). Cursor uses a
+different permission model — these restrictions are **prompt-level only**
+on Cursor and must be respected by you, the model, voluntarily:
+
+- **db-agent** — read-only DB introspection. Never write SQL DDL/DML. Output
+  goes to `output/db/schema.json` only.
+- **entity-scaffold-agent** — Step 0.2 only (manual). Reads `schema.json` + stack;
+  writes ORM skeleton under `output/src/`. No `src/features/` product code.
+  Sonnet-class prompt; npm/npx/node bash only.
+- **designer-agent** — `Read`, `Glob`, `Write` only. No shell access.
+  Output: `<SPEC_DIR>/design/design-spec.md` (spec mode) or
+  `output/feats/feat-{name}/design-spec.md` (default).
+- **specification-agent** — `Read`, `Glob`, `Grep`, `Write`. Decomposes the
+  spec into US + Task files. No shell.
+- **frontend-agent** — `Read`, `Edit`, `Write`, `Bash(npm:*)` family. Writes
+  UI files only (`src/features/{name}/` UI layer, components, pages, styles).
+  Never touches services, controllers, DTOs, entities.
+- **backend-agent** — Step 3 Tech tasks only. Same shell tools as frontend, but writes services,
+  DTOs, entities, controllers, DB queries. Never touches UI files. (Step 0.2 → **entity-scaffold-agent**.)
+- **qa-agent** — read-only on `src/`. Runs build + test commands. Writes only
+  `qa-report.md`.
+- **devops-agent** — `Read`, `Glob`, `Write`, `Edit`. **No `Bash` whatsoever.**
+  Generates `docker-compose.yml`, Dockerfiles, CI workflow stubs. Never deploys.
+- **doc-gen-agent** — `Read`, `Glob`, `Grep`, `Write`. Writes `Docs/feat-{name}/`.
+
+If you, as the model, violate these restrictions on Cursor, the conformance
+test will catch it via the post-ship `git diff` check on each task's "Preserve"
+list. **Treat the restrictions as binding.**
+
+---
+
+## Hard rules (cross-runtime)
+
+- **R1** — Never auto-chain PO → DEV. Two user invocations required.
+- **R2** — Max 2 tasks per US (1 if no PNG, 2 if PNG present).
+- **R3** — Model assignments: roles using `Sonnet 4.6` are analysis/decomposition;
+  roles using `Opus 4.7` are codegen. On Cursor, use the runtime's tier
+  selector (Cursor's "Composer model" setting) and pick the equivalent.
+- **R5** — Files in any task's `Preserve:` list MUST NOT be touched.
+- **R6** — Max 3 correction iterations per task. After 3, write **`T-<TASK_ID>-error-report.md`** (never a singleton shared `error-report.md`) beside the task spec and stop that task.
+- **R7** — Refresh CLAUDE.md (or coexist with planr-managed CLAUDE.md) at end
+  of `/ship`. Cursor has no Stop hook — see `planr-pipeline-ship.mdc`
+  Step 5 for the alternative.
+- **R8** — db-agent role is read-only. Never DDL/DML.
+- **R9** — frontend role only writes UI files; backend role only writes
+  services/DTOs/entities. No crossover.
+
+---
+
+## Conformance proof
+
+On a successful `/ship` run, write the `.pipeline-shipped` YAML marker file
+(see `planr-pipeline-ship.mdc` Step 5.5). The marker is the audit-grade
+proof that the pipeline executed; the conformance test harness (in the
+`planr-pipeline` repo at `conformance/runner.mjs`) verifies it.
+
+---
+
+## Compatibility matrix
+
+This rule represents the **Cursor adapter** to the OpenPlanr Protocol v1.0.0.
+Other supported runtimes:
+
+- **Claude Code** — install the `planr-pipeline` plugin (canonical surface)
+- **Codex** — see the AGENTS.md generated by `planr rules generate --target codex --scope pipeline`
+
+Full parity table: `planr-pipeline/docs/compatibility-matrix.md`.
+
+*Generated by `planr rules generate --target cursor --scope pipeline`.*

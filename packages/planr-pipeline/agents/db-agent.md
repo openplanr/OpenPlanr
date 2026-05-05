@@ -163,4 +163,4 @@ Output format: see Output Schema below.
 
 ---
 
-*Chained to: backend-agent (Step 0.2 scaffold mode) · specification-agent (Step 1)*
+*Chained to: entity-scaffold-agent (Step 0.2 scaffold, optional) · specification-agent (Step 1)*

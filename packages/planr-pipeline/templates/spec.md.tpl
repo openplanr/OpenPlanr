@@ -4,18 +4,26 @@
 > **Purpose:** Describe WHAT the feature must do, not HOW to build it.
 > No numbered User Stories here — only functional bullets.
 > This file is the primary input for the Specification Agent.
+>
+> **Default-mode template.** Uses the v1.0.0 schema frontmatter (since SPEC-001 / SPEC-002, harmonized for cross-mode schema compatibility) so the same `schemas/v1.0.0/spec.schema.json` validates default-mode and spec-driven specs alike. Spec-driven users should still prefer `templates/spec-driven.md.tpl` — both modes remain first-class.
 
 ---
 
 ## Feature Identity
 
 ```yaml
-FeatureName: "[feat-name]"          # used as folder name: output/feats/feat-{name}/
-FeatureTitle: "[Human-readable title]"
-Priority: "[P0 | P1 | P2]"
-Milestone: "[v1.0 | sprint-3 | etc.]"
-PO: "[Product Owner name]"
-CreatedAt: "[YYYY-MM-DD]"
+id: "FEAT-NNN"                      # default-mode feature id; project-scoped
+title: "[Human-readable title]"
+slug: "[feat-name]"                 # used as folder name: output/feats/feat-{slug}/
+schemaVersion: "1.0.0"
+status: "pending"                   # pending | shaping | shaped | decomposing | decomposed | ready-for-pipeline | in-pipeline | done
+priority: "P1"                      # P0 | P1 | P2 | P3
+milestone: "[v1.0 | sprint-3 | etc.]"
+po: "[Product Owner identifier]"
+created: "[YYYY-MM-DD]"
+updated: "[YYYY-MM-DD]"
+ui_files: []                        # PNG paths under input/ui/, empty when no UI surface
+tech_dependencies: []               # informational upstream tech deps, empty when none
 ```
 
 ---
@@ -67,7 +75,7 @@ CreatedAt: "[YYYY-MM-DD]"
 
 ## Screens / UI References
 
-> *List any PNG files deposited in input/ui/ that belong to this feature.*
+> *List any PNG files deposited in input/ui/ that belong to this feature. Mirror the same paths into the `ui_files` array in the frontmatter above.*
 
 ```yaml
 UIFiles:
@@ -124,4 +132,4 @@ BlockedBy:
 
 ---
 
-*Template version: 1.0 · See docs/spec-anatomy.md for full authoring guide*
+*Template version: 1.1 · See docs/spec-anatomy.md for full authoring guide*

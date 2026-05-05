@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.0.0/pipeline-shipped.schema.json",
+  "title": "OpenPlanr .pipeline-shipped marker (v1.0.0)",
+  "description": "JSON Schema for the YAML completion marker written by SHIP at the end of every successful (or partially-successful) run. Path: output/feats/feat-{name}/.pipeline-shipped (default mode) or .planr/specs/SPEC-NNN-{slug}/.pipeline-shipped (spec-driven mode). Note: this artifact uses `pipeline_version` (the planr-pipeline plugin semver) rather than a `schemaVersion` field; the schema-version of the marker is encoded in the file path itself (schemas/v1.0.0/...).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "shipped_at",
+    "pipeline_version",
+    "runtime",
+    "mode",
+    "feature",
+    "tasks_executed",
+    "tasks_failed",
+    "qa_gate_status",
+    "duration_seconds",
+    "agents_invoked",
+    "devops_status",
+    "docs_status",
+    "snapshot_status",
+    "error_reports"
+  ],
+  "properties": {
+    "shipped_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp at which SHIP completed."
+    },
+    "pipeline_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[A-Za-z0-9.-]+)?(?:\\+[A-Za-z0-9.-]+)?$",
+      "description": "Semver of the planr-pipeline plugin that produced the marker (e.g. 0.7.3)."
+    },
+    "runtime": {
+      "type": "string",
+      "enum": ["claude-code", "cursor", "codex"],
+      "description": "Runtime adapter that executed this turn (NEW in v1.0.0)."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["default", "spec-driven"],
+      "description": "Pipeline execution mode."
+    },
+    "feature": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Feature name (default mode) or spec slug (spec-driven mode)."
+    },
+    "tasks_executed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of tasks executed during this SHIP run."
+    },
+    "tasks_failed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of tasks that failed (after the 3-iteration correction loop)."
+    },
+    "qa_gate_status": {
+      "type": "string",
+      "enum": ["passed", "failed", "skipped"],
+      "description": "Outcome of the qa-agent gate."
+    },
+    "duration_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Wall-clock duration of the SHIP run in whole seconds."
+    },
+    "agents_invoked": {
+      "type": "array",
+      "description": "List of role names that actually ran during this SHIP turn. Order is informational.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "designer-agent",
+          "specification-agent",
+          "frontend-agent",
+          "backend-agent",
+          "db-agent",
+          "qa-agent",
+          "devops-agent",
+          "doc-gen-agent"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "devops_status": {
+      "type": "string",
+      "enum": ["generated", "skipped"],
+      "description": "Whether devops-agent produced artifacts this turn."
+    },
+    "docs_status": {
+      "type": "string",
+      "enum": ["generated", "skipped"],
+      "description": "Whether doc-gen-agent produced artifacts this turn."
+    },
+    "snapshot_status": {
+      "type": "string",
+      "enum": ["refreshed", "skipped"],
+      "description": "Whether the codebase snapshot was refreshed this turn."
+    },
+    "error_reports": {
+      "type": "array",
+      "description": "Relative or absolute repo paths for any **`T-<NNN>-error-report.md`** handoffs produced after R6 caps. Legacy singleton `tasks/error-report.md` is forbidden.",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

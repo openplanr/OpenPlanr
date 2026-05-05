@@ -9,10 +9,11 @@
 | Agent               | Model       | Phase    | Rationale |
 |---------------------|-------------|----------|-----------|
 | DB Agent            | Sonnet 4.6  | Step 0.1 | Schema introspection is structured, deterministic, and read-only. Sonnet 4.6 handles SQL + JSON generation reliably at lower cost. |
+| Entity Scaffold Agent | Sonnet 4.6 | Step 0.2 | Schema → `output/src/` entity/DbContext (or ORM equivalent) is **structured** codegen — map columns to types, wire FKs, no feature logic. Sonnet 4.6 is sufficient; Opus is reserved for Step 3 Tech tasks. |
 | Designer Agent      | Sonnet 4.6  | Step 1   | Vision analysis + structured Markdown output. Sonnet 4.6 vision is accurate for design token extraction. No code generation needed. |
 | Specification Agent | Sonnet 4.6  | Step 1   | Decomposition requires strong reasoning but not code generation. Sonnet 4.6 produces high-quality structured documents at speed. |
 | Frontend Agent      | Opus 4.7    | Step 3   | Production UI code requires the highest-quality output: correct JSX, TypeScript, state management, API wiring, and test generation. |
-| Backend Agent       | Opus 4.7    | Step 0.2 + 3 | Entity scaffolding + service/controller/DTO generation requires deep technical precision and context-aware code writing. |
+| Backend Agent       | Opus 4.7    | Step 3   | Task-driven services/controllers/DTOs/endpoints need deep reasoning and multi-file coordination — same tier as Frontend Agent. (Step 0.2 uses **Entity Scaffold Agent**.) |
 | QA Agent            | Sonnet 4.6  | Step 3.5 | Read-only verification: walks task DoD, runs build/test commands, surfaces error-reports. No code generation, so Opus 4.7 cost is unjustified. |
 | DevOps Agent        | Sonnet 4.6  | Step 3.5 | Generates infrastructure config from stack templates. Structured Markdown/YAML output, no novel logic. |
 | Doc-Gen Agent       | Sonnet 4.6  | Step 3.5 | Produces human-readable Markdown docs from existing artifacts. No code, no novel inference. |
@@ -90,8 +91,9 @@ High-volume, low-complexity → Sonnet 4.6
   - Design analysis (run once per feature with PNG changes)
 
 Low-volume, high-complexity → Opus 4.7
-  - Code generation (run once per task, re-run only on failure)
-  - Scaffold generation (run once per project migration)
+  - Feature code generation (run once per task, re-run only on failure)
+
+Structured scaffold (Step 0.2) → Sonnet 4.6 via **Entity Scaffold Agent** (run manually when `output/src/` entities are needed)
 ```
 
 ---

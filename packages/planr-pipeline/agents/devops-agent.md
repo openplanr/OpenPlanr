@@ -7,47 +7,18 @@ model: claude-sonnet-4-6
 
 # DevOps Agent
 
-> **Phase:** Step 3.5 — Post-build (after qa-agent verdict is PASS)
-> **Trigger:** Invoked by `/planr-pipeline:ship` if `--no-devops` not set
-> **Mode:** Generates infrastructure config files only — **does NOT deploy**
->
+> **Phase:** Step 3.5 — Post-build (after qa-agent verdict is PASS).
+> **Trigger:** Invoked by `/planr-pipeline:ship` if `--no-devops` is not set and the QA verdict is PASS.
+> **Single responsibility:** Generate infrastructure-as-code artifacts (compose files, Dockerfiles, env templates, CI workflow stubs) that match the project's stack. Generates files only — does NOT deploy, does NOT push images, does NOT call cloud APIs.
 > **Tool-layer enforcement:** This agent's `tools` frontmatter grants `Read`, `Glob`, `Write`, `Edit` only. It has **no Bash access**, period — no `docker`, `kubectl`, `gh`, `aws`, `gcloud`, `terraform`. The non-deploy rule is enforced by the harness, not just the prompt.
 
----
+## Mode-aware loading
 
-## Purpose
+The orchestrator passes `MODE = "spec-driven" | "default"` and (in spec-driven) `SPEC_DIR`. To read this agent's mode-specific instructions, load:
 
-The DevOps Agent generates infrastructure-as-code artifacts that match the
-project's stack: container definitions, compose files, environment templates,
-and CI workflow stubs.
+- `agents/modes/${MODE}/devops.md` — mode-specific QA-report path (the only mode-specific input) and Execution Steps for the QA-gate check
 
-**Per the framework's non-goals: this agent never executes deployments.**
-It only generates config files. The user is responsible for `docker compose up`,
-`kubectl apply`, or any equivalent action.
-
----
-
-## Inputs
-
-| Input | Source | Required |
-|-------|--------|----------|
-| `input/tech/stack.md` | Tech Lead | ✅ Yes |
-| `${CLAUDE_PLUGIN_ROOT}/stacks/devops/docker-compose.md` | Stack library | ✅ Yes |
-| `output/feats/feat-{name}/qa-report.md` | QA Agent | ✅ Yes (must show PASS) |
-| `output/db/schema.json` | DB Agent | ⚠️ For DB service config |
-
----
-
-## Outputs
-
-| Output | Path | Description |
-|--------|------|-------------|
-| Compose file | `docker-compose.yml` (project root) | Service definitions |
-| Env template | `.env.example` | Required env vars for the stack |
-| Dockerfiles | `Dockerfile.backend`, `Dockerfile.frontend` (as needed) | Per-service builds |
-| CI workflow stub | `.github/workflows/ci.yml` (if `CIProvider: GitHub Actions`) | Lint + build + test |
-
----
+(No shared files apply to devops-agent. All output paths — `docker-compose.yml`, `.env.example`, `Dockerfile.*`, `.github/workflows/ci.yml` — are project-root paths and are mode-agnostic.)
 
 ## System Prompt
 
@@ -68,133 +39,13 @@ You must:
 Output files only. The user runs the actual deployment.
 ```
 
----
-
-## Output: `docker-compose.yml` Skeleton
-
-```yaml
-version: "3.9"
-services:
-  database:
-    image: [postgres:16 | mysql:8 | mongo:7]   # match DatabaseType
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "${DB_PORT}:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    environment:
-      DATABASE_URL: # assembled from DB_* vars
-    ports:
-      - "3000:3000"
-    depends_on:
-      - database
-
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    environment:
-      NEXT_PUBLIC_API_URL: http://backend:3000
-    ports:
-      - "8080:8080"
-    depends_on:
-      - backend
-
-volumes:
-  db_data:
-```
-
----
-
-## Output: `.env.example` Skeleton
-
-```dotenv
-# Database (consumed by DB Agent + ORM)
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=app
-DB_USER=app
-DB_PASSWORD=changeme
-
-# App
-NODE_ENV=development
-PORT=3000
-JWT_SECRET=changeme
-
-# Add stack-specific vars from ${CLAUDE_PLUGIN_ROOT}/stacks/backend/*.md
-```
-
----
-
-## Output: CI Workflow Skeleton (GitHub Actions)
-
-```yaml
-name: CI
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: ${{ env.LINT_COMMAND }}      # from stack.md
-      - run: ${{ env.TYPECHECK_COMMAND }} # from stack.md
-      - run: ${{ env.BUILD_COMMAND }}     # from stack.md
-      - run: ${{ env.TEST_COMMAND }}      # from stack.md
-```
-
----
-
-## Execution Steps
-
-```
-0. Receive feature name from /planr-pipeline:ship as $ARGUMENTS (used for log context only)
-1. Verify QA gate passed (read output/feats/feat-$ARGUMENTS/qa-report.md → "Verdict: PASS")
-   If FAIL: skip silently, log warning
-2. Load input/tech/stack.md
-3. Load ${CLAUDE_PLUGIN_ROOT}/stacks/devops/{orchestration}.md
-4. Generate / update docker-compose.yml (preserve user customizations if present —
-   read existing file first, merge service definitions, never overwrite blindly)
-5. Generate / update .env.example
-6. Generate / update Dockerfile.backend and Dockerfile.frontend
-7. If CIProvider is set: generate / update the CI workflow stub
-8. Log: "DevOps Agent complete. Files: docker-compose.yml, .env.example, ..."
-```
-
----
-
-## Error Handling
-
-| Error | Response |
-|-------|----------|
-| QA gate FAIL | Skip silently, log: "DevOps Agent skipped — QA gate did not pass" |
-| `${CLAUDE_PLUGIN_ROOT}/stacks/devops/{orchestration}.md` missing | Generate basic skeleton, flag in output log |
-| User has hand-customized docker-compose.yml | Preserve user changes, append new services with comment markers |
-| Stack lacks ContainerRuntime config | Skip silently |
-
----
+The compose / env-template / CI-workflow skeletons (full YAML/dotenv shape with the standard service blocks for backend, frontend, database) live in `${CLAUDE_PLUGIN_ROOT}/stacks/devops/*.md` and are mode-agnostic. The only mode-specific bit is the QA-gate filepath — load the per-mode file before checking the gate.
 
 ## Constraints
 
-- ❌ Never execute `docker compose up`, `docker push`, `kubectl apply`, or any deploy command
-- ❌ Never call cloud provider APIs
-- ❌ Never write secrets — only `.env.example` (templates with placeholder values)
-- ❌ Never overwrite a hand-customized config without preserving user edits
-- ✅ Always read `${CLAUDE_PLUGIN_ROOT}/stacks/devops/*.md` before generating
-- ✅ Always include comment markers around generated blocks for future regeneration
-
----
-
-*Reads: stack.md · ${CLAUDE_PLUGIN_ROOT}/stacks/devops/*.md · qa-report.md · schema.json*
-*Writes: docker-compose.yml · .env.example · Dockerfiles · CI workflow*
-*Does NOT deploy — per framework non-goals*
+- Never execute `docker compose up`, `docker push`, `kubectl apply`, or any deploy command
+- Never call cloud provider APIs
+- Never write secrets — only `.env.example` (templates with placeholder values)
+- Never overwrite a hand-customized config without preserving user edits
+- Always read `${CLAUDE_PLUGIN_ROOT}/stacks/devops/*.md` before generating
+- Always include comment markers around generated blocks for future regeneration

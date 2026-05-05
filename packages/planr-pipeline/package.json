@@ -1,0 +1,15 @@
+{
+  "name": "planr-pipeline",
+  "version": "0.7.3",
+  "private": true,
+  "type": "module",
+  "description": "OpenPlanr Protocol — Claude Code plugin conformance + docs",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "npm run test:schema && npm run test:orchestration",
+    "test:schema": "node --test tests/schema/spec-schema.test.mjs tests/schema/story-schema.test.mjs tests/schema/task-schema.test.mjs tests/schema/stack-schema.test.mjs tests/schema/pipeline-shipped-schema.test.mjs",
+    "test:orchestration": "node --test tests/orchestration/r1-gate.test.mjs tests/orchestration/max-iterations.test.mjs tests/orchestration/per-task-error-report.test.mjs tests/orchestration/dry-run.test.mjs"
+  }
+}

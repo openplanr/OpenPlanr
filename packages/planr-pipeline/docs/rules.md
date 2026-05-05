@@ -36,12 +36,11 @@ Rationale: More than 2 tasks per US creates coordination complexity and ambiguou
 
 ### R3 — Model Assignments Are Fixed
 ```
-Sonnet 4.6 → DB Agent, Designer Agent, Specification Agent
+Sonnet 4.6 → DB Agent, Designer Agent, Specification Agent, Entity Scaffold Agent
 Opus 4.7   → Frontend Agent, Backend Agent
 ```
-Rationale: Sonnet 4.6 is sufficient and faster for analysis/decomposition.
-Opus 4.7 is required for the nuanced code generation work.
-Never swap these without updating all AGENT.md files.
+Rationale: Sonnet 4.6 is sufficient for analysis, decomposition, and **structured** schema→scaffold output (Entity Scaffold Agent — Step 0.2). Opus 4.7 is required for exploratory multi-file DEV codegen (Frontend + Backend task implementation).
+Never swap these without updating all agent frontmatter files and `docs/agent-model-map.md`.
 
 ---
 
@@ -67,25 +66,30 @@ Rationale: Preserved files represent existing functionality that must not regres
 
 ### R6 — Max 3 Correction Iterations
 ```
-Per task, after each code-generation pass, the DEV agent runs (in order, all from input/tech/stack.md):
+Per task, after each code-generation pass, the DEV agent runs (in order, all commands from input/tech/stack.md — skip any that are empty / undefined):
   1. LintCommand        (if defined)
   2. TypeCheckCommand   (if defined)
-  3. BuildCommand       (required)
-  4. TestCommand        (required — unit + integration)
+  3. BuildCommand       (required for this pipeline)
+  4. TestCommand        (required — must meaningfully exercise generated code for this repo)
 
-On any failure, enter the correction loop:
-  - Iteration 1: direct fix
-  - Iteration 2: holistic re-read of task + design-spec/schema + stack
-  - Iteration 3: minimal safe fix
-  - After 3: STOP. Write error-report.md using templates/error-report.md schema
-            to output/feats/feat-{name}/us-{N}/tasks/error-report.md. Escalate to human.
+On any failure, enter the correction loop (same task, same agent):
+  • Pass 1: direct fix against the failing command
+  • Pass 2: holistic re-read of the active task file + design-spec or schema (when relevant) + stack — then fix
+  • Pass 3: minimal safe fix — then re-run the full R6 command chain
+  • After 3 failed passes: STOP. Write the human handoff report using `templates/error-report.md` **shape** at the per-task path **`<tasks-dir>/T-<TASK_ID>-error-report.md`**, where `<TASK_ID>` is the failing task's YAML `id` (`^T-\\d{3}$`). Do **not** write a singleton `error-report.md` that could clobber parallel failures.
+      – Default mode:   `output/feats/feat-{name}/us-{N}/tasks/T-<TASK_ID>-error-report.md`
+      – Spec-driven:    `<SPEC_DIR>/tasks/T-<TASK_ID>-error-report.md`
+    Escalate to a human — do not spin further.
 
 Forbidden shortcuts: --no-verify, // @ts-ignore (without justification), skip()'d tests,
-                     stubbed return values to fool tests, removing assertions.
+                     stubbed return values to fool tests, removing assertions to green the run.
 ```
+
+**Authoritative copy:** Only this section defines the correction loop normatively. Prompts (`agents/*.md`), mode packs (`agents/modes/**`), orchestrator commands (`commands/*.md`), and `docs/pipeline-overview.md` MUST link here instead of copying multi-step loop prose. They may keep **operational sequencing** (which task paths to load, when to invoke Bash) — not a second definition of passes 1–3.
+
 Rationale: Infinite retry loops are expensive and rarely converge after 3 attempts
 without a fundamentally different approach (which requires human judgment).
-The error-report.md is the formal handoff artifact — it captures the iteration log,
+The error report is the formal handoff artifact — it captures the attempt log,
 suspected root cause, and recommended human action.
 
 ---
