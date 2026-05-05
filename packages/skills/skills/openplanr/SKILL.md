@@ -421,7 +421,7 @@ title: "Story title"
 specId: "SPEC-001"
 slug: "story-slug"
 schemaVersion: "1.0.0"
-status: "pending"            # pending | in-progress | done
+status: "pending"            # pending | in-progress | done | blocked
 priority: "P0"               # P0 | P1 | P2 | P3
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
@@ -439,7 +439,7 @@ slug: "task-slug"
 schemaVersion: "1.0.0"
 type: "UI"                   # UI | Tech (UI → frontend-agent, Tech → backend-agent)
 agent: "frontend-agent"      # frontend-agent | backend-agent | (db-agent for migrations)
-status: "pending"
+status: "pending"            # pending | in-progress | done | blocked
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
 ---
@@ -447,6 +447,30 @@ updated: "YYYY-MM-DD"
 
 The pipeline's specification-agent generates these automatically. If you need
 to hand-author them (e.g., AI is unavailable), use these templates verbatim.
+
+### Cross-runtime resume via task `status` (planr-pipeline v0.8.0+)
+
+The pipeline's `/ship` command reads each task's `status` on entry and
+partitions the dispatch queue:
+
+| status | behaviour |
+|---|---|
+| `done` | skip — already shipped |
+| `pending` | enqueue (fresh task) |
+| `in-progress` | enqueue + recover (prior run crashed) |
+| `blocked` | enqueue + retry (prior R6 wrote `tasks/T-NNN-error-report.md`) |
+
+This makes a partially-shipped SPEC resumable across sessions, machines,
+and runtimes — a SPEC half-shipped on Claude Code can finish on Cursor and
+vice versa.
+
+On Cursor and Codex `/ship` defaults to `DISPATCH_MODE: per-task` (one task
+per invocation) because Composer / persona role-shift is a single
+continuous session and cumulative context biases the model toward
+"verification rollup" instead of fresh codegen. On Claude Code the default
+is `multi-task` because manifest-isolated subagents give each task a clean
+context. Override with `--all-tasks` when you know your runtime supports
+isolated subagents.
 
 ### Spec-driven command sequence (Path B — when no pipeline plugin)
 

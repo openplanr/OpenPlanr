@@ -2,6 +2,20 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] — 2026-05-05
+
+### Changed — Aligned with `planr-pipeline` v0.8.0
+
+`skills/openplanr/SKILL.md` now teaches the v0.8.0 task lifecycle:
+
+- Status enum widened to `pending | in-progress | done | blocked` (was `pending | in-progress | done`). Aligns with the pipeline's task schema and the new error-report companion files.
+- New "Cross-runtime resume via task `status`" section documents the four-way status partition the pipeline uses on `/ship` entry, plus the `DISPATCH_MODE` default per runtime (Cursor/Codex `per-task`, Claude Code `multi-task`).
+
+### Pairs with
+
+- `planr-pipeline` v0.8.0 — schema discipline, mode isolation, run manifest, per-task error reports, dispatch state machine
+- `openplanr` (planr CLI) v1.5.3 — `TaskStatus` widened to include `'blocked'` so Linear sync no longer demotes blocked tasks
+
 ## [1.4.0] — 2026-04-30
 
 ### Changed — Aligned with `planr-pipeline` rename
