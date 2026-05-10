@@ -142,12 +142,14 @@ describe('CodexGenerator.generate file-list per scope', () => {
     expect(files[0].content).toContain('Planr Pipeline Orchestration');
   });
 
-  it('all scope produces 1 file (AGENTS.md with both sections concatenated)', async () => {
+  it('all scope produces 2 marker-tagged files (agile + pipeline blocks for AGENTS.md)', async () => {
     const gen = new CodexGenerator(mockConfig, '/tmp');
     gen.setScope('all');
     const files = await gen.generate(emptyArtifacts);
-    expect(files).toHaveLength(1);
+    expect(files).toHaveLength(2);
+    expect(files[0].markerName).toBe('agile');
+    expect(files[1].markerName).toBe('pipeline');
     expect(files[0].content).toContain('Agent Instructions');
-    expect(files[0].content).toContain('Planr Pipeline Orchestration');
+    expect(files[1].content).toContain('Planr Pipeline Orchestration');
   });
 });

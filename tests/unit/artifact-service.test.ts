@@ -219,7 +219,9 @@ describe('readArtifactRaw', () => {
 describe('updateArtifact', () => {
   it('writes new content to existing artifact file', async () => {
     mockListFiles.mockResolvedValue(['EPIC-001-test.md']);
-    await updateArtifact('/project', config, 'epic', 'EPIC-001', 'new content');
+    await updateArtifact('/project', config, 'epic', 'EPIC-001', 'new content', {
+      skipValidation: true,
+    });
     expect(mockWriteFile).toHaveBeenCalledWith(
       expect.stringContaining('EPIC-001-test.md'),
       'new content',

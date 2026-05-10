@@ -139,7 +139,17 @@ describe('aiTasksResponseSchema', () => {
 });
 
 describe('aiRefineResponseSchema', () => {
-  it('accepts valid refine response', () => {
+  it('accepts valid refine response with structured deltas', () => {
+    const result = aiRefineResponseSchema.safeParse({
+      suggestions: ['Suggestion 1'],
+      improved: { title: 'Improved' },
+      frontmatterChanges: { title: 'Better title' },
+      bodyChanges: [{ type: 'replaceSection', heading: 'Description', newContent: 'New desc' }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts valid refine response with legacy improvedMarkdown', () => {
     const result = aiRefineResponseSchema.safeParse({
       suggestions: ['Suggestion 1'],
       improved: { title: 'Improved' },
@@ -152,18 +162,16 @@ describe('aiRefineResponseSchema', () => {
     const result = aiRefineResponseSchema.safeParse({
       suggestions: [],
       improved: {},
-      improvedMarkdown: 'content',
     });
     expect(result.success).toBe(false);
   });
 
-  it('rejects empty improvedMarkdown', () => {
+  it('accepts response with no improvedMarkdown and no deltas (no changes)', () => {
     const result = aiRefineResponseSchema.safeParse({
       suggestions: ['S1'],
       improved: {},
-      improvedMarkdown: '',
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 });
 

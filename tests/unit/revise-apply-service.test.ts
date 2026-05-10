@@ -55,7 +55,7 @@ function buildSampleAudit(artifactPath: string, oldBlock: string, newBlock: stri
 \`\`\`diff
 --- EPIC-200 (before)
 +++ EPIC-200 (proposed)
-@@ -1,3 +1,3 @@
+@@ -6,3 +6,3 @@
  # EPIC-200: Sample
 -${oldBlock}
 +${newBlock}
@@ -78,7 +78,7 @@ describe('runApplyFromAudit', () => {
     mkdirSync(join(projectDir, '.planr', 'reports'), { recursive: true });
     writeFileSync(
       join(projectDir, '.planr', 'epics', 'EPIC-200-sample.md'),
-      '# EPIC-200: Sample\nold dependencies\ntrailer\n',
+      '---\nid: "EPIC-200"\ntitle: "Sample"\nstatus: "pending"\n---\n# EPIC-200: Sample\nold dependencies\ntrailer\n',
     );
     await gitCommit(projectDir, 'initial');
   });
@@ -110,7 +110,10 @@ describe('runApplyFromAudit', () => {
     expect(after).not.toContain('old dependencies');
 
     // Restore for subsequent tests.
-    writeFileSync(artifactPath, '# EPIC-200: Sample\nold dependencies\ntrailer\n');
+    writeFileSync(
+      artifactPath,
+      '---\nid: "EPIC-200"\ntitle: "Sample"\nstatus: "pending"\n---\n# EPIC-200: Sample\nold dependencies\ntrailer\n',
+    );
     await gitCommit(projectDir, 'reset after apply test');
   });
 
@@ -139,7 +142,10 @@ describe('runApplyFromAudit', () => {
     const artifactPath = join(projectDir, '.planr', 'epics', 'EPIC-200-sample.md');
     // Simulate drift: file no longer contains the `old dependencies` line
     // that the diff's context expects.
-    writeFileSync(artifactPath, '# EPIC-200: Sample\nLOCAL EDIT\ntrailer\n');
+    writeFileSync(
+      artifactPath,
+      '---\nid: "EPIC-200"\ntitle: "Sample"\nstatus: "pending"\n---\n# EPIC-200: Sample\nLOCAL EDIT\ntrailer\n',
+    );
     await gitCommit(projectDir, 'local drift');
 
     const auditPath = join(projectDir, '.planr', 'reports', 'audit-stale-test.md');
@@ -164,7 +170,10 @@ describe('runApplyFromAudit', () => {
     expect(readFileSync(artifactPath, 'utf-8')).toBe(before); // unchanged
 
     // Restore.
-    writeFileSync(artifactPath, '# EPIC-200: Sample\nold dependencies\ntrailer\n');
+    writeFileSync(
+      artifactPath,
+      '---\nid: "EPIC-200"\ntitle: "Sample"\nstatus: "pending"\n---\n# EPIC-200: Sample\nold dependencies\ntrailer\n',
+    );
     await gitCommit(projectDir, 'reset after stale test');
   });
 

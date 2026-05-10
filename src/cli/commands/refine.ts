@@ -26,7 +26,9 @@ import {
   readArtifactRaw,
   updateArtifact,
 } from '../../services/artifact-service.js';
+import { validateArtifactBytes } from '../../services/artifact-validation.js';
 import { loadConfig } from '../../services/config-service.js';
+import { applyRefineDeltas } from '../../services/delta-apply-service.js';
 import { promptSelect } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
 import { toMarkdownWithFrontmatter } from '../../utils/markdown.js';
@@ -117,16 +119,31 @@ async function refineOne(
     maxTokens: TOKEN_BUDGETS.refine,
   });
 
-  // Resolve improvedMarkdown — if AI returned JSON instead of markdown, reconstruct it
-  let markdown = result.improvedMarkdown;
-  const trimmed = markdown.trim();
-  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-    logger.warn('AI returned JSON instead of markdown. Reconstructing from improved data...');
-    const improved = result.improved as ArtifactFrontmatter;
-    markdown = toMarkdownWithFrontmatter(
-      improved,
-      rawContent.split('---').slice(2).join('---').trim(),
-    );
+  // Resolve the AI response: prefer structured deltas, fall back to legacy improvedMarkdown
+  const hasDelta =
+    (result.frontmatterChanges && Object.keys(result.frontmatterChanges).length > 0) ||
+    (result.bodyChanges && result.bodyChanges.length > 0);
+
+  let markdown: string;
+  if (hasDelta) {
+    markdown = applyRefineDeltas(rawContent, result.frontmatterChanges, result.bodyChanges);
+  } else if (result.improvedMarkdown) {
+    logger.warn('AI returned legacy improvedMarkdown — validating before apply...');
+    const validation = validateArtifactBytes(type, rawContent, result.improvedMarkdown);
+    if (!validation.ok) {
+      logger.error(`Refusing legacy improvedMarkdown: ${validation.reason}`);
+      logger.dim('Falling back to JSON-reconstructed frontmatter...');
+      const improved = result.improved as ArtifactFrontmatter;
+      markdown = toMarkdownWithFrontmatter(
+        improved,
+        rawContent.split('---').slice(2).join('---').trim(),
+      );
+    } else {
+      markdown = result.improvedMarkdown;
+    }
+  } else {
+    logger.info('AI returned no changes.');
+    return;
   }
 
   // Display improvements summary
@@ -141,7 +158,7 @@ async function refineOne(
     'Action:',
     [
       { name: 'Apply improved version', value: 'apply' },
-      { name: 'View improved version', value: 'view' },
+      { name: 'View changes', value: 'view' },
       { name: 'Skip (keep original)', value: 'skip' },
     ],
     'apply',
@@ -154,7 +171,24 @@ async function refineOne(
 
   if (action === 'view') {
     display.separator(50);
-    display.line(chalk.green(markdown));
+    if (hasDelta) {
+      if (result.frontmatterChanges && Object.keys(result.frontmatterChanges).length > 0) {
+        display.line(chalk.cyan('Frontmatter changes:'));
+        for (const [k, v] of Object.entries(result.frontmatterChanges)) {
+          display.line(`  ${k}: ${String(v)}`);
+        }
+      }
+      if (result.bodyChanges && result.bodyChanges.length > 0) {
+        display.line(chalk.cyan('Body changes:'));
+        for (const change of result.bodyChanges) {
+          if (change.type === 'replaceSection')
+            display.line(`  Replace section: ${change.heading}`);
+          else display.line(`  Replace text: "${change.findExact?.slice(0, 50)}..."`);
+        }
+      }
+    } else {
+      display.line(chalk.green(markdown));
+    }
     display.separator(50);
 
     const applyAfterView = await promptSelect(

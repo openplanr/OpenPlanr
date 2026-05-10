@@ -46,6 +46,7 @@ import type { OpenPlanrConfig, ReviseAuditEntry } from '../models/types.js';
 import { applyUnifiedDiff } from '../utils/diff.js';
 import { readFile } from '../utils/fs.js';
 import { display, logger } from '../utils/logger.js';
+import { validateArtifactBytes } from './artifact-validation.js';
 import { atomicWriteFile } from './atomic-write-service.js';
 import { createAuditLogWriter } from './audit-log-service.js';
 import { checkCleanTree, checkoutPaths } from './git-service.js';
@@ -158,6 +159,16 @@ export async function runApplyFromAudit(opts: ApplyFromAuditOptions): Promise<nu
       conflicts++;
       recordSkip(writer, entry, 'conflict-skipped', patch.error ?? 'diff did not apply cleanly');
       logger.warn(`${progress}: conflict — ${patch.error}`);
+      continue;
+    }
+
+    const artifactType = ((entry as unknown as Record<string, unknown>).artifactType ??
+      'task') as import('../models/types.js').ArtifactType;
+    const validation = validateArtifactBytes(artifactType, currentContent, patch.result ?? '');
+    if (!validation.ok) {
+      conflicts++;
+      recordSkip(writer, entry, 'conflict-skipped', `invariant violation: ${validation.reason}`);
+      logger.warn(`${progress}: revise skipped — ${validation.reason}`);
       continue;
     }
 

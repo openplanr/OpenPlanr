@@ -933,7 +933,9 @@ export async function runLinearTaskCheckboxSync(
       if (newBody !== body) {
         if (!dryRun) {
           const newRaw = raw.slice(0, close + 4) + newBody;
-          await updateArtifact(projectDir, config, 'task', taskFileId, newRaw);
+          await updateArtifact(projectDir, config, 'task', taskFileId, newRaw, {
+            skipValidation: true,
+          });
         }
         summary.filesUpdatedLocal++;
       }

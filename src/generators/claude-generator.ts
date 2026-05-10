@@ -16,7 +16,8 @@ export class ClaudeGenerator extends BaseGenerator {
     const date = new Date().toISOString().split('T')[0];
     const files: GeneratedFile[] = [];
 
-    // Always render CLAUDE.md (the file's body adapts via {{#if pipelineScope}}).
+    // CLAUDE.md is planr-managed as a whole — splice via marker so
+    // hand-written content above/below the managed block is preserved.
     const claudeContent = await renderTemplate(
       'rules/claude/CLAUDE.md.hbs',
       {
@@ -32,6 +33,7 @@ export class ClaudeGenerator extends BaseGenerator {
     files.push({
       path: path.join(this.config.outputPaths.claudeConfig, 'CLAUDE.md'),
       content: claudeContent,
+      markerName: 'agile',
     });
 
     // When scope ⊇ pipeline, also write the sibling reference card.
