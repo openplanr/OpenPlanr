@@ -5,11 +5,11 @@ argument-hint: <slug>
 
 # /planr-pipeline:status {slug}
 
-Read-only rollup for `${SLUG}` (first token — same slug hygiene as `/plan`). Never mutates disk. Fatals use **`commands/procedures/fatal-error-format.md`**.
+Read-only rollup for `${SLUG}` (first token — same slug hygiene as `/plan`). Never mutates disk. Fatals use **`procedures/fatal-error-format.md`**.
 
 ## Step 0 — Bind paths
 
-1. Run **`commands/procedures/mode-detection.md`** with `${SLUG}` from argv.
+1. Run **`procedures/mode-detection.md`** with `${SLUG}` from argv.
 2. If spec missing / feat dir missing, mirror `/ship` absent-input messages (two-line).
 
 Counts:

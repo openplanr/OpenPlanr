@@ -7,15 +7,15 @@ Greenfield directory + Node-stack brief. Intent is unambiguous. **Auto-scaffold 
 ```
 SCAFFOLD_NODE checklist (each must complete before continuing):
   1. Identify primary framework from BRIEF
-  2. Stage pre-existing assets via STAGE_DESIGN_ASSETS (invoke `${CLAUDE_PLUGIN_ROOT}/commands/procedures/stage-design-assets.md`)
+  2. Stage pre-existing assets via STAGE_DESIGN_ASSETS (invoke `${CLAUDE_PLUGIN_ROOT}/procedures/stage-design-assets.md`)
   3. Verify project root is now empty (or contains only hidden files)
   4. Announce scaffolding
   5. Run framework scaffolder
   6. Install additional deps from BRIEF
   7. Run post-scaffold init commands implied by BRIEF
-  8. Apply WRITE_PLANR_DIRS (`${CLAUDE_PLUGIN_ROOT}/commands/procedures/write-planr-dirs.md`)
-  9. Apply AUTHOR_STACK_FROM_BRIEF (`${CLAUDE_PLUGIN_ROOT}/commands/procedures/author-stack-from-brief.md`)
-  10. Apply RESTORE_DESIGN_ASSETS (invoke `${CLAUDE_PLUGIN_ROOT}/commands/procedures/restore-design-assets.md`) — copy stash into the spec design folder later (after Step 1 spec scaffold)
+  8. Apply WRITE_PLANR_DIRS (`${CLAUDE_PLUGIN_ROOT}/procedures/write-planr-dirs.md`)
+  9. Apply AUTHOR_STACK_FROM_BRIEF (`${CLAUDE_PLUGIN_ROOT}/procedures/author-stack-from-brief.md`)
+  10. Apply RESTORE_DESIGN_ASSETS (invoke `${CLAUDE_PLUGIN_ROOT}/procedures/restore-design-assets.md`) — copy stash into the spec design folder later (after Step 1 spec scaffold)
   11. Mark Phase A complete; continue to Phase B (Step 1)
 ```
 
@@ -32,7 +32,7 @@ The "primary" framework is the one that defines the project shape — typically 
 
 If `BRIEF` mentions multiple top-level frameworks at the same level (rare hybrid), pick the one with a canonical CLI scaffolder. If still ambiguous, default to **Next.js**.
 
-**2.** Before running any scaffolder, load and execute **`${CLAUDE_PLUGIN_ROOT}/commands/procedures/stage-design-assets.md`**.
+**2.** Before running any scaffolder, load and execute **`${CLAUDE_PLUGIN_ROOT}/procedures/stage-design-assets.md`**.
 
 **3. Verify project root is empty.**
 
@@ -94,9 +94,9 @@ If no CLI, fall back to `npm init` + minimal entry.
 
 **8. Print:** `✓ Project scaffolded.`
 
-**9.** Run `${CLAUDE_PLUGIN_ROOT}/commands/procedures/write-planr-dirs.md`.
+**9.** Run `${CLAUDE_PLUGIN_ROOT}/procedures/write-planr-dirs.md`.
 
-**10.** Run `${CLAUDE_PLUGIN_ROOT}/commands/procedures/author-stack-from-brief.md` (no-op when `BRIEF` is empty or has no stack hints).
+**10.** Run `${CLAUDE_PLUGIN_ROOT}/procedures/author-stack-from-brief.md` (no-op when `BRIEF` is empty or has no stack hints).
 
 **11. Print:** `✓ Bootstrapped .planr/. Continuing to PO Phase.` **You are not done** until Step 1 + Step 2 + Completion Contract pass. `RESTORE_DESIGN_ASSETS` runs inside Step 1 once the spec's `design/` folder exists.
 

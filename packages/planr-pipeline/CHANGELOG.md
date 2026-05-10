@@ -4,6 +4,25 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.9.1] — 2026-05-11
+
+### Fixed — Procedure files exposed as slash commands
+
+`commands/procedures/` moved to `procedures/` at the plugin root. The Claude Code plugin loader registers every `.md` under `commands/` as a slash command — so 19 internal procedure files (mode-detection, memory-read, strategy-*, etc.) were polluting the user's autocomplete menu alongside the 3 real commands (`plan`, `ship`, `status`).
+
+Users now see exactly 3 commands. Internal procedures are still readable by the orchestrator via `${CLAUDE_PLUGIN_ROOT}/procedures/` — no behavioral change.
+
+#### Files touched
+
+- 19 procedure files moved from `commands/procedures/` → `procedures/`
+- All path references updated in `commands/plan.md`, `commands/ship.md`, `commands/status.md`, `docs/protocol/runtime-adapters.md`, and 7 procedure files that cross-reference each other
+
+## [0.9.0] — 2026-05-11
+
+### Added — Project memory, task rationale, clarification loop, R10
+
+See [v0.9.0 release notes](https://github.com/openplanr/planr-pipeline/releases/tag/v0.9.0).
+
 ## [0.8.0] — 2026-05-03
 
 ### Changed — Mode isolation refactor
@@ -28,7 +47,7 @@ Dual-mode prompt content has been extracted from each agent prompt body into per
 - 7 agent entry files rewritten as thin loaders (`agents/{specification,designer,frontend,backend,qa,devops,doc-gen}-agent.md`). `agents/db-agent.md` is unchanged — it has no dual-mode content.
 - 14 new per-mode files at `agents/modes/{spec-driven,default}/<role>.md`.
 - 3 new shared files at `agents/modes/shared/{contract-create-modify-preserve.md, correction-loop-frontend.md, correction-loop-backend.md}`.
-- New `commands/procedures/mode-detection.md` shared between `/plan` and `/ship`.
+- New `procedures/mode-detection.md` shared between `/plan` and `/ship`.
 - Updated `commands/plan.md` and `commands/ship.md` to load the shared `mode-detection` procedure.
 - New `conformance/fixtures/default-mode/` fixture plus updated `conformance/runner.mjs` that auto-detects mode from fixture layout.
 - Harmonized `templates/spec.md.tpl` frontmatter to v1.0.0 schema.
@@ -57,13 +76,13 @@ Dual-mode prompt content has been extracted from each agent prompt body into per
 
 ### Changed — Split `commands/plan.md` into procedures (SPEC-003)
 
-`commands/plan.md` is a thin orchestrator (≤100 lines plus the immutable five-strategy matrix table bound to orchestration). PO Phase sequencing lives in `${CLAUDE_PLUGIN_ROOT}/commands/procedures/plan-step0-preflight.md`, `plan-step1-mode-and-spec.md`, and `plan-steps-2-through-completion.md`, alongside the existing `strategy-*.md`, `stage-design-assets.md`, and `restore-design-assets.md` procedures. Behaviour is intentionally unchanged versus the inlined v0.7.3 prose; conformance remains the state verifier for PLAN+SHIP workflows.
+`commands/plan.md` is a thin orchestrator (≤100 lines plus the immutable five-strategy matrix table bound to orchestration). PO Phase sequencing lives in `${CLAUDE_PLUGIN_ROOT}/procedures/plan-step0-preflight.md`, `plan-step1-mode-and-spec.md`, and `plan-steps-2-through-completion.md`, alongside the existing `strategy-*.md`, `stage-design-assets.md`, and `restore-design-assets.md` procedures. Behaviour is intentionally unchanged versus the inlined v0.7.3 prose; conformance remains the state verifier for PLAN+SHIP workflows.
 
 Project root `input/tech/stack.md` now declares `schemaVersion: "1.0.0"` so schema validation exits clean.
 
 #### Files touched (plan split / SPEC-003)
 
-- Thin `commands/plan.md` plus new `commands/procedures/plan-step0-preflight.md`, `plan-step1-mode-and-spec.md`, `plan-steps-2-through-completion.md`.
+- Thin `commands/plan.md` plus new `procedures/plan-step0-preflight.md`, `plan-step1-mode-and-spec.md`, `plan-steps-2-through-completion.md`.
 - Existing `strategy-*.md`, `stage-design-assets.md`, `restore-design-assets.md` procedure files finalized as authoritative strategy bodies extricated from `/plan`.
 
 ### Added — Run manifest + per-task error reports (SPEC-008)

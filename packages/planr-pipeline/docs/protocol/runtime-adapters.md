@@ -96,7 +96,7 @@ Each agent prompt is now a thin **entry loader** (≤60 lines) at `agents/<role>
 
 Per-mode prompt content lives at `agents/modes/{spec-driven,default}/<role>.md` (≤120 lines each). Truly identical content — the create/modify/preserve contract, the correction-loop protocols — lives at `agents/modes/shared/<topic>.md` and is referenced from both per-mode files.
 
-The mode-detection block used by both orchestrator commands lives at `commands/procedures/mode-detection.md` and is `Read` from `commands/plan.md` and `commands/ship.md`.
+The mode-detection block used by both orchestrator commands lives at `procedures/mode-detection.md` and is `Read` from `commands/plan.md` and `commands/ship.md`.
 
 ### Why it exists
 

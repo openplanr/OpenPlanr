@@ -28,7 +28,7 @@ This command has **EXACTLY** these phases, in order:
 
 **You are NOT done when a Bash command succeeds. You are NOT done when scaffolding completes. You are NOT done when bootstrap files are written.**
 
-You are done ONLY when the **Completion Contract** in `${CLAUDE_PLUGIN_ROOT}/commands/procedures/plan-steps-2-through-completion.md` is satisfied — every checkbox verified on disk.
+You are done ONLY when the **Completion Contract** in `${CLAUDE_PLUGIN_ROOT}/procedures/plan-steps-2-through-completion.md` is satisfied — every checkbox verified on disk.
 
 If you cannot complete a phase (subagent fails, scaffolder fails, missing dep), abort with a clear error identifying which phase failed and what state was reached. **Do not print success.** Do not silently exit.
 
@@ -53,7 +53,7 @@ Bash success is a step result, not a phase result. After every successful Bash c
 
 ## Step 0 — Pre-flight (state machine)
 
-**Execute** `${CLAUDE_PLUGIN_ROOT}/commands/procedures/plan-step0-preflight.md` from start to finish. That procedure sanitizes `$ARGUMENTS`, parses `SLUG` + `BRIEF`, runs **`### 0.4`–`### 0.5`** (signals + the coverage table below), invokes **exactly one** `${CLAUDE_PLUGIN_ROOT}/commands/procedures/strategy-*.md` file (**`### 0.6`**), and ends with the **Phase A** verification gate. Do not skip that gate.
+**Execute** `${CLAUDE_PLUGIN_ROOT}/procedures/plan-step0-preflight.md` from start to finish. That procedure sanitizes `$ARGUMENTS`, parses `SLUG` + `BRIEF`, runs **`### 0.4`–`### 0.5`** (signals + the coverage table below), invokes **exactly one** `${CLAUDE_PLUGIN_ROOT}/procedures/strategy-*.md` file (**`### 0.6`**), and ends with the **Phase A** verification gate. Do not skip that gate.
 
 ### Five-strategy decision matrix (coverage map)
 
@@ -71,19 +71,19 @@ Five rows. Five states. Mutually exclusive. Total coverage.
 
 ## Step 1 — MODE binding + input validation
 
-**Execute** `${CLAUDE_PLUGIN_ROOT}/commands/procedures/plan-step1-mode-and-spec.md`. This binds `MODE` / `SPEC_DIR` via **`mode-detection.md`**, validates inputs, optionally auto-scaffolds the spec shell, and ends with the **Phase B** verification gate.
+**Execute** `${CLAUDE_PLUGIN_ROOT}/procedures/plan-step1-mode-and-spec.md`. This binds `MODE` / `SPEC_DIR` via **`mode-detection.md`**, validates inputs, optionally auto-scaffolds the spec shell, and ends with the **Phase B** verification gate.
 
 ---
 
 ## Step 1.5 — Read resolved clarifications (if present)
 
-**Execute** `${CLAUDE_PLUGIN_ROOT}/commands/procedures/read-clarifications.md`. If a prior `/plan` run emitted `clarifications.md` and the PO has filled in `**Resolved:**` answers, this procedure parses them and injects the answers into the specification-agent's dispatch context. If no clarifications file exists, this step is a no-op.
+**Execute** `${CLAUDE_PLUGIN_ROOT}/procedures/read-clarifications.md`. If a prior `/plan` run emitted `clarifications.md` and the PO has filled in `**Resolved:**` answers, this procedure parses them and injects the answers into the specification-agent's dispatch context. If no clarifications file exists, this step is a no-op.
 
 ---
 
 ## Step 2 — Subagents + Completion Contract + STOP
 
-**Execute** `${CLAUDE_PLUGIN_ROOT}/commands/procedures/plan-steps-2-through-completion.md`. This covers Step 2 subagent sequencing, the Phase C verification gate, the Completion Contract, the success summary, **STOP**, and **Failure modes**.
+**Execute** `${CLAUDE_PLUGIN_ROOT}/procedures/plan-steps-2-through-completion.md`. This covers Step 2 subagent sequencing, the Phase C verification gate, the Completion Contract, the success summary, **STOP**, and **Failure modes**.
 
 ### Step 0.2 — Entity scaffold (optional; **not** part of the default Step 2 chain)
 
@@ -95,15 +95,15 @@ After **`output/db/schema.json`** exists, if the Tech Lead needs ORM entities / 
 
 | Piece | Procedure file |
 |---|---|
-| Step 0 + Phase A | `commands/procedures/plan-step0-preflight.md` |
-| Dry-run preview | `commands/procedures/plan-dry-run-preview.md` *(§ 0.5b only)* |
-| Fatal UX | `commands/procedures/fatal-error-format.md` |
+| Step 0 + Phase A | `procedures/plan-step0-preflight.md` |
+| Dry-run preview | `procedures/plan-dry-run-preview.md` *(§ 0.5b only)* |
+| Fatal UX | `procedures/fatal-error-format.md` |
 | Strategies | `strategy-continue.md`, `strategy-bootstrap-only.md`, `strategy-scaffold-node.md`, `strategy-ask-manual.md`, `strategy-ask-stack.md` |
 | Common (invoked by 2+ strategies) | `write-planr-dirs.md`, `author-stack-from-brief.md`, `stage-design-assets.md`, `restore-design-assets.md` |
-| Step 1 + Phase B | `commands/procedures/plan-step1-mode-and-spec.md` |
-| Mode detection (shared with `/ship`) | `commands/procedures/mode-detection.md` |
-| Auto-scaffold spec shell (Step 1b) | `commands/procedures/auto-scaffold-spec.md` |
-| Step 2 → finish | `commands/procedures/plan-steps-2-through-completion.md` |
+| Step 1 + Phase B | `procedures/plan-step1-mode-and-spec.md` |
+| Mode detection (shared with `/ship`) | `procedures/mode-detection.md` |
+| Auto-scaffold spec shell (Step 1b) | `procedures/auto-scaffold-spec.md` |
+| Step 2 → finish | `procedures/plan-steps-2-through-completion.md` |
 
 ---
 

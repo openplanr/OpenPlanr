@@ -10,4 +10,4 @@ Replace `<command>` and the reuse string with the real invocation (include slug,
 
 ---
 
-*Referenced by:* `commands/plan.md`, `commands/ship.md`, `commands/status.md`, `commands/procedures/mode-detection.md` (when tightening error UX).
+*Referenced by:* `commands/plan.md`, `commands/ship.md`, `commands/status.md`, `procedures/mode-detection.md` (when tightening error UX).

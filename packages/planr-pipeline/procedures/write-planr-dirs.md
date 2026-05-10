@@ -15,4 +15,4 @@ Writes the minimal `.planr/` scaffolding plus the `input/tech/` directory used b
 2. Create `.planr/specs/` if absent.
 3. Create `input/tech/` if absent.
 
-Returns control to the calling strategy. Strategies typically run `AUTHOR_STACK_FROM_BRIEF` (`${CLAUDE_PLUGIN_ROOT}/commands/procedures/author-stack-from-brief.md`) immediately after, when `BRIEF` mentions stack components.
+Returns control to the calling strategy. Strategies typically run `AUTHOR_STACK_FROM_BRIEF` (`${CLAUDE_PLUGIN_ROOT}/procedures/author-stack-from-brief.md`) immediately after, when `BRIEF` mentions stack components.

@@ -5,7 +5,7 @@ argument-hint: <slug> [--task T-NNN] [--yes] [--no-devops] [--no-docs]
 
 # /planr-pipeline:ship {slug …}
 
-Orchestrates the DEV Phase for `feat-${SLUG}` (see **`commands/procedures/ship-arguments-and-cost-gate.md`** for flag stripping rules). Generates production code from PO-Phase task files, runs the qa-agent gate, optionally generates infra and docs, then refreshes `CLAUDE.md` via the snapshot skill.
+Orchestrates the DEV Phase for `feat-${SLUG}` (see **`procedures/ship-arguments-and-cost-gate.md`** for flag stripping rules). Generates production code from PO-Phase task files, runs the qa-agent gate, optionally generates infra and docs, then refreshes `CLAUDE.md` via the snapshot skill.
 
 **Flags:**
 
@@ -29,7 +29,7 @@ Touch `.claude/.snapshot-pending` so the Stop hook (in `${CLAUDE_PLUGIN_ROOT}/ho
 
 ## Step 0.5 — Parse argv (`ship-arguments-and-cost-gate.md` **Phase A**)
 
-Execute **`${CLAUDE_PLUGIN_ROOT}/commands/procedures/ship-arguments-and-cost-gate.md` → Phase A only** before anything that needs **`${SLUG}`**.
+Execute **`${CLAUDE_PLUGIN_ROOT}/procedures/ship-arguments-and-cost-gate.md` → Phase A only** before anything that needs **`${SLUG}`**.
 
 ---
 
@@ -37,15 +37,15 @@ Execute **`${CLAUDE_PLUGIN_ROOT}/commands/procedures/ship-arguments-and-cost-gat
 
 ### 1a — Detect planr spec mode
 
-Run procedure: `${CLAUDE_PLUGIN_ROOT}/commands/procedures/mode-detection.md` **using `${SLUG}` as the slug input variable** _(equivalent historically to stripping feature token from `$ARGUMENTS`)._ After it executes, `MODE` and (for spec-driven mode) `SPEC_DIR` / `FEAT_DIR` are bound. The procedure also handles the self-heal-on-missing-`stack.md` pathway and the path-resolution table.
+Run procedure: `${CLAUDE_PLUGIN_ROOT}/procedures/mode-detection.md` **using `${SLUG}` as the slug input variable** _(equivalent historically to stripping feature token from `$ARGUMENTS`)._ After it executes, `MODE` and (for spec-driven mode) `SPEC_DIR` / `FEAT_DIR` are bound. The procedure also handles the self-heal-on-missing-`stack.md` pathway and the path-resolution table.
 
 ### 1b — Validate required inputs
 
-The procedure file at `${CLAUDE_PLUGIN_ROOT}/commands/procedures/mode-detection.md` (section "Required inputs (per command) → /ship") covers the required-inputs validation for both modes. The procedure's "Conditional / recommended inputs" section also covers the design-spec.md / `output/db/schema.json` warnings for both modes. After it returns, continue **Step 1.5**.
+The procedure file at `${CLAUDE_PLUGIN_ROOT}/procedures/mode-detection.md` (section "Required inputs (per command) → /ship") covers the required-inputs validation for both modes. The procedure's "Conditional / recommended inputs" section also covers the design-spec.md / `output/db/schema.json` warnings for both modes. After it returns, continue **Step 1.5**.
 
 ### 1.5 — TASK binding re-check + COST ESTIMATE (**Phase B**)
 
-Re-enter **`commands/procedures/ship-arguments-and-cost-gate.md` → Phase B** (TASK existence validation + COST block + conditional halt).
+Re-enter **`procedures/ship-arguments-and-cost-gate.md` → Phase B** (TASK existence validation + COST block + conditional halt).
 
 ### 1.6 — Bind run manifest path *(append-only `.run-manifest.jsonl`, SPEC-008)*
 
@@ -103,7 +103,7 @@ If `$SHIP_TASK_ID` was bound during Phase A (`--task T-NNN`), `DISPATCH_MODE` is
 
 ## Step 1.9 — Project memory read
 
-Execute `${CLAUDE_PLUGIN_ROOT}/commands/procedures/memory-read.md`. This reads `.planr/memory.md` (if present), keyword-matches entries against each task's file lists and stack keywords, and prepares a `## Relevant Project Memory` context block to inject into agent dispatch. If the file is absent or empty, this step is a no-op.
+Execute `${CLAUDE_PLUGIN_ROOT}/procedures/memory-read.md`. This reads `.planr/memory.md` (if present), keyword-matches entries against each task's file lists and stack keywords, and prepares a `## Relevant Project Memory` context block to inject into agent dispatch. If the file is absent or empty, this step is a no-op.
 
 ---
 

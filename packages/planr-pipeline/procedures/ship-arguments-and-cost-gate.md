@@ -66,28 +66,50 @@ Determine `{tasks_to_run}` multiset:
 | `$SHIP_TASK_ID` absent | Every parsed task artifact |
 | present | Strict subset matching that id |
 
-**Opus-class (DEV)** ≈ `{tasks_to_run}.length` frontline passes *(one agent dispatch per targeted task).*  
-**Sonnet-class QA** ≈ **`1`** when QA gate executes later — skipped only when **every** DEV task aborts **before** QA can start *(document if that zero-task edge arises).*
+**For each task in `{tasks_to_run}`, read frontmatter** to extract: `id`, `title`, `type`, `agent`, `status`. Count the items in the task body's `### Create` and `### Modify` file lists.
 
-Echo:
+**Partition by status:**
+- `done` → skip count
+- `pending` / `in-progress` / `blocked` → dispatch count
+
+**Compute estimates:**
+
+| Metric | Heuristic |
+|--------|-----------|
+| **Tokens per task (input)** | ~5k base context (stack + schema + task spec) + ~2k per Create file + ~1k per Modify file |
+| **Tokens per task (output)** | ~3k per Create file + ~1k per Modify file |
+| **QA gate** | ~30k input (reads all task specs + generated source + runs build/test) |
+| **DevOps / Doc-Gen** | ~15k each (Sonnet, skipped if flagged) |
+| **Dollar cost** | Opus 4.7: $15/M input + $75/M output. Sonnet 4.6: $3/M input + $15/M output. |
+| **Time** | `multi-task`: ~1.5 min/task. `per-task`: ~2.5 min/task (includes user re-invoke overhead). |
+
+Echo a structured estimate:
 
 ```
----
-ESTIMATE (non-binding):
+COST ESTIMATE — {SLUG}
 
-  Opus-class DEV batches  ≈ <N>
-  Sonnet QA gate batches  ≈ <Q>
-  Respect prior --no-devops / --no-docs opt-outs mentally when forecasting infra/docs roles.
+  Dispatch:  {dispatch_count} task(s) ({pending_count} pending, {blocked_count} blocked, {done_count} done/skipped)
+  Runtime:   {RUNTIME} → {DISPATCH_MODE}
 
-Totals are heuristic token ranges — telemetry/billing may diverge.
+  Task        Title                           Create  Modify  Agent
+  T-001       <title, max 35 chars>           <N>     <N>     <agent> (Opus 4.7)
+  T-002       <title>                         <N>     <N>     <agent> (Opus 4.7)
+  ...
+  ────────────────────────────────────────────────────────────
+  Subtotal    {dispatch_count} tasks           <sum>   <sum>
 
-<If $SHIP_ASSUME_YES OR already confirmed this turn→ say "Continuing now.">
+  Post-DEV    QA (Sonnet 4.6){" + DevOps" if not skipped}{" + Doc-Gen" if not skipped}
 
-<Else→ say "Reply proceed (or re-invoke adding --yes) before dispatching DEV agents.">
----
+  Est. tokens:  ~{min_input}k–{max_input}k input / ~{min_output}k–{max_output}k output
+  Est. cost:    ${min_cost}–${max_cost}
+  Est. time:    {min_time}–{max_time} min
+
+  Reply "proceed" or narrow with --task T-NNN.
 ```
 
-Interactive halt (**when `$SHIP_ASSUME_YES` is false**): **STOP** the orchestrator until explicit human confirmation. Never fabricate consent.
+**Range multiplier:** apply ×0.8 for min and ×1.3 for max on the per-task heuristics. R6 retries (iteration 2/3) are NOT pre-counted — they add cost if triggered but are not predictable.
+
+Interactive halt (**when `$SHIP_ASSUME_YES` is false**): **STOP** the orchestrator until explicit human confirmation. Never fabricate consent. When `$SHIP_ASSUME_YES` is true, print the estimate block once then continue without halting.
 
 ---
 

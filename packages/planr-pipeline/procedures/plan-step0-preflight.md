@@ -114,7 +114,7 @@ Five rows. Five states. Mutually exclusive. Total coverage. No undefined behavio
 
 When `PLAN_DRY_RUN=true`:
 
-1. Execute `${CLAUDE_PLUGIN_ROOT}/commands/procedures/plan-dry-run-preview.md`.
+1. Execute `${CLAUDE_PLUGIN_ROOT}/procedures/plan-dry-run-preview.md`.
 2. **STOP** immediately — skip **§ 0.6**, skip **§ Phase A verification gate**, skip `plan-step1-*` / `plan-steps-*` for this invocation.
 3. Mark orchestrator TodoWrite items **2–4** as `cancelled` with reason **`dry-run exit`**.
 
@@ -126,13 +126,13 @@ Follow **exactly one** procedure end-to-end. Do not duplicate strategy bodies in
 
 | Strategy | Procedure |
 |---|---|
-| `CONTINUE` | `${CLAUDE_PLUGIN_ROOT}/commands/procedures/strategy-continue.md` |
-| `BOOTSTRAP_ONLY` | `${CLAUDE_PLUGIN_ROOT}/commands/procedures/strategy-bootstrap-only.md` |
-| `SCAFFOLD_NODE` | `${CLAUDE_PLUGIN_ROOT}/commands/procedures/strategy-scaffold-node.md` |
-| `ASK_MANUAL` | `${CLAUDE_PLUGIN_ROOT}/commands/procedures/strategy-ask-manual.md` |
-| `ASK_STACK` | `${CLAUDE_PLUGIN_ROOT}/commands/procedures/strategy-ask-stack.md` |
+| `CONTINUE` | `${CLAUDE_PLUGIN_ROOT}/procedures/strategy-continue.md` |
+| `BOOTSTRAP_ONLY` | `${CLAUDE_PLUGIN_ROOT}/procedures/strategy-bootstrap-only.md` |
+| `SCAFFOLD_NODE` | `${CLAUDE_PLUGIN_ROOT}/procedures/strategy-scaffold-node.md` |
+| `ASK_MANUAL` | `${CLAUDE_PLUGIN_ROOT}/procedures/strategy-ask-manual.md` |
+| `ASK_STACK` | `${CLAUDE_PLUGIN_ROOT}/procedures/strategy-ask-stack.md` |
 
-For `BOOTSTRAP_ONLY` and `SCAFFOLD_NODE`, the common sub-procedures `WRITE_PLANR_DIRS` (`${CLAUDE_PLUGIN_ROOT}/commands/procedures/write-planr-dirs.md`) and `AUTHOR_STACK_FROM_BRIEF` (`${CLAUDE_PLUGIN_ROOT}/commands/procedures/author-stack-from-brief.md`) are standalone procedures both strategies invoke.
+For `BOOTSTRAP_ONLY` and `SCAFFOLD_NODE`, the common sub-procedures `WRITE_PLANR_DIRS` (`${CLAUDE_PLUGIN_ROOT}/procedures/write-planr-dirs.md`) and `AUTHOR_STACK_FROM_BRIEF` (`${CLAUDE_PLUGIN_ROOT}/procedures/author-stack-from-brief.md`) are standalone procedures both strategies invoke.
 
 ---
 
