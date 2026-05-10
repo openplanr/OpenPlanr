@@ -440,6 +440,7 @@ schemaVersion: "1.0.0"
 type: "UI"                   # UI | Tech (UI → frontend-agent, Tech → backend-agent)
 agent: "frontend-agent"      # frontend-agent | backend-agent | (db-agent for migrations)
 status: "pending"            # pending | in-progress | done | blocked
+rationale: ""                # 1-3 sentences: why this task, why these files (populated by specification-agent)
 created: "YYYY-MM-DD"
 updated: "YYYY-MM-DD"
 ---
@@ -471,6 +472,39 @@ continuous session and cumulative context biases the model toward
 is `multi-task` because manifest-isolated subagents give each task a clean
 context. Override with `--all-tasks` when you know your runtime supports
 isolated subagents.
+
+### Project memory (planr-pipeline v0.9.0+)
+
+`.planr/memory.md` is an append-only project memory file with three
+sections:
+
+- **Decisions** — architectural choices made during `/ship` not captured
+  in ADRs (e.g., "Prisma createMany doesn't support nested relations on
+  PG — use $transaction")
+- **Traps** — failure patterns auto-appended when R6 hits iteration 2+.
+  Surfaced to agents before dispatch so they don't repeat mistakes.
+- **Corrections** — human overrides recorded when the PO modifies agent
+  output at the R1 review gate
+
+The orchestrator reads memory on `/ship` entry and keyword-matches
+relevant entries into each agent's context. Agents never delete entries;
+humans prune. Entry format: `- [YYYY-MM-DD, <source>] <description>`.
+
+### Clarification loop (planr-pipeline v0.9.0+)
+
+When the specification-agent encounters genuine ambiguity during `/plan`
+(two valid interpretations → different architectures), it emits
+`clarifications.md` with structured options instead of guessing. The PO
+fills in the `**Resolved:**` fields, then re-runs `/plan` — the agent
+reads the answers and decomposes without guessing.
+
+### Task rationale (planr-pipeline v0.9.0+)
+
+Each task carries a `rationale:` frontmatter field (1-3 sentences)
+explaining why the task exists and why those specific files were chosen.
+The qa-agent reads rationale during the QA gate to flag implementation
+drift — a non-blocking warning when the code doesn't match the stated
+intent.
 
 ### Spec-driven command sequence (Path B — when no pipeline plugin)
 

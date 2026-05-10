@@ -2,6 +2,20 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] — 2026-05-11
+
+### Changed — Aligned with `planr-pipeline` v0.9.0
+
+- Task frontmatter template adds `rationale:` field (1-3 sentence decomposition reasoning)
+- New "Project memory" section: `.planr/memory.md` with decisions, traps, corrections — append-only, keyword-matched into agent dispatch context
+- New "Clarification loop" section: specification-agent emits structured options on ambiguity, PO resolves before re-running `/plan`
+- New "Task rationale" section: qa-agent checks implementation drift vs stated rationale
+
+### Pairs with
+
+- `planr-pipeline` v0.9.0 — project memory, rationale, clarification loop, R10 build-order rule
+- `openplanr` CLI v1.7.0 — artifact integrity, managed-block markers, adapter template alignment
+
 ## [1.5.0] — 2026-05-05
 
 ### Changed — Aligned with `planr-pipeline` v0.8.0
