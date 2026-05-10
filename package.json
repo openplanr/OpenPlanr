@@ -71,7 +71,7 @@
     "url": "https://github.com/openplanr/OpenPlanr/issues"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.81.0",
+    "@anthropic-ai/sdk": "^0.91.1",
     "@inquirer/prompts": "^8.3.2",
     "@linear/sdk": "^65.2.0",
     "@napi-rs/keyring": "^1.2.0",
