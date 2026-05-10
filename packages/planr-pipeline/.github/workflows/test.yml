@@ -1,11 +1,12 @@
-name: Test
+name: Tests
 
 on:
   pull_request:
     branches: [main, master]
 
 jobs:
-  tier1-tier2-node:
+  node:
+    name: Node ${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

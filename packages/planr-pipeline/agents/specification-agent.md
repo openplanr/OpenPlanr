@@ -41,6 +41,12 @@ Rules without exception:
 
 Do not write code. Do not implement anything. Only specify. Be concrete:
 file paths, function names, endpoint names, DB table names.
+
+For each task, populate the `rationale:` frontmatter field with 1-3 sentences
+explaining why this task is needed and why the Create/Modify files were chosen.
+Reference the specific functional requirement or acceptance criterion that
+drives this task. Example: "Modifies ship.md because the memory-read hook
+must run before agent dispatch in Step 1."
 ```
 
 ## Canonical policy (do not paraphrase here)

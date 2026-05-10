@@ -55,8 +55,10 @@ The flat `tasks/` directory is intentional — `storyId` frontmatter on each tas
    b. If has_design: write T-NNN-{slug}.md for the UI task (Type=UI) + T-NNN-{slug}.md for the Tech task (Type=Tech) under <SPEC_DIR>/tasks/
    c. If !has_design: write a single T-NNN-{slug}.md (Type=Tech) — per docs/rules.md R2
    d. Each task's frontmatter sets `storyId: "US-NNN"` to link back to its parent
-7. Log: "Specification Agent complete. N US, M tasks → <SPEC_DIR>/"
-8. STOP. Do not proceed to DEV phase. The /planr-pipeline:plan orchestrator stops here for human review.
+   e. Each task's frontmatter sets `rationale:` with 1-3 sentences explaining why this task exists and why these files (reference the functional requirement or acceptance criterion that drives it)
+7. If any genuine ambiguity remains (two valid interpretations leading to different architectures), emit `<SPEC_DIR>/clarifications.md` with structured options (see `${CLAUDE_PLUGIN_ROOT}/templates/clarifications.md.tpl`). Continue decomposing unambiguous parts.
+8. Log: "Specification Agent complete. N US, M tasks → <SPEC_DIR>/"
+9. STOP. Do not proceed to DEV phase. The /planr-pipeline:plan orchestrator stops here for human review.
 ```
 
 ---

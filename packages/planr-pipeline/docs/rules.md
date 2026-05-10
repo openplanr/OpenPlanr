@@ -122,6 +122,13 @@ Neither agent may write files outside their designated scope.
 ```
 Rationale: Clear ownership prevents conflicts when agents run in parallel.
 
+### R10 — Agent Role Parity (Build-Order Rule)
+```
+No pipeline release adds a new agent role (agents/<role>-agent.md + manifest entry)
+without corresponding qa-agent verification coverage.
+```
+The qa-agent must know how to verify the new role's outputs: file existence, schema conformance, DoD checks. Roles producing non-code artifacts (e.g., designer-agent → design-spec.md) must have structural validation in the qa-gate. Build order: Foundation (db, specification, frontend, backend) → Verification (qa) → Optional (devops, doc-gen). New roles insert into this pyramid at the appropriate layer; verification always covers them.
+
 ---
 
 ## Soft Guidelines (Strongly Recommended)

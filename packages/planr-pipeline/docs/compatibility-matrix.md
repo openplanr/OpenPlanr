@@ -23,6 +23,9 @@ Same `.planr/specs/` directories. Same SPEC / US / Task schema. Same `.pipeline-
 | **8 named subagents** | ✅ manifest-declared, model pinned | ⚠️ Composer subagent dispatch (Cursor 1.x) | ⚠️ persona role-shift only (no isolation) |
 | **Multi-task `/ship` in one invocation** | ✅ `DISPATCH_MODE: multi-task` (manifest-isolated subagents per task) | ⚠️ `DISPATCH_MODE: per-task` default (override with `--all-tasks`) — see §Dispatch mode below | ⚠️ `DISPATCH_MODE: per-task` default — see §Dispatch mode below |
 | **Task `status` resume** (continue partially-shipped specs across multiple `/ship` invocations) | ✅ status read on entry, written on close-out | ✅ same — runtime-agnostic, lives in T-task frontmatter | ✅ same |
+| **Project memory** (`.planr/memory.md` — traps, decisions, corrections) | ✅ orchestrator-managed read/write | ✅ prompt-driven read/write | ✅ prompt-driven read/write |
+| **Task rationale** (`rationale:` frontmatter on T-tasks) | ✅ | ✅ | ✅ |
+| **Clarification loop** (`clarifications.md` for ambiguous specs) | ✅ | ✅ | ✅ |
 | **Tool restrictions** (`Bash(psql:*)` etc.) | ✅ enforced at manifest layer | ❌ prompt-level only — model honours voluntarily | ❌ prompt-level only |
 | **Spec-driven mode** (`.planr/specs/`) | ✅ | ✅ | ✅ |
 | **Default mode** (`output/feats/`) | ✅ | ✅ | ✅ |

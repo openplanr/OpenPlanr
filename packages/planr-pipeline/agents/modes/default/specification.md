@@ -55,8 +55,10 @@ Schema content (frontmatter + body) is identical in both modes.
    b. Create us-{N}/tasks/ directory
    c. If has_design: write task-1.md (UI, Frontend Agent) + task-2.md (Tech, Backend Agent)
    d. If !has_design: write task-1.md (Tech only, Backend Agent) — per docs/rules.md R2
-7. Log: "Specification Agent complete. N US, M tasks → output/feats/feat-$ARGUMENTS/"
-8. STOP. Do not proceed to DEV phase. The /planr-pipeline:plan orchestrator stops here for human review.
+   e. Each task's frontmatter sets `rationale:` with 1-3 sentences explaining why this task exists and why these files
+7. If any genuine ambiguity remains, emit `output/feats/feat-$ARGUMENTS/clarifications.md` with structured options (see `${CLAUDE_PLUGIN_ROOT}/templates/clarifications.md.tpl`). Continue decomposing unambiguous parts.
+8. Log: "Specification Agent complete. N US, M tasks → output/feats/feat-$ARGUMENTS/"
+9. STOP. Do not proceed to DEV phase. The /planr-pipeline:plan orchestrator stops here for human review.
 ```
 
 ---

@@ -101,6 +101,12 @@ If `$SHIP_TASK_ID` was bound during Phase A (`--task T-NNN`), `DISPATCH_MODE` is
 
 ---
 
+## Step 1.9 — Project memory read
+
+Execute `${CLAUDE_PLUGIN_ROOT}/commands/procedures/memory-read.md`. This reads `.planr/memory.md` (if present), keyword-matches entries against each task's file lists and stack keywords, and prepares a `## Relevant Project Memory` context block to inject into agent dispatch. If the file is absent or empty, this step is a no-op.
+
+---
+
 ## Step 2 — Iterate User Stories with status-driven dispatch
 
 In default mode, iterate each `us-{N}` directory under `output/feats/feat-${SLUG}/` (sorted by US number).

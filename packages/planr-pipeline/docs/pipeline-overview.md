@@ -154,6 +154,18 @@ The framework refuses to auto-chain PO Phase → DEV Phase.
 
 ---
 
+## Project Memory (Step 1.9)
+
+`.planr/memory.md` is an append-only project memory file with three sections:
+
+- **Decisions** — architectural choices made during `/ship` not captured in ADRs
+- **Traps** — failure patterns auto-appended when R6 hits iteration 2+
+- **Corrections** — human overrides recorded at the R1 review gate
+
+**Lifecycle:** `/ship` Step 1.9 reads memory and keyword-matches relevant entries into each agent's dispatch context. R6 iteration 2+ auto-appends traps. R1 overrides auto-append corrections. Humans prune stale entries. Format: `- [YYYY-MM-DD, <source>] <description>`.
+
+---
+
 ## Correction Protocol (Step 3)
 
 Normative definition: **`docs/rules.md`** → **`### R6 — Max 3 Correction Iterations`**. This file does not duplicate R6 prose — read R6 before changing pipeline agent prompts.

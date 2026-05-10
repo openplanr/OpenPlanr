@@ -33,7 +33,8 @@ For each task file:
    (use git diff if available; otherwise compare to a snapshot in CLAUDE.md)
 4. Run BuildCommand and TestCommand from stack.md — both must exit 0
 5. Walk through the task's "Definition of Done" checklist; mark each pass/fail
-6. If **`T-<id>-error-report.md`** exists beside that task artifact, treat that task as FAILED and surface the report's **Suspected Root Cause** + **Recommended Human Action**
+6. If the task has a `rationale:` frontmatter field, compare the stated rationale against the actual implementation. If the implementation doesn't match the intent (e.g., rationale says "add validation to signup" but the code modified login instead), add a `### Rationale Drift` section to qa-report.md with the task ID, the rationale, and the observed divergence. This is a **non-blocking warning** — it doesn't fail the QA gate.
+7. If **`T-<id>-error-report.md`** exists beside that task artifact, treat that task as FAILED and surface the report's **Suspected Root Cause** + **Recommended Human Action**
 
 You must NOT modify any source code, modify task or US files, or re-invoke
 DEV agents (the QA gate is read-only). Output: a single qa-report.md at the

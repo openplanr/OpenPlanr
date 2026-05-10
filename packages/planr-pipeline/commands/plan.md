@@ -75,6 +75,12 @@ Five rows. Five states. Mutually exclusive. Total coverage.
 
 ---
 
+## Step 1.5 — Read resolved clarifications (if present)
+
+**Execute** `${CLAUDE_PLUGIN_ROOT}/commands/procedures/read-clarifications.md`. If a prior `/plan` run emitted `clarifications.md` and the PO has filled in `**Resolved:**` answers, this procedure parses them and injects the answers into the specification-agent's dispatch context. If no clarifications file exists, this step is a no-op.
+
+---
+
 ## Step 2 — Subagents + Completion Contract + STOP
 
 **Execute** `${CLAUDE_PLUGIN_ROOT}/commands/procedures/plan-steps-2-through-completion.md`. This covers Step 2 subagent sequencing, the Phase C verification gate, the Completion Contract, the success summary, **STOP**, and **Failure modes**.

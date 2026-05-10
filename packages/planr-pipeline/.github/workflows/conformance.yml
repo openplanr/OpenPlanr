@@ -8,8 +8,8 @@ on:
     branches: ["**"]
 
 jobs:
-  conformance:
-    name: Schema conformance — SPEC-001
+  schema-validation:
+    name: Schema validation
     runs-on: ubuntu-latest
 
     steps:
@@ -39,8 +39,7 @@ jobs:
             console.log('ok');
           "
 
-      # Schema validation: validate the default-mode conformance fixture
-      # (spec-todo + us-1 + task-1 + fixture-local stack.md) against the
+      # Validate the bundled default-mode conformance fixture against the
       # v1.0.0 JSON Schemas. Mode is auto-detected by detectFixtureMode().
       - name: Validate default-mode fixture
         run: |
