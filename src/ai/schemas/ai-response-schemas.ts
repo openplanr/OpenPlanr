@@ -171,10 +171,25 @@ export type AISprintAutoSelectResponse = z.infer<typeof aiSprintAutoSelectRespon
 
 // --- Refine ---
 
+const bodyChangeSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('replaceSection'),
+    heading: z.string().min(1),
+    newContent: z.string(),
+  }),
+  z.object({
+    type: z.literal('replaceText'),
+    findExact: z.string().min(1),
+    replaceWith: z.string(),
+  }),
+]);
+
 export const aiRefineResponseSchema = z.object({
   suggestions: z.array(z.string().min(1)).min(1),
   improved: z.record(z.string(), z.unknown()),
-  improvedMarkdown: z.string().min(1),
+  frontmatterChanges: z.record(z.string(), z.unknown()).optional(),
+  bodyChanges: z.array(bodyChangeSchema).optional(),
+  improvedMarkdown: z.string().optional(),
 });
 
 export type AIRefineResponse = z.infer<typeof aiRefineResponseSchema>;

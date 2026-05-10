@@ -28,21 +28,24 @@ Follow these steps in order. **STOP after step 4.**
 
 1. **Mode detection + input validation.** If spec-driven mode, scan `.planr/specs/` for `SPEC-NNN-{feature}` directory. If missing, auto-scaffold (see Auto-scaffolding below).
 2. **Read inputs:** spec body, `input/tech/stack.md`, optional `output/db/schema.json`, optional design-spec from PNGs.
-3. **Decompose:** read spec + stack + optional schema + optional design-spec, write US/Task files. Hard rule R2: max 2 tasks per US (1 if no PNG present).
-4. **STOP.** Print a summary. Wait for the human to type "ship {feature}".
+3. **Decompose:** read spec + stack + optional schema + optional design-spec, write US/Task files. Hard rule R2: max 2 tasks per US (1 if no PNG present). Each task's `rationale:` frontmatter field must be populated with 1-3 sentences explaining why this task exists.
+4. **Clarification loop:** if genuine ambiguity exists (two valid interpretations → different architectures), emit `clarifications.md` with structured options. Continue decomposing unambiguous parts. On re-run, read resolved clarifications and use them.
+5. **STOP.** Print a summary. Wait for the human to type "ship {feature}".
 
 ### DEV Phase — when user says "ship {feature}"
 
-1. Validate task files exist.
-2. For each US in topological order, dispatch tasks:
+1. **Read project memory:** if `.planr/memory.md` exists, keyword-match relevant entries (traps, decisions, corrections) against the current task's file list. Include matched entries in the persona's context to avoid repeating past mistakes.
+2. Validate task files exist. Read each task's `status` frontmatter — skip `done`, enqueue `pending`/`in-progress`/`blocked`.
+3. For each US in topological order, dispatch tasks:
    - `Type: UI` → adopt the **frontend** persona (writes UI files only).
    - `Type: Tech` → adopt the **backend** persona (writes services, DTOs, entities, controllers, DB queries — never UI).
 3. Apply the **3-iteration correction loop** (R6) per task:
    - Iteration 1: direct fix on build/test failure (`BuildCommand` + `TestCommand` from `input/tech/stack.md`).
    - Iteration 2: re-read task spec + design-spec/schema, fix holistically.
    - Iteration 3: minimal safe fix, flag remaining issues.
-   - On 3rd failure: write `error-report.md` and stop that task.
-4. Run **QA gate** (qa persona, read-only): verify Create/Modify/Preserve lists, build, test, DoD.
+   - On entering iteration 2: append a trap entry to `.planr/memory.md` under `## Traps` — `- [YYYY-MM-DD, T-NNN] <what failed and fix approach>`. Create the file from template if absent.
+   - On 3rd failure: write `T-NNN-error-report.md` and stop that task.
+4. Run **QA gate** (qa persona, read-only): verify Create/Modify/Preserve lists, build, test, DoD. If task has `rationale:`, check implementation drift vs stated intent (non-blocking warning).
 5. Optionally generate Docker/CI (devops persona — file generators only, never deploys) and `Docs/feat-{name}/` (doc-gen persona).
 6. Refresh `CLAUDE.md` snapshot OR co-exist with planr-managed `CLAUDE.md` (see Snapshot rules below).
 7. Write `.pipeline-shipped` marker (proof of execution).
@@ -133,6 +136,7 @@ error_reports:
 - **R7** — Refresh CLAUDE.md (or skip if planr-managed); always write `.pipeline-shipped` marker.
 - **R8** — db role is read-only.
 - **R9** — frontend role only writes UI files; backend role only writes services/DTOs/entities. No crossover.
+- **R10** — No new agent role ships without corresponding qa coverage.
 
 Note: tool restrictions on Codex are advisory (prompt-level only), not enforced by the runtime. Treat them as binding — the conformance harness will catch violations post-ship.
 

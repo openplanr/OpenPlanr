@@ -302,15 +302,14 @@ IMPORTANT RULES:
 You MUST respond with a valid JSON object containing:
 - "suggestions": Array of improvement suggestions (strings). Include suggestions for new features/stories here if applicable, rather than adding them to the document.
 - "improved": The improved artifact data as a JSON object with the same fields as the original frontmatter
-- "improvedMarkdown": A raw markdown string that will be written directly to a .md file. It MUST preserve the original file format: YAML frontmatter between --- delimiters followed by the markdown body. Do NOT put JSON in this field.
+- "frontmatterChanges": Object with ONLY the frontmatter fields you want to change (e.g. {"title": "Better Title", "priority": "P0"}). Omit fields you are NOT changing. NEVER change the "id" field.
+- "bodyChanges": Array of targeted changes to the markdown body. Each element is one of:
+  - {"type": "replaceSection", "heading": "## Section Name", "newContent": "new section body text"}
+  - {"type": "replaceText", "findExact": "exact text to find", "replaceWith": "replacement text"}
 
-CRITICAL: The "improvedMarkdown" field must be a plain markdown string, NOT a JSON object. It should look exactly like the original artifact the user provided, but with improvements applied. For example, if the original starts with:
----
-id: "EPIC-001"
-title: "My Epic"
----
-# EPIC-001: My Epic
-...then "improvedMarkdown" must also start with --- frontmatter and contain markdown content. Keep the same structure, sections, and cross-reference links as the original.
+Do NOT return the entire file. Return only the specific changes. Our code applies them surgically to preserve file structure, checkboxes, and formatting.
+
+NEVER include "improvedMarkdown" — that field is deprecated. If you return it, the system will validate and likely reject it. Use "frontmatterChanges" + "bodyChanges" instead.
 
 Respond with JSON only, no markdown or explanation.`;
 

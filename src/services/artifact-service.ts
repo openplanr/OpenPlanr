@@ -4,6 +4,7 @@ import { ensureDir, listFiles, readFile, writeFile } from '../utils/fs.js';
 import { logger } from '../utils/logger.js';
 import { parseMarkdown } from '../utils/markdown.js';
 import { slugify } from '../utils/slugify.js';
+import { ArtifactInvariantError, validateArtifactBytes } from './artifact-validation.js';
 import { atomicWriteFile } from './atomic-write-service.js';
 import { getNextId } from './id-service.js';
 import { renderTemplate } from './template-service.js';
@@ -150,6 +151,13 @@ export async function readArtifactRaw(
 
 /**
  * Overwrite an existing artifact file in place.
+ *
+ * When `skipValidation` is false (default), validates structural invariants
+ * before writing: frontmatter fences, YAML validity, identity preservation,
+ * and checkbox ID preservation. Throws `ArtifactInvariantError` on violation.
+ *
+ * Internal callers that construct content programmatically (linear-pull body
+ * reconstruction, bulk checkbox flip) may pass `skipValidation: true`.
  */
 export async function updateArtifact(
   projectDir: string,
@@ -157,12 +165,22 @@ export async function updateArtifact(
   type: ArtifactType,
   id: string,
   content: string,
+  { skipValidation = false }: { skipValidation?: boolean } = {},
 ): Promise<void> {
   const dir = path.join(projectDir, getArtifactDir(config, type));
   const files = await listFiles(dir, new RegExp(`^${id}-.*\\.md$`));
   if (files.length === 0) throw new Error(`Artifact ${id} not found.`);
 
   const filePath = path.join(dir, files[0]);
+
+  if (!skipValidation) {
+    const before = (await readFile(filePath)) ?? '';
+    const verdict = validateArtifactBytes(type, before, content);
+    if (!verdict.ok) {
+      throw new ArtifactInvariantError(id, verdict.reason);
+    }
+  }
+
   await atomicWriteFile(filePath, content);
 }
 
@@ -325,7 +343,7 @@ export async function addChildReference(
     }
   }
 
-  await updateArtifact(projectDir, config, parentType, parentId, updated);
+  await updateArtifact(projectDir, config, parentType, parentId, updated, { skipValidation: true });
 }
 
 /**

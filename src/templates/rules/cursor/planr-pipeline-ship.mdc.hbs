@@ -82,21 +82,24 @@ the `storyId` frontmatter field.
 For each story, run its tasks:
 
 1. Read the US file to identify which tasks belong to it.
-2. For each task:
-   - Read frontmatter `Type` field.
+2. **Read project memory:** if `.planr/memory.md` exists, keyword-match relevant entries against the current task's file list. Include matched traps/decisions/corrections in the subagent's context.
+3. For each task:
+   - Read frontmatter `Type` and `status` fields.
+   - Skip tasks with `status: done`. Enqueue `pending`, `in-progress` (recover), `blocked` (retry).
    - If `Type: UI` → dispatch the **frontend** subagent
      (`{{cursorRulesRoot}}/agents/frontend-agent.md`).
    - If `Type: Tech` → dispatch the **backend** subagent
      (`{{cursorRulesRoot}}/agents/backend-agent.md`).
    - frontend and backend tasks within the SAME US may run in parallel
      (Cursor's Composer supports parallel subagent dispatch — use it).
-3. Each subagent applies the **3-iteration correction loop** (R6):
+4. Each subagent applies the **3-iteration correction loop** (R6):
    - Iteration 1: direct fix on build/test failure.
    - Iteration 2: re-read task spec + design-spec/schema, fix holistically.
    - Iteration 3: minimal safe fix, flag remaining issues.
-   - On 3rd failure: write `error-report.md` (default mode:
-     `output/feats/feat-{feature}/us-{N}/tasks/error-report.md`; spec mode:
-     `<SPEC_DIR>/tasks/error-report.md`). Then STOP that task.
+   - On entering iteration 2: append a trap entry to `.planr/memory.md` under `## Traps`.
+   - On 3rd failure: write `T-NNN-error-report.md` (default mode:
+     `output/feats/feat-{feature}/us-{N}/tasks/T-NNN-error-report.md`; spec mode:
+     `<SPEC_DIR>/tasks/T-NNN-error-report.md`). Then STOP that task.
 4. If a task fails after 3 iterations, ship continues with other independent
    tasks but flags the failed task in the final summary.
 
@@ -112,6 +115,7 @@ The qa subagent verifies, for each task:
 - All "Modify" files were updated (and only as described)
 - All "Preserve" files are unchanged (`git diff` vs base)
 - Tests pass (`BuildCommand` + `TestCommand` from `stack.md`)
+- If task has `rationale:`, check implementation drift vs stated intent (non-blocking warning)
 - DoD checklist items satisfied
 
 If QA fails: flag in summary; **still proceed to Step 5 snapshot** so state

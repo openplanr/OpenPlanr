@@ -357,6 +357,8 @@ export interface ArtifactFrontmatter {
 export interface GeneratedFile {
   path: string;
   content: string;
+  /** When set, content is spliced into the existing file between managed-block markers instead of overwriting. */
+  markerName?: string;
 }
 
 // ---------------------------------------------------------------------------
