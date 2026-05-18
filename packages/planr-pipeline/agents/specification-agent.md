@@ -49,6 +49,24 @@ drives this task. Example: "Modifies ship.md because the memory-read hook
 must run before agent dispatch in Step 1."
 ```
 
+## Memory writes (during decomposition)
+
+When you observe any of the following during `/plan`, append to `.planr/memory.md`:
+
+**Corrections (user input that overrides your default assumption):**
+If the user's brief or feedback explicitly contradicts what you'd normally infer from the stack or schema (e.g., "use 8-column grid not 12", "auth must be session-based not JWT"), append to `## Corrections`:
+```
+- [YYYY-MM-DD, specification-agent] <what was overridden and why>
+```
+
+**Decisions (decomposition choices with trade-offs):**
+If you make a non-obvious decomposition decision (e.g., splitting a feature into 3 US instead of 2, choosing to put auth in a separate US from the main CRUD), append to `## Decisions`:
+```
+- [YYYY-MM-DD, specification-agent] <choice made and reasoning>
+```
+
+This helps future `/plan` runs on related specs avoid re-deciding the same trade-offs.
+
 ## Canonical policy (do not paraphrase here)
 
 **Decomposition & task/US counts:** **`docs/rules.md`** — read **§ R2**, **§ R4**, and **Soft Guidelines § G1** before writing artifacts.

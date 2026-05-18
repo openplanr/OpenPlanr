@@ -75,9 +75,11 @@ Five rows. Five states. Mutually exclusive. Total coverage.
 
 ---
 
-## Step 1.5 — Read resolved clarifications (if present)
+## Step 1.5 — Initialize project memory + read clarifications
 
-**Execute** `${CLAUDE_PLUGIN_ROOT}/procedures/read-clarifications.md`. If a prior `/plan` run emitted `clarifications.md` and the PO has filled in `**Resolved:**` answers, this procedure parses them and injects the answers into the specification-agent's dispatch context. If no clarifications file exists, this step is a no-op.
+**Execute** `${CLAUDE_PLUGIN_ROOT}/procedures/memory-read.md`. This ensures `.planr/memory.md` exists (creates from template if absent) and keyword-matches relevant entries for the specification-agent's context.
+
+Then **execute** `${CLAUDE_PLUGIN_ROOT}/procedures/read-clarifications.md`. If a prior `/plan` run emitted `clarifications.md` and the PO has filled in `**Resolved:**` answers, this procedure parses them and injects the answers into the specification-agent's dispatch context. If no clarifications file exists, this step is a no-op.
 
 ---
 

@@ -1,16 +1,17 @@
-# Procedure: Memory Read (invoked by `/ship` Step 1.9)
+# Procedure: Memory Read + Initialize (invoked by `/ship` Step 1.9 and `/plan` Step 0)
 
-> **Purpose:** Read `.planr/memory.md`, keyword-match entries against the current task, and inject relevant entries into the agent's dispatch context.
+> **Purpose:** Ensure `.planr/memory.md` exists, read it, keyword-match entries against the current task, and inject relevant entries into the agent's dispatch context.
 
 ## When to invoke
 
-After `MODE`, `SPEC_DIR`/`FEAT_DIR`, and `DISPATCH_MODE` are bound (Step 1.8), before any task dispatch (Step 2).
+- **`/ship`:** after `MODE`, `SPEC_DIR`/`FEAT_DIR`, and `DISPATCH_MODE` are bound (Step 1.8), before any task dispatch (Step 2).
+- **`/plan`:** after mode detection (Step 1), before subagent dispatch (Step 2).
 
 ## Execution
 
-### 1. Check for memory file
+### 1. Ensure memory file exists
 
-Read `.planr/memory.md` at the project root. If absent, skip silently — the file is created on first write (Step 2c trap/correction append), not on read.
+Check for `.planr/memory.md` at the project root. **If absent, create it from `${CLAUDE_PLUGIN_ROOT}/templates/memory.md.tpl`.** This is not optional — the file must exist so agents can append to it during the run. Print: `✓ Created .planr/memory.md`. If the file already exists, continue silently.
 
 ### 2. Pruning warning
 
