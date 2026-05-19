@@ -116,7 +116,7 @@ After the contract passes, print:
 
 | Condition | Action |
 |---|---|
-| `$ARGUMENTS` malformed (>5000 chars or contains nested invocation) | Abort at Step 0.0 with sanitization message |
+| `$ARGUMENTS` malformed (>12000 chars or contains nested invocation) | Abort at Step 0.0 with sanitization message |
 | Project root contains unrecognized non-asset files (SCAFFOLD_NODE) | Abort at SCAFFOLD_NODE checklist step 3, suggest cleanup |
 | Spec missing (default mode, no BRIEF) | Abort at Step 1, suggest creating `input/specs/spec-${SLUG}.md` or `planr spec init` |
 | `stack.md` missing (default mode) | Abort at Step 1, suggest copying from `${CLAUDE_PLUGIN_ROOT}/templates/stack.md.tpl` |

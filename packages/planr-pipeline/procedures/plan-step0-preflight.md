@@ -19,7 +19,7 @@ Run **before** **§ 0.0**:
 
 Before remaining Step 0 processing, validate that `$ARGUMENTS` is a sane invocation:
 
-- If `$ARGUMENTS` exceeds **5,000 characters**, abort with: `⚠ $ARGUMENTS is unexpectedly long (>5000 chars). This usually means a previous conversation was accidentally pasted in. Re-invoke with: /planr-pipeline:plan {slug} {short brief}`
+- If `$ARGUMENTS` exceeds **12,000 characters**, abort with: `⚠ $ARGUMENTS is unexpectedly long (>12000 chars). This usually means a previous conversation was accidentally pasted in. Re-invoke with: /planr-pipeline:plan {slug} {brief}`
 - If `$ARGUMENTS` contains the literal substring `/planr-pipeline:` (suggesting a nested invocation got pasted), abort with the same message.
 - If `$ARGUMENTS` is empty, abort with: `⚠ Missing slug. Usage: /planr-pipeline:plan {slug} [brief]`
 
