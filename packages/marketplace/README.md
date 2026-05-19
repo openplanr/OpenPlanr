@@ -18,7 +18,7 @@ Then install any of the plugins below:
 
 | Plugin | Version | Description |
 |---|---|---|
-| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.9.2 | Spec-driven AI factory with 8 subagents and tool-layer rule enforcement. Canonical Claude Code adapter for [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol); same workflow runs on Cursor + Codex via `planr rules generate --scope pipeline`. |
+| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.9.3 | Spec-driven AI factory with 8 subagents and tool-layer rule enforcement. Canonical Claude Code adapter for [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol); same workflow runs on Cursor + Codex via `planr rules generate --scope pipeline`. |
 | [`openplanr`](https://github.com/openplanr/skills) | 1.6.0 | OpenPlanr skill — multi-runtime routing playbook teaching Claude when to use which surface (Path A: Claude Code, A2: Cursor, A3: Codex, B: skill-driven, C: bare CLI). |
 
 ## Cross-runtime support
