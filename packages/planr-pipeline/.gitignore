@@ -3,6 +3,8 @@ node_modules/
 
 # Append-only pipeline run logs (SPEC-008)
 *.run-manifest.jsonl
+# …but seeded conformance fixtures ship their OWN .run-manifest.jsonl as test data (must be tracked)
+!conformance/fixtures/**/.run-manifest.jsonl
 
 # Transient sentinel from /ship Step 0 (never commit)
 .claude/.snapshot-pending

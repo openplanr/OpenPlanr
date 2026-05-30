@@ -1,0 +1,10 @@
+{
+  "warn_threshold": 20,
+  "cases": [
+    { "raw": "0", "outcome": "fatal", "dispatches": false, "exit": 2 },
+    { "raw": "-3", "outcome": "fatal", "dispatches": false, "exit": 2 },
+    { "raw": "abc", "outcome": "fatal", "dispatches": false, "exit": 2 },
+    { "raw": "50", "outcome": "warning", "dispatches": true, "exit": 0 },
+    { "raw": "1", "outcome": "silent", "dispatches": true, "exit": 0 }
+  ]
+}

@@ -107,6 +107,36 @@ Execute `${CLAUDE_PLUGIN_ROOT}/procedures/memory-read.md`. This reads `.planr/me
 
 ---
 
+## Step 1.10 — Worktree reconcile (idempotent)
+
+Self-heal orphaned git worktrees and dangling branches left by a prior `/ship` run that crashed mid-merge-loop (SPEC-013 FR12). This runs **before** the Step 2 dispatch queue is built so the wave scheduler always starts from a clean worktree state. The companion `in-progress` recovery in **§2a** then re-queues the tasks that were interrupted — together they bring a post-crash repo back to a clean, re-runnable state.
+
+> **Planr worktree-branch prefix:** `planr-wt/` (with a **slash**). The authoritative naming convention is defined in **`${CLAUDE_PLUGIN_ROOT}/procedures/ship-step2-dag-dispatch.md` Section 6**: the wave scheduler creates each short-lived branch as `planr-wt/<T.id>-<short-slug>` and its worktree directory as `.planr-worktrees/<T.id>`. This reconcile sweep MUST match that exact `planr-wt/` prefix so it deletes the branches the scheduler creates — and **only** those, never a user's own branches. If Section 6's convention ever changes, update this prefix in lockstep.
+
+**Gating:** This step applies only when `DISPATCH_MODE == multi-task` (worktrees are created only in that mode — Step 1.8). In `per-task` and `single-task` modes it is skipped as a no-op.
+
+**Reconcile sequence:**
+
+1. **Prune stale worktree metadata.** Run `git worktree prune` — drops the administrative entries for any worktree whose directory no longer exists on disk (e.g., a `.planr-worktrees/<T.id>` dir the OS or a crashed run already removed). This is itself a no-op when no metadata is stale.
+
+2. **Enumerate the live worktrees.** Run `git worktree list --porcelain` and collect every branch currently checked out in an active worktree (the `branch refs/heads/<name>` lines). These are **off-limits** — a `git branch -D` on a checked-out branch would fail anyway, and more importantly we must never delete a branch a still-running worktree owns.
+
+3. **Sweep dangling planr branches.** For each branch matching the `planr-wt/*` prefix that is **not** in the live-worktree set from step 2:
+   ```bash
+   git branch -D <branch>
+   ```
+   Only `planr-wt/`-prefixed branches are eligible; any branch outside that prefix (the user's own work) is never touched.
+
+4. **Log the reconcile counts to stdout** (informational only — not written to `.run-manifest.jsonl`, which stays single-writer for status transitions per SPEC-013 FR9):
+   ```
+   [reconcile] pruned <P> stale worktree(s), deleted <B> dangling planr-wt/* branch(es)
+   ```
+   When `P == 0` and `B == 0` the step has done nothing — emit the line with zeros (or skip it) and proceed; the whole step is a **no-op on a clean repository** and on a repo that holds only non-planr worktrees/branches.
+
+**Idempotency guarantee:** safe to run when (a) no worktrees exist (fresh repo), (b) only non-planr worktrees exist, or (c) a stale `.planr-worktrees/<T.id>` directory was already deleted by the OS. `git worktree prune` and the `planr-wt/`-scoped `git branch -D` sweep each tolerate the empty case, so re-running `/ship` after a crash never errors here.
+
+---
+
 ## Step 2 — Iterate User Stories with status-driven dispatch
 
 In default mode, iterate each `us-{N}` directory under `output/feats/feat-${SLUG}/` (sorted by US number).
@@ -132,7 +162,7 @@ If the resulting queue is **empty** AND `$SHIP_TASK_ID` is unset:
 
 ### 2b — Apply `DISPATCH_MODE`
 
-- `multi-task`: process the entire queue this invocation.
+- `multi-task`: process the entire queue this invocation **via the DAG-aware wave scheduler** — see **§2b-multi** below. The legacy "walk the queue one task at a time" behavior is the `--max-parallel 1` degenerate case of that scheduler, not a separate code path.
 - `per-task`: process **one** task this invocation — pick the first `pending`, otherwise the oldest `blocked`. Remaining tasks stay enqueued for the next `/ship` invocation. Print at the end:
 
   ```
@@ -142,6 +172,60 @@ If the resulting queue is **empty** AND `$SHIP_TASK_ID` is unset:
   ```
 
 - `single-task`: process the targeted task. Same behavior as `per-task` but selects by ID.
+
+> **`--max-parallel` × `DISPATCH_MODE` interaction (read before §2b-multi):**
+>
+> | Flag combination | Effect |
+> |---|---|
+> | `--all-tasks` | Forces `DISPATCH_MODE = multi-task` (Step 1.8 override). It does **NOT** raise the width cap — `${MAX_PARALLEL}` keeps its parsed/default value. "Run everything" and "run everything wide" are separate decisions. |
+> | `--max-parallel 1` | The explicit **sequential escape hatch**. The scheduler still runs, but every wave holds exactly one task, so dispatch order is byte-for-byte identical to the legacy sequential walk (procedure §4 step 8, §9.2). Use this to opt out of parallelism without leaving `multi-task` mode. |
+> | `--max-parallel N` (N>1) while the resolved `DISPATCH_MODE` is `per-task` or `single-task` | The cap is inapplicable — those modes dispatch one task per invocation by contract (FR15). Emit the one-line warning `[warn] --max-parallel ignored: runtime resolved to per-task mode`, then proceed sequentially through §2c unchanged. `--max-parallel` is **only** consumed by `multi-task`. |
+
+### 2b-multi — Multi-task wave dispatch (`DISPATCH_MODE == multi-task` only)
+
+Entered only when `DISPATCH_MODE == multi-task` (Claude-Code default, or any runtime under `--all-tasks`). The `per-task` and `single-task` branches never reach this sub-step — they fall straight through to **§2c** and keep their one-task-per-invocation contract verbatim (SPEC-013 FR15).
+
+This sub-step delegates wave selection to **`${CLAUDE_PLUGIN_ROOT}/procedures/ship-step2-dag-dispatch.md`** but **owns** every status-frontmatter and `.run-manifest.jsonl` write itself — the procedure is prompt-driven scheduling logic, not a writer (procedure §5, §7, §9.4: single-writer-in-main).
+
+1. **Bind the width cap.** Read `${MAX_PARALLEL}` from `$SHIP_MAX_PARALLEL` (parsed by **`procedures/ship-arguments-and-cost-gate.md`** Phase A from `--max-parallel N`; **default `4`** when the flag is absent). Validation of the flag value — positive-integer check, soft warn above ~20 — is owned upstream by that procedure (T-005); this sub-step **consumes the already-bound value** and does not re-validate it.
+
+2. **Assemble the scheduler input.** Take the Step 2a dispatch queue **after** `done`-skip and any `$SHIP_TASK_ID` narrowing (in `multi-task` no `$SHIP_TASK_ID` is bound). The remaining `pending` / `in-progress` / `blocked` tasks are the live set; the `in-progress` recovery and `blocked` retry semantics from §2a still apply. Normalize each task to the record shape required by the procedure's **§1 Input contract** (`id`, `status`, `agent`, `type`, `write_set` = union of its `### Create` + `### Modify` paths).
+
+3. **Cycle precheck (once).** Hand the full normalized queue + `${MAX_PARALLEL}` to the procedure, which runs its **§2 cycle detection** over the whole set once. On a cyclic write-set graph the procedure emits its two-line fatal and **dispatches nothing** — honor that: do not transition any status, do not append any manifest record, abort Step 2.
+
+4. **Drive the wave loop until the queue drains.** Repeat until no `pending` / `in-progress` / `blocked` task remains:
+
+   ```
+   while queue contains any pending/in-progress/blocked task:
+     W ← procedure §4 greedy wave selection over (queue, ${MAX_PARALLEL})   # ordered list of task ids, 1 ≤ len(W) ≤ ${MAX_PARALLEL}
+     # ---- pre-dispatch, in MAIN tree (single-writer) ----
+     for each T in W:
+       write T frontmatter: status: in-progress, updated: <today ISO>
+       append manifest { stage: "ship.task:<T.id>", agent: "<T.agent>", started_at: <now>, exit_status: "pending" }
+       provision worktree per procedure §6 (branch planr-wt/<T.id>-<slug>, symlink node_modules)
+     # ---- one orchestrator turn, len(W) Agent tool-calls (procedure §5 step 3) ----
+     dispatch each T in W as an Agent call: subagent_type=<T.agent>, isolation="worktree",
+       prompt = the standard §2c per-task dispatch prompt (task path, MODE/SPEC_DIR/FEAT_DIR,
+       stack inputs, project-memory block, + prior T-<id>-error-report.md body when status was blocked)
+     wait for ALL len(W) results before continuing
+     # ---- post-wave, in MAIN tree only (single-writer) ----
+     for each T in W:
+       on success: file-scoped merge per procedure §7 (declared writes only, forbidden-file guard)
+                   write T frontmatter: status: done, updated: <today>
+                   close manifest record: exit_status: "success", ended_at: <now>, files_written/files_modified populated
+       on R6 failure (3 iterations exhausted) or undeclared-write guard trip (§7 step 1):
+                   write T frontmatter: status: blocked, updated: <today>
+                   write tasks/T-<T.id>-error-report.md (mode-resolved folder, per §2c)
+                   close manifest record: exit_status: "failure", error_summary: <one line>
+       remove the worktree + branch per procedure §7 step 7
+     recompute the queue: drop every task that just landed done; blocked tasks roll to the next wave
+   ```
+
+5. **R6 inside the wave.** Each dispatched Agent runs the **R6 correction loop** (`${CLAUDE_PLUGIN_ROOT}/docs/rules.md`) exactly as in §2c step 4 — direct fix, then holistic re-read, then minimal-safe-fix-and-flag. A single task exhausting R6 lands `blocked` and does **NOT** abort the surrounding wave or the rest of the run (procedure §5 step 5; matches §2c).
+
+6. **Single-writer invariant (never violate).** Task `.md` `status` fields and `.run-manifest.jsonl` are written **only** here, in the main tree, by the orchestrator — never from inside a worktree. The procedure §7 file-scoped merge applies **declared** worktree files only; if a worktree's diff includes a task `.md` or `.run-manifest.jsonl`, the §7 forbidden-file check fires and the task is treated as an undeclared write (→ `blocked`). This sub-step preserves the §2c / §2d status state machine and the Step 1.6 manifest contract unchanged — it only changes the *dispatch shape* (K-wide waves) not the *bookkeeping owner*.
+
+7. **Termination.** When the queue drains, fall through to **Step 3 (QA Gate)**, which verifies every task that ran this invocation — parallelism speeds DEV, it does not weaken QA (procedure §5 step 7; SPEC-013 NFR1).
 
 ### 2c — Per-task lifecycle (status state machine)
 

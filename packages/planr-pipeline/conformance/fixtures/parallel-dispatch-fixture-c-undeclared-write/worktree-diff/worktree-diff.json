@@ -1,0 +1,13 @@
+{
+  "branch": "planr-wt/T-001-undeclared-write",
+  "task_id": "T-001",
+  "task_md_repo_path": ".planr/specs/SPEC-013-parallel-dispatch/tasks/T-001-undeclared-write.md",
+  "diff_name_only": [
+    "src/feature.ts",
+    "src/undeclared.ts"
+  ],
+  "blobs": {
+    "src/feature.ts": "worktree-feature.ts",
+    "src/undeclared.ts": "worktree-undeclared.ts"
+  }
+}

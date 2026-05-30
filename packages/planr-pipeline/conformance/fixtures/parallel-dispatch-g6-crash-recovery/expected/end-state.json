@@ -1,0 +1,29 @@
+{
+  "reconcile": {
+    "stale_branch_deleted_before_dispatch": true,
+    "deleted_branches": ["planr-wt/T-002-feature-b-in-progress"],
+    "pruned_worktrees": ["T-002"],
+    "live_branches_after": ["main"]
+  },
+  "dispatch_queue": {
+    "skipped": ["T-001"],
+    "requeued_in_progress": ["T-002"],
+    "enqueued_pending": ["T-003"],
+    "dispatched_order": ["T-002", "T-003"]
+  },
+  "final_task_status": {
+    "T-001": "done",
+    "T-002": "done",
+    "T-003": "done"
+  },
+  "files_present_after": ["src/feature-a.ts", "src/index.ts", "src/feature-b.ts", "src/feature-c.ts"],
+  "files_unchanged": ["src/feature-a.ts", "src/index.ts"],
+  "manifest": {
+    "T-001_ship_task_records": 1,
+    "T-001_redispatched": false,
+    "T-002_closed_records_with_ended_at": 1,
+    "T-002_open_record_superseded": true,
+    "no_duplicate_ship_task_for_T-001": true,
+    "no_double_merge": true
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "max_parallel": 4,
+  "declared_write_set": ["src/feature.ts"],
+  "worktree_diff": [
+    "src/feature.ts",
+    "src/undeclared.ts"
+  ],
+  "undeclared_paths": ["src/undeclared.ts"],
+  "subset_check_passed": false,
+  "applied_to_main": [],
+  "not_applied_to_main": [
+    "src/feature.ts",
+    "src/undeclared.ts"
+  ],
+  "undeclared_exists_in_main": false,
+  "feature_exists_in_main": false,
+  "task_status_in_main": "blocked",
+  "error_report_present": true,
+  "error_report_name": "T-001-error-report.md",
+  "task_completed": false
+}

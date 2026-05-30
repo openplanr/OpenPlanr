@@ -1,0 +1,7 @@
+{
+  "fixture": "parallel-dispatch-fixture-a-clobber-prevention",
+  "gate": "FIXTURE-A",
+  "description": "SPEC-013 clobber prevention. T-001 and T-002 both declare src/shared.ts under Modify (T-001 sets content version-A, T-002 sets version-B). They are co-scheduling CANDIDATES but pdOverlaps() detects the shared path at WAVE SELECTION time, so they are never co-dispatched: T-001 runs alone in wave 0, T-002 in wave 1. T-001 merges first; T-002 merges second; the final src/shared.ts in main reflects ONLY version-B. The conflict is caught at selection (Section 4), not at merge (Section 7) — there is no half-applied clobber of version-A.",
+  "max_parallel": 4,
+  "repo": "repo"
+}

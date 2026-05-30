@@ -4,6 +4,45 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.11.0] — 2026-05-30
+
+### Added — DAG-aware parallel wave dispatch for `/ship` (SPEC-013, M1)
+
+`/planr-pipeline:ship` can now dispatch multiple Tech/UI tasks **per orchestrator turn** instead of walking the queue one task at a time. In `DISPATCH_MODE: multi-task` (the default for the Claude Code runtime) the orchestrator computes a **wave** — a batch of tasks whose declared write-sets are disjoint — and emits one `Agent` tool-call per wave member in a single turn. Sequential dispatch is preserved exactly at `--max-parallel 1` and for the `per-task`/`single-task` runtimes (Cursor/Codex are **unchanged**).
+
+**Why:** the DEV phase was strictly serial even when a feature's tasks touched non-overlapping files. Wave dispatch drains a queue of `N` write-disjoint tasks in `ceil(N/cap)` turns instead of `N`, with no change to the QA gate or the per-task R6 correction loop.
+
+**Three-layer write-safety model (no clobbered files):**
+
+1. **Lock-list serialization** — an inlined Node/TS lock list (`package.json`, lockfiles, `**/index.ts`, `prisma/schema.prisma`, `**/migrations/**`) forces any two lock-touching tasks to serialize even if their declared write-sets look disjoint. Empty/absent declared write-set ⇒ serialized alone.
+2. **Worktree isolation** — each wave member runs with `isolation: "worktree"` on a private branch `planr-wt/<T.id>-<short-slug>` (dir `.planr-worktrees/<T.id>`, `node_modules` symlinked from main).
+3. **File-scoped merge** — the orchestrator validates the worktree diff against the task's declared Create/Modify list and applies **only** those paths via `git checkout <wt-branch> -- <files>` (never a full `git merge`). Task `.md` status fields and `.run-manifest.jsonl` stay single-writer in main; any undeclared write fails the task into R6.
+
+**Also added:**
+
+- `--max-parallel N` (default `4`; `1` = sequential escape hatch; `≤0`/non-numeric = two-line fatal; `>20` = soft warning). Bound as `$SHIP_MAX_PARALLEL`.
+- **Crash recovery** — `commands/ship.md` Step 1.10 reconcile (`git worktree prune` + sweep of dangling `planr-wt/*` branches) plus §2a `in-progress` re-queue bring a crashed run back to a clean, re-runnable state.
+- **Determinism** — id-sorted waves; byte-for-byte legacy parity at width 1; cycle precheck fails fast (dispatch nothing) on a mutually-overlapping task set.
+- **Shared contract rule 4** (`agents/modes/shared/contract-create-modify-preserve.md`) — the undeclared-write rejection policy, now defined once and cross-referenced (not duplicated) by the three QA agent files.
+- **Conformance** — 9 new `--verify-ship` fixtures + assertions in `conformance/runner.mjs`: G1 multi-wave, G2 floor-of-1, G3 arg-validation, G4 sequential-parity, G6 crash-recovery, G7 file-scoped-merge, plus clobber-prevention, undeclared-write, and cyclic-dep fixtures (120 assertions total). Wired into a new CI workflow (`.github/workflows/ci-parallel-dispatch.yml`).
+
+**Proof scope (honest M1 boundary):** the conformance suite proves clobber-prevention end-state and serialization of conflicting tasks via non-overlapping manifest intervals. It does **not** prove wall-clock concurrency (the orchestrator writes the timestamps). Explicit `dependsOn:` task dependencies, an authoritative `execution-plan.json` co-wave proof, and stack-extensible lock lists are deferred to **M2/M3**.
+
+**Files touched (v0.11.0):**
+
+- `procedures/ship-step2-dag-dispatch.md` *(new)* — the wave scheduler (Sections 1–9: input contract, cycle detection, inlined lock list, greedy wave selection, dispatch contract, worktree setup/dep-sharing, file-scoped merge, ship.md integration, determinism).
+- `commands/ship.md` — Step 1.10 (worktree reconcile) + Step 2b-multi (wave-dispatch wiring; consumes `$SHIP_MAX_PARALLEL`).
+- `procedures/ship-arguments-and-cost-gate.md` — `--max-parallel` parsing/validation → `$SHIP_MAX_PARALLEL`.
+- `agents/modes/shared/contract-create-modify-preserve.md` — rule 4 (undeclared-write); `agents/qa-agent.md`, `agents/modes/default/qa.md`, `agents/modes/spec-driven/qa.md` — cross-reference it (DRY).
+- `conformance/runner.mjs` + `conformance/fixtures/parallel-dispatch-*` *(9 new fixtures)*.
+- `docs/rules.md` (R11 Wave Write-Safety), `docs/pipeline-overview.md` (Parallel Dispatch M1), `docs/protocol/runtime-adapters.md` (Worktree Isolation), `docs/compatibility-matrix.md` (SPEC-013 row); `docs/feat-parallel-dispatch/` *(generated feature docs)*.
+- `.github/workflows/ci-parallel-dispatch.yml`, `.env.example` *(new)*.
+- `.claude-plugin/plugin.json` — version `0.10.0` → `0.11.0`.
+
+**Migration:** none. The task/spec **schema is unchanged** (M1 derives every serialize edge from file-scope inference + the lock list — no new frontmatter). Existing specs authored by the `planr` CLI dispatch under the new scheduler automatically; pass `--max-parallel 1` to opt back into strictly-sequential dispatch.
+
+**Pairs with (ecosystem alignment):** only `openplanr/marketplace` needs a matching change — bump the `planr-pipeline` `version` pin `0.10.0` → `0.11.0` (after this repo is tagged `v0.11.0`). The **`openplanr` CLI and `openplanr-skills` need no update**: the schema is unchanged, the CLI vendors no pipeline files, and the feature is Claude-Code-only (Cursor/Codex remain per-task sequential, so their generated adapter rules stay accurate).
+
 ## [0.10.0] — 2026-05-30
 
 ### Changed — Frontier model bump: Opus 4.7 → Opus 4.8 (1M context) for DEV codegen

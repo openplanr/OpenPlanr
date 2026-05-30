@@ -1,0 +1,8 @@
+{
+  "fixture": "parallel-dispatch-fixture-c-undeclared-write",
+  "gate": "FIXTURE-C",
+  "description": "SPEC-013 undeclared-write rejection (agents/modes/shared/contract-create-modify-preserve.md rule 4; procedures/ship-step2-dag-dispatch.md Section 7 step 1). A single task declares src/feature.ts under Create. Its worktree branch diff contains BOTH src/feature.ts AND an UNDECLARED write to src/undeclared.ts (in no task's Create/Modify list). The Section 7 subset check (wt_diff ⊆ declared) fails, so the orchestrator applies NOTHING from this worktree to main: src/undeclared.ts never lands, the declared src/feature.ts is also withheld (partial application is worse than none), the task is marked status: blocked, and a T-001-error-report.md is written to the spec tasks dir for R6 feedback. This is the negative twin of G7 (where the rogue write was a forbidden task .md silently scoped out) — here the rogue write is a plain undeclared source file, which is a HARD failure, not a silent scope-out.",
+  "max_parallel": 4,
+  "repo": "repo",
+  "worktree_diff": "worktree-diff.json"
+}

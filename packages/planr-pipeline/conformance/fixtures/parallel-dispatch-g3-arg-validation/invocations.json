@@ -1,0 +1,58 @@
+[
+  {
+    "name": "zero",
+    "argv": ["--max-parallel", "0"],
+    "raw": "0",
+    "outcome": "fatal",
+    "expected_stderr": [
+      "⚠ Invalid --max-parallel value: 0 (must be a positive integer ≥ 1).",
+      "Repair: /planr-pipeline:ship <slug> --max-parallel <positive-integer>"
+    ],
+    "expected_exit": 2,
+    "dispatches": false
+  },
+  {
+    "name": "negative",
+    "argv": ["--max-parallel", "-3"],
+    "raw": "-3",
+    "outcome": "fatal",
+    "expected_stderr": [
+      "⚠ Invalid --max-parallel value: -3 (must be a positive integer ≥ 1).",
+      "Repair: /planr-pipeline:ship <slug> --max-parallel <positive-integer>"
+    ],
+    "expected_exit": 2,
+    "dispatches": false
+  },
+  {
+    "name": "non-integer",
+    "argv": ["--max-parallel", "abc"],
+    "raw": "abc",
+    "outcome": "fatal",
+    "expected_stderr": [
+      "⚠ Invalid --max-parallel value: abc (must be a positive integer ≥ 1).",
+      "Repair: /planr-pipeline:ship <slug> --max-parallel <positive-integer>"
+    ],
+    "expected_exit": 2,
+    "dispatches": false
+  },
+  {
+    "name": "blast-radius",
+    "argv": ["--max-parallel", "50"],
+    "raw": "50",
+    "outcome": "warning",
+    "expected_stderr": [
+      "⚠ --max-parallel 50 is unusually high (> 20); proceeding, but expect heavy worktree/CPU load."
+    ],
+    "expected_exit": 0,
+    "dispatches": true
+  },
+  {
+    "name": "boundary-one",
+    "argv": ["--max-parallel", "1"],
+    "raw": "1",
+    "outcome": "silent",
+    "expected_stderr": [],
+    "expected_exit": 0,
+    "dispatches": true
+  }
+]

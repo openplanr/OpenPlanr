@@ -21,6 +21,7 @@ Iterate whitespace-split tokens left-to-right, consuming known switches:
 | `--no-docs` | `$SHIP_SKIP_DOCS = true` |
 | `--yes` | `$SHIP_ASSUME_YES = true` *(skips Phase B COST interactive halt)* |
 | `--task` | Must be followed immediately by `$SHIP_TASK_ID` matching `^T-\\d{3}$` |
+| `--max-parallel` | Must be followed immediately by `$SHIP_MAX_PARALLEL` — a positive integer (validation below). **Absent ⇒ `$SHIP_MAX_PARALLEL = 4`** (default). |
 
 **Fatals (`fatal-error-format.md` style — exactly two lines each):**
 
@@ -32,11 +33,27 @@ Iterate whitespace-split tokens left-to-right, consuming known switches:
   1. ⚠ **Task ids must match `^T-\\d{3}$` — got `<token>`.**  
   2. **Repair:** `/planr-pipeline:ship <slug> [--flags…] --task T-NNN`
 
+- **`--max-parallel` value is `0`, negative, or non-numeric** (e.g. `abc`) ⇒  
+  1. ⚠ **`--max-parallel` requires a positive integer — got `<token>`.**  
+  2. **Repair:** `/planr-pipeline:ship <slug> [--flags…] --max-parallel 4`
+
+**`--max-parallel` value validation** (mirrors `--task`, after binding `$SHIP_MAX_PARALLEL`):
+
+1. If `--max-parallel` is **absent** ⇒ `$SHIP_MAX_PARALLEL = 4` (default) — accept silently.
+2. If present ⇒ parse the next token as an integer.
+   - **`<= 0` OR non-numeric** ⇒ emit the two-line fatal above and **HALT** (dispatch nothing).
+   - **`> 20`** ⇒ emit the soft one-line warning (verbatim), then `$SHIP_MAX_PARALLEL = N` and **CONTINUE**:  
+     `[warn] --max-parallel N exceeds recommended ceiling (20); wide waves exhaust rate limits AND fill the orchestrator context in one turn — proceed knowingly`  
+     *(substitute the actual `N` for the literal `N`).*
+   - **`1`–`20`** ⇒ `$SHIP_MAX_PARALLEL = N` — accept silently. (`--max-parallel 1` is valid: sequential-equivalent dispatch.)
+
 Remaining tokens MUST resolve to **`${SLUG}` only** — kebab-case slug identical to **`plan-step0-preflight.md`** first-token hygiene. Any extra tokens ⇒  
 1. ⚠ **Unexpected trailing arguments after `<slug>`.**  
 2. **Repair:** `/planr-pipeline:ship <slug> …`
 
 Bind `${SLUG}` for every downstream reference (replace historical `$ARGUMENTS` interpolation).
+
+**Phase A bound outputs** (consumed by `commands/ship.md`): `${SLUG}`, `$SHIP_SKIP_DEVOPS`, `$SHIP_SKIP_DOCS`, `$SHIP_ASSUME_YES`, `$SHIP_TASK_ID` (when present), and **`$SHIP_MAX_PARALLEL`** (always bound — default `4`). `commands/ship.md` Step 2b-multi reads `$SHIP_MAX_PARALLEL` as the wave cap and passes it to `procedures/ship-step2-dag-dispatch.md`.
 
 ---
 

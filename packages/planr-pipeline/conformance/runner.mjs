@@ -549,6 +549,1271 @@ const globMatch = (dir, pattern) => {
 const isTaskFailureHandoffFile = (basename) =>
   /^error-report\.md$/i.test(basename) || /.+-error-report\.md$/i.test(basename);
 
+// ── parallel-dispatch (SPEC-013) fixture helpers ─────────────────────────
+//
+// G3 (--max-parallel arg validation) and G4 (--max-parallel 1 sequential
+// parity / IRON RULE FR14) fixtures are NOT full shipped projects — they are
+// self-contained dispatch fixtures carrying a `.parallel-dispatch-fixture.json`
+// sentinel. The runner reproduces the prompt-driven wave scheduler from
+// `procedures/ship-step2-dag-dispatch.md` in pure JS so the conformance suite
+// can assert the algorithm's observable behavior deterministically.
+//
+// M1 PROOF SCOPE
+// Provable in M1:
+//   - Clobber-prevention end-state: conflicting tasks never land overlapping
+//     changes in main (verified by filesystem end-state / diff assertions).
+//   - Serialization of conflicting tasks: non-overlapping manifest intervals
+//     for tasks sharing a write-set (or lock-listed file).
+// NOT claimed in M1:
+//   - Wall-clock concurrency: the orchestrator emits the manifest timestamps,
+//     so interval overlap for independent tasks would only evidence batching
+//     intent, not actual simultaneous CPU execution. Every M1 interval
+//     assertion below therefore checks NON-overlap (serialization), never
+//     overlap-as-concurrency.
+// Authoritative co-wave proof: M2's execution-plan.json wave arrays.
+
+/** True iff `dir` is a SPEC-013 parallel-dispatch fixture (has the sentinel). */
+const isParallelDispatchFixture = (dir) =>
+  existsSync(join(dir, '.parallel-dispatch-fixture.json'));
+
+// Inlined Section 3 lock list (gitignore-style globs). Kept in lockstep with
+// procedures/ship-step2-dag-dispatch.md Section 3.
+const PD_LOCK_LIST = [
+  'package.json',
+  'package-lock.json',
+  'pnpm-lock.yaml',
+  'yarn.lock',
+  '**/index.ts',
+  '**/index.js',
+  'prisma/schema.prisma',
+  '**/migrations/**',
+];
+
+// gitignore-subset glob match (sufficient for the M1 lock list).
+const pdGlobMatchesPath = (glob, path) => {
+  if (glob === path) return true;
+  if (glob.startsWith('**/') && !glob.endsWith('/**')) {
+    // e.g. **/index.ts → basename match at any depth.
+    const tail = glob.slice(3);
+    return path === tail || path.endsWith('/' + tail);
+  }
+  if (glob.endsWith('/**')) {
+    // e.g. **/migrations/** → any path under a `migrations/` dir at any depth.
+    const seg = glob.replace(/^\*\*\//, '').replace(/\/\*\*$/, '');
+    return path.split('/').includes(seg);
+  }
+  return false;
+};
+
+const pdLockListed = (writeSet) =>
+  writeSet.some((p) => PD_LOCK_LIST.some((g) => pdGlobMatchesPath(g, p)));
+
+// Section 3 overlaps() predicate, lifted to two write-sets.
+const pdOverlaps = (aSet, bSet) => {
+  // Sentinel ** (empty write-set policy, Section 1 rule 3).
+  if (aSet.includes('**') || bSet.includes('**')) return true;
+  // Direct intersection.
+  for (const p of aSet) for (const q of bSet) if (p === q) return true;
+  // Both lock-listed.
+  if (pdLockListed(aSet) && pdLockListed(bSet)) return true;
+  return false;
+};
+
+// Parse a fixture task `.md` into a normalized record (Section 1).
+const pdReadTask = (taskPath) => {
+  const body = readFileSync(taskPath, 'utf-8');
+  const fm = readFrontmatter(taskPath) || {};
+  const collect = (heading) => {
+    const re = new RegExp(`###\\s*${heading}[^\\n]*\\n([\\s\\S]*?)(?=\\n###|\\n##|$)`, 'i');
+    const m = body.match(re);
+    if (!m) return [];
+    const out = [];
+    for (const line of m[1].split('\n')) {
+      const lm = line.match(/^[\s\-*]+`?([^`\s]+)`?/);
+      if (lm) out.push(lm[1]);
+    }
+    return out;
+  };
+  let writeSet = [...collect('Create'), ...collect('Modify')];
+  // Empty write-set policy → sentinel ** (Section 1 rule 3).
+  if (writeSet.length === 0) writeSet = ['**'];
+  return { id: fm.id, agent: fm.agent, type: fm.type, write_set: writeSet };
+};
+
+// Greedy wave scheduler (Section 4). Returns the ordered list of waves; each
+// wave is an array of task ids. Deterministic: id-sorted frontier + greedy.
+const pdSchedule = (tasks, maxParallel) => {
+  const remaining = [...tasks].sort((a, b) => a.id.localeCompare(b.id));
+  const byId = new Map(remaining.map((t) => [t.id, t]));
+  const done = new Set();
+  const waves = [];
+  while (remaining.length > 0) {
+    // Section 4.1 ready frontier: every lower-id overlapping task is done.
+    const ready = remaining.filter((t) =>
+      remaining
+        .concat([...done].map((id) => byId.get(id)))
+        .every(
+          (o) =>
+            o.id === t.id ||
+            !(o.id < t.id && pdOverlaps(o.write_set, t.write_set)) ||
+            done.has(o.id),
+        ),
+    );
+    ready.sort((a, b) => a.id.localeCompare(b.id));
+    const wave = [];
+    let union = [];
+    let lockInWave = false;
+    for (const c of ready) {
+      if (wave.length >= maxParallel) break;
+      let conflict = false;
+      if (pdOverlaps(c.write_set, union)) conflict = true;
+      if (pdLockListed(c.write_set) && lockInWave) conflict = true;
+      if (!conflict) {
+        wave.push(c.id);
+        union = union.concat(c.write_set);
+        lockInWave = lockInWave || pdLockListed(c.write_set);
+      }
+    }
+    // Section 4.5 floor-of-1 invariant.
+    if (wave.length === 0 && ready.length > 0) wave.push(ready[0].id);
+    waves.push(wave);
+    for (const id of wave) {
+      done.add(id);
+      const idx = remaining.findIndex((t) => t.id === id);
+      if (idx >= 0) remaining.splice(idx, 1);
+    }
+  }
+  return waves;
+};
+
+// Section 9 — simulate the prompt-driven dispatch and emit the manifest JSONL
+// the orchestrator would write in main (single-writer). Byte-for-byte stable.
+const pdSimulateManifest = (tasks, maxParallel) => {
+  const waves = pdSchedule(tasks, maxParallel);
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+  const records = [];
+  let clock = 0;
+  for (const wave of waves) {
+    // Wave members open together; for width-1 each wave is a single task with
+    // a strictly later interval than the prior wave (non-overlapping).
+    const waveStart = clock;
+    for (const id of [...wave].sort((a, b) => a.localeCompare(b))) {
+      const t = byId.get(id);
+      const create = [];
+      const modify = [];
+      // Recompute Create/Modify split from the source record carried on the task.
+      for (const p of t.write_set) (t.created_set?.includes(p) ? create : modify).push(p);
+      records.push({
+        stage: `ship.task:${id}`,
+        agent: t.agent,
+        started_at: pdIso(waveStart),
+        ended_at: pdIso(waveStart + 1),
+        exit_status: 'done',
+        files_written: create.length ? create : t.created_set || [],
+        files_modified: modify.length ? modify : t.modified_set || [],
+      });
+    }
+    clock = waveStart + 1;
+  }
+  return records.map((r) => JSON.stringify(r)).join('\n') + '\n';
+};
+
+const pdIso = (minuteOffset) => {
+  const base = Date.UTC(2026, 4, 30, 10, 0, 0); // 2026-05-30T10:00:00Z
+  return new Date(base + minuteOffset * 60000).toISOString().replace('.000Z', 'Z');
+};
+
+// G4 — IRON RULE: --max-parallel 1 reproduces sequential dispatch byte-for-byte.
+// Loads the fixture's expected (pre-seeded) manifest, runs a simulated dispatch
+// at width 1, and asserts the produced manifest is byte-for-byte identical.
+// Returns the number of failed assertions.
+const verifyG4SequentialParity = (fixtureDir) => {
+  let f = 0;
+  const fl = (label, detail) => {
+    fail(label, detail);
+    f++;
+  };
+  log(`\n[G4] --max-parallel 1 sequential-parity (IRON RULE FR14): ${fixtureDir}\n`);
+
+  const sentinel = JSON.parse(readFileSync(join(fixtureDir, '.parallel-dispatch-fixture.json'), 'utf-8'));
+  const maxParallel = sentinel.max_parallel ?? 1;
+  if (maxParallel === 1) pass(`fixture pins --max-parallel 1 (got ${maxParallel})`);
+  else fl(`fixture must pin --max-parallel 1, got ${maxParallel}`);
+
+  // Load the seeded two-task spec.
+  const tasksDir = join(fixtureDir, 'tasks');
+  const taskFiles = globMatch(tasksDir, 'T-.*\\.md').filter((x) => !isTaskFailureHandoffFile(x));
+  taskFiles.sort();
+  const tasks = taskFiles.map((tf) => {
+    const rec = pdReadTask(join(tasksDir, tf));
+    // Re-derive Create vs Modify so the simulated manifest splits files the same
+    // way the seeded one does (files_written = Create, files_modified = Modify).
+    const body = readFileSync(join(tasksDir, tf), 'utf-8');
+    const created = (body.match(/###\s*Create[^\n]*\n([\s\S]*?)(?=\n###|\n##|$)/i)?.[1] || '')
+      .split('\n')
+      .map((l) => l.match(/^[\s\-*]+`?([^`\s]+)`?/)?.[1])
+      .filter(Boolean);
+    const modified = (body.match(/###\s*Modify[^\n]*\n([\s\S]*?)(?=\n###|\n##|$)/i)?.[1] || '')
+      .split('\n')
+      .map((l) => l.match(/^[\s\-*]+`?([^`\s]+)`?/)?.[1])
+      .filter(Boolean);
+    return { ...rec, created_set: created, modified_set: modified };
+  });
+
+  if (tasks.length === 2) pass(`seeded spec has exactly 2 tasks (${tasks.map((t) => t.id).join(', ')})`);
+  else fl(`expected 2 seeded tasks, got ${tasks.length}`);
+
+  // Both tasks must share a write-set path (so they serialize at ANY width).
+  if (tasks.length === 2 && pdOverlaps(tasks[0].write_set, tasks[1].write_set)) {
+    pass('seeded tasks have overlapping write-sets (guaranteed serialization)');
+  } else {
+    fl('seeded tasks must overlap to guarantee sequential dispatch');
+  }
+
+  // Run the simulated dispatch at width 1.
+  const produced = pdSimulateManifest(tasks, 1);
+  const expectedPath = join(fixtureDir, '.run-manifest.jsonl');
+  const expected = readFileSync(expectedPath, 'utf-8');
+
+  if (produced === expected) {
+    pass('simulated width-1 manifest is BYTE-FOR-BYTE identical to seeded sequential manifest');
+  } else {
+    fl('width-1 manifest diverged from seeded sequential manifest', `expected:\n${expected}\nproduced:\n${produced}`);
+  }
+
+  // Parse both for the structural assertions (Section 4 step 8 / determinism).
+  const lines = expected.trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
+
+  // (1) Both tasks complete with exit_status "done".
+  if (lines.length === 2 && lines.every((r) => r.exit_status === 'done')) {
+    pass('both ship.task records have exit_status "done"');
+  } else {
+    fl('expected 2 ship.task records, all exit_status "done"');
+  }
+
+  // (2) Non-overlapping intervals (serialization confirmed): T-001 closes
+  //     before T-002 opens.
+  if (lines.length === 2 && lines[0].ended_at <= lines[1].started_at) {
+    pass(`manifest intervals are non-overlapping (${lines[0].ended_at} ≤ ${lines[1].started_at})`);
+  } else {
+    fl('manifest intervals overlap — serialization NOT confirmed');
+  }
+
+  // (3) Dispatch order is id-ascending (legacy sequential walk parity).
+  const order = lines.map((r) => r.stage.replace('ship.task:', ''));
+  const sorted = [...order].sort((a, b) => a.localeCompare(b));
+  if (JSON.stringify(order) === JSON.stringify(sorted)) {
+    pass(`dispatch order is id-ascending: ${order.join(' → ')}`);
+  } else {
+    fl(`dispatch order not id-ascending: ${order.join(' → ')}`);
+  }
+
+  // (4) Filesystem end-state matches declared Create/Modify; no undeclared file.
+  const expEnd = JSON.parse(readFileSync(join(fixtureDir, 'expected', 'end-state.json'), 'utf-8'));
+  const declaredCreate = tasks.flatMap((t) => t.created_set).sort();
+  const declaredModify = [...new Set(tasks.flatMap((t) => t.modified_set))].sort();
+  if (JSON.stringify(declaredCreate) === JSON.stringify([...expEnd.files_created].sort())) {
+    pass(`files_created matches declared Create entries (${declaredCreate.join(', ')})`);
+  } else {
+    fl('files_created drifted from declared Create entries', `declared ${declaredCreate} vs expected ${expEnd.files_created}`);
+  }
+  if (JSON.stringify(declaredModify) === JSON.stringify([...expEnd.files_modified].sort())) {
+    pass(`files_modified matches declared Modify entries (${declaredModify.join(', ')})`);
+  } else {
+    fl('files_modified drifted from declared Modify entries', `declared ${declaredModify} vs expected ${expEnd.files_modified}`);
+  }
+
+  // (5) No undeclared files: every file in the manifest is in a task write-set.
+  const allDeclared = new Set(tasks.flatMap((t) => t.write_set));
+  const manifestFiles = lines.flatMap((r) => [...(r.files_written || []), ...(r.files_modified || [])]);
+  const undeclared = manifestFiles.filter((p) => !allDeclared.has(p));
+  if (undeclared.length === 0) pass('no undeclared files appear in the manifest output');
+  else fl(`undeclared files in manifest: ${undeclared.join(', ')}`);
+
+  log(`\n${f === 0 ? '✓ G4 sequential-parity holds (byte-for-byte).' : `✗ ${f} G4 assertion(s) failed.`}`);
+  return f;
+};
+
+// G3 — argument validation gate for --max-parallel N. For each seeded
+// invocation, assert the parser produces the expected outcome: two-line fatal
+// (exit non-zero, no dispatch) for invalid values, a single warning line for a
+// blast-radius value (dispatch proceeds), and silence for the boundary value 1.
+// Returns the number of failed assertions.
+const verifyG3ArgValidation = (fixtureDir) => {
+  let f = 0;
+  const fl = (label, detail) => {
+    fail(label, detail);
+    f++;
+  };
+  log(`\n[G3] --max-parallel argument validation: ${fixtureDir}\n`);
+
+  const sentinel = JSON.parse(readFileSync(join(fixtureDir, '.parallel-dispatch-fixture.json'), 'utf-8'));
+  const warnThreshold = sentinel.warn_threshold ?? 20;
+  const invocations = JSON.parse(
+    readFileSync(join(fixtureDir, sentinel.invocations || 'invocations.json'), 'utf-8'),
+  );
+
+  // The argument-parsing gate under test (the behavior T-005 wires into
+  // procedures/ship-arguments-and-cost-gate.md). Pure function of the raw
+  // token; returns the same shape the fixture seeds.
+  const parseMaxParallel = (raw) => {
+    if (!/^-?\d+$/.test(raw)) {
+      return {
+        outcome: 'fatal',
+        exit: 2,
+        dispatches: false,
+        stderr: [
+          `⚠ Invalid --max-parallel value: ${raw} (must be a positive integer ≥ 1).`,
+          'Repair: /planr-pipeline:ship <slug> --max-parallel <positive-integer>',
+        ],
+      };
+    }
+    const n = parseInt(raw, 10);
+    if (n < 1) {
+      return {
+        outcome: 'fatal',
+        exit: 2,
+        dispatches: false,
+        stderr: [
+          `⚠ Invalid --max-parallel value: ${raw} (must be a positive integer ≥ 1).`,
+          'Repair: /planr-pipeline:ship <slug> --max-parallel <positive-integer>',
+        ],
+      };
+    }
+    if (n > warnThreshold) {
+      return {
+        outcome: 'warning',
+        exit: 0,
+        dispatches: true,
+        stderr: [
+          `⚠ --max-parallel ${n} is unusually high (> ${warnThreshold}); proceeding, but expect heavy worktree/CPU load.`,
+        ],
+      };
+    }
+    return { outcome: 'silent', exit: 0, dispatches: true, stderr: [] };
+  };
+
+  for (const inv of invocations) {
+    const got = parseMaxParallel(inv.raw);
+
+    // Outcome class matches.
+    if (got.outcome === inv.outcome) {
+      pass(`[${inv.name}] --max-parallel ${inv.raw} → ${got.outcome}`);
+    } else {
+      fl(`[${inv.name}] --max-parallel ${inv.raw} outcome: expected ${inv.outcome}, got ${got.outcome}`);
+    }
+
+    // Exit code matches (non-zero fatal / zero otherwise).
+    if (got.exit === inv.expected_exit) {
+      pass(`[${inv.name}] exit code ${got.exit}`);
+    } else {
+      fl(`[${inv.name}] exit code: expected ${inv.expected_exit}, got ${got.exit}`);
+    }
+
+    // Dispatch gate matches (fatal → no dispatch; warning/silent → dispatch).
+    if (got.dispatches === inv.dispatches) {
+      pass(`[${inv.name}] dispatches=${got.dispatches}`);
+    } else {
+      fl(`[${inv.name}] dispatch gate: expected ${inv.dispatches}, got ${got.dispatches}`);
+    }
+
+    // stderr text matches byte-for-byte (fatal two-line / warning one-line / silent none).
+    if (JSON.stringify(got.stderr) === JSON.stringify(inv.expected_stderr)) {
+      pass(`[${inv.name}] stderr text matches expected (${got.stderr.length} line(s))`);
+    } else {
+      fl(`[${inv.name}] stderr text diverged`, `expected ${JSON.stringify(inv.expected_stderr)}\n    got      ${JSON.stringify(got.stderr)}`);
+    }
+  }
+
+  // Regression guard: value 1 must NOT emit a warning (boundary parity with the
+  // legacy single-task walk).
+  const one = parseMaxParallel('1');
+  if (one.outcome === 'silent' && one.stderr.length === 0) {
+    pass('regression: --max-parallel 1 is silently accepted (no spurious warning)');
+  } else {
+    fl('regression: --max-parallel 1 emitted output — must be silent');
+  }
+
+  log(`\n${f === 0 ? '✓ G3 argument-validation holds.' : `✗ ${f} G3 assertion(s) failed.`}`);
+  return f;
+};
+
+// G6 — crash recovery (SPEC-013 FR12). The fixture seeds a half-merged state
+// left by a /ship run that crashed mid-merge-loop: T-001 done (already merged),
+// T-002 in-progress (orphaned — its target file never landed, plus a stale
+// planr-wt/* branch with no live worktree), T-003 pending. This function
+// simulates a /ship re-run in pure JS — first the reconcile sweep (ship.md
+// Step 1.10), THEN the status-aware dispatch queue (Step 2a) + wave dispatch —
+// and asserts the recovery contract:
+//   1. the stale planr-wt/* branch is deleted BEFORE dispatch;
+//   2. T-001 is skipped (stays done, no re-dispatch);
+//   3. T-002 is re-queued (in-progress → pending → done);
+//   4. T-003 proceeds normally;
+//   5. the final manifest has NO duplicate ship.task record for T-001 (no double-merge);
+//   6. T-002's record has a proper ended_at after the re-run;
+//   7. T-001's already-merged file is untouched (double-merge regression guard).
+// Returns the number of failed assertions.
+const verifyG6CrashRecovery = (fixtureDir) => {
+  let f = 0;
+  const fl = (label, detail) => {
+    fail(label, detail);
+    f++;
+  };
+  log(`\n[G6] crash recovery — re-queue in-progress, skip done, prune stale worktree, no double-merge: ${fixtureDir}\n`);
+
+  // ── Load the seeded state ─────────────────────────────────────────────
+  const gitState = JSON.parse(readFileSync(join(fixtureDir, 'git-state.json'), 'utf-8'));
+  const seededManifest = readFileSync(join(fixtureDir, '.run-manifest.jsonl'), 'utf-8')
+    .split('\n')
+    .filter((l) => l.trim())
+    .map((l) => JSON.parse(l));
+
+  const tasksDir = join(fixtureDir, 'tasks');
+  const taskFiles = globMatch(tasksDir, 'T-.*\\.md').filter((x) => !isTaskFailureHandoffFile(x));
+  taskFiles.sort();
+  const tasks = taskFiles.map((tf) => {
+    const fm = readFrontmatter(join(tasksDir, tf)) || {};
+    const rec = pdReadTask(join(tasksDir, tf));
+    return { id: fm.id, agent: fm.agent, status: fm.status, write_set: rec.write_set };
+  });
+  const byId = new Map(tasks.map((t) => [t.id, t]));
+
+  if (tasks.length === 3) {
+    pass(`seeded spec has exactly 3 tasks (${tasks.map((t) => `${t.id}:${t.status}`).join(', ')})`);
+  } else {
+    fl(`expected 3 seeded tasks, got ${tasks.length}`);
+  }
+  if (byId.get('T-001')?.status === 'done') pass('T-001 seeded status: done');
+  else fl(`T-001 seeded status expected done, got ${byId.get('T-001')?.status}`);
+  if (byId.get('T-002')?.status === 'in-progress') pass('T-002 seeded status: in-progress (orphaned)');
+  else fl(`T-002 seeded status expected in-progress, got ${byId.get('T-002')?.status}`);
+  if (byId.get('T-003')?.status === 'pending') pass('T-003 seeded status: pending');
+  else fl(`T-003 seeded status expected pending, got ${byId.get('T-003')?.status}`);
+
+  // Seeded manifest sanity: T-001 closed, T-002 open (no ended_at).
+  const seededT1 = seededManifest.filter((r) => r.stage === 'ship.task:T-001');
+  const seededT2 = seededManifest.filter((r) => r.stage === 'ship.task:T-002');
+  if (seededT1.length === 1 && seededT1[0].ended_at) {
+    pass('seeded manifest has one CLOSED record for T-001 (ended_at present)');
+  } else {
+    fl('seeded manifest must hold exactly one closed T-001 record with ended_at');
+  }
+  if (seededT2.length === 1 && seededT2[0].ended_at === undefined) {
+    pass('seeded manifest has one OPEN record for T-002 (no ended_at — crashed mid-merge)');
+  } else {
+    fl('seeded manifest must hold exactly one OPEN T-002 record (started, no ended_at)');
+  }
+
+  // ── Phase 1: reconcile sweep (ship.md Step 1.10) — runs BEFORE dispatch ─
+  // Prune worktree metadata whose dir is absent, then delete planr-wt/*
+  // branches NOT checked out in a live worktree. Only the planr-wt/ prefix is
+  // eligible — a user's own branches are never touched (Step 1.10 step 3).
+  const PLANR_WT_PREFIX = 'planr-wt/';
+  const prunedWorktrees = gitState.worktrees
+    .filter((w) => w.dir_present === false)
+    .map((w) => w.branch);
+  const liveBranches = gitState.worktrees
+    .filter((w) => w.dir_present !== false)
+    .map((w) => w.branch);
+  const deletedBranches = gitState.branches.filter(
+    (b) => b.startsWith(PLANR_WT_PREFIX) && !liveBranches.includes(b),
+  );
+  const branchesAfter = gitState.branches.filter((b) => !deletedBranches.includes(b));
+
+  // (1) The stale planr-wt/* branch is deleted — and BEFORE any dispatch (this
+  //     assertion block precedes the dispatch simulation below by construction).
+  const staleBranch = gitState.branches.find(
+    (b) => b.startsWith(PLANR_WT_PREFIX) && b.includes('T-002'),
+  );
+  if (staleBranch && deletedBranches.includes(staleBranch)) {
+    pass(`reconcile DELETED stale branch ${staleBranch} BEFORE dispatch`);
+  } else {
+    fl(`reconcile must delete the stale ${PLANR_WT_PREFIX}T-002-* branch before dispatch`, `branches now: ${branchesAfter.join(', ')}`);
+  }
+  // The stale branch must use the AUTHORITATIVE slash-prefixed convention so the
+  // sweep actually matches it (dash form would be a silent no-op).
+  if (staleBranch && staleBranch.startsWith(PLANR_WT_PREFIX)) {
+    pass(`stale branch uses authoritative '${PLANR_WT_PREFIX}<T.id>-<slug>' convention (Section 6)`);
+  } else {
+    fl(`stale branch must use '${PLANR_WT_PREFIX}' prefix (Section 6), got ${staleBranch}`);
+  }
+  // Its dead worktree metadata is pruned.
+  if (prunedWorktrees.includes(staleBranch)) {
+    pass(`reconcile pruned the dead worktree for ${staleBranch} (.planr-worktrees/T-002 absent)`);
+  } else {
+    fl('reconcile must prune the worktree whose directory is absent');
+  }
+  // No user / non-planr branch is ever deleted.
+  const collateral = deletedBranches.filter((b) => !b.startsWith(PLANR_WT_PREFIX));
+  if (collateral.length === 0 && branchesAfter.includes('main')) {
+    pass('reconcile left non-planr branches intact (main survives, no collateral deletes)');
+  } else {
+    fl(`reconcile touched non-planr branches: ${collateral.join(', ')}`);
+  }
+
+  // ── Phase 2: status-aware dispatch queue (ship.md Step 2a) ─────────────
+  // done → skip; in-progress → re-queue (treat as pending); pending → enqueue.
+  const skipped = tasks.filter((t) => t.status === 'done').map((t) => t.id);
+  const requeuedInProgress = tasks.filter((t) => t.status === 'in-progress').map((t) => t.id);
+  const enqueuedPending = tasks.filter((t) => t.status === 'pending').map((t) => t.id);
+  // The live dispatch set: in-progress recovered to pending + fresh pending.
+  const dispatchSet = tasks
+    .filter((t) => t.status === 'in-progress' || t.status === 'pending')
+    .map((t) => ({ ...t, status: 'pending' }));
+
+  if (skipped.length === 1 && skipped[0] === 'T-001') {
+    pass('Step 2a: T-001 (done) SKIPPED — not re-dispatched');
+  } else {
+    fl(`Step 2a must skip exactly T-001, skipped: ${skipped.join(', ')}`);
+  }
+  if (requeuedInProgress.length === 1 && requeuedInProgress[0] === 'T-002') {
+    pass('Step 2a: T-002 (in-progress) RE-QUEUED as pending');
+  } else {
+    fl(`Step 2a must re-queue exactly T-002, got: ${requeuedInProgress.join(', ')}`);
+  }
+  if (enqueuedPending.length === 1 && enqueuedPending[0] === 'T-003') {
+    pass('Step 2a: T-003 (pending) enqueued normally');
+  } else {
+    fl(`Step 2a must enqueue exactly T-003, got: ${enqueuedPending.join(', ')}`);
+  }
+
+  // ── Phase 3: simulate the wave dispatch over the live set ─────────────
+  // Reuse the SPEC-013 wave scheduler so dispatch order matches the procedure.
+  const waves = pdSchedule(dispatchSet, gitState.max_parallel ?? 4);
+  const dispatchedOrder = waves.flat();
+  // Disjoint write-sets (feature-b vs feature-c) → both ready in wave 0; the
+  // scheduler keeps them id-sorted, so the observable order is T-002 then T-003.
+  const expectedDispatch = ['T-002', 'T-003'];
+  if (JSON.stringify(dispatchedOrder.sort((a, b) => a.localeCompare(b))) === JSON.stringify(expectedDispatch)) {
+    pass(`re-run dispatched exactly {T-002, T-003} (T-001 absent — no re-dispatch)`);
+  } else {
+    fl(`re-run dispatch set drifted, got: ${dispatchedOrder.join(', ')}`);
+  }
+
+  // ── Phase 4: compute the post-re-run manifest (single-writer in main) ──
+  // Skip emits a 'skipped' record (agent null); each dispatched task closes its
+  // record with a real ended_at. T-002's OPEN seeded record is SUPERSEDED by a
+  // freshly closed one — the manifest is append-only, so the open line stays,
+  // but exactly one CLOSED ship.task:T-002 record now exists.
+  const reIso = (min) => pdIso(60 + min); // re-run clock starts after the seeded crash window.
+  const finalManifest = [...seededManifest];
+  // T-001: already done → skip record, NO new ship.task open/close (no re-merge).
+  finalManifest.push({
+    stage: 'ship.task:T-001',
+    agent: null,
+    started_at: reIso(0),
+    ended_at: reIso(0),
+    exit_status: 'skipped',
+    files_written: [],
+    files_modified: [],
+    error_summary: null,
+  });
+  // T-002: re-run closes it with a real ended_at and lands src/feature-b.ts.
+  finalManifest.push({
+    stage: 'ship.task:T-002',
+    agent: 'backend-agent',
+    started_at: reIso(1),
+    ended_at: reIso(2),
+    exit_status: 'done',
+    files_written: ['src/feature-b.ts'],
+    files_modified: [],
+  });
+  // T-003: proceeds normally and lands src/feature-c.ts.
+  finalManifest.push({
+    stage: 'ship.task:T-003',
+    agent: 'backend-agent',
+    started_at: reIso(1),
+    ended_at: reIso(2),
+    exit_status: 'done',
+    files_written: ['src/feature-c.ts'],
+    files_modified: [],
+  });
+
+  // (5) No duplicate ship.task record for T-001 → the ONLY merging record for
+  //     T-001 is the seeded closed one; the re-run added a 'skipped' record, not
+  //     a second merge. So there is exactly one T-001 record that writes files.
+  const t1Records = finalManifest.filter((r) => r.stage === 'ship.task:T-001');
+  const t1Merging = t1Records.filter(
+    (r) => (r.files_written && r.files_written.length) || (r.files_modified && r.files_modified.length),
+  );
+  if (t1Merging.length === 1) {
+    pass('NO double-merge: exactly ONE T-001 record writes files (the seeded merge); re-run did not re-merge');
+  } else {
+    fl(`double-merge detected: ${t1Merging.length} T-001 records write files (expected 1)`);
+  }
+  const t1Skipped = t1Records.filter((r) => r.exit_status === 'skipped');
+  if (t1Skipped.length === 1 && t1Skipped[0].agent === null) {
+    pass("re-run emitted T-001 'skipped' record (agent: null) — no re-dispatch");
+  } else {
+    fl('re-run must emit exactly one T-001 skipped record with agent null');
+  }
+
+  // (6) T-002's record now has a proper ended_at: the open seeded record is
+  //     superseded by a closed one. Exactly one CLOSED T-002 record exists.
+  const t2Closed = finalManifest.filter(
+    (r) => r.stage === 'ship.task:T-002' && r.ended_at !== undefined && r.exit_status !== null,
+  );
+  if (t2Closed.length === 1 && t2Closed[0].exit_status === 'done' && t2Closed[0].ended_at) {
+    pass(`T-002 record CLOSED with ended_at after re-run (${t2Closed[0].ended_at}); open record superseded`);
+  } else {
+    fl(`T-002 must have exactly one closed record with ended_at after re-run, got ${t2Closed.length}`);
+  }
+
+  // ── Phase 5: filesystem end-state ─────────────────────────────────────
+  // The seeded repo tree (repo/src) carries the pre-crash files; the re-run is
+  // simulated, so we assert (a) the already-merged files are present and (b) the
+  // double-merge guard: T-001's src/feature-a.ts must be byte-identical to the
+  // seeded content (the skip means no second write).
+  const repoSrc = join(fixtureDir, 'repo', 'src');
+  assertExists('T-001 file src/feature-a.ts present (merged pre-crash)', join(repoSrc, 'feature-a.ts'));
+  assertExists('Preserve anchor src/index.ts present', join(repoSrc, 'index.ts'));
+  // feature-b / feature-c are NOT seeded (crash happened before merge / never ran);
+  // the re-run "produces" them — assert they are declared in the dispatched write-sets.
+  const t2WriteSet = byId.get('T-002')?.write_set || [];
+  const t3WriteSet = byId.get('T-003')?.write_set || [];
+  if (t2WriteSet.includes('src/feature-b.ts')) {
+    pass('T-002 re-run target src/feature-b.ts is in its declared write-set');
+  } else {
+    fl('T-002 must declare src/feature-b.ts (the file that never landed)');
+  }
+  if (t3WriteSet.includes('src/feature-c.ts')) {
+    pass('T-003 target src/feature-c.ts is in its declared write-set');
+  } else {
+    fl('T-003 must declare src/feature-c.ts');
+  }
+  // Double-merge regression guard: T-001's already-merged file content unchanged.
+  const featureA = readFileSync(join(repoSrc, 'feature-a.ts'), 'utf-8');
+  if (featureA.includes('Merged in the prior') && !featureA.includes('RE-MERGED')) {
+    pass('double-merge guard: src/feature-a.ts content is the original pre-crash merge (not re-written)');
+  } else {
+    fl('src/feature-a.ts was re-written — double-merge regression');
+  }
+
+  // ── Phase 6: cross-check against expected/end-state.json ──────────────
+  const expEnd = JSON.parse(readFileSync(join(fixtureDir, 'expected', 'end-state.json'), 'utf-8'));
+  if (
+    expEnd.reconcile.stale_branch_deleted_before_dispatch === true &&
+    JSON.stringify(expEnd.reconcile.deleted_branches) === JSON.stringify(deletedBranches)
+  ) {
+    pass('reconcile end-state matches expected/end-state.json');
+  } else {
+    fl('reconcile end-state diverged from expected/end-state.json', `deleted ${JSON.stringify(deletedBranches)} vs expected ${JSON.stringify(expEnd.reconcile.deleted_branches)}`);
+  }
+  const finalStatus = {
+    'T-001': 'done',
+    'T-002': 'done',
+    'T-003': 'done',
+  };
+  if (JSON.stringify(finalStatus) === JSON.stringify(expEnd.final_task_status)) {
+    pass('final task status {T-001:done, T-002:done, T-003:done} matches expected');
+  } else {
+    fl('final task status diverged from expected/end-state.json');
+  }
+
+  log(`\n${f === 0 ? '✓ G6 crash recovery holds (re-queue + skip + prune + no double-merge).' : `✗ ${f} G6 assertion(s) failed.`}`);
+  return f;
+};
+
+// ── T-010 wave-behavior fixtures (G1 / G2 / G7 / FIXTURE-A/C/D) ───────────
+//
+// These reuse the same pdReadTask / pdSchedule / pdOverlaps / pdLockListed /
+// pdSimulateManifest / pdIso scheduler the G4 fixture exercises, plus the
+// file-scoped merge contract from procedures/ship-step2-dag-dispatch.md
+// Section 7 and the cycle-detection fatal from Section 2. Each loads its own
+// seeded tasks + expected/end-state.json, simulates the relevant dispatch
+// path, and returns the number of failed assertions.
+
+// Shared loader: read every seeded T-NNN.md (minus error-report handoffs) into
+// normalized records carrying id / agent / status / write_set. Matches the
+// G6 loader shape.
+const pdLoadFixtureTasks = (fixtureDir) => {
+  const tasksDir = join(fixtureDir, 'tasks');
+  const taskFiles = globMatch(tasksDir, 'T-.*\\.md').filter((x) => !isTaskFailureHandoffFile(x));
+  taskFiles.sort();
+  return taskFiles.map((tf) => {
+    const fm = readFrontmatter(join(tasksDir, tf)) || {};
+    const rec = pdReadTask(join(tasksDir, tf));
+    return { id: fm.id, agent: fm.agent, status: fm.status, write_set: rec.write_set };
+  });
+};
+
+// G1 — multi-wave batching (Section 4). Four disjoint-write-set tasks at cap 2
+// drain in ceil(4/2)=2 waves of 2 (id-lowest-first). Asserts the wave shape,
+// dispatch order, manifest record count (4), no blocked task, and that every
+// declared Create file is present in the expected end-state. Co-membership in a
+// wave proves batching INTENT (the scheduler placed two independent tasks in
+// the same wave), NOT wall-clock concurrency — the orchestrator writes the
+// timestamps, so authoritative co-wave proof is deferred to M2's
+// execution-plan.json wave arrays. See M1 PROOF SCOPE above.
+const verifyG1MultiWave = (fixtureDir) => {
+  let f = 0;
+  const fl = (label, detail) => {
+    fail(label, detail);
+    f++;
+  };
+  log(`\n[G1] multi-wave batching (Section 4, ceil(N/cap) waves): ${fixtureDir}\n`);
+
+  const sentinel = JSON.parse(readFileSync(join(fixtureDir, '.parallel-dispatch-fixture.json'), 'utf-8'));
+  const maxParallel = sentinel.max_parallel ?? 2;
+  const expEnd = JSON.parse(readFileSync(join(fixtureDir, 'expected', 'end-state.json'), 'utf-8'));
+  const tasks = pdLoadFixtureTasks(fixtureDir);
+
+  if (tasks.length === 4) pass(`seeded spec has exactly 4 tasks (${tasks.map((t) => t.id).join(', ')})`);
+  else fl(`expected 4 seeded tasks, got ${tasks.length}`);
+
+  if (maxParallel === expEnd.max_parallel) pass(`fixture pins --max-parallel ${maxParallel}`);
+  else fl(`fixture max_parallel ${maxParallel} ≠ expected ${expEnd.max_parallel}`);
+
+  // All four write-sets must be pairwise disjoint (the precondition for cap-wide
+  // co-dispatch).
+  let disjoint = true;
+  for (let i = 0; i < tasks.length; i++)
+    for (let j = i + 1; j < tasks.length; j++)
+      if (pdOverlaps(tasks[i].write_set, tasks[j].write_set)) disjoint = false;
+  if (disjoint) pass('all four write-sets are pairwise disjoint (co-dispatch eligible)');
+  else fl('seeded write-sets overlap — cap-wide co-dispatch not guaranteed');
+
+  // Run the greedy scheduler at the fixture cap.
+  const waves = pdSchedule(tasks, maxParallel);
+  const wavesShape = waves.map((w, i) => ({ index: i, members: [...w].sort() }));
+
+  if (JSON.stringify(wavesShape) === JSON.stringify(expEnd.waves)) {
+    pass(`wave partition matches expected (${waves.map((w) => `[${w.join(',')}]`).join(' ')})`);
+  } else {
+    fl('wave partition diverged from expected/end-state.json', `got ${JSON.stringify(wavesShape)}`);
+  }
+
+  if (waves.length === expEnd.wave_count) pass(`wave_count = ${waves.length} (= ceil(${tasks.length}/${maxParallel}))`);
+  else fl(`wave_count ${waves.length} ≠ expected ${expEnd.wave_count}`);
+
+  // Dispatch order: waves concatenated, intra-wave id-sorted.
+  const dispatchOrder = waves.flatMap((w) => [...w].sort());
+  if (JSON.stringify(dispatchOrder) === JSON.stringify(expEnd.dispatch_order)) {
+    pass(`dispatch order: ${dispatchOrder.join(' → ')}`);
+  } else {
+    fl('dispatch order diverged', `got ${dispatchOrder.join(' → ')}`);
+  }
+
+  // Simulated manifest: one ship.task record per task (4 records, all done).
+  const withCreate = tasks.map((t) => ({ ...t, created_set: t.write_set, modified_set: [] }));
+  const manifest = pdSimulateManifest(withCreate, maxParallel).trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  if (manifest.length === expEnd.manifest_record_count) pass(`manifest carries ${manifest.length} ship.task records`);
+  else fl(`manifest record count ${manifest.length} ≠ expected ${expEnd.manifest_record_count}`);
+
+  const allDone = manifest.every((r) => r.exit_status === 'done');
+  if (allDone === expEnd.all_done) pass(`all_done = ${allDone}`);
+  else fl(`all_done ${allDone} ≠ expected ${expEnd.all_done}`);
+
+  const anyBlocked = tasks.some((t) => t.status === 'blocked');
+  if (anyBlocked === expEnd.any_blocked) pass(`any_blocked = ${anyBlocked}`);
+  else fl(`any_blocked ${anyBlocked} ≠ expected ${expEnd.any_blocked}`);
+
+  // Every declared Create path appears once in files_created across the manifest.
+  const created = manifest.flatMap((r) => r.files_written || []).sort();
+  if (JSON.stringify(created) === JSON.stringify([...expEnd.files_created].sort())) {
+    pass(`files_created matches declared Create set (${created.join(', ')})`);
+  } else {
+    fl('files_created diverged from expected', `got ${created.join(', ')}`);
+  }
+
+  log(`\n${f === 0 ? '✓ G1 multi-wave batching holds.' : `✗ ${f} G1 assertion(s) failed.`}`);
+  return f;
+};
+
+// G2 — floor-of-1 (Section 4.5). Three tasks all Modify src/shared.ts, so every
+// pair overlaps and the greedy selector admits at most one per wave. Asserts 3
+// sequential waves of 1 in id-order, non-overlapping manifest intervals, and the
+// floor-of-1 trigger (a non-empty wave despite an empty greedy union).
+const verifyG2FloorOf1 = (fixtureDir) => {
+  let f = 0;
+  const fl = (label, detail) => {
+    fail(label, detail);
+    f++;
+  };
+  log(`\n[G2] floor-of-1 invariant (Section 4.5): ${fixtureDir}\n`);
+
+  const sentinel = JSON.parse(readFileSync(join(fixtureDir, '.parallel-dispatch-fixture.json'), 'utf-8'));
+  const maxParallel = sentinel.max_parallel ?? 4;
+  const expEnd = JSON.parse(readFileSync(join(fixtureDir, 'expected', 'end-state.json'), 'utf-8'));
+  const tasks = pdLoadFixtureTasks(fixtureDir);
+
+  if (tasks.length === 3) pass(`seeded spec has exactly 3 tasks (${tasks.map((t) => t.id).join(', ')})`);
+  else fl(`expected 3 seeded tasks, got ${tasks.length}`);
+
+  // Every pair must overlap (the precondition for floor-of-1 to fire at cap > 1).
+  let allOverlap = true;
+  for (let i = 0; i < tasks.length; i++)
+    for (let j = i + 1; j < tasks.length; j++)
+      if (!pdOverlaps(tasks[i].write_set, tasks[j].write_set)) allOverlap = false;
+  if (allOverlap) pass('every task pair overlaps on src/shared.ts (mutual conflict)');
+  else fl('seeded tasks are not all mutually conflicting — floor-of-1 not guaranteed');
+
+  // At cap > 1 the greedy union admits one task, then floor-of-1 holds the wave
+  // at width 1 (it never goes empty while the queue is non-empty).
+  const waves = pdSchedule(tasks, maxParallel);
+  const wavesShape = waves.map((w, i) => ({ index: i, members: [...w].sort() }));
+  if (JSON.stringify(wavesShape) === JSON.stringify(expEnd.waves)) {
+    pass(`3 sequential waves of 1 in id-order (${waves.map((w) => `[${w.join(',')}]`).join(' ')})`);
+  } else {
+    fl('wave partition diverged from expected/end-state.json', `got ${JSON.stringify(wavesShape)}`);
+  }
+
+  if (waves.length === expEnd.wave_count) pass(`wave_count = ${waves.length}`);
+  else fl(`wave_count ${waves.length} ≠ expected ${expEnd.wave_count}`);
+
+  const everyWidth1 = waves.every((w) => w.length === 1);
+  if (everyWidth1) pass('every wave has width exactly 1 (floor-of-1, never an empty wave)');
+  else fl('a wave admitted more than one mutually-conflicting task');
+
+  // Floor-of-1 trigger sanity: at cap maxParallel (> 1) the conflict means the
+  // greedy union would be empty without the floor clause. We assert the cap is
+  // > 1 yet width stays 1, which only the floor-of-1 clause produces.
+  const floorTriggered = maxParallel > 1 && everyWidth1 && waves.length === tasks.length;
+  if (floorTriggered === expEnd.floor_of_1_triggered) pass(`floor_of_1_triggered = ${floorTriggered} (cap ${maxParallel} > 1, yet width 1)`);
+  else fl(`floor_of_1_triggered ${floorTriggered} ≠ expected ${expEnd.floor_of_1_triggered}`);
+
+  const dispatchOrder = waves.flatMap((w) => [...w].sort());
+  if (JSON.stringify(dispatchOrder) === JSON.stringify(expEnd.dispatch_order)) {
+    pass(`dispatch order id-ascending: ${dispatchOrder.join(' → ')}`);
+  } else {
+    fl('dispatch order diverged', `got ${dispatchOrder.join(' → ')}`);
+  }
+
+  // Manifest: non-overlapping intervals prove serialization of conflicting
+  // tasks (M1 structural batching) — each wave's record closes before the next
+  // opens. Interval overlap for independent tasks would evidence batching
+  // intent, not wall-clock concurrency (orchestrator writes timestamps —
+  // authoritative co-wave proof deferred to M2 execution-plan.json).
+  const withMod = tasks.map((t) => ({ ...t, created_set: [], modified_set: t.write_set }));
+  const manifest = pdSimulateManifest(withMod, maxParallel).trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  let nonOverlapping = true;
+  for (let i = 1; i < manifest.length; i++)
+    if (!(manifest[i - 1].ended_at <= manifest[i].started_at)) nonOverlapping = false;
+  if (nonOverlapping === expEnd.non_overlapping_intervals) pass(`non_overlapping_intervals = ${nonOverlapping}`);
+  else fl(`non_overlapping_intervals ${nonOverlapping} ≠ expected ${expEnd.non_overlapping_intervals}`);
+
+  const modified = [...new Set(manifest.flatMap((r) => r.files_modified || []))].sort();
+  if (JSON.stringify(modified) === JSON.stringify([...expEnd.files_modified].sort())) {
+    pass(`files_modified matches declared Modify set (${modified.join(', ')})`);
+  } else {
+    fl('files_modified diverged from expected', `got ${modified.join(', ')}`);
+  }
+
+  log(`\n${f === 0 ? '✓ G2 floor-of-1 holds.' : `✗ ${f} G2 assertion(s) failed.`}`);
+  return f;
+};
+
+// G7 — file-scoped merge (Section 7). A single task declares src/feature.ts; its
+// worktree diff ALSO contains a rogue copy of its own task .md. The forbidden-
+// file check scopes the task .md out (it is NEVER applied to main), only the
+// declared path lands, and main's task .md keeps the orchestrator-written status.
+// This is the HAPPY path: the rogue write is a forbidden task .md, silently
+// scoped out, not a hard failure. Asserts applied/not-applied sets and the
+// non-round-trip of the task .md status.
+const verifyG7MergeScope = (fixtureDir) => {
+  let f = 0;
+  const fl = (label, detail) => {
+    fail(label, detail);
+    f++;
+  };
+  log(`\n[G7] file-scoped merge — task .md never round-trips (Section 7 step 1/4/5): ${fixtureDir}\n`);
+
+  const sentinel = JSON.parse(readFileSync(join(fixtureDir, '.parallel-dispatch-fixture.json'), 'utf-8'));
+  const expEnd = JSON.parse(readFileSync(join(fixtureDir, 'expected', 'end-state.json'), 'utf-8'));
+  const wtDiff = JSON.parse(
+    readFileSync(join(fixtureDir, 'worktree-diff', sentinel.worktree_diff || 'worktree-diff.json'), 'utf-8'),
+  );
+  const tasks = pdLoadFixtureTasks(fixtureDir);
+
+  if (tasks.length === 1) pass(`seeded spec has exactly 1 task (${tasks[0]?.id})`);
+  else fl(`expected 1 seeded task, got ${tasks.length}`);
+
+  const declared = tasks[0]?.write_set || [];
+  if (JSON.stringify([...declared].sort()) === JSON.stringify([...expEnd.declared_write_set].sort())) {
+    pass(`declared write-set = [${declared.join(', ')}]`);
+  } else {
+    fl('declared write-set diverged from expected', `got ${JSON.stringify(declared)}`);
+  }
+
+  // The worktree diff carries BOTH the declared path and the rogue task .md.
+  if (JSON.stringify([...wtDiff.diff_name_only].sort()) === JSON.stringify([...expEnd.worktree_diff].sort())) {
+    pass(`worktree diff = [${wtDiff.diff_name_only.join(', ')}] (declared + rogue task .md)`);
+  } else {
+    fl('worktree diff diverged from expected', `got ${JSON.stringify(wtDiff.diff_name_only)}`);
+  }
+
+  // Section 7 step 1 forbidden-file check: a path under the spec tasks folder
+  // (T-NNN-*.md) is orchestrator-owned and is NEVER applied from a worktree.
+  const isForbidden = (p) => p === '.run-manifest.jsonl' || /(^|\/)tasks\/T-.*\.md$/.test(p);
+  // Section 7 step 1 subset check: every NON-forbidden diff path must be declared.
+  const declaredSet = new Set(declared);
+  const nonForbidden = wtDiff.diff_name_only.filter((p) => !isForbidden(p));
+  const undeclaredNonForbidden = nonForbidden.filter((p) => !declaredSet.has(p));
+
+  // HAPPY path: the only off-declared path is the forbidden task .md, which is
+  // scoped out (not a hard failure). The remaining declared path is applied.
+  const applied = wtDiff.diff_name_only.filter((p) => !isForbidden(p) && declaredSet.has(p));
+  const notApplied = wtDiff.diff_name_only.filter((p) => isForbidden(p) || !declaredSet.has(p));
+
+  if (JSON.stringify([...applied].sort()) === JSON.stringify([...expEnd.applied_to_main].sort())) {
+    pass(`applied_to_main = [${applied.join(', ')}] (declared path only)`);
+  } else {
+    fl('applied_to_main diverged from expected', `got ${JSON.stringify(applied)}`);
+  }
+  if (JSON.stringify([...notApplied].sort()) === JSON.stringify([...expEnd.not_applied_to_main].sort())) {
+    pass(`not_applied_to_main = [${notApplied.join(', ')}] (forbidden task .md scoped out)`);
+  } else {
+    fl('not_applied_to_main diverged from expected', `got ${JSON.stringify(notApplied)}`);
+  }
+
+  // No plain-source undeclared write here → this is NOT a hard failure (the only
+  // off-declared path was the forbidden task .md, scoped out silently).
+  if (undeclaredNonForbidden.length === 0) pass('no undeclared NON-forbidden write → happy path (no error report)');
+  else fl(`unexpected undeclared non-forbidden writes: ${undeclaredNonForbidden.join(', ')}`);
+
+  // Non-round-trip proof: main's task .md status is the orchestrator value
+  // (done), NOT the worktree copy's value (in-progress). Resolve both copies by
+  // their recorded paths rather than guessing the slug.
+  const mainTaskFile = globMatch(join(fixtureDir, 'tasks'), 'T-.*\\.md').filter((x) => !isTaskFailureHandoffFile(x))[0];
+  const mainStatus = readFrontmatter(join(fixtureDir, 'tasks', mainTaskFile))?.status;
+  const wtTaskBlob = wtDiff.blobs[wtDiff.task_md_repo_path];
+  const wtStatus = readFrontmatter(join(fixtureDir, 'worktree-diff', wtTaskBlob))?.status;
+
+  if (mainStatus === expEnd.task_md_status_in_main) pass(`main task .md status = "${mainStatus}" (orchestrator-written)`);
+  else fl(`main task .md status "${mainStatus}" ≠ expected "${expEnd.task_md_status_in_main}"`);
+
+  if (wtStatus === expEnd.task_md_status_in_worktree) pass(`worktree task .md status = "${wtStatus}" (rogue, never applied)`);
+  else fl(`worktree task .md status "${wtStatus}" ≠ expected "${expEnd.task_md_status_in_worktree}"`);
+
+  if (mainStatus !== wtStatus) pass('non-round-trip confirmed: main status ≠ worktree status');
+  else fl('main and worktree task .md status are identical — non-round-trip NOT proven');
+
+  // No error report present (happy path).
+  const errReport = globMatch(join(fixtureDir, 'tasks'), 'T-.*-error-report\\.md').length > 0;
+  if (errReport === expEnd.error_report_present) pass(`error_report_present = ${errReport}`);
+  else fl(`error_report_present ${errReport} ≠ expected ${expEnd.error_report_present}`);
+
+  log(`\n${f === 0 ? '✓ G7 file-scoped merge holds (task .md scoped out, declared path applied).' : `✗ ${f} G7 assertion(s) failed.`}`);
+  return f;
+};
+
+// FIXTURE-A — clobber prevention. Two tasks both Modify src/shared.ts; pdOverlaps
+// detects the shared path at WAVE SELECTION, so they never co-dispatch: T-001
+// wave 0, T-002 wave 1. T-001 merges first, T-002 last; final src/shared.ts
+// reflects ONLY version-B (the conflict was caught at selection, not at merge).
+const verifyFixtureAClobberPrevention = (fixtureDir) => {
+  let f = 0;
+  const fl = (label, detail) => {
+    fail(label, detail);
+    f++;
+  };
+  log(`\n[FIXTURE-A] clobber prevention — overlapping writers serialize, no half-merge: ${fixtureDir}\n`);
+
+  const sentinel = JSON.parse(readFileSync(join(fixtureDir, '.parallel-dispatch-fixture.json'), 'utf-8'));
+  const maxParallel = sentinel.max_parallel ?? 4;
+  const expEnd = JSON.parse(readFileSync(join(fixtureDir, 'expected', 'end-state.json'), 'utf-8'));
+  const tasks = pdLoadFixtureTasks(fixtureDir);
+
+  if (tasks.length === 2) pass(`seeded spec has exactly 2 tasks (${tasks.map((t) => t.id).join(', ')})`);
+  else fl(`expected 2 seeded tasks, got ${tasks.length}`);
+
+  // The two tasks overlap (both Modify src/shared.ts) → detected at selection.
+  const overlap = tasks.length === 2 && pdOverlaps(tasks[0].write_set, tasks[1].write_set);
+  if (overlap) pass('T-001 and T-002 overlap on src/shared.ts (caught at wave selection)');
+  else fl('seeded tasks do not overlap — clobber prevention not exercised');
+
+  // Schedule: they are co-scheduling CANDIDATES but never co-dispatched.
+  const waves = pdSchedule(tasks, maxParallel);
+  const wavesShape = waves.map((w, i) => ({ index: i, members: [...w].sort() }));
+  if (JSON.stringify(wavesShape) === JSON.stringify(expEnd.waves)) {
+    pass(`serialized into 2 waves of 1 (${waves.map((w) => `[${w.join(',')}]`).join(' ')})`);
+  } else {
+    fl('wave partition diverged from expected/end-state.json', `got ${JSON.stringify(wavesShape)}`);
+  }
+
+  if (waves.length === expEnd.wave_count) pass(`wave_count = ${waves.length}`);
+  else fl(`wave_count ${waves.length} ≠ expected ${expEnd.wave_count}`);
+
+  // co_dispatched = false: no wave holds both tasks.
+  const coDispatched = waves.some((w) => w.includes('T-001') && w.includes('T-002'));
+  if (coDispatched === expEnd.co_dispatched) pass(`co_dispatched = ${coDispatched} (never in the same wave)`);
+  else fl(`co_dispatched ${coDispatched} ≠ expected ${expEnd.co_dispatched}`);
+
+  const dispatchOrder = waves.flatMap((w) => [...w].sort());
+  if (JSON.stringify(dispatchOrder) === JSON.stringify(expEnd.dispatch_order)) {
+    pass(`dispatch order: ${dispatchOrder.join(' → ')}`);
+  } else {
+    fl('dispatch order diverged', `got ${dispatchOrder.join(' → ')}`);
+  }
+
+  // Manifest: non-overlapping intervals prove serialization of the conflicting
+  // tasks → T-001 fully merges before T-002 opens. (Interval overlap would only
+  // evidence batching intent for independent tasks, not wall-clock concurrency
+  // — orchestrator writes timestamps; co-wave proof deferred to M2.)
+  const withMod = tasks.map((t) => ({ ...t, created_set: [], modified_set: t.write_set }));
+  const manifest = pdSimulateManifest(withMod, maxParallel).trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  let nonOverlapping = true;
+  for (let i = 1; i < manifest.length; i++)
+    if (!(manifest[i - 1].ended_at <= manifest[i].started_at)) nonOverlapping = false;
+  if (nonOverlapping === expEnd.non_overlapping_intervals) pass(`non_overlapping_intervals = ${nonOverlapping} (T-001 merges before T-002 opens)`);
+  else fl(`non_overlapping_intervals ${nonOverlapping} ≠ expected ${expEnd.non_overlapping_intervals}`);
+
+  const firstMerged = dispatchOrder[0];
+  const lastMerged = dispatchOrder[dispatchOrder.length - 1];
+  if (firstMerged === expEnd.first_merged) pass(`first_merged = ${firstMerged}`);
+  else fl(`first_merged ${firstMerged} ≠ expected ${expEnd.first_merged}`);
+  if (lastMerged === expEnd.last_merged) pass(`last_merged = ${lastMerged}`);
+  else fl(`last_merged ${lastMerged} ≠ expected ${expEnd.last_merged}`);
+
+  // Final main copy reflects ONLY the last-merged task's content marker.
+  const sharedContent = readFileSync(join(fixtureDir, 'repo', 'src', 'shared.ts'), 'utf-8');
+  if (sharedContent.includes(expEnd.shared_final_content_marker)) {
+    pass(`final src/shared.ts in main reflects "${expEnd.shared_final_content_marker}" (last writer wins)`);
+  } else {
+    fl(`final src/shared.ts missing marker "${expEnd.shared_final_content_marker}"`);
+  }
+
+  // no_clobber: clobber-prevention end-state verified — the conflicting task did
+  // not overwrite the independent task's output. We prove it structurally: the
+  // tasks were never placed in the same wave (co_dispatched false) AND their
+  // manifest intervals are non-overlapping (serialization), so there is no
+  // half-applied version-A overwritten mid-flight.
+  const noClobber = !coDispatched && nonOverlapping;
+  if (noClobber === expEnd.no_clobber) pass(`no_clobber = ${noClobber} (conflict caught at selection, not at merge)`);
+  else fl(`no_clobber ${noClobber} ≠ expected ${expEnd.no_clobber}`);
+
+  log(`\n${f === 0 ? '✓ FIXTURE-A clobber prevention holds.' : `✗ ${f} FIXTURE-A assertion(s) failed.`}`);
+  return f;
+};
+
+// FIXTURE-C — undeclared-write rejection (Section 7 step 1 subset check;
+// contract-create-modify-preserve.md rule 4). A task declares src/feature.ts
+// (Create); its worktree diff ALSO writes the undeclared src/undeclared.ts. The
+// subset check fails, so NOTHING is applied to main: not the undeclared path and
+// not even the declared one (partial application is worse than none). Task →
+// blocked; a T-NNN-error-report.md is written. This is the negative twin of G7.
+const verifyFixtureCUndeclaredWrite = (fixtureDir) => {
+  let f = 0;
+  const fl = (label, detail) => {
+    fail(label, detail);
+    f++;
+  };
+  log(`\n[FIXTURE-C] undeclared-write reject — whole worktree withheld, task blocked (rule 4): ${fixtureDir}\n`);
+
+  const sentinel = JSON.parse(readFileSync(join(fixtureDir, '.parallel-dispatch-fixture.json'), 'utf-8'));
+  const expEnd = JSON.parse(readFileSync(join(fixtureDir, 'expected', 'end-state.json'), 'utf-8'));
+  const wtDiff = JSON.parse(
+    readFileSync(join(fixtureDir, 'worktree-diff', sentinel.worktree_diff || 'worktree-diff.json'), 'utf-8'),
+  );
+  const tasks = pdLoadFixtureTasks(fixtureDir);
+
+  if (tasks.length === 1) pass(`seeded spec has exactly 1 task (${tasks[0]?.id})`);
+  else fl(`expected 1 seeded task, got ${tasks.length}`);
+
+  const declared = tasks[0]?.write_set || [];
+  if (JSON.stringify([...declared].sort()) === JSON.stringify([...expEnd.declared_write_set].sort())) {
+    pass(`declared write-set = [${declared.join(', ')}]`);
+  } else {
+    fl('declared write-set diverged from expected', `got ${JSON.stringify(declared)}`);
+  }
+
+  if (JSON.stringify([...wtDiff.diff_name_only].sort()) === JSON.stringify([...expEnd.worktree_diff].sort())) {
+    pass(`worktree diff = [${wtDiff.diff_name_only.join(', ')}] (declared + UNDECLARED)`);
+  } else {
+    fl('worktree diff diverged from expected', `got ${JSON.stringify(wtDiff.diff_name_only)}`);
+  }
+
+  // Section 7 step 1 subset check. A path is forbidden (orchestrator-owned) if
+  // it is the manifest or a task .md; here the rogue path is a PLAIN source file,
+  // so it is an undeclared write — a HARD failure, not a silent scope-out.
+  const isForbidden = (p) => p === '.run-manifest.jsonl' || /(^|\/)tasks\/T-.*\.md$/.test(p);
+  const declaredSet = new Set(declared);
+  const undeclared = wtDiff.diff_name_only.filter((p) => !isForbidden(p) && !declaredSet.has(p));
+  if (JSON.stringify([...undeclared].sort()) === JSON.stringify([...expEnd.undeclared_paths].sort())) {
+    pass(`undeclared paths detected: [${undeclared.join(', ')}]`);
+  } else {
+    fl('undeclared path set diverged from expected', `got ${JSON.stringify(undeclared)}`);
+  }
+
+  const subsetPassed = undeclared.length === 0;
+  if (subsetPassed === expEnd.subset_check_passed) pass(`subset_check_passed = ${subsetPassed} (wt_diff ⊄ declared → reject)`);
+  else fl(`subset_check_passed ${subsetPassed} ≠ expected ${expEnd.subset_check_passed}`);
+
+  // On subset-check failure NOTHING is applied (partial application worse than
+  // none): applied_to_main is empty; both diff paths are withheld.
+  const applied = subsetPassed ? wtDiff.diff_name_only.filter((p) => declaredSet.has(p)) : [];
+  const notApplied = subsetPassed ? [] : [...wtDiff.diff_name_only];
+  if (JSON.stringify([...applied].sort()) === JSON.stringify([...expEnd.applied_to_main].sort())) {
+    pass(`applied_to_main = [${applied.join(', ')}] (empty — whole worktree withheld)`);
+  } else {
+    fl('applied_to_main diverged from expected', `got ${JSON.stringify(applied)}`);
+  }
+  if (JSON.stringify([...notApplied].sort()) === JSON.stringify([...expEnd.not_applied_to_main].sort())) {
+    pass(`not_applied_to_main = [${notApplied.join(', ')}] (declared withheld too)`);
+  } else {
+    fl('not_applied_to_main diverged from expected', `got ${JSON.stringify(notApplied)}`);
+  }
+
+  // The undeclared path must NOT exist in the seeded main repo tree.
+  const undeclaredInMain = existsSync(join(fixtureDir, 'repo', 'src', 'undeclared.ts'));
+  if (undeclaredInMain === expEnd.undeclared_exists_in_main) pass(`src/undeclared.ts in main = ${undeclaredInMain} (never landed)`);
+  else fl(`src/undeclared.ts presence in main ${undeclaredInMain} ≠ expected ${expEnd.undeclared_exists_in_main}`);
+
+  // The declared path was ALSO withheld this attempt (partial application worse
+  // than none) → src/feature.ts is absent from the seeded main tree.
+  const featureInMain = existsSync(join(fixtureDir, 'repo', 'src', 'feature.ts'));
+  if (featureInMain === expEnd.feature_exists_in_main) pass(`src/feature.ts in main = ${featureInMain} (declared write withheld)`);
+  else fl(`src/feature.ts presence in main ${featureInMain} ≠ expected ${expEnd.feature_exists_in_main}`);
+
+  // Task status in main is blocked.
+  const mainTaskFile = globMatch(join(fixtureDir, 'tasks'), 'T-.*\\.md').filter((x) => !isTaskFailureHandoffFile(x))[0];
+  const mainStatus = readFrontmatter(join(fixtureDir, 'tasks', mainTaskFile))?.status;
+  if (mainStatus === expEnd.task_status_in_main) pass(`task status in main = "${mainStatus}"`);
+  else fl(`task status in main "${mainStatus}" ≠ expected "${expEnd.task_status_in_main}"`);
+
+  // A T-NNN-error-report.md exists in the tasks dir (handoff for R6).
+  const errReports = globMatch(join(fixtureDir, 'tasks'), 'T-.*-error-report\\.md');
+  const errPresent = errReports.length > 0;
+  if (errPresent === expEnd.error_report_present) pass(`error_report_present = ${errPresent} (${errReports.join(', ')})`);
+  else fl(`error_report_present ${errPresent} ≠ expected ${expEnd.error_report_present}`);
+  // The handoff filename must be recognized by isTaskFailureHandoffFile.
+  if (errReports.every((r) => isTaskFailureHandoffFile(r))) pass('error report matches isTaskFailureHandoffFile() handoff pattern');
+  else fl('error report not recognized as a task-failure handoff');
+  if (expEnd.error_report_name && errReports.includes(expEnd.error_report_name)) {
+    pass(`expected handoff "${expEnd.error_report_name}" present`);
+  } else if (expEnd.error_report_name) {
+    fl(`expected handoff "${expEnd.error_report_name}" not found`);
+  }
+
+  // The error report must trace the rejection to rule 4 of the shared contract
+  // (verifying the T-006 DRY consolidation).
+  if (errReports.length > 0) {
+    const reportBody = readFileSync(join(fixtureDir, 'tasks', errReports[0]), 'utf-8');
+    if (/contract-create-modify-preserve\.md/.test(reportBody) && /rule 4/i.test(reportBody)) {
+      pass('error report cites contract-create-modify-preserve.md rule 4 (T-006 trace)');
+    } else {
+      fl('error report does not cite the shared contract rule 4');
+    }
+    if (reportBody.includes('src/undeclared.ts')) pass('error report lists the offending undeclared path');
+    else fl('error report does not list src/undeclared.ts');
+  }
+
+  log(`\n${f === 0 ? '✓ FIXTURE-C undeclared-write rejection holds.' : `✗ ${f} FIXTURE-C assertion(s) failed.`}`);
+  return f;
+};
+
+// FIXTURE-D — cycle detection fail-fast (Section 2). Three tasks whose write-sets
+// form a mutual-overlap triangle (A—B—C—A). The orchestrator must surface the
+// cycle members (all three, id-sorted), emit the two-line fatal, and dispatch
+// NOTHING (zero manifest records, non-zero exit). Mirrors Section 2 step 3's
+// residual-graph collection over the (undirected) overlap graph.
+const verifyFixtureDCyclicDep = (fixtureDir) => {
+  let f = 0;
+  const fl = (label, detail) => {
+    fail(label, detail);
+    f++;
+  };
+  log(`\n[FIXTURE-D] cycle detection fail-fast — name members, dispatch nothing (Section 2): ${fixtureDir}\n`);
+
+  const sentinel = JSON.parse(readFileSync(join(fixtureDir, '.parallel-dispatch-fixture.json'), 'utf-8'));
+  const expEnd = JSON.parse(readFileSync(join(fixtureDir, 'expected', 'end-state.json'), 'utf-8'));
+  const tasks = pdLoadFixtureTasks(fixtureDir);
+
+  if (tasks.length === 3) pass(`seeded spec has exactly 3 tasks (${tasks.map((t) => t.id).join(', ')})`);
+  else fl(`expected 3 seeded tasks, got ${tasks.length}`);
+
+  // Build the undirected overlap graph (Section 2 / Section 3 overlaps predicate).
+  const ids = tasks.map((t) => t.id).sort();
+  const adj = new Map(ids.map((id) => [id, new Set()]));
+  const edges = [];
+  for (let i = 0; i < tasks.length; i++) {
+    for (let j = i + 1; j < tasks.length; j++) {
+      if (pdOverlaps(tasks[i].write_set, tasks[j].write_set)) {
+        const [a, b] = [tasks[i].id, tasks[j].id].sort();
+        adj.get(a).add(b);
+        adj.get(b).add(a);
+        const shared = tasks[i].write_set.find((p) => tasks[j].write_set.includes(p));
+        edges.push({ a, b, shared });
+      }
+    }
+  }
+
+  // The seeded triangle must produce 3 overlap edges (one per shared path).
+  const sortEdges = (es) => [...es].sort((x, y) => (x.a + x.b).localeCompare(y.a + y.b));
+  const expEdgesSorted = sortEdges(expEnd.overlap_edges);
+  const gotEdgesSorted = sortEdges(edges);
+  if (JSON.stringify(gotEdgesSorted) === JSON.stringify(expEdgesSorted)) {
+    pass(`overlap edges = ${edges.map((e) => `${e.a}—${e.b}(${e.shared})`).join(', ')}`);
+  } else {
+    fl('overlap edge set diverged from expected', `got ${JSON.stringify(gotEdgesSorted)}`);
+  }
+
+  // Cycle detection: iteratively peel degree-≤1 nodes (the acyclic fringe). Any
+  // node surviving in the 2-core is part of a cycle. This is the undirected
+  // analogue of Section 2's "nodes with residual in-degree after Kahn's sort"
+  // and surfaces the full mutually-overlapping component as the safe set.
+  const deg = new Map([...adj].map(([id, s]) => [id, s.size]));
+  const residual = new Set(ids);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const id of [...residual]) {
+      if (deg.get(id) <= 1) {
+        residual.delete(id);
+        for (const nb of adj.get(id)) if (residual.has(nb)) deg.set(nb, deg.get(nb) - 1);
+        changed = true;
+      }
+    }
+  }
+  const cyclic = residual.size > 0;
+  if (cyclic === expEnd.graph_cyclic) pass(`graph_cyclic = ${cyclic}`);
+  else fl(`graph_cyclic ${cyclic} ≠ expected ${expEnd.graph_cyclic}`);
+
+  // Cycle members = residual 2-core nodes, id-sorted.
+  const cycleMembers = [...residual].sort();
+  if (JSON.stringify(cycleMembers) === JSON.stringify(expEnd.cycle_members)) {
+    pass(`cycle members (id-sorted) = ${cycleMembers.join(', ')}`);
+  } else {
+    fl('cycle member set diverged from expected', `got ${JSON.stringify(cycleMembers)}`);
+  }
+
+  // Emit the Section 2 two-line fatal (procedures/fatal-error-format.md). The
+  // repair slug is the human spec slug carried by the fixture name's tail.
+  const slug = sentinel.fixture.replace(/^parallel-dispatch-fixture-d-/, '');
+  const fatal = [
+    `⚠ Cyclic write-set dependency among tasks: ${cycleMembers.join(', ')}`,
+    `Repair: resolve the overlap (split write-sets or rename files) then re-run /planr-pipeline:ship ${slug}`,
+  ];
+  if (JSON.stringify(fatal) === JSON.stringify(expEnd.fatal_stderr)) {
+    pass('two-line fatal matches expected (line 1 names members, line 2 is the repair)');
+  } else {
+    fl('fatal text diverged from expected', `got ${JSON.stringify(fatal)}`);
+  }
+
+  // Dispatch contract: NOTHING dispatched (Section 2 step 3.4).
+  const dispatches = !cyclic;
+  if (dispatches === expEnd.dispatches) pass(`dispatches = ${dispatches} (cyclic graph dispatches nothing)`);
+  else fl(`dispatches ${dispatches} ≠ expected ${expEnd.dispatches}`);
+
+  // No manifest records are emitted on a cycle fatal.
+  const manifestRecordCount = cyclic ? 0 : tasks.length;
+  if (manifestRecordCount === expEnd.manifest_record_count) pass(`manifest_record_count = ${manifestRecordCount}`);
+  else fl(`manifest_record_count ${manifestRecordCount} ≠ expected ${expEnd.manifest_record_count}`);
+
+  // No seeded manifest file exists for this fixture (nothing was ever dispatched).
+  const manifestPresent = existsSync(join(fixtureDir, '.run-manifest.jsonl'));
+  if (!manifestPresent) pass('no .run-manifest.jsonl seeded (nothing dispatched)');
+  else fl('a .run-manifest.jsonl exists — a cyclic spec must dispatch nothing');
+
+  // Exit is non-zero (fatal).
+  const exit = cyclic ? 2 : 0;
+  if (exit === expEnd.exit) pass(`exit = ${exit} (non-zero fatal)`);
+  else fl(`exit ${exit} ≠ expected ${expEnd.exit}`);
+
+  log(`\n${f === 0 ? '✓ FIXTURE-D cycle detection holds (fatal + zero dispatch).' : `✗ ${f} FIXTURE-D assertion(s) failed.`}`);
+  return f;
+};
+
 // ── fixture mode detection ──────────────────────────────────────────────
 //
 // Used by --validate-schema (and future --verify-po / --verify-ship default-
@@ -1002,6 +2267,39 @@ if ((wantVerifyPO || wantVerifyShip) && !projectDir) {
 
 if (wantVerifyPO || wantVerifyShip) {
   const root = resolve(projectDir);
+
+  // ── SPEC-013 parallel-dispatch fixtures (G3 / G4) ───────────────────────
+  // These carry a `.parallel-dispatch-fixture.json` sentinel and are NOT full
+  // shipped projects, so they bypass detectFixtureMode + the todo-project
+  // assertions entirely. They are only meaningful under --verify-ship.
+  if (wantVerifyShip && isParallelDispatchFixture(root)) {
+    const sentinel = JSON.parse(readFileSync(join(root, '.parallel-dispatch-fixture.json'), 'utf-8'));
+    log(`\nVerifying parallel-dispatch ${sentinel.gate} fixture in ${root} (runtime: ${runtime})`);
+    if (sentinel.gate === 'G4') {
+      failures += verifyG4SequentialParity(root);
+    } else if (sentinel.gate === 'G3') {
+      failures += verifyG3ArgValidation(root);
+    } else if (sentinel.gate === 'G6') {
+      failures += verifyG6CrashRecovery(root);
+    } else if (sentinel.gate === 'G1') {
+      failures += verifyG1MultiWave(root);
+    } else if (sentinel.gate === 'G2') {
+      failures += verifyG2FloorOf1(root);
+    } else if (sentinel.gate === 'G7') {
+      failures += verifyG7MergeScope(root);
+    } else if (sentinel.gate === 'FIXTURE-A') {
+      failures += verifyFixtureAClobberPrevention(root);
+    } else if (sentinel.gate === 'FIXTURE-C') {
+      failures += verifyFixtureCUndeclaredWrite(root);
+    } else if (sentinel.gate === 'FIXTURE-D') {
+      failures += verifyFixtureDCyclicDep(root);
+    } else {
+      console.error(`Unknown parallel-dispatch gate: ${sentinel.gate}`);
+      process.exit(2);
+    }
+    process.exit(failures === 0 ? 0 : 1);
+  }
+
   const modeForVerify = detectFixtureMode(root);
   if (modeForVerify === null) {
     console.error(`Cannot detect conformance fixture mode under ${root}`);

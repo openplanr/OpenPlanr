@@ -1,0 +1,6 @@
+{
+  "fixture": "parallel-dispatch-g4-sequential-parity",
+  "gate": "G4",
+  "description": "IRON RULE (SPEC-013 FR14): --max-parallel 1 reproduces the legacy sequential dispatch byte-for-byte. Both tasks declare src/shared.ts under Modify, so they overlap and serialize at ANY width; at width 1 the wave scheduler MUST emit T-001 then T-002, one task per wave, with non-overlapping manifest intervals.",
+  "max_parallel": 1
+}

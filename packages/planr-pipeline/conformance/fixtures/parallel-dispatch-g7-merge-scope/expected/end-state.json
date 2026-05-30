@@ -1,0 +1,16 @@
+{
+  "max_parallel": 4,
+  "declared_write_set": ["src/feature.ts"],
+  "worktree_diff": [
+    "src/feature.ts",
+    ".planr/specs/SPEC-013-parallel-dispatch/tasks/T-001-merge-scope.md"
+  ],
+  "applied_to_main": ["src/feature.ts"],
+  "not_applied_to_main": [
+    ".planr/specs/SPEC-013-parallel-dispatch/tasks/T-001-merge-scope.md"
+  ],
+  "task_md_status_in_main": "done",
+  "task_md_status_in_worktree": "in-progress",
+  "task_completed": true,
+  "error_report_present": false
+}

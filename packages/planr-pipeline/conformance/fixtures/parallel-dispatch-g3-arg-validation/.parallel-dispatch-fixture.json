@@ -1,0 +1,7 @@
+{
+  "fixture": "parallel-dispatch-g3-arg-validation",
+  "gate": "G3",
+  "description": "Argument validation gate for --max-parallel N (SPEC-013 T-005). Invalid values (0, negative, non-integer) are two-line fatals per procedures/fatal-error-format.md and dispatch nothing (exit non-zero). A large blast-radius value (50) emits a soft warning line but dispatch proceeds. The boundary value 1 is silently accepted (regression: MUST NOT emit a warning) and proceeds.",
+  "warn_threshold": 20,
+  "invocations": "invocations.json"
+}

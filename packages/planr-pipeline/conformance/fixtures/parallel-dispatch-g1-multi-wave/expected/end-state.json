@@ -1,0 +1,13 @@
+{
+  "max_parallel": 2,
+  "wave_count": 2,
+  "waves": [
+    { "index": 0, "members": ["T-001", "T-002"] },
+    { "index": 1, "members": ["T-003", "T-004"] }
+  ],
+  "dispatch_order": ["T-001", "T-002", "T-003", "T-004"],
+  "manifest_record_count": 4,
+  "all_done": true,
+  "any_blocked": false,
+  "files_created": ["src/a.ts", "src/b.ts", "src/c.ts", "src/d.ts"]
+}

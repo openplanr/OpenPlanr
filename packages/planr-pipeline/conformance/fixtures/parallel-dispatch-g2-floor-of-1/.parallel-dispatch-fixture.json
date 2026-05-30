@@ -1,0 +1,6 @@
+{
+  "fixture": "parallel-dispatch-g2-floor-of-1",
+  "gate": "G2",
+  "description": "SPEC-013 floor-of-1 invariant (Section 4.5). Three tasks (T-001..T-003) all declare src/shared.ts under Modify, so every pair overlaps and the greedy selector can admit at most one per wave. The result is 3 sequential waves of 1 in id-order — never an empty wave while the queue is non-empty. All three tasks complete; the manifest carries 3 ship.task records with non-overlapping intervals.",
+  "max_parallel": 4
+}

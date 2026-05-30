@@ -1,0 +1,7 @@
+{
+  "fixture": "parallel-dispatch-g7-merge-scope",
+  "gate": "G7",
+  "description": "SPEC-013 FR9/FR11 file-scoped merge (procedures/ship-step2-dag-dispatch.md Section 7). A single task declares src/feature.ts under Create. Its worktree branch diff contains BOTH src/feature.ts AND a modified copy of its own task .md (.planr/specs/SPEC-013-parallel-dispatch/tasks/T-001-merge-scope.md). The orchestrator merges only the declared path via file-scoped checkout — the task .md is forbidden-file-listed and is NEVER applied from the worktree. The task .md status in main is the orchestrator-written 'done', NOT the worktree copy's value. No error report (this is the happy path: the rogue task-.md write is silently scoped out, not a hard failure, because the declared write src/feature.ts is the only file the merge applies).",
+  "max_parallel": 4,
+  "worktree_diff": "worktree-diff.json"
+}

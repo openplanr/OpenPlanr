@@ -22,6 +22,7 @@ Same `.planr/specs/` directories. Same SPEC / US / Task schema. Same `.pipeline-
 | **SHIP orchestration** | ✅ slash command (`/planr-pipeline:ship`) | ✅ rule | ✅ persona |
 | **8 named subagents** | ✅ manifest-declared, model pinned | ⚠️ Composer subagent dispatch (Cursor 1.x) | ⚠️ persona role-shift only (no isolation) |
 | **Multi-task `/ship` in one invocation** | ✅ `DISPATCH_MODE: multi-task` (manifest-isolated subagents per task) | ⚠️ `DISPATCH_MODE: per-task` default (override with `--all-tasks`) — see §Dispatch mode below | ⚠️ `DISPATCH_MODE: per-task` default — see §Dispatch mode below |
+| **DAG-aware parallel dispatch** (SPEC-013 — K-wide waves, worktree isolation) | ✅ full fan-out under `multi-task` (`isolation: worktree` + file-scoped merge) | ❌ not supported — per-task sequential (unchanged) | ❌ not supported — per-task sequential (unchanged) |
 | **Task `status` resume** (continue partially-shipped specs across multiple `/ship` invocations) | ✅ status read on entry, written on close-out | ✅ same — runtime-agnostic, lives in T-task frontmatter | ✅ same |
 | **Project memory** (`.planr/memory.md` — traps, decisions, corrections) | ✅ orchestrator-managed read/write | ✅ prompt-driven read/write | ✅ prompt-driven read/write |
 | **Task rationale** (`rationale:` frontmatter on T-tasks) | ✅ | ✅ | ✅ |
@@ -101,6 +102,18 @@ Each invocation in `per-task` mode dispatches **one** task, writes its closing s
 **For users:** if you're in Cursor and `/ship` produces a status rollup instead of generating code, the cause is Composer's cumulative-context bias on multi-task continuation runs. The default `per-task` dispatch mode in v0.8.0+ resolves this. If you're on an older plugin version, use `--task T-NNN` to force single-task targeting.
 
 **For mixed workflows:** plan in Cursor (read-friendly, ergonomic), ship in Claude Code (canonical isolation, fastest end-to-end). Both runtimes write the same `.planr/specs/` artifacts.
+
+### DAG-aware parallel dispatch (SPEC-013)
+
+The M1 wave scheduler fans a multi-task `/ship` queue out into **waves** — K `Agent` tool-calls per orchestrator turn — with each wave-member running under `isolation: worktree` and merged back to main file-by-file against its declared write-set. This is layered **on top of** `DISPATCH_MODE: multi-task` and is therefore a Claude Code capability only.
+
+| Runtime | DAG-aware parallel dispatch | Behavior |
+|---|---|---|
+| **Claude Code** | ✅ supported (full fan-out) | `DISPATCH_MODE: multi-task` + the wave scheduler. Worktree isolation is a host primitive (`isolation: "worktree"` on the `Agent` tool); the plugin merges only declared files. |
+| **Cursor** | ❌ not supported | Runs `DISPATCH_MODE: per-task` — one task per invocation, sequential, against the main tree. Unchanged by SPEC-013. |
+| **Codex** | ❌ not supported | Runs `DISPATCH_MODE: per-task` — one task per invocation, sequential. Unchanged by SPEC-013. |
+
+`--max-parallel 1` at **any** runtime is sequential-equivalent: on Claude Code it forces width-1 waves (byte-for-byte the legacy id-ordered walk); on Cursor/Codex the flag is inapplicable (per-task is already one task per invocation) and is ignored with a one-line warning. The multi-task-mode-only scope is fixed by `docs/rules.md` R11; the full algorithm is in `../procedures/ship-step2-dag-dispatch.md`.
 
 ## Cross-runtime spec portability
 

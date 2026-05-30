@@ -170,4 +170,26 @@ The framework refuses to auto-chain PO Phase → DEV Phase.
 
 Normative definition: **`docs/rules.md`** → **`### R6 — Max 3 Correction Iterations`**. This file does not duplicate R6 prose — read R6 before changing pipeline agent prompts.
 
+---
+
+## Parallel Dispatch (M1)
+
+> Applies to the DEV Phase (Step 3) **only when `DISPATCH_MODE: multi-task`** — the Claude Code default. In `per-task` and `single-task` modes the pipeline dispatches one task per invocation with no fan-out (see `docs/compatibility-matrix.md` §Dispatch mode). Algorithm: `procedures/ship-step2-dag-dispatch.md`. Safety rule: `docs/rules.md` R11.
+
+When more than one DEV task is `pending`/`blocked`, the orchestrator drains the queue in **waves** instead of a strictly sequential walk.
+
+**Wave structure.** A wave is `K` `Agent` tool-calls emitted in **one** orchestrator turn (1 ≤ K ≤ the width cap). It is prompt-driven: there is no daemon, no new process, no new dependency — the orchestrator follows the scheduler procedure in-context. A wave does not promise wall-clock concurrency; it bounds how many tasks the orchestrator *hands off* at once, and the orchestrator waits for all K results before computing the next wave.
+
+**Three-layer write-safety model.** Fan-out is only safe because every wave-member is provably non-conflicting:
+
+1. **Lock-list prevention.** Before selecting a wave, the scheduler unions each task's declared write-set (`### Create` ∪ `### Modify`) with the inlined Node/TS lock list (`package.json`, lockfiles, barrel `index.ts`, `prisma/schema.prisma`, `**/migrations/**`). Tasks whose unioned sets overlap are serialized into different waves. A task with an empty/absent write-set is serialized alone.
+2. **Worktree isolation.** Each admitted wave-member runs with `isolation: "worktree"` — its subagent writes to a private `planr-wt/<T.id>-<short-slug>` branch in `.planr-worktrees/<T.id>`, never to the shared main tree.
+3. **File-scoped merge verification.** When the agent returns, the orchestrator validates the worktree diff against the task's declared list and applies **only** those files to main via `git checkout <wt-branch> -- <declared-files>`. An undeclared write (or any touch of `.run-manifest.jsonl` / a task `.md` status field) is rejected → the task is `blocked` and re-queued through R6.
+
+**Width cap (`--max-parallel`).** Wave width is capped by `$SHIP_MAX_PARALLEL`, parsed from `--max-parallel N` (**default 4** when absent; positive-integer required, soft-warned above ~20). With `N` write-disjoint ready tasks and cap `K`, the queue drains in `ceil(N/K)` waves.
+
+**Sequential-parity escape (`--max-parallel 1`).** Setting the cap to `1` keeps the scheduler active but admits exactly one task per wave, producing dispatch order **byte-for-byte identical** to the legacy id-ordered sequential walk. This is the opt-out from parallelism without leaving `multi-task` mode.
+
+> **M2 (deferred — not shipped).** A future milestone will add `execution-plan.json` for auditable wave records and an explicit `dependsOn:` task field. M1 derives every serialize edge from file-scope inference plus the inlined lock list; do not treat the M2 surfaces as present.
+
 *See: `docs/rules.md` · `docs/agent-model-map.md` · `docs/task-anatomy.md`*

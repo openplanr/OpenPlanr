@@ -85,6 +85,7 @@ or
    c. Verify Preserve list integrity (git diff or stat compare)
    d. Walk DoD checklist
    e. If `<SPEC_DIR>/tasks/T-<id>-error-report.md` exists for that task id ⇒ FAIL citing handoff
+   f. See `agents/modes/shared/contract-create-modify-preserve.md` rule 4 for the undeclared-write rejection policy.
 3. Run input/tech/stack.md::BuildCommand
 4. Run input/tech/stack.md::TestCommand
 5. Aggregate findings into <SPEC_DIR>/qa-report.md

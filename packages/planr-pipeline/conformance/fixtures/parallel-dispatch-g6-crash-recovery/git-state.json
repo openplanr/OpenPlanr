@@ -1,0 +1,19 @@
+{
+  "description": "Seeded git stub for the half-merged crash state. Branches that survived the crash and the live worktrees that git knows about. The reconcile sweep (ship.md Step 1.10) prunes worktrees whose dir is absent, then deletes planr-wt/* branches not in the live-worktree set. AUTHORITATIVE branch convention: planr-wt/<T.id>-<short-slug> (procedures/ship-step2-dag-dispatch.md Section 6).",
+  "branches": [
+    "main",
+    "planr-wt/T-002-feature-b-in-progress"
+  ],
+  "worktrees": [
+    {
+      "branch": "main",
+      "path": ".",
+      "dir_present": true
+    },
+    {
+      "branch": "planr-wt/T-002-feature-b-in-progress",
+      "path": ".planr-worktrees/T-002",
+      "dir_present": false
+    }
+  ]
+}
