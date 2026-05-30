@@ -182,7 +182,7 @@ value (e.g. a custom subagent name) overrides the default routing.
 > **User Story:** US-001
 > **Spec:** SPEC-001
 > **Type:** UI
-> **Agent:** `frontend-agent` (Opus 4.7)
+> **Agent:** `frontend-agent` (Opus 4.8)
 
 ## Objective
 <1-2 sentences: what does this task accomplish?>
