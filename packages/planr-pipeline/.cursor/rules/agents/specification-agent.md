@@ -143,7 +143,7 @@ What is IN scope. What is explicitly OUT of scope for this US.]
 
 > **US:** us-{N} — [US Title]
 > **Feature:** feat-{name}
-> **Agent:** [Frontend Agent | Backend Agent] (Opus 4.7)
+> **Agent:** [Frontend Agent | Backend Agent] (Opus 4.8)
 > **Type:** [UI | Tech]
 > **Status:** pending
 

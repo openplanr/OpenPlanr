@@ -12,9 +12,9 @@
 | Entity Scaffold Agent | Sonnet 4.6 | Step 0.2 | Schema → `output/src/` entity/DbContext (or ORM equivalent) is **structured** codegen — map columns to types, wire FKs, no feature logic. Sonnet 4.6 is sufficient; Opus is reserved for Step 3 Tech tasks. |
 | Designer Agent      | Sonnet 4.6  | Step 1   | Vision analysis + structured Markdown output. Sonnet 4.6 vision is accurate for design token extraction. No code generation needed. |
 | Specification Agent | Sonnet 4.6  | Step 1   | Decomposition requires strong reasoning but not code generation. Sonnet 4.6 produces high-quality structured documents at speed. |
-| Frontend Agent      | Opus 4.7    | Step 3   | Production UI code requires the highest-quality output: correct JSX, TypeScript, state management, API wiring, and test generation. |
-| Backend Agent       | Opus 4.7    | Step 3   | Task-driven services/controllers/DTOs/endpoints need deep reasoning and multi-file coordination — same tier as Frontend Agent. (Step 0.2 uses **Entity Scaffold Agent**.) |
-| QA Agent            | Sonnet 4.6  | Step 3.5 | Read-only verification: walks task DoD, runs build/test commands, surfaces error-reports. No code generation, so Opus 4.7 cost is unjustified. |
+| Frontend Agent      | Opus 4.8    | Step 3   | Production UI code requires the highest-quality output: correct JSX, TypeScript, state management, API wiring, and test generation. |
+| Backend Agent       | Opus 4.8    | Step 3   | Task-driven services/controllers/DTOs/endpoints need deep reasoning and multi-file coordination — same tier as Frontend Agent. (Step 0.2 uses **Entity Scaffold Agent**.) |
+| QA Agent            | Sonnet 4.6  | Step 3.5 | Read-only verification: walks task DoD, runs build/test commands, surfaces error-reports. No code generation, so Opus 4.8 cost is unjustified. |
 | DevOps Agent        | Sonnet 4.6  | Step 3.5 | Generates infrastructure config from stack templates. Structured Markdown/YAML output, no novel logic. |
 | Doc-Gen Agent       | Sonnet 4.6  | Step 3.5 | Produces human-readable Markdown docs from existing artifacts. No code, no novel inference. |
 
@@ -38,10 +38,10 @@ Sonnet 4.6 limitations (why it's NOT used for DEV):
 
 ---
 
-## Why Opus 4.7 for Code Generation Phases?
+## Why Opus 4.8 for Code Generation Phases?
 
 ```
-Opus 4.7 strengths in this pipeline:
+Opus 4.8 strengths in this pipeline:
 ✅ Best-in-class multi-file code generation
 ✅ Deep understanding of framework conventions
 ✅ Reliable TypeScript/C# type correctness
@@ -49,7 +49,7 @@ Opus 4.7 strengths in this pipeline:
 ✅ Handles complex dependency graphs across files
 ✅ Understands and applies design token systems
 
-Opus 4.7 trade-offs (acceptable in DEV phase):
+Opus 4.8 trade-offs (acceptable in DEV phase):
 ⚠️ Higher cost per token → only used where it matters
 ⚠️ Slower → offset by parallel execution (Frontend + Backend run simultaneously)
 ```
@@ -62,12 +62,12 @@ Opus 4.7 trade-offs (acceptable in DEV phase):
 Step 3 — DEV Phase
                      ┌─────────────────────┐
          task-1.md → │  Frontend Agent     │ → UI files
-                     │  (Opus 4.7)         │
+                     │  (Opus 4.8)         │
                      └─────────────────────┘
                               ↓ (parallel)
                      ┌─────────────────────┐
          task-2.md → │  Backend Agent      │ → Tech files
-                     │  (Opus 4.7)         │
+                     │  (Opus 4.8)         │
                      └─────────────────────┘
                               ↓
                      Consolidated Build Check
@@ -90,7 +90,7 @@ High-volume, low-complexity → Sonnet 4.6
   - Spec decompositions (run per feature, per sprint)
   - Design analysis (run once per feature with PNG changes)
 
-Low-volume, high-complexity → Opus 4.7
+Low-volume, high-complexity → Opus 4.8
   - Feature code generation (run once per task, re-run only on failure)
 
 Structured scaffold (Step 0.2) → Sonnet 4.6 via **Entity Scaffold Agent** (run manually when `output/src/` entities are needed)

@@ -45,8 +45,8 @@
 | db-agent             | claude-sonnet-4-6 | 0.1      | —            | idle   |
 | designer-agent       | claude-sonnet-4-6 | 1        | —            | idle   |
 | specification-agent  | claude-sonnet-4-6 | 1        | —            | idle   |
-| frontend-agent       | claude-opus-4-7   | 3        | —            | idle   |
-| backend-agent        | claude-opus-4-7   | 0.2 + 3  | —            | idle   |
+| frontend-agent       | claude-opus-4-8[1m] | 3        | —            | idle   |
+| backend-agent        | claude-opus-4-8[1m] | 0.2 + 3  | —            | idle   |
 | qa-agent             | claude-sonnet-4-6 | 3.5      | —            | idle   |
 | devops-agent         | claude-sonnet-4-6 | 3.5      | —            | idle   |
 | doc-gen-agent        | claude-sonnet-4-6 | 3.5      | —            | idle   |

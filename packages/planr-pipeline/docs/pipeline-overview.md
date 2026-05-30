@@ -11,7 +11,7 @@ The pipeline enforces a **hard separation** between two activities:
 | Activity | Phase | Who | Agents |
 |----------|-------|-----|--------|
 | Understand & Decompose | PO Phase (Step 1) | PO + Tech Lead review | Sonnet 4.6 |
-| Build & Generate | DEV Phase (Step 3) | Tech Lead review | Opus 4.7 |
+| Build & Generate | DEV Phase (Step 3) | Tech Lead review | Opus 4.8 |
 
 A **mandatory human checkpoint** exists between them.
 The framework refuses to auto-chain PO Phase → DEV Phase.
@@ -98,7 +98,7 @@ The framework refuses to auto-chain PO Phase → DEV Phase.
 │                                                                             │
 │  Parallel execution per US (Frontend ‖ Backend within same US):            │
 │                                                                             │
-│  Frontend Agent (Opus 4.7)      Backend Agent (Opus 4.7)                   │
+│  Frontend Agent (Opus 4.8)      Backend Agent (Opus 4.8)                   │
 │  ← task-1.md (Type=UI)           ← task-2.md (Type=Tech)                    │
 │  ← OR task-1.md (Type=Tech)      OR task-1.md if no PNG (Type=Tech)         │
 │  UI layer only                  Services, DTOs, Entities, APIs             │

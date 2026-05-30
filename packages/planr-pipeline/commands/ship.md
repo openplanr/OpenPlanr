@@ -150,8 +150,8 @@ For each task in the dispatch queue, in order:
 1. **Read** the task file frontmatter. Capture `id`, `type`, `agent`, current `status`, `updated`.
 2. **Write** updated frontmatter: `status: in-progress`, `updated: <today's ISO date>`. Append manifest `{ stage: "ship.task:T-NNN", agent: <agent slug>, started_at: <now>, exit_status: <pending until close-out> }`.
 3. **Read** the task's `Type` field:
-   - `UI` → delegate to **frontend-agent** subagent (Opus 4.7)
-   - `Tech` → delegate to **backend-agent** subagent (Opus 4.7) or **db-agent** if the agent field says so
+   - `UI` → delegate to **frontend-agent** subagent (Opus 4.8)
+   - `Tech` → delegate to **backend-agent** subagent (Opus 4.8) or **db-agent** if the agent field says so
 4. **Apply the 3-iteration correction loop** (R6 — `${CLAUDE_PLUGIN_ROOT}/docs/rules.md`):
    - Iteration 1: direct fix on build/test failure
    - Iteration 2: re-read task spec + design-spec/schema, fix holistically

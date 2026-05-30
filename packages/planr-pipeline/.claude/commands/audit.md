@@ -212,11 +212,11 @@ Output: one schema definition file per artifact type, with inline comments expla
 ### Sub-Agent 3: AGENT AUDITOR
 **Responsibility:** Enforce single responsibility and tool-layer purity for every agent.
 
-For each of the 8 agents, produce a one-page agent contract:
+For each of the 9 agents, produce a one-page agent contract:
 
 ```
 AGENT: backend-agent
-MODEL: claude-opus-4-7 (codegen tier)
+MODEL: claude-opus-4-8[1m] (codegen tier)
 PHASE: 3 (DEV)
 SINGLE RESPONSIBILITY: Generate backend implementation code for Type=Tech tasks
 INPUT CONTRACT:

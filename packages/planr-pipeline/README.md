@@ -2,7 +2,7 @@
 
 > **Spec-driven AI factory.** Two-phase pipeline. Human checkpoint between phases. Plugin for Claude Code.
 
-The **canonical Claude Code adapter** for the [OpenPlanr Protocol v1.0.0](docs/protocol/README.md) — a runtime-agnostic spec-driven workflow that turns functional specs into production code. Eight specialized subagents (Sonnet 4.6 for analysis, Opus 4.7 for code generation), stack-aware decomposition, and hard rules enforced at the *tool* layer — not just in prompts.
+The **canonical Claude Code adapter** for the [OpenPlanr Protocol v1.0.0](docs/protocol/README.md) — a runtime-agnostic spec-driven workflow that turns functional specs into production code. Nine specialized subagents (Sonnet 4.6 for analysis, Opus 4.8 for code generation), stack-aware decomposition, and hard rules enforced at the *tool* layer — not just in prompts.
 
 The same protocol runs on Cursor and Codex via planr-generated rule files (see [Runtime support](#runtime-support) below). Same artifacts. Same workflow. Same `.pipeline-shipped` proof markers.
 
@@ -96,7 +96,7 @@ Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, y
                    open the generated US/task files, edit if needed
                              ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│  DEV PHASE  (Opus 4.7 codegen + Sonnet 4.6 verifiers)               │
+│  DEV PHASE  (Opus 4.8 codegen + Sonnet 4.6 verifiers)               │
 │  /planr-pipeline:ship {name}                                    │
 │                                                                     │
 │  frontend-agent + backend-agent (per task, parallel) →              │
@@ -129,9 +129,9 @@ Two commands. Everything else is automatic — auto-scaffolding when a spec is m
 | **db-agent** | Sonnet 4.6 | 0.1 | Schema introspection (SQL + Mongo) | READ-ONLY: `Bash(psql:*)`, `Bash(mongosh:*)`, etc. No `Edit`. |
 | **designer-agent** | Sonnet 4.6 | 1 | PNG → design-spec.md | `Read`, `Glob`, `Write` only |
 | **specification-agent** | Sonnet 4.6 | 1 | Spec → US + tasks | `Read`, `Glob`, `Grep`, `Write` |
-| **frontend-agent** | Opus 4.7 | 3 | UI codegen (task-1 UI) | `Read`, `Edit`, `Write`, `Bash(npm:*)` etc. |
+| **frontend-agent** | Opus 4.8 | 3 | UI codegen (task-1 UI) | `Read`, `Edit`, `Write`, `Bash(npm:*)` etc. |
 | **entity-scaffold-agent** | Sonnet 4.6 | 0.2 (manual) | Schema → `output/src/` ORM skeleton | `Read`, `Glob`, `Grep`, `Edit`, `Write`, `Bash(npm:*)`, `Bash(npx:*)`, `Bash(node:*)` |
-| **backend-agent** | Opus 4.7 | 3 | Backend codegen (task-2 Tech) | Same plus `Bash(prisma:*)`, `Bash(node:*)` |
+| **backend-agent** | Opus 4.8 | 3 | Backend codegen (task-2 Tech) | Same plus `Bash(prisma:*)`, `Bash(node:*)` |
 | **qa-agent** | Sonnet 4.6 | 3.5 | DoD gate, runs build/test | Read-only on src; `Write` only for qa-report.md |
 | **devops-agent** | Sonnet 4.6 | 3.5 | Docker, CI, env templates | `Read`, `Glob`, `Write`, `Edit`. **No Bash** — non-deploy enforced at tool layer. |
 | **doc-gen-agent** | Sonnet 4.6 | 3.5 | `Docs/feat-{name}/` from US + code | `Read`, `Glob`, `Grep`, `Write` |
@@ -210,7 +210,7 @@ See [planr's spec-driven proposal](https://github.com/openplanr/OpenPlanr/blob/m
 
 Pre-1.0 semver. Expect minor breaks across `0.1.x → 0.2.x`. Patch bumps (`0.1.0 → 0.1.1`) are doc/prompt clarifications only.
 
-Pinned model strings (`claude-sonnet-4-6`, `claude-opus-4-7`) are correct as of April 2026. They will drift; check the CHANGELOG when upgrading.
+Pinned model strings (`claude-sonnet-4-6`, `claude-opus-4-8[1m]`) are correct as of May 2026 (v0.10.0). Opus 4.8 is deployed with 1M context as the default DEV-tier frontier. Strings will drift; check the CHANGELOG when upgrading.
 
 ---
 

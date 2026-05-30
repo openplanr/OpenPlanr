@@ -4,6 +4,39 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.10.0] — 2026-05-30
+
+### Changed — Frontier model bump: Opus 4.7 → Opus 4.8 (1M context) for DEV codegen
+
+The DEV-tier codegen agents (`frontend-agent`, `backend-agent`) now ship with `model: claude-opus-4-8[1m]` in their YAML frontmatter. The `[1m]` suffix is Anthropic's selector for the 1M-context deployment of Claude Opus 4.8 (the same syntax as `/model claude-opus-4-8[1m]`). This makes Opus 4.8 with the 1M context window the default frontier for multi-file Tech and UI codegen tasks.
+
+**Why:** Opus 4.8 improves multi-file coordination, framework-convention adherence, and design-token application — exactly the codegen surface the DEV phase exercises. The 1M context lets `backend-agent` keep an entire feature's task chain (US + 2-3 task files + design-spec + schema.json + active stack file + correction-loop history) resident across all three R6 iterations without spilling context.
+
+**What stays the same:**
+
+- **Sonnet 4.6 still owns the analysis tier.** `db-agent`, `designer-agent`, `specification-agent`, `qa-agent`, `devops-agent`, `doc-gen-agent`, and the new `entity-scaffold-agent` (Step 0.2, SPEC-005) continue to use `claude-sonnet-4-6`. The cost split (Opus where reasoning over many files matters; Sonnet where structured output suffices) is unchanged.
+- **R3 model-assignment rule is unchanged in spirit** — the Opus tier identifier updated; the assignment table in `docs/rules.md` and `docs/agent-model-map.md` reflects the new string.
+- **Tool restrictions, frontmatter `name` / `description` fields, and agent prompts are unchanged.** Manifest-enforced tool boundaries are not affected by the model bump.
+- **Cost preview heuristics in `procedures/ship-arguments-and-cost-gate.md`** still reference per-million-token pricing for both classes. If Anthropic's price card for Opus 4.8 differs from 4.7, update that single line at COST ESTIMATE block § B.2.
+
+**Files touched (v0.10.0):**
+
+- `agents/backend-agent.md`, `agents/frontend-agent.md` — `model:` frontmatter updated to `claude-opus-4-8[1m]`.
+- `agents/entity-scaffold-agent.md` — internal cross-reference to backend-agent's model updated.
+- `.claude/commands/audit.md` — AGENT AUDITOR template's `MODEL:` reference updated.
+- `docs/rules.md` R3 — model-tier assignment row updated.
+- `docs/agent-model-map.md` — full model-tier table + rationale section updated.
+- `docs/pipeline-overview.md`, `docs/protocol/agent-roles.md`, `docs/task-anatomy.md`, `commands/ship.md` — display references updated.
+- `procedures/ship-arguments-and-cost-gate.md` — cost-preview model labels updated.
+- `README.md` — feature summary, agent table, "Pinned model strings" footnote, and refresh date.
+- `AGENTS.md` (Codex adapter), `.cursor/rules/planr-pipeline.mdc`, `.cursor/rules/agents/{backend,specification}-agent.md` — adapter mirrors updated.
+- `templates/CLAUDE.md.tpl` — generated-project agent status table updated to `claude-opus-4-8[1m]` for the two DEV agents (so installs render the current model).
+- `.claude-plugin/plugin.json` — version bumped from `0.9.1` to `0.10.0`.
+
+**Migration:** none. Existing `/planr-pipeline:plan` and `/planr-pipeline:ship` invocations pick up the new model automatically on first dispatch after install. If you've forked any agent files and pinned `claude-opus-4-7` manually, swap to `claude-opus-4-8[1m]`.
+
+**Pairs with (ecosystem alignment):** parallel updates required in the `openplanr` CLI (its agile-mode model-tier rendering), `openplanr-skills` (skill body templates that reference the Opus tier), and `openplanr/marketplace` (the marketplace.json pin for this plugin). Those repos are out-of-tree for this changelog entry but the model identifier needs to match for consistent docs across the ecosystem.
+
 ## [0.9.1] — 2026-05-11
 
 ### Fixed — Procedure files exposed as slash commands

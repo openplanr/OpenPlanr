@@ -28,7 +28,7 @@ Every task file must have ALL of these sections:
 # Task-{M} — [Descriptive Title]
 # US: us-{N} — [US Title]
 # Feature: feat-{name}
-# Agent: [Frontend Agent | Backend Agent] (Opus 4.7)
+# Agent: [Frontend Agent | Backend Agent] (Opus 4.8)
 # Type: [UI | Tech]
 # Status: [pending | in-progress | complete | failed]
 ```

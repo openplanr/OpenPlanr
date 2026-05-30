@@ -7,7 +7,7 @@
 > **Phase:** Step 3 — DEV Phase (**Tech task** codegen only)
 > **Trigger:** `/ship` dispatch for `Type: Tech` (`task-2.md` or sole `task-1.md` when no PNG)
 > **Not Step 0.2:** schema → `output/src/` scaffold uses **`entity-scaffold-agent`**
-> **Model (canonical):** Opus 4.7
+> **Model (canonical):** Opus 4.8
 
 ## Path resolution (dual mode)
 

@@ -80,7 +80,7 @@ Determine `{tasks_to_run}` multiset:
 | **Tokens per task (output)** | ~3k per Create file + ~1k per Modify file |
 | **QA gate** | ~30k input (reads all task specs + generated source + runs build/test) |
 | **DevOps / Doc-Gen** | ~15k each (Sonnet, skipped if flagged) |
-| **Dollar cost** | Opus 4.7: $15/M input + $75/M output. Sonnet 4.6: $3/M input + $15/M output. |
+| **Dollar cost** | Opus 4.8: ~$15/M input + ~$75/M output *(indicative — verify against the current Anthropic price card)*. Sonnet 4.6: ~$3/M input + ~$15/M output. |
 | **Time** | `multi-task`: ~1.5 min/task. `per-task`: ~2.5 min/task (includes user re-invoke overhead). |
 
 Echo a structured estimate:
@@ -92,8 +92,8 @@ COST ESTIMATE — {SLUG}
   Runtime:   {RUNTIME} → {DISPATCH_MODE}
 
   Task        Title                           Create  Modify  Agent
-  T-001       <title, max 35 chars>           <N>     <N>     <agent> (Opus 4.7)
-  T-002       <title>                         <N>     <N>     <agent> (Opus 4.7)
+  T-001       <title, max 35 chars>           <N>     <N>     <agent> (Opus 4.8)
+  T-002       <title>                         <N>     <N>     <agent> (Opus 4.8)
   ...
   ────────────────────────────────────────────────────────────
   Subtotal    {dispatch_count} tasks           <sum>   <sum>

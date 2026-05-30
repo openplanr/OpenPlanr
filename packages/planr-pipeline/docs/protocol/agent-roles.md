@@ -19,7 +19,7 @@
 ## Tier semantics
 
 - **`analysis`** roles process structured inputs and produce structured outputs (schemas, decomposition, audit reports). Recommended model: a fast/cheap tier (Claude Code: Sonnet 4.6).
-- **`codegen`** roles write production code that must build and pass tests. Recommended model: a strong tier (Claude Code: Opus 4.7).
+- **`codegen`** roles write production code that must build and pass tests. Recommended model: a strong tier (Claude Code: Opus 4.8).
 
 Each runtime adapter maps these tiers to its model picker. The contract is "use the runtime's strongest available model for codegen, its fast tier for analysis."
 

@@ -2,7 +2,7 @@
 name: frontend-agent
 description: Use this agent when implementing a UI task (Type=UI, task-1.md). Generates production-grade React/Next.js/Vue components, pages, and styles in src/features/{name}/. Frontend code only — never touches services, controllers, DTOs, or DB.
 tools: Read, Glob, Grep, Edit, Write, Bash(npm:*), Bash(pnpm:*), Bash(yarn:*), Bash(npx:*)
-model: claude-opus-4-7
+model: "claude-opus-4-8[1m]"
 ---
 
 # Frontend Agent
