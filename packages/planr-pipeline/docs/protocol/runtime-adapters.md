@@ -38,14 +38,15 @@ The conformance test fixture (`planr-pipeline/conformance/`) verifies items 5 an
 
 - Some users may not have Claude Code; this adapter doesn't help them.
 
-### Worktree Isolation (multi-task mode)
+### Native parallel dispatch (multi-task mode) — SPEC-014
 
-In `DISPATCH_MODE: multi-task` (the Claude Code default — see `../compatibility-matrix.md` §Dispatch mode), the orchestrator does **not** dispatch wave-members against the shared main working tree. Each wave-member is dispatched on the `Agent` tool with `isolation: "worktree"`, so the subagent writes to a **private git branch** in its own worktree, never directly to main.
+In `DISPATCH_MODE: multi-task` (the Claude Code default — see `../compatibility-matrix.md` §Dispatch mode), the orchestrator dispatches every *ready* task as a **native parallel `Agent` call in a single assistant turn**, all operating in the shared main working tree. This is exactly the native Claude Code parallel sub-agent behavior — the plugin adds no sandbox of its own.
 
-- **Host capability, not a custom sandbox.** Worktree isolation is a Claude Code runtime feature: the plugin passes `isolation: "worktree"` on the `Agent` tool-call and the Claude Code host provisions the worktree. The plugin implements no sandboxing of its own. Because the primitive is host-provided and only exercised by the K-wide wave fan-out, it is **multi-task-mode-only** and specific to the Claude Code adapter — Cursor and Codex do not fan out (they run `DISPATCH_MODE: per-task`, one task per invocation against the main tree) and therefore never invoke it.
-- **Branch & worktree naming.** The scheduler creates each short-lived branch as `planr-wt/<T.id>-<short-slug>` (slash-prefixed) with its worktree directory at `.planr-worktrees/<T.id>`.
-- **File-scoped merge after the agent finishes.** When the `Agent` call returns, the orchestrator computes the worktree diff and validates it against the task's declared `### Create` ∪ `### Modify` list. Only those declared files are applied to main via a **file-scoped checkout** — `git checkout <wt-branch> -- <declared-files>` — never a branch merge. A diff that touches an undeclared path (or a forbidden orchestrator-owned surface such as the task `.md` `status` field or `.run-manifest.jsonl`) is rejected: nothing from that worktree is applied, the task is marked `blocked`, and an error-report feeds the R6 loop on the next wave.
-- **Full protocol.** Wave selection, worktree provisioning (including `node_modules` symlinking), the file-scoped merge, the undeclared-write guard, and worktree cleanup are specified end-to-end in `../../procedures/ship-step2-dag-dispatch.md` (Sections 4–7). The wave write-safety constraint is `docs/rules.md` R11.
+- **No isolation, no merge-back.** Dispatched `Agent` calls do not set `isolation`; sub-agents write directly to the repo working tree. There is no private branch, no worktree, and no file-by-file merge step.
+- **Ordering is `dependsOn`-only.** planr does no write-set inference and no cycle detection. The only ordering constraint it honors is an explicit `dependsOn:` field — a dependent task is held back until its declared dependencies are `done`. Absent `dependsOn`, ready tasks dispatch together. Within a turn, ready tasks are id-sorted.
+- **No concurrency knob.** The host's native concurrency cap is the only throttle (the `--max-parallel` flag was removed in SPEC-014). Cursor and Codex run `DISPATCH_MODE: per-task` — one task per invocation — and never fan out.
+- **Advisory lock-list.** When two tasks touch a lock-listed path (`package.json`, lockfiles, `**/index.ts`, migrations, …) the dispatch prompt carries a non-enforcing advisory note. It changes no control flow.
+- **Single-writer bookkeeping.** Task `.md` `status` fields and `.run-manifest.jsonl` are written only by the orchestrator in the main tree. The native dispatch contract is documented in `docs/feat-parallel-dispatch/` (SPEC-014 supersedes the SPEC-013 worktree + wave scheduler).
 
 ## Cursor adapter
 

@@ -129,30 +129,6 @@ without corresponding qa-agent verification coverage.
 ```
 The qa-agent must know how to verify the new role's outputs: file existence, schema conformance, DoD checks. Roles producing non-code artifacts (e.g., designer-agent → design-spec.md) must have structural validation in the qa-gate. Build order: Foundation (db, specification, frontend, backend) → Verification (qa) → Optional (devops, doc-gen). New roles insert into this pyramid at the appropriate layer; verification always covers them.
 
-### R11 — Wave Write-Safety (multi-task mode only)
-```
-Tasks dispatched in the SAME wave MUST have disjoint declared write-sets
-(### Create ∪ ### Modify) after union with the Node/TS lock list inlined in
-procedures/ship-step2-dag-dispatch.md (Section 3).
-
-A task with an empty/absent declared write-set is serialized ALONE
-(treated as conflicting with all other tasks).
-
-Each wave-member runs with isolation: worktree; only declared files are
-merged to main via file-scoped checkout.
-
-Applies in DISPATCH_MODE: multi-task ONLY. per-task and single-task modes
-are unaffected (one task per invocation, no fan-out, no worktree).
-```
-Rationale: A wave is K `Agent` tool-calls in one orchestrator turn. Write-set
-disjointness (after the lock-list union) is what makes that fan-out safe — two
-wave-members can never contend for the same file. The lock list captures
-*undeclared* shared writes (`package.json`, barrel `index.ts`, migration
-registries) that look disjoint on paper but race in practice. The empty-write-set
-rule is fail-safe: a task that declares nothing could touch anything, so it never
-shares a wave. This is a Hard Rule — the wave scheduler enforces it (cycle
-detection + greedy disjoint selection) and the conformance suite asserts it.
-
 ---
 
 ## Soft Guidelines (Strongly Recommended)

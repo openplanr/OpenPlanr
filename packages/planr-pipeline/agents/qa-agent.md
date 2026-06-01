@@ -49,9 +49,6 @@ mode-specific path defined in the loaded per-mode file.
 - Always re-run build + tests from a clean shell
 - Always emit `qa-report.md`, even on full pass
 
-<!-- See `agents/modes/shared/contract-create-modify-preserve.md` rule 4 for the undeclared-write rejection policy. -->
-See `agents/modes/shared/contract-create-modify-preserve.md` rule 4 for the undeclared-write rejection policy.
-
 ## Error Handling
 
 | Error | Response |

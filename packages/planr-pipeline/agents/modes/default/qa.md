@@ -82,7 +82,6 @@ or
    b. Verify file presence and non-emptiness
    c. Verify Preserve list integrity (git diff or stat compare)
    d. Walk DoD checklist
-   e. See `agents/modes/shared/contract-create-modify-preserve.md` rule 4 for the undeclared-write rejection policy.
 3. Run input/tech/stack.md::BuildCommand
 4. Run input/tech/stack.md::TestCommand
 5. Aggregate findings into output/feats/feat-$ARGUMENTS/qa-report.md

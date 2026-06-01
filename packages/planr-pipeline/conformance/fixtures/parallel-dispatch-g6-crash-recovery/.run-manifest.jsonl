@@ -1,2 +1,0 @@
-{"stage":"ship.task:T-001","agent":"backend-agent","started_at":"2026-05-30T09:00:00Z","ended_at":"2026-05-30T09:01:00Z","exit_status":"done","files_written":[],"files_modified":["src/feature-a.ts"]}
-{"stage":"ship.task:T-002","agent":"backend-agent","started_at":"2026-05-30T09:01:00Z","exit_status":null,"files_written":[],"files_modified":[]}

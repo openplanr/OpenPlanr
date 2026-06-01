@@ -1,9 +1,0 @@
-{
-  "fixture": "parallel-dispatch-g6-crash-recovery",
-  "gate": "G6",
-  "description": "SPEC-013 FR12 crash recovery. A prior /ship crashed mid-merge-loop leaving a half-merged state: T-001 is done (already merged), T-002 is in-progress (orphaned, NOT merged — its target src/feature-b.ts is absent), T-003 is pending. A stale planr-wt/T-002-* branch survives with no live worktree. On re-run the reconcile sweep (ship.md Step 1.10) MUST delete that branch BEFORE dispatch; then the status-aware queue (Step 2a) skips done, re-queues in-progress→pending, runs pending. The re-run must end with no duplicate ship.task record for T-001 (no double-merge), T-002 closed with a real ended_at, and T-001's already-merged file untouched.",
-  "max_parallel": 4,
-  "stale_branch_prefix": "planr-wt/",
-  "git_state": "git-state.json",
-  "seeded_manifest": ".run-manifest.jsonl"
-}

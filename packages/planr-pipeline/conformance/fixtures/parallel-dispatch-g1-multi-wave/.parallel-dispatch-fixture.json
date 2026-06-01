@@ -1,6 +1,0 @@
-{
-  "fixture": "parallel-dispatch-g1-multi-wave",
-  "gate": "G1",
-  "description": "SPEC-013 multi-wave batching. Four tasks (T-001..T-004) with disjoint write-sets (src/a.ts, src/b.ts, src/c.ts, src/d.ts) dispatched at --max-parallel 2. The greedy wave selector (Section 4) admits the two lowest-id ready tasks per wave, so the queue drains in ceil(4/2)=2 waves: wave 0 = {T-001, T-002}, wave 1 = {T-003, T-004}. All four tasks complete; no task is blocked; the manifest carries 4 ship.task records.",
-  "max_parallel": 2
-}

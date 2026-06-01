@@ -4,6 +4,47 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.12.0] — 2026-06-01
+
+### Changed — Native host-driven parallel dispatch for `/ship` (SPEC-014; supersedes SPEC-013)
+
+SPEC-014 is a deliberate **reversal** of the SPEC-013 (v0.11.0) DAG-aware wave scheduler. planr-pipeline is a planning and orchestration layer, not a runtime sandbox; parallel write-safety between concurrent agents is the host runtime's concern. The DEV phase now dispatches tasks as **native parallel `Agent` calls** directly on the shared main working tree, exactly like native Claude Code parallel sub-agents.
+
+In Claude Code's multi-task dispatch mode the orchestrator emits **one `Agent` tool-call per ready task in a single assistant turn** — a task is *ready* when every id in its `dependsOn:` list is already `done`. There is **no worktree isolation, no merge-back, and no concurrency knob**; the host's native concurrency cap is the only throttle. Codex/Cursor (`per-task`) and `single-task` (`--task T-NNN`) dispatch exactly one task per invocation, unchanged.
+
+planr does **no** write-set inference and **no** cycle detection. The only ordering it honors is an explicit `dependsOn:` field. The lock-list survives **only as an advisory note** in the dispatch prompt — it never serializes anything.
+
+### Removed (SPEC-013 machinery)
+
+- **Git-worktree isolation** — no more `.planr-worktrees/<id>` directories, `planr-wt/<id>-<slug>` branches, dependency-dir symlinking, or `isolation: "worktree"` on `Agent` dispatches.
+- **DAG wave serialization engine** — write-set normalization, cycle detection, lock-list-driven serialization, and greedy wave selection are gone.
+- **File-scoped merge-back** + the undeclared-write guard + the forbidden-file check.
+- **Startup worktree reconcile sweep** (`commands/ship.md` Step 1.10).
+- **`--max-parallel N`** flag and the `$SHIP_MAX_PARALLEL` binding (and its cost-gate multiplier).
+- `.gitignore` entries `planr-wt` / `.planr-worktrees`.
+- The 9 SPEC-013 conformance fixtures (`conformance/fixtures/parallel-dispatch-*`, ~120 assertions) and their runner functions.
+
+### Added
+
+- Optional **`dependsOn`** field on the task schema (`schemas/v1.0.0/task.schema.json`) — an array of `^T-\d{3}$` task IDs. Backward-compatible: task files without it stay valid.
+- 4 native-dispatch conformance fixtures (`conformance/fixtures/native-dispatch-{nd1-parallel,nd2-advisory-locklist,nd3-dependson,nd4-per-task}`) + ND1–ND4 assertions in `conformance/runner.mjs`, wired into `.github/workflows/ci-parallel-dispatch.yml`.
+
+### Migration notes
+
+- **`--max-parallel` is gone.** Invocations that pass `--max-parallel` no longer have an effect — remove the flag. The host's native concurrency cap is the only throttle.
+- **Accepted tradeoff:** planr no longer guarantees write-isolation between parallel agents. Avoid collisions through good task decomposition, the advisory lock-list hint, and the host agent's judgment.
+- **Leftover artifacts from a prior 0.11.0 run:** any `.planr-worktrees/` directories or `planr-wt/*` branches left behind are no longer managed by planr and can be cleaned up with standard git — e.g. `git worktree remove .planr-worktrees/<id>` (or `git worktree prune`) and `git branch -D planr-wt/<id>-<slug>`.
+
+### Files touched (v0.12.0)
+
+- `commands/ship.md`, `procedures/ship-step2-dag-dispatch.md`, `procedures/ship-arguments-and-cost-gate.md` — native dispatch; worktree/wave/`--max-parallel` removed.
+- `schemas/v1.0.0/task.schema.json` — optional `dependsOn`.
+- `agents/**` shared QA/correction contract — `isolation`/worktree language removed.
+- `conformance/runner.mjs` + `conformance/fixtures/native-dispatch-*` *(4 new fixtures; 9 SPEC-013 fixtures deleted)*.
+- `.github/workflows/ci-parallel-dispatch.yml` — runs the native-dispatch suite.
+- `docs/rules.md` (R11 removed), `docs/pipeline-overview.md`, `docs/protocol/runtime-adapters.md`, `docs/compatibility-matrix.md`, `docs/feat-parallel-dispatch/` *(rewritten to native dispatch)*.
+- `.claude-plugin/plugin.json` — version `0.11.0` → `0.12.0`.
+
 ## [0.11.0] — 2026-05-30
 
 ### Added — DAG-aware parallel wave dispatch for `/ship` (SPEC-013, M1)

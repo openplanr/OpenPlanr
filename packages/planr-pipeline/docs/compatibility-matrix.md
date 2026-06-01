@@ -21,8 +21,8 @@ Same `.planr/specs/` directories. Same SPEC / US / Task schema. Same `.pipeline-
 | **PLAN orchestration** | ✅ slash command (`/planr-pipeline:plan`) | ✅ rule auto-attach on glob match | ✅ persona-triggered ("plan {feature}") |
 | **SHIP orchestration** | ✅ slash command (`/planr-pipeline:ship`) | ✅ rule | ✅ persona |
 | **8 named subagents** | ✅ manifest-declared, model pinned | ⚠️ Composer subagent dispatch (Cursor 1.x) | ⚠️ persona role-shift only (no isolation) |
-| **Multi-task `/ship` in one invocation** | ✅ `DISPATCH_MODE: multi-task` (manifest-isolated subagents per task) | ⚠️ `DISPATCH_MODE: per-task` default (override with `--all-tasks`) — see §Dispatch mode below | ⚠️ `DISPATCH_MODE: per-task` default — see §Dispatch mode below |
-| **DAG-aware parallel dispatch** (SPEC-013 — K-wide waves, worktree isolation) | ✅ full fan-out under `multi-task` (`isolation: worktree` + file-scoped merge) | ❌ not supported — per-task sequential (unchanged) | ❌ not supported — per-task sequential (unchanged) |
+| **Multi-task `/ship` in one invocation** | ✅ `DISPATCH_MODE: multi-task` (native parallel subagents per ready task) | ⚠️ `DISPATCH_MODE: per-task` default (override with `--all-tasks`) — see §Dispatch mode below | ⚠️ `DISPATCH_MODE: per-task` default — see §Dispatch mode below |
+| **Native parallel dispatch** (SPEC-014 — one `Agent` call per ready task, shared tree, `dependsOn` ordering) | ✅ full fan-out under `multi-task` (no isolation, no merge-back) | ❌ not supported — per-task sequential (unchanged) | ❌ not supported — per-task sequential (unchanged) |
 | **Task `status` resume** (continue partially-shipped specs across multiple `/ship` invocations) | ✅ status read on entry, written on close-out | ✅ same — runtime-agnostic, lives in T-task frontmatter | ✅ same |
 | **Project memory** (`.planr/memory.md` — traps, decisions, corrections) | ✅ orchestrator-managed read/write | ✅ prompt-driven read/write | ✅ prompt-driven read/write |
 | **Task rationale** (`rationale:` frontmatter on T-tasks) | ✅ | ✅ | ✅ |
@@ -103,17 +103,17 @@ Each invocation in `per-task` mode dispatches **one** task, writes its closing s
 
 **For mixed workflows:** plan in Cursor (read-friendly, ergonomic), ship in Claude Code (canonical isolation, fastest end-to-end). Both runtimes write the same `.planr/specs/` artifacts.
 
-### DAG-aware parallel dispatch (SPEC-013)
+### Native parallel dispatch (SPEC-014)
 
-The M1 wave scheduler fans a multi-task `/ship` queue out into **waves** — K `Agent` tool-calls per orchestrator turn — with each wave-member running under `isolation: worktree` and merged back to main file-by-file against its declared write-set. This is layered **on top of** `DISPATCH_MODE: multi-task` and is therefore a Claude Code capability only.
+In `DISPATCH_MODE: multi-task`, the orchestrator emits **one `Agent` call per ready task in a single turn**, all operating in the shared main working tree — exactly like native Claude Code parallel sub-agents. There is no isolation layer and no merge-back. This is a Claude Code capability only.
 
-| Runtime | DAG-aware parallel dispatch | Behavior |
+| Runtime | Native parallel dispatch | Behavior |
 |---|---|---|
-| **Claude Code** | ✅ supported (full fan-out) | `DISPATCH_MODE: multi-task` + the wave scheduler. Worktree isolation is a host primitive (`isolation: "worktree"` on the `Agent` tool); the plugin merges only declared files. |
-| **Cursor** | ❌ not supported | Runs `DISPATCH_MODE: per-task` — one task per invocation, sequential, against the main tree. Unchanged by SPEC-013. |
-| **Codex** | ❌ not supported | Runs `DISPATCH_MODE: per-task` — one task per invocation, sequential. Unchanged by SPEC-013. |
+| **Claude Code** | ✅ supported (full fan-out) | `DISPATCH_MODE: multi-task` — one `Agent` call per ready task in one turn, shared tree, `dependsOn`-only ordering. |
+| **Cursor** | ❌ not supported | Runs `DISPATCH_MODE: per-task` — exactly one task per invocation, sequential. |
+| **Codex** | ❌ not supported | Runs `DISPATCH_MODE: per-task` — exactly one task per invocation, sequential. |
 
-`--max-parallel 1` at **any** runtime is sequential-equivalent: on Claude Code it forces width-1 waves (byte-for-byte the legacy id-ordered walk); on Cursor/Codex the flag is inapplicable (per-task is already one task per invocation) and is ignored with a one-line warning. The multi-task-mode-only scope is fixed by `docs/rules.md` R11; the full algorithm is in `../procedures/ship-step2-dag-dispatch.md`.
+planr does no write-set inference and no cycle detection; the only ordering it honors is an explicit `dependsOn:` field. The host's native concurrency cap is the only throttle (there is no concurrency flag). The lock-list survives only as an advisory note in the dispatch prompt. The full contract is in `docs/feat-parallel-dispatch/`. (SPEC-014 supersedes the SPEC-013 worktree + wave scheduler.)
 
 ## Cross-runtime spec portability
 

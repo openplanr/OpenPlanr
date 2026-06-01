@@ -1,6 +1,0 @@
-{
-  "fixture": "parallel-dispatch-fixture-d-cyclic-dep",
-  "gate": "FIXTURE-D",
-  "description": "SPEC-013 cycle-detection fail-fast (procedures/ship-step2-dag-dispatch.md Section 2). Three tasks with overlapping write-sets form a cycle in the implicit serialize graph: T-001 (A) declares Modify src/a.ts + src/b.ts; T-002 (B) declares src/b.ts + src/c.ts; T-003 (C) declares src/c.ts + src/a.ts. Pairwise overlaps: A∩B on src/b.ts, B∩C on src/c.ts, A∩C on src/a.ts. Each serialize edge is encoded id-ascending (A→B via b.ts, A→C via a.ts, B→C via c.ts) — that particular triple is actually a DAG. The cycle here is over the UNDIRECTED overlap graph A—B—C—A; the conformance contract under test is that ANY mutual-overlap triangle is surfaced as a cyclic write-set dependency naming all three members, and NOTHING is dispatched. Section 2's residual-graph collection over-approximates the cycle to the safe set {T-001, T-002, T-003}, sorted by id. Expected: a two-line fatal naming T-001, T-002, T-003; zero manifest records; non-zero exit.",
-  "max_parallel": 4
-}

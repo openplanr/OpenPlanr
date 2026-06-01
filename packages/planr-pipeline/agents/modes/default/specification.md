@@ -56,6 +56,7 @@ Schema content (frontmatter + body) is identical in both modes.
    c. If has_design: write task-1.md (UI, Frontend Agent) + task-2.md (Tech, Backend Agent)
    d. If !has_design: write task-1.md (Tech only, Backend Agent) — per docs/rules.md R2
    e. Each task's frontmatter sets `rationale:` with 1-3 sentences explaining why this task exists and why these files
+   f. When a task genuinely needs another task's OUTPUT before it can run, set `dependsOn: ["T-NNN", …]` in that task's frontmatter (IDs scoped to the parent US). This is the ONLY way to declare hard ordering — /ship honors `dependsOn` and infers ordering from nothing else. Emit it ONLY for real output dependencies (e.g. a task that reads a schema/endpoint another task creates). NEVER infer a dependency from file-overlap or shared write-sets — write-set/lock-list inference is forbidden (SPEC-014 FR9). Omit `dependsOn` entirely (or leave it empty) when a task has no real predecessor; absent/empty means the task is dispatched in parallel. Prefer `dependsOn` over burying the DAG in a prose `## Dependencies` section.
 7. If any genuine ambiguity remains, emit `output/feats/feat-$ARGUMENTS/clarifications.md` with structured options (see `${CLAUDE_PLUGIN_ROOT}/templates/clarifications.md.tpl`). Continue decomposing unambiguous parts.
 8. Log: "Specification Agent complete. N US, M tasks → output/feats/feat-$ARGUMENTS/"
 9. STOP. Do not proceed to DEV phase. The /planr-pipeline:plan orchestrator stops here for human review.

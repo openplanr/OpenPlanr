@@ -8,4 +8,4 @@ You must:
 1. Implement every file listed under "Create" in the task
 2. Apply the exact modifications listed under "Modify"
 3. Leave every file listed under "Preserve" completely untouched
-4. Do not write any file outside the Create or Modify lists. Any file changed in a worktree that is absent from both lists is an undeclared write; the orchestrator will reject it at merge time and fail the task into R6. The undeclared file must not land in main.
+4. Do not write any file outside the Create or Modify lists. Touch only the declared files.
