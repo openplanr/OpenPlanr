@@ -4,6 +4,41 @@
 > (SPEC-015 finding A2) — the main thread already holds the clarified `{source, format}` and
 > writes the files directly. The shared core is three helpers; the rest is per-format.
 
+## C.0 — Ground the design in the target app (read this FIRST, v0.14.1)
+
+A generated design must look like it belongs in the **real app**, at a **real screen size** —
+not a generic card floating on gray. Before filling any shell, read the project:
+
+- **App shell / layout.** Find + read the app's layout + chrome — `app/layout.*`, `src/App.*`,
+  `components/{Layout,Shell,Sidebar,Nav,Header,Topbar,AppBar}.*` (framework-appropriate).
+  Render each generated screen **inside that shell** (the real sidebar / nav / header) so it
+  reads as embedded in the product. A free-floating centered card is correct ONLY when the
+  screen genuinely IS a modal / dialog / standalone marketing page.
+- **Design system / tokens.** Read `DESIGN.md`, the CSS/Tailwind theme (`globals.css`,
+  `tailwind.config.*`, `theme.*`), and the `ComponentLibrary` / `FrontendFramework` from
+  `input/tech/stack.md`. Match the **real** colors, type scale, spacing, radii, and component
+  shapes — never invent a generic palette/style.
+- **Existing screens.** Read 1–2 real pages/components and mirror their layout density,
+  navigation, and patterns.
+
+### Target viewport — design for a real screen, not a tiny card
+
+- **Desktop web app → full-bleed ~1440px** (use the app's real max-content width + breakpoints).
+  Let content use the width; do **not** center a narrow card in empty space.
+- Responsive/mobile → design the app's breakpoints (375 / 768 / 1024 / 1440) and show the
+  primary one at full width.
+- A constrained/centered card is correct ONLY for a genuine modal, dialog, or narrow form —
+  never for a full page. (Non-web mediums: match that medium's real frame instead.)
+
+### Craft — assemble it like a professional
+
+Apply the **design-craft rubric** `${CLAUDE_PLUGIN_ROOT}/agents/modes/shared/design-craft-rubric.md`
+**as you build**: one spacing scale (no arbitrary `13px`/`17px`), **same-type elements the
+same size** (all pills/badges/buttons/cards/inputs in a group identical), align everything to
+a grid, a consistent type scale, AA contrast, SVG icons (never emoji), `:focus-visible` +
+150–300ms hover. The model's first draft drifts on exactly these — the § C.4.5 self-review
+re-checks and fixes them before finalizing.
+
 ## C.1 — Shared core (every format)
 
 **Plugin-root handle — resolve it dynamically, do this once.** The `lib/design/*` helpers
@@ -73,6 +108,25 @@ artifact (SPEC-015 F6).
 - Copy `vendor/{react.production.min.js, react-dom.production.min.js, DesignCanvas.js}` →
   `<DESIGN_DIR>/vendor/`. Output: `<DESIGN_DIR>/canvas.html`. `framework: react`.
 - The shell already enforces view-only when no host bridge is present — do not add editing.
+
+## C.4.5 — Self-review pass (mandatory — fixes the "silly mistakes", v0.15.0)
+
+Before finalizing (the C.1 temp → final move), **audit your own artifact** against the craft
+rubric `${CLAUDE_PLUGIN_ROOT}/agents/modes/shared/design-craft-rubric.md`. Re-read the markup +
+CSS you just wrote and walk the rubric's pre-finalize checklist — with special attention to
+the defects LLM drafts make most:
+
+- **Sizing consistency (the #1 defect):** are all sibling elements of one type — pills, badges,
+  buttons, cards, inputs — exactly the same height / padding / width? (e.g. an `error` pill and
+  a `warn` pill MUST be identical in size.)
+- **Spacing:** is every margin / padding / gap on the scale? Are gaps within a group equal?
+- **Alignment:** does everything line up to a grid / baseline — no 1–3px drift, no orphaned or
+  optically-off element?
+- **Tokens / contrast / icons / focus** per the checklist.
+
+For **every** violation, **fix it in the artifact** — do not merely note it. This self-critique
+is **mandatory**, not optional: it is the step that turns a first-draft layout into a
+professional one. Only after the audit passes do you move the temp file into place (C.1).
 
 ## C.5 — finalized.json + manifest record
 

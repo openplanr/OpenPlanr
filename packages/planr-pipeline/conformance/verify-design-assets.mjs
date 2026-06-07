@@ -49,6 +49,7 @@ for (const rel of [
   'procedures/design-step3-spec-and-handoff.md',
   'procedures/design-detect-nudge.md',
   'agents/modes/shared/design-spec-template.md',
+  'agents/modes/shared/design-craft-rubric.md',
   'lib/design/index.mjs',
   'schemas/v1.0.0/design-manifest.schema.json',
 ]) assert(existsSync(join(root, rel)), rel);

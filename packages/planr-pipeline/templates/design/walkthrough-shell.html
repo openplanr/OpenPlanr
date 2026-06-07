@@ -12,6 +12,10 @@
   Generator contract:
    • Emit one <section class="screen" id="…" data-group="…" aria-label="…"> per screen,
      each wrapping the screen's markup in <div class="frame">…</div>.
+   • GROUND IT IN THE REAL APP (design-step2-generate.md C.0): each screen is a real
+     desktop view (~1440px — the frame holds up to 1680px), embedded in the app's
+     actual shell (sidebar/nav/header) and matching the real design system, not a
+     generic card. A centered card is only for a genuine modal/dialog.
    • Escape every spec-derived string with escapeHtml() (SPEC-015 S1).
    • Realistic content, never lorem.
 -->
@@ -60,7 +64,9 @@
       color: var(--muted); font-size: 10.5px; display: grid; place-items: center; font-weight: 700; }
     .side a.on .n { background: var(--accent); color: #fff; }
 
-    main { padding: 28px 32px 120px; max-width: 1280px; }
+    /* Wide enough to hold a real ~1440px desktop screen + gutters (was 1280px,
+       which squished desktop-app layouts into a narrow card). */
+    main { padding: 28px 32px 120px; max-width: 1680px; }
     .screen { margin: 0 0 44px; content-visibility: auto; contain-intrinsic-size: 900px; scroll-margin-top: calc(var(--bar-h) + 16px); }
     .screen > h2 { font-size: 20px; margin: 0 0 12px; }
     .frame { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
