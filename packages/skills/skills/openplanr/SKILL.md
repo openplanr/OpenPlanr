@@ -133,8 +133,10 @@ a **prototype** (one screen), a **walkthrough** (multi-screen gallery), or a
 **canvas** (Figma-like board) — plus a `design-spec.md`. That makes decomposition
 emit a UI task (R2: a `design-spec.md` OR a PNG ⇒ a UI task). The command asks which
 format (or pass `--format … --from … --yes` for headless), and never auto-chains —
-review the artifact, then run `/planr-pipeline:plan <slug>`. (Claude Code only as of
-planr-pipeline v0.13.0.)
+review the artifact, then run `/planr-pipeline:plan <slug>`. **No spec yet?** It asks
+whether to scaffold one or just **explore standalone** (design only, into
+`.planr/designs/<slug>/`, no tracked spec) — so you can prototype without committing to a
+spec. (Claude Code only as of planr-pipeline v0.13.0+.)
 
 **Path A invariants:**
 

@@ -2,6 +2,16 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] — 2026-06-07
+
+### Changed — Aligned with `planr-pipeline` v0.14.0
+
+- Teaches that `/planr-pipeline:design <slug>` works even when **no spec exists** yet: it asks whether to scaffold a spec or **explore standalone** (design only, into `.planr/designs/<slug>/`, no tracked spec) — so a design can be prototyped without committing to a spec first.
+
+### Pairs with
+
+- `planr-pipeline` v0.14.0 — `/design` no-spec ask + standalone exploration
+
 ## [1.7.0] — 2026-06-07
 
 ### Changed — Aligned with `planr-pipeline` v0.13.0
