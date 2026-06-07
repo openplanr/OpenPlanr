@@ -32,16 +32,16 @@ You are done ONLY when the **Completion Contract** in `${CLAUDE_PLUGIN_ROOT}/pro
 
 If you cannot complete a phase (subagent fails, scaffolder fails, missing dep), abort with a clear error identifying which phase failed and what state was reached. **Do not print success.** Do not silently exit.
 
-### TodoWrite is mandatory
+### Task tracking is mandatory
 
-At the **start** of execution, immediately create a TodoWrite list with these 4 items:
+At the **start** of execution, immediately track these 4 phases with your runtime's task tool:
 
 1. `Phase A — Pre-flight (state strategy + bootstrap)`
 2. `Phase B — MODE binding (**mode-detection.md**) + author spec shell`
 3. `Phase C — Subagent dispatch (db, designer, specification)`
 4. `Phase D — Verify completion contract + print summary`
 
-Mark each item `in_progress` before starting it, `completed` only after on-disk verification of its outputs (per the per-phase verification gates in the procedure files below). This is non-negotiable — without it, the model loses track on long executions and silently abandons mid-task.
+Use the current Claude Code task tools (**`TaskCreate`** one per phase, **`TaskUpdate`** to advance status). On Claude Code **< 2.1.142** the tool is `TodoWrite` (deprecated and disabled by default in 2.1.142+); on Cursor/Codex or any runtime without a task tool, track the phases inline in your responses. Mark each item `in_progress` before starting it, `completed` only after on-disk verification of its outputs (per the per-phase verification gates in the procedure files below). This is non-negotiable — without it, the model loses track on long executions and silently abandons mid-task. The tracker is a progress aid; if it is unavailable, still verify every phase on disk.
 
 When **`plan-step0-preflight.md`** terminates via **`§ 0.5b`** (`--dry-run`), mark item **1** `completed`, **2–4** `cancelled` (`dry-run exit`).
 

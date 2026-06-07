@@ -24,6 +24,7 @@ import { validate } from './json-schema-validate.mjs';
 import {
   escapeHtml, embedJson, hasUnsafeHtml,
   recommendFormat, resolveScreens, countScreens, chooseWalkthroughNav,
+  decideThinSpec,
 } from '../lib/design/index.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -107,6 +108,14 @@ assert(recommendFormat({ screenCount: 6, intentText: 'explore options' }).format
   '6 exploratory screens → canvas');
 assert(chooseWalkthroughNav(5) === 'anchor' && chooseWalkthroughNav(20) === 'lazy',
   'walkthrough nav: 5 → anchor, 20 → lazy');
+
+// thin-spec decision (v0.13.1 — interactive asks, only headless dead-ends)
+assert(decideThinSpec({ screenCount: 0 }).action === 'clarify',
+  '0 screens interactive → clarify (no dead-end)');
+assert(decideThinSpec({ screenCount: 0, format: 'walkthrough', from: 'spec' }).action === 'abort',
+  '0 screens headless (both flags, non-describe) → abort');
+assert(decideThinSpec({ screenCount: 0, from: 'describe' }).action === 'proceed',
+  '0 screens with --from describe → proceed');
 
 // 6 — escaping neutralizes a hostile string (XSS regression S1)
 log('\nescaping (S1 regression):');

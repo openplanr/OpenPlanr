@@ -116,7 +116,7 @@ When `PLAN_DRY_RUN=true`:
 
 1. Execute `${CLAUDE_PLUGIN_ROOT}/procedures/plan-dry-run-preview.md`.
 2. **STOP** immediately — skip **§ 0.6**, skip **§ Phase A verification gate**, skip `plan-step1-*` / `plan-steps-*` for this invocation.
-3. Mark orchestrator TodoWrite items **2–4** as `cancelled` with reason **`dry-run exit`**.
+3. Mark orchestrator task-tracker items **2–4** as `cancelled` with reason **`dry-run exit`**.
 
 *(Real runs (`PLAN_DRY_RUN=false`) continue to § 0.6 as before.)*
 
@@ -136,7 +136,7 @@ For `BOOTSTRAP_ONLY` and `SCAFFOLD_NODE`, the common sub-procedures `WRITE_PLANR
 
 ---
 
-### Phase A verification gate (mark TodoWrite item 1 complete)
+### Phase A verification gate (mark task-tracker item 1 complete)
 
 If **`PLAN_DRY_RUN=true`**, § **0.5b** already terminated — **do not** evaluate these checks.
 

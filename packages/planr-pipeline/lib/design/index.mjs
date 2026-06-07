@@ -13,6 +13,7 @@ export {
 } from './recommendFormat.mjs';
 export { resolveScreens, countScreens } from './screens.mjs';
 export { chooseWalkthroughNav, ANCHOR_MAX_SCREENS } from './walkthroughNav.mjs';
+export { decideThinSpec, isHeadless } from './interactivity.mjs';
 export {
   buildManifest, validateManifest,
   DESIGN_SOURCES, CONTENT_PROVENANCE, FRAMEWORKS, NAV_MODES, SCHEMA_VERSION,

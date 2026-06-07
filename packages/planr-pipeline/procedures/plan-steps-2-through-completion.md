@@ -41,7 +41,7 @@ Run subagents sequentially. Each subagent's output is consumed by the next.
 
 ---
 
-### Phase C verification gate (mark TodoWrite item 3 complete)
+### Phase C verification gate (mark task-tracker item 3 complete)
 
 Before continuing to Phase D, verify on disk:
 
@@ -90,7 +90,7 @@ Before printing any summary, verify ALL of the following on disk. **The PO Phase
 
 - If ANY contract checkbox fails, you have NOT completed the PO Phase. Continue executing the missing steps. **Do NOT print success.**
 - If a check is genuinely unresolvable (e.g., specification-agent crashed), abort with a clear error message identifying which check failed and what state was reached. **Do NOT print the success summary.**
-- Only after all checks pass: mark the final TodoWrite item complete and continue to 3.3.
+- Only after all checks pass: mark the final task-tracker item complete and continue to 3.3.
 
 ### 3.3 — Print success summary + stop
 

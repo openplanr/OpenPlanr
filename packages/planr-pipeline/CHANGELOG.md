@@ -4,6 +4,42 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.13.1] — 2026-06-07
+
+### Fixed — `/design` no longer dead-ends on a thin spec; it asks (DevEx)
+
+When the structural screen resolver found **0 screens** (a spec organized as functional
+requirements rather than a `## Screens` list / `ui_files:`, e.g. a `FR-A01…A19` spec),
+`/design` v0.13.0 **aborted** preflight with a `Repair:` hint and forced the user to re-run
+with `--from describe`. That dead-ended the whole point of the interactive flow ("the agent
+triggers a question to collect what it needs"). The clarification (`AskUserQuestion`) lived
+in Phase B but the abort fired in Phase A, before it could run.
+
+Now an **interactive** run with 0 screens **asks** instead of aborting (Phase B § B.0.5):
+derive the screens from the spec's requirements/flows · ground them in an existing design
+doc the preflight auto-detects (`design/*.md`, e.g. `ux-flows.md`) · add a `## Screens`
+section · cancel. Only a **headless** run (both `--format` and `--from` set, source not
+`describe`) still aborts — it cannot prompt. The decision is a tested helper
+(`lib/design/interactivity.mjs` `decideThinSpec` / `isHeadless`, + `tests/design/
+interactivity.test.mjs`), not prose. The generator still never fabricates a screen list
+silently (SPEC-015 F8/E3). Preflight now also detects `design/*.md` docs as a screen source.
+
+### Fixed — task tracking no longer hard-codes the deprecated `TodoWrite` tool
+
+Claude Code **deprecated `TodoWrite` in v2.1.142** (disabled by default in favor of the
+`TaskCreate` / `TaskGet` / `TaskList` / `TaskUpdate` family). The `/plan` and `/design`
+commands instructed the agent to "create a TodoWrite list," which silently no-ops on
+modern Claude Code (the orchestrator fell back to inline tracking — work was unaffected,
+but the progress UI was lost).
+
+- `commands/plan.md` + `commands/design.md`: phase tracking now uses the current task
+  tools (`TaskCreate` / `TaskUpdate`), with documented fallbacks — `TodoWrite` on Claude
+  Code < 2.1.142, and inline tracking on Cursor/Codex or any runtime without a task tool.
+- `procedures/plan-step0-preflight.md`, `plan-step1-mode-and-spec.md`,
+  `plan-steps-2-through-completion.md`, `strategy-scaffold-node.md`: "TodoWrite item N"
+  phrasing made tool-agnostic ("task-tracker item N"). On-disk phase verification is
+  unchanged and still mandatory regardless of which (or no) task tool is present.
+
 ## [0.13.0] — 2026-06-07
 
 ### Added — `/planr-pipeline:design`: design generation before decomposition (SPEC-015)

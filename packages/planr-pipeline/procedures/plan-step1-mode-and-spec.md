@@ -21,7 +21,7 @@ The procedure file at `${CLAUDE_PLUGIN_ROOT}/procedures/mode-detection.md` (sect
 
 ---
 
-### Phase B verification gate (mark TodoWrite item 2 complete)
+### Phase B verification gate (mark task-tracker item 2 complete)
 
 Before continuing to Phase C, verify on disk:
 

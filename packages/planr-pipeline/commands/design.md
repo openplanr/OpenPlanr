@@ -52,17 +52,22 @@ artifact, `finalized.json`, copied runtime, and `design-spec.md` all verified on
 If any phase cannot complete, **release the `.lock`** and abort via `fatal-error-format.md`
 (two lines). Do not print success. Do not auto-chain.
 
-### TodoWrite is mandatory
+### Task tracking
 
-At the start, create a TodoWrite list with these 4 items, and mark each `in_progress`
-before / `completed` after on-disk verification:
+At the start, track these 4 phases with your runtime's task tool, marking each
+`in_progress` before / `completed` after on-disk verification of its outputs:
 
 1. `Phase A — Preflight (mode + context + lock)`
 2. `Phase B — Clarify (source + format) [or: flags → skipped]`
 3. `Phase C — Generate artifact + finalized.json`
 4. `Phase D — Author design-spec.md + STOP (handoff)`
 
-On `--dry-run`, mark item 1 `completed`, items 2–4 `cancelled` (`dry-run exit`).
+Use the current Claude Code task tools (**`TaskCreate`** one per phase, **`TaskUpdate`**
+to advance status). On Claude Code **< 2.1.142** the tool is `TodoWrite` (deprecated and
+disabled by default in 2.1.142+); on Cursor/Codex or any runtime without a task tool,
+track the phases inline in your responses. The tracker is a progress aid only — never
+skip a phase's on-disk verification because no task tool is available. On `--dry-run`,
+mark item 1 done and items 2–4 cancelled (`dry-run exit`).
 
 ---
 
@@ -77,9 +82,13 @@ On `--dry-run`, mark item 1 `completed`, items 2–4 `cancelled` (`dry-run exit`
   clobber `design/`);
 - on `--dry-run`, prints the resolved plan + recommended format and STOPs.
 
-If the spec resolves **0 screens** and `--from` is not `describe`: abort (thin spec) with a
-two-line `Repair:` pointing the user to add a Screens section or pass `--from describe`
-(SPEC-015 finding E3 — never fabricate screens).
+**Thin spec (0 screens resolved)** is **not a dead-end** (v0.13.1). Preflight calls
+`lib/design/interactivity.mjs` `decideThinSpec`: an **interactive** run continues with
+`THIN_SPEC = true` so Phase B (§ B.0.5) *asks* the user how to source the screens
+(derive-from-spec / use an existing design doc like `design/ux-flows.md` / add a
+`## Screens` section / cancel). Only a **headless** run (both `--format` and `--from` set,
+source not `describe`) aborts with a two-line `Repair:` — it can't prompt. Either way the
+generator never fabricates a screen list silently (SPEC-015 finding F8/E3).
 
 ## Step B — Clarify (skipped when `--format` AND `--from` are both set)
 

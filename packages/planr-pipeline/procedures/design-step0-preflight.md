@@ -39,12 +39,27 @@ with its standard two-line error (do not invent a spec).
 - **Prior design?** If `DESIGN_DIR` already holds a `finalized.json`, bind `HAS_PRIOR` and
   read its `design_format` + `iterations` (drives the evolve/replace branch in Step B).
 - **Tokens:** if `DESIGN.md` exists at the repo root, note it as the design-token source.
+- **Existing design docs?** `ls <DESIGN_DIR>/*.md` excluding `design-spec.md` (e.g. a
+  hand-written `ux-flows.md`). Bind `DESIGN_DOCS` (paths). These become a screen source the
+  user can pick in the thin-spec clarification below.
 
-**Thin-spec guard (SPEC-015 E3):** if `SCREEN_COUNT == 0` and `FROM != describe`, abort:
-```
-⚠ <slug> has no screens to design (no Screens section / ui_files, and --from is not "describe")
-Repair: add a "## Screens" list to the spec, or run /planr-pipeline:design <slug> --from describe
-```
+**Thin-spec handling (v0.13.1 — interactive asks, never dead-ends):** compute the action
+with `lib/design/interactivity.mjs` `decideThinSpec({ screenCount: SCREEN_COUNT, from: FROM,
+format: FORMAT })`:
+
+- **`proceed`** — screens resolved, or `--from describe` (which derives screens from the
+  brief). Continue.
+- **`abort`** — `SCREEN_COUNT == 0` **and headless** (both `--format` and `--from` supplied,
+  source not `describe`): there is no way to prompt, so two-line fatal
+  (`fatal-error-format.md`):
+  ```
+  ⚠ <slug> resolves 0 screens (no Screens section / ui_files) and the run is headless (--format + --from set)
+  Repair: /planr-pipeline:design <slug> --from describe --format <format>
+  ```
+- **`clarify`** — `SCREEN_COUNT == 0`, **interactive**: do **NOT** abort. Bind `THIN_SPEC =
+  true` and continue — Phase B (§ B.0.5) asks the user how to source the screens
+  (derive-from-brief / use an existing `DESIGN_DOC` / add a `## Screens` section / cancel).
+  Never invent a screen list here (SPEC-015 F8: thin spec → clarify, don't fabricate).
 
 ## A.4 — Acquire the advisory lock (SPEC-015 E1)
 
@@ -71,6 +86,7 @@ If `DRY_RUN`: compute the recommended format via `lib/design/recommendFormat.mjs
   design dir:      <DESIGN_DIR>
   screens:         <SCREEN_COUNT> (<comma-joined SCREENS, truncated>)
   has PNGs:        <HAS_PNG>     prior design: <HAS_PRIOR>
+  thin-spec:       <decideThinSpec action: proceed | clarify | abort> (design docs: <DESIGN_DOCS or none>)
   recommended:     <format> — <reason>
   would write:     finalized.html|canvas.html, finalized.json, vendor/, design-spec.md
 ```

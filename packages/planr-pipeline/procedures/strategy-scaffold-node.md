@@ -2,7 +2,7 @@
 
 Greenfield directory + Node-stack brief. Intent is unambiguous. **Auto-scaffold without a consent prompt** — premium UX dictates the system act on clear intent.
 
-**Execute as an explicit checklist.** Add these items to the TodoWrite list (under Phase A) and check them off as you complete each:
+**Execute as an explicit checklist.** Add these items to the task-tracker list (under Phase A) and check them off as you complete each:
 
 ```
 SCAFFOLD_NODE checklist (each must complete before continuing):
