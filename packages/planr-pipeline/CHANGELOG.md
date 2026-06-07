@@ -4,6 +4,27 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.13.3] — 2026-06-07
+
+### Changed — `/design` keeps the project repo clean (scoped `.gitignore`)
+
+Each `/design` run copied a self-contained runtime into the spec's `design/vendor/`
+(~141KB React for canvas, ~30KB pretext for prototype/walkthrough) plus the generated HTML —
+so designing across features committed the third-party runtime into git, per design. Now
+`/design` writes a **`design/.gitignore`** that treats the rendered preview as build output:
+**`design-spec.md` (the intent `/plan` consumes) + `finalized.json` are tracked**, while
+`finalized.html` / `canvas.html` / `vendor/` / state / lock / temp are ignored. This scopes
+only the directory `/design` generated — it never touches the developer's root `.gitignore`,
+and deleting the file opts back into committing the full self-contained visual. The Phase-D
+handoff states the policy.
+
+### Changed — canvas uses a Figma-style dot grid
+
+`templates/design/DesignCanvas.jsx` (and the compiled `vendor/DesignCanvas.js`) now render
+the infinite canvas with a subtle **40px dot grid** on a clean near-white background
+(`#fcfcfc`), replacing the old 120px square-line grid on warm gray. Recompiled with esbuild;
+`node --check` clean, render verified.
+
 ## [0.13.2] — 2026-06-07
 
 ### Fixed — `/design` generation references the plugin root robustly (no hardcoded version path)

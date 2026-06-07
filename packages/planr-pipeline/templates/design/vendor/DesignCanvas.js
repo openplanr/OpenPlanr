@@ -1,6 +1,7 @@
 const DC = {
-  bg: "#f0eee9",
+  bg: "#fcfcfc",
   grid: "rgba(0,0,0,0.06)",
+  dot: "rgba(0,0,0,0.13)",
   label: "rgba(60,50,40,0.7)",
   title: "rgba(40,30,20,0.85)",
   subtitle: "rgba(60,50,40,0.6)",
@@ -350,7 +351,7 @@ function DCViewport({ children, minScale = 0.1, maxScale = 8, style = {} }) {
       vp.removeEventListener("pointercancel", onPointerUp);
     };
   }, [apply, minScale, maxScale]);
-  const gridSvg = `url("data:image/svg+xml,%3Csvg width='120' height='120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M120 0H0v120' fill='none' stroke='${encodeURIComponent(DC.grid)}' stroke-width='1'/%3E%3C/svg%3E")`;
+  const gridSvg = `url("data:image/svg+xml,%3Csvg width='40' height='40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1.2' cy='1.2' r='1.2' fill='${encodeURIComponent(DC.dot)}'/%3E%3C/svg%3E")`;
   return /* @__PURE__ */ React.createElement(
     "div",
     {
@@ -385,7 +386,7 @@ function DCViewport({ children, minScale = 0.1, maxScale = 8, style = {} }) {
           padding: "60px 0 80px"
         }
       },
-      /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", inset: -6e3, backgroundImage: gridSvg, backgroundSize: "120px 120px", pointerEvents: "none", zIndex: -1 } }),
+      /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", inset: -6e3, backgroundImage: gridSvg, backgroundSize: "40px 40px", pointerEvents: "none", zIndex: -1 } }),
       children
     )
   );

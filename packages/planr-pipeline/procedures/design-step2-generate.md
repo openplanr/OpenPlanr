@@ -79,3 +79,26 @@ html_file }`.
 
 If a `.run-manifest.jsonl` exists for the feature, append a `design.generate` stage record
 (`stage`, `agent: null`, `started_at`/`ended_at`, `files_written`, `exit_status: success`).
+
+## C.6 — Scoped `.gitignore` (keep the repo clean — v0.13.3)
+
+The rendered preview is regenerable build output, and the third-party runtime under
+`vendor/` (React ~141KB, pretext ~30KB) must **never** be committed per design. Write
+`<DESIGN_DIR>/.gitignore` so the project commits only the design **intent** by default. This
+does NOT touch the developer's root `.gitignore` — it only scopes the directory `/design`
+generated, and the developer stays in full control (edit or delete it to commit the visual):
+
+```gitignore
+# Written by /planr-pipeline:design. The rendered preview is build output (regenerable).
+# Tracked by default: design-spec.md (the intent /plan consumes) + finalized.json (metadata).
+# Delete this file to commit the full self-contained visual artifact instead.
+vendor/
+finalized.html
+canvas.html
+.design-canvas.state.json
+.finalized.tmp.*
+.design.lock
+```
+
+Write it only if `<DESIGN_DIR>/.gitignore` is absent — on a re-run/evolve, leave the
+developer's existing version untouched (they may have opted to track the visual).

@@ -44,6 +44,8 @@ Print a deliverable handoff, not a file-write log:
   Open:  file://<abs path to finalized.html|canvas.html>
   Spec:  design-spec.md authored → UI tasks will now generate
          (or: design-spec.md left to designer-agent — you have PNG mockups)
+  Git:   committing design-spec.md + finalized.json; the rendered preview + vendor/
+         runtime are gitignored (build output) — delete <DESIGN_DIR>/.gitignore to track them
 
   Next:  /planr-pipeline:plan <slug>
 ```
