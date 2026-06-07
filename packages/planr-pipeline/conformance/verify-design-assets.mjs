@@ -87,6 +87,20 @@ try {
   bad('DesignCanvas.js passes node --check', String(e.stderr || e.message).split('\n')[0]);
 }
 
+// 3b — desktop artboard sizing + front-loaded app context (v0.15.1)
+log('\ndesktop sizing + app context (v0.15.1):');
+assert(fileHas(canvasJs, '1440') && fileHas(canvasJs, '1024'),
+  'DesignCanvas default artboard is desktop (1440×1024), not a 260×480 phone card');
+assert(fileHas(join(root, 'templates/design/DesignCanvas.jsx'), 'width = 1440'),
+  'DesignCanvas.jsx source default width is desktop (1440)');
+assert(fileHas(canvasJs, '/ height, 1)') && !fileHas(canvasJs, '/ height, 2)'),
+  'canvas focus overlay caps scale at 1:1 (never enlarges a desktop screen past real size — the zoom fix)');
+const preflight = join(root, 'procedures/design-step0-preflight.md');
+assert(fileHas(preflight, 'APP_CTX') && fileHas(preflight, 'VIEWPORT_W'),
+  'preflight A.3.5 front-loads APP_CTX + VIEWPORT_W (read the project once, up front)');
+const generate = join(root, 'procedures/design-step2-generate.md');
+assert(fileHas(generate, 'VIEWPORT_W'), 'generate C.0/C.4 author at VIEWPORT_W (real desktop width)');
+
 // 4 — manifest schema vs golden fixtures
 log('\ndesign-manifest schema:');
 const schema = JSON.parse(readFileSync(join(root, 'schemas/v1.0.0/design-manifest.schema.json'), 'utf-8'));

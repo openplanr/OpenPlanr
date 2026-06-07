@@ -4,6 +4,34 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.15.1] — 2026-06-08
+
+### Fixed — canvas designs look like real desktop screens (zoom, size, front-loaded context)
+
+Three gaps remained after v0.15.0's "match the app" work, all surfaced by real `/design` runs
+whose canvas artboards inspected as `width:1320px; height:860px` and rendered **zoomed-in**,
+filling the window instead of reading as real screens:
+
+- **The focus/present view scaled artboards UP to 2× to fill the window** — so a screen was never
+  shown at real size; it was stretched to fill, which read as "zoomed in" and magnified every
+  spacing imperfection. The overlay now **caps at 1:1**: a desktop screen renders at real pixels,
+  shrinking only to fit the window, never enlarging.
+- **Canvas artboards weren't desktop-sized.** The canvas generate step (C.4) gave the generator
+  no sizing guidance, and the `DesignCanvas` fallback was phone-sized (`260×480`), so artboards
+  were authored at an arbitrary width with a short fixed height that **cropped** a real scrolling
+  page. C.4 now pins each artboard to **`width = VIEWPORT_W`** (the real desktop width, default
+  **1440**) and **`height = the screen's full content height`** (no inner scroll; err tall), and
+  the `DesignCanvas` fallback is now desktop **`1440×1024`**. (The cap + default changes are
+  recompiled into the vendored `DesignCanvas.js`.)
+- **App / design-system context was resolved late, in the generate step.** It was read inside C.0
+  — *after* the format was chosen in Step B, bundled with escaping/manifest mechanics, and it
+  never extracted a concrete desktop width. A new preflight step **A.3.5** front-loads
+  **`APP_CTX`** (app shell · design tokens · component library · reference screens · **`VIEWPORT_W`**)
+  **once, up front**; Step C now *consumes* it. `--dry-run` prints the resolved context.
+
+A conformance check guards the desktop default + the front-loaded context against regression.
+No routing change — the `openplanr` skill stays at **1.8.0**.
+
 ## [0.15.0] — 2026-06-07
 
 ### Added — design-craft rubric + mandatory self-review (professional polish)

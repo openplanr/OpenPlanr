@@ -574,7 +574,7 @@ async function dcExport(node, w, h, name, kind) {
   cv.toBlob((blob) => save(blob, "png"), "image/png");
 }
 function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorder, onFocus, onDelete }) {
-  const { id: rawId, label: rawLabel, width = 260, height = 480, children, style = {} } = artboard.props;
+  const { id: rawId, label: rawLabel, width = 1440, height = 1024, children, style = {} } = artboard.props;
   const id = rawId ?? rawLabel;
   const ref = React.useRef(null);
   const cardRef = React.useRef(null);
@@ -753,14 +753,14 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
     document.addEventListener("keydown", k);
     return () => document.removeEventListener("keydown", k);
   });
-  const { width = 260, height = 480, children } = artboard.props;
+  const { width = 1440, height = 1024, children } = artboard.props;
   const [vp, setVp] = React.useState({ w: window.innerWidth, h: window.innerHeight });
   React.useEffect(() => {
     const r = () => setVp({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener("resize", r);
     return () => window.removeEventListener("resize", r);
   }, []);
-  const scale = Math.max(0.1, Math.min((vp.w - 200) / width, (vp.h - 260) / height, 2));
+  const scale = Math.max(0.1, Math.min((vp.w - 200) / width, (vp.h - 260) / height, 1));
   const [ddOpen, setDd] = React.useState(false);
   const Arrow = ({ dir, onClick }) => /* @__PURE__ */ React.createElement(
     "button",

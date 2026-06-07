@@ -4,29 +4,29 @@
 > (SPEC-015 finding A2) — the main thread already holds the clarified `{source, format}` and
 > writes the files directly. The shared core is three helpers; the rest is per-format.
 
-## C.0 — Ground the design in the target app (read this FIRST, v0.14.1)
+## C.0 — Ground the design in the target app (consume APP_CTX, v0.15.1)
 
 A generated design must look like it belongs in the **real app**, at a **real screen size** —
-not a generic card floating on gray. Before filling any shell, read the project:
+not a generic card floating on gray. **You already resolved `APP_CTX` in preflight
+(`design-step0-preflight.md` A.3.5): `{ APP_SHELL, DESIGN_SYSTEM, COMPONENT_LIB, REF_SCREENS,
+VIEWPORT_W, breakpoints }`.** Build every screen from it — do **not** re-discover it ad hoc:
 
-- **App shell / layout.** Find + read the app's layout + chrome — `app/layout.*`, `src/App.*`,
-  `components/{Layout,Shell,Sidebar,Nav,Header,Topbar,AppBar}.*` (framework-appropriate).
-  Render each generated screen **inside that shell** (the real sidebar / nav / header) so it
-  reads as embedded in the product. A free-floating centered card is correct ONLY when the
-  screen genuinely IS a modal / dialog / standalone marketing page.
-- **Design system / tokens.** Read `DESIGN.md`, the CSS/Tailwind theme (`globals.css`,
-  `tailwind.config.*`, `theme.*`), and the `ComponentLibrary` / `FrontendFramework` from
-  `input/tech/stack.md`. Match the **real** colors, type scale, spacing, radii, and component
-  shapes — never invent a generic palette/style.
-- **Existing screens.** Read 1–2 real pages/components and mirror their layout density,
-  navigation, and patterns.
+- **Embed in `APP_SHELL`.** Render each screen **inside the real shell** (the actual sidebar /
+  nav / header you read), so it reads as embedded in the product. A free-floating centered card
+  is correct ONLY when `APP_SHELL = none`, or the screen genuinely IS a modal / dialog /
+  standalone marketing page.
+- **Match `DESIGN_SYSTEM` + `COMPONENT_LIB`.** Use the **real** brand color, type scale,
+  spacing, radii, and component shapes — never invent a generic palette/style.
+- **Mirror `REF_SCREENS`** for layout density, navigation, and patterns.
 
-### Target viewport — design for a real screen, not a tiny card
+### Target viewport — author at `VIEWPORT_W`, never a smaller ad-hoc width
 
-- **Desktop web app → full-bleed ~1440px** (use the app's real max-content width + breakpoints).
-  Let content use the width; do **not** center a narrow card in empty space.
+- **Author every screen at `VIEWPORT_W`** (the desktop content width bound in A.3.5 — **1440**
+  for a desktop web app unless the theme says otherwise). Let content use the full width; do
+  **not** center a narrow card in empty space, and do **not** pick an arbitrary width like
+  1320 — that was the bug.
 - Responsive/mobile → design the app's breakpoints (375 / 768 / 1024 / 1440) and show the
-  primary one at full width.
+  primary one (`VIEWPORT_W`) at full width.
 - A constrained/centered card is correct ONLY for a genuine modal, dialog, or narrow form —
   never for a full page. (Non-web mediums: match that medium's real frame instead.)
 
@@ -99,10 +99,19 @@ artifact (SPEC-015 F6).
 ## C.4 — canvas
 
 - Base: `templates/design/canvas-shell.html`.
+- **Artboard size — desktop, full-height (the fix for the 1320×860 / 1123px bug, v0.15.1).**
+  Each artboard is a **full screenshot of the screen**, not a slide. Set **`width = VIEWPORT_W`**
+  (the desktop width from `APP_CTX` — **1440** for a desktop web app; a mobile app → its device
+  width, e.g. 390) and **`height = the screen's FULL natural content height`** — tall enough to
+  show the **entire** screen with **no inner scrollbar**. Tall frames are correct on a canvas;
+  **never** clamp to a short fixed height like `860` (that cropped the page, and at focus-zoom
+  rendered ~1123px — not desktop). Estimate generously; when unsure, **err tall** (a dense
+  desktop page is commonly 1100–1600px+). The `DesignCanvas` fallback is desktop (`1440×1024`),
+  but always pass explicit per-screen dims — don't rely on the default.
 - Build the data object `{ sections: [ { id, title, subtitle?, artboards: [ { id, label,
   width, height, html } ] } ] }`, where `html` is each screen's rendered markup (spec text
-  inside it already escaped). Replace the `GENERATOR:data` marker with
-  `window.__CANVAS_DATA = <embedJson(data)>;` — **`embedJson` is required**.
+  inside it already escaped). Replace the shell's `/* GENERATOR:data */` marker so the line
+  reads `var DATA = <embedJson(data)>;` — **`embedJson` is required**.
 - On **evolve**, merge `priorState` (`.design-canvas.state.json`) so saved order/labels
   survive; re-write the sidecar.
 - Copy `vendor/{react.production.min.js, react-dom.production.min.js, DesignCanvas.js}` →
@@ -119,7 +128,10 @@ the defects LLM drafts make most:
 - **Sizing consistency (the #1 defect):** are all sibling elements of one type — pills, badges,
   buttons, cards, inputs — exactly the same height / padding / width? (e.g. an `error` pill and
   a `warn` pill MUST be identical in size.)
-- **Spacing:** is every margin / padding / gap on the scale? Are gaps within a group equal?
+- **Spacing — esp. vertical lists / nav / sidebar sections (the recurring "broken spacing" miss):**
+  is every margin / padding / gap on the scale? Are the gaps between sibling rows (sidebar nav
+  items, section lists, checklist rows) **equal**, and is each row's internal padding identical?
+  Uneven row gaps or drifting padding in a list is the #1 spacing defect — re-measure them.
 - **Alignment:** does everything line up to a grid / baseline — no 1–3px drift, no orphaned or
   optically-off element?
 - **Tokens / contrast / icons / focus** per the checklist.

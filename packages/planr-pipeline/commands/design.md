@@ -82,6 +82,10 @@ mark item 1 done and items 2–4 cancelled (`dry-run exit`).
   (the prior bug) and never silently abort; `--yes` assumes standalone, never auto-creates a spec;
 - resolves the **screen list** from the spec (`lib/design/screens.mjs` rules) and any
   existing PNGs / prior generated design (for the evolve-vs-replace + precedence branches);
+- resolves **`APP_CTX`** (v0.15.1) — reads the project's **app shell**, **design tokens**,
+  **component library**, 1–2 **reference screens**, and the **real desktop viewport width**
+  (`VIEWPORT_W`, default 1440) **once, up front**, so generation is grounded in bound values
+  instead of re-deriving them late (the old canvas-came-out-1320×860 bug);
 - acquires the advisory `<DESIGN_DIR>/../.lock` (SPEC-015 finding E1 — no two `/design` runs
   clobber the design dir);
 - on `--dry-run`, prints the resolved plan + recommended format and STOPs.

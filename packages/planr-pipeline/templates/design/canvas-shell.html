@@ -21,6 +21,10 @@
        { sections: [ { id, title, subtitle?, artboards: [
            { id, label, width, height, html }   // html = the screen's markup
        ] } ] }
+   • Artboard size = a real desktop screenshot (design-step2-generate.md C.4):
+     width = VIEWPORT_W (1440 for desktop web; mobile app → device width),
+     height = the screen's FULL content height (no inner scroll). Never a short
+     fixed slide — that crops the page. Err tall when unsure.
 -->
 <html lang="en">
 <head>

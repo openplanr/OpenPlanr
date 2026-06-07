@@ -86,6 +86,42 @@ format: FORMAT })`:
   (derive-from-brief / use an existing `DESIGN_DOC` / add a `## Screens` section / cancel).
   Never invent a screen list here (SPEC-015 F8: thin spec → clarify, don't fabricate).
 
+## A.3.5 — Resolve the app design context (APP_CTX — read the project ONCE, up front)
+
+> **Why this is here and not in Step C (v0.15.1).** Earlier versions read the app shell /
+> tokens / viewport *inside* the generate step (C.0), bundled with escaping + manifest
+> mechanics — so it was done shallowly, **after** the format was already chosen in Step B, and
+> no concrete **desktop width** was ever extracted (canvas artboards came out 1320×860, not a
+> real 1440 desktop). Resolve it **here**, once, as bound values, so Step B *and* Step C
+> consume the same grounded context instead of re-deriving it late.
+
+Read the **project the design belongs to** and bind `APP_CTX`. This is the design system +
+sizing context generation needs — gather it now, concretely:
+
+- **`APP_SHELL`** — find + **read** the app's layout / chrome: `app/layout.*`, `src/App.*`,
+  `components/{Layout,Shell,Sidebar,Nav,Header,Topbar,AppBar}.*` (framework-appropriate). Bind
+  the shell file path(s) + a one-line note of its structure (e.g. "fixed 248px sidebar + 56px
+  top bar + content"). If none exists (greenfield / standalone / marketing page) bind
+  `APP_SHELL = none` and say so — a free-floating card is then legitimate.
+- **`DESIGN_SYSTEM`** — read the token source in priority order: `DESIGN.md` (repo root), then
+  the CSS/Tailwind theme (`globals.css`, `tailwind.config.*`, `theme.*`). Bind the real **brand
+  color, font family, type scale, spacing scale, radii**. None found → bind
+  `DESIGN_SYSTEM = defaults` (use the craft-rubric scale) and note it.
+- **`COMPONENT_LIB`** — `ComponentLibrary` / `FrontendFramework` from `input/tech/stack.md`
+  (or detect from `package.json`). Match its real component shapes; don't invent a generic kit.
+- **`REF_SCREENS`** — read **1–2 real pages/components** to mirror layout density + patterns.
+- **`VIEWPORT_W` + breakpoints — the single most important sizing value.** Bind the app's
+  **real desktop content width**: read it from the theme (`max-width` / container max-width /
+  a `--max-width` token / Tailwind `screens`+`container`). **Default `VIEWPORT_W = 1440`** for a
+  desktop web app when there's no signal; a mobile-first app → its primary breakpoint (e.g.
+  `390`). Also note the responsive breakpoints if the app is responsive (375 / 768 / 1024 /
+  1440). **Every generated screen — including each canvas artboard — is authored at
+  `VIEWPORT_W`, never a smaller ad-hoc width.**
+
+`APP_CTX = { APP_SHELL, DESIGN_SYSTEM, COMPONENT_LIB, REF_SCREENS, VIEWPORT_W, breakpoints }`.
+Step C (C.0) **consumes** this — it does not re-read from scratch. Keep the reads lightweight
+(this is preflight), but bind every field to a concrete value, especially `VIEWPORT_W`.
+
 ## A.4 — Acquire the advisory lock (SPEC-015 E1)
 
 Lock file: `DESIGN_DIR/.design.lock` (JSON: `{ pid, host, started_at, command, ttl_seconds: 1800 }`).
@@ -112,6 +148,7 @@ If `DRY_RUN`: compute the recommended format via `lib/design/recommendFormat.mjs
   screens:         <SCREEN_COUNT> (<comma-joined SCREENS, truncated>)
   has PNGs:        <HAS_PNG>     prior design: <HAS_PRIOR>
   thin-spec:       <decideThinSpec action: proceed | clarify | abort> (design docs: <DESIGN_DOCS or none>)
+  app context:     viewport <VIEWPORT_W>px · shell <APP_SHELL or none> · tokens <DESIGN_SYSTEM source> · lib <COMPONENT_LIB>
   recommended:     <format> — <reason>
   would write:     finalized.html|canvas.html, finalized.json, vendor/, design-spec.md
 ```
