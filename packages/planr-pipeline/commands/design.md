@@ -76,10 +76,14 @@ mark item 1 done and items 2–4 cancelled (`dry-run exit`).
 **Execute** `${CLAUDE_PLUGIN_ROOT}/procedures/design-step0-preflight.md`. It:
 - binds `MODE` / `SPEC_DIR` via `mode-detection.md`, and `DESIGN_DIR` (see the path table
   there: `<SPEC_DIR>/design/` spec-driven, `output/feats/feat-${SLUG}/design/` default);
+- **no spec for `<slug>` (spec-driven)** → a **mandatory `AskUserQuestion`** (v0.14.0):
+  **Create a spec** (`SPEC-NNN-<slug>`) · **Standalone exploration** (into
+  `.planr/designs/<slug>/`, no tracked spec) · **Cancel**. Never silently scaffold a spec
+  (the prior bug) and never silently abort; `--yes` assumes standalone, never auto-creates a spec;
 - resolves the **screen list** from the spec (`lib/design/screens.mjs` rules) and any
   existing PNGs / prior generated design (for the evolve-vs-replace + precedence branches);
-- acquires the advisory `<SPEC_DIR>/.lock` (SPEC-015 finding E1 — no two `/design` runs
-  clobber `design/`);
+- acquires the advisory `<DESIGN_DIR>/../.lock` (SPEC-015 finding E1 — no two `/design` runs
+  clobber the design dir);
 - on `--dry-run`, prints the resolved plan + recommended format and STOPs.
 
 **Thin spec (0 screens resolved)** is **not a dead-end** (v0.13.1). Preflight calls

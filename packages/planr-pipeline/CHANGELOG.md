@@ -4,6 +4,33 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.14.0] — 2026-06-07
+
+### Fixed — `/design` no longer silently invents a spec; asks + adds standalone exploration
+
+When `/design` ran in spec-driven mode with **no spec for the slug**, the procedure said
+"abort, do not invent a spec" — but the model deviated and **silently scaffolded a tracked
+`SPEC-NNN-<slug>`** into `.planr/specs/`, polluting the user's planning system with a spec
+they never asked for (and inconsistently — other runs aborted on the same condition). Now the
+no-spec case is a **mandatory `AskUserQuestion`** (same enforcement as Phase B):
+
+- **A) Create a spec** — scaffold `SPEC-NNN-<slug>` as the home (explicit, user-chosen) → the planned-feature path `/plan` can consume.
+- **B) Standalone exploration** — design only, into a new **`.planr/designs/<slug>/`** location; **no tracked spec is created**. (Mirrors gstack `design-html`'s spec-less design.)
+- **C) Cancel.**
+
+`--yes` assumes **standalone** (non-polluting); it never silently creates a spec. The Phase-D
+handoff is standalone-aware (no false "UI tasks will now generate" when there's no spec).
+
+### Fixed — generator resolves the plugin root instead of giving up
+
+`$CLAUDE_PLUGIN_ROOT` is usually **unset** in the Bash subprocess, so `/design` was always
+falling back to hand-authoring `finalized.json` and hand-escaping — meaning the **tested**
+`lib/design` escaping + manifest validation (the real S1 XSS guard) never ran at generation
+time. `design-step2-generate.md` now instructs the generator to **derive the plugin root from
+a procedure file it is already reading** (`<root>/procedures/…` → `<root>/lib/design/…`) and
+invoke the helpers via `node`, falling back to direct authoring only when the root is
+genuinely unresolvable.
+
 ## [0.13.4] — 2026-06-07
 
 ### Fixed — `/design` Phase B now actually fires the clarification prompt

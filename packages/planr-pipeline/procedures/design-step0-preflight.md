@@ -23,11 +23,36 @@ Repair: /planr-pipeline:design <slug> --format walkthrough
 Run `${CLAUDE_PLUGIN_ROOT}/procedures/mode-detection.md` to bind `MODE`, `SPEC_DIR`
 (spec-driven) / `FEAT_DIR` (default). Then bind the design directory:
 
-- spec-driven: `DESIGN_DIR = <SPEC_DIR>/design/`
-- default: `DESIGN_DIR = output/feats/feat-${SLUG}/design/`
+- spec-driven, spec resolves: `DESIGN_DIR = <SPEC_DIR>/design/`
+- default mode: `DESIGN_DIR = output/feats/feat-${SLUG}/design/`
 
-Create `DESIGN_DIR` if missing. If `mode-detection` cannot resolve a spec for `SLUG`, abort
-with its standard two-line error (do not invent a spec).
+### No spec for `<slug>` (spec-driven) — ask; never silently scaffold or abort
+
+If spec-driven mode is active but `mode-detection` resolves **no spec** for `SLUG`, this is a
+user decision, not a default. **Do NOT silently invent / scaffold a `SPEC-NNN` spec** (the
+prior-version bug — it polluted `.planr/specs/` with an unrequested spec), and do NOT silently
+abort. Issue a **mandatory `AskUserQuestion` tool call** — same enforcement as Step B: it MUST
+be sent as a tool_use, never narrated as prose, and you must never auto-pick:
+
+> No spec exists for **<slug>** yet. How do you want to design it?
+> A) **Create a spec** — scaffold `SPEC-NNN-<slug>` as the home, then design into it (the planned-feature path; `/plan` can consume it later)
+> B) **Standalone exploration** — design only, into `.planr/designs/<slug>/`; no tracked spec is created
+> C) **Cancel**
+
+- **A** → scaffold a minimal spec via `${CLAUDE_PLUGIN_ROOT}/procedures/auto-scaffold-spec.md`
+  (or the `templates/spec-driven.md.tpl` shell), bind `SPEC_DIR` to it, and
+  `DESIGN_DIR = <SPEC_DIR>/design/`. Scaffolding is allowed **only here**, because the user
+  explicitly chose it.
+- **B** → `DESIGN_DIR = .planr/designs/<slug>/` (standalone). **No `SPEC-NNN` file is written.**
+  `design-spec.md` lands here too, but it is NOT auto-consumed by `/plan` until the user
+  promotes it to a spec (option A on a later run, or `/planr-pipeline:plan <slug>`).
+- **C** → STOP cleanly (the `.lock` is not acquired until A.4, so nothing to release).
+
+Under **`--yes`** with no spec, assume **B (standalone exploration)** — the least-surprising,
+non-polluting default — and say so. **Never** assume **A** under `--yes`: silently creating a
+tracked spec is exactly the bug being fixed.
+
+Create `DESIGN_DIR` if missing.
 
 ## A.3 — Resolve the screen list + context
 

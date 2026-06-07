@@ -6,18 +6,22 @@
 
 ## C.1 — Shared core (every format)
 
-**Plugin-root handle — do this once, before invoking any helper.** The `lib/design/*`
-helpers live under the plugin install. Capture the root from `${CLAUDE_PLUGIN_ROOT}` and
-**never hardcode a versioned path** like `…/planr-pipeline/0.13.0/` — that breaks on the
-next release and is wrong the moment the user updates:
+**Plugin-root handle — resolve it dynamically, do this once.** The `lib/design/*` helpers
+live under the plugin install. **Never hardcode a versioned path** like
+`…/planr-pipeline/0.13.0/` (wrong the moment the user updates). Resolve `PLUG` in order:
 
-```bash
-PLUG="${CLAUDE_PLUGIN_ROOT}"   # the currently-loaded plugin install (version-independent)
-```
+1. If `${CLAUDE_PLUGIN_ROOT}` is set, `PLUG="${CLAUDE_PLUGIN_ROOT}"`.
+2. **Else derive it from a file you are already reading.** You loaded this procedure from
+   `<plugin-root>/procedures/design-step2-generate.md`, so the helpers are the sibling
+   `<plugin-root>/lib/design/` — strip the `/procedures/…` suffix from that path to get
+   `PLUG`. In practice `$CLAUDE_PLUGIN_ROOT` is usually **unset** in the Bash subprocess, so
+   this is the **normal** branch — use it; do **not** jump straight to hand-authoring.
 
-Invoke any helper as `node "$PLUG/lib/design/<helper>.mjs"`. If `$CLAUDE_PLUGIN_ROOT` is not
-set in your shell, **author the small JSON/text outputs directly** (shapes are documented
-below and validated by `$PLUG/schemas/v1.0.0/`) instead of guessing an absolute path.
+Invoke any helper as `node "$PLUG/lib/design/<helper>.mjs"` — this keeps the **tested**
+escaping + manifest validation engaged at runtime (the real SPEC-015 S1 guard, not a
+best-effort hand-escape). Only if you genuinely cannot determine `PLUG` may you fall back to
+authoring the small JSON/text outputs directly to the shapes documented below + validating
+against `$PLUG/schemas/v1.0.0/`.
 
 1. **Screen list** — already resolved in Step A (`SCREENS`). For `source == describe`,
    derive a short screen list from the gathered brief.

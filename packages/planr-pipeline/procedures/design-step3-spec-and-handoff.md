@@ -50,5 +50,13 @@ Print a deliverable handoff, not a file-write log:
   Next:  /planr-pipeline:plan <slug>
 ```
 
+**Standalone designs** (`DESIGN_DIR` under `.planr/designs/<slug>/` — the user chose
+"Standalone exploration" at A.2): there is no spec, so the loop does **not** close yet.
+Replace the `Next` line with: *"standalone exploration — no spec; to build it, run
+`/planr-pipeline:plan <slug>` (scaffolds its own spec) or re-run `/planr-pipeline:design
+<slug>` and choose **Create a spec**."* Do not claim "UI tasks will now generate" for a
+standalone design — its `design-spec.md` lives outside `.planr/specs/` and is not consumed
+until promoted to a spec.
+
 Then **STOP**. Do NOT run `/plan` or `/ship` (R1 + the design no-auto-chain clause in
 `docs/rules.md`). The human reviews the artifact and the spec, then runs `/plan`.
