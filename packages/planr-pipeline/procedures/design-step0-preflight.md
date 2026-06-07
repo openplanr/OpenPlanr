@@ -1,0 +1,78 @@
+# Procedure: /design Step A — preflight (mode, context, lock)
+
+> Read by `commands/design.md` Step A. Resolves everything generation needs and guards
+> against concurrent runs. Writes nothing except the advisory lock.
+
+## A.1 — Parse arguments
+
+From `$ARGUMENTS`:
+- `SLUG` = first non-flag token (strip a leading `feat-` / `spec-`).
+- `FORMAT` = value of `--format` (one of `prototype|walkthrough|canvas`) or empty.
+- `FROM` = value of `--from` (one of `spec|png|describe`) or empty.
+- `YES` = `--yes` present.
+- `DRY_RUN` = `--dry-run` present.
+
+If `--format` is given with an unknown value, abort (`fatal-error-format.md`):
+```
+⚠ Unknown --format "<value>" (expected prototype | walkthrough | canvas)
+Repair: /planr-pipeline:design <slug> --format walkthrough
+```
+
+## A.2 — Bind mode + design dir
+
+Run `${CLAUDE_PLUGIN_ROOT}/procedures/mode-detection.md` to bind `MODE`, `SPEC_DIR`
+(spec-driven) / `FEAT_DIR` (default). Then bind the design directory:
+
+- spec-driven: `DESIGN_DIR = <SPEC_DIR>/design/`
+- default: `DESIGN_DIR = output/feats/feat-${SLUG}/design/`
+
+Create `DESIGN_DIR` if missing. If `mode-detection` cannot resolve a spec for `SLUG`, abort
+with its standard two-line error (do not invent a spec).
+
+## A.3 — Resolve the screen list + context
+
+- **Screen list:** read the spec body and apply the `lib/design/screens.mjs` rules
+  (frontmatter `ui_files:` list, then the first body section whose heading mentions
+  "screen"). Bind `SCREENS` (array) and `SCREEN_COUNT`.
+- **PNGs present?** Check the mode's PNG locations (`mode-detection.md` "PNG presence" row).
+  Bind `HAS_PNG`. This drives the one-writer precedence in Step D.
+- **Prior design?** If `DESIGN_DIR` already holds a `finalized.json`, bind `HAS_PRIOR` and
+  read its `design_format` + `iterations` (drives the evolve/replace branch in Step B).
+- **Tokens:** if `DESIGN.md` exists at the repo root, note it as the design-token source.
+
+**Thin-spec guard (SPEC-015 E3):** if `SCREEN_COUNT == 0` and `FROM != describe`, abort:
+```
+⚠ <slug> has no screens to design (no Screens section / ui_files, and --from is not "describe")
+Repair: add a "## Screens" list to the spec, or run /planr-pipeline:design <slug> --from describe
+```
+
+## A.4 — Acquire the advisory lock (SPEC-015 E1)
+
+Lock file: `DESIGN_DIR/.design.lock` (JSON: `{ pid, host, started_at, command, ttl_seconds: 1800 }`).
+
+- If the lock exists, is younger than its TTL, **and** its `pid` is still alive → refuse:
+  ```
+  ⚠ Another /design run holds <DESIGN_DIR>/.design.lock (pid <pid>, started <started_at>)
+  Repair: wait for it to finish, or remove the stale lock and re-run
+  ```
+- Otherwise (absent, expired, or dead pid) → write a fresh lock and proceed.
+
+The lock is released in Step D (and on any fatal abort). It is git-ignored — see the
+`.gitignore` entry `**/.design.lock`.
+
+## A.5 — Dry-run exit
+
+If `DRY_RUN`: compute the recommended format via `lib/design/recommendFormat.mjs`
+(`{ screenCount: SCREEN_COUNT, intentText: <spec title/summary> }`), then print:
+
+```
+/design dry-run — <slug>
+  mode:            <MODE>
+  design dir:      <DESIGN_DIR>
+  screens:         <SCREEN_COUNT> (<comma-joined SCREENS, truncated>)
+  has PNGs:        <HAS_PNG>     prior design: <HAS_PRIOR>
+  recommended:     <format> — <reason>
+  would write:     finalized.html|canvas.html, finalized.json, vendor/, design-spec.md
+```
+
+Release the lock and **STOP**. No generation, no other writes.

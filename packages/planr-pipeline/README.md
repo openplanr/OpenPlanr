@@ -115,10 +115,11 @@ Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, y
 
 | Name | Purpose |
 |---|---|
+| `/planr-pipeline:design {slug}` | **Optional, before `/plan`.** Generates a visual design — **prototype** (one screen), **walkthrough** (multi-screen gallery), or **canvas** (Figma-like board) — *and* a `design-spec.md`, so the PO Phase decomposes real UI tasks. Interactive by default; fully flag-driven for CI (`--format … --from … --yes`). |
 | `/planr-pipeline:plan {slug}` | PO Phase — auto-scaffolds the spec shell if missing, then decomposes into User Stories + tasks via designer-agent + specification-agent |
 | `/planr-pipeline:ship {slug}` | DEV Phase — frontend ‖ backend → qa → devops ‖ doc-gen → snapshot, with `.pipeline-shipped` marker at the end |
 
-Two commands. Everything else is automatic — auto-scaffolding when a spec is missing, auto-snapshot at the end of `/ship`, auto-self-heal of `input/tech/stack.md` in spec-driven mode.
+Two core phases (`plan` → `ship`) with a mandatory human review between them, plus an optional `design` step before `plan`. Everything else is automatic — auto-scaffolding when a spec is missing, auto-snapshot at the end of `/ship`, auto-self-heal of `input/tech/stack.md` in spec-driven mode. The pipeline never auto-chains across phases (`docs/rules.md` R1).
 
 ---
 

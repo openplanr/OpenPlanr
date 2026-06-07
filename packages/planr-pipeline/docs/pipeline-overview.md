@@ -18,6 +18,39 @@ The framework refuses to auto-chain PO Phase → DEV Phase.
 
 ---
 
+## Optional Design Sub-Phase (`/planr-pipeline:design`, before PO)
+
+A feature can carry **design intent** into the PO Phase so it decomposes real UI tasks
+instead of degrading to a Tech-only ship. Two ways intent arrives:
+
+- **Mockups** — drop `*.png` and `designer-agent` extracts a `design-spec.md` during `/plan`
+  (the original path; unchanged).
+- **Generation** — run `/planr-pipeline:design {slug}` **before** `/plan`. It generates a
+  visual artifact in one of three formats and authors `design-spec.md` directly:
+
+  | Format | Output | Substrate |
+  |--------|--------|-----------|
+  | prototype | one interactive screen (`finalized.html`) | vanilla + Pretext |
+  | walkthrough | multi-screen gallery, grouped sidebar (anchor ≤8 / lazy >8 screens) | vanilla + Pretext |
+  | canvas | Figma-like board of artboards (`canvas.html`, export + view-only) | vendored React |
+
+```
+  spec (no PNG)  ──/design──▶  design/{finalized.html|canvas.html} + design-spec.md
+                                            │
+                                            ▼  (R2: design-spec.md OR PNG ⇒ UI task)
+                               /plan ──▶ US + UI task + Tech task  ──▶  human review  ──▶  /ship
+```
+
+The format is chosen by a clarification prompt with a **recommended default** computed from
+the screen count (`lib/design/recommendFormat.mjs`); supplying `--format … --from …` skips
+the prompt for CI. `design-spec.md` has **one writer per run** (PNGs → `designer-agent`,
+otherwise the generator). `/design` is its own gate — it **never** auto-chains to `/plan`
+(R1 design corollary); `/plan` only prints a one-line nudge when UI intent is detected but
+no design exists. Tested core lives in `lib/design/` (escaping, screen resolver, format
+rule, manifest); conformance in `conformance/verify-design-assets.mjs` + `tests/design/`.
+
+---
+
 ## Full Pipeline
 
 ```

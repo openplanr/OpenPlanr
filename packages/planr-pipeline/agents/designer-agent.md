@@ -18,8 +18,9 @@ model: claude-sonnet-4-6
 The orchestrator passes `MODE = "spec-driven" | "default"` and (in spec-driven) `SPEC_DIR`. To read this agent's mode-specific instructions, load:
 
 - `agents/modes/${MODE}/designer.md` — mode-specific PNG-resolution priority, output path, Execution Steps, error handling
+- `agents/modes/shared/design-spec-template.md` — the canonical 10-section `design-spec.md` structure (single source of truth, shared with the `/planr-pipeline:design` generator so the contract cannot drift — SPEC-015 finding H1)
 
-(No shared files apply to designer-agent — PNG locations, the design-spec output path, and PNG-resolution priority lists are all mode-specific. The per-mode file also carries the universal path-expansion rules for `~/`, `~user/`, and bare relative paths.)
+(The per-mode file carries PNG locations, the design-spec output path, the PNG-resolution priority list, and the universal path-expansion rules for `~/`, `~user/`, and bare relative paths. The section structure itself is NOT redefined here — fill the shared template.)
 
 ## System Prompt
 
@@ -41,7 +42,7 @@ Output: a single Markdown file named design-spec.md at the mode-specific
 path defined in the loaded per-mode file.
 ```
 
-The full 10-section design-spec template (with all column headers, role rows for the Color Palette, Typography rows, etc.) is the same in both modes; the per-mode file only specifies WHERE to write it.
+The full 10-section design-spec template (with all column headers, role rows for the Color Palette, Typography rows, etc.) lives in `agents/modes/shared/design-spec-template.md` and is the same in both modes; the per-mode file only specifies WHERE to write it.
 
 ## Constraints
 

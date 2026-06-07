@@ -1,6 +1,6 @@
 # Compatibility Matrix — OpenPlanr Protocol v1.0.0
 
-> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.6.0.
+> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.13.0.
 
 ## TL;DR
 
@@ -20,6 +20,7 @@ Same `.planr/specs/` directories. Same SPEC / US / Task schema. Same `.pipeline-
 |---|---|---|---|
 | **PLAN orchestration** | ✅ slash command (`/planr-pipeline:plan`) | ✅ rule auto-attach on glob match | ✅ persona-triggered ("plan {feature}") |
 | **SHIP orchestration** | ✅ slash command (`/planr-pipeline:ship`) | ✅ rule | ✅ persona |
+| **Design generation** (`/planr-pipeline:design`, SPEC-015) | ✅ slash command (interactive + flag-driven) | ❌ not yet (v0.13.0) — see §Design generation below | ❌ not yet (v0.13.0) — see §Design generation below |
 | **8 named subagents** | ✅ manifest-declared, model pinned | ⚠️ Composer subagent dispatch (Cursor 1.x) | ⚠️ persona role-shift only (no isolation) |
 | **Multi-task `/ship` in one invocation** | ✅ `DISPATCH_MODE: multi-task` (native parallel subagents per ready task) | ⚠️ `DISPATCH_MODE: per-task` default (override with `--all-tasks`) — see §Dispatch mode below | ⚠️ `DISPATCH_MODE: per-task` default — see §Dispatch mode below |
 | **Native parallel dispatch** (SPEC-014 — one `Agent` call per ready task, shared tree, `dependsOn` ordering) | ✅ full fan-out under `multi-task` (no isolation, no merge-back) | ❌ not supported — per-task sequential (unchanged) | ❌ not supported — per-task sequential (unchanged) |
@@ -114,6 +115,28 @@ In `DISPATCH_MODE: multi-task`, the orchestrator emits **one `Agent` call per re
 | **Codex** | ❌ not supported | Runs `DISPATCH_MODE: per-task` — exactly one task per invocation, sequential. |
 
 planr does no write-set inference and no cycle detection; the only ordering it honors is an explicit `dependsOn:` field. The host's native concurrency cap is the only throttle (there is no concurrency flag). The lock-list survives only as an advisory note in the dispatch prompt. The full contract is in `docs/feat-parallel-dispatch/`. (SPEC-014 supersedes the SPEC-013 worktree + wave scheduler.)
+
+### Design generation (`/planr-pipeline:design`) is Claude-Code-only in v0.13.0
+
+The design-generation command (SPEC-015) ships **Claude Code only** for v0.13.0. It depends
+on capabilities that don't yet have a clean Cursor/Codex adapter:
+
+- **Interactive `AskUserQuestion`** for the source/format clarification (the recommended
+  default + outcome-labeled options). Cursor/Codex would need a rules-driven equivalent.
+- **Node helpers** in `lib/design/` (escaping, screen resolver, format rule, manifest) and a
+  **vendored React + esbuild** canvas runtime. These are invoked by the orchestrator at
+  generation time, not by a portable persona prompt.
+
+**What IS already cross-runtime:** the *output* is portable. A `design-spec.md` authored by
+`/design` (or its generated artifact) lands in the same `<SPEC_DIR>/design/` directory every
+adapter reads, and the **R2 amendment** ("a `design-spec.md` OR a PNG ⇒ a UI task") is
+runtime-agnostic — so a design generated on Claude Code makes Cursor/Codex emit the UI task
+too. Only the *generation* step is Claude-Code-only; *consumption* is universal.
+
+**Follow-up for parity:** teach the `planr` CLI rules generator (`planr rules generate
+--scope pipeline`) to emit a `.cursor/rules/planr-pipeline-design.mdc` + a Codex `AGENTS.md`
+section, with a rules-driven clarification flow and a documented dependency on `node` for the
+`lib/design` helpers. Tracked as a post-0.13.0 item.
 
 ## Cross-runtime spec portability
 

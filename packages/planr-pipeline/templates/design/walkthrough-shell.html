@@ -1,0 +1,168 @@
+<!doctype html>
+<!--
+  WALKTHROUGH shell — a multi-screen gallery with a grouped sidebar.
+
+  Two navigation modes, chosen by lib/design/walkthroughNav.mjs chooseWalkthroughNav():
+    • anchor (≤ 8 screens): one long page, smooth-scroll, sidebar scrollspy (muvi pattern).
+    • lazy   (> 8 screens): one screen shown at a time, prev/next + sidebar switch,
+                            inactive screens display:none so first paint stays fast.
+  The generator sets <html data-nav-mode="anchor|lazy">; if unset, this script
+  auto-picks (>8 → lazy). No build step, no dependencies.
+
+  Generator contract:
+   • Emit one <section class="screen" id="…" data-group="…" aria-label="…"> per screen,
+     each wrapping the screen's markup in <div class="frame">…</div>.
+   • Escape every spec-derived string with escapeHtml() (SPEC-015 S1).
+   • Realistic content, never lorem.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><!-- GENERATOR:title -->Walkthrough</title>
+  <!-- GENERATOR:fonts -->
+  <style>
+    :root {
+      /* GENERATOR:tokens */
+      --bg: #f5f6f8; --surface: #ffffff; --ink: #161b22; --muted: #6b7280;
+      --accent: #3b5bdb; --accent-tint: #eef1fd; --border: #e3e6ed; --radius: 14px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --sidebar-w: 248px; --bar-h: 56px;
+    }
+    * { box-sizing: border-box; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; transition: none !important; } }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    a { color: inherit; text-decoration: none; }
+
+    .app-bar { position: sticky; top: 0; z-index: 30; height: var(--bar-h); display: flex; align-items: center; gap: 14px;
+      padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .app-bar .brand { font-weight: 700; letter-spacing: .2px; }
+    .app-bar .count { margin-left: auto; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .app-bar .step { display: none; gap: 6px; }
+    [data-nav-mode="lazy"] .app-bar .step { display: flex; }
+    .app-bar button { font: inherit; font-size: 13px; padding: 6px 12px; border: 1px solid var(--border);
+      background: var(--surface); border-radius: 8px; cursor: pointer; color: var(--ink); }
+    .app-bar button:hover { background: var(--accent-tint); border-color: var(--accent); }
+
+    .layout { display: grid; grid-template-columns: var(--sidebar-w) 1fr; }
+    .side { position: sticky; top: var(--bar-h); align-self: start; height: calc(100vh - var(--bar-h));
+      overflow: auto; background: var(--surface); border-right: 1px solid var(--border); padding: 14px 10px 40px; }
+    .side .group { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); margin: 16px 10px 6px; }
+    .side .group:first-child { margin-top: 2px; }
+    .side a { display: flex; align-items: center; gap: 9px; padding: 8px 11px; border-radius: 9px;
+      color: var(--ink); font-size: 13.5px; font-weight: 500; cursor: pointer; }
+    .side a:hover { background: var(--bg); }
+    .side a.on { background: var(--accent-tint); color: var(--accent); font-weight: 600; }
+    .side a .n { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 6px; background: var(--bg);
+      color: var(--muted); font-size: 10.5px; display: grid; place-items: center; font-weight: 700; }
+    .side a.on .n { background: var(--accent); color: #fff; }
+
+    main { padding: 28px 32px 120px; max-width: 1280px; }
+    .screen { margin: 0 0 44px; content-visibility: auto; contain-intrinsic-size: 900px; scroll-margin-top: calc(var(--bar-h) + 16px); }
+    .screen > h2 { font-size: 20px; margin: 0 0 12px; }
+    .frame { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden;
+      box-shadow: 0 4px 16px rgba(20,27,34,.06); }
+    /* lazy mode: only the active screen is in flow */
+    [data-nav-mode="lazy"] .screen[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <div class="app-bar">
+    <span class="brand"><!-- GENERATOR:title -->Walkthrough</span>
+    <span class="step">
+      <button id="wt-prev" aria-label="Previous screen">‹ Prev</button>
+      <button id="wt-next" aria-label="Next screen">Next ›</button>
+    </span>
+    <span class="count" id="wt-counter" aria-live="polite"></span>
+  </div>
+  <div class="layout">
+    <nav class="side" id="wt-nav" aria-label="Screens"></nav>
+    <main id="wt-main">
+      <!-- GENERATOR:screens — one <section class="screen" id="s-…" data-group="…"
+           aria-label="…"><h2>…</h2><div class="frame">…</div></section> per screen. -->
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var screens = Array.prototype.slice.call(document.querySelectorAll('#wt-main .screen'));
+      var nav = document.getElementById('wt-nav');
+      var counter = document.getElementById('wt-counter');
+      var total = screens.length;
+      if (!total) { counter.textContent = 'No screens'; return; }
+
+      // Resolve nav mode: explicit data-nav-mode wins; otherwise >8 → lazy.
+      var mode = root.dataset.navMode;
+      if (mode !== 'anchor' && mode !== 'lazy') mode = total > 8 ? 'lazy' : 'anchor';
+      root.dataset.navMode = mode;
+
+      // Build the grouped sidebar from the screens.
+      var links = [];
+      var lastGroup = null;
+      screens.forEach(function (sec, i) {
+        var group = sec.getAttribute('data-group') || '';
+        if (group && group !== lastGroup) {
+          var g = document.createElement('div');
+          g.className = 'group';
+          g.textContent = group;
+          nav.appendChild(g);
+          lastGroup = group;
+        }
+        var a = document.createElement('a');
+        a.href = '#' + sec.id;
+        a.dataset.index = String(i);
+        a.innerHTML = '<span class="n">' + (i + 1) + '</span>';
+        a.appendChild(document.createTextNode(sec.getAttribute('aria-label') || sec.id));
+        a.addEventListener('click', function (e) { e.preventDefault(); go(i); });
+        nav.appendChild(a);
+        links.push(a);
+      });
+
+      var active = -1;
+      function mark(i) {
+        links.forEach(function (a, j) { a.classList.toggle('on', j === i); });
+        counter.textContent = 'Screen ' + (i + 1) + ' of ' + total;
+        active = i;
+      }
+
+      function go(i, opts) {
+        i = Math.max(0, Math.min(total - 1, i));
+        if (mode === 'lazy') {
+          screens.forEach(function (s, j) { s.hidden = j !== i; });
+          window.scrollTo({ top: 0, behavior: (opts && opts.instant) ? 'auto' : 'smooth' });
+          mark(i);
+        } else {
+          screens[i].scrollIntoView({ behavior: (opts && opts.instant) ? 'auto' : 'smooth', block: 'start' });
+          mark(i); // scrollspy will also keep this honest
+        }
+      }
+
+      if (mode === 'lazy') {
+        screens.forEach(function (s, j) { s.hidden = j !== 0; });
+        document.getElementById('wt-prev').addEventListener('click', function () { go(active - 1); });
+        document.getElementById('wt-next').addEventListener('click', function () { go(active + 1); });
+      } else if ('IntersectionObserver' in window) {
+        // anchor scrollspy: highlight whichever screen owns the upper viewport.
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (en) {
+            if (en.isIntersecting) mark(screens.indexOf(en.target));
+          });
+        }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+        screens.forEach(function (s) { io.observe(s); });
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+        if (e.key === 'ArrowRight' || e.key === 'j') { e.preventDefault(); go(active + 1); }
+        else if (e.key === 'ArrowLeft' || e.key === 'k') { e.preventDefault(); go(active - 1); }
+      });
+
+      mark(0);
+    })();
+  </script>
+</body>
+</html>

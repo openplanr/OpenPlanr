@@ -1,0 +1,68 @@
+<!doctype html>
+<!--
+  PROTOTYPE shell — one interactive, self-contained screen.
+
+  The /planr-pipeline:design generator fills the three GENERATOR markers below
+  and leaves the rest intact. Keep it dependency-light: Pretext (vendored) gives
+  real text reflow + computed heights; everything else is plain HTML/CSS.
+
+  Hard rules for the generator:
+   • Every spec-derived string (copy, labels, field names) MUST be HTML-escaped
+     via lib/design/escape.mjs escapeHtml() before interpolation. Never inline
+     raw spec text. (SPEC-015 finding S1.)
+   • Generate realistic content from the spec — never lorem ipsum.
+   • Keep the a11y baseline: heading hierarchy, :focus-visible, ARIA on controls,
+     prefers-reduced-motion, prefers-color-scheme.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><!-- GENERATOR:title -->Prototype</title>
+  <!-- GENERATOR:fonts — <link> Google Fonts here, then gate first paint on document.fonts.ready -->
+  <style>
+    :root {
+      /* GENERATOR:tokens — emit the design tokens (brand color, fonts, spacing
+         scale, radii) extracted from the spec / DESIGN.md as CSS custom props. */
+      --bg: #ffffff;
+      --ink: #14181f;
+      --muted: #5b6472;
+      --accent: #3b5bdb;
+      --border: #e6e8ee;
+      --radius: 12px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0e1116; --ink: #e9edf4; --muted: #9aa4b2; --border: #232a35; }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      * { animation: none !important; transition: none !important; }
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    main { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <main>
+    <!-- GENERATOR:screen — the single screen's markup. Use semantic HTML5
+         (<header>/<nav>/<main>/<section>/<footer>). Add contenteditable +
+         a MutationObserver re-layout if the design has reflowing text. -->
+  </main>
+
+  <!-- Vendored Pretext (text reflow / computed heights). Copied alongside this
+       file by the generator; falls back to no-op if absent. -->
+  <script src="./vendor/pretext.js"></script>
+  <script>
+    // First paint waits for fonts so Pretext measures real glyphs.
+    document.fonts && document.fonts.ready.then(function () {
+      document.documentElement.classList.add('fonts-ready');
+      // GENERATOR:layout — call the chosen Pretext API (prepare/layout) on the
+      // reflowing containers here, plus a ResizeObserver to re-layout.
+    });
+  </script>
+</body>
+</html>

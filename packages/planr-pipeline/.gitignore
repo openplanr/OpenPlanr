@@ -9,6 +9,14 @@ node_modules/
 # Transient sentinel from /ship Step 0 (never commit)
 .claude/.snapshot-pending
 
+# Transient /planr-pipeline:design artifacts (advisory lock + half-written output)
+**/.design.lock
+**/.finalized.tmp.*
+
+# Local-only dev marketplace for testing this plugin from the working tree
+# (the real distribution channel is the openplanr/marketplace repo).
+.claude-plugin/marketplace.json
+
 .DS_Store
 
 # OpenPlanr's own dogfooding workspace — internal sprint planning, not part of plugin distribution

@@ -27,6 +27,7 @@ Bind:
 | US files | `output/feats/feat-${SLUG}/us-*/us-*.md` | `<SPEC_DIR>/stories/US-*.md` |
 | Task files | `output/feats/feat-${SLUG}/us-*/tasks/task-*.md` | `<SPEC_DIR>/tasks/T-*.md` |
 | Design spec | `output/feats/feat-${SLUG}/design-spec.md` | `<SPEC_DIR>/design/design-spec.md` |
+| Design artifacts (`/planr-pipeline:design`) | `output/feats/feat-${SLUG}/design/` | `<SPEC_DIR>/design/` |
 | Error report (`T-<NNN>-error-report.md` after R6 cap) | `output/feats/feat-${SLUG}/us-{N}/tasks/T-<TASK_ID>-error-report.md` | `<SPEC_DIR>/tasks/T-<TASK_ID>-error-report.md` |
 
 `<TASK_ID>` **must mirror** YAML `id` on the artifact being implemented (pattern `^T-\\d{3}$`). **Never write** singleton `tasks/error-report.md`.
@@ -89,3 +90,12 @@ Required (spec-driven mode):
 - Default mode: `output/feats/feat-${SLUG}/design-spec.md` — warn if missing.
 - `input/tech/stack.md` has a non-empty `DatabaseType` AND DB env vars are present → calling command may trigger db-agent (mode-agnostic).
 - PNG presence (default mode: `input/ui/feat-${SLUG}/*.png` or `UIFiles:` listings; spec-driven: `<SPEC_DIR>/design/*.png`) → calling command may trigger designer-agent.
+
+**`design-spec.md` has exactly one writer per run** (SPEC-015 finding E2): when PNGs exist,
+`designer-agent` owns `design-spec.md` (vision extraction). When no PNGs exist and
+`/planr-pipeline:design` generates a visual artifact, the generator authors `design-spec.md`
+directly from the brief. The two never both write it in the same run. Note that in default
+mode the design **artifacts** live under a new `design/` subdir while `design-spec.md` stays
+at the existing flat `feat-${SLUG}/design-spec.md` path (so the existing designer-agent and
+specification-agent reads are unchanged); in spec-driven mode both already co-locate under
+`<SPEC_DIR>/design/`.

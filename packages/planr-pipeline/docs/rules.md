@@ -15,22 +15,37 @@
 Rationale: The human checkpoint between phases is the primary quality gate.
 Bypassing it removes the ability to catch decomposition errors before expensive code generation.
 
+**Design sub-phase corollary:** `/planr-pipeline:design` is an *optional* step that runs
+**before** `/plan` (never inside it, never after it as a re-decomposition). It is its own
+gate: it stops after writing the artifact + `design-spec.md`, and never auto-chains to
+`/plan` or `/ship`. `/plan` may *suggest* it (a printed stdout nudge when UI intent is
+detected but no design exists) but never invokes it — keeping `/plan` non-interactive and
+`--dry-run` / CI safe.
+
 ---
 
 ### R2 — Task Count Per US
 ```
-IF input/ui/*.png EXISTS for the feature:
+IF a design exists for the feature — a design-spec.md (authored by
+/planr-pipeline:design, or extracted by designer-agent) OR input/ui/*.png:
   tasks_per_us = 2
   task-1 = UI task → Frontend Agent
   task-2 = Tech task → Backend Agent
 
-IF no PNG:
+IF no design (no design-spec.md AND no PNG):
   tasks_per_us = 1
   task-1 = Tech task → Backend Agent (or combined UI+Tech)
 
 NEVER: 3 or more tasks per US
 ```
 Rationale: More than 2 tasks per US creates coordination complexity and ambiguous agent ownership.
+
+The trigger is **design intent existing**, not specifically a PNG. `design-spec.md` is the
+canonical signal — `specification-agent` already keys its `has_design` branch on it, so
+keying R2 on the same artifact keeps the rule and the agent consistent. This is what lets
+`/planr-pipeline:design` close the loop: generate a design → `design-spec.md` exists → the
+UI task is born, instead of degrading to a Tech-only ship. (Without this, a generated design
+with no PNG would still yield `tasks_per_us = 1` and no UI task.)
 
 ---
 

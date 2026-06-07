@@ -73,6 +73,10 @@ Five rows. Five states. Mutually exclusive. Total coverage.
 
 **Execute** `${CLAUDE_PLUGIN_ROOT}/procedures/plan-step1-mode-and-spec.md`. This binds `MODE` / `SPEC_DIR` via **`mode-detection.md`**, validates inputs, optionally auto-scaffolds the spec shell, and ends with the **Phase B** verification gate.
 
+### Step 1.1 — Missing-design nudge (printed, non-blocking)
+
+After Step 1 validation, **execute** `${CLAUDE_PLUGIN_ROOT}/procedures/design-detect-nudge.md`. If the feature looks UI-facing but has no design yet, it prints a one-line recommendation to run `/planr-pipeline:design {slug}` first. It is **stdout only** — no `AskUserQuestion`, no branch, no effect on `--dry-run`. `/plan` proceeds normally whether or not the nudge fires; `/plan` never invokes `/design` (R1 design corollary).
+
 ---
 
 ## Step 1.5 — Initialize project memory + read clarifications

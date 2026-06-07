@@ -11,6 +11,23 @@ For a given runtime adapter, the conformance test asserts that running PLAN + SH
 3. **No Preserve violations** — files in any task's `Preserve:` list are unchanged (`git diff` returns empty for those paths)
 4. **Marker schema validity** — the `.pipeline-shipped` YAML validates against the v1.0.0 schema in `protocol/spec-artifacts.md`
 
+### Design assets (`/planr-pipeline:design`, SPEC-015)
+
+`verify-design-assets.mjs` is a **self-contained** check (no runtime/operator needed) for the
+design-generation feature. Run it directly or via `npm run conformance:design` (it is also
+part of `npm test`):
+
+```bash
+node conformance/verify-design-assets.mjs
+```
+
+It asserts the shipped orchestration files, the three renderer shells + their `GENERATOR:`
+markers, the vendored runtime (`pretext.js`, React UMD, compiled `DesignCanvas.js` — which
+must pass `node --check`), the `design-manifest` schema against golden fixtures, the
+screen-resolver + format-recommendation rule on `fixture-design/SPEC-900-design-sample.md`,
+and the XSS-escaping regression. The operator-driven fixture for a live `/design` run lives
+in `fixture-design/`.
+
 ## Quick start
 
 ```bash

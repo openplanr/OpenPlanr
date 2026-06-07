@@ -4,6 +4,52 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.13.0] — 2026-06-07
+
+### Added — `/planr-pipeline:design`: design generation before decomposition (SPEC-015)
+
+A new **optional** command that turns a brief into a visual design **and** authors a
+`design-spec.md`, so the PO Phase decomposes real UI tasks instead of silently degrading to
+a Tech-only ship when no mockups exist. It runs **before** `/plan` (never inside it, never as
+a post-`/plan` re-decomposition) and never auto-chains. Reviewed via `/autoplan`
+(CEO → Design → Eng → DX) before implementation — see `docs/design-command-plan.md`.
+
+- **Three formats, one shared core.** `prototype` (one interactive Pretext screen),
+  `walkthrough` (multi-screen gallery; sidebar **anchor-scroll ≤8 screens**, **lazy
+  screen-switching >8**), and `canvas` (Figma-like pan/zoom board, vendored React). The
+  shared core is three tested helpers; the three renderers are thin shells in
+  `templates/design/`.
+- **Clarification with a recommended default.** Source → format is asked via
+  `AskUserQuestion` with the format pre-selected from the screen count
+  (`0–2 → prototype · 3+ linear → walkthrough · 3+ exploratory → canvas`), outcome-labeled.
+  Supplying `--format … --from …` **skips the prompt entirely** (fully non-interactive for
+  CI), plus `--yes` / `--dry-run` to match the `/plan` `/ship` flag family.
+- **Loop closes via R2.** `docs/rules.md` **R2 amended**: a UI task is born when a
+  `design-spec.md` **OR** a PNG exists (previously PNG-only), aligning the rule with
+  `specification-agent`'s `has_design` trigger.
+- **Honest canvas.** Opened without a host bridge, the canvas disables edit affordances and
+  shows a view-only banner; **Export PNG/HTML stays the primary action**. React + the
+  compiled `DesignCanvas` are vendored locally (SRI-pinned) so the artifact opens offline.
+- **Tested core + security.** `lib/design/` (escape, recommendFormat, screens,
+  walkthroughNav, manifest) with 27 unit tests; all spec-derived text is HTML-escaped /
+  JSON-serialized (`escapeHtml` / `embedJson`) with an injection regression. New
+  `schemas/v1.0.0/design-manifest.schema.json` (field `design_format`, not the reserved
+  `format`). New `conformance/verify-design-assets.mjs` + `conformance/fixture-design/`,
+  wired into `npm test`.
+- **Single-sourced contract.** The 10-section `design-spec.md` template moved to
+  `agents/modes/shared/design-spec-template.md`, included by both `designer-agent`
+  (extraction) and the generator (authoring) so it cannot drift.
+
+### Changed
+
+- `/plan` prints a one-line **stdout nudge** (`procedures/design-detect-nudge.md`) when a
+  feature is UI-facing but has no design — never an interactive prompt, so `--dry-run` / CI
+  stay unaffected.
+- `procedures/mode-detection.md` documents the new `design/` artifacts dir (both modes) and
+  the one-writer precedence for `design-spec.md`.
+- `commands/plan.md`, `docs/rules.md` (R1 design corollary), `docs/pipeline-overview.md`,
+  `README.md` updated.
+
 ## [0.12.0] — 2026-06-01
 
 ### Changed — Native host-driven parallel dispatch for `/ship` (SPEC-014; supersedes SPEC-013)
