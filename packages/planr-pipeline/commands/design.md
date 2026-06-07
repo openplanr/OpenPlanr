@@ -90,16 +90,22 @@ mark item 1 done and items 2–4 cancelled (`dry-run exit`).
 source not `describe`) aborts with a two-line `Repair:` — it can't prompt. Either way the
 generator never fabricates a screen list silently (SPEC-015 finding F8/E3).
 
-## Step B — Clarify (skipped when `--format` AND `--from` are both set)
+## Step B — Clarify (skipped only when `--format` AND `--from` are both set)
 
-**Execute** `${CLAUDE_PLUGIN_ROOT}/procedures/design-step1-clarify.md`. It asks, via
-`AskUserQuestion`, **source first, then format**, with the **recommended format
-pre-selected** from the screen count (`lib/design/recommendFormat.mjs`:
-`0–2 → prototype · 3+ linear → walkthrough · 3+ exploratory → canvas`), shown with a
-one-line "why". Options are outcome-labeled, not jargon. On re-run over an existing
-`design/`, it offers **Evolve / Replace / Cancel** (default Evolve, preserving
-`.design-canvas.state.json` layout). When both flags are supplied, this whole step is a
-no-op and the flag values are used verbatim.
+**Execute** `${CLAUDE_PLUGIN_ROOT}/procedures/design-step1-clarify.md`. When the relevant
+flag is absent, Phase B is a **mandatory `AskUserQuestion` tool call**, not a prose decision:
+it asks **source first, then format**, with the **recommended format pre-selected** from the
+screen count (`0–2 → prototype · 3+ linear → walkthrough · 3+ exploratory → canvas`), shown
+with a one-line "why". Outcome-labeled options, not jargon. On re-run over an existing
+`design/` it offers **Evolve / Replace / Cancel** (default Evolve).
+
+> **Do NOT auto-decide source/format from the brief and skip the prompt.** An explicit
+> brief is *content*, not the user's format/source choice — writing "proceeding without
+> further questions since the brief is explicit" is a violation. The prompt is skipped only
+> when both `--format` and `--from` are supplied, or `--yes` assumes that question's stated
+> default (say which). If no `AskUserQuestion` tool is callable, STOP and report
+> `BLOCKED — AskUserQuestion unavailable` — never silently default. (See the procedure's
+> "B — Enforcement" block.)
 
 ## Step C — Generate
 

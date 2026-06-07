@@ -4,6 +4,29 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.13.4] — 2026-06-07
+
+### Fixed — `/design` Phase B now actually fires the clarification prompt
+
+The Phase B clarification described the source/format question in prose ("if unset, ask"),
+which the model could rationalize away — in practice it would **auto-decide format/source
+from the brief and proceed** ("proceeding without further questions since your brief is
+explicit"), never issuing a real prompt. Ported gstack's enforcement into
+`procedures/design-step1-clarify.md` (+ `commands/design.md`): Phase B is now a **mandatory
+`AskUserQuestion` tool call** when the relevant flag is absent —
+
+- it MUST be sent as a tool_use, never narrated as prose;
+- an explicit brief is *content*, not the user's **format** (prototype/walkthrough/canvas)
+  or **source** choice — a clear brief is not consent to skip the prompt;
+- the recommendation is a **pre-selected default**, not a license to skip the call;
+- a prompt is skipped only when both `--format` and `--from` are passed, or `--yes` assumes
+  that question's stated default;
+- if no `AskUserQuestion` variant is callable, **STOP** and report
+  `BLOCKED — AskUserQuestion unavailable` — never silently default.
+
+There is no system trigger that "invokes" the question — the model must choose to call the
+tool, so the fix is forceful, gstack-style instruction that removes the skip rationalization.
+
 ## [0.13.3] — 2026-06-07
 
 ### Changed — `/design` keeps the project repo clean (scoped `.gitignore`)

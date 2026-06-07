@@ -1,7 +1,32 @@
 # Procedure: /design Step B — clarify source + format
 
-> Read by `commands/design.md` Step B. Interactive by default; fully skipped when both
-> `--format` and `--from` are supplied (CI/headless path).
+> Read by `commands/design.md` Step B. Interactive by default; skipped **only** when both
+> `--format` and `--from` are supplied (CI/headless), or when `--yes` authorizes assuming the
+> recommended default for a given prompt.
+
+## B — Enforcement (read first — this is why earlier runs wrongly skipped the prompt)
+
+Phase B is a **mandatory `AskUserQuestion` tool call** whenever the relevant flag is absent.
+It is **not** a prose decision and **not** optional:
+
+- **Issue the actual tool call.** Each question below MUST be sent as an `AskUserQuestion`
+  tool_use, never narrated as prose. Writing "I'll ask…", "Decision: …", or "Proceeding
+  with X…" in text instead of calling the tool is a violation — the user must see a real
+  prompt with selectable options.
+- **Never auto-decide from the brief.** An explicit brief supplies *content*; it does **not**
+  answer the user's **format** (prototype / walkthrough / canvas) or **source** choice. Do
+  NOT write *"proceeding without further questions since the brief is explicit"* — that exact
+  rationalization is the bug this rule exists to stop. A clear brief is not consent to skip
+  the format prompt.
+- **Tool resolution.** If a `mcp__*__AskUserQuestion` variant is in your tool list, prefer it;
+  otherwise call native `AskUserQuestion`. If **no** AskUserQuestion variant is callable,
+  **STOP** and report `BLOCKED — AskUserQuestion unavailable` — do **not** silently pick a
+  default and continue.
+- **The only ways to skip a prompt:** (a) both `--format` and `--from` were passed (B.0), or
+  (b) `--yes` is set — which authorizes assuming that question's *recommended/default* option,
+  and even then you must state which default you assumed.
+
+Recommendations below are **defaults shown pre-selected**, never a license to skip the call.
 
 ## B.0 — Flag short-circuit (CI/headless)
 
@@ -53,7 +78,8 @@ With `--yes`, assume **Evolve**.
 
 ## B.2 — Source
 
-If `FROM` is unset, ask:
+If `FROM` is unset, **issue an `AskUserQuestion` tool call** (never infer the source from the
+brief or the conversation):
 
 > Where should the design come from?
 > A) **From the spec** — generate from the feature's screens + flows (recommended when the spec has screens)
@@ -67,9 +93,10 @@ Bind `source ∈ {spec, png, describe}`. If `source == describe`, gather a short
 
 ## B.3 — Format (with a pre-selected recommendation)
 
-If `FORMAT` is unset, compute the recommendation with `lib/design/recommendFormat.mjs`
-(`{ screenCount: SCREEN_COUNT, intentText }`), then ask with the recommended option **first
-and pre-selected**, labeled by outcome (not jargon):
+If `FORMAT` is unset, **issue an `AskUserQuestion` tool call** — compute the recommendation
+with `${CLAUDE_PLUGIN_ROOT}/lib/design/recommendFormat.mjs` (`{ screenCount: SCREEN_COUNT,
+intentText }`) and present it as the **pre-selected default**, labeled by outcome (not
+jargon). The recommendation is the default, **not** a reason to skip the call:
 
 > <SCREEN_COUNT> screens → **<recommended>** recommended. What should I build?
 > A) **Single screen** — one polished page to react to *(prototype)*
