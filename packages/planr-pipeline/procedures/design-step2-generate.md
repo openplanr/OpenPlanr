@@ -6,16 +6,33 @@
 
 ## C.1 — Shared core (every format)
 
+**Plugin-root handle — do this once, before invoking any helper.** The `lib/design/*`
+helpers live under the plugin install. Capture the root from `${CLAUDE_PLUGIN_ROOT}` and
+**never hardcode a versioned path** like `…/planr-pipeline/0.13.0/` — that breaks on the
+next release and is wrong the moment the user updates:
+
+```bash
+PLUG="${CLAUDE_PLUGIN_ROOT}"   # the currently-loaded plugin install (version-independent)
+```
+
+Invoke any helper as `node "$PLUG/lib/design/<helper>.mjs"`. If `$CLAUDE_PLUGIN_ROOT` is not
+set in your shell, **author the small JSON/text outputs directly** (shapes are documented
+below and validated by `$PLUG/schemas/v1.0.0/`) instead of guessing an absolute path.
+
 1. **Screen list** — already resolved in Step A (`SCREENS`). For `source == describe`,
    derive a short screen list from the gathered brief.
-2. **Escaping** — interpolate NOTHING raw. Every spec-derived string (screen names, copy,
-   labels) goes through `lib/design/escape.mjs`:
-   - HTML text / attributes → `escapeHtml(value)`
-   - objects embedded in `<script>` (canvas data, state) → `embedJson(value)`
-   This is mandatory (SPEC-015 S1). Generate **realistic** content from the spec — never
-   lorem ipsum, and never a screen not present in the spec/brief (SPEC-015 F8).
-3. **Manifest** — build `finalized.json` with `lib/design/manifest.mjs` `buildManifest({...})`
-   and assert `validateManifest()` returns `ok: true` before writing.
+2. **Escaping (mandatory — SPEC-015 S1).** Interpolate NOTHING raw. **Before** writing any
+   spec-derived string into the artifact — screen titles, group names, labels, copy, field
+   names, all of it — escape it, **even when the value "looks safe"**:
+   - HTML text / attributes → `escapeHtml(value)` (`$PLUG/lib/design/escape.mjs`)
+   - objects embedded in a `<script>` (canvas data, `.state.json`) → `embedJson(value)`
+   Apply this as you author the HTML — the helper is the rule; do not skip it for "obviously
+   harmless" titles. Generate **realistic** content from the spec — never lorem ipsum, and
+   never a screen not present in the spec/brief (SPEC-015 F8).
+3. **Manifest** — build `finalized.json` with `node "$PLUG/lib/design/manifest.mjs"`
+   `buildManifest({...})` and assert `validateManifest()` returns `ok: true` before writing.
+   (Fallback: author `finalized.json` directly to the shape in C.5 and validate against
+   `$PLUG/schemas/v1.0.0/design-manifest.schema.json`.)
 
 Write the artifact to a temp file first (`<DESIGN_DIR>/.finalized.tmp.html`) and `mv` it
 into place only after it is fully written, so a crashed run never leaves a half-written

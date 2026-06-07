@@ -4,6 +4,27 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.13.2] — 2026-06-07
+
+### Fixed — `/design` generation references the plugin root robustly (no hardcoded version path)
+
+The Step C generate procedure referenced the `lib/design/*` helpers with bare paths, so when
+the orchestrator shelled out to `node` to build `finalized.json` it hand-rolled an absolute,
+**version-pinned** path (e.g. `…/planr-pipeline/0.13.0/lib/design/manifest.mjs`) — which is
+wrong the moment the plugin updates. `procedures/design-step2-generate.md` now establishes a
+**plugin-root handle** (`PLUG="${CLAUDE_PLUGIN_ROOT}"`, the currently-loaded install) and
+invokes helpers as `node "$PLUG/lib/design/…"`, with a documented fallback (author the JSON
+directly + validate against the shipped schema) when `$CLAUDE_PLUGIN_ROOT` isn't set. No
+behavior change to generated artifacts.
+
+### Fixed — stronger escaping instruction in generation
+
+The escaping step is now explicit that **every** spec-derived string (screen titles, group
+names, labels, copy, field names) must be escaped **before** it is written into the artifact,
+**even when it "looks safe"** — closing the gap where a model might skip `escapeHtml` for an
+"obviously harmless" title (SPEC-015 S1 hardening). The tested helper is unchanged; this
+sharpens the runtime instruction.
+
 ## [0.13.1] — 2026-06-07
 
 ### Fixed — `/design` no longer dead-ends on a thin spec; it asks (DevEx)
