@@ -2,6 +2,17 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.7.0] — 2026-06-07
+
+### Changed — Aligned with `planr-pipeline` v0.13.0
+
+- Routing now teaches the optional `/planr-pipeline:design <slug>` step that runs **before** `/plan`: when a feature is UI-facing but has no PNG mockups, generate a visual design (prototype / walkthrough / canvas) + `design-spec.md` instead of shipping backend-only.
+- Notes the R2 amendment (a `design-spec.md` OR a PNG ⇒ a UI task) so the design→UI-task loop is explained.
+
+### Pairs with
+
+- `planr-pipeline` v0.13.0 — `/planr-pipeline:design` generation (SPEC-015), Claude Code only
+
 ## [1.6.0] — 2026-05-11
 
 ### Changed — Aligned with `planr-pipeline` v0.9.0

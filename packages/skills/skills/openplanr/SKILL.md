@@ -127,6 +127,15 @@ If the user has dropped PNG mockups for the feature, place them at
 `input/ui/feat-<slug>/*.png` (default) or attach via `planr spec attach-design`
 if planr CLI is installed. Either path resolves correctly.
 
+**No mockups, but it's UI-facing?** Instead of shipping backend-only, run
+`/planr-pipeline:design <slug>` **before** `/plan` to *generate* a visual design —
+a **prototype** (one screen), a **walkthrough** (multi-screen gallery), or a
+**canvas** (Figma-like board) — plus a `design-spec.md`. That makes decomposition
+emit a UI task (R2: a `design-spec.md` OR a PNG ⇒ a UI task). The command asks which
+format (or pass `--format … --from … --yes` for headless), and never auto-chains —
+review the artifact, then run `/planr-pipeline:plan <slug>`. (Claude Code only as of
+planr-pipeline v0.13.0.)
+
 **Path A invariants:**
 
 - Do not call `planr spec decompose` — duplicates the pipeline's specification-agent
