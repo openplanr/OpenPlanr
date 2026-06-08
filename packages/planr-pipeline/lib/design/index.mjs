@@ -19,7 +19,7 @@ export {
   DESIGN_SOURCES, CONTENT_PROVENANCE, FRAMEWORKS, NAV_MODES, SCHEMA_VERSION,
 } from './manifest.mjs';
 export {
-  SPACING_STEP, COMMON_SPACING, FRAMES, DEFAULT_FRAME,
+  SPACING_STEP, COMMON_SPACING, FRAMES, DEFAULT_FRAME, BREAKPOINTS, RESPONSIVE_FRAMES,
   isOnSpacingScale, nearestSpacing, isCanonicalFrame, resolveTokens,
 } from './tokens.mjs';
 export { lintDesign, lintCanvasData } from './lint.mjs';

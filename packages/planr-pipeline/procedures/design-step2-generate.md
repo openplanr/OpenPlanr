@@ -59,6 +59,33 @@ off-scale values and same-type drift are *impossible*:
 The C.4.5a linter (`lib/design/lint.mjs`) deterministically **fails** off-grid spacing, so
 authoring on-grid here is what makes the finalize gate pass first time.
 
+## C.0.6 — Responsive + fluid: fill the space, reflow at breakpoints (v0.17.0)
+
+A professional design is **fluid** — it fills the width it's given and reflows at breakpoints —
+not a fixed 1440 column that shrinks or centers in dead space. Author every screen this way, for
+**all** formats:
+
+- **Fluid, not capped.** Layouts fill `100%` of their container. Use fluid CSS grid
+  (`grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))`), flex `flex: 1`, and `%`/`fr`
+  tracks so content and density scale with the available width. Do **NOT** wrap the screen in
+  `max-width: 1440px; margin: auto` — that hard cap is exactly the dead-space "shrunk to 1440"
+  bug. The only legitimate max-width is a **readability cap on long-form prose** (~70ch) inside an
+  otherwise fluid layout.
+- **Container queries, NOT media queries.** Set `container-type: inline-size` on the screen root
+  (`.ds-screen`) and author breakpoints with `@container` (widths from `BREAKPOINTS` in
+  `lib/design/tokens.mjs`):
+  - `@container (min-width: 1280px)` → **desktop** — full multi-column, sidebar expanded
+  - `@container (min-width: 768px)` → **tablet** — condensed: sidebar collapses to icons, fewer columns
+  - else → **mobile** — single column, stacked, hamburger / bottom-nav
+  **Why container, not media:** on a canvas every breakpoint frame shares one browser viewport, so
+  `@media` renders all frames identically — only a *container* query lets the same HTML reflow to a
+  1440 frame vs an 834 frame vs a 390 frame. (It also drives the live prototype/walkthrough resize
+  + device toggle.)
+- **One responsive design, many frames.** Author each screen **once** (fluid + `@container`); the
+  formats below render that same HTML at desktop / tablet / mobile widths. Never hand-write three
+  separate layouts — the container queries do the reflow. Style with **classes, never `id`s**, so
+  the same screen embedded in multiple frames can't collide.
+
 ## C.1 — Shared core (every format)
 
 **Plugin-root handle — resolve it dynamically, do this once.** The `lib/design/*` helpers
@@ -102,6 +129,10 @@ artifact (SPEC-015 F6).
 - Base: `templates/design/prototype-shell.html`.
 - Fill `GENERATOR:title|fonts|tokens|screen|layout`. Choose a Pretext tier for the screen
   (Simple / Card-grid / Chat / Content) and call the matching API in `GENERATOR:layout`.
+- **Responsive (C.0.6).** Author the screen fluid + `@container` with `container-type: inline-size`
+  on the screen root, so it fills the viewport and reflows. The shell's **device toggle**
+  (Desktop / Tablet / Mobile / Fluid) sets the preview container width — the same HTML reflows
+  through every breakpoint with no extra markup.
 - Copy `templates/design/vendor/pretext.js` → `<DESIGN_DIR>/vendor/pretext.js`.
 - Output: `<DESIGN_DIR>/finalized.html`. `framework: vanilla`.
 
@@ -113,24 +144,31 @@ artifact (SPEC-015 F6).
 - For each screen emit
   `<section class="screen" id="s-<slug>" data-group="<group>" aria-label="<escaped name>"><h2>…</h2><div class="frame">…</div></section>`.
   Group screens by their spec section when one exists.
+- **Responsive (C.0.6).** Each screen's markup is fluid + `@container` with `container-type:
+  inline-size` on its root, so it fills the gallery column and reflows. The shell's **device
+  toggle** switches every screen between Desktop / Tablet / Mobile / Fluid widths at once.
 - Copy `vendor/pretext.js`. Output: `<DESIGN_DIR>/finalized.html`. `framework: vanilla`,
   `nav_mode: <NAV_MODE>`.
 
 ## C.4 — canvas
 
 - Base: `templates/design/canvas-shell.html`.
-- **Artboard size — ONE canonical frame for every screen (v0.16.0).** All desktop artboards use
-  the **same** frame: `width: 1440, height: 1024` (the `FRAMES.desktop` constant in
-  `lib/design/tokens.mjs`; a mobile app → `FRAMES.mobile` `390×844`). Do **not** vary height per
-  screen — the 760 / 700 / 820 drift is exactly what makes a canvas look amateur; one consistent
-  frame is what makes it read like a real Figma file, every screen directly comparable. Content
-  taller than 1024 **scrolls inside** the screen container (`overflow:auto`), like a real desktop
-  viewport. The `DesignCanvas` fallback is already `1440×1024`; still pass the dims explicitly.
-  `lintCanvasData()` (C.4.5a) fails any artboard that isn't a canonical frame.
-- Build the data object `{ sections: [ { id, title, subtitle?, artboards: [ { id, label,
-  width, height, html } ] } ] }`, where `html` is each screen's rendered markup (spec text
-  inside it already escaped). Replace the shell's `/* GENERATOR:data */` marker so the line
-  reads `var DATA = <embedJson(data)>;` — **`embedJson` is required**.
+- **Breakpoint frames per screen (v0.17.0).** Render each screen as the **responsive frame set**
+  from `RESPONSIVE_FRAMES` (`lib/design/tokens.mjs`): **desktop `1440×1024`**, **tablet `834×1194`**,
+  **mobile `390×844`** — the *same* responsive HTML in all three; the `@container` rules (C.0.6)
+  reflow it per frame. Within a breakpoint every screen uses the SAME frame, so the board reads
+  like a real Figma responsive file and you see every breakpoint. Height is the frame's; taller
+  content **scrolls inside** (`overflow:auto`). `lintCanvasData()` (C.4.5a) fails any artboard that
+  isn't one of the canonical frames.
+- **Shared stylesheet, markup-only artboards.** Put the design-system CSS + tokens + `@container`
+  rules **once** in the top-level `css` field; each artboard's `html` is just the screen markup
+  (shared `ds-*` classes + a `container-type` root, **no `<style>`, no `id`s**). This keeps the 3×
+  frames small and guarantees identical styling across them.
+- Build `{ css, sections: [ { id, title, subtitle?, artboards: [ { id, label, width, height,
+  html } ] } ] }` — **one section per screen** (title = screen name), each with **three artboards**
+  labeled `Desktop` (1440×1024), `Tablet` (834×1194), `Mobile` (390×844), all sharing that screen's
+  `html`. Replace the shell's `/* GENERATOR:data */` marker so the line reads
+  `var DATA = <embedJson(data)>;` — **`embedJson` is required** (escape every spec string first).
 - On **evolve**, merge `priorState` (`.design-canvas.state.json`) so saved order/labels
   survive; re-write the sidecar.
 - Copy `vendor/{react.production.min.js, react-dom.production.min.js, DesignCanvas.js}` →

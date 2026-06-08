@@ -25,7 +25,7 @@ import {
   escapeHtml, embedJson, hasUnsafeHtml,
   recommendFormat, resolveScreens, countScreens, chooseWalkthroughNav,
   decideThinSpec,
-  isOnSpacingScale, isCanonicalFrame, lintDesign, lintCanvasData,
+  isOnSpacingScale, isCanonicalFrame, lintDesign, lintCanvasData, FRAMES, RESPONSIVE_FRAMES,
 } from '../lib/design/index.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -121,6 +121,25 @@ for (const shell of ['prototype-shell.html', 'walkthrough-shell.html', 'canvas-s
   assert(lintDesign(readFileSync(join(root, 'templates/design', shell), 'utf-8')).ok,
     `${shell} is lint-clean (shells obey the 4-point grid)`);
 }
+
+// 3d — responsive breakpoint frames + device toggle (v0.17.0)
+log('\nresponsive breakpoint frames (v0.17.0):');
+assert(isCanonicalFrame({ w: 834, h: 1194 }), 'tablet frame 834×1194 is canonical');
+assert(isCanonicalFrame(FRAMES.desktop) && isCanonicalFrame(FRAMES.mobile), 'desktop + mobile canonical');
+assert(RESPONSIVE_FRAMES.length === 3 && RESPONSIVE_FRAMES.map((f) => f.name).join() === 'desktop,tablet,mobile',
+  'RESPONSIVE_FRAMES = desktop → tablet → mobile');
+const genDoc = readFileSync(join(root, 'procedures/design-step2-generate.md'), 'utf-8');
+assert(/@container/.test(genDoc) && /container-type/.test(genDoc),
+  'generate guidance uses container queries + container-type (not media queries)');
+assert(/834|tablet/i.test(genDoc), 'generate guidance names the tablet breakpoint frame');
+assert(fileHas(join(root, 'templates/design/prototype-shell.html'), 'dv-bar') &&
+  fileHas(join(root, 'templates/design/prototype-shell.html'), 'container-type'),
+  'prototype shell has the device toggle + a container-query viewport');
+assert(fileHas(join(root, 'templates/design/walkthrough-shell.html'), 'data-w="834px"') &&
+  fileHas(join(root, 'templates/design/walkthrough-shell.html'), 'container-type'),
+  'walkthrough shell has the device toggle + container-query frames');
+assert(fileHas(join(root, 'templates/design/canvas-shell.html'), 'DATA.css'),
+  'canvas shell injects the shared stylesheet (DATA.css) for breakpoint frames');
 
 // 4 — manifest schema vs golden fixtures
 log('\ndesign-manifest schema:');

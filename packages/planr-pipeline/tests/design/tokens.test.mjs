@@ -3,6 +3,7 @@ import { test } from 'node:test';
 
 import {
   isOnSpacingScale, nearestSpacing, isCanonicalFrame, FRAMES, DEFAULT_FRAME, SPACING_STEP,
+  BREAKPOINTS, RESPONSIVE_FRAMES,
 } from '../../lib/design/tokens.mjs';
 
 test('on the 4-point grid: 0, 2, and multiples of 4 pass', () => {
@@ -32,11 +33,22 @@ test('nearestSpacing snaps to the grid, preserving sign', () => {
   assert.ok(isOnSpacingScale(nearestSpacing(17)), 'a snapped value is always on-grid');
 });
 
-test('canonical frames: desktop 1440×1024 + mobile 390×844', () => {
+test('canonical frames: desktop 1440 + tablet 834 + mobile 390 (v0.17.0)', () => {
   assert.equal(DEFAULT_FRAME.w, 1440);
   assert.equal(DEFAULT_FRAME.h, 1024);
   assert.equal(isCanonicalFrame({ w: 1440, h: 1024 }), true);
+  assert.equal(isCanonicalFrame(FRAMES.tablet), true);
+  assert.equal(isCanonicalFrame({ w: 834, h: 1194 }), true);
   assert.equal(isCanonicalFrame(FRAMES.mobile), true);
+});
+
+test('responsive frame set: desktop → tablet → mobile, widest first', () => {
+  assert.deepEqual(RESPONSIVE_FRAMES.map((f) => f.name), ['desktop', 'tablet', 'mobile']);
+  assert.deepEqual(RESPONSIVE_FRAMES.map((f) => f.w), [1440, 834, 390]);
+  // breakpoint frame widths fall in their container-query ranges
+  assert.ok(1440 >= BREAKPOINTS.desktop, 'desktop frame ≥ desktop breakpoint');
+  assert.ok(834 >= BREAKPOINTS.tablet && 834 < BREAKPOINTS.desktop, 'tablet frame in tablet range');
+  assert.ok(390 < BREAKPOINTS.tablet, 'mobile frame below tablet breakpoint');
 });
 
 test('off-canonical frames are rejected (the 760/700/820 drift)', () => {

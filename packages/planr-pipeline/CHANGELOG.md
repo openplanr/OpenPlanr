@@ -4,6 +4,32 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.17.0] — 2026-06-08
+
+### Added — responsive, fluid designs across breakpoint frames (desktop / tablet / mobile)
+
+Generated designs were rigid: a fixed 1440 max-width that shrank/centered in dead space instead of
+filling the viewport, with no breakpoints. v0.17.0 makes generation genuinely responsive:
+
+- **Fluid by default (generate step C.0.6).** Screens fill `100%` of their container with fluid
+  grids (`repeat(auto-fit, minmax())`) and `fr`/`%` tracks — no `max-width: 1440` dead-space cap
+  (only a readability cap on long-form prose). Density scales with the available width.
+- **Container queries, not media queries.** Screens set `container-type: inline-size` on the root
+  and author breakpoints with `@container` (desktop ≥1280, tablet ≥768, else mobile). This is the
+  key insight: on a canvas every frame shares one browser viewport, so only a *container* query
+  lets the SAME HTML reflow into a 1440 frame vs an 834 vs a 390. `BREAKPOINTS` + `RESPONSIVE_FRAMES`
+  live in `lib/design/tokens.mjs`.
+- **Canvas = breakpoint frames.** Each screen renders as three canonical frames — **desktop
+  1440×1024, tablet 834×1194, mobile 390×844** — one section per screen, the same responsive HTML
+  reflowing into each. A shared stylesheet is injected once (`DATA.css`); artboards are markup-only.
+  A true Figma-style responsive board.
+- **Prototype + walkthrough = live + a device toggle.** Both fill the viewport and reflow on resize,
+  plus a **Fluid / Desktop / Tablet / Mobile** toggle (keys 1–4 in the prototype) that drives the
+  container width — preview every breakpoint without resizing the window.
+
+`lintCanvasData` accepts the three canonical frames and rejects anything else. `npm test` → 74 green
++ conformance. No routing change — the `openplanr` skill stays **1.8.0**.
+
 ## [0.16.2] — 2026-06-08
 
 ### Fixed — canvas focus modal opens at ACTUAL SIZE (the lightbox no longer rescales the screen)

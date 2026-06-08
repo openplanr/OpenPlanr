@@ -11,11 +11,11 @@
      via lib/design/escape.mjs escapeHtml() before interpolation. Never inline
      raw spec text. (SPEC-015 finding S1.)
    • Generate realistic content from the spec — never lorem ipsum.
-   • GROUND IT IN THE REAL APP (design-step2-generate.md C.0): design at the app's
-     real desktop viewport (~1440px full-bleed, not a narrow card on empty space),
-     embed the screen in the app's actual shell (sidebar/nav/header), and match the
-     real design system (tokens, component library, existing screens). A centered
-     card is only for a genuine modal/dialog.
+   • GROUND IT IN THE REAL APP + make it FLUID + RESPONSIVE (design-step2-generate.md
+     C.0 / C.0.6): fill the width (no max-width:1440 dead-space cap), embed the screen in
+     the app's real shell (sidebar/nav/header), match the real design system, and author
+     @container breakpoints with container-type:inline-size on the screen root so the device
+     toggle reflows it desktop → tablet → mobile. A centered card is only for a genuine modal.
    • Keep the a11y baseline: heading hierarchy, :focus-visible, ARIA on controls,
      prefers-reduced-motion, prefers-color-scheme.
 -->
@@ -46,22 +46,71 @@
       html { scroll-behavior: auto; }
       * { animation: none !important; transition: none !important; }
     }
-    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); line-height: 1.5; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; min-height: 100vh; }
     :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    main { min-height: 100vh; }
+
+    /* Device toggle bar — preview the responsive screen at each breakpoint (v0.17.0). */
+    .dv-bar { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px; background: #11151c; color: #fff; font: 13px/1 var(--font); }
+    .dv-bar .brand { font-weight: 600; }
+    .dv-bar .grow { margin-left: auto; }
+    .dv-bar .sz { opacity: .6; font-variant-numeric: tabular-nums; min-width: 56px; text-align: right; }
+    .dv-bar button { font: inherit; padding: 8px 12px; border: 1px solid rgba(255,255,255,.2);
+      background: transparent; color: #fff; border-radius: 8px; cursor: pointer; }
+    .dv-bar button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); }
+    /* The responsive viewport: a container-query context whose width the toggle sets, so the SAME
+       screen reflows through every breakpoint. margin:auto centers + allows scroll to both edges. */
+    .dv-stage { flex: 1; display: flex; overflow: auto; background: #e9ebef; }
+    @media (prefers-color-scheme: dark) { .dv-stage { background: #05070b; } }
+    .dv-viewport { width: var(--device-w, 100%); margin: auto; flex: 0 0 auto;
+      container-type: inline-size; background: var(--bg); box-shadow: 0 0 0 1px var(--border); }
+    main { min-height: 100%; }
   </style>
 </head>
 <body>
-  <main>
-    <!-- GENERATOR:screen — the single screen's markup. Use semantic HTML5
-         (<header>/<nav>/<main>/<section>/<footer>). Add contenteditable +
-         a MutationObserver re-layout if the design has reflowing text. -->
-  </main>
+  <div class="dv-bar" role="toolbar" aria-label="Preview device">
+    <span class="brand"><!-- GENERATOR:title -->Prototype</span>
+    <span class="grow"></span>
+    <button data-w="100%" aria-pressed="true">Fluid</button>
+    <button data-w="1440px">Desktop</button>
+    <button data-w="834px">Tablet</button>
+    <button data-w="390px">Mobile</button>
+    <span class="sz" id="dv-sz">Fluid</span>
+  </div>
+  <div class="dv-stage">
+    <div class="dv-viewport" id="dv-viewport">
+      <main>
+        <!-- GENERATOR:screen — the single screen's markup, authored FLUID + responsive with
+             @container rules (design-step2-generate.md C.0.6). Put container-type:inline-size on
+             the screen root so the toggle's width reflows it. Semantic HTML5; classes not ids;
+             contenteditable + MutationObserver re-layout if text reflows. -->
+      </main>
+    </div>
+  </div>
 
   <!-- Vendored Pretext (text reflow / computed heights). Copied alongside this
        file by the generator; falls back to no-op if absent. -->
   <script src="./vendor/pretext.js"></script>
   <script>
+    // Device toggle: set --device-w → the .dv-viewport width → @container reflow.
+    // Keys 1/2/3/4 = Fluid/Desktop/Tablet/Mobile.
+    (function () {
+      var root = document.documentElement;
+      var sz = document.getElementById('dv-sz');
+      var btns = Array.prototype.slice.call(document.querySelectorAll('.dv-bar button'));
+      function pick(btn) {
+        var w = btn.getAttribute('data-w');
+        root.style.setProperty('--device-w', w);
+        btns.forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
+        sz.textContent = w === '100%' ? 'Fluid' : w.replace('px', ' px');
+      }
+      btns.forEach(function (b) { b.addEventListener('click', function () { pick(b); }); });
+      document.addEventListener('keydown', function (e) {
+        if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+        var i = { '1': 0, '2': 1, '3': 2, '4': 3 }[e.key];
+        if (i != null && btns[i]) btns[i].click();
+      });
+    })();
     // First paint waits for fonts so Pretext measures real glyphs.
     document.fonts && document.fonts.ready.then(function () {
       document.documentElement.classList.add('fonts-ready');

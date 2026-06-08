@@ -24,18 +24,36 @@ export const SPACING_STEP = 4;
 export const COMMON_SPACING = [4, 8, 12, 16, 24, 32, 48, 64];
 
 /**
- * Canonical artboard frames. ALL desktop screens use ONE frame (the fix for the
- * per-screen 760/700/820 height drift): width AND height are fixed, and content
- * taller than the frame scrolls inside the screen container. A consistent frame
- * is what makes a canvas read like a real Figma file — every screen directly
- * comparable.
+ * Canonical artboard frames — one fixed size PER BREAKPOINT (v0.17.0). A
+ * responsive screen is rendered into each: desktop / tablet / mobile. Within a
+ * breakpoint, every screen uses the SAME frame (the fix for the per-screen
+ * 760/700/820 drift), so the canvas reads like a real Figma responsive file —
+ * directly comparable, and you see every breakpoint. Content taller than the
+ * frame scrolls inside the screen container.
  */
 export const FRAMES = {
   desktop: { w: 1440, h: 1024 },
+  tablet: { w: 834, h: 1194 },
   mobile: { w: 390, h: 844 },
 };
 
 export const DEFAULT_FRAME = FRAMES.desktop;
+
+/**
+ * Container-query breakpoints (min inline-size, px). The generated screen sets
+ * `container-type: inline-size` on its root and authors `@container` rules at
+ * these widths, so ONE responsive design reflows into each breakpoint frame.
+ * Media queries can't do this on a canvas — every frame shares one browser
+ * viewport, so only a CONTAINER query distinguishes a 1440 frame from a 390 one.
+ */
+export const BREAKPOINTS = { desktop: 1280, tablet: 768 };
+
+/** The breakpoint frames a responsive screen renders into, widest first. */
+export const RESPONSIVE_FRAMES = [
+  { name: 'desktop', ...FRAMES.desktop },
+  { name: 'tablet', ...FRAMES.tablet },
+  { name: 'mobile', ...FRAMES.mobile },
+];
 
 /**
  * Is this pixel value on the 4-point grid? Negative values (e.g. a negative

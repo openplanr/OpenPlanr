@@ -17,13 +17,14 @@
    • Replace GENERATOR:data with embedJson()-encoded canvas data (see shape
      below). embedJson() is mandatory — it neutralizes </script> and U+2028/9
      in any spec-derived string (SPEC-015 S1). Never hand-concatenate strings.
-   • Shape:
-       { sections: [ { id, title, subtitle?, artboards: [
-           { id, label, width, height, html }   // html = the screen's markup
+   • Shape (v0.17.0):
+       { css?,                                  // shared design-system CSS, injected ONCE
+         sections: [ { id, title, subtitle?, artboards: [
+           { id, label, width, height, html }   // html = markup-only (uses the shared css)
        ] } ] }
-   • Artboard size = ONE canonical frame for every screen (design-step2-generate.md C.4):
-     1440×1024 desktop (390×844 mobile). Same frame for all screens so they're
-     comparable; content taller than 1024 scrolls inside. lib/design/lint.mjs
+   • Breakpoint frames: one SECTION per screen with three artboards — Desktop 1440×1024,
+     Tablet 834×1194, Mobile 390×844 — sharing the screen's html; the @container rules in
+     `css` reflow it per frame (design-step2-generate.md C.0.6 / C.4). lib/design/lint.mjs
      (lintCanvasData) fails any off-canonical frame.
 -->
 <html lang="en">
@@ -65,6 +66,15 @@
   <script>
     (function () {
       var DATA = /* GENERATOR:data */ { sections: [] };
+
+      // Shared design-system stylesheet (v0.17.0): injected once so every
+      // breakpoint frame (desktop/tablet/mobile) styles identically and each
+      // artboard's html stays markup-only.
+      if (DATA.css) {
+        var dsStyle = document.createElement('style');
+        dsStyle.textContent = DATA.css;
+        document.head.appendChild(dsStyle);
+      }
 
       // View-only unless a host bridge is present (it never is for a plain file open).
       if (!window.__canvasHost) document.body.classList.add('dc-viewonly');
