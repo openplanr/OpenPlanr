@@ -51,3 +51,8 @@ The full 10-section design-spec template (with all column headers, role rows for
 - Never modify input files
 - Always flag ambiguities in Section 10 — Open Questions
 - Always cross-reference `input/tech/stack.md` for component library awareness
+- **Design-system continuity (v0.18.0):** if a project design system exists
+  (`.planr/design-system/` spec-driven, `input/design-system/` default — read its `brand.md` +
+  `tokens.css`), ground the spec in it: note where the mockup **continues** the system's
+  tokens/voice, and flag any **divergence** in Section 10 (Open Questions) rather than silently
+  overriding the system. The design-spec *extends* the system; it never contradicts it.

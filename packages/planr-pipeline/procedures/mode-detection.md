@@ -28,6 +28,7 @@ Bind:
 | Task files | `output/feats/feat-${SLUG}/us-*/tasks/task-*.md` | `<SPEC_DIR>/tasks/T-*.md` |
 | Design spec | `output/feats/feat-${SLUG}/design-spec.md` | `<SPEC_DIR>/design/design-spec.md` |
 | Design artifacts (`/planr-pipeline:design`) | `output/feats/feat-${SLUG}/design/` | `<SPEC_DIR>/design/` |
+| Design system (project-wide, shared by every feature) | `input/design-system/` | `.planr/design-system/` |
 | Error report (`T-<NNN>-error-report.md` after R6 cap) | `output/feats/feat-${SLUG}/us-{N}/tasks/T-<TASK_ID>-error-report.md` | `<SPEC_DIR>/tasks/T-<TASK_ID>-error-report.md` |
 
 `<TASK_ID>` **must mirror** YAML `id` on the artifact being implemented (pattern `^T-\\d{3}$`). **Never write** singleton `tasks/error-report.md`.

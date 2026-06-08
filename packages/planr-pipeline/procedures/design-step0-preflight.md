@@ -11,6 +11,9 @@ From `$ARGUMENTS`:
 - `FROM` = value of `--from` (one of `spec|png|describe`) or empty.
 - `YES` = `--yes` present.
 - `DRY_RUN` = `--dry-run` present.
+- `SYSTEM_ONLY` = `--system` present. When set, this run only **(re)generates the project design
+  system** and STOPs — it does not design a feature: bind `MODE`/`DS_DIR` (A.2), run
+  `${CLAUDE_PLUGIN_ROOT}/procedures/design-system-generate.md`, log, and exit (no Phase B/C/D).
 
 If `--format` is given with an unknown value, abort (`fatal-error-format.md`):
 ```
@@ -103,10 +106,12 @@ sizing context generation needs — gather it now, concretely:
   the shell file path(s) + a one-line note of its structure (e.g. "fixed 248px sidebar + 56px
   top bar + content"). If none exists (greenfield / standalone / marketing page) bind
   `APP_SHELL = none` and say so — a free-floating card is then legitimate.
-- **`DESIGN_SYSTEM`** — read the token source in priority order: `DESIGN.md` (repo root), then
-  the CSS/Tailwind theme (`globals.css`, `tailwind.config.*`, `theme.*`). Bind the real **brand
-  color, font family, type scale, spacing scale, radii**. None found → bind
-  `DESIGN_SYSTEM = defaults` (use the craft-rubric scale) and note it.
+- **`DESIGN_SYSTEM`** — resolve the project's design **system** with `resolveDesignSystem({ dir:
+  DS_DIR })` (`$PLUG/lib/design/designSystem.mjs`; `DS_DIR` from `mode-detection.md` —
+  `.planr/design-system/` spec-driven, `input/design-system/` default). It reads the package, else
+  falls back to a root `DESIGN.md` / CSS-Tailwind theme / the stack's ComponentLibrary. Bind the
+  real **brand color, font family, type scale, spacing, radii** from it. **If `found: false`, do
+  NOT bind generic defaults** — trigger the **A.3.6 gate** below.
 - **`COMPONENT_LIB`** — `ComponentLibrary` / `FrontendFramework` from `input/tech/stack.md`
   (or detect from `package.json`). Match its real component shapes; don't invent a generic kit.
 - **`REF_SCREENS`** — read **1–2 real pages/components** to mirror layout density + patterns.
@@ -121,6 +126,33 @@ sizing context generation needs — gather it now, concretely:
 `APP_CTX = { APP_SHELL, DESIGN_SYSTEM, COMPONENT_LIB, REF_SCREENS, VIEWPORT_W, breakpoints }`.
 Step C (C.0) **consumes** this — it does not re-read from scratch. Keep the reads lightweight
 (this is preflight), but bind every field to a concrete value, especially `VIEWPORT_W`.
+
+## A.3.6 — Design-system gate: no system → ask, never go generic (v0.18.0)
+
+A generated design must **continue** an existing feel, not invent a standalone one (a standalone
+look "will be useless"). If `DESIGN_SYSTEM.found` is **false** (no `.planr/design-system/` package,
+no `DESIGN.md`, no theme), this is a **user decision** — issue a **mandatory `AskUserQuestion`**
+(same enforcement as Step B: a real tool_use, never narrated as prose, never auto-decided; **STOP**
+with `BLOCKED — AskUserQuestion unavailable` if no variant is callable):
+
+> **<slug>** has no design system yet — a design needs one to continue. How should I get it?
+> A) **Generate one** — create a project design system (tokens + brand + components), then design this feature in it *(recommended for a greenfield project)*
+> B) **Use an existing one** — point me at a path (a `DESIGN.md`, a CSS/Tailwind theme, an app dir, or a design-system package)
+> C) **Describe the brand** — answer a few questions (product, feel, brand color, light/dark) and I'll derive a starter system
+> D) **Cancel**
+
+- **A** → run `${CLAUDE_PLUGIN_ROOT}/procedures/design-system-generate.md` (existing-app scan first;
+  Advisor mode if vague). It writes the package to `DS_DIR` and rebinds `DESIGN_SYSTEM`.
+- **B** → read the given path and **normalize it into the `DS_DIR` package** (tokens.css + manifest +
+  brand + components), then rebind. (Ingesting — not just pointing — is what guarantees continuity
+  on every future run.)
+- **C** → gather the ≤4 brand answers, then run `design-system-generate.md` with them.
+- **D** → STOP cleanly (the `.lock` is acquired in A.4, so nothing to release).
+
+**Continuity is the whole point:** every path **persists** the system to `DS_DIR`, so this feature
+*and every future `/design` + the PO designer-agent* build on the same look — never standalone.
+Under **`--yes`**: choose **A** if any app signal exists (continue what's there), else **C** with
+sensible defaults — **never** silently proceed generic.
 
 ## A.4 — Acquire the advisory lock (SPEC-015 E1)
 
@@ -148,7 +180,8 @@ If `DRY_RUN`: compute the recommended format via `lib/design/recommendFormat.mjs
   screens:         <SCREEN_COUNT> (<comma-joined SCREENS, truncated>)
   has PNGs:        <HAS_PNG>     prior design: <HAS_PRIOR>
   thin-spec:       <decideThinSpec action: proceed | clarify | abort> (design docs: <DESIGN_DOCS or none>)
-  app context:     viewport <VIEWPORT_W>px · shell <APP_SHELL or none> · tokens <DESIGN_SYSTEM source> · lib <COMPONENT_LIB>
+  app context:     viewport <VIEWPORT_W>px · shell <APP_SHELL or none> · lib <COMPONENT_LIB>
+  design system:   <summarizeDesignSystem(DESIGN_SYSTEM)>   (if "none" → a real run fires the A.3.6 gate)
   recommended:     <format> — <reason>
   would write:     finalized.html|canvas.html, finalized.json, vendor/, design-spec.md
 ```

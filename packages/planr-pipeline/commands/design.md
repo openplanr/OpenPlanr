@@ -1,6 +1,6 @@
 ---
 description: Generate a visual design (prototype | walkthrough | canvas) + design-spec.md for a feature, BEFORE decomposition
-argument-hint: <slug> [--format prototype|walkthrough|canvas] [--from spec|png|describe] [--yes] [--dry-run]
+argument-hint: <slug> [--format prototype|walkthrough|canvas] [--from spec|png|describe] [--system] [--yes] [--dry-run]
 ---
 
 # /planr-pipeline:design {feature-name}
@@ -86,6 +86,11 @@ mark item 1 done and items 2–4 cancelled (`dry-run exit`).
   **component library**, 1–2 **reference screens**, and the **real desktop viewport width**
   (`VIEWPORT_W`, default 1440) **once, up front**, so generation is grounded in bound values
   instead of re-deriving them late (the old canvas-came-out-1320×860 bug);
+- resolves the project **design system** and, if none exists, runs a **mandatory `AskUserQuestion`
+  gate** (v0.18.0): **Generate one** · **Use an existing one** (a path) · **Describe the brand** ·
+  **Cancel** — it never proceeds with a generic look. The chosen system is persisted to the
+  project's `design-system/` dir and reused by every future design + the PO designer-agent
+  (continuity). `--system` (re)generates the system only, then STOPs;
 - acquires the advisory `<DESIGN_DIR>/../.lock` (SPEC-015 finding E1 — no two `/design` runs
   clobber the design dir);
 - on `--dry-run`, prints the resolved plan + recommended format and STOPs.

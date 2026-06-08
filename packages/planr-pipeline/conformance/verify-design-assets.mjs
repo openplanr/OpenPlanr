@@ -26,6 +26,7 @@ import {
   recommendFormat, resolveScreens, countScreens, chooseWalkthroughNav,
   decideThinSpec,
   isOnSpacingScale, isCanonicalFrame, lintDesign, lintCanvasData, FRAMES, RESPONSIVE_FRAMES,
+  designSystemStatus, resolveDesignSystem, contrastRatio, isReadable,
 } from '../lib/design/index.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -51,9 +52,17 @@ for (const rel of [
   'procedures/design-detect-nudge.md',
   'agents/modes/shared/design-spec-template.md',
   'agents/modes/shared/design-craft-rubric.md',
+  'agents/modes/shared/design-principles.md',
   'lib/design/index.mjs',
   'lib/design/tokens.mjs',
   'lib/design/lint.mjs',
+  'lib/design/designSystem.mjs',
+  'lib/design/contrast.mjs',
+  'procedures/design-system-generate.md',
+  'templates/design-system/tokens.css.tpl',
+  'templates/design-system/manifest.json.tpl',
+  'templates/design-system/brand.md.tpl',
+  'templates/design-system/components.md.tpl',
   'schemas/v1.0.0/design-manifest.schema.json',
 ]) assert(existsSync(join(root, rel)), rel);
 
@@ -140,6 +149,34 @@ assert(fileHas(join(root, 'templates/design/walkthrough-shell.html'), 'data-w="8
   'walkthrough shell has the device toggle + container-query frames');
 assert(fileHas(join(root, 'templates/design/canvas-shell.html'), 'DATA.css'),
   'canvas shell injects the shared stylesheet (DATA.css) for breakpoint frames');
+
+// 3e — design system layer + adherence (v0.18.0)
+log('\ndesign system + adherence (v0.18.0):');
+assert(designSystemStatus({ hasPackage: true }).source === 'package'
+  && designSystemStatus({ hasDesignMd: true }).source === 'design-md'
+  && designSystemStatus({}).found === false,
+  'designSystemStatus priority (package > design-md > … > none)');
+const dsFixDir = join(root, 'tests/fixtures/design-system');
+const dsFix = resolveDesignSystem({ dir: dsFixDir, projectRoot: dsFixDir });
+assert(dsFix.found && dsFix.source === 'package' && dsFix.tokens.length >= 5,
+  'resolveDesignSystem reads the package fixture (tokens parsed)');
+assert(Math.abs(contrastRatio('#ffffff', '#000000') - 21) < 0.2, 'contrast #fff/#000 ≈ 21:1');
+assert(contrastRatio('oklch(0.21 0.015 268)', 'oklch(1 0 0)') > 15,
+  'oklch contrast resolves to a WCAG-grade value (dark on white)');
+assert(isReadable('#000', '#fff') && !isReadable('#999', '#fff'),
+  'isReadable: black ok, mid-gray fails AA');
+assert(lintDesign('<style>.a{color:#999;background:#fff}</style>').ok === false,
+  'linter FAILS sub-AA text/background contrast');
+assert(lintDesign('<style>.a{color:#111;background:#fff}</style>').ok === true,
+  'linter PASSES AA contrast');
+assert(lintDesign('<style>.a{background:#11151c}</style>').warnings.some((w) => w.rule === 'color-not-token'),
+  'linter WARNS raw-color usage (prefer a token)');
+const preflightDoc = readFileSync(join(root, 'procedures/design-step0-preflight.md'), 'utf-8');
+assert(/A\.3\.6/.test(preflightDoc) && /design system/i.test(preflightDoc),
+  'preflight A.3.6 no-system gate present (generate / existing / describe)');
+assert(fileHas(join(root, 'procedures/design-step2-generate.md'), 'contrast-below-aa')
+  && fileHas(join(root, 'procedures/design-step2-generate.md'), 'tokens.css'),
+  'generate step links the DS tokens.css + enforces the contrast gate');
 
 // 4 — manifest schema vs golden fixtures
 log('\ndesign-manifest schema:');

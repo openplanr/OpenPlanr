@@ -22,6 +22,13 @@ gate: it stops after writing the artifact + `design-spec.md`, and never auto-cha
 detected but no design exists) but never invokes it — keeping `/plan` non-interactive and
 `--dry-run` / CI safe.
 
+**Design-system continuity corollary (v0.18.0):** a generated design must **continue** the
+project's design system, never invent a standalone one. If no design system exists, `/design`
+**stops and asks** (generate one / point to an existing one / describe the brand) — it never
+proceeds with a generic look. Whatever the user picks is **persisted** to the project
+(`.planr/design-system/` spec-driven, `input/design-system/` default) and reused by every future
+`/design` + the PO designer-agent, so the whole product stays one coherent system.
+
 ---
 
 ### R2 — Task Count Per US

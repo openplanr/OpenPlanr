@@ -23,3 +23,9 @@ export {
   isOnSpacingScale, nearestSpacing, isCanonicalFrame, resolveTokens,
 } from './tokens.mjs';
 export { lintDesign, lintCanvasData } from './lint.mjs';
+export {
+  designSystemStatus, resolveDesignSystem, summarizeDesignSystem, DS_PACKAGE_FILES,
+} from './designSystem.mjs';
+export {
+  parseColor, relativeLuminance, contrastRatio, isReadable, AA_NORMAL, AA_LARGE,
+} from './contrast.mjs';

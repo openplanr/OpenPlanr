@@ -29,11 +29,45 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 import { isOnSpacingScale, nearestSpacing, isCanonicalFrame, FRAMES } from './tokens.mjs';
+import { contrastRatio, AA_NORMAL } from './contrast.mjs';
 
 const SPACING_PROP =
   /^(padding|margin|gap|row-gap|column-gap|inset|top|right|bottom|left)(-(top|right|bottom|left|block|inline)(-(start|end))?)?$/;
 
 const SIZING_PROP = /^(width|height|min-width|min-height|max-width|max-height|padding|margin|font-size|gap)/;
+
+// v0.18.0 token-adherence (Atlas `_adherence.oxlintrc.json` model).
+const COLOR_PROP = /^(color|background|background-color|border(-(top|right|bottom|left))?-color|outline-color|fill|stroke|caret-color|text-decoration-color)$/;
+const COLOR_LITERAL = /#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|oklch\([^)]*\)/gi;
+const SYSTEM_FONTS = new Set([
+  'inherit', 'initial', 'sans-serif', 'serif', 'monospace', 'system-ui', 'ui-sans-serif', 'ui-monospace',
+  'ui-serif', '-apple-system', 'blinkmacsystemfont', 'segoe ui', 'roboto', 'helvetica neue', 'helvetica',
+  'arial', 'sfmono-regular', 'sf mono', 'menlo', 'consolas', 'liberation mono', 'cursive',
+]);
+
+/** All raw color literals used as a value (hex/rgb/oklch); [] for a var()/gradient. */
+function literalColors(value) {
+  return /gradient/i.test(value) ? [] : (value.match(COLOR_LITERAL) || []);
+}
+/** The first resolvable literal color in a value, or null (var/gradient/none). */
+function firstColor(value) {
+  if (/var\(|gradient/i.test(value)) return null;
+  const m = value.match(/#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)|oklch\([^)]*\)|\b(?:white|black)\b/i);
+  return m ? m[0] : null;
+}
+/** First font family in a font-family/font value, lowercased + unquoted. */
+function firstFontFamily(value) {
+  const first = value.split(',')[0].trim().replace(/^["']|["']$/g, '');
+  return first ? first.toLowerCase() : null;
+}
+/** Decls grouped per block (so color + background can be paired for a contrast check). */
+function declBlocks(html) {
+  const blocks = [];
+  for (const m of html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi))
+    for (const b of cssDeclBlocks(m[1])) blocks.push(declsFromBlock(b));
+  for (const m of html.matchAll(/style\s*=\s*(["'])([\s\S]*?)\1/gi)) blocks.push(declsFromBlock(m[2]));
+  return blocks;
+}
 
 /** Pull the px magnitudes that appear as standalone tokens in a CSS value. */
 function pxValues(value) {
@@ -119,29 +153,68 @@ function inlineSizingDrift(html) {
 }
 
 /**
- * Lint a design HTML string for spacing + drift. Frame is checked separately
- * (`lintCanvasData`) because it lives in the embedded canvas data, not the CSS.
+ * Lint a design HTML string. ERRORS (hard gate): off-grid spacing,
+ * sub-AA text/background contrast. WARNINGS (advisory, fed to the visual
+ * self-review): raw-color usage, non-design-system fonts, inline-sizing drift.
+ * Frame is checked separately (`lintCanvasData`).
  * @param {string} html
+ * @param {{ designSystem?: { fonts?: Array<{family:string}> } }} [opts]
  * @returns {{ ok: boolean, errors: object[], warnings: object[], summary: string }}
  */
-export function lintDesign(html) {
+export function lintDesign(html, opts = {}) {
+  const { designSystem = null } = opts;
   const errors = [];
   const warnings = [];
 
   for (const d of [...styleBlockDecls(html), ...inlineStyleDecls(html)]) {
-    if (!SPACING_PROP.test(d.prop)) continue;
-    for (const px of pxValues(d.value)) {
-      if (!isOnSpacingScale(px)) {
-        errors.push({
-          rule: 'spacing-off-grid',
-          level: 'error',
-          prop: d.prop,
-          value: `${px}px`,
-          suggestion: `${nearestSpacing(px)}px`,
-          where: d.where,
-          message: `${d.prop}: ${px}px is off the 4-point grid (${d.where}) → use ${nearestSpacing(px)}px`,
+    // spacing off the 4-point grid (ERROR)
+    if (SPACING_PROP.test(d.prop)) {
+      for (const px of pxValues(d.value)) {
+        if (!isOnSpacingScale(px)) {
+          errors.push({
+            rule: 'spacing-off-grid', level: 'error', prop: d.prop, value: `${px}px`,
+            suggestion: `${nearestSpacing(px)}px`, where: d.where,
+            message: `${d.prop}: ${px}px is off the 4-point grid (${d.where}) → use ${nearestSpacing(px)}px`,
+          });
+        }
+      }
+    }
+    // raw color used as a value, not a `--token` definition (WARN — use var(--…))
+    if (COLOR_PROP.test(d.prop)) {
+      for (const lit of literalColors(d.value)) {
+        warnings.push({
+          rule: 'color-not-token', level: 'warn', prop: d.prop, value: lit, where: d.where,
+          message: `${d.prop}: ${lit} is a raw color — use a design-system token via var(--…)`,
         });
       }
+    }
+    // font not in the design system + not a system fallback (WARN, only when a DS is known)
+    if ((d.prop === 'font-family' || d.prop === 'font') && designSystem?.fonts?.length) {
+      const fam = firstFontFamily(d.value);
+      const allowed = new Set(designSystem.fonts.map((f) => String(f.family || '').toLowerCase()));
+      if (fam && !allowed.has(fam) && !SYSTEM_FONTS.has(fam)) {
+        warnings.push({
+          rule: 'font-not-token', level: 'warn', value: fam, where: d.where,
+          message: `font "${fam}" is not in the design system (${[...allowed].join(', ') || 'none'})`,
+        });
+      }
+    }
+  }
+
+  // sub-AA contrast (ERROR): a block where color + background both resolve to literals
+  for (const block of declBlocks(html)) {
+    const c = block.find((d) => d.prop === 'color');
+    const bg = block.find((d) => d.prop === 'background' || d.prop === 'background-color');
+    if (!c || !bg) continue;
+    const fg = firstColor(c.value);
+    const back = firstColor(bg.value);
+    if (!fg || !back) continue;
+    const ratio = contrastRatio(fg, back);
+    if (ratio != null && ratio < AA_NORMAL) {
+      errors.push({
+        rule: 'contrast-below-aa', level: 'error', value: `${ratio.toFixed(1)}:1`, fg, bg: back,
+        message: `text/background contrast ${ratio.toFixed(1)}:1 is below AA 4.5:1 (${fg} on ${back})`,
+      });
     }
   }
 

@@ -4,6 +4,40 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.18.0] — 2026-06-08
+
+### Added — a project design system + a "no-system → ask" gate (designs continue one feel)
+
+planr could generate good per-feature designs but had no concept of a project-wide design
+**system**, so a `/design` run with no DESIGN.md / theme fell back to a generic, **standalone**
+look — which, as the user put it, "will be useless." v0.18.0 gives planr a first-class design
+system and makes every design a *continuation* of it (the Atlas + Core-Asset-Protocol model,
+adapted natively — no vendored dependency).
+
+- **A design-system package** — `.planr/design-system/` (spec-driven) / `input/design-system/`
+  (default), shared by every feature: `tokens.css` (portable custom properties, light+dark,
+  4-point spacing, AA-verified pairs), `manifest.json` (machine tokens), `brand.md` (positioning,
+  personality, voice, naming, contrast), `components.md` (per-surface recipes + premium polish).
+  Resolved by `lib/design/designSystem.mjs`.
+- **The no-system gate** — when none exists, `/design` preflight (**A.3.6**) fires a **mandatory
+  AskUserQuestion**: **Generate one** · **Use an existing one** (a path) · **Describe the brand** ·
+  **Cancel**. It never proceeds generic; whatever you pick is **persisted** and reused by every
+  future `/design` + the PO designer-agent — continuity by construction. `--system` (re)generates
+  the system only.
+- **A design-system generator** (`procedures/design-system-generate.md`) — existing-app scan,
+  brand answers, or an Advisor mode (3 directions when vague); writes the package on the 4-point
+  grid with AA contrast.
+- **Token + contrast adherence** — new `lib/design/contrast.mjs` (a WCAG helper parsing
+  `#hex`/`rgb()`/`oklch()`, validated against a published Atlas 17.7:1 pair). The linter now
+  **fails** on `contrast-below-aa` (the "faint text" defect) and **warns** on raw-color /
+  non-design-system-font usage (the Atlas `_adherence` model).
+- **Native anti-slop principles** (`agents/modes/shared/design-principles.md`) — no decorative
+  gradients / emoji UI / fake imagery / lorem.
+
+`npm test` → **90 green** + conformance. No new command (the gate is internal to `/design`) — the
+`openplanr` skill stays **1.8.0**. Follow-up (deferred): preview-specimen HTML + a self-describing
+design-system SKILL.md package.
+
 ## [0.17.0] — 2026-06-08
 
 ### Added — responsive, fluid designs across breakpoint frames (desktop / tablet / mobile)

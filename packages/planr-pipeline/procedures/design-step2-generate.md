@@ -15,8 +15,14 @@ VIEWPORT_W, breakpoints }`.** Build every screen from it — do **not** re-disco
   nav / header you read), so it reads as embedded in the product. A free-floating centered card
   is correct ONLY when `APP_SHELL = none`, or the screen genuinely IS a modal / dialog /
   standalone marketing page.
-- **Match `DESIGN_SYSTEM` + `COMPONENT_LIB`.** Use the **real** brand color, type scale,
-  spacing, radii, and component shapes — never invent a generic palette/style.
+- **Continue the `DESIGN_SYSTEM` (v0.18.0).** A system is guaranteed to exist (the A.3.6 gate).
+  **Link its `tokens.css`** into every generated screen (`<link rel="stylesheet"
+  href="<…>/design-system/tokens.css">`, or inline it) and style with its `var(--…)` tokens —
+  never raw hex/px — so the design is a *continuation* by construction. Use `brand.md` for
+  **copy/voice** (sentence case, the real vocabulary), `components.md` for **per-surface recipes**,
+  and `${CLAUDE_PLUGIN_ROOT}/agents/modes/shared/design-principles.md` to avoid the
+  machine-generated tells (no decorative gradients / emoji UI / fake imagery / lorem). Match the
+  `COMPONENT_LIB` component shapes.
 - **Mirror `REF_SCREENS`** for layout density, navigation, and patterns.
 
 ### Target viewport — author at `VIEWPORT_W`, never a smaller ad-hoc width
@@ -191,11 +197,16 @@ node "$PLUG/lib/design/lint.mjs" <DESIGN_DIR>/.finalized.tmp.html
 
 - For **every `spacing-off-grid` ERROR**, change that value to the reported `suggestion` (the
   nearest 4-point-grid step) in the markup/CSS.
-- For **canvas**, also assert `lintCanvasData(data).ok === true` — every artboard must be the
-  canonical `1440×1024` frame (C.4).
-- **Re-run until it exits 0** (zero errors). Off-grid spacing and off-frame artboards never ship.
-- Treat `inline-sizing-drift` **warnings** as a worklist for the visual pass — move the inline
-  sizing onto the shared class so siblings can't diverge.
+- For **every `contrast-below-aa` ERROR (v0.18.0)** — a text/background pair below AA 4.5:1 (the
+  "faint text" defect) — darken/lighten one side until it passes. Hard gate.
+- For **canvas**, also assert `lintCanvasData(data).ok === true` — every artboard must be a
+  canonical breakpoint frame (C.4).
+- **Re-run until it exits 0** (zero errors). Off-grid spacing, sub-AA contrast, and off-frame
+  artboards never ship.
+- Treat `color-not-token` / `font-not-token` / `inline-sizing-drift` **warnings** as a worklist:
+  replace raw colors with the design-system `var(--…)` tokens, swap non-system fonts for the DS
+  font, and move inline sizing onto the shared class. (Pass the resolved `DESIGN_SYSTEM` to
+  `lintDesign(html, { designSystem })` so it can judge the fonts.)
 
 (Fallback if `$PLUG` is unresolved: apply the same rule by hand — every padding/margin/gap/inset
 is `0`, `2`, or a multiple of 4; every canvas artboard is `1440×1024`.)
