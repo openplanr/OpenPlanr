@@ -160,6 +160,19 @@ assert(!hasUnsafeHtml(escapeHtml(hostile)), 'escapeHtml removes live markup');
 assert(!embedJson({ label: hostile }).includes('</script>'), 'embedJson has no </script> breakout');
 assert(JSON.parse(embedJson({ label: hostile })).label === hostile, 'embedJson preserves the value');
 
+// 7 — brand hygiene: no foreign product names in the shipped design assets (proprietary)
+log('\nbrand hygiene (proprietary — no foreign brands):');
+const brandAssets = [
+  'templates/design/DesignCanvas.jsx', 'templates/design/vendor/DesignCanvas.js',
+  'templates/design/canvas-shell.html', 'templates/design/walkthrough-shell.html',
+  'templates/design/prototype-shell.html', 'templates/design/README.md',
+  'lib/design/walkthroughNav.mjs', 'lib/design/manifest.mjs',
+];
+for (const brand of ['omelette', 'muvi', 'gstack']) {
+  const where = brandAssets.find((rel) => new RegExp(brand, 'i').test(readFileSync(join(root, rel), 'utf-8')));
+  assert(!where, `no foreign brand "${brand}" in shipped design assets${where ? ` (found in ${where})` : ''}`);
+}
+
 log('');
 if (failures === 0) { log('✓ all design-asset conformance checks passed'); process.exit(0); }
 log(`✗ ${failures} design-asset conformance check(s) failed`);

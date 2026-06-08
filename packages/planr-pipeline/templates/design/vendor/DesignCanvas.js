@@ -129,7 +129,7 @@ function DesignCanvas({ children, minScale, maxScale, style }) {
       return;
     }
     const t = setTimeout(() => {
-      window.omelette?.writeFile(DC_STATE_FILE, JSON.stringify({ sections: state.sections })).catch(() => {
+      window.__canvasHost?.writeFile(DC_STATE_FILE, JSON.stringify({ sections: state.sections })).catch(() => {
       });
     }, 250);
     return () => clearTimeout(t);
@@ -655,7 +655,7 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
     document.addEventListener("pointermove", move);
     document.addEventListener("pointerup", up);
   };
-  return /* @__PURE__ */ React.createElement("div", { ref, "data-dc-slot": id, style: { position: "relative", flexShrink: 0 } }, /* @__PURE__ */ React.createElement("div", { className: "dc-header", "data-omelette-chrome": "", style: { color: DC.label }, onPointerDown: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("div", { className: "dc-labelrow" }, /* @__PURE__ */ React.createElement("div", { className: "dc-grip", onPointerDown: onGripDown, title: "Drag to reorder" }, /* @__PURE__ */ React.createElement("svg", { width: "9", height: "13", viewBox: "0 0 9 13", fill: "currentColor" }, /* @__PURE__ */ React.createElement("circle", { cx: "2", cy: "2", r: "1.1" }), /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "2", r: "1.1" }), /* @__PURE__ */ React.createElement("circle", { cx: "2", cy: "6.5", r: "1.1" }), /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "6.5", r: "1.1" }), /* @__PURE__ */ React.createElement("circle", { cx: "2", cy: "11", r: "1.1" }), /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "11", r: "1.1" }))), /* @__PURE__ */ React.createElement("div", { className: "dc-labeltext", onClick: onFocus, title: "Click to focus" }, /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement("div", { ref, "data-dc-slot": id, style: { position: "relative", flexShrink: 0 } }, /* @__PURE__ */ React.createElement("div", { className: "dc-header", "data-dc-chrome": "", style: { color: DC.label }, onPointerDown: (e) => e.stopPropagation() }, /* @__PURE__ */ React.createElement("div", { className: "dc-labelrow" }, /* @__PURE__ */ React.createElement("div", { className: "dc-grip", onPointerDown: onGripDown, title: "Drag to reorder" }, /* @__PURE__ */ React.createElement("svg", { width: "9", height: "13", viewBox: "0 0 9 13", fill: "currentColor" }, /* @__PURE__ */ React.createElement("circle", { cx: "2", cy: "2", r: "1.1" }), /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "2", r: "1.1" }), /* @__PURE__ */ React.createElement("circle", { cx: "2", cy: "6.5", r: "1.1" }), /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "6.5", r: "1.1" }), /* @__PURE__ */ React.createElement("circle", { cx: "2", cy: "11", r: "1.1" }), /* @__PURE__ */ React.createElement("circle", { cx: "7", cy: "11", r: "1.1" }))), /* @__PURE__ */ React.createElement("div", { className: "dc-labeltext", onClick: onFocus, title: "Click to focus" }, /* @__PURE__ */ React.createElement(
     DCEditable,
     {
       value: label,
@@ -769,7 +769,7 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
     return () => window.removeEventListener("resize", r);
   }, []);
   const fitScale = Math.max(0.1, Math.min((vp.w - 200) / width, (vp.h - 260) / height, 1));
-  const [actual, setActual] = React.useState(false);
+  const [actual, setActual] = React.useState(true);
   const scale = actual ? 1 : fitScale;
   const pct = Math.round(scale * 100);
   const [ddOpen, setDd] = React.useState(false);
@@ -907,46 +907,53 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
       /* @__PURE__ */ React.createElement(
         "div",
         {
-          style: { position: "absolute", top: 64, bottom: 56, left: 100, right: 100, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: actual ? "flex-start" : "center", gap: 16, overflow: actual ? "auto" : "visible" }
+          style: { position: "absolute", top: 64, bottom: 56, left: 0, right: 0, display: "flex", overflow: "auto" }
         },
-        /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), style: { width: width * scale, height: height * scale, position: "relative", flex: "0 0 auto" } }, /* @__PURE__ */ React.createElement("div", { style: {
-          width,
-          height,
-          transform: scale === 1 ? "none" : `scale(${scale})`,
-          transformOrigin: "top left",
-          background: "#fff",
-          borderRadius: 2,
-          overflow: "hidden",
-          boxShadow: "0 20px 80px rgba(0,0,0,.4)"
-        } }, children || /* @__PURE__ */ React.createElement("div", { style: { height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#bbb" } }, aid))),
-        /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), style: { fontSize: 14, fontWeight: 500, opacity: 0.85, textAlign: "center", flex: "0 0 auto" } }, (sec.labels || {})[aid] ?? artboard.props.label, /* @__PURE__ */ React.createElement("span", { style: { opacity: 0.5, marginLeft: 10, fontVariantNumeric: "tabular-nums" } }, idx + 1, " / ", peers.length), /* @__PURE__ */ React.createElement(
-          "button",
+        /* @__PURE__ */ React.createElement(
+          "div",
           {
-            onClick: (e) => {
-              e.stopPropagation();
-              setActual((a) => !a);
-            },
-            title: actual ? "Fit to window (press 0)" : "Actual size 1:1 (press 1)",
-            style: {
-              marginLeft: 14,
-              border: "1px solid rgba(255,255,255,.25)",
-              background: actual ? "rgba(255,255,255,.16)" : "transparent",
-              color: "inherit",
-              font: "inherit",
-              fontSize: 12,
-              padding: "2px 8px",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontVariantNumeric: "tabular-nums"
-            }
+            onClick: (e) => e.stopPropagation(),
+            style: { margin: "auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: 24, flex: "0 0 auto" }
           },
-          width,
-          "\xD7",
-          height,
-          " \xB7 ",
-          pct,
-          "%"
-        ))
+          /* @__PURE__ */ React.createElement("div", { style: { width: width * scale, height: height * scale, position: "relative", flex: "0 0 auto" } }, /* @__PURE__ */ React.createElement("div", { style: {
+            width,
+            height,
+            transform: scale === 1 ? "none" : `scale(${scale})`,
+            transformOrigin: "top left",
+            background: "#fff",
+            borderRadius: 2,
+            overflow: "hidden",
+            boxShadow: "0 20px 80px rgba(0,0,0,.4)"
+          } }, children || /* @__PURE__ */ React.createElement("div", { style: { height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#bbb" } }, aid))),
+          /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 500, opacity: 0.85, textAlign: "center", flex: "0 0 auto" } }, (sec.labels || {})[aid] ?? artboard.props.label, /* @__PURE__ */ React.createElement("span", { style: { opacity: 0.5, marginLeft: 10, fontVariantNumeric: "tabular-nums" } }, idx + 1, " / ", peers.length), /* @__PURE__ */ React.createElement(
+            "button",
+            {
+              onClick: (e) => {
+                e.stopPropagation();
+                setActual((a) => !a);
+              },
+              title: actual ? "Fit to window (press 0)" : "Actual size 1:1 (press 1)",
+              style: {
+                marginLeft: 14,
+                border: "1px solid rgba(255,255,255,.25)",
+                background: actual ? "rgba(255,255,255,.16)" : "transparent",
+                color: "inherit",
+                font: "inherit",
+                fontSize: 12,
+                padding: "2px 8px",
+                borderRadius: 6,
+                cursor: "pointer",
+                fontVariantNumeric: "tabular-nums"
+              }
+            },
+            width,
+            "\xD7",
+            height,
+            " \xB7 ",
+            pct,
+            "%"
+          ))
+        )
       ),
       /* @__PURE__ */ React.createElement(Arrow, { dir: "left", onClick: () => go(-1) }),
       /* @__PURE__ */ React.createElement(Arrow, { dir: "right", onClick: () => go(1) }),

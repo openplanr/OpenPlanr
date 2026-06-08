@@ -9,7 +9,7 @@
  * it so conformance/tests can check a manifest with zero dependencies.
  *
  * Field style is snake_case to match the sibling operational metadata files
- * (`run-manifest` records, gstack `finalized.json`). Pure, stdlib-only.
+ * (`run-manifest` records, `finalized.json`). Pure, stdlib-only.
  */
 
 import { DESIGN_FORMATS } from './recommendFormat.mjs';

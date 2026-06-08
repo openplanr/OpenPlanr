@@ -4,6 +4,37 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.16.2] — 2026-06-08
+
+### Fixed — canvas focus modal opens at ACTUAL SIZE (the lightbox no longer rescales the screen)
+
+The downloaded HTML and the canvas grid always rendered each screen at its real `1440×1024` — but
+the **focus/lightbox modal** scaled the frame to *fit the window* (e.g. 80% on a 1080px-tall
+display, since a 1024-tall frame + the modal's chrome doesn't fit). That made the *preview* measure
+~`1153×820` and rescale on every window resize — so the modal, not the design, was "making the
+width not real". Confirmed by a user: the exported screen HTML inspects as exactly `1440×1024`; only
+the modal was off. Now:
+
+- The focus modal **opens at actual size (1:1)** — the screen renders at its real `width×height` and
+  **scrolls**, centered when it fits. Inspect it → real `1440×1024`. Resize the window → the frame
+  stays put (only the scroll area changes); a resize can no longer "break" the dimensions.
+- **Fit-to-window** becomes the opt-in (click the badge or press **0** / **f**); **1** returns to
+  actual size. The `1440×1024 · 100%` badge always shows the real size.
+
+No generation change — preview behavior only. Recompiled into the vendored `DesignCanvas.js`.
+
+### Changed — brand hygiene (proprietary product)
+
+A DevEx review found a foreign host-runtime brand woven through the canvas: the editing /
+persistence bridge was named `window.omelette` (plus a `data-omelette-chrome` attribute), and a
+few comments referenced other projects by codename. Renamed to a neutral proprietary handle —
+**`window.__canvasHost`** + `data-dc-chrome` — and dropped the `muvi` / `gstack` references from
+comments and the README. (The vendored **Pretext** text-reflow runtime keeps its name, like
+React — it's an attributed third-party dependency, not our brand.) A new conformance check fails
+the build if any foreign brand reappears in the shipped design assets.
+
+`npm test` → 73 green + conformance. Skill stays **1.8.0**.
+
 ## [0.16.1] — 2026-06-08
 
 ### Fixed — canvas focus view labels real dimensions + adds an actual-size (1:1) toggle

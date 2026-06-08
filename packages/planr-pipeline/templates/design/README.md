@@ -19,7 +19,7 @@ output so the artifact is self-contained and offline.
 
 | File | Source / pin | Committed? |
 |------|--------------|-----------|
-| `pretext.js` | the same 30KB Pretext bundle gstack `design-html` vendors (text reflow / computed heights) | yes |
+| `pretext.js` | 30KB Pretext text-reflow runtime, vendored (text reflow / computed heights) | yes |
 | `react.production.min.js` | React 18.3.1 UMD (SRI-pinned) | yes |
 | `react-dom.production.min.js` | ReactDOM 18.3.1 UMD (SRI-pinned) | yes |
 | `DesignCanvas.js` | compiled from `DesignCanvas.jsx` (classic JSX runtime) | yes |

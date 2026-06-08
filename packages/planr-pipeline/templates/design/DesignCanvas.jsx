@@ -127,8 +127,8 @@ function dcFlatten(children) {
 // .design-canvas.state.json
 // sidecar next to the HTML. Reads go via plain fetch() so the saved
 // arrangement is visible anywhere the HTML + sidecar are served together
-// (omelette preview, direct link, downloaded zip). Writes go through the
-// host's window.omelette bridge — editing requires the omelette runtime.
+// (host preview, direct link, downloaded zip). Writes go through the host
+// bridge (window.__canvasHost) — editing requires a host runtime.
 // Focus is ephemeral.
 // ─────────────────────────────────────────────────────────────
 const DC_STATE_FILE = '.design-canvas.state.json';
@@ -163,7 +163,7 @@ function DesignCanvas({ children, minScale, maxScale, style }) {
     if (!didRead.current) return;
     if (skipNextWrite.current) { skipNextWrite.current = false; return; }
     const t = setTimeout(() => {
-      window.omelette?.writeFile(DC_STATE_FILE, JSON.stringify({ sections: state.sections })).catch(() => {});
+      window.__canvasHost?.writeFile(DC_STATE_FILE, JSON.stringify({ sections: state.sections })).catch(() => {});
     }, 250);
     return () => clearTimeout(t);
   }, [state.sections]);
@@ -763,7 +763,7 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
 
   return (
     <div ref={ref} data-dc-slot={id} style={{ position: 'relative', flexShrink: 0 }}>
-      <div className="dc-header" data-omelette-chrome="" style={{ color: DC.label }} onPointerDown={(e) => e.stopPropagation()}>
+      <div className="dc-header" data-dc-chrome="" style={{ color: DC.label }} onPointerDown={(e) => e.stopPropagation()}>
         <div className="dc-labelrow">
           <div className="dc-grip" onPointerDown={onGripDown} title="Drag to reorder">
             <svg width="9" height="13" viewBox="0 0 9 13" fill="currentColor"><circle cx="2" cy="2" r="1.1"/><circle cx="7" cy="2" r="1.1"/><circle cx="2" cy="6.5" r="1.1"/><circle cx="7" cy="6.5" r="1.1"/><circle cx="2" cy="11" r="1.1"/><circle cx="7" cy="11" r="1.1"/></svg>
@@ -866,7 +866,11 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
   // why an inspected wrapper measures e.g. 1029px while the screen itself is
   // still 1440px (transform:scale is paint-only; it never changes the box).
   const fitScale = Math.max(0.1, Math.min((vp.w - 200) / width, (vp.h - 260) / height, 1));
-  const [actual, setActual] = React.useState(false);
+  // Default to ACTUAL SIZE (1:1): the screen opens at its real width×height and
+  // scrolls — never window-scaled. The lightbox's fit-scaling was what made an
+  // inspected frame read as 1153px ("not real") and made a window-resize appear
+  // to "break" the dimensions. Press 0 / f for a fit-to-window overview instead.
+  const [actual, setActual] = React.useState(true);
   const scale = actual ? 1 : fitScale;
   const pct = Math.round(scale * 100);
 
@@ -927,29 +931,35 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
             borderRadius: 16, fontSize: 20, cursor: 'pointer', lineHeight: 1, transition: 'background .12s' }}>×</button>
       </div>
 
-      {/* card centered, label + index below — only the card itself stops
-          propagation so any backdrop click (including the margins around
-          the card) exits focus */}
+      {/* Center-and-scroll: a single margin:auto child in an overflow:auto flex
+          container centers the frame when it fits and scrolls to BOTH edges when
+          it doesn't — so the frame is NEVER rescaled by the window (a resize
+          can't "break" its dimensions, the bug the lightbox scaling caused).
+          Clicking the empty margin (this container doesn't stop propagation)
+          exits focus. */}
       <div
-        style={{ position: 'absolute', top: 64, bottom: 56, left: 100, right: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: actual ? 'flex-start' : 'center', gap: 16, overflow: actual ? 'auto' : 'visible' }}>
-        <div onClick={(e) => e.stopPropagation()} style={{ width: width * scale, height: height * scale, position: 'relative', flex: '0 0 auto' }}>
-          <div style={{ width, height, transform: scale === 1 ? 'none' : `scale(${scale})`, transformOrigin: 'top left', background: '#fff', borderRadius: 2, overflow: 'hidden',
-            boxShadow: '0 20px 80px rgba(0,0,0,.4)' }}>
-            {children || <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb' }}>{aid}</div>}
+        style={{ position: 'absolute', top: 64, bottom: 56, left: 0, right: 0, display: 'flex', overflow: 'auto' }}>
+        <div onClick={(e) => e.stopPropagation()}
+          style={{ margin: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: 24, flex: '0 0 auto' }}>
+          <div style={{ width: width * scale, height: height * scale, position: 'relative', flex: '0 0 auto' }}>
+            <div style={{ width, height, transform: scale === 1 ? 'none' : `scale(${scale})`, transformOrigin: 'top left', background: '#fff', borderRadius: 2, overflow: 'hidden',
+              boxShadow: '0 20px 80px rgba(0,0,0,.4)' }}>
+              {children || <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb' }}>{aid}</div>}
+            </div>
           </div>
-        </div>
-        <div onClick={(e) => e.stopPropagation()} style={{ fontSize: 14, fontWeight: 500, opacity: .85, textAlign: 'center', flex: '0 0 auto' }}>
-          {(sec.labels || {})[aid] ?? artboard.props.label}
-          <span style={{ opacity: .5, marginLeft: 10, fontVariantNumeric: 'tabular-nums' }}>{idx + 1} / {peers.length}</span>
-          {/* Real dimensions + current zoom. Click (or press 1 / 0) to toggle
-              true 1:1 — proves the screen IS width×height; the fit view is just
-              scaled to your window. */}
-          <button onClick={(e) => { e.stopPropagation(); setActual((a) => !a); }}
-            title={actual ? 'Fit to window (press 0)' : 'Actual size 1:1 (press 1)'}
-            style={{ marginLeft: 14, border: '1px solid rgba(255,255,255,.25)', background: actual ? 'rgba(255,255,255,.16)' : 'transparent',
-              color: 'inherit', font: 'inherit', fontSize: 12, padding: '2px 8px', borderRadius: 6, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
-            {width}×{height} · {pct}%
-          </button>
+          <div style={{ fontSize: 14, fontWeight: 500, opacity: .85, textAlign: 'center', flex: '0 0 auto' }}>
+            {(sec.labels || {})[aid] ?? artboard.props.label}
+            <span style={{ opacity: .5, marginLeft: 10, fontVariantNumeric: 'tabular-nums' }}>{idx + 1} / {peers.length}</span>
+            {/* Real dimensions + zoom. Click (or press 1 / 0) to toggle actual
+                size ↔ fit-to-window. Default is actual size, so the number here
+                is the screen's REAL width×height. */}
+            <button onClick={(e) => { e.stopPropagation(); setActual((a) => !a); }}
+              title={actual ? 'Fit to window (press 0)' : 'Actual size 1:1 (press 1)'}
+              style={{ marginLeft: 14, border: '1px solid rgba(255,255,255,.25)', background: actual ? 'rgba(255,255,255,.16)' : 'transparent',
+                color: 'inherit', font: 'inherit', fontSize: 12, padding: '2px 8px', borderRadius: 6, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
+              {width}×{height} · {pct}%
+            </button>
+          </div>
         </div>
       </div>
 

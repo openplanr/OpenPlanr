@@ -3,7 +3,7 @@
   WALKTHROUGH shell — a multi-screen gallery with a grouped sidebar.
 
   Two navigation modes, chosen by lib/design/walkthroughNav.mjs chooseWalkthroughNav():
-    • anchor (≤ 8 screens): one long page, smooth-scroll, sidebar scrollspy (muvi pattern).
+    • anchor (≤ 8 screens): one long page, smooth-scroll, sidebar scrollspy.
     • lazy   (> 8 screens): one screen shown at a time, prev/next + sidebar switch,
                             inactive screens display:none so first paint stays fast.
   The generator sets <html data-nav-mode="anchor|lazy">; if unset, this script

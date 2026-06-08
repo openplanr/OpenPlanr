@@ -1,7 +1,7 @@
 /**
  * Walkthrough navigation mode, chosen by screen count.
  *
- *   ≤ 8 screens → 'anchor'  (the muvi pattern: one long page, sidebar
+ *   ≤ 8 screens → 'anchor'  (anchor-scroll: one long page, sidebar
  *                            smooth-scroll, all screens in the DOM)
  *   > 8 screens → 'lazy'    (discrete screen-switching; mount the active
  *                            screen + neighbors, lazy the rest)

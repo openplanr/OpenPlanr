@@ -7,8 +7,8 @@
   templates/design/vendor/). No CDN, no in-browser transpiler.
 
   HONEST VIEW-ONLY MODEL (SPEC-015 finding F3): editing/persistence needs a
-  window.omelette host bridge that does NOT exist when you just open this file.
-  So when omelette is absent we DISABLE the edit affordances (reorder grips,
+  host bridge (window.__canvasHost) that does NOT exist when you just open this
+  file. So when the host bridge is absent we DISABLE the edit affordances (reorder grips,
   rename, delete) rather than letting them silently discard changes — and we
   keep Export (PNG/HTML) as the primary action. A detached canvas is an honest
   shareable export surface, not a broken editor.
@@ -67,7 +67,7 @@
       var DATA = /* GENERATOR:data */ { sections: [] };
 
       // View-only unless a host bridge is present (it never is for a plain file open).
-      if (!window.omelette) document.body.classList.add('dc-viewonly');
+      if (!window.__canvasHost) document.body.classList.add('dc-viewonly');
 
       var h = React.createElement;
       function artboard(a) {
