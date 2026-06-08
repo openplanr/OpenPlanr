@@ -4,6 +4,25 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.16.1] — 2026-06-08
+
+### Fixed — canvas focus view labels real dimensions + adds an actual-size (1:1) toggle
+
+The canvas focus/present view scales each screen to fit the window (like Figma zoom), so
+inspecting it measured a *scaled wrapper* (e.g. `1029×732` = `1440×1024 × 0.71`) — which reads as
+"the screen isn't real desktop size". It always was `1440×1024` (`transform: scale` is paint-only;
+it never changes the element's box — the wrapper is sized *from* it, not the reverse), but nothing
+on screen said so. Now:
+
+- The focus view shows a **`1440×1024 · 71%` badge** — the screen's real dimensions plus the
+  current zoom, so the scaling is explicit and the true size is unmistakable.
+- Click the badge (or press **1**) for **actual size (1:1)** — the artboard renders at its real
+  pixels and scrolls; press **0** / **f** to fit again. In 1:1 mode the inspected element measures
+  the real `1440×1024`.
+
+No generation change — purely the preview's clarity (recompiled into the vendored
+`DesignCanvas.js`). `npm test` → 73 green + conformance. Skill stays **1.8.0**.
+
 ## [0.16.0] — 2026-06-08
 
 ### Added — design tokens + a deterministic linter (machine-enforced sizing/spacing)

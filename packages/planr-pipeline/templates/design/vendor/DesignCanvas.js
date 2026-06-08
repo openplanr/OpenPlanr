@@ -749,6 +749,14 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
         e.preventDefault();
         goSection(1);
       }
+      if (e.key === "1") {
+        e.preventDefault();
+        setActual(true);
+      }
+      if (e.key === "0" || e.key === "f") {
+        e.preventDefault();
+        setActual(false);
+      }
     };
     document.addEventListener("keydown", k);
     return () => document.removeEventListener("keydown", k);
@@ -760,7 +768,10 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
     window.addEventListener("resize", r);
     return () => window.removeEventListener("resize", r);
   }, []);
-  const scale = Math.max(0.1, Math.min((vp.w - 200) / width, (vp.h - 260) / height, 1));
+  const fitScale = Math.max(0.1, Math.min((vp.w - 200) / width, (vp.h - 260) / height, 1));
+  const [actual, setActual] = React.useState(false);
+  const scale = actual ? 1 : fitScale;
+  const pct = Math.round(scale * 100);
   const [ddOpen, setDd] = React.useState(false);
   const Arrow = ({ dir, onClick }) => /* @__PURE__ */ React.createElement(
     "button",
@@ -797,7 +808,9 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
       "div",
       {
         onClick: () => ctx.setFocus(null),
-        onWheel: (e) => e.preventDefault(),
+        onWheel: (e) => {
+          if (!actual) e.preventDefault();
+        },
         style: {
           position: "fixed",
           inset: 0,
@@ -894,19 +907,46 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
       /* @__PURE__ */ React.createElement(
         "div",
         {
-          style: { position: "absolute", top: 64, bottom: 56, left: 100, right: 100, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }
+          style: { position: "absolute", top: 64, bottom: 56, left: 100, right: 100, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: actual ? "flex-start" : "center", gap: 16, overflow: actual ? "auto" : "visible" }
         },
-        /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), style: { width: width * scale, height: height * scale, position: "relative" } }, /* @__PURE__ */ React.createElement("div", { style: {
+        /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), style: { width: width * scale, height: height * scale, position: "relative", flex: "0 0 auto" } }, /* @__PURE__ */ React.createElement("div", { style: {
           width,
           height,
-          transform: `scale(${scale})`,
+          transform: scale === 1 ? "none" : `scale(${scale})`,
           transformOrigin: "top left",
           background: "#fff",
           borderRadius: 2,
           overflow: "hidden",
           boxShadow: "0 20px 80px rgba(0,0,0,.4)"
         } }, children || /* @__PURE__ */ React.createElement("div", { style: { height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#bbb" } }, aid))),
-        /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), style: { fontSize: 14, fontWeight: 500, opacity: 0.85, textAlign: "center" } }, (sec.labels || {})[aid] ?? artboard.props.label, /* @__PURE__ */ React.createElement("span", { style: { opacity: 0.5, marginLeft: 10, fontVariantNumeric: "tabular-nums" } }, idx + 1, " / ", peers.length))
+        /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), style: { fontSize: 14, fontWeight: 500, opacity: 0.85, textAlign: "center", flex: "0 0 auto" } }, (sec.labels || {})[aid] ?? artboard.props.label, /* @__PURE__ */ React.createElement("span", { style: { opacity: 0.5, marginLeft: 10, fontVariantNumeric: "tabular-nums" } }, idx + 1, " / ", peers.length), /* @__PURE__ */ React.createElement(
+          "button",
+          {
+            onClick: (e) => {
+              e.stopPropagation();
+              setActual((a) => !a);
+            },
+            title: actual ? "Fit to window (press 0)" : "Actual size 1:1 (press 1)",
+            style: {
+              marginLeft: 14,
+              border: "1px solid rgba(255,255,255,.25)",
+              background: actual ? "rgba(255,255,255,.16)" : "transparent",
+              color: "inherit",
+              font: "inherit",
+              fontSize: 12,
+              padding: "2px 8px",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontVariantNumeric: "tabular-nums"
+            }
+          },
+          width,
+          "\xD7",
+          height,
+          " \xB7 ",
+          pct,
+          "%"
+        ))
       ),
       /* @__PURE__ */ React.createElement(Arrow, { dir: "left", onClick: () => go(-1) }),
       /* @__PURE__ */ React.createElement(Arrow, { dir: "right", onClick: () => go(1) }),

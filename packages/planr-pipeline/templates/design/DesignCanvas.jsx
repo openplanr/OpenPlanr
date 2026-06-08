@@ -848,6 +848,8 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
       if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
       if (e.key === 'ArrowUp') { e.preventDefault(); goSection(-1); }
       if (e.key === 'ArrowDown') { e.preventDefault(); goSection(1); }
+      if (e.key === '1') { e.preventDefault(); setActual(true); }   // actual size (1:1)
+      if (e.key === '0' || e.key === 'f') { e.preventDefault(); setActual(false); } // fit to window
     };
     document.addEventListener('keydown', k);
     return () => document.removeEventListener('keydown', k);
@@ -856,11 +858,17 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
   const { width = 1440, height = 1024, children } = artboard.props;
   const [vp, setVp] = React.useState({ w: window.innerWidth, h: window.innerHeight });
   React.useEffect(() => { const r = () => setVp({ w: window.innerWidth, h: window.innerHeight }); window.addEventListener('resize', r); return () => window.removeEventListener('resize', r); }, []);
-  // Cap at 1:1 — NEVER enlarge a screen past its real size. The old 2× cap
-  // stretched desktop artboards to fill the window, so they read as "zoomed in"
-  // and every spacing imperfection was magnified. Shrink only to fit; a desktop
-  // screen shown at real pixels looks like a real screen.
-  const scale = Math.max(0.1, Math.min((vp.w - 200) / width, (vp.h - 260) / height, 1));
+  // Fit-to-window scale, capped at 1:1 — NEVER enlarge past real size (the old
+  // 2× cap made desktop screens read as "zoomed in"). `actual` flips to true
+  // 1:1: the artboard renders at its real width×height (e.g. 1440×1024) and
+  // scrolls, so it can be inspected at real desktop resolution. The default fit
+  // view is SCALED to fit the window (like Figma zoom) — that scale is exactly
+  // why an inspected wrapper measures e.g. 1029px while the screen itself is
+  // still 1440px (transform:scale is paint-only; it never changes the box).
+  const fitScale = Math.max(0.1, Math.min((vp.w - 200) / width, (vp.h - 260) / height, 1));
+  const [actual, setActual] = React.useState(false);
+  const scale = actual ? 1 : fitScale;
+  const pct = Math.round(scale * 100);
 
   const [ddOpen, setDd] = React.useState(false);
   const Arrow = ({ dir, onClick }) => (
@@ -880,7 +888,7 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
   // transform on DesignCanvas's ancestors (including the canvas zoom itself).
   return ReactDOM.createPortal(
     <div onClick={() => ctx.setFocus(null)}
-      onWheel={(e) => e.preventDefault()}
+      onWheel={(e) => { if (!actual) e.preventDefault(); }}
       style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(24,20,16,.6)', backdropFilter: 'blur(14px)',
         fontFamily: DC.font, color: '#fff' }}>
 
@@ -923,16 +931,25 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
           propagation so any backdrop click (including the margins around
           the card) exits focus */}
       <div
-        style={{ position: 'absolute', top: 64, bottom: 56, left: 100, right: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-        <div onClick={(e) => e.stopPropagation()} style={{ width: width * scale, height: height * scale, position: 'relative' }}>
-          <div style={{ width, height, transform: `scale(${scale})`, transformOrigin: 'top left', background: '#fff', borderRadius: 2, overflow: 'hidden',
+        style={{ position: 'absolute', top: 64, bottom: 56, left: 100, right: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: actual ? 'flex-start' : 'center', gap: 16, overflow: actual ? 'auto' : 'visible' }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ width: width * scale, height: height * scale, position: 'relative', flex: '0 0 auto' }}>
+          <div style={{ width, height, transform: scale === 1 ? 'none' : `scale(${scale})`, transformOrigin: 'top left', background: '#fff', borderRadius: 2, overflow: 'hidden',
             boxShadow: '0 20px 80px rgba(0,0,0,.4)' }}>
             {children || <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb' }}>{aid}</div>}
           </div>
         </div>
-        <div onClick={(e) => e.stopPropagation()} style={{ fontSize: 14, fontWeight: 500, opacity: .85, textAlign: 'center' }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ fontSize: 14, fontWeight: 500, opacity: .85, textAlign: 'center', flex: '0 0 auto' }}>
           {(sec.labels || {})[aid] ?? artboard.props.label}
           <span style={{ opacity: .5, marginLeft: 10, fontVariantNumeric: 'tabular-nums' }}>{idx + 1} / {peers.length}</span>
+          {/* Real dimensions + current zoom. Click (or press 1 / 0) to toggle
+              true 1:1 — proves the screen IS width×height; the fit view is just
+              scaled to your window. */}
+          <button onClick={(e) => { e.stopPropagation(); setActual((a) => !a); }}
+            title={actual ? 'Fit to window (press 0)' : 'Actual size 1:1 (press 1)'}
+            style={{ marginLeft: 14, border: '1px solid rgba(255,255,255,.25)', background: actual ? 'rgba(255,255,255,.16)' : 'transparent',
+              color: 'inherit', font: 'inherit', fontSize: 12, padding: '2px 8px', borderRadius: 6, cursor: 'pointer', fontVariantNumeric: 'tabular-nums' }}>
+            {width}×{height} · {pct}%
+          </button>
         </div>
       </div>
 
