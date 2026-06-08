@@ -39,6 +39,26 @@ a grid, a consistent type scale, AA contrast, SVG icons (never emoji), `:focus-v
 150–300ms hover. The model's first draft drifts on exactly these — the § C.4.5 self-review
 re-checks and fixes them before finalizing.
 
+## C.0.5 — Author with the token scale, not ad-hoc px (v0.16.0)
+
+Internal consistency is enforced by **construction**, not by eyeballing — the engineering answer
+to "make every size/spacing accurate". Author every screen from a small, fixed vocabulary so
+off-scale values and same-type drift are *impossible*:
+
+- **Spacing — the 4-point grid.** Every padding / margin / gap / inset is `0`, `2`, or a multiple
+  of **4** — prefer the common steps **4 / 8 / 12 / 16 / 24 / 32 / 48 / 64** (`COMMON_SPACING` in
+  `lib/design/tokens.mjs`). Never emit `13px` / `14px` / `17px`. Define the scale once as CSS
+  custom properties (`--space-2: 8px`, …) — or reuse the app's real tokens from
+  `APP_CTX.DESIGN_SYSTEM` — and reference those; do not hand-type arbitrary px.
+- **Same-type elements share ONE class.** Every pill / badge / button / card / input of a kind
+  uses the same class (e.g. `.ds-badge`) with the size defined **there once** — never a
+  per-instance inline `width`/`height`/`padding`. Identical-by-construction beats
+  remembering-to-match; inline sizing on a classed element is a linter drift warning.
+- **Type + radii** come from the app's scale too — don't invent sizes.
+
+The C.4.5a linter (`lib/design/lint.mjs`) deterministically **fails** off-grid spacing, so
+authoring on-grid here is what makes the finalize gate pass first time.
+
 ## C.1 — Shared core (every format)
 
 **Plugin-root handle — resolve it dynamically, do this once.** The `lib/design/*` helpers
@@ -99,15 +119,14 @@ artifact (SPEC-015 F6).
 ## C.4 — canvas
 
 - Base: `templates/design/canvas-shell.html`.
-- **Artboard size — desktop, full-height (the fix for the 1320×860 / 1123px bug, v0.15.1).**
-  Each artboard is a **full screenshot of the screen**, not a slide. Set **`width = VIEWPORT_W`**
-  (the desktop width from `APP_CTX` — **1440** for a desktop web app; a mobile app → its device
-  width, e.g. 390) and **`height = the screen's FULL natural content height`** — tall enough to
-  show the **entire** screen with **no inner scrollbar**. Tall frames are correct on a canvas;
-  **never** clamp to a short fixed height like `860` (that cropped the page, and at focus-zoom
-  rendered ~1123px — not desktop). Estimate generously; when unsure, **err tall** (a dense
-  desktop page is commonly 1100–1600px+). The `DesignCanvas` fallback is desktop (`1440×1024`),
-  but always pass explicit per-screen dims — don't rely on the default.
+- **Artboard size — ONE canonical frame for every screen (v0.16.0).** All desktop artboards use
+  the **same** frame: `width: 1440, height: 1024` (the `FRAMES.desktop` constant in
+  `lib/design/tokens.mjs`; a mobile app → `FRAMES.mobile` `390×844`). Do **not** vary height per
+  screen — the 760 / 700 / 820 drift is exactly what makes a canvas look amateur; one consistent
+  frame is what makes it read like a real Figma file, every screen directly comparable. Content
+  taller than 1024 **scrolls inside** the screen container (`overflow:auto`), like a real desktop
+  viewport. The `DesignCanvas` fallback is already `1440×1024`; still pass the dims explicitly.
+  `lintCanvasData()` (C.4.5a) fails any artboard that isn't a canonical frame.
 - Build the data object `{ sections: [ { id, title, subtitle?, artboards: [ { id, label,
   width, height, html } ] } ] }`, where `html` is each screen's rendered markup (spec text
   inside it already escaped). Replace the shell's `/* GENERATOR:data */` marker so the line
@@ -118,27 +137,49 @@ artifact (SPEC-015 F6).
   `<DESIGN_DIR>/vendor/`. Output: `<DESIGN_DIR>/canvas.html`. `framework: react`.
 - The shell already enforces view-only when no host bridge is present — do not add editing.
 
-## C.4.5 — Self-review pass (mandatory — fixes the "silly mistakes", v0.15.0)
+## C.4.5 — Finalize gate: deterministic lint THEN visual self-review (v0.16.0)
 
-Before finalizing (the C.1 temp → final move), **audit your own artifact** against the craft
-rubric `${CLAUDE_PLUGIN_ROOT}/agents/modes/shared/design-craft-rubric.md`. Re-read the markup +
-CSS you just wrote and walk the rubric's pre-finalize checklist — with special attention to
-the defects LLM drafts make most:
+Before finalizing (the C.1 temp → final move), the artifact passes **two** checks — a machine
+linter first (it catches the *measurable* defects with certainty), then a visual self-review for
+what no static check can see.
+
+### C.4.5a — Deterministic lint gate (machine — mandatory)
+
+Run the linter on the artifact you just wrote (it is the engineering guarantee, not a vibe check):
+
+```bash
+node "$PLUG/lib/design/lint.mjs" <DESIGN_DIR>/.finalized.tmp.html
+```
+
+- For **every `spacing-off-grid` ERROR**, change that value to the reported `suggestion` (the
+  nearest 4-point-grid step) in the markup/CSS.
+- For **canvas**, also assert `lintCanvasData(data).ok === true` — every artboard must be the
+  canonical `1440×1024` frame (C.4).
+- **Re-run until it exits 0** (zero errors). Off-grid spacing and off-frame artboards never ship.
+- Treat `inline-sizing-drift` **warnings** as a worklist for the visual pass — move the inline
+  sizing onto the shared class so siblings can't diverge.
+
+(Fallback if `$PLUG` is unresolved: apply the same rule by hand — every padding/margin/gap/inset
+is `0`, `2`, or a multiple of 4; every canvas artboard is `1440×1024`.)
+
+### C.4.5b — Visual self-review (the subjective layer — mandatory)
+
+The linter can't see optical alignment, hierarchy, or rhythm. Re-read the markup + CSS against
+the craft rubric `${CLAUDE_PLUGIN_ROOT}/agents/modes/shared/design-craft-rubric.md` and fix:
 
 - **Sizing consistency (the #1 defect):** are all sibling elements of one type — pills, badges,
-  buttons, cards, inputs — exactly the same height / padding / width? (e.g. an `error` pill and
-  a `warn` pill MUST be identical in size.)
-- **Spacing — esp. vertical lists / nav / sidebar sections (the recurring "broken spacing" miss):**
-  is every margin / padding / gap on the scale? Are the gaps between sibling rows (sidebar nav
-  items, section lists, checklist rows) **equal**, and is each row's internal padding identical?
-  Uneven row gaps or drifting padding in a list is the #1 spacing defect — re-measure them.
-- **Alignment:** does everything line up to a grid / baseline — no 1–3px drift, no orphaned or
-  optically-off element?
-- **Tokens / contrast / icons / focus** per the checklist.
+  buttons, cards, inputs — exactly the same height / padding / width? (Same class, no inline
+  overrides — the C.4.5a drift warnings point right at these. An `error` pill and a `warn` pill
+  MUST be identical.)
+- **Spacing rhythm — esp. vertical lists / nav / sidebar sections:** the values are on-grid (the
+  linter proved it); now confirm the gaps between sibling rows are **equal** and each row's
+  padding is identical. Uneven row rhythm is the recurring "broken spacing" miss.
+- **Alignment:** everything lines up to a grid / baseline — no 1–3px drift, no optically-off
+  element.
+- **Hierarchy / contrast / icons / focus** per the checklist.
 
-For **every** violation, **fix it in the artifact** — do not merely note it. This self-critique
-is **mandatory**, not optional: it is the step that turns a first-draft layout into a
-professional one. Only after the audit passes do you move the temp file into place (C.1).
+Fix **every** violation in the artifact. Only after **both** passes are clean do you move the
+temp file into place (C.1).
 
 ## C.5 — finalized.json + manifest record
 

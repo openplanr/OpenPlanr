@@ -21,10 +21,10 @@
        { sections: [ { id, title, subtitle?, artboards: [
            { id, label, width, height, html }   // html = the screen's markup
        ] } ] }
-   • Artboard size = a real desktop screenshot (design-step2-generate.md C.4):
-     width = VIEWPORT_W (1440 for desktop web; mobile app → device width),
-     height = the screen's FULL content height (no inner scroll). Never a short
-     fixed slide — that crops the page. Err tall when unsure.
+   • Artboard size = ONE canonical frame for every screen (design-step2-generate.md C.4):
+     1440×1024 desktop (390×844 mobile). Same frame for all screens so they're
+     comparable; content taller than 1024 scrolls inside. lib/design/lint.mjs
+     (lintCanvasData) fails any off-canonical frame.
 -->
 <html lang="en">
 <head>
@@ -40,11 +40,11 @@
     body.dc-viewonly .dc-danger { display: none; }
 
     .dc-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-      display: none; align-items: center; gap: 12px; padding: 9px 16px;
+      display: none; align-items: center; gap: 12px; padding: 8px 16px;
       font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       color: #5a4a2a; background: #fef4a8; box-shadow: 0 1px 6px rgba(0,0,0,.12); }
     body.dc-viewonly .dc-banner { display: flex; }
-    .dc-banner code { background: rgba(0,0,0,.07); padding: 1px 6px; border-radius: 4px; }
+    .dc-banner code { background: rgba(0,0,0,.07); padding: 2px 8px; border-radius: 4px; }
     .dc-banner .x { margin-left: auto; cursor: pointer; border: 0; background: transparent; font-size: 16px; color: inherit; line-height: 1; }
     .dc-banner.dismissed { display: none !important; }
   </style>

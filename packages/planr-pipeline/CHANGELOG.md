@@ -4,6 +4,36 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.16.0] — 2026-06-08
+
+### Added — design tokens + a deterministic linter (machine-enforced sizing/spacing)
+
+Prompt-level self-review tightened craft but couldn't *guarantee* it — generated screens still
+drifted on internal spacing (`14px` next to `12px` next to `16px`) and per-screen frame size
+(760 / 700 / 820). v0.16.0 makes consistency an **engineering** property, not a vibe:
+
+- **A fixed token vocabulary** (`lib/design/tokens.mjs`) — spacing is the **4-point grid**
+  (`0`, `2`, or any multiple of 4; preferred steps 4/8/12/16/24/32/48/64), and every desktop
+  screen uses **one canonical frame** `1440×1024` (`FRAMES.desktop`). The generator authors from
+  this scale and reuses shared component classes, so off-scale values and same-type drift become
+  *impossible* by construction (new generate step **C.0.5**).
+- **A deterministic linter** (`lib/design/lint.mjs`) — parses the generated HTML/CSS and **fails**
+  on `spacing-off-grid` (any padding/margin/gap/inset off the grid, in a `<style>` rule or inline)
+  and, for canvas, `frame-not-canonical` (an artboard that isn't `1440×1024`); flags
+  `inline-sizing-drift` as a warning. The finalize gate (**C.4.5a**) runs it and snaps every error
+  to the nearest grid step, re-running until it exits 0 — verification by code, then the visual
+  self-review (**C.4.5b**) for what static analysis can't see. Also a CLI:
+  `node lib/design/lint.mjs <file.html>`.
+- **Canonical frame** replaces v0.15.1's per-screen "full content height" — all desktop artboards
+  are `1440×1024`, comparable like a real Figma file; taller content scrolls inside the screen.
+- **The shells now dogfood the grid** — the linter found 12 off-grid values in our own
+  prototype/walkthrough/canvas shells (6px/9px/11px/14px paddings); all fixed, and a conformance
+  check keeps them clean (generated files inherit shell CSS, so the framework must obey its own
+  scale).
+
+`npm test` → 73 green + conformance (token scale, linter catches off-grid/off-frame, shells clean).
+No routing change — the `openplanr` skill stays **1.8.0**.
+
 ## [0.15.1] — 2026-06-08
 
 ### Fixed — canvas designs look like real desktop screens (zoom, size, front-loaded context)

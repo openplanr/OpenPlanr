@@ -25,6 +25,7 @@ import {
   escapeHtml, embedJson, hasUnsafeHtml,
   recommendFormat, resolveScreens, countScreens, chooseWalkthroughNav,
   decideThinSpec,
+  isOnSpacingScale, isCanonicalFrame, lintDesign, lintCanvasData,
 } from '../lib/design/index.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -51,6 +52,8 @@ for (const rel of [
   'agents/modes/shared/design-spec-template.md',
   'agents/modes/shared/design-craft-rubric.md',
   'lib/design/index.mjs',
+  'lib/design/tokens.mjs',
+  'lib/design/lint.mjs',
   'schemas/v1.0.0/design-manifest.schema.json',
 ]) assert(existsSync(join(root, rel)), rel);
 
@@ -100,6 +103,24 @@ assert(fileHas(preflight, 'APP_CTX') && fileHas(preflight, 'VIEWPORT_W'),
   'preflight A.3.5 front-loads APP_CTX + VIEWPORT_W (read the project once, up front)');
 const generate = join(root, 'procedures/design-step2-generate.md');
 assert(fileHas(generate, 'VIEWPORT_W'), 'generate C.0/C.4 author at VIEWPORT_W (real desktop width)');
+
+// 3c — token scale + deterministic linter (v0.16.0)
+log('\ntoken scale + design linter (v0.16.0):');
+assert(isOnSpacingScale(16) && isOnSpacingScale(24) && !isOnSpacingScale(14) && !isOnSpacingScale(13),
+  'spacing scale: 16/24 on the 4-point grid, 13/14 off it');
+assert(isCanonicalFrame({ w: 1440, h: 1024 }) && !isCanonicalFrame({ w: 1440, h: 760 }),
+  'canonical frame: 1440×1024 ok, 1440×760 (the per-screen drift) rejected');
+assert(lintDesign('<style>.a{margin-bottom:14px}</style>').ok === false,
+  'linter FAILS off-grid spacing (14px)');
+assert(lintDesign('<style>.a{margin-bottom:16px;padding:24px}</style>').ok === true,
+  'linter PASSES on-grid spacing');
+assert(lintCanvasData({ sections: [{ artboards: [{ id: 'x', width: 1440, height: 760 }] }] }).ok === false,
+  'lintCanvasData FAILS an off-canonical artboard (1440×760)');
+// the framework dogfoods its own grid — generated files inherit shell CSS, so the shells must be clean
+for (const shell of ['prototype-shell.html', 'walkthrough-shell.html', 'canvas-shell.html']) {
+  assert(lintDesign(readFileSync(join(root, 'templates/design', shell), 'utf-8')).ok,
+    `${shell} is lint-clean (shells obey the 4-point grid)`);
+}
 
 // 4 — manifest schema vs golden fixtures
 log('\ndesign-manifest schema:');

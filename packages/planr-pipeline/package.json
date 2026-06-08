@@ -11,7 +11,7 @@
     "test": "npm run test:schema && npm run test:orchestration && npm run test:design && npm run conformance:design",
     "test:schema": "node --test tests/schema/spec-schema.test.mjs tests/schema/story-schema.test.mjs tests/schema/task-schema.test.mjs tests/schema/stack-schema.test.mjs tests/schema/pipeline-shipped-schema.test.mjs tests/schema/design-manifest-schema.test.mjs",
     "test:orchestration": "node --test tests/orchestration/r1-gate.test.mjs tests/orchestration/max-iterations.test.mjs tests/orchestration/per-task-error-report.test.mjs tests/orchestration/dry-run.test.mjs",
-    "test:design": "node --test tests/design/escape.test.mjs tests/design/recommendFormat.test.mjs tests/design/screens.test.mjs tests/design/manifest.test.mjs tests/design/walkthroughNav.test.mjs tests/design/interactivity.test.mjs",
+    "test:design": "node --test tests/design/escape.test.mjs tests/design/recommendFormat.test.mjs tests/design/screens.test.mjs tests/design/manifest.test.mjs tests/design/walkthroughNav.test.mjs tests/design/interactivity.test.mjs tests/design/tokens.test.mjs tests/design/lint.test.mjs",
     "conformance:design": "node conformance/verify-design-assets.mjs"
   }
 }
