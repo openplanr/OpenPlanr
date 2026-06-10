@@ -26,6 +26,12 @@ export interface DeliveryItem {
   type: 'spec' | 'epic' | 'feature' | 'story' | 'task' | 'quick' | 'backlog';
   status: string;
   done: boolean;
+  /**
+   * Resolved without being "done": `promoted` (backlog graduated into a
+   * spec/QT/story) or `superseded` (split/replaced). Addressed items are NOT
+   * outstanding work, but they also don't inflate the done count.
+   */
+  addressed: boolean;
   /** subtask completion, when the artifact is a checklist */
   progress?: { done: number; total: number };
   priority?: string;
@@ -38,7 +44,8 @@ export interface DeliveryStatus {
   mode: 'spec-driven' | 'agile';
   groups: Record<string, DeliveryItem[]>; // keyed by category label, in display order
   order: string[];
-  summary: { label: string; done: number; total: number }[];
+  summary: { label: string; done: number; addressed: number; total: number }[];
+  /** Items that are neither done nor addressed — the real open work. */
   outstanding: DeliveryItem[];
   warnings: string[];
 }
@@ -52,8 +59,19 @@ export interface CollectOptions {
 /** Per-type "done" semantics for a delivery roll-up. */
 function isDone(type: DeliveryItem['type'], status: string): boolean {
   const s = (status || '').toLowerCase();
-  if (type === 'backlog') return s === 'closed' || s === 'promoted' || s === 'done';
-  return s === 'done';
+  if (type === 'backlog') return s === 'closed' || s === 'done';
+  return s === 'done' || s === 'completed' || s === 'shipped' || s === 'released';
+}
+
+/**
+ * "Addressed" = resolved without being done: a backlog item `promoted` into a
+ * spec/QT/story, or any artifact `superseded` (split/replaced). These are not
+ * outstanding work — but counting them as "done" misstates the delivery
+ * summary (e.g. "1 done + 6 promoted", not "7 done").
+ */
+function isAddressed(status: string): boolean {
+  const s = (status || '').toLowerCase();
+  return s === 'promoted' || s === 'superseded';
 }
 
 function pickStr(v: unknown): string | undefined {
@@ -91,6 +109,7 @@ async function toItem(
     type,
     status,
     done: isDone(type, status),
+    addressed: isAddressed(status),
     progress,
     priority: pickStr(fm.priority),
   };
@@ -135,6 +154,7 @@ export async function collectDeliveryStatus(
         type: 'spec' as const,
         status: s.status,
         done: isDone('spec', s.status),
+        addressed: isAddressed(s.status),
         // spec rows report status only — we don't roll up per-spec task completion here
         // (would read every spec's task files); `done` status is the delivery signal.
       })),
@@ -174,9 +194,10 @@ export async function collectDeliveryStatus(
   const summary = order.map((label) => ({
     label,
     done: groups[label].filter((i) => i.done).length,
+    addressed: groups[label].filter((i) => i.addressed).length,
     total: groups[label].length,
   }));
-  const outstanding = allItems.filter((i) => !i.done);
+  const outstanding = allItems.filter((i) => !i.done && !i.addressed);
 
   return { projectName: config.projectName, mode, groups, order, summary, outstanding, warnings };
 }

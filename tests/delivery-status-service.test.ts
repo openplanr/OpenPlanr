@@ -31,6 +31,16 @@ beforeEach(async () => {
     join(dir, '.planr/backlog/BL-001-baz.md'),
     '---\nid: BL-001\ntitle: Baz item\nstatus: open\npriority: high\n---\n# Baz\n',
   );
+  // A promoted backlog item — addressed, NOT done, NOT outstanding
+  await writeFile(
+    join(dir, '.planr/backlog/BL-002-qux.md'),
+    '---\nid: BL-002\ntitle: Qux item\nstatus: promoted\n---\n# Qux\n',
+  );
+  // A superseded quick task — addressed, NOT done, NOT outstanding
+  await writeFile(
+    join(dir, '.planr/quick/QT-002-old.md'),
+    '---\nid: QT-002\ntitle: Old split task\nstatus: superseded\n---\n# Old\n',
+  );
 });
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
@@ -53,7 +63,24 @@ describe('collectDeliveryStatus', () => {
     expect(outstandingIds).not.toContain('SPEC-001'); // done spec
     expect(outstandingIds).not.toContain('QT-001'); // done quick
     const specSummary = s.summary.find((r) => r.label === 'Specs');
-    expect(specSummary).toEqual({ label: 'Specs', done: 1, total: 1 });
+    expect(specSummary).toEqual({ label: 'Specs', done: 1, addressed: 0, total: 1 });
+  });
+
+  it('promoted/superseded are ADDRESSED — not done, not outstanding', async () => {
+    const s = await collectDeliveryStatus(dir, config, {});
+    const outstandingIds = s.outstanding.map((i) => i.id);
+    expect(outstandingIds).not.toContain('BL-002'); // promoted → not outstanding
+    expect(outstandingIds).not.toContain('QT-002'); // superseded → not outstanding
+
+    // …and they don't inflate the done count ("1 done + 1 promoted", not "2 done")
+    const backlog = s.summary.find((r) => r.label === 'Backlog');
+    expect(backlog).toEqual({ label: 'Backlog', done: 0, addressed: 1, total: 2 });
+    const quick = s.summary.find((r) => r.label === 'Quick Tasks');
+    expect(quick).toEqual({ label: 'Quick Tasks', done: 1, addressed: 1, total: 2 });
+
+    const bl2 = s.groups.Backlog.find((i) => i.id === 'BL-002');
+    expect(bl2?.addressed).toBe(true);
+    expect(bl2?.done).toBe(false);
   });
 
   it('scope filters to a single id', async () => {
