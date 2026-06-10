@@ -124,6 +124,17 @@ export function createDaemon({ env = process.env } = {}) {
         const dir = boardDir(id);
         if (!dir) return json(res, 404, { error: `unknown board "${id}"` });
 
+        // Canonical trailing slash: /boards/<id> (no slash) must NOT serve the
+        // page — the browser would resolve every relative URL (variant-A.png,
+        // api/progress, api/feedback) against /boards/ and the whole board
+        // silently breaks (404 images, dead polling, lost feedback). Terminal
+        // linkifiers routinely drop the trailing slash from BOARD_URL, so
+        // redirect instead of serving.
+        if (parts.length === 2 && !url.pathname.endsWith('/')) {
+          res.writeHead(301, { location: `/boards/${encodeURIComponent(id)}/` });
+          return res.end();
+        }
+
         // /boards/<id>/api/…
         if (parts[2] === 'api') {
           if (req.method === 'GET' && parts[3] === 'progress') {
@@ -157,8 +168,9 @@ export function createDaemon({ env = process.env } = {}) {
           return json(res, 404, { error: 'unknown api route' });
         }
 
-        // static: /boards/<id>/ → board.html, else the named file (traversal-guarded)
-        if (req.method === 'GET') {
+        // static: /boards/<id>/ → board.html, else the named file (traversal-guarded).
+        // HEAD is honored like GET (Node omits the body automatically).
+        if (req.method === 'GET' || req.method === 'HEAD') {
           const rel = parts.slice(2).join('/') || 'board.html';
           // realpath BEFORE resolving: macOS tmp dirs are symlinks (/var → /private/var),
           // and the guard must compare like with like.

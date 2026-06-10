@@ -51,6 +51,16 @@ test('order 3: nothing resolves → source none, apiKey null (caller offers clau
   assert.deepEqual({ apiKey: auth.apiKey, source: auth.source }, { apiKey: null, source: 'none' });
 });
 
+test('a dormant key in cwd .env (not exported) → HINT, never auto-used, never echoed', () => {
+  const cwd = tmp();
+  writeFileSync(join(cwd, '.env'), 'OPENAI_API_KEY=sk-dormant\n');
+  const auth = resolveAuth({ cwd, env: { PLANR_HOME: tmp() } });
+  assert.equal(auth.apiKey, null, 'the engine never auto-reads .env');
+  assert.equal(auth.source, 'none');
+  assert.ok(auth.warnings.some((w) => w.startsWith('HINT') && w.includes('.env')), 'doctor can surface the dormant key');
+  assert.ok(!auth.warnings.join(' ').includes('sk-dormant'), 'the key value is never echoed');
+});
+
 test('corrupt credentials.json falls through to env with a warning', () => {
   const home = tmp();
   writeFileSync(join(home, 'credentials.json'), '{not json');

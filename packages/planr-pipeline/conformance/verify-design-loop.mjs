@@ -98,6 +98,16 @@ assert(reg.ok === true, 'board registered with the daemon');
 const served = await (await fetch(`${base}/boards/conf-loop/`)).text();
 assert(served.includes('conf') && served.includes('api/feedback'), 'board HTML served with the feedback wiring');
 
+// trailing-slash canon (the broken-images bug): /boards/<id> must 301 → /boards/<id>/,
+// never serve the page at a base that breaks every relative URL.
+const noSlash = await fetch(`${base}/boards/conf-loop`, { redirect: 'manual' });
+assert(noSlash.status === 301 && (noSlash.headers.get('location') ?? '').endsWith('/boards/conf-loop/'),
+  'slash-less board URL 301-redirects to the canonical slash form');
+const followed = await (await fetch(`${base}/boards/conf-loop`)).text();
+assert(followed.includes('api/feedback'), 'following the redirect lands on the working board');
+const head = await fetch(`${base}/boards/conf-loop/variant-A.svg`, { method: 'HEAD' });
+assert(head.status === 200, 'HEAD on a board asset answers 200');
+
 // 4 — pending feedback with a pin → consumed on read
 log('\nfeedback handshake:');
 const pending = {

@@ -4,6 +4,22 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.19.1] — 2026-06-10
+
+### Fixed — board URLs without the trailing slash broke every relative asset
+
+First field run of `/design-loop` surfaced it: terminal linkifiers routinely drop the
+trailing slash from the printed `BOARD_URL`, and the daemon served the board page at
+`/boards/<id>` anyway — so the browser resolved every relative URL against `/boards/` and
+the whole board silently broke: **404 images, dead progress polling, and lost feedback
+submits** (`/boards/api/feedback` → unknown board). The daemon now **301-redirects**
+`/boards/<id>` → `/boards/<id>/` (the canonical form), and honors **HEAD** like GET on
+static assets. Also from the same field run: when no key resolves but the project's
+`.env` holds one, `doctor`/auth now print a **HINT** explaining the key is dormant by
+design (the engine never auto-reads `.env` — silent-billing protection) and how to
+activate it, instead of a bare `hasKey:false`. Conformance now locks the redirect, the
+followed-redirect board, and HEAD behavior.
+
 ## [0.19.0] — 2026-06-10
 
 ### Added — the Design Loop Engine (`/design-loop` + `/design-review`)

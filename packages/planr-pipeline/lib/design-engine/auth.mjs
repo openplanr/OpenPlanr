@@ -84,6 +84,17 @@ export function resolveAuth(opts = {}) {
     return { apiKey: envKey, source: 'env', warnings };
   }
 
-  // 3 — nothing; caller offers setup or the claude-svg provider (never a dead-end)
+  // 3 — nothing resolves; caller offers setup or the claude-svg provider (never
+  // a dead-end). If a cwd .env DOES hold a key, SAY so — the engine deliberately
+  // never auto-reads it (that's the silent-billing trap), but leaving the user
+  // staring at hasKey:false while their key sits in .env is bad DevEx.
+  const dormant = readEnvFileKeys(cwd);
+  if (dormant.length > 0) {
+    warnings.push(
+      `HINT: an OPENAI_API_KEY exists in this project's ${dormant[0].file} but is not active — ` +
+        'the engine never auto-reads .env (silent-billing protection). To use it: export it into the ' +
+        'environment for this run, or store your own key via `planr-design setup`.',
+    );
+  }
   return { apiKey: null, source: 'none', warnings };
 }
