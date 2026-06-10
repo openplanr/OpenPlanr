@@ -189,7 +189,7 @@ Built-in templates: `rest-endpoint`, `react-component`, `database-migration`, `a
 | `planr revise <ID>` | AI-driven *alignment* of planning artifacts with codebase (with diff preview) |
 | `planr search <query>` | Full-text search across all artifacts |
 | `planr sync` | Validate and fix cross-references |
-| `planr status` | Tree view of all planning progress |
+| `planr status [scope]` | Whole-project delivery report — status + GitHub/Linear cross-ref + outstanding work (`--md` / `--json` / `--github` / `--linear`) |
 
 ### AI agent rules
 
