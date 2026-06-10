@@ -105,6 +105,10 @@ assert(noSlash.status === 301 && (noSlash.headers.get('location') ?? '').endsWit
   'slash-less board URL 301-redirects to the canonical slash form');
 const followed = await (await fetch(`${base}/boards/conf-loop`)).text();
 assert(followed.includes('api/feedback'), 'following the redirect lands on the working board');
+assert(followed.includes('m-interact') && followed.includes('pinlayer'),
+  'board ships the Interact/Pin mode toggle (canvas artifacts stay pannable)');
+assert(followed.includes('receipt') && followed.includes('Feedback submitted'),
+  'board ships the submission receipt UI');
 const head = await fetch(`${base}/boards/conf-loop/variant-A.svg`, { method: 'HEAD' });
 assert(head.status === 200, 'HEAD on a board asset answers 200');
 

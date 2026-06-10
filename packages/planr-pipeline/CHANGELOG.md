@@ -4,6 +4,30 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.19.2] — 2026-06-10
+
+### Changed — premium board UI; canvas artifacts stay fully interactive in review
+
+Field feedback on `/design-review` with a canvas artifact: the review board's pin overlay sat
+on top of the iframe and swallowed every pointer event — the canvas read as **frozen** (no
+pan, no zoom, no drag). And the dark chrome + thin success banner felt sub-premium.
+
+- **Interact / Pin modes** (header toggle, or press **P**): HTML artifacts — including
+  canvases and walkthroughs — now load in **Interact** mode, where the pin layer passes
+  pointer events through, so the canvas pans/zooms exactly as it does standalone. Switch to
+  **Pin** to annotate (images/SVGs still default to Pin). The review-mode popover shows the
+  captured screen id before you commit the pin.
+- **Premium reskin** on a cream + teal palette (`#f7f3e7 · #e1f2e8 · #b4e7d9 · #7cd2c1 ·
+  #4ab8a1 · #1f8f7d`): frosted sticky header + approve bar, white cards with soft teal
+  elevation, mint section surfaces, refined stars/pins/popovers, single-column layout for
+  review mode, and the versions panel only appears once versions actually exist.
+- **Unmistakable submission:** the approve button reports progress, then the whole bar
+  morphs into an animated ✓ receipt summarizing exactly what was written
+  ("running with artifact · 2 ratings · 3 pins"), the banner confirms the file write, and
+  the tab title gains a ✓. Regenerate/remix sends show the same summary.
+
+Conformance locks the mode toggle + receipt into the served board. 122 tests + 2 suites green.
+
 ## [0.19.1] — 2026-06-10
 
 ### Fixed — board URLs without the trailing slash broke every relative asset
