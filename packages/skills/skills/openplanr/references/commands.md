@@ -580,17 +580,51 @@ planr sync --dry-run
 
 ---
 
-### `planr status`
+### `planr status [scope]`
 
-Tree view of all planning progress.
+Whole-project **delivery report** — every spec / backlog / quick-task (or the agile tree) rolled
+up by status with completion, plus a **Summary** and an **Outstanding work** section, and OPTIONALLY
+cross-referenced with **GitHub PRs** and **Linear** issue state. No argument → the full project
+report; a `<scope>` (a spec/epic/feature id or slug) → scoped to that item.
 
 **Usage:**
 ```bash
-planr status
-planr status --all       # no truncation
+planr status                    # full delivery report (terminal)
+planr status --md               # paste-ready markdown delivery doc (Summary + tables + outstanding)
+planr status --json             # machine-readable (agents / CI)
+planr status --github --linear  # live-resolve PR + Linear state (else uses reconciled frontmatter)
+planr status SPEC-012           # scoped to one spec / epic / feature
+planr status --all              # no truncation (terminal)
 ```
 
-**When Claude should use:** "What's our planning status?", "show progress", "how far are we?"
+**Behavior:** offline by default (reads `.planr/` frontmatter + the reconciled Linear identifier/
+state — fast, no network). `--linear` live-fetches issue state via the Linear API; `--github`
+resolves linked-issue state and best-effort-correlates PRs by artifact id in the PR title.
+
+Distinct from the single-system status commands: `planr spec status` (per-spec decomposition/ship),
+`planr github status` (GitHub sync state), `planr linear status` (local↔Linear mapping). Use
+`planr status` for the **cross-system delivery picture**.
+
+**When Claude should use:** "What's our delivery status?", "show the project status report", "how far
+are we?", "generate a status report" (reach for `--md` to paste into a doc).
+
+---
+
+### Other CLI commands (also available — full list via `planr <cmd> --help`)
+
+Real commands the CLI exposes that agents will want; reach for them as needed:
+
+- **`planr update <ids...> [--status --owner --priority --all-done --all-pending]`** — bulk-update
+  artifact fields in one call (e.g. set several ids to `done`).
+- **`planr <type> update <id> [--status --owner]`** — update one epic / feature / story / task /
+  quick task (`planr task update <id> --all-done` also flips every checkbox to done).
+- **`planr backlog update <BL-id> [--priority --tag]`** — update a backlog item's priority / tags.
+- **`planr revise <ID> [--cascade --all --dry-run --audit]`** — AI *alignment* of artifacts with the
+  current codebase (safety pipeline + diff preview). Heavier than `refine` (prose polish); use it to
+  reconcile plans after the code drifts.
+- **`planr search <query> [--type --status]`** — full-text search across all artifacts.
+- **`planr spec destroy <specId>`** — remove a spec directory entirely (cleanup).
+- **`planr config remove-key <provider>`** — remove a stored API key.
 
 ---
 

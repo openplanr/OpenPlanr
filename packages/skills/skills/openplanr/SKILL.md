@@ -279,7 +279,7 @@ The most common commands. For the full catalog (~40 commands), see
 | `planr story create --epic EPIC-001 --yes` | Generate stories for every feature under an epic |
 | `planr task create --story US-001 --yes` | Generate an implementation task list |
 | `planr refine EPIC-001 --cascade --yes` | AI review and improvement, cascading to children |
-| `planr status` | Tree view of all planning progress |
+| `planr status` | Whole-project delivery report — status + GitHub/Linear cross-ref + outstanding (`--md`/`--json`) |
 | `planr rules generate --yes` | Generate CLAUDE.md / AGENTS.md / .cursor/rules |
 | `planr backlog prioritize --yes` | AI-powered backlog prioritization by impact/effort |
 
