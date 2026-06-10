@@ -138,6 +138,21 @@ whether to scaffold one or just **explore standalone** (design only, into
 `.planr/designs/<slug>/`, no tracked spec) — so you can prototype without committing to a
 spec. (Claude Code only as of planr-pipeline v0.13.0+.)
 
+**Exploring a brand asset, not a feature?** (logo, brand sheet, og-image, a one-off
+screen) → `/planr-pipeline:design-loop <target>` (v0.19.0+): N parallel AI variants on a
+live localhost comparison board — pin comments on exact regions, rate, remix — then
+iterate conversationally until approval; taste memory carries preferences across runs.
+Works with an OpenAI key (image generation) or with none (agent-authored SVG, $0 — often
+better for logos). The approved output lands in the project's design-system dir.
+
+**Polishing a design that already exists?** → `/planr-pipeline:design-review <slug>`
+(v0.19.0+): serves the generated `finalized.html`/`canvas.html` on the live board; each
+pin maps to its screen and ONLY that screen is regenerated (lint gate stays 0-error);
+approval syncs `design-spec.md` + `finalized.json`. Route here when the user says "fix
+this part of the design" about an artifact `/design` produced.
+
+Both stop at approval and never auto-chain into `/plan` or `/ship` (R1).
+
 **Path A invariants:**
 
 - Do not call `planr spec decompose` — duplicates the pipeline's specification-agent
