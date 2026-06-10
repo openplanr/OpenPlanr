@@ -116,6 +116,8 @@ Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, y
 | Name | Purpose |
 |---|---|
 | `/planr-pipeline:design {slug}` | **Optional, before `/plan`.** Generates a visual design — **prototype** (one screen), **walkthrough** (multi-screen gallery), or **canvas** (Figma-like board) — *and* a `design-spec.md`, so the PO Phase decomposes real UI tasks. Interactive by default; fully flag-driven for CI (`--format … --from … --yes`). |
+| `/planr-pipeline:design-loop {target}` | Interactive design exploration for ANY target (logo, brand-sheet, screen, og-image): concept gate **before any spend** → N parallel AI variants → a live localhost **board** (pin-comments on exact regions, ratings, remix, versions rail) → file-handshake feedback → session-chained iteration → approval + **taste memory**. Works with an OpenAI key (image generation) or **without one** (claude-svg: agent-authored SVG — exact hex, real type). See `docs/design-loop.md`. |
+| `/planr-pipeline:design-review {slug}` | Pin-comment review loop on an existing generated design: serves `finalized.html`/`canvas.html` on the live board, every pin maps to its screen, only the pinned screen is regenerated (lint gate stays 0-error), and the results sync back into `design-spec.md` + `finalized.json` + the run manifest. |
 | `/planr-pipeline:plan {slug}` | PO Phase — auto-scaffolds the spec shell if missing, then decomposes into User Stories + tasks via designer-agent + specification-agent |
 | `/planr-pipeline:ship {slug}` | DEV Phase — frontend ‖ backend → qa → devops ‖ doc-gen → snapshot, with `.pipeline-shipped` marker at the end |
 

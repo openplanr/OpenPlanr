@@ -16,7 +16,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -216,17 +216,37 @@ assert(!hasUnsafeHtml(escapeHtml(hostile)), 'escapeHtml removes live markup');
 assert(!embedJson({ label: hostile }).includes('</script>'), 'embedJson has no </script> breakout');
 assert(JSON.parse(embedJson({ label: hostile })).label === hostile, 'embedJson preserves the value');
 
-// 7 — brand hygiene: no foreign product names in the shipped design assets (proprietary)
-log('\nbrand hygiene (proprietary — no foreign brands):');
-const brandAssets = [
-  'templates/design/DesignCanvas.jsx', 'templates/design/vendor/DesignCanvas.js',
-  'templates/design/canvas-shell.html', 'templates/design/walkthrough-shell.html',
-  'templates/design/prototype-shell.html', 'templates/design/README.md',
-  'lib/design/walkthroughNav.mjs', 'lib/design/manifest.mjs',
+// 7 — brand hygiene (proprietary): no third-party project codenames anywhere in
+// tracked sources/docs. The denylist is assembled from fragments so this guard
+// itself never spells a name; extend it the same way when a new one shows up.
+log('\nbrand hygiene (proprietary — tracked sources are codename-free):');
+const FOREIGN_NAMES = ['ome' + 'lette', 'mu' + 'vi', 'gst' + 'ack'];
+const SCAN_ROOTS = ['commands', 'procedures', 'agents', 'lib', 'schemas', 'docs', 'tests', 'templates', 'conformance', 'README.md', 'CHANGELOG.md'];
+const SCAN_SKIP = [
+  'templates/design/vendor', // attributed third-party runtime (React, the reflow lib)
+  'conformance/verify-design-assets.mjs', // this guard (fragment-assembled)
 ];
-for (const brand of ['omelette', 'muvi', 'gstack']) {
-  const where = brandAssets.find((rel) => new RegExp(brand, 'i').test(readFileSync(join(root, rel), 'utf-8')));
-  assert(!where, `no foreign brand "${brand}" in shipped design assets${where ? ` (found in ${where})` : ''}`);
+const TEXT_EXT = /\.(md|mjs|js|jsx|html|json|tpl|css|feature|yml|yaml)$/;
+function* walkFiles(rel) {
+  const abs = join(root, rel);
+  if (!existsSync(abs)) return;
+  if (SCAN_SKIP.some((s) => rel === s || rel.startsWith(`${s}/`))) return;
+  if (rel.split('/').includes('node_modules')) return; // third-party content inside fixtures
+  const stat = statSync(abs);
+  if (stat.isFile()) { if (TEXT_EXT.test(rel)) yield rel; return; }
+  for (const entry of readdirSync(abs)) yield* walkFiles(join(rel, entry));
+}
+for (const name of FOREIGN_NAMES) {
+  const re = new RegExp(name, 'i');
+  let where = null;
+  for (const start of SCAN_ROOTS) {
+    for (const rel of walkFiles(start)) {
+      if (re.test(readFileSync(join(root, rel), 'utf-8'))) { where = rel; break; }
+    }
+    if (where) break;
+  }
+  assert(!where, `tracked sources are clean of codename #${FOREIGN_NAMES.indexOf(name) + 1}`,
+    where ? `"${name}" found in ${where}` : undefined);
 }
 
 log('');

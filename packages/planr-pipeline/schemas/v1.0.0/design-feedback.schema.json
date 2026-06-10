@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.0.0/design-feedback.schema.json",
+  "title": "OpenPlanr design-loop feedback (v1.0.0)",
+  "description": "The board↔agent file handshake. The board writes feedback.json (Submit / Approve) or feedback-pending.json (Regenerate / Remix / More-like-this) NEXT TO the board HTML; the agent reads it only after the user says they're done in the blocking AskUserQuestion. feedback-pending.json is consumed (deleted) on read. `ratings` and `comments` are keyed by variant id (A, B, …) — dynamic keys, so they are open objects here; value shapes are enforced by lib/design-engine/feedback.mjs. Pins carry normalized 0..1 region coords; the ≤1 upper bound is clamped at write time (the schema subset has no `maximum`).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "boardId",
+    "publishedAt",
+    "regenerated",
+    "ratings",
+    "comments",
+    "pins"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0",
+      "description": "Schema version pin."
+    },
+    "boardId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The board this feedback belongs to (daemon registry id)."
+    },
+    "publishedAt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ISO timestamp the feedback was written by the board."
+    },
+    "preferred": {
+      "type": "string",
+      "description": "Variant id the user picked in the approve bar (e.g. \"A\"). Absent until chosen."
+    },
+    "ratings": {
+      "type": "object",
+      "description": "Per-variant star rating 1..5, keyed by variant id."
+    },
+    "comments": {
+      "type": "object",
+      "description": "Per-variant free-text comment, keyed by variant id."
+    },
+    "overall": {
+      "type": "string",
+      "description": "Overall-direction textarea content."
+    },
+    "regenerated": {
+      "type": "boolean",
+      "description": "true when this is a feedback-pending.json round (the user asked for another generation pass) rather than a final submit."
+    },
+    "regenerateAction": {
+      "type": "string",
+      "enum": ["iterate", "remix", "more-like"],
+      "description": "Which regeneration the user asked for. Required by code when regenerated=true."
+    },
+    "remixSpec": {
+      "type": "object",
+      "description": "Remix instructions, e.g. { layoutFrom: \"A\", colorsFrom: \"B\", note }. Open shape; interpreted by the loop procedure."
+    },
+    "pins": {
+      "type": "array",
+      "description": "Region annotations — the core of \"fix exactly this part\".",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["variant", "x", "y", "w", "h", "comment", "intent"],
+        "properties": {
+          "variant": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Variant id (design-loop) or screen id (design-review) the pin sits on."
+          },
+          "x": { "type": "number", "minimum": 0, "description": "Left edge, normalized 0..1 of the variant's rendered box." },
+          "y": { "type": "number", "minimum": 0, "description": "Top edge, normalized 0..1." },
+          "w": { "type": "number", "minimum": 0, "description": "Width, normalized 0..1 (0 for a point pin)." },
+          "h": { "type": "number", "minimum": 0, "description": "Height, normalized 0..1 (0 for a point pin)." },
+          "comment": { "type": "string", "minLength": 1, "description": "What the user wants done here." },
+          "intent": {
+            "type": "string",
+            "enum": ["fix", "improve", "question"],
+            "description": "How the agent should treat the pin."
+          },
+          "screen": {
+            "type": "string",
+            "description": "design-review only: the artifact screen/section id the pin maps to (e.g. \"s-dashboard\")."
+          }
+        }
+      }
+    }
+  }
+}

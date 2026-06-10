@@ -4,6 +4,49 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.19.0] — 2026-06-10
+
+### Added — the Design Loop Engine (`/design-loop` + `/design-review`)
+
+An interactive, immersive design-iteration system — a proven design-shotgun flow
+generalized for ANY design target, plus a planr-native pin-review loop over generated
+artifacts. Zero npm dependencies (`lib/design-engine/`, plain Node ESM).
+
+- **`/planr-pipeline:design-loop {target}`** — logos, brand sheets, screens, OG images:
+  taste-aware concept list (anti-convergence enforced) → a **mandatory concept gate before
+  any spend** → N parallel variant subagents (structured `VARIANT_X_DONE/FAILED/RATE_LIMITED`
+  reports, tmp→cp, quality gate + one retry, sequential fallback) → a live localhost
+  **board** → file-handshake feedback → session-chained iteration → approval. R1: stops at
+  approval.
+- **Provider abstraction with graceful degradation** — `openai` (Responses API +
+  `image_generation`/gpt-image-2; iterate via `previous_response_id` so feedback *refines*;
+  gpt-4o vision quality gate) and **`claude-svg`** (always available, $0: the agent authors
+  exact SVG sheets against a validated contract — for logos/UI often better than diffusion).
+  Auth: `~/.planr/credentials.json` → env (with the **silent-billing disclosure** when the
+  key also sits in the cwd `.env`, + a not-gitignored warning) → guided `setup` with a real
+  smoke test and printed proof. Keys are never echoed.
+- **Board daemon v2** — persistent localhost server, board registry, `BOARD_URL:` stderr
+  line, in-tab reload, per-board mutex; **pin-comments** (normalized region annotations
+  with `fix|improve|question` intent), **versions rail with A/B slider diff**, **live
+  per-variant progress** (file-driven `progress.json`), the proven approve bar. One
+  self-contained HTML, no CDN, works offline.
+- **`/planr-pipeline:design-review {slug}`** — serves an existing `finalized.html`/
+  `canvas.html` through the board; every pin auto-maps to its screen/section; **only the
+  pinned screen is regenerated** (HTML edits through the design system's tokens); the lint
+  gate stays 0-error; on approve `finalized.json.iterations` bumps, the changed
+  `design-spec.md` sections sync, and a `design.review` record lands in
+  `.run-manifest.jsonl`.
+- **Taste memory** — per-project profile updated on BOTH approve and reject; 5%/week
+  confidence decay computed at read time; profile↔brief conflicts flagged, never silently
+  resolved.
+- **Schemas** (`design-feedback` incl. pins, `design-session`, `taste-profile`,
+  `design-approved`) — every engine read/write validates.
+- **Tests:** 121 unit (auth order + disclosure, session chaining, submit-vs-pending +
+  consume-on-read, pin clamping, taste decay math, provider fallback, mocked OpenAI
+  provider, sheet-contract validation) + a **full mocked-loop conformance** run
+  (`conformance/verify-design-loop.mjs`, $0, no network). Docs: `docs/design-loop.md`
+  (daemon protocol, feedback handshake, provider interface, 5-minute demo).
+
 ## [0.18.1] — 2026-06-10
 
 ### Added — `/planr-pipeline:status` with no slug = whole-project delivery report
@@ -99,13 +142,13 @@ No generation change — preview behavior only. Recompiled into the vendored `De
 
 ### Changed — brand hygiene (proprietary product)
 
-A DevEx review found a foreign host-runtime brand woven through the canvas: the editing /
-persistence bridge was named `window.omelette` (plus a `data-omelette-chrome` attribute), and a
-few comments referenced other projects by codename. Renamed to a neutral proprietary handle —
-**`window.__canvasHost`** + `data-dc-chrome` — and dropped the `muvi` / `gstack` references from
+A DevEx review found third-party project names woven through the canvas: the editing /
+persistence bridge and a chrome attribute carried a foreign host-runtime's name, and a few
+comments referenced other projects by codename. Renamed to neutral proprietary handles —
+**`window.__canvasHost`** + `data-dc-chrome` — and dropped the codename references from
 comments and the README. (The vendored **Pretext** text-reflow runtime keeps its name, like
 React — it's an attributed third-party dependency, not our brand.) A new conformance check fails
-the build if any foreign brand reappears in the shipped design assets.
+the build if any of those names reappears in the shipped design assets.
 
 `npm test` → 73 green + conformance. Skill stays **1.8.0**.
 
@@ -239,7 +282,7 @@ they never asked for (and inconsistently — other runs aborted on the same cond
 no-spec case is a **mandatory `AskUserQuestion`** (same enforcement as Phase B):
 
 - **A) Create a spec** — scaffold `SPEC-NNN-<slug>` as the home (explicit, user-chosen) → the planned-feature path `/plan` can consume.
-- **B) Standalone exploration** — design only, into a new **`.planr/designs/<slug>/`** location; **no tracked spec is created**. (Mirrors gstack `design-html`'s spec-less design.)
+- **B) Standalone exploration** — design only, into a new **`.planr/designs/<slug>/`** location; **no tracked spec is created**. (Mirrors the reference skill's spec-less design.)
 - **C) Cancel.**
 
 `--yes` assumes **standalone** (non-polluting); it never silently creates a spec. The Phase-D
@@ -262,7 +305,7 @@ genuinely unresolvable.
 The Phase B clarification described the source/format question in prose ("if unset, ask"),
 which the model could rationalize away — in practice it would **auto-decide format/source
 from the brief and proceed** ("proceeding without further questions since your brief is
-explicit"), never issuing a real prompt. Ported gstack's enforcement into
+explicit"), never issuing a real prompt. Ported the reference implementation's enforcement into
 `procedures/design-step1-clarify.md` (+ `commands/design.md`): Phase B is now a **mandatory
 `AskUserQuestion` tool call** when the relevant flag is absent —
 
@@ -276,7 +319,7 @@ explicit"), never issuing a real prompt. Ported gstack's enforcement into
   `BLOCKED — AskUserQuestion unavailable` — never silently default.
 
 There is no system trigger that "invokes" the question — the model must choose to call the
-tool, so the fix is forceful, gstack-style instruction that removes the skip rationalization.
+tool, so the fix is forceful, explicit instruction that removes the skip rationalization.
 
 ## [0.13.3] — 2026-06-07
 

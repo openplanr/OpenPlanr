@@ -1,4 +1,3 @@
-<!-- /autoplan restore point: ~/.gstack/projects/openplanr-planr-pipeline/main-autoplan-restore-20260607-155901.md -->
 # Plan — `/planr-pipeline:design` : design generation phase + missing-design clarification
 
 > Rough plan for review via `/autoplan`. Target: planr-pipeline v0.13.0 (SPEC-015).
@@ -19,7 +18,7 @@ Two concrete failures:
    design" and offers to make one. The skip is silent, so users don't discover the gap
    until they notice `/ship` produced backend-only code.
 
-gstack's `design-html` solves the inverse direction (brief/plan → production HTML) and
+The reference design skill (`design-html`) solves the inverse direction (brief/plan → production HTML) and
 uses an `AskUserQuestion` routing flow (Step 0 Cases A/B/C) to decide what to build.
 planr-pipeline has no equivalent.
 
@@ -30,7 +29,7 @@ planr-pipeline has no equivalent.
 2. A **clarification-driven format choice** when a design is needed, offering three
    kinds:
    - **Prototype** — one interactive, self-contained Pretext-native HTML screen.
-   - **Walkthrough** — multi-screen gallery, sidebar/tab navigation (the muvi pattern:
+   - **Walkthrough** — multi-screen gallery, sidebar/tab navigation (anchor-scroll:
      app-bar + grouped sidebar + browser-chrome screen frames).
    - **Canvas** — Figma-like pan/zoom infinite canvas of artboards grouped in sections
      (the provided `DesignCanvas.jsx`: reorder, rename, focus overlay, PNG/HTML export).
@@ -47,7 +46,7 @@ planr-pipeline has no equivalent.
 - Not auto-chaining `/plan → /design → /ship` (R1 stands; design is its own gate with a
   human review point).
 - Not a live WYSIWYG editor. Canvas editing/persistence requires a host bridge
-  (`window.omelette`); without it the canvas is view + client-side reorder only.
+  (`window.__canvasHost`); without it the canvas is view + client-side reorder only.
 - Not building a Pretext fork. We vendor the existing `pretext.js` (already 30KB, used
   by `design-html`).
 
@@ -88,7 +87,7 @@ agents are headless and cannot). Phases:
 
 - `templates/design/pretext.js` — copied for Prototype + Walkthrough output.
 - `templates/design/DesignCanvas.jsx` — copied for Canvas output (the provided file).
-- `templates/design/walkthrough-shell.html` — gallery chrome reference (muvi-style).
+- `templates/design/walkthrough-shell.html` — gallery chrome reference (anchor-gallery style).
 - `templates/design/canvas-shell.html` — boots React + `DesignCanvas` + the artboards.
 
 ### Artifact contract
@@ -147,14 +146,14 @@ D → current behavior. E → pause for the user to stage PNGs.
 - **Where the format choice lives**: only in `/design`, or also nudged from `/plan`?
   Leaning both.
 - **Model for `design-gen-agent`**: Opus (quality) vs Sonnet (cost).
-- **Walkthrough "tabs" vs sidebar-anchor**: the muvi pattern is sidebar + smooth-scroll
+- **Walkthrough "tabs" vs sidebar-anchor**: the anchor pattern is sidebar + smooth-scroll
   anchors; "tabs" may mean true tab-switching. Confirm the interaction.
 - **React dependency for canvas**: shell loads React via CDN (self-contained) vs project
   bundler. Leaning CDN for zero-setup preview.
 
 ---
 
-# GSTACK REVIEW REPORT — /autoplan
+# REVIEW REPORT — /autoplan
 
 > **Voices: subagent-only this run.** Codex CLI is authenticated but its realtime
 > websocket endpoint (`wss://chatgpt.com/backend-api/codex/responses`) is unreachable in
@@ -188,7 +187,7 @@ both; don't substitute pixels for intent.
 - `procedures/stage-design-assets.md` / `restore-design-assets.md` — asset staging into
   `design/`. **Reuse** for placing generated artifacts + vendored runtime.
 - `templates/` + `stacks/` — vendoring convention. **Reuse** for `templates/design/`.
-- gstack `design-html/vendor/pretext.js` (30KB) — **vendor the file, not the skill** (DRY
+- the reference skill's `vendor/pretext.js` (30KB) — **vendor the file, not the skill** (DRY
   the runtime; do not fork the skill logic → keeps planr-pipeline standalone, F5).
 - `specification-agent` R2 — already emits a UI task when a design exists. **The whole
   point**: make a design exist so the UI task is born.
@@ -212,7 +211,7 @@ APPROACH A — Self-contained generation phase (vendor pretext.js, author spec d
   Summary: /design (interactive) → design-gen authors visual artifact + design-spec.md,
            BEFORE /plan decomposes. Vendor pretext.js + canvas assets under templates/design.
   Effort: M (human ~3-4d / CC ~1 session)   Risk: Med (vendored JS maintenance)
-  Pros: standalone (no gstack dep); single design-aware decomposition; closes loop cleanly
+  Pros: standalone (no third-party skill dep); single design-aware decomposition; closes loop cleanly
   Cons: owns a JS runtime + canvas asset; format breadth = real surface to maintain
   Reuses: mode-detection, stage-design-assets, designer-agent (PNG fallback), pretext.js
 
@@ -223,11 +222,11 @@ APPROACH B — Nudge-only, no generation (printed recommendation + accept user P
   Pros: tiny; zero new runtime; no R3/R10 churn
   Cons: doesn't satisfy the user ask (they want generation); leaves the gap open
 
-APPROACH C — Shell out to gstack /design-html
-  Summary: /design invokes the installed gstack skill to produce HTML, then ingest.
+APPROACH C — Shell out to an external /design-html skill
+  Summary: /design invokes the external skill to produce HTML, then ingest.
   Effort: S-M   Risk: High (hard dependency on a separate product being installed)
   Pros: zero reimplementation; tracks upstream Pretext fixes
-  Cons: couples a standalone plugin to gstack; brittle across environments; no canvas/walkthrough
+  Cons: couples a standalone plugin to an external skill; brittle across environments; no canvas/walkthrough
 ```
 **RECOMMENDATION: Approach A**, because planr-pipeline must stand alone (P-independence)
 and the user wants real generation; DRY only the runtime (vendor `pretext.js`), not the
@@ -256,7 +255,7 @@ generation; C is rejected (hard external dep on a planning plugin).
   2. Right problem to solve?              Reframe to intent [unavailable]  subagent-only
   3. Scope calibration correct?          No — cut to 1     [unavailable]  → taste (user)
   4. Alternatives explored?              No — add B,C      [unavailable]  auto-added 0C-bis
-  5. Competitive/market risk (gstack)?   Yes — F5 fork     [unavailable]  addressed (vendor runtime only)
+  5. Competitive/market risk (reference tool)?   Yes — F5 fork     [unavailable]  addressed (vendor runtime only)
   6. 6-month trajectory sound?           Risk: canvas/JS   [unavailable]  → taste (user)
 ```
 Single-voice run: no CONFIRMED rows (missing voice = N/A). Every subagent critical
@@ -275,7 +274,7 @@ finding is flagged regardless (F1/F2/F3 critical → carried).
    user opens canvas with no host (writes must no-op silently, reads via fetch); re-running
    `/design` over an existing `design/` (evolve vs overwrite — ask, mirror design-html).
 5. **Code quality / DRY** — One generator core; formats are templates. Vendor `pretext.js`
-   rather than reimplement (DRY vs gstack). Don't duplicate designer-agent's extraction.
+   rather than reimplement (DRY vs the reference). Don't duplicate designer-agent's extraction.
 6. **Test review** — See Phase 3 test diagram. Conformance test for the new command + a
    golden `finalized.json`; R10 qa coverage for any new agent role.
 7. **Observability** — `finalized.json` + `.run-manifest.jsonl` record the design stage
@@ -317,7 +316,7 @@ at gates — neither silently decided.
 | 2 | CEO | Position `/design` BEFORE decomposition, not after `/plan` | Mechanical | P5 | Avoids R4 re-decomp collision (F6) |
 | 3 | CEO | `/plan` nudge = printed recommendation, not inline AskUserQuestion | Mechanical | P3,P5 | Keeps `/plan` non-interactive / dry-run / CI safe (F7) |
 | 4 | CEO | Ground generation in spec screen list; thin spec → clarify | Mechanical | P1 | Prevents hallucinated UI laundered to spec (F8) |
-| 5 | CEO | Vendor `pretext.js` runtime, do NOT fork the gstack skill | Mechanical | P4 | DRY runtime; stay standalone (F5) |
+| 5 | CEO | Vendor `pretext.js` runtime, do NOT fork the reference skill | Mechanical | P4 | DRY runtime; stay standalone (F5) |
 | 6 | CEO | Add alternatives B (nudge-only) and C (shell-out) to 0C-bis | Mechanical | P1 | Alternatives were missing |
 | 7 | CEO | Keep all 3 formats (don't auto-cut to 1) | **Taste→gate** | P-surfaces | User-explicit + standing surface-preference; not auto-decided |
 | 8 | CEO | New-agent vs orchestrator-procedure | **Taste→eng/gate** | P5 | Real R3/R10 tradeoff (F4); decide in eng phase |
@@ -360,7 +359,7 @@ plan's own "open decisions" (tabs-vs-sidebar, CDN-vs-bundler, evolve-vs-overwrit
   3+ exploratory/"options"/"concept"→Canvas`, shown with a one-line why ("12 screens →
   Walkthrough recommended"). Others stay selectable.
 - **F3 (CRITICAL) — view-only canvas is a silent-discard trap.** ADOPT. When
-  `window.omelette` is absent: edit affordances (reorder grips, rename, delete) render
+  `window.__canvasHost` is absent: edit affordances (reorder grips, rename, delete) render
   **visibly disabled** (not fake-then-discard); a persistent banner carries real copy +
   the edit command; **Export PNG/HTML stays enabled as the primary CTA** — a detached
   canvas is an honest *shareable export surface*, not a broken editor. (This *adds* value
@@ -372,7 +371,7 @@ plan's own "open decisions" (tabs-vs-sidebar, CDN-vs-bundler, evolve-vs-overwrit
 - **F5 (HIGH) — resolve parked UX decisions.** ADOPT both: (a) **walkthrough nav =
   sidebar screen-switching** (one screen at a time, lazy-mount) over smooth-scroll anchors
   — anchors force all screens into one DOM (perf) and read as a marketing page, not a flow;
-  *minor taste note: the muvi reference is anchor-scroll — flagged at final gate as a light
+  *minor taste note: the gallery reference is anchor-scroll — flagged at final gate as a light
   call, default = switch+lazy-mount.* (b) **vendor React locally, not CDN** — self-contained
   offline-openable deliverable; resolves the CDN supply-chain note + F3.
 - **F6 (HIGH) — artifact empty/loading/export-failed states.** ADOPT. Canvas empty state;
@@ -407,7 +406,7 @@ plan's own "open decisions" (tabs-vs-sidebar, CDN-vs-bundler, evolve-vs-overwrit
 | 16 | Design | Re-run = Evolve(preserve layout)/Replace(warn)/Cancel | Mechanical | P1 (F7) |
 | 17 | Design | `content_provenance` ribbon + metadata for thin-spec artifacts | Mechanical | P1 (F9) |
 | 18 | Design | Phase D summary = deliverable handoff (file:// links, why, next cmd) | Mechanical | P6 (F10) |
-| 19 | Design | Walkthrough anchor-scroll (muvi) vs screen-switch | **Taste→gate** | P5 — light call |
+| 19 | Design | Walkthrough anchor-scroll vs screen-switch | **Taste→gate** | P5 — light call |
 
 **Phase 2 complete.** Codex `[unavailable]`; Claude subagent: 10 findings (3 critical, 4
 high, 3 medium). 8 auto-adopted, 1 light taste call (walkthrough nav). Plan UX went from
@@ -419,7 +418,7 @@ high, 3 medium). 8 auto-adopted, 1 light taste call (walkthrough nav). Plan UX w
 
 This pass read the **actual repo** and found the plan was underspecified at the integration
 seams. Test plan artifact written to
-`~/.gstack/projects/openplanr-planr-pipeline/main-test-plan-20260607.md`.
+the user-space autoplan archive.
 
 ### Step 0 — Scope challenge (sub-problem → existing code)
 
@@ -515,14 +514,14 @@ qa-agent ── only if a generator subagent is kept ──► +Design Artifact 
   (not `format` — reserved JSON-Schema keyword); spell out the full required-field set
   before authoring `design-manifest.schema.json`.
 - **S2 / H3 (confirm) — vendor React locally; canvas is export+view-only forever.** ADOPT
-  (reconfirms Design-F3/F5). `window.omelette` exists nowhere in this repo → Canvas here is
+  (reconfirms Design-F3/F5). `window.__canvasHost` exists nowhere in this repo → Canvas here is
   permanently view+export; the **body** (not just the appendix) must say so, Export primary,
   edits disabled.
 
 ### Mandatory eng outputs
 
 **NOT in scope (deferred → backlog/SPEC, not a foreign root TODOS.md):** canvas live-edit /
-`window.omelette` host bridge; framework-native (React/Vue) component output from `/design`;
+`window.__canvasHost` host bridge; framework-native (React/Vue) component output from `/design`;
 DESIGN.md / design-system authoring; multi-variant "shotgun" exploration; auto-chaining.
 
 **Failure modes (additions to Phase 1 registry):** ReDecompCollision → **designed out**
@@ -703,11 +702,11 @@ User approved as-is. Final taste calls settled:
 
 | # | Phase | Decision | Resolution |
 |---|-------|----------|------------|
-| 19 | Design | Walkthrough nav | **Support both, default lazy** — anchor-scroll (muvi pattern) for ≤8 screens; auto-switch to lazy screen-switching above 8. Two nav paths, budgeted. |
+| 19 | Design | Walkthrough nav | **Support both, default lazy** — anchor-scroll for ≤8 screens; auto-switch to lazy screen-switching above 8. Two nav paths, budgeted. |
 | 21 | Eng | Generation impl | Orchestrator **step** (not a 4th agent) — accepted. |
 | 25 | Eng | design-spec.md authority | **Single-sourced template + direct authoring kept** (over eng's reversal) — accepted. |
 
-**Walkthrough renderer (final):** below 8 screens → anchor-scroll gallery (the muvi
+**Walkthrough renderer (final):** below 8 screens → anchor-scroll gallery (the anchor-scroll
 `finalized.html` pattern: app-bar + grouped sidebar + smooth-scroll, `content-visibility`
 for safety); 8+ screens → lazy screen-switching (active+neighbors mounted, "Screen N of M"
 counter, grouped by spec sections). The recommendation rule still prefers *prototype* at

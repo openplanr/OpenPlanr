@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.0.0/design-approved.schema.json",
+  "title": "OpenPlanr design-loop approval record (v1.0.0)",
+  "description": "Written as approved.json in the session dir when the user approves a variant on the board (\"We'll run with Option X\"). Records WHAT was approved and WHERE the approved output was copied INTO the repo (exploration artifacts themselves stay in user space). The design loop STOPs after writing this (R1) — a human invokes the next phase.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "boardId",
+    "sessionId",
+    "approvedVariant",
+    "approvedPath",
+    "provider",
+    "target",
+    "approvedAt",
+    "copiedTo"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0", "description": "Schema version pin." },
+    "boardId": { "type": "string", "minLength": 1, "description": "Board the approval came from." },
+    "sessionId": { "type": "string", "minLength": 1, "description": "The approved variant's session id." },
+    "approvedVariant": { "type": "string", "minLength": 1, "description": "Variant id, e.g. \"B\"." },
+    "approvedPath": { "type": "string", "minLength": 1, "description": "Absolute path of the approved artifact in the session dir." },
+    "provider": { "type": "string", "enum": ["openai", "claude-svg"], "description": "Provider that produced the approved artifact." },
+    "target": { "type": "string", "minLength": 1, "description": "What was designed (logo, brand-sheet, screen, og-image, …)." },
+    "approvedAt": { "type": "string", "minLength": 1, "description": "ISO timestamp." },
+    "copiedTo": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Repo destinations the approved output (+ derivatives like favicon set / production SVG) was copied to."
+    },
+    "notes": { "type": "string", "description": "Optional approval notes from the overall textarea." }
+  }
+}

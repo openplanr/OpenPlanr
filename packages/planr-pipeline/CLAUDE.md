@@ -115,3 +115,21 @@ Active commands when the plugin is loaded:
 - `/planr-pipeline:ship {feature}` — DEV Phase (frontend ‖ backend → qa → devops ‖ doc-gen → snapshot → marker)
 
 Spec-driven mode artifacts live under `.planr/specs/SPEC-NNN-{slug}/` — same schema the planr CLI authors. Hard rule R1: never auto-chain plan → ship.
+
+## Brand & provenance hygiene (house rule — always enforced)
+
+This is a proprietary product. Keep our identity clean:
+
+- **Never introduce third-party product/project names** into source, docs, tests, schemas,
+  comments, CHANGELOG entries, planning records, commit messages, or PR text — including the
+  names of tools or skills we learn from. Describe them neutrally ("the reference
+  implementation", "a proven pattern", "an external skill").
+- **Attributed runtime dependencies keep their real names** (React, Pretext) — honest
+  attribution of vendored libraries is not branding.
+- The conformance suite scans all tracked sources against a fragment-assembled denylist
+  (`conformance/verify-design-assets.mjs`). When a new third-party name slips in, scrub it
+  AND extend the denylist the same fragment way.
+- When committing such cleanups, use a **neutral chore message** ("chore: internal
+  references tidy-up") — never name the removed brands in the commit or PR.
+- Also standing: no AI-assistant metadata in commits or PRs (no co-author trailers, no
+  generated-with footers).
