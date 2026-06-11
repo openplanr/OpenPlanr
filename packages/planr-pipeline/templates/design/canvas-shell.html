@@ -44,7 +44,11 @@
       display: none; align-items: center; gap: 12px; padding: 8px 16px;
       font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       color: #5a4a2a; background: #fef4a8; box-shadow: 0 1px 6px rgba(0,0,0,.12); }
-    body.dc-viewonly .dc-banner { display: flex; }
+    /* The banner appears ONLY when opened top-level (a bare file open). Embedded
+       surfaces — the design-review board, IDE previews — own the editing
+       affordances, so the notice is pure noise there (the canvas still stays
+       view-only either way). */
+    body.dc-viewonly.dc-standalone .dc-banner { display: flex; }
     .dc-banner code { background: rgba(0,0,0,.07); padding: 2px 8px; border-radius: 4px; }
     .dc-banner .x { margin-left: auto; cursor: pointer; border: 0; background: transparent; font-size: 16px; color: inherit; line-height: 1; }
     .dc-banner.dismissed { display: none !important; }
@@ -52,10 +56,10 @@
 </head>
 <body>
   <div class="dc-banner" id="dc-banner" role="status">
-    <strong>View-only.</strong>
-    This canvas isn't connected to a project, so reordering/renaming won't save — but
-    <strong>Export PNG/HTML</strong> works. To edit, run
-    <code>/planr-pipeline:design &lt;slug&gt; --format canvas</code> from your project.
+    <strong>Static preview.</strong>
+    Reordering/renaming won't persist in a bare file open — <strong>Export PNG/HTML</strong>
+    works. To review and edit this design, run
+    <code>/planr-pipeline:design-review &lt;slug&gt;</code> from your project.
     <button class="x" aria-label="Dismiss" onclick="this.parentNode.classList.add('dismissed')">×</button>
   </div>
   <div id="root"></div>
@@ -76,8 +80,14 @@
         document.head.appendChild(dsStyle);
       }
 
-      // View-only unless a host bridge is present (it never is for a plain file open).
-      if (!window.__canvasHost) document.body.classList.add('dc-viewonly');
+      // View-only unless a host bridge is present (it never is for a plain file
+      // open). The banner additionally requires being the TOP-LEVEL window —
+      // inside an iframe (the design-review board, previews) the host surface
+      // owns editing, so the notice would be noise.
+      if (!window.__canvasHost) {
+        document.body.classList.add('dc-viewonly');
+        if (window.top === window) document.body.classList.add('dc-standalone');
+      }
 
       var h = React.createElement;
       function artboard(a) {

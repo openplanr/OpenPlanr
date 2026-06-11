@@ -4,6 +4,32 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.19.3] — 2026-06-11
+
+### Changed — the board is a design tool now: rails + stage + inspector
+
+Live review feedback: the stacked single-column board wasted the viewport and controls fought
+the artwork. The board is now a three-pane shell —
+
+- **Left rail — variants**: live thumbnails + generation state, one-click switching (also
+  `←`/`→`); the versions list lives here, and picking two turns the stage into the A/B slider.
+- **Stage — full-bleed**: the selected design large on a dot-grid backdrop; HTML artifacts
+  (canvases, walkthroughs) fill the viewport and stay fully interactive in Interact mode.
+- **Right rail — inspector**: rating + notes for the selection, a managed **pin list** (intent
+  chips, screen ids, click-to-jump highlight, delete), next-round actions (overall direction,
+  regenerate, remix), and the approve dock that morphs into the ✓ receipt.
+- Both rails collapse (`[` / `]` or the header toggles) for a true full-screen stage; `P` still
+  flips Interact/Pin. Compact 12.5px chrome; warm hairlines carry structure, teal is reserved
+  for interactive elements. The feedback handshake is byte-identical.
+
+### Fixed — canvas "view-only" banner showed inside the review board
+
+The standalone-file warning fired in every context without a host bridge — including the review
+board, where the design IS connected to its project and pins are the editing path. The banner now
+additionally requires being the top-level window (a bare file open); embedded surfaces suppress
+it while edit affordances stay correctly disabled. Copy reworded to route to
+`/planr-pipeline:design-review <slug>`.
+
 ## [0.19.2] — 2026-06-10
 
 ### Changed — premium board UI; canvas artifacts stay fully interactive in review
