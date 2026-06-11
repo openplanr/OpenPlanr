@@ -415,6 +415,11 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     stagein.appendChild(frame);
     attachPinLayer(layer, media, v);
     drawPins(layer, v.id);
+    // anchored pins track the content through pan/zoom/scroll
+    if (state.trackTimer) clearInterval(state.trackTimer);
+    if (v.type === 'html') {
+      state.trackTimer = setInterval(function () { positionPins(layer, v.id); }, 120);
+    }
     applyMode();
     updatePager((v.id === 'artifact' ? 'Artifact' : v.id) + (v.label ? ' · ' + v.label : ''));
   }
@@ -429,48 +434,83 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
   document.getElementById('pgNext').onclick = function () { select(state.sel + 1); };
 
   // ── pins ──────────────────────────────────────────────────────────────
+  // For iframe artifacts, pins are CONTENT-ANCHORED: coordinates are stored
+  // relative to the screen/artboard element under the click (a canvas artboard
+  // is [data-dc-slot]; walkthroughs use <section id>/[data-screen]). Those
+  // ratios are invariant under pan/zoom/scroll, so the pin means the same spot
+  // no matter the viewport state — and markers track the content live.
+  // Images/SVGs keep plain layer-relative ratios (the media IS the content).
   function attachPinLayer(layer, media, variant) {
     var down = null;
     layer.addEventListener('mousedown', function (e) {
       if (e.target.closest('.pin') || e.target.closest('.popover')) return;
       var r = layer.getBoundingClientRect();
-      down = { x: e.clientX - r.left, y: e.clientY - r.top };
+      down = { x: e.clientX - r.left, y: e.clientY - r.top, anchor: anchorAt(media, e) };
     });
     layer.addEventListener('mouseup', function (e) {
       if (!down) return;
       var r = layer.getBoundingClientRect();
       var up = { x: e.clientX - r.left, y: e.clientY - r.top };
-      var box = {
-        x: Math.min(down.x, up.x) / r.width,
-        y: Math.min(down.y, up.y) / r.height,
-        w: Math.abs(up.x - down.x) / r.width,
-        h: Math.abs(up.y - down.y) / r.height,
-      };
-      if (box.w * r.width < 8 && box.h * r.height < 8) { box.w = 0; box.h = 0; }
+      var box, anchor = down.anchor;
+      if (anchor) {
+        // anchor-space ratios: the layer box coincides with the iframe viewport,
+        // so element rects from the iframe document map 1:1 onto layer coords.
+        var ar = anchor.rect;
+        box = {
+          x: (Math.min(down.x, up.x) - ar.left) / ar.width,
+          y: (Math.min(down.y, up.y) - ar.top) / ar.height,
+          w: Math.abs(up.x - down.x) / ar.width,
+          h: Math.abs(up.y - down.y) / ar.height,
+        };
+        if (Math.abs(up.x - down.x) < 8 && Math.abs(up.y - down.y) < 8) { box.w = 0; box.h = 0; }
+        box.x = Math.min(1, Math.max(0, box.x)); box.y = Math.min(1, Math.max(0, box.y));
+      } else {
+        box = {
+          x: Math.min(down.x, up.x) / r.width,
+          y: Math.min(down.y, up.y) / r.height,
+          w: Math.abs(up.x - down.x) / r.width,
+          h: Math.abs(up.y - down.y) / r.height,
+        };
+        if (box.w * r.width < 8 && box.h * r.height < 8) { box.w = 0; box.h = 0; }
+      }
       down = null;
-      var screen = CFG.mode === 'review' ? screenAt(media, e) : undefined;
-      openPopover(layer, box, variant.id, screen);
+      openPopover(layer, box, variant.id, anchor ? anchor.id : undefined, up);
     });
   }
-  function screenAt(media, e) {
+  // Nearest content anchor under the pointer: canvas artboard [data-dc-slot],
+  // then [data-screen], then <section id>. Returns { id, el, rect } or null.
+  function anchorAt(media, e) {
     try {
-      if (media.tagName !== 'IFRAME') return undefined;
+      if (media.tagName !== 'IFRAME') return null;
       var doc = media.contentDocument;
       var ir = media.getBoundingClientRect();
       var node = doc.elementFromPoint(e.clientX - ir.left, e.clientY - ir.top);
-      while (node && node !== doc.body) {
-        if (node.dataset && node.dataset.screen) return node.dataset.screen;
-        if (node.tagName === 'SECTION' && node.id) return node.id;
+      while (node && node !== doc.documentElement) {
+        var id = (node.dataset && (node.dataset.dcSlot || node.dataset.screen)) ||
+                 (node.tagName === 'SECTION' && node.id ? node.id : null);
+        if (id) return { id: id, el: node, rect: node.getBoundingClientRect() };
         node = node.parentElement;
       }
-    } catch (err) { /* cross-origin — pin still records coords */ }
-    return undefined;
+    } catch (err) { /* cross-origin — fall back to layer-relative coords */ }
+    return null;
   }
-  function openPopover(layer, box, variantId, screen) {
+  // Re-find an anchor element by id inside the iframe document.
+  function anchorEl(media, id) {
+    try {
+      var doc = media.contentDocument;
+      return doc.querySelector('[data-dc-slot="' + id + '"]') ||
+             doc.getElementById(id) ||
+             doc.querySelector('[data-screen="' + id + '"]');
+    } catch (err) { return null; }
+  }
+  function openPopover(layer, box, variantId, screen, at) {
     document.querySelectorAll('.popover').forEach(function (p) { p.remove(); });
     var pop = el('div', 'popover');
-    pop.style.left = 'min(' + (box.x * 100) + '%, calc(100% - 280px))';
-    pop.style.top = 'min(' + (box.y * 100) + '%, calc(100% - 170px))';
+    var lr = layer.getBoundingClientRect();
+    var px = at ? at.x : box.x * lr.width;
+    var py = at ? at.y : box.y * lr.height;
+    pop.style.left = Math.max(8, Math.min(px, lr.width - 280)) + 'px';
+    pop.style.top = Math.max(8, Math.min(py, lr.height - 180)) + 'px';
     if (screen) pop.appendChild(el('div', 'hint', 'screen: ' + screen));
     var ta = el('textarea'); ta.placeholder = 'What should change here?';
     var sel = el('select', '', '<option value="fix">fix</option><option value="improve">improve</option><option value="question">question</option>');
@@ -499,16 +539,52 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
       if (pin._v !== variantId) return;
       if (pin.w > 0 || pin.h > 0) {
         var reg = el('div', 'region');
-        reg.style.left = (pin.x * 100) + '%'; reg.style.top = (pin.y * 100) + '%';
-        reg.style.width = (pin.w * 100) + '%'; reg.style.height = (pin.h * 100) + '%';
+        reg.dataset.idx = idx;
         layer.appendChild(reg);
       }
       var marker = el('div', 'pin');
       marker.dataset.idx = idx;
-      marker.style.left = (pin.x * 100) + '%'; marker.style.top = (pin.y * 100) + '%';
       marker.title = '[' + pin.intent + '] ' + pin.comment;
       marker.appendChild(el('div', 'pd', '<span>' + (idx + 1) + '</span>'));
       layer.appendChild(marker);
+    });
+    positionPins(layer, variantId);
+  }
+  // Place markers/regions: anchored pins resolve their element's CURRENT rect
+  // (tracks pan/zoom/scroll); plain pins use layer ratios. Runs on a light
+  // interval while an iframe artifact is on stage.
+  function positionPins(layer, variantId) {
+    var media = layer.parentNode ? layer.parentNode.querySelector('iframe,img,object') : null;
+    state.pins.forEach(function (pin, idx) {
+      if (pin._v !== variantId) return;
+      var marker = layer.querySelector('.pin[data-idx="' + idx + '"]');
+      var reg = layer.querySelector('.region[data-idx="' + idx + '"]');
+      var left, top, w, h, visible = true;
+      if (pin.screen && media && media.tagName === 'IFRAME') {
+        var a = anchorEl(media, pin.screen);
+        if (a) {
+          var r = a.getBoundingClientRect(); // iframe viewport coords == layer coords
+          left = r.left + pin.x * r.width; top = r.top + pin.y * r.height;
+          w = pin.w * r.width; h = pin.h * r.height;
+          var lr = layer.getBoundingClientRect();
+          visible = left > -40 && top > -40 && left < lr.width + 40 && top < lr.height + 40;
+        } else visible = false;
+        if (marker) {
+          marker.style.left = left + 'px'; marker.style.top = top + 'px';
+          marker.style.display = visible ? '' : 'none';
+        }
+        if (reg) {
+          reg.style.left = left + 'px'; reg.style.top = top + 'px';
+          reg.style.width = w + 'px'; reg.style.height = h + 'px';
+          reg.style.display = visible ? '' : 'none';
+        }
+      } else {
+        if (marker) { marker.style.left = (pin.x * 100) + '%'; marker.style.top = (pin.y * 100) + '%'; }
+        if (reg) {
+          reg.style.left = (pin.x * 100) + '%'; reg.style.top = (pin.y * 100) + '%';
+          reg.style.width = (pin.w * 100) + '%'; reg.style.height = (pin.h * 100) + '%';
+        }
+      }
     });
   }
   function renderPinList() {

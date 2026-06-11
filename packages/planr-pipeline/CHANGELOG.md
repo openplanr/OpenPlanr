@@ -4,6 +4,24 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.19.4] — 2026-06-11
+
+### Fixed — pins are content-anchored: exact through pan, zoom, and scroll
+
+Field report from a canvas review: a pin dropped while panned deep into the canvas recorded
+viewport ratios (`x: 0.31` of the browser window) with no screen id — meaningless to the agent
+and visually drifting on every pan. Pins on iframe artifacts are now **content-anchored**:
+
+- The click resolves the **artboard/screen element under it** — canvas `[data-dc-slot]`, then
+  `[data-screen]`, then `section[id]` (the old mapper only knew walkthrough anatomy, so canvas
+  pins never carried a screen id).
+- Coordinates are stored **relative to that element's box** — invariant under the canvas
+  transform, so the same ratio means the same spot at any pan/zoom/scroll state.
+- `pin.screen` carries the anchor id, giving `/design-review` the exact artboard to regenerate.
+- Markers **re-resolve the anchor's live rect** (~8×/sec) and ride along as the canvas moves,
+  hiding when the anchor leaves the viewport instead of floating orphaned. The pin popover opens
+  at the actual click point. Images/SVGs are unchanged (the media is the content there).
+
 ## [0.19.3] — 2026-06-11
 
 ### Changed — the board is a design tool now: rails + stage + inspector
