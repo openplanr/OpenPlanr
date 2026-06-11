@@ -14,7 +14,7 @@
         "source": "github",
         "repo": "openplanr/planr-pipeline"
       },
-      "version": "0.19.3"
+      "version": "0.19.4"
     },
     {
       "name": "openplanr",
