@@ -4,6 +4,19 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.19.5] — 2026-06-11
+
+### Changed — the /ship cost gate is a clickable AskUserQuestion, not a typed magic word
+
+The COST ESTIMATE halt asked the user to literally type `proceed` — while the runtime has a
+first-class question tool (the same one `/design` Phase B already enforces). The gate
+(`ship-arguments-and-cost-gate.md` § B.3) is now a **mandatory `AskUserQuestion` tool call**
+with the spend summary in the question text and clickable options: **Ship the batch**
+(recommended) · **Narrow the batch** (re-estimates the subset, same as `--task T-NNN`) ·
+**Skip extras** (`--no-devops`/`--no-docs`, re-gate) · **Cancel**. `--yes` still skips the
+gate; runtimes without an AskUserQuestion variant (rule-generated Cursor/Codex) keep the typed
+`proceed` fallback. Consent is never fabricated on either path.
+
 ## [0.19.4] — 2026-06-11
 
 ### Fixed — pins are content-anchored: exact through pan, zoom, and scroll

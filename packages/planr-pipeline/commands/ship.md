@@ -45,7 +45,7 @@ The procedure file at `${CLAUDE_PLUGIN_ROOT}/procedures/mode-detection.md` (sect
 
 ### 1.5 — TASK binding re-check + COST ESTIMATE (**Phase B**)
 
-Re-enter **`procedures/ship-arguments-and-cost-gate.md` → Phase B** (TASK existence validation + COST block + conditional halt).
+Re-enter **`procedures/ship-arguments-and-cost-gate.md` → Phase B** (TASK existence validation + COST block + the **B.3 AskUserQuestion confirmation gate** — a clickable Ship/Narrow/Skip-extras/Cancel prompt, never a typed magic word; `--yes` skips it).
 
 ### 1.6 — Bind run manifest path *(append-only `.run-manifest.jsonl`, SPEC-008)*
 

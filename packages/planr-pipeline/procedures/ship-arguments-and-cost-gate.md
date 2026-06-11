@@ -105,13 +105,33 @@ COST ESTIMATE — {SLUG}
   Est. tokens:  ~{min_input}k–{max_input}k input / ~{min_output}k–{max_output}k output
   Est. cost:    ${min_cost}–${max_cost}
   Est. time:    {min_time}–{max_time} min
-
-  Reply "proceed" or narrow with --task T-NNN.
 ```
 
 **Range multiplier:** apply ×0.8 for min and ×1.3 for max on the per-task heuristics. The estimate is per-task token/cost arithmetic only — it has no parallelism knob (native concurrency speeds wall-clock time but does not change total token spend). R6 retries (iteration 2/3) are NOT pre-counted — they add cost if triggered but are not predictable.
 
-Interactive halt (**when `$SHIP_ASSUME_YES` is false**): **STOP** the orchestrator until explicit human confirmation. Never fabricate consent. When `$SHIP_ASSUME_YES` is true, print the estimate block once then continue without halting.
+### B.3 — The confirmation gate (a clickable AskUserQuestion, never a typed magic word)
+
+When **`$SHIP_ASSUME_YES` is true**: print the estimate block once, then continue without
+halting. Otherwise the gate is a **mandatory `AskUserQuestion` tool call** — the same
+enforcement as `/design` Phase B (`design-step1-clarify.md` "B — Enforcement"):
+
+- **Issue the actual tool call.** Never narrate *"Reply `proceed` to ship"* and stop — the
+  user must get a real prompt with clickable options, not a magic word to type.
+- Put the **one-line spend summary in the question text** (the user decides with the number
+  in view): `Ship {dispatch_count} task(s) — est. {min_cost}–{max_cost}, {min_time}–{max_time} min?`
+
+> **Ship {dispatch_count} task(s)?** Est. **${min_cost}–${max_cost}** · {min_time}–{max_time} min · {DISPATCH_MODE}
+> A) **Ship the batch** *(recommended)* — dispatch exactly the estimate above
+> B) **Narrow the batch** — you name the task(s); re-run the estimate for that subset (same as `--task T-NNN`)
+> C) **Skip extras** — toggle `--no-devops` / `--no-docs`, re-print the estimate, re-gate
+> D) **Cancel** — nothing dispatched
+
+- **A** → continue to dispatch. **B** → bind the subset, recompute B.2, re-gate.
+  **C** → flip the flags, re-print, re-gate. **D** → STOP cleanly (no snapshot mutation).
+- **Fallback (no AskUserQuestion variant callable — e.g. a rule-generated runtime):** fall back
+  to the legacy typed gate — print
+  `Reply "proceed" to ship, or narrow with --task T-NNN.` and **STOP** until the user replies.
+  Never fabricate consent on either path.
 
 ---
 
