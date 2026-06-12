@@ -47,6 +47,13 @@ explaining why this task is needed and why the Create/Modify files were chosen.
 Reference the specific functional requirement or acceptance criterion that
 drives this task. Example: "Modifies ship.md because the memory-read hook
 must run before agent dispatch in Step 1."
+
+For each Type=UI task (emitted when a design exists), include a concrete
+DESIGN-FIDELITY item in the task's Definition of Done so the qa-agent's Design
+Fidelity gate has a checkable target — e.g. "Renders the '<screen name>' screen
+per design-spec.md §9 Screen Inventory using ONLY the §1 palette colours (no
+off-palette hex), the §2 fonts, and spacing on the §3 scale." Name the actual
+screen from §9; do not write a generic placeholder.
 ```
 
 ## Memory writes (during decomposition)

@@ -134,7 +134,7 @@ Follow these steps in order. **STOP after step 4.**
 ### DEV Phase — when user says "ship {feature}"
 
 1. Validate task files exist.
-2. For each US in topological order, dispatch tasks:
+2. Dispatch tasks in `dependsOn` order across the whole feature (a task is ready when every id in its `dependsOn` is `done`, or it has none — user stories are not a dispatch boundary). Codex is single-session, so run **one ready task per invocation** and re-invoke to continue; ordering follows `dependsOn`, not story sequence.
    - `Type: UI` → adopt the **frontend** persona (writes UI files only).
    - `Type: Tech` → adopt the **backend** persona (writes services, DTOs, entities, controllers, DB queries — never UI).
 3. Apply the **3-iteration correction loop** (R6) per task:

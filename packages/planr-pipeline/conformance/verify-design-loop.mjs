@@ -109,6 +109,10 @@ assert(followed.includes('m-interact') && followed.includes('pinlayer'),
   'board ships the Interact/Pin mode toggle (canvas artifacts stay pannable)');
 assert(followed.includes('receipt') && followed.includes('Feedback submitted'),
   'board ships the submission receipt UI');
+assert(followed.includes('id="btnExport"') && followed.includes('function domExport('),
+  'board ships PNG/HTML export (rasteriser + button)');
+assert(followed.includes('reference image') && followed.includes('design-spec.md'),
+  'export frames PNG as a reference image, HTML/spec as the real handoff');
 const head = await fetch(`${base}/boards/conf-loop/variant-A.svg`, { method: 'HEAD' });
 assert(head.status === 200, 'HEAD on a board asset answers 200');
 

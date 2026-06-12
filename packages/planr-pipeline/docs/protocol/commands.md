@@ -85,10 +85,10 @@ Auto-scaffolding and auto-healing produce no AI calls and no decomposition — t
 
 ### Orchestration
 
-1. **Iterate User Stories topologically.** For each story, dispatch its tasks:
+1. **Dispatch ready tasks feature-flat.** Collect every task across ALL stories into one queue and dispatch every task whose `dependsOn` is satisfied (or empty) — in one turn, not one story at a time. `dependsOn` is the only ordering; user-story folders are not a dispatch boundary.
    - `Type: UI` → `frontend-agent`
    - `Type: Tech` → `backend-agent`
-   - Tasks within the SAME US may run in parallel.
+   - The Frontend‖Backend pair within one US is the smallest case, never the ceiling — independent tasks from different stories dispatch together. (Single-session runtimes that can't fan out run one task per invocation instead.)
 2. **3-iteration correction loop per task** (rule R6):
    - Iter 1: direct fix on build/test failure.
    - Iter 2: re-read task spec + design-spec/schema, fix holistically.

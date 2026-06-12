@@ -39,6 +39,8 @@ A task with no `dependsOn` (or an empty list) is ready as soon as it is `pending
 
 The shared paths below are surfaced to each dispatched agent as an **advisory hint** in the dispatch prompt. They are **not** an ordering or serialization mechanism: planr does **not** split waves, serialize tasks, or fail a run because two tasks both touch a listed path. The list exists only so an agent editing one of these shared files knows to append rather than clobber and to keep its diff minimal.
 
+**This note is hygiene for the editing agent, never a scheduling signal for the orchestrator.** It never means "dispatch fewer tasks" or "order these" — tasks that share a lock-listed path still dispatch together in the same turn (the specification-agent already declares `dependsOn` whenever a genuine output ordering exists). Do not read overlap on this list as a reason to go narrow.
+
 ```yaml
 # planr-pipeline advisory lock list — shared files an agent should treat carefully
 # (gitignore-style globs). ADVISORY ONLY — surfaced in the dispatch prompt; enforces nothing.
@@ -69,7 +71,7 @@ For every ready task `T` in `${TASKS}` (ready = all `dependsOn` entries have `st
    - `subagent_type`: the task's `agent` field (`frontend-agent`, `backend-agent`, `db-agent`, …).
    - `description`: short label `"<T.id> — <task-title-first-35-chars>"`.
    - `prompt`: the standard per-task dispatch prompt (path to the task file, MODE/SPEC_DIR/FEAT_DIR, stack inputs, project-memory block, the advisory lock-list note from Section 2, plus the prior `T-<id>-error-report.md` body when `status` was `blocked` — see `commands/ship.md` Step 2c). The agents write directly to the shared working tree; there is no worktree isolation.
-3. **Wait for results.** The orchestrator does not unblock a dependent task until every task it lists in `dependsOn` has returned `done`.
+3. **Roll forward (don't wait for the whole batch).** As each task returns, close its bookkeeping and dispatch any task it just unblocked — you do not have to drain the current batch before starting newly-eligible dependents. A dependent is held back only until every id in its `dependsOn` is `done`; nothing else delays it. Width grows as dependencies clear and is never reset to a narrow wave.
 4. **Post-dispatch status transition.** For each task `T`:
    - **Success:** write `status: done`, `updated: <today>`; close the manifest record with `exit_status: "success"`, `ended_at: <now>`, populated `files_written`/`files_modified`.
    - **R6 failure:** write `status: blocked`, `updated: <today>`; write `T-<T.id>-error-report.md` to the mode-resolved tasks folder; close the manifest record with `exit_status: "failure"`. Continue — a single task's R6 failure does **not** abort the rest of the run (matches `commands/ship.md` Step 2c contract). Tasks that `dependsOn` a blocked task are not dispatched.
@@ -91,9 +93,9 @@ For every ready task `T` in `${TASKS}` (ready = all `dependsOn` entries have `st
 
 ---
 
-## Section 5 — Determinism & replay guarantees
+## Section 5 — Final-state determinism
 
-This procedure is deterministic: identical inputs (same task set, same `dependsOn` edges) always produce the same dispatch outcome.
+This procedure gives **final-state** determinism: identical inputs (same task set, same `dependsOn` edges) always produce the same shipped *state* — the same tasks done/blocked, the same dependency ordering honored. It does **not** guarantee a reproducible dispatch *schedule*: native style is prompt-driven (the model emits the `Agent` calls), so the relative order and timing of independent tasks within a ready set are not fixed. A runtime-enforced, replayable *schedule* is exactly what the `workflow` dispatch style adds on top (the host's Workflow tool schedules the declared DAG) — see `commands/ship.md` §2b-workflow.
 
 1. **`dependsOn` is the only ordering input.** A task dispatches once every task in its `dependsOn` list is `done`. Tasks with no declared dependency are dispatched as soon as they are ready, in no enforced relative order — the host's native concurrency cap is the only throttle.
 2. **Single-writer status & manifest.** Task `.md` `status` fields and `.run-manifest.jsonl` are written only by the orchestrator (Section 3), so concurrent agents cannot race on shipped-state bookkeeping (FR9).

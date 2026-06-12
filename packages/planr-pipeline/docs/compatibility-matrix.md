@@ -106,7 +106,7 @@ Each invocation in `per-task` mode dispatches **one** task, writes its closing s
 
 ### Native parallel dispatch (SPEC-014)
 
-In `DISPATCH_MODE: multi-task`, the orchestrator emits **one `Agent` call per ready task in a single turn**, all operating in the shared main working tree — exactly like native Claude Code parallel sub-agents. There is no isolation layer and no merge-back. This is a Claude Code capability only.
+In `DISPATCH_MODE: multi-task`, the orchestrator emits **one `Agent` call per ready task in a single turn**, all operating in the shared main working tree — exactly like native Claude Code parallel sub-agents. The queue is **feature-flat** (ready tasks collected across ALL stories) and the orchestrator dispatches **every** ready task — it does not self-limit to one or two. There is no isolation layer and no merge-back. This is a Claude Code capability only.
 
 | Runtime | Native parallel dispatch | Behavior |
 |---|---|---|
@@ -115,6 +115,17 @@ In `DISPATCH_MODE: multi-task`, the orchestrator emits **one `Agent` call per re
 | **Codex** | ❌ not supported | Runs `DISPATCH_MODE: per-task` — exactly one task per invocation, sequential. |
 
 planr does no write-set inference and no cycle detection; the only ordering it honors is an explicit `dependsOn:` field. The host's native concurrency cap is the only throttle (there is no concurrency flag). The lock-list survives only as an advisory note in the dispatch prompt. The full contract is in `docs/feat-parallel-dispatch/`. (SPEC-014 supersedes the SPEC-013 worktree + wave scheduler.)
+
+#### Dispatch style — `native` vs `workflow` (Claude Code `multi-task` only)
+
+On Claude Code, `/ship` Step 1.8 additionally binds `DISPATCH_STYLE` — *how* the wide fan-out runs. Both run identical agents, honor `dependsOn`, and keep the orchestrator as the single writer of status + manifest:
+
+| Style | Scheduler | When |
+|---|---|---|
+| **`native`** (default) | The orchestrator emits the `Agent` calls itself, fanning out as it sees fit. | Default; flexible, zero new machinery. |
+| `workflow` | The orchestrator drives the **Workflow tool**, declaring the `dependsOn` DAG; the host schedules it deterministically and replayably. | When you want a guaranteed, reproducible schedule. |
+
+Chosen via the Step 1.5 cost/dispatch gate (clickable) or `--native` / `--workflow`; `--yes` ⇒ `native`. On Cursor / Codex / unknown the choice is suppressed (no Workflow tool, no safe in-session fan-out) — both collapse to the per-task resume loop. `DISPATCH_STYLE` does **not** revive worktrees or waves; in `workflow` style determinism comes from the host's Workflow tool, not a planr-side scheduler.
 
 ### Design generation (`/planr-pipeline:design`) is Claude-Code-only in v0.13.0
 

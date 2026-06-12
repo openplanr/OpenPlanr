@@ -83,6 +83,15 @@ export function renderBoardHtml(config) {
              justify-content:center; font-size:13px; transition:all .14s ease }
   .iconbtn:hover { color:var(--primary); border-color:var(--soft) }
   .iconbtn.off { background:var(--cream); color:var(--line-strong) }
+  .exportwrap { position:relative }
+  .menu { position:absolute; right:0; top:34px; z-index:60; min-width:214px; background:var(--card);
+          border:1px solid var(--line); border-radius:var(--r); padding:5px;
+          box-shadow:0 12px 36px rgba(29,42,38,.16) }
+  .menu button { display:block; width:100%; text-align:left; border:0; background:transparent;
+                 color:var(--ink); font-size:12.5px; padding:8px 10px; border-radius:var(--rs); cursor:pointer }
+  .menu button:hover { background:var(--mint); color:var(--primary) }
+  .menu .mhint { color:var(--muted); font-size:10.5px; padding:6px 10px 4px; line-height:1.45 }
+  .menu .sep { height:1px; background:var(--line); margin:4px 2px }
   .hint { color:var(--muted); font-size:11.5px; white-space:nowrap }
 
   .banner { position:fixed; top:52px; left:50%; transform:translateX(-50%); z-index:80;
@@ -234,6 +243,10 @@ export function renderBoardHtml(config) {
     <button id="m-pin">Pin</button>
   </div>
   <span class="hint" id="modeHint"></span>
+  <div class="exportwrap">
+    <button class="iconbtn" id="btnExport" title="export PNG / HTML" aria-haspopup="true">⤓</button>
+    <div class="menu" id="exportMenu" hidden></div>
+  </div>
   <button class="iconbtn" id="tgL" title="toggle variants panel ( [ )">⟨</button>
   <button class="iconbtn" id="tgR" title="toggle inspector ( ] )">⟩</button>
 </header>
@@ -358,6 +371,183 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     if (e.key === 'ArrowRight' && CFG.variants.length > 1) select(state.sel + 1);
   });
 
+  // ── export (PNG reference image / HTML handoff) ───────────────────────
+  // Self-contained rasteriser, the same pipeline the canvas uses: clone the
+  // node with computed styles + @font-face + <img> urls inlined, wrap in
+  // foreignObject→canvas (≤3×) for PNG. Everything derives from the node's OWN
+  // document, so it operates on an element inside the same-origin artifact
+  // iframe. PNG is a REFERENCE image; the HTML (+ design-spec.md) is the real
+  // design→implementation handoff — the menu copy says so.
+  function domExport(node, w, h, name, kind) {
+    var doc = node.ownerDocument, win = doc.defaultView || window;
+    var ready = (doc.fonts && doc.fonts.ready) ? doc.fonts.ready.catch(function () {}) : Promise.resolve();
+    var toDataURL = function (url) {
+      return fetch(url).then(function (r) { return r.blob(); }).then(function (b) {
+        return new Promise(function (res) {
+          var fr = new FileReader();
+          fr.onload = function () { res(fr.result); };
+          fr.onerror = function () { res(url); };
+          fr.readAsDataURL(b);
+        });
+      }).catch(function () { return url; });
+    };
+    var save = function (blob, ext) {
+      if (!blob) return;
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = name + '.' + ext; a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    };
+    return ready.then(function () {
+      var fontRules = [], pending = [], seen = {};
+      var scrapeCss = function (href) {
+        if (seen[href]) return; seen[href] = 1;
+        pending.push(fetch(href).then(function (r) { return r.text(); }).then(function (css) {
+          (css.match(/@font-face\\s*{[^}]*}/g) || []).forEach(function (m) { fontRules.push({ css: m, base: href }); });
+        }).catch(function () {}));
+      };
+      var sheets = doc.styleSheets;
+      for (var i = 0; i < sheets.length; i++) {
+        var ss = sheets[i], base = ss.href || doc.baseURI;
+        try {
+          var rules = ss.cssRules;
+          for (var j = 0; j < rules.length; j++) if (rules[j].type === 5) fontRules.push({ css: rules[j].cssText, base: base });
+        } catch (e) { if (ss.href) scrapeCss(ss.href); }
+      }
+      return Promise.all(pending).then(function () {
+        return Promise.all(fontRules.map(function (rule) {
+          var out = rule.css, m, re = /url\\((['"]?)([^'")]+)\\1\\)/g, urls = [];
+          while ((m = re.exec(rule.css))) { if (m[2].indexOf('data:') !== 0) urls.push(m); }
+          var chain = Promise.resolve();
+          urls.forEach(function (mm) {
+            chain = chain.then(function () {
+              var abs; try { abs = new URL(mm[2], rule.base).href; } catch (e) { return; }
+              return toDataURL(abs).then(function (d) { out = out.split(mm[0]).join('url("' + d + '")'); });
+            });
+          });
+          return chain.then(function () { return out; });
+        }));
+      }).then(function (fontList) {
+        var fontCss = fontList.join('\\n');
+        var cloneStyled = function (src) {
+          if (src.nodeType === 8 || (src.nodeType === 1 && src.tagName === 'SCRIPT')) return doc.createTextNode('');
+          var dst = src.cloneNode(false);
+          if (src.nodeType === 1) {
+            var cs = win.getComputedStyle(src), txt = '';
+            for (var i = 0; i < cs.length; i++) txt += cs[i] + ':' + cs.getPropertyValue(cs[i]) + ';';
+            dst.setAttribute('style', txt + 'animation:none;transition:none;');
+            if (src.tagName === 'CANVAS') { try { var im = doc.createElement('img'); im.src = src.toDataURL(); im.setAttribute('style', txt); return im; } catch (e) {} }
+          }
+          for (var c = src.firstChild; c; c = c.nextSibling) dst.appendChild(cloneStyled(c));
+          return dst;
+        };
+        var clone = cloneStyled(node);
+        clone.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+        clone.style.boxShadow = 'none'; clone.style.borderRadius = '0';
+        var jobs = [];
+        clone.querySelectorAll('img').forEach(function (im) {
+          var s = im.getAttribute('src');
+          if (s && s.indexOf('data:') !== 0) {
+            try { var abs = new URL(s, doc.baseURI).href; jobs.push(toDataURL(abs).then(function (d) { im.setAttribute('src', d); })); } catch (e) {}
+          }
+        });
+        return Promise.all(jobs).then(function () {
+          var xml = new XMLSerializer().serializeToString(clone);
+          if (kind === 'html') {
+            var html = '<!doctype html><html><head><meta charset="utf-8"><title>' + name + '</title>' +
+              (fontCss ? '<style>' + fontCss + '</style>' : '') + '</head><body style="margin:0">' + xml + '</body></html>';
+            return save(new Blob([html], { type: 'text/html' }), 'html');
+          }
+          var px = Math.max(1, Math.min(3, Math.floor(11000 / Math.max(w, h)) || 1));
+          var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (w * px) + '" height="' + (h * px) +
+            '" viewBox="0 0 ' + w + ' ' + h + '"><foreignObject width="' + w + '" height="' + h + '">' +
+            (fontCss ? '<style><![CDATA[' + fontCss + ']]></style>' : '') + xml + '</foreignObject></svg>';
+          var img = new Image();
+          return new Promise(function (res, rej) {
+            img.onload = res; img.onerror = function () { rej(new Error('render failed')); };
+            img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+          }).then(function () {
+            var cv = document.createElement('canvas'); cv.width = w * px; cv.height = h * px;
+            cv.getContext('2d').drawImage(img, 0, 0);
+            cv.toBlob(function (blob) { save(blob, 'png'); }, 'image/png');
+          });
+        });
+      });
+    });
+  }
+
+  function exportName(suffix) {
+    var v = cur();
+    var base = (CFG.boardId || 'design') + (v && v.id && v.id !== 'artifact' ? '-' + v.id : '');
+    return (base + (suffix ? '-' + suffix : '')).replace(/[^\\w.-]+/g, '_');
+  }
+  function currentScreenEl() {
+    var m = state.media;
+    if (!m || m.tagName !== 'IFRAME') return null;
+    try {
+      var doc = m.contentDocument;
+      var node = doc.elementFromPoint(m.clientWidth / 2, m.clientHeight / 2);
+      while (node && node !== doc.documentElement) {
+        if ((node.dataset && (node.dataset.dcSlot || node.dataset.screen)) || (node.tagName === 'SECTION' && node.id)) return node;
+        node = node.parentElement;
+      }
+      return doc.body;
+    } catch (e) { return null; }
+  }
+  function downloadSrc(src, name) {
+    var a = document.createElement('a'); a.href = src; a.download = name; a.click();
+  }
+  function toast(text) {
+    banner('ok', text);
+    setTimeout(function () { document.getElementById('banner').classList.remove('show'); }, 2800);
+  }
+  function exportRun(target) {
+    closeMenu();
+    var v = cur();
+    if (target === 'html-file') { downloadSrc(v.src, exportName('') + '.html'); return; }
+    if (target === 'src') { downloadSrc(v.src, exportName('') + (/\\.svg(\\?|$)/.test(v.src) ? '.svg' : '.png')); return; }
+    var node, w, h, label;
+    if (target === 'screen') {
+      node = currentScreenEl();
+      if (!node) { toast('No screen under the viewport to export.'); return; }
+      w = node.offsetWidth || node.scrollWidth; h = node.offsetHeight || node.scrollHeight;
+      label = (node.dataset && (node.dataset.dcSlot || node.dataset.screen)) || node.id || 'screen';
+    } else {
+      if (!state.media || state.media.tagName !== 'IFRAME') { toast('Nothing to rasterise.'); return; }
+      var d = state.media.contentDocument;
+      node = d.body;
+      w = Math.max(d.documentElement.scrollWidth, d.body.scrollWidth);
+      h = Math.max(d.documentElement.scrollHeight, d.body.scrollHeight);
+      label = 'full';
+    }
+    toast('Rendering PNG…');
+    domExport(node, w, h, exportName(label), 'png')
+      .then(function () { toast('PNG downloaded — reference image (HTML + design-spec.md is the real handoff).'); })
+      .catch(function (e) { toast('Export failed: ' + (e && e.message ? e.message : e)); });
+  }
+
+  var exportMenu = document.getElementById('exportMenu');
+  function closeMenu() { exportMenu.hidden = true; }
+  function buildMenu() {
+    var v = cur();
+    exportMenu.innerHTML = '';
+    var add = function (label, fn) { var b = el('button', '', label); b.onclick = fn; exportMenu.appendChild(b); };
+    if (v.type === 'html') {
+      add('PNG — current screen', function () { exportRun('screen'); });
+      add('PNG — full design', function () { exportRun('full'); });
+      exportMenu.appendChild(el('div', 'sep'));
+      add('HTML — download artifact', function () { exportRun('html-file'); });
+      exportMenu.appendChild(el('div', 'mhint', 'PNG is a reference image. The HTML (+ design-spec.md) is the real design→build handoff.'));
+    } else {
+      add('Download ' + (/\\.svg(\\?|$)/.test(v.src) ? 'SVG' : 'PNG'), function () { exportRun('src'); });
+      exportMenu.appendChild(el('div', 'mhint', 'Reference image for sharing.'));
+    }
+  }
+  document.getElementById('btnExport').onclick = function (e) {
+    e.stopPropagation();
+    if (exportMenu.hidden) { buildMenu(); exportMenu.hidden = false; } else closeMenu();
+  };
+  document.addEventListener('click', function () { closeMenu(); });
+
   // ── left rail: variants ───────────────────────────────────────────────
   var vlist = document.getElementById('vlist');
   CFG.variants.forEach(function (v, i) {
@@ -388,6 +578,7 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
   function renderStage() {
     var v = cur();
     stagein.innerHTML = '';
+    state.media = null;
     stagein.className = 'stagein' + (v.type === 'html' ? ' fillwrap' : '');
 
     if (state.diff) {
@@ -410,6 +601,7 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     else if (v.type === 'svg') { media = el('object'); media.type = 'image/svg+xml'; media.data = v.src; }
     else { media = el('img'); media.src = v.src; media.alt = v.id; }
     frame.appendChild(media);
+    state.media = media;
     var layer = el('div', 'pinlayer');
     frame.appendChild(layer);
     stagein.appendChild(frame);

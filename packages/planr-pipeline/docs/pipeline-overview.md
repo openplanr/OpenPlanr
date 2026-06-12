@@ -129,7 +129,8 @@ rule, manifest); conformance in `conformance/verify-design-assets.mjs` + `tests/
 │                                                                             │
 │  Trigger: /planr-pipeline:ship {name}                               │
 │                                                                             │
-│  Parallel execution per US (Frontend ‖ Backend within same US):            │
+│  Wide dispatch — ALL ready tasks across ALL stories, in parallel.          │
+│  (FE ‖ BE within one US is the SMALLEST case shown, never the cap:)         │
 │                                                                             │
 │  Frontend Agent (Opus 4.8)      Backend Agent (Opus 4.8)                   │
 │  ← task-1.md (Type=UI)           ← task-2.md (Type=Tech)                    │
@@ -209,7 +210,7 @@ Normative definition: **`docs/rules.md`** → **`### R6 — Max 3 Correction Ite
 
 > Applies to the DEV Phase (Step 3) **only when `DISPATCH_MODE: multi-task`** — the Claude Code default. In `per-task` and `single-task` modes the pipeline dispatches exactly one task per invocation (see `docs/compatibility-matrix.md` §Dispatch mode). Feature docs: `docs/feat-parallel-dispatch/`.
 
-When more than one DEV task is ready, the orchestrator dispatches them as **native parallel `Agent` calls** — one tool-call per ready task in a single assistant turn, all operating in the shared main working tree, exactly like native Claude Code parallel sub-agents.
+When more than one DEV task is ready, the orchestrator dispatches them as **native parallel `Agent` calls** — one tool-call per ready task in a single assistant turn, all operating in the shared main working tree, exactly like native Claude Code parallel sub-agents. The dispatch queue is **feature-flat**: ready tasks are collected across ALL stories, not one US at a time. **Dispatch every ready task; do not self-limit to one or two** — the host's native concurrency cap is the only throttle. (On Claude Code, `DISPATCH_STYLE` further chooses *how* the fan-out runs: `native` — the orchestrator emits the `Agent` calls itself; `workflow` — it drives the Workflow tool to schedule the `dependsOn` DAG deterministically. Same agents, same single-writer bookkeeping.)
 
 **Dispatch shape.** A "batch" is simply the orchestrator emitting one `Agent` call per *ready* task (those with no unmet `dependsOn:`) in one turn. There is no worktree isolation and no merge-back: sub-agents write directly to the repo. It is prompt-driven — no daemon, no new process, no new dependency. The host's native concurrency cap is the only throttle; there is no `--max-parallel` knob.
 
@@ -219,6 +220,6 @@ When more than one DEV task is ready, the orchestrator dispatches them as **nati
 
 **Single-writer bookkeeping (retained).** Task `status` transitions and `.run-manifest.jsonl` lines are written only by the orchestrator in the main tree, before and after each task — orthogonal good hygiene, independent of the removed worktree machinery.
 
-**Accepted tradeoff.** planr no longer guarantees write-isolation between parallel agents. Collision avoidance moves to good task decomposition, the advisory lock-list hint, and the host agent's judgment. (SPEC-014 supersedes the SPEC-013 worktree + wave scheduler; see `docs/feat-parallel-dispatch/`.)
+**Why wide is safe (not a tradeoff to fear).** The specification-agent decomposes a feature so that ready tasks are write-disjoint — `dependsOn` is declared for genuine output dependencies, and independent siblings stay independent. So dispatching ALL eligible tasks at once is the **expected, safe** default: there is no isolation layer because eligible tasks don't overlap, and the advisory lock-list is hygiene for the rare shared file, never a reason to go narrow. planr deliberately does not re-add worktrees or wave-splitting (SPEC-014 supersedes the SPEC-013 worktree + wave scheduler; see `docs/feat-parallel-dispatch/`).
 
 *See: `docs/rules.md` · `docs/agent-model-map.md` · `docs/task-anatomy.md` · `docs/feat-parallel-dispatch/`*

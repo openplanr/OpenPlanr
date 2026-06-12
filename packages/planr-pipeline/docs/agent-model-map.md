@@ -73,12 +73,15 @@ Step 3 — DEV Phase
                      Consolidated Build Check
 ```
 
-Frontend Agent (task-1) runs first or in parallel with Backend Agent (task-2).
-They operate on completely different file sets — no merge conflicts by design.
+Frontend and Backend Agents operate on completely different file sets — no merge
+conflicts by design.
 
-Topological parallelism rule:
-- task-1 (UI) and task-2 (Tech) within the same US can run in parallel
-- US-N+1 tasks must wait for US-N to complete (if dependency declared)
+Feature-flat parallelism rule (multi-task):
+- ALL ready tasks across ALL stories dispatch together — not just the UI/Tech pair
+  within one US. Independent US-N+1 tasks run alongside US-N tasks.
+- The ONLY ordering is per-task `dependsOn`: a task waits only for the specific
+  tasks it declares, regardless of which story they belong to. Whole stories do
+  not serialize.
 
 ---
 

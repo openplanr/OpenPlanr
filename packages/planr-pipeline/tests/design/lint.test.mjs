@@ -91,3 +91,46 @@ test('font-not-token warns against a known design system only', () => {
   const noDs = lintDesign('<style>.a{font-family:"Comic Sans MS"}</style>');
   assert.ok(!noDs.warnings.some((w) => w.rule === 'font-not-token'), 'no DS → cannot judge fonts');
 });
+
+test('off-grid spacing expressed in rem/em is caught (normalized to px at 16px root)', () => {
+  assert.equal(lintDesign('<style>.a{padding:0.8125rem}</style>').errors.some((e) => e.rule === 'spacing-off-grid'), true, '0.8125rem = 13px is off-grid');
+  assert.equal(lintDesign('<style>.a{padding:1rem;gap:0.5rem}</style>').errors.length, 0, '1rem/0.5rem = 16px/8px are on-grid');
+});
+
+test('lintDesign reports a declarations count (0 when no <style>/inline CSS is present)', () => {
+  assert.equal(lintDesign('.a{padding:13px}').declarations, 0, 'raw CSS (no <style>) parses to zero declarations');
+  assert.ok(lintDesign('<style>.a{padding:16px;color:#111}</style>').declarations >= 2, 'real <style> CSS parses declarations');
+});
+
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const LINT = join(dirname(fileURLToPath(import.meta.url)), '../../lib/design/lint.mjs');
+const runLint = (args) => {
+  try { execFileSync('node', [LINT, ...args], { stdio: 'pipe' }); return 0; }
+  catch (e) { return e.status; }
+};
+
+test('CLI auto-wraps a bare .css so compiled stylesheets (Tailwind arbitrary values) are caught', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lint-cli-'));
+  try {
+    writeFileSync(join(dir, 'app.css'), '.p-13{padding:13px}.ok{margin:16px}'); // compiled off-grid px
+    writeFileSync(join(dir, 'clean.css'), '.ok{padding:16px;gap:8px}');
+    assert.equal(runLint([join(dir, 'app.css')]), 1, 'off-grid in a bare .css is caught (auto-wrapped) → exit 1');
+    assert.equal(runLint([join(dir, 'clean.css')]), 0, 'on-grid compiled .css → exit 0');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('CLI --expect-styles fails (exit 3) when a style-less file parses zero declarations — no fabricated clean pass', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lint-cli-'));
+  try {
+    writeFileSync(join(dir, 'shell.html'), '<div>no styles here</div>'); // a CSR shell — nothing to lint
+    writeFileSync(join(dir, 'real.html'), '<style>.a{padding:16px}</style>');
+    assert.equal(runLint([join(dir, 'shell.html')]), 0, 'back-compat: no flag → 0 even with nothing parsed');
+    assert.equal(runLint(['--expect-styles', join(dir, 'shell.html')]), 3, 'zero-decl + --expect-styles → exit 3 (no fabricated pass)');
+    assert.equal(runLint(['--expect-styles', join(dir, 'real.html')]), 0, 'real on-grid CSS → exit 0');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});

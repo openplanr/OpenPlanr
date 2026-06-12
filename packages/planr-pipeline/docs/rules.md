@@ -142,7 +142,7 @@ Frontend Agent → UI files only (components, pages, styles, client state)
 Backend Agent  → Tech files only (services, DTOs, entities, endpoints, DB queries)
 Neither agent may write files outside their designated scope.
 ```
-Rationale: Clear ownership prevents conflicts when agents run in parallel.
+Rationale: clean per-agent ownership is exactly what makes **wide** parallel dispatch safe — because ready tasks write to disjoint scopes, the orchestrator dispatches ALL of them at once with no isolation needed. Scope boundaries are the reason fan-out is the default, not a reason to limit it.
 
 ### R10 — Agent Role Parity (Build-Order Rule)
 ```

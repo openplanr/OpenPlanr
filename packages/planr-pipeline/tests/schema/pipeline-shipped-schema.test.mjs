@@ -22,10 +22,15 @@ test('pipeline-shipped marker fails when required fields (mode, tasks_failed, du
   assert.ok(errors.length > 0);
 });
 
-test('pipeline-shipped marker rejects runtime not in enum [claude-code, cursor, codex]', () => {
+test('pipeline-shipped marker rejects runtime not in enum [claude-code, cursor, codex, unknown]', () => {
   const badRuntime = { ...valid, runtime: 'aider' };
   const errors = validate(badRuntime, schema);
   assert.ok(errors.length > 0, 'expected runtime enum violation');
+});
+
+test('pipeline-shipped marker accepts runtime "unknown" (Step 1.7 fail-safe still writes a marker)', () => {
+  const errors = validate({ ...valid, runtime: 'unknown' }, schema);
+  assert.equal(errors.length, 0, 'unknown is a valid runtime value');
 });
 
 test('pipeline-shipped marker rejects mode other than default | spec-driven', () => {
@@ -56,4 +61,15 @@ test('pipeline-shipped marker rejects negative tasks_executed', () => {
   const negative = { ...valid, tasks_executed: -1 };
   const errors = validate(negative, schema);
   assert.ok(errors.length > 0, 'expected tasks_executed minimum:0 violation');
+});
+
+test('pipeline-shipped marker accepts optional dispatch_style native | workflow, and omitted', () => {
+  assert.equal(validate(valid, schema).length, 0, 'omitted dispatch_style is valid (optional)');
+  assert.equal(validate({ ...valid, dispatch_style: 'native' }, schema).length, 0);
+  assert.equal(validate({ ...valid, dispatch_style: 'workflow' }, schema).length, 0);
+});
+
+test('pipeline-shipped marker rejects dispatch_style outside enum [native, workflow]', () => {
+  const errors = validate({ ...valid, dispatch_style: 'turbo' }, schema);
+  assert.ok(errors.length > 0, 'expected dispatch_style enum violation');
 });

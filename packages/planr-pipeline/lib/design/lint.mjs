@@ -72,7 +72,15 @@ function declBlocks(html) {
 /** Pull the px magnitudes that appear as standalone tokens in a CSS value. */
 function pxValues(value) {
   if (/\bvar\(|\bcalc\(/.test(value)) return []; // token / computed — not a literal
-  return (value.match(/-?\d+(?:\.\d+)?px/g) || []).map((t) => parseFloat(t));
+  // px-equivalent literals. rem/em are normalized to px at the 16px root the
+  // spacing tokens assume — Tailwind/most stacks compile spacing to rem, so an
+  // off-grid rem (0.8125rem = 13px) would otherwise slip past the grid check.
+  const out = [];
+  for (const m of value.matchAll(/-?\d+(?:\.\d+)?(px|rem|em)\b/g)) {
+    const n = parseFloat(m[0]);
+    out.push(/r?em/.test(m[1]) ? Math.round(n * 16 * 1000) / 1000 : n);
+  }
+  return out;
 }
 
 /** Split a declaration block (`a:1; b:2`) into `{prop,value}` pairs. */
@@ -166,7 +174,8 @@ export function lintDesign(html, opts = {}) {
   const errors = [];
   const warnings = [];
 
-  for (const d of [...styleBlockDecls(html), ...inlineStyleDecls(html)]) {
+  const decls = [...styleBlockDecls(html), ...inlineStyleDecls(html)];
+  for (const d of decls) {
     // spacing off the 4-point grid (ERROR)
     if (SPACING_PROP.test(d.prop)) {
       for (const px of pxValues(d.value)) {
@@ -224,6 +233,7 @@ export function lintDesign(html, opts = {}) {
     ok: errors.length === 0,
     errors,
     warnings,
+    declarations: decls.length,
     summary: `${errors.length} error(s), ${warnings.length} warning(s)`,
   };
 }
@@ -262,12 +272,19 @@ function extractCanvasData(html) {
 // ── CLI ────────────────────────────────────────────────────────────────────
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 if (isMain) {
-  const files = process.argv.slice(2);
+  // `--expect-styles`: a file that parses to ZERO declarations is a FAILURE, not
+  // a silent "✓ clean". Without this guard, pointing the linter at a raw .css
+  // (no <style> wrapper) or an empty/style-less HTML reports clean having checked
+  // nothing — a fabricated pass. Used by the qa-agent's design-fidelity gate,
+  // which always expects real CSS to be present in what it lints.
+  const expectStyles = process.argv.includes('--expect-styles');
+  const files = process.argv.slice(2).filter((a) => a !== '--expect-styles');
   if (!files.length) {
-    console.error('usage: node lib/design/lint.mjs <file.html> [<file2.html> …]');
+    console.error('usage: node lib/design/lint.mjs [--expect-styles] <file.html> [<file2.html> …]');
     process.exit(2);
   }
   let totalErrors = 0;
+  let emptyParsed = false;
   for (const file of files) {
     let html;
     try { html = readFileSync(file, 'utf-8'); } catch (e) {
@@ -275,16 +292,29 @@ if (isMain) {
       totalErrors += 1;
       continue;
     }
+    // A bare stylesheet has no <style> wrapper, so lintDesign would parse nothing.
+    // Auto-wrap .css/.scss (and any file with no <style> but obvious CSS rules) so
+    // the qa fidelity gate can point straight at COMPILED CSS in the build output.
+    if (/\.s?css$/i.test(file) || (!/<style[\s>]/i.test(html) && /\{[^}]*:[^}]*\}/.test(html))) {
+      html = `<style>${html}</style>`;
+    }
     const res = lintDesign(html);
     const data = extractCanvasData(html);
     const frame = data ? lintCanvasData(data) : { ok: true, errors: [] };
     const allErrors = [...res.errors, ...frame.errors];
     totalErrors += allErrors.length;
 
-    console.log(`\n${file} — ${allErrors.length} error(s), ${res.warnings.length} warning(s)`);
+    console.log(`\n${file} — ${res.declarations} declaration(s), ${allErrors.length} error(s), ${res.warnings.length} warning(s)`);
     for (const e of allErrors) console.log(`  ✗ [${e.rule}] ${e.message}`);
     for (const w of res.warnings) console.log(`  ⚠ [${w.rule}] ${w.message}`);
-    if (!allErrors.length && !res.warnings.length) console.log('  ✓ clean');
+    if (res.declarations === 0) {
+      emptyParsed = true;
+      console.log(`  ⚠ [no-styles-parsed] 0 CSS declarations found — point at COMPILED CSS, or wrap raw CSS as <style>…</style>${expectStyles ? ' (fails --expect-styles)' : ''}`);
+    } else if (!allErrors.length && !res.warnings.length) {
+      console.log('  ✓ clean');
+    }
   }
-  process.exit(totalErrors ? 1 : 0);
+  // Exit: 1 = real lint errors; 3 = --expect-styles but a file parsed nothing
+  // (distinct so "checked nothing" can't read as a pass); 0 = clean.
+  process.exit(totalErrors ? 1 : (expectStyles && emptyParsed ? 3 : 0));
 }

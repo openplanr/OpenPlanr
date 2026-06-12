@@ -1,6 +1,6 @@
 ---
 description: Run the DEV Phase pipeline for a feature (frontend + backend agents per task, then qa, devops, doc-gen, then snapshot)
-argument-hint: <slug> [--task T-NNN] [--yes] [--no-devops] [--no-docs]
+argument-hint: <slug> [--task T-NNN] [--yes] [--no-devops] [--no-docs] [--workflow|--native] [--all-tasks]
 ---
 
 # /planr-pipeline:ship {slug …}
@@ -11,9 +11,11 @@ Orchestrates the DEV Phase for `feat-${SLUG}` (see **`procedures/ship-arguments-
 
 | Flag | Behaviour |
 |--|--|
-| **`--task T-NNN`** | Run DEV + QA/doc stages only for **`id: T-NNN`** frontmatter *(validated post mode-detection)*. |
-| **`--yes`** | Skip the COST **ESTIMATE** interactive gate (**still prints** the labelled estimate block once). |
+| **`--task T-NNN`** | Run DEV + QA/doc stages only for **`id: T-NNN`** frontmatter *(validated post mode-detection)*. Forces `single-task`. |
+| **`--yes`** | Skip the COST **ESTIMATE** interactive gate (**still prints** the labelled estimate block once); implies dispatch style `native`. |
 | **`--no-devops`**, **`--no-docs`** | Step 4 opt-outs unchanged. |
+| **`--workflow`** / **`--native`** | Pre-select the Claude Code multi-task dispatch *style* (host-scheduled DAG vs free native fan-out); skips the B.3 style prompt. Ignored on cursor/codex/unknown. |
+| **`--all-tasks`** | Force `multi-task` on a host that can run parallel subagents. |
 
 Fatal errors obey **`fatal-error-format.md`**.
 
@@ -45,7 +47,7 @@ The procedure file at `${CLAUDE_PLUGIN_ROOT}/procedures/mode-detection.md` (sect
 
 ### 1.5 — TASK binding re-check + COST ESTIMATE (**Phase B**)
 
-Re-enter **`procedures/ship-arguments-and-cost-gate.md` → Phase B** (TASK existence validation + COST block + the **B.3 AskUserQuestion confirmation gate** — a clickable Ship/Narrow/Skip-extras/Cancel prompt, never a typed magic word; `--yes` skips it).
+Re-enter **`procedures/ship-arguments-and-cost-gate.md` → Phase B** (TASK existence validation + COST block + the **B.3 AskUserQuestion confirmation gate** — a clickable spend-confirmation prompt, never a typed magic word, that on Claude Code multi-task also offers the **free-native vs structured-workflow** dispatch choice; `--yes` skips it and defaults to `native`).
 
 ### 1.6 — Bind run manifest path *(append-only `.run-manifest.jsonl`, SPEC-008)*
 
@@ -84,20 +86,34 @@ Bind `RUNTIME` once, before any subagent dispatch decision. The detection is rea
 
 ---
 
-## Step 1.8 — Dispatch mode (`DISPATCH_MODE` binding)
+## Step 1.8 — Dispatch mode + style
 
-`DISPATCH_MODE` controls whether Step 2 dispatches **all** pending tasks in one invocation (Claude Code's manifest-isolated subagents make that safe) or **one** task per invocation (Cursor / Codex carry cumulative session context that biases the model toward "this looks already shipped, write a status rollup" — per-invocation isolation is the only reliable mitigation):
+### Dispatch mode (`DISPATCH_MODE`)
 
-| `RUNTIME` | Default `DISPATCH_MODE` | Why |
+`multi-task` is the **default and the design center** on Claude Code: each subagent gets fresh, manifest-isolated context, so the orchestrator can fan out **every ready task at once** with no cumulative-context bias. The narrow modes exist ONLY for runtimes that carry one continuous session (where prior tasks' context biases the model toward "this looks already shipped, write a status rollup" instead of generating code — per-invocation isolation is the only reliable mitigation).
+
+| `RUNTIME` | `DISPATCH_MODE` | Why |
 |---|---|---|
-| `claude-code` | `multi-task` | Manifest-declared subagents → fresh per-task context, no cumulative bias |
-| `cursor` | `per-task` | Composer is one continuous session; per-task fresh invocation prevents the verification-rollup failure mode |
-| `codex` | `per-task` | Same as Cursor — persona role-shift in one continuous session |
-| `unknown` | `per-task` | Fail safe |
+| `claude-code` | **`multi-task`** | Manifest-isolated subagents → **fan out every eligible task in one turn. Dispatch wide; this is the intended operating point.** |
+| `cursor` / `codex` | `per-task` | One continuous session; per-invocation isolation prevents the verification-rollup failure mode. |
+| `unknown` | `per-task` | Fail safe — an unidentified host may be single-session. |
 
-Override: `--all-tasks` forces `multi-task` (advanced flag — only use when you know the runtime supports isolated subagents).
+`--all-tasks` forces `multi-task` on any host that can run parallel subagents. If `$SHIP_TASK_ID` was bound (`--task T-NNN`), `DISPATCH_MODE` is forced to `single-task` (already a single-task invocation).
 
-If `$SHIP_TASK_ID` was bound during Phase A (`--task T-NNN`), `DISPATCH_MODE` is forced to `single-task` regardless of `RUNTIME` (already a single-task invocation).
+### Dispatch style (`DISPATCH_STYLE`) — Claude Code `multi-task` only
+
+When `RUNTIME == claude-code` AND `DISPATCH_MODE == multi-task`, bind `DISPATCH_STYLE` — *how* the wide fan-out is executed. Both run the same agents on the shared tree, honor `dependsOn`, and keep the orchestrator as the single writer of status + manifest; they differ only in who guarantees the schedule:
+
+| `DISPATCH_STYLE` | Meaning |
+|---|---|
+| **`native`** (default) | The orchestrator emits one `Agent` call per eligible task directly and fans out as it sees fit. Model-driven dispatch — maximum flexibility, zero new machinery. |
+| `workflow` | The orchestrator drives the **Workflow tool**: it declares the `dependsOn` DAG and the host schedules the fan-out **deterministically and replayably** (runtime-enforced, not model-emitted). Same agents, same single-writer bookkeeping committed by the orchestrator from the returned per-node results. |
+
+Bind from Phase-A flags (`--native` / `--workflow`) when present; otherwise the **Step 1.5 / B.3 gate** offers the choice as a clickable option (`--yes` ⇒ `native`). On `cursor` / `codex` / `unknown`, `DISPATCH_STYLE` is **not bound** and the choice is suppressed — neither a Workflow tool nor safe in-session fan-out exists there, so both styles collapse to the per-task resume loop.
+
+Append manifest `{ stage: "ship.dispatch-style-selected", agent: null, exit_status: "success", cost_hint: "style=<native|workflow|n/a>" }`.
+
+**Neither mode nor style is a width knob.** On `multi-task`, width is exactly "every eligible task" — the host's native concurrency cap is the only throttle. Do not self-limit to 1–2 agents.
 
 ---
 
@@ -107,15 +123,19 @@ Execute `${CLAUDE_PLUGIN_ROOT}/procedures/memory-read.md`. This reads `.planr/me
 
 ---
 
-## Step 2 — Iterate User Stories with status-driven dispatch
+## Step 2 — Dispatch the feature's tasks (feature-flat, status-driven)
 
-In default mode, iterate each `us-{N}` directory under `output/feats/feat-${SLUG}/` (sorted by US number).
+**In `multi-task` mode the dispatch queue is FEATURE-FLAT: collect every task across ALL stories into one set and dispatch every eligible task together.** User-story folders are where task files *live* — they are **not** a dispatch boundary. A feature with six ready tasks across four stories is **six `Agent` calls in one turn**, not one story's two. Do not walk stories one at a time; do not stop at the Frontend‖Backend pair inside a single US — that two-agent picture is the *smallest* case, not the canonical one.
 
-In spec-driven mode, iterate each `<SPEC_DIR>/stories/US-*.md` (sorted by ID); the corresponding tasks live in the *flat* `<SPEC_DIR>/tasks/` directory and reference their parent story via the `storyId` frontmatter field.
+Where the task files live (read them ALL into one queue regardless of story):
+- **default mode:** `output/feats/feat-${SLUG}/us-*/tasks/task-*.md`
+- **spec-driven mode:** the flat `<SPEC_DIR>/tasks/T-*.md` (each carries a `storyId` linking it to its story, which does not affect dispatch order)
 
-### 2a — Build the dispatch queue (status-aware)
+(`per-task` / `single-task` modes process one task per invocation — see 2b.)
 
-Read every task file's frontmatter and partition by `status` (per `schemas/v1.0.0/task.schema.json`):
+### 2a — Build the dispatch queue (status-aware, across ALL stories)
+
+Read **every** task file's frontmatter across all of the feature's stories into one flat queue, and partition by `status` (per `schemas/v1.0.0/task.schema.json`):
 
 | Frontmatter `status` | Treatment |
 |---|---|
@@ -132,7 +152,7 @@ If the resulting queue is **empty** AND `$SHIP_TASK_ID` is unset:
 
 ### 2b — Apply `DISPATCH_MODE`
 
-- `multi-task`: process the queue this invocation via **native parallel dispatch** — see **§2b-multi** below. Emit one `Agent` tool-call per **eligible** ready task in a single assistant turn (eligible = every id in its `dependsOn` is `done`, or it declares no `dependsOn` — `dependsOn` is the ONLY hard ordering; no write-set inference, no cycle detection), with **no** `isolation` field and **no** width cap. The host's native concurrency cap is the only throttle.
+- `multi-task`: process the whole feature-flat queue this invocation via **native parallel dispatch** — see **§2b-multi** below. **Dispatch every eligible task; do not artificially limit width.** Eligible = every id in its `dependsOn` is `done`, or it declares no `dependsOn` (`dependsOn` is the ONLY hard ordering — no write-set inference, no cycle detection). Emit one `Agent` tool-call per eligible task in a single assistant turn, with **no** `isolation` field and **no** width cap. If five tasks are eligible, that is five `Agent` calls in this turn — not one or two. The host's native concurrency cap is the only throttle.
 - `per-task`: process **one** task this invocation — pick the first `pending`, otherwise the oldest `blocked`. Remaining tasks stay enqueued for the next `/ship` invocation. Print at the end:
 
   ```
@@ -145,55 +165,50 @@ If the resulting queue is **empty** AND `$SHIP_TASK_ID` is unset:
 
 > **`--all-tasks` × `DISPATCH_MODE`:** `--all-tasks` forces `DISPATCH_MODE = multi-task` (Step 1.8 override) so every eligible ready task is dispatched in one turn. There is no width knob — `--all-tasks` decides *whether* the run goes wide; the host's native concurrency cap decides *how* wide. The `per-task` and `single-task` modes always dispatch exactly one task per invocation (FR11).
 
-### §2b-multi — Native parallel dispatch (`DISPATCH_MODE == multi-task` only)
+### §2b-multi — Wide dispatch (`DISPATCH_MODE == multi-task` only)
 
-Entered only when `DISPATCH_MODE == multi-task` (Claude-Code default, or any runtime under `--all-tasks`). The `per-task` and `single-task` branches never reach this sub-step — they fall straight through to **§2c** and keep their one-task-per-invocation contract verbatim (FR11).
+Entered only when `DISPATCH_MODE == multi-task`. `per-task` / `single-task` never reach here — they fall through to **§2c** and keep their one-task-per-invocation contract (FR11).
 
-The full contract lives in **`${CLAUDE_PLUGIN_ROOT}/procedures/ship-step2-dag-dispatch.md`** (native dispatch §1–§5). That procedure is **prompt-driven dispatch logic, not a writer** — this orchestrator owns every status-frontmatter and `.run-manifest.jsonl` write (single-writer, FR12/FR13). Drive it as follows:
+**The default is wide, and wide is safe.** Your task decomposition already makes ready tasks write-disjoint — the specification-agent declares `dependsOn` for genuine *output* dependencies and keeps independent siblings independent — so dispatching ALL eligible tasks at once is the **expected** behavior, not a hazard to manage. The host runs them as native parallel subagents; there is no isolation layer because eligible tasks don't overlap. The single-writer bookkeeping below is a mechanical stamp-before / reconcile-after sweep — it is **not** a reason to go narrow. Full contract: `${CLAUDE_PLUGIN_ROOT}/procedures/ship-step2-dag-dispatch.md`.
 
-1. **Assemble the live set.** Take the Step 2a dispatch queue **after** `done`-skip and any `$SHIP_TASK_ID` narrowing (in `multi-task` no `$SHIP_TASK_ID` is bound). The remaining `pending` / `in-progress` / `blocked` tasks are live; the `in-progress` recovery and `blocked` retry semantics from §2a still apply. For each task read `id`, `status`, `agent`, `type`, the optional **`dependsOn`** frontmatter array, and its `write_set` (union of the task's `### Create` + `### Modify` paths).
+**`DISPATCH_STYLE` branch (bound in Step 1.8):** `native` (default) → emit the `Agent` calls yourself, steps 1–6 below. `workflow` → drive the Workflow tool instead, **§2b-workflow**.
 
-2. **Compute eligible ready tasks (`dependsOn`-only).** A live task is **eligible** this turn iff every id in its `dependsOn` array is already `done`, or it declares no `dependsOn`. `dependsOn` is the ONLY hard ordering constraint — perform **no** write-set inference and **no** cycle detection. Tasks whose declared deps are not yet `done` are deferred to a later turn. Tasks with no `dependsOn` are eligible the first turn regardless of any declared file overlap.
+#### Native style
 
-3. **Surface the advisory lock-list note (FR9a).** If two or more eligible tasks' `write_set`s overlap a lock-list glob (`package.json`, lockfiles, `**/index.ts`, `**/migrations/**` — full list in the procedure §2), add a **non-enforcing** "consider ordering" note to each affected task's dispatch prompt, e.g. *"Note: T-A and T-B both declare writes to `package.json`; consider whether their edits must be ordered — advisory only, planr does not serialize them."* This changes no control flow; the host may act on it or ignore it.
+1. **Assemble the live set (feature-flat).** The Step 2a queue after `done`-skip — every `pending`/`in-progress`/`blocked` task across all stories. `in-progress` recovery and `blocked` retry from §2a still apply. Per task read `id`, `status`, `agent`, `type`, and the optional **`dependsOn`** array.
 
-4. **Dispatch the eligible set in one turn (native, parallel).** In a single assistant turn, emit **one `Agent` tool-call per eligible task**:
+2. **Eligibility (`dependsOn`-only).** Eligible iff every id in its `dependsOn` is `done`, or it has none. **No** write-set inference, **no** cycle detection. A task with no `dependsOn` is eligible immediately, *regardless of any file overlap with a sibling*.
+
+3. **Stamp the eligible set, then dispatch all of it in one turn.**
 
    ```
-   while any live task is eligible this turn:
-     E ← eligible ready tasks (step 2)           # 1..N tasks, no width cap
-     # ---- pre-dispatch bookkeeping (orchestrator, single-writer) ----
-     for each T in E:
-       write T frontmatter: status: in-progress, updated: <today ISO>
-       append manifest { stage: "ship.task:<T.id>", agent: "<T.agent>", started_at: <now>, exit_status: "pending" }
-     # ---- one orchestrator turn, len(E) Agent tool-calls, NO isolation field ----
-     for each T in E:
-       Agent call: subagent_type=<T.agent>,
-         prompt = the standard §2c per-task dispatch prompt (task path, MODE/SPEC_DIR/FEAT_DIR,
-         stack inputs, project-memory block, advisory lock-list note from step 3 when applicable,
-         + prior T-<id>-error-report.md body when status was blocked)
-       # no `isolation` field — sub-agents write directly to the shared main working tree
-     wait for ALL len(E) results before continuing
-     # ---- post-turn bookkeeping (orchestrator, single-writer) ----
-     for each T in E:
-       on success: write T frontmatter: status: done, updated: <today>
-                   close manifest record: exit_status: "success", ended_at: <now>, files_written/files_modified populated
-       on R6 failure (3 iterations exhausted):
-                   write T frontmatter: status: blocked, updated: <today>
-                   write tasks/T-<T.id>-error-report.md (mode-resolved folder, per §2c)
-                   close manifest record: exit_status: "failure", error_summary: <one line>
-     # done tasks may unblock dependents → recompute eligibility next turn
+   stamp(E):  for each T in E → frontmatter status:in-progress, updated:<today>;
+              append manifest { stage:"ship.task:<T.id>", agent:"<T.agent>", started_at:<now>, exit_status:"pending" }
+   dispatch:  ONE assistant turn · ONE Agent call per T in E (subagent_type=<T.agent>) ·
+              prompt = the §2c per-task prompt · NO `isolation` field · NO width cap.
    ```
 
-5. **R6 inside the turn.** Each dispatched Agent runs the **R6 correction loop** (`${CLAUDE_PLUGIN_ROOT}/docs/rules.md`) exactly as in §2c step 4 — direct fix, then holistic re-read, then minimal-safe-fix-and-flag. A single task exhausting R6 lands `blocked` and does **NOT** abort the surrounding turn or the rest of the run (FR14; matches §2c).
+   `stamp` is one quick batched pass over the whole eligible set — **not** a per-task gate you interleave between dispatches. Stamp them all, then emit every `Agent` call together.
 
-6. **Single-writer invariant (never violate).** Task `.md` `status` fields and `.run-manifest.jsonl` are written **only** here, by the orchestrator in the main tree (FR12/FR13). Sub-agents never write status or manifest. This sub-step preserves the §2c / §2d status state machine and the Step 1.6 manifest contract unchanged — it only changes the *dispatch shape* (one Agent call per eligible task, no `isolation`), not the *bookkeeping owner*.
+4. **Roll forward — do not wait for the whole batch.** As each `Agent` returns, close its bookkeeping immediately (success → `done`; R6-exhausted → `blocked` + `T-<id>-error-report.md`) **and dispatch any task it just unblocked**. You never have to drain the current batch before starting newly-eligible dependents; width grows as dependencies clear and is never reset to a narrow wave. Continue until every task is `done` or `blocked` (a `blocked` task's dependents are unreachable — skip them).
 
-7. **Termination.** Repeat dispatch turns until no eligible task remains (every task is `done` or `blocked` — a `done` task can make a previously-deferred dependent eligible on the next turn). Then fall through to **Step 3 (QA Gate)**, which verifies every task that ran this invocation — native parallelism speeds DEV, it does not weaken QA (NFR1).
+5. **R6 per task.** Each Agent runs the R6 loop (`${CLAUDE_PLUGIN_ROOT}/docs/rules.md`) exactly as §2c step 4. One task exhausting R6 lands `blocked` and does **not** abort the run (FR14).
 
-### 2c — Per-task lifecycle (status state machine)
+6. **Single-writer (mechanical, not a throttle).** Task `.md` `status` and `.run-manifest.jsonl` are written **only** by the orchestrator (FR12/FR13); subagents never write either. This owns *who writes bookkeeping*, not *how wide you dispatch* — keep it batched and out of the way of fan-out.
 
-For each task in the dispatch queue, in order:
+#### §2b-workflow — Workflow style (deterministic, host-scheduled DAG)
+
+When `DISPATCH_STYLE == workflow`, drive the **Workflow tool** instead of hand-emitting `Agent` calls. planr **declares** the graph; the host **schedules** it. Do NOT revive a planr-side scheduler, worktrees, or waves — that machinery was deleted in SPEC-014 and must not return; determinism comes from the host's Workflow tool, not from planr.
+
+1. **Pre-stamp EVERY feature task** (the whole live set up front — not just the first eligible set that native's per-turn `stamp(E)` covers), before authoring the workflow: for each task T → frontmatter `status: in-progress`, `updated: <today>`; append manifest `{ stage: "ship.task:<T.id>", agent: "<T.agent>", started_at: <now>, exit_status: "pending" }`. Stamping all tasks up front is correct here (unlike native, which rolls forward and stamps each task just before it runs) because the whole DAG commits to run in this one orchestrator turn — a mid-workflow crash then leaves dependents at `in-progress` (which §2a recovers) rather than at `pending`, indistinguishable from never-started. The trade is intentional: in workflow style a deep dependent's `started_at` is the author-time stamp, not its true dispatch instant (acceptable — the manifest captures the run's outer timeline, and `ended_at` from the node is exact); native style keeps exact per-task `started_at` via its roll-forward stamp.
+2. **Author one workflow** whose nodes are the feature's tasks and whose edges are the `dependsOn` graph (`pipeline`/`parallel` so independent tasks run concurrently and a dependent waits on its dependency's node). Each node dispatches the task's agent with the §2c per-task prompt and **returns a structured result**: `{ id, status: done|blocked, ended_at, files_written[], files_modified[], error_summary?, errorReport? }` — where on `blocked`, `error_summary` is the one concise line for the manifest and `errorReport` is the FULL `${CLAUDE_PLUGIN_ROOT}/templates/error-report.md`-shaped body (per-pass attempt log + file lists + suspected root cause), so the orchestrator can write the report verbatim. Nodes do **NOT** write status or manifest themselves.
+3. **Commit bookkeeping from the returned results** (orchestrator, single-writer): per node result, close the task frontmatter (`done`, or `blocked` + write `T-<id>-error-report.md` verbatim from the node's `errorReport`) and close its manifest record (`exit_status`, `ended_at` from the node, `files_written`/`files_modified` populated, `error_summary` from the node on failure). FR12/FR13 hold — the schedule is the host's, the writes are still the orchestrator's, and every record carries `started_at` (step 1) + `ended_at` (the node).
+
+**Termination (both styles).** When the queue drains, fall through to **Step 3 (QA Gate)** — it audits every task that ran this invocation (NFR1; wide dispatch speeds DEV, it never weakens QA).
+
+### 2c — Per-task prompt + close-out (the template, not the iteration order)
+
+This is the per-task state machine — the prompt body and close-out applied to **each** dispatched task. It does **not** govern iteration order: in `multi-task` mode §2b-multi dispatches all eligible tasks at once (per-task / single-task modes apply this to their one task). Read it as "what each task's dispatch looks like," not "do these one at a time."
 
 1. **Read** the task file frontmatter. Capture `id`, `type`, `agent`, current `status`, `updated`.
 2. **Write** updated frontmatter: `status: in-progress`, `updated: <today's ISO date>`. Append manifest `{ stage: "ship.task:T-NNN", agent: <agent slug>, started_at: <now>, exit_status: <pending until close-out> }`.
@@ -215,7 +230,7 @@ For each task in the dispatch queue, in order:
 - A task whose frontmatter says `status: done` is **canonically shipped**. Step 2 never re-dispatches it. To force re-attempt, manually flip it back to `pending` (or `blocked` if you want the agent to read the prior error report).
 - A task whose frontmatter says `status: in-progress` AND has no `T-NNN-error-report.md` companion AND no `done` close-out has crashed — Step 2a recovers it.
 - The `updated:` field is bumped on every status transition. The manifest captures the per-attempt timeline; the frontmatter captures the current state. Both are needed.
-- frontend-agent and backend-agent tasks within the SAME US may run in parallel (per `${CLAUDE_PLUGIN_ROOT}/docs/pipeline-overview.md`) **only when `DISPATCH_MODE: multi-task`**. Per-task mode is sequential by definition.
+- In `multi-task` mode, **ALL eligible tasks across ALL stories run in parallel** — not just the Frontend/Backend pair inside one US. The FE‖BE-within-a-US case is the *smallest* instance of this, never the ceiling. (Per-task / single-task modes are sequential by definition.)
 
 ---
 
@@ -300,6 +315,7 @@ Contents (YAML):
 ```yaml
 shipped_at: "<ISO 8601 UTC timestamp>"
 pipeline_version: "<from ${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json>"
+runtime: "<claude-code | cursor | codex | unknown>"   # ${RUNTIME} from Step 1.7 (unknown = fail-safe)
 mode: "<default | spec-driven>"
 feature: "${SLUG}"
 tasks_executed: <integer>
@@ -315,6 +331,7 @@ agents_invoked:
 devops_status: "<generated | skipped>"
 docs_status: "<generated | skipped>"
 snapshot_status: "<refreshed | skipped>"
+dispatch_style: "<native | workflow>"   # ${DISPATCH_STYLE}; OMIT the key entirely on per-task runtimes / single-task / when unbound
 error_reports:               # paths to any T-<NNN>-error-report.md files; empty list if none
   - <path>
 ```

@@ -4,6 +4,82 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.20.0] — 2026-06-12
+
+A field-driven release across four fronts: wide DEV dispatch, a chooseable dispatch style,
+a real design↔implementation gate, and board export. Built from an exhaustive recon and
+hardened through two adversarial review passes (15 findings found + fixed, then re-verified).
+
+### Changed — `/ship` dispatches wide by default (the 1–2-agent problem, fixed)
+
+The orchestrator was under-dispatching to 1–2 subagents not because of a cap but because of
+**framing**: every loud cue said "one user story at a time, Frontend‖Backend, in order." The
+DEV dispatch is reframed so **feature-flat, dispatch-every-eligible-task** is the canonical,
+explicitly-instructed default:
+
+- The queue is collected across **ALL stories** (user-story folders are not a dispatch
+  boundary); the orchestrator dispatches **every** ready task (no unmet `dependsOn`) in one
+  turn, rolling forward as dependencies clear instead of waiting for a whole batch. The
+  Frontend‖Backend-within-one-US picture is now labelled the *smallest* case, never the
+  ceiling. The host's native concurrency cap is the only throttle.
+- The single-writer bookkeeping is reframed as a mechanical batched stamp/reconcile, not a
+  per-dispatch throttle; "no isolation" is reframed as "decomposition makes ready tasks
+  write-disjoint, so wide is *safe*." Propagated through `ship.md`, the dispatch procedure,
+  `pipeline-overview.md`, `rules.md`, `compatibility-matrix.md`, `docs/protocol/commands.md`,
+  `agent-model-map.md`, and `AGENTS.md`. The SPEC-014 ND1–ND4 state contract is unchanged.
+
+### Added — dispatch style: free `native` vs deterministic `workflow`
+
+On Claude Code multi-task, `/ship` now offers **how** the wide fan-out runs, via the cost gate
+(clickable) or `--native` / `--workflow`:
+
+- **`native`** (default) — the orchestrator emits the `Agent` calls itself; maximum flexibility.
+- **`workflow`** — the orchestrator drives the **Workflow tool**, declaring the `dependsOn` DAG
+  for the host to schedule deterministically and replayably. Same agents, same single-writer
+  bookkeeping (the orchestrator pre-stamps every task and commits from each node's returned
+  result — including the full error-report body on a block). No SPEC-014 worktree/wave machinery
+  is revived; determinism comes from the host's Workflow tool.
+
+The choice is suppressed on Cursor/Codex/unknown (no Workflow tool, no safe in-session fan-out →
+per-task), recorded in the `.pipeline-shipped` marker (new optional `dispatch_style`; also fills
+the previously-missing `runtime` field, and `unknown` is now a valid marker runtime) and a
+`ship.dispatch-style-selected` manifest record. Cost gate reframed: wide = the **same total
+tokens**, only less wall-clock (time estimate = longest dependency chain, not the sum).
+
+### Added — design↔implementation fidelity gate (qa)
+
+The design only ever paired to the build through `design-spec.md` tokens, and **nothing verified
+the shipped UI against it** (qa didn't even read `design-spec.md` — an unmet R10). The qa-agent
+now runs a Design Fidelity gate on every UI feature:
+
+- **Artifact structure (R10)** — structurally validates `design-spec.md` itself (10 sections,
+  §1 hex present, §9 ≥1 screen, §10 Open Questions cleared) and **FAILs** a UI feature whose
+  designer output is missing/empty (no more fabricated "n/a" pass); "n/a" is reserved for
+  genuinely backend-only features.
+- **Build-fidelity lint** — lints the **compiled CSS** the build emits with
+  `lib/design/lint.mjs --expect-styles` (new flag: zero parsed declarations exits 3 so "checked
+  nothing" can't read as clean; bare `.css` is auto-wrapped; rem/em spacing is normalized to the
+  px grid so Tailwind's rem-compiled off-grid is caught). Off-grid spacing and sub-AA contrast in
+  the *shipped* styles are 0-error gates.
+- **Off-palette colour check** — flags any colour literal (hex/rgb/hsl/oklch, shorthand-normalized)
+  not in the §1 palette. It does **not** false-fail a screen for the palette roles it didn't use,
+  and is indirection-safe (`var()`/theme keys/utility classes resolve to tokens).
+
+### Added — PNG / HTML export on the design board
+
+The review/loop board gains a top-bar **Export** menu — PNG of the current screen or the full
+design (rasterised from the same-origin artifact iframe via the proven canvas pipeline), and an
+HTML download. The copy is explicit that **PNG is a reference image** and the **HTML +
+`design-spec.md` is the real design→build handoff** (a PNG is a screenshot for tickets/PRs/decks,
+not the implementation substrate).
+
+### Tested
+
+127 unit tests + the SPEC-014 ND1–ND4 native-dispatch fixtures + both conformance suites, all
+green. The dispatch rewrite, the workflow stamp lifecycle, the rebuilt fidelity gate, and the
+linter hardening (`--expect-styles`, `.css` auto-wrap, rem/em) are each independently tested or
+conformance-locked.
+
 ## [0.19.5] — 2026-06-11
 
 ### Changed — the /ship cost gate is a clickable AskUserQuestion, not a typed magic word

@@ -23,6 +23,7 @@ Tool restrictions are mode-agnostic — Write is still granted only for the qa-r
 | Generated source code under `src/` (project root) | Frontend/Backend Agents | Yes |
 | `input/tech/stack.md` (BuildCommand, TestCommand) | Tech Lead | Yes |
 | `output/feats/feat-{name}/us-*/tasks/T-*-error-report.md` | Frontend/Backend Agents | Conditional |
+| `output/feats/feat-{name}/design-spec.md` | Designer Agent / `/design` | Conditional — Type=UI features (drives the Design Fidelity gate) |
 
 ---
 
@@ -61,6 +62,7 @@ Tool restrictions are mode-agnostic — Write is still granted only for the qa-r
 - **Preserve files:** [untouched | modified: list]
 - **DoD checklist:** X/Y satisfied — [list failures]
 - **Tests:** [pass | failures: list]
+- **Design Fidelity:** structure [valid | gaps: list | n/a backend-only] · build-lint [clean | N error(s) | no-CSS] · palette [clean | off-palette: list]
 - **`T-<TASK_ID>-error-report.md`:** [absent | present — link path]
 
 ## Overall Verdict
@@ -82,6 +84,7 @@ or
    b. Verify file presence and non-emptiness
    c. Verify Preserve list integrity (git diff or stat compare)
    d. Walk DoD checklist
+   e. DESIGN FIDELITY: run qa-agent.md system-prompt step 8 — 8a structurally validate `output/feats/feat-$ARGUMENTS/design-spec.md` (R10; FAIL a feature that has a Type=UI task but a missing/empty/malformed spec), 8b build-fidelity lint of the COMPILED CSS via `node "${CLAUDE_PLUGIN_ROOT}/lib/design/lint.mjs" --expect-styles <build-output .css>`, 8c off-palette colour check vs §1. FAIL on a structural gap, a lint ERROR, or an off-palette literal; record the `### Design Fidelity` line.
 3. Run input/tech/stack.md::BuildCommand
 4. Run input/tech/stack.md::TestCommand
 5. Aggregate findings into output/feats/feat-$ARGUMENTS/qa-report.md
