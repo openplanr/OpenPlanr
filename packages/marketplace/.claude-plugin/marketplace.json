@@ -9,12 +9,12 @@
   "plugins": [
     {
       "name": "planr-pipeline",
-      "description": "Spec-driven AI factory. Two-phase pipeline (PO Phase → human review → DEV Phase) with a design generation + iteration layer (/design, /design-loop, /design-review), specialized subagents, and tool-layer rule enforcement. Canonical Claude Code adapter for OpenPlanr Protocol v1.0.0.",
+      "description": "Spec-driven AI factory. Two-phase pipeline (PO Phase → human review → DEV Phase) with a design generation + iteration layer (/design, /design-loop, /design-review), a live read-only project dashboard (/dashboard), specialized subagents, and tool-layer rule enforcement. Canonical Claude Code adapter for OpenPlanr Protocol v1.0.0.",
       "source": {
         "source": "github",
         "repo": "openplanr/planr-pipeline"
       },
-      "version": "0.20.0"
+      "version": "0.21.0"
     },
     {
       "name": "openplanr",
@@ -23,7 +23,7 @@
         "source": "github",
         "repo": "openplanr/skills"
       },
-      "version": "1.9.0"
+      "version": "1.10.0"
     }
   ]
 }
