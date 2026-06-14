@@ -153,6 +153,13 @@ this part of the design" about an artifact `/design` produced.
 
 Both stop at approval and never auto-chain into `/plan` or `/ship` (R1).
 
+**Want to *see* the whole project, not just read it?** → `/planr-pipeline:dashboard`
+(v0.21.0+): launches a persistent localhost server with six live, read-only views of
+`.planr/` — Overview · Graph · Board · List · Sprints · Activity — rendered from a typed
+project graph and kept in sync as files change (≤1s, view-state preserved). It never writes
+to `.planr/`. Route here when the user wants to *visualize* progress; route to
+`/planr-pipeline:status` (or `planr status`) for a terminal/markdown delivery report instead.
+
 **Path A invariants:**
 
 - Do not call `planr spec decompose` — duplicates the pipeline's specification-agent

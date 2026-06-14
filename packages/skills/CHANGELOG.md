@@ -2,6 +2,26 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.10.0] — 2026-06-14
+
+### Changed — Aligned with `planr-pipeline` v0.21.0
+
+- Routes the new `/planr-pipeline:dashboard` command (v0.21.0+): a persistent localhost server with six live, read-only views of `.planr/` — Overview · Graph · Board · List · Sprints · Activity — kept in sync as files change (≤1s, view-state preserved). Teaches when to reach for the visual dashboard versus the `/planr-pipeline:status` (terminal / markdown) delivery report.
+
+### Pairs with
+
+- `planr-pipeline` v0.21.0 — `/dashboard` live read-only project dashboard
+
+## [1.9.0] — 2026-06-10
+
+### Changed — Aligned with `planr-pipeline` v0.19.0
+
+- Routes `/planr-pipeline:design-loop <target>` (brand-asset exploration on a live pin-comment board with taste memory; key-optional) and `/planr-pipeline:design-review <slug>` (pin-driven per-screen fixes on an existing generated design, with artifact sync). Both R1-stop.
+
+### Pairs with
+
+- `planr-pipeline` v0.19.0 — the Design Loop Engine + design-review
+
 ## [1.8.0] — 2026-06-07
 
 ### Changed — Aligned with `planr-pipeline` v0.14.0
