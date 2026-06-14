@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>planr dashboard</title>
+  <!--
+    Single-page shell (SPEC-016 / T-006). Loads the design-system token sheet
+    (ds.css) and the ESM entry (main.js, type=module). The shell + views are
+    vanilla JS ESM modules with zero runtime dependencies — no inline styles, no
+    external CDN references. Surfaces that opt into the vendored React UMD load
+    it themselves (it lives under lib/dashboard/vendor/, served locally — never a
+    CDN) so this shell page ships no asset that 404s.
+  -->
+  <link rel="stylesheet" href="./ds.css" />
+</head>
+<body>
+  <div id="app" role="application" aria-label="planr dashboard"></div>
+
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

@@ -4,6 +4,32 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.21.0] — 2026-06-14
+
+### Added — `/planr-pipeline:dashboard` (live, read-only `.planr/` dashboard)
+
+A new standalone command that launches (or reuses) a persistent localhost server
+serving a visual projection of the project graph.
+
+- **Six views** — Overview · Graph · Board · List · Sprints · Activity — rendered
+  from a typed `{ nodes, edges }` graph (`schemas/v1.0.0/graph.schema.json`) that
+  covers both the agile model (epic/feature/story/task) and the spec model
+  (spec/story/task).
+- **One engine, one truth** — the graph data path mirrors the
+  `/planr-pipeline:status` A.1/A.2 contract: delegate to the planr CLI
+  (`planr graph --json` / `planr status --json`) when present and new enough,
+  otherwise fall back to a native frontmatter reader. Both paths return an
+  equivalent, schema-valid graph.
+- **Live sync** — a debounced `.planr/` file watcher pushes minimal patches over
+  an SSE stream so the dashboard updates in place (≤1s), preserving the active
+  view, zoom, selection, and filters. `--no-watch` serves a static snapshot.
+- **Read-only** — the server, engine, and watcher only read; there is no
+  write-back to `.planr/`.
+- **Conformance** — added `conformance/verify-dashboard.mjs` (palette fidelity
+  against the design-system tokens, brand hygiene, and graph-schema presence) plus
+  `node:test` suites for the graph schema, native↔delegate graph equivalence, the
+  server routes, and the watcher debounce/scope. Wired into `npm test`.
+
 ## [0.20.0] — 2026-06-12
 
 A field-driven release across four fronts: wide DEV dispatch, a chooseable dispatch style,

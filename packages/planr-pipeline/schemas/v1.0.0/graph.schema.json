@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.0.0/graph.schema.json",
+  "title": "OpenPlanr dashboard project Graph (v1.0.0)",
+  "description": "The typed project graph the dashboard renders. Built from .planr/ artifacts either by delegating to the planr CLI (planr graph --json / planr status --json) or by the native frontmatter reader; both paths must validate against this schema (SPEC-016 / US-002). A Graph is { nodes: Node[], edges: Edge[] }. A Node is one artifact (epic, feature, story, task, spec, backlog item, quick task, sprint, or ADR) with a classified status mirroring /planr-pipeline:status A.2. An Edge is either a `contains` hierarchy link (from a frontmatter parent id) or a `depends_on` link (from a dependsOn entry). Definitions are inlined (no $ref) to match the conformance validator subset.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["nodes", "edges"],
+  "properties": {
+    "nodes": {
+      "type": "array",
+      "description": "Every recognized .planr/ artifact as a typed node.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "title", "status", "frontmatter"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Artifact identifier, taken from frontmatter `id` (e.g. SPEC-016, US-002, T-007, EPIC-001, FEAT-003, ADR-004). Unique within the graph."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "epic",
+              "feature",
+              "story",
+              "task",
+              "spec",
+              "backlog",
+              "quick",
+              "sprint",
+              "adr"
+            ],
+            "description": "Artifact kind, inferred from the file's path pattern and id prefix. Covers both the agile model (epic/feature/story/task) and the spec model (spec/story/task)."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human-readable title from frontmatter `title`, or the artifact id when no title is present."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "done",
+              "in-progress",
+              "blocked",
+              "outstanding",
+              "addressed"
+            ],
+            "description": "Classified status, mirroring /planr-pipeline:status A.2: done (done|closed|completed|shipped|released), addressed (promoted|superseded), blocked, in-progress, otherwise outstanding. Never an invented status."
+          },
+          "frontmatter": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "The artifact's raw parsed YAML frontmatter, preserved for the inspector. Includes githubIssue / linearIssueIdentifier when present."
+          },
+          "githubIssue": {
+            "type": ["string", "integer"],
+            "description": "GitHub issue/PR reference from frontmatter `githubIssue`, hoisted onto the node for cross-reference. Present only when the frontmatter carries it."
+          },
+          "linearIssueIdentifier": {
+            "type": "string",
+            "description": "Linear identifier from frontmatter `linearIssueIdentifier` (e.g. ENG-99), hoisted onto the node. Present only when the frontmatter carries it."
+          },
+          "body": {
+            "type": "string",
+            "description": "The artifact's markdown body below the frontmatter. Optional; included by getNode for the detail view."
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "description": "Hierarchy (`contains`) and dependency (`depends_on`) links between nodes.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "kind"],
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Source node id. For `contains` this is the parent (e.g. the story id from a task's storyId). For `depends_on` this is the dependent node."
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target node id. For `contains` this is the child. For `depends_on` this is the prerequisite (e.g. an entry from dependsOn)."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["contains", "depends_on"],
+            "description": "`contains` = hierarchy edge derived from a frontmatter parent id (epicId/featureId/specId/storyId). `depends_on` = dependency edge derived from a dependsOn array entry."
+          }
+        }
+      }
+    }
+  }
+}
