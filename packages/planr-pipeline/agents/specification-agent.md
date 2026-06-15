@@ -80,6 +80,9 @@ This helps future `/plan` runs on related specs avoid re-deciding the same trade
 
 **User Story markdown shape (frontmatter + body):** **`schemas/v1.0.0/story.schema.json`**
 
-**Task markdown shape (frontmatter + body):** **`schemas/v1.0.0/task.schema.json`**
+**Task markdown shape (frontmatter + body):** **`schemas/v1.0.0/task.schema.json`**. The frontmatter is **schema-validated at the `/plan` gate**, so it MUST conform exactly — invented values fail the build, they do not pass silently:
+
+- **`status` MUST be exactly one of `pending | in-progress | done | blocked`**, and a newly decomposed task MUST be **`status: "pending"`**. Do NOT use `ready`, `todo`, `open`, `active`, or any synonym — they are not in the enum, fail validation, and (if they slipped through) leave `/ship` with an empty dispatch queue.
+- **`type`/`agent` must satisfy the schema correlation:** `Tech` ⇒ `backend-agent`, `UI` ⇒ `frontend-agent`.
 
 Loaded mode file (`agents/modes/${MODE}/specification.md`) supplies directories, filenames, Inputs/Outputs table, Execution Steps — unchanged by this trim.

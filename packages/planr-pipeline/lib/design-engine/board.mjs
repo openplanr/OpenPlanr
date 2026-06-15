@@ -171,6 +171,14 @@ export function renderBoardHtml(config) {
   .diffwrap .topimg img { max-width:none; width:100% }
   .diffwrap input[type=range] { position:absolute; left:16px; right:16px; bottom:12px;
                                 width:calc(100% - 32px); z-index:6 }
+  /* HTML/canvas artifacts can't be image-diffed; compare them as live iframes side by side. */
+  .diffab { display:flex; gap:10px; width:100%; height:calc(100vh - 44px - 40px) }
+  .diffab .abcol { flex:1; position:relative; border:1px solid var(--line); border-radius:var(--r);
+                   overflow:hidden; background:#fff }
+  .diffab .abcol iframe { width:100%; height:100%; border:0; display:block }
+  .diffab .ablab { position:absolute; top:8px; left:8px; z-index:2; font-size:10px; font-weight:700;
+                   letter-spacing:.06em; background:var(--mint); color:var(--primary);
+                   border:1px solid var(--soft); border-radius:6px; padding:2px 7px }
   .stagebar { position:sticky; bottom:0; display:flex; justify-content:center; padding:8px; z-index:10; pointer-events:none }
   .stagebar .inner { pointer-events:auto; display:flex; align-items:center; gap:10px; background:var(--ink);
                      color:var(--cream); border-radius:999px; padding:6px 14px; font-size:11.5px;
@@ -582,6 +590,16 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     stagein.className = 'stagein' + (v.type === 'html' ? ' fillwrap' : '');
 
     if (state.diff) {
+      // HTML/canvas artifacts aren't images — an image clip-slider would render
+      // them as broken <img>. Compare them as two live iframes side by side.
+      if (v.type === 'html') {
+        var ab = el('div', 'diffab');
+        ab.innerHTML = '<div class="abcol"><span class="ablab">A</span><iframe src="' + state.diff[0] + '"></iframe></div>' +
+          '<div class="abcol"><span class="ablab">B</span><iframe src="' + state.diff[1] + '"></iframe></div>';
+        stagein.appendChild(ab);
+        updatePager('A / B compare');
+        return;
+      }
       var d = el('div', 'frame');
       d.style.maxWidth = '920px';
       d.innerHTML = '<div class="diffwrap"><img src="' + state.diff[0] + '" alt="base">' +
@@ -953,7 +971,8 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
         t.dataset.file = file;
         t.innerHTML = '<span class="vt">' + (/\\.svg$/.test(file)
           ? '<object type="image/svg+xml" data="' + file + '"></object>'
-          : '<img src="' + file + '" alt="">') + '</span>' + vid + ' · v' + (i + 1);
+          : /\\.(png|jpe?g|webp)$/i.test(file) ? '<img src="' + file + '" alt="">'
+          : '◈') + '</span>' + vid + ' · v' + (i + 1);
         t.onclick = function () {
           var ix = state.railSel.indexOf(t);
           if (ix >= 0) state.railSel.splice(ix, 1); else state.railSel.push(t);

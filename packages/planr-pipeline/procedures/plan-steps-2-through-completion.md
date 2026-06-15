@@ -51,6 +51,13 @@ Before continuing to Phase D, verify on disk:
 - [ ] Output dir contains ≥1 US-*.md file
 - [ ] Output dir contains ≥1 Task file
 - [ ] No subagent abort message is unresolved
+- [ ] **Schema-validation gate (mandatory).** Run the shipped validator against the freshly-written artifacts:
+  ```
+  node ${CLAUDE_PLUGIN_ROOT}/conformance/runner.mjs --runtime claude-code --validate-schema <DIR>
+  ```
+  In **spec-driven** mode `<DIR>` MUST be **`<SPEC_DIR>`** — the `.planr/specs/SPEC-NNN-slug/` directory that *directly* contains `SPEC-*.md`, `stories/`, and `tasks/`. The stories/tasks lookup is **non-recursive**: passing `.planr/` or the repo root validates only the spec and reports a misleading "all passed" while skipping every task. In **default** mode pass the **project root** (the validator descends `output/feats/…` itself). `--validate-schema` then checks the spec + every `stories/US-*.md` + every `tasks/T-*.md` against `schemas/v1.0.0/*`.
+  - A **non-zero exit is a HARD failure**: it names the offending file + field (e.g. `[enum] $.status: value "ready" not in enum […]`, the exact drift that otherwise leaves `/ship` with an empty dispatch queue). Surface the validator output verbatim, abort, and do NOT proceed to Phase D — the specification-agent's output must be corrected (or re-run) first.
+  - **Sanity-guard the gate itself:** the run MUST report at least one `✓ task …` (and, when stories exist, `✓ story …`) line. If it validated only the spec, you passed the wrong `<DIR>` — fix the path and re-run; a "passed" that validated zero tasks is not a pass. This is the deterministic gate that stops a hallucinated frontmatter value from masquerading as a trustworthy plan.
 
 If any check fails, surface the error to the user and abort. Do NOT print a success summary on a failed Phase C.
 
