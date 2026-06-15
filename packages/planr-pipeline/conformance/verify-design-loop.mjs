@@ -116,6 +116,11 @@ assert(followed.includes('reference image') && followed.includes('design-spec.md
 const head = await fetch(`${base}/boards/conf-loop/variant-A.svg`, { method: 'HEAD' });
 assert(head.status === 200, 'HEAD on a board asset answers 200');
 
+// the root index must NOT enumerate boards — a registered board name must never
+// leak into the shared index (cross-project confidentiality, SPEC-017 scoping).
+const indexHtml = await (await fetch(`${base}/`)).text();
+assert(!indexHtml.includes('conf-loop'), 'root index does not enumerate registered board names');
+
 // 4 — pending feedback with a pin → consumed on read
 log('\nfeedback handshake:');
 const pending = {

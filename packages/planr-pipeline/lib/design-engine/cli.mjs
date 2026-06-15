@@ -32,6 +32,7 @@ import { sheetContract, contractInstructions, validateSheet } from './providers/
 import { createSession, loadSession, saveSession, appendRound } from './session.mjs';
 import { renderBoardHtml } from './board.mjs';
 import { findRunningDaemon } from './daemon.mjs';
+import { publicBoardId } from './board-token.mjs';
 import { loadProfile, saveProfile, updateTaste, detectConflicts } from './taste.mjs';
 
 const here = fileURLToPath(import.meta.url);
@@ -319,9 +320,12 @@ async function ensureDaemon() {
 
 async function cmdBoard(args) {
   const dir = resolve(args.dir || resolveSessionDir(args));
-  const id = String(args.id || basename(dir));
+  const slug = String(args.id || basename(dir));
+  // Capability URL: the board id carries an unguessable token, so the review URL
+  // is the credential — no other project's board is reachable or enumerable.
+  const id = publicBoardId(slug, dir);
   const mode = args.mode === 'review' ? 'review' : 'loop';
-  const title = args.title || `planr design — ${id}`;
+  const title = args.title || `planr design — ${slug}`;
 
   let variants;
   if (args.variants) {

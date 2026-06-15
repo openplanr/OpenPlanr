@@ -4,6 +4,24 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.21.1] — 2026-06-15
+
+### Fixed — design boards are scoped to the design under review (capability URLs)
+
+The board daemon is one shared, persistent server per machine. Its root `/`
+enumerated **every** board from **every** project, and boards were reachable at a
+guessable `/boards/<slug>/` — so a review URL (or a screenshot of the index)
+leaked other projects' names.
+
+- **Capability URL** — each board now registers under `<slug>--<token>`, where
+  `token` is an unguessable 96-bit value. The URL printed by `/design` /
+  `/design-loop` / `/design-review` is the credential; the bare slug 404s.
+- **No enumeration** — `GET /` no longer lists boards; it points you to the exact
+  URL your command printed.
+- The token is persisted in the daemon state dir (under `planrHome`), keyed by
+  the board dir, so the URL is stable across daemon restarts and never lands in a
+  project's git tree.
+
 ## [0.21.0] — 2026-06-14
 
 ### Added — `/planr-pipeline:dashboard` (live, read-only `.planr/` dashboard)

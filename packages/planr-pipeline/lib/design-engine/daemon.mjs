@@ -157,13 +157,14 @@ export function createDaemon({ env = process.env } = {}) {
       }
 
       if (req.method === 'GET' && url.pathname === '/') {
-        const registry = loadRegistry();
-        const rows = Object.keys(registry)
-          .map((id) => `<li><a href="/boards/${encodeURIComponent(id)}/">${id}</a></li>`)
-          .join('') || '<li>(no boards yet)</li>';
+        // The root never enumerates boards: the registry spans every project on
+        // this machine, and listing it would leak other projects' names into a
+        // shared/screenshared review URL. A board is reachable only via its own
+        // capability URL (/boards/<slug>--<token>/), printed by the command.
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
         return res.end(`<!doctype html><meta charset="utf-8"><title>planr design boards</title>
-<body style="font:15px system-ui;padding:32px"><h1>planr design boards</h1><ul>${rows}</ul>`);
+<body style="font:15px system-ui;padding:32px"><h1>planr design boards</h1>
+<p>Open the board with the exact URL printed by your design command. Boards are not listed here.</p>`);
       }
 
       if (req.method === 'POST' && url.pathname === '/api/boards') {
