@@ -92,6 +92,14 @@ export function isPortInUse(port, { host = '127.0.0.1', timeout = 500 } = {}) {
   });
 }
 
+/**
+ * Daemon behaviour version. Bumped whenever the server's contract changes (e.g.
+ * the non-enumerating index, registry pruning) so `ensureDaemon` can detect a
+ * daemon running stale code and restart it instead of reusing it forever. A
+ * daemon started before this field existed reports no version → treated as stale.
+ */
+export const DAEMON_VERSION = 2;
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.svg': 'image/svg+xml',
@@ -134,6 +142,18 @@ export function createDaemon({ env = process.env } = {}) {
   };
   const saveRegistry = (r) => writeFileSync(registryPath, `${JSON.stringify(r, null, 2)}\n`);
 
+  // Startup hygiene: prune the persistent registry so it never accumulates — or
+  // serves — other projects' boards. Drop entries whose dir vanished, and legacy
+  // entries that predate capability tokens (bare slug, no `--<token>`).
+  (() => {
+    const reg = loadRegistry();
+    let changed = false;
+    for (const [id, dir] of Object.entries(reg)) {
+      if (!existsSync(dir) || !/--[a-f0-9]{16,}$/.test(id)) { delete reg[id]; changed = true; }
+    }
+    if (changed) saveRegistry(reg);
+  })();
+
   const reloadGen = new Map(); // boardId → counter
   const mutex = new Map(); // boardId → promise chain
   const locked = (id, fn) => {
@@ -153,7 +173,7 @@ export function createDaemon({ env = process.env } = {}) {
       const parts = url.pathname.split('/').filter(Boolean);
 
       if (req.method === 'GET' && url.pathname === '/health') {
-        return json(res, 200, { ok: true, pid: process.pid, boards: Object.keys(loadRegistry()).length });
+        return json(res, 200, { ok: true, pid: process.pid, version: DAEMON_VERSION, boards: Object.keys(loadRegistry()).length });
       }
 
       if (req.method === 'GET' && url.pathname === '/') {
@@ -276,7 +296,10 @@ export async function findRunningDaemon({ env = process.env, fetchImpl = fetch }
   if (!port) return null;
   try {
     const res = await fetchImpl(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(800) });
-    if (res.ok) return { port };
+    if (res.ok) {
+      const health = await res.json().catch(() => ({}));
+      return { port, pid: health.pid ?? null, version: health.version ?? null };
+    }
   } catch {
     /* dead daemon — caller starts a fresh one (rule 14) */
   }

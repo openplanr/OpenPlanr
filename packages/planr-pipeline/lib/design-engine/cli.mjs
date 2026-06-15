@@ -31,7 +31,7 @@ import * as openai from './providers/openai.mjs';
 import { sheetContract, contractInstructions, validateSheet } from './providers/claudeSvg.mjs';
 import { createSession, loadSession, saveSession, appendRound } from './session.mjs';
 import { renderBoardHtml } from './board.mjs';
-import { findRunningDaemon } from './daemon.mjs';
+import { findRunningDaemon, DAEMON_VERSION } from './daemon.mjs';
 import { publicBoardId } from './board-token.mjs';
 import { loadProfile, saveProfile, updateTaste, detectConflicts } from './taste.mjs';
 
@@ -301,7 +301,15 @@ async function cmdCheck(args) {
 
 async function ensureDaemon() {
   const running = await findRunningDaemon();
-  if (running) return running.port;
+  if (running && running.version === DAEMON_VERSION) return running.port;
+  // A daemon is already running but on stale code (older/absent version) — e.g.
+  // it predates the non-enumerating index. Reusing it would keep serving the old
+  // behaviour, so stop it and spawn a fresh one. (Rule 14 still holds: the daemon
+  // outlives the agent; we only recycle it across a version change.)
+  if (running && running.pid) {
+    try { process.kill(running.pid); } catch { /* already gone, or not ours */ }
+    await new Promise((r) => setTimeout(r, 200)); // let the OS release the listener
+  }
   const daemonPath = join(here, '..', 'daemon.mjs');
   const child = spawn(process.execPath, [daemonPath, '--serve'], { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
   const port = await new Promise((resolvePort, reject) => {

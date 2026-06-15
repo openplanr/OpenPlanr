@@ -31,7 +31,7 @@ process.env.PLANR_HOME = HOME;
 const { validate } = await import(join(root, 'conformance/json-schema-validate.mjs'));
 const { sheetContract, contractInstructions, validateSheet } = await import(join(root, 'lib/design-engine/providers/claudeSvg.mjs'));
 const { createSession, appendRound, saveSession, loadSession } = await import(join(root, 'lib/design-engine/session.mjs'));
-const { createDaemon } = await import(join(root, 'lib/design-engine/daemon.mjs'));
+const { createDaemon, DAEMON_VERSION } = await import(join(root, 'lib/design-engine/daemon.mjs'));
 const { renderBoardHtml } = await import(join(root, 'lib/design-engine/board.mjs'));
 const { readFeedback } = await import(join(root, 'lib/design-engine/feedback.mjs'));
 const { emptyProfile, updateTaste, saveProfile, loadProfile } = await import(join(root, 'lib/design-engine/taste.mjs'));
@@ -120,6 +120,11 @@ assert(head.status === 200, 'HEAD on a board asset answers 200');
 // leak into the shared index (cross-project confidentiality, SPEC-017 scoping).
 const indexHtml = await (await fetch(`${base}/`)).text();
 assert(!indexHtml.includes('conf-loop'), 'root index does not enumerate registered board names');
+
+// the daemon reports its behaviour version, so a client can detect a daemon
+// running stale code and restart it instead of reusing it (SPEC-017).
+const health = await (await fetch(`${base}/health`)).json();
+assert(health.version === DAEMON_VERSION, 'daemon /health reports its version (stale-daemon restart guard)');
 
 // 4 — pending feedback with a pin → consumed on read
 log('\nfeedback handshake:');

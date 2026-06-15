@@ -4,6 +4,23 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.21.2] — 2026-06-15
+
+### Fixed — the board daemon now restarts onto new code (capability-URL fix lands)
+
+v0.21.1 stopped the board index from enumerating boards, but the daemon is a
+long-lived process and `ensureDaemon` reused any running one with no version
+check — so a daemon started before the update kept serving the old enumerating
+index, and the registry kept accumulating every project's boards.
+
+- **Version-aware restart** — `/health` now reports a `DAEMON_VERSION`. When a
+  running daemon reports a different (or absent) version, `ensureDaemon` stops it
+  and spawns a fresh one, so behaviour changes actually take effect after an
+  update instead of waiting for a manual kill or reboot.
+- **Registry pruning on startup** — drops boards whose dir vanished and legacy
+  entries that predate capability tokens (bare slug, no `--<token>`), so the
+  shared registry can no longer accumulate — or serve — other projects' boards.
+
 ## [0.21.1] — 2026-06-15
 
 ### Fixed — design boards are scoped to the design under review (capability URLs)
