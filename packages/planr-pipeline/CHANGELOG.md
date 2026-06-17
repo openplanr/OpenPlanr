@@ -4,6 +4,31 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.23.0] — 2026-06-17
+
+### Added — `/planr-pipeline:sync` (spec ↔ quick-task ↔ issue-tracker reconciliation)
+
+New read-only-by-default command that keeps the `.planr/` graph aligned with the issue tracker.
+In planr the **Quick Task is the externalization handle** — it is the artifact pushed to Linear
+or GitHub, so a spec is only visible to POs and managers (outside the repo) through its QT. A
+shipped spec with no QT, or a QT that never reached the tracker, is invisible to everyone who
+doesn't read `.planr/`. `sync` enforces the contract:
+
+- **Every non-meta spec maps 1:1 to a Quick Task** — the wrapper QT is created (mirroring the
+  spec's current evidenced status) when missing, so manager visibility starts on day one rather
+  than only at ship time.
+- **QT status mirrors the spec's *evidenced* state** — "done" requires ALL internal tasks `done`
+  AND `qa_gate_status: PASS` in the ship marker; the spec's own `status:` field is treated as
+  drift to detect, never as truth.
+- **QT ↔ tracker issue stays in sync** — Linear (`linearIssueIdentifier`) and/or GitHub
+  (`githubIssue`), whichever the project configures (`--tracker linear|github|auto`).
+- **Safety model:** read-only audit + classified report by default; `--apply` writes only the
+  SAFE class (status flips, missing wrapper QTs — all native `.planr/` file edits); `--push`
+  pushes changed QTs to the tracker and commits. Every operation is idempotent; broader-than-spec
+  QTs and mixed-evidence cases are listed for the human, never auto-touched; meta/ledger specs are
+  auto-excluded. The push surface is discovered at runtime and degrades gracefully (prints the
+  command to run) when no tracker CLI is available.
+
 ## [0.22.0] — 2026-06-16
 
 ### Added / Fixed — metadata-driven dashboard (filters, grouping, and every view)
