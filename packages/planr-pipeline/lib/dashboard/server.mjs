@@ -31,7 +31,7 @@ import {
 import { fileURLToPath } from 'node:url';
 
 import { planrHome } from '../design-engine/paths.mjs';
-import { writePidFile } from '../design-engine/daemon.mjs';
+import { writePidFile } from '../design-engine/server-util.mjs';
 import { buildGraph, getNode as engineGetNode, detectMode } from './graph-engine.mjs';
 import { createWatcher } from './watcher.mjs';
 

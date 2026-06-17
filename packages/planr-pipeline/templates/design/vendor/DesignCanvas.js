@@ -596,7 +596,7 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
     setMenuOpen(false);
     if (!cardRef.current) return;
     const name = String(label || id || "artboard").replace(/[^\w\s.-]+/g, "_");
-    dcExport(cardRef.current, width, height, name, kind).catch((e) => console.error("[design-canvas] export failed:", e));
+    dcExport(cardRef.current, cardRef.current.offsetWidth, cardRef.current.offsetHeight, name, kind).catch((e) => console.error("[design-canvas] export failed:", e));
   };
   const onGripDown = (e) => {
     e.preventDefault();
@@ -680,9 +680,9 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
     {
       ref: cardRef,
       className: "dc-card",
-      style: { borderRadius: 2, boxShadow: "0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)", overflow: "hidden", width, height, background: "#fff", ...style }
+      style: { borderRadius: 2, boxShadow: "0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)", overflow: "hidden", width, height: "auto", alignSelf: "flex-start", background: "#fff", ...style }
     },
-    children || /* @__PURE__ */ React.createElement("div", { style: { height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#bbb", fontSize: 13, fontFamily: DC.font } }, id)
+    children || /* @__PURE__ */ React.createElement("div", { style: { minHeight: 240, display: "flex", alignItems: "center", justifyContent: "center", color: "#bbb", fontSize: 13, fontFamily: DC.font } }, id)
   ));
 }
 function DCEditable({ value, onChange, style, tag = "span", onClick }) {

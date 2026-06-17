@@ -4,6 +4,89 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.24.0] — 2026-06-17
+
+### Added — collaborative review board (persistent, multi-author feedback)
+
+The design review board became a **collaborative, persistent, attributed feedback surface**.
+Previously the board was single-session, single-author, and lossy: it loaded nothing on open
+and a submit overwrote the whole feedback file, so a refresh, a close, or a re-serve started
+empty and the next submit wiped prior pins. The collaboration layer makes the feedback file the
+durable source of truth and the board a live projection of it — several reviewers can open the
+same board, identify themselves once, and pin / rate / comment with every contribution
+attributed, merged without data loss, and surviving refresh, close, and re-serve.
+
+- **Persistent, attributed feedback model + non-destructive merge.** The design feedback shape
+  extends additively with an `authors[]` roster and per-item `author`, a stable content-keyed
+  `id`, a `status` (`open | addressed | resolved`), and threaded `replies[]`. A pure merge folds
+  a contribution into the stored record by author + item id — last-write-wins per item only, so
+  one reviewer's edit never deletes another's; re-submitting an unchanged item is a no-op.
+- **Load + merge persistence path (daemon).** `GET /api/feedback` returns the durable record (a
+  designed empty record before any submit); `POST /api/feedback` merges under the existing
+  per-board mutex instead of overwriting. The "pending" round is reconciled into the durable
+  store (emptied, not destructively deleted), so a stale round can never drop another author's
+  pins or double-apply.
+- **Lightweight author identity + deterministic avatars.** A first contribution prompts for a
+  display name (no account, no password — a local review tool); the name derives an avatar of
+  initials on a deterministic colour from a fixed accessible palette. The identity is remembered
+  per browser and editable; each reviewer appears once in the roster.
+- **Pin overlay: persistence, attribution, and a Show/Hide-all toggle.** Stored pins re-render on
+  every load, attributed to their author with intent (`fix | improve | question`) and status
+  styling on the marker. A single, always-discoverable Show/Hide toggle hides or shows the whole
+  overlay, is keyboard-operable, and remembers its state for the session.
+- **Feedback panel (inbox) + pin lifecycle.** A persistent rail lists every pin and comment,
+  filterable by author, intent, and status with live counts and avatars; selecting an item jumps
+  to and highlights its pin on the canvas, and vice-versa. Each pin supports a short threaded
+  reply and a resolve action, so feedback is a tracked conversation, not a write-once note.
+- **Live collaboration + presence (degrades cleanly).** When multiple tabs view the same board, a
+  contribution from one appears in the others within about a second via the daemon event stream,
+  with a presence cluster of who is viewing now. If the stream is unavailable, the board still
+  loads and merges correctly on submit / refresh — never a broken state.
+- **Premium, accessible, no-dead-end states.** Empty (an inviting first-pin affordance), loading
+  skeleton, save-failure toast with retry (never a silent loss), stream-down badge (the board
+  stays usable), and an all-resolved celebratory state are all designed. AA contrast, keyboard
+  reachable, and `prefers-reduced-motion` respected throughout.
+- **Backward and forward compatible.** An older, unattributed feedback file loads cleanly (legacy
+  items shown as "Anonymous"), and every new write produces a file that validates against the
+  design feedback JSON Schema. New tests cover the merge model, daemon GET / merge-POST,
+  attribution, pin persistence, reply / resolve / delete, SSE fan-out and presence, the premium
+  states, and the legacy load.
+
+### Fixed — board shell design fidelity (design-spec §8)
+
+The review board's base chrome (top bar, variant/inspector rails, stage, segmented Interact/Pin
+toggle, export menu, approve dock) was still rendering in the legacy **warm cream/teal** skin while
+only the new collaboration layer adopted the approved **cool-neutral indigo** palette — a two-skin
+mismatch. The board shell is now restyled to the design-system / design-spec §1 cool-neutral skin
+(same token names, cool values; radii, shadows, and hairlines aligned too), so chrome, the
+collaboration layer, and the design under review all read as one coherent indigo surface. Token
+values only — no class-structure or behaviour change.
+
+### Internal — clean-code & modularity pass (no behaviour change)
+
+A review-driven tidy-up of the design-engine sources, for public-repo readability. No runtime
+behaviour changes; the full test, conformance, and a live-board smoke test all pass.
+
+- **Shared server primitives extracted.** The port/PID/liveness lifecycle helpers moved out of the
+  board daemon into `lib/design-engine/server-util.mjs`; the daemon re-exports them for
+  back-compat and the dashboard server now imports them directly (dropping a dashboard→daemon
+  coupling that existed only for a PID helper).
+- **Board generator consolidated.** The five parallel intent/status lookup maps collapsed into one
+  `INTENT_CONFIG` (a new intent is now one entry, not five), magic numbers became named constants,
+  inline icons moved to an `ICONS` registry, storage keys centralised, and a `clamp()` helper
+  replaced repeated `Math.min/Math.max` clamping. The live-collaboration block is encapsulated
+  behind a single `live.init()` entry point, and its client-side merge helper was renamed so it no
+  longer shadows the durable-store merge.
+- **Test harness extracted.** The SSE test client moved to `tests/sse-client.mjs` so the
+  live-collaboration tests read as intent rather than transport plumbing.
+- **Comment hygiene.** Restatement / narration comments were pruned across the daemon, feedback
+  model, board generator, and tests; the design-decision and contract comments were kept.
+- **Internal planning metadata removed.** Spec/task identifiers (`SPEC-NNN`, `T-NNN`), design-spec
+  section citations (`§N`), and internal design-screen ids were stripped from shipped source
+  comments, test names, and schema descriptions — they referenced internal planning artifacts and
+  some shipped into the generated board's DOM. The substantive descriptions were kept; the
+  user-facing `design-spec.md` handoff references in the board's export menu were retained.
+
 ## [0.23.0] — 2026-06-17
 
 ### Added — `/planr-pipeline:sync` (spec ↔ quick-task ↔ issue-tracker reconciliation)

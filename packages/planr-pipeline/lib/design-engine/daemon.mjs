@@ -10,8 +10,20 @@
  *   GET  /boards/<id>/                 → the board HTML
  *   GET  /boards/<id>/<file>           → static asset from the board dir (traversal-guarded)
  *   GET  /boards/<id>/api/progress     → progress.json + reloadGen
- *   POST /boards/<id>/api/feedback     → { kind: submit|pending, feedback } → writes the file
+ *   GET  /boards/<id>/api/feedback     → the durable feedback record (normalizeLegacy'd), or
+ *                                        { authors: [], items: [] } when no file exists yet
+ *   POST /boards/<id>/api/feedback     → { kind: submit|pending, feedback } → MERGES (never
+ *                                        overwrites) into the durable store under the board mutex
  *   POST /boards/<id>/api/reload       → bump reloadGen (board polls it and swaps HTML in-tab)
+ *
+ * durable, multi-author feedback (load + merge persistence path).
+ * The feedback file is the single source of truth; the board is a live projection of it.
+ *   - GET loads + normalizes the durable record so a refresh/re-serve never starts empty.
+ *   - POST reads the current durable file, mergeFeedback()s the contribution in, and writes
+ *     the result — all serialized on the per-board mutex so one author's submit can never
+ *     wipe another author's (or an earlier) pins. The raw request body is never written verbatim.
+ *   - A "pending" round is reconciled INTO the durable store (not consumed-and-deleted), so
+ *     the destructive feedback-pending.json delete that dropped data is gone.
  *
  * PROGRESS IS A FILE (documented decision): the agent writes progress.json next
  * to board.html; the daemon only reads it. Same philosophy as the feedback
@@ -24,73 +36,22 @@
  */
 
 import { createServer } from 'node:http';
-import { createConnection } from 'node:net';
 import {
   existsSync, mkdirSync, readFileSync, writeFileSync, realpathSync,
 } from 'node:fs';
 import { join, resolve, extname, sep } from 'node:path';
 
 import { daemonDir } from './paths.mjs';
-import { clampPin, assertValidFeedback, FEEDBACK_FILE, PENDING_FILE } from './feedback.mjs';
+import {
+  clampPin, assertValidFeedback, mergeFeedback, normalizeLegacy, isDeleteMarker,
+  FEEDBACK_FILE, PENDING_FILE,
+} from './feedback.mjs';
 
-/* ------------------------------------------------------------------ *
- * Shared server-lifecycle helpers (extracted in SPEC-016/T-001).
- *
- * The board daemon and the dashboard server both need the same three
- * primitives: write/read a port-keyed PID file, probe whether a TCP
- * port is already accepting connections, and confirm a process is alive.
- * They live here (the original server module) so neither surface owns a
- * duplicate copy. Existing board-daemon behaviour is unchanged — these
- * are additive exports only.
- * ------------------------------------------------------------------ */
-
-/** Write a PID file at `<dir>/<port>` holding the current process id. */
-export function writePidFile(dir, port, pid = process.pid) {
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, String(port)), `${pid}\n`);
-}
-
-/** Read the pid recorded at `<dir>/<port>`, or null if absent/unreadable. */
-export function readPidFile(dir, port) {
-  const file = join(dir, String(port));
-  if (!existsSync(file)) return null;
-  const pid = Number(readFileSync(file, 'utf-8').trim());
-  return Number.isInteger(pid) && pid > 0 ? pid : null;
-}
-
-/** True when a process with `pid` is currently alive (signal 0 probe). */
-export function isProcessAlive(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    // EPERM means the process exists but is owned by another user.
-    return err && err.code === 'EPERM';
-  }
-}
-
-/**
- * Resolve to true when `port` on `host` already accepts a TCP connection
- * (i.e. a server owns it). Never rejects — a refused/timed-out probe
- * resolves false. Used for reuse-if-running detection.
- */
-export function isPortInUse(port, { host = '127.0.0.1', timeout = 500 } = {}) {
-  return new Promise((resolveProbe) => {
-    const socket = createConnection({ port, host });
-    let settled = false;
-    const done = (inUse) => {
-      if (settled) return;
-      settled = true;
-      socket.destroy();
-      resolveProbe(inUse);
-    };
-    socket.setTimeout(timeout);
-    socket.once('connect', () => done(true));
-    socket.once('timeout', () => done(false));
-    socket.once('error', () => done(false));
-  });
-}
+// Shared server-lifecycle primitives live in server-util.mjs (used by both this daemon and the
+// dashboard server). Re-exported here for back-compat with importers that reach for them on daemon.
+export {
+  writePidFile, readPidFile, isProcessAlive, isPortInUse,
+} from './server-util.mjs';
 
 /**
  * Daemon behaviour version. Bumped whenever the server's contract changes (e.g.
@@ -112,6 +73,9 @@ const MIME = {
   '.js': 'text/javascript; charset=utf-8',
 };
 
+/** Cap on a request body (bytes) — a feedback round is small; this bounds memory per request. */
+const MAX_BODY_SIZE = 5_000_000;
+
 const json = (res, code, body) => {
   res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(body));
@@ -122,7 +86,7 @@ const readBody = (req) =>
     let data = '';
     req.on('data', (c) => {
       data += c;
-      if (data.length > 5_000_000) reject(new Error('body too large'));
+      if (data.length > MAX_BODY_SIZE) reject(new Error('body too large'));
     });
     req.on('end', () => resolveBody(data));
     req.on('error', reject);
@@ -142,9 +106,8 @@ export function createDaemon({ env = process.env } = {}) {
   };
   const saveRegistry = (r) => writeFileSync(registryPath, `${JSON.stringify(r, null, 2)}\n`);
 
-  // Startup hygiene: prune the persistent registry so it never accumulates — or
-  // serves — other projects' boards. Drop entries whose dir vanished, and legacy
-  // entries that predate capability tokens (bare slug, no `--<token>`).
+  // Startup hygiene: prune the registry so it never serves a vanished dir or a
+  // legacy entry that predates capability tokens (which would leak across projects).
   (() => {
     const reg = loadRegistry();
     let changed = false;
@@ -162,10 +125,116 @@ export function createDaemon({ env = process.env } = {}) {
     return tail;
   };
 
+  /* ------------------------------------------------------------------ *
+   * live collaboration via Server-Sent Events.
+   *
+   * The daemon keeps an in-memory registry of every open SSE connection per
+   * board (keyed by boardId). It is the ONLY ephemeral, non-file state the
+   * board owns — presence is a transient "who's looking right now" signal, not
+   * durable feedback, so it is intentionally never persisted (hard rule: the
+   * feedback file is the single source of truth; presence is not feedback).
+   *
+   * Each entry is a { name, initials, color, res } record so we can (a) write
+   * SSE frames to the response stream, and (b) deduplicate presence by name so
+   * one reviewer with two tabs open surfaces as a single avatar.
+   *
+   * If no tab is connected (the stream is unavailable), every broadcast is a
+   * silent no-op and the board still works fully through load + merge-on-submit
+   * — live sync degrades cleanly, it is never required for correctness.
+   * ------------------------------------------------------------------ */
+  const presence = {
+    clients: new Map(), // boardId → Set<{ name, initials, color, res }>
+
+    /** Frame one SSE event for a single client. Named event + JSON data payload. */
+    write(res, eventName, data) {
+      try {
+        res.write(`event: ${eventName}\n`);
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      } catch {
+        /* a half-closed stream throws on write — the close handler prunes it */
+      }
+    },
+
+    /** Broadcast a named event with a JSON payload to every connected client of a board. */
+    broadcast(boardId, eventName, data) {
+      const clients = this.clients.get(boardId);
+      if (!clients) return;
+      for (const client of clients) this.write(client.res, eventName, data);
+    },
+
+    /**
+     * The deduplicated roster for a board: each distinct reviewer NAME appears once (two tabs by
+     * the same reviewer collapse to a single avatar), carrying only the display-safe
+     * { name, initials, color } — never the response stream or any PII.
+     */
+    roster(boardId) {
+      const clients = this.clients.get(boardId);
+      if (!clients) return [];
+      const byName = new Map();
+      for (const { name, initials, color } of clients) {
+        if (!byName.has(name)) byName.set(name, { name, initials, color });
+      }
+      return [...byName.values()];
+    },
+  };
+
   const boardDir = (id) => {
     const dir = loadRegistry()[id];
     return dir && existsSync(dir) ? dir : null;
   };
+
+  // boards we've already announced the mutex-guarded merge path for,
+  // so the startup/registration log line is emitted once per board, not per request.
+  const mutexAnnounced = new Set();
+  const announceMutexPath = (id) => {
+    if (mutexAnnounced.has(id)) return;
+    mutexAnnounced.add(id);
+    process.stderr.write(`[feedback] mutex-guarded merge path active for board ${id}\n`);
+  };
+
+  /**
+   * read the durable feedback record for a board and normalize it so every pin
+   * carries an author + stable id (legacy/unattributed files load as "Anonymous"). Returns
+   * null when the file is absent or unparseable — callers decide the empty/fallback shape.
+   */
+  const readStored = (dir) => {
+    const file = join(dir, FEEDBACK_FILE);
+    if (!existsSync(file)) return null;
+    try {
+      return normalizeLegacy(JSON.parse(readFileSync(file, 'utf-8')));
+    } catch {
+      return null;
+    }
+  };
+
+  /**
+   * reconcile any leftover feedback-pending.json into the durable store, then
+   * leave the pending file as an empty record. The previous board version consumed-and-deleted
+   * the pending file on read, which dropped other authors' pins — here it is MERGED, never
+   * destroyed. Best-effort + serialized on the board mutex; a parse error skips reconciliation
+   * rather than corrupting the durable file.
+   */
+  const reconcilePending = (id, dir) =>
+    locked(id, () => {
+      const pendingPath = join(dir, PENDING_FILE);
+      if (!existsSync(pendingPath)) return;
+      let pending;
+      try {
+        pending = JSON.parse(readFileSync(pendingPath, 'utf-8'));
+      } catch {
+        return; // unreadable pending round — leave it untouched, never destroy the durable store
+      }
+      const merged = mergeFeedback(readStored(dir) ?? {}, pending);
+      try {
+        assertValidFeedback(merged);
+      } catch {
+        return; // refuse to write an invalid durable record
+      }
+      writeFileSync(join(dir, FEEDBACK_FILE), `${JSON.stringify(merged, null, 2)}\n`);
+      // The pending round is now folded into the durable store. Empty it (rather than delete)
+      // so a stale round can never be double-applied, while keeping the file's existence intact.
+      writeFileSync(pendingPath, `${JSON.stringify({ pins: [], authors: [] }, null, 2)}\n`);
+    });
 
   const server = createServer(async (req, res) => {
     try {
@@ -197,6 +266,10 @@ export function createDaemon({ env = process.env } = {}) {
         registry[id] = resolve(dir);
         saveRegistry(registry);
         if (!reloadGen.has(id)) reloadGen.set(id, 0);
+        // confirm the mutex-guarded merge path is active for this board and fold any
+        // leftover pending round into the durable store (non-destructively) on (re-)register.
+        announceMutexPath(id);
+        reconcilePending(id, registry[id]);
         return json(res, 200, { ok: true, url: `/boards/${encodeURIComponent(id)}/` });
       }
 
@@ -226,21 +299,124 @@ export function createDaemon({ env = process.env } = {}) {
             }
             return json(res, 200, { ...progress, reloadGen: reloadGen.get(id) ?? 0 });
           }
+          // GET /api/feedback/stream — the live collaboration channel. A
+          // long-lived SSE connection; the daemon pushes presence:join/leave (the deduplicated
+          // roster) and feedback:update (the merged item after each POST). Identity is read from
+          // the query (?name=&initials=&color=) — a LOCAL display name + avatar only, no auth/PII.
+          if (req.method === 'GET' && parts[3] === 'feedback' && parts[4] === 'stream') {
+            const name = (url.searchParams.get('name') || 'Anonymous').trim() || 'Anonymous';
+            const initials = (url.searchParams.get('initials') || '').trim();
+            const color = (url.searchParams.get('color') || '').trim();
+
+            res.writeHead(200, {
+              'content-type': 'text/event-stream; charset=utf-8',
+              'cache-control': 'no-cache',
+              connection: 'keep-alive',
+              // SSE behind a proxy: disable response buffering so events flush immediately.
+              'x-accel-buffering': 'no',
+            });
+            // Open the stream with a comment frame so the client's EventSource fires `onopen`
+            // promptly even before the first real event.
+            res.write(': connected\n\n');
+
+            const client = { name, initials, color, res };
+            if (!presence.clients.has(id)) presence.clients.set(id, new Set());
+            const clients = presence.clients.get(id);
+            clients.add(client);
+
+            // Announce the grown roster to the other clients (the joiner doesn't get its own join).
+            for (const other of clients) {
+              if (other !== client) presence.write(other.res, 'presence:join', { roster: presence.roster(id) });
+            }
+
+            req.on('close', () => {
+              clients.delete(client);
+              if (clients.size === 0) {
+                presence.clients.delete(id);
+              } else {
+                // Notify the remaining clients with the post-leave deduplicated roster.
+                presence.broadcast(id, 'presence:leave', { roster: presence.roster(id) });
+              }
+            });
+            return; // keep the connection open — no res.end()
+          }
+          // GET the durable feedback record for the board's initial load — never a fetch
+          // error. No file yet → a valid empty record (the designed "no feedback yet" state).
+          // Read-only: it must NOT delete feedback-pending.json.
+          if (req.method === 'GET' && parts[3] === 'feedback') {
+            const stored = readStored(dir);
+            return json(res, 200, stored ?? { authors: [], items: [] });
+          }
           if (req.method === 'POST' && parts[3] === 'feedback') {
             const body = JSON.parse(await readBody(req) || '{}');
             const kind = body.kind === 'pending' ? 'pending' : 'submit';
-            const feedback = body.feedback ?? {};
-            feedback.pins = (feedback.pins ?? []).map(clampPin);
+            const raw = body.feedback ?? {};
+            // a contribution may carry DELETE MARKERS ({ id, author, deleted:true })
+            // alongside (or instead of) real pins. Markers are instructions, not stored items, so they
+            // are NOT clamped (no coords to normalize) and they must bypass the schema gate — a marker
+            // intentionally omits the required pin fields. We clamp only real pins, validate a
+            // marker-free view of the contribution, then hand the FULL contribution (markers included)
+            // to mergeFeedback so the author-scoped removal happens under the same mutex.
+            const rawPins = Array.isArray(raw.pins) ? raw.pins : [];
+            raw.pins = rawPins.map((p) => (isDeleteMarker(p) ? p : clampPin(p)));
+            // normalize the incoming round first — fill author ("Anonymous") + the
+            // content-derived stable id on every pin — so a client that doesn't pre-assign ids
+            // stays compatible, and the same logical pin keys consistently across submits. The
+            // contribution must then itself be a valid feedback object before we fold it in, so a
+            // malformed body is rejected up front and never reaches the durable file.
+            const contribution = normalizeLegacy(raw);
+            // Validate a marker-free view: delete markers are deliberately not schema-shaped pins.
+            const validatable = { ...contribution, pins: (contribution.pins ?? []).filter((p) => !isDeleteMarker(p)) };
             try {
-              assertValidFeedback(feedback);
+              assertValidFeedback(validatable);
             } catch (e) {
               return json(res, 400, { error: e.message });
             }
-            await locked(id, () => {
-              const file = kind === 'pending' ? PENDING_FILE : FEEDBACK_FILE;
-              writeFileSync(join(dir, file), `${JSON.stringify(feedback, null, 2)}\n`);
-            });
-            return json(res, 200, { ok: true, kind });
+            announceMutexPath(id);
+
+            // A "pending" round is the design-loop's regenerate/remix handshake: written to its own
+            // PENDING_FILE (mutex-serialized so it can't interleave with a reload) and NOT folded
+            // into the durable store. The destructive part removed was the load-side
+            // consume that dropped other authors' durable pins — a pending write never touches
+            // feedback.json. It's a generation request, never a lifecycle edit, so it carries no
+            // delete markers and the marker-free, schema-valid view is what's written.
+            if (kind === 'pending') {
+              await locked(id, () => {
+                writeFileSync(join(dir, PENDING_FILE), `${JSON.stringify(validatable, null, 2)}\n`);
+              });
+              return json(res, 200, { ok: true, kind });
+            }
+
+            // submit → MERGE into the durable store, never overwrite. Read-merge-write runs INSIDE
+            // the per-board lock so two concurrent POSTs can't interleave a half-written file or
+            // clobber each other; the raw request body is never written verbatim.
+            let result;
+            try {
+              await locked(id, () => {
+                const stored = readStored(dir) ?? {};
+                const merged = mergeFeedback(stored, contribution);
+                assertValidFeedback(merged);
+                writeFileSync(join(dir, FEEDBACK_FILE), `${JSON.stringify(merged, null, 2)}\n`);
+                result = merged;
+              });
+            } catch (e) {
+              return json(res, 500, { error: String(e.message ?? e) });
+            }
+            // fan the merge out to every tab viewing this board over SSE. The
+            // event carries only the single changed item(s) from this contribution — looked up by
+            // (id + author) in the just-merged record so the canonical post-merge state is sent —
+            // not the whole file. A contribution is normally one pin (a drop/edit/reply/resolve);
+            // deletes carry no surviving item, so we skip those (the client re-fetches if needed).
+            // This runs inside the POST handler so connected clients see the update within the
+            // request's lifetime (~1s). No connected clients → a silent no-op.
+            const mergedByKey = new Map(
+              (Array.isArray(result?.pins) ? result.pins : []).map((p) => [`${p.id} ${p.author}`, p]),
+            );
+            for (const cp of Array.isArray(contribution.pins) ? contribution.pins : []) {
+              const item = mergedByKey.get(`${cp.id} ${cp.author}`);
+              if (item) presence.broadcast(id, 'feedback:update', { item });
+            }
+            return json(res, 200, { ok: true, kind, feedback: result });
           }
           if (req.method === 'POST' && parts[3] === 'reload') {
             await locked(id, () => reloadGen.set(id, (reloadGen.get(id) ?? 0) + 1));

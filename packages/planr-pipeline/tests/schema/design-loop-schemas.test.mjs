@@ -25,8 +25,8 @@ const validFeedback = {
   overall: 'lean into B, darker indigo',
   regenerated: false,
   pins: [
-    { variant: 'B', x: 0.42, y: 0.1, w: 0.2, h: 0.08, comment: 'kern the wordmark tighter', intent: 'fix' },
-    { variant: 'A', x: 0.5, y: 0.5, w: 0, h: 0, comment: 'what font is this?', intent: 'question', screen: 's-hero' },
+    { id: 'a1b2c3d4e5f6', author: 'Dana', variant: 'B', x: 0.42, y: 0.1, w: 0.2, h: 0.08, comment: 'kern the wordmark tighter', intent: 'fix' },
+    { id: 'f6e5d4c3b2a1', author: 'Dana', variant: 'A', x: 0.5, y: 0.5, w: 0, h: 0, comment: 'what font is this?', intent: 'question', screen: 's-hero' },
   ],
 };
 
@@ -56,6 +56,77 @@ test('design-feedback: bad intent, missing comment, unknown key all fail', () =>
   assert.ok(errs.some((e) => e.rule === 'enum'), 'intent enum rejected');
   assert.ok(errs.some((e) => e.rule === 'minLength'), 'empty comment rejected');
   assert.ok(errs.some((e) => e.rule === 'additionalProperties'), 'unknown key rejected');
+});
+
+// SPEC-017: the extended collaborative shape round-trips through the schema —
+// an authors[] roster plus per-item author / stable id / status / threaded replies.
+test('design-feedback: a full attributed collaborative record validates', () => {
+  const attributed = {
+    schema_version: '1.0.0',
+    boardId: 'collab-2026-06-17',
+    publishedAt: '2026-06-17T10:00:00Z',
+    regenerated: false,
+    ratings: {},
+    comments: {},
+    authors: [
+      { name: 'Dana', color: '--avatar-1', initials: 'D', lastSeen: '2026-06-17T10:03:00Z' },
+      { name: 'Ravi', color: '--avatar-3', initials: 'R', lastSeen: '2026-06-17T10:02:00Z' },
+    ],
+    pins: [
+      {
+        id: 'a1b2c3d4e5f6',
+        author: 'Dana',
+        variant: 's-dashboard',
+        x: 0.42, y: 0.1, w: 0.2, h: 0.08,
+        comment: 'kern the wordmark tighter',
+        intent: 'fix',
+        status: 'open',
+        createdAt: '2026-06-17T10:01:00Z',
+        replies: [],
+      },
+      {
+        id: 'f6e5d4c3b2a1',
+        author: 'Ravi',
+        variant: 's-dashboard',
+        x: 0.5, y: 0.5, w: 0, h: 0,
+        comment: 'is this the right radius?',
+        intent: 'question',
+        status: 'resolved',
+        createdAt: '2026-06-17T10:02:00Z',
+        screen: 's-dashboard',
+        replies: [
+          { id: 'aa11bb22cc33', author: 'Dana', comment: 'yes, matches the token', createdAt: '2026-06-17T10:03:00Z' },
+        ],
+      },
+    ],
+  };
+  assert.equal(validate(attributed, feedbackSchema).length, 0);
+});
+
+// SPEC-017 backward compatibility: a file from the previous (unattributed) board version —
+// no authors[], no per-pin id/author/status/replies — still validates so an older record
+// loads cleanly. (The board normalizes such items to "Anonymous" at load time.)
+test('design-feedback: a legacy attributed-but-id-less record fails id/author require, but a fully legacy file with attribution stays valid', () => {
+  // A legacy pin missing the now-required id + author must fail the pin item schema.
+  const legacy = {
+    schema_version: '1.0.0',
+    boardId: 'logo-2025-12-01',
+    publishedAt: '2025-12-01T09:00:00Z',
+    regenerated: false,
+    ratings: { A: 4 },
+    comments: { A: 'tighter' },
+    pins: [{ variant: 'A', x: 0.1, y: 0.1, w: 0, h: 0, comment: 'legacy note', intent: 'fix' }],
+  };
+  const errs = validate(legacy, feedbackSchema);
+  assert.ok(errs.some((e) => e.rule === 'required'), 'a raw legacy pin lacks the required id/author (normalized at load)');
+
+  // Once normalized (id + author added; "Anonymous" attribution), the same record validates.
+  const normalized = {
+    ...legacy,
+    authors: [{ name: 'Anonymous' }],
+    pins: [{ ...legacy.pins[0], id: 'abc123abc123', author: 'Anonymous' }],
+  };
+  assert.equal(validate(normalized, feedbackSchema).length, 0, 'normalized legacy record validates');
 });
 
 const validSession = {

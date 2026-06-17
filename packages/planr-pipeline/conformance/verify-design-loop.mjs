@@ -134,7 +134,7 @@ const pending = {
   schema_version: '1.0.0', boardId: 'conf-loop', publishedAt: new Date().toISOString(),
   ratings: { A: 4 }, comments: { A: 'thicker' }, overall: 'bolder mark',
   regenerated: true, regenerateAction: 'iterate',
-  pins: [{ variant: 'A', x: 0.1, y: 0.1, w: 0.2, h: 0.1, comment: 'stroke too thin here', intent: 'fix' }],
+  pins: [{ id: 'a1b2c3d4e5f6', author: 'Reviewer', variant: 'A', x: 0.1, y: 0.1, w: 0.2, h: 0.1, comment: 'stroke too thin here', intent: 'fix' }],
 };
 const postPending = await (await fetch(`${base}/boards/conf-loop/api/feedback`, {
   method: 'POST', headers: { 'content-type': 'application/json' },

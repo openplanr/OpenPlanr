@@ -695,7 +695,8 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
     setMenuOpen(false);
     if (!cardRef.current) return;
     const name = String(label || id || 'artboard').replace(/[^\w\s.-]+/g, '_');
-    dcExport(cardRef.current, width, height, name, kind)
+    // Measure the rendered box (height is now content-driven, not the device-frame prop).
+    dcExport(cardRef.current, cardRef.current.offsetWidth, cardRef.current.offsetHeight, name, kind)
       .catch((e) => console.error('[design-canvas] export failed:', e));
   };
 
@@ -796,8 +797,8 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
         </div>
       </div>
       <div ref={cardRef} className="dc-card"
-        style={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)', overflow: 'hidden', width, height, background: '#fff', ...style }}>
-        {children || <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 13, fontFamily: DC.font }}>{id}</div>}
+        style={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)', overflow: 'hidden', width, height: 'auto', alignSelf: 'flex-start', background: '#fff', ...style }}>
+        {children || <div style={{ minHeight: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 13, fontFamily: DC.font }}>{id}</div>}
       </div>
     </div>
   );
