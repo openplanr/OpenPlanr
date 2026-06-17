@@ -2,6 +2,18 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.11.0] — 2026-06-17
+
+### Changed — Aligned with `planr-pipeline` v0.23.0–v0.24.0
+
+- Routes the new `/planr-pipeline:sync` command (v0.23.0+): reconciles spec ↔ quick-task ↔ tracker so every unit of work has its quick task — the externalization unit — then pushes those to Linear or GitHub for PO / manager visibility. Read-only and native-first by default (audit + local file fixes); the tracker push is explicit. Teaches that this is distinct from the CLI's `planr spec sync` (local integrity check), which it does NOT replace.
+- Notes the v0.24.0 collaborative review board: `/planr-pipeline:design-review` now serves a persistent, multi-author feedback surface — contributions are attributed and merged without loss, survive refresh / close / re-serve, and show live presence over SSE.
+
+### Pairs with
+
+- `planr-pipeline` v0.23.0 — `/sync` spec ↔ quick-task ↔ tracker reconciliation
+- `planr-pipeline` v0.24.0 — persistent, multi-author collaborative `/design-review` board
+
 ## [1.10.0] — 2026-06-14
 
 ### Changed — Aligned with `planr-pipeline` v0.21.0

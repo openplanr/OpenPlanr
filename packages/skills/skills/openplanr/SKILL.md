@@ -149,7 +149,9 @@ better for logos). The approved output lands in the project's design-system dir.
 (v0.19.0+): serves the generated `finalized.html`/`canvas.html` on the live board; each
 pin maps to its screen and ONLY that screen is regenerated (lint gate stays 0-error);
 approval syncs `design-spec.md` + `finalized.json`. Route here when the user says "fix
-this part of the design" about an artifact `/design` produced.
+this part of the design" about an artifact `/design` produced. As of v0.24.0 the review
+board is a persistent, multi-author collaborative surface — feedback is attributed, merged
+without loss, and survives refresh / close / re-serve, with live presence over SSE.
 
 Both stop at approval and never auto-chain into `/plan` or `/ship` (R1).
 
@@ -159,6 +161,13 @@ Both stop at approval and never auto-chain into `/plan` or `/ship` (R1).
 project graph and kept in sync as files change (≤1s, view-state preserved). It never writes
 to `.planr/`. Route here when the user wants to *visualize* progress; route to
 `/planr-pipeline:status` (or `planr status`) for a terminal/markdown delivery report instead.
+
+**Need to reconcile planning artifacts with an external tracker?** → `/planr-pipeline:sync`
+(v0.23.0+): reconciles spec ↔ quick-task ↔ tracker so every unit of work has its quick task
+(the externalization unit) and pushes those to Linear or GitHub for PO / manager visibility.
+Read-only and native-first by default (audit + local file fixes); the tracker push is explicit.
+Distinct from `planr spec sync` (the CLI's local integrity check) — `/sync` is the cross-tracker
+reconciliation.
 
 **Path A invariants:**
 
