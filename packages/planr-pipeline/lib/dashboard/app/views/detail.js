@@ -27,6 +27,7 @@
  */
 
 import { displayId } from '../display-id.js';
+import { typeAccent, typeLabel, typePlural, sprintOf } from '../metadata.js';
 
 /* ── element helper ─────────────────────────────────────────────────── */
 
@@ -101,11 +102,17 @@ const DETAIL_CSS = `
   background: var(--muted);
   color: var(--muted-foreground);
 }
+/* per-type badge colors mirror the metadata-registry accents (typeAccent):
+ * epic/spec=primary, feature/sprint=info, story=success, task/backlog=muted,
+ * quick=warning, adr=accent. Unknown/auxiliary types fall through to the
+ * neutral .type-badge base (muted) so they still render legibly. */
 .type-badge.type-epic    { background: var(--primary); color: var(--primary-foreground); }
 .type-badge.type-feature { background: var(--info); color: var(--info-foreground); }
 .type-badge.type-story   { background: var(--success); color: var(--success-foreground); }
 .type-badge.type-task    { background: var(--muted); color: var(--muted-foreground); }
 .type-badge.type-spec    { background: var(--primary); color: var(--primary-foreground); }
+.type-badge.type-backlog { background: var(--muted); color: var(--muted-foreground); }
+.type-badge.type-quick   { background: var(--warning); color: var(--warning-foreground); }
 .type-badge.type-sprint  { background: var(--info); color: var(--info-foreground); }
 .type-badge.type-adr     { background: var(--accent); color: var(--accent-foreground); }
 
@@ -275,7 +282,7 @@ const DETAIL_CSS = `
   font-family: var(--font-sans);
 }
 
-/* child tasks (story-only): linked id · title + status badge */
+/* child relationships (any parent type): linked id · title + status badge */
 .childtask-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .childtask-item {
   display: flex;
@@ -300,6 +307,11 @@ const DETAIL_CSS = `
 .childtask-link:hover { color: var(--primary); }
 .childtask-id { flex: 0 0 auto; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted-foreground); }
 .childtask-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* small type dot so a mixed child list (epic → features + stories) reads its
+ * relationships at a glance; color is the registry accent (set inline). */
+.childtask-dot { flex: 0 0 auto; width: var(--space-2); height: var(--space-2); border-radius: var(--radius-xl); }
+.childtask-end { display: inline-flex; align-items: center; gap: var(--space-3); flex: 0 0 auto; }
+.childtask-type { font-size: var(--text-xs); color: var(--muted-foreground); }
 
 @container shell (max-width: 767px) {
   .detail-header__top { flex-direction: column; gap: var(--space-3); }
@@ -366,18 +378,50 @@ async function fetchGraph() {
 
 /**
  * Task nodes contained by a parent id, via the graph's `contains` edges. Edge
- * from/to use namespaced ids (`SPEC-016/T-004`). Pure: no DOM.
+ * from/to use namespaced ids (`SPEC-016/T-004`). Pure: no DOM. Retained for
+ * backwards compatibility — `childrenOf` is the general (any-type) form.
  * @param {{nodes:object[],edges:object[]}} graph
  * @param {string} parentId
  * @returns {Array<object>}
  */
 export function childTasksOf(graph, parentId) {
+  return childrenOf(graph, parentId).filter((n) => n.type === 'task');
+}
+
+/**
+ * Every child node a parent id `contains`, in graph order, regardless of child
+ * type (epic→features/stories, feature→stories/tasks, spec→stories/tasks,
+ * story→tasks). Edge from/to use namespaced ids. Pure: no DOM.
+ * @param {{nodes:object[],edges:object[]}} graph
+ * @param {string} parentId
+ * @returns {Array<object>}
+ */
+export function childrenOf(graph, parentId) {
   if (!graph || !Array.isArray(graph.edges)) return [];
   const byId = new Map((graph.nodes || []).map((n) => [n.id, n]));
   return graph.edges
     .filter((e) => e && e.kind === 'contains' && e.from === parentId)
     .map((e) => byId.get(e.to))
-    .filter((n) => n && n.type === 'task');
+    .filter((n) => n);
+}
+
+/**
+ * Member nodes of a sprint — every node whose `sprintOf()` resolves to the
+ * sprint's local id. Sprints aggregate work by frontmatter ref rather than by
+ * `contains` edges, so this complements `childrenOf`. Pure: no DOM.
+ * @param {{nodes:object[]}} graph
+ * @param {object} sprintNode
+ * @returns {Array<object>}
+ */
+export function sprintMembersOf(graph, sprintNode) {
+  if (!graph || !Array.isArray(graph.nodes) || !sprintNode) return [];
+  const localId = displayId(sprintNode);
+  if (!localId) return [];
+  return graph.nodes.filter((n) => {
+    if (!n || n.id === sprintNode.id) return false;
+    const ref = String(sprintOf(n) || '');
+    return ref === localId || ref === String(sprintNode.id);
+  });
 }
 
 /* ── body parsing (pure) ────────────────────────────────────────────── */
@@ -588,6 +632,31 @@ const META_FIELDS = [
 // Mono-rendered values (ids / dates).
 const MONO_FIELDS = new Set(['sprintId', 'specId', 'epicId', 'featureId', 'storyId', 'created', 'updated']);
 
+// Frontmatter keys already surfaced elsewhere (promoted META_FIELDS, the header
+// lede, the deps cell, the footer refs) — excluded from the generic "remaining
+// frontmatter" pass so auxiliary fields (priority / estimate / sprint dates …)
+// appear exactly once and a QT/BL/sprint node is never a dead-end.
+const META_HANDLED = new Set([
+  ...HEADER_KEYS,
+  ...META_FIELDS.map(([k]) => k),
+  'dependsOn', 'shipRef', 'qaRef',
+  'rationale', 'description', 'goal',
+  'specScope', 'gherkin',
+]);
+
+// Date-ish auxiliary keys rendered with the mono (tabular-number) treatment.
+const MONO_AUX = new Set(['startDate', 'endDate', 'dueDate', 'date', 'startedAt', 'completedAt']);
+
+/** Human label for an arbitrary frontmatter key (camelCase → "Title Case"). */
+function humanizeKey(key) {
+  const s = String(key || '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z\d])([A-Z])/g, '$1 $2')
+    .trim();
+  if (!s) return 'Field';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 /** Whether a frontmatter value is present (non-empty). */
 function present(v) {
   return v != null && v !== '' && !(Array.isArray(v) && v.length === 0);
@@ -611,6 +680,14 @@ function scopedRef(node, ref) {
   return scope ? `${scope}/${r}` : r;
 }
 
+/** One label/value meta cell. `mono` applies the tabular-number treatment. */
+function metaCell(label, value, mono) {
+  return el('div', { class: 'meta-cell' }, [
+    el('div', { class: 'meta-cell__label', text: label }),
+    el('div', { class: `meta-cell__value${mono ? ' tnum' : ''}`, text: value }),
+  ]);
+}
+
 /** Build the meta grid from the node's type + frontmatter. */
 function metaGrid(node) {
   const fm = node.frontmatter || {};
@@ -618,15 +695,22 @@ function metaGrid(node) {
   for (const [key, label] of META_FIELDS) {
     const value = key === 'type' ? node.type : fm[key];
     if (!present(value)) continue;
-    const mono = MONO_FIELDS.has(key);
-    cells.push(el('div', { class: 'meta-cell' }, [
-      el('div', { class: 'meta-cell__label', text: label }),
-      el('div', {
-        class: `meta-cell__value${mono ? ' tnum' : ''}`,
-        text: key === 'type' ? String(value).replace(/^\w/, (c) => c.toUpperCase()) : String(value),
-      }),
-    ]));
+    // The Type value uses the registry's canonical label (so quick → "Quick",
+    // adr → "ADR") rather than a naive first-letter capitalize.
+    const display = key === 'type' ? typeLabel(String(value)) : String(value);
+    cells.push(metaCell(label, display, MONO_FIELDS.has(key)));
   }
+
+  // Generic "remaining frontmatter" pass: every present field not already
+  // surfaced (promoted, lede, deps, footer refs) gets a cell, in frontmatter
+  // order. This keeps auxiliary types coherent — opening a quick/backlog node
+  // shows its priority/estimate, a sprint shows its dates — never a dead-end.
+  for (const [key, value] of Object.entries(fm)) {
+    if (META_HANDLED.has(key)) continue;
+    if (!present(value)) continue;
+    cells.push(metaCell(humanizeKey(key), stringifyMeta(value), MONO_AUX.has(key)));
+  }
+
   // Always show a "Depends on" cell so the grid mirrors the comp.
   const deps = Array.isArray(fm.dependsOn) ? fm.dependsOn : [];
   cells.push(el('div', { class: 'meta-cell' }, [
@@ -647,8 +731,18 @@ function headerSection(node) {
   const type = node.type || 'task';
   const status = node.status || 'outstanding';
 
+  // The badge label is the registry's canonical singular (typeLabel); the
+  // per-type CSS class drives its accent, with an inline accent fallback so an
+  // unknown/auxiliary type still reads as a colored chip rather than vanishing.
+  const known = type === 'epic' || type === 'feature' || type === 'story'
+    || type === 'task' || type === 'spec' || type === 'backlog'
+    || type === 'quick' || type === 'sprint' || type === 'adr';
   const crumb = el('div', { class: 'detail-crumb' }, [
-    el('span', { class: `type-badge type-${type}`, text: type }),
+    el('span', {
+      class: `type-badge type-${type}`,
+      text: typeLabel(type),
+      attrs: known ? {} : { style: `background: ${typeAccent(type)}; color: var(--primary-foreground);` },
+    }),
     el('span', { class: 'detail-crumb__id', text: displayId(node) }),
   ]);
   // append the parent reference (spec/story/feature/epic) to the crumb if present
@@ -759,26 +853,60 @@ function storyStatementSection(node) {
   ]);
 }
 
-/** The child-tasks card (story-only): linked id · title · status + n/total. */
-function childTasksSection(node, graph) {
-  if ((node.type || '') !== 'story') return null;
-  const kids = childTasksOf(graph, node.id);
+/**
+ * Resolve a parent node's child nodes + a card heading, for ANY parent type:
+ *   - sprint → members (every node whose sprintOf() points at this sprint)
+ *   - everything else → nodes it `contains` (epic→features/stories,
+ *     feature→stories/tasks, spec→stories/tasks, story→tasks, …)
+ * The heading names the dominant child type when the children are uniform
+ * (e.g. "Tasks"), else a neutral "Contains" / "Sprint work". Pure: no DOM.
+ * @returns {{ kids: object[], heading: string }}
+ */
+function resolveChildren(node, graph) {
+  const type = node.type || '';
+  if (type === 'sprint') {
+    return { kids: sprintMembersOf(graph, node), heading: 'Sprint work' };
+  }
+  const kids = childrenOf(graph, node.id);
+  const childTypes = new Set(kids.map((k) => k.type).filter(Boolean));
+  const heading = childTypes.size === 1
+    ? typePlural([...childTypes][0])
+    : 'Contains';
+  return { kids, heading };
+}
+
+/**
+ * The child-relationships card (any parent type): each child rendered as a
+ * linked id · title with a type dot + status badge, plus an n/total done
+ * counter. Returns null only when the parent genuinely has no children — never
+ * silently drops a present child of an unexpected type.
+ */
+function childrenSection(node, graph) {
+  const { kids, heading } = resolveChildren(node, graph);
   if (!kids.length) return null;
-  const done = kids.filter((k) => k.status === 'done').length;
+  const done = kids.filter((k) => k.status === 'done' || k.status === 'addressed').length;
   const list = el('ul', { class: 'childtask-list' });
   for (const k of kids) {
     const st = k.status || 'outstanding';
+    const kType = k.type || '';
     list.append(el('li', { class: 'childtask-item' }, [
       el('a', { class: 'childtask-link', attrs: { href: `#detail/${k.id}` } }, [
+        el('span', {
+          class: 'childtask-dot',
+          attrs: { style: `background: ${typeAccent(kType)};`, title: typeLabel(kType) },
+        }),
         el('span', { class: 'childtask-id', text: displayId(k) }),
         el('span', { class: 'childtask-title', text: k.title || displayId(k) }),
       ]),
-      el('span', { class: `status-badge status-${st}`, text: st.replace('-', ' ') }),
+      el('span', { class: 'childtask-end' }, [
+        el('span', { class: 'childtask-type', text: typeLabel(kType) }),
+        el('span', { class: `status-badge status-${st}`, text: st.replace('-', ' ') }),
+      ]),
     ]));
   }
   return el('section', { class: 'detail-card' }, [
     el('div', { class: 'detail-card__head' }, [
-      el('span', { class: 'detail-card__title', text: 'Tasks' }),
+      el('span', { class: 'detail-card__title', text: heading }),
       el('span', { class: 'detail-card__count tnum', text: `${done} / ${kids.length}` }),
     ]),
     list,
@@ -827,6 +955,23 @@ function footerSection(node) {
 
 /* ── mount ──────────────────────────────────────────────────────────── */
 
+// Types that can own children (so they need the full graph to resolve them).
+// Leaf types (task / backlog / quick / adr) skip the graph fetch entirely.
+const PARENT_TYPES = new Set(['epic', 'feature', 'spec', 'story', 'sprint']);
+
+/**
+ * Obtain the typed graph for resolving a parent's children. Prefer the live
+ * SSE-merged graph the shell keeps fresh on window.__dashboard.graph (no extra
+ * request, stays current) and fall back to a one-shot fetch. Returns null when
+ * neither is available.
+ * @returns {Promise<{nodes:object[],edges:object[]}|null>}
+ */
+async function loadGraph() {
+  const live = (typeof window !== 'undefined' && window.__dashboard && window.__dashboard.graph) || null;
+  if (live && Array.isArray(live.nodes) && live.nodes.length) return live;
+  return fetchGraph();
+}
+
 /**
  * Mount the Detail view into `el`.
  * @param {HTMLElement} el2 content mount element
@@ -845,9 +990,9 @@ export async function mount(el2, params = {}) {
   el2.append(el('p', { class: 'ds-note', text: 'Loading artifact…' }));
 
   const node = await fetchNode(id);
-  // Only stories need the full graph (for their child tasks) — tasks/specs keep
-  // their single-fetch cost.
-  const graph = node && node.type === 'story' ? await fetchGraph() : null;
+  // Any parent type (epic/feature/spec/story/sprint) needs the full graph to
+  // resolve its children; leaf types keep their single-fetch cost.
+  const graph = node && PARENT_TYPES.has(node.type) ? await loadGraph() : null;
   el2.innerHTML = '';
 
   if (!node) {
@@ -855,12 +1000,16 @@ export async function mount(el2, params = {}) {
     return;
   }
 
+  // Section assembly is type-aware but never leaves a null body: stories add the
+  // user-story statement; any parent adds its child-relationships card; every
+  // node always gets header + meta grid + footer, so opening a quick/backlog/
+  // sprint/adr node is a coherent page rather than a dead-end.
   el2.append(
     headerSection(node),
     storyStatementSection(node),
     metaGrid(node),
     criteriaSection(node),
-    childTasksSection(node, graph),
+    childrenSection(node, graph),
     checklistSection(node),
     footerSection(node),
   );

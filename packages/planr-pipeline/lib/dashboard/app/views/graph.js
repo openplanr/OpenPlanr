@@ -43,23 +43,34 @@
 
 import { displayId } from '../display-id.js';
 import { buildHierarchy, layoutVisible, bboxOf } from '../vendor/graph-layout.js';
+import { getFilter } from '../main.js';
+import {
+  typeLabel, typeAccent,
+  statusBadge, filterNodes,
+} from '../metadata.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-/* ── tier model: root tier code + the per-mode pill, per mode ────────────────
- * `code` is the short token shown in the mode pill (SPEC · US · TASK).
+/* ── tier-code labels for the mode pill (SPEC · US · TASK) ────────────────────
+ * `code` is the short token shown in the mode pill. This is ONLY the per-mode
+ * hierarchy the layout engine lays into tiers/lanes — it is NOT an allowlist that
+ * decides which nodes render. Every node present in the (rail-filtered) graph is
+ * always representable: types outside this hierarchy (quick, backlog, adr,
+ * sprint, or any unknown type) are laid into an appended "Other" lane below the
+ * hierarchy so they never silently vanish. Vocabulary (labels, accents, badges)
+ * comes from the shared metadata registry, never a fixed list here.
  */
-const TIERS = {
+const TIER_CODES = {
   agile: [
-    { type: 'epic', label: 'Epic', code: 'EPIC' },
-    { type: 'feature', label: 'Feature', code: 'FEAT' },
-    { type: 'story', label: 'Story', code: 'US' },
-    { type: 'task', label: 'Task', code: 'TASK' },
+    { type: 'epic', code: 'EPIC' },
+    { type: 'feature', code: 'FEAT' },
+    { type: 'story', code: 'US' },
+    { type: 'task', code: 'TASK' },
   ],
   spec: [
-    { type: 'spec', label: 'Spec', code: 'SPEC' },
-    { type: 'story', label: 'Story', code: 'US' },
-    { type: 'task', label: 'Task', code: 'TASK' },
+    { type: 'spec', code: 'SPEC' },
+    { type: 'story', code: 'US' },
+    { type: 'task', code: 'TASK' },
   ],
 };
 
@@ -109,15 +120,14 @@ function accentClass(status) {
   }
 }
 
-/** Map a graph status to a badge class + human label (matches overview.js). */
+/**
+ * Map a graph status to a badge [class, label] via the shared metadata registry,
+ * so unknown statuses get a safe default instead of vanishing.
+ * @param {string} status
+ * @returns {[string, string]} [badgeClass, badgeText]
+ */
 function badgeFor(status) {
-  switch (status) {
-    case 'done': return ['ds-badge--done', 'done'];
-    case 'in-progress': return ['ds-badge--progress', 'in progress'];
-    case 'blocked': return ['ds-badge--blocked', 'blocked'];
-    case 'addressed': return ['ds-badge--addressed', 'addressed'];
-    default: return ['ds-badge--todo', 'todo'];
-  }
+  return statusBadge(status);
 }
 
 /**
@@ -149,22 +159,24 @@ export function blockedTransitiveDependents(graph, nodeId) {
 }
 
 /**
- * Filter a Graph down to a single tier model (SPEC-016 / T-009). Returns a new
- * `Graph` containing only the node types for `mode` and only the edges whose
- * endpoints both survive — the input is never mutated.
+ * Return a fresh shallow copy of a Graph (SPEC-016 / T-009 — metadata follow-up).
+ *
+ * This formerly dropped every node whose type was not in the per-`mode` tier
+ * allowlist, which silently deleted quick / backlog / adr / sprint (and any
+ * unknown type) from the canvas. The mode now only selects which type is the
+ * top-level ROOT for the hierarchy layout (handled by the layout engine); it must
+ * never decide which nodes are representable. So this keeps EVERY node + edge —
+ * auxiliary / unknown types are laid into the appended "Other" lane at render
+ * time rather than removed. The input is never mutated.
  *
  * @param {{nodes:object[],edges:object[]}} graph schema-valid Graph
- * @param {"agile"|"spec"} mode tier model to keep
- * @returns {{nodes:object[],edges:object[]}} a fresh, filtered Graph
+ * @param {"agile"|"spec"} [mode] retained for signature compatibility (unused)
+ * @returns {{nodes:object[],edges:object[]}} a fresh Graph with all nodes/edges
  */
 export function filterByMode(graph, mode) {
-  const tiers = TIERS[mode] || TIERS.agile;
-  const allowed = new Set(tiers.map((t) => t.type));
-  const srcNodes = (graph && graph.nodes) || [];
-  const srcEdges = (graph && graph.edges) || [];
-  const nodes = srcNodes.filter((n) => allowed.has(n.type));
-  const keep = new Set(nodes.map((n) => n.id));
-  const edges = srcEdges.filter((e) => keep.has(e.from) && keep.has(e.to));
+  void mode;
+  const nodes = ((graph && graph.nodes) || []).slice();
+  const edges = ((graph && graph.edges) || []).slice();
   return { nodes, edges };
 }
 
@@ -197,14 +209,17 @@ export function assembleInspectorData(graph, nodeId) {
 }
 
 /**
- * The tiers for `mode` that actually have at least one node in `graph`, so a
- * spec-only project never advertises an empty "Epic"/"Feature" code.
+ * The hierarchy tier codes for `mode` that actually have at least one node in
+ * `graph`, so a spec-only project never advertises an empty "EPIC"/"FEAT" code.
+ * Only the hierarchy tiers are shown here as a quick orientation pill — auxiliary
+ * types still render in the canvas regardless; they just are not part of the
+ * mode's tier vocabulary.
  * @param {{nodes:object[]}} graph
  * @param {"agile"|"spec"} mode
- * @returns {Array<{type:string,label:string,code:string}>}
+ * @returns {Array<{type:string,code:string}>}
  */
 export function presentTiers(graph, mode) {
-  const tiers = TIERS[mode] || TIERS.agile;
+  const tiers = TIER_CODES[mode] || TIER_CODES.agile;
   const types = new Set(((graph && graph.nodes) || []).map((n) => n && n.type));
   const present = tiers.filter((t) => types.has(t.type));
   return present.length ? present : tiers;
@@ -261,6 +276,85 @@ function edgePath(a, b, kind) {
   const x2 = bx + bw / 2; const y2 = by;
   const my = (y1 + y2) / 2;
   return `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`;
+}
+
+/* ── "Other" lane: nodes the hierarchy layout did not place ────────────────── */
+
+// Geometry for the appended auxiliary lane (every value is a multiple of the
+// 4-point grid, §3). The lane card matches the layout engine's leaf-card size so
+// the two drawings read as one canvas.
+const AUX_CARD_W = 200;
+const AUX_CARD_H = 68;
+const AUX_GAP_X = 24; // gap between sibling aux cards
+const AUX_GAP_Y = 56; // gap between wrapped aux rows / from the hierarchy above
+const AUX_LABEL_H = 28; // height reserved above the lane for its "Other" label
+
+/**
+ * Lay out the leftover nodes — every filtered node the hierarchy layout did NOT
+ * place (auxiliary types like quick / backlog / adr / sprint, plus any orphan or
+ * unknown type) — into a single "Other" lane appended BELOW the hierarchy
+ * drawing, so no node ever silently vanishes. Pure: returns absolute-pixel boxes
+ * keyed by id, the lane's label anchor, and the lane's own bounding box.
+ *
+ * @param {object[]} nodes the rail-filtered node list
+ * @param {object} placed the layout engine's `nodes` map (already-placed ids)
+ * @param {Set<string>} hierMembers ids that BELONG to the contains-hierarchy
+ *   (roots + their descendants). These are excluded even when not currently
+ *   placed, because a collapsed root's descendants are hidden ON PURPOSE and are
+ *   revealed by expanding the root — they are not orphans.
+ * @param {{minX:number,maxX:number,maxY:number,width:number}} hierBox the
+ *   hierarchy drawing's bbox, used to align + position the lane beneath it
+ * @returns {{nodes:object, label:{x:number,y:number}|null,
+ *            box:{minX:number,minY:number,maxX:number,maxY:number}|null}}
+ */
+function layoutOtherLane(nodes, placed, hierMembers, hierBox) {
+  const leftover = (Array.isArray(nodes) ? nodes : [])
+    .filter((n) => n && !placed[n.id] && !(hierMembers && hierMembers.has(n.id)));
+  if (!leftover.length) return { nodes: {}, label: null, box: null };
+
+  // Lane origin: left-aligned with the hierarchy drawing, dropped below it.
+  const originX = hierBox.minX;
+  const top = hierBox.maxY + AUX_GAP_Y;
+  // Wrap into as many columns as the hierarchy width allows (>= 1).
+  const usableW = Math.max(AUX_CARD_W, hierBox.width);
+  const perRow = Math.max(1, Math.floor((usableW + AUX_GAP_X) / (AUX_CARD_W + AUX_GAP_X)));
+
+  const out = {};
+  const cardTop = top + AUX_LABEL_H;
+  let maxX = originX + AUX_CARD_W;
+  let maxY = cardTop + AUX_CARD_H;
+  leftover.forEach((n, i) => {
+    const col = i % perRow;
+    const row = Math.floor(i / perRow);
+    const x = originX + col * (AUX_CARD_W + AUX_GAP_X);
+    const y = cardTop + row * (AUX_CARD_H + AUX_GAP_Y);
+    out[n.id] = {
+      id: n.id, x, y,
+      w: AUX_CARD_W, h: AUX_CARD_H, width: AUX_CARD_W, height: AUX_CARD_H,
+      kind: 'aux', rootId: null,
+    };
+    maxX = Math.max(maxX, x + AUX_CARD_W);
+    maxY = Math.max(maxY, y + AUX_CARD_H);
+  });
+
+  return {
+    nodes: out,
+    label: { x: originX, y: top + AUX_LABEL_H - 8 },
+    box: { minX: originX, minY: top, maxX, maxY },
+  };
+}
+
+/**
+ * Union two bounding boxes into the {minX,minY,maxX,maxY,width,height} shape the
+ * view's fit/minimap consume. `b` may be null (returns `a` unchanged).
+ */
+function mergeBoxes(a, b) {
+  if (!b) return a;
+  const minX = Math.min(a.minX, b.minX);
+  const minY = Math.min(a.minY, b.minY);
+  const maxX = Math.max(a.maxX, b.maxX);
+  const maxY = Math.max(a.maxY, b.maxY);
+  return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
 }
 
 /* ── scoped stylesheet (token-only; injected once) ──────────────────────── */
@@ -399,6 +493,17 @@ function ensureStyle() {
 /* let card shadows + the hover lift render past the foreignObject box */
 .ds-graph__svg foreignObject { overflow: visible; }
 
+/* "Other" lane heading — labels the appended lane of auxiliary / orphan nodes
+ * (quick · backlog · adr · sprint · unknown types) the hierarchy can't tier. */
+.ds-graph__lane-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  fill: var(--muted-foreground);
+}
+
 .ds-node {
   position: relative;
   width: 100%;
@@ -451,6 +556,10 @@ function ensureStyle() {
 .ds-node.is-ghost:hover { opacity: 1; }
 
 .ds-node__head { display: flex; align-items: center; gap: var(--space-2); }
+/* a small type-colour dot on aux-lane cards so quick / backlog / adr / sprint
+ * (and any unknown type) carry a clear, fallback-safe type cue. The colour is set
+ * inline from typeAccent() — always a ds.css token, muted for unknowns. */
+.ds-node__type-dot { width: var(--space-2); height: var(--space-2); border-radius: 50%; flex: none; background: var(--muted-foreground); }
 .ds-node__id { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--muted-foreground); }
 .ds-node__title {
   font-size: var(--text-base);
@@ -692,6 +801,35 @@ export async function mount(mountEl) {
     selectedId: (window.__dashboard && window.__dashboard.selectedId) || null,
   };
 
+  /**
+   * Live-data preference: prefer the in-memory graph the SSE merge maintains
+   * (window.__dashboard.graph) so live patches repaint, falling back to the graph
+   * fetched at mount. Always returns a `{ nodes, edges }` shape.
+   */
+  function liveGraph() {
+    const live = window.__dashboard && window.__dashboard.graph;
+    if (live && Array.isArray(live.nodes) && Array.isArray(live.edges) && live.nodes.length) {
+      return live;
+    }
+    return graph;
+  }
+
+  /**
+   * The graph the canvas should lay out: the live graph narrowed by the SHARED
+   * rail filter (type + status). An empty type filter = all types; a null status
+   * = all statuses (see filterNodes). Edges are kept only between surviving nodes.
+   * Auxiliary / unknown types are NOT dropped — they survive the type filter the
+   * same as any other type and are laid into the "Other" lane at render time.
+   */
+  function filteredGraph() {
+    const g = liveGraph();
+    const f = getFilter();
+    const nodes = filterNodes(g.nodes, { typeFilter: f.typeFilter, statusFilter: f.statusFilter }, displayId);
+    const keep = new Set(nodes.map((n) => n.id));
+    const edges = (g.edges || []).filter((e) => keep.has(e.from) && keep.has(e.to));
+    return { nodes, edges };
+  }
+
   // Stable DOM scaffold (built once); the canvas is re-rendered on change.
   const stage = el('div', { class: 'ds-graph__stage' });
   const scroll = el('div', { class: 'ds-graph__scroll', attrs: { tabindex: '0', 'aria-label': 'Project graph canvas' } });
@@ -806,7 +944,7 @@ export async function mount(mountEl) {
   }
 
   /* ── inspector population ──────────────────────────────────────────── */
-  function nodeById(id) { return graph.nodes.find((n) => n.id === id) || null; }
+  function nodeById(id) { return liveGraph().nodes.find((n) => n.id === id) || null; }
 
   function showInspector(node) {
     inspector.innerHTML = '';
@@ -904,12 +1042,13 @@ export async function mount(mountEl) {
     render({ fit: true, focusId: willExpand ? rootId : null });
   }
 
-  /* ── blocked-path computation over the FULL graph (so collapsed roots that
-   *    contain a blocked descendant can still surface state if shown) ───── */
-  function computeBlocked() {
-    const blockedNodes = graph.nodes.filter((n) => n.status === 'blocked').map((n) => n.id);
+  /* ── blocked-path computation over the rendered (rail-filtered) graph, so a
+   *    collapsed root that contains a blocked descendant can still surface state.
+   *    @param {{nodes:object[],edges:object[]}} g the graph being rendered ─── */
+  function computeBlocked(g) {
+    const blockedNodes = g.nodes.filter((n) => n.status === 'blocked').map((n) => n.id);
     const dependentsOf = new Map(); // prerequisite id → [dependent ids]
-    for (const e of graph.edges) {
+    for (const e of g.edges) {
       if (e.kind !== 'depends_on') continue;
       if (!dependentsOf.has(e.to)) dependentsOf.set(e.to, []);
       dependentsOf.get(e.to).push(e.from);
@@ -925,7 +1064,7 @@ export async function mount(mountEl) {
     for (const b of blockedNodes) blockedSet.delete(b);
     const onBlockedPath = new Set([...blockedNodes, ...blockedSet]);
     const blockedEdgeKeys = new Set();
-    for (const e of graph.edges) {
+    for (const e of g.edges) {
       if (e.kind !== 'depends_on') continue;
       if (onBlockedPath.has(e.to)) blockedEdgeKeys.add(`${e.from} ${e.to}`);
     }
@@ -934,9 +1073,45 @@ export async function mount(mountEl) {
 
   /* ── full canvas render (visible set only) ─────────────────────────── */
   function render(opts = {}) {
-    const hierarchy = buildHierarchy(graph, state.mode);
-    const laid = layoutVisible(graph, state.mode, state.expanded);
-    const { blockedSet, blockedEdgeKeys } = computeBlocked();
+    // The rail-filtered live graph is the single source for THIS render. Every
+    // node that survives the rail filter must be representable on the canvas.
+    const g = filteredGraph();
+    const hierarchy = buildHierarchy(g, state.mode);
+    const laid = layoutVisible(g, state.mode, state.expanded);
+
+    // Every id that BELONGS to the contains-forest (roots + all descendants),
+    // computed from the hierarchy regardless of collapse state. A collapsed
+    // root's descendants are hidden on purpose, so they must NOT fall into the
+    // "Other" lane — only genuine non-hierarchy nodes (auxiliary types / orphans)
+    // do. Walk childrenOf from each root.
+    const hierMembers = new Set();
+    const collectMembers = (id) => {
+      if (hierMembers.has(id)) return;
+      hierMembers.add(id);
+      for (const child of (hierarchy.childrenOf.get(id) || [])) collectMembers(child);
+    };
+    for (const rootId of hierarchy.roots) collectMembers(rootId);
+
+    // The hierarchy layout only places nodes reachable from the mode's root types
+    // (spec, or epic/feature). Any other filtered node — auxiliary types (quick,
+    // backlog, adr, sprint), orphans, or unknown types — is laid into an appended
+    // "Other" lane so NOTHING vanishes. Merge those boxes into the layout, then
+    // add the edges among the now-complete visible set and re-derive the bbox.
+    const otherLane = layoutOtherLane(g.nodes, laid.nodes, hierMembers, laid.bbox);
+    if (Object.keys(otherLane.nodes).length) {
+      Object.assign(laid.nodes, otherLane.nodes);
+      const visible = new Set(Object.keys(laid.nodes));
+      const drawn = new Set(laid.edges.map((e) => `${e.kind} ${e.from} ${e.to}`));
+      for (const e of g.edges) {
+        if (!visible.has(e.from) || !visible.has(e.to)) continue;
+        if (drawn.has(`${e.kind} ${e.from} ${e.to}`)) continue; // already laid by the engine
+        laid.edges.push({ from: e.from, to: e.to, kind: e.kind });
+      }
+      laid.bbox = mergeBoxes(laid.bbox, otherLane.box);
+    }
+    laid.otherLabel = otherLane.label;
+
+    const { blockedSet, blockedEdgeKeys } = computeBlocked(g);
 
     lastBox = laid.bbox;
     lastLaid = laid;
@@ -1018,6 +1193,7 @@ export async function mount(mountEl) {
       const n = nodeById(id);
       if (!n) continue;
       const isRoot = p.kind === 'root';
+      const isAux = p.kind === 'aux';
       const fo = svg('foreignObject', { x: p.x, y: p.y, width: p.w, height: p.h });
       const [badgeClass, badgeLabel] = badgeFor(n.status);
       const blockedCls = blockedSet.has(id) ? ' node-blocked' : '';
@@ -1027,7 +1203,13 @@ export async function mount(mountEl) {
       const ghostCls = (state.expanded.size >= 1 && isRoot && !state.expanded.has(id)) ? ' is-ghost' : '';
       const localId = displayId(n);
 
+      // Aux-lane cards lead with a type-colour dot + type label so quick / backlog
+      // / adr / sprint (and any unknown type) carry a clear, fallback-safe type cue
+      // — typeAccent / typeLabel both degrade gracefully for unknown types.
       const head = el('div', { class: 'ds-node__head' }, [
+        isAux
+          ? el('span', { class: 'ds-node__type-dot', attrs: { style: `background:${typeAccent(n.type)}`, title: typeLabel(n.type) } })
+          : null,
         el('div', { class: 'ds-node__id', text: localId }),
       ]);
       let chevron = null;
@@ -1071,13 +1253,22 @@ export async function mount(mountEl) {
       gNodes.append(fo);
     }
 
+    // "Other" lane heading (drawn after nodes so it reads on top of the grid).
+    if (laid.otherLabel) {
+      viewport.append(svg('text', {
+        class: 'ds-graph__lane-label',
+        x: laid.otherLabel.x, y: laid.otherLabel.y,
+      }, [document.createTextNode('Other')]));
+    }
+
     // mount the svg (no viewBox — 1 user unit == 1 screen px; the viewport <g>
     // transform alone positions + scales the drawing).
     scroll.innerHTML = '';
     scroll.append(svgRoot);
 
-    // tier chips reflect the present layer set as short codes (SPEC · US · TASK)
-    tierChips.textContent = presentTiers(graph, state.mode).map((t) => t.code).join(' · ');
+    // tier chips reflect the present hierarchy layer set as short codes
+    // (SPEC · US · TASK) for the CURRENT rail-filtered graph.
+    tierChips.textContent = presentTiers(g, state.mode).map((t) => t.code).join(' · ');
 
     // legend (edge styles + status-to-accent key)
     renderLegend();
@@ -1307,9 +1498,9 @@ export async function mount(mountEl) {
   scroll.addEventListener('pointercancel', endPan);
   scroll.addEventListener('pointerleave', endPan);
 
-  // expand-all / collapse-all
+  // expand-all / collapse-all (over the CURRENT rail-filtered roots)
   expandAllBtn.addEventListener('click', () => {
-    const h = buildHierarchy(graph, state.mode);
+    const h = buildHierarchy(filteredGraph(), state.mode);
     state.expanded = new Set(h.roots);
     render({ fit: true });
   });
@@ -1337,6 +1528,13 @@ export async function mount(mountEl) {
   document.addEventListener('planr:mode', onProjectMode);
   mount.cleanup = () => document.removeEventListener('planr:mode', onProjectMode);
 
+  // re-render + re-fit when the SHARED rail filter (type / status) changes, so the
+  // canvas always reflects exactly the rail's selection — never a stale set.
+  const onFilterChange = () => { state.expanded = new Set(); render({ fit: true }); };
+  document.addEventListener('planr:filter-change', onFilterChange);
+  let prevCleanup = mount.cleanup;
+  mount.cleanup = () => { prevCleanup(); document.removeEventListener('planr:filter-change', onFilterChange); };
+
   // re-fit on viewport resize so the drawing stays centered (no re-layout); a
   // resize re-fits ALL visible nodes with the readable-floor clamp.
   let resizeIdle = null;
@@ -1345,7 +1543,7 @@ export async function mount(mountEl) {
     resizeIdle = setTimeout(() => fitToView(lastBox, FIT_ALL_MIN_SCALE), 120);
   };
   window.addEventListener('resize', onResize);
-  const prevCleanup = mount.cleanup;
+  prevCleanup = mount.cleanup;
   mount.cleanup = () => { prevCleanup(); window.removeEventListener('resize', onResize); };
 
   // mount scaffold + first render (auto-fit so nodes are centered on load)

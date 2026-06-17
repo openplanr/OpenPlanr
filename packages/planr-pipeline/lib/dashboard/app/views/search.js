@@ -22,6 +22,7 @@
  */
 
 import { displayId } from '../display-id.js';
+import { typesInGraph, typePlural, typeLabel } from '../metadata.js';
 
 /* ── data layer (T-011) — pure, no DOM ──────────────────────────────── */
 
@@ -140,6 +141,31 @@ const ENTER_ICON =
   '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" '
   + 'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'
   + '<path d="M9 10 5 14l4 4"/><path d="M5 14h10a4 4 0 0 0 4-4V6"/></svg>';
+
+/**
+ * Build the input placeholder from the types actually present in the graph, so
+ * it never lies about what's searchable. The index is type-agnostic — every
+ * artifact type is queryable — so the copy enumerates whichever types exist
+ * (registry order via typesInGraph), pluralized, with the last one joined by
+ * "or". Stays short/graceful for 0–2 types; long lists elide with an ellipsis
+ * so the placeholder doesn't overflow the input.
+ * @param {Array<object>} nodes — the project graph's nodes
+ * @returns {string}
+ */
+function placeholderFor(nodes) {
+  const plurals = typesInGraph(nodes).map(typePlural).map((p) => p.toLowerCase());
+  if (!plurals.length) return 'Search the project…';
+  if (plurals.length === 1) return `Search ${plurals[0]}…`;
+  if (plurals.length === 2) return `Search ${plurals[0]} or ${plurals[1]}…`;
+  // 3+ types: lead with the first few, end on "or <last>". Only show the eliding
+  // "…" when something is actually omitted (4+ types); at exactly 3 the head + last
+  // already cover everything, so no ellipsis.
+  const LEAD = 3;
+  const last = plurals[plurals.length - 1];
+  const head = plurals.slice(0, Math.min(LEAD, plurals.length - 1));
+  const elided = plurals.length - 1 > head.length;
+  return `Search ${head.join(', ')}${elided ? ', …' : ''} or ${last}…`;
+}
 
 /** Build an element with class / html / text / attrs / children. */
 function el(tag, opts = {}, children = []) {
@@ -317,7 +343,7 @@ function renderResults(listEl, nav) {
     }, [
       el('span', { class: 'search-result__id', text: displayId(node) }),
       el('span', { class: 'search-result__title', text: node.title || displayId(node) }),
-      el('span', { class: 'search-result__type', text: node.type || '' }),
+      el('span', { class: 'search-result__type', text: node.type ? typeLabel(node.type) : '' }),
       el('span', { class: 'search-result__hint' }, [
         el('span', { html: ENTER_ICON }),
         el('span', { text: 'open' }),
@@ -396,7 +422,7 @@ export async function open() {
     class: 'search-input',
     attrs: {
       type: 'text',
-      placeholder: 'Search specs, stories, tasks…',
+      placeholder: placeholderFor(graph.nodes),
       'aria-label': 'Search',
       autocomplete: 'off',
       spellcheck: 'false',

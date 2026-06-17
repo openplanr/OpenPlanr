@@ -25,103 +25,21 @@
  */
 
 import { displayId } from '../display-id.js';
+import { getFilter } from '../main.js';
+import {
+  groupBy, groupingDimensions,
+  specOf, specsInGraph, statusBadge, filterNodes,
+} from '../metadata.js';
 
-/* ── data layer (T-011) — pure, no DOM ──────────────────────────────── */
-
-/**
- * The four visible status columns, in board order. `addressed` folds into the
- * "Done" column (it is a terminal classified status). This order is also the
- * key order of the Map returned by groupBy(nodes, "status").
- */
-const STATUS_ORDER = ['outstanding', 'in-progress', 'blocked', 'done'];
-
-/** Human label for each status-group key. */
-const STATUS_LABEL = {
-  outstanding: 'Outstanding',
-  'in-progress': 'In progress',
-  blocked: 'Blocked',
-  done: 'Done',
-};
-
-/** Map a raw node status onto one of the four board status buckets. */
-function statusBucket(status) {
-  if (status === 'addressed') return 'done';
-  return STATUS_ORDER.includes(status) ? status : 'outstanding';
-}
-
-/**
- * Group nodes for the board. Pure: no DOM, no side effects.
- *
- * @param {Array<object>} nodes  the graph nodes
- * @param {'status'|'sprint'|'feature'} key  grouping dimension
- * @returns {Map<string, Array<object>>} ordered Map of group key → nodes.
- *   - status : exactly four keys in STATUS_ORDER (empty groups kept so all
- *              four columns always render).
- *   - sprint : keyed by frontmatter.sprintId; missing → "unassigned".
- *   - feature: keyed by frontmatter.featureId; missing → "unassigned".
- */
-export function groupBy(nodes, key) {
-  const list = Array.isArray(nodes) ? nodes : [];
-  const out = new Map();
-
-  if (key === 'status') {
-    for (const k of STATUS_ORDER) out.set(k, []);
-    for (const n of list) out.get(statusBucket(n && n.status)).push(n);
-    return out;
-  }
-
-  const field = key === 'sprint' ? 'sprintId' : 'featureId';
-  for (const n of list) {
-    const fm = (n && n.frontmatter) || {};
-    const groupKey = fm[field] != null && fm[field] !== '' ? String(fm[field]) : 'unassigned';
-    if (!out.has(groupKey)) out.set(groupKey, []);
-    out.get(groupKey).push(n);
-  }
-  // stable, readable order: named groups first (sorted), "unassigned" last.
-  const ordered = new Map();
-  const keys = [...out.keys()].filter((k) => k !== 'unassigned').sort();
-  for (const k of keys) ordered.set(k, out.get(k));
-  if (out.has('unassigned')) ordered.set('unassigned', out.get('unassigned'));
-  return ordered;
-}
-
-/**
- * Resolve the spec a node belongs to, or null. Pure, no DOM. Reads frontmatter:
- * `specScope` (stamped by the reader on every story AND task under
- * specs/SPEC-NNN/) → authored `specId` → the namespaced id prefix as a last
- * resort. A spec body node resolves to its own id.
- * @param {object} node
- * @returns {string|null}
- */
-export function specOf(node) {
-  const fm = (node && node.frontmatter) || {};
-  if (typeof fm.specScope === 'string' && fm.specScope) return fm.specScope;
-  if (typeof fm.specId === 'string' && fm.specId) return fm.specId;
-  if (node && typeof node.id === 'string' && node.id.includes('/')) {
-    const scope = node.id.slice(0, node.id.indexOf('/'));
-    if (/^SPEC-/i.test(scope)) return scope;
-  }
-  if (node && node.type === 'spec') {
-    const own = fm.id != null && fm.id !== '' ? String(fm.id) : (node.id != null ? String(node.id) : '');
-    if (own) return own;
-  }
-  return null;
-}
-
-/**
- * Distinct spec ids present in the graph, numerically sorted. Pure. Drives the
- * spec filter dropdown (only specs that actually exist are advertised).
- * @param {Array<object>} nodes
- * @returns {string[]}
- */
-export function specsInGraph(nodes) {
-  const set = new Set();
-  for (const n of (Array.isArray(nodes) ? nodes : [])) {
-    const s = specOf(n);
-    if (s) set.add(s);
-  }
-  return [...set].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
-}
+/* ── data layer ───────────────────────────────────────────────────────
+ * Grouping (groupBy / dimensions / bucket labels), spec scope (specOf /
+ * specsInGraph), status badges, and type+status filtering all live in the
+ * shared metadata registry (metadata.js) so the Board, List, and every other
+ * view speak the same vocabulary — and any artifact type present in the graph
+ * (incl. quick/QT and backlog/BL) is groupable and filterable here without a
+ * board-local list. The Board re-exports specOf/specsInGraph/groupBy so existing
+ * importers keep working. */
+export { groupBy, specOf, specsInGraph };
 
 /* ── UI layer (T-010) ───────────────────────────────────────────────── */
 
@@ -379,17 +297,6 @@ async function fetchGraph() {
   }
 }
 
-/** Map a node status onto a status-footer badge class + label (reuses ds.css). */
-function badgeFor(status) {
-  switch (status) {
-    case 'done': return ['ds-badge--done', 'done'];
-    case 'in-progress': return ['ds-badge--progress', 'in progress'];
-    case 'blocked': return ['ds-badge--blocked', 'blocked'];
-    case 'addressed': return ['ds-badge--addressed', 'addressed'];
-    default: return ['ds-badge--todo', 'to do'];
-  }
-}
-
 /**
  * The spec (or nearest-parent) badge descriptor for a card, or null. Roots and a
  * node whose spec equals its own id are suppressed so a spec card never shows a
@@ -410,7 +317,7 @@ function specBadgeFor(node) {
 
 /** Render one artifact card. */
 function cardlet(node) {
-  const [badgeClass, badgeLabel] = badgeFor(node && node.status);
+  const [badgeClass, badgeLabel] = statusBadge(node && node.status);
   const localId = displayId(node);
   const sb = specBadgeFor(node);
   const card = el('div', {
@@ -440,27 +347,26 @@ function cardlet(node) {
   return card;
 }
 
-/** Resolve the display label for a group key under the current grouping. */
-function groupLabel(key, dimension) {
-  if (dimension === 'status') return STATUS_LABEL[key] || key;
-  if (key === 'unassigned') return 'Unassigned';
-  return key;
-}
-
 /** Render the columns for a grouping into `host`, narrowed to `specFilter`. */
 function renderColumns(host, graph, dimension, specFilter) {
   host.innerHTML = '';
   let nodes = Array.isArray(graph.nodes) ? graph.nodes : [];
+  // Apply the shared rail filter (type + status) first, then the board's own
+  // spec dropdown. (Search is a List-only affordance — the board has no search
+  // box, so honoring it here would hide cards with no visible cause.) Grouping
+  // below never silently drops anything: missing keys → an explicit "No <dim>".
+  const f = getFilter();
+  nodes = filterNodes(nodes, { typeFilter: f.typeFilter, statusFilter: f.statusFilter });
   if (specFilter && specFilter !== 'all') nodes = nodes.filter((n) => specOf(n) === specFilter);
   const groups = groupBy(nodes, dimension);
   const cols = el('div', { class: 'board-cols', attrs: { 'data-group': dimension } });
-  for (const [key, nodes] of groups) {
+  for (const group of groups) {
     const body = el('div', { class: 'board-col__body' });
-    for (const n of nodes) body.append(cardlet(n));
-    cols.append(el('div', { class: 'board-col', attrs: { 'data-col': key } }, [
+    for (const n of group.nodes) body.append(cardlet(n));
+    cols.append(el('div', { class: 'board-col', attrs: { 'data-col': group.key || 'none' } }, [
       el('div', { class: 'board-col__head' }, [
-        el('span', { class: 'board-col__title', text: groupLabel(key, dimension) }),
-        el('span', { class: 'col-count tnum', text: String(nodes.length) }),
+        el('span', { class: 'board-col__title', text: group.label }),
+        el('span', { class: 'col-count tnum', text: String(group.nodes.length) }),
       ]),
       body,
     ]));
@@ -500,11 +406,13 @@ export async function mount(el2) {
 
   const colsHost = el('div', { class: 'board-colshost' });
 
-  // "Group by" toolbar control (Status / Sprint / Feature).
+  // "Group by" toolbar control — dimensions are METADATA-DRIVEN: Status + Type
+  // always, plus Sprint / Feature / Epic / Spec when ≥1 node carries that key.
   const groupby = el('div', { class: 'board-groupby', attrs: { role: 'group', 'aria-label': 'Group by' } });
-  const DIMS = [['status', 'Status'], ['sprint', 'Sprint'], ['feature', 'Feature']];
+  const dims = groupingDimensions(currentGraph().nodes);
+  if (!dims.some((d) => d.key === dimension)) dimension = (dims[0] && dims[0].key) || 'status';
   const buttons = new Map();
-  for (const [dim, label] of DIMS) {
+  for (const { key: dim, label } of dims) {
     const btn = el('button', {
       class: 'board-groupby__btn',
       text: label,

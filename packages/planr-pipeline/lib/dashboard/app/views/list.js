@@ -22,6 +22,8 @@
  */
 
 import { displayId } from '../display-id.js';
+import { filterState } from '../main.js';
+import { typesInGraph, typePlural } from '../metadata.js';
 
 /* ── data layer (T-011) — pure, no DOM ──────────────────────────────── */
 
@@ -125,17 +127,6 @@ const COLUMNS = [
   { sortKey: 'sprint', label: 'Sprint', sortable: true },
   { key: 'deps', label: 'Deps', sortable: false },
   { key: 'pr', label: 'PR', sortable: false },
-];
-
-/** Type chips offered in the filter toolbar (plural + count, like the mockup);
- * only types present in the data are shown so a spec project never advertises an
- * empty Epics/Features chip. */
-const TYPE_CHIPS = [
-  { type: 'epic', label: 'Epics' },
-  { type: 'feature', label: 'Features' },
-  { type: 'story', label: 'Stories' },
-  { type: 'task', label: 'Tasks' },
-  { type: 'spec', label: 'Specs' },
 ];
 
 /** Build an element with class / html / text / attrs / children. */
@@ -282,30 +273,15 @@ function badgeFor(status) {
 }
 
 /**
- * Shared client-side filter + sort state. setFilter() mutates the state then
- * dispatches the matching event so the view re-renders. The dimension `'type'`
- * sets typeFilter; `'status'` sets statusFilter.
+ * List-local SORT state. The FILTER state (type / status / search) is the
+ * SHARED store imported from main.js — the rail, the List chips, and every
+ * browse view read and write that single source of truth (so a type toggled in
+ * the rail and a chip toggled here stay in lockstep). Sort is List-only, so it
+ * stays here and fires its own `planr:sort-change`.
  */
-export const filterState = {
-  typeFilter: [],
-  statusFilter: null,
-  search: '',
+const sortState = {
   sortKey: 'id',
   sortDir: 'asc',
-  /**
-   * @param {'type'|'status'|'search'} dimension
-   * @param {string[]|string|null} value
-   */
-  setFilter(dimension, value) {
-    if (dimension === 'type') this.typeFilter = Array.isArray(value) ? value.slice() : [];
-    else if (dimension === 'status') this.statusFilter = value == null ? null : String(value);
-    else if (dimension === 'search') this.search = value == null ? '' : String(value);
-    if (typeof document !== 'undefined') {
-      document.dispatchEvent(new CustomEvent('planr:filter-change', {
-        detail: { typeFilter: this.typeFilter, statusFilter: this.statusFilter, search: this.search },
-      }));
-    }
-  },
   /** Set sort key + direction (toggles direction when the key is unchanged). */
   setSort(sortKey) {
     if (this.sortKey === sortKey) this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
@@ -323,8 +299,8 @@ function renderRows(tbody, graph) {
   tbody.innerHTML = '';
   const visible = sortNodes(
     filterNodes(graph.nodes, filterState),
-    filterState.sortKey,
-    filterState.sortDir,
+    sortState.sortKey,
+    sortState.sortDir,
   );
 
   if (!visible.length) {
@@ -357,13 +333,13 @@ function renderRows(tbody, graph) {
 /** Reflect the active sort key/direction onto the column header buttons. */
 function syncSortHeaders(headerBtns) {
   for (const [key, btn] of headerBtns) {
-    if (key !== filterState.sortKey) {
+    if (key !== sortState.sortKey) {
       btn.setAttribute('aria-sort', 'none');
       const arrow = btn.querySelector('.list-sortbtn__arrow');
       if (arrow) arrow.textContent = '';
       continue;
     }
-    const asc = filterState.sortDir === 'asc';
+    const asc = sortState.sortDir === 'asc';
     btn.setAttribute('aria-sort', asc ? 'ascending' : 'descending');
     const arrow = btn.querySelector('.list-sortbtn__arrow');
     if (arrow) arrow.textContent = asc ? '↑' : '↓';
@@ -419,17 +395,18 @@ export async function mount(el2) {
   });
   toolbar.append(allChip);
 
-  for (const { type, label } of TYPE_CHIPS) {
+  // One counted chip per type ACTUALLY present (metadata-driven) — so Quick (QT)
+  // and Backlog (BL) get chips whenever they exist, never an empty hard-coded set.
+  for (const type of typesInGraph(graph.nodes)) {
     const count = graph.nodes.filter((n) => n.type === type).length;
-    if (!count) continue; // only advertise types that exist in this project
     const chip = el('button', {
       class: 'chip',
-      attrs: { type: 'button', 'data-type': type, 'aria-pressed': 'false' },
+      attrs: { type: 'button', 'data-type': type, 'aria-pressed': filterState.typeFilter.includes(type) ? 'true' : 'false' },
     }, [
-      el('span', { text: `${label} ${count}` }),
+      el('span', { text: `${typePlural(type)} ${count}` }),
     ]);
     chip.addEventListener('click', () => {
-      // toggle this type in the filter set.
+      // toggle this type in the shared filter set.
       const set = new Set(filterState.typeFilter);
       if (set.has(type)) set.delete(type); else set.add(type);
       filterState.setFilter('type', [...set]);
@@ -456,7 +433,7 @@ export async function mount(el2) {
       el('span', { class: 'list-sortbtn__arrow' }),
     ]);
     btn.addEventListener('click', () => {
-      filterState.setSort(col.sortKey);
+      sortState.setSort(col.sortKey);
     });
     headerBtns.set(col.sortKey, btn);
     headRow.append(el('th', {}, [btn]));

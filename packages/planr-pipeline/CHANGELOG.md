@@ -4,6 +4,44 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.22.0] — 2026-06-16
+
+### Added / Fixed — metadata-driven dashboard (filters, grouping, and every view)
+
+The dashboard data layer already emitted nine artifact types
+(`epic · feature · story · task · spec · backlog · quick · sprint · adr`) and five
+classified statuses, but the UI hard-coded incomplete subsets in half a dozen
+places — so **quick-tasks (QT) and backlog (BL) appeared on cards yet could not be
+filtered or grouped**, the rail's filter panel was inert, and several views
+silently dropped or under-counted whole artifact kinds. The dashboard is now fully
+metadata-driven: anything present in `.planr/` is filterable, groupable, countable,
+and labelled everywhere, and nothing dead-ends.
+
+- **New shared registry** `lib/dashboard/app/metadata.js` — single source of truth
+  for type labels/plurals/accents, statuses/badges, present-in-graph enumeration, a
+  generic `groupBy` (with explicit "No &lt;dimension&gt;" buckets), grouping-dimension
+  discovery, and `filterNodes`. Replaces the scattered hard-coded lists.
+- **Rail filters are wired and data-driven.** The Status chips and Type checkboxes
+  were previously decorative (no handlers); they now read one shared filter store,
+  list only the statuses/types actually present (so **Quick / Backlog / Sprint /
+  ADR** show up with live counts), and every browse view honours them.
+- **Board "Group by"** now offers **Type** alongside Status, plus Sprint / Feature /
+  Epic / Spec — all derived from the data; items missing a key land in an explicit
+  bucket instead of vanishing.
+- **List** uses the shared filter store (its chips were a private duplicate) and
+  derives its type chips from the graph.
+- **Graph** no longer drops quick/backlog/adr/sprint/orphan nodes — they render in
+  an appended "Other" lane; the view honours the rail filter.
+- **Overview** KPIs + status breakdown count every present type (no more
+  spec/story/task-only tallies), with empty-state fallbacks.
+- **Sprint** membership is any artifact carrying a matching `sprintId` (not
+  task-only), so QT/BL on a sprint appear in the KPIs, burndown, and assignee table.
+- **Detail** is type-aware (renders children for any parent type; QT/BL/sprint/adr
+  pages are coherent) and surfaces auxiliary frontmatter.
+- **Search** placeholder + result labels are derived from the types present.
+- **Activity** honours the shared filter and tolerates all types/statuses.
+- Tests: added `tests/dashboard/metadata.test.mjs` (registry + grouping + filtering).
+
 ## [0.21.3] — 2026-06-15
 
 ### Fixed — board rendered HTML/canvas artifacts as images (broken thumbnail + blank compare)

@@ -24,6 +24,9 @@
  *   - `planr:theme-change` { detail: { theme } }  from the theme toggle
  */
 
+import { setFilter, getFilter } from './main.js';
+import { typesInGraph, statusesInGraph, typePlural, statusLabel } from './metadata.js';
+
 /* ── inline outline icons (design-spec §6) ──────────────────────────── */
 const ICON = {
   overview: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
@@ -49,9 +52,6 @@ const VIEWS = [
   { id: 'sprints', label: 'Sprints', icon: ICON.sprints },
   { id: 'activity', label: 'Activity', icon: ICON.activity },
 ];
-
-const STATUS_FILTERS = ['All', 'Done', 'In progress', 'Blocked'];
-const TYPE_FILTERS = ['Epic', 'Feature', 'Story', 'Task', 'Spec'];
 
 /** Small DOM helper — create an element with class, attrs, html, and children. */
 function el(tag, opts = {}, children = []) {
@@ -106,39 +106,23 @@ function buildRail() {
   navGroup.append(nav);
   rail.append(navGroup);
 
-  // filters
+  // filters — the Status chips + Type checkboxes are METADATA-DRIVEN: the
+  // containers render empty here and populateFilters(graph) (called by main.js
+  // once /api/graph loads, and again on each live patch) fills them from the
+  // types/statuses ACTUALLY present, wired to the shared filter state. A status
+  // (Outstanding/Addressed) or type (Quick/Backlog) that exists in the data
+  // shows up automatically; one that doesn't is never advertised.
   const filters = el('div', { class: 'ds-filters' }, [
     el('div', { class: 'ds-rail__label', text: 'Filters' }),
+    el('div', { class: 'ds-filter' }, [
+      el('div', { class: 'ds-filter__head', text: 'Status' }),
+      el('div', { class: 'ds-chips', attrs: { 'data-status-chips': '' } }),
+    ]),
+    el('div', { class: 'ds-filter' }, [
+      el('div', { class: 'ds-filter__head', text: 'Type' }),
+      el('div', { class: 'ds-typefilter', attrs: { 'data-type-filter': '' } }),
+    ]),
   ]);
-
-  const statusFilter = el('div', { class: 'ds-filter' }, [
-    el('div', { class: 'ds-filter__head', text: 'Status' }),
-  ]);
-  const statusChips = el('div', { class: 'ds-chips' });
-  STATUS_FILTERS.forEach((label, i) => {
-    const chip = el('button', {
-      class: 'ds-chip',
-      text: label,
-      attrs: { type: 'button', 'data-status': label, 'aria-pressed': i === 0 ? 'true' : 'false' },
-    });
-    statusChips.append(chip);
-  });
-  statusFilter.append(statusChips);
-
-  const typeFilter = el('div', { class: 'ds-filter' }, [
-    el('div', { class: 'ds-filter__head', text: 'Type' }),
-  ]);
-  const typeBox = el('div', { class: 'ds-typefilter' });
-  for (const t of TYPE_FILTERS) {
-    const label = el('label', { class: 'ds-checkbox' });
-    const box = el('input', { attrs: { type: 'checkbox', value: t.toLowerCase() } });
-    box.checked = true;
-    label.append(box, el('span', { text: t }));
-    typeBox.append(label);
-  }
-  typeFilter.append(typeBox);
-
-  filters.append(statusFilter, typeFilter);
   rail.append(filters);
 
   // live indicator (rail foot, pulse)
@@ -231,6 +215,95 @@ function buildTopbar() {
   return bar;
 }
 
+/* ── metadata-driven rail filters (wired to the shared filter state) ─────────*/
+
+/** Recompute the "all checked / none checked ⇒ all types" rule into a filter. */
+function typeFilterFromChecks(allTypes) {
+  const host = document.querySelector('[data-type-filter]');
+  if (!host) return [];
+  const checked = [...host.querySelectorAll('input[type="checkbox"]')]
+    .filter((b) => b.checked).map((b) => b.value);
+  // Empty typeFilter means "all types"; selecting every present type is the
+  // same as no filter, so collapse both to [] (keeps the List "All" chip in sync).
+  return (checked.length === 0 || checked.length === allTypes.length) ? [] : checked;
+}
+
+/** Build the Status chips (All + each status present) from the graph. */
+function populateStatusChips(nodes) {
+  const host = document.querySelector('[data-status-chips]');
+  if (!host) return;
+  const sel = getFilter().statusFilter; // null ⇒ All
+  host.innerHTML = '';
+  const make = (id, label) => {
+    const pressed = id === 'all' ? sel == null : sel === id;
+    const chip = el('button', {
+      class: 'ds-chip',
+      text: label,
+      attrs: { type: 'button', 'data-status': id, 'aria-pressed': pressed ? 'true' : 'false' },
+    });
+    chip.addEventListener('click', () => setFilter('status', id === 'all' ? null : id));
+    host.append(chip);
+  };
+  make('all', 'All');
+  for (const s of statusesInGraph(nodes)) make(s, statusLabel(s));
+}
+
+/** Build the Type checkboxes (one per type present, with a live count). */
+function populateTypeFilter(nodes) {
+  const host = document.querySelector('[data-type-filter]');
+  if (!host) return;
+  const types = typesInGraph(nodes);
+  const selected = getFilter().typeFilter; // [] ⇒ all
+  host.innerHTML = '';
+  for (const t of types) {
+    const count = nodes.filter((n) => n && n.type === t).length;
+    const label = el('label', { class: 'ds-checkbox' });
+    const box = el('input', { attrs: { type: 'checkbox', value: t } });
+    box.checked = selected.length === 0 || selected.includes(t);
+    box.addEventListener('change', () => setFilter('type', typeFilterFromChecks(types)));
+    label.append(box, el('span', { text: `${typePlural(t)} ${count}` }));
+    host.append(label);
+  }
+}
+
+/**
+ * Fill the rail's Status + Type filter controls from the graph actually loaded.
+ * Idempotent: rebuilds from the current `getFilter()` selection so it can be
+ * re-run on every live patch (a new type/status appears automatically). Called
+ * by main.js after /api/graph loads and after each SSE merge.
+ * @param {{nodes?: object[]}} graph
+ */
+export function populateFilters(graph) {
+  if (typeof document === 'undefined') return;
+  const nodes = (graph && Array.isArray(graph.nodes)) ? graph.nodes : [];
+  populateStatusChips(nodes);
+  populateTypeFilter(nodes);
+}
+
+/**
+ * Reflect the current shared filter state onto the rail controls WITHOUT
+ * rebuilding (so a change made from another surface — e.g. the List view's type
+ * chips or its "All" chip — keeps the rail in sync). Bound to planr:filter-change.
+ */
+function syncFilterControls() {
+  if (typeof document === 'undefined') return;
+  const f = getFilter();
+  const statusHost = document.querySelector('[data-status-chips]');
+  if (statusHost) {
+    for (const chip of statusHost.querySelectorAll('[data-status]')) {
+      const id = chip.getAttribute('data-status');
+      const pressed = id === 'all' ? f.statusFilter == null : f.statusFilter === id;
+      chip.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    }
+  }
+  const typeHost = document.querySelector('[data-type-filter]');
+  if (typeHost) {
+    for (const box of typeHost.querySelectorAll('input[type="checkbox"]')) {
+      box.checked = f.typeFilter.length === 0 || f.typeFilter.includes(box.value);
+    }
+  }
+}
+
 /**
  * Render the shell into `root`. Returns the content element view modules mount
  * into (also discoverable via `#ds-content`).
@@ -246,6 +319,15 @@ export function renderShell(root) {
 
   shell.append(buildRail(), buildTopbar(), content);
   root.append(shell);
+
+  // Keep the rail controls in sync when the filter changes from any surface
+  // (List view chips, the "All" chip, etc.). Guarded so repeat renders don't
+  // stack listeners. populateFilters() fills the options once the graph loads.
+  if (!renderShell._filterSyncBound) {
+    document.addEventListener('planr:filter-change', syncFilterControls);
+    renderShell._filterSyncBound = true;
+  }
+
   return content;
 }
 

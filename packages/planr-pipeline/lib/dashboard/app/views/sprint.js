@@ -25,7 +25,15 @@
  * Node shape (lib/dashboard/graph-reader.mjs):
  *   { id, type, title, status, frontmatter: { sprintId?, agent?, owner?, ... } }
  *   status ∈ done | in-progress | blocked | outstanding | addressed
+ *
+ * Sprint membership is any artifact with a matching sprintId — not task nodes
+ * only. A quick-task, backlog item, story, or anything else carrying a
+ * `frontmatter.sprintId` (or `frontmatter.sprint`) that points at the active
+ * sprint counts toward the committed total, KPIs, burndown, and by-assignee
+ * table. The sprint node itself is the sprint, never a member of itself.
  */
+
+import { sprintOf } from '../metadata.js';
 
 /* ── data layer (pure, no DOM) ──────────────────────────────────────── */
 
@@ -59,13 +67,14 @@ function tsOf(node) {
  * Algorithm (per T-013 spec):
  *   1. Active sprint = nodes of `type === "sprint"` with `status !== "done"`,
  *      taking the first by `frontmatter.created` ascending.
- *   2. Committed tasks = task nodes whose `frontmatter.sprintId` matches that
- *      sprint's id.
+ *   2. Committed members = any artifact (excluding the sprint node itself)
+ *      whose `sprintOf(node)` matches that sprint's id — any type, not tasks
+ *      only.
  *   3. KPIs: committed = count; completed = done/addressed count;
  *      carryover = committed − completed clamped at 0; velocity = completed.
- *   4. burndownPoints: bucket each committed task's `updated` timestamp into a
+ *   4. burndownPoints: bucket each committed member's `updated` timestamp into a
  *      sprint day index (day 0 = sprint start) and, for each day up to the
- *      current day, count tasks not yet completed by the end of that day.
+ *      current day, count members not yet completed by the end of that day.
  *
  * Returns `null` when no active sprint exists.
  *
@@ -94,19 +103,21 @@ export function getSprintData(graph) {
   if (!sprint) return null;
   const sprintId = String(sprint.id);
 
-  // (2) Committed tasks: task nodes whose sprintId matches the active sprint.
-  const tasks = nodes.filter(
-    (n) => n && n.type === 'task' && n.frontmatter && String(n.frontmatter.sprintId) === sprintId,
+  // (2) Committed members: any artifact whose sprintId matches the active
+  // sprint, regardless of type. The sprint node itself is the sprint, not a
+  // member of itself, so it is excluded.
+  const members = nodes.filter(
+    (n) => n && n.type !== 'sprint' && String(sprintOf(n)) === sprintId,
   );
 
   // (3) KPIs.
-  const committed = tasks.length;
-  const completed = tasks.filter((t) => isDone(t.status)).length;
+  const committed = members.length;
+  const completed = members.filter((m) => isDone(m.status)).length;
   const velocity = completed;
 
-  // (4) Burndown series — bucket task `updated` timestamps into sprint days and
-  // count tasks still remaining (not completed) at the end of each day.
-  const burndownPoints = computeBurndown(sprint, tasks);
+  // (4) Burndown series — bucket member `updated` timestamps into sprint days
+  // and count members still remaining (not completed) at the end of each day.
+  const burndownPoints = computeBurndown(sprint, members);
 
   // Carryover = work that has spilled past the sprint window. While the sprint
   // is still in progress nothing has carried over yet (0); once the window has
@@ -135,42 +146,42 @@ function sprintElapsed(sprint, burndownPoints) {
  * Build the day-by-day burndown points for a sprint. Day 0 is the sprint start
  * (`sprint.frontmatter.created`); the series runs through the current day,
  * bounded by the sprint length when present. A point's `remaining` is the count
- * of committed tasks not yet completed (by `updated` timestamp) on or before
+ * of committed members not yet completed (by `updated` timestamp) on or before
  * that day. Pure helper for getSprintData. Always returns ≥ 1 point.
  *
  * @param {object} sprint the active sprint node
- * @param {object[]} tasks the committed task nodes
+ * @param {object[]} members the committed member nodes (any type)
  * @returns {Array<{ day: number, remaining: number }>}
  */
-function computeBurndown(sprint, tasks) {
+function computeBurndown(sprint, members) {
   const sf = (sprint && sprint.frontmatter) || {};
   const startMs = sf.created != null && sf.created !== '' ? Date.parse(String(sf.created)) : NaN;
   const start = Number.isNaN(startMs) ? 0 : startMs;
   const DAY = 86400000;
 
-  // Span: prefer an explicit length; else from start → latest task update / now.
+  // Span: prefer an explicit length; else from start → latest member update / now.
   const lengthDays = Number(sf.lengthDays) > 0 ? Math.floor(Number(sf.lengthDays)) : 0;
   let latest = start;
-  for (const t of tasks) {
-    const ts = tsOf(t);
+  for (const m of members) {
+    const ts = tsOf(m);
     if (!Number.isNaN(ts) && ts > latest) latest = ts;
   }
   const elapsedFromData = start > 0 ? Math.max(0, Math.floor((latest - start) / DAY)) : 0;
-  const totalDays = lengthDays > 0 ? lengthDays : Math.max(elapsedFromData, tasks.length, 1);
+  const totalDays = lengthDays > 0 ? lengthDays : Math.max(elapsedFromData, members.length, 1);
   const currentDay = lengthDays > 0 ? Math.min(elapsedFromData, lengthDays) : Math.max(elapsedFromData, 0);
 
-  // Completion-day index per completed task (clamped to the visible span).
+  // Completion-day index per completed member (clamped to the visible span).
   const completedDays = [];
-  for (const t of tasks) {
-    if (!isDone(t.status)) continue;
-    const ts = tsOf(t);
+  for (const m of members) {
+    if (!isDone(m.status)) continue;
+    const ts = tsOf(m);
     let day = start > 0 && !Number.isNaN(ts) ? Math.floor((ts - start) / DAY) : totalDays;
     if (day < 0) day = 0;
     if (day > totalDays) day = totalDays;
     completedDays.push(day);
   }
 
-  const committed = tasks.length;
+  const committed = members.length;
   const points = [];
   const lastDay = Math.max(currentDay, 0);
   for (let d = 0; d <= lastDay; d++) {
@@ -204,14 +215,16 @@ function sprintViewModel(summary, graph) {
 
   const sprintId = summary.sprintId;
   const sprintNode = nodes.find((n) => n && n.type === 'sprint' && String(n.id) === sprintId) || null;
-  const committedTasks = nodes.filter(
-    (n) => n && n.type === 'task' && n.frontmatter && String(n.frontmatter.sprintId) === sprintId,
+  // Committed members: any artifact with a matching sprintId, regardless of
+  // type, excluding the sprint node itself.
+  const committedMembers = nodes.filter(
+    (n) => n && n.type !== 'sprint' && String(sprintOf(n)) === sprintId,
   );
 
   const committed = summary.committed;
   const done = summary.completed;
-  const inProgress = committedTasks.filter((t) => t.status === 'in-progress').length;
-  const blocked = committedTasks.filter((t) => t.status === 'blocked').length;
+  const inProgress = committedMembers.filter((m) => m.status === 'in-progress').length;
+  const blocked = committedMembers.filter((m) => m.status === 'blocked').length;
 
   const points = summary.burndownPoints.length ? summary.burndownPoints : [{ day: 0, remaining: committed }];
   const elapsedDays = points[points.length - 1].day;
@@ -228,16 +241,16 @@ function sprintViewModel(summary, graph) {
   // Actual line = the real burndown points from the summary.
   const actual = points;
 
-  // Per-assignee tally.
+  // Per-assignee tally across all committed members (any type).
   const byName = new Map();
-  for (const t of committedTasks) {
-    const name = assigneeOf(t);
+  for (const m of committedMembers) {
+    const name = assigneeOf(m);
     if (!byName.has(name)) byName.set(name, { name, committed: 0, done: 0, inProgress: 0, blocked: 0 });
     const row = byName.get(name);
     row.committed += 1;
-    if (isDone(t.status)) row.done += 1;
-    else if (t.status === 'in-progress') row.inProgress += 1;
-    else if (t.status === 'blocked') row.blocked += 1;
+    if (isDone(m.status)) row.done += 1;
+    else if (m.status === 'in-progress') row.inProgress += 1;
+    else if (m.status === 'blocked') row.blocked += 1;
   }
   const assignees = [...byName.values()].sort((a, b) => b.committed - a.committed || a.name.localeCompare(b.name));
 
@@ -542,7 +555,7 @@ export async function mount(el2) {
       el('p', { class: 'ds-lede', text: data.rangeLabel }),
     ]),
     el('div', { class: 'sprint-kpis' }, [
-      kpiTile('Committed', data.committed, 'tasks'),
+      kpiTile('Committed', data.committed, 'items'),
       kpiTile('Done', data.done, `${data.completionPct}%`),
       kpiTile('In progress', data.inProgress, `${data.blocked} blocked`),
       kpiTile('Carryover risk', data.carryover, 'behind ideal'),

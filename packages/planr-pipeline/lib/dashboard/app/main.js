@@ -22,7 +22,7 @@
  * no third-party product codenames.
  */
 
-import { renderShell, setActiveView, setModeChip } from './shell.js';
+import { renderShell, setActiveView, setModeChip, populateFilters } from './shell.js';
 
 /* ──────────────────────────────────────────────────────────────────────────
  * filterState — authoritative client-side filter state (SPEC-016 / T-007).
@@ -32,30 +32,38 @@ import { renderShell, setActiveView, setModeChip } from './shell.js';
  * dispatches on `document`. setFilter() is the single mutation entry point so the
  * dispatched detail always mirrors the stored state exactly (AC2).
  *
- *   shape: { statusFilter: string|null, typeFilter: string[] }
+ *   shape: { statusFilter: string|null, typeFilter: string[], search: string }
  *     statusFilter — a single status id (e.g. 'done') or null for "All"
  *     typeFilter   — selected artifact types (e.g. ['task']); [] means "all types"
+ *     search       — case-insensitive substring (List view); '' means no search
+ *
+ * This is the ONE filter store the whole app shares: the rail (shell.js) writes
+ * type + status, the List view writes type + status + search, and every browse
+ * view reads it via getFilter() + reacts to `planr:filter-change`. (Earlier the
+ * rail was unwired and the List kept a private duplicate — two desynced stores.)
  * ──────────────────────────────────────────────────────────────────────────*/
-const FILTER_KEYS = { status: 'statusFilter', type: 'typeFilter' };
+const FILTER_KEYS = { status: 'statusFilter', type: 'typeFilter', search: 'search' };
 
-const _filter = { statusFilter: null, typeFilter: [] };
+const _filter = { statusFilter: null, typeFilter: [], search: '' };
 
 /** Return a defensive copy of the current filter state. */
 export function getFilter() {
-  return { statusFilter: _filter.statusFilter, typeFilter: [..._filter.typeFilter] };
+  return { statusFilter: _filter.statusFilter, typeFilter: [..._filter.typeFilter], search: _filter.search };
 }
 
 /**
  * Set one filter dimension and announce the change on `planr:filter-change`.
- * @param {'status'|'type'} key  which dimension to set
- * @param {string|string[]|null} val  status id / null (status) · type id array (type)
- * @returns {{statusFilter: string|null, typeFilter: string[]}} the new state
+ * @param {'status'|'type'|'search'} key  which dimension to set
+ * @param {string|string[]|null} val  status id / null · type id array · search string
+ * @returns {{statusFilter: string|null, typeFilter: string[], search: string}} the new state
  */
 export function setFilter(key, val) {
   const field = FILTER_KEYS[key];
   if (!field) return getFilter();
   if (field === 'typeFilter') {
     _filter.typeFilter = Array.isArray(val) ? [...val] : (val == null ? [] : [val]);
+  } else if (field === 'search') {
+    _filter.search = val == null ? '' : String(val);
   } else {
     _filter.statusFilter = val == null || val === '' ? null : val;
   }
@@ -66,8 +74,18 @@ export function setFilter(key, val) {
   return detail;
 }
 
-/** Grouped export so view modules can `import { filterState } from '../main.js'`. */
-export const filterState = { setFilter, getFilter };
+/**
+ * Grouped export so view modules can `import { filterState } from '../main.js'`.
+ * `setFilter`/`getFilter` mirror the module functions; the read-only accessors
+ * let views that previously held a private state object read the same store.
+ */
+export const filterState = {
+  setFilter,
+  getFilter,
+  get typeFilter() { return [..._filter.typeFilter]; },
+  get statusFilter() { return _filter.statusFilter; },
+  get search() { return _filter.search; },
+};
 
 /** Lazy view loaders — code-split per route (dynamic import). */
 const ROUTES = {
@@ -243,6 +261,10 @@ export function applySsePatch(patch) {
   // Restore view-state regardless of what the merge/hook touches.
   dashboard.selectedId = keptSelection;
   dashboard.filterText = keptFilter;
+
+  // A patch may introduce a new type/status — re-derive the rail filter options
+  // from the merged graph (preserves the current selection). Cheap + idempotent.
+  populateFilters(dashboard.graph);
 
   if (affectedIds.length === 0) return; // nothing changed → nothing to repaint
 
@@ -497,6 +519,34 @@ function boot() {
 
   // Live sync (T-004): open the SSE stream so .planr/ edits patch in place.
   connectEvents();
+
+  // Metadata-driven rail filters: load the graph once into the shared in-memory
+  // store, then build the Type + Status filter controls from the types/statuses
+  // ACTUALLY present (re-derived live as patches arrive). Async — the rail shows
+  // its "Filters" header immediately and the controls fill in on load.
+  loadInitialGraph();
+}
+
+/**
+ * Fetch GET /api/graph once at boot, store it as the shared in-memory graph
+ * (the same object SSE patches mutate), and populate the rail's Type + Status
+ * filters from the data. Tolerates failure: the rail simply renders no filter
+ * options rather than a hard-coded list. AC: metadata-driven filters.
+ * @returns {Promise<object|null>}
+ */
+export async function loadInitialGraph() {
+  if (typeof fetch !== 'function') { populateFilters(dashboard.graph); return null; }
+  let graph = null;
+  try {
+    const res = await fetch('/api/graph');
+    if (res.ok) {
+      const g = await res.json();
+      if (g && Array.isArray(g.nodes)) graph = g;
+    }
+  } catch { graph = null; }
+  if (graph) dashboard.graph = graph;
+  populateFilters(dashboard.graph);
+  return graph;
 }
 
 if (typeof document !== 'undefined') {

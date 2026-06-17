@@ -21,6 +21,8 @@
  */
 
 import { displayId } from '../display-id.js';
+import { getFilter } from '../main.js';
+import { STATUS_IDS, statusBadge, typeAccent, typeLabel, filterNodes } from '../metadata.js';
 
 /* ── element helper ─────────────────────────────────────────────────── */
 
@@ -59,9 +61,16 @@ const ACTIVITY_CSS = `
 .feed-entry__main { min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
 .feed-entry__text { font-size: var(--text-sm); color: var(--foreground); }
 .feed-entry__text strong { font-weight: var(--weight-semibold); }
+.feed-entry__type {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--type-accent, var(--muted-foreground));
+}
 .feed-entry__meta { font-size: var(--text-xs); color: var(--muted-foreground); }
 .feed-entry__time { font-size: var(--text-xs); color: var(--muted-foreground); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+/* The dot is coloured per status. Classes are keyed to the registry's canonical
+ * status ids (STATUS_IDS); an unknown status keeps the muted base background. */
 .dot {
   flex: 0 0 auto;
   margin-top: var(--space-1);
@@ -138,9 +147,11 @@ export function relativeTime(ms) {
 
 /* ── patch → feed-entry model (pure) ────────────────────────────────── */
 
-const KNOWN_STATUS = new Set(['done', 'in-progress', 'blocked', 'addressed', 'outstanding']);
+// Canonical statuses come from the shared registry — the single source of truth.
+const KNOWN_STATUS = new Set(STATUS_IDS);
 
-/** Normalise a status string onto the five known buckets (for the dot colour). */
+/** Normalise a status string onto the registry's canonical ids (for the dot
+ * colour). Unknown statuses fall back to 'outstanding'/muted, never to a type. */
 function dotStatus(status) {
   const s = String(status || '').trim().toLowerCase();
   if (KNOWN_STATUS.has(s)) return s;
@@ -150,14 +161,15 @@ function dotStatus(status) {
 
 /**
  * Best-effort status extraction from a contract `change` string (e.g.
- * "status → done") so the feed dot is coloured. Falls back to the event `type`.
+ * "status → done") so the feed dot is coloured. Returns a canonical status id
+ * when one is named in the text, else '' (the caller defaults to 'outstanding').
  */
-function statusFromChange(change, type) {
-  const text = String(change || '');
+function statusFromChange(change) {
+  const text = String(change || '').toLowerCase();
   for (const known of KNOWN_STATUS) {
-    if (text.toLowerCase().includes(known)) return known;
+    if (text.includes(known)) return known;
   }
-  return type;
+  return '';
 }
 
 /**
@@ -165,7 +177,12 @@ function statusFromChange(change, type) {
  * patch shape ({ updated, added, removed, edges }) and of a flat single-event
  * shape ({ id, status, actor, text }). Pure: no DOM. Returns null when the patch
  * carries nothing to show.
- * @returns {{status:string, text:string, id:string, actor:string}|null}
+ *
+ * `type` and `status` are carried so the shared rail filter can match the entry
+ * (see makeNode). `type` is the artifact type from the event (used for the
+ * type-accent label + the type filter); `status` is a canonical status id —
+ * never the type value, so an unknown status falls back to 'outstanding'/muted.
+ * @returns {{type:string, status:string, text:string, id:string, actor:string}|null}
  */
 export function entryFromPatch(patch) {
   if (!patch || typeof patch !== 'object') return null;
@@ -173,7 +190,8 @@ export function entryFromPatch(patch) {
   // SSE event-shape contract (T-013): { type, nodeId, change, actor?, ts }.
   if (patch.nodeId && patch.change != null) {
     return {
-      status: dotStatus(statusFromChange(patch.change, patch.type)),
+      type: patch.type != null ? String(patch.type) : '',
+      status: dotStatus(statusFromChange(patch.change)),
       id: String(patch.nodeId),
       text: String(patch.change),
       actor: patch.actor != null ? String(patch.actor) : '',
@@ -183,6 +201,7 @@ export function entryFromPatch(patch) {
   // Flat single-event shape.
   if (patch.id && (patch.text || patch.status)) {
     return {
+      type: patch.type != null ? String(patch.type) : '',
       status: dotStatus(patch.status),
       id: String(patch.id),
       text: patch.text != null ? String(patch.text) : `${patch.id} → ${patch.status || 'updated'}`,
@@ -201,6 +220,7 @@ export function entryFromPatch(patch) {
     const status = node.status || verb;
     const actor = (node.frontmatter && (node.frontmatter.agent || node.frontmatter.owner)) || '';
     return {
+      type: node.type != null ? String(node.type) : '',
       status: dotStatus(node.status),
       id: String(node.id),
       text: `${node.id} → ${status}`,
@@ -208,7 +228,10 @@ export function entryFromPatch(patch) {
     };
   }
   if (removed.length) {
-    return { status: 'outstanding', id: String(removed[0]), text: `${removed[0]} removed`, actor: '.planr/ change' };
+    const r = removed[0];
+    const id = (r && typeof r === 'object') ? String(r.id || '') : String(r);
+    const type = (r && typeof r === 'object' && r.type != null) ? String(r.type) : '';
+    return { type, status: 'outstanding', id, text: `${id} removed`, actor: '.planr/ change' };
   }
   return null;
 }
@@ -273,7 +296,11 @@ export function parseActivityEvent(rawData) {
 
 /** Build a `<li class="feed-entry">` for an entry model captured at `at` ms.
  * The model id is the (possibly-namespaced) change subject; display the local
- * id and strip the namespace prefix from the change text too. */
+ * id and strip the namespace prefix from the change text too.
+ *
+ * Colours + labels are registry-driven: the dot uses the canonical status id;
+ * the type label/accent come from typeLabel/typeAccent (muted fallback for
+ * unknown types) and the status badge text from statusBadge (safe default). */
 function feedEntry(model, at) {
   const localId = displayId(model.id);
   const time = el('span', {
@@ -284,6 +311,18 @@ function feedEntry(model, at) {
   const text = String(model.text || '')
     .replace(`${model.id} → `, '→ ')
     .replace(model.id, localId);
+  const [, badgeText] = statusBadge(model.status);
+  // The type label sits before the id, tinted with the type's accent token —
+  // an unknown/auxiliary type still renders (typeLabel/typeAccent fall back).
+  const metaChildren = [];
+  if (model.type) {
+    metaChildren.push(el('span', {
+      class: 'feed-entry__type',
+      text: typeLabel(model.type),
+      attrs: { style: `--type-accent: ${typeAccent(model.type)}` },
+    }));
+  }
+  metaChildren.push(el('span', { text: `${model.actor || '.planr/ change'} · ${badgeText}` }));
   return el('li', { class: 'feed-entry' }, [
     el('span', { class: `dot dot-${model.status}` }),
     el('div', { class: 'feed-entry__main' }, [
@@ -291,10 +330,32 @@ function feedEntry(model, at) {
         el('strong', { text: localId }),
         el('span', { text: ` — ${text}` }),
       ]),
-      el('div', { class: 'feed-entry__meta', text: model.actor || '.planr/ change' }),
+      el('div', { class: 'feed-entry__meta' }, metaChildren),
     ]),
     time,
   ]);
+}
+
+/* ── shared rail filter (honours the rail; never drops unknown types) ── */
+
+/** Project a feed-entry model onto the node shape filterNodes expects. */
+function modelAsNode(model) {
+  return { id: model.id, type: model.type, status: model.status, title: model.text };
+}
+
+/**
+ * Does this entry pass the shared rail filter? The feed is event-shaped, so we
+ * project each entry onto a node and reuse filterNodes — the one place type +
+ * status matching lives. Empty typeFilter / null statusFilter mean "all", so an
+ * unknown type is never dropped unless the rail explicitly excludes it.
+ * @param {{type:string,status:string,id:string,text:string}} model
+ * @returns {boolean}
+ */
+function passesFilter(model) {
+  const f = getFilter();
+  // The Activity feed has no search box of its own — honour type + status only.
+  const filter = { typeFilter: f.typeFilter, statusFilter: f.statusFilter };
+  return filterNodes([modelAsNode(model)], filter).length > 0;
 }
 
 /* ── view state (module-scoped so unmount can tear down) ────────────── */
@@ -303,6 +364,7 @@ let _source = null;
 let _tick = null;
 let _onMessage = null;
 let _onError = null;
+let _onFilterChange = null;
 
 /**
  * Close the EventSource and clear timers/listeners. Called by the router before
@@ -317,6 +379,10 @@ export function unmount() {
   }
   _onMessage = null;
   _onError = null;
+  if (_onFilterChange && typeof document !== 'undefined') {
+    document.removeEventListener('planr:filter-change', _onFilterChange);
+  }
+  _onFilterChange = null;
   if (_tick) { clearInterval(_tick); _tick = null; }
 }
 
@@ -349,18 +415,40 @@ export function mount(el2) {
   );
 
   let firstArrived = false;
+  // Every entry that has arrived (newest last). The DOM only shows the subset
+  // that passes the shared rail filter; re-filtering re-renders from here so a
+  // change is never lost — only hidden — while a filter is active.
+  /** @type {{model:object, at:number}[]} */
+  const records = [];
 
-  /** Append an entry to the top of the feed for one SSE patch. */
+  /** Re-render the feed from `records`, applying the current shared filter. */
+  const render = () => {
+    feed.innerHTML = '';
+    // Newest first — `records` is append-ordered, so iterate in reverse.
+    for (let i = records.length - 1; i >= 0; i--) {
+      const rec = records[i];
+      if (passesFilter(rec.model)) feed.append(feedEntry(rec.model, rec.at));
+    }
+  };
+
+  /** Append an entry for one SSE patch, then show it if it passes the filter. */
   const append = (patch) => {
     const model = entryFromPatch(patch);
     if (!model) return;
     if (!firstArrived) { firstArrived = true; placeholder.remove(); }
-    feed.prepend(feedEntry(model, Date.now()));
+    records.push({ model, at: Date.now() });
+    if (passesFilter(model)) feed.prepend(feedEntry(model, records[records.length - 1].at));
     // Pulse the shell's live badge.
     if (typeof document !== 'undefined') {
       document.dispatchEvent(new CustomEvent('planr:activity-event', { detail: model }));
     }
   };
+
+  // Re-render when the shared rail filter changes (AC: feed honours the rail).
+  _onFilterChange = () => { render(); };
+  if (typeof document !== 'undefined') {
+    document.addEventListener('planr:filter-change', _onFilterChange);
+  }
 
   if (typeof EventSource !== 'undefined') {
     try {
