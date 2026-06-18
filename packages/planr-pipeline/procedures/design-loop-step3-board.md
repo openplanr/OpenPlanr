@@ -6,10 +6,16 @@
 ## D.1 — Reveal + serve
 
 1. Show the variants inline in chat (Read the PNGs / SVGs) — a quick visual index.
-2. `node "$PLUG/lib/design-engine/cli.mjs" board --dir <ABS_SESSION_DIR> --id <PROJECT>-<TARGET>`
-   → parse the **`BOARD_URL:`** line from stderr. The daemon is independent of this
-   session (hard rule 14); if it ever dies, re-run the same `board` command — same dir,
-   same feedback files, nothing lost.
+2. Serve the board. The daemon is a long-running server that must OUTLIVE the short-lived
+   `board` command — a sandboxed agent runtime reaps a detached child when the launching command
+   exits, so bring the daemon up as a tracked **background task** first, then register the board:
+   - `node "$PLUG/lib/design-engine/cli.mjs" daemon --status` → if `running:true`, skip the next bullet.
+   - else launch as a **background task** and wait for `DAEMON_PORT:`:
+     `node "$PLUG/lib/design-engine/cli.mjs" daemon --serve`
+   - `node "$PLUG/lib/design-engine/cli.mjs" board --dir <ABS_SESSION_DIR> --id <PROJECT>-<TARGET>`
+     → reuses the running daemon (instant); parse the **`BOARD_URL:`** line from stderr. The daemon
+     is independent of this session (hard rule 14); if it ever dies, re-run the same `board`
+     command — same dir, same feedback files, nothing lost.
 
 ## D.2 — The blocking wait
 

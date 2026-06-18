@@ -127,6 +127,8 @@ node $PLUG/lib/design-engine/cli.mjs record --variant A --session-dir <dir> \
 node $PLUG/lib/design-engine/cli.mjs board --dir <dir> --id demo-logo
 # → stderr: BOARD_URL: http://127.0.0.1:<port>/boards/demo-logo/
 # open it: pin a region, rate, Submit → feedback.json appears next to board.html
+# (in a terminal the daemon `board` spawns survives on its own; inside a sandboxed agent,
+#  bring it up first as a background task — `cli.mjs daemon --serve` — then `board` reuses it.)
 
 # with a key instead: node $PLUG/lib/design-engine/cli.mjs setup
 # → stores the key (0600) + runs a real smoke generation and prints the proof:

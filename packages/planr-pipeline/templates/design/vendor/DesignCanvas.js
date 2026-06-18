@@ -680,7 +680,7 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
     {
       ref: cardRef,
       className: "dc-card",
-      style: { borderRadius: 2, boxShadow: "0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)", overflow: "hidden", width, height: "auto", alignSelf: "flex-start", background: "#fff", ...style }
+      style: { borderRadius: 2, boxShadow: "0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)", overflow: "hidden", width, minHeight: height, alignSelf: "flex-start", background: "#fff", ...style }
     },
     children || /* @__PURE__ */ React.createElement("div", { style: { minHeight: 240, display: "flex", alignItems: "center", justifyContent: "center", color: "#bbb", fontSize: 13, fontFamily: DC.font } }, id)
   ));

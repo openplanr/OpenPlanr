@@ -13,10 +13,16 @@
    `design-step0-preflight.md` A.4 semantics) — a review IS a design mutation session.
    Release on every exit path.
 3. Serve in **review mode** (one iframe + pin layer; pins auto-map to the nearest
-   `<section id>` / `[data-screen]` — that id arrives in `pin.screen`):
-   `node "$PLUG/lib/design-engine/cli.mjs" board --dir <ABS_DESIGN_DIR> --id <slug>-review --mode review`
-   → parse **`BOARD_URL:`**. (The daemon already serves the artifact's `vendor/` assets
-   from the same dir.)
+   `<section id>` / `[data-screen]` — that id arrives in `pin.screen`). The board daemon is a
+   long-running server that must OUTLIVE the short-lived `board` command — a sandboxed agent
+   runtime reaps a detached child when the launching command exits, so bring the daemon up as a
+   tracked **background task** first, then register the board against it:
+   - `node "$PLUG/lib/design-engine/cli.mjs" daemon --status` → if `running:true`, skip the next bullet.
+   - else launch as a **background task** and wait for `DAEMON_PORT:`:
+     `node "$PLUG/lib/design-engine/cli.mjs" daemon --serve`
+   - `node "$PLUG/lib/design-engine/cli.mjs" board --dir <ABS_DESIGN_DIR> --id <slug>-review --mode review`
+     → reuses the running daemon (instant, no spawn); parse **`BOARD_URL:`**. (The daemon serves
+     the artifact's `vendor/` assets from the same dir.)
 4. Blocking `AskUserQuestion` (enforcement per `design-step1-clarify.md`; URL in the text):
    > Review board live: **<BOARD_URL>** — pin regions on any screen
    > (`fix` / `improve` / `question`), then come back.

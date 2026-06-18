@@ -31,7 +31,7 @@ import * as openai from './providers/openai.mjs';
 import { sheetContract, contractInstructions, validateSheet } from './providers/claudeSvg.mjs';
 import { createSession, loadSession, saveSession, appendRound } from './session.mjs';
 import { renderBoardHtml } from './board.mjs';
-import { findRunningDaemon, DAEMON_VERSION } from './daemon.mjs';
+import { findRunningDaemon, DAEMON_VERSION, createDaemon } from './daemon.mjs';
 import { publicBoardId } from './board-token.mjs';
 import { loadProfile, saveProfile, updateTaste, detectConflicts } from './taste.mjs';
 
@@ -326,6 +326,40 @@ async function ensureDaemon() {
   return port;
 }
 
+// `daemon` — manage the long-running board daemon directly. In a sandboxed agent runtime a
+// detached child is reaped when the launching command exits, so the daemon can't ride on the
+// short-lived `board` command: run `daemon --serve` as a tracked BACKGROUND task (it IS the
+// daemon — the listening server keeps the process alive), then `board` reuses it. `--status`
+// reports whether one is already running so the caller can skip the launch.
+async function cmdDaemon(args) {
+  const running = await findRunningDaemon();
+  if (args.status) {
+    out({
+      ok: true,
+      running: Boolean(running),
+      port: running ? running.port : null,
+      pid: running ? running.pid : null,
+      version: running ? running.version : null,
+      current: Boolean(running) && running.version === DAEMON_VERSION,
+    });
+    return;
+  }
+  // --serve (default): reuse a healthy, current-version daemon; otherwise boot one and stay up.
+  if (running && running.version === DAEMON_VERSION) {
+    errLine(`DAEMON_PORT: ${running.port}`); // the agent parses this exact line
+    out({ ok: true, reused: true, port: running.port });
+    return;
+  }
+  if (running && running.pid) {
+    try { process.kill(running.pid); } catch { /* already gone, or not ours */ }
+    await new Promise((r) => setTimeout(r, 200)); // let the OS release the listener
+  }
+  const port = await createDaemon().listen();
+  // The listening server keeps this process alive — run it as a background task so the board
+  // outlives the short-lived `board` call. The agent parses this exact line for the port.
+  errLine(`DAEMON_PORT: ${port}`);
+}
+
 async function cmdBoard(args) {
   const dir = resolve(args.dir || resolveSessionDir(args));
   const slug = String(args.id || basename(dir));
@@ -426,6 +460,7 @@ const COMMANDS = {
   iterate: cmdIterate,
   record: cmdRecord,
   check: cmdCheck,
+  daemon: cmdDaemon,
   board: cmdBoard,
   taste: cmdTaste,
 };
