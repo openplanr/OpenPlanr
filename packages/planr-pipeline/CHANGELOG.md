@@ -4,6 +4,18 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.24.4] — 2026-06-18
+
+### Fixed — the board no longer hides the design behind the empty state
+
+On a freshly-opened board the stage showed a full-bleed "Drop your first pin" panel **over the
+design** — an opaque `position:absolute; inset:0` overlay — so you couldn't see the variant/canvas
+you were there to review until you interacted (and it fired in loop mode too). The stage overlay is
+removed: the **design is always visible**. The invitation to pin now lives only in the feedback rail
+("No feedback yet — click the design to drop the first pin"), and the **identity modal still opens on
+the first pin drop** (the `withIdentity` gate), so a reviewer's session is recorded exactly when they
+contribute. The loading skeleton, save-failed toast, and all-resolved states are unchanged.
+
 ## [0.24.3] — 2026-06-18
 
 ### Added — the design-review agent resolves a pin once it has fixed it

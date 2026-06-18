@@ -1,6 +1,6 @@
 {
   "name": "planr-pipeline",
-  "version": "0.24.3",
+  "version": "0.24.4",
   "private": true,
   "type": "module",
   "description": "OpenPlanr Protocol — Claude Code plugin conformance + docs",

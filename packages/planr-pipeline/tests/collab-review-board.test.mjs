@@ -1097,10 +1097,10 @@ test('the board ships a keyboard-accessible Show/Hide pins toggle (role=switch +
 test('the board ships every designed no-dead-end state (empty / loading / offline / save-fail / all-resolved)', () => {
   const html = boardHtml();
 
-  // empty (first-pin invite) — inviting region, not a blank canvas.
-  assert.ok(html.includes('id="rbEmptyStage"'), 'empty state ships');
-  assert.ok(html.includes('Drop your first pin'), 'empty state invites the first pin (no blank canvas)');
-  assert.ok(html.includes('id="rbEmptyCta"'), 'empty state has an actionable CTA');
+  // empty (first-pin invite) — the DESIGN stays visible; the invitation lives in the feedback
+  // rail, never as a full-stage overlay that hides the design.
+  assert.ok(!html.includes('id="rbEmptyStage"'), 'no full-stage empty overlay (the design is always visible)');
+  assert.ok(html.includes('No feedback yet'), 'the rail invites the first pin');
 
   // loading skeleton — no blank white flash during the GET flight.
   assert.ok(html.includes('id="rbSkeletonStage"'), 'loading skeleton ships');

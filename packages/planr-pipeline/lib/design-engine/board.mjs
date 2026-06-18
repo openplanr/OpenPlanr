@@ -666,28 +666,6 @@ export function renderBoardHtml(config) {
      wrapped in @media (prefers-reduced-motion: no-preference) so reduced-motion users get
      instant state changes (the global guard near the top also collapses any transition). */
 
-  /* the empty state — stage: centred empty mark + title + sub + primary CTA, on the canvas surface. */
-  .rb-empty-stage { position:absolute; inset:0; z-index:5; display:none;
-                   flex-direction:column; align-items:center; justify-content:center;
-                   gap:8px; padding:48px 24px; text-align:center;
-                   background:var(--rb-canvas); pointer-events:auto }
-  .rb-empty-stage.show { display:flex }
-  .rb-empty-stage .rb-empty-mark { display:inline-flex; align-items:center; justify-content:center;
-                   width:64px; height:64px; margin-bottom:8px; border-radius:var(--rb-r);
-                   background:var(--rb-stage); color:var(--rb-primary) }
-  .rb-empty-stage .rb-empty-title { font-size:24px; font-weight:600; line-height:1.2; color:var(--rb-ink) }
-  .rb-empty-stage .rb-empty-sub { font-size:14px; line-height:1.5; color:var(--rb-muted);
-                   max-width:320px; margin:0 }
-  .rb-empty-cta { display:inline-flex; align-items:center; gap:8px; height:40px; margin-top:16px;
-                   padding:0 20px; border:1px solid var(--rb-primary); border-radius:var(--rb-rs);
-                   background:var(--rb-primary); color:var(--rb-primary-fg);
-                   font:inherit; font-size:14px; font-weight:600; cursor:pointer }
-  .rb-empty-cta svg { color:var(--rb-primary-fg); flex:0 0 auto }
-  .rb-empty-cta:focus-visible { outline:2px solid var(--rb-primary); outline-offset:2px }
-  @media (prefers-reduced-motion: no-preference) {
-    .rb-empty-cta { transition:filter .15s var(--rb-ease) }
-    .rb-empty-cta:hover { filter:brightness(.92) }
-  }
   /* rail: a matching empty note (14, --rb-muted) shown when the durable record has no items. */
   .rb-empty-rail { color:var(--rb-muted); font-size:14px; line-height:1.5;
                    padding:24px 12px; text-align:center }
@@ -831,20 +809,6 @@ ${mode === 'review' ? '' : `<nav class="rail left" id="railL">
 
   <section class="stage" id="stage">
     <div class="stagein" id="stagein"></div>
-    <!-- empty state — shown when the durable record has no items
-         after the initial GET resolves. Plus mark (outline SVG) + "Drop your first pin" title
-         + descriptive sub + primary CTA that arms Pin mode. Inviting, never a blank canvas. -->
-    <div class="rb-empty-stage" id="rbEmptyStage" role="region" aria-label="no feedback yet" hidden>
-      <span class="rb-empty-mark" aria-hidden="true">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-      </span>
-      <div class="rb-empty-title">Drop your first pin</div>
-      <p class="rb-empty-sub">No feedback yet. Click anywhere on the design to pin a comment — choose an intent, write a note, and it saves for the whole team.</p>
-      <button class="rb-empty-cta" id="rbEmptyCta" type="button">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        Drop a pin
-      </button>
-    </div>
     <!-- loading skeleton (no blank white flash) — three stage skeleton blocks
          shown during the GET /api/feedback flight; removed on resolve/reject. Shimmer plays only
          under prefers-reduced-motion: no-preference. -->
@@ -2021,8 +1985,6 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
         railList.appendChild(el('div', 'rb-empty-rail',
           '<b>No feedback yet</b><br>Click the design to drop the first pin — it shows up here for the whole team.'));
       }
-      // keep the stage empty state in sync with the rail (skeleton suppresses it).
-      reconcileStates();
       return;
     }
     if (openN === 0 && (!state.filter || state.filter.kind === 'all')) {
@@ -2032,12 +1994,9 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     }
     if (!shown.length) {
       railList.appendChild(el('div', 'rb-rail-empty', 'No items match this filter.'));
-      reconcileStates();
       return;
     }
     shown.forEach(function (r) { railList.appendChild(buildRailItem(r.pin, r.num)); });
-    // the variant has items → the stage empty state must be hidden.
-    reconcileStates();
   }
 
   function buildRailItem(pin, num) {
@@ -2797,34 +2756,26 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
       renderSeen(rec && rec.authors);
       // paint the durable, attributed pin overlay from the loaded record.
       loadAndRenderPins(rec);
-      // with the record in hand, reconcile the empty state — an empty record
-      // shows the empty state; a non-empty one hides it. (loadAndRenderPins→renderRail also reconciles.)
-      reconcileStates();
     }).catch(function (e) {
       // loading-error → a non-blocking save-failed toast with Retry (re-runs the
       // GET). The board still works through merge-on-submit (eventual consistency on the next
       // successful load), so this degrades cleanly to a usable board, never a blank/broken screen.
       hideLoadingSkeleton();
-      reconcileStates();
       showSaveFailedToast(
         'Could not load existing feedback' + (e && e.message ? ' — ' + e.message : '') + '. The board still works; pins you add will save.',
         loadFeedback);
     });
   }
 
-  // ── premium states — empty / loading / save-failed / all-resolved () ──────
+  // ── premium states — loading / save-failed / all-resolved () ──────
   // No dead ends. Each edge state is a designed, actionable surface on the palette:
-  //   • showEmptyState/hideEmptyState   — the empty state: the stage empty mark + CTA + rail note, shown
-  //       once the GET resolves with zero stored items for the current variant.
   //   • showLoadingSkeleton/hideLoadingSkeleton — stage + rail skeletons during the GET flight.
   //   • showSaveFailedToast/hideSaveFailedToast — a non-blocking toast that holds the failed
   //       contribution in memory; Retry re-submits, debounced so duplicate clicks are ignored
   //       while a retry is in flight.
-  //   • showAllResolvedState/hideAllResolvedState — the celebratory rail state (openCount===0).
-  // reconcileStates() is the single arbiter that decides which (if any) of empty / all-resolved
-  // shows, given the current loaded record — called after every GET/merge re-render.
-  var emptyStage = document.getElementById('rbEmptyStage');
-  var emptyCta = document.getElementById('rbEmptyCta');
+  //   • showAllResolvedState — the celebratory rail state (openCount===0).
+  // The design itself is always visible — the "no feedback yet" invitation lives in the rail
+  // (renderRail), never as an overlay over the design; identity is asked on the first pin drop.
   var skeletonStage = document.getElementById('rbSkeletonStage');
   var skeletonRail = document.getElementById('rbSkeletonRail');
   var saveToast = document.getElementById('rbSaveToast');
@@ -2841,26 +2792,6 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     if (skeletonRail) { skeletonRail.classList.remove('show'); skeletonRail.hidden = true; }
   }
 
-  // empty state: shown when the current variant has zero stored pins. The stage mark +
-  // CTA invite the first pin; the rail shows a matching "No feedback yet" note (rendered in
-  // renderRail). Hidden the moment items exist for the variant.
-  function showEmptyState() {
-    if (emptyStage) { emptyStage.hidden = false; emptyStage.classList.add('show'); }
-  }
-  function hideEmptyState() {
-    if (emptyStage) { emptyStage.classList.remove('show'); emptyStage.hidden = true; }
-  }
-  // The empty CTA arms Pin mode and nudges the reviewer to click the design (identity is asked
-  // on the first actual drop). It is keyboard-operable as a native <button>.
-  if (emptyCta) {
-    emptyCta.onclick = function () { state.pinMode = true; applyMode(); hideEmptyState(); };
-  }
-
-  // railHasItemsForVariant() → does the durable record carry any pin for the current variant?
-  function railHasItemsForVariant() {
-    var v = cur();
-    return (state.loadedPins || []).some(function (pin) { return loadedPinForVariant(pin, v); });
-  }
   // openResolvedCounts() → { open, resolved, total } over the current variant's stored pins.
   function openResolvedCounts() {
     var v = cur(), open = 0, resolved = 0;
@@ -2924,14 +2855,6 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
       hideSaveFailedToast();
       try { fn(); } catch (e) { /* the retry's own path re-surfaces the toast on failure */ }
     };
-  }
-
-  // reconcileStates() — the single arbiter for the stage empty state. Hidden while the skeleton is
-  // up; otherwise the empty state shows iff the current variant has no stored pins. (The rail's own empty +
-  // all-resolved notes are reconciled inside renderRail from the same loaded record.)
-  function reconcileStates() {
-    if (skeletonStage && skeletonStage.classList.contains('show')) { hideEmptyState(); return; }
-    if (railHasItemsForVariant()) hideEmptyState(); else showEmptyState();
   }
 
   // ── focus trap (keyboard accessibility) ────────────────────────────────────
