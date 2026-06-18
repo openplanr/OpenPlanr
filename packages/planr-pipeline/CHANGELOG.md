@@ -4,6 +4,32 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.24.5] — 2026-06-18
+
+### Changed — the design-loop board is unified onto the single feedback surface
+
+The loop board still shipped the legacy inspector column (rate / notes / a duplicate pins list /
+remix / regenerate / an approve dock) **alongside** the collaborative feedback rail — two feedback
+surfaces, the same split we removed from review mode in v0.24.1. Loop is now the same one-panel
+surface: the variants rail stays for comparison, but the inspector is gone and its still-needed
+controls fold **into** the feedback rail — a collapsible **"Next round"** section (overall direction
+· remix layout/colors · Regenerate · Remix · More-like) above an always-visible **Approve** dock,
+both pinned below the pin inbox, which scrolls in its own section. Per-variant star ratings and
+free-form notes were dropped — the collaborative pins are the feedback. The handshake is unchanged
+byte-for-byte: every control keeps its id, so Regenerate/Remix/More-like still write
+`feedback-pending.json` (`regenerateAction` + `remixSpec`/`preferred`) and Approve still writes
+`feedback.json` with the preferred variant. New round/approve styling stays on the design-system
+tokens (zero raw hex), and both modes share one compact, professional density.
+
+### Fixed — pins stay anchored to the canvas during pan / zoom / scroll
+
+Anchored pins on an html artifact (canvas, walkthrough) visibly shook and lagged when you panned —
+the markers were repositioned off a fixed 120 ms `setInterval`, so they stuttered up to ~60 ms behind
+content that pans natively (and the canvas pans via CSS transform, which fires no scroll event). The
+poll is replaced with a `requestAnimationFrame` tracking loop that repositions in lockstep with the
+browser's own paint, so markers stay glued frame-for-frame; the browser pauses it automatically in a
+background tab. The positioning math is unchanged.
+
 ## [0.24.4] — 2026-06-18
 
 ### Fixed — the board no longer hides the design behind the empty state

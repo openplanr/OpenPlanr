@@ -3,19 +3,24 @@
  * works offline, localhost only). The board is the CHOOSER; AskUserQuestion is
  * only the blocking wait (hard rule 2).
  *
- * v0.19.3 shell: a design-tool layout —
- *   ┌ top bar: title · mode · Interact/Pin · panel toggles ┐
- *   │ left rail: variants (live state) + versions/A-B      │
- *   │ stage: the selected design, full-bleed on a dot grid │
- *   │ right rail: inspector — rating, notes, pins, actions │
- *   └ approve dock lives at the inspector's foot ──────────┘
- * Both rails collapse (⌘/ctrl-free: click, or [ and ] keys). Density is
- * compact (12.5–13px chrome); ONE accent family (indigo) on layered cool
- * neutrals — structure is drawn with cool hairlines, indigo means interactive.
+ * Unified shell — ONE feedback surface in every mode (loop + review):
+ *   ┌ top bar: title · mode · Interact/Pin · variants toggle ┐
+ *   │ left rail (loop only): variants (live state) + versions │
+ *   │ stage: the selected design, full-bleed on a dot grid    │
+ *   │ feedback rail: pin inbox (scrolls) + — in loop — a       │
+ *   │   collapsible "Next round" section + the approve dock    │
+ *   └──────────────────────────────────────────────────────────┘
+ * Loop keeps the variants rail (comparison) and folds its round controls
+ * (direction · remix · regenerate · approve) INTO the feedback rail, so there
+ * is never a second inspector panel. Review shows stage + feedback rail only.
+ * The variants rail collapses (click, or the [ key). Density is compact
+ * (12.5–13px chrome); ONE accent family (indigo) on layered cool neutrals —
+ * structure is drawn with cool hairlines, indigo means interactive.
  *
  * Interaction: html artifacts (canvases, walkthroughs) load in Interact mode —
  * the pin layer passes pointer events through so pan/zoom works natively;
- * Pin (or the P key) arms annotation. Images/SVGs default to Pin.
+ * Pin (or the P key) arms annotation. Images/SVGs default to Pin. Anchored
+ * pins track the content every animation frame, so they stay glued on pan.
  * Submission morphs the approve dock into a receipt of what was written.
  *
  * Handshake (unchanged): POST api/feedback {kind: submit|pending, feedback};
@@ -98,8 +103,8 @@ export function renderBoardHtml(config) {
   ::-webkit-scrollbar-track { background:transparent }
 
   .app { display:grid; grid-template-rows:44px 1fr; height:100vh }
-  /* 4 columns: left rail · stage · inspector · feedback rail. */
-  .main { display:grid; grid-template-columns:auto 1fr auto auto; min-height:0 }
+  /* 3 columns: variants rail · stage · feedback rail (the single feedback surface). */
+  .main { display:grid; grid-template-columns:auto 1fr auto; min-height:0 }
 
   /* ── top bar ─────────────────────────────────────────────────────────── */
   .top { display:flex; align-items:center; gap:12px; padding:0 12px;
@@ -141,23 +146,24 @@ export function renderBoardHtml(config) {
   /* ── rails ───────────────────────────────────────────────────────────── */
   .rail { background:var(--panel); overflow-y:auto; min-height:0; transition:width .16s ease }
   .rail.left { width:216px; border-right:2px solid var(--line) }
-  .rail.right { width:296px; border-left:2px solid var(--line); display:flex; flex-direction:column }
   .rail.closed { width:0; overflow:hidden; border:0 }
 
-  /* Review mode (a single finalized artifact under pin review): the clean SPEC-017 surface —
-     top bar + stage + persistent feedback rail. The variant-comparison rail and the
-     rate/notes/approve inspector are design-loop machinery; in a pin-driven review they're
-     hidden so the collaborative feedback rail is the SINGLE feedback surface (pins auto-merge
-     to feedback.json; approval is the command's "Approve as-is", not a board button). */
-  .app.review .rail.left, .app.review .rail.right { display:none }
-  .app.review #tgL, .app.review #tgR { display:none }
+  /* Unified single-surface modes — the feedback rail is the SINGLE feedback surface in both.
+     Review (a finalized artifact under pin review): stage + feedback rail. Loop (variant
+     comparison): variants rail + stage + feedback rail, with the round controls + approve dock
+     folded INTO the feedback rail — never a second inspector. Pins auto-merge to feedback.json;
+     loop approval writes feedback.json from the in-rail dock, review's is the command's "Approve as-is". */
   .app.review .main { grid-template-columns:1fr auto }
+  .app.loop   .main { grid-template-columns:auto 1fr auto }
   /* Narrow widths (small laptop / split screen): the feedback rail reflows BELOW the stage,
-     full-width and scrollable, so the review surface never overflows or squishes off-screen. */
+     full-width and scrollable, so the surface never overflows or squishes off-screen. In loop
+     the variants rail also drops below the stage. */
   @media (max-width: 900px) {
     .app.review .main { grid-template-columns:1fr; grid-template-rows:1fr auto }
-    .app.review .rb-feedback-rail { width:auto; flex:none; max-height:46vh;
+    .app.loop   .main { grid-template-columns:1fr; grid-template-rows:auto 1fr auto }
+    .rb-feedback-rail { width:auto; flex:none; max-height:46vh;
              border-left:0; border-top:2px solid var(--rb-line) }
+    .app.loop .rail.left { max-height:30vh }
   }
   .crumb { display:none; align-items:center; gap:6px; font-size:12px; color:var(--muted);
            white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:32vw }
@@ -253,14 +259,7 @@ export function renderBoardHtml(config) {
   .stagebar b { color:#fff; font-weight:600 }
   .stagebar button { border:0; background:transparent; color:var(--accent2); font-size:13px; padding:0 2px }
 
-  /* ── inspector ───────────────────────────────────────────────────────── */
-  .insp { flex:1; overflow-y:auto; min-height:0 }
-  .insp .sect { border-bottom:2px solid var(--line); padding-bottom:12px }
-  .stars { display:flex; gap:2px }
-  .stars button { background:none; border:0; font-size:19px; color:var(--line-strong);
-                  padding:0 2px; transition:color .1s ease, transform .1s ease }
-  .stars button:hover { transform:scale(1.12) }
-  .stars button.on { color:var(--hover) }
+  /* ── form controls (shared by the in-rail round + approve sections) ────── */
   textarea, select, input[type=text] { background:var(--card); color:var(--ink);
             border:1px solid var(--line); border-radius:var(--rs); padding:8px 8px;
             font:inherit; width:100% }
@@ -277,25 +276,8 @@ export function renderBoardHtml(config) {
                  padding:8px 16px; font-size:12.5px }
   .btn.primary:hover { background:var(--hover); border-color:var(--hover); color:#fff }
   .btn.block { width:100% }
-  .pinrow { display:flex; gap:8px; align-items:flex-start; padding:8px 8px; border-radius:var(--rs);
-            cursor:pointer; border:1px solid transparent; margin-bottom:2px }
-  .pinrow:hover { background:var(--cream) }
-  .pinrow .n { width:18px; height:18px; border-radius:50%; background:var(--primary); color:#fff;
-               font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;
-               flex:0 0 auto; margin-top:2px }
-  .pinrow .tx { flex:1; min-width:0; font-size:11.5px; line-height:1.45 }
-  .pinrow .tx .it { font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
-                    color:var(--primary); background:var(--mint); border-radius:4px; padding:2px 8px; margin-right:8px }
-  .pinrow .tx .sc { color:var(--muted); font-size:10.5px }
-  .pinrow .del { border:0; background:transparent; color:var(--muted); font-size:13px; padding:2px }
-  .pinrow .del:hover { color:#dc2626 }
-  .empty { color:var(--muted); font-size:11.5px; padding:2px 8px }
   .fieldlbl { font-size:11px; color:var(--muted); margin:8px 0 4px }
   .inline { display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:12px; color:var(--muted) }
-
-  /* ── approve dock ────────────────────────────────────────────────────── */
-  .dock { border-top:2px solid var(--line); background:var(--panel); padding:12px }
-  .dock .inline { margin-bottom:8px }
   .receipt { display:none; align-items:flex-start; gap:12px; font-size:12.5px; line-height:1.5 }
   .receipt.show { display:flex }
   .receipt .check { width:26px; height:26px; border-radius:50%; background:var(--primary); color:#fff;
@@ -498,6 +480,27 @@ export function renderBoardHtml(config) {
   .rb-rail-group-label { font-size:10px; font-weight:700; letter-spacing:.1em;
                    text-transform:uppercase; color:var(--rb-muted); padding:12px 4px 8px }
   .rb-rail-empty { color:var(--rb-muted); font-size:13px; line-height:1.5; padding:24px 8px; text-align:center }
+
+  /* in-rail round controls + approve dock (loop mode) — the legacy inspector folded into
+     the ONE feedback surface: a collapsible "Next round" section above an always-visible
+     approve dock, both pinned below the independently-scrolling pin inbox. Token-only so the
+     palette stays on the design-system tokens (zero raw hex in the feedback-rail stylesheet). */
+  .rb-round { flex:0 0 auto; border-top:1px solid var(--rb-line); background:var(--rb-panel) }
+  .rb-round-head { display:flex; align-items:center; gap:8px; width:100%; padding:10px 16px;
+                   background:transparent; border:0; cursor:pointer; font:inherit; font-size:11px;
+                   font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--rb-muted) }
+  .rb-round-head:hover { color:var(--rb-ink) }
+  .rb-round-caret { margin-left:auto; display:inline-flex; color:var(--rb-muted); transition:transform .16s ease }
+  .rb-round-head[aria-expanded="true"] .rb-round-caret { transform:rotate(180deg) }
+  .rb-round-body { display:flex; flex-direction:column; gap:12px; padding:0 16px 14px;
+                   max-height:42vh; overflow-y:auto }
+  .rb-round-body[hidden] { display:none }
+  .rb-round-body .fieldlbl { margin:0 0 4px }
+  .rb-round-body textarea { min-height:44px }
+  .rb-round-hint { font-size:11px; color:var(--rb-muted); line-height:1.5 }
+  .rb-approve { flex:0 0 auto; border-top:1px solid var(--rb-line); background:var(--rb-panel); padding:12px 16px }
+  .rb-approve .inline { margin-bottom:8px; color:var(--rb-muted) }
+  .rb-approve .rb-round-hint { margin-top:8px }
 
   /* rail item: avatar sm + name (13/500) + pin # (mono 12/600) + time (12) + 2-line comment
      + intent badge + status chip. hover: border --rb-line-strong + shadow lift.
@@ -733,7 +736,7 @@ export function renderBoardHtml(config) {
 </style>
 </head>
 <body>
-<div class="app${mode === 'review' ? ' review' : ''}">
+<div class="app ${mode === 'review' ? 'review' : 'loop'}">
 <header class="top">
   <span class="dot"></span>
   <h1>${title.replace(/</g, '&lt;')}</h1>
@@ -771,8 +774,7 @@ export function renderBoardHtml(config) {
     <button class="iconbtn" id="btnExport" title="export PNG / HTML" aria-haspopup="true">⤓</button>
     <div class="menu" id="exportMenu" hidden></div>
   </div>
-  ${mode === 'review' ? '' : `<button class="iconbtn" id="tgL" title="toggle variants panel ( [ )">⟨</button>
-  <button class="iconbtn" id="tgR" title="toggle inspector ( ] )">⟩</button>`}
+  ${mode === 'review' ? '' : `<button class="iconbtn" id="tgL" title="toggle variants panel ( [ )">⟨</button>`}
 </header>
 <div class="banner" id="banner"><span class="badge" id="bannerBadge">✓</span><span id="bannerText"></span></div>
 <!-- offline badge (stream-down state) — a non-blocking pill shown only when
@@ -876,50 +878,6 @@ ${mode === 'review' ? '' : `<nav class="rail left" id="railL">
     </div>
   </section>
 
-${mode === 'review' ? '' : `<aside class="rail right" id="railR">
-    <div class="insp">
-      <div class="sect">
-        <h2>Rate <span id="selName" style="text-transform:none;letter-spacing:0;color:var(--primary)"></span></h2>
-        <div class="stars" id="stars"></div>
-        <div class="fieldlbl">Notes</div>
-        <textarea id="notes" placeholder="What works, what doesn't…"></textarea>
-        <div id="moreWrap" style="margin-top:8px"></div>
-      </div>
-      <div class="sect">
-        <h2>Pins <span id="pinCount" style="text-transform:none;letter-spacing:0"></span></h2>
-        <div id="pinlist"><div class="empty">Switch to <b>Pin</b> and click the design — drag to mark a region.</div></div>
-      </div>
-      <div class="sect">
-        <h2>Next round</h2>
-        <div class="fieldlbl">Overall direction</div>
-        <textarea id="overall" placeholder="What should the next round do?"></textarea>
-        <div class="fieldlbl" id="remixLbl">Remix</div>
-        <div class="inline" id="remixRow">
-          layout <select id="remixLayout"></select>
-          colors <select id="remixColors"></select>
-        </div>
-        <input type="text" id="remixNote" placeholder="remix note (optional)" style="margin-top:8px" />
-        <div class="inline" style="margin-top:12px">
-          <button class="btn" id="iterateBtn">Regenerate</button>
-          <button class="btn" id="remixBtn">Remix</button>
-          <span class="hint">sends feedback-pending.json</span>
-        </div>
-      </div>
-    </div>
-    <div class="dock">
-      <div id="approveForm">
-        <div class="inline">We'll run with <select id="approveSel"></select></div>
-        <button class="btn primary block" id="submitBtn">Approve &amp; submit feedback</button>
-        <div class="hint" style="margin-top:8px">writes feedback.json — then return to your coding agent</div>
-      </div>
-      <div class="receipt" id="receipt">
-        <span class="check">✓</span>
-        <div><b>Feedback submitted</b> <span id="receiptMeta" class="meta"></span><br>
-        <span class="meta">return to your coding agent and tell it you're done</span></div>
-      </div>
-    </div>
-  </aside>`}
-
   <!-- feedback rail / inbox — the persistent right rail.
        Header (title + open count + resolved chip), filter bar, grouped item list. The
        rail is hidden until the durable overlay is loaded so an empty board never shows
@@ -941,6 +899,49 @@ ${mode === 'review' ? '' : `<aside class="rail right" id="railR">
       <div class="rb-skeleton-row"><span class="rb-skeleton--dot"></span><span class="rb-skeleton--block w70"></span><span class="rb-skeleton--block w40"></span></div>
     </div>
     <div class="rb-rail-list" id="rbRailList"></div>
+    ${mode === 'review' ? '' : `<!-- in-rail round controls (loop only) — the legacy inspector folded into the one
+         feedback surface: a collapsible "Next round" section (overall direction · remix ·
+         regenerate · more-like), pinned below the scrolling pin inbox. Every control id is
+         preserved so the existing handshake handlers bind + POST unchanged. -->
+    <section class="rb-round" id="rbRound">
+      <button class="rb-round-head" id="rbRoundToggle" type="button" aria-expanded="false" aria-controls="rbRoundBody">
+        Next round
+        <span class="rb-round-caret" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+      </button>
+      <div class="rb-round-body" id="rbRoundBody" hidden>
+        <div>
+          <div class="fieldlbl">Overall direction</div>
+          <textarea id="overall" placeholder="What should the next round do?"></textarea>
+        </div>
+        <div>
+          <div class="fieldlbl" id="remixLbl">Remix</div>
+          <div class="inline" id="remixRow">
+            layout <select id="remixLayout"></select>
+            colors <select id="remixColors"></select>
+          </div>
+          <input type="text" id="remixNote" placeholder="remix note (optional)" style="margin-top:8px" />
+        </div>
+        <div id="moreWrap"></div>
+        <div class="inline rb-round-actions">
+          <button class="btn" id="iterateBtn">Regenerate</button>
+          <button class="btn" id="remixBtn">Remix</button>
+        </div>
+        <span class="rb-round-hint">sends feedback-pending.json — this tab reloads when the new round lands</span>
+      </div>
+    </section>
+    <!-- approve dock (loop only) — always visible; writes feedback.json with the preferred variant. -->
+    <div class="rb-approve" id="rbApprove">
+      <div id="approveForm">
+        <div class="inline">Approve <select id="approveSel"></select></div>
+        <button class="btn primary block" id="submitBtn">Approve &amp; submit feedback</button>
+        <div class="rb-round-hint">writes feedback.json — then return to your coding agent</div>
+      </div>
+      <div class="receipt" id="receipt">
+        <span class="check">✓</span>
+        <div><b>Feedback submitted</b> <span id="receiptMeta" class="meta"></span><br>
+        <span class="meta">return to your coding agent and tell it you're done</span></div>
+      </div>
+    </div>`}
     <p class="rb-rail-foot">Pins save automatically as you add them — return to your coding agent when you're done reviewing.</p>
   </aside>
 </div>
@@ -1230,25 +1231,22 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
   segI.onclick = function () { state.pinMode = false; applyMode(); };
   segP.onclick = function () { state.pinMode = true; applyMode(); };
 
-  // ── rails toggle ──────────────────────────────────────────────────────
-  function toggleRail(which) {
-    var r = document.getElementById(which === 'L' ? 'railL' : 'railR');
-    var b = document.getElementById(which === 'L' ? 'tgL' : 'tgR');
-    if (!r || !b) return; // review mode: no collapsible rails
+  // ── variants rail toggle (loop only) ──────────────────────────────────
+  function toggleRail() {
+    var r = document.getElementById('railL');
+    var b = document.getElementById('tgL');
+    if (!r || !b) return; // review mode: no collapsible variants rail
     r.classList.toggle('closed');
     b.classList.toggle('off', r.classList.contains('closed'));
   }
   var tgLEl = document.getElementById('tgL');
-  if (tgLEl) tgLEl.onclick = function () { toggleRail('L'); };
-  var tgREl = document.getElementById('tgR');
-  if (tgREl) tgREl.onclick = function () { toggleRail('R'); };
+  if (tgLEl) tgLEl.onclick = function () { toggleRail(); };
 
   document.addEventListener('keydown', function (e) {
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
     var k = e.key.toLowerCase();
     if (k === 'p') { state.pinMode = !state.pinMode; applyMode(); }
-    if (k === '[') toggleRail('L');
-    if (k === ']') toggleRail('R');
+    if (k === '[') toggleRail();
     if (e.key === 'ArrowLeft' && CFG.variants.length > 1) select(state.sel - 1);
     if (e.key === 'ArrowRight' && CFG.variants.length > 1) select(state.sel + 1);
   });
@@ -1504,13 +1502,8 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     loadAndRenderPins();
     applyOverlayVisibility();
     // anchored pins track the content through pan/zoom/scroll
-    if (state.trackTimer) clearInterval(state.trackTimer);
-    if (v.type === 'html') {
-      state.trackTimer = setInterval(function () {
-        positionPins(layer, v.id);
-        positionLoadedPins(layer, v.id);
-      }, 120);
-    }
+    stopTracking();
+    if (v.type === 'html') startTracking(layer, v.id);
     applyMode();
     updatePager((v.id === 'artifact' ? 'Artifact' : v.id) + (v.label ? ' · ' + v.label : ''));
   }
@@ -1824,6 +1817,28 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
         marker.style.display = '';
       }
     });
+  }
+
+  // ── content-anchored pin tracking ─────────────────────────────────────
+  // Anchored pins (iframe artifacts) must stay GLUED to their content through
+  // pan / zoom / scroll. The canvas pans via CSS transform — which fires no
+  // scroll event — so we can't drive this off scroll/resize listeners. Instead
+  // we reposition on every animation frame while an html artifact is on stage:
+  // rAF runs in lockstep with the browser's own paint (and the browser pauses it
+  // in a background tab), so markers track the content within a single frame
+  // instead of lagging a fixed 120ms poll and visibly stuttering. A handful of
+  // getBoundingClientRect reads per frame is negligible.
+  function startTracking(layer, variantId) {
+    stopTracking();
+    var run = function () {
+      positionPins(layer, variantId);
+      positionLoadedPins(layer, variantId);
+      state.trackRaf = requestAnimationFrame(run);
+    };
+    state.trackRaf = requestAnimationFrame(run);
+  }
+  function stopTracking() {
+    if (state.trackRaf) { cancelAnimationFrame(state.trackRaf); state.trackRaf = null; }
   }
 
   // ── feedback rail / inbox + detail card ──
@@ -2404,71 +2419,24 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
   });
   showPinsBtn.onclick = function () { setPinsVisible(true); };
 
-  function renderPinList() {
-    var list = document.getElementById('pinlist');
-    if (!list) return; // review mode: the legacy draft-pin panel isn't rendered
-    var countEl = document.getElementById('pinCount');
-    if (countEl) countEl.textContent = state.pins.length ? '· ' + state.pins.length : '';
-    if (!state.pins.length) {
-      list.innerHTML = '<div class="empty">Switch to <b>Pin</b> and click the design — drag to mark a region.</div>';
-      return;
-    }
-    list.innerHTML = '';
-    state.pins.forEach(function (pin, idx) {
-      var row = el('div', 'pinrow');
-      row.innerHTML = '<span class="n">' + (idx + 1) + '</span>' +
-        '<span class="tx"><span class="it">' + pin.intent + '</span>' + pin.comment.replace(/</g, '&lt;') +
-        (pin.author ? '<br><span class="sc">' + String(pin.author).replace(/</g, '&lt;') + '</span>' : '') +
-        (pin.screen ? '<br><span class="sc">screen: ' + pin.screen + '</span>' : '') + '</span>' +
-        '<button class="del" title="remove pin">×</button>';
-      // attribution avatar on the draft-pin rail item
-      if (pin.author) { row.insertBefore(avatarFor(pin.author, 'sm'), row.firstChild); }
-      row.onclick = function (e) {
-        if (e.target.classList.contains('del')) {
-          state.pins.splice(idx, 1);
-          var layer = document.querySelector('.pinlayer');
-          if (layer) drawPins(layer, cur().id);
-          renderPinList();
-          return;
-        }
-        var vi = CFG.variants.findIndex(function (v) { return v.id === pin._v; });
-        if (vi >= 0 && vi !== state.sel) select(vi);
-        var m = document.querySelector('.pin[data-idx="' + idx + '"]');
-        if (m) { m.classList.add('hl'); setTimeout(function () { m.classList.remove('hl'); }, 900); m.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
-      };
-      list.appendChild(row);
-    });
-  }
+  // The draft-pin list (legacy inspector "Pins" panel) was removed in the unified rail:
+  // every persisted pin already renders in #rbRailList, the stage draws the pre-confirm
+  // draft marker, and delete lives in the detail card. Kept as a no-op so the existing
+  // call sites (drawPins / pin-drop flow) stay valid in both modes.
+  function renderPinList() {}
 
-  // ── inspector (per-selection) — loop mode only; review mode omits this DOM ──
-  var stars = document.getElementById('stars');
-  if (stars) for (var s = 1; s <= 5; s++) (function (n) {
-    var b = el('button', '', '★');
-    b.setAttribute('aria-label', n + ' star' + (n > 1 ? 's' : ''));
-    b.onclick = function () { state.ratings[cur().id] = n; paintStars(); };
-    stars.appendChild(b);
-  })(s);
-  function paintStars() {
-    if (!stars) return;
-    var n = state.ratings[cur().id] || 0;
-    Array.prototype.forEach.call(stars.children, function (c, i) { c.classList.toggle('on', i < n); });
-  }
-  var notes = document.getElementById('notes');
-  if (notes) notes.oninput = function () { state.comments[cur().id] = notes.value; };
+  // ── round controls (per-selection) — loop only; review mode omits this DOM ──
+  // The legacy Rate (stars) + Notes panels were dropped — the collaborative pins ARE the
+  // feedback. The only per-selection control left is "More like <variant>", repainted with
+  // the current variant id whenever the selection changes.
   function renderInspector() {
-    var selNameEl = document.getElementById('selName');
-    if (!selNameEl) return; // review mode: no inspector to render
-    selNameEl.textContent = '· ' + (cur().id === 'artifact' ? 'artifact' : cur().id);
-    paintStars();
-    if (notes) notes.value = state.comments[cur().id] || '';
     var mw = document.getElementById('moreWrap');
-    if (mw) {
-      mw.innerHTML = '';
-      if (CFG.mode === 'loop') {
-        var more = el('button', 'btn block', 'More like ' + cur().id);
-        more.onclick = function () { sendPending('more-like', { preferred: cur().id }); };
-        mw.appendChild(more);
-      }
+    if (!mw) return; // review mode (no round controls), or single-variant loop
+    mw.innerHTML = '';
+    if (CFG.mode === 'loop') {
+      var more = el('button', 'btn block', 'More like ' + cur().id);
+      more.onclick = function () { sendPending('more-like', { preferred: cur().id }); };
+      mw.appendChild(more);
     }
   }
 
@@ -2488,6 +2456,19 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
       document.getElementById('remixBtn').style.display = 'none';
       document.getElementById('remixNote').style.display = 'none';
     }
+  }
+
+  // ── "Next round" collapse toggle (loop only) ──────────────────────────
+  // The round controls fold away by default so the pin inbox owns the rail height;
+  // the approve dock below stays always-visible. aria-expanded mirrors the state.
+  var roundToggle = document.getElementById('rbRoundToggle');
+  var roundBody = document.getElementById('rbRoundBody');
+  if (roundToggle && roundBody) {
+    roundToggle.onclick = function () {
+      var willOpen = roundBody.hidden;
+      roundBody.hidden = !willOpen;
+      roundToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    };
   }
 
   // ── handshake ─────────────────────────────────────────────────────────
