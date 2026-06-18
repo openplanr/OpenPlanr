@@ -4,6 +4,28 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.24.1] — 2026-06-18
+
+### Fixed — review board is now the clean single-surface design (no legacy leftovers)
+
+A `/design-review` board (`mode: review`) was still rendering the design-loop chrome
+on top of the new collaborative surface — a left variants rail and a rate/notes/regenerate/
+**Approve & submit** inspector — so reviewers saw two competing feedback panels and an approve
+dock they didn't need. The review board now renders exactly the approved surface: **top bar +
+stage + persistent feedback rail**.
+
+- **Legacy chrome removed in review mode** (generated HTML omits it entirely; loop mode keeps the
+  variant-comparison rail + inspector). Pins auto-merge to `feedback.json`; approval is the
+  command's "Approve as-is" — no board button needed. A rail footer makes the auto-save + return
+  flow explicit so there is no dead end where the dock used to be.
+- **Which-page breadcrumb** in the top bar ("Artifact · canvas.html") replaces the variants rail.
+- **Pin-drop popover** restyled to the cool-neutral design language — intent **chips**
+  (fix / improve / question, colour-matched to the rail) replace the old dropdown; the target
+  screen is shown inline.
+- **Responsive reflow** — on narrow widths the feedback rail moves below the stage (full-width,
+  scrollable) so the surface never overflows.
+- Tidied a leftover teal accent in the region-marker fill (now the indigo accent).
+
 ## [0.24.0] — 2026-06-17
 
 ### Added — collaborative review board (persistent, multi-author feedback)

@@ -143,6 +143,29 @@ export function renderBoardHtml(config) {
   .rail.left { width:216px; border-right:2px solid var(--line) }
   .rail.right { width:296px; border-left:2px solid var(--line); display:flex; flex-direction:column }
   .rail.closed { width:0; overflow:hidden; border:0 }
+
+  /* Review mode (a single finalized artifact under pin review): the clean SPEC-017 surface —
+     top bar + stage + persistent feedback rail. The variant-comparison rail and the
+     rate/notes/approve inspector are design-loop machinery; in a pin-driven review they're
+     hidden so the collaborative feedback rail is the SINGLE feedback surface (pins auto-merge
+     to feedback.json; approval is the command's "Approve as-is", not a board button). */
+  .app.review .rail.left, .app.review .rail.right { display:none }
+  .app.review #tgL, .app.review #tgR { display:none }
+  .app.review .main { grid-template-columns:1fr auto }
+  /* Narrow widths (small laptop / split screen): the feedback rail reflows BELOW the stage,
+     full-width and scrollable, so the review surface never overflows or squishes off-screen. */
+  @media (max-width: 900px) {
+    .app.review .main { grid-template-columns:1fr; grid-template-rows:1fr auto }
+    .app.review .rb-feedback-rail { width:auto; flex:none; max-height:46vh;
+             border-left:0; border-top:2px solid var(--rb-line) }
+  }
+  .crumb { display:none; align-items:center; gap:6px; font-size:12px; color:var(--muted);
+           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:32vw }
+  .app.review .crumb { display:flex }
+  .crumb .crumb-sep { opacity:.5 }
+  .rb-rail-foot { display:none }
+  .app.review .rb-rail-foot { display:block; padding:10px 16px 12px; margin:0; font-size:11.5px;
+           color:var(--muted); line-height:1.5; border-top:1px solid var(--line) }
   .sect { padding:12px 12px 4px }
   .sect h2 { margin:0 0 8px; font-size:10px; font-weight:700; text-transform:uppercase;
              letter-spacing:.1em; color:var(--muted) }
@@ -195,12 +218,20 @@ export function renderBoardHtml(config) {
              box-shadow:0 2px 8px rgba(28,35,48,.3) }
   .pin .pd span { transform:rotate(45deg) }
   .pin.hl .pd { background:var(--hover); transform:rotate(-45deg) scale(1.25) }
-  .region { position:absolute; border:1.5px dashed var(--primary); background:rgba(31,143,125,.07);
+  .region { position:absolute; border:1.5px dashed var(--primary); background:rgba(79,70,229,.07);
             border-radius:4px; z-index:7; pointer-events:none }
   .popover { position:absolute; z-index:60; width:264px; background:var(--card);
              border:1px solid var(--line); border-radius:var(--r); padding:12px;
              box-shadow:0 12px 36px rgba(28,35,48,.16) }
   .popover .row { display:flex; gap:8px; margin-top:8px }
+  .popover .intent-pick { display:flex; gap:6px; margin-top:8px }
+  .intent-chip { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line);
+                 background:var(--cream); color:var(--muted); font:inherit; font-size:11.5px; font-weight:600;
+                 padding:4px 10px; border-radius:999px; cursor:pointer; transition:all .14s ease }
+  .intent-chip:hover { border-color:var(--soft); color:var(--ink) }
+  .intent-chip:focus-visible { outline:2px solid var(--primary); outline-offset:2px }
+  .intent-chip.on { border-color:var(--primary); color:var(--ink); background:var(--mint) }
+  .intent-chip .intent-dot { width:8px; height:8px; border-radius:999px; flex:none }
   .diffwrap { position:relative; max-width:100%; }
   .diffwrap img { display:block; max-width:100% }
   .diffwrap .topimg { position:absolute; inset:0; overflow:hidden }
@@ -724,11 +755,12 @@ export function renderBoardHtml(config) {
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app${mode === 'review' ? ' review' : ''}">
 <header class="top">
   <span class="dot"></span>
   <h1>${title.replace(/</g, '&lt;')}</h1>
   <span class="chip">${mode}</span>
+  <span class="crumb" id="crumb"></span>
   <span class="spacer"></span>
   <div class="seg" id="modeSeg" title="press P to toggle">
     <button id="m-interact">Interact</button>
@@ -761,8 +793,8 @@ export function renderBoardHtml(config) {
     <button class="iconbtn" id="btnExport" title="export PNG / HTML" aria-haspopup="true">⤓</button>
     <div class="menu" id="exportMenu" hidden></div>
   </div>
-  <button class="iconbtn" id="tgL" title="toggle variants panel ( [ )">⟨</button>
-  <button class="iconbtn" id="tgR" title="toggle inspector ( ] )">⟩</button>
+  ${mode === 'review' ? '' : `<button class="iconbtn" id="tgL" title="toggle variants panel ( [ )">⟨</button>
+  <button class="iconbtn" id="tgR" title="toggle inspector ( ] )">⟩</button>`}
 </header>
 <div class="banner" id="banner"><span class="badge" id="bannerBadge">✓</span><span id="bannerText"></span></div>
 <!-- offline badge (stream-down state) — a non-blocking pill shown only when
@@ -786,7 +818,7 @@ export function renderBoardHtml(config) {
 </div>
 
 <div class="main">
-  <nav class="rail left" id="railL">
+${mode === 'review' ? '' : `<nav class="rail left" id="railL">
     <div class="sect">
       <h2>Variants</h2>
       <div id="vlist"></div>
@@ -795,7 +827,7 @@ export function renderBoardHtml(config) {
       <h2>Versions <span class="hint" style="text-transform:none;letter-spacing:0">· pick two to A/B</span></h2>
       <div id="vers"></div>
     </div>
-  </nav>
+  </nav>`}
 
   <section class="stage" id="stage">
     <div class="stagein" id="stagein"></div>
@@ -880,7 +912,7 @@ export function renderBoardHtml(config) {
     </div>
   </section>
 
-  <aside class="rail right" id="railR">
+${mode === 'review' ? '' : `<aside class="rail right" id="railR">
     <div class="insp">
       <div class="sect">
         <h2>Rate <span id="selName" style="text-transform:none;letter-spacing:0;color:var(--primary)"></span></h2>
@@ -922,7 +954,7 @@ export function renderBoardHtml(config) {
         <span class="meta">return to your coding agent and tell it you're done</span></div>
       </div>
     </div>
-  </aside>
+  </aside>`}
 
   <!-- feedback rail / inbox — the persistent right rail.
        Header (title + open count + resolved chip), filter bar, grouped item list. The
@@ -945,6 +977,7 @@ export function renderBoardHtml(config) {
       <div class="rb-skeleton-row"><span class="rb-skeleton--dot"></span><span class="rb-skeleton--block w70"></span><span class="rb-skeleton--block w40"></span></div>
     </div>
     <div class="rb-rail-list" id="rbRailList"></div>
+    <p class="rb-rail-foot">Pins save automatically as you add them — return to your coding agent when you're done reviewing.</p>
   </aside>
 </div>
 </div>
@@ -987,6 +1020,20 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     return n;
   }
   function cur() { return CFG.variants[state.sel]; }
+  // Top-bar breadcrumb (review mode): names the artifact under review (replaces the variants rail).
+  function setCrumb() {
+    var crumbEl = document.getElementById('crumb');
+    if (!crumbEl) return;
+    var v = cur() || {};
+    var name = v.label || (v.id === 'artifact' ? 'Artifact' : v.id) || 'Design';
+    var file = v.src ? String(v.src).split('/').pop().split('?')[0] : '';
+    crumbEl.innerHTML = '';
+    crumbEl.appendChild(document.createTextNode(name));
+    if (file && file !== name) {
+      crumbEl.appendChild(el('span', 'crumb-sep', '·'));
+      crumbEl.appendChild(document.createTextNode(file));
+    }
+  }
   /** Clamp v into [lo, hi]. */
   function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
@@ -1223,11 +1270,14 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
   function toggleRail(which) {
     var r = document.getElementById(which === 'L' ? 'railL' : 'railR');
     var b = document.getElementById(which === 'L' ? 'tgL' : 'tgR');
+    if (!r || !b) return; // review mode: no collapsible rails
     r.classList.toggle('closed');
     b.classList.toggle('off', r.classList.contains('closed'));
   }
-  document.getElementById('tgL').onclick = function () { toggleRail('L'); };
-  document.getElementById('tgR').onclick = function () { toggleRail('R'); };
+  var tgLEl = document.getElementById('tgL');
+  if (tgLEl) tgLEl.onclick = function () { toggleRail('L'); };
+  var tgREl = document.getElementById('tgR');
+  if (tgREl) tgREl.onclick = function () { toggleRail('R'); };
 
   document.addEventListener('keydown', function (e) {
     if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
@@ -1416,9 +1466,9 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
   };
   document.addEventListener('click', function () { closeMenu(); });
 
-  // ── left rail: variants ───────────────────────────────────────────────
+  // ── left rail: variants (loop mode only; review mode omits the rail) ──────
   var vlist = document.getElementById('vlist');
-  CFG.variants.forEach(function (v, i) {
+  if (vlist) CFG.variants.forEach(function (v, i) {
     var it = el('div', 'vitem');
     it.dataset.variant = v.id;
     var tb = v.type === 'image' ? '<img src="' + v.src + '" alt="">'
@@ -1595,7 +1645,29 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     pop.style.top = clamp(py, 8, lr.height - 180) + 'px';
     if (screen) pop.appendChild(el('div', 'hint', 'screen: ' + screen));
     var ta = el('textarea'); ta.placeholder = 'What should change here?';
-    var sel = el('select', '', '<option value="fix">fix</option><option value="improve">improve</option><option value="question">question</option>');
+    // intent picker — chips coloured by the same INTENT_CONFIG the rail/markers use.
+    var intent = 'fix';
+    var picker = el('div', 'intent-pick');
+    picker.setAttribute('role', 'radiogroup');
+    picker.setAttribute('aria-label', 'pin intent');
+    ['fix', 'improve', 'question'].forEach(function (k) {
+      var cfg = INTENT_CONFIG[k];
+      var chip = el('button', 'intent-chip' + (k === intent ? ' on' : ''));
+      chip.type = 'button';
+      chip.setAttribute('role', 'radio');
+      chip.setAttribute('aria-checked', k === intent ? 'true' : 'false');
+      var dot = el('span', 'intent-dot'); dot.style.background = cfg.dot;
+      chip.appendChild(dot);
+      chip.appendChild(document.createTextNode(cfg.label));
+      chip.onclick = function () {
+        intent = k;
+        picker.querySelectorAll('.intent-chip').forEach(function (c) {
+          c.classList.remove('on'); c.setAttribute('aria-checked', 'false');
+        });
+        chip.classList.add('on'); chip.setAttribute('aria-checked', 'true');
+      };
+      picker.appendChild(chip);
+    });
     var row = el('div', 'row');
     var ok = el('button', 'btn primary', 'Pin it');
     var cancel = el('button', 'btn', 'Cancel');
@@ -1605,7 +1677,7 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
       var createdAt = new Date().toISOString();
       var comment = ta.value.trim();
       var pin = { variant: screen || variantId, x: box.x, y: box.y, w: box.w, h: box.h,
-                  comment: comment, intent: sel.value, _v: variantId,
+                  comment: comment, intent: intent, _v: variantId,
                   author: author, createdAt: createdAt };
       if (screen) pin.screen = screen;
       // optimistic render first (the marker appears instantly), then
@@ -1623,7 +1695,7 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
             variant: screen || variantId,
             x: box.x, y: box.y, w: box.w, h: box.h,
             comment: comment,
-            intent: sel.value,
+            intent: intent,
             status: 'open',
             createdAt: createdAt,
             replies: [],
@@ -1634,7 +1706,7 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     };
     cancel.onclick = function () { pop.remove(); };
     row.appendChild(ok); row.appendChild(cancel);
-    pop.appendChild(ta); pop.appendChild(sel); pop.appendChild(row);
+    pop.appendChild(ta); pop.appendChild(picker); pop.appendChild(row);
     layer.appendChild(pop);
     ta.focus();
   }
@@ -2375,7 +2447,9 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
 
   function renderPinList() {
     var list = document.getElementById('pinlist');
-    document.getElementById('pinCount').textContent = state.pins.length ? '· ' + state.pins.length : '';
+    if (!list) return; // review mode: the legacy draft-pin panel isn't rendered
+    var countEl = document.getElementById('pinCount');
+    if (countEl) countEl.textContent = state.pins.length ? '· ' + state.pins.length : '';
     if (!state.pins.length) {
       list.innerHTML = '<div class="empty">Switch to <b>Pin</b> and click the design — drag to mark a region.</div>';
       return;
@@ -2407,45 +2481,54 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     });
   }
 
-  // ── inspector (per-selection) ─────────────────────────────────────────
+  // ── inspector (per-selection) — loop mode only; review mode omits this DOM ──
   var stars = document.getElementById('stars');
-  for (var s = 1; s <= 5; s++) (function (n) {
+  if (stars) for (var s = 1; s <= 5; s++) (function (n) {
     var b = el('button', '', '★');
     b.setAttribute('aria-label', n + ' star' + (n > 1 ? 's' : ''));
     b.onclick = function () { state.ratings[cur().id] = n; paintStars(); };
     stars.appendChild(b);
   })(s);
   function paintStars() {
+    if (!stars) return;
     var n = state.ratings[cur().id] || 0;
     Array.prototype.forEach.call(stars.children, function (c, i) { c.classList.toggle('on', i < n); });
   }
   var notes = document.getElementById('notes');
-  notes.oninput = function () { state.comments[cur().id] = notes.value; };
+  if (notes) notes.oninput = function () { state.comments[cur().id] = notes.value; };
   function renderInspector() {
-    document.getElementById('selName').textContent = '· ' + (cur().id === 'artifact' ? 'artifact' : cur().id);
+    var selNameEl = document.getElementById('selName');
+    if (!selNameEl) return; // review mode: no inspector to render
+    selNameEl.textContent = '· ' + (cur().id === 'artifact' ? 'artifact' : cur().id);
     paintStars();
-    notes.value = state.comments[cur().id] || '';
+    if (notes) notes.value = state.comments[cur().id] || '';
     var mw = document.getElementById('moreWrap');
-    mw.innerHTML = '';
-    if (CFG.mode === 'loop') {
-      var more = el('button', 'btn block', 'More like ' + cur().id);
-      more.onclick = function () { sendPending('more-like', { preferred: cur().id }); };
-      mw.appendChild(more);
+    if (mw) {
+      mw.innerHTML = '';
+      if (CFG.mode === 'loop') {
+        var more = el('button', 'btn block', 'More like ' + cur().id);
+        more.onclick = function () { sendPending('more-like', { preferred: cur().id }); };
+        mw.appendChild(more);
+      }
     }
   }
 
-  // ── selectors ─────────────────────────────────────────────────────────
+  // ── selectors (loop mode only) ────────────────────────────────────────
   ['remixLayout', 'remixColors', 'approveSel'].forEach(function (id) {
     var sel = document.getElementById(id);
+    if (!sel) return;
     CFG.variants.forEach(function (v) {
       var o = document.createElement('option'); o.value = v.id; o.textContent = v.id; sel.appendChild(o);
     });
   });
   if (CFG.variants.length < 2) {
-    document.getElementById('remixRow').style.display = 'none';
-    document.getElementById('remixLbl').style.display = 'none';
-    document.getElementById('remixBtn').style.display = 'none';
-    document.getElementById('remixNote').style.display = 'none';
+    var remixRowEl = document.getElementById('remixRow');
+    if (remixRowEl) {
+      remixRowEl.style.display = 'none';
+      document.getElementById('remixLbl').style.display = 'none';
+      document.getElementById('remixBtn').style.display = 'none';
+      document.getElementById('remixNote').style.display = 'none';
+    }
   }
 
   // ── handshake ─────────────────────────────────────────────────────────
@@ -2481,7 +2564,7 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
       publishedAt: new Date().toISOString(),
       ratings: state.ratings,
       comments: state.comments,
-      overall: document.getElementById('overall').value || '',
+      overall: (document.getElementById('overall') || {}).value || '',
       regenerated: false,
       authors: authorRoster(),
       pins: cleanPins(),
@@ -2595,18 +2678,22 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
       banner('pending', 'Sent to your agent (' + action + ' · ' + summary(fb) + ') — this tab reloads when the new round lands.');
     });
   }
-  document.getElementById('remixBtn').onclick = function () {
+  // The remix / regenerate / approve actions are loop-mode chrome; review mode omits them
+  // (pins auto-merge to feedback.json; approval is the command's "Approve as-is").
+  var remixBtnEl = document.getElementById('remixBtn');
+  if (remixBtnEl) remixBtnEl.onclick = function () {
     sendPending('remix', { remixSpec: {
       layoutFrom: document.getElementById('remixLayout').value,
       colorsFrom: document.getElementById('remixColors').value,
       note: document.getElementById('remixNote').value || '',
     } });
   };
-  document.getElementById('iterateBtn').onclick = function () { sendPending('iterate', {}); };
-  document.getElementById('submitBtn').onclick = function () {
+  var iterateBtnEl = document.getElementById('iterateBtn');
+  if (iterateBtnEl) iterateBtnEl.onclick = function () { sendPending('iterate', {}); };
+  var submitBtnEl = document.getElementById('submitBtn');
+  if (submitBtnEl) submitBtnEl.onclick = function () {
     var fb = payload({ preferred: document.getElementById('approveSel').value });
-    var btn = document.getElementById('submitBtn');
-    btn.disabled = true; btn.textContent = 'Writing feedback.json…';
+    submitBtnEl.disabled = true; submitBtnEl.textContent = 'Writing feedback.json…';
     post('submit', fb, function () {
       document.getElementById('approveForm').style.display = 'none';
       document.getElementById('receiptMeta').textContent = '(' + summary(fb) + ')';
@@ -2635,6 +2722,7 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
   }
   function renderVersions(versions) {
     var box = document.getElementById('vers');
+    if (!box) return; // review mode: no variants rail
     document.getElementById('versSect').hidden = false;
     box.innerHTML = '';
     Object.keys(versions).forEach(function (vid) {
@@ -3104,6 +3192,7 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
   // GET resolves — loadFeedback() hides the skeleton + reconciles the real states on settle.
   showLoadingSkeleton();
   select(0);
+  setCrumb();
   // Apply the restored Show/Hide state to the first paint, then load the durable overlay.
   applyOverlayVisibility();
   loadFeedback();
