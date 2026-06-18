@@ -9,7 +9,9 @@
  *   evolve    variants FROM an existing image ("I don't like THIS")
  *   iterate   continue a session chain with feedback text (refine, not regenerate)
  *   check     quality-gate an artifact against its brief / sheet contract
+ *   daemon    --status (is a board daemon up?) | --serve (reuse or run it; for a background task)
  *   board     write board.html, ensure the daemon, register, print BOARD_URL on stderr
+ *   feedback  resolve --dir <dir> --id <slug> (--pins <id,…> | --all-open) — mark pins resolved
  *   taste     read | approved <artifact> | rejected <artifact> (updates the profile)
  *
  * Outputs one JSON result line on stdout per command (agent-parseable); humans
@@ -403,6 +405,69 @@ async function cmdBoard(args) {
   out({ ok: true, boardId: id, dir, port, url, mode, variants: variants.map((v) => v.id) });
 }
 
+// `feedback resolve` — mark review pins resolved from the agent side, after it has addressed
+// them. A thin client of the running daemon (the same path the board's Resolve button uses): GET
+// the durable record (so each pin's id + author — the merge key — are exact), flip status to
+// "resolved" on the targeted pins, and POST one merge contribution. The daemon merges under its
+// per-board mutex, writes feedback.json, and broadcasts feedback:update so any open tab flips the
+// marker + rail chip live. Resolve is a TEAM action (not author-scoped), so the agent can resolve
+// a reviewer's pin. Run it right after the round (before further edits) to keep the GET→POST
+// window tiny.
+async function cmdFeedback(args) {
+  const sub = args._[1];
+  if (sub !== 'resolve') fail(`unknown feedback subcommand "${sub || ''}" (expected: resolve)`);
+
+  const dir = resolve(args.dir || fail('feedback resolve: --dir <board dir> required'));
+  const slug = String(args.id || basename(dir));
+  const id = publicBoardId(slug, dir); // reuses the board's existing capability token
+
+  const targeted = typeof args.pins === 'string'
+    ? args.pins.split(',').map((s) => s.trim()).filter(Boolean) : null;
+  const allOpen = Boolean(args['all-open']);
+  if (targeted && allOpen) fail('feedback resolve: pass --pins OR --all-open, not both');
+  if (!targeted && !allOpen) fail('feedback resolve: pass --pins <id,…> or --all-open');
+
+  const running = await findRunningDaemon();
+  if (!running) {
+    fail('feedback resolve: no board daemon running — start one (`cli.mjs daemon --serve`) and re-serve the board first');
+  }
+  const base = `http://127.0.0.1:${running.port}/boards/${encodeURIComponent(id)}/api/feedback`;
+
+  // GET the durable record so id + author (the merge key) come straight from the store.
+  const stored = await fetch(base).then((r) => r.json()).catch(() => null);
+  if (!stored) fail(`feedback resolve: could not read feedback for board "${id}" (is it registered?)`);
+  const pins = Array.isArray(stored.pins) ? stored.pins : [];
+
+  const candidates = targeted ? pins.filter((p) => targeted.includes(p.id)) : pins;
+  const found = new Set(candidates.map((p) => p.id));
+  const missing = targeted ? targeted.filter((pid) => !found.has(pid)) : [];
+  const toResolve = candidates.filter((p) => p.status !== 'resolved');
+  const alreadyResolved = candidates.filter((p) => p.status === 'resolved').map((p) => p.id);
+
+  if (toResolve.length) {
+    const authors = [...new Set(toResolve.map((p) => p.author).filter(Boolean))].map((name) => ({ name }));
+    const contribution = {
+      schema_version: '1.0.0',
+      boardId: id,
+      publishedAt: new Date().toISOString(),
+      regenerated: false,
+      ratings: {},
+      comments: {},
+      authors,
+      pins: toResolve.map((p) => ({ ...p, status: 'resolved' })), // full item — preserves the (id+author) key
+    };
+    const res = await fetch(base, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'submit', feedback: contribution }),
+    }).then((r) => r.json().then((b) => ({ ok: r.ok, error: b && b.error })))
+      .catch((e) => ({ ok: false, error: String(e && e.message ? e.message : e) }));
+    if (!res.ok || res.error) fail(`feedback resolve: daemon rejected the update — ${res.error || 'request failed'}`);
+  }
+
+  out({ ok: true, boardId: id, resolved: toResolve.map((p) => p.id), alreadyResolved, missing });
+}
+
 async function cmdTaste(args) {
   const sub = args._[1] || 'read';
   const project = args.project || 'default';
@@ -462,6 +527,7 @@ const COMMANDS = {
   check: cmdCheck,
   daemon: cmdDaemon,
   board: cmdBoard,
+  feedback: cmdFeedback,
   taste: cmdTaste,
 };
 

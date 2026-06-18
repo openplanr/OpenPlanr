@@ -33,7 +33,8 @@
 On feedback (`readFeedback(<DESIGN_DIR>)`; pending consumed on read):
 
 1. **Group pins by `pin.screen`** (fall back to y-position against `finalized.json.screens`
-   order when a pin somehow lacks one — say so). Answer every `question` pin in chat.
+   order when a pin somehow lacks one — say so). Answer every `question` pin in chat — note each
+   question pin id you answered, for the resolve step below.
 2. Per pinned screen, regenerate **only that screen's markup section**:
    - Locate `<section class="screen" id="<pin.screen>">` (walkthrough), the artboard entry
      (canvas `DATA`), or the `GENERATOR:screen` region (prototype).
@@ -51,7 +52,18 @@ On feedback (`readFeedback(<DESIGN_DIR>)`; pending consumed on read):
 4. Record lineage: `… record --variant artifact --session-dir <DESIGN_DIR> --file <artifact>
    --brief "review round" --feedback "<pin summary>"` + append the pins to the session's
    `regionEdits` (engine `recordRegionEdit` shape).
-5. Update `<DESIGN_DIR>/progress.json` versions (board rail) +
+5. **Mark the pins you addressed resolved** (a team action — runs against the live board). Collect
+   the ids of every pin handled this round: each `fix`/`improve` pin whose screen passed the lint
+   gate (step 3), plus each `question` pin you answered in chat (step 1). Flip them in the durable
+   record AND live on the board in one call:
+   `node "$PLUG/lib/design-engine/cli.mjs" feedback resolve --dir <ABS_DESIGN_DIR> --id <slug>-review --pins <id,id,…>`
+   - Pass the SAME `--id <slug>-review` slug you served the board with (A.3) — the resolve call
+     re-derives the board's capability id from it.
+   - Only resolve pins you actually addressed; leave a pin `open` if its lint errors weren't all
+     cleared, or if you deferred it. The daemon merges under its per-board lock and broadcasts the
+     change, so any open review tab flips the marker ring + rail chip to resolved without a reload.
+     `missing` ids in the output mean the reviewer deleted that pin mid-round — a safe no-op.
+6. Update `<DESIGN_DIR>/progress.json` versions (board rail) +
    `curl -s -X POST <BOARD_URL>api/reload` → the tab swaps in place. Back to the A.4 wait.
 
 ## C — Approve + sync the PO artifacts (R1)

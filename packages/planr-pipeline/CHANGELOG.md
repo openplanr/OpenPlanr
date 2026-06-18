@@ -4,6 +4,24 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.24.3] — 2026-06-18
+
+### Added — the design-review agent resolves a pin once it has fixed it
+
+When you pin feedback on a review board and the agent addresses it, the pin used to stay `open`
+— you had to mark it resolved by hand. Now the agent closes the loop itself.
+
+- **New `cli.mjs feedback resolve --dir <dir> --id <slug> (--pins <id,…> | --all-open)`.** A thin
+  client of the running board daemon: it reads the durable record, flips the targeted pins to
+  `status:"resolved"` (preserving each pin's id + author so the merge keys correctly), and POSTs
+  one merge. The daemon writes `feedback.json` under its per-board lock and broadcasts the change,
+  so any open review tab's marker ring + rail chip flip to resolved **live** — the same effect as
+  clicking Resolve on the board. Resolve is a team action (not author-scoped); unknown ids are a
+  safe no-op (reported as `missing`); re-running is idempotent.
+- **`/design-review` pin loop updated** — after a pinned screen is regenerated and passes the lint
+  gate (and after answering `question` pins), the agent marks exactly the pins it addressed
+  resolved, then reloads. Pins it deferred stay open.
+
 ## [0.24.2] — 2026-06-18
 
 ### Fixed — design boards come up cleanly in one step (no daemon-launch fumble)
