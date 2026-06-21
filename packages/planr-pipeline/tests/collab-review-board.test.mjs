@@ -1065,8 +1065,8 @@ test('when a client disconnects, the remaining client receives presence:leave', 
 // entire pin overlay, is keyboard-accessible, and the state is preserved for the session.
 // This closes the one render-level coverage gap (the persistence + lifecycle paths are
 // already covered by the pin-drop and delete round-trips). The toggle is a role=switch button
-// (Space/Enter operable, aria-checked mirrors visibility); the floating "Show pins" bar is
-// the no-dead-end re-entry when the overlay is hidden. Assert the markup + the wiring fns.
+// (Space/Enter operable, aria-checked mirrors visibility) and is the SINGLE show/hide control —
+// when pins are hidden it reads "Pins hidden", so there is NO floating bar over the design.
 
 test('the board ships a keyboard-accessible Show/Hide pins toggle (role=switch + aria-checked)', () => {
   const html = boardHtml();
@@ -1077,14 +1077,15 @@ test('the board ships a keyboard-accessible Show/Hide pins toggle (role=switch +
   assert.ok(/role="switch"/.test(toggle), 'the toggle is role=switch (keyboard accessible)');
   assert.ok(/aria-checked=/.test(toggle), 'aria-checked mirrors pin visibility for AT');
 
-  // The floating re-entry bar (no dead end when pins are hidden) + its keyboard-operable button.
-  for (const hook of ['rb-pins-hidden-bar', 'rbPinsHiddenBar', 'rbHiddenCount', 'id="rbShowPins"']) {
-    assert.ok(html.includes(hook), `hidden-pins re-entry bar ships ${hook}`);
+  // No floating "Show pins" bar over the design — the top-bar toggle is the one re-entry point.
+  for (const gone of ['rb-pins-hidden-bar', 'rbPinsHiddenBar', 'rbHiddenCount', 'id="rbShowPins"']) {
+    assert.ok(!html.includes(gone), `floating hidden-pins bar removed (${gone} absent)`);
   }
+  assert.ok(html.includes('Pins hidden'), 'the toggle itself surfaces the hidden state (no separate bar)');
 
   // The wiring: a togglePins() function flips state and the session-remembered flag.
   assert.ok(html.includes('function togglePins'), 'client wires togglePins()');
-  assert.ok(html.includes('pinsHidden'), 'visibility is tracked as a session flag (preserved for the session)');
+  assert.ok(html.includes('rb-pins-visible'), 'visibility is tracked as a session-storage flag (preserved for the session)');
 });
 
 // ── premium designed states + accessibility (board render) ────────────

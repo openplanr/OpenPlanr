@@ -409,23 +409,6 @@ export function renderBoardHtml(config) {
   .rb-toggle-switch[aria-checked="true"] .rb-toggle-thumb { transform:translateX(12px) }
   .rb-toggle-label { white-space:nowrap }
 
-  /* floating hidden-pins bar — pill at the stage's bottom-centre when hidden */
-  .rb-pins-hidden-bar { position:absolute; left:50%; bottom:20px; transform:translateX(-50%);
-                   z-index:11; display:none; align-items:center; gap:12px;
-                   padding:8px 8px 8px 16px; border-radius:999px;
-                   background:var(--rb-card); color:var(--rb-ink);
-                   border:1px solid var(--rb-line); box-shadow:var(--rb-shadow-lg);
-                   font-size:12px; font-weight:500 }
-  .rb-pins-hidden-bar.show { display:flex }
-  .rb-pins-hidden-bar .rb-hidden-count { color:var(--rb-muted) }
-  .rb-pins-hidden-bar .rb-show-pins { border:0; border-radius:999px; cursor:pointer;
-                   display:inline-flex; align-items:center; gap:8px; height:28px; padding:0 12px;
-                   background:var(--rb-primary); color:var(--rb-primary-fg); font:inherit;
-                   font-size:12px; font-weight:600;
-                   transition:filter .15s var(--rb-ease) }
-  .rb-pins-hidden-bar .rb-show-pins:hover { filter:brightness(.92) }
-  .rb-pins-hidden-bar .rb-show-pins:focus-visible { outline:2px solid var(--rb-primary); outline-offset:2px }
-
   /* pin-drop motion — guarded; pins appear instantly when reduced-motion is on. */
   @media (prefers-reduced-motion: no-preference) {
     .rb-pin-marker { animation:rb-pin-drop 150ms var(--rb-ease) both }
@@ -818,15 +801,6 @@ ${mode === 'review' ? '' : `<nav class="rail left" id="railL">
       <div class="rb-skeleton--block lg"></div>
       <div class="rb-skeleton--block w70"></div>
       <div class="rb-skeleton--block w40"></div>
-    </div>
-    <!-- floating hidden-pins bar — shown only when the
-         overlay is toggled off. "Show pins" is keyboard-operable and toggles the overlay on. -->
-    <div class="rb-pins-hidden-bar" id="rbPinsHiddenBar">
-      <span class="rb-hidden-count" id="rbHiddenCount">0 pins hidden</span>
-      <button class="rb-show-pins" id="rbShowPins" type="button">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-        Show pins
-      </button>
     </div>
     <!-- pin detail card — scrim-less overlay anchored to
          the stage, caps at 600px with a scrollable body. Author row + intent badge + comment
@@ -1785,7 +1759,6 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
       layer.appendChild(marker);
     });
     positionLoadedPins(layer, v.id);
-    refreshHiddenBar();
     // keep the rail + open detail card in sync with the durable overlay.
     renderRail();
     syncDetailCard();
@@ -2355,12 +2328,12 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     if (!state.pinMode) closeDetailCard();
   });
 
-  // ── Show/Hide overlay toggle + floating hidden-pins bar ──────
+  // ── Show/Hide pins overlay toggle (top bar) ──────
+  // The single show/hide control lives in the top bar (role=switch, keyboard-operable). When
+  // pins are hidden the toggle itself reads "Pins hidden" with the eye-off icon, so there is no
+  // separate floating bar over the design — the toggle is the one re-entry point.
   var PINS_VISIBLE_KEY = STORAGE_KEYS.pinsVisible;
   var pinsToggle = document.getElementById('rbPinsToggle');
-  var pinsHiddenBar = document.getElementById('rbPinsHiddenBar');
-  var hiddenCount = document.getElementById('rbHiddenCount');
-  var showPinsBtn = document.getElementById('rbShowPins');
   var toggleIcon = document.getElementById('rbToggleIcon');
   var toggleLabel = document.getElementById('rbToggleLabel');
 
@@ -2375,23 +2348,9 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     catch (e) { state._pinsVisibleMem = visible; }
   }
 
-  // Count of loaded markers that belong to the current variant (drives the hidden-bar pill).
-  function visiblePinCount() {
-    var v = cur();
-    return state.loadedPins.filter(function (pin) { return loadedPinForVariant(pin, v); }).length;
-  }
-  function refreshHiddenBar() {
-    var n = visiblePinCount();
-    if (!state.pinsVisible && n > 0) {
-      hiddenCount.textContent = n + ' pin' + (n === 1 ? '' : 's') + ' hidden';
-      pinsHiddenBar.classList.add('show');
-    } else {
-      pinsHiddenBar.classList.remove('show');
-    }
-  }
   // applyOverlayVisibility(): mirror state.pinsVisible onto the DOM — the overlay container
-  // (the pin layer) gets .rb-overlay-hidden (CSS: markers display:none), the toggle's
-  // aria-checked/label/icon reflect the state, and the floating bar appears when hidden.
+  // (the pin layer) gets .rb-overlay-hidden (CSS: markers display:none) and the toggle's
+  // aria-checked/label/icon reflect the state.
   function applyOverlayVisibility() {
     var layer = document.querySelector('.pinlayer');
     if (layer) layer.classList.toggle('rb-overlay-hidden', !state.pinsVisible);
@@ -2399,7 +2358,6 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     pinsToggle.setAttribute('aria-checked', state.pinsVisible ? 'true' : 'false');
     toggleLabel.textContent = state.pinsVisible ? 'Pins' : 'Pins hidden';
     toggleIcon.innerHTML = state.pinsVisible ? ICONS.eyeOn : ICONS.eyeOff;
-    refreshHiddenBar();
   }
   function setPinsVisible(visible) {
     state.pinsVisible = !!visible;
@@ -2417,7 +2375,6 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
   pinsToggle.addEventListener('keydown', function (e) {
     if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') { e.preventDefault(); togglePins(); }
   });
-  showPinsBtn.onclick = function () { setPinsVisible(true); };
 
   // The draft-pin list (legacy inspector "Pins" panel) was removed in the unified rail:
   // every persisted pin already renders in #rbRailList, the stage draws the pre-confirm

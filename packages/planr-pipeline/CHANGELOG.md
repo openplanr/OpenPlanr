@@ -4,6 +4,16 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.24.6] — 2026-06-18
+
+### Fixed — no floating "pins hidden" bar over the design
+
+Hiding the pin overlay popped a floating "N pins hidden · Show pins" pill into the **centre of the
+stage**, covering the very design you were reviewing. It was redundant: the top-bar Show/Hide toggle
+already flips to **"Pins hidden"** (eye-off icon) and is the keyboard-operable re-entry point. The
+floating bar is removed — the top-bar toggle is now the single show/hide control, and the design
+stays unobstructed when pins are hidden.
+
 ## [0.24.5] — 2026-06-18
 
 ### Changed — the design-loop board is unified onto the single feedback surface
