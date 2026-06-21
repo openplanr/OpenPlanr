@@ -1436,9 +1436,12 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
     stagein.className = 'stagein' + (v.type === 'html' ? ' fillwrap' : '');
 
     if (state.diff) {
-      // HTML/canvas artifacts aren't images — an image clip-slider would render
-      // them as broken <img>. Compare them as two live iframes side by side.
-      if (v.type === 'html') {
+      // Choose the compare UI by the DIFF SOURCES, not the current variant type:
+      // two html canvases compare as side-by-side iframes; two raster/vector
+      // VERSION snapshots (variant-X-vN.svg/png) keep the image clip-slider even
+      // though the variant itself now renders as a canvas.
+      var diffIsHtml = /\\.html?$/i.test(state.diff[0]);
+      if (diffIsHtml) {
         var ab = el('div', 'diffab');
         ab.innerHTML = '<div class="abcol"><span class="ablab">A</span><iframe src="' + state.diff[0] + '"></iframe></div>' +
           '<div class="abcol"><span class="ablab">B</span><iframe src="' + state.diff[1] + '"></iframe></div>';
@@ -1607,7 +1610,11 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
       var author = getIdentity() || 'Anonymous';
       var createdAt = new Date().toISOString();
       var comment = ta.value.trim();
-      var pin = { variant: screen || variantId, x: box.x, y: box.y, w: box.w, h: box.h,
+      // pin.variant carries the SCREEN id in review (one artifact, used for regen)
+      // but the VARIANT LETTER in loop (many artifacts, used to scope the pin to
+      // its variant). The anchor slot always rides pin.screen.
+      var pinVariant = CFG.mode === 'review' ? (screen || variantId) : variantId;
+      var pin = { variant: pinVariant, x: box.x, y: box.y, w: box.w, h: box.h,
                   comment: comment, intent: intent, _v: variantId,
                   author: author, createdAt: createdAt };
       if (screen) pin.screen = screen;
@@ -1623,7 +1630,7 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
           var item = {
             id: id,
             author: author,
-            variant: screen || variantId,
+            variant: pinVariant,
             x: box.x, y: box.y, w: box.w, h: box.h,
             comment: comment,
             intent: intent,
@@ -1704,11 +1711,22 @@ var CFG = /* GENERATOR:config */ ${embedJson(cfg)};
   // ring, with the author avatar tucked at the marker's top-right. These are read-only
   // here; each carries data-pin-id for two-way select.
 
-  // A loaded pin belongs to the current variant when its anchor screen is in play
-  // (iframe artifact), or — for image/svg variants where the media IS the content —
-  // when its variant field matches the variant id (a legacy unattributed pin with neither
-  // still shows, so a record from an older board never silently disappears).
+  // Which loaded pins belong on the current variant. The two board modes scope
+  // differently because review has ONE artifact while loop has MANY:
+  //  • loop — every variant is its own artifact (now a per-variant canvas), so a
+  //    pin shows ONLY on its variant. pin.variant carries the variant letter
+  //    (schema: "Variant id (design-loop)"), so we match it directly; a legacy
+  //    pin with no variant still shows so an older record never vanishes.
+  //  • review — a single html artifact whose screens live inside it, so a
+  //    screen-anchored pin rides that one html artifact (pin.variant is the
+  //    SCREEN id there, used for regen — not a board-scoping key).
   function loadedPinForVariant(pin, variant) {
+    if (CFG.mode === 'loop') {
+      if (pin.variant != null && pin.variant !== '') {
+        return pin.variant === variant.id || pin.variant === variant.label;
+      }
+      return true;
+    }
     if (pin.screen) return variant.type === 'html';
     if (pin.variant != null && pin.variant !== '') {
       return pin.variant === variant.id || pin.variant === variant.label;

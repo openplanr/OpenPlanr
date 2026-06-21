@@ -4,6 +4,22 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.24.7] — 2026-06-21
+
+### Changed — design-loop variants ride the same real canvas as design-review
+
+A design-loop variant was a flat image on the stage — you couldn't freely pan/zoom to explore it the
+way `/design-review` lets you on its DesignCanvas. Now each variant is **materialized as that same
+canvas**: `generate`/`record` write a sibling `variant-{X}.html` (the variant image wrapped in
+`canvas-shell.html`) and copy the `vendor/` runtime next to it, so the board renders every variant in
+the pannable/zoomable DesignCanvas. The board **prefers `variant-{X}.html`** and degrades to the bare
+image for legacy sessions, so nothing breaks; the source `variant-{X}.{svg,png}` stays on disk for
+lineage/export. Pins on a canvas variant become content-anchored (they track pan/zoom) and are now
+**scoped to their variant** — a pin dropped on A no longer leaks onto B/C/D. The A/B version compare
+picks its UI from the snapshot type (image clip-slider for raster/vector versions, side-by-side
+iframes for canvases). New helper `lib/design-engine/canvas-wrap.mjs`; the feedback handshake is
+unchanged.
+
 ## [0.24.6] — 2026-06-18
 
 ### Fixed — no floating "pins hidden" bar over the design

@@ -5,6 +5,11 @@
 
 ## D.1 — Reveal + serve
 
+> Each variant is also materialized as a real DesignCanvas (`variant-{X}.html` + a copied
+> `vendor/`) by `generate`/`record`, so the board shows it on the SAME pannable/zoomable canvas as
+> `/design-review` (the board prefers `variant-{X}.html`, degrading to the bare image when absent).
+> Nothing extra to run — keep the source `variant-{X}.{svg,png}` on disk for lineage/export.
+
 1. Show the variants inline in chat (Read the PNGs / SVGs) — a quick visual index.
 2. Serve the board. The daemon is a long-running server that must OUTLIVE the short-lived
    `board` command — a sandboxed agent runtime reaps a detached child when the launching command
