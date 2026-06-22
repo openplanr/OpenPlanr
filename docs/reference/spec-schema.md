@@ -1,8 +1,10 @@
 # Spec Schema Reference (v1.0.0)
 
-This document is the canonical, version-pinned schema for spec-driven mode
-artifacts. Both **planr CLI** and the **planr-pipeline** Claude Code plugin
-read and write to this exact schema — no conversion adapter, no glue scripts.
+This document is the CLI-facing reference for spec-driven mode artifacts. For
+this cleanup cycle, the canonical OpenPlanr Protocol JSON Schemas live in
+[`openplanr/planr-pipeline/schemas/v1.0.0`](https://github.com/openplanr/planr-pipeline/tree/main/schemas/v1.0.0).
+Both **planr CLI** and the **planr-pipeline** Claude Code plugin use this
+artifact contract — no conversion adapter, no glue scripts.
 
 When hand-authoring spec artifacts (e.g. AI is unavailable), use the templates
 below verbatim.
@@ -10,7 +12,8 @@ below verbatim.
 > **Schema version:** `1.0.0`
 > **Pinning rule:** the `schemaVersion` field on every artifact MUST match the
 > reader's expected version. Both planr CLI and planr-pipeline currently
-> require `1.0.0`. Future breaking changes will bump in lockstep across both.
+> require `1.0.0`. Breaking changes start in the pipeline-owned schema source
+> and must be mirrored here before release.
 
 ---
 

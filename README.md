@@ -128,7 +128,7 @@ planr spec shape SPEC-001              # 4 questions, no $EDITOR
 
 ### Spec-driven mode
 
-Third planning posture — designed for handing features to AI coding agents. Specs decompose into User Stories and Tasks with explicit file Create / Modify / Preserve lists, `Type: UI | Tech`, agent assignment, and DoD with build / test commands. Schema matches [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol).
+Third planning posture — designed for handing features to AI coding agents. Specs decompose into User Stories and Tasks with explicit file Create / Modify / Preserve lists, `Type: UI | Tech`, agent assignment, and DoD with build / test commands. Schema matches [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol); canonical JSON Schemas for this cleanup cycle live in `openplanr/planr-pipeline` under `schemas/v1.0.0/`.
 
 | Command | Description |
 |---|---|

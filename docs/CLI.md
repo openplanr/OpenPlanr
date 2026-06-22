@@ -566,7 +566,7 @@ planr quick promote QT-001 --feature FEAT-001
 
 ### `planr spec`
 
-Spec-driven planning mode — third posture alongside agile + QT, designed for **planning *for* AI coding agents**. Each spec is a self-contained directory at `.planr/specs/SPEC-NNN-{slug}/` containing the spec doc, decomposed User Stories, decomposed Tasks, and any UI design assets. The artifact schema **matches the [planr-pipeline](https://github.com/openplanr/planr-pipeline) Claude Code plugin verbatim** — file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment, DoD with build/test commands. The two products share one schema; no conversion adapter ever.
+Spec-driven planning mode — third posture alongside agile + QT, designed for **planning *for* AI coding agents**. Each spec is a self-contained directory at `.planr/specs/SPEC-NNN-{slug}/` containing the spec doc, decomposed User Stories, decomposed Tasks, and any UI design assets. The artifact schema mirrors the [planr-pipeline](https://github.com/openplanr/planr-pipeline) canonical protocol schemas under `schemas/v1.0.0/` — file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment, DoD with build/test commands. The two products use one artifact contract; no conversion adapter ever.
 
 See [`docs/proposals/spec-driven-mode.md`](proposals/spec-driven-mode.md) for the full design.
 
