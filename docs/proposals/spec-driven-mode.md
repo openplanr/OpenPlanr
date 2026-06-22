@@ -14,7 +14,7 @@
 
 ## TL;DR
 
-Add a third planning mode to `planr` CLI alongside the existing **agile** (epic/feature/story/task) and **quick task (QT)** modes: **spec-driven**. Each spec is a self-contained directory `.planr/specs/SPEC-NNN-{slug}/` containing the spec document, its decomposed User Stories and Tasks, and any UI design assets. The artifact schema matches the [planr-pipeline](https://github.com/openplanr/planr-pipeline) plugin's contract verbatim — both products share one schema, no conversion layer.
+Add a third planning mode to `planr` CLI alongside the existing **agile** (epic/feature/story/task) and **quick task (QT)** modes: **spec-driven**. Each spec is a self-contained directory `.planr/specs/SPEC-NNN-{slug}/` containing the spec document, its decomposed User Stories and Tasks, and any UI design assets. The artifact schema mirrors the [planr-pipeline](https://github.com/openplanr/planr-pipeline) canonical OpenPlanr Protocol schemas under `schemas/v1.0.0/`, with no conversion layer.
 
 Strategic outcome: `planr` becomes the **planning surface**, planr-pipeline the **execution surface**, with zero translation between them. OpenPlanr becomes the planning system for the agentic era — humans planning *for* AI agents.
 
@@ -30,7 +30,7 @@ Strategic outcome: `planr` becomes the **planning surface**, planr-pipeline the 
 - Explicit `agent:` field
 - DoD checklists referencing build/test commands from a stack config
 
-The planr-pipeline plugin (live at v0.2.0) already produces this richer artifact contract. Right now both products produce planning artifacts in different formats — they don't share a schema. This proposal closes that gap.
+The planr-pipeline plugin already produces this richer artifact contract. Right now both products produce planning artifacts in different formats. This proposal closes that gap by making the CLI mirror the pipeline-owned protocol schemas.
 
 ### Strategic positioning
 
@@ -49,7 +49,7 @@ This is a moat. Tools optimized for human PM workflows can't pivot to agent-exec
 ### Goals (v1)
 
 1. Ship `planr spec` namespace with: `init`, `create`, `shape`, `decompose`, `attach-design`, `status`, `sync`, `promote`, `list`, `show`
-2. Adopt planr-pipeline's artifact schemas verbatim (file shapes, frontmatter fields)
+2. Mirror planr-pipeline's canonical artifact schemas (file shapes, frontmatter fields)
 3. **Self-contained per-spec directory layout** (per BL-011 addendum): `.planr/specs/SPEC-NNN-{slug}/{design,stories,tasks}/`
 4. Add `modes` array to `.planr/config.json` so a project can declare which modes are active (additive, not exclusive)
 5. Add `decompose` AI capability that mirrors planr-pipeline's specification-agent prompt, using planr's existing `ai-service.ts` provider abstraction

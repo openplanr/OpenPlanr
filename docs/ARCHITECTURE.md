@@ -111,7 +111,7 @@ Alongside the agile (epic/feature/story/task) and QT modes, planr supports a **s
 
 - **Service:** `src/services/spec-service.ts` — directory-aware CRUD (specs are nested directories, not flat files)
 - **Layout:** `.planr/specs/SPEC-NNN-{slug}/{SPEC-NNN-{slug}.md, design/, stories/US-NNN-*.md, tasks/T-NNN-*.md}`
-- **Schema:** matches the [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) Claude Code plugin verbatim (file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment, DoD with build/test commands)
+- **Schema:** mirrors the [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) canonical protocol schemas under `schemas/v1.0.0/` (file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment, DoD with build/test commands)
 - **Bridge:** `planr spec promote` validates + prints `/planr-pipeline:plan {slug}` for execution. The pipeline plugin reads `.planr/specs/` directly when spec mode is active — no conversion adapter.
 
 See `docs/proposals/spec-driven-mode.md` for the full design.
