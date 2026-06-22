@@ -4,6 +4,20 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.24.8] — 2026-06-22
+
+### Changed — release-train stabilization and drift guards
+
+This patch release cleans up ecosystem trust issues rather than changing runtime behavior. Package,
+plugin, stack, protocol docs, compatibility docs, schemas, and fixtures now agree on
+`planr-pipeline` `0.24.8`; `qa_gate_status` examples use the schema values
+`passed | failed | skipped`; and protocol ownership is recorded in
+`docs/adrs/ADR-001-protocol-ownership.md`.
+
+The release also adds `npm run doctor:versions` plus markdown contract tests so stale versions,
+broken procedure links, R1 stop-gate language regressions, uppercase shipped-marker status values,
+and explicit Claude context-window suffixes are caught before release.
+
 ## [0.24.7] — 2026-06-21
 
 ### Changed — design-loop variants ride the same real canvas as design-review
