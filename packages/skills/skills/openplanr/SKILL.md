@@ -136,7 +136,8 @@ format (or pass `--format … --from … --yes` for headless), and never auto-ch
 review the artifact, then run `/planr-pipeline:plan <slug>`. **No spec yet?** It asks
 whether to scaffold one or just **explore standalone** (design only, into
 `.planr/designs/<slug>/`, no tracked spec) — so you can prototype without committing to a
-spec. (Claude Code only as of planr-pipeline v0.13.0+.)
+spec. The command remains a Claude Code plugin-local authoring surface; its
+outputs are portable through `<SPEC_DIR>/design/` and the shared protocol schemas.
 
 **Exploring a brand asset, not a feature?** (logo, brand sheet, og-image, a one-off
 screen) → `/planr-pipeline:design-loop <target>` (v0.19.0+): N parallel AI variants on a
@@ -389,7 +390,8 @@ Every artifact has YAML frontmatter with `id`, `status`, and parent links
 (`epicId`, `featureId`, `storyId`, `specId`). Follow parent links to build the
 full context chain when implementing a task. See
 `references/artifacts.md` for the full frontmatter schema per artifact type, or
-visit the canonical reference at `openplanr.dev/docs/reference/spec-schema`.
+see the OpenPlanr CLI schema reference or the canonical protocol schemas in
+`openplanr/planr-pipeline/schemas/v1.0.0/`.
 
 ## Common Workflows
 
@@ -415,9 +417,9 @@ OpenPlanr supports three planning modes:
 The spec-driven mode produces planning artifacts with a richer agent-execution
 contract: explicit file Create/Modify/Preserve lists, `Type: UI|Tech`, agent
 assignment (`frontend-agent` / `backend-agent`), and DoD with build/test
-commands. The schema **matches the
-[`planr-pipeline`](https://github.com/openplanr/planr-pipeline) Claude
-Code plugin verbatim** — both products share one schema, no conversion adapter.
+commands. The schema mirrors the
+[`planr-pipeline`](https://github.com/openplanr/planr-pipeline) canonical
+protocol schemas under `schemas/v1.0.0/`; no conversion adapter is required.
 
 ### When to suggest spec-driven mode
 
@@ -586,7 +588,8 @@ planr spec promote SPEC-001
 When the planr-pipeline plugin is installed, follow Path A in the
 [Critical Routing Decision](#critical-routing-decision) section. The pipeline
 scaffolds the spec shell, decomposes, and ships — planr CLI is optional. Both
-products share the v1.0.0 spec schema verbatim.
+products use the OpenPlanr Protocol v1.0.0 artifact contract; the canonical
+JSON Schemas live in `planr-pipeline/schemas/v1.0.0/` for this cleanup cycle.
 
 ### When NOT to use spec-driven mode
 
@@ -600,7 +603,7 @@ See `references/troubleshooting.md` for handling:
 
 - "AI provider not configured" → `planr config set-provider anthropic`
 - "API key missing" → `planr config set-key anthropic`
-- "AI is not configured" during `planr spec decompose` → configure AI as above, or hand-author from the [schema reference](https://openplanr.dev/docs/reference/spec-schema)
+- "AI is not configured" during `planr spec decompose` → configure AI as above, or hand-author from the [canonical protocol schemas](https://github.com/openplanr/planr-pipeline/tree/main/schemas/v1.0.0)
 - Hangs in agent execution → you forgot `--yes`
 - Broken parent links → `planr sync` (or `planr spec sync` for spec-driven mode)
 - Import errors on older Node → upgrade to Node 20+

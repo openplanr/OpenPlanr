@@ -6,7 +6,7 @@ Thanks for your interest in improving the skill. This repo is small — the "cod
 
 ## Ground rules
 
-- **The skill is instruction-only.** We do not wrap CLI commands in shell scripts (the agent can call `planr` directly via bash). We do not reimplement CLI logic here. Changes to CLI behavior belong in the [CLI repo](https://github.com/openplanr/openplanr).
+- **The skill is instruction-only.** We do not wrap CLI commands in shell scripts (the agent can call `planr` directly via bash). We do not reimplement CLI logic here. Changes to CLI behavior belong in the [CLI repo](https://github.com/openplanr/OpenPlanr).
 - **Triggers drive activation.** The `description` field in `SKILL.md` frontmatter is the sole signal Claude uses to decide whether to activate the skill. Changes to it must be tested against the activation prompts in `docs/INSTALL.md`.
 - **Keep `SKILL.md` tight.** Target 100–300 lines. Heavier content belongs in `references/` (loaded on demand) or `examples/`.
 

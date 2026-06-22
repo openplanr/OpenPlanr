@@ -10,7 +10,7 @@ Install once — any Claude-powered agent can now plan your project before writi
 [![npm](https://img.shields.io/npm/v/openplanr.svg?label=openplanr%20CLI)](https://www.npmjs.com/package/openplanr)
 [![Agent Skills Spec](https://img.shields.io/badge/Agent%20Skills-compatible-8A2BE2)](https://agentskills.io/specification)
 
-[Main CLI](https://github.com/openplanr/openplanr) · [npm](https://www.npmjs.com/package/openplanr) · [Command reference](https://github.com/openplanr/openplanr/blob/main/docs/CLI.md) · [Issues](https://github.com/openplanr/skills/issues)
+[Main CLI](https://github.com/openplanr/OpenPlanr) · [npm](https://www.npmjs.com/package/openplanr) · [Command reference](https://github.com/openplanr/OpenPlanr/blob/main/docs/CLI.md) · [Issues](https://github.com/openplanr/skills/issues)
 
 </div>
 
@@ -20,7 +20,7 @@ Install once — any Claude-powered agent can now plan your project before writi
 
 AI coding agents are great at writing code — and bad at planning it. They jump to implementation without structuring the work into epics, features, stories, and tasks. You end up with code that solves the wrong problem, or the right problem at the wrong granularity.
 
-[OpenPlanr](https://github.com/openplanr/openplanr) is a CLI that fixes this. It turns a brief or a PRD into a full agile plan — markdown artifacts your team and your agents can read, refine, and implement against.
+[OpenPlanr](https://github.com/openplanr/OpenPlanr) is a CLI that fixes this. It turns a brief or a PRD into a full agile plan — markdown artifacts your team and your agents can read, refine, and implement against.
 
 This **skill** teaches Claude to drive the CLI on your behalf. You stay in the conversation; Claude runs the commands and reads back the results.
 
@@ -86,7 +86,9 @@ npx openplanr@latest init
 npx openplanr@latest plan
 ```
 
-See the [CLI repo](https://github.com/openplanr/openplanr) and the [command reference](https://github.com/openplanr/openplanr/blob/main/docs/CLI.md).
+See the [CLI repo](https://github.com/openplanr/OpenPlanr) and the [command reference](https://github.com/openplanr/OpenPlanr/blob/main/docs/CLI.md).
+
+In the ecosystem split, OpenPlanr plans, `planr-pipeline` ships, this skill routes the assistant to the right surface, and the marketplace installs the plugin and skill metadata.
 
 ## Who this is for
 
@@ -114,7 +116,7 @@ See [`docs/INSTALL.md`](./docs/INSTALL.md) for install details, [`docs/CONTRIBUT
 
 ## Related
 
-- [OpenPlanr CLI](https://github.com/openplanr/openplanr) — the planning engine this skill drives
+- [OpenPlanr CLI](https://github.com/openplanr/OpenPlanr) — the planning engine this skill drives
 - [Agent Skills specification](https://agentskills.io/specification)
 - [Anthropic skills examples](https://github.com/anthropics/skills)
 - [Claude Code plugin marketplaces](https://docs.claude.com/en/docs/claude-code/plugins)

@@ -1,6 +1,6 @@
 # OpenPlanr Command Reference
 
-Complete catalog of `planr` commands, formatted for agent consumption. For authoritative flag documentation, see the canonical [CLI reference](https://github.com/openplanr/openplanr/blob/main/docs/CLI.md) in the CLI repo.
+Complete catalog of `planr` commands, formatted for agent consumption. For authoritative flag documentation, see the canonical [CLI reference](https://github.com/openplanr/OpenPlanr/blob/main/docs/CLI.md) in the CLI repo.
 
 **Binary:** `planr` (alias: `opr`). **Package:** `openplanr` on npm. **Node:** 20+.
 
