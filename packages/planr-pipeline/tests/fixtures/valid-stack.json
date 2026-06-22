@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "AppName": "planr-pipeline",
-  "Version": "0.7.3",
+  "Version": "0.24.8",
   "Description": "Spec-driven AI software factory plugin for Claude Code",
   "Repository": "https://github.com/openplanr/planr-pipeline",
   "Language": "JavaScript (Node ESM)",

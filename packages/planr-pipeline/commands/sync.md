@@ -40,7 +40,7 @@ that QT's status mirrors the spec's *evidenced* state, and it is pushed to the c
    tip yields a wrong answer (abort on a non-ff divergence and say so). If the working tree has
    uncommitted tracked changes, abort and tell the user.
 2. **"Done" is evidenced, never assumed.** A spec is done iff ALL its internal tasks are `done`
-   AND its ship marker shows **`qa_gate_status: PASS`** — spec-driven `<SPEC_DIR>/.pipeline-shipped`,
+   AND its ship marker shows **`qa_gate_status: passed`** — spec-driven `<SPEC_DIR>/.pipeline-shipped`,
    default mode `output/feats/feat-*/.pipeline-shipped`. The spec's own `status:` field is
    unreliable — use it only to *detect* drift, never as the source of truth.
 3. **Resolve the spec↔QT link three ways:** QT frontmatter `sourceSpec: SPEC-NNN`; the spec-dir

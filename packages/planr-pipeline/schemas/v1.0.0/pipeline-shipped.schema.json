@@ -30,7 +30,7 @@
     "pipeline_version": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[A-Za-z0-9.-]+)?(?:\\+[A-Za-z0-9.-]+)?$",
-      "description": "Semver of the planr-pipeline plugin that produced the marker (e.g. 0.7.3)."
+      "description": "Semver of the planr-pipeline plugin that produced the marker (e.g. 0.24.8)."
     },
     "runtime": {
       "type": "string",

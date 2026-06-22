@@ -11,7 +11,7 @@ model: claude-sonnet-4-6
 > **Not used by:** default `/planr-pipeline:plan` or `/ship` sequencing.
 > **Single responsibility:** Structured schema → scaffold files under **`output/src/`** (Entities, DbContext, `schema.prisma` append, etc. per stack). No HTTP layer, no `src/features/` product code.
 
-**DEV task implementation:** **`agents/backend-agent.md`** (`claude-opus-4-8[1m]`) during `/planr-pipeline:ship`.
+**DEV task implementation:** **`agents/backend-agent.md`** (`claude-opus-4-8`) during `/planr-pipeline:ship`.
 
 ## System Prompt
 

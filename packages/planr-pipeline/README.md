@@ -198,7 +198,7 @@ Read the full rule set in [`docs/rules.md`](docs/rules.md).
 
 `planr-pipeline` owns the **execution** verb. The two are complementary: planr plans, pipeline ships.
 
-### Bridge to planr spec-driven mode (v0.3.0+)
+### Bridge to planr spec-driven mode
 
 When a project uses planr's **spec-driven mode** (the third planning posture, see `planr spec init`), this plugin reads `.planr/specs/SPEC-NNN-{slug}/` directly — no conversion adapter, no copy step. Both products share the same artifact schema:
 
@@ -216,7 +216,7 @@ See [planr's spec-driven proposal](https://github.com/openplanr/OpenPlanr/blob/m
 
 Pre-1.0 semver. Expect minor breaks across `0.1.x → 0.2.x`. Patch bumps (`0.1.0 → 0.1.1`) are doc/prompt clarifications only.
 
-Pinned model strings (`claude-sonnet-4-6`, `claude-opus-4-8[1m]`) are correct as of May 2026 (v0.10.0). Opus 4.8 is deployed with 1M context as the default DEV-tier frontier. Strings will drift; check the CHANGELOG when upgrading.
+Pinned model strings (`claude-sonnet-4-6`, `claude-opus-4-8`) are operational guidance, not part of the protocol schema. Claude Code uses the default context window for these assignments; do not add context-window suffixes unless the CLI contract changes. Check [`docs/agent-model-map.md`](docs/agent-model-map.md) and the changelog when upgrading.
 
 ---
 

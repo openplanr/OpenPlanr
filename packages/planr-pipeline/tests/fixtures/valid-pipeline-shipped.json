@@ -1,6 +1,6 @@
 {
   "shipped_at": "2026-05-04T00:00:00Z",
-  "pipeline_version": "0.7.3",
+  "pipeline_version": "0.24.8",
   "runtime": "claude-code",
   "mode": "spec-driven",
   "feature": "todo-app",

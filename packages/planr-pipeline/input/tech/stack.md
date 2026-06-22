@@ -15,7 +15,7 @@
 ```yaml
 schemaVersion: "1.0.0"
 AppName: "planr-pipeline"
-Version: "0.7.3"
+Version: "0.24.8"
 Description: "Spec-driven AI software factory plugin for Claude Code (OpenPlanr Protocol v1.0.0 canonical adapter)"
 Repository: "https://github.com/openplanr/planr-pipeline"
 ```
@@ -129,7 +129,7 @@ DoNotUse:
 
 MustPreserve:
   - "agents/*.md YAML frontmatter `tools:` field — manifest-enforced security boundary"
-  - "docs/protocol/spec-artifacts.md as the canonical v1.0.0 schema reference until schemas/ replaces it"
+  - "schemas/v1.0.0/ as the canonical v1.0.0 protocol schema source"
   - "conformance/expected/*.json fixture goldens"
 ```
 

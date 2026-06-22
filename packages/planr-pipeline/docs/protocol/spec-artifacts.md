@@ -160,7 +160,7 @@ Illustrative example:
 
 ```yaml
 shipped_at: "2026-04-29T14:32:11Z"
-pipeline_version: "0.7.3"
+pipeline_version: "0.24.8"
 runtime: "claude-code"
 mode: "spec-driven"
 feature: "auth"
@@ -209,7 +209,7 @@ planr rules generate --target codex --scope pipeline    # regenerate AGENTS.md a
 - `agent-roles.md` — 8 role contracts (inputs, outputs, tool guardrails)
 - `commands.md` — PLAN and SHIP command contracts
 - `runtime-adapters.md` — per-runtime adapter specs
-- `OpenPlanr/docs/reference/spec-schema.md` — companion schema reference (mirror, lives with the planr CLI)
+- `OpenPlanr/docs/reference/spec-schema.md` — companion schema reference generated for the planr CLI; `schemas/v1.0.0/` in this repo remains canonical for this cleanup cycle
 
 ---
 

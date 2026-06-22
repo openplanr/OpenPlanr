@@ -1,7 +1,8 @@
 # OpenPlanr Protocol
 
 > Version: **1.0.0**
-> Status: **stable** — pinned across planr CLI v1.5.0+, planr-pipeline v0.6.0+, openplanr skill v1.3.0+
+> Status: **stable** for schemaVersion `1.0.0`. Current canonical executor docs are verified against planr-pipeline v0.24.8.
+> Ownership: `planr-pipeline/schemas/v1.0.0/` is canonical for this cleanup cycle; downstream CLI, skill, and marketplace docs mirror it.
 
 The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI development. It defines:
 
@@ -17,9 +18,9 @@ OpenPlanr ships across multiple repos and three first-class AI coding agent runt
 | Component | Role | Repo |
 |---|---|---|
 | `planr` CLI | Authoring surface — generates `.planr/` markdown artifacts | `openplanr/OpenPlanr` |
-| `planr-pipeline` | Claude Code plugin — canonical pipeline executor (8 subagents) | `openplanr/planr-pipeline` |
+| `planr-pipeline` | Claude Code plugin — canonical pipeline executor, schema owner, and conformance source | `openplanr/planr-pipeline` |
 | `openplanr` skill | Routing playbook — teaches Claude when to use which surface | `openplanr/skills` |
-| `openplanr/marketplace` | Distribution — Claude Code plugin registry pinned to v0.6.0 | `openplanr/marketplace` |
+| `openplanr/marketplace` | Distribution — Claude Code plugin registry metadata | `openplanr/marketplace` |
 
 The same workflow runs on **Claude Code** (canonical), **Cursor** (via planr-generated `.cursor/rules/planr-pipeline.mdc` + agent body files), and **Codex** (via `AGENTS.md` with a pipeline section). All three runtimes share the same artifact contract — a SPEC authored on one runtime is consumable by any other.
 
@@ -36,7 +37,9 @@ The protocol is the contract. Runtimes are adapters.
 
 ## Pinning rule
 
-`schemaVersion: "1.0.0"` is required on every spec, story, and task. Future breaking changes will bump this version in lockstep across all three runtimes; readers MUST refuse mismatched versions. See `OpenPlanr/docs/reference/spec-schema.md` for the canonical schema.
+`schemaVersion: "1.0.0"` is required on every spec, story, and task. Future breaking changes will bump this version in lockstep across all three runtimes; readers MUST refuse mismatched versions.
+
+Canonical schema source for this cleanup cycle: [`../../schemas/v1.0.0/`](../../schemas/v1.0.0/). The OpenPlanr CLI schema reference is a downstream mirror for CLI users.
 
 ## Compatibility matrix
 

@@ -2,7 +2,7 @@
 name: backend-agent
 description: Use this agent when implementing a Tech task from the task file (Type=Tech — task-2.md, or sole task-1.md when no PNG). Services, controllers, DTOs, DB queries — backend only; never touches UI. For Step 0.2 entity scaffolding from schema.json use entity-scaffold-agent instead.
 tools: Read, Glob, Grep, Edit, Write, Bash(npm:*), Bash(pnpm:*), Bash(yarn:*), Bash(npx:*), Bash(prisma:*), Bash(node:*)
-model: "claude-opus-4-8[1m]"
+model: claude-opus-4-8
 ---
 
 # Backend Agent

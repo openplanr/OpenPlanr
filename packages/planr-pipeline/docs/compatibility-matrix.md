@@ -1,189 +1,118 @@
-# Compatibility Matrix — OpenPlanr Protocol v1.0.0
+# Compatibility Matrix - OpenPlanr Protocol v1.0.0
 
-> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.13.0.
+> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.24.8.
 
 ## TL;DR
 
-OpenPlanr ships three runtime adapters that all implement the same artifact contract:
+OpenPlanr ships three runtime adapters that all consume the same protocol artifacts:
 
 | Runtime | Install | Adapter |
 |---|---|---|
-| **Claude Code** *(canonical)* | `/plugin install planr-pipeline@openplanr` | This plugin (manifest-enforced subagents) |
-| **Cursor** | `npm i -g openplanr && planr rules generate --target cursor --scope pipeline` | `.cursor/rules/planr-pipeline.mdc` + agent body files |
-| **Codex** | `npm i -g openplanr && planr rules generate --target codex --scope pipeline` | `AGENTS.md` with pipeline section |
+| Claude Code (canonical executor) | `/plugin install planr-pipeline@openplanr` | This plugin: manifest-declared commands, agents, local tools, and conformance |
+| Cursor | `npm i -g openplanr && planr rules generate --target cursor --scope pipeline` | `.cursor/rules/planr-pipeline.mdc` plus generated agent body files |
+| Codex | `npm i -g openplanr && planr rules generate --target codex --scope pipeline` | `AGENTS.md` with the OpenPlanr pipeline section |
 
-Same `.planr/specs/` directories. Same SPEC / US / Task schema. Same `.pipeline-shipped` marker. The pipeline shells the contract; runtimes are interchangeable adapters.
+Same `.planr/specs/` directories. Same SPEC, US, Task, stack, graph, and `.pipeline-shipped` schemas. Runtime adapters differ in orchestration capabilities, but artifacts remain portable.
 
-## Capability matrix
+## Capability Matrix
 
-| Capability | Claude Code (A) | Cursor (A2) | Codex (A3) |
+| Capability | Claude Code | Cursor | Codex |
 |---|---|---|---|
-| **PLAN orchestration** | ✅ slash command (`/planr-pipeline:plan`) | ✅ rule auto-attach on glob match | ✅ persona-triggered ("plan {feature}") |
-| **SHIP orchestration** | ✅ slash command (`/planr-pipeline:ship`) | ✅ rule | ✅ persona |
-| **Design generation** (`/planr-pipeline:design`, SPEC-015) | ✅ slash command (interactive + flag-driven) | ❌ not yet (v0.13.0) — see §Design generation below | ❌ not yet (v0.13.0) — see §Design generation below |
-| **8 named subagents** | ✅ manifest-declared, model pinned | ⚠️ Composer subagent dispatch (Cursor 1.x) | ⚠️ persona role-shift only (no isolation) |
-| **Multi-task `/ship` in one invocation** | ✅ `DISPATCH_MODE: multi-task` (native parallel subagents per ready task) | ⚠️ `DISPATCH_MODE: per-task` default (override with `--all-tasks`) — see §Dispatch mode below | ⚠️ `DISPATCH_MODE: per-task` default — see §Dispatch mode below |
-| **Native parallel dispatch** (SPEC-014 — one `Agent` call per ready task, shared tree, `dependsOn` ordering) | ✅ full fan-out under `multi-task` (no isolation, no merge-back) | ❌ not supported — per-task sequential (unchanged) | ❌ not supported — per-task sequential (unchanged) |
-| **Task `status` resume** (continue partially-shipped specs across multiple `/ship` invocations) | ✅ status read on entry, written on close-out | ✅ same — runtime-agnostic, lives in T-task frontmatter | ✅ same |
-| **Project memory** (`.planr/memory.md` — traps, decisions, corrections) | ✅ orchestrator-managed read/write | ✅ prompt-driven read/write | ✅ prompt-driven read/write |
-| **Task rationale** (`rationale:` frontmatter on T-tasks) | ✅ | ✅ | ✅ |
-| **Clarification loop** (`clarifications.md` for ambiguous specs) | ✅ | ✅ | ✅ |
-| **Tool restrictions** (`Bash(psql:*)` etc.) | ✅ enforced at manifest layer | ❌ prompt-level only — model honours voluntarily | ❌ prompt-level only |
-| **Spec-driven mode** (`.planr/specs/`) | ✅ | ✅ | ✅ |
-| **Default mode** (`output/feats/`) | ✅ | ✅ | ✅ |
-| **Auto-scaffold spec shell** | ✅ | ✅ | ✅ |
-| **Self-heal `input/tech/stack.md`** | ✅ | ✅ | ✅ |
-| **3-iteration correction loop** (R6) | ✅ | ✅ (prompt-driven) | ✅ (prompt-driven) |
-| **`.pipeline-shipped` marker** | ✅ writes runtime: claude-code | ✅ writes runtime: cursor | ✅ writes runtime: codex |
-| **CLAUDE.md snapshot** (R7) | ✅ via Stop hook + Step 5 | ⚠️ no Stop hook — `.cursor/.snapshot-pending` sentinel only | ⚠️ no Stop hook |
-| **Coexistence with planr-managed CLAUDE.md** | ✅ explicit detect + skip | ✅ explicit detect + skip | ✅ explicit detect + skip |
-| **R1 PLAN/SHIP separation** | ✅ two distinct commands | ✅ two distinct rules | ✅ two distinct keywords |
-| **R3 model assignments fixed** | ✅ at manifest | ⚠️ best-effort (Cursor model picker) | ⚠️ best-effort (Codex model picker) |
-| **`${CLAUDE_PLUGIN_ROOT}` resolution** | ✅ native | ❌ substituted with `.cursor/rules/` paths | ❌ substituted with project paths |
-| **3-min onboarding for new users** | install plugin + `/plan` | `npm i -g openplanr` + `rules generate` + say "plan" | `npm i -g openplanr` + `rules generate` + say "plan" |
-| **Conformance test passes** | ✅ | ✅ (with caveats below) | ✅ (with caveats below) |
+| PLAN orchestration | Slash command: `/planr-pipeline:plan` | Generated rules; user says `plan {feature}` | Generated `AGENTS.md`; user says `plan {feature}` |
+| SHIP orchestration | Slash command: `/planr-pipeline:ship` | Generated rules; per-task resume loop | Generated `AGENTS.md`; per-task resume loop |
+| R1 plan/ship separation | Enforced by separate commands and prompts | Enforced by generated rules | Enforced by generated agent instructions |
+| Spec-driven mode | Supported | Supported | Supported |
+| Default mode | Supported | Supported | Supported |
+| `.pipeline-shipped` marker | Writes `runtime: claude-code` | Writes `runtime: cursor` | Writes `runtime: codex` |
+| `qa_gate_status` values | `passed`, `failed`, `skipped` | Same schema | Same schema |
+| Subagent/tool isolation | Manifest-enforced tools | Prompt-level/persona constraints | Prompt-level/persona constraints |
+| Multi-task ship dispatch | Native wide fan-out by ready task | Per-task by default | Per-task by default |
+| `dependsOn` ordering | Supported | Supported | Supported |
+| Workflow dispatch style | Supported on Claude Code where available | Not supported | Not supported |
+| Preserve-list protection | Runtime instruction plus conformance diff check | Conformance diff check | Conformance diff check |
+| Project memory | Orchestrator-managed read/write | Prompt-driven read/write | Prompt-driven read/write |
+| Design generation command | Plugin-local command | Not generated by rules yet; consumes output artifacts | Not generated by rules yet; consumes output artifacts |
+| Design loop / review board | Plugin-local localhost tools | Not generated by rules yet | Not generated by rules yet |
+| Dashboard command | Plugin-local read-only localhost dashboard | Not generated by rules yet | Not generated by rules yet |
+| Sync command | Plugin-local command contract | Not generated by rules yet | Not generated by rules yet |
+| Status command | Plugin-local command with disk fallback | Generated or prompt-equivalent status behavior | Generated or prompt-equivalent status behavior |
+| Conformance | Canonical local conformance suite | Artifact conformance target | Artifact conformance target |
+
+## Current Guarantees
+
+The protocol guarantee is artifact-level compatibility:
+
+- A SPEC authored by OpenPlanr CLI or one runtime can be consumed by the others.
+- Stories, tasks, stack files, design specs, graph output, run manifests, and shipped markers use schemas under `schemas/v1.0.0/`.
+- The canonical schema source for this cleanup cycle is `planr-pipeline/schemas/v1.0.0/`; OpenPlanr CLI docs mirror that contract for CLI users.
+
+The runtime guarantee is not identical tool behavior:
+
+- Claude Code is the canonical executor because plugin manifests enforce command and agent tool boundaries.
+- Cursor and Codex use generated instructions/personas; their restrictions are prompt-level and validated after the fact by conformance and Preserve-list checks.
+- Local product surfaces such as `/design-loop`, `/design-review`, `/dashboard`, and `/sync` are currently plugin-local surfaces. Their artifacts are portable where applicable, but the commands themselves are not generated into Cursor/Codex rules yet.
+
+## Dispatch Modes
+
+`/planr-pipeline:ship` binds dispatch behavior from the runtime:
+
+| Runtime | Default behavior | Reason |
+|---|---|---|
+| Claude Code | `multi-task` | The host can dispatch isolated subagents; ready tasks can fan out safely when `dependsOn` is satisfied. |
+| Cursor | `per-task` | Single-session context can bias later tasks; one task per invocation is safer. |
+| Codex | `per-task` | Same cumulative-context risk as Cursor. |
+
+On Claude Code, the cost/dispatch gate can choose `native` or `workflow` style when the host supports it. Cursor, Codex, and unknown runtimes collapse to per-task resume behavior.
+
+## Design Tooling Parity
+
+Design generation and the design-loop/review board are currently Claude Code plugin-local tools.
+
+Portable outputs:
+
+- `design-spec.md`
+- `finalized.json`
+- approved design artifacts copied into the repo
+- task decomposition behavior that consumes those artifacts
+
+Not yet generated into Cursor/Codex rules:
+
+- Interactive source/format clarification
+- Local design board daemon and review board UI
+- Taste profile and design session management
+- Design-loop provider setup
+
+This means a design generated or approved through Claude Code can still influence Cursor/Codex planning and shipping through the shared artifacts. Only the authoring/review tooling is runtime-specific today.
 
 ## Caveats
 
-### Tool restrictions on Cursor and Codex are advisory
+### Cursor and Codex restrictions are advisory
 
-The Claude Code plugin enforces tool restrictions at the manifest layer (e.g., `db-agent` literally cannot invoke `git` because `Bash(git:*)` is not in its allowed tools list). Cursor and Codex have repo-level permission models that don't map cleanly to per-persona restrictions.
+Claude Code enforces per-agent tools through plugin manifests. Cursor and Codex cannot currently mirror that exact tool-layer boundary for every role. The mitigation is conformance plus Preserve-list verification after execution.
 
-**Mitigation:** the conformance test runner (`conformance/runner.mjs`) does a post-ship `git diff` check on every task's `Preserve:` list. A model that violates a Preserve rule on Cursor or Codex will be caught after the fact, even though the violation wasn't blocked at runtime.
+### Snapshot hooks differ by runtime
 
-**Implication:** for high-trust environments (production codegen on enterprise repos), Claude Code is the recommended runtime. Cursor and Codex are excellent for development workflows but should not be relied on for security-critical pipelines.
+Claude Code can use plugin lifecycle behavior to remind users about snapshots and shipped state. Cursor and Codex do not have the same hook surface, so `.pipeline-shipped` remains the primary audit marker.
 
-### No Stop hook on Cursor or Codex
+### Compatibility should be tested, not trusted
 
-Claude Code fires a `Stop` hook when a command terminates. The pipeline uses this to remind users to run a snapshot if `/ship` aborted mid-flow.
-
-**Cursor adapter:** writes `.cursor/.snapshot-pending` at start of `/ship` Step 0; surfaces a reminder on next session start. Best-effort, not guaranteed.
-
-**Codex adapter:** no equivalent at all. The `.pipeline-shipped` marker still gets written on successful runs, so the audit trail is intact.
-
-**Implication:** if your `/ship` aborts before snapshot on Cursor or Codex, the next session may not surface a reminder. Run `git status .cursor/.snapshot-pending` (Cursor) or check for an absent `.pipeline-shipped` (Codex) to detect.
-
-### Cursor subagent dispatch is empirically verified, not contractually documented
-
-Cursor 1.x's Composer dispatches subagents from rule files containing system prompts. This is a real capability — verified live during pre-launch testing — but Cursor's public documentation doesn't pin the subagent model formally.
-
-**Mitigation:** the Cursor adapter pins to Cursor 1.x. If the runtime changes the dispatch model in 2.x+, the adapter may need an update. The conformance test will catch the regression.
-
-**Implication:** treat Cursor compatibility as a soft contract that evolves with Cursor. The protocol is stable; the adapter ships with a "best supported as of planr-pipeline v0.6.0" warranty.
-
-### Codex 2.0 persona quality not yet measured
-
-The Codex adapter ships v1 with the AGENTS.md format. Persona role-shift is the mechanism — the model adopts the role's behaviour during a specific task — but cross-persona context contamination is theoretically possible.
-
-**Mitigation:** for v1, document this as a known polish item. Run the conformance fixture against Codex pre-launch and document the result. If quality is significantly below Cursor parity, flag it explicitly in the matrix.
-
-**Implication:** Codex compatibility is "preview" until live measurement closes. Users wanting maximum quality should prefer Claude Code or Cursor.
-
-### Dispatch mode — multi-task vs per-task `/ship`
-
-`/planr-pipeline:ship` Step 1.8 binds `DISPATCH_MODE` based on the detected runtime. This controls whether a single invocation processes the **entire dispatch queue** (all `pending` + `blocked` tasks of the spec) or **one task at a time**.
-
-| Runtime | Default `DISPATCH_MODE` | Why |
-|---|---|---|
-| Claude Code | `multi-task` | Each subagent is dispatched via the Task tool with isolated context. No cumulative-context bias across tasks. |
-| Cursor | `per-task` | The Composer is one continuous session — without per-task fresh invocation, prior tasks' context biases the model toward "this looks already shipped, write a status rollup" instead of generating code. |
-| Codex | `per-task` | Same as Cursor — persona role-shift in one continuous session has the same cumulative-context risk. |
-
-**Override:** `--all-tasks` forces `multi-task` regardless of runtime (advanced — only use when you know your specific session supports isolated subagents).
-
-**Resume semantics:** the per-task mode is non-disruptive because **task `status` lives in the T-task frontmatter** (`schemas/v1.0.0/task.schema.json` enum: `pending`, `in-progress`, `done`, `blocked`). On entry, Step 2a reads every task's status:
-
-- `done` → skip
-- `pending` → enqueue
-- `in-progress` → enqueue + recover (prior run crashed mid-task)
-- `blocked` → enqueue + retry (prior R6 cycle wrote `T-NNN-error-report.md`; new attempt re-reads it)
-
-Each invocation in `per-task` mode dispatches **one** task, writes its closing status, and prints a clear "Remaining queue: N tasks. Run `/planr-pipeline:ship {slug}` again to continue." The user re-invokes the slash command per task; the status field lets the pipeline pick up exactly where it left off, even across sessions, machines, or runtimes.
-
-**For users:** if you're in Cursor and `/ship` produces a status rollup instead of generating code, the cause is Composer's cumulative-context bias on multi-task continuation runs. The default `per-task` dispatch mode in v0.8.0+ resolves this. If you're on an older plugin version, use `--task T-NNN` to force single-task targeting.
-
-**For mixed workflows:** plan in Cursor (read-friendly, ergonomic), ship in Claude Code (canonical isolation, fastest end-to-end). Both runtimes write the same `.planr/specs/` artifacts.
-
-### Native parallel dispatch (SPEC-014)
-
-In `DISPATCH_MODE: multi-task`, the orchestrator emits **one `Agent` call per ready task in a single turn**, all operating in the shared main working tree — exactly like native Claude Code parallel sub-agents. The queue is **feature-flat** (ready tasks collected across ALL stories) and the orchestrator dispatches **every** ready task — it does not self-limit to one or two. There is no isolation layer and no merge-back. This is a Claude Code capability only.
-
-| Runtime | Native parallel dispatch | Behavior |
-|---|---|---|
-| **Claude Code** | ✅ supported (full fan-out) | `DISPATCH_MODE: multi-task` — one `Agent` call per ready task in one turn, shared tree, `dependsOn`-only ordering. |
-| **Cursor** | ❌ not supported | Runs `DISPATCH_MODE: per-task` — exactly one task per invocation, sequential. |
-| **Codex** | ❌ not supported | Runs `DISPATCH_MODE: per-task` — exactly one task per invocation, sequential. |
-
-planr does no write-set inference and no cycle detection; the only ordering it honors is an explicit `dependsOn:` field. The host's native concurrency cap is the only throttle (there is no concurrency flag). The lock-list survives only as an advisory note in the dispatch prompt. The full contract is in `docs/feat-parallel-dispatch/`. (SPEC-014 supersedes the SPEC-013 worktree + wave scheduler.)
-
-#### Dispatch style — `native` vs `workflow` (Claude Code `multi-task` only)
-
-On Claude Code, `/ship` Step 1.8 additionally binds `DISPATCH_STYLE` — *how* the wide fan-out runs. Both run identical agents, honor `dependsOn`, and keep the orchestrator as the single writer of status + manifest:
-
-| Style | Scheduler | When |
-|---|---|---|
-| **`native`** (default) | The orchestrator emits the `Agent` calls itself, fanning out as it sees fit. | Default; flexible, zero new machinery. |
-| `workflow` | The orchestrator drives the **Workflow tool**, declaring the `dependsOn` DAG; the host schedules it deterministically and replayably. | When you want a guaranteed, reproducible schedule. |
-
-Chosen via the Step 1.5 cost/dispatch gate (clickable) or `--native` / `--workflow`; `--yes` ⇒ `native`. On Cursor / Codex / unknown the choice is suppressed (no Workflow tool, no safe in-session fan-out) — both collapse to the per-task resume loop. `DISPATCH_STYLE` does **not** revive worktrees or waves; in `workflow` style determinism comes from the host's Workflow tool, not a planr-side scheduler.
-
-### Design generation (`/planr-pipeline:design`) is Claude-Code-only in v0.13.0
-
-The design-generation command (SPEC-015) ships **Claude Code only** for v0.13.0. It depends
-on capabilities that don't yet have a clean Cursor/Codex adapter:
-
-- **Interactive `AskUserQuestion`** for the source/format clarification (the recommended
-  default + outcome-labeled options). Cursor/Codex would need a rules-driven equivalent.
-- **Node helpers** in `lib/design/` (escaping, screen resolver, format rule, manifest) and a
-  **vendored React + esbuild** canvas runtime. These are invoked by the orchestrator at
-  generation time, not by a portable persona prompt.
-
-**What IS already cross-runtime:** the *output* is portable. A `design-spec.md` authored by
-`/design` (or its generated artifact) lands in the same `<SPEC_DIR>/design/` directory every
-adapter reads, and the **R2 amendment** ("a `design-spec.md` OR a PNG ⇒ a UI task") is
-runtime-agnostic — so a design generated on Claude Code makes Cursor/Codex emit the UI task
-too. Only the *generation* step is Claude-Code-only; *consumption* is universal.
-
-**Follow-up for parity:** teach the `planr` CLI rules generator (`planr rules generate
---scope pipeline`) to emit a `.cursor/rules/planr-pipeline-design.mdc` + a Codex `AGENTS.md`
-section, with a rules-driven clarification flow and a documented dependency on `node` for the
-`lib/design` helpers. Tracked as a post-0.13.0 item.
-
-## Cross-runtime spec portability
-
-A SPEC authored on one runtime is consumable by any other:
+Use the conformance suite for protocol-level behavior:
 
 ```bash
-# On a Cursor-only machine:
-planr spec create "User auth" --slug auth --priority P0
-# scaffolds .planr/specs/SPEC-001-auth/ with v1.0.0 schema
-
-# Move the project to a teammate using Claude Code:
-git pull
-/planr-pipeline:plan auth
-# the Claude Code plugin reads the same SPEC-001-auth directory
+npm run conformance:check
 ```
 
-This is the single biggest payoff of the protocol: teams can mix runtimes per developer without coordination overhead.
+For runtime-operated fixtures, use `conformance/runner.mjs` with `--setup`, then verify PO and SHIP state against the runtime-produced workspace.
 
-## When to use which adapter
+## See Also
 
-| If your priority is... | Pick this runtime |
-|---|---|
-| Manifest-enforced security (production codegen on enterprise code) | Claude Code |
-| IDE integration with strong UI/UX | Cursor |
-| Already on Codex, want pipeline workflow without switching | Codex |
-| Maximum cross-team flexibility | All three — same artifacts; per-developer choice |
-
-## See also
-
-- `protocol/README.md` — protocol overview
-- `protocol/spec-artifacts.md` — artifact schema
-- `protocol/agent-roles.md` — 8 role contracts
-- `protocol/commands.md` — PLAN and SHIP contracts
-- `protocol/runtime-adapters.md` — per-adapter specs
-- `../conformance/README.md` — how to run the conformance test against any runtime
+- `protocol/README.md` - protocol overview
+- `protocol/spec-artifacts.md` - artifact schemas and marker examples
+- `protocol/agent-roles.md` - role contracts
+- `protocol/commands.md` - PLAN and SHIP contracts
+- `protocol/runtime-adapters.md` - adapter details
+- `../conformance/README.md` - conformance workflow
 
 ---
 
-*OpenPlanr Protocol v1.0.0 — compatibility matrix.*
+*OpenPlanr Protocol v1.0.0 - compatibility matrix for planr-pipeline v0.24.8.*
