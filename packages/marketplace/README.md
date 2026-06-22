@@ -1,11 +1,11 @@
 # OpenPlanr Marketplace
 
-Official Claude Code plugin marketplace for [OpenPlanr](https://github.com/OpenPlanr).
+Official Claude Code plugin marketplace for [OpenPlanr](https://github.com/openplanr).
 
 ## Install
 
 ```
-/plugin marketplace add OpenPlanr/marketplace
+/plugin marketplace add openplanr/marketplace
 ```
 
 Then install any of the plugins below:
@@ -18,8 +18,10 @@ Then install any of the plugins below:
 
 | Plugin | Version | Description |
 |---|---|---|
-| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.12.0 | Spec-driven AI factory with 9 subagents and tool-layer rule enforcement. Canonical Claude Code adapter for [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol); same workflow runs on Cursor + Codex via `planr rules generate --scope pipeline`. |
-| [`openplanr`](https://github.com/openplanr/skills) | 1.6.0 | OpenPlanr skill — multi-runtime routing playbook teaching Claude when to use which surface (Path A: Claude Code, A2: Cursor, A3: Codex, B: skill-driven, C: bare CLI). |
+| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.24.8 | Spec-driven AI factory with specialized subagents, design generation/review, sync, dashboard, conformance checks, and tool-layer rule enforcement. Canonical Claude Code adapter for [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol); Cursor and Codex use generated OpenPlanr rules. |
+| [`openplanr`](https://github.com/openplanr/skills) | 1.11.0 | OpenPlanr skill — multi-runtime routing playbook teaching Claude when to use the CLI, the pipeline plugin, generated Cursor/Codex rules, or bare `planr` commands. |
+
+Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in the same release-train change.
 
 ## Cross-runtime support
 

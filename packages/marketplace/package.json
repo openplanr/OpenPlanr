@@ -1,0 +1,8 @@
+{
+  "name": "openplanr-marketplace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/check-readme.mjs"
+  }
+}
