@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.8.0
+
+### Minor Changes
+
+- Add `planr graph --json`, a read-only artifact graph export for dashboard and
+  ecosystem conformance. The command emits the shared OpenPlanr Protocol graph
+  shape `{ nodes, edges }`, namespaces spec-local story/task ids, and preserves
+  `contains` and `depends_on` edges from frontmatter.
+
 ## 1.7.2
 
 ### Patch Changes

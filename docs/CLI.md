@@ -1040,6 +1040,23 @@ planr status --all
 
 ---
 
+### `planr graph`
+
+Emit the OpenPlanr artifact graph. `--json` is the stable machine-readable
+contract consumed by `planr-pipeline` dashboard and ecosystem conformance.
+
+```bash
+planr graph --json
+```
+
+| Option   | Description                         | Default |
+| -------- | ----------------------------------- | ------- |
+| `--json` | Output `{ nodes, edges }` as JSON   | `false` |
+
+The JSON output follows `planr-pipeline/schemas/v1.0.0/graph.schema.json`.
+
+---
+
 ### `planr config show`
 
 Display the current project configuration including AI provider, model, and API key status.
