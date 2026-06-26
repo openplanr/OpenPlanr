@@ -34,6 +34,15 @@ The split is non-negotiable. **The plugin refuses to auto-chain PO Phase → DEV
 
 All three adapters share the same `.planr/specs/SPEC-NNN-{slug}/` artifact contract — a SPEC authored on one runtime is consumable by any other. See [`docs/compatibility-matrix.md`](docs/compatibility-matrix.md) for the full parity table and per-runtime caveats; see [`docs/protocol/`](docs/protocol/) for the runtime-agnostic protocol spec.
 
+## Ecosystem operations
+
+OpenPlanr is a four-repo ecosystem. For the operating model, see:
+
+- [`docs/ecosystem-guide.md`](docs/ecosystem-guide.md) — which surface plans, ships, routes, and installs.
+- [`docs/ownership-map.md`](docs/ownership-map.md) — which repo owns each contract.
+- [`docs/doctor.md`](docs/doctor.md) — `npm run doctor`, strict mode, JSON output, and release checks.
+- [`docs/release-checklist.md`](docs/release-checklist.md) — release order, required commands, and rollback notes.
+
 ## Install
 
 ```

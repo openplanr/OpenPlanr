@@ -21,3 +21,5 @@ node_modules/
 
 # OpenPlanr's own dogfooding workspace — internal sprint planning, not part of plugin distribution
 .planr/
+!conformance/fixtures/dashboard-graph/.planr/
+!conformance/fixtures/dashboard-graph/.planr/config.json

@@ -4,6 +4,21 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.24.9] — 2026-06-23
+
+### Added — ecosystem doctor and release discipline
+
+This patch adds the full `npm run doctor` health check for local environment,
+version alignment, protocol docs, sibling repos, daemon state, credentials, and
+release audits. `npm run doctor:versions` now delegates to the same checker with
+`--versions-only`, while `--strict`, `--release`, and `--json` support merge and
+release automation.
+
+The release also adds tracked ownership and release discipline docs:
+`docs/ownership-map.md`, `docs/release-checklist.md`, `docs/doctor.md`, and
+`docs/ecosystem-guide.md`. Markdown contract tests now guard those docs so the
+four-repo ownership model stays visible.
+
 ## [0.24.8] — 2026-06-22
 
 ### Changed — release-train stabilization and drift guards

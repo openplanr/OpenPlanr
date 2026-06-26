@@ -15,7 +15,7 @@
 ```yaml
 schemaVersion: "1.0.0"
 AppName: "planr-pipeline"
-Version: "0.24.8"
+Version: "0.24.9"
 Description: "Spec-driven AI software factory plugin for Claude Code (OpenPlanr Protocol v1.0.0 canonical adapter)"
 Repository: "https://github.com/openplanr/planr-pipeline"
 ```

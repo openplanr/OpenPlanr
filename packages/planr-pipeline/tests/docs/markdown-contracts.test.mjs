@@ -92,3 +92,36 @@ test('Claude Code model strings rely on the default context window', () => {
   assert.match(read('agents/frontend-agent.md'), /^model:\s*"?claude-opus-4-8"?$/m);
   assert.match(read('agents/backend-agent.md'), /^model:\s*"?claude-opus-4-8"?$/m);
 });
+
+test('ownership map names every ecosystem repo', () => {
+  const ownership = read('docs/ownership-map.md');
+
+  for (const repo of ['openplanr/OpenPlanr', 'openplanr/planr-pipeline', 'openplanr/skills', 'openplanr/marketplace']) {
+    assert.match(ownership, new RegExp(repo.replace('/', '\\/')));
+  }
+});
+
+test('release checklist covers the four-repo release train', () => {
+  const checklist = read('docs/release-checklist.md');
+
+  for (const repo of ['planr-pipeline', 'marketplace', 'skills', 'OpenPlanr']) {
+    assert.match(checklist, new RegExp(`\\b${repo}\\b`));
+  }
+});
+
+test('doctor docs cover strict release and json modes', () => {
+  const doctor = read('docs/doctor.md');
+
+  assert.match(doctor, /--strict/);
+  assert.match(doctor, /--release/);
+  assert.match(doctor, /--json/);
+});
+
+test('ecosystem guide uses canonical surface labels', () => {
+  const guide = read('docs/ecosystem-guide.md');
+
+  assert.match(guide, /OpenPlanr plans/);
+  assert.match(guide, /planr-pipeline ships/);
+  assert.match(guide, /openplanr skill routes/);
+  assert.match(guide, /marketplace installs/);
+});

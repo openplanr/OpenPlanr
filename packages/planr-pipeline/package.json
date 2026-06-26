@@ -1,6 +1,6 @@
 {
   "name": "planr-pipeline",
-  "version": "0.24.8",
+  "version": "0.24.9",
   "private": true,
   "type": "module",
   "description": "OpenPlanr Protocol — Claude Code plugin conformance + docs",
@@ -10,9 +10,11 @@
   "scripts": {
     "test": "npm run test:schema && npm run test:orchestration && npm run test:docs && npm run test:design && npm run test:design-engine && npm run test:dashboard && npm run conformance:design && npm run conformance:design-loop && npm run conformance:dashboard",
     "test:design-engine": "node --test tests/design-engine/auth.test.mjs tests/design-engine/session-feedback.test.mjs tests/design-engine/taste-providers.test.mjs tests/design-engine/board-token.test.mjs tests/design-engine/daemon-registry.test.mjs tests/design-engine/daemon-command.test.mjs tests/design-engine/feedback-resolve.test.mjs tests/design-engine/canvas-wrap.test.mjs tests/collab-review-board.test.mjs",
-    "test:dashboard": "node --test tests/dashboard/graph-equivalence.test.mjs tests/dashboard/server.test.mjs tests/dashboard/watcher.test.mjs tests/dashboard/metadata.test.mjs",
+    "test:dashboard": "node --test tests/dashboard/graph-equivalence.test.mjs tests/dashboard/openplanr-cli-graph-equivalence.test.mjs tests/dashboard/server.test.mjs tests/dashboard/watcher.test.mjs tests/dashboard/metadata.test.mjs",
     "test:docs": "node --test tests/docs/markdown-contracts.test.mjs",
-    "doctor:versions": "node scripts/doctor-versions.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "doctor:versions": "node scripts/doctor.mjs --versions-only",
+    "ecosystem:conformance": "node scripts/ecosystem-conformance.mjs",
     "conformance:native-dispatch": "node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd1-parallel && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd2-advisory-locklist && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd3-dependson && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd4-per-task",
     "conformance:check": "npm run conformance:native-dispatch && npm run conformance:design && npm run conformance:design-loop && npm run conformance:dashboard",
     "conformance:design-loop": "node conformance/verify-design-loop.mjs",

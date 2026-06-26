@@ -1,6 +1,6 @@
 # Compatibility Matrix - OpenPlanr Protocol v1.0.0
 
-> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.24.8.
+> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.24.9.
 
 ## TL;DR
 
@@ -115,4 +115,4 @@ For runtime-operated fixtures, use `conformance/runner.mjs` with `--setup`, then
 
 ---
 
-*OpenPlanr Protocol v1.0.0 - compatibility matrix for planr-pipeline v0.24.8.*
+*OpenPlanr Protocol v1.0.0 - compatibility matrix for planr-pipeline v0.24.9.*

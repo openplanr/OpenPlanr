@@ -46,7 +46,7 @@ test('pipeline-shipped marker rejects qa_gate_status outside enum [passed, faile
 });
 
 test('pipeline-shipped marker rejects pipeline_version that is not semver', () => {
-  const badVersion = { ...valid, pipeline_version: 'v0.24.8' };
+  const badVersion = { ...valid, pipeline_version: 'v0.24.9' };
   const errors = validate(badVersion, schema);
   assert.ok(errors.length > 0, 'expected pipeline_version pattern violation (leading "v" not allowed)');
 });
