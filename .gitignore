@@ -33,6 +33,9 @@ Thumbs.db
 *~
 
 .planr/
+!tests/fixtures/graph-project/
+!tests/fixtures/graph-project/.planr/
+!tests/fixtures/graph-project/.planr/**
 .claude/
 .cursor/
 

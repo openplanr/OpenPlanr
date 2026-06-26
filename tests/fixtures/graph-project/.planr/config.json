@@ -1,0 +1,21 @@
+{
+  "projectName": "graph-fixture",
+  "targets": ["cursor", "claude", "codex"],
+  "outputPaths": {
+    "agile": ".planr",
+    "cursorRules": ".cursor/rules",
+    "claudeConfig": ".",
+    "codexConfig": "."
+  },
+  "idPrefix": {
+    "epic": "EPIC",
+    "feature": "FEAT",
+    "story": "US",
+    "task": "TASK",
+    "quick": "QT",
+    "backlog": "BL",
+    "sprint": "SPRINT",
+    "spec": "SPEC"
+  },
+  "createdAt": "2026-06-23"
+}
