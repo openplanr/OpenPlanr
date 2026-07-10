@@ -4,6 +4,22 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.24.10] — 2026-07-11
+
+### Changed — Analysis tier upgraded to Sonnet 5
+
+The analysis / decomposition agents (`db-agent`, `designer-agent`, `specification-agent`, `qa-agent`, `devops-agent`, `doc-gen-agent`, `entity-scaffold-agent`) now pin `model: claude-sonnet-5`, up from `claude-sonnet-4-6`. The DEV-tier codegen agents (`frontend-agent`, `backend-agent`) remain on `claude-opus-4-8`.
+
+**No context-window suffixes.** All references to the `[1m]` model selector are dropped from the docs and the generated-project `CLAUDE.md` template. Claude Opus 4.8 ships with the 1M-context window as its default, so the suffix is unnecessary — and it is not a valid identifier in agent-manifest frontmatter (which is why it must never appear there). The agent manifests were already suffix-free; this release removes the last stale references in `.claude/commands/audit.md` and `templates/CLAUDE.md.tpl`. `tests/docs/markdown-contracts.test.mjs` enforces the no-suffix contract on the DEV agents.
+
+Adapter mirrors (`AGENTS.md`, `.cursor/rules/*`), docs (`docs/agent-model-map.md`, `docs/rules.md` R3, `docs/pipeline-overview.md`, `docs/protocol/agent-roles.md`), the plan/ship procedures, and the README pinned-strings guidance are all updated in lockstep.
+
+### Internal
+
+- **Refactor:** extracted shared `lib/design/{cli-parser,mime-types,path-util,schema-loader}.mjs` utilities out of the design-engine and dashboard server; consumers rewired, no behavior change (design + dashboard suites green).
+
+**Ecosystem:** the `openplanr` CLI rule templates and the marketing site carry matching Sonnet 5 updates; the marketplace pin advances to 0.24.10.
+
 ## [0.24.9] — 2026-06-23
 
 ### Added — ecosystem doctor and release discipline

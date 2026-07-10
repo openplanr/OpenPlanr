@@ -23,3 +23,10 @@ node_modules/
 .planr/
 !conformance/fixtures/dashboard-graph/.planr/
 !conformance/fixtures/dashboard-graph/.planr/config.json
+
+# Internal audit / analysis reports — generated for local review, not shipped with the plugin
+/CODEBASE-REVIEW.md
+/DEVEX_QUALITY_RISK_REGISTER.md
+/FEATURE_MAP.md
+/PROJECT_KNOWLEDGE.md
+/SYSTEM_ARCHITECTURE.md
