@@ -54,15 +54,9 @@
 
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, unlinkSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
-import { validate } from '../../conformance/json-schema-validate.mjs';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const FEEDBACK_SCHEMA = JSON.parse(
-  readFileSync(join(here, '../../schemas/v1.0.0/design-feedback.schema.json'), 'utf-8'),
-);
+import { assertValid } from '../design/schema-loader.mjs';
 
 export const FEEDBACK_FILE = 'feedback.json';
 export const PENDING_FILE = 'feedback-pending.json';
@@ -289,10 +283,7 @@ export function mergeFeedback(stored, contribution) {
 }
 
 export function assertValidFeedback(feedback) {
-  const errs = validate(feedback, FEEDBACK_SCHEMA);
-  if (errs.length > 0) {
-    throw new Error(`invalid design-feedback: ${errs.map((e) => `${e.path} ${e.rule}`).join('; ')}`);
-  }
+  assertValid(feedback, 'design-feedback');
   if (feedback.regenerated && !feedback.regenerateAction) {
     throw new Error('invalid design-feedback: regenerated=true requires regenerateAction');
   }

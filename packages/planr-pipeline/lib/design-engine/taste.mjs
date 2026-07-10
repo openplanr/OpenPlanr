@@ -7,14 +7,8 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-import { validate } from '../../conformance/json-schema-validate.mjs';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const TASTE_SCHEMA = JSON.parse(
-  readFileSync(join(here, '../../schemas/v1.0.0/taste-profile.schema.json'), 'utf-8'),
-);
+import { assertValid } from '../design/schema-loader.mjs';
 
 export const DIMENSIONS = ['fonts', 'colors', 'layouts', 'aesthetics'];
 const WEEK_MS = 7 * 24 * 3600 * 1000;
@@ -30,11 +24,7 @@ export function emptyProfile() {
 }
 
 export function assertValidProfile(profile) {
-  const errs = validate(profile, TASTE_SCHEMA);
-  if (errs.length > 0) {
-    throw new Error(`invalid taste-profile: ${errs.map((e) => `${e.path} ${e.rule}`).join('; ')}`);
-  }
-  return profile;
+  return assertValid(profile, 'taste-profile');
 }
 
 /** Decayed confidence for one entry, computed at read time. */
@@ -49,7 +39,7 @@ export function loadProfile(path, { now = new Date() } = {}) {
   const profile = existsSync(path)
     ? assertValidProfile(JSON.parse(readFileSync(path, 'utf-8')))
     : emptyProfile();
-  const withEffective = JSON.parse(JSON.stringify(profile));
+  const withEffective = structuredClone(profile);
   for (const dim of DIMENSIONS) {
     for (const entry of withEffective.dimensions[dim]) {
       entry.effective = Math.round(decayedConfidence(entry, now) * 10000) / 10000;
@@ -59,7 +49,7 @@ export function loadProfile(path, { now = new Date() } = {}) {
 }
 
 function stripEffective(profile) {
-  const clean = JSON.parse(JSON.stringify(profile));
+  const clean = structuredClone(profile);
   for (const dim of DIMENSIONS) for (const e of clean.dimensions[dim]) delete e.effective;
   return clean;
 }
@@ -82,7 +72,7 @@ export function updateTaste(profile, { verdict, attributes = {}, sessionId, arti
     throw new Error(`updateTaste: verdict must be approved|rejected, got "${verdict}"`);
   }
   const ts = now.toISOString();
-  const next = JSON.parse(JSON.stringify(stripEffective(profile)));
+  const next = stripEffective(profile);
 
   for (const dim of DIMENSIONS) {
     for (const rawValue of attributes[dim] ?? []) {

@@ -5,15 +5,9 @@
  */
 
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
-import { validate } from '../../conformance/json-schema-validate.mjs';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const SESSION_SCHEMA = JSON.parse(
-  readFileSync(join(here, '../../schemas/v1.0.0/design-session.schema.json'), 'utf-8'),
-);
+import { assertValid } from '../design/schema-loader.mjs';
 
 export function sessionFilePath(sessionDir, variant) {
   return join(sessionDir, `session-${variant}.json`);
@@ -21,11 +15,7 @@ export function sessionFilePath(sessionDir, variant) {
 
 /** Throws with the violation list when a session object is off-schema. */
 export function assertValidSession(session) {
-  const errs = validate(session, SESSION_SCHEMA);
-  if (errs.length > 0) {
-    throw new Error(`invalid design-session: ${errs.map((e) => `${e.path} ${e.rule}`).join('; ')}`);
-  }
-  return session;
+  return assertValid(session, 'design-session');
 }
 
 /**
@@ -64,9 +54,20 @@ export function loadSession(sessionDir, variant) {
   return assertValidSession(JSON.parse(readFileSync(p, 'utf-8')));
 }
 
+export function cloneSession(session) {
+  const { outputPaths, feedbackHistory, briefVersions, regionEdits, ...shallow } = session;
+  return {
+    ...shallow,
+    outputPaths: [...outputPaths],
+    feedbackHistory: [...feedbackHistory],
+    briefVersions: [...briefVersions],
+    regionEdits: regionEdits.map((r) => ({ ...r, pins: [...r.pins] })),
+  };
+}
+
 /** Append a generation round: the artifact it produced (+ optional chain id / feedback). */
 export function appendRound(session, { outputPath, responseId, feedback, brief, now = () => new Date() }) {
-  const next = { ...session };
+  const next = cloneSession(session);
   next.outputPaths = [...session.outputPaths, outputPath];
   if (responseId !== undefined) next.lastResponseId = responseId;
   if (feedback) next.feedbackHistory = [...session.feedbackHistory, feedback];
@@ -79,10 +80,10 @@ export function appendRound(session, { outputPath, responseId, feedback, brief, 
 
 /** Record a pin-driven region edit (design-review rounds). */
 export function recordRegionEdit(session, { screen, pins, summary, now = () => new Date() }) {
-  const next = { ...session };
+  const next = cloneSession(session);
   const edit = { at: now().toISOString(), pins, summary };
   if (screen) edit.screen = screen;
-  next.regionEdits = [...session.regionEdits, edit];
+  next.regionEdits.push(edit);
   next.updatedAt = edit.at;
   return assertValidSession(next);
 }

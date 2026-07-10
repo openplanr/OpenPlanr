@@ -34,11 +34,18 @@ function readEnvFileKeys(dir) {
   return found;
 }
 
+const gitIgnoreCache = new Map();
+
 function isGitIgnored(cwd, file) {
+  const key = `${cwd}\x00${file}`;
+  const cached = gitIgnoreCache.get(key);
+  if (cached !== undefined) return cached;
   try {
     execFileSync('git', ['check-ignore', '-q', file], { cwd, stdio: 'ignore' });
+    gitIgnoreCache.set(key, true);
     return true;
   } catch {
+    gitIgnoreCache.set(key, false);
     return false;
   }
 }

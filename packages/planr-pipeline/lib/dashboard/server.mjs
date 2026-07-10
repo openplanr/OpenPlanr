@@ -24,18 +24,20 @@
  */
 
 import { createServer } from 'node:http';
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import {
-  dirname, join, resolve, extname, sep,
+  dirname, join, sep,
 } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { planrHome } from '../design-engine/paths.mjs';
 import { writePidFile } from '../design-engine/server-util.mjs';
+import { MIME } from '../design/mime-types.mjs';
+import { serveStaticFile } from '../design/path-util.mjs';
 import { buildGraph, getNode as engineGetNode, detectMode } from './graph-engine.mjs';
 import { createWatcher } from './watcher.mjs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const here = dirname(fileURLToPath(import.meta.url));
 
 export const DEFAULT_PORT = 7473;
 
@@ -63,7 +65,7 @@ let versionCache;
 function readPackageVersion() {
   if (versionCache !== undefined) return versionCache;
   try {
-    const pkgPath = join(__dirname, '..', '..', 'package.json');
+    const pkgPath = join(here, '..', '..', 'package.json');
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
     versionCache = typeof pkg.version === 'string' ? pkg.version : '0.0.0';
   } catch {
@@ -90,22 +92,7 @@ function readGitBranch(repoRoot) {
 }
 
 /** Static client app directory served at `/`. */
-const APP_DIR = join(__dirname, 'app');
-
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.woff2': 'font/woff2',
-  '.map': 'application/json; charset=utf-8',
-};
+const APP_DIR = join(here, 'app');
 
 /** Per-process state dir for the dashboard daemon (mirrors design-daemon). */
 export function dashboardDir(env = process.env) {
@@ -116,25 +103,6 @@ const json = (res, code, body) => {
   res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(body));
 };
-
-/** Serve a static file from APP_DIR (or a caller-supplied appDir), traversal-guarded. */
-function serveStatic(res, appDir, relPath) {
-  if (!existsSync(appDir)) {
-    return json(res, 404, { error: 'app directory not found' });
-  }
-  // realpath BEFORE resolve: tmp dirs can be symlinks; compare like with like.
-  const realDir = realpathSync(appDir);
-  const rel = relPath && relPath !== '/' ? relPath.replace(/^\/+/, '') : 'index.html';
-  const abs = resolve(realDir, rel);
-  if (abs !== realDir && !abs.startsWith(realDir + sep)) {
-    return json(res, 403, { error: 'path traversal blocked' });
-  }
-  if (!existsSync(abs)) return json(res, 404, { error: `not found: ${rel}` });
-  res.writeHead(200, {
-    'content-type': MIME[extname(abs).toLowerCase()] ?? 'application/octet-stream',
-  });
-  return res.end(readFileSync(abs));
-}
 
 /**
  * Apply a watcher patch (`{ updated, added, removed, edges }`) to an in-memory
@@ -251,12 +219,12 @@ export function createDashboardServer({
       }
 
       if (req.method === 'GET' || req.method === 'HEAD') {
-        return serveStatic(res, appDir, pathname);
+        return serveStaticFile(res, appDir, pathname, MIME);
       }
 
       return json(res, 404, { error: 'not found' });
     } catch (err) {
-      return json(res, 500, { error: String((err && err.message) ?? err) });
+      return json(res, 500, { error: String(err?.message ?? err) });
     }
   });
 

@@ -16,21 +16,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, basename, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { validateJson } from '../../conformance/json-schema-validate.mjs';
-
-const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(here, '..', '..');
-
-/** Lazy-load + cache the Graph schema once. */
-let graphSchemaCache = null;
-function graphSchema() {
-  if (!graphSchemaCache) {
-    graphSchemaCache = JSON.parse(
-      readFileSync(join(repoRoot, 'schemas', 'v1.0.0', 'graph.schema.json'), 'utf-8'),
-    );
-  }
-  return graphSchemaCache;
-}
+import { validate } from '../design/schema-loader.mjs';
 
 // ── Minimal YAML frontmatter parser (stdlib only) ─────────────────────────
 //
@@ -472,7 +458,7 @@ export function readGraph(planrDir, opts = {}) {
   const graph = { nodes, edges };
 
   if (shouldValidate) {
-    const errs = validateJson(graph, graphSchema());
+    const errs = validate(graph, 'graph');
     if (errs.length > 0) {
       const first = errs.slice(0, 3).map((e) => `${e.path}: ${e.rule} — ${e.detail}`).join('; ');
       throw new Error(`graph-reader produced a graph that fails graph.schema.json: ${first}`);

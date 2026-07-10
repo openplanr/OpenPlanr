@@ -9,9 +9,9 @@
   },
   "scripts": {
     "test": "npm run test:schema && npm run test:orchestration && npm run test:docs && npm run test:design && npm run test:design-engine && npm run test:dashboard && npm run conformance:design && npm run conformance:design-loop && npm run conformance:dashboard",
-    "test:design-engine": "node --test tests/design-engine/auth.test.mjs tests/design-engine/session-feedback.test.mjs tests/design-engine/taste-providers.test.mjs tests/design-engine/board-token.test.mjs tests/design-engine/daemon-registry.test.mjs tests/design-engine/daemon-command.test.mjs tests/design-engine/feedback-resolve.test.mjs tests/design-engine/canvas-wrap.test.mjs tests/collab-review-board.test.mjs",
-    "test:dashboard": "node --test tests/dashboard/graph-equivalence.test.mjs tests/dashboard/openplanr-cli-graph-equivalence.test.mjs tests/dashboard/server.test.mjs tests/dashboard/watcher.test.mjs tests/dashboard/metadata.test.mjs",
-    "test:docs": "node --test tests/docs/markdown-contracts.test.mjs",
+    "test:design-engine": "node --test tests/design-engine/ tests/collab-review-board.test.mjs",
+    "test:dashboard": "node --test tests/dashboard/",
+    "test:docs": "node --test tests/docs/",
     "doctor": "node scripts/doctor.mjs",
     "doctor:versions": "node scripts/doctor.mjs --versions-only",
     "ecosystem:conformance": "node scripts/ecosystem-conformance.mjs",
@@ -19,9 +19,9 @@
     "conformance:check": "npm run conformance:native-dispatch && npm run conformance:design && npm run conformance:design-loop && npm run conformance:dashboard",
     "conformance:design-loop": "node conformance/verify-design-loop.mjs",
     "conformance:dashboard": "node conformance/verify-dashboard.mjs",
-    "test:schema": "node --test tests/schema/spec-schema.test.mjs tests/schema/story-schema.test.mjs tests/schema/task-schema.test.mjs tests/schema/stack-schema.test.mjs tests/schema/pipeline-shipped-schema.test.mjs tests/schema/design-manifest-schema.test.mjs tests/schema/design-loop-schemas.test.mjs tests/schema/graph-schema.test.mjs",
-    "test:orchestration": "node --test tests/orchestration/r1-gate.test.mjs tests/orchestration/max-iterations.test.mjs tests/orchestration/per-task-error-report.test.mjs tests/orchestration/dry-run.test.mjs",
-    "test:design": "node --test tests/design/escape.test.mjs tests/design/recommendFormat.test.mjs tests/design/screens.test.mjs tests/design/manifest.test.mjs tests/design/walkthroughNav.test.mjs tests/design/interactivity.test.mjs tests/design/tokens.test.mjs tests/design/lint.test.mjs tests/design/contrast.test.mjs tests/design/designSystem.test.mjs",
+    "test:schema": "node --test tests/schema/",
+    "test:orchestration": "node --test tests/orchestration/",
+    "test:design": "node --test tests/design/",
     "conformance:design": "node conformance/verify-design-assets.mjs"
   }
 }

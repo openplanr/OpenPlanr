@@ -15,28 +15,16 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { validateJson } from '../../conformance/json-schema-validate.mjs';
+import { validate } from '../design/schema-loader.mjs';
 import { readGraph, readNode } from './graph-reader.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(here, '..', '..');
 
 /** Lowest planr CLI version that emits the graph/status --json the dashboard consumes. */
 export const CLI_GRAPH_MIN_VERSION = '1.7.2';
-
-let graphSchemaCache = null;
-function graphSchema() {
-  if (!graphSchemaCache) {
-    graphSchemaCache = JSON.parse(
-      readFileSync(join(repoRoot, 'schemas', 'v1.0.0', 'graph.schema.json'), 'utf-8'),
-    );
-  }
-  return graphSchemaCache;
-}
 
 // ── Version-floor check (same semantics as commands/status.md A.1) ──────────
 
@@ -116,7 +104,7 @@ export function tryDelegate(planrDir, run = defaultRun) {
     }
     const graph = normalizeDelegateOutput(parsed);
     if (!graph) continue;
-    const errs = validateJson(graph, graphSchema());
+    const errs = validate(graph, 'graph');
     if (errs.length === 0) return graph;
   }
   return null;

@@ -43,26 +43,21 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { flag } from '../lib/design/cli-parser.mjs';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const __repoRoot = resolve(__dirname, '..');
 const VALID_RUNTIMES = new Set(['claude-code', 'cursor', 'codex']);
 
 // ── arg parsing ─────────────────────────────────────────────────────────
 const args = process.argv.slice(2);
-const flag = (name) => {
-  const i = args.indexOf(`--${name}`);
-  if (i === -1) return null;
-  const next = args[i + 1];
-  return next && !next.startsWith('--') ? next : true;
-};
-
-const runtime = flag('runtime');
-const wantSetup = flag('setup') === true;
-const wantVerifyPO = flag('verify-po') === true;
-const wantVerifyShip = flag('verify-ship') === true;
-const validateSchemaArg = flag('validate-schema');
+const runtime = flag(args, 'runtime');
+const wantSetup = flag(args, 'setup') === true;
+const wantVerifyPO = flag(args, 'verify-po') === true;
+const wantVerifyShip = flag(args, 'verify-ship') === true;
+const validateSchemaArg = flag(args, 'validate-schema');
 const wantValidateSchema = validateSchemaArg !== null && validateSchemaArg !== false;
-const projectDir = typeof flag('dir') === 'string' ? flag('dir') : null;
+const projectDir = typeof flag(args, 'dir') === 'string' ? flag(args, 'dir') : null;
 
 if (!runtime || !VALID_RUNTIMES.has(runtime)) {
   console.error(

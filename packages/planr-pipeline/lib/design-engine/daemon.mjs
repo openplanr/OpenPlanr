@@ -37,11 +37,13 @@
 
 import { createServer } from 'node:http';
 import {
-  existsSync, mkdirSync, readFileSync, writeFileSync, realpathSync,
+  existsSync, mkdirSync, readFileSync, writeFileSync,
 } from 'node:fs';
-import { join, resolve, extname, sep } from 'node:path';
+import { join, resolve } from 'node:path';
 
 import { daemonDir } from './paths.mjs';
+import { MIME } from '../design/mime-types.mjs';
+import { serveStaticFile } from '../design/path-util.mjs';
 import {
   clampPin, assertValidFeedback, mergeFeedback, normalizeLegacy, isDeleteMarker,
   FEEDBACK_FILE, PENDING_FILE,
@@ -60,18 +62,6 @@ export {
  * daemon started before this field existed reports no version → treated as stale.
  */
 export const DAEMON_VERSION = 2;
-
-const MIME = {
-  '.html': 'text/html; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp',
-  '.json': 'application/json; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-};
 
 /** Cap on a request body (bytes) — a feedback round is small; this bounds memory per request. */
 const MAX_BODY_SIZE = 5_000_000;
@@ -428,17 +418,9 @@ export function createDaemon({ env = process.env } = {}) {
         // static: /boards/<id>/ → board.html, else the named file (traversal-guarded).
         // HEAD is honored like GET (Node omits the body automatically).
         if (req.method === 'GET' || req.method === 'HEAD') {
-          const rel = parts.slice(2).join('/') || 'board.html';
-          // realpath BEFORE resolving: macOS tmp dirs are symlinks (/var → /private/var),
-          // and the guard must compare like with like.
-          const realDir = realpathSync(dir);
-          const abs = resolve(realDir, rel);
-          if (abs !== realDir && !abs.startsWith(realDir + sep)) {
-            return json(res, 403, { error: 'path traversal blocked' });
-          }
-          if (!existsSync(abs)) return json(res, 404, { error: `not found: ${rel}` });
-          res.writeHead(200, { 'content-type': MIME[extname(abs).toLowerCase()] ?? 'application/octet-stream' });
-          return res.end(readFileSync(abs));
+          const rel = parts.slice(2).join('/');
+          serveStaticFile(res, dir, rel || 'board.html', MIME);
+          return;
         }
       }
 
@@ -480,6 +462,17 @@ export async function findRunningDaemon({ env = process.env, fetchImpl = fetch }
     /* dead daemon — caller starts a fresh one (rule 14) */
   }
   return null;
+}
+
+/**
+ * Kill a running daemon process (identified by findRunningDaemon). Best-effort:
+ * sends SIGTERM, waits 200ms for the OS to release the listener.
+ * Safe to call with null/undefined running.
+ */
+export async function killRunningDaemon(running) {
+  if (!running || !running.pid) return;
+  try { process.kill(running.pid); } catch { /* already gone, or not ours */ }
+  await new Promise((r) => setTimeout(r, 200));
 }
 
 // CLI entry: `node daemon.mjs --serve [port]`

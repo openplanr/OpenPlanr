@@ -33,10 +33,11 @@ import * as openai from './providers/openai.mjs';
 import { sheetContract, contractInstructions, validateSheet } from './providers/claudeSvg.mjs';
 import { createSession, loadSession, saveSession, appendRound } from './session.mjs';
 import { renderBoardHtml } from './board.mjs';
-import { findRunningDaemon, DAEMON_VERSION, createDaemon } from './daemon.mjs';
+import { findRunningDaemon, DAEMON_VERSION, createDaemon, killRunningDaemon } from './daemon.mjs';
 import { publicBoardId } from './board-token.mjs';
 import { loadProfile, saveProfile, updateTaste, detectConflicts } from './taste.mjs';
 import { imageDimensions, buildImageCanvasData, wrapInCanvas, discoverVariants } from './canvas-wrap.mjs';
+import { parseArgs } from '../design/cli-parser.mjs';
 
 const here = fileURLToPath(import.meta.url);
 // templates/design lives at the plugin root (cli.mjs is at lib/design-engine/).
@@ -73,21 +74,7 @@ function materializeCanvasArtifact(sessionDir, variantId, imageFile, label) {
   }
 }
 
-// ── arg parsing (tiny, deliberate) ──────────────────────────────────────────
-function parseArgs(argv) {
-  const args = { _: [] };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a.startsWith('--')) {
-      const key = a.slice(2);
-      const next = argv[i + 1];
-      if (next === undefined || next.startsWith('--')) args[key] = true;
-      else { args[key] = next; i++; }
-    } else args._.push(a);
-  }
-  return args;
-}
-
+// ── helpers ──────────────────────────────────────────────────────────────────
 const out = (obj) => process.stdout.write(`${JSON.stringify(obj, null, 2)}\n`);
 const errLine = (s) => process.stderr.write(`${s}\n`);
 const fail = (msg, code = 1) => { errLine(`✗ ${msg}`); process.exit(code); };
@@ -350,10 +337,7 @@ async function ensureDaemon() {
   // it predates the non-enumerating index. Reusing it would keep serving the old
   // behaviour, so stop it and spawn a fresh one. (Rule 14 still holds: the daemon
   // outlives the agent; we only recycle it across a version change.)
-  if (running && running.pid) {
-    try { process.kill(running.pid); } catch { /* already gone, or not ours */ }
-    await new Promise((r) => setTimeout(r, 200)); // let the OS release the listener
-  }
+  await killRunningDaemon(running);
   const daemonPath = join(here, '..', 'daemon.mjs');
   const child = spawn(process.execPath, [daemonPath, '--serve'], { detached: true, stdio: ['ignore', 'ignore', 'pipe'] });
   const port = await new Promise((resolvePort, reject) => {
@@ -394,10 +378,7 @@ async function cmdDaemon(args) {
     out({ ok: true, reused: true, port: running.port });
     return;
   }
-  if (running && running.pid) {
-    try { process.kill(running.pid); } catch { /* already gone, or not ours */ }
-    await new Promise((r) => setTimeout(r, 200)); // let the OS release the listener
-  }
+  await killRunningDaemon(running);
   const port = await createDaemon().listen();
   // The listening server keeps this process alive — run it as a background task so the board
   // outlives the short-lived `board` call. The agent parses this exact line for the port.
@@ -498,7 +479,7 @@ async function cmdFeedback(args) {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ kind: 'submit', feedback: contribution }),
     }).then((r) => r.json().then((b) => ({ ok: r.ok, error: b && b.error })))
-      .catch((e) => ({ ok: false, error: String(e && e.message ? e.message : e) }));
+      .catch((e) => ({ ok: false, error: String(e?.message ?? e) }));
     if (!res.ok || res.error) fail(`feedback resolve: daemon rejected the update — ${res.error || 'request failed'}`);
   }
 
