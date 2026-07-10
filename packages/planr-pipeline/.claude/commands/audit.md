@@ -216,7 +216,7 @@ For each of the 9 agents, produce a one-page agent contract:
 
 ```
 AGENT: backend-agent
-MODEL: claude-opus-4-8[1m] (codegen tier)
+MODEL: claude-opus-4-8 (codegen tier)
 PHASE: 3 (DEV)
 SINGLE RESPONSIBILITY: Generate backend implementation code for Type=Tech tasks
 INPUT CONTRACT:

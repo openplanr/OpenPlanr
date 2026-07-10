@@ -2,7 +2,7 @@
 name: doc-gen-agent
 description: Use this agent when generating human-readable documentation under Docs/feat-{name}/ from User Stories, tasks, generated code, and qa-report. Cross-references spec vs code and flags drift. No code generation.
 tools: Read, Glob, Grep, Write
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 ---
 
 # Doc-Gen Agent

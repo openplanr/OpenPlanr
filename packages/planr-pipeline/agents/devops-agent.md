@@ -2,7 +2,7 @@
 name: devops-agent
 description: Use this agent when generating infrastructure config (docker-compose.yml, Dockerfiles, .env.example, CI workflow stubs) from the project's stack. Generates files only — never deploys, never pushes images, never calls cloud APIs.
 tools: Read, Glob, Write, Edit
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 ---
 
 # DevOps Agent

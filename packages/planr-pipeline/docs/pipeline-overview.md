@@ -10,7 +10,7 @@ The pipeline enforces a **hard separation** between two activities:
 
 | Activity | Phase | Who | Agents |
 |----------|-------|-----|--------|
-| Understand & Decompose | PO Phase (Step 1) | PO + Tech Lead review | Sonnet 4.6 |
+| Understand & Decompose | PO Phase (Step 1) | PO + Tech Lead review | Sonnet 5 |
 | Build & Generate | DEV Phase (Step 3) | Tech Lead review | Opus 4.8 |
 
 A **mandatory human checkpoint** exists between them.
@@ -66,12 +66,12 @@ rule, manifest); conformance in `conformance/verify-design-assets.mjs` + `tests/
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  STEP 0 — DB PREPARATION (once per project, optional)                       │
 │                                                                             │
-│  0.1  DB Agent (Sonnet 4.6, READ-ONLY)                                     │
+│  0.1  DB Agent (Sonnet 5, READ-ONLY)                                     │
 │       SQL: SELECT on INFORMATION_SCHEMA                                     │
 │       Mongo: driver-based collection introspection                          │
 │       → output/db/schema.json                                               │
 │                                                                             │
-│  0.2  Entity Scaffold Agent (Sonnet 4.6) — optional manual dispatch          │
+│  0.2  Entity Scaffold Agent (Sonnet 5) — optional manual dispatch          │
 │       ORM entity / DbContext skeleton from schema.json → output/src/      │
 │       → output/src/Entities/ + output/src/DbContext/                        │
 └──────────────────────────────────┬──────────────────────────────────────────┘
@@ -83,17 +83,17 @@ rule, manifest); conformance in `conformance/verify-design-assets.mjs` + `tests/
 │  Trigger: /planr-pipeline:plan {name}                                │
 │                                                                             │
 │  Chain (in order):                                                          │
-│  ① DB Agent (Sonnet 4.6) — conditional: DatabaseType set, no fresh schema  │
+│  ① DB Agent (Sonnet 5) — conditional: DatabaseType set, no fresh schema  │
 │    stack.md + DB env vars                                                   │
 │    → output/db/schema.json                                                  │
 │                         │                                                   │
 │                         ▼                                                   │
-│  ② Designer Agent (Sonnet 4.6) — conditional on ≥1 PNG for this feature    │
+│  ② Designer Agent (Sonnet 5) — conditional on ≥1 PNG for this feature    │
 │    input/ui/feat-{name}/*.png OR PNGs listed in spec UIFiles                │
 │    → output/feats/feat-{name}/design-spec.md                                │
 │                         │                                                   │
 │                         ▼                                                   │
-│  ③ Specification Agent (Sonnet 4.6)                                         │
+│  ③ Specification Agent (Sonnet 5)                                         │
 │    spec + design-spec + stack + schema                                      │
 │    → output/feats/feat-{name}/                                              │
 │       ├── design-spec.md                                                    │
@@ -144,9 +144,9 @@ rule, manifest); conformance in `conformance/verify-design-assets.mjs` + `tests/
 │                         ▼                                                   │
 │  STEP 3.5 — POST-BUILD AGENTS (after all DEV tasks settle)                 │
 │                                                                             │
-│  ④ QA Agent (Sonnet 4.6) — gates DEV output against task DoD               │
-│  ⑤ DevOps Agent (Sonnet 4.6, optional) — generates docker-compose / CI    │
-│  ⑥ Doc-Gen Agent (Sonnet 4.6, optional) — writes Docs/ from US + tasks    │
+│  ④ QA Agent (Sonnet 5) — gates DEV output against task DoD               │
+│  ⑤ DevOps Agent (Sonnet 5, optional) — generates docker-compose / CI    │
+│  ⑥ Doc-Gen Agent (Sonnet 5, optional) — writes Docs/ from US + tasks    │
 │                                                                             │
 │                         ▼                                                   │
 │            /snapshot → CLAUDE.md updated                                    │

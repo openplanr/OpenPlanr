@@ -2,7 +2,7 @@
 name: qa-agent
 description: Use this agent when verifying a completed DEV phase against task contracts. Walks each task DoD, runs build/test commands, surfaces error-reports, and writes a single qa-report.md. Read-only on src; only writes the QA report.
 tools: Read, Glob, Grep, Bash(git diff:*), Bash(npm:*), Bash(pnpm:*), Bash(yarn:*), Bash(node:*), Write
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 ---
 
 # QA Agent

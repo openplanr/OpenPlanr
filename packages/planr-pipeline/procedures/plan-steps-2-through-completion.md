@@ -12,7 +12,7 @@ Run subagents sequentially. Each subagent's output is consumed by the next.
 
 - **Skip** if `output/db/schema.json` exists AND was generated within the last 24h AND user did not pass `--rescan`.
 - **Skip** if no `DatabaseType` in stack.md.
-- Otherwise: delegate to the **db-agent** subagent (Sonnet 4.6, READ-ONLY).
+- Otherwise: delegate to the **db-agent** subagent (Sonnet 5, READ-ONLY).
 - Output: `output/db/schema.json`.
 
 ### 2.2 — Use the **designer-agent** subagent (conditional)

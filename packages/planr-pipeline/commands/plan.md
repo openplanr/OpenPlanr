@@ -93,7 +93,7 @@ Then **execute** `${CLAUDE_PLUGIN_ROOT}/procedures/read-clarifications.md`. If a
 
 ### Step 0.2 — Entity scaffold (optional; **not** part of the default Step 2 chain)
 
-After **`output/db/schema.json`** exists, if the Tech Lead needs ORM entities / DbContext (or stack-equivalent) under **`output/src/`** *before* DEV tasks: dispatch **`entity-scaffold-agent`** — **`${CLAUDE_PLUGIN_ROOT}/agents/entity-scaffold-agent.md`** (`claude-sonnet-4-6`). **Do not** use **`backend-agent`** for Step 0.2 — **`backend-agent`** is **Step 3** Tech task codegen only (`/planr-pipeline:ship`).
+After **`output/db/schema.json`** exists, if the Tech Lead needs ORM entities / DbContext (or stack-equivalent) under **`output/src/`** *before* DEV tasks: dispatch **`entity-scaffold-agent`** — **`${CLAUDE_PLUGIN_ROOT}/agents/entity-scaffold-agent.md`** (`claude-sonnet-5`). **Do not** use **`backend-agent`** for Step 0.2 — **`backend-agent`** is **Step 3** Tech task codegen only (`/planr-pipeline:ship`).
 
 ---
 

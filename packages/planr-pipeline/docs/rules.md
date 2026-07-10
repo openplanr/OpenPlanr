@@ -58,10 +58,10 @@ with no PNG would still yield `tasks_per_us = 1` and no UI task.)
 
 ### R3 — Model Assignments Are Fixed
 ```
-Sonnet 4.6 → DB Agent, Designer Agent, Specification Agent, Entity Scaffold Agent
+Sonnet 5 → DB Agent, Designer Agent, Specification Agent, Entity Scaffold Agent
 Opus 4.8   → Frontend Agent, Backend Agent
 ```
-Rationale: Sonnet 4.6 is sufficient for analysis, decomposition, and **structured** schema→scaffold output (Entity Scaffold Agent — Step 0.2). Opus 4.8 is required for exploratory multi-file DEV codegen (Frontend + Backend task implementation).
+Rationale: Sonnet 5 is sufficient for analysis, decomposition, and **structured** schema→scaffold output (Entity Scaffold Agent — Step 0.2). Opus 4.8 is required for exploratory multi-file DEV codegen (Frontend + Backend task implementation).
 Never swap these without updating all agent frontmatter files and `docs/agent-model-map.md`.
 
 ---

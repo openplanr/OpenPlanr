@@ -2,7 +2,7 @@
 name: specification-agent
 description: Use this agent when decomposing a functional spec into User Stories + tasks. Reads spec/stack/schema/design and writes the full feature arborescence to the mode-specific output location. No code generation.
 tools: Read, Glob, Grep, Write
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 ---
 
 # Specification Agent

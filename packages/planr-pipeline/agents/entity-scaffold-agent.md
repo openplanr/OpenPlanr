@@ -2,7 +2,7 @@
 name: entity-scaffold-agent
 description: Step 0.2 only — generate ORM entity / DbContext (or equivalent) scaffolding from output/db/schema.json into output/src/. Not for `/ship` Tech tasks; use backend-agent for those.
 tools: Read, Glob, Grep, Edit, Write, Bash(npm:*), Bash(npx:*), Bash(node:*)
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 ---
 
 # Entity Scaffold Agent

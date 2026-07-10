@@ -85,7 +85,7 @@ Determine `{tasks_to_run}` multiset:
 | **Tokens per task (output)** | ~3k per Create file + ~1k per Modify file |
 | **QA gate** | ~30k input (reads all task specs + generated source + runs build/test) |
 | **DevOps / Doc-Gen** | ~15k each (Sonnet, skipped if flagged) |
-| **Dollar cost** | Opus 4.8: ~$15/M input + ~$75/M output *(indicative — verify against the current Anthropic price card)*. Sonnet 4.6: ~$3/M input + ~$15/M output. |
+| **Dollar cost** | Opus 4.8: ~$15/M input + ~$75/M output *(indicative — verify against the current Anthropic price card)*. Sonnet 5: ~$3/M input + ~$15/M output. |
 | **Wall-clock time** | `multi-task`: tasks run **concurrently** → ~1.5 min × the **longest `dependsOn` chain depth**, NOT the task count. A flat 6-task feature (no chains) is ~1.5–2 min, not ~9. `per-task`: ~2.5 min/task **summed** (sequential + re-invoke overhead). |
 
 Echo a structured estimate:
@@ -103,7 +103,7 @@ COST ESTIMATE — {SLUG}
   ────────────────────────────────────────────────────────────
   Subtotal    {dispatch_count} tasks           <sum>   <sum>
 
-  Post-DEV    QA (Sonnet 4.6){" + DevOps" if not skipped}{" + Doc-Gen" if not skipped}
+  Post-DEV    QA (Sonnet 5){" + DevOps" if not skipped}{" + Doc-Gen" if not skipped}
 
   Est. tokens:  ~{min_input}k–{max_input}k input / ~{min_output}k–{max_output}k output
   Est. cost:    ${min_cost}–${max_cost}

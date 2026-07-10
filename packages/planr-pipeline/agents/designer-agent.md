@@ -2,7 +2,7 @@
 name: designer-agent
 description: Use this agent when PNG mockups for a feature need to be analyzed into a structured design specification. Vision-based extraction of colors, typography, components, and layout into a 10-section design-spec.md.
 tools: Read, Glob, Write
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 ---
 
 # Designer Agent

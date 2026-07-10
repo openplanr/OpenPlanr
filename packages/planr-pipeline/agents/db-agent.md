@@ -2,7 +2,7 @@
 name: db-agent
 description: Use this agent when scanning a live database schema. READ-ONLY introspection that produces output/db/schema.json from PostgreSQL, MySQL, MSSQL, SQLite, or MongoDB.
 tools: Read, Grep, Glob, Bash(psql:*), Bash(mysql:*), Bash(sqlite3:*), Bash(mongosh:*), Bash(mongo:*), Write
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 ---
 
 # DB Agent

@@ -6,7 +6,7 @@
 
 > **Phase:** Step 0.2 — optional **manual** scaffold (not in default `plan`/`ship` chains)
 > **Trigger:** Tech Lead after `output/db/schema.json` exists, when ORM entities / DbContext under `output/src/` are needed before DEV tasks
-> **Model (canonical):** Sonnet 4.6 — structured schema→scaffold mapping
+> **Model (canonical):** Sonnet 5 — structured schema→scaffold mapping
 
 ## Purpose
 
