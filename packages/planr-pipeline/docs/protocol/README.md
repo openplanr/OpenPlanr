@@ -1,7 +1,7 @@
 # OpenPlanr Protocol
 
 > Version: **1.0.0**
-> Status: **stable** for schemaVersion `1.0.0`. Current canonical executor docs are verified against planr-pipeline v0.24.9.
+> Status: **stable** for schemaVersion `1.0.0`. Current canonical executor docs are verified against planr-pipeline v0.24.10.
 > Ownership: `planr-pipeline/schemas/v1.0.0/` is canonical for this cleanup cycle; downstream CLI, skill, and marketplace docs mirror it.
 
 The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI development. It defines:
