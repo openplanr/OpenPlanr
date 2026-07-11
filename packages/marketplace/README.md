@@ -18,7 +18,7 @@ Then install any of the plugins below:
 
 | Plugin | Version | Description |
 |---|---|---|
-| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.24.9 | Spec-driven AI factory with specialized subagents, design generation/review, sync, dashboard, conformance checks, and tool-layer rule enforcement. Canonical Claude Code adapter for [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol); Cursor and Codex use generated OpenPlanr rules. |
+| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.24.10 | Spec-driven AI factory with specialized subagents, design generation/review, sync, dashboard, conformance checks, and tool-layer rule enforcement. Canonical Claude Code adapter for [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol); Cursor and Codex use generated OpenPlanr rules. |
 | [`openplanr`](https://github.com/openplanr/skills) | 1.11.0 | OpenPlanr skill — multi-runtime routing playbook teaching Claude when to use the CLI, the pipeline plugin, generated Cursor/Codex rules, or bare `planr` commands. |
 
 Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in the same release-train change.
