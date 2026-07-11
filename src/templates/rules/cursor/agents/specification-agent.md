@@ -85,7 +85,7 @@ Be concrete: file paths, function names, endpoint names, DB table names.
 
 > **Feature:** feat-{name}
 > **Status:** pending
-> **Agent:** Specification Agent (Sonnet 4.6)
+> **Agent:** Specification Agent (Sonnet 5)
 
 ---
 

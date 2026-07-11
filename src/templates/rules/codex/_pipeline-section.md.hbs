@@ -130,7 +130,7 @@ error_reports:
 
 - **R1** — Never auto-chain PLAN → SHIP. Always wait for explicit "ship {feature}".
 - **R2** — Max 2 tasks per US.
-- **R3** — Roles using `Sonnet 4.6` are analysis/decomposition; roles using `Opus 4.8` are codegen. On Codex, use the model picker to match.
+- **R3** — Roles using `Sonnet 5` are analysis/decomposition; roles using `Opus 4.8` are codegen. On Codex, use the model picker to match.
 - **R5** — Files in any task's `Preserve:` list MUST NOT be touched. Conformance test asserts this via `git diff` on Preserve paths.
 - **R6** — Max 3 correction iterations per task.
 - **R7** — Refresh CLAUDE.md (or skip if planr-managed); always write `.pipeline-shipped` marker.
