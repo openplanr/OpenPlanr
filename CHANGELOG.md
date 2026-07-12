@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.9.0
+
+### Minor Changes
+
+- [`05a3088`](https://github.com/openplanr/OpenPlanr/commit/05a3088ef0af8628f0a38562062192c62fbbbf66) Add the unified cross-runtime distribution flow: `planr setup`, runtime adapter
+  lifecycle management, pipeline routing, unified doctor diagnostics, exact
+  runtime locks, and append-only planning provenance. The full
+  `planr-pipeline` package is installed by default with `--minimal` as the
+  planning-only escape hatch. Codex skills and Cursor rules now come from the
+  shared portable registries, while migrations preserve hand-written content,
+  back up exact bytes, retain shared user assets safely, and support conflict-safe
+  rollback and removal.
+
 ## 1.8.1
 
 ### Patch Changes
