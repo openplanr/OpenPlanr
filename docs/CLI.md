@@ -898,18 +898,21 @@ Run `planr setup` before or after init to install runtime workflows safely.
 ### `planr setup`, `planr runtime`, and `planr doctor`
 
 ```bash
-planr setup --runtime auto --scope both
+planr setup
+planr setup --runtime auto --scope user --yes
 planr setup --dry-run
 planr setup --minimal
 planr runtime detect
-planr runtime install codex --scope both
+planr runtime install codex --scope user
 planr runtime rollback
 planr doctor --strict
 ```
 
-Setup previews exact mutations, backs up existing bytes, preserves content outside
-managed markers, writes `.planr/runtime-lock.json`, and is idempotent. `--minimal`
-keeps only the dedicated planning CLI.
+Interactive setup guides workflow, runtime, and scope selection. User scope is
+the default; project scope requires a Git worktree or initialized OpenPlanr
+project. Setup previews mutations, backs up existing bytes, preserves content
+outside managed markers, writes `.planr/runtime-lock.json` only for project
+installations, and is idempotent. `--minimal` keeps only the dedicated planning CLI.
 
 Use `planr pipeline plan|design|design-loop|design-review|ship|status|dashboard|sync|doctor`
 to route the complete delivery workflow.

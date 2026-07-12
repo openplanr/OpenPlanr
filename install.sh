@@ -3,13 +3,11 @@ set -eu
 
 MINIMAL=0
 VERSION="${OPENPLANR_VERSION:-latest}"
-SETUP_ARGS=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --minimal)
       MINIMAL=1
-      SETUP_ARGS="$SETUP_ARGS --minimal"
       ;;
     --version)
       shift
@@ -20,7 +18,8 @@ while [ "$#" -gt 0 ]; do
       VERSION="$1"
       ;;
     *)
-      SETUP_ARGS="$SETUP_ARGS $1"
+      printf '%s\n' "E_INSTALL_OPTION: Unknown installer option: $1" >&2
+      exit 2
       ;;
   esac
   shift
@@ -39,10 +38,17 @@ if [ "$NODE_MAJOR" -lt 20 ]; then
 fi
 
 if [ "$MINIMAL" -eq 1 ]; then
-  npm install --global --omit=optional "openplanr@$VERSION"
+  npm install --global --omit=optional --no-audit --no-fund --loglevel=error "openplanr@$VERSION"
 else
-  npm install --global "openplanr@$VERSION"
+  npm install --global --no-audit --no-fund --loglevel=error "openplanr@$VERSION"
 fi
 
-# shellcheck disable=SC2086
-planr setup $SETUP_ARGS
+INSTALLED_VERSION=$(planr --version)
+printf '\n%s\n\n' "OpenPlanr $INSTALLED_VERSION installed successfully."
+printf '%s\n' 'Next:'
+printf '%s\n' '  cd /path/to/your/project'
+if [ "$MINIMAL" -eq 1 ]; then
+  printf '%s\n' '  planr setup --minimal'
+else
+  printf '%s\n' '  planr setup'
+fi

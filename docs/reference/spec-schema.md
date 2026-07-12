@@ -3,7 +3,7 @@
 This document is the CLI-facing reference for spec-driven mode artifacts. For
 this cleanup cycle, the canonical OpenPlanr Protocol JSON Schemas live in
 [`openplanr/planr-pipeline/schemas/v1.0.0`](https://github.com/openplanr/planr-pipeline/tree/main/schemas/v1.0.0).
-Both **planr CLI** and the **planr-pipeline** Claude Code plugin use this
+Both **planr CLI** and the portable **planr-pipeline** workflow use this
 artifact contract — no conversion adapter, no glue scripts.
 
 When hand-authoring spec artifacts (e.g. AI is unavailable), use the templates

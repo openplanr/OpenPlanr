@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   appendFileSync,
   existsSync,
@@ -12,6 +14,9 @@ import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   applySetup,
+  cleanupHomeProjectInstall,
+  inspectProjectContext,
+  previewHomeProjectCleanup,
   previewSetup,
   removeRuntime,
   rollbackRuntime,
@@ -31,6 +36,8 @@ beforeEach(() => {
   process.env.OPENPLANR_HOME = userHome;
   process.env.OPENPLANR_PIPELINE_ROOT = pipelineRoot;
   mkdirSync(projectDir, { recursive: true });
+  mkdirSync(join(projectDir, '.planr'), { recursive: true });
+  writeFileSync(join(projectDir, '.planr', 'config.json'), '{}\n');
 });
 
 afterEach(() => {
@@ -40,6 +47,97 @@ afterEach(() => {
 });
 
 describe('runtime setup', () => {
+  it('defaults to user scope and never writes project files', async () => {
+    const preview = await previewSetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+    });
+    expect(preview.scope).toBe('user');
+    expect(preview.actions.every((action) => action.scope === 'user')).toBe(true);
+    expect(preview.projectContext).toMatchObject({ valid: true, reason: 'planr' });
+    await applySetup({ projectDir, cliVersion, runtime: 'codex' });
+    expect(existsSync(join(userHome, 'CLAUDE.md'))).toBe(false);
+    expect(existsSync(join(userHome, 'AGENTS.md'))).toBe(false);
+    expect(existsSync(join(userHome, '.planr', 'runtime-lock.json'))).toBe(false);
+  });
+
+  it('accepts nested directories inside a Git worktree as project context', () => {
+    const gitProject = join(root, 'git-project');
+    const nested = join(gitProject, 'packages', 'app');
+    mkdirSync(nested, { recursive: true });
+    execFileSync('git', ['init', gitProject], { stdio: 'ignore' });
+    expect(inspectProjectContext(nested)).toMatchObject({ valid: true, reason: 'git' });
+  });
+
+  it('rejects project writes outside Git and initialized Planr projects', async () => {
+    const arbitrary = join(root, 'arbitrary');
+    mkdirSync(arbitrary);
+    await expect(
+      previewSetup({ projectDir: arbitrary, cliVersion, runtime: 'cursor', scope: 'project' }),
+    ).rejects.toMatchObject({ code: 'E_PROJECT_CONTEXT_REQUIRED' });
+  });
+
+  it('cleans only recorded project-scoped files from a legacy home installation', async () => {
+    const lock = join(userHome, '.planr', 'runtime-lock.json');
+    const content = Buffer.from('{"legacy":true}\n');
+    const agents = join(userHome, 'AGENTS.md');
+    const managed = [
+      '# Hand-written before',
+      '<!-- ##planr-pipeline:begin## (managed by planr CLI; preserve hand-edits outside this block) -->',
+      'managed policy',
+      '<!-- ##planr-pipeline:end## -->',
+      '# Hand-written after',
+      '',
+    ].join('\n');
+    const managedBegin = managed.indexOf('<!-- ##planr-pipeline:begin##');
+    const managedEnd =
+      managed.indexOf('<!-- ##planr-pipeline:end## -->') + '<!-- ##planr-pipeline:end## -->'.length;
+    const managedHash = createHash('sha256')
+      .update(managed.slice(managedBegin, managedEnd))
+      .digest('hex');
+    mkdirSync(join(userHome, '.planr', 'runtime'), { recursive: true });
+    writeFileSync(lock, content);
+    writeFileSync(agents, managed);
+    const key = createHash('sha256').update(resolve(userHome)).digest('hex').slice(0, 16);
+    writeFileSync(
+      join(userHome, '.planr', 'runtime', 'state.json'),
+      `${JSON.stringify({
+        schemaVersion: '1.0.0',
+        projects: {
+          [key]: {
+            projectDir: resolve(userHome),
+            updatedAt: new Date().toISOString(),
+            runtimes: [],
+            ownedFiles: [
+              {
+                runtime: 'core',
+                scope: 'project',
+                target: lock,
+                kind: 'file',
+                hash: createHash('sha256').update(content).digest('hex'),
+              },
+              {
+                runtime: 'codex',
+                scope: 'project',
+                target: agents,
+                kind: 'managed-block',
+                marker: 'pipeline',
+                hash: managedHash,
+              },
+            ],
+          },
+        },
+      })}\n`,
+    );
+    expect(await previewHomeProjectCleanup()).toEqual([lock, agents]);
+    expect((await cleanupHomeProjectInstall()).removed).toEqual([lock, agents]);
+    expect(existsSync(lock)).toBe(false);
+    expect(readFileSync(agents, 'utf8')).toContain('# Hand-written before');
+    expect(readFileSync(agents, 'utf8')).toContain('# Hand-written after');
+    expect(readFileSync(agents, 'utf8')).not.toContain('managed policy');
+  });
+
   it('can add the full pipeline after a minimal planning-only setup', async () => {
     const minimal = await applySetup({
       projectDir,
@@ -169,6 +267,8 @@ describe('runtime setup', () => {
   it('retains shared user assets until the final project removes the runtime', async () => {
     const secondProject = join(root, 'project-two');
     mkdirSync(secondProject, { recursive: true });
+    mkdirSync(join(secondProject, '.planr'));
+    writeFileSync(join(secondProject, '.planr', 'config.json'), '{}\n');
     for (const targetProject of [projectDir, secondProject]) {
       await applySetup({
         projectDir: targetProject,
@@ -193,6 +293,8 @@ describe('runtime setup', () => {
   it('does not roll back user assets that another project still owns', async () => {
     const secondProject = join(root, 'project-two');
     mkdirSync(secondProject, { recursive: true });
+    mkdirSync(join(secondProject, '.planr'));
+    writeFileSync(join(secondProject, '.planr', 'config.json'), '{}\n');
     const first = await applySetup({
       projectDir,
       cliVersion,

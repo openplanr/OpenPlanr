@@ -84,10 +84,13 @@ Same artifacts (`.planr/specs/SPEC-NNN-{slug}/`). Same `.pipeline-shipped` proof
 
 ```bash
 curl -fsSL https://openplanr.dev/install.sh | sh
-planr setup --runtime auto --scope both
+cd my-project
+planr setup
 planr doctor
 ```
 
+The installer installs the CLI only. Guided setup detects coding agents and
+prompts for workflow mode, runtimes, and scope; user scope is the safe default.
 Use `planr setup --dry-run` to preview, `planr setup --minimal` for planning
 only, and `planr runtime rollback` to restore exact pre-migration bytes.
 
@@ -336,7 +339,7 @@ OpenPlanr is one of four components:
 | Component | Role | Repo |
 |---|---|---|
 | **`planr` CLI** | Authoring surface — generates `.planr/` artifacts and runtime rule files | this repo |
-| **`planr-pipeline`** | Claude Code plugin — canonical executor (8 subagents, manifest-enforced tool restrictions) | [openplanr/planr-pipeline](https://github.com/openplanr/planr-pipeline) |
+| **`planr-pipeline`** | Portable PO → Design → Review → DEV → QA engine with nine canonical roles and runtime adapters | [openplanr/planr-pipeline](https://github.com/openplanr/planr-pipeline) |
 | **`openplanr` skill** | Routing playbook — teaches Claude when to use which surface | [openplanr/skills](https://github.com/openplanr/skills) |
 | **`openplanr/marketplace`** | Distribution — Claude Code plugin registry | [openplanr/marketplace](https://github.com/openplanr/marketplace) |
 
