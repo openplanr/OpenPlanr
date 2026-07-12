@@ -1,6 +1,8 @@
 # OpenPlanr Protocol — Agent Roles (v1.0.0)
 
-> The 9 named roles defined as input/output contracts, runtime-agnostic. Each runtime adapter implements these as it can: Claude Code via manifest-enforced subagents, Cursor via Composer subagent dispatch, Codex via persona role-shift.
+> The 9 named roles defined as input/output contracts, runtime-agnostic. Claude
+> Code uses manifest-enforced agents, Cursor uses host dispatch with sequential
+> fallback, and Codex uses native subagents when exposed plus sequential fallback.
 
 ## Role index
 
@@ -18,8 +20,9 @@
 
 ## Tier semantics
 
-- **`analysis`** roles process structured inputs and produce structured outputs (schemas, decomposition, audit reports). Recommended model: a fast/cheap tier (Claude Code: Sonnet 5).
-- **`codegen`** roles write production code that must build and pass tests. Recommended model: a strong tier (Claude Code: Opus 4.8).
+- **`analysis-high`** roles process structured inputs and produce structured outputs.
+- **`implementation-high`** roles write production code that must build and pass tests.
+- **`read-only-qa`** roles verify outputs without modifying source.
 
 Each runtime adapter maps these tiers to its model picker. The contract is "use the runtime's strongest available model for codegen, its fast tier for analysis."
 
@@ -76,9 +79,10 @@ Each runtime adapter maps these tiers to its model picker. The contract is "use 
 |---|---|---|
 | **Claude Code (canonical)** | Plugin manifest (`tools:` YAML frontmatter on each agent file) | Hard enforcement — agent literally cannot invoke disallowed tools |
 | **Cursor** | Prompt-level only (master rule + role body documentation) | Advisory — model is asked to honour; conformance harness's git-diff check on Preserve list catches violations |
-| **Codex** | Prompt-level only (AGENTS.md persona section) | Same as Cursor |
+| **Codex** | Capability-dependent; skills are durable, tool isolation may be advisory | Preserve verification + conformance |
 
-This is a deliberate trade-off. Manifest-level enforcement is a Claude Code differentiator. Cursor and Codex achieve workflow parity but cannot match the security model — yet. Future runtime adapters could close this gap if/when the runtime exposes per-persona tool restrictions.
+Manifest-level enforcement remains a Claude Code differentiator. Other adapters
+report their actual capability and use conformance rather than claiming identical security.
 
 ## See also
 

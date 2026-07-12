@@ -6,10 +6,23 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
+import {
+  discoverEcosystemRepositories,
+  resolveWorkspaceRoot,
+} from '../lib/ecosystem/workspace-discovery.mjs';
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const workRoot = resolve(root, '..');
+const projectRoot = process.cwd();
+const sourceCheckout =
+  process.env.OPENPLANR_DOCTOR_PACKAGE_MODE !== '1' &&
+  existsSync(join(root, 'input/tech/stack.md'));
 const rawArgs = process.argv.slice(2);
 const args = new Set(rawArgs);
+const workspace = resolveWorkspaceRoot({ pipelineRoot: root, argv: rawArgs });
+const ecosystem = discoverEcosystemRepositories({
+  pipelineRoot: root,
+  workspaceRoot: workspace.path,
+});
 
 const options = {
   versionsOnly: args.has('--versions-only'),
@@ -115,9 +128,9 @@ function listMarkdown(dir) {
     .map((name) => join(dir, name));
 }
 
-function gitIgnored(absPath) {
-  const relPath = relative(root, absPath);
-  const result = run('git', ['check-ignore', '-q', relPath], root);
+function gitIgnored(absPath, base = root) {
+  const relPath = relative(base, absPath);
+  const result = run('git', ['check-ignore', '-q', relPath], base);
   return result.status === 0;
 }
 
@@ -220,12 +233,16 @@ function runVersionAndProtocolChecks(pkg) {
     fail('versions.package-plugin', 'Versions', `.claude-plugin/plugin.json is ${plugin.version}, expected ${version}`, 'Update both files together.');
   }
 
-  const stack = readText('input/tech/stack.md');
-  const stackVersion = stack.match(/^Version:\s*"([^"]+)"/m)?.[1];
-  if (stackVersion === version) {
-    ok('versions.stack', 'Versions', `input/tech/stack.md Version matches ${version}`);
+  if (sourceCheckout) {
+    const stack = readText('input/tech/stack.md');
+    const stackVersion = stack.match(/^Version:\s*"([^"]+)"/m)?.[1];
+    if (stackVersion === version) {
+      ok('versions.stack', 'Versions', `input/tech/stack.md Version matches ${version}`);
+    } else {
+      fail('versions.stack', 'Versions', `input/tech/stack.md Version is ${stackVersion || '(missing)'}, expected ${version}`, 'Update input/tech/stack.md release metadata.');
+    }
   } else {
-    fail('versions.stack', 'Versions', `input/tech/stack.md Version is ${stackVersion || '(missing)'}, expected ${version}`, 'Update input/tech/stack.md release metadata.');
+    ok('versions.package-mode', 'Versions', 'installed package health mode does not require repository-only release metadata');
   }
 
   const protocol = readText('docs/protocol/README.md');
@@ -235,11 +252,13 @@ function runVersionAndProtocolChecks(pkg) {
     fail('versions.protocol-readme', 'Versions', `protocol README does not name planr-pipeline v${version}`, 'Update docs/protocol/README.md.');
   }
 
-  const matrix = readText('docs/compatibility-matrix.md');
-  if (matrix.includes(`planr-pipeline v${version}`)) {
-    ok('versions.compatibility-matrix', 'Versions', `compatibility matrix names planr-pipeline v${version}`);
-  } else {
-    fail('versions.compatibility-matrix', 'Versions', `compatibility matrix does not name planr-pipeline v${version}`, 'Update docs/compatibility-matrix.md.');
+  if (sourceCheckout) {
+    const matrix = readText('docs/compatibility-matrix.md');
+    if (matrix.includes(`planr-pipeline v${version}`)) {
+      ok('versions.compatibility-matrix', 'Versions', `compatibility matrix names planr-pipeline v${version}`);
+    } else {
+      fail('versions.compatibility-matrix', 'Versions', `compatibility matrix does not name planr-pipeline v${version}`, 'Update docs/compatibility-matrix.md.');
+    }
   }
 
   if (protocol.includes('schemas/v1.0.0/')) {
@@ -281,7 +300,10 @@ function runVersionAndProtocolChecks(pkg) {
     fail('protocol.qa-gate-schema', 'Protocol', `pipeline-shipped schema qa_gate_status enum is ${qaEnum.join(', ')}`, 'Restore passed, failed, skipped.');
   }
 
-  if (existsSync(join(root, 'docs/adrs/ADR-001-protocol-ownership.md'))) {
+  if (!sourceCheckout) {
+    // ADRs remain source-owned release evidence and are intentionally absent
+    // from the portable runtime package.
+  } else if (existsSync(join(root, 'docs/adrs/ADR-001-protocol-ownership.md'))) {
     ok('protocol.ownership-adr', 'Protocol', 'protocol ownership ADR exists');
   } else {
     fail('protocol.ownership-adr', 'Protocol', 'protocol ownership ADR is missing', 'Restore docs/adrs/ADR-001-protocol-ownership.md.');
@@ -295,7 +317,7 @@ function runVersionAndProtocolChecks(pkg) {
     'input/tech/stack.md',
     'commands/sync.md',
     'schemas/v1.0.0/pipeline-shipped.schema.json',
-  ];
+  ].filter((file) => existsSync(join(root, file)));
   const stalePatterns = [
     { label: 'planr-pipeline v0.6.0', regex: /planr-pipeline v0\.6\.0/ },
     { label: 'planr-pipeline v0.13.0', regex: /planr-pipeline v0\.13\.0/ },
@@ -330,21 +352,31 @@ function runVersionAndProtocolChecks(pkg) {
 
 function runEcosystemChecks(pkg) {
   const version = pkg.version;
-  const marketplaceRoot = join(workRoot, 'openplanr-marketplace');
-  const marketplaceManifest = join(marketplaceRoot, '.claude-plugin/marketplace.json');
-  const skillsRoot = join(workRoot, 'openplanr-skills');
-  const skillsManifest = join(skillsRoot, '.claude-plugin/marketplace.json');
-  const openPlanrRoot = join(workRoot, 'OpenPlanr');
-  const openPlanrPackage = join(openPlanrRoot, 'package.json');
+  ok(
+    'ecosystem.workspace-root',
+    'Ecosystem',
+    `ecosystem workspace resolved from ${workspace.source}: ${ecosystem.workspaceRoot}`,
+  );
+
+  const marketplaceRoot = ecosystem.repositories.marketplace?.path;
+  const skillsRoot = ecosystem.repositories.skills?.path;
+  const openPlanrRoot = ecosystem.repositories.cli?.path;
+  const marketplaceManifest = marketplaceRoot
+    ? join(marketplaceRoot, '.claude-plugin/marketplace.json')
+    : null;
+  const skillsManifest = skillsRoot
+    ? join(skillsRoot, '.claude-plugin/marketplace.json')
+    : null;
+  const openPlanrPackage = openPlanrRoot ? join(openPlanrRoot, 'package.json') : null;
 
   let marketplace = null;
-  if (existsSync(marketplaceManifest)) {
+  if (marketplaceManifest && existsSync(marketplaceManifest)) {
     marketplace = readJsonFile(marketplaceManifest);
     const pipelinePlugin = (marketplace.plugins || []).find((entry) => entry.name === 'planr-pipeline');
     if (pipelinePlugin?.version === version) {
       ok('ecosystem.marketplace-pipeline-version', 'Ecosystem', `marketplace planr-pipeline version matches ${version}`);
     } else {
-      warn('ecosystem.marketplace-pipeline-version', 'Ecosystem', `marketplace planr-pipeline version is ${pipelinePlugin?.version || '(missing)'}, expected ${version}`, 'Update openplanr-marketplace/.claude-plugin/marketplace.json.', true);
+      warn('ecosystem.marketplace-pipeline-version', 'Ecosystem', `marketplace planr-pipeline version is ${pipelinePlugin?.version || '(missing)'}, expected ${version}`, 'Update marketplace/.claude-plugin/marketplace.json.', true);
     }
 
     const readmePath = join(marketplaceRoot, 'README.md');
@@ -362,35 +394,35 @@ function runEcosystemChecks(pkg) {
       if (errors.length === 0) {
         ok('ecosystem.marketplace-readme', 'Ecosystem', 'marketplace README matches marketplace manifest');
       } else {
-        warn('ecosystem.marketplace-readme', 'Ecosystem', `marketplace README mismatch: ${errors.join('; ')}`, 'Run npm run check in openplanr-marketplace and update README.', true);
+        warn('ecosystem.marketplace-readme', 'Ecosystem', `marketplace README mismatch: ${errors.join('; ')}`, 'Run npm run check in the marketplace repo and update README.', true);
       }
     } else {
-      warn('ecosystem.marketplace-readme', 'Ecosystem', 'marketplace README.md is missing', 'Restore openplanr-marketplace/README.md.', true);
+      warn('ecosystem.marketplace-readme', 'Ecosystem', 'marketplace README.md is missing', 'Restore marketplace/README.md.', true);
     }
   } else {
-    warn('ecosystem.marketplace-present', 'Ecosystem', 'openplanr-marketplace sibling repo not found', 'Clone github.com/openplanr/marketplace next to planr-pipeline for strict ecosystem checks.', true);
+    warn('ecosystem.marketplace-present', 'Ecosystem', 'marketplace repo not found', 'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT to point at sibling OpenPlanr repos.', true);
   }
 
-  if (existsSync(skillsManifest)) {
+  if (skillsManifest && existsSync(skillsManifest)) {
     const skills = readJsonFile(skillsManifest);
     const skillVersion = skills.metadata?.version;
     if (skillVersion) {
-      ok('ecosystem.skills-version-present', 'Ecosystem', `openplanr-skills manifest reports version ${skillVersion}`);
+      ok('ecosystem.skills-version-present', 'Ecosystem', `skills manifest reports version ${skillVersion}`);
     } else {
-      warn('ecosystem.skills-version-present', 'Ecosystem', 'openplanr-skills manifest has no metadata.version', 'Add metadata.version to openplanr-skills/.claude-plugin/marketplace.json.', true);
+      warn('ecosystem.skills-version-present', 'Ecosystem', 'skills manifest has no metadata.version', 'Add metadata.version to skills/.claude-plugin/marketplace.json.', true);
     }
 
     const marketplaceSkill = (marketplace?.plugins || []).find((entry) => entry.name === 'openplanr');
     if (marketplace && skillVersion && marketplaceSkill?.version === skillVersion) {
       ok('ecosystem.marketplace-skills-version', 'Ecosystem', `marketplace openplanr version matches skills ${skillVersion}`);
     } else if (marketplace && skillVersion) {
-      warn('ecosystem.marketplace-skills-version', 'Ecosystem', `marketplace openplanr version is ${marketplaceSkill?.version || '(missing)'}, expected ${skillVersion}`, 'Update openplanr-marketplace/.claude-plugin/marketplace.json.', true);
+      warn('ecosystem.marketplace-skills-version', 'Ecosystem', `marketplace openplanr version is ${marketplaceSkill?.version || '(missing)'}, expected ${skillVersion}`, 'Update marketplace/.claude-plugin/marketplace.json.', true);
     }
   } else {
-    warn('ecosystem.skills-present', 'Ecosystem', 'openplanr-skills sibling repo not found', 'Clone github.com/openplanr/skills next to planr-pipeline for strict ecosystem checks.', true);
+    warn('ecosystem.skills-present', 'Ecosystem', 'skills repo not found', 'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT to point at sibling OpenPlanr repos.', true);
   }
 
-  if (existsSync(openPlanrPackage)) {
+  if (openPlanrPackage && existsSync(openPlanrPackage)) {
     const openPlanr = readJsonFile(openPlanrPackage);
     if (openPlanr.version) {
       ok('ecosystem.openplanr-version-present', 'Ecosystem', `OpenPlanr package version is ${openPlanr.version}`);
@@ -398,7 +430,7 @@ function runEcosystemChecks(pkg) {
       warn('ecosystem.openplanr-version-present', 'Ecosystem', 'OpenPlanr package.json has no version', 'Restore package.json version.', true);
     }
   } else {
-    warn('ecosystem.openplanr-present', 'Ecosystem', 'OpenPlanr sibling repo not found', 'Clone github.com/openplanr/OpenPlanr next to planr-pipeline for strict ecosystem checks.', true);
+    warn('ecosystem.openplanr-present', 'Ecosystem', 'OpenPlanr CLI repo not found', 'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT to point at sibling OpenPlanr repos.', true);
   }
 }
 
@@ -412,13 +444,13 @@ function runCredentialChecks() {
   let found = false;
 
   for (const file of envFiles) {
-    const absPath = join(root, file);
+    const absPath = join(projectRoot, file);
     if (!existsSync(absPath)) continue;
     const text = readFileSync(absPath, 'utf8');
     if (!/^\s*OPENAI_API_KEY\s*=/m.test(text)) continue;
     found = true;
 
-    if (gitIgnored(absPath)) {
+    if (gitIgnored(absPath, projectRoot)) {
       ok(`credentials.${file}`, 'Credentials', `${file} contains OPENAI_API_KEY and is gitignored`);
     } else {
       warn(`credentials.${file}`, 'Credentials', `${file} contains OPENAI_API_KEY and is not gitignored`, `Add ${file} to .gitignore or move the key to user-level credentials.`);
@@ -433,26 +465,28 @@ function runCredentialChecks() {
 function runReleaseChecks(pkg) {
   checkRelease('release.pipeline', 'planr-pipeline', root, pkg.version);
 
-  const skillsRoot = join(workRoot, 'openplanr-skills');
-  const skillsManifest = join(skillsRoot, '.claude-plugin/marketplace.json');
-  if (existsSync(skillsManifest)) {
+  const skillsRoot = ecosystem.repositories.skills?.path;
+  const skillsManifest = skillsRoot
+    ? join(skillsRoot, '.claude-plugin/marketplace.json')
+    : null;
+  if (skillsManifest && existsSync(skillsManifest)) {
     const skills = readJsonFile(skillsManifest);
     if (skills.metadata?.version) {
-      checkRelease('release.skills', 'openplanr-skills', skillsRoot, skills.metadata.version);
+      checkRelease('release.skills', 'skills', skillsRoot, skills.metadata.version);
     }
   } else {
-    warn('release.skills-present', 'Releases', 'openplanr-skills sibling repo not found; release check skipped', 'Clone skills sibling repo before final release audit.', true);
+    warn('release.skills-present', 'Releases', 'skills repo not found; release check skipped', 'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT before the final release audit.', true);
   }
 
-  const openPlanrRoot = join(workRoot, 'OpenPlanr');
-  const openPlanrPackage = join(openPlanrRoot, 'package.json');
-  if (existsSync(openPlanrPackage)) {
+  const openPlanrRoot = ecosystem.repositories.cli?.path;
+  const openPlanrPackage = openPlanrRoot ? join(openPlanrRoot, 'package.json') : null;
+  if (openPlanrPackage && existsSync(openPlanrPackage)) {
     const openPlanr = readJsonFile(openPlanrPackage);
     if (openPlanr.version) {
       checkRelease('release.openplanr', 'OpenPlanr', openPlanrRoot, openPlanr.version);
     }
   } else {
-    warn('release.openplanr-present', 'Releases', 'OpenPlanr sibling repo not found; release check skipped', 'Clone OpenPlanr sibling repo before final release audit.', true);
+    warn('release.openplanr-present', 'Releases', 'OpenPlanr CLI repo not found; release check skipped', 'Use --workspace-root or OPENPLANR_ECOSYSTEM_ROOT before the final release audit.', true);
   }
 }
 
@@ -477,15 +511,21 @@ const pkg = readJson('package.json');
 
 runEnvironmentChecks(pkg);
 runVersionAndProtocolChecks(pkg);
-runEcosystemChecks(pkg);
+if (sourceCheckout) {
+  runEcosystemChecks(pkg);
+} else {
+  ok('ecosystem.package-mode', 'Ecosystem', 'installed package health does not require sibling source repositories');
+}
 
 if (!options.versionsOnly) {
   runDaemonChecks();
   runCredentialChecks();
 }
 
-if (options.release) {
+if (options.release && sourceCheckout) {
   runReleaseChecks(pkg);
+} else if (options.release) {
+  fail('release.source-required', 'Releases', 'release audit requires a source checkout', 'Run the release audit from the planr-pipeline repository.');
 }
 
 await Promise.all(pendingHealthChecks);

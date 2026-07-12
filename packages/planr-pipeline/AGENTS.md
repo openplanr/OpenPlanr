@@ -6,16 +6,21 @@ This project follows a structured agile workflow. All planning artifacts are in 
 
 ## Context-Gathering Protocol
 
-Before implementing ANY task or subtask, you MUST gather full planning context by reading the artifact hierarchy. Follow this exact sequence:
+Before implementing a task, gather the strongest available planning context. Use
+the artifact hierarchy when it exists; when it does not, use the explicit user
+request, repository ADRs/docs, and the existing code as the authoritative context.
+Missing `.planr/` artifacts must never block an otherwise well-specified change.
 
 ### Step 1: Read the Task List
 
-- Open the task file from `.planr/tasks/` (e.g., `TASK-001-*.md`) or quick task from `.planr/quick/`
+- If `.planr/tasks/` or `.planr/quick/` exists, open the relevant task file
 - Parse the frontmatter to find `storyId` or `featureId`
 - Identify the target subtask (first unchecked `- [ ]` item)
 - Read ALL subtasks to understand the full scope and dependencies
+- If no task artifact exists, treat the user's explicit implementation plan as
+  the task specification and continue to Step 3.
 
-### Step 2: Read the Parent Chain (MANDATORY)
+### Step 2: Read the Parent Chain (when present)
 
 Follow the artifact hierarchy upward — each level adds critical context:
 
@@ -53,16 +58,26 @@ Before writing code, understand what exists:
 
 ## Implementation Rules
 
-1. **ONE subtask at a time** — implement only the target subtask
-2. **Wait for user approval** before moving to the next subtask
-3. **Follow existing patterns** — match the code style, naming conventions, and architecture from Step 4
-4. **Map to acceptance criteria** — every implementation must satisfy the Gherkin scenarios from Step 2
-5. **Mark completed work** — after implementing a subtask, update the task file:
+1. **Honor the authorized scope** — when the user requests an end-to-end plan,
+   continue through coherent implementation batches until the plan is complete.
+   Do not insert approval gates between routine subtasks.
+2. **Use real approval gates only** — pause for missing product decisions,
+   irreversible/destructive operations, external publication/deployment, secrets,
+   or a genuine blocker. The pipeline R1 PLAN→SHIP human gate remains mandatory.
+3. **Verify each batch** — run focused tests after each logical batch and the
+   relevant regression/conformance suites before declaring the plan complete.
+4. **Follow existing patterns** — match the code style, naming conventions, and architecture from Step 4.
+5. **Map to acceptance criteria** — satisfy Gherkin scenarios when they exist;
+   otherwise use the explicit plan's acceptance scenarios.
+6. **Mark completed work when tracked** — after implementing a subtask, update the task file if one exists:
    - Change `- [ ]` to `- [x]` for the completed subtask
    - When ALL subtasks in a task group are done, also mark the parent group `- [x]`
    - When ALL groups in the file are done, update frontmatter `status: "done"`
    - This applies to both `.planr/tasks/` and `.planr/quick/` files
-6. **Don't modify unrelated code** — stay focused on the target subtask
+7. **Don't modify unrelated code** — stay focused on the authorized plan.
+8. **Multi-repo ecosystem changes** — update the contract-owning repository
+   first, then downstream adapters, skills, marketplace metadata, tests, and docs.
+   Preserve independent product identities and version histories.
 
 ## Artifact Locations
 
@@ -100,151 +115,58 @@ All artifacts follow `PREFIX-NNN-slug.md` format:
 
 ## Planr Pipeline Orchestration
 
-This project conforms to the **OpenPlanr Protocol v1.0.0** — a runtime-agnostic contract for spec-driven AI workflows. As a Codex agent you are both planner and executor across two distinct phases.
+This repository owns the portable pipeline engine and Protocol v1.1 capability
+contracts. OpenPlanr is the dedicated planning CLI; this pipeline is the complete
+PO → Design → Review → DEV → QA → delivery workflow and intentionally includes
+feature-local planning of its own.
 
-**Hard rule R1: never auto-chain PO Phase to DEV Phase.** Two user invocations required: "plan {feature}" and "ship {feature}".
+### Execution contract
 
-### Mode detection
+- Use `lib/pipeline/` for deterministic state transitions, validation, locking,
+  provenance, dependency ordering, Preserve verification, correction counters,
+  manifests, and finalization. Do not duplicate this logic in prompts.
+- Runtime adapters dispatch models and tools only. Resolve portable assets through
+  the adapter registry; never put runtime-specific paths or model names in core code.
+- **R1:** PLAN and SHIP are separate user invocations. Never auto-chain them.
+- **R2:** Decomposition produces at most two tasks per story (one when no UI input exists).
+- **R5:** Preserve paths are immutable during task execution.
+- **R6:** A task receives at most three correction iterations before it is blocked.
+- **R7:** Successful SHIP writes the run manifest, provenance event, and
+  `.pipeline-shipped` marker. Runtime-managed instruction files are never overwritten.
+- **R8:** Database inspection is read-only.
+- **R9:** Frontend and backend ownership boundaries are binding.
 
-1. If `.planr/config.json` exists with `idPrefix.spec` set, you are in **spec-driven mode**.
-   - Spec dir: `.planr/specs/SPEC-NNN-{slug}/`
-   - Stories: `<SPEC_DIR>/stories/US-NNN-{slug}.md`
-   - Tasks (flat): `<SPEC_DIR>/tasks/T-NNN-{slug}.md`
-2. Otherwise, **default mode**:
-   - Feature dir: `output/feats/feat-{name}/`
-   - Stories: `<feat>/us-{N}/us-{N}.md`
-   - Tasks: `<feat>/us-{N}/tasks/task-{M}.md`
+### Runtime behavior
 
-| Concept | Default | Spec-driven |
-|---|---|---|
-| Spec source | `input/specs/spec-{name}.md` | `<SPEC_DIR>/SPEC-NNN-{slug}.md` |
-| Design spec | `output/feats/feat-{name}/design-spec.md` | `<SPEC_DIR>/design/design-spec.md` |
-| US output | `output/feats/feat-{name}/us-{N}/us-{N}.md` | `<SPEC_DIR>/stories/US-NNN-{slug}.md` |
-| Task output | `output/feats/feat-{name}/us-{N}/tasks/task-{M}.md` | `<SPEC_DIR>/tasks/T-NNN-{slug}.md` |
+Runtime selection follows: explicit flag → active adapter marker → project default
+→ only compatible installed runtime → `E_RUNTIME_AMBIGUOUS`. Use capability tiers
+(`analysis-high`, `implementation-high`, `read-only-qa`) rather than vendor model
+names. Use native subagents and parallel dispatch when the selected adapter reports
+those capabilities; otherwise use the registry-defined sequential fallback.
 
-### PO Phase — when user says "plan {feature}"
+The canonical nine roles are defined in `registry/roles.json`: database,
+designer, specification, entity scaffold, frontend, backend, QA, DevOps, and
+documentation. That registry—not an instruction-file table—is authoritative.
 
-Follow these steps in order. **STOP after step 4.**
+### Artifact modes
 
-1. **Mode detection + input validation.** If spec-driven mode, scan `.planr/specs/` for `SPEC-NNN-{feature}` directory. If missing, auto-scaffold (see Auto-scaffolding below).
-2. **Read inputs:** spec body, `input/tech/stack.md`, optional `output/db/schema.json`, optional design-spec from PNGs.
-3. **Decompose:** read spec + stack + optional schema + optional design-spec, write US/Task files. Hard rule R2: max 2 tasks per US (1 if no PNG present).
-4. **STOP.** Print a summary. Wait for the human to type "ship {feature}".
+- Spec-driven mode is active when `.planr/config.json` defines `idPrefix.spec`.
+  Artifacts live below `.planr/specs/SPEC-NNN-{slug}/`.
+- Default mode uses `input/specs/spec-{slug}.md` and
+  `output/feats/feat-{slug}/`.
+- Protocol v1.0 artifacts remain readable. Runtime locks, adapter manifests,
+  compatibility manifests, and provenance events are additive v1.1 contracts.
 
-### DEV Phase — when user says "ship {feature}"
+### Verification
 
-1. Validate task files exist.
-2. Dispatch tasks in `dependsOn` order across the whole feature (a task is ready when every id in its `dependsOn` is `done`, or it has none — user stories are not a dispatch boundary). Codex is single-session, so run **one ready task per invocation** and re-invoke to continue; ordering follows `dependsOn`, not story sequence.
-   - `Type: UI` → adopt the **frontend** persona (writes UI files only).
-   - `Type: Tech` → adopt the **backend** persona (writes services, DTOs, entities, controllers, DB queries — never UI).
-3. Apply the **3-iteration correction loop** (R6) per task:
-   - Iteration 1: direct fix on build/test failure (`BuildCommand` + `TestCommand` from `input/tech/stack.md`).
-   - Iteration 2: re-read task spec + design-spec/schema, fix holistically.
-   - Iteration 3: minimal safe fix, flag remaining issues.
-   - On 3rd failure: write `error-report.md` and stop that task.
-4. Run **QA gate** (qa persona, read-only): verify Create/Modify/Preserve lists, build, test, DoD.
-5. Optionally generate Docker/CI (devops persona — file generators only, never deploys) and `Docs/feat-{name}/` (doc-gen persona).
-6. Refresh `CLAUDE.md` snapshot OR co-exist with planr-managed `CLAUDE.md` (see Snapshot rules below).
-7. Write `.pipeline-shipped` marker (proof of execution).
+Before declaring an ecosystem change complete, run focused unit tests, packed-package
+smoke tests, protocol conformance, cross-runtime asset scans, and the relevant
+repository test suites. A generated Codex or Cursor adapter must contain no native
+Claude asset paths, Claude-only commands, or vendor model-selection instructions.
 
-### 8 named role personas
-
-When dispatching a task, adopt the corresponding role's behaviour. Codex doesn't have separate subagent processes — these are persona shifts within the same session, but the role's constraints are binding:
-
-- **db** — read-only DB introspection. Never DDL/DML. Output: `output/db/schema.json`.
-- **designer** — PNG analysis → `design-spec.md`. Read/Write only, no shell.
-- **specification** — spec → US + Task files. No shell. Strict R2 (max 2 tasks/US).
-- **frontend** — UI files only. Never touches services, controllers, DTOs, entities.
-- **backend** — services, DTOs, entities, controllers, DB queries. Never touches UI files.
-- **qa** — read-only verification. Runs build + test. Writes only `qa-report.md`.
-- **devops** — Docker, CI, env templates. **No shell whatsoever — never deploys.**
-- **doc-gen** — `Docs/feat-{name}/` from US, tasks, generated source.
-
-### Auto-scaffolding (when spec is missing)
-
-When `<SPEC_DIR>/SPEC-NNN-{feature}.md` is missing in spec-driven mode:
-
-1. Ensure `.planr/config.json` exists with `idPrefix.spec: "SPEC"`.
-2. Ensure `.planr/specs/` exists.
-3. Determine next SPEC ID by scanning existing `SPEC-NNN-*/` dirs.
-4. Create `.planr/specs/SPEC-NNN-{feature}/{stories,tasks,design}/`.
-5. Write a placeholder spec body to `<SPEC_DIR>/SPEC-NNN-{feature}.md` (use the v1.0.0 spec schema).
-6. Print: `✓ Scaffolded SPEC-NNN-{feature}. Edit the spec body, then re-run: plan {feature}`. ABORT.
-7. **Do not invoke any role.** Decomposition runs only on the second invocation, after the user has filled in the body.
-
-### Self-healing in spec mode
-
-When `input/tech/stack.md` is missing:
-
-1. Write a v1.0.0 stack template to `input/tech/stack.md` (project name, language, framework, ORM, BuildCommand, TestCommand). Create `input/tech/` if absent.
-2. Print: `✓ Created input/tech/stack.md from template. Edit to declare your real stack, then re-run: plan {feature}`. ABORT.
-
-### Snapshot rules (R7)
-
-At the end of `/ship`, refresh `CLAUDE.md` (or AGENTS.md, if that's the canonical doc for this project). Capture:
-- Project Identity (name, version, stack)
-- Phase Status (filesystem scan)
-- Feature Registry
-- Active roles + tier
-- Build Log (append-only — never truncate)
-- Known Issues (scan `error-report.md` files)
-- Stack Summary (embed `input/tech/stack.md`)
-
-**Coexistence with planr-managed CLAUDE.md:** if the existing `CLAUDE.md` opens with `> Generated by OpenPlanr` or contains `## Context-Gathering Protocol`, do NOT overwrite. Print: *"CLAUDE.md is planr-managed; pipeline state recorded via .pipeline-shipped marker."* and skip the snapshot write.
-
-### `.pipeline-shipped` marker
-
-After a successful `/ship`, write a YAML marker:
-
-**Default mode:** `output/feats/feat-{feature}/.pipeline-shipped`
-**Spec-driven mode:** `<SPEC_DIR>/.pipeline-shipped`
-
-```yaml
-shipped_at: "<ISO 8601 UTC>"
-pipeline_version: "<runtime adapter writes its own version, e.g. 0.6.0>"
-protocol_version: "1.0.0"
-runtime: "codex"
-mode: "<default | spec-driven>"
-feature: "{feature}"
-tasks_executed: <integer>
-tasks_failed: <integer>
-qa_gate_status: "<passed | failed | skipped>"
-duration_seconds: <integer>
-agents_invoked:
-  - frontend-agent
-  - backend-agent
-  - qa-agent
-  - devops-agent
-  - doc-gen-agent
-devops_status: "<generated | skipped>"
-docs_status: "<generated | skipped>"
-snapshot_status: "<refreshed | skipped>"
-error_reports:
-  - <path>
-```
-
-### Hard rules (Codex enforcement — prompt-level, not enforced by runtime)
-
-- **R1** — Never auto-chain PLAN → SHIP. Always wait for explicit "ship {feature}".
-- **R2** — Max 2 tasks per US.
-- **R3** — Roles using `Sonnet 5` include analysis/decomposition and **entity-scaffold-agent** (structured Step 0.2 scaffold). Roles using `Opus 4.8` are DEV codegen (**frontend-agent**, **backend-agent** Tech tasks). On Codex, use the model picker to match.
-- **R5** — Files in any task's `Preserve:` list MUST NOT be touched. Conformance test asserts this via `git diff` on Preserve paths.
-- **R6** — Max 3 correction iterations per task.
-- **R7** — Refresh CLAUDE.md (or skip if planr-managed); always write `.pipeline-shipped` marker.
-- **R8** — db role is read-only.
-- **R9** — frontend role only writes UI files; backend role only writes services/DTOs/entities. No crossover.
-
-Note: tool restrictions on Codex are advisory (prompt-level only), not enforced by the runtime. Treat them as binding — the conformance harness will catch violations post-ship.
-
-### Conformance proof
-
-The OpenPlanr Protocol v1.0.0 conformance test (in `planr-pipeline/conformance/runner.mjs`) verifies:
-- Post-PO state (US + Task files exist with valid frontmatter)
-- Post-DEV state (`src/` populated, build/test green, `.pipeline-shipped` marker present)
-- Preserve list integrity (`git diff` on each task's Preserve paths returns empty)
-
-Compatibility matrix: see `planr-pipeline/docs/compatibility-matrix.md` for the full Codex parity table.
+Compatibility details live in `docs/compatibility-matrix.md`; schemas and registries
+live in `schemas/v1.1.0/` and `registry/`.
 
 ---
 
-*Generated by `planr rules generate --target codex --scope pipeline`. The Codex adapter for OpenPlanr Protocol v1.0.0.*
+*Managed by OpenPlanr. Preserve hand-written content outside managed markers.*

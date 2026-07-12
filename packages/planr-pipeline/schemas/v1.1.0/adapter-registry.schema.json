@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/adapter-registry.schema.json",
+  "title": "OpenPlanr runtime adapter registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "protocolVersion", "pipelineVersion", "adapters"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "pipelineVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+" },
+    "adapters": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "version", "capabilityLevel", "installScopes", "entrypoints", "capabilities", "assets", "healthChecks", "drivers"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+" },
+          "capabilityLevel": { "type": "string", "enum": ["artifact", "workflow", "product"] },
+          "installScopes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "enum": ["user", "project"] }
+          },
+          "entrypoints": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["plan", "ship"],
+            "properties": {
+              "plan": { "type": "string", "minLength": 1 },
+              "design": { "type": "string", "minLength": 1 },
+              "ship": { "type": "string", "minLength": 1 },
+              "dashboard": { "type": "string", "minLength": 1 },
+              "sync": { "type": "string", "minLength": 1 },
+              "doctor": { "type": "string", "minLength": 1 }
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["subagents", "hooks", "toolIsolation", "parallelDispatch", "headlessLaunch"],
+            "properties": {
+              "subagents": { "type": "string", "enum": ["native", "advisory", "sequential", "dynamic"] },
+              "hooks": { "type": "boolean" },
+              "toolIsolation": { "type": "string", "enum": ["enforced", "advisory"] },
+              "parallelDispatch": { "type": "string", "enum": ["native", "host", "sequential", "dynamic"] },
+              "headlessLaunch": { "type": "boolean" }
+            }
+          },
+          "assets": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "healthChecks": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "drivers": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["install", "migrate", "rollback", "uninstall"],
+            "properties": {
+              "install": { "type": "string", "minLength": 1 },
+              "migrate": { "type": "string", "minLength": 1 },
+              "rollback": { "type": "string", "minLength": 1 },
+              "uninstall": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

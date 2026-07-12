@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/ecosystem-manifest.schema.json",
+  "title": "OpenPlanr resolved ecosystem compatibility manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "generatedAt", "protocol", "components", "adapters"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "protocol": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current", "supported"],
+      "properties": {
+        "current": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "supported": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "components": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cli", "pipeline", "skills", "marketplace"],
+      "properties": {
+        "cli": { "type": "object", "additionalProperties": false, "required": ["version", "pipelineRange"], "properties": { "version": { "type": "string" }, "pipelineRange": { "type": "string" } } },
+        "pipeline": { "type": "object", "additionalProperties": false, "required": ["version", "cliRange"], "properties": { "version": { "type": "string" }, "cliRange": { "type": "string" } } },
+        "skills": { "type": "object", "additionalProperties": false, "required": ["version", "cliRange"], "properties": { "version": { "type": "string" }, "cliRange": { "type": "string" } } },
+        "marketplace": { "type": "object", "additionalProperties": false, "required": ["version"], "properties": { "version": { "type": "string" } } }
+      }
+    },
+    "adapters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["runtime", "version", "capabilityLevel", "pipelineRange"],
+        "properties": {
+          "runtime": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "version": { "type": "string" },
+          "capabilityLevel": { "type": "string", "enum": ["artifact", "workflow", "product"] },
+          "pipelineRange": { "type": "string" }
+        }
+      }
+    }
+  }
+}

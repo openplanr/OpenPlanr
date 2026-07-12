@@ -4,6 +4,20 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.25.0] — 2026-07-12
+
+### Added
+- Public `@openplanr/pipeline` package with a zero-dependency engine and CLI.
+- Runtime adapter and role registries, runtime-lock and ecosystem-manifest schemas.
+- Append-only artifact provenance contract and deterministic PLAN/SHIP state APIs.
+- Portable ecosystem workspace discovery for doctor and release checks.
+
+### Changed
+- Runtime-neutral roles use capability tiers; runtime-specific model mapping stays in adapters.
+- Protocol v1.0 artifact schemas remain stable while v1.1 adds ecosystem contracts.
+- Doctor now distinguishes source release audits from installed-package health,
+  so the packed CLI does not require repository-only stack, ADR, or sibling data.
+
 ## [0.24.10] — 2026-07-11
 
 ### Changed — Analysis tier upgraded to Sonnet 5

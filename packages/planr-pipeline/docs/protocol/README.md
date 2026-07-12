@@ -1,13 +1,16 @@
 # OpenPlanr Protocol
 
-> Version: **1.0.0**
-> Status: **stable** for schemaVersion `1.0.0`. Current canonical executor docs are verified against planr-pipeline v0.24.10.
-> Ownership: `planr-pipeline/schemas/v1.0.0/` is canonical for this cleanup cycle; downstream CLI, skill, and marketplace docs mirror it.
+> Artifact version: **1.0.0**
+> Ecosystem contracts: **1.1.0**
+> Status: v1.0 artifact frontmatter remains stable. v1.1 adds optional adapter,
+> runtime-lock, compatibility, role-registry, and provenance contracts.
+> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.25.0.
 
 The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI development. It defines:
 
 - **Spec artifacts** — the directory layout and YAML frontmatter for SPECs, User Stories, Tasks, design specs, error reports, qa reports, and the `.pipeline-shipped` execution marker.
-- **Agent roles** — 8 named roles with input/output contracts, tool-use guardrails, and model-tier guidance.
+- **Agent roles** — 9 named roles, including the optional entity-scaffold role,
+  with input/output contracts, tool-use guardrails, and capability-tier guidance.
 - **Commands** — `PLAN` and `SHIP` defined as command contracts (inputs, validation, mode detection, orchestration, exits).
 - **Workflow** — PO Phase → mandatory human review → DEV Phase. Hard rule R1 prohibits auto-chaining.
 
@@ -17,12 +20,14 @@ OpenPlanr ships across multiple repos and three first-class AI coding agent runt
 
 | Component | Role | Repo |
 |---|---|---|
-| `planr` CLI | Authoring surface — generates `.planr/` markdown artifacts | `openplanr/OpenPlanr` |
-| `planr-pipeline` | Claude Code plugin — canonical pipeline executor, schema owner, and conformance source | `openplanr/planr-pipeline` |
-| `openplanr` skill | Routing playbook — teaches Claude when to use which surface | `openplanr/skills` |
-| `openplanr/marketplace` | Distribution — Claude Code plugin registry metadata | `openplanr/marketplace` |
+| `planr` CLI | Dedicated planning, artifact lifecycle, setup, routing, and doctor | `openplanr/OpenPlanr` |
+| `@openplanr/pipeline` | Complete PO, Design, DEV, and QA engine; schema and conformance owner | `openplanr/planr-pipeline` |
+| runtime skills | Reusable planning and delivery workflows | `openplanr/skills` |
+| marketplace | Claude metadata plus resolved compatibility manifest | `openplanr/marketplace` |
 
-The same workflow runs on **Claude Code** (canonical), **Cursor** (via planr-generated `.cursor/rules/planr-pipeline.mdc` + agent body files), and **Codex** (via `AGENTS.md` with a pipeline section). All three runtimes share the same artifact contract — a SPEC authored on one runtime is consumable by any other.
+The same workflow runs on **Claude Code** through native plugin assets, **Cursor**
+through portable rules and handoff, and **Codex** through installed skills plus
+dynamic subagent fallback. All three share the same artifact contract.
 
 The protocol is the contract. Runtimes are adapters.
 
@@ -31,15 +36,20 @@ The protocol is the contract. Runtimes are adapters.
 | File | What it defines |
 |---|---|
 | `spec-artifacts.md` | YAML frontmatter for SPEC, US, Task. Body-section structure. `.pipeline-shipped` marker schema. v1.0.0 schema reference. |
-| `agent-roles.md` | 8 roles (db, designer, specification, frontend, backend, qa, devops, doc-gen). Inputs, outputs, tool guardrails, model tier. |
+| `agent-roles.md` | 9 roles, including optional entity-scaffold. Inputs, outputs, tool guardrails, capability tier. |
 | `commands.md` | `PLAN` and `SHIP` as command contracts. Mode detection, validation, orchestration, exits. R1 normative. |
 | `runtime-adapters.md` | How Claude Code plugin, Cursor MDC rules, and Codex AGENTS.md implement this protocol. |
+| `../generated/roles.md` | Generated nine-role registry table. |
+| `../generated/adapters.md` | Generated certified-adapter capability table. |
 
 ## Pinning rule
 
 `schemaVersion: "1.0.0"` is required on every spec, story, and task. Future breaking changes will bump this version in lockstep across all three runtimes; readers MUST refuse mismatched versions.
 
 Canonical schema source for this cleanup cycle: [`../../schemas/v1.0.0/`](../../schemas/v1.0.0/). The OpenPlanr CLI schema reference is a downstream mirror for CLI users.
+
+Additive ecosystem contracts live under [`../../schemas/v1.1.0/`](../../schemas/v1.1.0/).
+They do not invalidate or rewrite v1.0 artifact frontmatter.
 
 ## Compatibility matrix
 

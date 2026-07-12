@@ -1,17 +1,47 @@
 {
-  "name": "planr-pipeline",
-  "version": "0.24.10",
-  "private": true,
+  "name": "@openplanr/pipeline",
+  "version": "0.25.0",
+  "private": false,
   "type": "module",
-  "description": "OpenPlanr Protocol — Claude Code plugin conformance + docs",
+  "description": "OpenPlanr complete PO, Design, DEV, QA, and delivery pipeline",
+  "main": "./lib/pipeline/index.mjs",
+  "exports": {
+    ".": "./lib/pipeline/index.mjs"
+  },
+  "bin": {
+    "planr-pipeline": "./bin/planr-pipeline.mjs"
+  },
+  "files": [
+    "adapters/",
+    ".claude-plugin/",
+    "agents/",
+    "bin/",
+    "commands/",
+    "conformance/",
+    "docs/protocol/",
+    "hooks/",
+    "lib/",
+    "procedures/",
+    "registry/",
+    "schemas/",
+    "scripts/doctor.mjs",
+    "stacks/",
+    "templates/",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "test": "npm run test:schema && npm run test:orchestration && npm run test:docs && npm run test:design && npm run test:design-engine && npm run test:dashboard && npm run conformance:design && npm run conformance:design-loop && npm run conformance:dashboard",
-    "test:design-engine": "node --test tests/design-engine/*.test.mjs tests/collab-review-board.test.mjs",
-    "test:dashboard": "node --test tests/dashboard/*.test.mjs",
-    "test:docs": "node --test tests/docs/*.test.mjs",
+    "test:design-engine": "node scripts/run-test-group.mjs tests/design-engine tests/collab-review-board.test.mjs",
+    "test:dashboard": "node scripts/run-test-group.mjs tests/dashboard",
+    "test:docs": "node scripts/run-test-group.mjs tests/docs",
     "doctor": "node scripts/doctor.mjs",
     "doctor:versions": "node scripts/doctor.mjs --versions-only",
     "ecosystem:conformance": "node scripts/ecosystem-conformance.mjs",
@@ -19,9 +49,9 @@
     "conformance:check": "npm run conformance:native-dispatch && npm run conformance:design && npm run conformance:design-loop && npm run conformance:dashboard",
     "conformance:design-loop": "node conformance/verify-design-loop.mjs",
     "conformance:dashboard": "node conformance/verify-dashboard.mjs",
-    "test:schema": "node --test tests/schema/*.test.mjs",
-    "test:orchestration": "node --test tests/orchestration/*.test.mjs",
-    "test:design": "node --test tests/design/*.test.mjs",
+    "test:schema": "node scripts/run-test-group.mjs tests/schema",
+    "test:orchestration": "node scripts/run-test-group.mjs tests/orchestration tests/ecosystem tests/pipeline",
+    "test:design": "node scripts/run-test-group.mjs tests/design",
     "conformance:design": "node conformance/verify-design-assets.mjs"
   }
 }

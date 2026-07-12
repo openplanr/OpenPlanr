@@ -1,6 +1,7 @@
 # OpenPlanr Protocol — Commands (v1.0.0)
 
-> `PLAN` and `SHIP` defined as runtime-agnostic command contracts. Each runtime adapter exposes them via its native command surface (Claude Code slash commands, Cursor rule keywords, Codex persona triggers).
+> `PLAN` and `SHIP` defined as runtime-agnostic command contracts. Each runtime
+> adapter exposes them through native commands, skills, or a machine-readable handoff.
 
 ## Hard rule R1 (normative)
 
@@ -143,14 +144,14 @@ Print summary including: mode, tasks succeeded, tasks failed, qa status, devops 
 |---|---|---|---|
 | **Claude Code (canonical)** | `/planr-pipeline:plan {feature}` | `/planr-pipeline:ship {feature}` | `/planr-pipeline:status {feature}` |
 | **Cursor** | User says `plan {feature}` (or "decompose {feature}") — `.cursor/rules/planr-pipeline-plan.mdc` activates | User says `ship {feature}` — `planr-pipeline-ship.mdc` activates | User says `status {feature}` (wire `commands/status.md` analogue) |
-| **Codex** | User says `plan {feature}` — AGENTS.md persona triggers | User says `ship {feature}` — same | Codex personas SHOULD mirror Claude Code wording |
+| **Codex** | `$planr-plan` or router | `$planr-ship` or router | Skills call the portable engine and use native subagents when available |
 
 In all three runtimes, R1 must be respected: PLAN exits without invoking SHIP, and SHIP requires a separate explicit user invocation.
 
 ## See also
 
 - `spec-artifacts.md` — what PLAN writes and SHIP reads
-- `agent-roles.md` — the 8 roles PLAN and SHIP orchestrate
+- `agent-roles.md` — the 9 roles PLAN and SHIP orchestrate
 - `runtime-adapters.md` — per-runtime command surface details
 - `../rules.md` — full rule set including R1
 

@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.1.0",
+  "pipelineVersion": "0.25.0",
+  "adapters": [
+    {
+      "id": "claude-code",
+      "version": "0.25.0",
+      "capabilityLevel": "product",
+      "installScopes": ["user", "project"],
+      "entrypoints": {
+        "plan": "/planr-pipeline:plan",
+        "design": "/planr-pipeline:design",
+        "ship": "/planr-pipeline:ship",
+        "dashboard": "/planr-pipeline:dashboard",
+        "sync": "/planr-pipeline:sync",
+        "doctor": "planr pipeline doctor"
+      },
+      "capabilities": {
+        "subagents": "native",
+        "hooks": true,
+        "toolIsolation": "enforced",
+        "parallelDispatch": "native",
+        "headlessLaunch": true
+      },
+      "assets": ["commands", "agents", "procedures", "hooks", "templates", "schemas"],
+      "healthChecks": ["plugin-installed", "commands-present", "hook-readable"],
+      "drivers": {
+        "install": "openplanr://drivers/claude-code/install",
+        "migrate": "openplanr://drivers/claude-code/migrate",
+        "rollback": "openplanr://drivers/claude-code/rollback",
+        "uninstall": "openplanr://drivers/claude-code/uninstall"
+      }
+    },
+    {
+      "id": "codex",
+      "version": "0.25.0",
+      "capabilityLevel": "workflow",
+      "installScopes": ["user", "project"],
+      "entrypoints": {
+        "plan": "$planr-plan",
+        "design": "$planr-design",
+        "ship": "$planr-ship",
+        "dashboard": "$planr-dashboard",
+        "sync": "$planr-sync",
+        "doctor": "$planr-doctor"
+      },
+      "capabilities": {
+        "subagents": "dynamic",
+        "hooks": true,
+        "toolIsolation": "advisory",
+        "parallelDispatch": "dynamic",
+        "headlessLaunch": true
+      },
+      "assets": ["skills", "project-guidance", "schemas", "templates"],
+      "healthChecks": ["skills-present", "project-guidance-current", "runtime-authenticated"],
+      "drivers": {
+        "install": "openplanr://drivers/codex/install",
+        "migrate": "openplanr://drivers/codex/migrate",
+        "rollback": "openplanr://drivers/codex/rollback",
+        "uninstall": "openplanr://drivers/codex/uninstall"
+      }
+    },
+    {
+      "id": "cursor",
+      "version": "0.25.0",
+      "capabilityLevel": "workflow",
+      "installScopes": ["project"],
+      "entrypoints": {
+        "plan": "plan {feature}",
+        "design": "design {feature}",
+        "ship": "ship {feature}",
+        "dashboard": "open planr dashboard",
+        "sync": "sync planr",
+        "doctor": "planr pipeline doctor"
+      },
+      "capabilities": {
+        "subagents": "advisory",
+        "hooks": false,
+        "toolIsolation": "advisory",
+        "parallelDispatch": "host",
+        "headlessLaunch": false
+      },
+      "assets": ["rules", "roles", "schemas", "templates"],
+      "healthChecks": ["rules-present", "portable-assets-present", "no-foreign-runtime-paths"],
+      "drivers": {
+        "install": "openplanr://drivers/cursor/install",
+        "migrate": "openplanr://drivers/cursor/migrate",
+        "rollback": "openplanr://drivers/cursor/rollback",
+        "uninstall": "openplanr://drivers/cursor/uninstall"
+      }
+    }
+  ]
+}

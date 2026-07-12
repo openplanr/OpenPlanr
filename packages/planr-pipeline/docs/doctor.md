@@ -15,6 +15,7 @@ npm run doctor -- --strict
 npm run doctor -- --release
 npm run doctor -- --release --strict
 npm run doctor -- --json
+npm run doctor -- --workspace-root /path/to/checkouts
 ```
 
 ## Modes
@@ -26,6 +27,20 @@ npm run doctor -- --json
 | `--release` | Checks tags and GitHub releases for current pipeline, skill, and CLI versions when sibling repos exist. |
 | `--json` | Emits machine-readable output with `ok`, `failures`, `warnings`, and `checks`. |
 | `--versions-only` | Runs the version/protocol/ecosystem subset used by `npm run doctor:versions`. |
+| `--workspace-root <path>` | Explicit parent directory containing ecosystem checkouts. Overrides auto-discovery. |
+
+## Ecosystem Discovery
+
+Doctor no longer requires specific sibling folder names. It resolves repositories
+in this order:
+
+1. `--workspace-root <path>`
+2. `OPENPLANR_ECOSYSTEM_ROOT`
+3. The parent directory of the current `planr-pipeline` checkout
+
+Within that directory it recognizes the common short and legacy checkout names,
+then falls back to matching each checkout's `openplanr/*` Git remote. This keeps
+strict checks portable across developer machines and CI workspaces.
 
 ## Output Contract
 

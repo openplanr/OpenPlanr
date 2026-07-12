@@ -14,7 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -28,13 +28,22 @@ const assert = (cond, label, detail) => (cond ? ok(label) : bad(label, detail));
 const HOME = mkdtempSync(join(tmpdir(), 'planr-loop-home-'));
 process.env.PLANR_HOME = HOME;
 
-const { validate } = await import(join(root, 'conformance/json-schema-validate.mjs'));
-const { sheetContract, contractInstructions, validateSheet } = await import(join(root, 'lib/design-engine/providers/claudeSvg.mjs'));
-const { createSession, appendRound, saveSession, loadSession } = await import(join(root, 'lib/design-engine/session.mjs'));
-const { createDaemon, DAEMON_VERSION } = await import(join(root, 'lib/design-engine/daemon.mjs'));
-const { renderBoardHtml } = await import(join(root, 'lib/design-engine/board.mjs'));
-const { readFeedback } = await import(join(root, 'lib/design-engine/feedback.mjs'));
-const { emptyProfile, updateTaste, saveProfile, loadProfile } = await import(join(root, 'lib/design-engine/taste.mjs'));
+const moduleUrl = (relativePath) => pathToFileURL(join(root, relativePath)).href;
+const { validate } = await import(moduleUrl('conformance/json-schema-validate.mjs'));
+const { sheetContract, contractInstructions, validateSheet } = await import(
+  moduleUrl('lib/design-engine/providers/claudeSvg.mjs')
+);
+const { createSession, appendRound, saveSession, loadSession } = await import(
+  moduleUrl('lib/design-engine/session.mjs')
+);
+const { createDaemon, DAEMON_VERSION } = await import(
+  moduleUrl('lib/design-engine/daemon.mjs')
+);
+const { renderBoardHtml } = await import(moduleUrl('lib/design-engine/board.mjs'));
+const { readFeedback } = await import(moduleUrl('lib/design-engine/feedback.mjs'));
+const { emptyProfile, updateTaste, saveProfile, loadProfile } = await import(
+  moduleUrl('lib/design-engine/taste.mjs')
+);
 
 log('OpenPlanr design-loop conformance (mocked full loop, $0)\n');
 

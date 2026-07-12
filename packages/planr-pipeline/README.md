@@ -1,10 +1,10 @@
 # planr-pipeline
 
-> **Spec-driven AI factory.** Two-phase pipeline. Human checkpoint between phases. Plugin for Claude Code.
+> **Complete feature delivery workflow.** PO, Design, Review, DEV, QA, and delivery outputs with a mandatory human checkpoint.
 
-The **canonical Claude Code adapter** for the [OpenPlanr Protocol v1.0.0](docs/protocol/README.md) — a runtime-agnostic spec-driven workflow that turns functional specs into production code. Nine specialized subagents (Sonnet 5 for analysis, Opus 4.8 for code generation), stack-aware decomposition, and hard rules enforced at the *tool* layer — not just in prompts.
+`@openplanr/pipeline` is the portable pipeline engine for the [OpenPlanr Protocol](docs/protocol/README.md). It includes its own feature-local PO planning, design and review boards, implementation, QA, documentation, and DevOps outputs. Nine canonical roles use capability tiers rather than vendor model names; runtime adapters map those capabilities to their native tools.
 
-The same protocol runs on Cursor and Codex via planr-generated rule files (see [Runtime support](#runtime-support) below). Same artifacts. Same workflow. Same `.pipeline-shipped` proof markers.
+OpenPlanr remains the dedicated planning/project-management CLI. The two products intentionally overlap at spec decomposition and record provenance so users can see which engine performed each operation.
 
 ---
 
@@ -24,13 +24,13 @@ The split is non-negotiable. **The plugin refuses to auto-chain PO Phase → DEV
 
 ## Runtime support
 
-`planr-pipeline` is the **canonical Claude Code adapter** for the OpenPlanr Protocol v1.0.0. The same protocol runs on Cursor and Codex via planr-generated rule files:
+The package certifies Claude Code, Codex, and Cursor first. Install and migrate adapters through `planr`:
 
 | Runtime | Adapter | Install |
 |---|---|---|
-| **Claude Code** *(canonical)* | This plugin (manifest-enforced subagents) | `/plugin marketplace add openplanr/marketplace && /plugin install planr-pipeline@openplanr` |
-| **Cursor** | `.cursor/rules/planr-pipeline.mdc` + agent body files | `npm i -g openplanr && planr rules generate --target cursor --scope pipeline` |
-| **Codex** | `AGENTS.md` with pipeline section | `npm i -g openplanr && planr rules generate --target codex --scope pipeline` |
+| **Claude Code** | Native commands and tool-enforced agents | `planr setup --runtime claude` |
+| **Cursor** | Portable relative project rules and nine role files | `planr setup --runtime cursor` |
+| **Codex** | User-scope workflow skills and concise project policy | `planr setup --runtime codex` |
 
 All three adapters share the same `.planr/specs/SPEC-NNN-{slug}/` artifact contract — a SPEC authored on one runtime is consumable by any other. See [`docs/compatibility-matrix.md`](docs/compatibility-matrix.md) for the full parity table and per-runtime caveats; see [`docs/protocol/`](docs/protocol/) for the runtime-agnostic protocol spec.
 
@@ -45,12 +45,16 @@ OpenPlanr is a four-repo ecosystem. For the operating model, see:
 
 ## Install
 
-```
-/plugin marketplace add openplanr/marketplace
-/plugin install planr-pipeline@openplanr
+```bash
+curl -fsSL https://openplanr.dev/install.sh | sh
+# Windows: irm https://openplanr.dev/install.ps1 | iex
+
+planr setup
+planr doctor
+planr pipeline plan todo
 ```
 
-Two commands and you have an opinionated, multi-agent code factory in any Claude Code project.
+Use `npx openplanr@latest setup` without a global install or `--minimal` for planning only.
 
 ---
 
@@ -94,7 +98,7 @@ Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, y
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  PO PHASE  (Sonnet 5 agents — fast, structured)                   │
+│  PO PHASE  (analysis-high capability roles)                        │
 │  /planr-pipeline:plan {name}                                │
 │                                                                     │
 │  db-agent (if DB) → designer-agent (if PNG) → specification-agent   │
@@ -105,7 +109,7 @@ Total time: ~15 minutes of your input + ~10 minutes of agent work. You review, y
                    open the generated US/task files, edit if needed
                              ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│  DEV PHASE  (Opus 4.8 codegen + Sonnet 5 verifiers)               │
+│  DEV PHASE  (implementation-high + read-only-qa capabilities)      │
 │  /planr-pipeline:ship {name}                                    │
 │                                                                     │
 │  frontend-agent + backend-agent (per task, parallel) →              │
@@ -139,19 +143,19 @@ Two core phases (`plan` → `ship`) with a mandatory human review between them, 
 
 ## Agents
 
-| Agent | Model | Phase | Role | Tool restrictions |
+| Agent | Capability | Phase | Role | Tool restrictions |
 |---|---|---|---|---|
-| **db-agent** | Sonnet 5 | 0.1 | Schema introspection (SQL + Mongo) | READ-ONLY: `Bash(psql:*)`, `Bash(mongosh:*)`, etc. No `Edit`. |
-| **designer-agent** | Sonnet 5 | 1 | PNG → design-spec.md | `Read`, `Glob`, `Write` only |
-| **specification-agent** | Sonnet 5 | 1 | Spec → US + tasks | `Read`, `Glob`, `Grep`, `Write` |
-| **frontend-agent** | Opus 4.8 | 3 | UI codegen (task-1 UI) | `Read`, `Edit`, `Write`, `Bash(npm:*)` etc. |
-| **entity-scaffold-agent** | Sonnet 5 | 0.2 (manual) | Schema → `output/src/` ORM skeleton | `Read`, `Glob`, `Grep`, `Edit`, `Write`, `Bash(npm:*)`, `Bash(npx:*)`, `Bash(node:*)` |
-| **backend-agent** | Opus 4.8 | 3 | Backend codegen (task-2 Tech) | Same plus `Bash(prisma:*)`, `Bash(node:*)` |
-| **qa-agent** | Sonnet 5 | 3.5 | DoD gate, runs build/test | Read-only on src; `Write` only for qa-report.md |
-| **devops-agent** | Sonnet 5 | 3.5 | Docker, CI, env templates | `Read`, `Glob`, `Write`, `Edit`. **No Bash** — non-deploy enforced at tool layer. |
-| **doc-gen-agent** | Sonnet 5 | 3.5 | `Docs/feat-{name}/` from US + code | `Read`, `Glob`, `Grep`, `Write` |
+| **db-agent** | analysis-high | 0.1 | Schema introspection | Database and source read-only |
+| **designer-agent** | analysis-high | 1 | UI inputs → design spec | Design artifact writes only |
+| **specification-agent** | analysis-high | 1 | Spec → stories + tasks | Planning artifacts only |
+| **entity-scaffold-agent** | analysis-high | 0.2 (manual) | Persistence skeleton | Declared scaffold paths only |
+| **frontend-agent** | implementation-high | 3 | UI implementation | Task UI Create/Modify paths only |
+| **backend-agent** | implementation-high | 3 | Service implementation | Task tech Create/Modify paths only |
+| **qa-agent** | read-only-qa | 3.5 | DoD, build, and test gate | Source read-only; QA report only |
+| **devops-agent** | analysis-high | 3.5 | Docker, CI, env templates | Declared config only; never deploys |
+| **doc-gen-agent** | analysis-high | 3.5 | Feature documentation | Documentation output only |
 
-See `docs/agent-model-map.md` for the rationale per agent.
+`registry/roles.json` is authoritative and generates adapter assets and documentation.
 
 ---
 
@@ -192,7 +196,7 @@ The plugin ships defaults at `${CLAUDE_PLUGIN_ROOT}/stacks/{frontend,backend,dat
 The plugin enforces 9 hard rules. Three are critical:
 
 - **R1** — Never auto-chain PO Phase → DEV Phase. Two separate triggers, mandatory human review between. *Enforced by command structure.*
-- **R3** — Model assignments are fixed (Sonnet for analysis, Opus for codegen). *Enforced by `model:` frontmatter.*
+- **R3** — Portable roles request capability tiers; each runtime adapter owns its model mapping.
 - **R8** — DB Agent is READ-ONLY. *Enforced by `tools` frontmatter — only read-only DB clients in Bash, no Edit, single Write target.*
 
 R6 — Max 3 correction iterations per task — applies to DEV agents. After 3, the agent stops and writes `error-report.md` per `templates/error-report.md`.
@@ -203,17 +207,15 @@ Read the full rule set in [`docs/rules.md`](docs/rules.md).
 
 ## Relationship to planr
 
-[planr](https://github.com/openplanr/OpenPlanr) is OpenPlanr's agile + spec-driven planning CLI. It owns the **planning** verb.
-
-`planr-pipeline` owns the **execution** verb. The two are complementary: planr plans, pipeline ships.
+[planr](https://github.com/openplanr/OpenPlanr) is the dedicated planning and project-management CLI. `planr-pipeline` is the complete feature-delivery workflow and includes its own PO planning. Their decomposition overlap is intentional.
 
 ### Bridge to planr spec-driven mode
 
 When a project uses planr's **spec-driven mode** (the third planning posture, see `planr spec init`), this plugin reads `.planr/specs/SPEC-NNN-{slug}/` directly — no conversion adapter, no copy step. Both products share the same artifact schema:
 
-- planr authors specs and runs `planr spec decompose` to generate User Stories + Tasks
-- The pipeline plugin (`/planr-pipeline:plan {slug}` and `/planr-pipeline:ship {slug}`) reads from the planr spec directory and executes
-- planr is the **authoring surface**; planr-pipeline is the **executor**
+- OpenPlanr can author and decompose specs for ongoing project planning.
+- The pipeline PO phase can independently author feature-local decomposition directly connected to Design, DEV, and QA.
+- Both append `.planr/provenance.jsonl`; do not run both decomposers on one populated spec without explicit reconciliation.
 
 The pipeline auto-detects spec mode by looking for `.planr/config.json` with `idPrefix.spec` set. If absent, it falls back to the default `output/feats/feat-{name}/` layout — existing pipeline-only workflows are unchanged.
 
@@ -225,7 +227,7 @@ See [planr's spec-driven proposal](https://github.com/openplanr/OpenPlanr/blob/m
 
 Pre-1.0 semver. Expect minor breaks across `0.1.x → 0.2.x`. Patch bumps (`0.1.0 → 0.1.1`) are doc/prompt clarifications only.
 
-Pinned model strings (`claude-sonnet-5`, `claude-opus-4-8`) are operational guidance, not part of the protocol schema. Claude Code uses the default context window for these assignments; do not add context-window suffixes unless the CLI contract changes. Check [`docs/agent-model-map.md`](docs/agent-model-map.md) and the changelog when upgrading.
+Vendor model strings are confined to the native adapter and are not part of the protocol. Portable registries use `analysis-high`, `implementation-high`, and `read-only-qa` capabilities.
 
 ---
 

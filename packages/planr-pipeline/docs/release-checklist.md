@@ -6,9 +6,9 @@ or marketplace metadata.
 ## Release Order
 
 1. `planr-pipeline`
-2. `marketplace`
+2. `OpenPlanr`
 3. `skills`
-4. `OpenPlanr`
+4. `marketplace`
 
 Patch releases can skip repos that do not need a content change, but the final
 audit must still verify all four repos: `planr-pipeline`, `marketplace`,
@@ -33,6 +33,7 @@ git diff --check
 Run in `marketplace` when marketplace metadata or README rows change:
 
 ```bash
+npm run generate
 npm run check
 git diff --check
 ```
@@ -40,7 +41,7 @@ git diff --check
 Run in `skills` when skill routing or version claims change:
 
 ```bash
-rg -n "planr-pipeline|OpenPlanr|marketplace|schemas/v1.0.0|0\\.[0-9]+\\.[0-9]+|1\\.[0-9]+\\.[0-9]+"
+npm test
 git diff --check
 ```
 
@@ -48,6 +49,8 @@ Run in `OpenPlanr` when CLI output or protocol references change:
 
 ```bash
 npm test
+npm run build
+npm pack --dry-run
 git diff --check
 ```
 
@@ -71,7 +74,8 @@ The release audit checks:
 - `planr-pipeline` package, plugin manifest, stack metadata, protocol docs, and
   compatibility matrix agree.
 - `marketplace` manifest and README agree.
-- `skills` manifest has a version and the marketplace points to it.
+- `skills` bundle has a version and the marketplace points to it.
+- `marketplace/ecosystem.json` is generated from the released component and adapter versions.
 - `OpenPlanr` has a package version and published release when checked.
 - Git tags and GitHub releases exist for versioned repos.
 - Cross-repo graph output matches through `npm run ecosystem:conformance -- --strict`.

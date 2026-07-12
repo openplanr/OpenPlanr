@@ -9,7 +9,7 @@ Accepted
 OpenPlanr spans multiple repositories:
 
 - `openplanr/OpenPlanr` owns the planning CLI and artifact authoring surface.
-- `openplanr/planr-pipeline` owns the executor plugin, runtime commands, agent contracts, local design/dashboard tooling, and conformance suite.
+- `openplanr/planr-pipeline` owns the complete PO–Design–DEV engine, runtime-neutral contracts, native Claude adapter, local design/dashboard tooling, and conformance suite.
 - `openplanr/skills` owns assistant routing instructions.
 - `openplanr/marketplace` owns Claude Code plugin distribution metadata.
 

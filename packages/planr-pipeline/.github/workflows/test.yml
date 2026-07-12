@@ -7,10 +7,11 @@ on:
 jobs:
   node:
     name: Node ${{ matrix.node-version }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         node-version: ["20.x", "22.x"]
     steps:
       - uses: actions/checkout@v4
@@ -20,6 +21,7 @@ jobs:
       - run: node --check conformance/runner.mjs
       - run: node --check conformance/json-schema-validate.mjs
       - run: npm test
+      - run: npm pack --dry-run
       - name: Conformance fixtures (default + spec-driven)
         shell: bash
         run: |

@@ -120,8 +120,8 @@ test('doctor docs cover strict release and json modes', () => {
 test('ecosystem guide uses canonical surface labels', () => {
   const guide = read('docs/ecosystem-guide.md');
 
-  assert.match(guide, /OpenPlanr plans/);
-  assert.match(guide, /planr-pipeline ships/);
-  assert.match(guide, /openplanr skill routes/);
-  assert.match(guide, /marketplace installs/);
+  assert.match(guide, /OpenPlanr is the dedicated planning control plane/);
+  assert.match(guide, /planr-pipeline is the complete delivery workflow/);
+  assert.match(guide, /skills provide reusable workflows/);
+  assert.match(guide, /marketplace publishes metadata/);
 });

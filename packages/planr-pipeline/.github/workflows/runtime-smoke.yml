@@ -1,0 +1,79 @@
+name: Credentialed runtime smoke
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+  release:
+    types: [prereleased]
+
+jobs:
+  claude-plan-ship:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Detect credential
+        id: auth
+        env:
+          RUNTIME_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: test -n "$RUNTIME_API_KEY" && echo "available=true" >> "$GITHUB_OUTPUT" || echo "available=false" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.auth.outputs.available == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.auth.outputs.available == 'true'
+        with:
+          node-version: 22
+      - run: npm install --global @anthropic-ai/claude-code
+        if: steps.auth.outputs.available == 'true'
+      - run: cp -R conformance/fixtures/spec-driven-todo-shipped "$RUNNER_TEMP/claude-smoke"
+        if: steps.auth.outputs.available == 'true'
+      - name: Native PLAN smoke
+        if: steps.auth.outputs.available == 'true'
+        working-directory: ${{ runner.temp }}/claude-smoke
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: claude --plugin-dir "$GITHUB_WORKSPACE" -p "/planr-pipeline:plan todo-feature --dry-run"
+      - name: Native SHIP resume smoke
+        if: steps.auth.outputs.available == 'true'
+        working-directory: ${{ runner.temp }}/claude-smoke
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: claude --plugin-dir "$GITHUB_WORKSPACE" -p "/planr-pipeline:ship todo-feature"
+      - run: node conformance/runner.mjs --runtime claude-code --verify-ship --dir "$RUNNER_TEMP/claude-smoke"
+        if: steps.auth.outputs.available == 'true'
+
+  codex-plan-ship:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Detect credential
+        id: auth
+        env:
+          RUNTIME_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: test -n "$RUNTIME_API_KEY" && echo "available=true" >> "$GITHUB_OUTPUT" || echo "available=false" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.auth.outputs.available == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.auth.outputs.available == 'true'
+        with:
+          node-version: 22
+      - run: npm install --global @openai/codex
+        if: steps.auth.outputs.available == 'true'
+      - run: cp -R conformance/fixtures/spec-driven-todo-shipped "$RUNNER_TEMP/codex-smoke"
+        if: steps.auth.outputs.available == 'true'
+      - name: Codex PLAN smoke
+        if: steps.auth.outputs.available == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: >-
+          codex exec --ephemeral --skip-git-repo-check --sandbox workspace-write
+          -C "$RUNNER_TEMP/codex-smoke"
+          "Follow $GITHUB_WORKSPACE/adapters/codex/skills/planr-plan/SKILL.md and run PLAN for todo-feature in dry-run mode. Never invoke SHIP."
+      - name: Codex SHIP smoke
+        if: steps.auth.outputs.available == 'true'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: >-
+          codex exec --ephemeral --skip-git-repo-check --sandbox workspace-write
+          -C "$RUNNER_TEMP/codex-smoke"
+          "Follow $GITHUB_WORKSPACE/adapters/codex/skills/planr-ship/SKILL.md and run the reviewed SHIP resume for todo-feature."
+      - run: node conformance/runner.mjs --runtime codex --verify-ship --dir "$RUNNER_TEMP/codex-smoke"
+        if: steps.auth.outputs.available == 'true'

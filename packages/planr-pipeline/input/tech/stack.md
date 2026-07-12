@@ -15,8 +15,8 @@
 ```yaml
 schemaVersion: "1.0.0"
 AppName: "planr-pipeline"
-Version: "0.24.10"
-Description: "Spec-driven AI software factory plugin for Claude Code (OpenPlanr Protocol v1.0.0 canonical adapter)"
+Version: "0.25.0"
+Description: "Portable OpenPlanr PO, Design, DEV, QA, and delivery pipeline (Protocol v1.0 artifacts + v1.1 ecosystem contracts)"
 Repository: "https://github.com/openplanr/planr-pipeline"
 ```
 
@@ -41,7 +41,7 @@ MigrationTool: ""
 
 ```yaml
 Language: "JavaScript (Node ESM)"
-Framework: "Claude Code plugin"
+Framework: "Portable Node engine with runtime adapters"
 RuntimeVersion: "Node 20+"
 AuthStrategy: ""
 APIStyle: ""
@@ -66,7 +66,7 @@ HTTPClient: ""
 ## DevOps / Infrastructure
 
 ```yaml
-ContainerRuntime: ""      # plugin distribution is via the Claude Code plugin marketplace
+ContainerRuntime: ""      # distributed through npm plus runtime-native adapters
 Orchestration: ""
 CIProvider: "GitHub Actions"
 CloudProvider: ""
