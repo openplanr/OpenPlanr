@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.1
+
+### Patch Changes
+
+- [`392b50c`](https://github.com/openplanr/OpenPlanr/commit/392b50c26d31d4d3bc680471e7864ec1f1d8beca) Make installation quiet and configuration explicit, add guided runtime setup with safe user-scope defaults, prevent accidental project writes outside Git or initialized OpenPlanr projects, and diagnose legacy home-directory setup files.
+
 ## 1.9.0
 
 ### Minor Changes
