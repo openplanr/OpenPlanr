@@ -1,7 +1,8 @@
 import path from 'node:path';
 import type { ArtifactCollection, GeneratedFile } from '../models/types.js';
+import { resolvePipelinePackage } from '../services/pipeline-package-service.js';
 import { renderTemplate } from '../services/template-service.js';
-import { OPENPLANR_PROTOCOL_VERSION } from '../utils/constants.js';
+import { readFile } from '../utils/fs.js';
 import { BaseGenerator } from './base-generator.js';
 
 export class CodexGenerator extends BaseGenerator {
@@ -28,11 +29,10 @@ export class CodexGenerator extends BaseGenerator {
     }
 
     if (this.includesPipeline()) {
-      const pipelineData = { ...baseData, protocolVersion: OPENPLANR_PROTOCOL_VERSION };
-      const content = await renderTemplate(
-        'rules/codex/_pipeline-section.md.hbs',
-        pipelineData,
-        this.config.templateOverrides,
+      const pipeline = resolvePipelinePackage();
+      if (!pipeline) throw new Error('E_PIPELINE_NOT_INSTALLED');
+      const content = await readFile(
+        path.join(pipeline.root, 'adapters', 'codex', 'project-guidance.md'),
       );
       files.push({ path: targetPath, content, markerName: 'pipeline' });
     }

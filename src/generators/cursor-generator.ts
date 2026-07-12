@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { ArtifactCollection, GeneratedFile } from '../models/types.js';
+import { resolvePipelinePackage } from '../services/pipeline-package-service.js';
 import { renderTemplate } from '../services/template-service.js';
-import { getTemplatesDir, OPENPLANR_PROTOCOL_VERSION } from '../utils/constants.js';
 import { readFile } from '../utils/fs.js';
 import { BaseGenerator } from './base-generator.js';
 
@@ -15,31 +15,13 @@ const AGILE_CURSOR_TEMPLATES = [
   'implement-task-list.mdc.hbs',
 ];
 
-/** Pipeline-mode rules — 3 `.mdc` files driving the planr-pipeline two-phase flow on Cursor. */
-const PIPELINE_MDC_TEMPLATES = [
-  'planr-pipeline.mdc.hbs',
-  'planr-pipeline-plan.mdc.hbs',
-  'planr-pipeline-ship.mdc.hbs',
-];
-
-/**
- * 8 named subagent roles dispatched by the pipeline rules. Body files (system
- * prompts) are vendored from `planr-pipeline/agents/` at build time and
- * copied verbatim to `.cursor/rules/agents/` at generation time. They are NOT
- * Handlebars templates — Cursor's Composer reads them as plain system prompts.
- *
- * Keep in sync with `planr-pipeline/agents/{name}.md` body content.
- */
-const PIPELINE_AGENT_NAMES = [
-  'db-agent',
-  'designer-agent',
-  'specification-agent',
-  'frontend-agent',
-  'backend-agent',
-  'qa-agent',
-  'devops-agent',
-  'doc-gen-agent',
-];
+interface PortableRole {
+  id: string;
+  phase: string;
+  activation: string;
+  capability: string;
+  writeBoundary: string;
+}
 
 export class CursorGenerator extends BaseGenerator {
   getTargetName(): string {
@@ -65,16 +47,39 @@ export class CursorGenerator extends BaseGenerator {
 
     // ── Pipeline-mode rules (Cursor adapter for planr-pipeline) ──────
     if (this.includesPipeline()) {
-      const pipelineData = {
-        ...baseData,
-        protocolVersion: OPENPLANR_PROTOCOL_VERSION,
-        cursorRulesRoot: rulesDir,
-        agentNames: PIPELINE_AGENT_NAMES,
-      };
-      files.push(
-        ...(await this.renderMdcTemplates(PIPELINE_MDC_TEMPLATES, pipelineData, rulesDir)),
+      const pipeline = resolvePipelinePackage();
+      if (!pipeline) throw new Error('E_PIPELINE_NOT_INSTALLED');
+      const portableRule = await readFile(
+        path.join(pipeline.root, 'adapters', 'cursor', 'rules', 'openplanr.mdc'),
       );
-      files.push(...(await this.copyAgentBodies(PIPELINE_AGENT_NAMES, rulesDir)));
+      files.push({ path: path.join(rulesDir, 'openplanr.mdc'), content: portableRule });
+
+      const roleRegistry = JSON.parse(await readFile(pipeline.roleRegistryPath)) as {
+        roles: PortableRole[];
+      };
+      for (const role of roleRegistry.roles) {
+        const content = [
+          `# ${role.id}`,
+          '',
+          `Capability tier: \`${role.capability}\``,
+          `Phase: \`${role.phase}\``,
+          `Activation: \`${role.activation}\``,
+          '',
+          `- ${role.writeBoundary}`,
+          '',
+        ].join('\n');
+        files.push({ path: path.join(rulesDir, 'openplanr-roles', `${role.id}.md`), content });
+      }
+
+      const deprecation =
+        '---\ndescription: Deprecated OpenPlanr pipeline alias\nalwaysApply: false\n---\n\nThis compatibility alias is deprecated. Use the portable `openplanr.mdc` rule.\n';
+      for (const legacy of [
+        'planr-pipeline.mdc',
+        'planr-pipeline-plan.mdc',
+        'planr-pipeline-ship.mdc',
+      ]) {
+        files.push({ path: path.join(rulesDir, legacy), content: deprecation });
+      }
     }
 
     return files;
@@ -95,20 +100,6 @@ export class CursorGenerator extends BaseGenerator {
       );
       out.push({
         path: path.join(rulesDir, filename.replace('.hbs', '')),
-        content,
-      });
-    }
-    return out;
-  }
-
-  /** Copy vendored agent body files verbatim (no Handlebars) under `<rulesDir>/agents/`. */
-  private async copyAgentBodies(agentNames: string[], rulesDir: string): Promise<GeneratedFile[]> {
-    const out: GeneratedFile[] = [];
-    const srcDir = path.join(getTemplatesDir(), 'rules', 'cursor', 'agents');
-    for (const name of agentNames) {
-      const content = await readFile(path.join(srcDir, `${name}.md`));
-      out.push({
-        path: path.join(rulesDir, 'agents', `${name}.md`),
         content,
       });
     }

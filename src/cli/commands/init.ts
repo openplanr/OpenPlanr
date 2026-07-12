@@ -21,8 +21,9 @@ import {
 } from '../../services/prompt-service.js';
 import { renderTemplate } from '../../services/template-service.js';
 import { ARTIFACT_DIRS, CONFIG_FILENAME } from '../../utils/constants.js';
-import { ensureDir, fileExists, writeFile } from '../../utils/fs.js';
+import { ensureDir, fileExists, readFile, writeFile } from '../../utils/fs.js';
 import { logger } from '../../utils/logger.js';
+import { spliceManagedBlock } from '../../utils/splice-managed-block.js';
 
 export function registerInitCommand(program: Command) {
   program
@@ -32,7 +33,8 @@ export function registerInitCommand(program: Command) {
     .option('--no-ai', 'skip AI setup')
     .option(
       '--no-pipeline-rules',
-      'skip planr-pipeline rules (generates agile rules only — equivalent to running `planr rules generate --scope agile` post-init)',
+      'deprecated compatibility flag; runtime installation belongs to `planr setup`',
+      false,
     )
     .action(async (opts) => {
       const projectDir = program.opts().projectDir as string;
@@ -145,18 +147,9 @@ export function registerInitCommand(program: Command) {
         logger.success('Created estimation guide');
       }
 
-      // Decide rule scope: agile (default agile workflow rules) or all (agile +
-      // planr-pipeline rules so Cursor/Codex/Claude pick up the spec-driven
-      // workflow automatically). Interactive default is `true` to give every new
-      // project a complete cross-runtime experience without an extra command.
-      const includePipelineRules =
-        opts.pipelineRules === false
-          ? false
-          : await promptConfirm(
-              'Generate planr-pipeline rules (auto-activates spec-driven workflow in Cursor and Codex)?',
-              true,
-            );
-      const ruleScope: GenerationScope = includePipelineRules ? 'all' : 'agile';
+      // Project initialization writes planning context only. User/runtime
+      // installation and pipeline migration belong to `planr setup`.
+      const ruleScope: GenerationScope = 'agile';
 
       // Generate AI agent rules
       const generators = createGenerators(config, projectDir);
@@ -172,7 +165,12 @@ export function registerInitCommand(program: Command) {
         for (const file of files) {
           const fullPath = path.join(projectDir, file.path);
           await ensureDir(path.dirname(fullPath));
-          await writeFile(fullPath, file.content);
+          if (file.markerName) {
+            const existing = (await fileExists(fullPath)) ? await readFile(fullPath) : '';
+            await writeFile(fullPath, spliceManagedBlock(existing, file.markerName, file.content));
+          } else {
+            await writeFile(fullPath, file.content);
+          }
           ruleFiles++;
         }
       }
@@ -205,9 +203,7 @@ export function registerInitCommand(program: Command) {
       }
       logger.dim('  planr epic create        — Create your first epic');
       logger.dim('  planr quick "description" — Quick standalone task list (no agile ceremony)');
-      if (includePipelineRules) {
-        logger.dim('  planr spec create        — Author a spec for the planr-pipeline workflow');
-      }
+      logger.dim('  planr setup              — Install or migrate runtime workflow adapters');
       logger.dim('  planr rules generate     — Regenerate AI agent rules after changes');
       logger.dim('  planr config show        — View configuration');
     });

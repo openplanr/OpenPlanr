@@ -875,25 +875,44 @@ planr checklist reset
 
 ### `planr init`
 
-Initialize Planr in the current project. Sets up `.planr/`, picks an AI provider, asks for your default coding agent, and **auto-generates AI agent rule files for the runtime(s) you target**.
+Initialize planning in the current project. Sets up `.planr/`, optional AI
+configuration, and agile project context. Runtime installation belongs to `planr setup`.
 
 ```bash
-planr init                                # interactive — defaults include pipeline rules
-planr init --name my-project --yes        # non-interactive — accepts all defaults (incl. pipeline rules)
-planr init --no-pipeline-rules --yes      # non-interactive, agile-only (skip pipeline rules)
-planr init --no-ai --yes                  # non-interactive, no AI provider, agile + pipeline rules
+planr init
+planr init --name my-project --yes
+planr init --no-ai --yes
 ```
 
 | Option                  | Description                                                                | Default                     |
 | ----------------------- | -------------------------------------------------------------------------- | --------------------------- |
 | `--name <name>`         | Project name                                                               | basename of cwd             |
 | `--no-ai`               | Skip AI provider setup                                                     | AI prompt enabled           |
-| `--no-pipeline-rules`   | Skip planr-pipeline rules (agile rules only)                           | Pipeline rules generated    |
+| `--no-pipeline-rules`   | Deprecated compatibility flag                                          | Runtime setup is separate   |
 | `--yes` / `-y`          | Non-interactive mode (accept all defaults)                                 | Interactive                 |
 
-**Why pipeline rules are on by default:** with them, `planr init` produces a complete, ready-to-use cross-runtime project. Cursor picks up `.cursor/rules/planr-pipeline.mdc` automatically; Codex's `AGENTS.md` includes the pipeline orchestration section; Claude Code's `CLAUDE.md` gets the pipeline block. **One command — every runtime activates the spec-driven workflow without further setup.**
+Run `planr setup` before or after init to install runtime workflows safely.
 
-If you only want agile mode (epic → feature → story → task), pass `--no-pipeline-rules` to skip the pipeline file set.
+---
+
+### `planr setup`, `planr runtime`, and `planr doctor`
+
+```bash
+planr setup --runtime auto --scope both
+planr setup --dry-run
+planr setup --minimal
+planr runtime detect
+planr runtime install codex --scope both
+planr runtime rollback
+planr doctor --strict
+```
+
+Setup previews exact mutations, backs up existing bytes, preserves content outside
+managed markers, writes `.planr/runtime-lock.json`, and is idempotent. `--minimal`
+keeps only the dedicated planning CLI.
+
+Use `planr pipeline plan|design|design-loop|design-review|ship|status|dashboard|sync|doctor`
+to route the complete delivery workflow.
 
 ---
 
@@ -925,14 +944,16 @@ planr rules generate --dry-run                             # preview without wri
 | Target × Scope          | Output                                                                                                        |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `cursor` × `agile`      | `.cursor/rules/{agile-checklist,create-epic,create-features,create-user-story,create-task-list,implement-task-list}.mdc` (6 files) |
-| `cursor` × `pipeline`   | `.cursor/rules/planr-pipeline.mdc` + `planr-pipeline-{plan,ship}.mdc` + `agents/{8 role bodies}.md`   |
+| `cursor` × `pipeline`   | `.cursor/rules/openplanr.mdc` + `openplanr-roles/{9 role files}.md` + deprecation aliases |
 | `claude` × `agile`      | `CLAUDE.md` (agile context-gathering protocol)                                                                |
 | `claude` × `pipeline`   | `CLAUDE.md` (with pipeline block) + sibling `planr-pipeline.md` reference card                            |
 | `codex` × `agile`       | `AGENTS.md` (agile context)                                                                                   |
-| `codex` × `pipeline`    | `AGENTS.md` with `## Planr Pipeline Orchestration` section                                                |
+| `codex` × `pipeline`    | Concise `AGENTS.md` project policy; `planr setup` installs user-scope workflow skills |
 | `* × all`               | Both scopes side-by-side                                                                                      |
 
-**Cross-runtime support:** the same OpenPlanr Protocol v1.0.0 runs on Claude Code (canonical, with manifest-enforced subagents), Cursor (via Composer subagent dispatch), and Codex (via persona role-shift). See [`planr-pipeline/docs/compatibility-matrix.md`](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md) for the full parity table.
+**Cross-runtime support:** v1.0 artifacts plus v1.1 capability contracts run on
+Claude Code, Cursor, and Codex. Codex uses skills and native subagents when exposed;
+Cursor uses Composer handoff with sequential fallback.
 
 ---
 

@@ -2,9 +2,9 @@
 
 # OpenPlanr
 
-### The planning layer for AI coding agents
+### Dedicated planning CLI and cross-runtime workflow control plane
 
-**Plan once. Ship with agents.** Works natively on **Claude Code**, **Cursor**, and **Codex** via the runtime-agnostic [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol).
+**Plan continuously. Route feature delivery anywhere.** Certified first for **Claude Code**, **Cursor**, and **Codex** through Protocol v1.0 artifacts plus v1.1 runtime contracts.
 
 [![npm version](https://img.shields.io/npm/v/openplanr.svg?style=flat-square&color=cb3837&logo=npm)](https://www.npmjs.com/package/openplanr)
 [![node](https://img.shields.io/node/v/openplanr.svg?style=flat-square&color=339933&logo=node.js&logoColor=white)](https://nodejs.org)
@@ -12,24 +12,31 @@
 [![protocol](https://img.shields.io/badge/protocol-v1.0.0-7c3aed?style=flat-square)](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol)
 [![runtimes](https://img.shields.io/badge/runtimes-Claude%20Code%20%7C%20Cursor%20%7C%20Codex-f97316?style=flat-square)](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md)
 
-**[Website](https://openplanr.dev)** · **[Pipeline plugin](https://github.com/openplanr/planr-pipeline)** · **[Compatibility matrix](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md)** · **[Protocol spec](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol)** · **[CLI reference](docs/CLI.md)**
+**[Website](https://openplanr.dev)** · **[Setup guide](docs/CROSS_RUNTIME_SETUP.md)** · **[Compatibility matrix](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md)** · **[Protocol spec](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol)** · **[CLI reference](docs/CLI.md)**
 
 </div>
 
 ---
 
-`planr` is a Node CLI that authors structured plans (epics, features, stories, tasks, or full specs) as markdown in your repo, then generates runtime-native rule files so your AI coding agent picks up the plan automatically. One command to install, one command to initialise — your runtime activates the workflow without further setup.
+OpenPlanr is the standalone planning and project-management CLI. It owns epics,
+features, stories, tasks, specs, sprints, backlog, reports, integrations, and
+artifact lifecycle. `planr-pipeline` is a separate complete PO → Design → Review
+→ DEV → QA workflow with its own feature-local planning phase. The overlap is
+intentional; shared artifacts and provenance make the producer explicit.
 
 ```bash
-npm install -g openplanr
+curl -fsSL https://openplanr.dev/install.sh | sh
+# Windows: irm https://openplanr.dev/install.ps1 | iex
+
 cd my-project
+planr setup
+planr doctor
 planr init
-# ✓ Created .planr/config.json
-# ✓ Generated 17 AI agent rule file(s) (scope: all)
-# ✓ Open Cursor / Codex / Claude Code — pipeline workflow is live
+planr pipeline plan auth
 ```
 
-That's the whole onboarding.
+No global install is also supported: `npx openplanr@latest setup`. Planning-only
+installations use `--minimal`; the full pipeline is the default.
 
 ---
 
@@ -38,9 +45,9 @@ That's the whole onboarding.
 AI coding agents are powerful but lack structured planning context. Without a clear plan, they generate code that drifts from requirements, churn on the same problem across sessions, and can't be audited. OpenPlanr fixes this with four properties:
 
 1. **Markdown artifacts in your repo** — plans live next to your code, version-controlled, gittable, gradable. No external SaaS, no DB.
-2. **One contract, every runtime** — author once; Claude Code, Cursor, and Codex all consume the same artifacts via [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol).
-3. **Three planning postures** — pick the ceremony level that matches the work: agile (epic → feature → story → task), quick task (one-off chores), or spec-driven (handoff to an AI factory).
-4. **Hard rules at the tool layer** — when paired with the [planr-pipeline](https://github.com/openplanr/planr-pipeline) Claude Code plugin, agent tool restrictions are enforced in the manifest, not just the prompt. Production-grade audit trail via the `.pipeline-shipped` execution marker.
+2. **One contract, every runtime** — Claude Code, Cursor, and Codex consume the same v1.0 artifacts while locks, adapter capabilities, and provenance use additive v1.1 contracts.
+3. **Three planning postures** — agile, quick task, or spec-driven planning, independent from the pipeline's feature-local PO phase.
+4. **Safe runtime migration** — setup previews exact changes, preserves hand-written content, records ownership, backs up exact bytes, and supports rollback.
 
 ---
 
@@ -58,13 +65,14 @@ Pick one per project, mix per task. The spec-driven posture is the bridge to the
 
 ## Cross-runtime support
 
-`planr init` auto-generates rule files for all three runtimes by default. Each tool is **self-sufficient after a single install**:
+`planr setup` detects installed runtimes and installs portable adapters. `planr init`
+remains project initialization; it is no longer overloaded with user installation.
 
 | Runtime | What gets installed | How the workflow activates |
 |---|---|---|
-| **Claude Code** | `CLAUDE.md` + sibling `planr-pipeline.md` reference card. Optional: install the `planr-pipeline` plugin for full manifest-enforced subagents. | `/planr-pipeline:plan {feature}` and `/planr-pipeline:ship {feature}` slash commands |
-| **Cursor** | `.cursor/rules/planr-pipeline.mdc` + `agents/{8 role bodies}.md` | User says "plan {feature}" or "ship {feature}" — Composer dispatches the pipeline subagents |
-| **Codex** | `AGENTS.md` with `## Planr Pipeline Orchestration` section | User says "plan {feature}" — Codex adopts the role personas |
+| **Claude Code** | Portable package with the native plugin commands and tool-enforced agents; existing marketplace installs remain compatible | Existing slash commands or the packaged headless router |
+| **Cursor** | Portable project rules plus nine generated role files using relative paths | Composer handoff with sequential fallback |
+| **Codex** | User-scope skills; `AGENTS.md` contains only project policy and artifact pointers | Skills, native subagents when available, sequential fallback otherwise |
 
 Same artifacts (`.planr/specs/SPEC-NNN-{slug}/`). Same `.pipeline-shipped` proof markers. Cross-runtime spec portability works out of the box. See the [compatibility matrix](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md) for per-capability parity.
 
@@ -72,11 +80,16 @@ Same artifacts (`.planr/specs/SPEC-NNN-{slug}/`). Same `.pipeline-shipped` proof
 
 ## Quick start
 
-### Install
+### Install and setup
 
 ```bash
-npm install -g openplanr
+curl -fsSL https://openplanr.dev/install.sh | sh
+planr setup --runtime auto --scope both
+planr doctor
 ```
+
+Use `planr setup --dry-run` to preview, `planr setup --minimal` for planning
+only, and `planr runtime rollback` to restore exact pre-migration bytes.
 
 ### Initialise a project
 
@@ -118,8 +131,9 @@ planr quick create "add OAuth login"
 ```bash
 planr spec create "Auth flow" --slug auth
 planr spec shape SPEC-001              # 4 questions, no $EDITOR
-# Then in Claude Code / Cursor / Codex:
-#   /planr-pipeline:plan auth      → human review → /planr-pipeline:ship auth
+planr pipeline plan auth
+# Human review is mandatory before the separate SHIP invocation:
+planr pipeline ship auth
 ```
 
 ---
@@ -229,6 +243,10 @@ Output: Markdown + HTML written to `.planr/reports/`. `--push slack` posts via w
 
 | Command | Description |
 |---|---|
+| `planr setup` | Detect and install runtime adapters with preview, backup, and locking |
+| `planr runtime detect/list/install/update/remove/rollback/doctor` | Manage adapter lifecycle |
+| `planr doctor [--strict] [--fix] [--json]` | Unified ecosystem health checks |
+| `planr pipeline <action>` | Route PLAN, Design, SHIP, status, dashboard, sync, or doctor |
 | `planr init` | Initialise project (creates `.planr/`, generates rules for all runtimes by default) |
 | `planr config show` | Display current configuration + spec-driven readiness |
 | `planr config set-provider` / `set-key` / `set-model` / `set-agent` | Manage AI provider settings |

@@ -8,10 +8,11 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         node-version: [20, 22]
 
     steps:
@@ -49,3 +50,14 @@ jobs:
 
       - name: Verify CLI runs
         run: node dist/cli/index.js --version
+
+      - name: Packed artifact smoke test
+        run: npm pack --dry-run
+
+      - name: POSIX installer syntax
+        if: runner.os != 'Windows'
+        run: sh -n install.sh
+
+      - name: PowerShell installer syntax
+        shell: pwsh
+        run: "[scriptblock]::Create((Get-Content -Raw install.ps1)) | Out-Null"

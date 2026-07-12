@@ -23,9 +23,10 @@
  *  - Schema matches planr-pipeline plugin verbatim — both products
  *    share one contract. See https://github.com/openplanr/planr-pipeline
  *
- * This service owns spec authoring inside the planr CLI. The
- * planr-pipeline plugin is the executor: it reads `.planr/specs/` (when
- * spec mode is active) and runs the PO/DEV phases to ship code.
+ * This service owns dedicated planning inside the planr CLI. The pipeline
+ * independently provides feature-local PO planning as part of its complete
+ * PO → Design → Review → DEV → QA flow. Both producers share the artifact
+ * contract and record provenance so their intentional overlap stays clear.
  */
 
 import path from 'node:path';
@@ -36,6 +37,7 @@ import { parseMarkdown } from '../utils/markdown.js';
 import { slugify } from '../utils/slugify.js';
 import { atomicWriteFile } from './atomic-write-service.js';
 import { getNextId } from './id-service.js';
+import { appendOpenPlanrProvenance, readOpenPlanrVersion } from './provenance-service.js';
 import { renderTemplate } from './template-service.js';
 
 // ---------------------------------------------------------------------------
@@ -698,6 +700,16 @@ export async function decomposeSpec(
 
   // ── Final status: decomposed ──────────────────────────────────────────
   await updateSpecFields(projectDir, config, specId, { status: 'decomposed' });
+
+  await appendOpenPlanrProvenance({
+    projectDir,
+    artifactId: spec.id,
+    artifactPath: spec.specFile,
+    operation: 'decomposed',
+    productVersion: readOpenPlanrVersion(),
+    runtime: config.defaultAgent ?? 'cli',
+    phase: 'planning',
+  });
 
   logger.debug(`Decomposed ${specId}: ${storiesCreated} stories, ${tasksCreated} tasks written`);
 
