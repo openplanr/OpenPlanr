@@ -89,7 +89,7 @@ describe('runtime setup', () => {
     expect(agents).toContain('OpenPlanr runtime policy');
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-ship', 'SKILL.md'))).toBe(true);
     const lock = JSON.parse(readFileSync(join(projectDir, '.planr', 'runtime-lock.json'), 'utf8'));
-    expect(lock.components).toEqual({ cli: cliVersion, pipeline: '0.25.0', skills: '1.12.0' });
+    expect(lock.components).toEqual({ cli: cliVersion, pipeline: '0.25.1', skills: '1.12.0' });
     expect(lock.adapters).toHaveLength(1);
 
     const second = await previewSetup({

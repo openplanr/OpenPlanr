@@ -85,7 +85,7 @@
     "zod": "^4.3.6"
   },
   "optionalDependencies": {
-    "@openplanr/pipeline": "^0.25.0"
+    "planr-pipeline": "^0.25.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.9",

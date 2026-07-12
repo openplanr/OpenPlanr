@@ -385,7 +385,7 @@ function buildActions(
     throw new RuntimeManagerError(
       'E_VERSION_UNAVAILABLE',
       `Installed pipeline ${version} does not match requested ${options.version}.`,
-      `Install @openplanr/pipeline@${options.version} and rerun setup.`,
+      `Install planr-pipeline@${options.version} and rerun setup.`,
     );
   }
   const actions: FileAction[] = [];
@@ -481,7 +481,7 @@ function buildActions(
           scope: 'project',
           target: path.join(options.projectDir, 'CLAUDE.md'),
           content: Buffer.from(
-            'Use the native planr-pipeline plugin for PLAN, Design, SHIP, dashboard, sync, and doctor. Portable procedures and deterministic state are supplied by @openplanr/pipeline. PLAN and SHIP remain separate user actions.',
+            'Use the native planr-pipeline plugin for PLAN, Design, SHIP, dashboard, sync, and doctor. Portable procedures and deterministic state are supplied by planr-pipeline. PLAN and SHIP remain separate user actions.',
           ),
           kind: 'managed-block',
           marker: 'pipeline',
@@ -928,7 +928,7 @@ export async function runtimeDoctor(projectDir: string): Promise<{
   diagnostics.push({
     code: 'pipeline-package',
     status: pipeline ? 'pass' : 'warn',
-    message: pipeline ? `@openplanr/pipeline ${pipeline.version}` : 'Planning-only installation',
+    message: pipeline ? `planr-pipeline ${pipeline.version}` : 'Planning-only installation',
     ...(!pipeline ? { fix: 'Install openplanr without omitting optional dependencies.' } : {}),
   });
   const lock = path.join(projectDir, '.planr', 'runtime-lock.json');

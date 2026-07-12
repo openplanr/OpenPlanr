@@ -22,7 +22,7 @@ function candidateRoots(): string[] {
   ].filter((value): value is string => Boolean(value));
 
   try {
-    const entry = require.resolve('@openplanr/pipeline');
+    const entry = require.resolve('planr-pipeline');
     roots.unshift(path.resolve(path.dirname(entry), '../..'));
   } catch {
     // Optional dependency may be omitted by the minimal installer.
