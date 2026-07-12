@@ -1,6 +1,6 @@
 {
-  "name": "@openplanr/pipeline",
-  "version": "0.25.0",
+  "name": "planr-pipeline",
+  "version": "0.25.1",
   "private": false,
   "type": "module",
   "description": "OpenPlanr complete PO, Design, DEV, QA, and delivery pipeline",

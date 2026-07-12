@@ -15,7 +15,7 @@
 ```yaml
 schemaVersion: "1.0.0"
 AppName: "planr-pipeline"
-Version: "0.25.0"
+Version: "0.25.1"
 Description: "Portable OpenPlanr PO, Design, DEV, QA, and delivery pipeline (Protocol v1.0 artifacts + v1.1 ecosystem contracts)"
 Repository: "https://github.com/openplanr/planr-pipeline"
 ```

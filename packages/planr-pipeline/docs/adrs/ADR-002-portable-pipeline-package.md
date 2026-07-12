@@ -7,7 +7,7 @@ Accepted
 ## Decision
 
 `planr-pipeline` remains the complete PO, Design, DEV, QA, and delivery product
-and becomes the public `@openplanr/pipeline` package. Deterministic workflow
+and becomes the public `planr-pipeline` package. Deterministic workflow
 state belongs in its Node engine; runtime adapters own only model/tool dispatch.
 
 OpenPlanr remains the dedicated planning CLI and common setup/router surface.

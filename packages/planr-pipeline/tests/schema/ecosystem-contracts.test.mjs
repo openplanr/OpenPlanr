@@ -30,8 +30,8 @@ test('runtime lock validates and rejects an unknown field', () => {
     generatedAt: '2026-07-12T10:00:00Z',
     manifestDigest: `sha256:${'a'.repeat(64)}`,
     protocolVersion: '1.1.0',
-    components: { cli: '1.9.0', pipeline: '0.25.0', skills: '1.12.0' },
-    adapters: [{ runtime: 'codex', version: '0.25.0', capabilityLevel: 'workflow', installScope: 'both' }]
+    components: { cli: '1.9.0', pipeline: '0.25.1', skills: '1.12.0' },
+    adapters: [{ runtime: 'codex', version: '0.25.1', capabilityLevel: 'workflow', installScope: 'both' }]
   };
   assert.deepEqual(validate(lock, schema('runtime-lock')), []);
   assert.ok(validate({ ...lock, machinePath: '/tmp/private' }, schema('runtime-lock')).length > 0);
@@ -43,12 +43,12 @@ test('ecosystem manifest expresses independent versions and capability levels', 
     generatedAt: '2026-07-12T10:00:00Z',
     protocol: { current: '1.1.0', supported: ['1.0.x', '1.1.x'] },
     components: {
-      cli: { version: '1.9.0', pipelineRange: '^0.25.0' },
-      pipeline: { version: '0.25.0', cliRange: '^1.9.0' },
+      cli: { version: '1.9.0', pipelineRange: '^0.25.1' },
+      pipeline: { version: '0.25.1', cliRange: '^1.9.0' },
       skills: { version: '1.12.0', cliRange: '^1.9.0' },
       marketplace: { version: '1.0.0' }
     },
-    adapters: [{ runtime: 'codex', version: '0.25.0', capabilityLevel: 'workflow', pipelineRange: '^0.25.0' }]
+    adapters: [{ runtime: 'codex', version: '0.25.1', capabilityLevel: 'workflow', pipelineRange: '^0.25.1' }]
   };
   assert.deepEqual(validate(manifest, schema('ecosystem-manifest')), []);
 });
@@ -61,7 +61,7 @@ test('provenance event validates without changing artifact frontmatter', () => {
     artifact_id: 'SPEC-001',
     artifact_path: '.planr/specs/SPEC-001-auth/SPEC-001-auth.md',
     operation: 'decomposed',
-    producer: { product: 'planr-pipeline', version: '0.25.0', runtime: 'codex', phase: 'po' },
+    producer: { product: 'planr-pipeline', version: '0.25.1', runtime: 'codex', phase: 'po' },
     run_id: 'run-1'
   };
   assert.deepEqual(validate(event, schema('provenance-event')), []);

@@ -4,7 +4,7 @@ alwaysApply: true
 ---
 
 Read `.planr/runtime-lock.json` before pipeline work. Portable procedures and
-schemas are supplied by `@openplanr/pipeline`; all project references are relative
+schemas are supplied by `planr-pipeline`; all project references are relative
 to the repository root. PLAN and SHIP are separate user actions. Dispatch the nine
 roles from the portable registry through Composer when supported, with sequential
 fallback. Respect dependency ordering, Preserve paths, correction limits, and role

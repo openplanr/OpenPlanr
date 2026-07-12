@@ -2,7 +2,7 @@
 
 > **Complete feature delivery workflow.** PO, Design, Review, DEV, QA, and delivery outputs with a mandatory human checkpoint.
 
-`@openplanr/pipeline` is the portable pipeline engine for the [OpenPlanr Protocol](docs/protocol/README.md). It includes its own feature-local PO planning, design and review boards, implementation, QA, documentation, and DevOps outputs. Nine canonical roles use capability tiers rather than vendor model names; runtime adapters map those capabilities to their native tools.
+`planr-pipeline` is the portable pipeline engine for the [OpenPlanr Protocol](docs/protocol/README.md). It includes its own feature-local PO planning, design and review boards, implementation, QA, documentation, and DevOps outputs. Nine canonical roles use capability tiers rather than vendor model names; runtime adapters map those capabilities to their native tools.
 
 OpenPlanr remains the dedicated planning/project-management CLI. The two products intentionally overlap at spec decomposition and record provenance so users can see which engine performed each operation.
 

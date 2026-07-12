@@ -4,10 +4,18 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.25.1] — 2026-07-12
+
+### Fixed
+- Publish the portable engine as the unscoped `planr-pipeline` package owned
+  by the same npm account as the unscoped `openplanr` CLI.
+- Replace the unavailable `@openplanr` organization scope across package,
+  adapter, compatibility, and installation contracts.
+
 ## [0.25.0] — 2026-07-12
 
 ### Added
-- Public `@openplanr/pipeline` package with a zero-dependency engine and CLI.
+- Portable pipeline package with a zero-dependency engine and CLI.
 - Runtime adapter and role registries, runtime-lock and ecosystem-manifest schemas.
 - Append-only artifact provenance contract and deterministic PLAN/SHIP state APIs.
 - Portable ecosystem workspace discovery for doctor and release checks.
