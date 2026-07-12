@@ -124,7 +124,9 @@ function parseEntry(chunk: string, _auditPath: string): ReviseAuditEntry | null 
   const outcome = heading[1] as ReviseAuditOutcome;
   const artifactId = heading[2];
 
-  const artifactPathMatch = chunk.match(/\n>\s+(\/[^\s\n]+\.md)/);
+  // Audit files contain native filesystem paths. Capture the complete quoted
+  // line so POSIX, Windows drive, UNC, and paths containing spaces all replay.
+  const artifactPathMatch = chunk.match(/\n>\s+([^\r\n]+?\.md)\r?(?=\n|$)/);
   const artifactPath = artifactPathMatch ? artifactPathMatch[1] : undefined;
 
   const timestampMatch = chunk.match(/timestamp=([0-9T:\-.Z]+)/);

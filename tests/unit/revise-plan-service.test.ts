@@ -85,6 +85,20 @@ describe('readPlanFromAudit', () => {
     expect(feat150?.diff).toContain('-All other features');
   });
 
+  it('captures Windows artifact paths, including paths with spaces', () => {
+    const windowsPath = String.raw`D:\work tree\.planr\features\FEAT-150-sample.md`;
+    const auditPath = join(tmpDir, 'sample-windows-path.md');
+    writeFileSync(
+      auditPath,
+      SAMPLE_AUDIT.replace('/repo/.planr/features/FEAT-150-sample.md', windowsPath),
+    );
+
+    const plan = readPlanFromAudit(auditPath);
+    expect(plan.entries.find((entry) => entry.artifactId === 'FEAT-150')?.artifactPath).toBe(
+      windowsPath,
+    );
+  });
+
   it('extracts evidence citations with their quotes', () => {
     const auditPath = join(tmpDir, 'sample-evidence.md');
     writeFileSync(auditPath, SAMPLE_AUDIT);
