@@ -49,12 +49,16 @@ OpenPlanr is a four-repo ecosystem. For the operating model, see:
 curl -fsSL https://openplanr.dev/install.sh | sh
 # Windows: irm https://openplanr.dev/install.ps1 | iex
 
+cd my-project
 planr setup
 planr doctor
 planr pipeline plan todo
 ```
 
-Use `npx openplanr@latest setup` without a global install or `--minimal` for planning only.
+The installer installs the CLI only. Guided setup detects coding agents and
+prompts for workflow mode and scope; user scope is the safe default and Cursor
+requires a project. Use `npx openplanr@latest setup` without a global install
+or `planr setup --minimal` for planning only.
 
 ---
 
