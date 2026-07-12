@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    env:
+      OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/.ci/planr-pipeline
 
     strategy:
       matrix:
@@ -17,6 +19,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Checkout released pipeline fixture
+        uses: actions/checkout@v6
+        with:
+          repository: openplanr/planr-pipeline
+          ref: v0.25.0
+          path: .ci/planr-pipeline
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6

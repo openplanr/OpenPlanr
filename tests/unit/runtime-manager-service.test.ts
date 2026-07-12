@@ -22,13 +22,14 @@ let root: string;
 let projectDir: string;
 let userHome: string;
 const cliVersion = JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version as string;
+const pipelineRoot = process.env.OPENPLANR_PIPELINE_ROOT ?? resolve('../planr-pipeline');
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'openplanr-runtime-'));
   projectDir = join(root, 'project');
   userHome = join(root, 'home');
   process.env.OPENPLANR_HOME = userHome;
-  process.env.OPENPLANR_PIPELINE_ROOT = resolve('../planr-pipeline');
+  process.env.OPENPLANR_PIPELINE_ROOT = pipelineRoot;
   mkdirSync(projectDir, { recursive: true });
 });
 

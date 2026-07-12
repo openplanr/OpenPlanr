@@ -28,7 +28,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && rm -rf dist/templates && cp -r src/templates dist/templates",
+    "build": "tsc && node scripts/copy-templates.mjs",
     "dev": "tsx src/cli/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
