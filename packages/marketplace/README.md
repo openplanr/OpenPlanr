@@ -19,9 +19,9 @@ Then install any of the plugins below:
 <!-- ecosystem-table:start -->
 | Component | Version | Compatibility |
 |---|---:|---|
-| OpenPlanr CLI | 1.9.0 | pipeline ^0.25.1 |
-| Pipeline package/plugin | 0.25.1 | CLI ^1.9.0 |
-| Runtime skills | 1.12.0 | CLI ^1.9.0 |
+| OpenPlanr CLI | 1.9.1 | pipeline ^0.25.1 |
+| Pipeline package/plugin | 0.25.1 | CLI ^1.9.1 |
+| Runtime skills | 1.12.0 | CLI ^1.9.1 |
 | Protocol | 1.1.0 | reads v1.0 artifacts; v1.1 capabilities |
 <!-- ecosystem-table:end -->
 
