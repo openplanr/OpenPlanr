@@ -2,7 +2,7 @@
 
 Official Claude Code plugin marketplace for [OpenPlanr](https://github.com/openplanr).
 
-## Install
+## Claude marketplace install
 
 ```
 /plugin marketplace add openplanr/marketplace
@@ -40,9 +40,14 @@ Install and configure all detected certified runtimes through one surface:
 
 ```bash
 curl -fsSL https://openplanr.dev/install.sh | sh
+cd my-project
 planr setup
 planr doctor
 ```
+
+The web installer installs only the CLI. Guided setup runs separately in an
+interactive terminal, displays detected coding agents, and defaults to safe
+user scope. Project scope requires a Git or initialized OpenPlanr project.
 
 Compatibility matrix: [`openplanr/planr-pipeline/docs/compatibility-matrix.md`](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md). Protocol spec: [`openplanr/planr-pipeline/docs/protocol/`](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol).
 
