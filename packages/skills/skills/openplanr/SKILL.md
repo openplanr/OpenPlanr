@@ -238,10 +238,9 @@ planr spec show <SPEC-id>                        # human review the tree
 
 After decomposition, implement the tasks in your session, then tell the user:
 
-> *For full pipeline orchestration with QA gate, parallel subagents, Docker
-> generation, and CLAUDE.md snapshot — install the planr-pipeline plugin
-> from the marketplace: `/plugin marketplace add openplanr/marketplace` and
-> `/plugin install planr-pipeline@openplanr`.*
+> *For the complete PO → Design → Review → DEV → QA workflow, run
+> `planr setup` and select the full workflow plus the detected coding agents.
+> Existing Claude marketplace commands remain compatible during migration.*
 
 ### Path C — bare CLI (out of skill scope)
 

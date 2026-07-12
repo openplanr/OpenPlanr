@@ -25,12 +25,17 @@ populated spec unless the user explicitly asks to reconcile the results.
 Before first use run:
 
 ```bash
+curl -fsSL https://openplanr.dev/install.sh | sh
+cd <project>
 planr setup
 planr doctor
 planr init
 ```
 
-No global install: `npx openplanr@latest setup`. Planning-only: `planr setup --minimal`.
+The installer installs only the CLI. Guided setup detects coding agents and asks
+which runtimes and scopes to configure; user scope is the safe default. No
+global install: `npx openplanr@latest setup`. Planning-only:
+`planr setup --minimal`.
 
 For pipeline work, use the dedicated workflow skills or the router:
 

@@ -55,6 +55,19 @@ Code can consume this marketplace; Cursor uses generated project rules.
 
 ## Install
 
+### Guided cross-runtime setup (recommended)
+
+```bash
+curl -fsSL https://openplanr.dev/install.sh | sh
+cd my-project
+planr setup
+planr doctor
+```
+
+The installer installs only the CLI. Guided setup detects Claude Code, Codex,
+and Cursor, then asks which integrations and scopes to configure. User scope is
+the safe default; it never writes project files into your home directory.
+
 ### Claude Code
 
 Two commands — the first registers this repo as a plugin marketplace, the second installs the OpenPlanr plugin from it:
