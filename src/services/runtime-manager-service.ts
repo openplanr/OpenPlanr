@@ -79,12 +79,16 @@ export interface SetupOptions {
   projectDir: string;
   cliVersion: string;
   runtime?: RuntimeChoice;
+  /** Explicit runtime selection from the interactive setup wizard. */
+  runtimes?: RuntimeId[];
   scope?: InstallScope;
   minimal?: boolean;
   version?: string;
   dryRun?: boolean;
   /** Preserve already-managed adapters when installing or updating one runtime. */
   merge?: boolean;
+  /** Reuse every recorded adapter scope when doctor repairs managed assets. */
+  preserveExistingScopes?: boolean;
 }
 
 export interface SetupPreview {
@@ -95,6 +99,14 @@ export interface SetupPreview {
   runtimeScopes: Partial<Record<RuntimeId, InstallScope>>;
   scope: InstallScope;
   pipelineVersion: string | null;
+  detectedRuntimes: RuntimeId[];
+  unavailableRuntimes: RuntimeId[];
+  scopeIncompatibleRuntimes: RuntimeId[];
+  projectContext: {
+    valid: boolean;
+    path: string;
+    reason: 'planr' | 'git' | 'none';
+  };
   actions: Array<{
     runtime: string;
     scope: string;
@@ -175,6 +187,22 @@ function statePath(): string {
 function detectCommand(command: string): boolean {
   const result = spawnSync(command, ['--version'], { encoding: 'utf8', windowsHide: true });
   return !result.error && result.status === 0;
+}
+
+export function inspectProjectContext(projectDir: string): SetupPreview['projectContext'] {
+  const resolved = path.resolve(projectDir);
+  if (existsSync(path.join(resolved, '.planr', 'config.json'))) {
+    return { valid: true, path: resolved, reason: 'planr' };
+  }
+  const git = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], {
+    cwd: resolved,
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+  if (!git.error && git.status === 0 && git.stdout.trim() === 'true') {
+    return { valid: true, path: resolved, reason: 'git' };
+  }
+  return { valid: false, path: resolved, reason: 'none' };
 }
 
 export function detectRuntimes(): Array<{
@@ -321,7 +349,7 @@ function buildRuntimeLock(
       throw new RuntimeManagerError('E_ADAPTER_MISSING', `Adapter ${runtime} is absent.`);
     const installScope = normalizeInstallScope(
       adapter,
-      runtimeScopes[runtime] ?? options.scope ?? 'both',
+      runtimeScopes[runtime] ?? options.scope ?? 'user',
     );
     return {
       runtime,
@@ -394,7 +422,7 @@ function buildActions(
     const adapter = registry.adapters.find((entry) => entry.id === runtime);
     if (!adapter)
       throw new RuntimeManagerError('E_ADAPTER_MISSING', `Adapter ${runtime} is absent.`);
-    const scope = normalizeInstallScope(adapter, runtimeScopes[runtime] ?? options.scope ?? 'both');
+    const scope = normalizeInstallScope(adapter, runtimeScopes[runtime] ?? options.scope ?? 'user');
     const installUser =
       (scope === 'user' || scope === 'both') && adapter.installScopes.includes('user');
     const installProject =
@@ -493,7 +521,7 @@ function buildActions(
 
   if (
     runtimes.some((runtime) => {
-      const scope = runtimeScopes[runtime] ?? options.scope ?? 'both';
+      const scope = runtimeScopes[runtime] ?? options.scope ?? 'user';
       return scope === 'project' || scope === 'both';
     })
   ) {
@@ -566,17 +594,48 @@ async function createBackup(
 
 export async function previewSetup(options: SetupOptions): Promise<SetupPreview> {
   assertNodeVersion();
-  if (!['user', 'project', 'both'].includes(options.scope ?? 'both')) {
+  const scope = options.scope ?? 'user';
+  if (!['user', 'project', 'both'].includes(scope)) {
     throw new RuntimeManagerError(
       'E_SCOPE_INVALID',
       `Install scope "${options.scope}" is invalid.`,
       'Choose user, project, or both.',
     );
   }
-  const selectedRuntimes = options.minimal ? [] : chooseRuntimes(options.runtime ?? 'auto');
+  const projectContext = inspectProjectContext(options.projectDir);
+  if ((scope === 'project' || scope === 'both') && !projectContext.valid) {
+    throw new RuntimeManagerError(
+      'E_PROJECT_CONTEXT_REQUIRED',
+      `Project-scoped setup requires a Git worktree or initialized OpenPlanr project; ${projectContext.path} is neither.`,
+      'Change into a project, run `planr init`, or use `planr setup --scope user`.',
+    );
+  }
+  let selectedRuntimes = options.minimal
+    ? []
+    : options.runtimes
+      ? [...new Set(options.runtimes)]
+      : chooseRuntimes(options.runtime ?? 'auto');
+  let scopeIncompatibleRuntimes: RuntimeId[] = [];
+  if (!options.minimal && (options.runtime ?? 'auto') === 'auto' && !options.runtimes) {
+    const adapters = listRuntimeAdapters();
+    scopeIncompatibleRuntimes = selectedRuntimes.filter((runtime) => {
+      const adapter = adapters.find((entry) => entry.id === runtime);
+      return scope === 'user' && !adapter?.installScopes.includes('user');
+    });
+    selectedRuntimes = selectedRuntimes.filter(
+      (runtime) => !scopeIncompatibleRuntimes.includes(runtime),
+    );
+    if (selectedRuntimes.length === 0) {
+      throw new RuntimeManagerError(
+        'E_SCOPE_UNSUPPORTED',
+        'Detected coding agents require project scope, but setup defaulted to user scope.',
+        'Change into a Git or initialized OpenPlanr project and run `planr setup --scope project`.',
+      );
+    }
+  }
   let runtimes = selectedRuntimes;
   const runtimeScopes: Partial<Record<RuntimeId, InstallScope>> = {};
-  if (options.merge && !options.minimal) {
+  if ((options.merge || options.preserveExistingScopes) && !options.minimal) {
     const state = await loadState();
     const project = state.projects[projectKey(options.projectDir)];
     const existing = project?.runtimes ?? [];
@@ -586,7 +645,9 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     }
     runtimes = [...new Set([...existing, ...runtimes])];
   }
-  for (const runtime of selectedRuntimes) runtimeScopes[runtime] = options.scope ?? 'both';
+  if (!options.preserveExistingScopes) {
+    for (const runtime of selectedRuntimes) runtimeScopes[runtime] = scope;
+  }
   const pipeline = options.minimal ? null : resolvePipelinePackage();
   if (!options.minimal) {
     const { registry } = readRegistry();
@@ -596,7 +657,7 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
         throw new RuntimeManagerError('E_ADAPTER_MISSING', `Adapter ${runtime} is absent.`);
       runtimeScopes[runtime] = normalizeInstallScope(
         adapter,
-        runtimeScopes[runtime] ?? options.scope ?? 'both',
+        runtimeScopes[runtime] ?? options.scope ?? 'user',
       );
     }
   }
@@ -607,8 +668,16 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     minimal: Boolean(options.minimal),
     runtimes,
     runtimeScopes,
-    scope: options.scope ?? 'both',
+    scope,
     pipelineVersion: pipeline?.version ?? null,
+    detectedRuntimes: detectRuntimes()
+      .filter((item) => item.installed)
+      .map((item) => item.runtime),
+    unavailableRuntimes: detectRuntimes()
+      .filter((item) => !item.installed)
+      .map((item) => item.runtime),
+    scopeIncompatibleRuntimes,
+    projectContext,
     actions: actions.map((action) => ({
       runtime: action.runtime,
       scope: action.scope,
@@ -884,6 +953,79 @@ export async function removeRuntime(
   return { ok: true, removed, retainedShared };
 }
 
+function homeProjectRecord(state: RuntimeState) {
+  return state.projects[projectKey(userHome())];
+}
+
+export async function previewHomeProjectCleanup(): Promise<string[]> {
+  const state = await loadState();
+  const project = homeProjectRecord(state);
+  if (!project || path.resolve(project.projectDir) !== path.resolve(userHome())) return [];
+  return project.ownedFiles.filter((file) => file.scope === 'project').map((file) => file.target);
+}
+
+export async function managedRuntimesForProject(projectDir: string): Promise<RuntimeId[]> {
+  const state = await loadState();
+  return [...(state.projects[projectKey(projectDir)]?.runtimes ?? [])];
+}
+
+export function isOpenPlanrHome(projectDir: string): boolean {
+  return path.resolve(projectDir) === path.resolve(userHome());
+}
+
+export async function cleanupHomeProjectInstall(): Promise<{ ok: true; removed: string[] }> {
+  const state = await loadState();
+  const key = projectKey(userHome());
+  const project = state.projects[key];
+  if (!project || path.resolve(project.projectDir) !== path.resolve(userHome())) {
+    return { ok: true, removed: [] };
+  }
+  const projectFiles = project.ownedFiles.filter((file) => file.scope === 'project');
+  for (const file of projectFiles) {
+    if (!existsSync(file.target)) continue;
+    const current = await readFile(file.target);
+    if (ownershipHash(current, file.kind, file.marker) !== file.hash) {
+      throw new RuntimeManagerError(
+        'E_MIGRATION_CONFLICT',
+        `Refusing to clean modified OpenPlanr content from ${file.target}.`,
+        'Preserve the hand edits or use the recorded runtime backup before cleaning the home installation.',
+      );
+    }
+  }
+
+  const removed: string[] = [];
+  for (const file of projectFiles) {
+    if (!existsSync(file.target)) continue;
+    if (file.kind === 'managed-block') {
+      const remaining = removeManagedBlock(
+        (await readFile(file.target, 'utf8')).toString(),
+        file.marker ?? 'runtime',
+      );
+      if (remaining.trim()) await atomicWrite(file.target, Buffer.from(remaining));
+      else await unlink(file.target);
+    } else {
+      await unlink(file.target);
+    }
+    removed.push(file.target);
+  }
+
+  project.ownedFiles = project.ownedFiles.filter((file) => file.scope !== 'project');
+  for (const runtime of [...project.runtimes]) {
+    const runtimeFiles = project.ownedFiles.filter((file) => file.runtime === runtime);
+    if (runtimeFiles.length === 0) {
+      project.runtimes = project.runtimes.filter((item) => item !== runtime);
+      if (project.runtimeScopes) delete project.runtimeScopes[runtime];
+    } else if (project.runtimeScopes) {
+      project.runtimeScopes[runtime] = inferRuntimeScope(project.ownedFiles, runtime);
+    }
+  }
+  project.updatedAt = new Date().toISOString();
+  project.activeRuntime = project.runtimes.length === 1 ? project.runtimes[0] : undefined;
+  if (project.runtimes.length === 0 && project.ownedFiles.length === 0) delete state.projects[key];
+  await atomicWrite(statePath(), Buffer.from(`${JSON.stringify(state, null, 2)}\n`));
+  return { ok: true, removed };
+}
+
 export async function runtimeDoctor(projectDir: string): Promise<{
   ok: boolean;
   diagnostics: Array<{
@@ -931,13 +1073,26 @@ export async function runtimeDoctor(projectDir: string): Promise<{
     message: pipeline ? `planr-pipeline ${pipeline.version}` : 'Planning-only installation',
     ...(!pipeline ? { fix: 'Install openplanr without omitting optional dependencies.' } : {}),
   });
+  const state = await loadState();
+  const installed = state.projects[projectKey(projectDir)];
+  const expectsProjectLock =
+    installed?.ownedFiles.some((file) => file.scope === 'project') ?? false;
   const lock = path.join(projectDir, '.planr', 'runtime-lock.json');
   if (!existsSync(lock)) {
+    const lockStatus = expectsProjectLock ? 'warn' : installed ? 'pass' : 'warn';
     diagnostics.push({
       code: 'runtime-lock',
-      status: 'warn',
-      message: 'Project runtime lock missing',
-      fix: 'Run `planr setup --scope project`.',
+      status: lockStatus,
+      message: expectsProjectLock
+        ? 'Project runtime lock missing'
+        : installed
+          ? 'User-scope setup does not require a project runtime lock'
+          : 'No managed runtime setup found for this directory',
+      ...(expectsProjectLock
+        ? { fix: 'Run `planr setup --scope project`.' }
+        : !installed
+          ? { fix: 'Run `planr setup`.' }
+          : {}),
     });
   } else {
     try {
@@ -993,8 +1148,6 @@ export async function runtimeDoctor(projectDir: string): Promise<{
     }
   }
 
-  const state = await loadState();
-  const installed = state.projects[projectKey(projectDir)];
   if (installed) {
     if (lockedAdapters) {
       const lockedState = lockedAdapters
@@ -1041,6 +1194,16 @@ export async function runtimeDoctor(projectDir: string): Promise<{
       status: 'warn',
       message: 'The project has a runtime lock but this machine has no managed adapter state',
       fix: 'Run `planr setup` to install the locked runtime adapters on this machine.',
+    });
+  }
+
+  const accidentalHomeFiles = await previewHomeProjectCleanup();
+  if (accidentalHomeFiles.length > 0) {
+    diagnostics.push({
+      code: 'home-project-install',
+      status: 'warn',
+      message: `${accidentalHomeFiles.length} project-scoped managed file(s) were installed in the home directory`,
+      fix: 'Run `planr doctor --fix` to preview and remove only recorded OpenPlanr-owned project content.',
     });
   }
 

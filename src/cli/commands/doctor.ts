@@ -1,6 +1,14 @@
 import type { Command } from 'commander';
+import { isNonInteractive } from '../../services/interactive-state.js';
 import { promptConfirm } from '../../services/prompt-service.js';
-import { applySetup, runtimeDoctor } from '../../services/runtime-manager-service.js';
+import {
+  applySetup,
+  cleanupHomeProjectInstall,
+  isOpenPlanrHome,
+  managedRuntimesForProject,
+  previewHomeProjectCleanup,
+  runtimeDoctor,
+} from '../../services/runtime-manager-service.js';
 import { display, logger } from '../../utils/logger.js';
 
 export function registerDoctorCommand(program: Command, cliVersion: string) {
@@ -15,25 +23,54 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
       const projectDir = program.opts().projectDir as string;
       let result = await runtimeDoctor(projectDir);
       if (opts.fix) {
-        const preview = await applySetup({
-          projectDir,
-          cliVersion,
-          runtime: 'auto',
-          scope: 'both',
-          dryRun: true,
-        });
+        const homeCleanup = await previewHomeProjectCleanup();
+        const managedRuntimes = isOpenPlanrHome(projectDir)
+          ? []
+          : await managedRuntimesForProject(projectDir);
+        const preview = managedRuntimes.length
+          ? await applySetup({
+              projectDir,
+              cliVersion,
+              runtimes: managedRuntimes,
+              scope: 'user',
+              preserveExistingScopes: true,
+              dryRun: true,
+            })
+          : null;
         if (!opts.json) {
           logger.heading('Repair preview');
-          for (const action of preview.actions.filter((item) => item.operation !== 'unchanged')) {
+          for (const target of homeCleanup) display.bullet(`remove ${target}`);
+          for (const action of (preview?.actions ?? []).filter(
+            (item) => item.operation !== 'unchanged',
+          )) {
             display.bullet(`${action.operation} ${action.target}`);
           }
         }
+        const hasRepairs =
+          homeCleanup.length > 0 ||
+          (preview?.actions ?? []).some((item) => item.operation !== 'unchanged');
+        if (!hasRepairs) {
+          if (!opts.json) logger.success('No owned-file repairs are needed.');
+        }
         const confirmed =
-          opts.yes ||
-          program.opts().yes ||
-          (await promptConfirm('Apply owned-file repairs?', true));
+          hasRepairs &&
+          (opts.yes ||
+            program.opts().yes ||
+            (!isNonInteractive() && (await promptConfirm('Apply owned-file repairs?', true))));
+        if (hasRepairs && !confirmed && isNonInteractive() && !opts.json) {
+          logger.warn('Repairs were not applied; rerun with --yes after reviewing the preview.');
+        }
         if (confirmed) {
-          await applySetup({ projectDir, cliVersion, runtime: 'auto', scope: 'both' });
+          if (homeCleanup.length) await cleanupHomeProjectInstall();
+          if (managedRuntimes.length) {
+            await applySetup({
+              projectDir,
+              cliVersion,
+              runtimes: managedRuntimes,
+              scope: 'user',
+              preserveExistingScopes: true,
+            });
+          }
           result = await runtimeDoctor(projectDir);
         }
       }

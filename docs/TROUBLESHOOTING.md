@@ -16,6 +16,8 @@ explicit confirmation gates.
 ## Runtime setup and migration
 
 - `E_NODE_VERSION`: install Node.js 20 or newer; the installer never changes Node.
+- `E_PROJECT_CONTEXT_REQUIRED`: change into a Git or initialized OpenPlanr
+  project before selecting project scope, or use `--scope user`.
 - `E_RUNTIME_AMBIGUOUS`: pass `--runtime` or set a project default.
 - `E_LOCK_INCOMPATIBLE`: run the exact `planr runtime update ...` command shown.
 - `E_MIGRATION_CONFLICT`: a managed file changed after setup; preview, preserve
@@ -26,6 +28,11 @@ explicit confirmation gates.
 Setup backups live under `~/.planr/backups/<project-hash>/<timestamp>/`. Machine
 state and paths live under `~/.planr/runtime/state.json`; the committed project
 lock contains only versions and compatibility capabilities.
+
+If an older installer created `~/CLAUDE.md`, `~/AGENTS.md`, Cursor rules, or a
+home-directory runtime lock, `planr doctor` reports `home-project-install`.
+Run `planr doctor --fix` to preview removal. Only recorded OpenPlanr-owned bytes
+are removed; user-scope adapters and hand-written content are retained.
 
 ---
 
