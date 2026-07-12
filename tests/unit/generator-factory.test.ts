@@ -17,6 +17,7 @@ const mockConfig: OpenPlanrConfig = {
 };
 
 const emptyArtifacts = { epics: [], features: [], stories: [], tasks: [] };
+const portablePath = (value: string) => value.replaceAll('\\', '/');
 
 describe('createGenerator', () => {
   it('creates CursorGenerator for cursor target', () => {
@@ -78,7 +79,7 @@ describe('CursorGenerator.generate file-list per scope', () => {
     const files = await gen.generate(emptyArtifacts);
     expect(files).toHaveLength(6);
     for (const f of files) {
-      expect(f.path).toMatch(/\.cursor\/rules\/.*\.mdc$/);
+      expect(portablePath(f.path)).toMatch(/\.cursor\/rules\/.*\.mdc$/);
     }
   });
 
@@ -89,7 +90,7 @@ describe('CursorGenerator.generate file-list per scope', () => {
     // Portable master + 3 deprecation aliases + 9 role files.
     expect(files).toHaveLength(13);
     const ruleFiles = files.filter((f) => f.path.endsWith('.mdc'));
-    const agentFiles = files.filter((f) => f.path.includes('/openplanr-roles/'));
+    const agentFiles = files.filter((f) => portablePath(f.path).includes('/openplanr-roles/'));
     expect(ruleFiles).toHaveLength(4);
     expect(agentFiles).toHaveLength(9);
   });

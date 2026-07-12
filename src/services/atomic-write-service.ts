@@ -66,7 +66,9 @@ export async function atomicWriteFile(
   try {
     await writeFileAsync(tmpPath, content, 'utf-8');
     // fsync the temp file so the new content is durable before the rename.
-    const fd = await openAsync(tmpPath, constants.O_RDONLY);
+    // Windows requires a writable handle for FlushFileBuffers; opening the
+    // freshly-written temp file read-only makes fsync fail with EPERM.
+    const fd = await openAsync(tmpPath, constants.O_RDWR);
     try {
       await fsyncAsync(fd);
     } finally {

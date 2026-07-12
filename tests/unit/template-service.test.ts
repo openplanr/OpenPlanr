@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // We need to mock fs before importing template-service since it registers
@@ -77,7 +78,7 @@ describe('renderTemplate', () => {
 
     const result = await renderTemplate('test.hbs', { title: 'Test' }, '/custom/templates');
 
-    expect(mockFileExists).toHaveBeenCalledWith('/custom/templates/test.hbs');
+    expect(mockFileExists).toHaveBeenCalledWith(join('/custom/templates', 'test.hbs'));
     expect(result).toBe('OVERRIDE: Test');
   });
 
@@ -87,7 +88,7 @@ describe('renderTemplate', () => {
 
     const result = await renderTemplate('test.hbs', { title: 'Test' }, '/custom/templates');
 
-    expect(mockReadFile).toHaveBeenCalledWith('/default/templates/test.hbs');
+    expect(mockReadFile).toHaveBeenCalledWith(join('/default/templates', 'test.hbs'));
     expect(result).toBe('DEFAULT: Test');
   });
 });

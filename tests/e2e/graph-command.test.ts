@@ -3,13 +3,14 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const CLI = resolve('src/cli/index.ts');
+const TSX = resolve('node_modules/tsx/dist/cli.mjs');
 const fixtureRoot = resolve('tests/fixtures/graph-project');
 
 describe('planr graph', () => {
   it('emits stable graph JSON', () => {
     const output = execFileSync(
-      'npx',
-      ['tsx', CLI, '--project-dir', fixtureRoot, 'graph', '--json'],
+      process.execPath,
+      [TSX, CLI, '--project-dir', fixtureRoot, 'graph', '--json'],
       {
         encoding: 'utf-8',
         env: { ...process.env, NO_COLOR: '1' },

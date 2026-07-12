@@ -5,9 +5,10 @@ import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const CLI = resolve('src/cli/index.ts');
+const TSX = resolve('node_modules/tsx/dist/cli.mjs');
 
 function runPlanr(args: string[], cwd: string) {
-  return spawnSync('npx', ['tsx', CLI, ...args], {
+  return spawnSync(process.execPath, [TSX, CLI, ...args], {
     encoding: 'utf-8',
     cwd,
     env: { ...process.env, NO_COLOR: '1' },
