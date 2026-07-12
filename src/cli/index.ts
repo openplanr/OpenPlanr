@@ -4,11 +4,13 @@ import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { ConfigNotFoundError, findProjectRoot } from '../services/config-service.js';
 import { setNonInteractive } from '../services/interactive-state.js';
+import { RuntimeManagerError } from '../services/runtime-manager-service.js';
 import { display, logger, setVerbose } from '../utils/logger.js';
 import { registerBacklogCommand } from './commands/backlog.js';
 import { registerChecklistCommand } from './commands/checklist.js';
 import { registerConfigCommand } from './commands/config.js';
 import { registerContextCommand } from './commands/context.js';
+import { registerDoctorCommand } from './commands/doctor.js';
 import { registerEpicCommand } from './commands/epic.js';
 import { registerEstimateCommand } from './commands/estimate.js';
 import { registerExportCommand } from './commands/export.js';
@@ -17,6 +19,7 @@ import { registerGitHubCommand } from './commands/github.js';
 import { registerGraphCommand } from './commands/graph.js';
 import { registerInitCommand } from './commands/init.js';
 import { registerLinearCommand } from './commands/linear.js';
+import { registerPipelineCommand } from './commands/pipeline.js';
 import { registerPlanCommand } from './commands/plan.js';
 import { registerQuickCommand } from './commands/quick.js';
 import { registerRefineCommand } from './commands/refine.js';
@@ -24,7 +27,9 @@ import { registerReportCommand } from './commands/report.js';
 import { registerReportLinterCommand } from './commands/report-linter.js';
 import { registerReviseCommand } from './commands/revise.js';
 import { registerRulesCommand } from './commands/rules.js';
+import { registerRuntimeCommand } from './commands/runtime.js';
 import { registerSearchCommand } from './commands/search.js';
+import { registerSetupCommand } from './commands/setup.js';
 import { registerSpecCommand } from './commands/spec.js';
 import { registerSprintCommand } from './commands/sprint.js';
 import { registerStatusCommand } from './commands/status.js';
@@ -54,7 +59,7 @@ const program = new Command();
 
 program
   .name('planr')
-  .description('AI-powered planning CLI — backlog, sprints, tasks, estimation, and AI agent rules')
+  .description('OpenPlanr planning CLI and cross-runtime pipeline router')
   .version(version)
   .option('--project-dir <path>', 'project root directory', findProjectRoot())
   .option('--verbose', 'verbose output', false)
@@ -71,6 +76,10 @@ program.hook('preAction', () => {
 });
 
 registerInitCommand(program);
+registerSetupCommand(program, version);
+registerDoctorCommand(program, version);
+registerRuntimeCommand(program, version);
+registerPipelineCommand(program);
 registerLinearCommand(program);
 registerBacklogCommand(program);
 registerEpicCommand(program);
@@ -107,6 +116,18 @@ program.parseAsync(process.argv).catch((err) => {
     display.line('');
     display.line('  Run `planr init` to get started.');
     display.line('');
+    process.exit(1);
+  }
+  if (err instanceof RuntimeManagerError || String(err?.name).startsWith('E_')) {
+    const value =
+      err instanceof RuntimeManagerError
+        ? err.toJSON()
+        : { ok: false, code: err.name, problem: err.message };
+    if (process.argv.includes('--json')) display.line(JSON.stringify(value));
+    else {
+      logger.error(`${value.code}: ${value.problem}`);
+      if ('recovery' in value && value.recovery) display.line(`  ${value.recovery}`);
+    }
     process.exit(1);
   }
   throw err;

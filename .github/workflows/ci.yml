@@ -8,14 +8,25 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    env:
+      OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/.ci/planr-pipeline
 
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         node-version: [20, 22]
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Checkout released pipeline fixture
+        uses: actions/checkout@v6
+        with:
+          repository: openplanr/planr-pipeline
+          ref: v0.25.1
+          path: .ci/planr-pipeline
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6
@@ -43,9 +54,20 @@ jobs:
         if: matrix.node-version == 22
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-report
+          name: coverage-report-${{ matrix.os }}-node-${{ matrix.node-version }}
           path: coverage/
           retention-days: 14
 
       - name: Verify CLI runs
         run: node dist/cli/index.js --version
+
+      - name: Packed artifact smoke test
+        run: npm pack --dry-run
+
+      - name: POSIX installer syntax
+        if: runner.os != 'Windows'
+        run: sh -n install.sh
+
+      - name: PowerShell installer syntax
+        shell: pwsh
+        run: "[scriptblock]::Create((Get-Content -Raw install.ps1)) | Out-Null"

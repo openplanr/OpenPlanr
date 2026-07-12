@@ -22,11 +22,13 @@
   "files": [
     "dist/",
     "bin/",
+    "install.sh",
+    "install.ps1",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && rm -rf dist/templates && cp -r src/templates dist/templates",
+    "build": "tsc && node scripts/copy-templates.mjs",
     "dev": "tsx src/cli/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -81,6 +83,9 @@
     "openai": "^6.33.0",
     "yaml": "^2.8.3",
     "zod": "^4.3.6"
+  },
+  "optionalDependencies": {
+    "planr-pipeline": "^0.25.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.9",

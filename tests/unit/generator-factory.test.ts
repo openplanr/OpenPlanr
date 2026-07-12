@@ -17,6 +17,7 @@ const mockConfig: OpenPlanrConfig = {
 };
 
 const emptyArtifacts = { epics: [], features: [], stories: [], tasks: [] };
+const portablePath = (value: string) => value.replaceAll('\\', '/');
 
 describe('createGenerator', () => {
   it('creates CursorGenerator for cursor target', () => {
@@ -78,27 +79,27 @@ describe('CursorGenerator.generate file-list per scope', () => {
     const files = await gen.generate(emptyArtifacts);
     expect(files).toHaveLength(6);
     for (const f of files) {
-      expect(f.path).toMatch(/\.cursor\/rules\/.*\.mdc$/);
+      expect(portablePath(f.path)).toMatch(/\.cursor\/rules\/.*\.mdc$/);
     }
   });
 
-  it('pipeline scope produces 3 .mdc files + 8 agent body files', async () => {
+  it('pipeline scope produces portable rules plus the canonical 9 roles', async () => {
     const gen = new CursorGenerator(mockConfig, '/tmp');
     gen.setScope('pipeline');
     const files = await gen.generate(emptyArtifacts);
-    // 3 pipeline rules + 8 agent body files = 11
-    expect(files).toHaveLength(11);
+    // Portable master + 3 deprecation aliases + 9 role files.
+    expect(files).toHaveLength(13);
     const ruleFiles = files.filter((f) => f.path.endsWith('.mdc'));
-    const agentFiles = files.filter((f) => f.path.includes('/agents/'));
-    expect(ruleFiles).toHaveLength(3);
-    expect(agentFiles).toHaveLength(8);
+    const agentFiles = files.filter((f) => portablePath(f.path).includes('/openplanr-roles/'));
+    expect(ruleFiles).toHaveLength(4);
+    expect(agentFiles).toHaveLength(9);
   });
 
-  it('all scope produces 6 + 3 + 8 = 17 files total', async () => {
+  it('all scope produces 6 agile + 4 pipeline rules + 9 roles', async () => {
     const gen = new CursorGenerator(mockConfig, '/tmp');
     gen.setScope('all');
     const files = await gen.generate(emptyArtifacts);
-    expect(files).toHaveLength(17);
+    expect(files).toHaveLength(19);
   });
 });
 
@@ -130,7 +131,7 @@ describe('CodexGenerator.generate file-list per scope', () => {
     const files = await gen.generate(emptyArtifacts);
     expect(files).toHaveLength(1);
     expect(files[0].path).toMatch(/AGENTS\.md$/);
-    expect(files[0].content).not.toContain('Planr Pipeline Orchestration');
+    expect(files[0].content).not.toContain('OpenPlanr runtime policy');
   });
 
   it('pipeline scope produces 1 file (AGENTS.md, pipeline content only)', async () => {
@@ -139,7 +140,7 @@ describe('CodexGenerator.generate file-list per scope', () => {
     const files = await gen.generate(emptyArtifacts);
     expect(files).toHaveLength(1);
     expect(files[0].path).toMatch(/AGENTS\.md$/);
-    expect(files[0].content).toContain('Planr Pipeline Orchestration');
+    expect(files[0].content).toContain('OpenPlanr runtime policy');
   });
 
   it('all scope produces 2 marker-tagged files (agile + pipeline blocks for AGENTS.md)', async () => {
@@ -150,6 +151,6 @@ describe('CodexGenerator.generate file-list per scope', () => {
     expect(files[0].markerName).toBe('agile');
     expect(files[1].markerName).toBe('pipeline');
     expect(files[0].content).toContain('Agent Instructions');
-    expect(files[1].content).toContain('Planr Pipeline Orchestration');
+    expect(files[1].content).toContain('OpenPlanr runtime policy');
   });
 });

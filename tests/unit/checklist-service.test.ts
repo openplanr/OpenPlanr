@@ -37,7 +37,7 @@ describe('getChecklistPath', () => {
   it('returns path ending in checklists/AGILE-DEVELOPMENT-GUIDE.md', () => {
     const config = createDefaultConfig('test');
     const p = getChecklistPath('/project', config);
-    expect(p).toBe('/project/.planr/checklists/AGILE-DEVELOPMENT-GUIDE.md');
+    expect(p).toBe(join('/project', '.planr', 'checklists', 'AGILE-DEVELOPMENT-GUIDE.md'));
   });
 });
 

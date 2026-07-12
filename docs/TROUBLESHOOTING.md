@@ -2,6 +2,31 @@
 
 Common issues and how to resolve them.
 
+Start with the unified health check:
+
+```bash
+planr doctor --json
+planr setup --dry-run
+```
+
+`doctor --fix` previews owned generated-file repairs. Package installation,
+version changes, provenance recovery, credential changes, and deletion remain
+explicit confirmation gates.
+
+## Runtime setup and migration
+
+- `E_NODE_VERSION`: install Node.js 20 or newer; the installer never changes Node.
+- `E_RUNTIME_AMBIGUOUS`: pass `--runtime` or set a project default.
+- `E_LOCK_INCOMPATIBLE`: run the exact `planr runtime update ...` command shown.
+- `E_MIGRATION_CONFLICT`: a managed file changed after setup; preview, preserve
+  the edit, or use `planr runtime rollback`.
+- `E_PROVENANCE_WRITE`: repair permissions, then append an explicit recovery
+  event; doctor never invents history silently.
+
+Setup backups live under `~/.planr/backups/<project-hash>/<timestamp>/`. Machine
+state and paths live under `~/.planr/runtime/state.json`; the committed project
+lock contains only versions and compatibility capabilities.
+
 ---
 
 ## "No .planr/config.json found"

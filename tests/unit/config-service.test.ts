@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDefaultConfig, loadConfig, saveConfig } from '../../src/services/config-service.js';
 
@@ -84,8 +85,7 @@ describe('saveConfig', () => {
     // biome-ignore lint/suspicious/noExplicitAny: test passes partial config intentionally
     await saveConfig('/my-project', validConfig as any);
     const writtenPath = mockWriteFile.mock.calls[0][0];
-    expect(writtenPath).toContain('/my-project');
-    expect(writtenPath).toContain('.planr/config.json');
+    expect(writtenPath).toBe(join('/my-project', '.planr', 'config.json'));
   });
 });
 

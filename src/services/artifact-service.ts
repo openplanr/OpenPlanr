@@ -23,7 +23,8 @@ const ARTIFACT_DIR_MAP: Record<string, string> = {
 
 /** Return the directory path for a given artifact type relative to the agile output root. */
 export function getArtifactDir(config: OpenPlanrConfig, type: ArtifactType): string {
-  return path.join(config.outputPaths.agile, ARTIFACT_DIR_MAP[type] || type);
+  const agileRoot = config.outputPaths.agile.replaceAll('\\', '/');
+  return path.posix.join(agileRoot, ARTIFACT_DIR_MAP[type] || type);
 }
 
 /** Create a new artifact file from a Handlebars template, assigning the next available ID. */
