@@ -9,7 +9,7 @@
     ".": "./lib/pipeline/index.mjs"
   },
   "bin": {
-    "planr-pipeline": "./bin/planr-pipeline.mjs"
+    "planr-pipeline": "bin/planr-pipeline.mjs"
   },
   "files": [
     "adapters/",
