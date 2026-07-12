@@ -1,8 +1,10 @@
 {
   "name": "openplanr-marketplace",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node scripts/check-readme.mjs"
+    "generate": "node scripts/generate-ecosystem.mjs",
+    "check": "node scripts/generate-ecosystem.mjs --check && node scripts/check-readme.mjs"
   }
 }

@@ -16,24 +16,32 @@ Then install any of the plugins below:
 
 ## Plugins
 
+<!-- ecosystem-table:start -->
+| Component | Version | Compatibility |
+|---|---:|---|
+| OpenPlanr CLI | 1.9.0 | pipeline ^0.25.1 |
+| Pipeline package/plugin | 0.25.1 | CLI ^1.9.0 |
+| Runtime skills | 1.12.0 | CLI ^1.9.0 |
+| Protocol | 1.1.0 | reads v1.0 artifacts; v1.1 capabilities |
+<!-- ecosystem-table:end -->
+
 | Plugin | Version | Description |
 |---|---|---|
-| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.24.10 | Spec-driven AI factory with specialized subagents, design generation/review, sync, dashboard, conformance checks, and tool-layer rule enforcement. Canonical Claude Code adapter for [OpenPlanr Protocol v1.0.0](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol); Cursor and Codex use generated OpenPlanr rules. |
-| [`openplanr`](https://github.com/openplanr/skills) | 1.11.0 | OpenPlanr skill — multi-runtime routing playbook teaching Claude when to use the CLI, the pipeline plugin, generated Cursor/Codex rules, or bare `planr` commands. |
+| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.25.1 | Complete PO, Design, Review, DEV, and QA workflow; portable package with native Claude Code adapter. |
+| [`openplanr`](https://github.com/openplanr/skills) | 1.12.0 | Unified planning and delivery workflow skills for the certified runtimes. |
 
 Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in the same release-train change.
 
 ## Cross-runtime support
 
-OpenPlanr is a runtime-agnostic protocol. The pipeline plugin above is the canonical Claude Code adapter; Cursor and Codex run the same workflow via planr-generated rule files:
+OpenPlanr is the dedicated planning CLI and common runtime control plane. The
+pipeline is the complete delivery workflow and includes feature-local planning.
+Install and configure all detected certified runtimes through one surface:
 
 ```bash
-# Cursor
-npm i -g openplanr
-planr rules generate --target cursor --scope pipeline
-
-# Codex
-planr rules generate --target codex --scope pipeline
+curl -fsSL https://openplanr.dev/install.sh | sh
+planr setup
+planr doctor
 ```
 
 Compatibility matrix: [`openplanr/planr-pipeline/docs/compatibility-matrix.md`](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md). Protocol spec: [`openplanr/planr-pipeline/docs/protocol/`](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol).
