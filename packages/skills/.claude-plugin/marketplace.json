@@ -6,16 +6,22 @@
   },
   "metadata": {
     "description": "Agent skills for OpenPlanr — agile, quick, and spec-driven planning for AI coding agents",
-    "version": "1.11.0"
+    "version": "1.12.0"
   },
   "plugins": [
     {
       "name": "openplanr",
-      "description": "Agile + spec-driven planning CLI for AI coding agents — epics, features, stories, tasks, sprints, backlog, agent rules, and spec-driven mode that bridges to the planr-pipeline Claude Code plugin",
+      "description": "Dedicated planning plus portable PO, Design, DEV, and QA workflow routing for Claude Code, Codex, and Cursor",
       "source": "./",
       "strict": false,
       "skills": [
-        "./skills/openplanr"
+        "./skills/openplanr-unified",
+        "./skills/planr-plan",
+        "./skills/planr-design",
+        "./skills/planr-ship",
+        "./skills/planr-dashboard",
+        "./skills/planr-sync",
+        "./skills/planr-doctor"
       ]
     }
   ]

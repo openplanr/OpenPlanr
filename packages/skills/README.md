@@ -1,10 +1,11 @@
 <div align="center">
 
-# OpenPlanr Skill
+# OpenPlanr Runtime Skills
 
-**Agile planning for AI coding agents.**
+**Dedicated planning and complete delivery workflows across AI runtimes.**
 
-Install once — any Claude-powered agent can now plan your project before writing a line of code.
+Install once, then use the same planning and pipeline workflow on Claude Code,
+Codex, or Cursor.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![npm](https://img.shields.io/npm/v/openplanr.svg?label=openplanr%20CLI)](https://www.npmjs.com/package/openplanr)
@@ -22,7 +23,9 @@ AI coding agents are great at writing code — and bad at planning it. They jump
 
 [OpenPlanr](https://github.com/openplanr/OpenPlanr) is a CLI that fixes this. It turns a brief or a PRD into a full agile plan — markdown artifacts your team and your agents can read, refine, and implement against.
 
-This **skill** teaches Claude to drive the CLI on your behalf. You stay in the conversation; Claude runs the commands and reads back the results.
+This bundle teaches compatible runtimes to drive both products correctly:
+OpenPlanr for ongoing planning and project management, and planr-pipeline for the
+complete PO → Design → Review → DEV → QA flow, including feature-local planning.
 
 ## What you can ask
 
@@ -39,14 +42,16 @@ The skill detects the planning intent, runs the right `planr` command with the r
 ## How it works
 
 ```
- You  ───►  Claude (with skill)  ───►  planr CLI  ───►  .planr/*.md
+ You  ───►  runtime skill  ───►  planr router  ───►  .planr/*.md
                                                          │
                                                          ▼
                                             artifacts the agent
                                             then implements against
 ```
 
-Installing the skill adds a `SKILL.md` instruction file plus references and worked examples. Claude loads the instructions on demand when it detects a planning intent and calls OpenPlanr via `npx openplanr@latest` (no global install required).
+The bundle provides a unified router plus focused PLAN, Design, SHIP, dashboard,
+sync, and doctor skills. Codex installation is handled by `planr setup`; Claude
+Code can consume this marketplace; Cursor uses generated project rules.
 
 ## Install
 
@@ -88,7 +93,9 @@ npx openplanr@latest plan
 
 See the [CLI repo](https://github.com/openplanr/OpenPlanr) and the [command reference](https://github.com/openplanr/OpenPlanr/blob/main/docs/CLI.md).
 
-In the ecosystem split, OpenPlanr plans, `planr-pipeline` ships, this skill routes the assistant to the right surface, and the marketplace installs the plugin and skill metadata.
+OpenPlanr owns dedicated planning and artifact lifecycle. `planr-pipeline` owns
+the complete delivery flow and also performs feature-local planning. Provenance
+records which planning engine decomposed a spec.
 
 ## Who this is for
 
@@ -99,8 +106,15 @@ In the ecosystem split, OpenPlanr plans, `planr-pipeline` ships, this skill rout
 ## What's in this repo
 
 ```
-skills/openplanr/
-├── SKILL.md                    # The skill entry point (loaded by Claude)
+skills/openplanr-unified/       # Product/runtime routing
+skills/planr-plan/              # Feature-local PO phase
+skills/planr-design/            # Design workflows
+skills/planr-ship/              # DEV + QA + finalization
+skills/planr-dashboard/         # Local project visualization
+skills/planr-sync/              # Read-only reconciliation audit
+skills/planr-doctor/            # Unified diagnostics
+skills/openplanr/               # Legacy skill retained for deprecation window
+├── SKILL.md
 ├── references/
 │   ├── commands.md             # Full ~40-command catalog
 │   ├── workflows.md            # 7 canonical end-to-end workflows

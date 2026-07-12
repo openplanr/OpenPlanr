@@ -1,0 +1,51 @@
+---
+name: openplanr-unified
+description: Route OpenPlanr planning and complete pipeline workflows across Claude Code, Codex, and Cursor.
+license: MIT
+---
+
+# OpenPlanr unified workflow
+
+OpenPlanr and planr-pipeline are separate products with an intentional planning overlap:
+
+- OpenPlanr is the dedicated planning and project-management CLI. Use it for
+  ongoing epics, features, stories, tasks, specs, sprints, backlog, reports,
+  integrations, and artifact lifecycle.
+- planr-pipeline is the complete PO → Design → Review → DEV → QA → delivery
+  workflow. Its PO phase performs feature-local planning directly connected to delivery.
+- Both read Protocol v1.0 artifacts. Runtime locks, adapter manifests,
+  compatibility manifests, and provenance are additive v1.1 contracts.
+
+## Routing
+
+Use OpenPlanr commands for portfolio/project planning. Use `planr pipeline ...`
+for a feature moving through delivery. Do not run both decomposers over an already
+populated spec unless the user explicitly asks to reconcile the results.
+
+Before first use run:
+
+```bash
+planr setup
+planr doctor
+planr init
+```
+
+No global install: `npx openplanr@latest setup`. Planning-only: `planr setup --minimal`.
+
+For pipeline work, use the dedicated workflow skills or the router:
+
+```bash
+planr pipeline plan <feature>
+planr pipeline design <feature>
+# review generated artifacts
+planr pipeline ship <feature>
+```
+
+PLAN and SHIP are always separate user invocations. Never infer SHIP approval from
+PLAN completion. Honor runtime selection precedence, task dependencies, Preserve
+paths, the three-correction limit, and frontend/backend ownership boundaries.
+
+Codex uses installed user-scope skills and concise project policy. Cursor uses
+portable project rules and Composer handoff. Claude Code retains native slash
+commands and tool-enforced agents. Runtime-specific model names must not leak into
+portable procedures.

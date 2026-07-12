@@ -2,6 +2,20 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.12.0] — 2026-07-12
+
+### Added
+
+- Portable PLAN, Design, SHIP, dashboard, sync, and doctor skills.
+- Unified routing that distinguishes dedicated OpenPlanr planning from the
+  pipeline's complete delivery flow and feature-local PO planning.
+- CI validation for skill paths, names, and runtime-specific instruction leaks.
+
+### Changed
+
+- Codex skills and Cursor rules are first-class adapter surfaces rather than a
+  large `AGENTS.md` persona workflow.
+
 ## [1.11.0] — 2026-06-17
 
 ### Changed — Aligned with `planr-pipeline` v0.23.0–v0.24.0
