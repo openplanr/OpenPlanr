@@ -2304,16 +2304,15 @@ var OpenPlanrArtifactStage = (() => {
   function emit(root, window, type, detail) {
     root.dispatchEvent(new window.CustomEvent(type, { detail, bubbles: true }));
   }
-  function blobForSource(window, source) {
-    if (source instanceof window.Blob) return source;
-    if (typeof source === "string" && source.trimStart().startsWith("<")) {
-      return new window.Blob([source], { type: "text/html" });
-    }
-    if (source && typeof source === "object" && typeof source.html === "string") {
-      return new window.Blob([source.html], { type: "text/html" });
-    }
-    if (source instanceof window.ArrayBuffer || window.ArrayBuffer.isView(source)) {
-      return new window.Blob([source], { type: "text/html" });
+  async function htmlForSource(window, source) {
+    if (typeof source === "string" && source.trimStart().startsWith("<")) return source;
+    if (source && typeof source === "object" && typeof source.html === "string") return source.html;
+    if (source instanceof window.Blob) return source.text();
+    if (source instanceof window.ArrayBuffer) return new window.TextDecoder().decode(source);
+    if (window.ArrayBuffer.isView(source)) {
+      return new window.TextDecoder().decode(
+        new window.Uint8Array(source.buffer, source.byteOffset, source.byteLength)
+      );
     }
     return null;
   }
@@ -2354,7 +2353,6 @@ var OpenPlanrArtifactStage = (() => {
     const panels = new Map(
       [...document2.querySelectorAll(".planr-artifact-panel[data-artifact-id]")].map((panel) => [panel.dataset.artifactId, panel])
     );
-    const objectUrls = /* @__PURE__ */ new Map();
     const cleanup = [];
     function listen(target, type, handler, options) {
       target.addEventListener(type, handler, options);
@@ -2578,10 +2576,6 @@ var OpenPlanrArtifactStage = (() => {
     }
     listen(root, "click", onClick);
     listen(document2, "keydown", onKeyDown);
-    listen(window, "pagehide", () => {
-      for (const url of objectUrls.values()) window.URL.revokeObjectURL(url);
-      objectUrls.clear();
-    }, { once: true });
     render();
     let readyPromise = Promise.resolve(state);
     let feedbackController = null;
@@ -2610,8 +2604,6 @@ var OpenPlanrArtifactStage = (() => {
       dispatch,
       destroy() {
         for (const remove of cleanup.splice(0)) remove();
-        for (const url of objectUrls.values()) window.URL.revokeObjectURL(url);
-        objectUrls.clear();
       }
     });
     window.__openPlanrArtifactStage = controller;
@@ -2655,19 +2647,17 @@ var OpenPlanrArtifactStage = (() => {
         frame,
         getState: () => state
       });
-      if (typeof window.Blob !== "function" || typeof window.URL?.createObjectURL !== "function") {
-        const error = new Error("Blob URL support is required for artifact sources.");
+      if (typeof window.TextDecoder !== "function") {
+        const error = new Error("UTF-8 decoding support is required for artifact sources.");
         error.code = "E_ARTIFACT_BROWSER_UNSUPPORTED";
         throw error;
       }
-      const blob = blobForSource(window, source);
-      if (!blob) {
+      const html = await htmlForSource(window, source);
+      if (!html) {
         throw new TypeError(
           `Artifact source resolver must return HTML bytes or a Blob for ${artifact.id}.`
         );
       }
-      const url = window.URL.createObjectURL(blob);
-      objectUrls.set(artifact.id, url);
       const loaded = new Promise((resolve, reject) => {
         frame.addEventListener("load", resolve, { once: true });
         frame.addEventListener("error", () => reject(new Error(`Artifact frame failed: ${artifact.id}`)), { once: true });
@@ -2681,7 +2671,7 @@ var OpenPlanrArtifactStage = (() => {
         if (typeof detach === "function") cleanup.push(detach);
       }
       frame.dataset.planrArtifactDigest = artifact.sha256;
-      frame.src = url;
+      frame.srcdoc = html;
       await loaded;
     }
     if (state.status === "ready" && state.artifacts.length > 0) {

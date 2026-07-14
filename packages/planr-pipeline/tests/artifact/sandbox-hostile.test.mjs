@@ -367,7 +367,7 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   const mainFrameElement = page.locator('[data-planr-artifact-frame="main"]');
   assert.equal(await mainFrameElement.getAttribute('sandbox'), 'allow-scripts');
   assert.equal(await mainFrameElement.evaluate((frame) => frame.contentDocument), null);
-  assert.match(await mainFrameElement.getAttribute('src'), /^blob:/);
+  assert.match(await mainFrameElement.getAttribute('srcdoc'), /^<!doctype html>/i);
   assert.match(await mainFrameElement.getAttribute('csp'), /connect-src 'none'/);
   assert.equal(await mainFrameElement.getAttribute('aria-busy'), null);
 
@@ -463,7 +463,10 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   let attempts = (await page.evaluate(() => globalThis.__planrNavigationEvents.at(-1)?.attempts)) ?? 0;
   while (attempts < 2) {
     const before = await page.evaluate(() => globalThis.__planrNavigationEvents.length);
-    await navigationFrame.evaluate((frame, url) => { frame.src = url; }, watchdogUrl);
+    await navigationFrame.evaluate((frame, url) => {
+      frame.removeAttribute('srcdoc');
+      frame.src = url;
+    }, watchdogUrl);
     await page.waitForFunction((count) => globalThis.__planrNavigationEvents.length > count, before);
     const event = await page.evaluate(() => globalThis.__planrNavigationEvents.at(-1));
     assert.equal(event.recovered, true);
@@ -471,7 +474,10 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
     await page.waitForFunction(() => document.querySelector('[data-planr-artifact-frame="navigator"]')?.dataset.planrBridgeTrusted === 'true');
     await navigator.locator('#document-open').waitFor();
   }
-  await navigationFrame.evaluate((frame, url) => { frame.src = url; }, watchdogUrl);
+  await navigationFrame.evaluate((frame, url) => {
+    frame.removeAttribute('srcdoc');
+    frame.src = url;
+  }, watchdogUrl);
   await page.waitForFunction(() => globalThis.__planrNavigationEvents?.some((event) => event.failedClosed));
   const finalNavigation = await page.evaluate(() => globalThis.__planrNavigationEvents.at(-1));
   assert.equal(finalNavigation.failedClosed, true);

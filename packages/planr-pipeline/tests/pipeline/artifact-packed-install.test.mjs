@@ -33,7 +33,7 @@ function runNpm(args, options = {}) {
   return run(process.execPath, [npmCli, ...args], options);
 }
 
-test('packed 0.26.0 package contains the portable artifact release boundary', () => {
+test('packed 0.26.1 package contains the portable artifact release boundary', () => {
   const packed = JSON.parse(runNpm([
     'pack', '--json', '--ignore-scripts', '--pack-destination', temp,
   ]).stdout)[0];
@@ -62,7 +62,7 @@ test('packed 0.26.0 package contains the portable artifact release boundary', ()
   for (const path of files) {
     assert.doesNotMatch(path, /^(?:\.env(?:\.|\/|$)|\.planr\/|tests\/)/);
   }
-  assert.equal(packed.version, '0.26.0');
+  assert.equal(packed.version, '0.26.1');
   assert.equal(packed.name, 'planr-pipeline');
 
   const installRoot = join(temp, 'install');

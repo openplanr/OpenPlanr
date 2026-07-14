@@ -757,8 +757,8 @@ export function renderArtifactParentRuntime({
       settle.resolve(value);frame.dispatchEvent(new CustomEvent(config.anchorEvent,{detail:value}));
     };
     addEventListener('message',receive);
-    const rememberSource=()=>{const value=frame.getAttribute('src')||'';if(value.startsWith('blob:')&&!immutableSource)immutableSource=value};
-    const sourceObserver=new MutationObserver(rememberSource);sourceObserver.observe(frame,{attributes:true,attributeFilter:['src']});
+    const rememberSource=()=>{if(immutableSource)return;const html=frame.getAttribute('srcdoc')||'';if(html){immutableSource={type:'srcdoc',value:html};return}const value=frame.getAttribute('src')||'';if(value.startsWith('blob:'))immutableSource={type:'url',value}};
+    const sourceObserver=new MutationObserver(rememberSource);sourceObserver.observe(frame,{attributes:true,attributeFilter:['src','srcdoc']});
     const settlePending=()=>{for(const value of pending.values()){clearTimeout(value.timer);value.resolve(null)}pending.clear()};
     const clearChallenge=()=>{if(pendingChallenge){clearTimeout(pendingChallenge.timer);pendingChallenge=null}};
     const failClosed=()=>{
@@ -767,7 +767,7 @@ export function renderArtifactParentRuntime({
       const inertPolicy=config.frameCsp.replaceAll('&','&amp;').replaceAll('"','&quot;');
       inertSource=URL.createObjectURL(new Blob(['<!doctype html><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="'+inertPolicy+'"><meta name="referrer" content="no-referrer"><title>Artifact blocked</title><p>Artifact navigation was blocked.</p>'],{type:'text/html'}));
       frame.dispatchEvent(new CustomEvent(config.navigationEvent,{detail:{artifactId:artifact.id,recovered:false,failedClosed:true,attempts:navigationAttempts}}));
-      frame.src=inertSource;
+      frame.removeAttribute('srcdoc');frame.src=inertSource;
     };
     const recoverNavigation=()=>{
       if(failedClosed||!immutableSource)return;
@@ -775,7 +775,7 @@ export function renderArtifactParentRuntime({
       if(navigationAttempts>=3){failClosed();return}
       recovering=true;trustedLoad=false;quarantine(true);clearChallenge();
       frame.dispatchEvent(new CustomEvent(config.navigationEvent,{detail:{artifactId:artifact.id,recovered:true,failedClosed:false,attempts:navigationAttempts}}));
-      frame.src=immutableSource;
+      if(immutableSource.type==='srcdoc'){frame.removeAttribute('src');frame.removeAttribute('srcdoc');frame.srcdoc=immutableSource.value}else{frame.removeAttribute('srcdoc');frame.src=immutableSource.value}
     };
     const challengeCurrentDocument=()=>{
       if(failedClosed)return;clearChallenge();

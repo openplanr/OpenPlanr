@@ -333,16 +333,15 @@ function emit(root, window, type, detail) {
   root.dispatchEvent(new window.CustomEvent(type, { detail, bubbles: true }));
 }
 
-function blobForSource(window, source) {
-  if (source instanceof window.Blob) return source;
-  if (typeof source === 'string' && source.trimStart().startsWith('<')) {
-    return new window.Blob([source], { type: 'text/html' });
-  }
-  if (source && typeof source === 'object' && typeof source.html === 'string') {
-    return new window.Blob([source.html], { type: 'text/html' });
-  }
-  if (source instanceof window.ArrayBuffer || window.ArrayBuffer.isView(source)) {
-    return new window.Blob([source], { type: 'text/html' });
+async function htmlForSource(window, source) {
+  if (typeof source === 'string' && source.trimStart().startsWith('<')) return source;
+  if (source && typeof source === 'object' && typeof source.html === 'string') return source.html;
+  if (source instanceof window.Blob) return source.text();
+  if (source instanceof window.ArrayBuffer) return new window.TextDecoder().decode(source);
+  if (window.ArrayBuffer.isView(source)) {
+    return new window.TextDecoder().decode(
+      new window.Uint8Array(source.buffer, source.byteOffset, source.byteLength),
+    );
   }
   return null;
 }
@@ -389,7 +388,6 @@ export function mountArtifactStage({
     [...document.querySelectorAll('.planr-artifact-panel[data-artifact-id]')]
       .map((panel) => [panel.dataset.artifactId, panel]),
   );
-  const objectUrls = new Map();
   const cleanup = [];
 
   function listen(target, type, handler, options) {
@@ -636,10 +634,6 @@ export function mountArtifactStage({
   listen(root, 'click', onClick);
   listen(document, 'keydown', onKeyDown);
 
-  listen(window, 'pagehide', () => {
-    for (const url of objectUrls.values()) window.URL.revokeObjectURL(url);
-    objectUrls.clear();
-  }, { once: true });
   render();
 
   let readyPromise = Promise.resolve(state);
@@ -669,8 +663,6 @@ export function mountArtifactStage({
     dispatch,
     destroy() {
       for (const remove of cleanup.splice(0)) remove();
-      for (const url of objectUrls.values()) window.URL.revokeObjectURL(url);
-      objectUrls.clear();
     },
   });
   window.__openPlanrArtifactStage = controller;
@@ -716,19 +708,17 @@ export function mountArtifactStage({
       frame,
       getState: () => state,
     });
-    if (typeof window.Blob !== 'function' || typeof window.URL?.createObjectURL !== 'function') {
-      const error = new Error('Blob URL support is required for artifact sources.');
+    if (typeof window.TextDecoder !== 'function') {
+      const error = new Error('UTF-8 decoding support is required for artifact sources.');
       error.code = 'E_ARTIFACT_BROWSER_UNSUPPORTED';
       throw error;
     }
-    const blob = blobForSource(window, source);
-    if (!blob) {
+    const html = await htmlForSource(window, source);
+    if (!html) {
       throw new TypeError(
         `Artifact source resolver must return HTML bytes or a Blob for ${artifact.id}.`,
       );
     }
-    const url = window.URL.createObjectURL(blob);
-    objectUrls.set(artifact.id, url);
 
     const loaded = new Promise((resolve, reject) => {
       frame.addEventListener('load', resolve, { once: true });
@@ -743,7 +733,10 @@ export function mountArtifactStage({
       if (typeof detach === 'function') cleanup.push(detach);
     }
     frame.dataset.planrArtifactDigest = artifact.sha256;
-    frame.src = url;
+    // srcdoc keeps the document in an opaque sandbox origin without relying on
+    // parent-created Blob URLs, which some embedded browser runtimes refuse to
+    // load across their storage partition boundary.
+    frame.srcdoc = html;
     await loaded;
   }
 

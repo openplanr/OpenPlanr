@@ -1,6 +1,6 @@
 # Artifact Review and Private Sharing
 
-> planr-pipeline 0.26.0 · Protocol v1.0 planning artifacts with additive
+> planr-pipeline 0.26.1 · Protocol v1.0 planning artifacts with additive
 > Protocol v1.1 artifact-review contracts
 
 Artifact review is the portable engine behind `planr artifact`. It turns a

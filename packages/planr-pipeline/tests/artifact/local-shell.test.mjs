@@ -312,10 +312,10 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
   );
   assert.deepEqual(
     await page.locator('[data-planr-artifact-frame]').evaluateAll((frames) => (
-      frames.map((frame) => frame.getAttribute('src')?.startsWith('blob:'))
+      frames.map((frame) => frame.getAttribute('srcdoc')?.startsWith('<!doctype html>'))
     )),
     [true, true, true],
-    'tokenized source responses are converted to Blob URLs before iframe navigation',
+    'tokenized source responses use opaque-origin srcdoc navigation',
   );
 
   const checkout = page.frameLocator('[data-planr-artifact-frame="checkout"]');
@@ -324,7 +324,7 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
   assert.deepEqual(
     cspScriptViolations,
     [],
-    'packaged artifact scripts execute without a CSP violation inside the opaque Blob frame',
+    'packaged artifact scripts execute without a CSP violation inside the opaque srcdoc frame',
   );
   assert.equal(await page.locator('[data-planr-artifact-frame="checkout"]').getAttribute('sandbox'), 'allow-scripts');
   assert.equal(await page.locator('[data-planr-artifact-frame="checkout"]').evaluate((frame) => frame.contentDocument), null);
