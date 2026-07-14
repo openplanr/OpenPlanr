@@ -33,7 +33,7 @@ function runNpm(args, options = {}) {
   return run(process.execPath, [npmCli, ...args], options);
 }
 
-test('packed 0.26.2 package contains the portable artifact release boundary', () => {
+test('packed 0.26.3 package contains the portable artifact release boundary', () => {
   const packed = JSON.parse(runNpm([
     'pack', '--json', '--ignore-scripts', '--pack-destination', temp,
   ]).stdout)[0];
@@ -62,7 +62,7 @@ test('packed 0.26.2 package contains the portable artifact release boundary', ()
   for (const path of files) {
     assert.doesNotMatch(path, /^(?:\.env(?:\.|\/|$)|\.planr\/|tests\/)/);
   }
-  assert.equal(packed.version, '0.26.2');
+  assert.equal(packed.version, '0.26.3');
   assert.equal(packed.name, 'planr-pipeline');
 
   const installRoot = join(temp, 'install');
@@ -107,9 +107,18 @@ test('packed 0.26.2 package contains the portable artifact release boundary', ()
   assert.ok(report.checks.some(({ id }) => id === 'artifact.assets-present'));
   assert.ok(report.checks.some(({ id }) => id === 'artifact.public-exports'));
 
+  const codexSkillsRoot = join(packageRoot, 'adapters', 'codex', 'skills');
   const portableText = [
-    readFileSync(join(packageRoot, 'adapters', 'codex', 'skills', 'planr-artifact', 'SKILL.md'), 'utf8'),
+    ...[
+      'planr-artifact',
+      'planr-dashboard',
+      'planr-design',
+      'planr-doctor',
+      'planr-plan',
+      'planr-ship',
+      'planr-sync',
+    ].map((name) => readFileSync(join(codexSkillsRoot, name, 'SKILL.md'), 'utf8')),
     readFileSync(join(packageRoot, 'registry', 'adapters.json'), 'utf8'),
   ].join('\n');
-  assert.doesNotMatch(portableText, /CLAUDE_PLUGIN_ROOT|\b(?:Sonnet|Opus)\b|\bplanr-pipeline\s+(?:artifact|plan|ship)\b/);
+  assert.doesNotMatch(portableText, /CLAUDE_PLUGIN_ROOT|\b(?:Sonnet|Opus)\b|`planr-pipeline\s+[^`]+`/);
 });
