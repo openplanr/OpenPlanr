@@ -4,6 +4,15 @@
   "private": false,
   "type": "module",
   "description": "OpenPlanr complete PO, Design, DEV, QA, and delivery pipeline",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openplanr/planr-pipeline"
+  },
+  "bugs": {
+    "url": "https://github.com/openplanr/planr-pipeline/issues"
+  },
+  "homepage": "https://github.com/openplanr/planr-pipeline#readme",
   "main": "./lib/pipeline/index.mjs",
   "exports": {
     ".": "./lib/pipeline/index.mjs"

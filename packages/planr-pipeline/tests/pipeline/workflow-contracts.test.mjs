@@ -8,6 +8,17 @@ import { test } from 'node:test';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = (path) => readFileSync(join(root, path), 'utf8');
 
+test('package metadata identifies the provenance repository and license', () => {
+  const packageJson = JSON.parse(read('package.json'));
+  assert.deepEqual(packageJson.repository, {
+    type: 'git',
+    url: 'https://github.com/openplanr/planr-pipeline',
+  });
+  assert.equal(packageJson.license, 'MIT');
+  assert.equal(packageJson.bugs?.url, 'https://github.com/openplanr/planr-pipeline/issues');
+  assert.equal(packageJson.homepage, 'https://github.com/openplanr/planr-pipeline#readme');
+});
+
 test('publish workflow installs the exact lock before every release gate', () => {
   const workflow = read('.github/workflows/publish.yml');
   const install = workflow.indexOf('- run: npm ci');
