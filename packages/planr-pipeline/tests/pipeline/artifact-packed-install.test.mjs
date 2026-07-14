@@ -33,7 +33,7 @@ function runNpm(args, options = {}) {
   return run(process.execPath, [npmCli, ...args], options);
 }
 
-test('packed 0.26.1 package contains the portable artifact release boundary', () => {
+test('packed 0.26.2 package contains the portable artifact release boundary', () => {
   const packed = JSON.parse(runNpm([
     'pack', '--json', '--ignore-scripts', '--pack-destination', temp,
   ]).stdout)[0];
@@ -62,7 +62,7 @@ test('packed 0.26.1 package contains the portable artifact release boundary', ()
   for (const path of files) {
     assert.doesNotMatch(path, /^(?:\.env(?:\.|\/|$)|\.planr\/|tests\/)/);
   }
-  assert.equal(packed.version, '0.26.1');
+  assert.equal(packed.version, '0.26.2');
   assert.equal(packed.name, 'planr-pipeline');
 
   const installRoot = join(temp, 'install');
@@ -80,7 +80,7 @@ test('packed 0.26.1 package contains the portable artifact release boundary', ()
   const importSmoke = run(process.execPath, [
     '--input-type=module',
     '--eval',
-    "import * as p from 'planr-pipeline'; const names=['bundleArtifact','createArtifactEnvelope','encodeArtifactFragment','decodeArtifactFragment','encryptArtifactPayload','decryptArtifactPayload','startArtifactReview','createReviewLink','importArtifactReview','mergeArtifactFeedback']; if(names.some((name)=>typeof p[name]!=='function')) process.exit(2);",
+    "import * as p from 'planr-pipeline'; const names=['bundleArtifact','createArtifactEnvelope','encodeArtifactFragment','decodeArtifactFragment','encryptArtifactPayload','decryptArtifactPayload','startArtifactReview','exportArtifactReviewSession','createReviewLink','createReviewLinkPreview','decodeReviewLink','importArtifactReview','mergeArtifactFeedback']; if(names.some((name)=>typeof p[name]!=='function')) process.exit(2);",
   ], {
     cwd: installRoot,
     env: {

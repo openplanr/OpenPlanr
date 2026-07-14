@@ -214,6 +214,31 @@ test('transport-neutral import redacts decoder inputs and stale review details',
     sources: staleLedger, currentEnvelope: current, persist: false,
   });
   assert.equal(retained.reviewState.reviews[0].stale, true, 'source ledger audit label survives');
+
+  const project = temporary('planr-review-stale-project-');
+  mkdirSync(join(project, '.git'));
+  writeFileSync(join(project, '.git', 'HEAD'), 'ref: refs/heads/main\n');
+  const env = { ...process.env, PLANR_HOME: temporary('planr-review-stale-home-') };
+  await importArtifactReview({ sources: review(currentDigest), currentEnvelope: current, cwd: project, env });
+  await assert.rejects(
+    importArtifactReview({
+      sources: review(staleDigest, { reviewId: 'review-stale' }),
+      currentEnvelope: envelope('<!doctype html><p>Old</p>'),
+      cwd: project,
+      env,
+    }),
+    (error) => error.code === ARTIFACT_ERROR_CODES.STALE_REVIEW
+      && error.details.localDigest === currentDigest,
+  );
+  const preserved = await importArtifactReview({
+    sources: review(staleDigest, { reviewId: 'review-stale' }),
+    currentEnvelope: envelope('<!doctype html><p>Old</p>'),
+    cwd: project,
+    env,
+    allowStale: true,
+  });
+  assert.equal(preserved.currentReviewOf, currentDigest);
+  assert.equal(preserved.reviewState.reviews.at(-1).stale, true);
   assert.doesNotMatch(
     readFileSync(join(here, '..', '..', 'lib', 'artifact', 'import.mjs'), 'utf8'),
     /from ['"]\.\/(?:codec|crypto|share-client)/,

@@ -24,14 +24,16 @@ export {
   bundleArtifact,
   createArtifactEnvelope,
   createReviewLink,
+  createReviewLinkPreview,
   decodeArtifactFragment,
+  decodeReviewLink,
   decryptArtifactPayload,
   encodeArtifactFragment,
   encryptArtifactPayload,
   importArtifactReview,
   mergeArtifactFeedback,
 } from '../artifact/index.mjs';
-export { startArtifactReview } from '../artifact/review-server.mjs';
+export { exportArtifactReviewSession, startArtifactReview } from '../artifact/review-server.mjs';
 
 export async function runDesignCommand(args = []) {
   const { spawnSync } = await import('node:child_process');

@@ -12,6 +12,7 @@ import {
   artifactReviewServerStateExists,
   artifactReviewStatePath,
   closeArtifactReviewServers,
+  exportArtifactReviewSession,
   startArtifactReview,
 } from '../../lib/artifact/review-server.mjs';
 import { ARTIFACT_ERROR_CODES } from '../../lib/pipeline/errors.mjs';
@@ -167,12 +168,26 @@ test('startArtifactReview returns a private tokenized session and serves only me
   }
   assert.doesNotMatch(readFileSync(statePath, 'utf8'), /Checkout flow|<html|bridgeNonce/);
 
+  const exportedJson = await exportArtifactReviewSession(review.sessionId, { env });
+  assert.equal(exportedJson.action, 'artifact_review_exported');
+  assert.equal(exportedJson.format, 'json');
+  assert.equal(JSON.parse(exportedJson.content).artifactId, 'checkout');
+  const exportedMarkdown = await exportArtifactReviewSession(review.sessionId, {
+    env,
+    format: 'markdown',
+  });
+  assert.match(exportedMarkdown.content, /^# OpenPlanr Artifact Reviews/);
+
   const firstClose = review.close();
   const sharedClose = review.close();
   assert.equal(firstClose, sharedClose, 'concurrent close callers share one promise');
   assert.deepEqual(await firstClose, { ok: true, remaining: 0 });
   assert.deepEqual(await review.close(), { ok: true, alreadyClosed: true });
   await waitFor(() => !artifactReviewServerStateExists(0, env));
+  await assert.rejects(
+    exportArtifactReviewSession(review.sessionId, { env }),
+    (error) => error.code === ARTIFACT_ERROR_CODES.SESSION_NOT_FOUND,
+  );
 });
 
 test('no-open and SSH sessions suppress browser launch and provide serializable forwarding guidance', async () => {

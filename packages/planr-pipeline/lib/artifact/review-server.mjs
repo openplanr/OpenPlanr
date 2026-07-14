@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -99,6 +99,73 @@ function reviewStateDir(env = process.env) {
 export function artifactReviewStatePath(port = 0, env = process.env) {
   const suffix = port === 0 ? 'default' : String(port);
   return join(reviewStateDir(env), `state-${suffix}.json`);
+}
+
+/** Export a live review by public session ID without exposing daemon credentials. */
+export async function exportArtifactReviewSession(sessionId, {
+  format = 'json',
+  env = process.env,
+  fetchImpl = fetch,
+} = {}) {
+  if (!safeSessionId(sessionId)) {
+    throw artifactError(ARTIFACT_ERROR_CODES.SESSION_NOT_FOUND, 'Artifact review session was not found.');
+  }
+  if (!['json', 'markdown'].includes(format)) {
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.REVIEW_EXPORT,
+      'Artifact review export format must be json or markdown.',
+    );
+  }
+  const directory = reviewStateDir(env);
+  let names = [];
+  try {
+    names = readdirSync(directory)
+      .filter((name) => /^state-(?:default|\d+)\.json$/.test(name))
+      .sort();
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      throw artifactError(ARTIFACT_ERROR_CODES.REVIEW_EXPORT, 'Artifact review daemon state is unavailable.');
+    }
+  }
+  for (const name of names) {
+    const statePath = join(directory, name);
+    let entry;
+    try { entry = lstatSync(statePath); } catch { continue; }
+    if (!entry.isFile() || entry.isSymbolicLink()) continue;
+    const state = readJsonState(statePath);
+    if (!validState(state, 0) || !(await stateIsHealthy(state, fetchImpl))) continue;
+    let response;
+    try {
+      response = await fetchImpl(
+        `http://${LOOPBACK_HOST}:${state.port}/internal/v1/sessions/${encodeURIComponent(sessionId)}/export/${format}`,
+        {
+          method: 'GET',
+          headers: { authorization: `Bearer ${state.controlToken}` },
+          signal: AbortSignal.timeout(15_000),
+        },
+      );
+    } catch { continue; }
+    if (response.status === 404) continue;
+    const content = await response.text();
+    if (!response.ok) {
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.REVIEW_EXPORT,
+        `Artifact review export failed with HTTP ${response.status}.`,
+      );
+    }
+    return Object.freeze({
+      ok: true,
+      action: 'artifact_review_exported',
+      sessionId,
+      format,
+      content,
+    });
+  }
+  throw artifactError(
+    ARTIFACT_ERROR_CODES.SESSION_NOT_FOUND,
+    'Artifact review session was not found.',
+    'Keep the local review session open, verify the session ID, and retry.',
+  );
 }
 
 function stateLockPath(port, env) {

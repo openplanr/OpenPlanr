@@ -359,46 +359,39 @@ export async function importArtifactReview({
   fileSystem,
 } = {}) {
   validateArtifactEnvelope(currentEnvelope);
-  const currentReviewOf = digestArtifactEnvelope(currentEnvelope);
+  const envelopeReviewOf = digestArtifactEnvelope(currentEnvelope);
   const artifactId = currentEnvelope.viewer.activeArtifactId;
   const decodedEntries = await decodeArtifactReviewSources(sources, { decodeSource, withMetadata: true });
   const reviews = decodedEntries.map((entry) => entry.review);
-  const summaries = decodedEntries.map((entry) => {
-    const { review } = entry;
-    const stale = review.reviewOf !== currentReviewOf;
-    if (stale && !allowStale) {
-      const summary = safeReviewSummary(review, true);
-      throw new PipelineError(
-        ARTIFACT_ERROR_CODES.STALE_REVIEW,
-        'Artifact review targets a different canonical artifact digest.',
-        'Preview the stale review, then retry with explicit allowStale confirmation.',
-        {
-          localDigest: currentReviewOf,
-          reviewDigest: review.reviewOf,
-          pinCount: summary.pinCount,
-          replyCount: summary.replyCount,
-        },
-      );
-    }
-    return safeReviewSummary(review, stale || entry.stale);
-  });
   const destination = resolveArtifactReviewDestination({ cwd, env, artifactId, designDir });
   const reviewStatePath = destination.reviewStatePath ?? destination.path;
   return withArtifactReviewLock(reviewStatePath, () => {
-    let ledger = readArtifactReviewState(reviewStatePath, { allowMissing: true });
+    let ledger = persist
+      ? readArtifactReviewState(reviewStatePath, { allowMissing: true })
+      : null;
+    const currentReviewOf = ledger?.currentReviewOf ?? envelopeReviewOf;
+    const summaries = decodedEntries.map((entry) => {
+      const { review } = entry;
+      const stale = review.reviewOf !== currentReviewOf;
+      if (stale && !allowStale) {
+        const summary = safeReviewSummary(review, true);
+        throw new PipelineError(
+          ARTIFACT_ERROR_CODES.STALE_REVIEW,
+          'Artifact review targets a different canonical artifact digest.',
+          'Preview the stale review, then retry with explicit allowStale confirmation.',
+          {
+            localDigest: currentReviewOf,
+            reviewDigest: review.reviewOf,
+            pinCount: summary.pinCount,
+            replyCount: summary.replyCount,
+          },
+        );
+      }
+      return safeReviewSummary(review, stale || entry.stale);
+    });
     if (!ledger) ledger = createReviewLedger({ artifactId, currentReviewOf });
     if (ledger.artifactId !== artifactId) {
       throw new PipelineError(ARTIFACT_ERROR_CODES.REVIEW_IMPORT, 'Stored review state belongs to another artifact.');
-    }
-    if (ledger.currentReviewOf !== currentReviewOf) {
-      ledger = createReviewLedger({
-        artifactId,
-        currentReviewOf,
-        reviews: ledger.reviews.map((entry) => ({
-          review: entry.review,
-          stale: entry.stale || entry.review.reviewOf !== currentReviewOf,
-        })),
-      });
     }
     for (const [index, review] of reviews.entries()) {
       ledger = mergeReviewLedger(ledger, review, { stale: summaries[index].stale });
