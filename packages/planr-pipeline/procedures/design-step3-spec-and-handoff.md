@@ -47,8 +47,17 @@ Print a deliverable handoff, not a file-write log:
   Git:   committing design-spec.md + finalized.json; the rendered preview + vendor/
          runtime are gitignored (build output) — delete <DESIGN_DIR>/.gitignore to track them
 
+  Review locally (optional): planr artifact <abs artifact path>
+  Share (optional, explicit): planr artifact share <abs artifact path>
+  Import returned feedback:   planr artifact import "<returned-review-url>"
+
   Next:  /planr-pipeline:plan <slug>
 ```
+
+The optional review commands are independent of the workflow handoff. Do not run `share`
+unless the user explicitly chooses it; opening/completing the design never publishes or uploads
+the artifact. Importing a returned review URL is likewise explicit and does not run `/plan` or
+`/ship`.
 
 **Standalone designs** (`DESIGN_DIR` under `.planr/designs/<slug>/` — the user chose
 "Standalone exploration" at A.2): there is no spec, so the loop does **not** close yet.
@@ -59,4 +68,5 @@ standalone design — its `design-spec.md` lives outside `.planr/specs/` and is 
 until promoted to a spec.
 
 Then **STOP**. Do NOT run `/plan` or `/ship` (R1 + the design no-auto-chain clause in
-`docs/rules.md`). The human reviews the artifact and the spec, then runs `/plan`.
+`docs/rules.md`). Do not invoke Share automatically. The human reviews the artifact and the
+spec, optionally shares/imports through the explicit commands above, then runs `/plan`.

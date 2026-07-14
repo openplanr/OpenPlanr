@@ -29,6 +29,21 @@ Three formats, one shared core:
 A human reviews, then runs `/planr-pipeline:plan {slug}`. Enforced by
 `${CLAUDE_PLUGIN_ROOT}/docs/rules.md` R1 (and the new design clause).
 
+### Review and sharing are explicit
+
+Generation never publishes or uploads the design. The handoff may offer these optional,
+separate actions:
+
+```text
+planr artifact <artifact-file>                 # local review only
+planr artifact share <artifact-file>           # explicit immutable share
+planr artifact import "<returned-review-url>"  # explicit feedback import
+```
+
+Opening or completing `/design`, approving locally, or continuing to `/plan` never invokes
+`artifact share`. A remote reviewer returns a new review URL; importing it is also a deliberate
+user action and does not start `/plan` or `/ship`.
+
 ---
 
 ## ORCHESTRATION CONTRACT (read this first, mandatory)
@@ -138,8 +153,9 @@ and copies the needed `templates/design/vendor/` files alongside the artifact.
 E2: if PNGs exist, leave `design-spec.md` to `designer-agent` and only produce the visual
 artifact; otherwise author it directly from the brief, never by re-reading pixels). It sets
 `content_provenance` (`spec` vs `inferred`), releases the `.lock`, verifies the Completion
-Contract, prints the **handoff** (clickable `file://` paths, the chosen format + why, and
-the one next command `/planr-pipeline:plan {slug}`), and **STOPS** (R1).
+Contract, prints the **handoff** (clickable `file://` paths, optional explicit artifact
+review/share commands, and the next workflow command `/planr-pipeline:plan {slug}`), and
+**STOPS** (R1).
 
 ---
 

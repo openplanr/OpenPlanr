@@ -8,10 +8,11 @@ import { test } from 'node:test';
 import { resolveRuntimeAdapter, runtimeHandoff } from '../../lib/pipeline/index.mjs';
 
 test('runtime resolution follows explicit, active, project, then only-installed precedence', () => {
-  assert.equal(resolveRuntimeAdapter({ explicit: 'codex', active: 'claude', projectDefault: 'cursor', installed: ['codex'] }).source, 'explicit');
-  assert.equal(resolveRuntimeAdapter({ active: 'claude', projectDefault: 'cursor', installed: ['claude-code'] }).adapter.id, 'claude-code');
-  assert.equal(resolveRuntimeAdapter({ active: '', projectDefault: 'cursor', installed: ['codex', 'cursor'] }).adapter.id, 'cursor');
-  assert.equal(resolveRuntimeAdapter({ active: '', installed: ['codex'] }).source, 'installed');
+  const projectRoot = mkdtempSync(join(tmpdir(), 'planr-runtime-precedence-'));
+  assert.equal(resolveRuntimeAdapter({ projectRoot, explicit: 'codex', active: 'claude', projectDefault: 'cursor', installed: ['codex'] }).source, 'explicit');
+  assert.equal(resolveRuntimeAdapter({ projectRoot, active: 'claude', projectDefault: 'cursor', installed: ['claude-code'] }).adapter.id, 'claude-code');
+  assert.equal(resolveRuntimeAdapter({ projectRoot, active: '', projectDefault: 'cursor', installed: ['codex', 'cursor'] }).adapter.id, 'cursor');
+  assert.equal(resolveRuntimeAdapter({ projectRoot, active: '', installed: ['codex'] }).source, 'installed');
 });
 
 test('runtime resolution reads the active adapter marker from user state', () => {

@@ -1,11 +1,11 @@
 {
   "schemaVersion": "1.0.0",
   "protocolVersion": "1.1.0",
-  "pipelineVersion": "0.25.1",
+  "pipelineVersion": "0.26.0",
   "adapters": [
     {
       "id": "claude-code",
-      "version": "0.25.1",
+      "version": "0.26.0",
       "capabilityLevel": "product",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -13,6 +13,7 @@
         "design": "/planr-pipeline:design",
         "ship": "/planr-pipeline:ship",
         "dashboard": "/planr-pipeline:dashboard",
+        "artifact": "planr artifact",
         "sync": "/planr-pipeline:sync",
         "doctor": "planr pipeline doctor"
       },
@@ -21,10 +22,11 @@
         "hooks": true,
         "toolIsolation": "enforced",
         "parallelDispatch": "native",
-        "headlessLaunch": true
+        "headlessLaunch": true,
+        "artifactReview": true
       },
-      "assets": ["commands", "agents", "procedures", "hooks", "templates", "schemas"],
-      "healthChecks": ["plugin-installed", "commands-present", "hook-readable"],
+      "assets": ["commands", "agents", "procedures", "hooks", "templates", "schemas", "artifact-review"],
+      "healthChecks": ["plugin-installed", "commands-present", "hook-readable", "artifact-command-valid"],
       "drivers": {
         "install": "openplanr://drivers/claude-code/install",
         "migrate": "openplanr://drivers/claude-code/migrate",
@@ -34,7 +36,7 @@
     },
     {
       "id": "codex",
-      "version": "0.25.1",
+      "version": "0.26.0",
       "capabilityLevel": "workflow",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -42,6 +44,7 @@
         "design": "$planr-design",
         "ship": "$planr-ship",
         "dashboard": "$planr-dashboard",
+        "artifact": "$planr-artifact",
         "sync": "$planr-sync",
         "doctor": "$planr-doctor"
       },
@@ -50,10 +53,11 @@
         "hooks": true,
         "toolIsolation": "advisory",
         "parallelDispatch": "dynamic",
-        "headlessLaunch": true
+        "headlessLaunch": true,
+        "artifactReview": true
       },
-      "assets": ["skills", "project-guidance", "schemas", "templates"],
-      "healthChecks": ["skills-present", "project-guidance-current", "runtime-authenticated"],
+      "assets": ["skills", "project-guidance", "schemas", "templates", "artifact-review"],
+      "healthChecks": ["skills-present", "project-guidance-current", "runtime-authenticated", "artifact-command-valid"],
       "drivers": {
         "install": "openplanr://drivers/codex/install",
         "migrate": "openplanr://drivers/codex/migrate",
@@ -63,7 +67,7 @@
     },
     {
       "id": "cursor",
-      "version": "0.25.1",
+      "version": "0.26.0",
       "capabilityLevel": "workflow",
       "installScopes": ["project"],
       "entrypoints": {
@@ -71,6 +75,7 @@
         "design": "design {feature}",
         "ship": "ship {feature}",
         "dashboard": "open planr dashboard",
+        "artifact": "planr artifact",
         "sync": "sync planr",
         "doctor": "planr pipeline doctor"
       },
@@ -79,10 +84,11 @@
         "hooks": false,
         "toolIsolation": "advisory",
         "parallelDispatch": "host",
-        "headlessLaunch": false
+        "headlessLaunch": false,
+        "artifactReview": true
       },
-      "assets": ["rules", "roles", "schemas", "templates"],
-      "healthChecks": ["rules-present", "portable-assets-present", "no-foreign-runtime-paths"],
+      "assets": ["rules", "roles", "schemas", "templates", "artifact-review"],
+      "healthChecks": ["rules-present", "portable-assets-present", "no-foreign-runtime-paths", "artifact-command-valid"],
       "drivers": {
         "install": "openplanr://drivers/cursor/install",
         "migrate": "openplanr://drivers/cursor/migrate",

@@ -97,6 +97,23 @@ function dcFlatten(children) {
   });
   return out;
 }
+function dcPlanrAnchorId(sectionId, artboardId) {
+  const encodePart = (value) => {
+    let encoded = "";
+    for (const char of String(value ?? "")) {
+      encoded += /^[A-Za-z0-9]$/.test(char) ? char : `_u${char.codePointAt(0).toString(16)}_`;
+    }
+    return encoded || "unnamed";
+  };
+  const full = `dc:${encodePart(sectionId)}:${encodePart(artboardId)}`;
+  if (full.length <= 512) return full;
+  let hash = 2166136261;
+  for (const char of full) {
+    hash ^= char.codePointAt(0);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return `${full.slice(0, 502)}:${hash.toString(16).padStart(8, "0")}`;
+}
 const DC_STATE_FILE = ".design-canvas.state.json";
 function DesignCanvas({ children, minScale, maxScale, style }) {
   const [state, setState] = React.useState({ sections: {}, focus: null });
@@ -579,6 +596,10 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
   const ref = React.useRef(null);
   const cardRef = React.useRef(null);
   const menuRef = React.useRef(null);
+  const ctx = React.useContext(DCCtx);
+  const focusKey = `${sectionId}/${id}`;
+  const focused = ctx?.state.focus === focusKey;
+  const planrAnchorId = dcPlanrAnchorId(sectionId, id);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [confirming, setConfirming] = React.useState(false);
   React.useEffect(() => {
@@ -680,6 +701,8 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
     {
       ref: cardRef,
       className: "dc-card",
+      "data-planr-id": focused ? void 0 : planrAnchorId,
+      "data-planr-screen": String(sectionId),
       style: { borderRadius: 2, boxShadow: "0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)", overflow: "hidden", width, minHeight: height, alignSelf: "flex-start", background: "#fff", ...style }
     },
     children || /* @__PURE__ */ React.createElement("div", { style: { minHeight: 240, display: "flex", alignItems: "center", justifyContent: "center", color: "#bbb", fontSize: 13, fontFamily: DC.font } }, id)
@@ -714,6 +737,7 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
   const meta = sectionMeta[sectionId];
   const peers = meta.slotIds;
   const aid = artboard.props.id ?? artboard.props.label;
+  const planrAnchorId = dcPlanrAnchorId(sectionId, aid);
   const idx = peers.indexOf(aid);
   const secIdx = sectionOrder.indexOf(sectionId);
   const go = (d) => {
@@ -915,16 +939,24 @@ function DCFocusOverlay({ entry, sectionMeta, sectionOrder }) {
             onClick: (e) => e.stopPropagation(),
             style: { margin: "auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: 24, flex: "0 0 auto" }
           },
-          /* @__PURE__ */ React.createElement("div", { style: { width: width * scale, height: height * scale, position: "relative", flex: "0 0 auto" } }, /* @__PURE__ */ React.createElement("div", { style: {
-            width,
-            height,
-            transform: scale === 1 ? "none" : `scale(${scale})`,
-            transformOrigin: "top left",
-            background: "#fff",
-            borderRadius: 2,
-            overflow: "hidden",
-            boxShadow: "0 20px 80px rgba(0,0,0,.4)"
-          } }, children || /* @__PURE__ */ React.createElement("div", { style: { height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#bbb" } }, aid))),
+          /* @__PURE__ */ React.createElement("div", { style: { width: width * scale, height: height * scale, position: "relative", flex: "0 0 auto" } }, /* @__PURE__ */ React.createElement(
+            "div",
+            {
+              "data-planr-id": planrAnchorId,
+              "data-planr-screen": String(sectionId),
+              style: {
+                width,
+                height,
+                transform: scale === 1 ? "none" : `scale(${scale})`,
+                transformOrigin: "top left",
+                background: "#fff",
+                borderRadius: 2,
+                overflow: "hidden",
+                boxShadow: "0 20px 80px rgba(0,0,0,.4)"
+              }
+            },
+            children || /* @__PURE__ */ React.createElement("div", { style: { height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#bbb" } }, aid)
+          )),
           /* @__PURE__ */ React.createElement("div", { style: { fontSize: 14, fontWeight: 500, opacity: 0.85, textAlign: "center", flex: "0 0 auto" } }, (sec.labels || {})[aid] ?? artboard.props.label, /* @__PURE__ */ React.createElement("span", { style: { opacity: 0.5, marginLeft: 10, fontVariantNumeric: "tabular-nums" } }, idx + 1, " / ", peers.length), /* @__PURE__ */ React.createElement(
             "button",
             {
@@ -1003,4 +1035,10 @@ function DCPostIt({ children, top, left, right, bottom, rotate = -2, width = 180
     zIndex: 5
   } }, children);
 }
-Object.assign(window, { DesignCanvas, DCSection, DCArtboard, DCPostIt });
+Object.assign(window, {
+  DesignCanvas,
+  DCSection,
+  DCArtboard,
+  DCPostIt,
+  DCPlanrAnchorId: dcPlanrAnchorId
+});

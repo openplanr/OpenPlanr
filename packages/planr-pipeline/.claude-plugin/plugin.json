@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "planr-pipeline",
-  "version": "0.25.1",
-  "description": "Spec-driven AI software factory for Claude Code. Two-phase pipeline (PO → review → DEV) with an optional design-generation step, specialized subagents, stack-aware code generation, and hard rules enforced at the tool layer.",
+  "version": "0.26.0",
+  "description": "Portable OpenPlanr PO, Design, Review, DEV, and QA pipeline with secure local artifact annotation and private sharing contracts.",
   "author": {
     "name": "OpenPlanr",
     "url": "https://github.com/openplanr"
@@ -16,6 +16,7 @@
     "subagents",
     "pipeline",
     "po-dev",
-    "openplanr"
+    "openplanr",
+    "artifact-review"
   ]
 }

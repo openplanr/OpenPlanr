@@ -16,7 +16,11 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+      - run: npm ci
       - run: npm test
+      - run: npm run check:artifact-shell
+      - run: npm run test:artifact:packed
+      - run: npm run conformance:artifact
       - run: npm pack --dry-run
       - run: npm publish --access public --provenance
         env:

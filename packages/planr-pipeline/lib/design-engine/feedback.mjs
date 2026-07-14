@@ -57,6 +57,8 @@ import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { assertValid } from '../design/schema-loader.mjs';
+import { validateArtifactReview } from '../artifact/envelope.mjs';
+import { ARTIFACT_ERROR_CODES, PipelineError } from '../pipeline/errors.mjs';
 
 export const FEEDBACK_FILE = 'feedback.json';
 export const PENDING_FILE = 'feedback-pending.json';
@@ -308,3 +310,155 @@ export function readFeedback(boardDir) {
   }
   return null;
 }
+
+function validIso(value, fallback) {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value)) ? value : fallback;
+}
+
+function reviewAuthor(author) {
+  return author && typeof author === 'object' ? author.name : author;
+}
+
+/**
+ * Translate one generic Protocol v1.1 review into the established design-feedback
+ * store. Existing legacy-only fields are deliberately used as the merge base, so
+ * ratings, comments, preferred, regeneration state, and remix data survive.
+ */
+export function artifactReviewToDesignFeedback(review, {
+  storedFeedback,
+  boardId,
+  publishedAt = review?.updatedAt ?? review?.createdAt ?? new Date().toISOString(),
+} = {}) {
+  validateArtifactReview(review);
+  const base = storedFeedback && typeof storedFeedback === 'object'
+    ? normalizeLegacy(storedFeedback)
+    : {
+      schema_version: '1.0.0',
+      boardId: boardId ?? review.reviewId,
+      publishedAt,
+      regenerated: false,
+      ratings: {},
+      comments: {},
+      pins: [],
+      authors: [],
+    };
+  const contribution = {
+    boardId: base.boardId ?? boardId ?? review.reviewId,
+    publishedAt,
+    overall: review.overall,
+    authors: [],
+    pins: review.pins.map((pin) => ({
+      id: pin.id,
+      author: pin.author.name,
+      variant: pin.variant ?? pin.artifactId,
+      x: pin.region.x,
+      y: pin.region.y,
+      w: pin.region.w,
+      h: pin.region.h,
+      comment: pin.comment,
+      intent: pin.intent,
+      status: pin.status,
+      createdAt: pin.createdAt,
+      ...(pin.anchor?.planrId ? { screen: pin.anchor.planrId } : {}),
+      replies: pin.replies.map((reply) => ({
+        id: reply.id,
+        author: reply.author.name,
+        comment: reply.comment,
+        createdAt: reply.createdAt,
+      })),
+    })),
+  };
+  const roster = new Map((base.authors ?? []).map((author) => [author.name, { ...author }]));
+  for (const pin of review.pins) {
+    if (!roster.has(pin.author.name)) roster.set(pin.author.name, { name: pin.author.name });
+    for (const reply of pin.replies) {
+      if (!roster.has(reply.author.name)) roster.set(reply.author.name, { name: reply.author.name });
+    }
+  }
+  contribution.authors = [...roster.values()];
+  return assertValidFeedback(mergeFeedback(base, contribution));
+}
+
+/**
+ * Translate legacy design feedback into a schema-valid generic review. This is
+ * pure and never migrates or deletes the source file. Missing legacy reply IDs
+ * receive deterministic content-derived IDs.
+ */
+export function designFeedbackToArtifactReview(feedback, {
+  reviewId,
+  reviewOf,
+  artifactId = 'artifact',
+  artifactIdByVariant = {},
+  viewport = { width: 1440, height: 900 },
+  viewportByArtifact = {},
+  now,
+} = {}) {
+  const normalized = normalizeLegacy(feedback);
+  assertValidFeedback(normalized);
+  let fallbackTime = '1970-01-01T00:00:00.000Z';
+  if (typeof now === 'function') {
+    try {
+      const fallbackTimeValue = now();
+      fallbackTime = fallbackTimeValue instanceof Date
+        ? fallbackTimeValue.toISOString()
+        : new Date(fallbackTimeValue).toISOString();
+    } catch {
+      throw new PipelineError(
+        ARTIFACT_ERROR_CODES.REVIEW_INVALID,
+        'Artifact review translator clock returned an invalid timestamp.',
+      );
+    }
+  }
+  const publishedAt = validIso(normalized.publishedAt, fallbackTime);
+  const pins = normalized.pins.map((pin) => {
+    const resolvedArtifactId = artifactIdByVariant[pin.variant] ?? artifactId;
+    const pinTime = validIso(pin.createdAt, publishedAt);
+    return {
+      id: pin.id,
+      author: { name: reviewAuthor(pin.author) || DEFAULT_AUTHOR },
+      artifactId: resolvedArtifactId,
+      ...(pin.variant ? { variant: pin.variant } : {}),
+      region: {
+        x: clampPin(pin).x,
+        y: clampPin(pin).y,
+        w: clampPin(pin).w,
+        h: clampPin(pin).h,
+      },
+      viewport: viewportByArtifact[resolvedArtifactId] ?? viewport,
+      ...(pin.screen ? { anchor: { planrId: pin.screen } } : {}),
+      intent: pin.intent,
+      status: pin.status ?? 'open',
+      comment: pin.comment,
+      replies: (pin.replies ?? []).map((reply) => {
+        const createdAt = validIso(reply.createdAt, pinTime);
+        const author = reviewAuthor(reply.author) || DEFAULT_AUTHOR;
+        return {
+          id: reply.id ?? generateStableId({ author, comment: reply.comment, createdAt }),
+          author: { name: author },
+          comment: reply.comment,
+          createdAt,
+        };
+      }),
+      createdAt: pinTime,
+      updatedAt: pinTime,
+    };
+  });
+  const result = {
+    schemaVersion: '1.0.0',
+    reviewId: reviewId ?? `design-${generateStableId({
+      author: normalized.boardId,
+      createdAt: publishedAt,
+      comment: reviewOf,
+    })}`,
+    reviewOf,
+    decision: normalized.preferred ? 'approved' : 'pending',
+    overall: normalized.overall ?? '',
+    createdAt: publishedAt,
+    updatedAt: publishedAt,
+    pins,
+  };
+  validateArtifactReview(result);
+  return result;
+}
+
+export const mergeArtifactReviewIntoDesignFeedback = artifactReviewToDesignFeedback;

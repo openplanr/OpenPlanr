@@ -1,4 +1,4 @@
-export { PipelineError } from './errors.mjs';
+export { ARTIFACT_ERROR_CODES, PipelineError } from './errors.mjs';
 export {
   completePlan,
   detectPipelineMode,
@@ -20,6 +20,18 @@ export {
   validateRuntimeLock,
 } from './runtime.mjs';
 export { createDashboardServer as startDashboard } from '../dashboard/server.mjs';
+export {
+  bundleArtifact,
+  createArtifactEnvelope,
+  createReviewLink,
+  decodeArtifactFragment,
+  decryptArtifactPayload,
+  encodeArtifactFragment,
+  encryptArtifactPayload,
+  importArtifactReview,
+  mergeArtifactFeedback,
+} from '../artifact/index.mjs';
+export { startArtifactReview } from '../artifact/review-server.mjs';
 
 export async function runDesignCommand(args = []) {
   const { spawnSync } = await import('node:child_process');

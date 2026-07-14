@@ -32,7 +32,12 @@ import { resolveProvider } from './providers/index.mjs';
 import * as openai from './providers/openai.mjs';
 import { sheetContract, contractInstructions, validateSheet } from './providers/claudeSvg.mjs';
 import { createSession, loadSession, saveSession, appendRound } from './session.mjs';
-import { renderBoardHtml } from './board.mjs';
+import {
+  DESIGN_BOARD_ENVELOPE_FILE,
+  DESIGN_BOARD_SOURCES_FILE,
+  renderBoardHtml,
+} from './board.mjs';
+import { createDesignBoardArtifactEnvelope } from './artifact-adapter.mjs';
 import { findRunningDaemon, DAEMON_VERSION, createDaemon, killRunningDaemon } from './daemon.mjs';
 import { publicBoardId } from './board-token.mjs';
 import { loadProfile, saveProfile, updateTaste, detectConflicts } from './taste.mjs';
@@ -409,7 +414,37 @@ async function cmdBoard(args) {
     if (variants.length === 0) fail(`no variant-*.{png,svg,html} files in ${dir}`);
   }
 
-  writeFileSync(join(dir, 'board.html'), renderBoardHtml({ boardId: id, title, mode, variants }));
+  let feedback;
+  const feedbackPath = join(dir, 'feedback.json');
+  if (existsSync(feedbackPath)) {
+    try { feedback = JSON.parse(readFileSync(feedbackPath, 'utf8')); } catch { /* daemon exposes the invalid record */ }
+  }
+  const envelope = await createDesignBoardArtifactEnvelope({
+    sessionDir: dir,
+    mode,
+    variants,
+    title,
+    feedback,
+  });
+  writeFileSync(join(dir, DESIGN_BOARD_ENVELOPE_FILE), `${JSON.stringify(envelope)}\n`, { mode: 0o600 });
+  const sources = variants.map((variant) => {
+    const direct = /\.(?:svg|png)$/i.test(variant.src) ? variant.src : null;
+    const original = direct ?? [
+      `variant-${variant.id}.svg`,
+      `variant-${variant.id}.png`,
+    ].find((name) => existsSync(join(dir, name))) ?? variant.src;
+    return {
+      artifactId: variant.id,
+      src: original,
+      kind: /\.svg$/i.test(original) ? 'svg' : /\.png$/i.test(original) ? 'png' : 'html',
+    };
+  });
+  writeFileSync(
+    join(dir, DESIGN_BOARD_SOURCES_FILE),
+    `${JSON.stringify({ schemaVersion: '1.0.0', sources }, null, 2)}\n`,
+    { mode: 0o600 },
+  );
+  writeFileSync(join(dir, 'board.html'), renderBoardHtml({ boardId: id, title, mode, variants, envelope }));
   const port = await ensureDaemon();
   const reg = await fetch(`http://127.0.0.1:${port}/api/boards`, {
     method: 'POST',

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -462,6 +463,97 @@ function runCredentialChecks() {
   }
 }
 
+async function runArtifactChecks() {
+  const required = [
+    'adapters/codex/skills/planr-artifact/SKILL.md',
+    'bin/planr-pipeline.mjs',
+    'conformance/verify-artifact-review.mjs',
+    'docs/artifact-review.md',
+    'lib/artifact/bundle.mjs',
+    'lib/artifact/codec.mjs',
+    'lib/artifact/crypto.mjs',
+    'lib/artifact/import.mjs',
+    'lib/artifact/merge.mjs',
+    'lib/artifact/review-server.mjs',
+    'lib/artifact/share-client.mjs',
+    'lib/artifact/ui/generated/artifact-shell-assets.json',
+    'lib/design-engine/artifact-adapter.mjs',
+    'lib/design-engine/board-adapter.mjs',
+    'lib/pipeline/index.mjs',
+    'registry/artifact-theme.json',
+    'schemas/v1.1.0/artifact-envelope.schema.json',
+    'schemas/v1.1.0/artifact-paste.schema.json',
+    'schemas/v1.1.0/artifact-review.schema.json',
+    'schemas/v1.1.0/artifact-theme.schema.json',
+    'templates/artifact-review-shell.html',
+    'templates/artifact-review-stage.js',
+    'templates/design/design-board-adapter.js',
+  ];
+  const missing = required.filter((path) => !existsSync(join(root, path)));
+  if (missing.length === 0) {
+    ok('artifact.assets-present', 'Artifact review', 'portable artifact schemas, engine, shell, skill, and conformance assets are present');
+  } else {
+    fail('artifact.assets-present', 'Artifact review', `portable artifact assets are missing: ${missing.join(', ')}`, 'Restore the package allowlist and regenerate artifact assets.');
+    return;
+  }
+
+  try {
+    for (const name of ['artifact-envelope', 'artifact-paste', 'artifact-review', 'artifact-theme']) {
+      readJson(`schemas/v1.1.0/${name}.schema.json`);
+    }
+    ok('artifact.schemas-readable', 'Artifact review', 'Protocol v1.1 artifact schemas parse as JSON');
+  } catch {
+    fail('artifact.schemas-readable', 'Artifact review', 'one or more Protocol v1.1 artifact schemas are invalid JSON', 'Regenerate or restore the artifact schemas.');
+  }
+
+  const manifest = readJson('lib/artifact/ui/generated/artifact-shell-assets.json');
+  const drift = [];
+  for (const asset of manifest.assets ?? []) {
+    const path = join(root, asset.path);
+    if (!existsSync(path)) {
+      drift.push(`${asset.path} is missing`);
+      continue;
+    }
+    const bytes = readFileSync(path);
+    const digest = createHash('sha256').update(bytes).digest('hex');
+    if (bytes.byteLength !== asset.bytes || digest !== asset.sha256) {
+      drift.push(`${asset.path} does not match its generated manifest`);
+    }
+  }
+  if (drift.length === 0 && (manifest.assets?.length ?? 0) >= 5) {
+    ok('artifact.generated-assets', 'Artifact review', 'generated shell, theme, stage, and design adapter match their manifest');
+  } else {
+    fail('artifact.generated-assets', 'Artifact review', drift.join('; ') || 'artifact shell manifest is incomplete', 'Run `npm run generate:artifact-shell` and commit every generated output.');
+  }
+
+  const publicIndex = readText('lib/pipeline/index.mjs');
+  const names = [
+    'bundleArtifact', 'createArtifactEnvelope', 'encodeArtifactFragment',
+    'decodeArtifactFragment', 'encryptArtifactPayload', 'decryptArtifactPayload',
+    'startArtifactReview', 'createReviewLink', 'importArtifactReview',
+    'mergeArtifactFeedback', 'ARTIFACT_ERROR_CODES',
+  ];
+  if (names.every((name) => new RegExp(`\\b${name}\\b`).test(publicIndex))) {
+    ok('artifact.public-exports', 'Artifact review', 'package root declares the stable artifact API and named errors');
+  } else {
+    fail('artifact.public-exports', 'Artifact review', 'package root artifact exports are incomplete', 'Export the complete stable artifact API from lib/pipeline/index.mjs.');
+  }
+
+  const skill = readText('adapters/codex/skills/planr-artifact/SKILL.md');
+  if (/\bplanr artifact\b/.test(skill)
+    && !/CLAUDE_PLUGIN_ROOT|\b(?:Sonnet|Opus)\b|\bplanr-pipeline\s+artifact\b/.test(skill)) {
+    ok('artifact.portable-skill', 'Artifact review', 'Codex artifact skill uses only the public planr route');
+  } else {
+    fail('artifact.portable-skill', 'Artifact review', 'Codex artifact skill contains a non-portable invocation', 'Use only `planr artifact` in portable runtime assets.');
+  }
+
+  if (readText('bin/planr-pipeline.mjs').startsWith('#!/usr/bin/env node')) {
+    ok('artifact.package-bin', 'Artifact review', 'package executable has a portable Node shebang');
+  } else {
+    fail('artifact.package-bin', 'Artifact review', 'package executable is missing its portable Node shebang', 'Restore bin/planr-pipeline.mjs and its package.json bin entry.');
+  }
+}
+
 function runReleaseChecks(pkg) {
   checkRelease('release.pipeline', 'planr-pipeline', root, pkg.version);
 
@@ -494,7 +586,7 @@ function printHumanSummary(summary) {
   const title = options.versionsOnly ? 'OpenPlanr doctor (versions only)' : 'OpenPlanr doctor';
   console.log(`${title}: ${summary.ok ? 'ok' : 'failed'} (${summary.failures} failure(s), ${summary.warnings} warning(s))`);
 
-  const order = ['Environment', 'Versions', 'Protocol', 'Ecosystem', 'Daemons', 'Credentials', 'Releases'];
+  const order = ['Environment', 'Versions', 'Protocol', 'Artifact review', 'Ecosystem', 'Daemons', 'Credentials', 'Releases'];
   for (const category of order) {
     const categoryChecks = checks.filter((check) => check.category === category);
     if (categoryChecks.length === 0) continue;
@@ -511,6 +603,7 @@ const pkg = readJson('package.json');
 
 runEnvironmentChecks(pkg);
 runVersionAndProtocolChecks(pkg);
+await runArtifactChecks();
 if (sourceCheckout) {
   runEcosystemChecks(pkg);
 } else {

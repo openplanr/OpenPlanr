@@ -68,6 +68,32 @@ test('plan command and protocol command docs preserve the R1 stop gate', () => {
   assert.match(protocolCommands, /PLAN command MUST NOT auto-chain to the SHIP command/);
 });
 
+test('design workflows keep Share/import explicit and preserve the R1 stop gate', () => {
+  const files = [
+    'commands/design.md',
+    'commands/design-loop.md',
+    'commands/design-review.md',
+    'procedures/design-step3-spec-and-handoff.md',
+    'procedures/design-loop-step3-board.md',
+    'procedures/design-loop-step4-approve.md',
+    'procedures/design-review-loop.md',
+  ];
+
+  for (const file of files) {
+    const text = read(file);
+    assert.match(text, /explicit/i, `${file} labels review sharing/import as explicit`);
+    assert.match(text, /(?:never|does not|do not|must not)[\s\S]{0,120}(?:publish|share|upload|auto-chain)/i,
+      `${file} forbids an automatic publication or workflow transition`);
+  }
+
+  for (const file of ['commands/design.md', 'commands/design-loop.md', 'commands/design-review.md']) {
+    const text = read(file);
+    assert.match(text, /planr artifact (?:share|import)/, `${file} names the portable planr artifact route`);
+    assert.doesNotMatch(text, /planr-pipeline artifact/, `${file} never invokes the nested package executable`);
+    assert.match(text, /(?:never|does not).*\/ship/i, `${file} preserves the R1 stop`);
+  }
+});
+
 test('qa_gate_status docs use the pipeline-shipped schema values', () => {
   const sync = read('commands/sync.md');
   const ship = read('commands/ship.md');

@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/artifact-envelope.schema.json",
+  "title": "OpenPlanr self-contained HTML artifact envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "artifacts", "viewer"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "title", "sha256", "html", "viewport", "colorScheme"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$" },
+          "kind": { "const": "html" },
+          "title": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "html": { "type": "string", "minLength": 1 },
+          "viewport": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["width", "height"],
+            "properties": {
+              "width": { "type": "integer", "minimum": 1, "maximum": 16384 },
+              "height": { "type": "integer", "minimum": 1, "maximum": 16384 }
+            }
+          },
+          "colorScheme": { "type": "string", "enum": ["light", "dark"] }
+        }
+      }
+    },
+    "viewer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "activeArtifactId"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["single", "variants"] },
+        "activeArtifactId": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "reviewId", "reviewOf", "decision", "overall", "pins"],
+      "properties": {
+        "schemaVersion": { "const": "1.0.0" },
+        "reviewId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "reviewOf": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "decision": { "type": "string", "enum": ["pending", "approved", "changes_requested"] },
+        "overall": { "type": "string", "maxLength": 65536 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "pins": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "author", "artifactId", "region", "viewport", "intent", "status", "comment", "replies", "createdAt", "updatedAt"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "author": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name"],
+                "properties": {
+                  "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+                  "name": { "type": "string", "minLength": 1, "maxLength": 256 }
+                }
+              },
+              "artifactId": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "variant": { "type": "string", "minLength": 1, "maxLength": 128 },
+              "region": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["x", "y", "w", "h"],
+                "properties": {
+                  "x": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "y": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "w": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "h": { "type": "number", "minimum": 0, "maximum": 1 }
+                }
+              },
+              "viewport": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["width", "height"],
+                "properties": {
+                  "width": { "type": "integer", "minimum": 1, "maximum": 16384 },
+                  "height": { "type": "integer", "minimum": 1, "maximum": 16384 }
+                }
+              },
+              "anchor": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["planrId"],
+                "properties": {
+                  "planrId": { "type": "string", "minLength": 1, "maxLength": 512 },
+                  "screen": { "type": "string", "minLength": 1, "maxLength": 128 }
+                }
+              },
+              "intent": { "type": "string", "enum": ["fix", "improve", "question"] },
+              "status": { "type": "string", "enum": ["open", "addressed", "resolved"] },
+              "comment": { "type": "string", "minLength": 1, "maxLength": 65536 },
+              "replies": {
+                "type": "array",
+                "maxItems": 10000,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "author", "comment", "createdAt"],
+                  "properties": {
+                    "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+                    "author": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["name"],
+                      "properties": {
+                        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+                        "name": { "type": "string", "minLength": 1, "maxLength": 256 }
+                      }
+                    },
+                    "comment": { "type": "string", "minLength": 1, "maxLength": 65536 },
+                    "createdAt": { "type": "string", "format": "date-time" }
+                  }
+                }
+              },
+              "createdAt": { "type": "string", "format": "date-time" },
+              "updatedAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

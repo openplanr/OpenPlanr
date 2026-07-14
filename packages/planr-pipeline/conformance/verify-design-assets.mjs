@@ -92,6 +92,10 @@ for (const rel of [
 const canvasJs = join(root, 'templates/design/vendor/DesignCanvas.js');
 assert(fileHas(canvasJs, 'React.createElement'), 'DesignCanvas.js is compiled (React.createElement)');
 assert(fileHas(canvasJs, 'Object.assign(window'), 'DesignCanvas.js registers globals');
+assert(fileHas(canvasJs, 'data-planr-id') && fileHas(canvasJs, 'data-planr-screen'),
+  'DesignCanvas.js emits declarative Planr artboard + screen anchors');
+assert(fileHas(canvasJs, 'data-dc-slot') && fileHas(canvasJs, 'data-dc-section'),
+  'DesignCanvas.js preserves legacy canvas slot + section attributes');
 try {
   execFileSync('node', ['--check', canvasJs], { stdio: 'pipe' });
   ok('DesignCanvas.js passes node --check');
@@ -105,6 +109,8 @@ assert(fileHas(canvasJs, '1440') && fileHas(canvasJs, '1024'),
   'DesignCanvas default artboard is desktop (1440×1024), not a 260×480 phone card');
 assert(fileHas(join(root, 'templates/design/DesignCanvas.jsx'), 'width = 1440'),
   'DesignCanvas.jsx source default width is desktop (1440)');
+assert(fileHas(join(root, 'templates/design/DesignCanvas.jsx'), 'focused ? undefined : planrAnchorId'),
+  'focused canvas artboards expose one stable anchor in the live DOM');
 assert(fileHas(canvasJs, '/ height, 1)') && !fileHas(canvasJs, '/ height, 2)'),
   'canvas focus overlay caps scale at 1:1 (never enlarges a desktop screen past real size — the zoom fix)');
 const preflight = join(root, 'procedures/design-step0-preflight.md');
@@ -112,6 +118,13 @@ assert(fileHas(preflight, 'APP_CTX') && fileHas(preflight, 'VIEWPORT_W'),
   'preflight A.3.5 front-loads APP_CTX + VIEWPORT_W (read the project once, up front)');
 const generate = join(root, 'procedures/design-step2-generate.md');
 assert(fileHas(generate, 'VIEWPORT_W'), 'generate C.0/C.4 author at VIEWPORT_W (real desktop width)');
+
+const designCommand = join(root, 'commands/design.md');
+const designHandoff = join(root, 'procedures/design-step3-spec-and-handoff.md');
+assert(fileHas(designCommand, 'planr artifact share') && fileHas(designHandoff, 'planr artifact import'),
+  'design handoff advertises explicit artifact Share + returned-review import');
+assert(fileHas(designCommand, 'never publishes or uploads') && fileHas(designHandoff, 'Do not invoke Share automatically'),
+  'design completion never publishes or shares automatically');
 
 // 3c — token scale + deterministic linter (v0.16.0)
 log('\ntoken scale + design linter (v0.16.0):');

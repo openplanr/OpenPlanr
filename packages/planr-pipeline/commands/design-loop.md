@@ -18,6 +18,12 @@ subagents (hard rule 6).
 
 **R1:** this loop STOPS at approval. It never auto-chains into `/plan` or `/ship`.
 
+**Sharing is explicit:** the board's **Share** control creates an immutable multi-variant
+artifact review only when the user selects it. Opening the board, submitting feedback,
+regenerating, or approving never publishes anything. A remote reviewer returns a new review
+URL; bring it back with `planr artifact import "<returned-review-url>"`. Importing feedback is
+also explicit and never advances PLAN → SHIP.
+
 ## Task tracking
 
 Create one task per phase (`TaskCreate`, advance with `TaskUpdate`; pre-2.1.142 runtimes:
@@ -59,3 +65,5 @@ TodoWrite; no task tool: inline). Verify each phase's outputs on disk before adv
 12. R1: stop at approval.
 13. Every artifact dir gets a scoped `.gitignore` (the engine writes it).
 14. Board survives a dead agent; agent survives a dead daemon (re-`board` the same dir).
+15. **Share/import are explicit** — no board lifecycle event uploads, publishes, imports, or
+    continues into `/plan` or `/ship` automatically.

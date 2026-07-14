@@ -37,17 +37,40 @@
 
 import { createServer } from 'node:http';
 import {
-  existsSync, mkdirSync, readFileSync, writeFileSync,
+  existsSync, mkdirSync, readFileSync, statSync, writeFileSync,
 } from 'node:fs';
-import { join, resolve } from 'node:path';
+import {
+  basename, dirname, extname, join, resolve,
+} from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { daemonDir } from './paths.mjs';
+import {
+  closeHttpServer,
+  listenLoopback,
+  readRequestBody,
+} from './server-util.mjs';
 import { MIME } from '../design/mime-types.mjs';
-import { serveStaticFile } from '../design/path-util.mjs';
+import { resolveContainedRealPath, serveStaticFile } from '../design/path-util.mjs';
 import {
   clampPin, assertValidFeedback, mergeFeedback, normalizeLegacy, isDeleteMarker,
+  artifactReviewToDesignFeedback, designFeedbackToArtifactReview,
   FEEDBACK_FILE, PENDING_FILE,
 } from './feedback.mjs';
+import {
+  DESIGN_BOARD_ENVELOPE_FILE,
+  DESIGN_BOARD_SOURCES_FILE,
+} from './board.mjs';
+import {
+  createArtifactBridgeNonce,
+  prepareArtifactDocument,
+  renderArtifactParentRuntime,
+} from '../artifact/bridge.mjs';
+import {
+  digestArtifactEnvelope,
+  validateArtifactEnvelope,
+  validateArtifactReview,
+} from '../artifact/envelope.mjs';
 
 // Shared server-lifecycle primitives live in server-util.mjs (used by both this daemon and the
 // dashboard server). Re-exported here for back-compat with importers that reach for them on daemon.
@@ -61,7 +84,7 @@ export {
  * daemon running stale code and restart it instead of reusing it forever. A
  * daemon started before this field existed reports no version → treated as stale.
  */
-export const DAEMON_VERSION = 2;
+export const DAEMON_VERSION = 3;
 
 /** Cap on a request body (bytes) — a feedback round is small; this bounds memory per request. */
 const MAX_BODY_SIZE = 5_000_000;
@@ -71,18 +94,16 @@ const json = (res, code, body) => {
   res.end(JSON.stringify(body));
 };
 
-const readBody = (req) =>
-  new Promise((resolveBody, reject) => {
-    let data = '';
-    req.on('data', (c) => {
-      data += c;
-      if (data.length > MAX_BODY_SIZE) reject(new Error('body too large'));
-    });
-    req.on('end', () => resolveBody(data));
-    req.on('error', reject);
-  });
+const readBody = (req) => readRequestBody(req, {
+  maxBytes: MAX_BODY_SIZE,
+  encoding: 'utf8',
+});
 
-export function createDaemon({ env = process.env } = {}) {
+const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const artifactStageRuntimePath = join(packageRoot, 'templates', 'artifact-review-stage.js');
+const designBoardAdapterPath = join(packageRoot, 'templates', 'design', 'design-board-adapter.js');
+
+export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch } = {}) {
   const stateDir = daemonDir(env);
   mkdirSync(stateDir, { recursive: true });
   const registryPath = join(stateDir, 'boards.json');
@@ -108,6 +129,7 @@ export function createDaemon({ env = process.env } = {}) {
   })();
 
   const reloadGen = new Map(); // boardId → counter
+  const bridgeNonces = new Map(); // boardId → opaque-origin bridge capability
   const mutex = new Map(); // boardId → promise chain
   const locked = (id, fn) => {
     const tail = (mutex.get(id) ?? Promise.resolve()).then(fn, fn);
@@ -171,6 +193,70 @@ export function createDaemon({ env = process.env } = {}) {
   const boardDir = (id) => {
     const dir = loadRegistry()[id];
     return dir && existsSync(dir) ? dir : null;
+  };
+
+  const readEnvelope = (dir) => {
+    const path = join(dir, DESIGN_BOARD_ENVELOPE_FILE);
+    if (!existsSync(path)) return null;
+    try {
+      const envelope = JSON.parse(readFileSync(path, 'utf8'));
+      validateArtifactEnvelope(envelope);
+      return envelope;
+    } catch {
+      return null;
+    }
+  };
+
+  const readSources = (dir, envelope = readEnvelope(dir)) => {
+    if (!envelope) return [];
+    const path = join(dir, DESIGN_BOARD_SOURCES_FILE);
+    if (!existsSync(path)) return [];
+    try {
+      const value = JSON.parse(readFileSync(path, 'utf8'));
+      if (value?.schemaVersion !== '1.0.0' || !Array.isArray(value.sources)) return [];
+      const artifactIds = new Set(envelope.artifacts.map(({ id: artifactId }) => artifactId));
+      const seen = new Set();
+      const sources = [];
+      for (const source of value.sources) {
+        if (!source || typeof source !== 'object' || Array.isArray(source)
+          || !artifactIds.has(source.artifactId) || seen.has(source.artifactId)
+          || !['svg', 'png', 'html'].includes(source.kind)
+          || typeof source.src !== 'string' || source.src.length < 1 || source.src.length > 512
+          || source.src.includes('\0')) continue;
+        const expected = source.kind === 'svg' ? '.svg' : source.kind === 'png' ? '.png' : '.html';
+        if (extname(source.src).toLowerCase() !== expected) continue;
+        const resolved = resolveContainedRealPath(dir, source.src).realPath;
+        const entry = statSync(resolved);
+        if (!entry.isFile() || entry.size > 10 * 1024 * 1024) continue;
+        seen.add(source.artifactId);
+        sources.push({
+          artifactId: source.artifactId,
+          kind: source.kind,
+          name: basename(source.src),
+          path: resolved,
+          bytes: entry.size,
+        });
+      }
+      return sources;
+    } catch {
+      return [];
+    }
+  };
+
+  const artifactReviewFor = (id, dir, envelope, stored = readStored(dir)) => {
+    const feedback = stored ?? {
+      schema_version: '1.0.0', boardId: id, publishedAt: new Date(0).toISOString(),
+      regenerated: false, ratings: {}, comments: {}, authors: [], pins: [],
+    };
+    const artifactIdByVariant = Object.fromEntries(envelope.artifacts.map(({ id: artifactId }) => [artifactId, artifactId]));
+    const viewportByArtifact = Object.fromEntries(envelope.artifacts.map(({ id: artifactId, viewport }) => [artifactId, viewport]));
+    return designFeedbackToArtifactReview(feedback, {
+      reviewOf: digestArtifactEnvelope(envelope),
+      artifactId: envelope.viewer.activeArtifactId,
+      artifactIdByVariant,
+      viewport: envelope.artifacts[0]?.viewport,
+      viewportByArtifact,
+    });
   };
 
   // boards we've already announced the mutex-guarded merge path for,
@@ -256,6 +342,7 @@ export function createDaemon({ env = process.env } = {}) {
         registry[id] = resolve(dir);
         saveRegistry(registry);
         if (!reloadGen.has(id)) reloadGen.set(id, 0);
+        if (!bridgeNonces.has(id)) bridgeNonces.set(id, createArtifactBridgeNonce());
         // confirm the mutex-guarded merge path is active for this board and fold any
         // leftover pending round into the durable store (non-destructively) on (re-)register.
         announceMutexPath(id);
@@ -281,6 +368,90 @@ export function createDaemon({ env = process.env } = {}) {
 
         // /boards/<id>/api/…
         if (parts[2] === 'api') {
+          if (req.method === 'GET' && parts[3] === 'envelope') {
+            const envelope = readEnvelope(dir);
+            if (!envelope) return json(res, 404, { error: 'artifact envelope unavailable' });
+            const review = artifactReviewFor(id, dir, envelope);
+            return json(res, 200, { envelope: { ...envelope, review } });
+          }
+          if (req.method === 'GET' && parts[3] === 'sources') {
+            const envelope = readEnvelope(dir);
+            if (!envelope) return json(res, 404, { error: 'artifact envelope unavailable' });
+            const sources = readSources(dir, envelope)
+              .filter(({ kind }) => kind === 'svg' || kind === 'png')
+              .map(({ artifactId, kind, name, bytes }) => ({
+                artifactId,
+                kind,
+                name,
+                bytes,
+                url: `exports/${encodeURIComponent(artifactId)}/source`,
+              }));
+            return json(res, 200, { sources });
+          }
+          if (req.method === 'GET' && parts[3] === 'artifact-review') {
+            const envelope = readEnvelope(dir);
+            if (!envelope) return json(res, 404, { error: 'artifact envelope unavailable' });
+            const feedback = readStored(dir);
+            return json(res, 200, {
+              review: artifactReviewFor(id, dir, envelope, feedback),
+              feedback: feedback ?? null,
+            });
+          }
+          if (req.method === 'PUT' && parts[3] === 'artifact-review') {
+            const envelope = readEnvelope(dir);
+            if (!envelope) return json(res, 404, { error: 'artifact envelope unavailable' });
+            const value = JSON.parse(await readBody(req) || '{}');
+            const review = value.review ?? value;
+            try { validateArtifactReview(review); } catch (error) {
+              return json(res, 400, { error: error.message });
+            }
+            if (review.reviewOf !== digestArtifactEnvelope(envelope)) {
+              return json(res, 409, { error: 'artifact review targets a stale design envelope' });
+            }
+            let feedback;
+            try {
+              await locked(id, () => {
+                feedback = artifactReviewToDesignFeedback(review, {
+                  storedFeedback: readStored(dir),
+                  boardId: id,
+                });
+                assertValidFeedback(feedback);
+                writeFileSync(join(dir, FEEDBACK_FILE), `${JSON.stringify(feedback, null, 2)}\n`);
+              });
+            } catch (error) {
+              return json(res, 400, { error: error.message });
+            }
+            const byId = new Map(feedback.pins.map((pin) => [pin.id, pin]));
+            for (const pin of review.pins) {
+              const item = byId.get(pin.id);
+              if (item) presence.broadcast(id, 'feedback:update', { item });
+            }
+            return json(res, 200, { ok: true, feedback, review: artifactReviewFor(id, dir, envelope, feedback) });
+          }
+          if (req.method === 'POST' && parts[3] === 'pastes') {
+            const value = JSON.parse(await readBody(req) || '{}');
+            const allowed = ['schemaVersion', 'operation', 'iv', 'ciphertext', 'ttl'];
+            if (!value || typeof value !== 'object' || Array.isArray(value)
+              || Object.keys(value).some((key) => !allowed.includes(key))
+              || value.schemaVersion !== '1.0.0' || value.operation !== 'create'
+              || !['1d', '7d', '30d'].includes(value.ttl)
+              || typeof value.iv !== 'string' || typeof value.ciphertext !== 'string') {
+              return json(res, 400, { error: 'invalid encrypted paste request' });
+            }
+            if (typeof fetchImpl !== 'function') return json(res, 503, { error: 'share service unavailable' });
+            try {
+              const remote = await fetchImpl('https://share.openplanr.dev/api/v1/pastes', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(Object.fromEntries(allowed.map((key) => [key, value[key]]))),
+                redirect: 'error',
+              });
+              const body = await remote.json().catch(() => ({ error: 'share service returned malformed JSON' }));
+              return json(res, remote.ok ? 200 : remote.status, body);
+            } catch {
+              return json(res, 503, { error: 'share service unavailable' });
+            }
+          }
           if (req.method === 'GET' && parts[3] === 'progress') {
             let progress = {};
             const p = join(dir, 'progress.json');
@@ -415,6 +586,80 @@ export function createDaemon({ env = process.env } = {}) {
           return json(res, 404, { error: 'unknown api route' });
         }
 
+        const boardBase = `/boards/${encodeURIComponent(id)}/`;
+        if ((req.method === 'GET' || req.method === 'HEAD') && parts.length === 3 && parts[2] === 'runtime.js') {
+          const nonce = bridgeNonces.get(id) ?? createArtifactBridgeNonce();
+          bridgeNonces.set(id, nonce);
+          const source = renderArtifactParentRuntime({
+            artifactBaseUrl: `${boardBase}artifacts/`,
+            stageRuntimeUrl: `${boardBase}stage.js`,
+            adapterRuntimeUrl: `${boardBase}design-adapter.js`,
+            nonce,
+          });
+          res.writeHead(200, {
+            'content-type': 'text/javascript; charset=utf-8',
+            'cache-control': 'no-store',
+            'x-content-type-options': 'nosniff',
+          });
+          return res.end(req.method === 'HEAD' ? undefined : source);
+        }
+        if ((req.method === 'GET' || req.method === 'HEAD') && parts.length === 3
+          && ['stage.js', 'design-adapter.js'].includes(parts[2])) {
+          const path = parts[2] === 'stage.js' ? artifactStageRuntimePath : designBoardAdapterPath;
+          if (!existsSync(path)) return json(res, 503, { error: 'generated board runtime unavailable' });
+          const source = readFileSync(path);
+          res.writeHead(200, {
+            'content-type': 'text/javascript; charset=utf-8',
+            'content-length': source.byteLength,
+            'cache-control': 'no-store',
+            'x-content-type-options': 'nosniff',
+          });
+          return res.end(req.method === 'HEAD' ? undefined : source);
+        }
+        if ((req.method === 'GET' || req.method === 'HEAD') && parts.length === 4 && parts[2] === 'artifacts') {
+          const envelope = readEnvelope(dir);
+          const artifact = envelope?.artifacts.find(({ id: artifactId }) => artifactId === decodeURIComponent(parts[3]));
+          if (!artifact) return json(res, 404, { error: 'artifact unavailable' });
+          const nonce = bridgeNonces.get(id) ?? createArtifactBridgeNonce();
+          bridgeNonces.set(id, nonce);
+          const address = server.address();
+          const port = typeof address === 'object' && address ? address.port : 0;
+          const prepared = prepareArtifactDocument({
+            html: artifact.html,
+            artifactId: artifact.id,
+            nonce,
+            parentOrigin: `http://127.0.0.1:${port}`,
+          });
+          const source = Buffer.from(prepared.html);
+          res.writeHead(200, {
+            'content-security-policy': `${prepared.csp}; sandbox allow-scripts; frame-ancestors 'none'`,
+            'content-disposition': 'attachment; filename="openplanr-design-artifact.html"',
+            'content-type': 'application/octet-stream',
+            'content-length': source.byteLength,
+            'cache-control': 'no-store',
+            'cross-origin-resource-policy': 'same-origin',
+            'x-content-type-options': 'nosniff',
+          });
+          return res.end(req.method === 'HEAD' ? undefined : source);
+        }
+        if ((req.method === 'GET' || req.method === 'HEAD') && parts.length === 5
+          && parts[2] === 'exports' && parts[4] === 'source') {
+          const artifactId = decodeURIComponent(parts[3]);
+          const source = readSources(dir).find((candidate) => candidate.artifactId === artifactId
+            && ['svg', 'png'].includes(candidate.kind));
+          if (!source) return json(res, 404, { error: 'design source unavailable' });
+          const bytes = readFileSync(source.path);
+          const downloadName = `openplanr-${artifactId.replace(/[^A-Za-z0-9._-]+/g, '_')}.${source.kind}`;
+          res.writeHead(200, {
+            'content-type': source.kind === 'svg' ? MIME['.svg'] : MIME['.png'],
+            'content-length': bytes.byteLength,
+            'content-disposition': `attachment; filename="${downloadName}"`,
+            'cache-control': 'no-store',
+            'x-content-type-options': 'nosniff',
+          });
+          return res.end(req.method === 'HEAD' ? undefined : bytes);
+        }
+
         // static: /boards/<id>/ → board.html, else the named file (traversal-guarded).
         // HEAD is honored like GET (Node omits the body automatically).
         if (req.method === 'GET' || req.method === 'HEAD') {
@@ -433,16 +678,12 @@ export function createDaemon({ env = process.env } = {}) {
   return {
     server,
     /** Start on 127.0.0.1; port 0 = ephemeral. Persists the port for discovery. */
-    listen(port = 0) {
-      return new Promise((resolveListen) => {
-        server.listen(port, '127.0.0.1', () => {
-          const actual = server.address().port;
-          writeFileSync(join(stateDir, 'port'), String(actual));
-          resolveListen(actual);
-        });
-      });
+    async listen(port = 0) {
+      const actual = await listenLoopback(server, port);
+      writeFileSync(join(stateDir, 'port'), String(actual));
+      return actual;
     },
-    close: () => new Promise((r) => server.close(r)),
+    close: () => closeHttpServer(server),
   };
 }
 

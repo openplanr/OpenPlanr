@@ -653,58 +653,48 @@ const boardHtml = () => renderBoardHtml({
   mode: 'review',
   variants: [{ id: 'A', label: 'screen', src: 'a.svg', type: 'svg' }],
 });
+const boardRuntime = () => readFileSync(join(here, '..', 'templates/design/design-board-adapter.js'), 'utf8');
+const stageRuntime = () => readFileSync(join(here, '..', 'templates/artifact-review-stage.js'), 'utf8');
 
-test('the board ships the feedback rail — header, filter bar, grouped items', () => {
+test('the board consumes the shared feedback rail and decision primitives once', () => {
   const html = boardHtml();
   for (const hook of [
-    'rb-feedback-rail', 'rb-rail-header', 'rb-rail-title', 'rbRailOpenCount', 'rbRailResolvedChip',
-    'rb-filter-bar', 'rbFilterBar', 'rb-rail-list', 'rbRailList',
-    'rb-filter-chip', 'rb-filter-chip--active', 'rb-rail-item', 'rb-rail-item--active',
+    'planr-review-rail', 'data-planr-slot="feedback-rail"', 'data-planr-thread-list',
+    'data-planr-slot="domain-rail"', 'data-planr-slot="decision"',
   ]) {
     assert.ok(html.includes(hook), `feedback rail ships ${hook}`);
   }
-  // CSS classes the filter/item list need at runtime (built in JS) are present in the stylesheet.
-  for (const cls of ['rb-badge--fix', 'rb-badge--improve', 'rb-badge--question', 'rb-badge--open', 'rb-badge--resolved']) {
-    assert.ok(html.includes(cls), `intent/status badge class ${cls} is styled`);
-  }
+  assert.equal((html.match(/class="planr-review-rail"/g) ?? []).length, 1, 'no nested/duplicate review rail');
 });
 
-test('the board ships the detail card — thread, reply input, resolve, delete', () => {
-  const html = boardHtml();
+test('the shared runtime ships threads, replies and resolve/reopen lifecycle', () => {
+  const html = stageRuntime();
   for (const hook of [
-    'rb-detail-card', 'rbDetailCard', 'rb-thread-list', 'rbThreadList',
-    'rb-reply-input', 'rbReplyText', 'rbReplySend', 'rb-resolve-btn', 'rbResolveBtn',
-    'rb-delete-btn', 'rbDeleteBtn', 'rbDetailClose',
+    'planr-thread', 'planr-reply-form', 'data-planr-thread-action',
+    'Resolve', 'Reopen', 'Show pin',
   ]) {
-    assert.ok(html.includes(hook), `detail card ships ${hook}`);
+    assert.ok(html.includes(hook), `shared feedback runtime ships ${hook}`);
   }
-  // detail card caps at 600px with an internal scroll (DoD)
-  assert.match(html, /\.rb-detail-card\s*\{[^}]*max-height:600px/, 'detail card caps at 600px');
-  assert.match(html, /\.rb-detail-body\s*\{[^}]*overflow-y:auto/, 'detail body scrolls internally');
 });
 
-test('two-way selection + lifecycle wiring functions are present in the client', () => {
-  const html = boardHtml();
+test('shared selection and legacy persistence adapters are both wired', () => {
+  const html = stageRuntime();
+  const adapter = boardRuntime();
   for (const fn of [
-    'function renderRail', 'function selectPin', 'function selectRailItem',
-    'function openDetailCard', 'function submitReply', 'function resolvePin', 'function deletePin',
+    'focusThread', 'focusPin', 'selectPin', 'mountArtifactFeedbackRail',
   ]) {
-    assert.ok(html.includes(fn), `client wires ${fn}`);
+    assert.ok(html.includes(fn), `shared client wires ${fn}`);
   }
-  // container-query reflow (rail moves below the stage on narrow widths)
-  assert.ok(html.includes('@container rb-screen (max-width: 1023px)'), 'rail reflows ≤1023px');
+  for (const route of ['api/artifact-review', 'api/feedback', 'api/feedback/stream']) {
+    assert.ok(adapter.includes(route), `design adapter retains ${route}`);
+  }
 });
 
-test('the rail/detail CSS stays on the palette tokens (no off-palette raw hex)', () => {
+test('the shared rail uses canonical Planr theme tokens', () => {
   const html = boardHtml();
-  // isolate the feedback-rail CSS section (from its banner to </style>) and assert no raw
-  // hex literals appear in its rule bodies — every colour is a var(--rb-*)/var(--pin-*) token.
-  const start = html.indexOf('feedback rail / inbox');
-  assert.ok(start > 0, 'feedback-rail CSS section is present');
-  const end = html.indexOf('</style>', start);
-  const section = html.slice(start, end);
-  const rawHex = section.match(/#[0-9a-fA-F]{3,6}\b/g) || [];
-  assert.equal(rawHex.length, 0, `feedback-rail CSS uses only palette tokens, found raw hex: ${rawHex.join(', ')}`);
+  assert.ok(html.includes('.planr-review-rail'), 'shared feedback rail CSS ships');
+  assert.ok(html.includes('var(--planr-color-rule)'), 'shared rail consumes generated theme tokens');
+  assert.ok(!html.includes('--rb-'), 'legacy board palette is not duplicated');
 });
 
 test('a reply the detail card POSTs is schema-valid and merges non-destructively', async () => {
@@ -1069,23 +1059,12 @@ test('when a client disconnects, the remaining client receives presence:leave', 
 // when pins are hidden it reads "Pins hidden", so there is NO floating bar over the design.
 
 test('the board ships a keyboard-accessible Show/Hide pins toggle (role=switch + aria-checked)', () => {
-  const html = boardHtml();
-
-  // The top-bar toggle: a real button with role=switch and aria-checked (keyboard operable).
-  assert.ok(html.includes('id="rbPinsToggle"'), 'show/hide pins toggle ships');
-  const toggle = html.slice(html.indexOf('id="rbPinsToggle"') - 80, html.indexOf('id="rbPinsToggle"') + 120);
-  assert.ok(/role="switch"/.test(toggle), 'the toggle is role=switch (keyboard accessible)');
-  assert.ok(/aria-checked=/.test(toggle), 'aria-checked mirrors pin visibility for AT');
-
-  // No floating "Show pins" bar over the design — the top-bar toggle is the one re-entry point.
-  for (const gone of ['rb-pins-hidden-bar', 'rbPinsHiddenBar', 'rbHiddenCount', 'id="rbShowPins"']) {
-    assert.ok(!html.includes(gone), `floating hidden-pins bar removed (${gone} absent)`);
-  }
-  assert.ok(html.includes('Pins hidden'), 'the toggle itself surfaces the hidden state (no separate bar)');
-
-  // The wiring: a togglePins() function flips state and the session-remembered flag.
-  assert.ok(html.includes('function togglePins'), 'client wires togglePins()');
-  assert.ok(html.includes('rb-pins-visible'), 'visibility is tracked as a session-storage flag (preserved for the session)');
+  const html = boardRuntime();
+  assert.ok(html.includes('data-planr-pins-toggle'), 'show/hide pins toggle ships in the domain slot');
+  assert.ok(html.includes('role", "switch"'), 'the toggle is role=switch (keyboard accessible)');
+  assert.ok(html.includes('aria-checked'), 'aria-checked mirrors pin visibility for AT');
+  assert.ok(html.includes('Pins hidden'), 'the toggle itself surfaces the hidden state');
+  assert.ok(html.includes('data-planr-annotation-layer'), 'the toggle controls the one shared annotation layer');
 });
 
 // ── premium designed states + accessibility (board render) ────────────
@@ -1103,25 +1082,10 @@ test('the board ships every designed no-dead-end state (empty / loading / offlin
   assert.ok(!html.includes('id="rbEmptyStage"'), 'no full-stage empty overlay (the design is always visible)');
   assert.ok(html.includes('No feedback yet'), 'the rail invites the first pin');
 
-  // loading skeleton — no blank white flash during the GET flight.
-  assert.ok(html.includes('id="rbSkeletonStage"'), 'loading skeleton ships');
-  assert.ok(html.includes('rb-skeleton--block'), 'skeleton blocks are present');
-
-  // stream-down / offline badge — board stays usable, re-syncs on reconnect.
-  assert.ok(html.includes('id="rbOfflineBadge"'), 'offline (stream-down) badge ships');
-  const offline = html.slice(html.indexOf('id="rbOfflineBadge"') - 60, html.indexOf('id="rbOfflineBadge"') + 80);
-  assert.ok(/role="status"/.test(offline) && /aria-live=/.test(offline), 'offline badge is announced politely (a11y)');
-
-  // save-failed toast with Retry — never a silent loss.
-  assert.ok(html.includes('id="rbSaveToast"'), 'save-failed toast ships');
-  assert.ok(html.includes('id="rbSaveToastRetry"'), 'save-failed toast offers Retry (no silent loss)');
-  const toastEl = html.slice(html.indexOf('id="rbSaveToast"') - 60, html.indexOf('id="rbSaveToast"') + 80);
-  assert.ok(/role="alert"/.test(toastEl), 'save-failed toast is an assertive alert');
-
-  // all-resolved celebratory empty state in the rail.
-  assert.ok(html.includes('rb-all-resolved'), 'all-resolved state is styled');
-  assert.ok(html.includes('function shouldShowAllResolved'), 'client decides when to show the all-resolved state');
-  assert.ok(html.includes('function buildAllResolvedNode'), 'client builds the all-resolved node');
+  assert.ok(html.includes('class="planr-stage-status"'), 'loading/error status surface ships');
+  assert.ok(html.includes('role="status"') && html.includes('aria-live="polite"'), 'status is announced politely');
+  assert.ok(html.includes('class="planr-field-error"'), 'save/validation errors have an alert surface');
+  assert.ok(stageRuntime().includes('pins.filter'), 'resolved/open counts derive from durable shared review state');
 });
 
 test('the board honours prefers-reduced-motion (motion collapses to ~0ms)', () => {
@@ -1130,8 +1094,5 @@ test('the board honours prefers-reduced-motion (motion collapses to ~0ms)', () =
     html.includes('@media (prefers-reduced-motion: reduce)'),
     'a reduced-motion kill-switch neutralises animations/transitions',
   );
-  assert.ok(
-    html.includes('@media (prefers-reduced-motion: no-preference)'),
-    'the new motion is authored under no-preference (only scheduled when motion is welcome)',
-  );
+  assert.ok(html.includes('transition-duration: 0s !important'), 'reduced motion collapses transitions');
 });

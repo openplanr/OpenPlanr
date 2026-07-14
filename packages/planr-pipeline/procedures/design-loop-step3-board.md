@@ -22,6 +22,11 @@
      is independent of this session (hard rule 14); if it ever dies, re-run the same `board`
      command — same dir, same feedback files, nothing lost.
 
+The board exposes **Share** as an optional, explicit control. It shares the ordered variants as
+one immutable artifact envelope; it never wraps `board.html` inside another review shell. Merely
+opening the board, reloading variants, submitting local feedback, or approving must not call the
+share transport.
+
 ## D.2 — The blocking wait
 
 Issue the mandatory `AskUserQuestion` (enforcement per `design-step1-clarify.md`) with the
@@ -35,7 +40,10 @@ URL in the question text:
 > C) **Cancel the loop**
 
 (A and B both proceed to D.3 — the file disambiguates; the split exists so the user can
-say what they did.)
+say what they did.) If a remote reviewer returns a review URL, the user must first run
+`planr artifact import "<returned-review-url>"`; that explicit import merges into the durable
+feedback file, after which A follows the normal path. A URL pasted in chat is not feedback, and
+Share/import never imply approval or continue into `/plan` or `/ship`.
 
 ## D.3 — Read the file, never the chat
 
@@ -47,6 +55,10 @@ say what they did.)
 - `kind=pending` (consumed on read — never double-applied) → D.4 with
   `regenerateAction ∈ iterate | remix | more-like`.
 - `null` (no file) → the user hasn't submitted; say so and re-wait (D.2). Do not guess.
+
+An imported remote review is not a fourth feedback channel: `artifact import` translates and
+merges it into the same adjacent feedback file before this read, preserving ratings, comments,
+pins, replies, regeneration state, and preferred variant fields.
 
 ## D.4 — Apply a regeneration round
 

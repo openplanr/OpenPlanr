@@ -39,7 +39,10 @@ const { createSession, appendRound, saveSession, loadSession } = await import(
 const { createDaemon, DAEMON_VERSION } = await import(
   moduleUrl('lib/design-engine/daemon.mjs')
 );
-const { renderBoardHtml } = await import(moduleUrl('lib/design-engine/board.mjs'));
+const {
+  DESIGN_BOARD_ENVELOPE_FILE, DESIGN_BOARD_SOURCES_FILE, renderBoardHtml,
+} = await import(moduleUrl('lib/design-engine/board.mjs'));
+const { createDesignBoardArtifactEnvelope } = await import(moduleUrl('lib/design-engine/artifact-adapter.mjs'));
 const { readFeedback } = await import(moduleUrl('lib/design-engine/feedback.mjs'));
 const { emptyProfile, updateTaste, saveProfile, loadProfile } = await import(
   moduleUrl('lib/design-engine/taste.mjs')
@@ -68,6 +71,16 @@ for (const rel of [
   'docs/design-loop.md',
 ]) assert(existsSync(join(root, rel)), rel);
 
+const loopCommand = readFileSync(join(root, 'commands/design-loop.md'), 'utf8');
+const reviewCommand = readFileSync(join(root, 'commands/design-review.md'), 'utf8');
+const loopBoardProcedure = readFileSync(join(root, 'procedures/design-loop-step3-board.md'), 'utf8');
+assert(loopCommand.includes('planr artifact import') && reviewCommand.includes('planr artifact share'),
+  'design loop/review expose Share + returned-review import through planr');
+assert(loopBoardProcedure.includes('never wrap') && loopBoardProcedure.includes('never imply approval'),
+  'board sharing stays explicit, immutable, non-nested, and separate from approval');
+assert(!loopCommand.includes('planr-pipeline artifact') && !reviewCommand.includes('planr-pipeline artifact'),
+  'design docs never invoke the nested package executable for artifact review');
+
 // 1 — contract + author + check
 log('\ngenerate (claude-svg):');
 const contract = sheetContract('logo');
@@ -91,9 +104,21 @@ assert(existsSync(join(sessionDir, 'session-A.json')), 'session persisted in the
 
 // 3 — board through a REAL localhost daemon
 log('\nboard + daemon:');
+const boardEnvelope = await createDesignBoardArtifactEnvelope({
+  sessionDir,
+  mode: 'loop',
+  title: 'conf',
+  variants: [{ id: 'A', label: 'variant-A.svg', src: 'variant-A.svg', type: 'svg' }],
+});
+writeFileSync(join(sessionDir, DESIGN_BOARD_ENVELOPE_FILE), JSON.stringify(boardEnvelope));
+writeFileSync(join(sessionDir, DESIGN_BOARD_SOURCES_FILE), JSON.stringify({
+  schemaVersion: '1.0.0',
+  sources: [{ artifactId: 'A', src: 'variant-A.svg', kind: 'svg' }],
+}));
 writeFileSync(join(sessionDir, 'board.html'), renderBoardHtml({
   boardId: 'conf-loop', title: 'conf', mode: 'loop',
   variants: [{ id: 'A', label: 'variant-A.svg', src: 'variant-A.svg', type: 'svg' }],
+  envelope: boardEnvelope,
 }));
 writeFileSync(join(sessionDir, 'progress.json'), JSON.stringify({ variants: { A: 'done' }, versions: { A: ['variant-A.svg'] } }));
 const daemon = createDaemon();
@@ -105,7 +130,8 @@ const reg = await (await fetch(`${base}/api/boards`, {
 })).json();
 assert(reg.ok === true, 'board registered with the daemon');
 const served = await (await fetch(`${base}/boards/conf-loop/`)).text();
-assert(served.includes('conf') && served.includes('api/feedback'), 'board HTML served with the feedback wiring');
+assert(served.includes('conf') && served.includes('planr-review-rail') && served.includes('./runtime.js'),
+  'board HTML serves one shared review shell with the trusted runtime');
 
 // trailing-slash canon (the broken-images bug): /boards/<id> must 301 → /boards/<id>/,
 // never serve the page at a base that breaks every relative URL.
@@ -113,17 +139,32 @@ const noSlash = await fetch(`${base}/boards/conf-loop`, { redirect: 'manual' });
 assert(noSlash.status === 301 && (noSlash.headers.get('location') ?? '').endsWith('/boards/conf-loop/'),
   'slash-less board URL 301-redirects to the canonical slash form');
 const followed = await (await fetch(`${base}/boards/conf-loop`)).text();
-assert(followed.includes('api/feedback'), 'following the redirect lands on the working board');
-assert(followed.includes('m-interact') && followed.includes('pinlayer'),
-  'board ships the Interact/Pin mode toggle (canvas artifacts stay pannable)');
-assert(followed.includes('receipt') && followed.includes('Feedback submitted'),
-  'board ships the submission receipt UI');
-assert(followed.includes('id="btnExport"') && followed.includes('function domExport('),
-  'board ships PNG/HTML export (rasteriser + button)');
-assert(followed.includes('reference image') && followed.includes('design-spec.md'),
-  'export frames PNG as a reference image, HTML/spec as the real handoff');
-assert(followed.includes('jpe?g') && followed.includes('diffab'),
-  'board renders html artifacts type-correctly: ◈ version thumbnail + iframe A/B compare (never a broken <img>)');
+assert(followed.includes('planr-review-rail'), 'following the redirect lands on the working shared board');
+assert(followed.includes('data-planr-mode="interact"') && followed.includes('data-planr-mode="comment"'),
+  'board ships the shared Interact/Comment mode toggle (canvas artifacts stay pannable)');
+assert(followed.includes('data-planr-share-dialog') && followed.includes('Private fragment'),
+  'board ships the explicit Share privacy receipt');
+assert((followed.match(/class="planr-shell"/g) ?? []).length === 1
+  && !followed.includes('legacy-board-shell'), 'board contains one review shell and never nests legacy chrome');
+assert(followed.includes('data-planr-view="split"') && followed.includes('data-planr-slot="domain-rail"'),
+  'shared view controls and design-specific extension slot coexist');
+const runtime = await (await fetch(`${base}/boards/conf-loop/runtime.js`)).text();
+const adapter = await (await fetch(`${base}/boards/conf-loop/design-adapter.js`)).text();
+const artifact = await fetch(`${base}/boards/conf-loop/artifacts/A`);
+assert(runtime.includes('/boards/conf-loop/artifacts/') && adapter.includes('api/feedback'),
+  'trusted runtime preserves capability-scoped artifacts and legacy feedback adapter');
+assert([
+  'Overall direction', 'planrVariantComment', 'planrRemixLayout', 'planrRemixColors',
+  'planrRemixNote', 'PNG — current screen', 'PNG — full design', 'source-${source.kind}',
+].every((control) => adapter.includes(control)) && runtime.includes('exportPng'),
+'shared adapter preserves all next-round controls and authenticated PNG/source export seams');
+assert(artifact.status === 200 && (artifact.headers.get('content-type') ?? '').startsWith('application/octet-stream'),
+  'daemon serves prepared opaque-origin artifact bytes');
+const sources = await (await fetch(`${base}/boards/conf-loop/api/sources`)).json();
+const sourceExport = await fetch(`${base}/boards/conf-loop/${sources.sources?.[0]?.url ?? ''}`);
+assert(sources.sources?.[0]?.kind === 'svg' && sourceExport.status === 200
+  && (sourceExport.headers.get('content-disposition') ?? '').includes('attachment'),
+'daemon exposes traversal-guarded source download metadata and bytes');
 const head = await fetch(`${base}/boards/conf-loop/variant-A.svg`, { method: 'HEAD' });
 assert(head.status === 200, 'HEAD on a board asset answers 200');
 

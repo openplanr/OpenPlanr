@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 
 import {
   imageDimensions, buildImageCanvasData, wrapInCanvas, discoverVariants,
@@ -19,6 +20,8 @@ import {
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SHELL = readFileSync(join(ROOT, 'templates', 'design', 'canvas-shell.html'), 'utf8');
+const CANVAS_SOURCE = readFileSync(join(ROOT, 'templates', 'design', 'DesignCanvas.jsx'), 'utf8');
+const CANVAS_RUNTIME = readFileSync(join(ROOT, 'templates', 'design', 'vendor', 'DesignCanvas.js'), 'utf8');
 
 test('imageDimensions reads an SVG viewBox, a PNG IHDR, and falls back', () => {
   const dir = mkdtempSync(join(tmpdir(), 'cw-dim-'));
@@ -60,6 +63,35 @@ test('wrapInCanvas injects the data + neutralizes a </script> breakout (embedJso
   assert.ok(!html.includes('</script><img src=x onerror=alert(1)>'), 'no live </script> breakout survives');
   assert.ok(html.includes('\\u003c'), 'angle brackets are \\u-escaped inside the script');
   assert.ok(html.includes('./vendor/DesignCanvas.js'), 'the canvas references the vendored runtime');
+});
+
+test('DesignCanvas emits stable unique Planr anchors without replacing legacy canvas attributes', () => {
+  assert.match(CANVAS_SOURCE, /data-dc-slot=\{id\}/, 'legacy artboard slot stays declarative');
+  assert.match(CANVAS_SOURCE, /data-dc-section=\{sid\}/, 'legacy section marker stays declarative');
+  assert.match(CANVAS_SOURCE, /data-planr-id=\{focused \? undefined : planrAnchorId\}/,
+    'the background artboard yields its anchor while its focus copy is mounted');
+  assert.match(CANVAS_SOURCE, /data-planr-id=\{planrAnchorId\} data-planr-screen=\{String\(sectionId\)\}/,
+    'the focus copy carries the same stable id and screen');
+
+  assert.match(CANVAS_RUNTIME, /"data-dc-slot"/);
+  assert.match(CANVAS_RUNTIME, /"data-dc-section"/);
+  assert.match(CANVAS_RUNTIME, /"data-planr-id"/);
+  assert.match(CANVAS_RUNTIME, /"data-planr-screen"/);
+
+  const runtimeWindow = {};
+  runInNewContext(CANVAS_RUNTIME, {
+    window: runtimeWindow,
+    React: { createContext: () => ({}) },
+  });
+  const anchorId = runtimeWindow.DCPlanrAnchorId;
+  assert.equal(typeof anchorId, 'function', 'compiled runtime exports its deterministic anchor helper');
+
+  const checkout = anchorId('Checkout flow', 'Desktop:A');
+  assert.equal(checkout, anchorId('Checkout flow', 'Desktop:A'), 'the same artboard is stable');
+  assert.match(checkout, /^[A-Za-z0-9][A-Za-z0-9._:-]*$/, 'the bridge can resolve the generated id');
+  assert.notEqual(anchorId('a-b', 'c'), anchorId('a', 'b-c'), 'section/artboard boundaries cannot collide');
+  assert.notEqual(anchorId('résumé', '桌面'), anchorId('resume', '桌面'), 'Unicode identities remain distinct');
+  assert.ok(anchorId('s'.repeat(900), 'a'.repeat(900)).length <= 512, 'pathological ids remain bridge-bounded');
 });
 
 test('discoverVariants prefers the canvas (.html) and degrades to the source image', () => {

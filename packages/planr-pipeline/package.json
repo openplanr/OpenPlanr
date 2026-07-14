@@ -1,6 +1,6 @@
 {
   "name": "planr-pipeline",
-  "version": "0.25.1",
+  "version": "0.26.0",
   "private": false,
   "type": "module",
   "description": "OpenPlanr complete PO, Design, DEV, QA, and delivery pipeline",
@@ -18,6 +18,9 @@
     "bin/",
     "commands/",
     "conformance/",
+    "docs/adrs/ADR-005-artifact-review-sharing-security.md",
+    "docs/artifact-review.md",
+    "docs/generated/",
     "docs/protocol/",
     "hooks/",
     "lib/",
@@ -25,6 +28,7 @@
     "registry/",
     "schemas/",
     "scripts/doctor.mjs",
+    "scripts/generate-artifact-shell.mjs",
     "stacks/",
     "templates/",
     "README.md",
@@ -37,8 +41,26 @@
   "engines": {
     "node": ">=20"
   },
+  "dependencies": {
+    "esbuild": "0.28.1",
+    "pako": "2.1.0",
+    "parse5": "8.0.1"
+  },
+  "devDependencies": {
+    "pixelmatch": "7.2.0",
+    "playwright": "1.61.1",
+    "pngjs": "7.0.0"
+  },
   "scripts": {
-    "test": "npm run test:schema && npm run test:orchestration && npm run test:docs && npm run test:design && npm run test:design-engine && npm run test:dashboard && npm run conformance:design && npm run conformance:design-loop && npm run conformance:dashboard",
+    "test": "npm run test:schema && npm run test:orchestration && npm run test:docs && npm run test:design && npm run test:design-engine && npm run test:artifact && npm run test:dashboard && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard",
+    "generate:artifact-shell": "node scripts/generate-artifact-shell.mjs",
+    "check:artifact-shell": "node scripts/generate-artifact-shell.mjs --check",
+    "test:artifact": "node scripts/run-test-group.mjs tests/artifact",
+    "test:artifact:browser": "node --test tests/artifact/local-shell.test.mjs tests/artifact/review-interactions.test.mjs tests/artifact/share-ui.test.mjs tests/artifact/sandbox-hostile.test.mjs tests/artifact/design-board-integration.test.mjs",
+    "test:artifact:contracts": "node --test tests/artifact/bundle.test.mjs tests/artifact/schemas-envelope.test.mjs",
+    "test:artifact:share": "node --test tests/artifact/codec.test.mjs tests/artifact/crypto-share.test.mjs",
+    "test:artifact:exports": "node --test tests/pipeline/artifact-exports.test.mjs",
+    "test:artifact:packed": "node --test tests/pipeline/artifact-packed-install.test.mjs",
     "test:design-engine": "node scripts/run-test-group.mjs tests/design-engine tests/collab-review-board.test.mjs",
     "test:dashboard": "node scripts/run-test-group.mjs tests/dashboard",
     "test:docs": "node scripts/run-test-group.mjs tests/docs",
@@ -46,7 +68,9 @@
     "doctor:versions": "node scripts/doctor.mjs --versions-only",
     "ecosystem:conformance": "node scripts/ecosystem-conformance.mjs",
     "conformance:native-dispatch": "node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd1-parallel && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd2-advisory-locklist && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd3-dependson && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd4-per-task",
-    "conformance:check": "npm run conformance:native-dispatch && npm run conformance:design && npm run conformance:design-loop && npm run conformance:dashboard",
+    "conformance:check": "npm run conformance:native-dispatch && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard",
+    "conformance:artifact": "npm run conformance:artifact-review",
+    "conformance:artifact-review": "node conformance/verify-artifact-review.mjs",
     "conformance:design-loop": "node conformance/verify-design-loop.mjs",
     "conformance:dashboard": "node conformance/verify-dashboard.mjs",
     "test:schema": "node scripts/run-test-group.mjs tests/schema",

@@ -3,8 +3,8 @@
 > Artifact version: **1.0.0**
 > Ecosystem contracts: **1.1.0**
 > Status: v1.0 artifact frontmatter remains stable. v1.1 adds optional adapter,
-> runtime-lock, compatibility, role-registry, and provenance contracts.
-> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.25.1.
+> runtime-lock, compatibility, role-registry, provenance, and artifact-review contracts.
+> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.26.0.
 
 The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI development. It defines:
 
@@ -13,6 +13,8 @@ The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI devel
   with input/output contracts, tool-use guardrails, and capability-tier guidance.
 - **Commands** — `PLAN` and `SHIP` defined as command contracts (inputs, validation, mode detection, orchestration, exits).
 - **Workflow** — PO Phase → mandatory human review → DEV Phase. Hard rule R1 prohibits auto-chaining.
+- **Artifact review** — portable HTML envelopes, immutable structured feedback,
+  and ciphertext-only paste boundaries without changing planning frontmatter.
 
 ## Why a protocol
 
@@ -39,6 +41,7 @@ The protocol is the contract. Runtimes are adapters.
 | `agent-roles.md` | 9 roles, including optional entity-scaffold. Inputs, outputs, tool guardrails, capability tier. |
 | `commands.md` | `PLAN` and `SHIP` as command contracts. Mode detection, validation, orchestration, exits. R1 normative. |
 | `runtime-adapters.md` | How Claude Code plugin, Cursor MDC rules, and Codex AGENTS.md implement this protocol. |
+| `../artifact-review.md` | Engine API, `planr artifact` commands, sandbox, privacy, sharing, and design-board integration. |
 | `../generated/roles.md` | Generated nine-role registry table. |
 | `../generated/adapters.md` | Generated certified-adapter capability table. |
 
@@ -50,6 +53,31 @@ Canonical schema source for this cleanup cycle: [`../../schemas/v1.0.0/`](../../
 
 Additive ecosystem contracts live under [`../../schemas/v1.1.0/`](../../schemas/v1.1.0/).
 They do not invalidate or rewrite v1.0 artifact frontmatter.
+
+Artifact review adds these v1.1 schemas:
+
+- `artifact-envelope.schema.json` — one or more ordered, self-contained HTML
+  artifacts plus frozen viewer state and optional feedback.
+- `artifact-review.schema.json` — review identity, decision, overall feedback,
+  normalized pins, anchors, replies, authors, and timestamps.
+- `artifact-paste.schema.json` — create/created/stored shapes for the encrypted,
+  expiring short-link boundary.
+- `artifact-theme.schema.json` — the canonical generated light/dark review-shell
+  design tokens.
+
+These schemas use `schemaVersion: "1.0.0"` for their own payload format while
+living in the additive Protocol v1.1 capability namespace. They are not SPEC,
+story, or task frontmatter and do not alter existing Protocol v1.0 artifacts.
+
+## Artifact review workflow
+
+The public entrypoint is `planr artifact`; runtime guidance must not call a
+globally installed nested pipeline executable. Local review is loopback-only and
+sharing is always explicit. Small shares keep their encoded payload in the URL
+fragment. Large or explicitly short shares are compressed and encrypted in the
+client, and the key remains in the fragment while the service stores ciphertext
+only. A reviewer returns immutable feedback with a new review URL, which the
+originator validates and imports non-destructively.
 
 ## Compatibility matrix
 

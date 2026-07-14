@@ -14,6 +14,11 @@ test('canonical adapter registry validates and names the three certified runtime
   const registry = readJson('registry/adapters.json');
   assert.deepEqual(validate(registry, schema('adapter-registry')), []);
   assert.deepEqual(registry.adapters.map((adapter) => adapter.id), ['claude-code', 'codex', 'cursor']);
+  for (const adapter of registry.adapters) {
+    assert.equal(adapter.capabilities.artifactReview, true);
+    assert.match(adapter.entrypoints.artifact, /(?:planr artifact|\$planr-artifact)/);
+    assert.ok(adapter.healthChecks.includes('artifact-command-valid'));
+  }
 });
 
 test('canonical role registry validates and contains exactly nine unique roles', () => {

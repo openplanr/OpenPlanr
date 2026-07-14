@@ -27,3 +27,13 @@ test('Codex and Cursor portable adapters contain no foreign runtime instructions
     }
   }
 });
+
+test('the Codex artifact skill routes through planr without executing the nested binary', () => {
+  const skill = readFileSync(
+    join(root, 'adapters', 'codex', 'skills', 'planr-artifact', 'SKILL.md'),
+    'utf8',
+  );
+  assert.match(skill, /\bplanr artifact\b/);
+  assert.doesNotMatch(skill, /(?:^|[`\s])planr-pipeline\s+(?:artifact|plan|ship)(?:[`\s]|$)/m);
+  assert.match(skill, /never publishes it automatically/i);
+});

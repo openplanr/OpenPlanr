@@ -160,7 +160,7 @@ Illustrative example:
 
 ```yaml
 shipped_at: "2026-04-29T14:32:11Z"
-pipeline_version: "0.25.1"
+pipeline_version: "0.26.0"
 runtime: "claude-code"
 mode: "spec-driven"
 feature: "auth"
@@ -203,10 +203,44 @@ planr rules generate --target cursor --scope pipeline   # regenerate Cursor rule
 planr rules generate --target codex --scope pipeline    # regenerate AGENTS.md after upgrade
 ```
 
+## Additive Protocol v1.1 artifact-review contracts
+
+Universal HTML review is an optional capability contract, not a new planning
+artifact type and not a required child of a SPEC directory. It leaves SPEC,
+story, task, stack, QA report, and `.pipeline-shipped` v1.0 schemas unchanged.
+
+The canonical schemas are:
+
+| Schema | Purpose |
+|---|---|
+| [`artifact-envelope.schema.json`](../../schemas/v1.1.0/artifact-envelope.schema.json) | Ordered, self-contained HTML artifacts, viewport/color-scheme state, viewer mode, and optional review. |
+| [`artifact-review.schema.json`](../../schemas/v1.1.0/artifact-review.schema.json) | Immutable review identity, verdict, overall feedback, normalized pins, stable anchors, authors, threads, and timestamps. |
+| [`artifact-paste.schema.json`](../../schemas/v1.1.0/artifact-paste.schema.json) | Strict request/response/storage shapes for encrypted, expiring short links. |
+| [`artifact-theme.schema.json`](../../schemas/v1.1.0/artifact-theme.schema.json) | Canonical tokens used to generate local and hosted review-shell assets. |
+
+`reviewOf` is a SHA-256 digest of the canonical envelope identity: its
+`schemaVersion`, ordered `artifacts`, and `viewer`, excluding `review`. Each
+artifact also carries a SHA-256 digest of its canonical bundled HTML. This makes
+stale imports detectable without allowing feedback to change the reviewed
+identity.
+
+Generic review state persists under `.planr/artifacts/<artifact-id>/` in a valid
+OpenPlanr project and under `~/.planr/artifacts/` otherwise. Design-board reviews
+retain the existing adjacent `feedback.json` contract and add an artifact-review
+state sidecar. Neither location changes the spec-driven directory layout above.
+
+Sharing transport is outside the planning tree. Fragment links contain an
+encoded, compressed payload after `#`; encrypted short links store ciphertext
+remotely and place the AES key only in the fragment. Both transports produce an
+immutable envelope, and importing returned feedback validates `reviewOf` before
+an atomic merge.
+
 ## See also
 
 - [`schemas/v1.0.0/`](../../schemas/v1.0.0/) — canonical JSON Schemas (spec, story, task, stack, pipeline-shipped)
-- `agent-roles.md` — 8 role contracts (inputs, outputs, tool guardrails)
+- [`schemas/v1.1.0/`](../../schemas/v1.1.0/) — additive runtime, provenance, compatibility, and artifact-review contracts
+- [`../artifact-review.md`](../artifact-review.md) — engine API, commands, privacy, sandbox, and integration reference
+- `agent-roles.md` — 9 role contracts (inputs, outputs, tool guardrails)
 - `commands.md` — PLAN and SHIP command contracts
 - `runtime-adapters.md` — per-runtime adapter specs
 - `OpenPlanr/docs/reference/spec-schema.md` — companion schema reference generated for the planr CLI; `schemas/v1.0.0/` in this repo remains canonical for this cleanup cycle

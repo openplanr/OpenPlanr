@@ -12,7 +12,7 @@
  * lands in a project's git tree. Keyed by the board's absolute dir.
  */
 
-import { randomBytes } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -20,6 +20,47 @@ import { daemonDir } from './paths.mjs';
 
 /** A valid token: lowercase hex, ≥16 chars (we mint 24 = 96 bits). */
 const TOKEN_RE = /^[a-f0-9]{16,}$/;
+const BASE64URL_TOKEN_RE = /^[A-Za-z0-9_-]+$/;
+
+/** Mint a fixed-entropy capability token without coupling callers to board ids. */
+export function mintCapabilityToken({
+  bytes = 32,
+  encoding = 'base64url',
+  randomBytesImpl = randomBytes,
+} = {}) {
+  if (!Number.isInteger(bytes) || bytes < 12 || bytes > 64) {
+    throw new RangeError('Capability tokens require 12 through 64 random bytes.');
+  }
+  if (!['base64url', 'hex'].includes(encoding)) {
+    throw new TypeError(`Unsupported capability token encoding: ${String(encoding)}`);
+  }
+  const value = randomBytesImpl(bytes);
+  if (!Buffer.isBuffer(value) || value.byteLength !== bytes) {
+    throw new TypeError('Capability token random source returned the wrong byte length.');
+  }
+  return value.toString(encoding);
+}
+
+/** Strict fixed-size token validation used before constant-time comparison. */
+export function isCapabilityToken(value, { bytes = 32, encoding = 'base64url' } = {}) {
+  if (typeof value !== 'string') return false;
+  if (encoding === 'hex') return value.length === bytes * 2 && /^[a-f0-9]+$/.test(value);
+  if (encoding !== 'base64url' || !BASE64URL_TOKEN_RE.test(value)) return false;
+  try {
+    return Buffer.from(value, 'base64url').byteLength === bytes
+      && Buffer.from(value, 'base64url').toString('base64url') === value;
+  } catch {
+    return false;
+  }
+}
+
+/** Compare opaque tokens without leaking a matching prefix. */
+export function timingSafeTokenEqual(left, right) {
+  if (typeof left !== 'string' || typeof right !== 'string') return false;
+  const leftBytes = Buffer.from(left, 'utf8');
+  const rightBytes = Buffer.from(right, 'utf8');
+  return leftBytes.byteLength === rightBytes.byteLength && timingSafeEqual(leftBytes, rightBytes);
+}
 
 /**
  * Read or mint the capability token for a board dir. Stable per dir: the same
@@ -42,10 +83,10 @@ export function ensureBoardToken(dir, { env = process.env } = {}) {
   }
   if (TOKEN_RE.test(tokens[key] || '')) return tokens[key];
 
-  const token = randomBytes(12).toString('hex');
+  const token = mintCapabilityToken({ bytes: 12, encoding: 'hex' });
   tokens[key] = token;
   mkdirSync(stateDir, { recursive: true });
-  writeFileSync(store, `${JSON.stringify(tokens, null, 2)}\n`);
+  writeFileSync(store, `${JSON.stringify(tokens, null, 2)}\n`, { mode: 0o600 });
   return token;
 }
 

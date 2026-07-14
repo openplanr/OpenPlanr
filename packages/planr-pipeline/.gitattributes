@@ -1,0 +1,5 @@
+lib/artifact/ui/generated/* text eol=lf
+templates/artifact-review-shell.html text eol=lf
+templates/artifact-review-stage.js text eol=lf
+templates/design/design-board-adapter.js text eol=lf
+tests/artifact/__fixtures__/*.golden.* text eol=lf

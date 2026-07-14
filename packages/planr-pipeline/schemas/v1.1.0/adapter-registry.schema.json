@@ -28,12 +28,13 @@
           "entrypoints": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["plan", "ship"],
+            "required": ["plan", "ship", "artifact"],
             "properties": {
               "plan": { "type": "string", "minLength": 1 },
               "design": { "type": "string", "minLength": 1 },
               "ship": { "type": "string", "minLength": 1 },
               "dashboard": { "type": "string", "minLength": 1 },
+              "artifact": { "type": "string", "minLength": 1 },
               "sync": { "type": "string", "minLength": 1 },
               "doctor": { "type": "string", "minLength": 1 }
             }
@@ -41,13 +42,14 @@
           "capabilities": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["subagents", "hooks", "toolIsolation", "parallelDispatch", "headlessLaunch"],
+            "required": ["subagents", "hooks", "toolIsolation", "parallelDispatch", "headlessLaunch", "artifactReview"],
             "properties": {
               "subagents": { "type": "string", "enum": ["native", "advisory", "sequential", "dynamic"] },
               "hooks": { "type": "boolean" },
               "toolIsolation": { "type": "string", "enum": ["enforced", "advisory"] },
               "parallelDispatch": { "type": "string", "enum": ["native", "host", "sequential", "dynamic"] },
-              "headlessLaunch": { "type": "boolean" }
+              "headlessLaunch": { "type": "boolean" },
+              "artifactReview": { "type": "boolean" }
             }
           },
           "assets": { "type": "array", "items": { "type": "string", "minLength": 1 } },
