@@ -1,12 +1,13 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const CLI = resolve('src/cli/index.ts');
+const TSX_CLI = resolve('node_modules/tsx/dist/cli.mjs');
 const run = (args: string, opts?: { cwd?: string; env?: Record<string, string> }) =>
-  execSync(`npx tsx ${CLI} ${args}`, {
+  execFileSync(process.execPath, [TSX_CLI, CLI, ...args.trim().split(/\s+/)], {
     encoding: 'utf-8',
     cwd: opts?.cwd,
     env: { ...process.env, NO_COLOR: '1', ...opts?.env },
@@ -27,7 +28,7 @@ afterEach(() => {
   tempDirs = [];
 });
 
-// `npx tsx` cold-start can take 5-7s on the first invocation; budget generously.
+// Keep a generous budget for real CLI work without relying on a shared npx cache.
 const TIMEOUT_MS = 25_000;
 
 describe('init and setup have separate responsibilities', () => {
