@@ -42,8 +42,35 @@ describe('planr artifact and PATH-safe pipeline routing', { timeout: 30_000 }, (
     const result = run(['artifact', 'share', 'artifact.html', '--no-open', '--json'], dir);
     expect(result.status, result.stderr).toBe(0);
     const output = JSON.parse(result.stdout);
-    expect(output).toMatchObject({ ok: true, transport: 'fragment', uploaded: false });
+    expect(output).toMatchObject({
+      ok: true,
+      transport: 'fragment',
+      uploaded: false,
+      presentation: 'document',
+    });
     expect(output.url).toMatch(/^https:\/\/share\.openplanr\.dev\/#v1\./);
+  });
+
+  it('serializes explicit canvas presentation while auto remains a document compatibility fallback', () => {
+    const dir = temporary();
+    writeFileSync(join(dir, 'artifact.html'), '<!doctype html><html><body>Canvas</body></html>');
+
+    const explicit = run(
+      ['artifact', 'share', 'artifact.html', '--presentation', 'canvas', '--no-open', '--json'],
+      dir,
+    );
+    expect(explicit.status, explicit.stderr).toBe(0);
+    expect(JSON.parse(explicit.stdout)).toMatchObject({ presentation: 'canvas' });
+
+    const invalid = run(
+      ['artifact', 'share', 'artifact.html', '--presentation', 'website', '--no-open', '--json'],
+      dir,
+    );
+    expect(invalid.status).not.toBe(0);
+    expect(JSON.parse(invalid.stdout)).toMatchObject({
+      code: 'E_ARTIFACT_INPUT_INVALID',
+      problem: expect.stringContaining('auto, document, or canvas'),
+    });
   });
 
   it('routes deterministic engine actions without requiring planr-pipeline on PATH', () => {

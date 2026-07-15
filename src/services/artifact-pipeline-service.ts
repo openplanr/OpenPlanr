@@ -15,7 +15,11 @@ export interface ArtifactEnvelope {
     viewport: { width: number; height: number };
     colorScheme: 'light' | 'dark';
   }>;
-  viewer: { mode: 'single' | 'variants'; activeArtifactId: string };
+  viewer: {
+    mode: 'single' | 'variants';
+    activeArtifactId: string;
+    presentation?: 'document' | 'canvas';
+  };
   review?: Record<string, unknown>;
 }
 
@@ -37,6 +41,7 @@ export interface ArtifactPipelineApi {
       viewport: { width: number; height: number };
       colorScheme: 'light' | 'dark';
     }>;
+    viewer?: ArtifactEnvelope['viewer'];
   }): ArtifactEnvelope;
   createReviewLinkPreview(envelope: ArtifactEnvelope): {
     fragmentLength: number;
@@ -133,17 +138,20 @@ export async function prepareArtifactEnvelope(options: {
   file: string;
   root: string;
   title?: string;
+  presentation?: 'auto' | 'document' | 'canvas';
 }): Promise<{
   api: ArtifactPipelineApi;
   envelope: ArtifactEnvelope;
   bundle: ArtifactBundle;
   artifactId: string;
+  presentation: 'document' | 'canvas';
 }> {
   const api = await loadArtifactPipeline();
   const file = path.resolve(options.file);
   const root = path.resolve(options.root);
   const bundle = await api.bundleArtifact({ entry: file, root });
   const id = artifactId(file, root);
+  const presentation = options.presentation === 'canvas' ? 'canvas' : 'document';
   const envelope = api.createArtifactEnvelope({
     artifacts: [
       {
@@ -154,8 +162,17 @@ export async function prepareArtifactEnvelope(options: {
         colorScheme: 'light',
       },
     ],
+    ...(options.presentation === 'auto' || options.presentation === undefined
+      ? {}
+      : {
+          viewer: {
+            mode: 'single' as const,
+            activeArtifactId: id,
+            presentation: options.presentation,
+          },
+        }),
   });
-  return { api, envelope, bundle, artifactId: id };
+  return { api, envelope, bundle, artifactId: id, presentation };
 }
 
 export function withoutArtifactReview(envelope: ArtifactEnvelope): ArtifactEnvelope {

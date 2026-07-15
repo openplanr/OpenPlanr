@@ -146,8 +146,14 @@ planr artifact ./artifact.html
 # Add pins, threads, and an Approve or Request changes decision.
 
 planr artifact share ./artifact.html --no-open
+planr artifact open ./artifact.html --presentation canvas # optional spatial view
 planr artifact import "<returned-review-url>"
 ```
+
+Generic artifacts render edge-to-edge in the headless document presentation;
+design boards retain the zoomable canvas. Complete local HTML/CSS/JavaScript is
+bundled into an opaque-origin sandbox, so private review is not standalone site
+hosting.
 
 Small reviews remain in the URL fragment and are never sent to the share host.
 Large reviews use an explicitly confirmed, encrypted, expiring short link; the
