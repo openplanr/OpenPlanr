@@ -32,6 +32,7 @@ function fallbackEnvelope(variants = []) {
     viewer: {
       mode: artifacts.length > 1 ? 'variants' : 'single',
       activeArtifactId: artifacts[0]?.id ?? 'artifact',
+      presentation: 'canvas',
     },
   });
 }

@@ -114,6 +114,33 @@ test('canonical variants envelope supports transient split shell state without d
   assert.equal(digestArtifactEnvelope(envelope), digest);
 });
 
+test('optional presentation preserves old digests and validates only serialized document or canvas values', () => {
+  const legacy = createArtifactEnvelope({ artifacts: [artifact] });
+  assert.equal(Object.hasOwn(legacy.viewer, 'presentation'), false);
+  const legacyDigest = digestArtifactEnvelope(legacy);
+  assert.equal(digestArtifactEnvelope(JSON.parse(JSON.stringify(legacy))), legacyDigest);
+
+  const document = createArtifactEnvelope({
+    artifacts: [artifact],
+    viewer: { mode: 'single', activeArtifactId: artifact.id, presentation: 'document' },
+  });
+  const canvas = createArtifactEnvelope({
+    artifacts: [artifact],
+    viewer: { mode: 'single', activeArtifactId: artifact.id, presentation: 'canvas' },
+  });
+  assert.equal(document.viewer.presentation, 'document');
+  assert.equal(canvas.viewer.presentation, 'canvas');
+  assert.notEqual(digestArtifactEnvelope(document), legacyDigest);
+  assert.notEqual(digestArtifactEnvelope(canvas), legacyDigest);
+  assert.throws(
+    () => createArtifactEnvelope({
+      artifacts: [artifact],
+      viewer: { mode: 'single', activeArtifactId: artifact.id, presentation: 'auto' },
+    }),
+    /presentation must be document or canvas/,
+  );
+});
+
 test('envelope and review negative fixtures fail with named errors', () => {
   const base = createArtifactEnvelope({ artifacts: [artifact] });
   assert.throws(

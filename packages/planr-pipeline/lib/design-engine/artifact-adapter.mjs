@@ -383,6 +383,7 @@ export async function createDesignBoardArtifactEnvelope(options = {}) {
   const viewer = {
     mode: bundled.mode === 'review' ? 'single' : (bundled.artifacts.length > 1 ? 'variants' : 'single'),
     activeArtifactId,
+    presentation: 'canvas',
   };
   const base = createArtifactEnvelope({ artifacts: bundled.artifacts, viewer });
   if (options.feedback === undefined || options.feedback === null) return base;

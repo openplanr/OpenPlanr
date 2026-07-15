@@ -50,7 +50,7 @@
             "required": ["width", "height"],
             "properties": {
               "width": { "type": "integer", "minimum": 1, "maximum": 16384 },
-              "height": { "type": "integer", "minimum": 1, "maximum": 16384 }
+              "height": { "type": "integer", "minimum": 1, "maximum": 262144 }
             }
           },
           "anchor": {

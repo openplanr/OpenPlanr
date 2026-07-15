@@ -13,8 +13,11 @@ export const ARTIFACT_BRIDGE_CHANNEL = 'openplanr.artifact-anchor';
 export const ARTIFACT_BRIDGE_VERSION = '1.0.0';
 export const ARTIFACT_BRIDGE_EVENT = 'planr:artifact-anchor';
 export const ARTIFACT_BRIDGE_READY_EVENT = 'planr:artifact-bridge-ready';
+export const ARTIFACT_BRIDGE_LAYOUT_EVENT = 'planr:artifact-layout';
 export const ARTIFACT_EXPORT_MAX_EDGE = 11_000;
 export const ARTIFACT_EXPORT_MAX_DATA_URL = 24 * 1024 * 1024;
+export const ARTIFACT_LAYOUT_MAX_WIDTH = 16_384;
+export const ARTIFACT_LAYOUT_MAX_HEIGHT = 262_144;
 
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/;
 const REQUEST_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
@@ -238,6 +241,7 @@ function artifactGuardAndBridgeSource({ artifactId, nonce, parentOrigin }) {
   const NativeWorker=globalThis.Worker;
   const NativeSharedWorker=globalThis.SharedWorker;
   const NativeBlob=globalThis.Blob;
+  const NativeResizeObserver=globalThis.ResizeObserver;
   const nativeCreateObjectURL=URL.createObjectURL.bind(URL);
   const nativeRevokeObjectURL=URL.revokeObjectURL.bind(URL);
   const workerGuard=${JSON.stringify(workerGuard)};
@@ -393,13 +397,26 @@ function artifactGuardAndBridgeSource({ artifactId, nonce, parentOrigin }) {
     else message.reason=String(value||'export failed').slice(0,256);
     postToParent(message,contract.parentOrigin);
   };
+  let lastLayout='';let layoutTimer=0;
+  const measureLayout=()=>{
+    layoutTimer=0;
+    const root=document.documentElement,body=document.body;
+    const width=Math.ceil(Math.max(root?.scrollWidth||0,root?.clientWidth||0,body?.scrollWidth||0,body?.clientWidth||0,innerWidth||0));
+    const height=Math.ceil(Math.max(root?.scrollHeight||0,root?.clientHeight||0,body?.scrollHeight||0,body?.clientHeight||0,innerHeight||0));
+    if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1
+      ||width>${ARTIFACT_LAYOUT_MAX_WIDTH}||height>${ARTIFACT_LAYOUT_MAX_HEIGHT})return;
+    const signature=width+'x'+height;if(signature===lastLayout)return;lastLayout=signature;
+    postToParent({channel:contract.channel,schemaVersion:contract.schemaVersion,type:'layout.measurement',nonce:contract.nonce,artifactId:contract.artifactId,layout:{width,height}},contract.parentOrigin);
+  };
+  const scheduleLayout=()=>{if(layoutTimer)return;layoutTimer=setTimeout(measureLayout,80)};
+  try{if(typeof NativeResizeObserver==='function'){const observer=new NativeResizeObserver(scheduleLayout);observer.observe(document.documentElement);if(document.body)observer.observe(document.body)}}catch{}
   let windowStart=performance.now(),messageCount=0;
   addEventListener('message',event=>{
     if(event.source!==parent||event.origin!==contract.parentOrigin)return;
     const now=performance.now();if(now-windowStart>1000){windowStart=now;messageCount=0}if(++messageCount>60)return;
     const data=event.data;
     if(validBase(data,'bridge.challenge',['channel','schemaVersion','type','artifactId','requestId'])){
-      send('bridge.challenge-ack',data.requestId);return;
+      send('bridge.challenge-ack',data.requestId);scheduleLayout();return;
     }
     if(validBase(data,'export.request',['channel','schemaVersion','type','artifactId','requestId','target'])
       &&['screen','full'].includes(own(data,'target'))){
@@ -423,7 +440,7 @@ function artifactGuardAndBridgeSource({ artifactId, nonce, parentOrigin }) {
     }
   });
   const ready=()=>send('bridge.ready');
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ready,{once:true});else queueMicrotask(ready);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{ready();scheduleLayout()},{once:true});else queueMicrotask(()=>{ready();scheduleLayout()});
 })();`;
 }
 
@@ -508,6 +525,8 @@ export function validateArtifactBridgeMessage(event, {
   const baseKeys = new Set(['channel', 'schemaVersion', 'type', 'nonce', 'artifactId']);
   if (type === 'bridge.ready') {
     if (!exactKeys(data, baseKeys)) return bridgeFailure('schema');
+  } else if (type === 'layout.measurement') {
+    if (!exactKeys(data, new Set([...baseKeys, 'layout']))) return bridgeFailure('schema');
   } else if (type === 'bridge.challenge-ack' || type === 'anchor.miss') {
     if (!exactKeys(data, new Set([...baseKeys, 'requestId']))) return bridgeFailure('schema');
   } else if (type === 'anchor.result') {
@@ -531,6 +550,26 @@ export function validateArtifactBridgeMessage(event, {
     return Object.freeze({
       ok: true,
       value: Object.freeze({ type, artifactId, authenticated: false }),
+    });
+  }
+  if (type === 'layout.measurement') {
+    const layout = ownDataValue(data, 'layout');
+    if (!exactKeys(layout, new Set(['width', 'height']))) return bridgeFailure('layout');
+    const layoutWidth = ownDataValue(layout, 'width');
+    const layoutHeight = ownDataValue(layout, 'height');
+    if (!Number.isInteger(layoutWidth) || !Number.isInteger(layoutHeight)
+      || layoutWidth < 1 || layoutWidth > ARTIFACT_LAYOUT_MAX_WIDTH
+      || layoutHeight < 1 || layoutHeight > ARTIFACT_LAYOUT_MAX_HEIGHT) {
+      return bridgeFailure('layout');
+    }
+    return Object.freeze({
+      ok: true,
+      value: Object.freeze({
+        type,
+        artifactId,
+        authenticated: true,
+        layout: Object.freeze({ width: layoutWidth, height: layoutHeight }),
+      }),
     });
   }
 
@@ -659,6 +698,7 @@ export function renderArtifactParentRuntime({
     schemaVersion: ARTIFACT_BRIDGE_VERSION,
     anchorEvent: ARTIFACT_BRIDGE_EVENT,
     readyEvent: ARTIFACT_BRIDGE_READY_EVENT,
+    layoutEvent: ARTIFACT_BRIDGE_LAYOUT_EVENT,
     navigationEvent: 'planr:artifact-navigation-blocked',
     frameCsp: [
       "default-src 'none'",
@@ -682,11 +722,11 @@ export function renderArtifactParentRuntime({
   'use strict';
   const config=${config};
   const requestId=()=>crypto.randomUUID?.()||('request-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2));
-  const bridgeClient={attach({artifact,frame}){
+  const bridgeClient={attach({artifact,frame,getState}){
     const pending=new Map();let windowStart=performance.now(),messageCount=0;
     let immutableSource='',trustedLoad=false,recovering=false,navigationAttempts=0,failedClosed=false;
     let inertSource='';
-    let pendingChallenge=null;
+    let pendingChallenge=null;let measuredLayout=null;
     const plain=value=>{if(!value||typeof value!=='object'||Array.isArray(value))return false;const prototype=Object.getPrototypeOf(value);return prototype===Object.prototype||prototype===null};
     const own=(value,key)=>{const descriptor=plain(value)?Object.getOwnPropertyDescriptor(value,key):null;return descriptor&&Object.hasOwn(descriptor,'value')?descriptor.value:undefined};
     const exact=(value,keys)=>plain(value)&&Object.keys(value).length===keys.length&&Object.keys(value).every(key=>keys.includes(key));
@@ -723,6 +763,15 @@ export function renderArtifactParentRuntime({
         quarantine(false);
         frame.dispatchEvent(new CustomEvent(config.readyEvent,{detail:{artifactId:artifact.id,authenticated:true}}));return;
       }
+      if(type==='layout.measurement'){
+        const layout=own(data,'layout');
+        if(!trustedLoad||!exact(data,['channel','schemaVersion','type','nonce','artifactId','layout'])
+          ||!exact(layout,['width','height'])||!Number.isInteger(layout.width)||!Number.isInteger(layout.height)
+          ||layout.width<1||layout.width>${ARTIFACT_LAYOUT_MAX_WIDTH}
+          ||layout.height<1||layout.height>${ARTIFACT_LAYOUT_MAX_HEIGHT})return;
+        measuredLayout=Object.freeze({width:layout.width,height:layout.height});
+        frame.dispatchEvent(new CustomEvent(config.layoutEvent,{detail:measuredLayout}));return;
+      }
       const receivedRequestId=own(data,'requestId');
       if(!trustedLoad||!validRequestId(receivedRequestId)||!pending.has(receivedRequestId))return;
       const settle=pending.get(receivedRequestId);
@@ -745,7 +794,8 @@ export function renderArtifactParentRuntime({
       if(type==='anchor.result'&&!exact(data,['channel','schemaVersion','type','nonce','artifactId','requestId','anchor']))return;
       pending.delete(receivedRequestId);clearTimeout(settle.timer);
       if(type==='anchor.miss'){settle.resolve(null);return}
-      const anchor=data.anchor,rect=anchor?.rect,viewport=anchor?.viewport,frozen=artifact.viewport;
+      const anchor=data.anchor,rect=anchor?.rect,viewport=anchor?.viewport;
+      const frozen=getState?.()?.presentation==='document'&&measuredLayout?measuredLayout:artifact.viewport;
       const anchorKeys=anchor?.screen===undefined?['planrId','rect','viewport']:['planrId','screen','rect','viewport'];
       if(!exact(anchor,anchorKeys)||!exact(rect,['x','y','width','height'])||!exact(viewport,['width','height'])
         ||!validId(anchor?.planrId)||(anchor.screen!==undefined&&!validScreen(anchor.screen))
@@ -786,7 +836,7 @@ export function renderArtifactParentRuntime({
     };
     const onFrameLoad=()=>{
       rememberSource();
-      trustedLoad=false;quarantine(true);
+      trustedLoad=false;measuredLayout=null;quarantine(true);
       challengeCurrentDocument();
     };
     frame.addEventListener('load',onFrameLoad);

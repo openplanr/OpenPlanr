@@ -10,6 +10,7 @@ export const ARTIFACT_STAGE_EVENTS = Object.freeze({
   change: 'planr:stage-change',
   point: 'planr:artifact-point',
   region: 'planr:artifact-region',
+  layout: 'planr:artifact-layout',
 });
 
 export const ARTIFACT_STAGE_LIMITS = Object.freeze({
@@ -17,11 +18,14 @@ export const ARTIFACT_STAGE_LIMITS = Object.freeze({
   minZoom: 25,
   maxZoom: 200,
   zoomStep: 10,
+  maxDocumentWidth: 16_384,
+  maxDocumentHeight: 262_144,
 });
 
 const VIEW_MODES = Object.freeze(['single', 'variants', 'split']);
 const REVIEW_MODES = Object.freeze(['interact', 'comment']);
 const THEMES = Object.freeze(['auto', 'light', 'dark']);
+const PRESENTATIONS = Object.freeze(['document', 'canvas']);
 const STATUSES = Object.freeze([
   'ready',
   'empty',
@@ -134,6 +138,11 @@ function normalizeViewMode(value, artifactCount) {
   return member(value, VIEW_MODES, 'variants');
 }
 
+export function resolveArtifactPresentation(value, { viewMode = 'single', artifactCount = 1 } = {}) {
+  if (PRESENTATIONS.includes(value)) return value;
+  return artifactCount > 1 || viewMode === 'variants' || viewMode === 'split' ? 'canvas' : 'document';
+}
+
 /**
  * Build the metadata-only value embedded in the shell document. Artifact HTML,
  * review state, and all unknown/machine metadata are intentionally excluded.
@@ -151,12 +160,16 @@ export function createArtifactStagePayload(envelope = {}, { viewer } = {}) {
     requestedArtifactId(sourceViewer.activeArtifactId),
     firstId,
   );
+  const mode = normalizeViewMode(sourceViewer.mode, artifacts.length);
   return Object.freeze({
     schemaVersion: '1.0.0',
     artifacts,
     viewer: Object.freeze({
-      mode: normalizeViewMode(sourceViewer.mode, artifacts.length),
+      mode,
       activeArtifactId,
+      ...(PRESENTATIONS.includes(sourceViewer.presentation)
+        ? { presentation: sourceViewer.presentation }
+        : {}),
     }),
   });
 }
@@ -180,22 +193,28 @@ export function createArtifactStageState(payload = {}, shellModel = {}) {
   const statusFallback = artifacts.length === 0 ? 'empty' : 'ready';
   let status = member(shellModel.status, STATUSES, statusFallback);
   if (artifacts.length === 0 && status === 'ready') status = 'empty';
+  const viewMode = normalizeViewMode(
+    shellModel.viewMode ?? payload?.viewer?.mode,
+    artifacts.length,
+  );
+  const presentation = resolveArtifactPresentation(
+    shellModel.presentation ?? payload?.viewer?.presentation,
+    { viewMode, artifactCount: artifacts.length },
+  );
   return Object.freeze({
     schemaVersion: '1.0.0',
     artifacts,
     activeArtifactId,
     comparisonArtifactId,
-    viewMode: normalizeViewMode(
-      shellModel.viewMode ?? payload?.viewer?.mode,
-      artifacts.length,
-    ),
+    viewMode,
+    presentation,
     reviewMode: member(shellModel.reviewMode, REVIEW_MODES, 'interact'),
     zoom: clamp(
       Number.isInteger(shellModel.zoom) ? shellModel.zoom : ARTIFACT_STAGE_LIMITS.defaultZoom,
       ARTIFACT_STAGE_LIMITS.minZoom,
       ARTIFACT_STAGE_LIMITS.maxZoom,
     ),
-    railOpen: shellModel.railOpen !== false,
+    railOpen: shellModel.railOpen === undefined ? presentation === 'canvas' : Boolean(shellModel.railOpen),
     theme: member(shellModel.theme, THEMES, 'auto'),
     status,
   });
@@ -388,6 +407,7 @@ export function mountArtifactStage({
     [...document.querySelectorAll('.planr-artifact-panel[data-artifact-id]')]
       .map((panel) => [panel.dataset.artifactId, panel]),
   );
+  const documentLayouts = new Map();
   const cleanup = [];
 
   function listen(target, type, handler, options) {
@@ -401,6 +421,8 @@ export function mountArtifactStage({
     root.dataset.planrReviewMode = state.reviewMode;
     root.dataset.planrState = state.status;
     root.dataset.planrRailOpen = String(state.railOpen);
+    root.dataset.planrPresentation = state.presentation;
+    document.documentElement.dataset.planrPresentation = state.presentation;
     document.documentElement.dataset.planrTheme = state.theme;
 
     const grid = document.querySelector('.planr-frame-grid');
@@ -533,6 +555,7 @@ export function mountArtifactStage({
   }
 
   function onKeyDown(event) {
+    if (event.defaultPrevented) return;
     if (!event.altKey && !event.ctrlKey && !event.metaKey && !isEditableTarget(event.target)) {
       if (event.key.toLowerCase() === 'i') {
         dispatch({ type: 'set-review-mode', reviewMode: 'interact' });
@@ -542,8 +565,7 @@ export function mountArtifactStage({
         dispatch({ type: 'set-review-mode', reviewMode: 'comment' });
         return;
       }
-      if (event.key === 'Escape' && state.railOpen
-        && window.matchMedia?.('(max-width: 900px)').matches) {
+      if (event.key === 'Escape' && state.railOpen) {
         dispatch({ type: 'set-rail-open', railOpen: false });
         document.querySelector('[data-planr-action="feedback"]')?.focus();
         return;
@@ -571,11 +593,12 @@ export function mountArtifactStage({
     const artifact = stageArtifactById(state, artifactId);
     if (!artifact) return;
     const region = clientSelectionToNormalized(layer.getBoundingClientRect(), start, end);
+    const measured = state.presentation === 'document' ? documentLayouts.get(artifactId) : null;
     const detail = Object.freeze({
       schemaVersion: '1.0.0',
       artifactId,
       region,
-      viewport: artifact.viewport,
+      viewport: measured ?? artifact.viewport,
     });
     emit(root, window, ARTIFACT_STAGE_EVENTS.region, detail);
     emit(root, window, ARTIFACT_STAGE_EVENTS.point, detail);
@@ -629,6 +652,23 @@ export function mountArtifactStage({
       event.preventDefault();
       const bounds = layer.getBoundingClientRect();
       emitSelection(layer, { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 });
+    });
+  }
+  for (const [artifactId, frame] of frames) {
+    listen(frame, ARTIFACT_STAGE_EVENTS.layout, (event) => {
+      if (state.presentation !== 'document') return;
+      const width = event.detail?.width;
+      const height = event.detail?.height;
+      if (!Number.isInteger(width) || !Number.isInteger(height)
+        || width < 1 || width > ARTIFACT_STAGE_LIMITS.maxDocumentWidth
+        || height < 1 || height > ARTIFACT_STAGE_LIMITS.maxDocumentHeight) return;
+      const layout = Object.freeze({ width, height });
+      documentLayouts.set(artifactId, layout);
+      const panel = panels.get(artifactId);
+      if (!panel) return;
+      panel.dataset.planrLayoutMeasured = 'true';
+      panel.style.setProperty('--planr-document-width', `${width}px`);
+      panel.style.setProperty('--planr-document-height', `${height}px`);
     });
   }
   listen(root, 'click', onClick);
@@ -733,10 +773,17 @@ export function mountArtifactStage({
       if (typeof detach === 'function') cleanup.push(detach);
     }
     frame.dataset.planrArtifactDigest = artifact.sha256;
-    // srcdoc keeps the document in an opaque sandbox origin without relying on
-    // parent-created Blob URLs, which some embedded browser runtimes refuse to
-    // load across their storage partition boundary.
-    frame.srcdoc = html;
+    if (typeof window.URL?.createObjectURL !== 'function' || typeof window.Blob !== 'function') {
+      const error = new Error('Blob URL support is required for artifact sources.');
+      error.code = 'E_ARTIFACT_BROWSER_UNSUPPORTED';
+      throw error;
+    }
+    const sourceUrl = window.URL.createObjectURL(new window.Blob([html], {
+      type: 'text/html;charset=utf-8',
+    }));
+    cleanup.push(() => window.URL.revokeObjectURL(sourceUrl));
+    frame.removeAttribute('srcdoc');
+    frame.src = sourceUrl;
     await loaded;
   }
 

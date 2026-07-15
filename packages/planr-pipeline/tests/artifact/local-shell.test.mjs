@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
 import { createArtifactEnvelope } from '../../lib/artifact/envelope.mjs';
+import { startArtifactReview } from '../../lib/artifact/review-server.mjs';
 import {
   ARTIFACT_STAGE_LIMITS,
   clientPointToNormalized,
@@ -170,6 +172,89 @@ test('generated browser controller and manifest are deterministic portable asset
   assert.match(assets['templates/artifact-review-shell.html'], /artifact-review-stage\.js/);
 });
 
+test('document presentation uses authenticated natural sizing, outer scrolling, and overlay feedback', {
+  skip: !runBrowser,
+  timeout: 60_000,
+}, async (t) => {
+  const { chromium } = await import('playwright');
+  const home = mkdtempSync(join(tmpdir(), 'planr-document-shell-'));
+  const artifact = {
+    id: 'long-document',
+    title: 'Long responsive artifact',
+    viewport: { width: 1440, height: 900 },
+    colorScheme: 'light',
+    html: `<!doctype html><html><head><meta charset="utf-8"><style>
+      *{box-sizing:border-box}html,body{margin:0}body{font:16px system-ui;background:#f4f6fa;color:#171722}
+      main{min-height:2400px;padding:48px max(24px,8vw)}section{min-height:720px;padding:32px;background:white;border-bottom:1px solid #dfe3ea}
+    </style></head><body><main><section data-planr-id="top">Top</section><section data-planr-id="middle">Middle</section><section data-planr-id="bottom"><button id="grow">Grow</button></section></main><script>
+      document.querySelector('#grow').addEventListener('click',()=>{const extra=document.createElement('section');extra.id='dynamic';extra.textContent='Dynamic content';document.querySelector('main').append(extra)});
+    </script></body></html>`,
+  };
+  const envelope = createArtifactEnvelope({ artifacts: [artifact] });
+  const review = await startArtifactReview({
+    envelope,
+    env: { ...process.env, PLANR_HOME: home },
+    noOpen: true,
+  });
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  t.after(async () => {
+    await review.close().catch(() => {});
+    await context.close();
+    await browser.close();
+    rmSync(home, { recursive: true, force: true });
+  });
+  const page = await context.newPage();
+  await page.goto(review.url);
+  await page.waitForFunction(() => document.querySelector('[data-artifact-id="long-document"]')?.dataset.planrLayoutMeasured === 'true');
+  assert.equal(await page.locator('.planr-shell').getAttribute('data-planr-presentation'), 'document');
+  assert.equal(await page.locator('html').getAttribute('data-planr-presentation'), 'document');
+  assert.equal(await page.locator('[data-planr-action="feedback"]').getAttribute('aria-expanded'), 'false');
+  await expectHiddenCanvasChrome(page);
+
+  const initial = await page.evaluate(() => ({
+    outerHeight: document.documentElement.scrollHeight,
+    frameHeight: document.querySelector('[data-planr-artifact-frame]')?.getBoundingClientRect().height,
+    width: document.querySelector('.planr-artifact-panel')?.getBoundingClientRect().width,
+  }));
+  assert.ok(initial.outerHeight > 2_300);
+  assert.ok(initial.frameHeight > 2_300);
+  assert.equal(initial.width, 1280);
+
+  const frame = page.frameLocator('[data-planr-artifact-frame="long-document"]');
+  await frame.locator('#grow').click();
+  await page.waitForFunction((height) => document.documentElement.scrollHeight > height + 400, initial.outerHeight);
+
+  const widthBefore = await page.locator('.planr-artifact-panel').evaluate((node) => node.getBoundingClientRect().width);
+  await page.locator('[data-planr-action="feedback"]').click();
+  const widthAfter = await page.locator('.planr-artifact-panel').evaluate((node) => node.getBoundingClientRect().width);
+  assert.equal(widthAfter, widthBefore, 'feedback overlay never resizes document content');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('[data-planr-action="feedback"]').getAttribute('aria-expanded'), 'false');
+
+  await page.evaluate(() => {
+    globalThis.__planrDocumentRegions = [];
+    addEventListener('planr:artifact-region', (event) => globalThis.__planrDocumentRegions.push(event.detail));
+    scrollTo(0, 1_650);
+  });
+  await page.locator('[data-planr-mode="comment"]').click();
+  await page.mouse.click(640, 520);
+  await page.waitForFunction(() => globalThis.__planrDocumentRegions?.length === 1);
+  const region = await page.evaluate(() => globalThis.__planrDocumentRegions[0]);
+  assert.equal(region.artifactId, 'long-document');
+  assert.ok(region.region.y > 0.4, 'below-the-fold comments use full-document coordinates');
+  assert.ok(region.viewport.height > 2_800, 'pin viewport records the measured document height');
+});
+
+async function expectHiddenCanvasChrome(page) {
+  for (const selector of [
+    '.planr-stage-heading',
+    '.planr-stage-controls',
+    '[data-planr-action="zoom-reset"]',
+    '[data-planr-action="theme"]',
+  ]) assert.equal(await page.locator(selector).count(), 0, `${selector} is absent in document mode`);
+}
+
 async function serve(document, runtime, artifacts = []) {
   const artifactByPath = new Map(artifacts.map((artifact) => [
     `/artifact/${encodeURIComponent(artifact.id)}`,
@@ -312,10 +397,10 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
   );
   assert.deepEqual(
     await page.locator('[data-planr-artifact-frame]').evaluateAll((frames) => (
-      frames.map((frame) => frame.getAttribute('srcdoc')?.startsWith('<!doctype html>'))
+      frames.map((frame) => frame.getAttribute('src')?.startsWith('blob:'))
     )),
     [true, true, true],
-    'tokenized source responses use opaque-origin srcdoc navigation',
+    'bundled source responses use opaque-origin Blob navigation',
   );
 
   const checkout = page.frameLocator('[data-planr-artifact-frame="checkout"]');

@@ -10,6 +10,9 @@ directly and never relaunch Codex from inside this skill.
 
 1. For local review, run `planr artifact <file>` or
    `planr artifact open <file>`. Use `--no-open --json` in headless sessions.
+   Generic artifacts default to the headless `document` presentation. Use
+   `--presentation canvas` only when the user requests spatial/zoomable review;
+   use `--presentation document` to force the reading surface.
 2. Sharing is always explicit. Run `planr artifact share <file>` only after the
    user asks to share. Explain that fragment links contain encoded plaintext;
    encrypted short links store ciphertext and keep the key in the URL fragment.
@@ -23,3 +26,7 @@ directly and never relaunch Codex from inside this skill.
 
 Local review is loopback-only. Opening, approving, finishing, or importing an
 artifact never publishes it automatically.
+
+Artifact review bundles complete local HTML/CSS/JavaScript and presents it
+inside an invisible opaque-origin sandbox. It is private review, not standalone
+website hosting; never describe a share link as deploying the artifact itself.

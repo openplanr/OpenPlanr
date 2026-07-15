@@ -9,3 +9,7 @@ to the repository root. PLAN and SHIP are separate user actions. Dispatch the ni
 roles from the portable registry through Composer when supported, with sequential
 fallback. Respect dependency ordering, Preserve paths, correction limits, and role
 file ownership. Append producer history to `.planr/provenance.jsonl`.
+
+Invoke artifact review only through `planr artifact`. Generic HTML defaults to
+the headless `document` presentation; design boards and spatial variant reviews
+use `canvas`. Private artifact review is not standalone website publishing.

@@ -11,7 +11,7 @@ import { createArtifactStagePayload } from './stage.mjs';
 import { digestArtifactEnvelope } from '../envelope.mjs';
 import { embedJson, escapeHtml } from '../../design/escape.mjs';
 
-export const ARTIFACT_SHELL_VERSION = '1.0.0';
+export const ARTIFACT_SHELL_VERSION = '1.1.0';
 export const ARTIFACT_SHELL_ASSET_PATHS = Object.freeze({
   template: 'templates/artifact-review-shell.html',
   stageRuntime: 'templates/artifact-review-stage.js',
@@ -696,6 +696,83 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .planr-share-receipt-size { grid-column: 2; text-align: left; }
   .planr-share-result > div { grid-template-columns: 1fr; }
 }
+/* Document presentation: the artifact owns the page; the iframe is only an
+   opaque-origin security boundary and has no visible canvas treatment. */
+html[data-planr-presentation="document"],
+html[data-planr-presentation="document"] body {
+  height: auto;
+  min-height: 100%;
+}
+html[data-planr-presentation="document"] body { overflow: visible; }
+.planr-shell[data-planr-presentation="document"] {
+  height: auto;
+  min-height: 100vh;
+  grid-template-rows: var(--planr-toolbar-height) auto;
+}
+.planr-shell[data-planr-presentation="document"] .planr-toolbar {
+  position: sticky;
+  top: 0;
+  backdrop-filter: blur(16px);
+}
+.planr-shell[data-planr-presentation="document"] .planr-workspace,
+.planr-shell[data-planr-presentation="document"][data-planr-rail-open="false"] .planr-workspace {
+  display: block;
+}
+.planr-shell[data-planr-presentation="document"] .planr-stage {
+  overflow: visible;
+  background: transparent;
+}
+.planr-shell[data-planr-presentation="document"] .planr-stage-scroll {
+  position: static;
+  overflow: visible;
+  padding: 0;
+}
+.planr-shell[data-planr-presentation="document"] .planr-stage-surface {
+  width: 100%;
+  min-width: 100%;
+  transform: none;
+}
+.planr-shell[data-planr-presentation="document"] .planr-frame-grid {
+  width: 100%;
+  display: block;
+}
+.planr-shell[data-planr-presentation="document"] .planr-artifact-panel {
+  width: max(100%, var(--planr-document-width, 100%));
+  height: var(--planr-document-height, max(var(--planr-artifact-height), calc(100vh - var(--planr-toolbar-height))));
+  min-height: calc(100vh - var(--planr-toolbar-height));
+}
+.planr-shell[data-planr-presentation="document"] .planr-frame {
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.planr-shell[data-planr-presentation="document"] .planr-frame iframe {
+  background: transparent;
+}
+.planr-shell[data-planr-presentation="document"] .planr-frame-label { display: none; }
+.planr-shell[data-planr-presentation="document"] .planr-stage-status { inset: 0; min-height: calc(100vh - var(--planr-toolbar-height)); }
+.planr-shell[data-planr-presentation="document"] .planr-review-rail {
+  position: fixed;
+  z-index: 50;
+  inset: var(--planr-toolbar-height) 0 0 auto;
+  width: min(var(--planr-review-rail-width), 100vw);
+  border-left: 1px solid var(--planr-color-rule);
+  box-shadow: -18px 0 60px color-mix(in srgb, var(--planr-color-background) 34%, transparent);
+}
+.planr-shell[data-planr-presentation="document"][data-planr-rail-open="false"] .planr-review-rail {
+  opacity: 1;
+  transform: translateX(100%);
+}
+@media (max-width: 900px) {
+  .planr-shell[data-planr-presentation="document"] .planr-review-rail {
+    inset: auto 0 0;
+    width: 100%;
+  }
+  .planr-shell[data-planr-presentation="document"][data-planr-rail-open="false"] .planr-review-rail {
+    transform: translateY(100%);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0s !important;
@@ -713,7 +790,7 @@ export const DEFAULT_ARTIFACT_SHELL_INPUT = Object.freeze({
     title: 'OpenPlanr artifact review',
     privacy: 'local',
     theme: 'auto',
-    railOpen: true,
+    railOpen: false,
     feedbackCount: 0,
     zoom: 72,
   }),
@@ -741,7 +818,7 @@ export function renderArtifactShellDocument(
     review: input.envelope?.review ?? null,
   });
   return `<!doctype html>
-<html lang="en" data-planr-theme="${model.theme}" data-planr-artifact-shell="${ARTIFACT_SHELL_VERSION}">
+<html lang="en" data-planr-theme="${model.theme}" data-planr-presentation="${model.presentation}" data-planr-artifact-shell="${ARTIFACT_SHELL_VERSION}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">

@@ -1,6 +1,6 @@
 # Artifact Review and Private Sharing
 
-> planr-pipeline 0.26.3 · Protocol v1.0 planning artifacts with additive
+> planr-pipeline 0.27.0 · Protocol v1.0 planning artifacts with additive
 > Protocol v1.1 artifact-review contracts
 
 Artifact review is the portable engine behind `planr artifact`. It turns a
@@ -25,12 +25,14 @@ planr artifact open <file>
   --title <title>
   --root <asset-root>
   --theme auto|light|dark
+  --presentation auto|document|canvas
   --port <port>
   --no-open
   --json
 
 planr artifact share <file>
   --title <title>
+  --presentation auto|document|canvas
   --short
   --ttl 1d|7d|30d
   --no-open
@@ -51,6 +53,41 @@ A minimal OpenPlanr installation reports `E_PIPELINE_NOT_INSTALLED` with the
 full-install command. Local review binds to `127.0.0.1`; under SSH the result
 includes an exact port-forwarding command instead of attempting a remote browser
 launch.
+
+`auto` is the public default. A single generic artifact resolves to `document`;
+multi-variant envelopes and every design-board adapter resolve to `canvas`.
+Explicit `document` or `canvas` overrides that inference. JSON results include
+the resolved presentation.
+
+## Document and canvas presentations
+
+`document` is the default reading and review experience for generic HTML. The
+complete bundled document renders edge-to-edge beneath a sticky 48px toolbar.
+Only the OpenPlanr mark, title, privacy state, Interact/Comment controls,
+feedback count, and Share action remain visible. Feedback starts closed and
+opens as an overlay, so the artifact never reflows when a reviewer reads a
+thread.
+
+`canvas` preserves the existing zoomable artboard, view controls, variants,
+split comparison, design workflow controls, and review rail behavior. Design
+boards serialize `viewer.presentation: "canvas"`, including single-variant
+boards.
+
+The envelope field is optional for compatibility:
+
+```json
+{
+  "viewer": {
+    "mode": "single",
+    "activeArtifactId": "checkout",
+    "presentation": "document"
+  }
+}
+```
+
+`auto` is never serialized. Old single-artifact links resolve to `document` and
+old variant links resolve to `canvas` without changing their canonical digest.
+When an explicit presentation is stored, it is part of the review digest.
 
 ## Portable engine API
 
@@ -139,10 +176,25 @@ forms, navigation targets, absolute machine paths, repository remotes,
 environment references, and recognized secrets fail closed.
 
 Artifact HTML runs in an opaque-origin iframe with exactly
-`sandbox="allow-scripts"`. An injected CSP blocks network connections,
+`sandbox="allow-scripts"`. The complete HTML/CSS/JavaScript dependency graph is
+loaded from immutable bundled bytes through a Blob URL; it is never fetched from
+the original project after sharing and never executes under the
+`share.openplanr.dev` origin. An injected CSP blocks network connections,
 navigation, forms, popups, downloads, storage, parent access, objects, base URL
 changes, and nested frames while allowing packaged inline code and data/blob
 assets. Never add `allow-same-origin` to this sandbox.
+
+In document presentation, the iframe is an invisible security boundary rather
+than visible canvas chrome. A nonce-authenticated, throttled `ResizeObserver`
+reports bounded document dimensions so the outer OpenPlanr page scrolls
+naturally. Measurements are capped at 16,384px wide and 262,144px high;
+malformed, forged, or excessive messages are ignored. Pin regions use the
+measured full-document coordinate space, with `data-planr-id` anchors preferred
+and normalized coordinates retained as fallback.
+
+Private artifact review is not standalone website hosting. A future publishing
+mode would require a separate isolated artifact origin and a different security
+contract.
 
 ## Sharing and privacy
 
@@ -186,6 +238,8 @@ Multi-variant boards create one ordered `artifacts[]` envelope rather than
 nesting an existing board inside another review shell. Existing board URLs,
 ratings, regeneration/remix controls, SSE updates, pending-feedback semantics,
 `feedback.json`, approval markers, and the R1 PLAN→SHIP gate remain intact.
+All design-board envelopes explicitly select `canvas`, even when a review has
+only one artifact.
 
 Design review imports translate into the adjacent legacy `feedback.json` plus
 the artifact review state sidecar. Generic reviews are stored under

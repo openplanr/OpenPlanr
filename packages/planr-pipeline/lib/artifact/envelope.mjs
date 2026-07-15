@@ -11,6 +11,8 @@ const MAX_ARTIFACT_HTML_BYTES = 10 * 1024 * 1024;
 const MAX_PINS = 10_000;
 const MAX_REPLIES = 10_000;
 const MAX_PASTE_BYTES = 5 * 1024 * 1024;
+export const ARTIFACT_PRESENTATIONS = Object.freeze(['document', 'canvas']);
+export const ARTIFACT_DOCUMENT_MAX_HEIGHT = 262_144;
 
 function invalid(message, details = undefined) {
   throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, message, '', details);
@@ -23,11 +25,11 @@ function assertBoundedString(value, label, { min = 0, max, pattern } = {}) {
   }
 }
 
-function assertViewport(viewport, label) {
+function assertViewport(viewport, label, { maxHeight = 16_384 } = {}) {
   if (!viewport || !Number.isInteger(viewport.width) || !Number.isInteger(viewport.height)
     || viewport.width < 1 || viewport.width > 16384
-    || viewport.height < 1 || viewport.height > 16384) {
-    invalid(`${label} must be an integer viewport from 1 through 16384 pixels.`);
+    || viewport.height < 1 || viewport.height > maxHeight) {
+    invalid(`${label} must have an integer width from 1 through 16384 pixels and height from 1 through ${maxHeight} pixels.`);
   }
 }
 
@@ -134,6 +136,15 @@ function normalizeViewer(viewer, artifacts) {
   if (!ids.has(normalized.activeArtifactId)) {
     throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, 'Viewer activeArtifactId is not present in artifacts.');
   }
+  if (viewer?.presentation !== undefined) {
+    if (!ARTIFACT_PRESENTATIONS.includes(viewer.presentation)) {
+      throw new PipelineError(
+        ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
+        'Viewer presentation must be document or canvas.',
+      );
+    }
+    normalized.presentation = viewer.presentation;
+  }
   return normalized;
 }
 
@@ -180,7 +191,7 @@ export function validateArtifactReview(review) {
       assertBoundedString(pin.anchor.planrId, `${label}.anchor.planrId`, { min: 1, max: 512 });
       if (pin.anchor.screen !== undefined) assertBoundedString(pin.anchor.screen, `${label}.anchor.screen`, { min: 1, max: 128 });
     }
-    assertViewport(pin.viewport, `${label}.viewport`);
+    assertViewport(pin.viewport, `${label}.viewport`, { maxHeight: ARTIFACT_DOCUMENT_MAX_HEIGHT });
     for (const coordinate of ['x', 'y', 'w', 'h']) {
       const value = pin.region?.[coordinate];
       if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {

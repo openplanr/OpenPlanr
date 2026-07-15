@@ -249,7 +249,7 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
   const artifact = envelope.artifacts[0];
   const document = renderArtifactShellDocument({
     envelope,
-    viewer: { mode: 'single', activeArtifactId: artifact.id },
+    viewer: { mode: 'single', activeArtifactId: artifact.id, presentation: 'canvas' },
     shell: { title: 'Checkout confidence pass', theme: 'light', privacy: 'local', status: 'ready' },
   });
   const host = await serve(document, renderArtifactStageRuntimeAsset(), artifact);

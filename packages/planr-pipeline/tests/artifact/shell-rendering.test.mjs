@@ -14,6 +14,7 @@ import {
 import {
   ARTIFACT_SHELL_STATES,
   normalizeArtifactShellModel,
+  resolveArtifactPresentation,
   renderArtifactShellMarkup,
 } from '../../lib/artifact/ui/renderers.mjs';
 import {
@@ -153,12 +154,43 @@ test('zero and one artifact force single mode for every non-single request', () 
       viewer: { mode: requestedMode, activeArtifactId: 'only' },
     });
     assert.equal(one.viewMode, 'single', `one artifact normalizes ${requestedMode} to single`);
+    assert.equal(one.presentation, 'document');
     const html = renderArtifactShellMarkup(one);
     assert.match(html, /data-planr-view="single"/);
-    assert.match(html, /data-planr-view="variants" aria-pressed="false" disabled/);
-    assert.match(html, /data-planr-view="split" aria-pressed="false" disabled/);
-    assert.match(html, /role="tablist" aria-label="Artifact variants" hidden/);
+    assert.match(html, /data-planr-presentation="document"/);
+    assert.doesNotMatch(html, /Artifact display controls|Viewport controls|data-planr-action="theme"/);
   }
+});
+
+test('presentation resolution is compatible, explicit, and keeps document chrome quiet', () => {
+  assert.equal(resolveArtifactPresentation(undefined, { mode: 'single', artifactCount: 1 }), 'document');
+  assert.equal(resolveArtifactPresentation(undefined, { mode: 'variants', artifactCount: 2 }), 'canvas');
+  assert.equal(resolveArtifactPresentation('canvas', { mode: 'single', artifactCount: 1 }), 'canvas');
+  assert.equal(resolveArtifactPresentation('document', { mode: 'variants', artifactCount: 2 }), 'document');
+
+  const documentModel = normalizeArtifactShellModel({
+    envelope: { artifacts: [artifact('only', 'Only artifact')] },
+    viewer: { mode: 'single', activeArtifactId: 'only' },
+  });
+  const documentHtml = renderArtifactShellMarkup(documentModel);
+  assert.equal(documentModel.presentation, 'document');
+  assert.equal(documentModel.railOpen, false);
+  assert.match(documentHtml, /data-planr-presentation="document"/);
+  assert.doesNotMatch(documentHtml, /HTML ·|ARTIFACT \/|Single|Variants|Split|Viewport controls|data-planr-action="theme"/);
+  assert.match(documentHtml, /Interact/);
+  assert.match(documentHtml, /Comment/);
+  assert.match(documentHtml, /Feedback/);
+  assert.match(documentHtml, /Share/);
+
+  const canvasModel = normalizeArtifactShellModel({
+    envelope: { artifacts: [artifact('only', 'Only artifact')] },
+    viewer: { mode: 'single', activeArtifactId: 'only', presentation: 'canvas' },
+  });
+  const canvasHtml = renderArtifactShellMarkup(canvasModel);
+  assert.equal(canvasModel.presentation, 'canvas');
+  assert.equal(canvasModel.railOpen, true);
+  assert.match(canvasHtml, /Viewport controls/);
+  assert.match(canvasHtml, /Artifact display controls/);
 });
 
 test('all required ready, loading, empty, and failure states render actionable live status', () => {
@@ -230,6 +262,8 @@ test('structural CSS is token-only and carries approved desktop, mobile, focus, 
   assert.match(ARTIFACT_SHELL_CSS, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(ARTIFACT_SHELL_CSS, /transition-duration: 0s !important/);
   assert.match(ARTIFACT_SHELL_CSS, /outline: 2px solid var\(--planr-color-primary\)/);
+  assert.match(ARTIFACT_SHELL_CSS, /data-planr-presentation="document"/);
+  assert.match(ARTIFACT_SHELL_CSS, /transform: translateX\(100%\)/);
 });
 
 // This is intentionally a deterministic source-byte contract, not a rendered

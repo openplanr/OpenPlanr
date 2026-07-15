@@ -40,7 +40,8 @@
       "required": ["mode", "activeArtifactId"],
       "properties": {
         "mode": { "type": "string", "enum": ["single", "variants"] },
-        "activeArtifactId": { "type": "string", "minLength": 1, "maxLength": 128 }
+        "activeArtifactId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "presentation": { "type": "string", "enum": ["document", "canvas"] }
       }
     },
     "review": {
@@ -92,7 +93,7 @@
                 "required": ["width", "height"],
                 "properties": {
                   "width": { "type": "integer", "minimum": 1, "maximum": 16384 },
-                  "height": { "type": "integer", "minimum": 1, "maximum": 16384 }
+                  "height": { "type": "integer", "minimum": 1, "maximum": 262144 }
                 }
               },
               "anchor": {

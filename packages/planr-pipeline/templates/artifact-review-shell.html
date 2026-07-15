@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-planr-theme="auto" data-planr-artifact-shell="1.0.0">
+<html lang="en" data-planr-theme="auto" data-planr-presentation="document" data-planr-artifact-shell="1.1.0">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -763,6 +763,83 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .planr-share-receipt-size { grid-column: 2; text-align: left; }
   .planr-share-result > div { grid-template-columns: 1fr; }
 }
+/* Document presentation: the artifact owns the page; the iframe is only an
+   opaque-origin security boundary and has no visible canvas treatment. */
+html[data-planr-presentation="document"],
+html[data-planr-presentation="document"] body {
+  height: auto;
+  min-height: 100%;
+}
+html[data-planr-presentation="document"] body { overflow: visible; }
+.planr-shell[data-planr-presentation="document"] {
+  height: auto;
+  min-height: 100vh;
+  grid-template-rows: var(--planr-toolbar-height) auto;
+}
+.planr-shell[data-planr-presentation="document"] .planr-toolbar {
+  position: sticky;
+  top: 0;
+  backdrop-filter: blur(16px);
+}
+.planr-shell[data-planr-presentation="document"] .planr-workspace,
+.planr-shell[data-planr-presentation="document"][data-planr-rail-open="false"] .planr-workspace {
+  display: block;
+}
+.planr-shell[data-planr-presentation="document"] .planr-stage {
+  overflow: visible;
+  background: transparent;
+}
+.planr-shell[data-planr-presentation="document"] .planr-stage-scroll {
+  position: static;
+  overflow: visible;
+  padding: 0;
+}
+.planr-shell[data-planr-presentation="document"] .planr-stage-surface {
+  width: 100%;
+  min-width: 100%;
+  transform: none;
+}
+.planr-shell[data-planr-presentation="document"] .planr-frame-grid {
+  width: 100%;
+  display: block;
+}
+.planr-shell[data-planr-presentation="document"] .planr-artifact-panel {
+  width: max(100%, var(--planr-document-width, 100%));
+  height: var(--planr-document-height, max(var(--planr-artifact-height), calc(100vh - var(--planr-toolbar-height))));
+  min-height: calc(100vh - var(--planr-toolbar-height));
+}
+.planr-shell[data-planr-presentation="document"] .planr-frame {
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.planr-shell[data-planr-presentation="document"] .planr-frame iframe {
+  background: transparent;
+}
+.planr-shell[data-planr-presentation="document"] .planr-frame-label { display: none; }
+.planr-shell[data-planr-presentation="document"] .planr-stage-status { inset: 0; min-height: calc(100vh - var(--planr-toolbar-height)); }
+.planr-shell[data-planr-presentation="document"] .planr-review-rail {
+  position: fixed;
+  z-index: 50;
+  inset: var(--planr-toolbar-height) 0 0 auto;
+  width: min(var(--planr-review-rail-width), 100vw);
+  border-left: 1px solid var(--planr-color-rule);
+  box-shadow: -18px 0 60px color-mix(in srgb, var(--planr-color-background) 34%, transparent);
+}
+.planr-shell[data-planr-presentation="document"][data-planr-rail-open="false"] .planr-review-rail {
+  opacity: 1;
+  transform: translateX(100%);
+}
+@media (max-width: 900px) {
+  .planr-shell[data-planr-presentation="document"] .planr-review-rail {
+    inset: auto 0 0;
+    width: 100%;
+  }
+  .planr-shell[data-planr-presentation="document"][data-planr-rail-open="false"] .planr-review-rail {
+    transform: translateY(100%);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0s !important;
@@ -774,29 +851,21 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 </style>
 </head>
 <body>
-<div class="planr-shell" data-planr-view="single" data-planr-review-mode="interact" data-planr-state="loading" data-planr-rail-open="true">
+<div class="planr-shell" data-planr-presentation="document" data-planr-view="single" data-planr-review-mode="interact" data-planr-state="loading" data-planr-rail-open="false">
   <header class="planr-toolbar">
-  <div class="planr-brand" aria-label="OpenPlanr"><span class="planr-mark" aria-hidden="true"></span><span class="planr-title-block"><strong>OpenPlanr artifact review</strong><span>HTML · 1440×900</span></span></div>
+  <div class="planr-brand" aria-label="OpenPlanr"><span class="planr-mark" aria-hidden="true"></span><span class="planr-title-block"><strong>OpenPlanr artifact review</strong></span></div>
   <span class="planr-privacy" data-privacy="local">Local review</span>
-  <span class="planr-domain-toolbar" data-planr-slot="domain-toolbar" aria-label="Artifact workflow controls"></span>
   <span class="planr-toolbar-spacer" aria-hidden="true"></span>
-  <div class="planr-segment" role="group" aria-label="Viewport controls"><button type="button" data-planr-action="zoom-out" aria-label="Zoom out">−</button><button type="button" data-planr-action="zoom-reset" aria-label="Reset zoom">72%</button><button type="button" data-planr-action="zoom-in" aria-label="Zoom in">+</button></div>
   <div class="planr-segment" role="group" aria-label="Review mode"><button type="button" data-planr-mode="interact" data-planr-short-label="I" aria-pressed="true">Interact</button><button type="button" data-planr-mode="comment" data-planr-short-label="C" aria-pressed="false">Comment</button></div>
-  <button class="planr-toolbar-action" type="button" data-planr-action="theme" aria-label="Shell theme auto">auto</button>
-  <button class="planr-toolbar-action" type="button" data-planr-action="feedback" aria-controls="planr-review-rail" aria-expanded="true">Feedback <span class="planr-count">0</span></button>
+  <button class="planr-toolbar-action" type="button" data-planr-action="feedback" aria-controls="planr-review-rail" aria-expanded="false">Feedback <span class="planr-count">0</span></button>
   <button class="planr-toolbar-action planr-share" type="button" data-planr-action="share" aria-haspopup="dialog">Share</button>
 </header>
   <div class="planr-workspace"><main class="planr-stage" aria-label="Artifact review stage">
-  <div class="planr-stage-heading"><span>ARTIFACT / ARTIFACT</span><span role="status" aria-live="polite" data-planr-slot="status">Interactions enabled</span></div>
-  <div class="planr-stage-controls" role="group" aria-label="Artifact display controls">
-  <div class="planr-segment planr-view-modes" role="group" aria-label="Artifact view mode"><button type="button" data-planr-view="single" aria-pressed="true">Single</button><button type="button" data-planr-view="variants" aria-pressed="false" disabled>Variants</button><button type="button" data-planr-view="split" aria-pressed="false" disabled>Split</button></div>
-  <div class="planr-variants" role="tablist" aria-label="Artifact variants" hidden></div>
-</div>
   <div class="planr-stage-scroll"><div class="planr-stage-surface" style="--planr-shell-zoom:0.72" inert aria-hidden="true"><div class="planr-frame-grid" data-planr-layout="single"></div></div></div>
   <div class="planr-stage-status" role="status" aria-live="polite" aria-atomic="true">
   <div><strong>Loading private review</strong><p>Validating the envelope and frozen artifact viewport.</p></div>
 </div>
-</main><aside class="planr-review-rail" id="planr-review-rail" aria-label="Review feedback">
+</main><aside class="planr-review-rail" id="planr-review-rail" aria-label="Review feedback" inert aria-hidden="true">
   <header><h2>Review feedback</h2><div class="planr-review-metrics" aria-label="Review metrics"><span data-planr-metric="open">0 open</span><span class="planr-count" data-planr-metric="total" aria-label="0 feedback items">0</span></div></header>
   <section class="planr-identity" aria-label="Reviewer identity"><label for="planr-reviewer-name">Your name<input id="planr-reviewer-name" type="text" maxlength="256" autocomplete="name" aria-describedby="planr-review-error" data-planr-reviewer-name></label><p class="planr-field-error" id="planr-review-error" role="alert" hidden></p></section>
   <div class="planr-feedback-slot" data-planr-slot="feedback-rail" role="region" aria-label="Feedback threads"><p data-planr-empty-feedback>No feedback yet. Choose Comment, then click or drag on the artifact.</p><div class="planr-thread-list" data-planr-thread-list></div></div>
@@ -834,7 +903,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   <div><span class="planr-mark" aria-hidden="true"></span><strong data-planr-hosted-title></strong><p data-planr-hosted-detail></p><button type="button" data-planr-hosted-retry hidden></button></div>
 </section>
 <div class="planr-visually-hidden" role="status" aria-live="polite" aria-atomic="true" data-planr-slot="review-announcer"></div>
-<script type="application/json" id="planr-artifact-shell-model">{"schemaVersion":"1.0.0","title":"OpenPlanr artifact review","artifacts":[],"activeArtifact":null,"activeIndex":0,"comparisonArtifact":null,"comparisonIndex":-1,"viewMode":"single","reviewMode":"interact","status":"loading","statusCopy":{"title":"Loading private review","detail":"Validating the envelope and frozen artifact viewport."},"privacy":"local","privacyLabel":"Local review","theme":"auto","zoom":72,"feedbackCount":0,"railOpen":true}</script>
+<script type="application/json" id="planr-artifact-shell-model">{"schemaVersion":"1.0.0","title":"OpenPlanr artifact review","artifacts":[],"activeArtifact":null,"activeIndex":0,"comparisonArtifact":null,"comparisonIndex":-1,"viewMode":"single","reviewMode":"interact","status":"loading","statusCopy":{"title":"Loading private review","detail":"Validating the envelope and frozen artifact viewport."},"privacy":"local","privacyLabel":"Local review","theme":"auto","zoom":72,"feedbackCount":0,"presentation":"document","railOpen":false}</script>
 <script type="application/json" id="planr-artifact-stage-payload">{"schemaVersion":"1.0.0","artifacts":[],"viewer":{"mode":"single","activeArtifactId":""}}</script>
 <script type="application/json" id="planr-artifact-review-state">{"schemaVersion":"1.0.0","reviewOf":"55de5bb62bebfe364277d81444783971b7fb7f3a160eb6900a97ccf1d3e0fb10","review":null}</script>
 <script src="./artifact-review-stage.js" defer></script>

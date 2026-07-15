@@ -9,6 +9,8 @@ import {
   ARTIFACT_BRIDGE_CHANNEL,
   ARTIFACT_BRIDGE_VERSION,
   ARTIFACT_EXPORT_MAX_EDGE,
+  ARTIFACT_LAYOUT_MAX_HEIGHT,
+  ARTIFACT_LAYOUT_MAX_WIDTH,
   artifactContentSecurityPolicy,
   createArtifactBridgeNonce,
   prepareArtifactDocument,
@@ -221,6 +223,41 @@ test('bridge validator bounds authenticated PNG export responses', () => {
   }
 });
 
+test('bridge validator accepts only nonce-bound document layout measurements within hard ceilings', () => {
+  const nonce = createArtifactBridgeNonce();
+  const source = {};
+  const options = {
+    source,
+    nonce,
+    artifactId: 'main',
+    viewport: { width: 800, height: 600 },
+    pendingRequestIds: new Set(),
+    pendingChallengeIds: new Set(),
+  };
+  const data = {
+    channel: ARTIFACT_BRIDGE_CHANNEL,
+    schemaVersion: ARTIFACT_BRIDGE_VERSION,
+    type: 'layout.measurement',
+    nonce,
+    artifactId: 'main',
+    layout: { width: 1440, height: 48_000 },
+  };
+  const valid = validateArtifactBridgeMessage({ source, origin: 'null', data }, options);
+  assert.equal(valid.ok, true);
+  assert.deepEqual(valid.value.layout, { width: 1440, height: 48_000 });
+  assert.equal(valid.value.authenticated, true);
+
+  for (const malformed of [
+    { ...data, nonce: 'B'.repeat(43) },
+    { ...data, layout: { width: ARTIFACT_LAYOUT_MAX_WIDTH + 1, height: 100 } },
+    { ...data, layout: { width: 100, height: ARTIFACT_LAYOUT_MAX_HEIGHT + 1 } },
+    { ...data, layout: { width: 100, height: Number.NaN } },
+    { ...data, layout: { width: 100, height: 200 }, extra: true },
+  ]) {
+    assert.equal(validateArtifactBridgeMessage({ source, origin: 'null', data: malformed }, options).ok, false);
+  }
+});
+
 test('parent runtime sends nonce-free challenges and keeps the nonce closure-private', () => {
   const nonce = createArtifactBridgeNonce();
   const runtime = renderArtifactParentRuntime({
@@ -367,7 +404,8 @@ test('real browser keeps dynamic artifacts useful while hostile capabilities fai
   const mainFrameElement = page.locator('[data-planr-artifact-frame="main"]');
   assert.equal(await mainFrameElement.getAttribute('sandbox'), 'allow-scripts');
   assert.equal(await mainFrameElement.evaluate((frame) => frame.contentDocument), null);
-  assert.match(await mainFrameElement.getAttribute('srcdoc'), /^<!doctype html>/i);
+  assert.match(await mainFrameElement.getAttribute('src'), /^blob:/i);
+  assert.equal(await mainFrameElement.getAttribute('srcdoc'), null);
   assert.match(await mainFrameElement.getAttribute('csp'), /connect-src 'none'/);
   assert.equal(await mainFrameElement.getAttribute('aria-busy'), null);
 

@@ -127,7 +127,9 @@ test('review mode selects one finalized artifact and uses the review title', asy
   assert.equal(envelope.artifacts[0].title, 'Checkout review');
   assert.match(envelope.artifacts[0].html, /<h1>Final<\/h1>/);
   assert.doesNotMatch(envelope.artifacts[0].html, /Draft canvas|Old chrome/);
-  assert.deepEqual(envelope.viewer, { mode: 'single', activeArtifactId: 'artifact' });
+  assert.deepEqual(envelope.viewer, {
+    mode: 'single', activeArtifactId: 'artifact', presentation: 'canvas',
+  });
 });
 
 test('legacy feedback is translated after the ordered envelope digest is known', async () => {

@@ -4,6 +4,23 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.27.0] — 2026-07-15
+
+### Added
+
+- Headless `document` and zoomable `canvas` artifact presentations with
+  compatible auto-resolution and an optional digest-bound envelope field.
+- Nonce-authenticated, bounded document measurements for natural outer-page
+  scrolling, dynamic content height, and full-document annotation coordinates.
+
+### Changed
+
+- Generic local and hosted artifacts now render edge-to-edge beneath the quiet
+  review toolbar with feedback closed and overlaid by default.
+- Design boards explicitly retain canvas presentation, including single-variant
+  reviews. Complete bundled HTML executes through an opaque-origin Blob iframe;
+  private review remains distinct from standalone website hosting.
+
 ## [0.25.1] — 2026-07-12
 
 ### Fixed

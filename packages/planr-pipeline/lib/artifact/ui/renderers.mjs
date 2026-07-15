@@ -14,6 +14,7 @@ export const ARTIFACT_SHELL_STATES = Object.freeze([
 export const ARTIFACT_VIEW_MODES = Object.freeze(['single', 'variants', 'split']);
 export const ARTIFACT_REVIEW_MODES = Object.freeze(['interact', 'comment']);
 export const ARTIFACT_SHELL_THEMES = Object.freeze(['auto', 'light', 'dark']);
+export const ARTIFACT_PRESENTATIONS = Object.freeze(['document', 'canvas']);
 
 const STATUS_COPY = Object.freeze({
   empty: Object.freeze({
@@ -70,6 +71,12 @@ function viewportDimension(value, fallback) {
   return Number.isInteger(value) && value > 0 && value <= 16_384 ? value : fallback;
 }
 
+/** Resolve runtime presentation without mutating or upgrading stored envelopes. */
+export function resolveArtifactPresentation(value, { mode = 'single', artifactCount = 1 } = {}) {
+  if (ARTIFACT_PRESENTATIONS.includes(value)) return value;
+  return artifactCount > 1 || mode === 'variants' || mode === 'split' ? 'canvas' : 'document';
+}
+
 function normalizeArtifact(value, index) {
   const artifact = value && typeof value === 'object' ? value : {};
   const id = plainText(artifact.id, `artifact-${index + 1}`) || `artifact-${index + 1}`;
@@ -120,6 +127,10 @@ export function normalizeArtifactShellModel(input = {}) {
   const theme = member(shell.theme, ARTIFACT_SHELL_THEMES, 'auto');
   const zoom = Math.min(200, Math.max(25, nonNegativeInteger(shell.zoom, 72)));
   const feedbackCount = nonNegativeInteger(shell.feedbackCount, 0);
+  const presentation = resolveArtifactPresentation(
+    viewer.presentation ?? shell.presentation,
+    { mode: viewMode, artifactCount: artifacts.length },
+  );
 
   return Object.freeze({
     schemaVersion: '1.0.0',
@@ -138,7 +149,8 @@ export function normalizeArtifactShellModel(input = {}) {
     theme,
     zoom,
     feedbackCount,
-    railOpen: shell.railOpen !== false,
+    presentation,
+    railOpen: shell.railOpen === undefined ? presentation === 'canvas' : Boolean(shell.railOpen),
   });
 }
 
@@ -150,15 +162,13 @@ function activeMetadata(model) {
 
 export function renderArtifactToolbar(model) {
   const interact = model.reviewMode === 'interact';
+  const canvas = model.presentation === 'canvas';
   return `<header class="planr-toolbar">
-  <div class="planr-brand" aria-label="OpenPlanr"><span class="planr-mark" aria-hidden="true"></span><span class="planr-title-block"><strong>${escapeHtml(model.title)}</strong><span>${escapeHtml(activeMetadata(model))}</span></span></div>
+  <div class="planr-brand" aria-label="OpenPlanr"><span class="planr-mark" aria-hidden="true"></span><span class="planr-title-block"><strong>${escapeHtml(model.title)}</strong>${canvas ? `<span>${escapeHtml(activeMetadata(model))}</span>` : ''}</span></div>
   <span class="planr-privacy" data-privacy="${escapeHtml(model.privacy)}">${escapeHtml(model.privacyLabel)}</span>
-  <span class="planr-domain-toolbar" data-planr-slot="domain-toolbar" aria-label="Artifact workflow controls"></span>
-  <span class="planr-toolbar-spacer" aria-hidden="true"></span>
-  <div class="planr-segment" role="group" aria-label="Viewport controls"><button type="button" data-planr-action="zoom-out" aria-label="Zoom out">−</button><button type="button" data-planr-action="zoom-reset" aria-label="Reset zoom">${model.zoom}%</button><button type="button" data-planr-action="zoom-in" aria-label="Zoom in">+</button></div>
-  <div class="planr-segment" role="group" aria-label="Review mode"><button type="button" data-planr-mode="interact" data-planr-short-label="I" aria-pressed="${interact}">Interact</button><button type="button" data-planr-mode="comment" data-planr-short-label="C" aria-pressed="${!interact}">Comment</button></div>
-  <button class="planr-toolbar-action" type="button" data-planr-action="theme" aria-label="Shell theme ${escapeHtml(model.theme)}">${escapeHtml(model.theme)}</button>
-  <button class="planr-toolbar-action" type="button" data-planr-action="feedback" aria-controls="planr-review-rail" aria-expanded="${model.railOpen}">Feedback <span class="planr-count">${model.feedbackCount}</span></button>
+${canvas ? '  <span class="planr-domain-toolbar" data-planr-slot="domain-toolbar" aria-label="Artifact workflow controls"></span>\n' : ''}  <span class="planr-toolbar-spacer" aria-hidden="true"></span>
+${canvas ? `  <div class="planr-segment" role="group" aria-label="Viewport controls"><button type="button" data-planr-action="zoom-out" aria-label="Zoom out">−</button><button type="button" data-planr-action="zoom-reset" aria-label="Reset zoom">${model.zoom}%</button><button type="button" data-planr-action="zoom-in" aria-label="Zoom in">+</button></div>\n` : ''}  <div class="planr-segment" role="group" aria-label="Review mode"><button type="button" data-planr-mode="interact" data-planr-short-label="I" aria-pressed="${interact}">Interact</button><button type="button" data-planr-mode="comment" data-planr-short-label="C" aria-pressed="${!interact}">Comment</button></div>
+${canvas ? `  <button class="planr-toolbar-action" type="button" data-planr-action="theme" aria-label="Shell theme ${escapeHtml(model.theme)}">${escapeHtml(model.theme)}</button>\n` : ''}  <button class="planr-toolbar-action" type="button" data-planr-action="feedback" aria-controls="planr-review-rail" aria-expanded="${model.railOpen}">Feedback <span class="planr-count">${model.feedbackCount}</span></button>
   <button class="planr-toolbar-action planr-share" type="button" data-planr-action="share" aria-haspopup="dialog">Share</button>
 </header>`;
 }
@@ -216,9 +226,8 @@ export function renderArtifactStage(model) {
   const unavailable = model.status !== 'ready';
   const breadcrumb = model.activeArtifact?.title ?? 'Artifact';
   return `<main class="planr-stage" aria-label="Artifact review stage">
-  <div class="planr-stage-heading"><span>ARTIFACT / ${escapeHtml(breadcrumb.toUpperCase())}</span><span role="status" aria-live="polite" data-planr-slot="status">${model.reviewMode === 'comment' ? 'Comment mode' : 'Interactions enabled'}</span></div>
-  ${renderArtifactVariantControls(model)}
-  <div class="planr-stage-scroll"><div class="planr-stage-surface" style="--planr-shell-zoom:${model.zoom / 100}"${unavailable ? ' inert aria-hidden="true"' : ''}><div class="planr-frame-grid" data-planr-layout="${model.viewMode}">${renderArtifactPanels(model)}</div></div></div>
+${model.presentation === 'canvas' ? `  <div class="planr-stage-heading"><span>ARTIFACT / ${escapeHtml(breadcrumb.toUpperCase())}</span><span role="status" aria-live="polite" data-planr-slot="status">${model.reviewMode === 'comment' ? 'Comment mode' : 'Interactions enabled'}</span></div>
+  ${renderArtifactVariantControls(model)}\n` : ''}  <div class="planr-stage-scroll"><div class="planr-stage-surface" style="--planr-shell-zoom:${model.zoom / 100}"${unavailable ? ' inert aria-hidden="true"' : ''}><div class="planr-frame-grid" data-planr-layout="${model.viewMode}">${renderArtifactPanels(model)}</div></div></div>
   ${renderArtifactStatus(model)}
 </main>`;
 }
@@ -270,7 +279,7 @@ export function renderHostedArtifactViewerSlot() {
 }
 
 export function renderArtifactShellMarkup(model) {
-  return `<div class="planr-shell" data-planr-view="${model.viewMode}" data-planr-review-mode="${model.reviewMode}" data-planr-state="${model.status}" data-planr-rail-open="${model.railOpen}">
+  return `<div class="planr-shell" data-planr-presentation="${model.presentation}" data-planr-view="${model.viewMode}" data-planr-review-mode="${model.reviewMode}" data-planr-state="${model.status}" data-planr-rail-open="${model.railOpen}">
   ${renderArtifactToolbar(model)}
   <div class="planr-workspace">${renderArtifactStage(model)}${renderArtifactRail(model)}</div>
 </div>

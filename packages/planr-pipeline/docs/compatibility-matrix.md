@@ -1,6 +1,6 @@
 # Compatibility Matrix - Protocol v1.0 artifacts + v1.1 capabilities
 
-> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.26.3.
+> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.27.0.
 
 ## TL;DR
 
@@ -34,6 +34,7 @@ Same `.planr/specs/` directories. Same SPEC, US, Task, stack, graph, and `.pipel
 | Design generation command | Native and `planr pipeline design` | Router handoff | `$planr-design` / router |
 | Design loop / review board | Available | Available through router handoff | Available through installed skill/router |
 | Universal HTML artifact review | `planr artifact` | `planr artifact` handoff | Installed `$planr-artifact` skill invoking `planr` |
+| Headless document / canvas presentation | Same generated renderer | Same generated renderer | Same generated renderer |
 | Local pins, threads, and decisions | Supported | Supported | Supported |
 | Fragment sharing | Supported | Supported | Supported |
 | Encrypted expiring short links | Supported | Supported | Supported |
@@ -103,6 +104,8 @@ skills and rules never invoke the nested `planr-pipeline` binary.
 The portable contract includes:
 
 - Local, loopback-only review of self-contained HTML.
+- Headless `document` presentation for generic artifacts and zoomable `canvas`
+  presentation for design boards and spatial comparison workflows.
 - The shared annotation shell, including pins, threads, identities, decisions,
   JSON/Markdown export, and ordered multi-variant envelopes.
 - Explicit fragment sharing for payloads at or below 8,000 characters.
@@ -154,4 +157,4 @@ For runtime-operated fixtures, use `conformance/runner.mjs` with `--setup`, then
 
 ---
 
-*OpenPlanr Protocol v1.0 artifacts + v1.1 ecosystem contracts - compatibility matrix for planr-pipeline v0.26.3.*
+*OpenPlanr Protocol v1.0 artifacts + v1.1 ecosystem contracts - compatibility matrix for planr-pipeline v0.27.0.*
