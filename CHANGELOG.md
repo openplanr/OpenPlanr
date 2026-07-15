@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.10.0
+
+### Minor Changes
+
+- [`4438a9a`](https://github.com/openplanr/OpenPlanr/commit/4438a9a046beeaa1a0ac9201fc24fa635c36b470) Add `planr artifact` for secure local HTML review, private fragment or encrypted short-link sharing, returned-review import, and live-session export.
+
 ## 1.9.1
 
 ### Patch Changes
