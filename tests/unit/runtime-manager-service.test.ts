@@ -187,7 +187,8 @@ describe('runtime setup', () => {
     expect(agents).toContain('OpenPlanr runtime policy');
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-ship', 'SKILL.md'))).toBe(true);
     const lock = JSON.parse(readFileSync(join(projectDir, '.planr', 'runtime-lock.json'), 'utf8'));
-    expect(lock.components).toEqual({ cli: cliVersion, pipeline: '0.25.1', skills: '1.12.0' });
+    expect(lock.components).toEqual({ cli: cliVersion, pipeline: '0.26.3', skills: '1.13.0' });
+    expect(existsSync(join(userHome, '.codex', 'skills', 'planr-artifact', 'SKILL.md'))).toBe(true);
     expect(lock.adapters).toHaveLength(1);
 
     const second = await previewSetup({
@@ -201,6 +202,10 @@ describe('runtime setup', () => {
     appendFileSync(join(projectDir, 'AGENTS.md'), '\n# Later hand-written policy\n');
     const doctor = await runtimeDoctor(projectDir);
     expect(doctor.diagnostics.find((item) => item.code === 'managed-files')?.status).toBe('pass');
+    expect(doctor.diagnostics.find((item) => item.code === 'skill-commands')).toMatchObject({
+      status: 'pass',
+      message: 'Installed Codex skills reference public planr commands only',
+    });
   });
 
   it('rolls migration back to exact prior bytes', async () => {

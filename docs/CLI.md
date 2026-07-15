@@ -723,7 +723,7 @@ planr spec destroy SPEC-001 --yes
 
 #### `planr spec attach-design`
 
-Copy PNG mockup files into the spec's `design/` subdirectory and update `ui_files` frontmatter on the SPEC. The `planr-pipeline` `designer-agent` reads these PNGs to generate `design/design-spec.md` when `/planr-pipeline:plan` runs.
+Copy PNG mockup files into the spec's `design/` subdirectory and update `ui_files` frontmatter on the SPEC. The pipeline `designer-agent` reads these PNGs to generate `design/design-spec.md` when `planr pipeline plan` runs.
 
 ```bash
 planr spec attach-design SPEC-001 --files login.png signup.png
@@ -739,9 +739,9 @@ Validate that a spec is ready for handoff to `planr-pipeline` (has stories, task
 planr spec promote SPEC-001
 ```
 
-After promotion, run from Claude Code:
+After promotion, run from any configured runtime:
 ```
-/planr-pipeline:plan {slug}
+planr pipeline plan {slug}
 ```
 
 ---
@@ -916,6 +916,24 @@ installations, and is idempotent. `--minimal` keeps only the dedicated planning 
 
 Use `planr pipeline plan|design|design-loop|design-review|ship|status|dashboard|sync|doctor`
 to route the complete delivery workflow.
+
+### `planr artifact`
+
+Open, share, import, and export universal HTML review sessions:
+
+```bash
+planr artifact <file>
+planr artifact open <file> [--title <title>] [--root <asset-root>] [--theme auto|light|dark] [--port <port>] [--no-open] [--json]
+planr artifact share <file> [--title <title>] [--root <asset-root>] [--short] [--ttl 1d|7d|30d] [--no-open] [--json] [--yes]
+planr artifact import <review-url>... [--output <path>] [--allow-stale] [--json] [--yes]
+planr artifact export <session-id> [--format json|markdown] [--output <path>]
+```
+
+Local sessions bind only to loopback. Sharing is never automatic. Small reviews
+use a URL fragment; encrypted short links require explicit consent and default
+to a seven-day expiry. See [Artifact review and private sharing](ARTIFACT_REVIEW.md)
+for the sandbox, privacy, remote/SSH, stale-review, offline, and self-hosting
+contracts.
 
 ---
 

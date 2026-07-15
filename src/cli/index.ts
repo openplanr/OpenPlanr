@@ -6,6 +6,7 @@ import { ConfigNotFoundError, findProjectRoot } from '../services/config-service
 import { setNonInteractive } from '../services/interactive-state.js';
 import { RuntimeManagerError } from '../services/runtime-manager-service.js';
 import { display, logger, setVerbose } from '../utils/logger.js';
+import { registerArtifactCommand } from './commands/artifact.js';
 import { registerBacklogCommand } from './commands/backlog.js';
 import { registerChecklistCommand } from './commands/checklist.js';
 import { registerConfigCommand } from './commands/config.js';
@@ -80,6 +81,7 @@ registerSetupCommand(program, version);
 registerDoctorCommand(program, version);
 registerRuntimeCommand(program, version);
 registerPipelineCommand(program);
+registerArtifactCommand(program);
 registerLinearCommand(program);
 registerBacklogCommand(program);
 registerEpicCommand(program);
@@ -118,15 +120,22 @@ program.parseAsync(process.argv).catch((err) => {
     display.line('');
     process.exit(1);
   }
-  if (err instanceof RuntimeManagerError || String(err?.name).startsWith('E_')) {
+  if (
+    err instanceof RuntimeManagerError ||
+    String(err?.name).startsWith('E_') ||
+    String(err?.code).startsWith('E_')
+  ) {
     const value =
       err instanceof RuntimeManagerError
         ? err.toJSON()
-        : { ok: false, code: err.name, problem: err.message };
+        : typeof err?.toJSON === 'function'
+          ? err.toJSON()
+          : { ok: false, code: err.code ?? err.name, problem: err.message };
     if (process.argv.includes('--json')) display.line(JSON.stringify(value));
     else {
       logger.error(`${value.code}: ${value.problem}`);
       if ('recovery' in value && value.recovery) display.line(`  ${value.recovery}`);
+      if ('fix' in value && value.fix) display.line(`  ${value.fix}`);
     }
     process.exit(1);
   }

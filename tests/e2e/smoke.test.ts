@@ -53,6 +53,7 @@ describe('CLI smoke tests', () => {
       expect(output).toContain('epic');
       expect(output).toContain('backlog');
       expect(output).toContain('sprint');
+      expect(output).toContain('artifact');
     },
     SMOKE_TIMEOUT_MS,
   );

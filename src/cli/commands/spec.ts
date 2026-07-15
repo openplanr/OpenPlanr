@@ -101,7 +101,7 @@ export function registerSpecCommand(program: Command) {
       );
       display.line('  4. Review:           planr spec show <SPEC-id>');
       display.line('  5. Promote:          planr spec promote <SPEC-id>');
-      display.line('  6. Ship via plugin:  /planr-pipeline:plan <slug>     (in Claude Code)');
+      display.line('  6. Start delivery:  planr pipeline plan <slug>');
     });
 
   // ------------------------------------------------------------------------
@@ -444,7 +444,7 @@ export function registerSpecCommand(program: Command) {
         }
       }
       display.line('');
-      display.line(`  Pipeline handoff: /planr-pipeline:plan ${spec.slug}`);
+      display.line(`  Pipeline handoff: planr pipeline plan ${spec.slug}`);
     });
 
   // ------------------------------------------------------------------------
@@ -552,7 +552,7 @@ export function registerSpecCommand(program: Command) {
         logger.dim('');
         logger.dim(`Design directory: ${designDir}`);
         logger.dim(
-          `When you run /planr-pipeline:plan, the designer-agent will analyze these PNGs into design/design-spec.md.`,
+          `When you run planr pipeline plan, the designer-agent will analyze these PNGs into design/design-spec.md.`,
         );
       } catch (err) {
         logger.error((err as Error).message);
@@ -588,10 +588,10 @@ export function registerSpecCommand(program: Command) {
       logger.success(`${specId} is ready for planr-pipeline.`);
       logger.dim('');
       display.line('Next: in Claude Code, run:');
-      display.line(`  /planr-pipeline:plan ${spec.slug}`);
+      display.line(`  planr pipeline plan ${spec.slug}`);
       display.line('');
       display.line('After human review of the decomposition:');
-      display.line(`  /planr-pipeline:ship ${spec.slug}`);
+      display.line(`  planr pipeline ship ${spec.slug}`);
       display.line('');
       logger.dim(
         `(The pipeline plugin reads .planr/specs/${spec.id}-${spec.slug}/ directly when spec mode is active.)`,
