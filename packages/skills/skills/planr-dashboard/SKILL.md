@@ -1,8 +1,10 @@
 ---
 name: planr-dashboard
-description: Open the loopback-only OpenPlanr project dashboard.
+description: Start or inspect the loopback-only OpenPlanr planning dashboard.
 license: MIT
 ---
 
-Run `planr pipeline dashboard`. Report the local URL and never bind the planning
-dashboard to a non-loopback network interface.
+# Planr Dashboard
+
+Run `planr pipeline dashboard` with the user's options. Keep the server bound to
+loopback, report the local URL, and use `--no-watch` when a one-shot view is requested.

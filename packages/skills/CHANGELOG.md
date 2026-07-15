@@ -2,6 +2,20 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.13.0] — 2026-07-15
+
+### Added
+
+- `planr-artifact` for local HTML review, explicit private sharing, returned-review
+  import, and live-session export through `planr artifact`.
+
+### Changed
+
+- PLAN, Design, and SHIP skills now use the public deterministic `planr pipeline`
+  engine routes and never require `planr-pipeline` on `PATH`.
+- Documentation now matches `openplanr@1.10.0`, `planr-pipeline@0.26.3`, and the
+  deployed `share.openplanr.dev` privacy model.
+
 ## [1.12.0] — 2026-07-12
 
 ### Added

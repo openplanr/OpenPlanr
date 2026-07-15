@@ -49,9 +49,10 @@ The skill detects the planning intent, runs the right `planr` command with the r
                                             then implements against
 ```
 
-The bundle provides a unified router plus focused PLAN, Design, SHIP, dashboard,
-sync, and doctor skills. Codex installation is handled by `planr setup`; Claude
-Code can consume this marketplace; Cursor uses generated project rules.
+The bundle provides a unified router plus focused artifact review, PLAN, Design,
+SHIP, dashboard, sync, and doctor skills. Codex installation is handled by
+`planr setup`; Claude Code can consume this marketplace; Cursor uses generated
+project rules.
 
 ## Install
 
@@ -120,6 +121,7 @@ records which planning engine decomposed a spec.
 
 ```
 skills/openplanr-unified/       # Product/runtime routing
+skills/planr-artifact/          # Local review and private share/import/export
 skills/planr-plan/              # Feature-local PO phase
 skills/planr-design/            # Design workflows
 skills/planr-ship/              # DEV + QA + finalization

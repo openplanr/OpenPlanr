@@ -40,15 +40,22 @@ global install: `npx openplanr@latest setup`. Planning-only:
 For pipeline work, use the dedicated workflow skills or the router:
 
 ```bash
-planr pipeline plan <feature>
-planr pipeline design <feature>
+planr pipeline prepare-plan <feature> --json
+planr pipeline complete-plan <feature> --runtime <active-runtime> --json
+planr pipeline design-engine <action> <feature>
 # review generated artifacts
-planr pipeline ship <feature>
+planr pipeline prepare-ship <feature> --json
+planr pipeline finalize-ship <feature> --runtime <active-runtime> --json
 ```
 
 PLAN and SHIP are always separate user invocations. Never infer SHIP approval from
 PLAN completion. Honor runtime selection precedence, task dependencies, Preserve
 paths, the three-correction limit, and frontend/backend ownership boundaries.
+
+For universal HTML review, use `planr artifact <file>`. Sharing is explicit:
+small artifacts use fragment-only links, while `planr artifact share <file>
+--short` uploads AES-GCM ciphertext and keeps the decryption key in the URL
+fragment. Import returned feedback with `planr artifact import <review-url>`.
 
 Codex uses installed user-scope skills and concise project policy. Cursor uses
 portable project rules and Composer handoff. Claude Code retains native slash

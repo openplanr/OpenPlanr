@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Agent skills for OpenPlanr — agile, quick, and spec-driven planning for AI coding agents",
-    "version": "1.12.0"
+    "version": "1.13.0"
   },
   "plugins": [
     {
@@ -16,6 +16,7 @@
       "strict": false,
       "skills": [
         "./skills/openplanr-unified",
+        "./skills/planr-artifact",
         "./skills/planr-plan",
         "./skills/planr-design",
         "./skills/planr-ship",

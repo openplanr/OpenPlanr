@@ -1,11 +1,17 @@
 ---
 name: planr-ship
-description: Execute a reviewed OpenPlanr feature through DEV, QA, and finalization.
+description: Execute the reviewed OpenPlanr pipeline DEV and QA phases for a feature.
 license: MIT
 ---
 
-Require a separate explicit SHIP request after PLAN review. Run
-`planr pipeline ship <feature>`, execute ready tasks in dependency order, use native
-subagents when available and sequential fallback otherwise, enforce role and Preserve
-boundaries, cap correction attempts at three, run build/test plus QA, and finalize
-manifests, provenance, and the shipped marker.
+# Planr SHIP
+
+1. Confirm this is a separate user invocation after PLAN review.
+2. Run `planr pipeline prepare-ship <feature> --json` and execute ready tasks in
+   `dependsOn` order. Use native subagents when available; otherwise apply the
+   registry-defined roles sequentially.
+3. Respect Create/Modify/Preserve lists and role ownership. Retry a failing task
+   at most three times, then write its error report and mark it blocked.
+4. Run build and tests from `input/tech/stack.md`, perform the read-only QA gate,
+   then run `planr pipeline finalize-ship <feature> --runtime <active-runtime> --json`
+   so manifests, provenance, and the `.pipeline-shipped` marker are written.

@@ -6,7 +6,8 @@ For OpenPlanr maintainers. This repo's only published artifact is the skill itse
 
 ## Versioning
 
-Version lives in `.claude-plugin/marketplace.json` under `metadata.version`. Follow semver:
+Version lives in both `package.json` and `.claude-plugin/marketplace.json` under
+`metadata.version`; validation requires them to match. Follow semver:
 
 - **Patch** (`1.0.0` → `1.0.1`) — wording fixes, typo corrections, troubleshooting additions.
 - **Minor** (`1.0.0` → `1.1.0`) — new reference doc, new example, new workflow, new commands covered.

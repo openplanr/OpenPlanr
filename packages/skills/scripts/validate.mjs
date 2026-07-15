@@ -4,8 +4,25 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const marketplace = JSON.parse(readFileSync(join(root, '.claude-plugin', 'marketplace.json'), 'utf8'));
+const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const names = new Set();
 const errors = [];
+const expectedPortableSkills = new Set([
+  'openplanr-unified',
+  'planr-artifact',
+  'planr-plan',
+  'planr-design',
+  'planr-ship',
+  'planr-dashboard',
+  'planr-sync',
+  'planr-doctor',
+]);
+
+if (packageJson.version !== marketplace.metadata?.version) {
+  errors.push(
+    `Version drift: package.json=${packageJson.version} marketplace=${marketplace.metadata?.version}`,
+  );
+}
 
 for (const plugin of marketplace.plugins ?? []) {
   for (const relative of plugin.skills ?? []) {
@@ -22,7 +39,17 @@ for (const plugin of marketplace.plugins ?? []) {
     if (/CLAUDE_PLUGIN_ROOT|Sonnet|Opus|persona role-shift/.test(text)) {
       errors.push(`${relative} contains a runtime-specific portable-workflow leak`);
     }
+    if (/^\s*planr-pipeline\s+/m.test(text) || /`planr-pipeline\s+[^`]+`/.test(text)) {
+      errors.push(`${relative} invokes the nested planr-pipeline executable`);
+    }
   }
+}
+
+for (const expected of expectedPortableSkills) {
+  if (!names.has(expected)) errors.push(`Marketplace is missing portable skill: ${expected}`);
+}
+for (const name of names) {
+  if (!expectedPortableSkills.has(name)) errors.push(`Unexpected portable skill: ${name}`);
 }
 
 if (errors.length) {

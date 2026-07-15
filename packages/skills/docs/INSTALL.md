@@ -15,7 +15,10 @@ Three channels, each self-contained. Pick the one that matches your environment.
 /plugin install openplanr@openplanr-skills
 ```
 
-The first command registers this repo as a plugin marketplace. The second installs the OpenPlanr plugin from that marketplace. The plugin contains a single skill named `openplanr` which Claude Code activates automatically when it detects planning intent.
+The first command registers this repo as a plugin marketplace. The second installs
+the OpenPlanr plugin from that marketplace. It includes the unified planner plus
+focused artifact review, PLAN, Design, SHIP, dashboard, sync, and doctor skills.
+Claude Code activates the relevant skill from the user's intent.
 
 ### Verify
 
@@ -30,6 +33,10 @@ The skill should activate and Claude Code should ask clarifying questions or run
 ```
 
 and look for `openplanr` under your installed plugins.
+
+To verify artifact review routing as well, ask Claude Code to review a local HTML
+file. It should invoke `planr artifact <file>` and must never invoke the nested
+`planr-pipeline` executable directly.
 
 ### Local development (for contributors)
 

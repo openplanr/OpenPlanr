@@ -1,8 +1,10 @@
 ---
 name: planr-sync
-description: Audit OpenPlanr artifact graph and tracker reconciliation state.
+description: Audit OpenPlanr planning artifacts for graph and protocol drift.
 license: MIT
 ---
 
-Run `planr pipeline sync --json` for a read-only audit. Explain drift. Apply local
-repairs or tracker mutations only when the user explicitly requests them.
+# Planr Sync
+
+Run `planr pipeline sync --json`, explain actionable drift, and change artifacts
+only when the user explicitly requests repair.

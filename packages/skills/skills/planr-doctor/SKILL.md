@@ -1,8 +1,11 @@
 ---
 name: planr-doctor
-description: Diagnose OpenPlanr CLI, pipeline, adapters, locks, migrations, and credentials.
+description: Diagnose OpenPlanr CLI, pipeline, runtime adapter, and lock health.
 license: MIT
 ---
 
-Run `planr doctor --json`. Preview `--fix` changes. Package installation, version
-changes, provenance recovery, deletion, and credential changes require explicit confirmation.
+# Planr Doctor
+
+Run `planr doctor` with the requested flags. Prefer `--json` for diagnosis.
+Preview every repair; package installation, version changes, provenance recovery,
+and deletion always require explicit confirmation.

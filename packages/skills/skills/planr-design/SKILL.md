@@ -1,9 +1,11 @@
 ---
 name: planr-design
-description: Run OpenPlanr design, design-loop, or design-review with portable boards.
+description: Run OpenPlanr design, design-loop, or design-review using portable board assets.
 license: MIT
 ---
 
-Route the requested design action through `planr pipeline design`,
-`design-loop`, or `design-review`. Keep boards loopback-only, use repository-relative
-paths, preserve the existing visual system, and require approval before downstream work.
+# Planr Design
+
+Invoke `planr pipeline design-engine` with the user's design subcommand and arguments.
+Use repository-relative artifact paths. Review returned annotations before applying
+changes, preserve existing visual behavior, and do not launch a non-loopback server.
