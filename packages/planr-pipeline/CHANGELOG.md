@@ -4,6 +4,13 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.27.1] — 2026-07-15
+
+### Fixed
+
+- Expose artifact stage payload creation through a DOM-free module so hosted
+  viewers cannot accidentally bundle and auto-mount a second stage runtime.
+
 ## [0.27.0] — 2026-07-15
 
 ### Added

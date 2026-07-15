@@ -2019,6 +2019,63 @@ var OpenPlanrArtifactStage = (() => {
     return controller;
   }
 
+  // lib/artifact/ui/stage-payload.mjs
+  var PRESENTATIONS = Object.freeze(["document", "canvas"]);
+  function positiveInteger(value, fallback) {
+    return Number.isInteger(value) && value > 0 ? value : fallback;
+  }
+  function freezeArtifactMetadata(artifact, index) {
+    if (!artifact || typeof artifact !== "object") {
+      throw new TypeError(`Artifact ${index + 1} must be an object.`);
+    }
+    if (typeof artifact.id !== "string" || artifact.id.length === 0) {
+      throw new TypeError(`Artifact ${index + 1} requires an id.`);
+    }
+    return Object.freeze({
+      id: artifact.id,
+      title: typeof artifact.title === "string" && artifact.title.length > 0 ? artifact.title : `Artifact ${index + 1}`,
+      sha256: typeof artifact.sha256 === "string" ? artifact.sha256 : "",
+      viewport: Object.freeze({
+        width: positiveInteger(artifact.viewport?.width, 1440),
+        height: positiveInteger(artifact.viewport?.height, 900)
+      }),
+      colorScheme: ["light", "dark"].includes(artifact.colorScheme) ? artifact.colorScheme : "light"
+    });
+  }
+  function requestedArtifactId(value) {
+    if (typeof value === "string") return value;
+    return typeof value?.id === "string" ? value.id : "";
+  }
+  function availableId(artifacts, requested, fallback = "") {
+    return artifacts.some(({ id }) => id === requested) ? requested : fallback;
+  }
+  function normalizeViewMode(value, artifactCount) {
+    if (artifactCount < 2) return "single";
+    return ["single", "variants", "split"].includes(value) ? value : "variants";
+  }
+  function createArtifactStagePayload(envelope = {}, { viewer } = {}) {
+    const artifacts = Object.freeze(
+      (Array.isArray(envelope?.artifacts) ? envelope.artifacts : []).map(freezeArtifactMetadata)
+    );
+    const sourceViewer = viewer && typeof viewer === "object" ? viewer : envelope?.viewer && typeof envelope.viewer === "object" ? envelope.viewer : {};
+    const firstId = artifacts[0]?.id ?? "";
+    const activeArtifactId = availableId(
+      artifacts,
+      requestedArtifactId(sourceViewer.activeArtifactId),
+      firstId
+    );
+    const mode = normalizeViewMode(sourceViewer.mode, artifacts.length);
+    return Object.freeze({
+      schemaVersion: "1.0.0",
+      artifacts,
+      viewer: Object.freeze({
+        mode,
+        activeArtifactId,
+        ...PRESENTATIONS.includes(sourceViewer.presentation) ? { presentation: sourceViewer.presentation } : {}
+      })
+    });
+  }
+
   // lib/artifact/ui/stage.mjs
   var ARTIFACT_STAGE_EVENTS = Object.freeze({
     change: "planr:stage-change",
@@ -2037,7 +2094,7 @@ var OpenPlanrArtifactStage = (() => {
   var VIEW_MODES = Object.freeze(["single", "variants", "split"]);
   var REVIEW_MODES = Object.freeze(["interact", "comment"]);
   var THEMES = Object.freeze(["auto", "light", "dark"]);
-  var PRESENTATIONS = Object.freeze(["document", "canvas"]);
+  var PRESENTATIONS2 = Object.freeze(["document", "canvas"]);
   var STATUSES = Object.freeze([
     "ready",
     "empty",
@@ -2090,27 +2147,6 @@ var OpenPlanrArtifactStage = (() => {
   function normalized2(value) {
     return Math.round(clamp2(finite2(value), 0, 1) * 1e6) / 1e6;
   }
-  function positiveInteger(value, fallback) {
-    return Number.isInteger(value) && value > 0 ? value : fallback;
-  }
-  function freezeArtifactMetadata(artifact, index) {
-    if (!artifact || typeof artifact !== "object") {
-      throw new TypeError(`Artifact ${index + 1} must be an object.`);
-    }
-    if (typeof artifact.id !== "string" || artifact.id.length === 0) {
-      throw new TypeError(`Artifact ${index + 1} requires an id.`);
-    }
-    return Object.freeze({
-      id: artifact.id,
-      title: typeof artifact.title === "string" && artifact.title.length > 0 ? artifact.title : `Artifact ${index + 1}`,
-      sha256: typeof artifact.sha256 === "string" ? artifact.sha256 : "",
-      viewport: Object.freeze({
-        width: positiveInteger(artifact.viewport?.width, 1440),
-        height: positiveInteger(artifact.viewport?.height, 900)
-      }),
-      colorScheme: member2(artifact.colorScheme, ["light", "dark"], "light")
-    });
-  }
   function artifactMetadata(artifact) {
     return Object.freeze({
       id: artifact.id,
@@ -2120,66 +2156,44 @@ var OpenPlanrArtifactStage = (() => {
       colorScheme: artifact.colorScheme
     });
   }
-  function requestedArtifactId(value) {
+  function requestedArtifactId2(value) {
     if (typeof value === "string") return value;
     return typeof value?.id === "string" ? value.id : "";
   }
-  function availableId(artifacts, requested, fallback = "") {
+  function availableId2(artifacts, requested, fallback = "") {
     return artifacts.some(({ id }) => id === requested) ? requested : fallback;
   }
   function comparisonIdFor(artifacts, activeArtifactId, requested = "") {
     if (requested !== activeArtifactId && artifacts.some(({ id }) => id === requested)) return requested;
     return artifacts.find(({ id }) => id !== activeArtifactId)?.id ?? "";
   }
-  function normalizeViewMode(value, artifactCount) {
+  function normalizeViewMode2(value, artifactCount) {
     if (artifactCount < 2) return "single";
     return member2(value, VIEW_MODES, "variants");
   }
   function resolveArtifactPresentation(value, { viewMode = "single", artifactCount = 1 } = {}) {
-    if (PRESENTATIONS.includes(value)) return value;
+    if (PRESENTATIONS2.includes(value)) return value;
     return artifactCount > 1 || viewMode === "variants" || viewMode === "split" ? "canvas" : "document";
-  }
-  function createArtifactStagePayload(envelope = {}, { viewer } = {}) {
-    const artifacts = Object.freeze(
-      (Array.isArray(envelope?.artifacts) ? envelope.artifacts : []).map(freezeArtifactMetadata)
-    );
-    const sourceViewer = viewer && typeof viewer === "object" ? viewer : envelope?.viewer && typeof envelope.viewer === "object" ? envelope.viewer : {};
-    const firstId = artifacts[0]?.id ?? "";
-    const activeArtifactId = availableId(
-      artifacts,
-      requestedArtifactId(sourceViewer.activeArtifactId),
-      firstId
-    );
-    const mode = normalizeViewMode(sourceViewer.mode, artifacts.length);
-    return Object.freeze({
-      schemaVersion: "1.0.0",
-      artifacts,
-      viewer: Object.freeze({
-        mode,
-        activeArtifactId,
-        ...PRESENTATIONS.includes(sourceViewer.presentation) ? { presentation: sourceViewer.presentation } : {}
-      })
-    });
   }
   function createArtifactStageState(payload = {}, shellModel = {}) {
     const artifacts = Object.freeze(
       (Array.isArray(payload?.artifacts) ? payload.artifacts : []).map(artifactMetadata)
     );
     const firstId = artifacts[0]?.id ?? "";
-    const activeArtifactId = availableId(
+    const activeArtifactId = availableId2(
       artifacts,
-      requestedArtifactId(shellModel.activeArtifact ?? shellModel.activeArtifactId) || requestedArtifactId(payload?.viewer?.activeArtifactId),
+      requestedArtifactId2(shellModel.activeArtifact ?? shellModel.activeArtifactId) || requestedArtifactId2(payload?.viewer?.activeArtifactId),
       firstId
     );
     const comparisonArtifactId = comparisonIdFor(
       artifacts,
       activeArtifactId,
-      requestedArtifactId(shellModel.comparisonArtifact ?? shellModel.comparisonArtifactId)
+      requestedArtifactId2(shellModel.comparisonArtifact ?? shellModel.comparisonArtifactId)
     );
     const statusFallback = artifacts.length === 0 ? "empty" : "ready";
     let status = member2(shellModel.status, STATUSES, statusFallback);
     if (artifacts.length === 0 && status === "ready") status = "empty";
-    const viewMode = normalizeViewMode(
+    const viewMode = normalizeViewMode2(
       shellModel.viewMode ?? payload?.viewer?.mode,
       artifacts.length
     );
@@ -2211,7 +2225,7 @@ var OpenPlanrArtifactStage = (() => {
   function reduceArtifactStageState(state, action = {}) {
     switch (action.type) {
       case "set-active": {
-        const id = availableId(state.artifacts, action.artifactId);
+        const id = availableId2(state.artifacts, action.artifactId);
         if (!id || id === state.activeArtifactId) return state;
         const comparisonArtifactId = id === state.comparisonArtifactId ? state.activeArtifactId : comparisonIdFor(state.artifacts, id, state.comparisonArtifactId);
         return nextState(state, { activeArtifactId: id, comparisonArtifactId });
@@ -2221,7 +2235,7 @@ var OpenPlanrArtifactStage = (() => {
         return id === state.comparisonArtifactId ? state : nextState(state, { comparisonArtifactId: id });
       }
       case "set-view-mode": {
-        const viewMode = normalizeViewMode(action.viewMode, state.artifacts.length);
+        const viewMode = normalizeViewMode2(action.viewMode, state.artifacts.length);
         return viewMode === state.viewMode ? state : nextState(state, { viewMode });
       }
       case "set-review-mode": {

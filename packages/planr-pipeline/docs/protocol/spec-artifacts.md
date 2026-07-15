@@ -160,7 +160,7 @@ Illustrative example:
 
 ```yaml
 shipped_at: "2026-04-29T14:32:11Z"
-pipeline_version: "0.27.0"
+pipeline_version: "0.27.1"
 runtime: "claude-code"
 mode: "spec-driven"
 feature: "auth"

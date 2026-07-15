@@ -5,6 +5,7 @@ import {
 import { mountArtifactFeedbackRail } from './feedback-rail.mjs';
 import { mountHostedArtifactViewer } from './hosted-viewer.mjs';
 import { mountArtifactShareDialog } from './share-dialog.mjs';
+export { createArtifactStagePayload } from './stage-payload.mjs';
 
 export const ARTIFACT_STAGE_EVENTS = Object.freeze({
   change: 'planr:stage-change',
@@ -84,31 +85,6 @@ function normalized(value) {
   return Math.round(clamp(finite(value), 0, 1) * 1_000_000) / 1_000_000;
 }
 
-function positiveInteger(value, fallback) {
-  return Number.isInteger(value) && value > 0 ? value : fallback;
-}
-
-function freezeArtifactMetadata(artifact, index) {
-  if (!artifact || typeof artifact !== 'object') {
-    throw new TypeError(`Artifact ${index + 1} must be an object.`);
-  }
-  if (typeof artifact.id !== 'string' || artifact.id.length === 0) {
-    throw new TypeError(`Artifact ${index + 1} requires an id.`);
-  }
-  return Object.freeze({
-    id: artifact.id,
-    title: typeof artifact.title === 'string' && artifact.title.length > 0
-      ? artifact.title
-      : `Artifact ${index + 1}`,
-    sha256: typeof artifact.sha256 === 'string' ? artifact.sha256 : '',
-    viewport: Object.freeze({
-      width: positiveInteger(artifact.viewport?.width, 1440),
-      height: positiveInteger(artifact.viewport?.height, 900),
-    }),
-    colorScheme: member(artifact.colorScheme, ['light', 'dark'], 'light'),
-  });
-}
-
 function artifactMetadata(artifact) {
   return Object.freeze({
     id: artifact.id,
@@ -141,37 +117,6 @@ function normalizeViewMode(value, artifactCount) {
 export function resolveArtifactPresentation(value, { viewMode = 'single', artifactCount = 1 } = {}) {
   if (PRESENTATIONS.includes(value)) return value;
   return artifactCount > 1 || viewMode === 'variants' || viewMode === 'split' ? 'canvas' : 'document';
-}
-
-/**
- * Build the metadata-only value embedded in the shell document. Artifact HTML,
- * review state, and all unknown/machine metadata are intentionally excluded.
- */
-export function createArtifactStagePayload(envelope = {}, { viewer } = {}) {
-  const artifacts = Object.freeze(
-    (Array.isArray(envelope?.artifacts) ? envelope.artifacts : []).map(freezeArtifactMetadata),
-  );
-  const sourceViewer = viewer && typeof viewer === 'object'
-    ? viewer
-    : (envelope?.viewer && typeof envelope.viewer === 'object' ? envelope.viewer : {});
-  const firstId = artifacts[0]?.id ?? '';
-  const activeArtifactId = availableId(
-    artifacts,
-    requestedArtifactId(sourceViewer.activeArtifactId),
-    firstId,
-  );
-  const mode = normalizeViewMode(sourceViewer.mode, artifacts.length);
-  return Object.freeze({
-    schemaVersion: '1.0.0',
-    artifacts,
-    viewer: Object.freeze({
-      mode,
-      activeArtifactId,
-      ...(PRESENTATIONS.includes(sourceViewer.presentation)
-        ? { presentation: sourceViewer.presentation }
-        : {}),
-    }),
-  });
 }
 
 export function createArtifactStageState(payload = {}, shellModel = {}) {

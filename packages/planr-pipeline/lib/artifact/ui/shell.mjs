@@ -7,7 +7,7 @@ import {
   renderArtifactShellMarkup,
   renderArtifactShellModelData,
 } from './renderers.mjs';
-import { createArtifactStagePayload } from './stage.mjs';
+import { createArtifactStagePayload } from './stage-payload.mjs';
 import { digestArtifactEnvelope } from '../envelope.mjs';
 import { embedJson, escapeHtml } from '../../design/escape.mjs';
 
