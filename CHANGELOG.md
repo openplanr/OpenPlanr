@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.11.0
+
+### Minor Changes
+
+- [`0c14c9b`](https://github.com/openplanr/OpenPlanr/commit/0c14c9bbe05909da130d5e0bb03aa143444a7b56) Add headless document and zoomable canvas presentations to `planr artifact`,
+  including `--presentation auto|document|canvas`, resolved JSON output, and the
+  planr-pipeline 0.27.1 compatibility update.
+
 ## 1.10.0
 
 ### Minor Changes
