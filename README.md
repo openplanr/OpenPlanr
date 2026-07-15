@@ -12,7 +12,7 @@
 [![protocol](https://img.shields.io/badge/protocol-v1.0.0-7c3aed?style=flat-square)](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol)
 [![runtimes](https://img.shields.io/badge/runtimes-Claude%20Code%20%7C%20Cursor%20%7C%20Codex-f97316?style=flat-square)](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md)
 
-**[Website](https://openplanr.dev)** · **[Setup guide](docs/CROSS_RUNTIME_SETUP.md)** · **[Compatibility matrix](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md)** · **[Protocol spec](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol)** · **[CLI reference](docs/CLI.md)**
+**[Website](https://openplanr.dev)** · **[Setup guide](docs/CROSS_RUNTIME_SETUP.md)** · **[Artifact review](docs/ARTIFACT_REVIEW.md)** · **[Compatibility matrix](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md)** · **[Protocol spec](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol)** · **[CLI reference](docs/CLI.md)**
 
 </div>
 
@@ -138,6 +138,21 @@ planr pipeline plan auth
 # Human review is mandatory before the separate SHIP invocation:
 planr pipeline ship auth
 ```
+
+### Review and privately share any HTML artifact
+
+```bash
+planr artifact ./artifact.html
+# Add pins, threads, and an Approve or Request changes decision.
+
+planr artifact share ./artifact.html --no-open
+planr artifact import "<returned-review-url>"
+```
+
+Small reviews remain in the URL fragment and are never sent to the share host.
+Large reviews use an explicitly confirmed, encrypted, expiring short link; the
+decryption key remains in the fragment and the service stores ciphertext only.
+See the [artifact review and privacy guide](docs/ARTIFACT_REVIEW.md).
 
 ---
 

@@ -100,6 +100,40 @@ Manual mode (no AI) is available for `planr epic create`, `planr feature create`
 
 ---
 
+## Artifact review issues
+
+### `E_PIPELINE_NOT_INSTALLED`
+
+Artifact review is part of the full distribution. A planning-only install made
+with `--minimal` omits it. Install the full package and verify again:
+
+```bash
+npm install -g openplanr@latest
+planr doctor
+```
+
+### `E_ARTIFACT_STALE_REVIEW`
+
+The returned review targets a different artifact digest. Do not merge it
+silently. If the older feedback is still useful, rerun the import with
+`--allow-stale`, inspect the preview, and confirm. CI must also pass `--yes`.
+
+### A remote or SSH browser cannot reach the local review
+
+`planr artifact` intentionally binds to `127.0.0.1`. Use `--no-open --json`,
+then forward the printed port over SSH. Do not bind the review server publicly.
+
+### An artifact dependency is rejected
+
+The bundler accepts only resolvable files below `--root`. Remote URLs, forms,
+path traversal, symlink escapes, and unresolved dependencies are rejected by
+design. Vendor the dependency locally or choose the correct asset root.
+
+See [Artifact review and private sharing](ARTIFACT_REVIEW.md) for the complete
+privacy and sharing model.
+
+---
+
 ## Cross-reference issues
 
 ### Links point to wrong files

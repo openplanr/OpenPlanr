@@ -144,6 +144,7 @@ const skillNames = [
   'planr-dashboard',
   'planr-sync',
   'planr-doctor',
+  'planr-artifact',
 ];
 
 function hash(value: string | Buffer): string {
@@ -363,7 +364,7 @@ function buildRuntimeLock(
     pipelineVersion,
     adapters,
   });
-  const components = { cli: options.cliVersion, pipeline: pipelineVersion, skills: '1.12.0' };
+  const components = { cli: options.cliVersion, pipeline: pipelineVersion, skills: '1.13.0' };
   const manifestDigest = `sha256:${hash(digestInput)}`;
   const lockPath = path.join(options.projectDir, '.planr', 'runtime-lock.json');
   if (existsSync(lockPath)) {
@@ -1188,6 +1189,37 @@ export async function runtimeDoctor(projectDir: string): Promise<{
         ? { fix: 'Run `planr setup --dry-run`, then explicitly approve repair or rollback.' }
         : {}),
     });
+
+    const installedSkills = installed.ownedFiles.filter(
+      (file) => file.runtime === 'codex' && file.target.endsWith(`${path.sep}SKILL.md`),
+    );
+    if (installedSkills.length > 0) {
+      const supported = new Set(['artifact', 'doctor', 'pipeline']);
+      const violations: string[] = [];
+      for (const skill of installedSkills) {
+        if (!existsSync(skill.target)) continue;
+        const content = readFileSync(skill.target, 'utf8');
+        if (/`planr-pipeline\s+[^`]+`/u.test(content)) {
+          violations.push(`${skill.target}: invokes planr-pipeline directly`);
+        }
+        for (const match of content.matchAll(/`planr\s+([a-z][\w-]*)(?:\s|`)/gu)) {
+          if (!supported.has(match[1])) {
+            violations.push(`${skill.target}: unknown planr command ${match[1]}`);
+          }
+        }
+      }
+      diagnostics.push({
+        code: 'skill-commands',
+        status: violations.length > 0 ? 'fail' : 'pass',
+        message:
+          violations.length > 0
+            ? `${violations.length} installed skill command reference(s) are invalid`
+            : 'Installed Codex skills reference public planr commands only',
+        ...(violations.length > 0
+          ? { fix: 'Run `planr setup --runtime codex --scope user` to refresh managed skills.' }
+          : {}),
+      });
+    }
   } else if (lockedAdapters?.length) {
     diagnostics.push({
       code: 'runtime-state-missing',
