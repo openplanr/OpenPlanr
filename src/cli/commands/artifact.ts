@@ -14,6 +14,7 @@ import { promptConfirm } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
 
 type Theme = 'auto' | 'light' | 'dark';
+type Presentation = 'auto' | 'document' | 'canvas';
 type ExportFormat = 'json' | 'markdown';
 
 interface OpenOptions {
@@ -23,6 +24,7 @@ interface OpenOptions {
   port?: string;
   open?: boolean;
   json?: boolean;
+  presentation?: string;
 }
 
 interface ShareOptions {
@@ -33,6 +35,7 @@ interface ShareOptions {
   open?: boolean;
   json?: boolean;
   yes?: boolean;
+  presentation?: string;
 }
 
 function projectDir(program: Command): string {
@@ -68,6 +71,15 @@ function port(value?: string): number {
   return parsed;
 }
 
+function presentation(value?: string): Presentation {
+  if (value === undefined) return 'auto';
+  if (['auto', 'document', 'canvas'].includes(value)) return value as Presentation;
+  throw new ArtifactCommandError(
+    'E_ARTIFACT_INPUT_INVALID',
+    'Artifact presentation must be auto, document, or canvas.',
+  );
+}
+
 function confirmed(program: Command, local?: boolean): boolean {
   return Boolean(local || program.opts().yes);
 }
@@ -78,6 +90,7 @@ async function openArtifact(program: Command, file: string, options: OpenOptions
     file: resolveInput(program, file),
     root: resolveRoot(program, options.root),
     title: options.title,
+    presentation: presentation(options.presentation),
   });
   const session = await prepared.api.startArtifactReview({
     envelope: prepared.envelope,
@@ -88,13 +101,15 @@ async function openArtifact(program: Command, file: string, options: OpenOptions
     cwd,
     openUrl: openExternalUrl,
   });
-  if (options.json) display.line(JSON.stringify(session));
+  if (options.json)
+    display.line(JSON.stringify({ ...session, presentation: prepared.presentation }));
   else {
     logger.success('Artifact review ready');
     display.keyValue('Session', String(session.sessionId));
     display.keyValue('URL', String(session.url));
     display.keyValue('Files', String(prepared.bundle.fileCount));
     display.keyValue('Bundled', `${prepared.bundle.bytes.toLocaleString()} bytes`);
+    display.keyValue('Presentation', prepared.presentation);
     display.blank();
     logger.dim('Press Ctrl+C to stop the local review session.');
   }
@@ -114,6 +129,7 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
     file: resolveInput(program, file),
     root: resolveRoot(program, options.root),
     title: options.title,
+    presentation: presentation(options.presentation),
   });
   const preview = prepared.api.createReviewLinkPreview(prepared.envelope);
   const yes = confirmed(program, options.yes);
@@ -151,13 +167,15 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
   });
   const url = String(result.url);
   if (options.open !== false) await openExternalUrl(url);
-  if (options.json) display.line(JSON.stringify(result));
+  if (options.json)
+    display.line(JSON.stringify({ ...result, presentation: prepared.presentation }));
   else {
     logger.success(
       result.uploaded ? 'Encrypted short link created' : 'Private fragment link created',
     );
     display.keyValue('URL', url);
     display.keyValue('Transport', String(result.transport));
+    display.keyValue('Presentation', prepared.presentation);
     if (result.expiresAt) display.keyValue('Expires', String(result.expiresAt));
     if (result.deletionToken) {
       display.keyValue('Deletion token', String(result.deletionToken));
@@ -291,6 +309,7 @@ function addOpenOptions(command: Command): Command {
     .option('--title <title>', 'review title')
     .option('--root <asset-root>', 'root for local artifact dependencies')
     .option('--theme <theme>', 'auto, light, or dark', 'auto')
+    .option('--presentation <presentation>', 'auto, document, or canvas', 'auto')
     .option('--port <port>', 'loopback review port')
     .option('--no-open', 'do not open a browser')
     .option('--json', 'emit machine-readable output', false);
@@ -322,6 +341,7 @@ export function registerArtifactCommand(program: Command): void {
     .description('Create an immutable private review link')
     .option('--title <title>', 'review title')
     .option('--root <asset-root>', 'root for local artifact dependencies')
+    .option('--presentation <presentation>', 'auto, document, or canvas', 'auto')
     .option('--short', 'create an encrypted expiring short link', false)
     .option('--ttl <ttl>', '1d, 7d, or 30d', '7d')
     .option('--no-open', 'do not open the review link')

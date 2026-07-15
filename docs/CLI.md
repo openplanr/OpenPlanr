@@ -923,8 +923,8 @@ Open, share, import, and export universal HTML review sessions:
 
 ```bash
 planr artifact <file>
-planr artifact open <file> [--title <title>] [--root <asset-root>] [--theme auto|light|dark] [--port <port>] [--no-open] [--json]
-planr artifact share <file> [--title <title>] [--root <asset-root>] [--short] [--ttl 1d|7d|30d] [--no-open] [--json] [--yes]
+planr artifact open <file> [--title <title>] [--root <asset-root>] [--theme auto|light|dark] [--presentation auto|document|canvas] [--port <port>] [--no-open] [--json]
+planr artifact share <file> [--title <title>] [--root <asset-root>] [--presentation auto|document|canvas] [--short] [--ttl 1d|7d|30d] [--no-open] [--json] [--yes]
 planr artifact import <review-url>... [--output <path>] [--allow-stale] [--json] [--yes]
 planr artifact export <session-id> [--format json|markdown] [--output <path>]
 ```
@@ -934,6 +934,12 @@ use a URL fragment; encrypted short links require explicit consent and default
 to a seven-day expiry. See [Artifact review and private sharing](ARTIFACT_REVIEW.md)
 for the sandbox, privacy, remote/SSH, stale-review, offline, and self-hosting
 contracts.
+
+`--presentation auto` is the default. One generic artifact resolves to the
+headless `document` page; multi-variant and design-board reviews use `canvas`.
+Explicit `document` or `canvas` overrides the inference, and JSON output reports
+the resolved value. Artifact review bundles source and runs it inside an
+invisible opaque-origin Blob sandbox; it is not standalone website publishing.
 
 ---
 

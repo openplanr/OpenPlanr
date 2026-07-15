@@ -5,11 +5,17 @@ session with comments, pins, threads, and Approve or Request changes decisions.
 JavaScript inside the artifact remains interactive in an opaque-origin,
 network-blocked sandbox.
 
+Generic artifacts open in `document` presentation by default: the complete
+artifact is the edge-to-edge page below a quiet 48px review toolbar. The prior
+zoomable artboard is still available as `canvas` presentation and remains the
+default for design boards and multi-variant workflows.
+
 ## Local review
 
 ```bash
 planr artifact ./artifact.html
 planr artifact open ./artifact.html --root . --theme auto
+planr artifact open ./artifact.html --presentation canvas
 planr artifact export <session-id> --format markdown --output review.md
 ```
 
@@ -18,10 +24,27 @@ The bundler packages project-local CSS, scripts, modules, images, SVG, fonts,
 path traversal, symlink escapes, and unresolved assets. Use `--no-open --json`
 for remote or SSH sessions, then forward the printed loopback port explicitly.
 
+`--presentation auto|document|canvas` is available on `open` and `share`.
+`auto` resolves one generic artifact to `document`; explicit overrides win.
+Document feedback starts closed and opens as an overlay without resizing the
+artifact. JSON output includes the resolved presentation.
+
+The complete local HTML/CSS/JavaScript graph is bundled into immutable bytes
+before review or sharing. The viewer does not fetch the original project after
+sharing. It loads those bytes through an invisible Blob iframe with
+`sandbox="allow-scripts"`; it never injects artifact HTML into OpenPlanr or
+executes it under the `share.openplanr.dev` origin. A bounded authenticated
+layout bridge provides natural outer-page scrolling and full-document pins.
+
+This is private artifact review, not standalone website hosting. Publishing a
+top-level website would require a separate isolated artifact origin and is not
+part of this command.
+
 ## Private links
 
 ```bash
 planr artifact share ./artifact.html
+planr artifact share ./artifact.html --presentation document
 planr artifact share ./artifact.html --short --ttl 7d --yes
 ```
 
