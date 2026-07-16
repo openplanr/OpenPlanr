@@ -33,6 +33,16 @@ export {
   importArtifactReview,
   mergeArtifactFeedback,
 } from '../artifact/index.mjs';
+export {
+  createLiveReviewRoom,
+  appendLiveRoomEvent,
+  createLiveRoomClient,
+  createLiveRoomEvent,
+  decryptLiveRoomEvent,
+  encryptLiveRoomEvent,
+  hydrateLiveReviewRoom,
+  reduceLiveRoomEvents,
+} from '../artifact/index.mjs';
 export { exportArtifactReviewSession, startArtifactReview } from '../artifact/review-server.mjs';
 
 export async function runDesignCommand(args = []) {

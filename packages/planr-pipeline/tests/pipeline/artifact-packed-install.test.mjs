@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { after, test } from 'node:test';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const packageVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
 const temp = mkdtempSync(join(tmpdir(), 'planr-artifact-pack-'));
 const npmCli = process.env.npm_execpath;
 
@@ -33,7 +34,7 @@ function runNpm(args, options = {}) {
   return run(process.execPath, [npmCli, ...args], options);
 }
 
-test('packed 0.27.1 package contains the portable artifact release boundary', () => {
+test(`packed ${packageVersion} package contains the portable artifact release boundary`, () => {
   const packed = JSON.parse(runNpm([
     'pack', '--json', '--ignore-scripts', '--pack-destination', temp,
   ]).stdout)[0];
@@ -53,6 +54,7 @@ test('packed 0.27.1 package contains the portable artifact release boundary', ()
     'lib/design-engine/board-adapter.mjs',
     'schemas/v1.1.0/artifact-envelope.schema.json',
     'schemas/v1.1.0/artifact-paste.schema.json',
+    'schemas/v1.1.0/artifact-room-event.schema.json',
     'schemas/v1.1.0/artifact-review.schema.json',
     'schemas/v1.1.0/artifact-theme.schema.json',
     'templates/artifact-review-shell.html',
@@ -63,7 +65,7 @@ test('packed 0.27.1 package contains the portable artifact release boundary', ()
   for (const path of files) {
     assert.doesNotMatch(path, /^(?:\.env(?:\.|\/|$)|\.planr\/|tests\/)/);
   }
-  assert.equal(packed.version, '0.27.1');
+  assert.equal(packed.version, packageVersion);
   assert.equal(packed.name, 'planr-pipeline');
 
   const installRoot = join(temp, 'install');
@@ -81,7 +83,7 @@ test('packed 0.27.1 package contains the portable artifact release boundary', ()
   const importSmoke = run(process.execPath, [
     '--input-type=module',
     '--eval',
-    "import * as p from 'planr-pipeline'; const names=['bundleArtifact','createArtifactEnvelope','encodeArtifactFragment','decodeArtifactFragment','encryptArtifactPayload','decryptArtifactPayload','startArtifactReview','exportArtifactReviewSession','createReviewLink','createReviewLinkPreview','decodeReviewLink','importArtifactReview','mergeArtifactFeedback']; if(names.some((name)=>typeof p[name]!=='function')) process.exit(2);",
+    "import * as p from 'planr-pipeline'; const names=['bundleArtifact','createArtifactEnvelope','encodeArtifactFragment','decodeArtifactFragment','encryptArtifactPayload','decryptArtifactPayload','startArtifactReview','exportArtifactReviewSession','createReviewLink','createReviewLinkPreview','decodeReviewLink','importArtifactReview','mergeArtifactFeedback','createLiveReviewRoom','appendLiveRoomEvent','hydrateLiveReviewRoom','reduceLiveRoomEvents']; if(names.some((name)=>typeof p[name]!=='function')) process.exit(2);",
   ], {
     cwd: installRoot,
     env: {

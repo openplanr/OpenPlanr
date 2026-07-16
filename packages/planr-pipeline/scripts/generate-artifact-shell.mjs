@@ -75,6 +75,7 @@ export function renderArtifactShellAssetManifest(assets) {
         'share.copyText',
         'hosted.decodeFragment',
         'hosted.loadShort',
+        'hosted.loadRoom',
         'hosted.onEnvelope',
       ],
     },

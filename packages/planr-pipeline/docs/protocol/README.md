@@ -4,7 +4,7 @@
 > Ecosystem contracts: **1.1.0**
 > Status: v1.0 artifact frontmatter remains stable. v1.1 adds optional adapter,
 > runtime-lock, compatibility, role-registry, provenance, and artifact-review contracts.
-> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.27.1.
+> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.28.0.
 
 The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI development. It defines:
 
@@ -13,8 +13,9 @@ The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI devel
   with input/output contracts, tool-use guardrails, and capability-tier guidance.
 - **Commands** — `PLAN` and `SHIP` defined as command contracts (inputs, validation, mode detection, orchestration, exits).
 - **Workflow** — PO Phase → mandatory human review → DEV Phase. Hard rule R1 prohibits auto-chaining.
-- **Artifact review** — portable HTML envelopes, immutable structured feedback,
-  and ciphertext-only paste boundaries without changing planning frontmatter.
+- **Artifact review** — portable HTML envelopes, encrypted live-room events,
+  immutable snapshots, and ciphertext-only sharing boundaries without changing
+  planning frontmatter.
 
 ## Why a protocol
 
@@ -62,6 +63,8 @@ Artifact review adds these v1.1 schemas:
   normalized pins, anchors, replies, authors, and timestamps.
 - `artifact-paste.schema.json` — create/created/stored shapes for the encrypted,
   expiring short-link boundary.
+- `artifact-room-event.schema.json` — encrypted append-only event plaintext for
+  live artifact rooms; the service stores only the ciphertext record.
 - `artifact-theme.schema.json` — the canonical generated light/dark review-shell
   design tokens.
 
@@ -73,11 +76,12 @@ story, or task frontmatter and do not alter existing Protocol v1.0 artifacts.
 
 The public entrypoint is `planr artifact`; runtime guidance must not call a
 globally installed nested pipeline executable. Local review is loopback-only and
-sharing is always explicit. Small shares keep their encoded payload in the URL
-fragment. Large or explicitly short shares are compressed and encrypted in the
-client, and the key remains in the fragment while the service stores ciphertext
-only. A reviewer returns immutable feedback with a new review URL, which the
-originator validates and imports non-destructively.
+sharing is always explicit. New generic shares use an encrypted live room: the
+ordinary URL can view and comment, while a separate creator-only manage URL can
+pause comments, set the final verdict, or delete the room. Small fragment and
+encrypted short links remain explicit immutable snapshot alternatives. The
+service stores ciphertext only; importing either a room or snapshot validates
+the reviewed digest and merges feedback non-destructively.
 
 ## Compatibility matrix
 

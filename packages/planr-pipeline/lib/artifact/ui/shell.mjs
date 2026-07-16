@@ -116,6 +116,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--planr-color-primary) 14%, transparent);
 }
 .planr-toolbar-spacer { flex: 1; }
+.planr-room-manager { display: inline-flex; align-items: center; gap: 5px; }
+.planr-room-manager button { height: 28px; border: 1px solid var(--planr-color-rule); border-radius: var(--planr-radius-small); background: var(--planr-color-panel); color: var(--planr-color-text-muted); font: 650 10px/1 var(--planr-font-body); padding: 0 8px; }
+.planr-room-manager button:last-child { border-color: color-mix(in srgb, var(--planr-color-danger) 55%, var(--planr-color-rule)); color: var(--planr-color-danger); }
+.planr-shell[data-planr-room-comments-paused] [data-planr-mode="comment"] { cursor: not-allowed; opacity: .48; }
 .planr-domain-toolbar { min-width: 0; display: inline-flex; align-items: center; gap: 6px; }
 .planr-segment {
   height: 30px;
@@ -306,6 +310,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .planr-pin-improve { background-color: var(--planr-color-primary-strong); color: var(--planr-color-on-improve); }
 .planr-pin-question { background-color: var(--planr-color-question); color: var(--planr-color-on-question); }
 .planr-pin-resolved, .planr-pin-addressed { background-color: var(--planr-color-resolved); color: var(--planr-color-on-resolved); }
+.planr-pin-highlight { animation: planr-pin-highlight 1.2s ease-out; }
+@keyframes planr-pin-highlight {
+  0%, 35% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--planr-color-primary) 52%, transparent), 0 4px 14px color-mix(in srgb, var(--planr-color-background) 38%, transparent); }
+  100% { box-shadow: 0 4px 14px color-mix(in srgb, var(--planr-color-background) 38%, transparent); }
+}
 .planr-pin-region {
   position: absolute;
   z-index: 7;
@@ -436,6 +445,19 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 .planr-review-rail h2 { margin: 0; font: 650 13px/1 var(--planr-font-display); }
 .planr-review-metrics { display: flex; align-items: center; gap: 6px; }
+.planr-review-header-actions { display: flex; align-items: center; gap: 8px; }
+.planr-rail-close {
+  width: 32px;
+  height: 32px;
+  display: none;
+  place-items: center;
+  border: 1px solid var(--planr-color-rule);
+  border-radius: var(--planr-radius-small);
+  background: var(--planr-color-raised);
+  color: var(--planr-color-text);
+  font: 20px/1 var(--planr-font-body);
+  cursor: pointer;
+}
 .planr-identity { padding: 10px 14px 0; border-bottom: 1px solid var(--planr-color-rule); }
 .planr-identity label { margin-bottom: 10px; }
 .planr-feedback-slot { overflow: auto; padding: 14px; }
@@ -667,20 +689,30 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     z-index: 50;
     inset: auto 0 0;
     height: min(52vh, 480px);
+    height: min(52dvh, 480px);
+    max-height: calc(100dvh - var(--planr-toolbar-height));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    overscroll-behavior: contain;
     border: 1px solid var(--planr-color-rule);
     border-radius: var(--planr-radius-large) var(--planr-radius-large) 0 0;
     box-shadow: 0 18px 60px color-mix(in srgb, var(--planr-color-background) 52%, transparent);
   }
-  .planr-shell[data-planr-rail-open="false"] .planr-review-rail { opacity: 1; transform: translateY(100%); }
+  .planr-shell[data-planr-rail-open="false"] .planr-review-rail { opacity: 0; visibility: hidden; transform: translate3d(0, calc(100% + env(safe-area-inset-bottom, 0px)), 0); }
+  .planr-rail-close { display: grid; }
   .planr-stage-scroll { padding-left: 14px; }
 }
 @media (max-width: 620px) {
-  .planr-toolbar { gap: 6px; padding-inline: 10px; }
-  .planr-brand { max-width: 145px; }
-  .planr-title-block strong { max-width: 110px; }
-  .planr-toolbar [data-planr-mode] { width: 28px; overflow: hidden; padding: 0; font-size: 0; }
-  .planr-toolbar [data-planr-mode]::before { content: attr(data-planr-short-label); font-size: 11px; }
-  .planr-toolbar-action { padding-inline: 9px; }
+  .planr-toolbar {
+    gap: 5px;
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+  }
+  .planr-brand { max-width: 128px; }
+  .planr-title-block strong { max-width: 96px; }
+  .planr-toolbar [data-planr-mode] { min-width: 42px; padding-inline: 7px; }
+  .planr-toolbar [data-planr-mode="interact"] { font-size: 0; }
+  .planr-toolbar [data-planr-mode="interact"]::before { content: "View"; font-size: 11px; }
+  .planr-toolbar-action { padding-inline: 8px; }
   .planr-stage-controls { padding-inline: 10px; }
   .planr-dialog-backdrop { align-items: end; padding: 0; }
   .planr-share-dialog { width: 100%; max-height: min(78vh, 680px); border-radius: var(--planr-radius-large) var(--planr-radius-large) 0 0; }
@@ -689,8 +721,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .planr-toolbar { gap: 5px; padding-inline: 8px; }
   .planr-brand { max-width: 20px; }
   .planr-title-block { display: none; }
-  .planr-toolbar-action[data-planr-action="feedback"] { width: 32px; overflow: hidden; padding: 0; font-size: 0; }
-  .planr-toolbar-action[data-planr-action="feedback"] .planr-count { font-size: 10px; }
+  .planr-toolbar-action[data-planr-action="feedback"] { min-width: 32px; padding-inline: 6px; }
+  .planr-toolbar-action[data-planr-action="feedback"] .planr-feedback-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .planr-variants button { max-width: 150px; padding-inline: 8px; }
   .planr-share-receipt-row { grid-template-columns: 28px minmax(0, 1fr); }
   .planr-share-receipt-size { grid-column: 2; text-align: left; }
@@ -737,7 +769,9 @@ html[data-planr-presentation="document"] body { overflow: visible; }
   display: block;
 }
 .planr-shell[data-planr-presentation="document"] .planr-artifact-panel {
-  width: max(100%, var(--planr-document-width, 100%));
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: var(--planr-document-height, max(var(--planr-artifact-height), calc(100vh - var(--planr-toolbar-height))));
   min-height: calc(100vh - var(--planr-toolbar-height));
 }
@@ -748,6 +782,8 @@ html[data-planr-presentation="document"] body { overflow: visible; }
   box-shadow: none;
 }
 .planr-shell[data-planr-presentation="document"] .planr-frame iframe {
+  width: 100%;
+  max-width: 100%;
   background: transparent;
 }
 .planr-shell[data-planr-presentation="document"] .planr-frame-label { display: none; }
@@ -770,7 +806,7 @@ html[data-planr-presentation="document"] body { overflow: visible; }
     width: 100%;
   }
   .planr-shell[data-planr-presentation="document"][data-planr-rail-open="false"] .planr-review-rail {
-    transform: translateY(100%);
+    transform: translate3d(0, calc(100% + env(safe-area-inset-bottom, 0px)), 0);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -821,7 +857,7 @@ export function renderArtifactShellDocument(
 <html lang="en" data-planr-theme="${model.theme}" data-planr-presentation="${model.presentation}" data-planr-artifact-shell="${ARTIFACT_SHELL_VERSION}">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' data: blob:; script-src 'self' 'unsafe-inline' data: blob:; frame-src blob:; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'self'; worker-src data: blob:; object-src 'none'; form-action 'none'; base-uri 'none'">

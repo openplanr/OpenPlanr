@@ -86,6 +86,16 @@ test('artifact execution copy injects the earliest CSP and rejects bypass markup
   );
   assert.match(prepared.html, /injectedScript\?\.remove\(\)/);
   assert.match(prepared.html, /nonce="A{24}"/);
+  assert.match(prepared.html, /name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/);
+
+  const authoredViewport = prepareArtifactDocument({
+    html: '<!doctype html><html><head><meta name="viewport" content="width=720"></head><body></body></html>',
+    artifactId: 'main',
+    nonce,
+    parentOrigin: 'http://127.0.0.1:41000',
+  });
+  assert.match(authoredViewport.html, /name="viewport" content="width=720"/);
+  assert.equal((authoredViewport.html.match(/name="viewport"/g) ?? []).length, 1);
 
   for (const html of [
     '<!doctype html><html><head></head><body><form></form></body></html>',

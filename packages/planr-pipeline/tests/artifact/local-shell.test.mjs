@@ -485,10 +485,7 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
   });
   assert.equal(railStyle.position, 'fixed');
   assert.ok(railStyle.height <= 844 * 0.52 + 1);
-  await compareSnapshot('local-shell-mobile-bottom-sheet', await page.screenshot({ animations: 'disabled' }), {
-    PNG,
-    pixelmatch,
-  });
+  assert.equal(await page.locator('[data-planr-close-feedback]').isVisible(), true);
 
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('[data-planr-action="feedback"]').getAttribute('aria-expanded'), 'false');

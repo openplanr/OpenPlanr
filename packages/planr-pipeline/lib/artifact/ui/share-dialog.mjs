@@ -6,7 +6,7 @@ export const ARTIFACT_SHARE_TTLS = Object.freeze({
   '30d': Object.freeze({ label: '30 days', milliseconds: 2_592_000_000 }),
 });
 
-export const ARTIFACT_SHARE_TRANSPORTS = Object.freeze(['fragment', 'short']);
+export const ARTIFACT_SHARE_TRANSPORTS = Object.freeze(['live', 'fragment', 'short']);
 
 const PHASES = Object.freeze(['idle', 'previewing', 'ready', 'creating', 'created', 'error']);
 
@@ -53,6 +53,7 @@ function frozenResult(value) {
     );
   }
   const deletionToken = text(value.deletionToken);
+  const manageUrl = text(value.manageUrl);
   if (deletionToken && value.url.includes(deletionToken)) {
     throw new ArtifactShareUiError(
       'E_ARTIFACT_SHARE_DELETION_TOKEN_LEAK',
@@ -62,6 +63,7 @@ function frozenResult(value) {
   return Object.freeze({
     transport: value.transport,
     url: value.url,
+    manageUrl,
     deletionToken,
     expiresAt: text(value.expiresAt),
   });
@@ -82,7 +84,7 @@ function freezeState(value) {
   return Object.freeze({
     open: Boolean(value.open),
     phase: member(value.phase, PHASES, 'idle'),
-    transport: member(value.transport, ARTIFACT_SHARE_TRANSPORTS, 'fragment'),
+    transport: member(value.transport, ARTIFACT_SHARE_TRANSPORTS, 'live'),
     ttl: Object.hasOwn(ARTIFACT_SHARE_TTLS, value.ttl) ? value.ttl : '7d',
     preview: value.preview ? normalizeArtifactSharePreview(value.preview) : null,
     result: value.result ? frozenResult(value.result) : null,
@@ -95,7 +97,7 @@ export function createArtifactShareDialogState({ preview, ttl = '7d' } = {}) {
   return freezeState({
     open: false,
     phase: normalizedPreview ? 'ready' : 'idle',
-    transport: normalizedPreview?.fragmentEligible === false ? 'short' : 'fragment',
+    transport: 'live',
     ttl,
     preview: normalizedPreview,
     result: null,
@@ -118,7 +120,7 @@ export function reduceArtifactShareDialog(state, action = {}) {
         ...current,
         phase: 'ready',
         preview,
-        transport: preview.fragmentEligible ? current.transport : 'short',
+        transport: current.transport === 'fragment' && !preview.fragmentEligible ? 'short' : current.transport,
         result: null,
         error: '',
       });
@@ -258,7 +260,7 @@ export function mountArtifactShareDialog({
     }
 
     const ttlRow = dialog.querySelector('[data-planr-share-ttl-row]');
-    if (ttlRow) ttlRow.hidden = state.transport !== 'short';
+    if (ttlRow) ttlRow.hidden = !['live', 'short'].includes(state.transport);
     const ttlSelect = dialog.querySelector('[data-planr-share-ttl]');
     if (ttlSelect) {
       ttlSelect.value = state.ttl;
@@ -278,7 +280,9 @@ export function mountArtifactShareDialog({
       primary.disabled = !preview || state.phase === 'previewing' || state.phase === 'creating';
       primary.textContent = state.phase === 'creating'
         ? 'Creating…'
-        : state.transport === 'short'
+        : state.transport === 'live'
+          ? 'Create live review room'
+          : state.transport === 'short'
           ? 'Create encrypted link'
           : 'Copy private link';
     }
@@ -286,6 +290,10 @@ export function mountArtifactShareDialog({
     if (receipt) receipt.hidden = state.phase !== 'created' || !state.result;
     const resultUrl = dialog.querySelector('[data-planr-share-url]');
     if (resultUrl) resultUrl.value = state.result?.url ?? '';
+    const manage = dialog.querySelector('[data-planr-share-manage]');
+    if (manage) manage.hidden = !state.result?.manageUrl;
+    const manageUrl = dialog.querySelector('[data-planr-share-manage-url]');
+    if (manageUrl) manageUrl.value = state.result?.manageUrl ?? '';
     const deletion = dialog.querySelector('[data-planr-share-deletion]');
     if (deletion) deletion.hidden = !state.result?.deletionToken;
     const deletionToken = dialog.querySelector('[data-planr-share-deletion-token]');
@@ -344,8 +352,8 @@ export function mountArtifactShareDialog({
         review: reviewForShare(stageController),
         preview: state.preview,
         transport,
-        ttl: transport === 'short' ? state.ttl : undefined,
-        confirmed: transport === 'short',
+        ttl: ['live', 'short'].includes(transport) ? state.ttl : undefined,
+        confirmed: ['live', 'short'].includes(transport),
       }));
       if (request !== generation || !state.open) return state;
       state = reduceArtifactShareDialog(state, {
@@ -354,7 +362,9 @@ export function mountArtifactShareDialog({
       });
       render();
       await handlers.copyText(state.result.url);
-      announce(transport === 'short'
+      announce(transport === 'live'
+        ? 'Live review URL copied. Save the separate private manage URL.'
+        : transport === 'short'
         ? 'Encrypted short link copied. Store the one-time deletion token now.'
         : 'Private fragment copied. Nothing was uploaded.');
     } catch (error) {
@@ -392,7 +402,9 @@ export function mountArtifactShareDialog({
         transport: button.dataset.planrShareTransport,
       });
       render();
-      announce(state.transport === 'short'
+      announce(state.transport === 'live'
+        ? 'Live encrypted review selected. Anyone with this link can comment.'
+        : state.transport === 'short'
         ? 'Encrypted short link selected. Creation requires confirmation.'
         : 'Private fragment selected. Nothing will be uploaded.');
       return;
@@ -403,6 +415,10 @@ export function mountArtifactShareDialog({
     }
     if (button.dataset.planrShareCopyUrl !== undefined) {
       void copy(state.result?.url, 'Review URL copied.');
+      return;
+    }
+    if (button.dataset.planrShareCopyManage !== undefined) {
+      void copy(state.result?.manageUrl, 'Private manage URL copied. Keep it private.');
       return;
     }
     if (button.dataset.planrShareCopyDeletion !== undefined) {

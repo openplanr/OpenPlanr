@@ -82,6 +82,12 @@ when those scripts are useful and intentionally interactive.
 - Short shares are immutable, expire after an allowed 1/7/30-day TTL, and are
   deleted with a one-time bearer token. The service returns generic errors and
   does not log payloads, keys, ciphertext, or tokens.
+- Live rooms are a separate encrypted append-only transport. A normal review
+  URL carries the decryption key and write capability after `#`; the creator's
+  management capability is emitted only in a separate private URL. A Durable
+  Object orders and fans out ciphertext events, while clients decrypt and
+  validate feedback locally. Pausing a room blocks ordinary writes but leaves
+  its history readable until expiry or deletion.
 
 ## Consequences
 

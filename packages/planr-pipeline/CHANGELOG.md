@@ -4,6 +4,26 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.28.0] — 2026-07-16
+
+### Added
+
+- End-to-end encrypted live artifact review rooms with stable reviewer and
+  creator-only management links, ordered real-time feedback events, expiry,
+  pause/reopen controls, owner verdicts, and immutable snapshot fallback.
+
+### Changed
+
+- Mobile document reviews now keep responsive artifact width, readable toolbar
+  controls, safe-area-aware feedback sheets, and reliable close/focus behavior.
+- Artifact execution copies receive a mobile viewport when the source does not
+  provide one, while authored viewport policy remains unchanged.
+
+### Fixed
+
+- Long document pin placement and Show pin behavior use authenticated measured
+  coordinates without forcing the desktop document width onto mobile viewers.
+
 ## [0.27.1] — 2026-07-15
 
 ### Fixed

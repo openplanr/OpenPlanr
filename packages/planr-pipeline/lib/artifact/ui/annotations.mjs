@@ -238,7 +238,13 @@ export function mountArtifactAnnotations({
     if (state.activeArtifactId !== pin.artifactId) {
       stageController.dispatch({ type: 'set-active', artifactId: pin.artifactId });
     }
-    queueMicrotask(() => document.getElementById(annotationDomIds(pinId).pin)?.focus());
+    queueMicrotask(() => {
+      const marker = document.getElementById(annotationDomIds(pinId).pin);
+      marker?.scrollIntoView?.({ block: 'center', inline: 'center', behavior: 'smooth' });
+      marker?.focus?.({ preventScroll: true });
+      marker?.classList.add('planr-pin-highlight');
+      window.setTimeout(() => marker?.classList.remove('planr-pin-highlight'), 1_200);
+    });
   }
 
   function renderPins() {

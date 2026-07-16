@@ -482,6 +482,14 @@ export function prepareArtifactDocument({
     }
   }
   const csp = artifactContentSecurityPolicy(scriptNonce);
+  const hasViewport = descendants(head).some((node) => node?.tagName?.toLowerCase() === 'meta'
+    && getAttr(node, 'name')?.trim().toLowerCase() === 'viewport');
+  const viewportMeta = hasViewport ? null : createElement('meta');
+  if (viewportMeta) {
+    setAttr(viewportMeta, 'name', 'viewport');
+    setAttr(viewportMeta, 'content', 'width=device-width,initial-scale=1,viewport-fit=cover');
+    viewportMeta.parentNode = head;
+  }
   const cspMeta = createElement('meta');
   setAttr(cspMeta, 'http-equiv', 'Content-Security-Policy');
   setAttr(cspMeta, 'content', csp);
@@ -501,7 +509,7 @@ export function prepareArtifactDocument({
     if (node?.tagName?.toLowerCase() === 'script') setAttr(node, 'nonce', scriptNonce);
     queue.push(...descendants(node));
   }
-  head.childNodes = [cspMeta, referrerMeta, bridge, ...(head.childNodes ?? [])];
+  head.childNodes = [cspMeta, referrerMeta, ...(viewportMeta ? [viewportMeta] : []), bridge, ...(head.childNodes ?? [])];
   return Object.freeze({ html: serialize(document), csp, scriptNonce });
 }
 

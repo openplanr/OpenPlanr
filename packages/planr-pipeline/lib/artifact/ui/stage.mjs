@@ -463,6 +463,11 @@ export function mountArtifactStage({
   function onClick(event) {
     const target = event.target.closest?.('button');
     if (!target) return;
+    if (target.hasAttribute('data-planr-close-feedback')) {
+      dispatch({ type: 'set-rail-open', railOpen: false });
+      document.querySelector('[data-planr-action="feedback"]')?.focus();
+      return;
+    }
     if (target.dataset.planrView) {
       dispatch({ type: 'set-view-mode', viewMode: target.dataset.planrView });
       return;

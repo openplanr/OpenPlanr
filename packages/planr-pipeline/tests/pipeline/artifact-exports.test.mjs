@@ -5,17 +5,25 @@ import * as pipeline from '../../lib/pipeline/index.mjs';
 
 const STABLE_ARTIFACT_EXPORTS = Object.freeze([
   'bundleArtifact',
+  'appendLiveRoomEvent',
   'createArtifactEnvelope',
+  'createLiveReviewRoom',
+  'createLiveRoomClient',
+  'createLiveRoomEvent',
   'createReviewLink',
   'createReviewLinkPreview',
   'decodeArtifactFragment',
   'decodeReviewLink',
   'decryptArtifactPayload',
+  'decryptLiveRoomEvent',
   'encodeArtifactFragment',
   'encryptArtifactPayload',
+  'encryptLiveRoomEvent',
   'exportArtifactReviewSession',
   'importArtifactReview',
   'mergeArtifactFeedback',
+  'hydrateLiveReviewRoom',
+  'reduceLiveRoomEvents',
   'startArtifactReview',
 ]);
 
@@ -29,7 +37,7 @@ test('package root exposes the complete stable artifact engine contract', () => 
 
 test('artifact error codes are named, unique, stable E_ARTIFACT values', () => {
   const entries = Object.entries(pipeline.ARTIFACT_ERROR_CODES);
-  assert.equal(entries.length, 49, 'the complete artifact error registry must be exported');
+  assert.equal(entries.length, 56, 'the complete artifact error registry must be exported');
   assert.equal(new Set(entries.map(([, code]) => code)).size, entries.length);
   for (const [name, code] of entries) {
     assert.match(name, /^[A-Z][A-Z0-9_]+$/);
@@ -40,6 +48,8 @@ test('artifact error codes are named, unique, stable E_ARTIFACT values', () => {
     pipeline.ARTIFACT_ERROR_CODES.SHORT_CONFIRMATION_REQUIRED,
     'E_ARTIFACT_SHORT_CONFIRMATION_REQUIRED',
   );
+  assert.equal(pipeline.ARTIFACT_ERROR_CODES.ROOM_CLOSED, 'E_ARTIFACT_ROOM_CLOSED');
+  assert.equal(pipeline.ARTIFACT_ERROR_CODES.ROOM_EVENT_REPLAY, 'E_ARTIFACT_ROOM_EVENT_REPLAY');
 });
 
 test('root exports execute a deterministic fragment round trip', () => {

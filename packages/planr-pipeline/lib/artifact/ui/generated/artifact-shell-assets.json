@@ -14,6 +14,7 @@
       "share.copyText",
       "hosted.decodeFragment",
       "hosted.loadShort",
+      "hosted.loadRoom",
       "hosted.onEnvelope"
     ]
   },
@@ -30,18 +31,18 @@
     },
     {
       "path": "templates/artifact-review-shell.html",
-      "bytes": 42864,
-      "sha256": "83ef82aef4eddc659745992a60291be265d499d0379f90541ae1f2fefd447c31"
+      "bytes": 45801,
+      "sha256": "4c6538ab86fb411b70387b87df632e2e5c0c69be0231a672dd2c61d85b778bcb"
     },
     {
       "path": "templates/artifact-review-stage.js",
-      "bytes": 117166,
-      "sha256": "87ff44b86b527f51a5b54f16fbf37263d61dfbdb94f8ca7dfb0f62441432e7b4"
+      "bytes": 119848,
+      "sha256": "50225603ea12ca76cbeac114f1ab6d85d0c0f24fbe2c5202370721a8856a41e1"
     },
     {
       "path": "templates/design/design-board-adapter.js",
-      "bytes": 188224,
-      "sha256": "65fc2265bc31264199799a4d7216c3c124174d5f39db3f0184194683d8d1de55"
+      "bytes": 188571,
+      "sha256": "040a6ab3be3310b0e5ff30341b3f54d912b94d13635f69eaed77c50223066e3c"
     }
   ]
 }

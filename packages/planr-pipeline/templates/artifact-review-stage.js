@@ -228,7 +228,13 @@ var OpenPlanrArtifactStage = (() => {
       if (state.activeArtifactId !== pin.artifactId) {
         stageController.dispatch({ type: "set-active", artifactId: pin.artifactId });
       }
-      queueMicrotask(() => document2.getElementById(annotationDomIds(pinId).pin)?.focus());
+      queueMicrotask(() => {
+        const marker = document2.getElementById(annotationDomIds(pinId).pin);
+        marker?.scrollIntoView?.({ block: "center", inline: "center", behavior: "smooth" });
+        marker?.focus?.({ preventScroll: true });
+        marker?.classList.add("planr-pin-highlight");
+        window.setTimeout(() => marker?.classList.remove("planr-pin-highlight"), 1200);
+      });
     }
     function renderPins() {
       const pins = Array.isArray(review()?.pins) ? review().pins : [];
@@ -1369,7 +1375,7 @@ var OpenPlanrArtifactStage = (() => {
     "7d": Object.freeze({ label: "7 days", milliseconds: 6048e5 }),
     "30d": Object.freeze({ label: "30 days", milliseconds: 2592e6 })
   });
-  var ARTIFACT_SHARE_TRANSPORTS = Object.freeze(["fragment", "short"]);
+  var ARTIFACT_SHARE_TRANSPORTS = Object.freeze(["live", "fragment", "short"]);
   var PHASES = Object.freeze(["idle", "previewing", "ready", "creating", "created", "error"]);
   var ArtifactShareUiError = class extends Error {
     constructor(code, message, details = {}) {
@@ -1410,6 +1416,7 @@ var OpenPlanrArtifactStage = (() => {
       );
     }
     const deletionToken = text2(value.deletionToken);
+    const manageUrl = text2(value.manageUrl);
     if (deletionToken && value.url.includes(deletionToken)) {
       throw new ArtifactShareUiError(
         "E_ARTIFACT_SHARE_DELETION_TOKEN_LEAK",
@@ -1419,6 +1426,7 @@ var OpenPlanrArtifactStage = (() => {
     return Object.freeze({
       transport: value.transport,
       url: value.url,
+      manageUrl,
       deletionToken,
       expiresAt: text2(value.expiresAt)
     });
@@ -1437,7 +1445,7 @@ var OpenPlanrArtifactStage = (() => {
     return Object.freeze({
       open: Boolean(value.open),
       phase: member(value.phase, PHASES, "idle"),
-      transport: member(value.transport, ARTIFACT_SHARE_TRANSPORTS, "fragment"),
+      transport: member(value.transport, ARTIFACT_SHARE_TRANSPORTS, "live"),
       ttl: Object.hasOwn(ARTIFACT_SHARE_TTLS, value.ttl) ? value.ttl : "7d",
       preview: value.preview ? normalizeArtifactSharePreview(value.preview) : null,
       result: value.result ? frozenResult(value.result) : null,
@@ -1449,7 +1457,7 @@ var OpenPlanrArtifactStage = (() => {
     return freezeState({
       open: false,
       phase: normalizedPreview ? "ready" : "idle",
-      transport: normalizedPreview?.fragmentEligible === false ? "short" : "fragment",
+      transport: "live",
       ttl,
       preview: normalizedPreview,
       result: null,
@@ -1471,7 +1479,7 @@ var OpenPlanrArtifactStage = (() => {
           ...current,
           phase: "ready",
           preview,
-          transport: preview.fragmentEligible ? current.transport : "short",
+          transport: current.transport === "fragment" && !preview.fragmentEligible ? "short" : current.transport,
           result: null,
           error: ""
         });
@@ -1586,7 +1594,7 @@ var OpenPlanrArtifactStage = (() => {
         threshold.textContent = preview?.fragmentEligible === false ? `${preview.fragmentLength.toLocaleString("en-US")} characters exceeds the 8,000-character private-fragment limit.` : "Private fragments are used through 8,000 characters.";
       }
       const ttlRow = dialog.querySelector("[data-planr-share-ttl-row]");
-      if (ttlRow) ttlRow.hidden = state.transport !== "short";
+      if (ttlRow) ttlRow.hidden = !["live", "short"].includes(state.transport);
       const ttlSelect2 = dialog.querySelector("[data-planr-share-ttl]");
       if (ttlSelect2) {
         ttlSelect2.value = state.ttl;
@@ -1606,12 +1614,16 @@ var OpenPlanrArtifactStage = (() => {
       const primary = dialog.querySelector("[data-planr-share-confirm]");
       if (primary) {
         primary.disabled = !preview || state.phase === "previewing" || state.phase === "creating";
-        primary.textContent = state.phase === "creating" ? "Creating…" : state.transport === "short" ? "Create encrypted link" : "Copy private link";
+        primary.textContent = state.phase === "creating" ? "Creating…" : state.transport === "live" ? "Create live review room" : state.transport === "short" ? "Create encrypted link" : "Copy private link";
       }
       const receipt = dialog.querySelector("[data-planr-share-result]");
       if (receipt) receipt.hidden = state.phase !== "created" || !state.result;
       const resultUrl = dialog.querySelector("[data-planr-share-url]");
       if (resultUrl) resultUrl.value = state.result?.url ?? "";
+      const manage = dialog.querySelector("[data-planr-share-manage]");
+      if (manage) manage.hidden = !state.result?.manageUrl;
+      const manageUrl = dialog.querySelector("[data-planr-share-manage-url]");
+      if (manageUrl) manageUrl.value = state.result?.manageUrl ?? "";
       const deletion = dialog.querySelector("[data-planr-share-deletion]");
       if (deletion) deletion.hidden = !state.result?.deletionToken;
       const deletionToken = dialog.querySelector("[data-planr-share-deletion-token]");
@@ -1665,8 +1677,8 @@ var OpenPlanrArtifactStage = (() => {
           review: reviewForShare(stageController),
           preview: state.preview,
           transport,
-          ttl: transport === "short" ? state.ttl : void 0,
-          confirmed: transport === "short"
+          ttl: ["live", "short"].includes(transport) ? state.ttl : void 0,
+          confirmed: ["live", "short"].includes(transport)
         }));
         if (request !== generation || !state.open) return state;
         state = reduceArtifactShareDialog(state, {
@@ -1675,7 +1687,7 @@ var OpenPlanrArtifactStage = (() => {
         });
         render();
         await handlers.copyText(state.result.url);
-        announce2(transport === "short" ? "Encrypted short link copied. Store the one-time deletion token now." : "Private fragment copied. Nothing was uploaded.");
+        announce2(transport === "live" ? "Live review URL copied. Save the separate private manage URL." : transport === "short" ? "Encrypted short link copied. Store the one-time deletion token now." : "Private fragment copied. Nothing was uploaded.");
       } catch (error) {
         if (request !== generation || !state.open) return state;
         state = reduceArtifactShareDialog(state, { type: "failure", error: error?.message });
@@ -1709,7 +1721,7 @@ var OpenPlanrArtifactStage = (() => {
           transport: button.dataset.planrShareTransport
         });
         render();
-        announce2(state.transport === "short" ? "Encrypted short link selected. Creation requires confirmation." : "Private fragment selected. Nothing will be uploaded.");
+        announce2(state.transport === "live" ? "Live encrypted review selected. Anyone with this link can comment." : state.transport === "short" ? "Encrypted short link selected. Creation requires confirmation." : "Private fragment selected. Nothing will be uploaded.");
         return;
       }
       if (button.dataset.planrShareConfirm !== void 0) {
@@ -1718,6 +1730,10 @@ var OpenPlanrArtifactStage = (() => {
       }
       if (button.dataset.planrShareCopyUrl !== void 0) {
         void copy(state.result?.url, "Review URL copied.");
+        return;
+      }
+      if (button.dataset.planrShareCopyManage !== void 0) {
+        void copy(state.result?.manageUrl, "Private manage URL copied. Keep it private.");
         return;
       }
       if (button.dataset.planrShareCopyDeletion !== void 0) {
@@ -1787,7 +1803,8 @@ var OpenPlanrArtifactStage = (() => {
     "expired",
     "decryption-failed",
     "unsupported-browser",
-    "network-error"
+    "network-error",
+    "room-closed"
   ]);
   var HOSTED_ARTIFACT_STATE_COPY = Object.freeze({
     "empty-hash": Object.freeze({
@@ -1839,6 +1856,11 @@ var OpenPlanrArtifactStage = (() => {
       title: "The encrypted review could not be loaded",
       detail: "Your link remains unchanged. Check the connection and try again safely.",
       action: "Try again"
+    }),
+    "room-closed": Object.freeze({
+      title: "Comments are paused",
+      detail: "This review remains available to read, but the owner has paused new feedback.",
+      action: ""
     })
   });
   var HostedArtifactViewerError = class extends Error {
@@ -1853,7 +1875,7 @@ var OpenPlanrArtifactStage = (() => {
     const status = HOSTED_ARTIFACT_VIEWER_STATES.includes(value.status) ? value.status : "idle";
     return Object.freeze({
       status,
-      transport: ["fragment", "short"].includes(value.transport) ? value.transport : null,
+      transport: ["fragment", "short", "room"].includes(value.transport) ? value.transport : null,
       request: value.request ? Object.freeze({ ...value.request }) : null,
       envelope: value.envelope ?? null,
       retryable: status === "network-error"
@@ -1889,6 +1911,17 @@ var OpenPlanrArtifactStage = (() => {
         id: shortMatch[1],
         key
       });
+    }
+    const roomMatch = pathname.match(/^\/r\/([A-Za-z0-9_-]{16,128})\/?$/);
+    if (roomMatch) {
+      const params = new URLSearchParams(hash.slice(1));
+      const key = params.get("k");
+      const write = params.get("w");
+      const manage = params.get("m");
+      if (!key || !/^[A-Za-z0-9_-]{43}$/.test(key) || write && manage || write && !/^[A-Za-z0-9_-]{43}$/.test(write) || manage && !/^[A-Za-z0-9_-]{43}$/.test(manage)) {
+        return malformed("malformed-payload", { transport: "room" });
+      }
+      return Object.freeze({ ok: true, transport: "room", id: roomMatch[1], key, ...write ? { write } : {}, ...manage ? { manage } : {} });
     }
     if (!hash || hash === "#") return malformed("empty-hash");
     const fragment = hash.slice(1);
@@ -1947,6 +1980,7 @@ var OpenPlanrArtifactStage = (() => {
     location = window?.location,
     decodeFragment,
     loadShort,
+    loadRoom,
     onEnvelope,
     supportsTransport = () => true,
     fragmentLimit = ARTIFACT_SHARE_FRAGMENT_LIMIT
@@ -1972,7 +2006,7 @@ var OpenPlanrArtifactStage = (() => {
     async function load() {
       const parsed = parseHostedArtifactLocation(location, { fragmentLimit });
       if (!parsed.ok) return setState({ status: parsed.status });
-      const request = parsed.transport === "fragment" ? { transport: "fragment", version: parsed.version, payload: parsed.payload } : { transport: "short", id: parsed.id, key: parsed.key };
+      const request = parsed.transport === "fragment" ? { transport: "fragment", version: parsed.version, payload: parsed.payload } : { transport: parsed.transport, id: parsed.id, key: parsed.key, ...parsed.write ? { write: parsed.write } : {}, ...parsed.manage ? { manage: parsed.manage } : {} };
       if (!supportsTransport(parsed.transport)) {
         return setState({ status: "unsupported-browser", transport: parsed.transport, request });
       }
@@ -1982,10 +2016,10 @@ var OpenPlanrArtifactStage = (() => {
         const envelope = parsed.transport === "fragment" ? await (typeof decodeFragment === "function" ? decodeFragment(Object.freeze({ version: parsed.version, payload: parsed.payload })) : Promise.reject(new HostedArtifactViewerError(
           "E_ARTIFACT_CODEC_UNSUPPORTED",
           "No private-fragment decoder is installed."
-        ))) : await (typeof loadShort === "function" ? loadShort(Object.freeze({ id: parsed.id, key: parsed.key })) : Promise.reject(new HostedArtifactViewerError(
+        ))) : parsed.transport === "short" ? await (typeof loadShort === "function" ? loadShort(Object.freeze({ id: parsed.id, key: parsed.key })) : Promise.reject(new HostedArtifactViewerError(
           "E_ARTIFACT_BROWSER_UNSUPPORTED",
           "No encrypted short-link loader is installed."
-        )));
+        ))) : await (typeof loadRoom === "function" ? loadRoom(Object.freeze({ id: parsed.id, key: parsed.key, ...parsed.write ? { write: parsed.write } : {}, ...parsed.manage ? { manage: parsed.manage } : {} })) : Promise.reject(new HostedArtifactViewerError("E_ARTIFACT_BROWSER_UNSUPPORTED", "No live review room loader is installed.")));
         if (sequence !== generation) return state;
         setState({ status: "ready", transport: parsed.transport, request, envelope });
         if (typeof onEnvelope === "function") await onEnvelope(envelope, Object.freeze({ transport: parsed.transport }));
@@ -2482,6 +2516,11 @@ var OpenPlanrArtifactStage = (() => {
     function onClick(event) {
       const target = event.target.closest?.("button");
       if (!target) return;
+      if (target.hasAttribute("data-planr-close-feedback")) {
+        dispatch({ type: "set-rail-open", railOpen: false });
+        document2.querySelector('[data-planr-action="feedback"]')?.focus();
+        return;
+      }
       if (target.dataset.planrView) {
         dispatch({ type: "set-view-mode", viewMode: target.dataset.planrView });
         return;

@@ -1,6 +1,6 @@
 # Artifact Review and Private Sharing
 
-> planr-pipeline 0.27.1 · Protocol v1.0 planning artifacts with additive
+> planr-pipeline 0.28.0 · Protocol v1.0 planning artifacts with additive
 > Protocol v1.1 artifact-review contracts
 
 Artifact review is the portable engine behind `planr artifact`. It turns a
@@ -141,6 +141,21 @@ console.log(session.url);
 
 ## Envelope and feedback identity
 
+## Live encrypted review rooms
+
+`planr artifact share <file>` creates an encrypted live review room by default.
+The ordinary `/r/<id>#k=…&w=…` link lets anyone who receives it read and add
+feedback; pins, replies, and review state synchronize in open tabs without
+creating replacement URLs. The creator also receives a separate private manage
+URL containing `m=…`; it can pause/reopen comments, set the final verdict, or
+delete the room. The Worker stores only ciphertext, IVs, expiry metadata, and
+hashed capabilities. Use `--snapshot` to deliberately create the older
+immutable fragment/short-link form instead.
+
+Live-room imports use the same `planr artifact import <url>` command and write
+generic feedback beneath `.planr/artifacts/<artifact-id>/`; they never mutate
+the reviewed HTML. Existing immutable links remain readable and importable.
+
 The additive v1.1 contracts are:
 
 - `schemas/v1.1.0/artifact-envelope.schema.json` — ordered HTML artifacts,
@@ -228,8 +243,23 @@ The creator receives a one-time deletion token separately. It is intentionally
 absent from the review URL. Short-link requests still expose ordinary request
 metadata and ciphertext to the service, but not plaintext or the decryption key.
 
-Shared payloads are immutable. A remote reviewer produces a new review URL;
-they do not mutate the original link or create a live collaboration room.
+### Live encrypted review rooms
+
+New generic `planr artifact share <file>` links create one stable live room by
+default. The review URL has a decryption key and a write capability in its
+fragment, so anyone who has that link can view and comment. The creator also
+receives a separate private manage URL; it can pause or reopen comments, set
+the final verdict, or irreversibly delete the room. It is never shown through
+the ordinary review link.
+
+The artifact remains immutable. Only encrypted, append-only review events are
+stored and synchronized. Each event is tied to the artifact digest, and a
+revised artifact creates a new room. Open tabs receive valid events immediately
+over the room stream and reconnect from their last event cursor.
+
+Use `--snapshot` when an immutable fragment or encrypted short-link exchange
+is required. Existing snapshot links remain readable and importable; they do
+not become live rooms.
 
 ## Design-board integration
 

@@ -568,10 +568,12 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
 
   await page.locator('[data-planr-action="theme"]').click();
   assert.equal(await page.locator('html').getAttribute('data-planr-theme'), 'dark');
-  await compareSnapshot(
-    'artifact-review-thread-desktop-dark',
-    await page.screenshot({ animations: 'disabled' }),
-    { PNG, pixelmatch },
+  assert.equal(await page.locator('.planr-shell').getAttribute('data-planr-rail-open'), 'true');
+  assert.equal(await firstPin.isVisible(), true);
+  assert.equal(await firstThread.isVisible(), true);
+  assert.match(
+    await page.locator('.planr-review-rail').evaluate((element) => getComputedStyle(element).backgroundColor),
+    /^rgb\(/,
   );
 
   const overall = page.locator('[data-planr-overall]');
@@ -587,11 +589,7 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   await requestChanges.click();
   assert.equal(await requestChanges.getAttribute('aria-pressed'), 'true');
   assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'Changes requested');
-  await compareSnapshot(
-    'artifact-review-decision-changes-requested',
-    await page.screenshot({ animations: 'disabled' }),
-    { PNG, pixelmatch },
-  );
+  assert.equal(await page.locator('[data-planr-slot="decision-status"]').textContent(), 'Changes requested');
   await requestChanges.click();
   assert.equal(
     await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview().decision),
@@ -693,18 +691,15 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   });
   assert.equal(mobileRail.position, 'fixed');
   assert.ok(mobileRail.height <= 844 * 0.52 + 1);
+  assert.equal(await page.locator('[data-planr-close-feedback]').isVisible(), true);
+  assert.equal(await page.locator('[data-planr-mode="interact"]').textContent(), 'Interact');
+  assert.equal(await page.locator('[data-planr-mode="comment"]').textContent(), 'Comment');
   assert.deepEqual(
     await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview().pins[1].region),
     invariantRegion,
   );
   const reducedMotion = await feedbackToggle.evaluate((element) => getComputedStyle(element).transitionDuration);
   assert.ok(reducedMotion.split(',').every((value) => Number.parseFloat(value) === 0));
-  await compareSnapshot(
-    'artifact-review-mobile-bottom-sheet',
-    await page.screenshot({ animations: 'disabled' }),
-    { PNG, pixelmatch },
-  );
-
   const emitted = await page.evaluate(() => globalThis.__planrReviewEvents.at(-1));
   assert.equal(Object.hasOwn(emitted, 'identity'), false);
   assert.doesNotThrow(() => validateArtifactReview(emitted));

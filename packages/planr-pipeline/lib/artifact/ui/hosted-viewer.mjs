@@ -13,6 +13,7 @@ export const HOSTED_ARTIFACT_VIEWER_STATES = Object.freeze([
   'decryption-failed',
   'unsupported-browser',
   'network-error',
+  'room-closed',
 ]);
 
 export const HOSTED_ARTIFACT_STATE_COPY = Object.freeze({
@@ -66,6 +67,11 @@ export const HOSTED_ARTIFACT_STATE_COPY = Object.freeze({
     detail: 'Your link remains unchanged. Check the connection and try again safely.',
     action: 'Try again',
   }),
+  'room-closed': Object.freeze({
+    title: 'Comments are paused',
+    detail: 'This review remains available to read, but the owner has paused new feedback.',
+    action: '',
+  }),
 });
 
 export class HostedArtifactViewerError extends Error {
@@ -81,7 +87,7 @@ function freezeState(value) {
   const status = HOSTED_ARTIFACT_VIEWER_STATES.includes(value.status) ? value.status : 'idle';
   return Object.freeze({
     status,
-    transport: ['fragment', 'short'].includes(value.transport) ? value.transport : null,
+    transport: ['fragment', 'short', 'room'].includes(value.transport) ? value.transport : null,
     request: value.request ? Object.freeze({ ...value.request }) : null,
     envelope: value.envelope ?? null,
     retryable: status === 'network-error',
@@ -121,6 +127,20 @@ export function parseHostedArtifactLocation(location, {
       id: shortMatch[1],
       key,
     });
+  }
+
+  const roomMatch = pathname.match(/^\/r\/([A-Za-z0-9_-]{16,128})\/?$/);
+  if (roomMatch) {
+    const params = new URLSearchParams(hash.slice(1));
+    const key = params.get('k');
+    const write = params.get('w');
+    const manage = params.get('m');
+    if (!key || !/^[A-Za-z0-9_-]{43}$/.test(key) || (write && manage)
+      || (write && !/^[A-Za-z0-9_-]{43}$/.test(write))
+      || (manage && !/^[A-Za-z0-9_-]{43}$/.test(manage))) {
+      return malformed('malformed-payload', { transport: 'room' });
+    }
+    return Object.freeze({ ok: true, transport: 'room', id: roomMatch[1], key, ...(write ? { write } : {}), ...(manage ? { manage } : {}) });
   }
 
   if (!hash || hash === '#') return malformed('empty-hash');
@@ -184,6 +204,7 @@ export function mountHostedArtifactViewer({
   location = window?.location,
   decodeFragment,
   loadShort,
+  loadRoom,
   onEnvelope,
   supportsTransport = () => true,
   fragmentLimit = ARTIFACT_SHARE_FRAGMENT_LIMIT,
@@ -214,7 +235,7 @@ export function mountHostedArtifactViewer({
     if (!parsed.ok) return setState({ status: parsed.status });
     const request = parsed.transport === 'fragment'
       ? { transport: 'fragment', version: parsed.version, payload: parsed.payload }
-      : { transport: 'short', id: parsed.id, key: parsed.key };
+      : { transport: parsed.transport, id: parsed.id, key: parsed.key, ...(parsed.write ? { write: parsed.write } : {}), ...(parsed.manage ? { manage: parsed.manage } : {}) };
     if (!supportsTransport(parsed.transport)) {
       return setState({ status: 'unsupported-browser', transport: parsed.transport, request });
     }
@@ -228,12 +249,14 @@ export function mountHostedArtifactViewer({
             'E_ARTIFACT_CODEC_UNSUPPORTED',
             'No private-fragment decoder is installed.',
           )))
-        : await (typeof loadShort === 'function'
+        : parsed.transport === 'short' ? await (typeof loadShort === 'function'
           ? loadShort(Object.freeze({ id: parsed.id, key: parsed.key }))
           : Promise.reject(new HostedArtifactViewerError(
             'E_ARTIFACT_BROWSER_UNSUPPORTED',
             'No encrypted short-link loader is installed.',
-          )));
+          ))) : await (typeof loadRoom === 'function'
+            ? loadRoom(Object.freeze({ id: parsed.id, key: parsed.key, ...(parsed.write ? { write: parsed.write } : {}), ...(parsed.manage ? { manage: parsed.manage } : {}) }))
+            : Promise.reject(new HostedArtifactViewerError('E_ARTIFACT_BROWSER_UNSUPPORTED', 'No live review room loader is installed.')));
       if (sequence !== generation) return state;
       setState({ status: 'ready', transport: parsed.transport, request, envelope });
       if (typeof onEnvelope === 'function') await onEnvelope(envelope, Object.freeze({ transport: parsed.transport }));

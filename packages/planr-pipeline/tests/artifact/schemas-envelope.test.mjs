@@ -205,3 +205,15 @@ test('paste schema validates request, response, and ciphertext-only storage boun
   assert.notEqual(validateJson({ ...request, key: 'must-not-cross-boundary' }, schema).length, 0);
   assert.notEqual(validateJson({ ...stored, plaintext: '<html>' }, schema).length, 0);
 });
+
+test('live room event schema validates digest-bound encrypted review operations', () => {
+  const schema = loadSchema('artifact-room-event', 'v1.1.0');
+  const event = {
+    schemaVersion: '1.0.0', eventId: 'evt-1', roomId: 'room_0123456789abcd',
+    reviewOf: 'a'.repeat(64), kind: 'pin', createdAt: '2026-07-16T00:00:00.000Z',
+    payload: { id: 'pin-1' },
+  };
+  assert.deepEqual(validateJson(event, schema), []);
+  assert.notEqual(validateJson({ ...event, kind: 'plaintext' }, schema).length, 0);
+  assert.notEqual(validateJson({ ...event, reviewOf: 'not-a-digest' }, schema).length, 0);
+});

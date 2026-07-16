@@ -256,7 +256,7 @@ test('structural CSS is token-only and carries approved desktop, mobile, focus, 
     '--planr-motion-fast',
     '--planr-motion-base',
   ]) assert.match(ARTIFACT_SHELL_CSS, new RegExp(token));
-  assert.match(ARTIFACT_SHELL_CSS, /height: min\(52vh, 480px\)/);
+  assert.match(ARTIFACT_SHELL_CSS, /height: min\(52dvh, 480px\)/);
   assert.match(ARTIFACT_SHELL_CSS, /@media \(max-width: 900px\)/);
   assert.match(ARTIFACT_SHELL_CSS, /@media \(max-width: 390px\)/);
   assert.match(ARTIFACT_SHELL_CSS, /@media \(prefers-reduced-motion: reduce\)/);
@@ -264,6 +264,9 @@ test('structural CSS is token-only and carries approved desktop, mobile, focus, 
   assert.match(ARTIFACT_SHELL_CSS, /outline: 2px solid var\(--planr-color-primary\)/);
   assert.match(ARTIFACT_SHELL_CSS, /data-planr-presentation="document"/);
   assert.match(ARTIFACT_SHELL_CSS, /transform: translateX\(100%\)/);
+  assert.match(ARTIFACT_SHELL_CSS, /padding-bottom: env\(safe-area-inset-bottom/);
+  assert.match(ARTIFACT_SHELL_CSS, /width: 100%;\n  max-width: 100%;\n  min-width: 0;/);
+  assert.doesNotMatch(ARTIFACT_SHELL_CSS, /width: max\(100%, var\(--planr-document-width/);
 });
 
 // This is intentionally a deterministic source-byte contract, not a rendered

@@ -168,7 +168,7 @@ export function renderArtifactToolbar(model) {
   <span class="planr-privacy" data-privacy="${escapeHtml(model.privacy)}">${escapeHtml(model.privacyLabel)}</span>
 ${canvas ? '  <span class="planr-domain-toolbar" data-planr-slot="domain-toolbar" aria-label="Artifact workflow controls"></span>\n' : ''}  <span class="planr-toolbar-spacer" aria-hidden="true"></span>
 ${canvas ? `  <div class="planr-segment" role="group" aria-label="Viewport controls"><button type="button" data-planr-action="zoom-out" aria-label="Zoom out">−</button><button type="button" data-planr-action="zoom-reset" aria-label="Reset zoom">${model.zoom}%</button><button type="button" data-planr-action="zoom-in" aria-label="Zoom in">+</button></div>\n` : ''}  <div class="planr-segment" role="group" aria-label="Review mode"><button type="button" data-planr-mode="interact" data-planr-short-label="I" aria-pressed="${interact}">Interact</button><button type="button" data-planr-mode="comment" data-planr-short-label="C" aria-pressed="${!interact}">Comment</button></div>
-${canvas ? `  <button class="planr-toolbar-action" type="button" data-planr-action="theme" aria-label="Shell theme ${escapeHtml(model.theme)}">${escapeHtml(model.theme)}</button>\n` : ''}  <button class="planr-toolbar-action" type="button" data-planr-action="feedback" aria-controls="planr-review-rail" aria-expanded="${model.railOpen}">Feedback <span class="planr-count">${model.feedbackCount}</span></button>
+${canvas ? `  <button class="planr-toolbar-action" type="button" data-planr-action="theme" aria-label="Shell theme ${escapeHtml(model.theme)}">${escapeHtml(model.theme)}</button>\n` : ''}  <button class="planr-toolbar-action" type="button" data-planr-action="feedback" aria-controls="planr-review-rail" aria-expanded="${model.railOpen}"><span class="planr-feedback-label">Feedback</span> <span class="planr-count">${model.feedbackCount}</span></button>
   <button class="planr-toolbar-action planr-share" type="button" data-planr-action="share" aria-haspopup="dialog">Share</button>
 </header>`;
 }
@@ -235,7 +235,7 @@ ${model.presentation === 'canvas' ? `  <div class="planr-stage-heading"><span>AR
 export function renderArtifactRail(model) {
   const closed = !model.railOpen;
   return `<aside class="planr-review-rail" id="planr-review-rail" aria-label="Review feedback"${closed ? ' inert aria-hidden="true"' : ''}>
-  <header><h2>Review feedback</h2><div class="planr-review-metrics" aria-label="Review metrics"><span data-planr-metric="open">0 open</span><span class="planr-count" data-planr-metric="total" aria-label="${model.feedbackCount} feedback items">${model.feedbackCount}</span></div></header>
+  <header><h2>Review feedback</h2><div class="planr-review-header-actions"><div class="planr-review-metrics" aria-label="Review metrics"><span data-planr-metric="open">0 open</span><span class="planr-count" data-planr-metric="total" aria-label="${model.feedbackCount} feedback items">${model.feedbackCount}</span></div><button class="planr-rail-close" type="button" data-planr-close-feedback aria-label="Close feedback">×</button></div></header>
   <section class="planr-identity" aria-label="Reviewer identity"><label for="planr-reviewer-name">Your name<input id="planr-reviewer-name" type="text" maxlength="256" autocomplete="name" aria-describedby="planr-review-error" data-planr-reviewer-name></label><p class="planr-field-error" id="planr-review-error" role="alert" hidden></p></section>
   <div class="planr-feedback-slot" data-planr-slot="feedback-rail" role="region" aria-label="Feedback threads"><p data-planr-empty-feedback>No feedback yet. Choose Comment, then click or drag on the artifact.</p><div class="planr-thread-list" data-planr-thread-list></div></div>
   <section class="planr-domain-rail" data-planr-slot="domain-rail" aria-label="Artifact workflow details" hidden></section>
@@ -249,20 +249,24 @@ export function renderArtifactRail(model) {
 
 export function renderArtifactShareDialog() {
   return `<div class="planr-dialog-backdrop" data-planr-share-dialog hidden>
-  <section class="planr-share-dialog" role="dialog" aria-modal="true" aria-labelledby="planr-share-title" aria-describedby="planr-share-description" data-planr-share-phase="idle" data-planr-share-selected="fragment">
-    <header><div><h2 id="planr-share-title">Share this review</h2><p id="planr-share-description">Choose where the review bytes live before creating a link.</p></div><button type="button" class="planr-dialog-close" data-planr-share-close aria-label="Close share dialog">×</button></header>
+  <section class="planr-share-dialog" role="dialog" aria-modal="true" aria-labelledby="planr-share-title" aria-describedby="planr-share-description" data-planr-share-phase="idle" data-planr-share-selected="live">
+    <header><div><h2 id="planr-share-title">Share this review</h2><p id="planr-share-description">Live review is encrypted and collaborative. Snapshot links are immutable alternatives.</p></div><button type="button" class="planr-dialog-close" data-planr-share-close aria-label="Close share dialog">×</button></header>
     <div class="planr-share-receipt" role="group" aria-label="Privacy receipt">
-      <button type="button" class="planr-share-receipt-row is-selected" data-planr-share-transport="fragment" aria-pressed="true">
+      <button type="button" class="planr-share-receipt-row is-selected" data-planr-share-transport="live" aria-pressed="true">
+        <span class="planr-share-receipt-icon" aria-hidden="true">●</span><span><strong>Live collaborative review</strong><small>Encrypted artifact and feedback events are stored until expiry. Anyone with the link can comment.</small></span><span class="planr-share-receipt-size">Default</span>
+      </button>
+      <button type="button" class="planr-share-receipt-row" data-planr-share-transport="fragment" aria-pressed="false">
         <span class="planr-share-receipt-icon" aria-hidden="true">#</span><span><strong>Private fragment</strong><small>Compressed into the URL. Nothing is uploaded.</small></span><span class="planr-share-receipt-size" data-planr-share-fragment-size>Calculating…</span>
       </button>
       <button type="button" class="planr-share-receipt-row" data-planr-share-transport="short" aria-pressed="false">
         <span class="planr-share-receipt-icon" aria-hidden="true">◇</span><span><strong>Encrypted short link</strong><small>AES-256-GCM ciphertext is stored until expiry; the key stays in this link fragment.</small></span><span class="planr-share-receipt-size" data-planr-share-short-size>Calculating…</span>
       </button>
     </div>
-    <p class="planr-share-threshold" data-planr-share-threshold>Private fragments are used through 8,000 characters.</p>
+    <p class="planr-share-threshold" data-planr-share-threshold>Live rooms are the default. Private fragments are immutable snapshots through 8,000 characters.</p>
     <div class="planr-share-ttl" data-planr-share-ttl-row hidden><label for="planr-share-ttl">Encrypted storage expiry<select id="planr-share-ttl" data-planr-share-ttl><option value="1d">1 day</option><option value="7d" selected>7 days</option><option value="30d">30 days</option></select></label><p>Ciphertext and request metadata are visible to the service until <time data-planr-share-expiry></time>. The decryption key is not uploaded.</p></div>
     <section class="planr-share-result" data-planr-share-result hidden aria-label="Share receipt">
       <label for="planr-share-url">Review URL</label><div><input id="planr-share-url" data-planr-share-url readonly><button type="button" data-planr-share-copy-url>Copy URL</button></div>
+      <div data-planr-share-manage hidden><label for="planr-share-manage-url">Private manage URL</label><div><input id="planr-share-manage-url" data-planr-share-manage-url readonly><button type="button" data-planr-share-copy-manage>Copy manage URL</button></div></div>
       <aside class="planr-deletion-receipt" data-planr-share-deletion hidden><strong>One-time deletion token</strong><p>Store this token now; it cannot be recovered. It is separate from the review URL.</p><code data-planr-share-deletion-token></code><button type="button" data-planr-share-copy-deletion>Copy deletion token</button></aside>
     </section>
     <p class="planr-share-error" role="alert" data-planr-share-error hidden></p>
