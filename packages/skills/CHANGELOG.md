@@ -2,6 +2,26 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.15.0] — 2026-07-16
+
+### Changed
+
+- `planr-artifact` now uses encrypted live collaboration rooms by default,
+  documents creator-only management controls, and retains immutable sharing
+  behind the explicit `--snapshot` option.
+- Runtime instructions align with `openplanr@1.12.0` and
+  `planr-pipeline@0.28.0`.
+
+## [1.14.0] — 2026-07-15
+
+### Changed
+
+- `planr-artifact` now explains the default headless document presentation,
+  explicit canvas override, resolved JSON output, and the distinction between
+  private artifact review and standalone website hosting.
+- Runtime instructions align with `openplanr@1.11.0` and
+  `planr-pipeline@0.27.1`.
+
 ## [1.13.0] — 2026-07-15
 
 ### Added

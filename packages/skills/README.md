@@ -54,6 +54,15 @@ SHIP, dashboard, sync, and doctor skills. Codex installation is handled by
 `planr setup`; Claude Code can consume this marketplace; Cursor uses generated
 project rules.
 
+Generic HTML review uses a quiet, edge-to-edge document presentation by
+default. Design boards retain the zoomable canvas. Both use the same bundled,
+opaque-origin review sandbox and the public `planr artifact` command.
+
+Artifact sharing creates a stable encrypted live room by default. Reviewers
+collaborate on one URL in real time; the creator receives a separate private
+manage URL. Immutable fragment and encrypted short-link sharing remain
+available through `planr artifact share <file> --snapshot`.
+
 ## Install
 
 ### Guided cross-runtime setup (recommended)

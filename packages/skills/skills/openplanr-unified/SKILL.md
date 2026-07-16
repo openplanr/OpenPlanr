@@ -53,9 +53,10 @@ PLAN completion. Honor runtime selection precedence, task dependencies, Preserve
 paths, the three-correction limit, and frontend/backend ownership boundaries.
 
 For universal HTML review, use `planr artifact <file>`. Sharing is explicit:
-small artifacts use fragment-only links, while `planr artifact share <file>
---short` uploads AES-GCM ciphertext and keeps the decryption key in the URL
-fragment. Import returned feedback with `planr artifact import <review-url>`.
+`planr artifact share <file>` creates a stable AES-GCM encrypted live room by
+default, with a separate private creator manage URL. Use `--snapshot` for a
+fragment-only or encrypted short-link snapshot. Import latest room or snapshot
+feedback with `planr artifact import <review-url>`.
 
 Codex uses installed user-scope skills and concise project policy. Cursor uses
 portable project rules and Composer handoff. Claude Code retains native slash
