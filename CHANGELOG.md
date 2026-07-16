@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.12.0
+
+### Minor Changes
+
+- [`60fd19c`](https://github.com/openplanr/OpenPlanr/commit/60fd19cccd15fecf3cb00c189b8719dc92ee6fcf) Make encrypted live artifact review rooms the default sharing workflow, retain
+  immutable snapshots behind `--snapshot`, support live-room feedback imports,
+  and bundle `planr-pipeline` 0.28.0.
+
 ## 1.11.0
 
 ### Minor Changes
