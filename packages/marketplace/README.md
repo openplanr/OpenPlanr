@@ -19,16 +19,16 @@ Then install any of the plugins below:
 <!-- ecosystem-table:start -->
 | Component | Version | Compatibility |
 |---|---:|---|
-| OpenPlanr CLI | 1.10.0 | pipeline ^0.26.3 |
-| Pipeline package/plugin | 0.26.3 | CLI ^1.10.0 |
-| Runtime skills | 1.13.0 | CLI ^1.10.0 |
+| OpenPlanr CLI | 1.12.0 | pipeline ^0.28.0 |
+| Pipeline package/plugin | 0.28.0 | CLI ^1.12.0 |
+| Runtime skills | 1.15.0 | CLI ^1.12.0 |
 | Protocol | 1.1.0 | reads v1.0 artifacts; v1.1 capabilities |
 <!-- ecosystem-table:end -->
 
 | Plugin | Version | Description |
 |---|---|---|
-| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.26.3 | Complete PO, Design, Review, DEV, and QA workflow with universal HTML artifact review and private sharing. |
-| [`openplanr`](https://github.com/openplanr/skills) | 1.13.0 | Unified planning, artifact review, and delivery workflow skills for the certified runtimes. |
+| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.28.0 | Complete PO, Design, Review, DEV, and QA workflow with universal HTML artifact review and private sharing. |
+| [`openplanr`](https://github.com/openplanr/skills) | 1.15.0 | Unified planning, artifact review, and delivery workflow skills for the certified runtimes. |
 
 Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in the same release-train change.
 
@@ -51,7 +51,7 @@ user scope. Project scope requires a Git or initialized OpenPlanr project.
 
 ## Artifact review and private sharing
 
-OpenPlanr CLI 1.10.0 and pipeline 0.26.3 add a runtime-neutral review surface:
+OpenPlanr CLI 1.12.0 and pipeline 0.28.0 provide a runtime-neutral review surface:
 
 ```bash
 planr artifact ./artifact.html
@@ -59,12 +59,22 @@ planr artifact share ./artifact.html
 planr artifact import "<returned-review-url>"
 ```
 
-Small reviews are encoded into a `share.openplanr.dev` URL fragment and never
-reach the server. Large reviews use opt-in, expiring AES-256-GCM short links;
-Cloudflare stores ciphertext only and the decryption key remains in the URL
-fragment. Sharing is never automatic. Claude Code, Codex, and Cursor all route
-artifact actions through the public `planr` command rather than requiring the
-nested pipeline executable on `PATH`.
+One generic artifact is an edge-to-edge
+`document` review by default, with only the quiet review toolbar visible.
+Multi-variant and design-board workflows keep the zoomable `canvas` surface;
+users can override either choice with `--presentation document|canvas`.
+Complete local HTML/CSS/JavaScript is bundled into an invisible opaque-origin
+sandbox. Review links are not standalone website deployments.
+
+Sharing is never automatic. New generic shares create one stable AES-256-GCM
+encrypted live room: anyone with the review URL can comment and see updates in
+open tabs, while only the separate creator manage URL can pause comments, set
+the final verdict, or delete the room. `--snapshot` keeps the explicit
+fragment-only or encrypted-short-link alternative. Cloudflare stores ciphertext
+only and the decryption key remains in the URL fragment at
+`share.openplanr.dev`. Claude Code, Codex,
+and Cursor all route artifact actions through the public `planr` command rather
+than requiring the nested pipeline executable on `PATH`.
 
 Compatibility matrix: [`openplanr/planr-pipeline/docs/compatibility-matrix.md`](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md). Protocol spec: [`openplanr/planr-pipeline/docs/protocol/`](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol).
 
