@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.12.1
+
+### Patch Changes
+
+- [`a2b22ec`](https://github.com/openplanr/OpenPlanr/commit/a2b22ec0bbeb5131b6f2a2d5f6d0a99be3558dfa) Use planr-pipeline 0.28.1 so live collaborative rooms encrypt the compressed artifact payload correctly, including rooms created from legacy artifact shares.
+
 ## 1.12.0
 
 ### Minor Changes
