@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.12.2
+
+### Patch Changes
+
+- [`0784dbd`](https://github.com/openplanr/OpenPlanr/commit/0784dbd1d311a46f56451188199ab12c4f080407) Decode feedback from existing encrypted live artifact review rooms whose persisted events predate the room-event version field.
+
 ## 1.12.1
 
 ### Patch Changes
