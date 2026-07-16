@@ -32,6 +32,17 @@ afterEach(() => {
 });
 
 describe('planr artifact and PATH-safe pipeline routing', { timeout: 30_000 }, () => {
+  it('reserves --short for the explicit immutable snapshot transport', () => {
+    const dir = temporary();
+    writeFileSync(join(dir, 'artifact.html'), '<!doctype html><title>review</title>');
+    const result = run(
+      ['artifact', 'share', 'artifact.html', '--short', '--no-open', '--json'],
+      dir,
+    );
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).toContain('requires `--snapshot`');
+  });
+
   it('creates a private fragment link through the public planr artifact command', () => {
     const dir = temporary();
     writeFileSync(
@@ -39,7 +50,10 @@ describe('planr artifact and PATH-safe pipeline routing', { timeout: 30_000 }, (
       '<!doctype html><html><body><button id="ready">Ready</button></body></html>',
     );
 
-    const result = run(['artifact', 'share', 'artifact.html', '--no-open', '--json'], dir);
+    const result = run(
+      ['artifact', 'share', 'artifact.html', '--snapshot', '--no-open', '--json'],
+      dir,
+    );
     expect(result.status, result.stderr).toBe(0);
     const output = JSON.parse(result.stdout);
     expect(output).toMatchObject({
@@ -56,7 +70,16 @@ describe('planr artifact and PATH-safe pipeline routing', { timeout: 30_000 }, (
     writeFileSync(join(dir, 'artifact.html'), '<!doctype html><html><body>Canvas</body></html>');
 
     const explicit = run(
-      ['artifact', 'share', 'artifact.html', '--presentation', 'canvas', '--no-open', '--json'],
+      [
+        'artifact',
+        'share',
+        'artifact.html',
+        '--snapshot',
+        '--presentation',
+        'canvas',
+        '--no-open',
+        '--json',
+      ],
       dir,
     );
     expect(explicit.status, explicit.stderr).toBe(0);

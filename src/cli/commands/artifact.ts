@@ -36,6 +36,7 @@ interface ShareOptions {
   json?: boolean;
   yes?: boolean;
   presentation?: string;
+  snapshot?: boolean;
 }
 
 function projectDir(program: Command): string {
@@ -125,14 +126,65 @@ async function openArtifact(program: Command, file: string, options: OpenOptions
 }
 
 async function shareArtifact(program: Command, file: string, options: ShareOptions): Promise<void> {
+  if (options.short && !options.snapshot) {
+    throw new ArtifactCommandError(
+      'E_ARTIFACT_INPUT_INVALID',
+      '`--short` selects encrypted snapshot transport and requires `--snapshot`.',
+      'Use `planr artifact share <file> --snapshot --short --yes`, or omit both options to create a live room.',
+    );
+  }
   const prepared = await prepareArtifactEnvelope({
     file: resolveInput(program, file),
     root: resolveRoot(program, options.root),
     title: options.title,
     presentation: presentation(options.presentation),
   });
-  const preview = prepared.api.createReviewLinkPreview(prepared.envelope);
   const yes = confirmed(program, options.yes);
+  if (!options.snapshot) {
+    if (typeof prepared.api.createLiveReviewRoom !== 'function') {
+      throw new ArtifactCommandError(
+        'E_PIPELINE_VERSION_INCOMPATIBLE',
+        'The installed planr-pipeline does not support encrypted live review rooms.',
+        'Run `npm install -g openplanr@latest` after the compatible pipeline release is available, or use `--snapshot`.',
+      );
+    }
+    let allowLive = yes;
+    if (!allowLive) {
+      if (isNonInteractive()) {
+        throw new ArtifactCommandError(
+          'E_ARTIFACT_CONFIRMATION_REQUIRED',
+          'Live review rooms upload encrypted ciphertext and require explicit confirmation.',
+          'Rerun with `planr artifact share <file> --yes`.',
+        );
+      }
+      display.keyValue('Expiry', options.ttl ?? '7d');
+      allowLive = await promptConfirm(
+        'Create an encrypted live review room? Anyone with the review link can comment; only you receive the manage link.',
+        true,
+      );
+    }
+    if (!allowLive) return;
+    const result = await prepared.api.createLiveReviewRoom(prepared.envelope, {
+      baseUrl: process.env.OPENPLANR_SHARE_BASE ?? 'https://share.openplanr.dev',
+      ttl: options.ttl ?? '7d',
+    });
+    const url = String(result.url);
+    if (options.open !== false) await openExternalUrl(url);
+    if (options.json) {
+      display.line(JSON.stringify({ ...result, presentation: prepared.presentation }));
+    } else {
+      logger.success('Encrypted live review room created');
+      display.keyValue('Review URL', url);
+      display.keyValue('Manage URL', String(result.manageUrl));
+      display.keyValue('Presentation', prepared.presentation);
+      if (result.expiresAt) display.keyValue('Expires', String(result.expiresAt));
+      logger.warn(
+        'Save the manage URL privately. It can pause comments, set the final decision, or delete this room.',
+      );
+    }
+    return;
+  }
+  const preview = prepared.api.createReviewLinkPreview(prepared.envelope);
   if (!preview.fragmentEligible && isNonInteractive() && !(options.short && yes)) {
     throw new ArtifactCommandError(
       'E_ARTIFACT_SHORT_CONFIRMATION_REQUIRED',
@@ -207,7 +259,21 @@ async function importArtifactReviews(
   options: { output?: string; allowStale?: boolean; json?: boolean; yes?: boolean },
 ): Promise<void> {
   const api = await loadArtifactPipeline();
-  const decoded = await Promise.all(sources.map((source) => api.decodeReviewLink(source)));
+  const decoded = await Promise.all(
+    sources.map(async (source) => {
+      if (/^https?:\/\/[^/]+\/r\/[A-Za-z0-9_-]{16,128}\/?#/u.test(source)) {
+        if (typeof api.hydrateLiveReviewRoom !== 'function') {
+          throw new ArtifactCommandError(
+            'E_PIPELINE_VERSION_INCOMPATIBLE',
+            'The installed planr-pipeline does not support live review import.',
+          );
+        }
+        const room = await api.hydrateLiveReviewRoom(source);
+        return { ...room.envelope, review: room.review };
+      }
+      return api.decodeReviewLink(source);
+    }),
+  );
   const artifactId = decoded[0]?.viewer.activeArtifactId;
   for (const envelope of decoded) assertReviewEnvelope(envelope, artifactId);
   const currentEnvelope = withoutArtifactReview(decoded[0]);
@@ -338,11 +404,12 @@ export function registerArtifactCommand(program: Command): void {
 
   artifact
     .command('share <file>')
-    .description('Create an immutable private review link')
+    .description('Create an encrypted live review room')
     .option('--title <title>', 'review title')
     .option('--root <asset-root>', 'root for local artifact dependencies')
     .option('--presentation <presentation>', 'auto, document, or canvas', 'auto')
     .option('--short', 'create an encrypted expiring short link', false)
+    .option('--snapshot', 'create an immutable snapshot instead of a live room', false)
     .option('--ttl <ttl>', '1d, 7d, or 30d', '7d')
     .option('--no-open', 'do not open the review link')
     .option('--json', 'emit machine-readable output', false)
@@ -353,7 +420,7 @@ export function registerArtifactCommand(program: Command): void {
 
   artifact
     .command('import <review-url...>')
-    .description('Import one or more immutable returned-review links')
+    .description('Import one or more live-room or immutable review links')
     .option('--output <path>', 'also write the merged review state to this path')
     .option('--allow-stale', 'preview and explicitly accept stale feedback', false)
     .option('--json', 'emit machine-readable output', false)

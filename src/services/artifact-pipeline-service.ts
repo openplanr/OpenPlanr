@@ -53,6 +53,14 @@ export interface ArtifactPipelineApi {
     envelope: ArtifactEnvelope,
     options: Record<string, unknown>,
   ): Promise<Record<string, unknown>>;
+  createLiveReviewRoom?: (
+    envelope: ArtifactEnvelope,
+    options: Record<string, unknown>,
+  ) => Promise<Record<string, unknown>>;
+  hydrateLiveReviewRoom?: (
+    source: string,
+    options?: Record<string, unknown>,
+  ) => Promise<{ envelope: ArtifactEnvelope; review: Record<string, unknown> }>;
   decodeReviewLink(source: string, options?: Record<string, unknown>): Promise<ArtifactEnvelope>;
   importArtifactReview(options: Record<string, unknown>): Promise<Record<string, unknown>>;
   startArtifactReview(options: Record<string, unknown>): Promise<Record<string, unknown>>;

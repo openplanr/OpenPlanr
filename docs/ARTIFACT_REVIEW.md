@@ -45,10 +45,17 @@ part of this command.
 ```bash
 planr artifact share ./artifact.html
 planr artifact share ./artifact.html --presentation document
-planr artifact share ./artifact.html --short --ttl 7d --yes
+planr artifact share ./artifact.html --snapshot --short --ttl 7d --yes
 ```
 
-Artifacts whose encoded fragments are 8,000 characters or less use
+By default, sharing creates one stable encrypted live review room. The normal
+review URL lets anyone with the link view and comment; a separate creator-only
+manage URL can pause/reopen comments, set the final decision, or delete the
+room. New feedback synchronizes to other open review tabs immediately. The
+artifact itself remains immutable and the service stores ciphertext only.
+
+Use `--snapshot` for the immutable sharing model. Artifacts whose encoded
+fragments are 8,000 characters or less use
 `https://share.openplanr.dev/#v1.<payload>`. The browser fragment is not sent in
 the HTTP request, so the host receives no artifact content. Fragment links are
 encoded, not encrypted: anyone who receives the URL can read the review.
@@ -61,8 +68,10 @@ ciphertext, never plaintext or the key. Links are immutable and expire after
 
 ## Return and import feedback
 
-The reviewer copies a new immutable review URL from the hosted viewer. Import
-one or more returned reviews non-destructively:
+Live-room feedback stays in its encrypted room until expiry or deletion. Import
+the room URL at any point to merge its latest full feedback state locally. For
+snapshot sharing, a reviewer still returns a new immutable review URL. Import
+one or more room or snapshot URLs non-destructively:
 
 ```bash
 planr artifact import "<review-url>" "<second-review-url>"
