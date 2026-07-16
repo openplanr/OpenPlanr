@@ -13,6 +13,7 @@ jobs:
 
     permissions:
       contents: write
+      id-token: write
       pull-requests: write
 
     steps:
@@ -24,6 +25,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          registry-url: https://registry.npmjs.org
 
       - run: npm ci
       - run: npm run build
@@ -37,8 +39,10 @@ jobs:
         with:
           title: "chore: version packages"
           commit: "chore: version packages"
+          publish: npm publish
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         if: steps.changesets.outputs.hasChangesets == 'false'
