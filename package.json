@@ -39,6 +39,7 @@
     "format:check": "biome format src/ tests/",
     "prepare": "husky",
     "prepublishOnly": "npm run build",
+    "release": "node scripts/publish-if-needed.mjs",
     "changeset": "changeset",
     "version-packages": "changeset version"
   },
