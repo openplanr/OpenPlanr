@@ -145,7 +145,8 @@ planr pipeline ship auth
 planr artifact ./artifact.html
 # Add pins, threads, and an Approve or Request changes decision.
 
-planr artifact share ./artifact.html --no-open
+planr artifact share ./artifact.html --no-open # live encrypted room (default)
+planr artifact share ./artifact.html --snapshot # explicit immutable snapshot
 planr artifact open ./artifact.html --presentation canvas # optional spatial view
 planr artifact import "<returned-review-url>"
 ```
@@ -155,9 +156,11 @@ design boards retain the zoomable canvas. Complete local HTML/CSS/JavaScript is
 bundled into an opaque-origin sandbox, so private review is not standalone site
 hosting.
 
-Small reviews remain in the URL fragment and are never sent to the share host.
-Large reviews use an explicitly confirmed, encrypted, expiring short link; the
-decryption key remains in the fragment and the service stores ciphertext only.
+Sharing is explicit. A new generic share creates one stable encrypted live room:
+anyone with its review URL can comment, while the creator receives a separate
+private manage URL to pause comments, set the final verdict, or delete the
+room. Immutable fragments and encrypted short links remain available with
+`--snapshot`; the service stores ciphertext only.
 See the [artifact review and privacy guide](docs/ARTIFACT_REVIEW.md).
 
 ---

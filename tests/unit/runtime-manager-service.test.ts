@@ -27,6 +27,8 @@ let root: string;
 let projectDir: string;
 let userHome: string;
 const cliVersion = JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version as string;
+const pipelineVersion = JSON.parse(readFileSync(resolve('package.json'), 'utf8'))
+  .optionalDependencies['planr-pipeline'] as string;
 const pipelineRoot = process.env.OPENPLANR_PIPELINE_ROOT ?? resolve('../planr-pipeline');
 
 beforeEach(() => {
@@ -187,7 +189,11 @@ describe('runtime setup', () => {
     expect(agents).toContain('OpenPlanr runtime policy');
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-ship', 'SKILL.md'))).toBe(true);
     const lock = JSON.parse(readFileSync(join(projectDir, '.planr', 'runtime-lock.json'), 'utf8'));
-    expect(lock.components).toEqual({ cli: cliVersion, pipeline: '0.27.1', skills: '1.13.0' });
+    expect(lock.components).toEqual({
+      cli: cliVersion,
+      pipeline: pipelineVersion,
+      skills: '1.13.0',
+    });
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-artifact', 'SKILL.md'))).toBe(true);
     expect(lock.adapters).toHaveLength(1);
 

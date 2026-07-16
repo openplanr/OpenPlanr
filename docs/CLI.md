@@ -924,14 +924,16 @@ Open, share, import, and export universal HTML review sessions:
 ```bash
 planr artifact <file>
 planr artifact open <file> [--title <title>] [--root <asset-root>] [--theme auto|light|dark] [--presentation auto|document|canvas] [--port <port>] [--no-open] [--json]
-planr artifact share <file> [--title <title>] [--root <asset-root>] [--presentation auto|document|canvas] [--short] [--ttl 1d|7d|30d] [--no-open] [--json] [--yes]
+planr artifact share <file> [--title <title>] [--root <asset-root>] [--presentation auto|document|canvas] [--snapshot] [--short] [--ttl 1d|7d|30d] [--no-open] [--json] [--yes]
 planr artifact import <review-url>... [--output <path>] [--allow-stale] [--json] [--yes]
 planr artifact export <session-id> [--format json|markdown] [--output <path>]
 ```
 
-Local sessions bind only to loopback. Sharing is never automatic. Small reviews
-use a URL fragment; encrypted short links require explicit consent and default
-to a seven-day expiry. See [Artifact review and private sharing](ARTIFACT_REVIEW.md)
+Local sessions bind only to loopback. Sharing is never automatic. New generic
+shares create an encrypted live review room with one stable review URL and a
+separate creator-only manage URL. `--snapshot` selects the older immutable
+fragment/short-link flow; encrypted short links default to a seven-day expiry.
+See [Artifact review and private sharing](ARTIFACT_REVIEW.md)
 for the sandbox, privacy, remote/SSH, stale-review, offline, and self-hosting
 contracts.
 
