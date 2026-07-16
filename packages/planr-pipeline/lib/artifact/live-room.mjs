@@ -134,7 +134,7 @@ export function createLiveRoomClient({ baseUrl = 'https://share.openplanr.dev', 
   return Object.freeze({
     async create({ envelope, ttl = '7d', crypto } = {}) {
       assertEnvelope(envelope); if (!ARTIFACT_ROOM_TTLS.includes(ttl)) throw error(ARTIFACT_ERROR_CODES.ROOM_INVALID, 'Live review TTL must be 1d, 7d, or 30d.');
-      const reviewOf = await digestEnvelope(envelope, crypto); const compressed = compressArtifactPayload(envelope); const encrypted = await encryptArtifactPayload(compressed, { crypto });
+      const reviewOf = await digestEnvelope(envelope, crypto); const prepared = compressArtifactPayload(envelope); const encrypted = await encryptArtifactPayload(prepared.compressed, { crypto });
       const writeCapability = randomToken(crypto); const manageCapability = randomToken(crypto);
       const created = await json('/api/v1/rooms', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ schemaVersion: '1.0.0', operation: 'create', ttl, reviewOf, iv: encrypted.iv, ciphertext: encrypted.ciphertext, writeCapability, manageCapability }) });
       validateId(created.id); if (!validIso(created.expiresAt)) throw error(ARTIFACT_ERROR_CODES.ROOM_INVALID, 'Live review service returned an invalid room.');

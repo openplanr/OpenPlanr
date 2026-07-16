@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   appendLiveRoomEvent,
+  createLiveRoomClient,
   createLiveRoomEvent,
   createLiveRoomLinks,
   decryptLiveRoomEvent,
@@ -65,4 +66,27 @@ test('append helper uploads ciphertext instead of feedback plaintext', async () 
   assert.equal(request[1], write);
   assert.equal(typeof request[2].ciphertext, 'string');
   assert.doesNotMatch(request[2].ciphertext, /Fix this/);
+});
+
+test('live room creation encrypts the compressed envelope bytes', async () => {
+  let request;
+  const fetchImpl = async (_url, options) => {
+    request = JSON.parse(options.body);
+    return new Response(JSON.stringify({
+      id: roomId,
+      expiresAt: '2026-07-22T00:00:00.000Z',
+    }), { status: 201, headers: { 'content-type': 'application/json' } });
+  };
+  const envelope = {
+    schemaVersion: '1.0.0',
+    artifacts: [{ id: 'artifact', kind: 'html', title: 'Artifact', html: '<!doctype html><p>private</p>' }],
+    viewer: { mode: 'single', activeArtifactId: 'artifact' },
+  };
+
+  const result = await createLiveRoomClient({ fetchImpl }).create({ envelope, ttl: '7d' });
+
+  assert.equal(result.action, 'artifact_live_room_created');
+  assert.equal(typeof request.iv, 'string');
+  assert.equal(typeof request.ciphertext, 'string');
+  assert.doesNotMatch(request.ciphertext, /private/);
 });
