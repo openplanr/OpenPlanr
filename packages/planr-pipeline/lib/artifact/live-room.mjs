@@ -88,7 +88,8 @@ export async function encryptLiveRoomEvent(event, { key, crypto } = {}) {
 }
 
 export async function decryptLiveRoomEvent(record, { key, roomId, reviewOf, crypto } = {}) {
-  const bytes = await decryptArtifactPayload(record, { keyFragment: key, crypto, maxEncryptedBytes: ARTIFACT_COMPRESSED_LIMIT });
+  const encrypted = record?.version ? record : { ...record, version: ARTIFACT_ROOM_VERSION };
+  const bytes = await decryptArtifactPayload(encrypted, { keyFragment: key, crypto, maxEncryptedBytes: ARTIFACT_COMPRESSED_LIMIT });
   let value;
   try { value = JSON.parse(new TextDecoder().decode(bytes)); } catch { throw error(ARTIFACT_ERROR_CODES.ROOM_EVENT_INVALID, 'Live review event could not be decoded.'); }
   const normalized = createLiveRoomEvent(value);

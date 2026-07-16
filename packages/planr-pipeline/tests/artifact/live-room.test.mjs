@@ -46,6 +46,13 @@ test('room event encryption round trips and binds room plus reviewed digest', as
   await assert.rejects(() => decryptLiveRoomEvent(encrypted, { key, roomId, reviewOf: 'b'.repeat(64) }), { code: 'E_ARTIFACT_DIGEST_MISMATCH' });
 });
 
+test('room event decryption accepts versionless Worker records from existing rooms', async () => {
+  const event = createLiveRoomEvent({ roomId, reviewOf, kind: 'pin', payload: pin(), eventId: 'event-legacy-wire', createdAt: '2026-07-15T00:00:00.000Z' });
+  const encrypted = await encryptLiveRoomEvent(event, { key });
+  const wire = { sequence: 1, iv: encrypted.iv, ciphertext: encrypted.ciphertext };
+  assert.deepEqual(await decryptLiveRoomEvent(wire, { key, roomId, reviewOf }), event);
+});
+
 test('room reduction deduplicates replayed events and reserves final decision for owner event', () => {
   const events = [
     createLiveRoomEvent({ roomId, reviewOf, kind: 'pin', payload: pin(), eventId: '1', createdAt: '2026-07-15T00:00:00.000Z' }),
