@@ -15,6 +15,8 @@ npm run doctor -- --strict
 npm run doctor -- --release
 npm run doctor -- --release --strict
 npm run doctor -- --json
+npm run doctor -- --repair-preview --json
+npm run doctor -- --fix --json
 npm run doctor -- --workspace-root /path/to/checkouts
 ```
 
@@ -27,6 +29,8 @@ npm run doctor -- --workspace-root /path/to/checkouts
 | `--release` | Checks tags and GitHub releases for current pipeline, skill, and CLI versions when sibling repos exist. |
 | `--json` | Emits machine-readable output with `ok`, `failures`, `warnings`, and `checks`. |
 | `--versions-only` | Runs the version/protocol/ecosystem subset used by `npm run doctor:versions`. |
+| `--repair-preview` | Reports safe Planr-owned stale-daemon repairs without changing files. |
+| `--fix` | Rechecks daemon health and removes only stale Planr-owned daemon state. |
 | `--workspace-root <path>` | Explicit parent directory containing ecosystem checkouts. Overrides auto-discovery. |
 
 ## Ecosystem Discovery
@@ -71,6 +75,6 @@ them.
 | Versions | Update `package.json`, `.claude-plugin/plugin.json`, `input/tech/stack.md`, protocol docs, and compatibility docs together. |
 | Protocol | Keep schemas under `schemas/v1.0.0/` canonical and use `qa_gate_status` values `passed`, `failed`, `skipped`. |
 | Ecosystem | Update sibling marketplace, skills, and OpenPlanr docs after owner repo changes. |
-| Daemons | Remove stale state under `~/.planr/design-daemon/` or `~/.planr/dashboard-daemon/`, then restart the command. |
+| Daemons | Run `planr doctor --fix`; it previews, confirms, rechecks, and removes only stale Planr-owned daemon state. |
 | Credentials | Keep project `.env` files with `OPENAI_API_KEY` ignored, or move the key to user-level credentials. |
 | Releases | Create the missing tag or GitHub release, then rerun `npm run doctor -- --release --strict`. |

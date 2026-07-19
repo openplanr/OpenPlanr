@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const expected = {
-  pipeline: process.env.PLANR_EXPECT_PIPELINE ?? '0.28.2',
+  pipeline: process.env.PLANR_EXPECT_PIPELINE ?? '0.28.3',
   cli: process.env.PLANR_EXPECT_CLI ?? '1.12.2',
   skills: process.env.PLANR_EXPECT_SKILLS ?? '1.15.0',
 };

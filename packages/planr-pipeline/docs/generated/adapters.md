@@ -4,6 +4,6 @@
 
 | Runtime | Adapter | Level | Subagents | Tool isolation | Headless | Artifact review |
 |---|---:|---|---|---|---|---|
-| claude-code | 0.28.2 | product | native | enforced | yes | `planr artifact` |
-| codex | 0.28.2 | workflow | dynamic | advisory | yes | `$planr-artifact` |
-| cursor | 0.28.2 | workflow | advisory | advisory | no; native handoff | `planr artifact` |
+| claude-code | 0.28.3 | product | native | enforced | yes | `planr artifact` |
+| codex | 0.28.3 | workflow | dynamic | advisory | yes | `$planr-artifact` |
+| cursor | 0.28.3 | workflow | advisory | advisory | no; native handoff | `planr artifact` |

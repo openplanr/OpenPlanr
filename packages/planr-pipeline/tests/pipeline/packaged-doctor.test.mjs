@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -57,4 +57,41 @@ test('the installed package doctor does not require source-only release files', 
   assert.equal(report.ok, true);
   assert.ok(report.checks.some((check) => check.id === 'versions.package-mode'));
   assert.ok(report.checks.some((check) => check.id === 'ecosystem.package-mode'));
+});
+
+test('doctor previews and repairs stale Planr-owned daemon state', () => {
+  const temp = mkdtempSync(join(tmpdir(), 'planr-doctor-repair-'));
+  const home = join(temp, 'home');
+  const projectRoot = join(temp, 'project');
+  const designState = join(home, '.planr', 'design-daemon');
+  const dashboardState = join(home, '.planr', 'dashboard-daemon');
+  mkdirSync(designState, { recursive: true });
+  mkdirSync(dashboardState, { recursive: true });
+  mkdirSync(projectRoot, { recursive: true });
+  writeFileSync(join(designState, 'port'), '1\n');
+  writeFileSync(join(dashboardState, 'port'), 'not-a-port\n');
+
+  const preview = spawnSync(process.execPath, [join(root, 'scripts/doctor.mjs'), '--json', '--repair-preview'], {
+    cwd: projectRoot,
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home, PLANR_HOME: join(home, '.planr') },
+  });
+  assert.equal(preview.status, 0, preview.stderr || preview.stdout);
+  const previewReport = JSON.parse(preview.stdout);
+  assert.equal(previewReport.repairs.length, 2);
+  assert.ok(previewReport.repairs.every((repair) => repair.applied === false));
+  assert.equal(existsSync(designState), true);
+  assert.equal(existsSync(dashboardState), true);
+
+  const fixed = spawnSync(process.execPath, [join(root, 'scripts/doctor.mjs'), '--json', '--fix'], {
+    cwd: projectRoot,
+    encoding: 'utf8',
+    env: { ...process.env, HOME: home, PLANR_HOME: join(home, '.planr') },
+  });
+  assert.equal(fixed.status, 0, fixed.stderr || fixed.stdout);
+  const fixedReport = JSON.parse(fixed.stdout);
+  assert.equal(fixedReport.repairs.length, 2);
+  assert.ok(fixedReport.repairs.every((repair) => repair.applied === true));
+  assert.equal(existsSync(designState), false);
+  assert.equal(existsSync(dashboardState), false);
 });

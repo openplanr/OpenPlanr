@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -30,9 +30,12 @@ const options = {
   strict: args.has('--strict') || process.env.OPENPLANR_STRICT_ECOSYSTEM === '1',
   release: args.has('--release'),
   json: args.has('--json'),
+  repairPreview: args.has('--repair-preview'),
+  fix: args.has('--fix'),
 };
 
 const checks = [];
+const repairs = [];
 
 function addCheck({ id, category, status, severity, message, fix = '', strictFail = false }) {
   let finalStatus = status;
@@ -145,7 +148,7 @@ function checkLocalhostHealth(id, label, dirName) {
 
   const port = readFileSync(portFile, 'utf8').trim();
   if (!/^\d+$/.test(port)) {
-    warn(`${id}.state`, 'Daemons', `${label} daemon port file is invalid`, `Delete ${portFile} and restart the daemon.`);
+    handleStaleDaemon(id, label, stateDir, `${label} daemon port file is invalid`);
     return;
   }
 
@@ -157,7 +160,7 @@ function checkLocalhostHealth(id, label, dirName) {
       .then(async (response) => {
         clearTimeout(timeout);
         if (!response.ok) {
-          warn(`${id}.health`, 'Daemons', `${label} daemon health returned HTTP ${response.status}`, `Restart the daemon or remove stale state under ${stateDir}.`);
+          handleStaleDaemon(id, label, stateDir, `${label} daemon health returned HTTP ${response.status}`);
           return;
         }
 
@@ -165,14 +168,26 @@ function checkLocalhostHealth(id, label, dirName) {
         if (body?.ok === true) {
           ok(`${id}.health`, 'Daemons', `${label} daemon is healthy on localhost:${port}`);
         } else {
-          warn(`${id}.health`, 'Daemons', `${label} daemon health response is not ok`, `Restart the daemon or remove stale state under ${stateDir}.`);
+          handleStaleDaemon(id, label, stateDir, `${label} daemon health response is not ok`);
         }
       })
       .catch(() => {
         clearTimeout(timeout);
-        warn(`${id}.health`, 'Daemons', `${label} daemon state exists but localhost:${port} is unreachable`, `Remove stale state under ${stateDir} or restart the daemon.`);
+        handleStaleDaemon(id, label, stateDir, `${label} daemon state exists but localhost:${port} is unreachable`);
       }),
   );
+}
+
+function handleStaleDaemon(id, label, stateDir, message) {
+  const repair = { id: `${id}.state`, operation: 'remove', target: stateDir };
+  if (options.fix) {
+    rmSync(stateDir, { recursive: true, force: true });
+    repairs.push({ ...repair, applied: true });
+    ok(`${id}.health`, 'Daemons', `Removed stale ${label.toLowerCase()} daemon state under ${stateDir}`);
+    return;
+  }
+  if (options.repairPreview) repairs.push({ ...repair, applied: false });
+  warn(`${id}.health`, 'Daemons', message, 'Run `planr doctor --fix` to preview and remove this Planr-owned stale state.');
 }
 
 function readGithubRelease(cwd, tag) {
@@ -628,6 +643,7 @@ const summary = {
   failures: checks.filter((check) => check.status === 'fail').length,
   warnings: checks.filter((check) => check.status === 'warn').length,
   checks: checks.map(({ category, ...check }) => check),
+  repairs,
 };
 
 if (options.json) {
