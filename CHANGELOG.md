@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.12.3
+
+### Patch Changes
+
+- [`ed010b3`](https://github.com/openplanr/OpenPlanr/commit/ed010b35fa57c855af89432fb622d1a31f34594d) Make `planr doctor --fix` preview and safely remove stale Planr-owned design and dashboard daemon state. Missing runtimes are now informational unless the current setup selected them.
+
 ## 1.12.2
 
 ### Patch Changes
