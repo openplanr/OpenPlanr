@@ -22,7 +22,7 @@ jobs:
       - name: Verify published packages and share host
         run: |
           node - <<'NODE'
-          const manifest = require('./ecosystem.json');
+          const manifest = JSON.parse(await (await import('node:fs/promises')).readFile('./ecosystem.json', 'utf8'));
           for (const [name, expected] of [['openplanr', manifest.components.cli.version], ['planr-pipeline', manifest.components.pipeline.version]]) {
             const response = await fetch(`https://registry.npmjs.org/${name}/latest`);
             if (!response.ok) throw new Error(`${name} registry lookup failed: ${response.status}`);
