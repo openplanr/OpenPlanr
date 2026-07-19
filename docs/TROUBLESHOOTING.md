@@ -9,9 +9,13 @@ planr doctor --json
 planr setup --dry-run
 ```
 
-`doctor --fix` previews owned generated-file repairs. Package installation,
-version changes, provenance recovery, credential changes, and deletion remain
-explicit confirmation gates.
+`doctor --fix` previews owned generated-file repairs and stale Planr daemon
+state. It asks once, rechecks daemon health, and removes only Planr-owned state;
+it never kills a process. Package installation, version changes, provenance
+recovery, credential changes, and unrelated deletion remain explicit gates.
+
+An unavailable runtime is informational unless setup or the project lock
+actually selected it. A selected runtime that disappears remains a warning.
 
 ## Runtime setup and migration
 

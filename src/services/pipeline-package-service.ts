@@ -15,18 +15,20 @@ export interface PipelinePackage {
 
 function candidateRoots(): string[] {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  const roots = [
-    process.env.OPENPLANR_PIPELINE_ROOT,
-    path.resolve(here, '../../../planr-pipeline'),
-    path.resolve(process.cwd(), '../planr-pipeline'),
-  ].filter((value): value is string => Boolean(value));
+  const roots = [process.env.OPENPLANR_PIPELINE_ROOT].filter((value): value is string =>
+    Boolean(value),
+  );
 
   try {
     const entry = require.resolve('planr-pipeline');
-    roots.unshift(path.resolve(path.dirname(entry), '../..'));
+    roots.push(path.resolve(path.dirname(entry), '../..'));
   } catch {
     // Optional dependency may be omitted by the minimal installer.
   }
+  roots.push(
+    path.resolve(here, '../../../planr-pipeline'),
+    path.resolve(process.cwd(), '../planr-pipeline'),
+  );
   return [...new Set(roots.map((root) => path.resolve(root)))];
 }
 

@@ -1027,8 +1027,12 @@ export async function cleanupHomeProjectInstall(): Promise<{ ok: true; removed: 
   return { ok: true, removed };
 }
 
-export async function runtimeDoctor(projectDir: string): Promise<{
+export async function runtimeDoctor(
+  projectDir: string,
+  options: { pipelineRepair?: 'preview' | 'apply' } = {},
+): Promise<{
   ok: boolean;
+  repairs: Array<{ id: string; operation: 'remove'; target: string; applied: boolean }>;
   diagnostics: Array<{
     code: string;
     status: 'pass' | 'warn' | 'fail';
@@ -1042,6 +1046,7 @@ export async function runtimeDoctor(projectDir: string): Promise<{
     message: string;
     fix?: string;
   }> = [];
+  const repairs: Array<{ id: string; operation: 'remove'; target: string; applied: boolean }> = [];
   let lockedAdapters:
     | Array<{
         runtime: RuntimeId;
@@ -1057,12 +1062,19 @@ export async function runtimeDoctor(projectDir: string): Promise<{
     message: `Node.js ${process.versions.node}`,
     ...(nodeMajor < 20 ? { fix: 'Install Node.js 20 or newer.' } : {}),
   });
+  const state = await loadState();
+  const installed = state.projects[projectKey(projectDir)];
   for (const result of detectRuntimes()) {
+    const configured = installed?.runtimes.includes(result.runtime) ?? false;
     diagnostics.push({
       code: `runtime-${result.runtime}`,
-      status: result.installed ? 'pass' : 'warn',
-      message: result.installed ? `${result.runtime} detected` : `${result.runtime} not detected`,
-      ...(!result.installed
+      status: result.installed || !configured ? 'pass' : 'warn',
+      message: result.installed
+        ? `${result.runtime} detected`
+        : configured
+          ? `${result.runtime} is configured but not detected`
+          : `${result.runtime} is not installed or configured`,
+      ...(!result.installed && configured
         ? { fix: `Install ${result.command} only if you intend to use this adapter.` }
         : {}),
     });
@@ -1074,8 +1086,6 @@ export async function runtimeDoctor(projectDir: string): Promise<{
     message: pipeline ? `planr-pipeline ${pipeline.version}` : 'Planning-only installation',
     ...(!pipeline ? { fix: 'Install openplanr without omitting optional dependencies.' } : {}),
   });
-  const state = await loadState();
-  const installed = state.projects[projectKey(projectDir)];
   const expectsProjectLock =
     installed?.ownedFiles.some((file) => file.scope === 'project') ?? false;
   const lock = path.join(projectDir, '.planr', 'runtime-lock.json');
@@ -1269,11 +1279,17 @@ export async function runtimeDoctor(projectDir: string): Promise<{
   if (pipeline) {
     const result = spawnSync(
       process.execPath,
-      [path.join(pipeline.root, 'scripts', 'doctor.mjs'), '--json'],
+      [
+        path.join(pipeline.root, 'scripts', 'doctor.mjs'),
+        '--json',
+        ...(options.pipelineRepair === 'preview' ? ['--repair-preview'] : []),
+        ...(options.pipelineRepair === 'apply' ? ['--fix'] : []),
+      ],
       {
         cwd: projectDir,
         encoding: 'utf8',
         windowsHide: true,
+        env: { ...process.env, PLANR_HOME: path.join(userHome(), '.planr') },
       },
     );
     try {
@@ -1284,7 +1300,14 @@ export async function runtimeDoctor(projectDir: string): Promise<{
           message: string;
           fix?: string;
         }>;
+        repairs?: Array<{
+          id: string;
+          operation: 'remove';
+          target: string;
+          applied: boolean;
+        }>;
       };
+      repairs.push(...(report.repairs ?? []));
       for (const check of report.checks ?? []) {
         if (check.status === 'ok') continue;
         diagnostics.push({
@@ -1304,7 +1327,7 @@ export async function runtimeDoctor(projectDir: string): Promise<{
     }
   }
   const fail = diagnostics.some((item) => item.status === 'fail');
-  return { ok: !fail, diagnostics };
+  return { ok: !fail, diagnostics, repairs };
 }
 
 export async function clearRuntimeStateForTests(root: string): Promise<void> {
