@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "generate": "node scripts/generate-ecosystem.mjs",
-    "check": "node scripts/generate-ecosystem.mjs --check && node scripts/check-readme.mjs"
+    "check": "node scripts/generate-ecosystem.mjs --check && node scripts/check-readme.mjs",
+    "test": "node --test tests/*.test.mjs"
   }
 }
