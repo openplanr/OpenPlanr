@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-16T11:06:55.944Z",
+  "generatedAt": "2026-07-19T09:14:26.940Z",
   "protocol": {
     "current": "1.1.0",
     "supported": [
@@ -10,16 +10,16 @@
   },
   "components": {
     "cli": {
-      "version": "1.12.0",
-      "pipelineRange": "^0.28.0"
+      "version": "1.12.2",
+      "pipelineRange": "^0.28.2"
     },
     "pipeline": {
-      "version": "0.28.0",
-      "cliRange": "^1.12.0"
+      "version": "0.28.2",
+      "cliRange": "^1.12.2"
     },
     "skills": {
       "version": "1.15.0",
-      "cliRange": "^1.12.0"
+      "cliRange": "^1.12.2"
     },
     "marketplace": {
       "version": "1.0.0"
@@ -28,21 +28,21 @@
   "adapters": [
     {
       "runtime": "claude-code",
-      "version": "0.28.0",
+      "version": "0.28.2",
       "capabilityLevel": "product",
-      "pipelineRange": "^0.28.0"
+      "pipelineRange": "^0.28.2"
     },
     {
       "runtime": "codex",
-      "version": "0.28.0",
+      "version": "0.28.2",
       "capabilityLevel": "workflow",
-      "pipelineRange": "^0.28.0"
+      "pipelineRange": "^0.28.2"
     },
     {
       "runtime": "cursor",
-      "version": "0.28.0",
+      "version": "0.28.2",
       "capabilityLevel": "workflow",
-      "pipelineRange": "^0.28.0"
+      "pipelineRange": "^0.28.2"
     }
   ]
 }
