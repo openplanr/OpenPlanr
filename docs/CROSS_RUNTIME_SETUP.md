@@ -87,6 +87,8 @@ absolute paths remain in the user runtime state and backups.
 - Setup never installs Node or deletes unknown user files.
 - `doctor --fix` can remove legacy project files accidentally installed under
   `$HOME`, but only when their recorded ownership hashes still match.
+- `doctor --fix` can remove unreachable design/dashboard daemon state after a
+  preview and second health check; it never kills or inspects unrelated processes.
 - Credentials are not written to runtime locks or provenance.
 - Doctor redacts secrets and only fixes owned files after preview.
 - Provenance is append-only. Recovery requires an explicit event rather than

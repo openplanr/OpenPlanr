@@ -16,12 +16,19 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
     .command('doctor')
     .description('Diagnose OpenPlanr, pipeline, runtime adapter, and project health')
     .option('--strict', 'treat warnings as failures', false)
-    .option('--fix', 'preview and repair owned generated files', false)
+    .option('--fix', 'preview and repair owned generated files and stale daemon state', false)
     .option('--json', 'machine-readable output', false)
-    .option('--yes', 'apply owned-file repairs without confirmation', false)
+    .option(
+      '--yes',
+      'apply previewed owned-file and stale-daemon repairs without confirmation',
+      false,
+    )
     .action(async (opts) => {
       const projectDir = program.opts().projectDir as string;
-      let result = await runtimeDoctor(projectDir);
+      let result = await runtimeDoctor(
+        projectDir,
+        opts.fix ? { pipelineRepair: 'preview' } : undefined,
+      );
       if (opts.fix) {
         const homeCleanup = await previewHomeProjectCleanup();
         const managedRuntimes = isOpenPlanrHome(projectDir)
@@ -40,6 +47,8 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
         if (!opts.json) {
           logger.heading('Repair preview');
           for (const target of homeCleanup) display.bullet(`remove ${target}`);
+          for (const repair of result.repairs)
+            display.bullet(`${repair.operation} ${repair.target}`);
           for (const action of (preview?.actions ?? []).filter(
             (item) => item.operation !== 'unchanged',
           )) {
@@ -48,6 +57,7 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
         }
         const hasRepairs =
           homeCleanup.length > 0 ||
+          result.repairs.length > 0 ||
           (preview?.actions ?? []).some((item) => item.operation !== 'unchanged');
         if (!hasRepairs) {
           if (!opts.json) logger.success('No owned-file repairs are needed.');
@@ -56,11 +66,15 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
           hasRepairs &&
           (opts.yes ||
             program.opts().yes ||
-            (!isNonInteractive() && (await promptConfirm('Apply owned-file repairs?', true))));
+            (!isNonInteractive() &&
+              (await promptConfirm('Apply owned-file and stale-daemon repairs?', true))));
         if (hasRepairs && !confirmed && isNonInteractive() && !opts.json) {
           logger.warn('Repairs were not applied; rerun with --yes after reviewing the preview.');
         }
         if (confirmed) {
+          if (result.repairs.length) {
+            await runtimeDoctor(projectDir, { pipelineRepair: 'apply' });
+          }
           if (homeCleanup.length) await cleanupHomeProjectInstall();
           if (managedRuntimes.length) {
             await applySetup({

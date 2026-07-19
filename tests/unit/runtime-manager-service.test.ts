@@ -214,6 +214,50 @@ describe('runtime setup', () => {
     });
   });
 
+  it('treats an unselected missing runtime as informational and a configured one as a warning', async () => {
+    const originalPath = process.env.PATH;
+    process.env.PATH = '';
+    try {
+      const unconfigured = await runtimeDoctor(projectDir);
+      expect(unconfigured.diagnostics.find((item) => item.code === 'runtime-cursor')).toMatchObject(
+        {
+          status: 'pass',
+          message: 'cursor is not installed or configured',
+        },
+      );
+
+      await applySetup({ projectDir, cliVersion, runtime: 'cursor', scope: 'project' });
+      const configured = await runtimeDoctor(projectDir);
+      expect(configured.diagnostics.find((item) => item.code === 'runtime-cursor')).toMatchObject({
+        status: 'warn',
+        message: 'cursor is configured but not detected',
+      });
+    } finally {
+      process.env.PATH = originalPath;
+    }
+  });
+
+  it('previews and applies pipeline stale-daemon repairs', async () => {
+    const designState = join(userHome, '.planr', 'design-daemon');
+    const dashboardState = join(userHome, '.planr', 'dashboard-daemon');
+    mkdirSync(designState, { recursive: true });
+    mkdirSync(dashboardState, { recursive: true });
+    writeFileSync(join(designState, 'port'), '1\n');
+    writeFileSync(join(dashboardState, 'port'), 'invalid\n');
+
+    const preview = await runtimeDoctor(projectDir, { pipelineRepair: 'preview' });
+    expect(preview.repairs).toHaveLength(2);
+    expect(preview.repairs.every((repair) => repair.applied === false)).toBe(true);
+    expect(existsSync(designState)).toBe(true);
+    expect(existsSync(dashboardState)).toBe(true);
+
+    const fixed = await runtimeDoctor(projectDir, { pipelineRepair: 'apply' });
+    expect(fixed.repairs).toHaveLength(2);
+    expect(fixed.repairs.every((repair) => repair.applied === true)).toBe(true);
+    expect(existsSync(designState)).toBe(false);
+    expect(existsSync(dashboardState)).toBe(false);
+  });
+
   it('rolls migration back to exact prior bytes', async () => {
     const original = '# Keep exactly this\n\nCustom text.\n';
     writeFileSync(join(projectDir, 'AGENTS.md'), original);
