@@ -19,15 +19,15 @@ Then install any of the plugins below:
 <!-- ecosystem-table:start -->
 | Component | Version | Compatibility |
 |---|---:|---|
-| OpenPlanr CLI | 1.12.3 | pipeline ^0.28.3 |
-| Pipeline package/plugin | 0.28.3 | CLI ^1.12.3 |
-| Runtime skills | 1.15.0 | CLI ^1.12.3 |
+| OpenPlanr CLI | 1.12.4 | pipeline ^0.28.4 |
+| Pipeline package/plugin | 0.28.4 | CLI ^1.12.4 |
+| Runtime skills | 1.15.0 | CLI ^1.12.4 |
 | Protocol | 1.1.0 | reads v1.0 artifacts; v1.1 capabilities |
 <!-- ecosystem-table:end -->
 
 | Plugin | Version | Description |
 |---|---|---|
-| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.28.3 | Complete PO, Design, Review, DEV, and QA workflow with universal HTML artifact review and private sharing. |
+| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.28.4 | Complete PO, Design, Review, DEV, and QA workflow with universal HTML artifact review and private sharing. |
 | [`openplanr`](https://github.com/openplanr/skills) | 1.15.0 | Unified planning, artifact review, and delivery workflow skills for the certified runtimes. |
 
 Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in the same release-train change.
@@ -51,7 +51,7 @@ user scope. Project scope requires a Git or initialized OpenPlanr project.
 
 ## Artifact review and private sharing
 
-OpenPlanr CLI 1.12.3 and pipeline 0.28.3 provide a runtime-neutral review surface:
+OpenPlanr CLI 1.12.4 and pipeline 0.28.4 provide a runtime-neutral review surface:
 
 ```bash
 planr artifact ./artifact.html
