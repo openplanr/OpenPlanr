@@ -76,6 +76,7 @@
     "doctor": "node scripts/doctor.mjs",
     "doctor:versions": "node scripts/doctor.mjs --versions-only",
     "ecosystem:conformance": "node scripts/ecosystem-conformance.mjs",
+    "canary:artifact-release": "node scripts/artifact-release-canary.mjs",
     "conformance:native-dispatch": "node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd1-parallel && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd2-advisory-locklist && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd3-dependson && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd4-per-task",
     "conformance:check": "npm run conformance:native-dispatch && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard",
     "conformance:artifact": "npm run conformance:artifact-review",
