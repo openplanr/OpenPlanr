@@ -129,15 +129,22 @@ Claude will invoke the skill when the user's intent matches; the skill's instruc
 
 ## Post-install sanity check
 
-Regardless of channel, run these five prompts to confirm activation works on the common triggers:
+Regardless of channel, run these seven prompts to confirm activation works on the common triggers:
 
 1. "Help me plan out a new authentication system."
 2. "I have a PRD — can you break it into epics and tasks?"
 3. "Estimate story points for this story: a user can reset their password via email."
 4. "What's the status of our planning for this project?"
 5. "Generate agent rules from my planning artifacts."
+6. "Share this local HTML artifact for collaborative review."
+7. "Run the reviewed feature through the OpenPlanr shipping workflow."
 
-The skill should trigger on all five. It should NOT trigger on unrelated requests like "write a function to parse JSON" or "debug this TypeScript error."
+The relevant OpenPlanr skill should trigger on all seven. It should NOT trigger on these four controls:
+
+1. "Write a function to parse JSON."
+2. "Debug this TypeScript error."
+3. "Explain the weather forecast."
+4. "Write a short poem about coffee."
 
 If a trigger fails, please [open an issue](https://github.com/openplanr/skills/issues) with the exact prompt and the environment (Claude Code / Claude.ai / API).
 
