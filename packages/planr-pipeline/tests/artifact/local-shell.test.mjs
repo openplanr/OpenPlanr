@@ -391,9 +391,12 @@ test('real browser stage preserves dynamic interaction, comment routing, accessi
   await page.goto(host.url);
   await page.waitForFunction(() => globalThis.__openPlanrArtifactStage?.getState().status === 'ready');
   assert.equal(await page.evaluate(() => globalThis.__openPlanrArtifactStage.getState().zoom), 72);
+  const bridgeAttachments = await page.evaluate(() => globalThis.__planrBridgeAttachments);
+  assert.equal(new Set(bridgeAttachments).size, envelope.artifacts.length, 'each artifact bridge attaches once');
   assert.deepEqual(
-    await page.evaluate(() => globalThis.__planrBridgeAttachments),
-    ['checkout', 'insights', 'components'],
+    [...bridgeAttachments].sort(),
+    envelope.artifacts.map(({ id }) => id).sort(),
+    'concurrently loaded artifact bridges all attach regardless of completion order',
   );
   assert.deepEqual(
     await page.locator('[data-planr-artifact-frame]').evaluateAll((frames) => (
