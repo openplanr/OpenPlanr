@@ -31,13 +31,13 @@
     },
     {
       "path": "templates/artifact-review-shell.html",
-      "bytes": 45801,
-      "sha256": "4c6538ab86fb411b70387b87df632e2e5c0c69be0231a672dd2c61d85b778bcb"
+      "bytes": 47916,
+      "sha256": "4b54b50673ae79b4ffad85739d977ffd38798cd0b1efe8690680528643f94b4a"
     },
     {
       "path": "templates/artifact-review-stage.js",
-      "bytes": 119848,
-      "sha256": "50225603ea12ca76cbeac114f1ab6d85d0c0f24fbe2c5202370721a8856a41e1"
+      "bytes": 123541,
+      "sha256": "1603ed4265666208218056fadf967ee801b51576c287e1c87e694d7f17ec1e63"
     },
     {
       "path": "templates/design/design-board-adapter.js",

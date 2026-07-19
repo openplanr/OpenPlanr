@@ -141,7 +141,7 @@ test('shell document keeps artifact bytes out of the parent and exposes only the
     shell: { title: 'Artifact behavior review', theme: 'light', status: 'ready' },
   });
 
-  assert.doesNotMatch(document, /Interactions <span|data-planr-id|<html data-artifact/);
+  assert.doesNotMatch(document, /Interactions <span|data-planr-id(?:=|\s)|<html data-artifact/);
   assert.match(document, /id="planr-artifact-stage-payload"/);
   assert.match(document, /script-src 'self' 'unsafe-inline'/);
   assert.match(document, /frame-src blob:/);

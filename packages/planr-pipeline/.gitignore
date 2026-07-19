@@ -30,3 +30,4 @@ node_modules/
 /FEATURE_MAP.md
 /PROJECT_KNOWLEDGE.md
 /SYSTEM_ARCHITECTURE.md
+.gstack/

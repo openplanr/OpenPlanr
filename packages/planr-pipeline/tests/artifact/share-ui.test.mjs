@@ -401,6 +401,9 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
     await page.evaluate(() => globalThis.__planrCopies.at(-1)),
     `https://share.openplanr.dev/p/paste-123#k=${'k'.repeat(43)}`,
   );
+  await page.locator('[data-planr-share-copy-url]').click();
+  assert.equal(await page.locator('[data-planr-share-copy-url]').getAttribute('data-planr-copy-state'), 'copied');
+  assert.equal(await page.locator('[data-planr-share-copy-url]').textContent(), 'Copied');
   await page.locator('[data-planr-share-copy-deletion]').click();
   await page.waitForFunction(() => globalThis.__planrCopies.at(-1) === 'delete-once-789');
   await page.locator('[data-planr-share-close]').click();
@@ -465,4 +468,33 @@ test('real browser share receipt is explicit, focus-safe, upload-safe, and visua
   assert.equal(modalStyle.transition, '0s');
   assert.ok(Number.parseFloat(modalStyle.maxHeight) <= 680);
   await context.close();
+
+  const roomContext = await browser.newContext({ viewport: { width: 900, height: 700 } });
+  await roomContext.addInitScript(({ artifactUrl }) => {
+    globalThis.__planrRoomCopies = [];
+    globalThis.__OPENPLANR_ARTIFACT_STAGE_OPTIONS__ = {
+      async resolveArtifactSource() {
+        const response = await fetch(artifactUrl, { cache: 'no-store' });
+        return response.blob();
+      },
+      share: {
+        existingRoom: true,
+        existingShareUrl: 'https://share.openplanr.dev/r/room-stable#k=key&w=write',
+        async copyText(value) { globalThis.__planrRoomCopies.push(value); },
+      },
+    };
+  }, { artifactUrl: `${host.url}artifact/checkout` });
+  const roomPage = await roomContext.newPage();
+  await roomPage.goto(host.url);
+  await roomPage.waitForFunction(() => globalThis.__openPlanrArtifactStage?.getState().status === 'ready');
+  const roomShare = roomPage.locator('[data-planr-action="share"]');
+  assert.equal(await roomShare.textContent(), 'Copy link');
+  assert.equal(await roomShare.getAttribute('aria-haspopup'), null);
+  await roomShare.click();
+  assert.deepEqual(await roomPage.evaluate(() => globalThis.__planrRoomCopies), [
+    'https://share.openplanr.dev/r/room-stable#k=key&w=write',
+  ]);
+  assert.equal(await roomShare.textContent(), 'Copied');
+  assert.equal(await roomPage.locator('[data-planr-share-dialog]').isHidden(), true);
+  await roomContext.close();
 });

@@ -517,7 +517,7 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
     await page.screenshot({ animations: 'disabled' }),
     { PNG, pixelmatch },
   );
-  await composer.locator('[data-planr-composer-submit]').click();
+  await comment.press('Meta+Enter');
   await page.waitForFunction(() => globalThis.__openPlanrArtifactStage.review?.getReview()?.pins.length === 1);
   assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'improve feedback added.');
 
@@ -545,7 +545,8 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   const replyForm = firstThread.locator('[data-planr-reply-form]');
   const hostileReply = '<svg onload="globalThis.__replyXss=true"> Confirmed in the responsive state.';
   await replyForm.locator('textarea').fill(hostileReply);
-  await replyForm.locator('button[type="submit"]').click();
+  assert.match(await page.locator('[data-planr-identity-status]').textContent(), /Comments will appear as Asem <admin>\./);
+  await replyForm.locator('textarea').press('Control+Enter');
   await page.waitForFunction(() => globalThis.__openPlanrArtifactStage.review.getReview().pins[0].replies.length === 1);
   assert.equal(await firstThread.locator('.planr-reply').count(), 1);
   assert.equal(await firstThread.locator('.planr-reply').textContent().then((value) => value.includes(hostileReply)), true);

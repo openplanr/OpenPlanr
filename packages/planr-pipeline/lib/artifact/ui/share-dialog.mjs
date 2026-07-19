@@ -187,6 +187,8 @@ export function mountArtifactShareDialog({
   prepareShare,
   createShare,
   copyText,
+  existingRoom = false,
+  existingShareUrl = null,
   now = () => new Date(),
 } = {}) {
   if (!document || !window || !root) return null;
@@ -198,6 +200,7 @@ export function mountArtifactShareDialog({
   let state = createArtifactShareDialogState();
   let returnFocus = null;
   let generation = 0;
+  const copyResetTimers = new Map();
   const cleanup = [];
   const handlers = {
     prepareShare: typeof prepareShare === 'function'
@@ -213,6 +216,7 @@ export function mountArtifactShareDialog({
       },
     copyText: typeof copyText === 'function' ? copyText : (value) => defaultCopy(window, value),
   };
+  const stableShareUrl = typeof existingShareUrl === 'function' ? existingShareUrl : () => existingShareUrl;
 
   function listen(target, type, handler, options) {
     target.addEventListener(type, handler, options);
@@ -222,6 +226,41 @@ export function mountArtifactShareDialog({
   function announce(message) {
     const live = dialog.querySelector('[data-planr-share-status]');
     if (live) live.textContent = message;
+  }
+
+  function resetCopyButton(button) {
+    const timer = copyResetTimers.get(button);
+    if (timer) window.clearTimeout(timer);
+    copyResetTimers.delete(button);
+    button.removeAttribute('data-planr-copy-state');
+    button.textContent = button.dataset.planrCopyLabel ?? button.textContent;
+  }
+
+  function showCopyState(button, stateValue) {
+    if (!button) return;
+    if (!button.dataset.planrCopyLabel) button.dataset.planrCopyLabel = button.textContent.trim();
+    const prior = copyResetTimers.get(button);
+    if (prior) window.clearTimeout(prior);
+    button.dataset.planrCopyState = stateValue;
+    button.textContent = stateValue === 'copied' ? 'Copied' : 'Try again';
+    copyResetTimers.set(button, window.setTimeout(() => resetCopyButton(button), 1_800));
+  }
+
+  function resetCopyButtons() {
+    for (const button of dialog.querySelectorAll('[data-planr-copy-state]')) resetCopyButton(button);
+  }
+
+  async function copyExistingRoom() {
+    const value = stableShareUrl();
+    if (!value) return;
+    try {
+      await handlers.copyText(value);
+      showCopyState(trigger, 'copied');
+      announce('Live review URL copied. This remains the same collaboration room.');
+    } catch (error) {
+      showCopyState(trigger, 'error');
+      announce(error?.message ?? 'Review URL could not be copied.');
+    }
   }
 
   function render() {
@@ -255,8 +294,8 @@ export function mountArtifactShareDialog({
     const threshold = dialog.querySelector('[data-planr-share-threshold]');
     if (threshold) {
       threshold.textContent = preview?.fragmentEligible === false
-        ? `${preview.fragmentLength.toLocaleString('en-US')} characters exceeds the 8,000-character private-fragment limit.`
-        : 'Private fragments are used through 8,000 characters.';
+        ? `Private fragment snapshot unavailable (${preview.fragmentLength.toLocaleString('en-US')} characters; 8,000 limit). Live review and encrypted short link are available.`
+        : 'Private fragment snapshot available for links up to 8,000 characters.';
     }
 
     const ttlRow = dialog.querySelector('[data-planr-share-ttl-row]');
@@ -306,6 +345,7 @@ export function mountArtifactShareDialog({
   }
 
   async function open() {
+    resetCopyButtons();
     returnFocus = document.activeElement instanceof window.HTMLElement ? document.activeElement : trigger;
     state = reduceArtifactShareDialog(state, { type: 'open' });
     state = reduceArtifactShareDialog(state, { type: 'preview-start' });
@@ -322,7 +362,7 @@ export function mountArtifactShareDialog({
       render();
       announce(state.preview.fragmentEligible
         ? 'Private fragment is available. Nothing will be uploaded.'
-        : 'Encrypted short link is required because the fragment exceeds 8,000 characters.');
+        : 'Private fragment snapshot is unavailable at this size. Live review and encrypted short link remain available.');
     } catch (error) {
       if (request !== generation || !state.open) return state;
       state = reduceArtifactShareDialog(state, { type: 'failure', error: error?.message });
@@ -335,6 +375,7 @@ export function mountArtifactShareDialog({
   function close() {
     generation += 1;
     state = reduceArtifactShareDialog(state, { type: 'close' });
+    resetCopyButtons();
     render();
     returnFocus?.focus?.();
     returnFocus = null;
@@ -376,19 +417,34 @@ export function mountArtifactShareDialog({
     return state;
   }
 
-  async function copy(value, successMessage) {
+  async function copy(value, successMessage, button) {
     if (!value) return;
     try {
       await handlers.copyText(value);
+      showCopyState(button, 'copied');
       announce(successMessage);
     } catch (error) {
+      showCopyState(button, 'error');
       state = reduceArtifactShareDialog(state, { type: 'failure', error: error?.message });
       render();
       announce(state.error);
     }
   }
 
-  listen(trigger, 'click', open);
+  if (existingRoom) {
+    const value = stableShareUrl();
+    if (value) {
+      trigger.textContent = 'Copy link';
+      trigger.dataset.planrCopyLabel = 'Copy link';
+      trigger.removeAttribute('aria-haspopup');
+      trigger.setAttribute('aria-label', 'Copy this live review room link');
+      listen(trigger, 'click', () => { void copyExistingRoom(); });
+    } else {
+      trigger.hidden = true;
+    }
+  } else {
+    listen(trigger, 'click', open);
+  }
   listen(backdrop, 'click', (event) => {
     const button = event.target.closest?.('button');
     if (!button) return;
@@ -414,15 +470,15 @@ export function mountArtifactShareDialog({
       return;
     }
     if (button.dataset.planrShareCopyUrl !== undefined) {
-      void copy(state.result?.url, 'Review URL copied.');
+      void copy(state.result?.url, 'Review URL copied.', button);
       return;
     }
     if (button.dataset.planrShareCopyManage !== undefined) {
-      void copy(state.result?.manageUrl, 'Private manage URL copied. Keep it private.');
+      void copy(state.result?.manageUrl, 'Private manage URL copied. Keep it private.', button);
       return;
     }
     if (button.dataset.planrShareCopyDeletion !== undefined) {
-      void copy(state.result?.deletionToken, 'One-time deletion token copied.');
+      void copy(state.result?.deletionToken, 'One-time deletion token copied.', button);
     }
   });
   const ttlSelect = dialog.querySelector('[data-planr-share-ttl]');
@@ -465,6 +521,8 @@ export function mountArtifactShareDialog({
     },
     destroy() {
       generation += 1;
+      for (const timer of copyResetTimers.values()) window.clearTimeout(timer);
+      copyResetTimers.clear();
       for (const remove of cleanup.splice(0)) remove();
       if (state.open) {
         state = reduceArtifactShareDialog(state, { type: 'close' });

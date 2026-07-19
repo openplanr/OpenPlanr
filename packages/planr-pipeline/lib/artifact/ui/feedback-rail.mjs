@@ -738,6 +738,7 @@ export function mountArtifactFeedbackRail({
   if (!root || !document || !window) invalid('A browser root, document, and window are required.');
   const slot = root.querySelector('[data-planr-slot="feedback-rail"]');
   const identityInput = root.querySelector('[data-planr-reviewer-name]');
+  const identityStatus = root.querySelector('[data-planr-identity-status]');
   const overall = root.querySelector('#planr-overall-note');
   const decisionStatus = root.querySelector('[data-planr-slot="decision-status"]');
   const decisionButtons = [...root.querySelectorAll('[data-planr-decision]')];
@@ -802,7 +803,12 @@ export function mountArtifactFeedbackRail({
     }
     fragment.append(list);
     slot.replaceChildren(fragment);
-    if (document.activeElement !== identityInput) identityInput.value = controller.getIdentity()?.name ?? '';
+    const identityName = controller.getIdentity()?.name ?? '';
+    if (document.activeElement !== identityInput) identityInput.value = identityName;
+    if (identityStatus) {
+      identityStatus.dataset.planrIdentityReady = String(Boolean(identityName));
+      identityStatus.textContent = identityName ? `Comments will appear as ${identityName}.` : 'Used to sign your comments.';
+    }
     overall.maxLength = ARTIFACT_REVIEW_LIMITS.text;
     overall.value = review?.overall ?? '';
     for (const button of decisionButtons) {
@@ -838,10 +844,23 @@ export function mountArtifactFeedbackRail({
     if (event.target !== identityInput) return;
     try {
       controller.setIdentity(event.target.value ? { name: event.target.value } : null);
+      const name = controller.getIdentity()?.name ?? '';
+      if (identityStatus) {
+        identityStatus.dataset.planrIdentityReady = String(Boolean(name));
+        identityStatus.textContent = name ? `Comments will appear as ${name}.` : 'Used to sign your comments.';
+      }
       clearError();
     } catch (error) {
       showError(error);
     }
+  };
+
+  const onKeyDown = (event) => {
+    if (event.key !== 'Enter' || event.isComposing || (!event.metaKey && !event.ctrlKey)) return;
+    const form = event.target?.closest?.('[data-planr-reply-form]');
+    if (!form) return;
+    event.preventDefault();
+    form.requestSubmit();
   };
 
   const emitSelection = (pinId) => {
@@ -932,6 +951,7 @@ export function mountArtifactFeedbackRail({
   identityInput.addEventListener('input', onInput);
   slot.addEventListener('click', onClick);
   slot.addEventListener('submit', onSubmit);
+  slot.addEventListener('keydown', onKeyDown);
   overall.addEventListener('change', onOverallChange);
   for (const button of decisionButtons) button.addEventListener('click', onDecision);
   root.addEventListener(ARTIFACT_REVIEW_SELECT_EVENT, onSelect);
@@ -955,6 +975,7 @@ export function mountArtifactFeedbackRail({
       identityInput.removeEventListener('input', onInput);
       slot.removeEventListener('click', onClick);
       slot.removeEventListener('submit', onSubmit);
+      slot.removeEventListener('keydown', onKeyDown);
       overall.removeEventListener('change', onOverallChange);
       for (const button of decisionButtons) button.removeEventListener('click', onDecision);
       root.removeEventListener(ARTIFACT_REVIEW_SELECT_EVENT, onSelect);

@@ -443,6 +443,9 @@ export function mountArtifactAnnotations({
       if (event.key === 'Escape') {
         event.preventDefault();
         closeComposer({ restoreFocus: true });
+      } else if (event.key === 'Enter' && !event.isComposing && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        composer.requestSubmit();
       }
     });
     listen(composer, 'submit', (event) => {

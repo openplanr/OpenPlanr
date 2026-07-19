@@ -419,6 +419,9 @@ var OpenPlanrArtifactStage = (() => {
         if (event.key === "Escape") {
           event.preventDefault();
           closeComposer({ restoreFocus: true });
+        } else if (event.key === "Enter" && !event.isComposing && (event.metaKey || event.ctrlKey)) {
+          event.preventDefault();
+          composer.requestSubmit();
         }
       });
       listen(composer, "submit", (event) => {
@@ -1162,6 +1165,7 @@ var OpenPlanrArtifactStage = (() => {
     if (!root || !document2 || !window) invalid("A browser root, document, and window are required.");
     const slot = root.querySelector('[data-planr-slot="feedback-rail"]');
     const identityInput = root.querySelector("[data-planr-reviewer-name]");
+    const identityStatus = root.querySelector("[data-planr-identity-status]");
     const overall = root.querySelector("#planr-overall-note");
     const decisionStatus = root.querySelector('[data-planr-slot="decision-status"]');
     const decisionButtons = [...root.querySelectorAll("[data-planr-decision]")];
@@ -1219,7 +1223,12 @@ var OpenPlanrArtifactStage = (() => {
       }
       fragment.append(list);
       slot.replaceChildren(fragment);
-      if (document2.activeElement !== identityInput) identityInput.value = controller.getIdentity()?.name ?? "";
+      const identityName2 = controller.getIdentity()?.name ?? "";
+      if (document2.activeElement !== identityInput) identityInput.value = identityName2;
+      if (identityStatus) {
+        identityStatus.dataset.planrIdentityReady = String(Boolean(identityName2));
+        identityStatus.textContent = identityName2 ? `Comments will appear as ${identityName2}.` : "Used to sign your comments.";
+      }
       overall.maxLength = ARTIFACT_REVIEW_LIMITS.text;
       overall.value = review?.overall ?? "";
       for (const button of decisionButtons) {
@@ -1251,10 +1260,22 @@ var OpenPlanrArtifactStage = (() => {
       if (event.target !== identityInput) return;
       try {
         controller.setIdentity(event.target.value ? { name: event.target.value } : null);
+        const name = controller.getIdentity()?.name ?? "";
+        if (identityStatus) {
+          identityStatus.dataset.planrIdentityReady = String(Boolean(name));
+          identityStatus.textContent = name ? `Comments will appear as ${name}.` : "Used to sign your comments.";
+        }
         clearError();
       } catch (error) {
         showError(error);
       }
+    };
+    const onKeyDown = (event) => {
+      if (event.key !== "Enter" || event.isComposing || !event.metaKey && !event.ctrlKey) return;
+      const form = event.target?.closest?.("[data-planr-reply-form]");
+      if (!form) return;
+      event.preventDefault();
+      form.requestSubmit();
     };
     const emitSelection = (pinId) => {
       controller.selectPin(pinId);
@@ -1338,6 +1359,7 @@ var OpenPlanrArtifactStage = (() => {
     identityInput.addEventListener("input", onInput);
     slot.addEventListener("click", onClick);
     slot.addEventListener("submit", onSubmit);
+    slot.addEventListener("keydown", onKeyDown);
     overall.addEventListener("change", onOverallChange);
     for (const button of decisionButtons) button.addEventListener("click", onDecision);
     root.addEventListener(ARTIFACT_REVIEW_SELECT_EVENT, onSelect);
@@ -1360,6 +1382,7 @@ var OpenPlanrArtifactStage = (() => {
         identityInput.removeEventListener("input", onInput);
         slot.removeEventListener("click", onClick);
         slot.removeEventListener("submit", onSubmit);
+        slot.removeEventListener("keydown", onKeyDown);
         overall.removeEventListener("change", onOverallChange);
         for (const button of decisionButtons) button.removeEventListener("click", onDecision);
         root.removeEventListener(ARTIFACT_REVIEW_SELECT_EVENT, onSelect);
@@ -1540,6 +1563,8 @@ var OpenPlanrArtifactStage = (() => {
     prepareShare,
     createShare,
     copyText,
+    existingRoom = false,
+    existingShareUrl = null,
     now = () => /* @__PURE__ */ new Date()
   } = {}) {
     if (!document2 || !window || !root) return null;
@@ -1550,6 +1575,7 @@ var OpenPlanrArtifactStage = (() => {
     let state = createArtifactShareDialogState();
     let returnFocus = null;
     let generation = 0;
+    const copyResetTimers = /* @__PURE__ */ new Map();
     const cleanup = [];
     const handlers = {
       prepareShare: typeof prepareShare === "function" ? prepareShare : async () => ({ fragmentLength: 0, compressedBytes: 0, ciphertextBytes: 0 }),
@@ -1561,6 +1587,7 @@ var OpenPlanrArtifactStage = (() => {
       },
       copyText: typeof copyText === "function" ? copyText : (value) => defaultCopy(window, value)
     };
+    const stableShareUrl = typeof existingShareUrl === "function" ? existingShareUrl : () => existingShareUrl;
     function listen(target, type, handler, options) {
       target.addEventListener(type, handler, options);
       cleanup.push(() => target.removeEventListener(type, handler, options));
@@ -1568,6 +1595,37 @@ var OpenPlanrArtifactStage = (() => {
     function announce2(message) {
       const live = dialog.querySelector("[data-planr-share-status]");
       if (live) live.textContent = message;
+    }
+    function resetCopyButton(button) {
+      const timer = copyResetTimers.get(button);
+      if (timer) window.clearTimeout(timer);
+      copyResetTimers.delete(button);
+      button.removeAttribute("data-planr-copy-state");
+      button.textContent = button.dataset.planrCopyLabel ?? button.textContent;
+    }
+    function showCopyState(button, stateValue) {
+      if (!button) return;
+      if (!button.dataset.planrCopyLabel) button.dataset.planrCopyLabel = button.textContent.trim();
+      const prior = copyResetTimers.get(button);
+      if (prior) window.clearTimeout(prior);
+      button.dataset.planrCopyState = stateValue;
+      button.textContent = stateValue === "copied" ? "Copied" : "Try again";
+      copyResetTimers.set(button, window.setTimeout(() => resetCopyButton(button), 1800));
+    }
+    function resetCopyButtons() {
+      for (const button of dialog.querySelectorAll("[data-planr-copy-state]")) resetCopyButton(button);
+    }
+    async function copyExistingRoom() {
+      const value = stableShareUrl();
+      if (!value) return;
+      try {
+        await handlers.copyText(value);
+        showCopyState(trigger, "copied");
+        announce2("Live review URL copied. This remains the same collaboration room.");
+      } catch (error) {
+        showCopyState(trigger, "error");
+        announce2(error?.message ?? "Review URL could not be copied.");
+      }
     }
     function render() {
       const preview = state.preview;
@@ -1591,7 +1649,7 @@ var OpenPlanrArtifactStage = (() => {
       if (shortSize) shortSize.textContent = preview ? formatArtifactShareBytes(preview.ciphertextBytes) : "Calculating…";
       const threshold = dialog.querySelector("[data-planr-share-threshold]");
       if (threshold) {
-        threshold.textContent = preview?.fragmentEligible === false ? `${preview.fragmentLength.toLocaleString("en-US")} characters exceeds the 8,000-character private-fragment limit.` : "Private fragments are used through 8,000 characters.";
+        threshold.textContent = preview?.fragmentEligible === false ? `Private fragment snapshot unavailable (${preview.fragmentLength.toLocaleString("en-US")} characters; 8,000 limit). Live review and encrypted short link are available.` : "Private fragment snapshot available for links up to 8,000 characters.";
       }
       const ttlRow = dialog.querySelector("[data-planr-share-ttl-row]");
       if (ttlRow) ttlRow.hidden = !["live", "short"].includes(state.transport);
@@ -1635,6 +1693,7 @@ var OpenPlanrArtifactStage = (() => {
       }
     }
     async function open() {
+      resetCopyButtons();
       returnFocus = document2.activeElement instanceof window.HTMLElement ? document2.activeElement : trigger;
       state = reduceArtifactShareDialog(state, { type: "open" });
       state = reduceArtifactShareDialog(state, { type: "preview-start" });
@@ -1649,7 +1708,7 @@ var OpenPlanrArtifactStage = (() => {
         if (request !== generation || !state.open) return state;
         state = reduceArtifactShareDialog(state, { type: "preview-ready", preview });
         render();
-        announce2(state.preview.fragmentEligible ? "Private fragment is available. Nothing will be uploaded." : "Encrypted short link is required because the fragment exceeds 8,000 characters.");
+        announce2(state.preview.fragmentEligible ? "Private fragment is available. Nothing will be uploaded." : "Private fragment snapshot is unavailable at this size. Live review and encrypted short link remain available.");
       } catch (error) {
         if (request !== generation || !state.open) return state;
         state = reduceArtifactShareDialog(state, { type: "failure", error: error?.message });
@@ -1661,6 +1720,7 @@ var OpenPlanrArtifactStage = (() => {
     function close() {
       generation += 1;
       state = reduceArtifactShareDialog(state, { type: "close" });
+      resetCopyButtons();
       render();
       returnFocus?.focus?.();
       returnFocus = null;
@@ -1696,18 +1756,35 @@ var OpenPlanrArtifactStage = (() => {
       }
       return state;
     }
-    async function copy(value, successMessage) {
+    async function copy(value, successMessage, button) {
       if (!value) return;
       try {
         await handlers.copyText(value);
+        showCopyState(button, "copied");
         announce2(successMessage);
       } catch (error) {
+        showCopyState(button, "error");
         state = reduceArtifactShareDialog(state, { type: "failure", error: error?.message });
         render();
         announce2(state.error);
       }
     }
-    listen(trigger, "click", open);
+    if (existingRoom) {
+      const value = stableShareUrl();
+      if (value) {
+        trigger.textContent = "Copy link";
+        trigger.dataset.planrCopyLabel = "Copy link";
+        trigger.removeAttribute("aria-haspopup");
+        trigger.setAttribute("aria-label", "Copy this live review room link");
+        listen(trigger, "click", () => {
+          void copyExistingRoom();
+        });
+      } else {
+        trigger.hidden = true;
+      }
+    } else {
+      listen(trigger, "click", open);
+    }
     listen(backdrop, "click", (event) => {
       const button = event.target.closest?.("button");
       if (!button) return;
@@ -1729,15 +1806,15 @@ var OpenPlanrArtifactStage = (() => {
         return;
       }
       if (button.dataset.planrShareCopyUrl !== void 0) {
-        void copy(state.result?.url, "Review URL copied.");
+        void copy(state.result?.url, "Review URL copied.", button);
         return;
       }
       if (button.dataset.planrShareCopyManage !== void 0) {
-        void copy(state.result?.manageUrl, "Private manage URL copied. Keep it private.");
+        void copy(state.result?.manageUrl, "Private manage URL copied. Keep it private.", button);
         return;
       }
       if (button.dataset.planrShareCopyDeletion !== void 0) {
-        void copy(state.result?.deletionToken, "One-time deletion token copied.");
+        void copy(state.result?.deletionToken, "One-time deletion token copied.", button);
       }
     });
     const ttlSelect = dialog.querySelector("[data-planr-share-ttl]");
@@ -1779,6 +1856,8 @@ var OpenPlanrArtifactStage = (() => {
       },
       destroy() {
         generation += 1;
+        for (const timer of copyResetTimers.values()) window.clearTimeout(timer);
+        copyResetTimers.clear();
         for (const remove of cleanup.splice(0)) remove();
         if (state.open) {
           state = reduceArtifactShareDialog(state, { type: "close" });
