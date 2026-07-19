@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.12.4
+
+### Patch Changes
+
+- [`4f6c4c5`](https://github.com/openplanr/OpenPlanr/commit/4f6c4c51c62ad93447fc0caed64d20ad11fd30c5) Update the bundled pipeline to 0.28.4 for stable live-room sharing, clearer fragment limits, visible copy confirmation, reviewer identity feedback, and keyboard comment submission.
+
 ## 1.12.3
 
 ### Patch Changes
