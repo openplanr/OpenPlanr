@@ -1,6 +1,6 @@
 /**
  * `planr linear` — Linear.app integration command tree.
- * `init` stores a PAT, validates it, and saves the default team in
+ * `init` stores a PAT, validates it, and saves the allowed + default teams in
  * `.planr/config.json`. See `planr linear --help` for the full subcommand list.
  */
 
@@ -28,7 +28,9 @@ import {
   validateTeamAccess,
   validateToken,
 } from '../../services/linear-service.js';
+import { withLinearTeam } from '../../services/linear-team-service.js';
 import {
+  promptCheckbox,
   promptMappingStrategy,
   promptSecret,
   promptSelect,
@@ -65,7 +67,7 @@ const PAT_HINT =
 
 const LINEAR_HELP = `
 ${chalk.bold('Subcommands:')}
-  init              Store PAT, pick team, save linear.teamId
+  init              Store PAT, choose allowed teams, save a default team
   sync              Pull workflow status (features/stories) + bidirectional task checkboxes
   push <artifact>   Create/update Linear entities at any granularity:
                       EPIC-XXX  → project + features + stories + tasklists
@@ -79,6 +81,7 @@ ${chalk.bold('Common flags:')}
   --dry-run         Show planned work without writes (push: no API; sync: read-only to Linear, no local writes)
   --update-only     push: only update existing linked entities, never create
   --push-parents    push: if a parent is not yet in Linear, push it first without prompting
+  --team <id|key>   push: target any team selected during linear init
 
 ${chalk.dim('Examples:')}
   planr linear sync
@@ -98,7 +101,7 @@ export function registerLinearCommand(program: Command) {
 
   linear
     .command('init')
-    .description('Validate a Linear PAT, pick a team, and save settings to the project config')
+    .description('Validate a Linear PAT, choose teams, and save a default team')
     .action(async () => {
       const projectDir = program.opts().projectDir as string;
       let config: OpenPlanrConfig;
@@ -160,36 +163,73 @@ export function registerLinearCommand(program: Command) {
         return;
       }
 
-      let teamId: string;
+      let selectedTeams = teams;
       if (teams.length === 1) {
-        teamId = teams[0].id;
         display.line(
           `Using team ${teams[0].name} (${teams[0].key}) — the only team available to this user.`,
         );
       } else {
         if (isNonInteractive()) {
           logger.error(
-            'Multiple teams are available. Run `planr linear init` in an interactive terminal to choose a team, or set `linear.teamId` in `.planr/config.json` after selecting an id from the Linear UI.',
+            'Multiple teams are available. Run `planr linear init` in an interactive terminal to choose allowed teams and a default, or configure `linear.teams` and `linear.teamId` in `.planr/config.json`.',
           );
           process.exit(1);
           return;
         }
-        const choice = await promptSelect(
-          'Which Linear team should OpenPlanr use for pushes?',
-          teams.map((t) => ({ name: `${t.name} (${t.key})`, value: t.id })),
+        const scope = await promptSelect(
+          'Which Linear teams may OpenPlanr use?',
+          [
+            { name: 'All accessible teams', value: 'all' },
+            { name: 'Choose one or more teams', value: 'choose' },
+          ],
+          'all',
         );
-        teamId = choice;
+        if (scope === 'choose') {
+          const previous = new Set(config.linear?.teams?.map((team) => team.id) ?? []);
+          const selectedIds = await promptCheckbox(
+            'Select Linear teams:',
+            teams.map((team) => ({
+              name: `${team.name} (${team.key})`,
+              value: team.id,
+              checked: previous.has(team.id) || config.linear?.teamId === team.id,
+            })),
+          );
+          if (selectedIds.length === 0) {
+            logger.error('Select at least one Linear team.');
+            process.exit(1);
+            return;
+          }
+          selectedTeams = teams.filter((team) => selectedIds.includes(team.id));
+        }
       }
 
-      let teamInfo: { name: string; key: string };
+      const validatedTeams: Array<{ id: string; name: string; key: string }> = [];
       try {
-        teamInfo = await validateTeamAccess(client, teamId);
-        logger.success(`Team access ok: ${teamInfo.name} (${teamInfo.key}).`);
+        for (const team of selectedTeams) {
+          const teamInfo = await validateTeamAccess(client, team.id);
+          validatedTeams.push({ id: team.id, ...teamInfo });
+          logger.success(`Team access ok: ${teamInfo.name} (${teamInfo.key}).`);
+        }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         logger.error(msg);
         process.exit(1);
         return;
+      }
+
+      let defaultTeam = validatedTeams[0];
+      if (validatedTeams.length > 1) {
+        const defaultTeamId = await promptSelect(
+          'Which team should OpenPlanr use by default?',
+          validatedTeams.map((team) => ({
+            name: `${team.name} (${team.key})`,
+            value: team.id,
+          })),
+          validatedTeams.some((team) => team.id === config.linear?.teamId)
+            ? config.linear?.teamId
+            : validatedTeams[0].id,
+        );
+        defaultTeam = validatedTeams.find((team) => team.id === defaultTeamId) ?? defaultTeam;
       }
 
       try {
@@ -202,7 +242,12 @@ export function registerLinearCommand(program: Command) {
 
       const next: OpenPlanrConfig = {
         ...config,
-        linear: { teamId, teamKey: teamInfo.key },
+        linear: {
+          ...config.linear,
+          teamId: defaultTeam.id,
+          teamKey: defaultTeam.key,
+          teams: validatedTeams,
+        },
       };
       try {
         await saveConfig(projectDir, next);
@@ -214,8 +259,9 @@ export function registerLinearCommand(program: Command) {
 
       logger.success('Linear integration is ready.');
       display.line('');
-      display.line(`  teamId: ${teamId}`);
-      display.line('  config:  .planr/config.json (linear.teamId, linear.teamKey)');
+      display.line(`  teams:   ${validatedTeams.map((team) => team.key).join(', ')}`);
+      display.line(`  default: ${defaultTeam.name} (${defaultTeam.key})`);
+      display.line('  config:  .planr/config.json (linear.teams, linear.teamId)');
       display.line('  token:  credentials service (key: linear) or PLANR_LINEAR_TOKEN');
       display.line('');
       logger.dim('Next: `planr linear sync`, `planr linear push <epic>`, or `planr linear status`');
@@ -404,6 +450,7 @@ export function registerLinearCommand(program: Command) {
       'Push only the target artifact (and minimum parent chain when --push-parents is set). EPIC/FEAT pushes skip their descendants.',
       false,
     )
+    .option('--team <id-or-key>', 'Target a team selected during `planr linear init`')
     .option(
       '--as <strategy>',
       'Epic-only: mapping strategy. One of: project | milestone-of:<projectId> | label-on:<projectId>',
@@ -421,6 +468,7 @@ export function registerLinearCommand(program: Command) {
           // defaults to true (today's behavior unchanged).
           cascade: boolean;
           as?: string;
+          team?: string;
         },
       ) => {
         const projectDir = program.opts().projectDir as string;
@@ -437,9 +485,19 @@ export function registerLinearCommand(program: Command) {
           process.exit(1);
           return;
         }
+        try {
+          config = withLinearTeam(config, o.team);
+        } catch (e) {
+          logger.error(e instanceof Error ? e.message : String(e));
+          process.exit(1);
+          return;
+        }
+        const linearConfig = config.linear;
+        if (!linearConfig) return;
 
         const header = o.dryRun ? 'Linear push (dry run)' : 'Linear push';
         logger.heading(`${header} — ${artifactId}`);
+        if (linearConfig.teamKey) display.line(`Team: ${linearConfig.teamKey}`);
         display.blank();
 
         if (o.dryRun) {
@@ -500,7 +558,7 @@ export function registerLinearCommand(program: Command) {
         const client = createLinearClient(token);
         try {
           await validateToken(client);
-          await validateTeamAccess(client, config.linear.teamId);
+          await validateTeamAccess(client, linearConfig.teamId);
         } catch (e) {
           logger.error(e instanceof Error ? e.message : String(e));
           process.exit(1);
@@ -529,13 +587,13 @@ export function registerLinearCommand(program: Command) {
           findArtifactTypeById(artifactId) === 'epic' &&
           !strategyOverride &&
           !isNonInteractive() &&
-          !config.linear.defaultEpicStrategy
+          !linearConfig.defaultEpicStrategy
         ) {
           try {
             const existing = await readArtifact(projectDir, config, 'epic', artifactId);
             const alreadyMapped = Boolean(existing?.data.linearMappingStrategy);
             if (!alreadyMapped) {
-              const picked = await promptMappingStrategy(client, config.linear.teamId, artifactId);
+              const picked = await promptMappingStrategy(client, linearConfig.teamId, artifactId);
               if (picked) strategyOverride = picked;
             }
           } catch {
@@ -550,16 +608,16 @@ export function registerLinearCommand(program: Command) {
         const pushType = findArtifactTypeById(artifactId);
         if (
           (pushType === 'quick' || pushType === 'backlog') &&
-          !config.linear.standaloneProjectId &&
+          !linearConfig.standaloneProjectId &&
           !isNonInteractive()
         ) {
           try {
-            const picked = await promptStandaloneProject(client, config.linear.teamId);
+            const picked = await promptStandaloneProject(client, linearConfig.teamId);
             if (picked) {
               const next: OpenPlanrConfig = {
                 ...config,
                 linear: {
-                  ...config.linear,
+                  ...linearConfig,
                   standaloneProjectId: picked.projectId,
                   standaloneProjectName: picked.projectName,
                 },

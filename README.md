@@ -250,7 +250,7 @@ Built-in templates: `rest-endpoint`, `react-component`, `database-migration`, `a
 | `planr github push [ID]` | Push artifacts to GitHub Issues |
 | `planr github sync` | Bi-directional status sync with GitHub |
 | `planr github status` | Show sync status of linked artifacts |
-| `planr linear init` | Configure Linear (team + token) |
+| `planr linear init` | Configure Linear (allowed teams + default + token) |
 | `planr linear push <id>` | Epic → Linear project; features / stories / tasks → issues |
 | `planr linear sync` | Pull Linear workflow state into artifact `status` |
 | `planr export --format html` | Export planning report (markdown / JSON / HTML) |

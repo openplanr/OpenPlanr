@@ -1181,11 +1181,13 @@ planr config set-agent cursor            # set directly
 
 ### `planr linear init`
 
-Authenticate to [Linear](https://linear.app) with a personal access token, choose a team, and save `linear.teamId` and `linear.teamKey` in `.planr/config.json`. The token is stored via the credentials service (or the `PLANR_LINEAR_TOKEN` environment variable) and is never written into `config.json`.
+Authenticate to [Linear](https://linear.app) with a personal access token, then allow one, several, or all accessible teams. When several teams are enabled, choose the default used by commands that omit `--team`. OpenPlanr saves the allowed `linear.teams` plus the backward-compatible default `linear.teamId` and `linear.teamKey` in `.planr/config.json`. The token is stored via the credentials service (or the `PLANR_LINEAR_TOKEN` environment variable) and is never written into `config.json`.
 
 ```bash
 planr linear init
 ```
+
+`planr linear push <artifact> --team <id-or-key>` targets any team selected during init. A push always targets one team; OpenPlanr does not duplicate an artifact across every team because each artifact has one authoritative Linear linkage.
 
 ### `planr linear sync`
 
