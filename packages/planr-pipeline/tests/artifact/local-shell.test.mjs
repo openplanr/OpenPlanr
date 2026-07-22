@@ -184,7 +184,7 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
     viewport: { width: 1440, height: 900 },
     colorScheme: 'light',
     html: `<!doctype html><html><head><meta charset="utf-8"><style>
-      *{box-sizing:border-box}html,body{margin:0}body{font:16px system-ui;background:#f4f6fa;color:#171722}
+      *{box-sizing:border-box}html,body{margin:0}html{overflow-y:scroll}body{overflow:auto;font:16px system-ui;background:#f4f6fa;color:#171722}
       main{min-height:2400px;padding:48px max(24px,8vw)}section{min-height:720px;padding:32px;background:white;border-bottom:1px solid #dfe3ea}
     </style></head><body><main><section data-planr-id="top">Top</section><section data-planr-id="middle">Middle</section><section data-planr-id="bottom"><button id="grow">Grow</button></section></main><script>
       document.querySelector('#grow').addEventListener('click',()=>{const extra=document.createElement('section');extra.id='dynamic';extra.textContent='Dynamic content';document.querySelector('main').append(extra)});
@@ -221,7 +221,19 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
   assert.ok(initial.frameHeight > 2_300);
   assert.equal(initial.width, 1280);
 
+  const artifactFrame = page.locator('[data-planr-artifact-frame="long-document"]');
   const frame = page.frameLocator('[data-planr-artifact-frame="long-document"]');
+  assert.equal(await artifactFrame.getAttribute('scrolling'), 'no');
+  assert.equal(await artifactFrame.evaluate((node) => node.style.overflow), 'hidden');
+  await page.evaluate(() => scrollTo(0, 0));
+  await artifactFrame.hover({ position: { x: 640, y: 600 } });
+  await page.mouse.wheel(0, 500);
+  await page.waitForFunction(() => scrollY > 0);
+  const scrollOwnership = await page.evaluate(() => ({ outer: scrollY }));
+  const innerScroll = await frame.locator('html').evaluate(() => scrollY);
+  assert.ok(scrollOwnership.outer > 0, 'the outer document owns wheel scrolling');
+  assert.equal(innerScroll, 0, 'the artifact iframe does not consume wheel scrolling');
+
   await frame.locator('#grow').click();
   await page.waitForFunction((height) => document.documentElement.scrollHeight > height + 400, initial.outerHeight);
 

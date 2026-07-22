@@ -4,6 +4,14 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.28.5] — 2026-07-22
+
+### Fixed
+
+- Document-mode artifact reviews now give the outer review page exclusive
+  scrolling ownership, preventing artifact-authored root overflow from creating
+  a second iframe scrollbar while preserving canvas-mode scrolling.
+
 ## [0.28.0] — 2026-07-16
 
 ### Added

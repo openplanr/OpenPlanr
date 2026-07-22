@@ -36,8 +36,8 @@
     },
     {
       "path": "templates/artifact-review-stage.js",
-      "bytes": 123541,
-      "sha256": "1603ed4265666208218056fadf967ee801b51576c287e1c87e694d7f17ec1e63"
+      "bytes": 123841,
+      "sha256": "7a30bed780751015fac60164c53e11524dd074cfde18231041267407c2f9f798"
     },
     {
       "path": "templates/design/design-board-adapter.js",

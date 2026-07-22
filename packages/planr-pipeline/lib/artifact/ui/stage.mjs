@@ -430,7 +430,19 @@ export function mountArtifactStage({
       panel.setAttribute('aria-label', `${isPrimary ? 'Primary' : 'Comparison'} artifact: ${artifact?.title ?? id}`);
       const frame = frames.get(id);
       const annotationLayer = panel.querySelector('[data-planr-annotation-layer]');
-      if (frame) frame.tabIndex = isVisible && state.status === 'ready' && state.reviewMode === 'interact' ? 0 : -1;
+      if (frame) {
+        frame.tabIndex = isVisible && state.status === 'ready' && state.reviewMode === 'interact' ? 0 : -1;
+        if (state.presentation === 'document') {
+          // The outer review page owns natural scrolling in document mode. This
+          // also suppresses scroll containers authored on the artifact root,
+          // which otherwise produce a nested scrollbar inside the opaque frame.
+          frame.setAttribute('scrolling', 'no');
+          frame.style.overflow = 'hidden';
+        } else {
+          frame.removeAttribute('scrolling');
+          frame.style.removeProperty('overflow');
+        }
+      }
       if (annotationLayer) {
         const enabled = isVisible && state.status === 'ready' && state.reviewMode === 'comment';
         annotationLayer.tabIndex = enabled ? 0 : -1;

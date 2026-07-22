@@ -2566,7 +2566,16 @@ var OpenPlanrArtifactStage = (() => {
         panel.setAttribute("aria-label", `${isPrimary ? "Primary" : "Comparison"} artifact: ${artifact?.title ?? id}`);
         const frame = frames.get(id);
         const annotationLayer = panel.querySelector("[data-planr-annotation-layer]");
-        if (frame) frame.tabIndex = isVisible && state.status === "ready" && state.reviewMode === "interact" ? 0 : -1;
+        if (frame) {
+          frame.tabIndex = isVisible && state.status === "ready" && state.reviewMode === "interact" ? 0 : -1;
+          if (state.presentation === "document") {
+            frame.setAttribute("scrolling", "no");
+            frame.style.overflow = "hidden";
+          } else {
+            frame.removeAttribute("scrolling");
+            frame.style.removeProperty("overflow");
+          }
+        }
         if (annotationLayer) {
           const enabled = isVisible && state.status === "ready" && state.reviewMode === "comment";
           annotationLayer.tabIndex = enabled ? 0 : -1;
