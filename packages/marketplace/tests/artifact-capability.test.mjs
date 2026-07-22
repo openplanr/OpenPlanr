@@ -9,7 +9,7 @@ test('published artifact-review components resolve from one compatibility manife
   const marketplace = await readJson('../.claude-plugin/marketplace.json');
 
   assert.equal(ecosystem.protocol.current, '1.1.0');
-  assert.match(ecosystem.components.cli.version, /^1\.12\./);
+  assert.match(ecosystem.components.cli.version, /^1\.13\./);
   assert.match(ecosystem.components.pipeline.version, /^0\.28\./);
   assert.equal(ecosystem.components.skills.version, '1.15.0');
   assert.equal(ecosystem.components.cli.pipelineRange, `^${ecosystem.components.pipeline.version}`);

@@ -19,9 +19,9 @@ Then install any of the plugins below:
 <!-- ecosystem-table:start -->
 | Component | Version | Compatibility |
 |---|---:|---|
-| OpenPlanr CLI | 1.12.4 | pipeline ^0.28.4 |
-| Pipeline package/plugin | 0.28.4 | CLI ^1.12.4 |
-| Runtime skills | 1.15.0 | CLI ^1.12.4 |
+| OpenPlanr CLI | 1.13.0 | pipeline ^0.28.4 |
+| Pipeline package/plugin | 0.28.4 | CLI ^1.13.0 |
+| Runtime skills | 1.15.0 | CLI ^1.13.0 |
 | Protocol | 1.1.0 | reads v1.0 artifacts; v1.1 capabilities |
 <!-- ecosystem-table:end -->
 
@@ -51,7 +51,7 @@ user scope. Project scope requires a Git or initialized OpenPlanr project.
 
 ## Artifact review and private sharing
 
-OpenPlanr CLI 1.12.4 and pipeline 0.28.4 provide a runtime-neutral review surface:
+OpenPlanr CLI 1.13.0 and pipeline 0.28.4 provide a runtime-neutral review surface:
 
 ```bash
 planr artifact ./artifact.html
