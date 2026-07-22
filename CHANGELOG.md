@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.13.1
+
+### Patch Changes
+
+- [`ace659d`](https://github.com/openplanr/OpenPlanr/commit/ace659d7afcf55834e0a6f4610881863a4947b7c) Update the bundled pipeline to 0.28.5 so document artifacts use a single outer scrollbar instead of competing iframe scrolling.
+
 ## 1.13.0
 
 ### Minor Changes
