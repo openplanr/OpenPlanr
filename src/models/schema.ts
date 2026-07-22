@@ -50,10 +50,20 @@ export const distributionConfigSchema = z.object({
 const LINEAR_UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/** Persisted slice of LinearConfig — `planr linear init` writes `teamId` only; other fields are optional. */
+/** Persisted Linear configuration. `teamId` remains the default and preserves legacy configs. */
 export const linearConfigSchema = z.object({
   teamId: z.string().min(1),
   teamKey: z.string().optional(),
+  teams: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        key: z.string().min(1),
+        name: z.string().min(1),
+      }),
+    )
+    .min(1)
+    .optional(),
   defaultProjectLead: z.string().optional(),
   /**
    * Pull: Linear state name → OpenPlanr status; push legacy: `pending`|`in-progress`|`done` → state id uuid

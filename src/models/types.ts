@@ -44,9 +44,16 @@ export interface AIConfig {
  * only for in-memory flows.
  */
 export interface LinearConfig {
+  /** Default team used when a Linear command does not pass `--team`. */
   teamId: string;
   /** Team key (e.g. ENG) for display; not required for API calls. */
   teamKey?: string;
+  /** Teams this project may target. Missing means the legacy single `teamId` configuration. */
+  teams?: Array<{
+    id: string;
+    key: string;
+    name: string;
+  }>;
   /** Optional Linear user id to set as project lead on created/updated projects. */
   defaultProjectLead?: string;
   /**
