@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.13.0
+
+### Minor Changes
+
+- [`004ca3f`](https://github.com/openplanr/OpenPlanr/commit/004ca3f16451ceb7a47dd95ae897c473587a2ec4) Allow Linear setup to configure one, several, or all accessible teams, select a default, and target configured teams per push with `--team`.
+
 ## 1.12.4
 
 ### Patch Changes
