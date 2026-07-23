@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.13.3
+
+### Patch Changes
+
+- [`a4c61dc`](https://github.com/openplanr/OpenPlanr/commit/a4c61dc2bb09527783f44ed51d3cfabce3027cc2) Bundle artifacts from their own directory by default, and report safely vendored remote assets in local review output.
+
 ## 1.13.2
 
 ### Patch Changes
