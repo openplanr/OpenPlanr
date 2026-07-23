@@ -1069,7 +1069,7 @@ test('the board ships a keyboard-accessible Show/Hide pins toggle (role=switch +
 
 // ── premium designed states + accessibility (board render) ────────────
 //
-// US-007 primary AC: every state — empty (no feedback), loading, save failure, stream
+// US-007 primary AC: every state — empty (no comments), loading, save failure, stream
 // down, all-resolved — shows a designed, actionable surface (never a blank screen, silent
 // loss, or dead end), and the board respects prefers-reduced-motion. These are render-level
 // assertions against the static board HTML so they stay deterministic and $0.
@@ -1077,10 +1077,10 @@ test('the board ships a keyboard-accessible Show/Hide pins toggle (role=switch +
 test('the board ships every designed no-dead-end state (empty / loading / offline / save-fail / all-resolved)', () => {
   const html = boardHtml();
 
-  // empty (first-pin invite) — the DESIGN stays visible; the invitation lives in the feedback
-  // rail, never as a full-stage overlay that hides the design.
+  // empty (first-comment invite) — the DESIGN stays visible; the invitation lives in the
+  // comments rail, never as a full-stage overlay that hides the design.
   assert.ok(!html.includes('id="rbEmptyStage"'), 'no full-stage empty overlay (the design is always visible)');
-  assert.ok(html.includes('No feedback yet'), 'the rail invites the first pin');
+  assert.ok(html.includes('No comments yet'), 'the rail invites the first comment');
 
   assert.ok(html.includes('class="planr-stage-status"'), 'loading/error status surface ships');
   assert.ok(html.includes('role="status"') && html.includes('aria-live="polite"'), 'status is announced politely');

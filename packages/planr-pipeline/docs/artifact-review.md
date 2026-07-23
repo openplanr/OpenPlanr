@@ -1,6 +1,6 @@
 # Artifact Review and Private Sharing
 
-> planr-pipeline 0.28.5 · Protocol v1.0 planning artifacts with additive
+> planr-pipeline 0.29.0 · Protocol v1.0 planning artifacts with additive
 > Protocol v1.1 artifact-review contracts
 
 Artifact review is the portable engine behind `planr artifact`. It turns a
@@ -11,7 +11,7 @@ used for local annotation and by the hosted viewer at
 
 The review surface supports dynamic JavaScript, stable pins and threads,
 Approve/Request changes decisions, JSON or Markdown export, and non-destructive
-feedback import. Sharing is always explicit; opening or reviewing an artifact
+comment import. Sharing is always explicit; opening or reviewing an artifact
 locally never uploads it.
 
 ## CLI contract
@@ -62,11 +62,13 @@ the resolved presentation.
 ## Document and canvas presentations
 
 `document` is the default reading and review experience for generic HTML. The
-complete bundled document renders edge-to-edge beneath a sticky 48px toolbar.
-Only the OpenPlanr mark, title, privacy state, Interact/Comment controls,
-feedback count, and Share action remain visible. Feedback starts closed and
-opens as an overlay, so the artifact never reflows when a reviewer reads a
-thread.
+complete bundled document begins at the top of the viewport and renders
+edge-to-edge without a branded toolbar or persistent interaction modes. A
+compact floating action rail provides one-shot Add comment, Comments, Share or
+Copy link, and More controls without resizing the artifact. Comments start
+closed and open as an overlay. `C` arms one point-or-region comment, successful
+selection returns to normal artifact interaction, and Escape cancels an armed
+comment.
 
 `canvas` preserves the existing zoomable artboard, view controls, variants,
 split comparison, design workflow controls, and review rail behavior. Design
@@ -139,13 +141,13 @@ const session = await startArtifactReview({ envelope, theme: 'auto' });
 console.log(session.url);
 ```
 
-## Envelope and feedback identity
+## Envelope and comment identity
 
 ## Live encrypted review rooms
 
 `planr artifact share <file>` creates an encrypted live review room by default.
 The ordinary `/r/<id>#k=…&w=…` link lets anyone who receives it read and add
-feedback; pins, replies, and review state synchronize in open tabs without
+comments; pins, replies, and review state synchronize in open tabs without
 creating replacement URLs. The creator also receives a separate private manage
 URL containing `m=…`; it can pause/reopen comments, set the final verdict, or
 delete the room. The Worker stores only ciphertext, IVs, expiry metadata, and
@@ -153,7 +155,7 @@ hashed capabilities. Use `--snapshot` to deliberately create the older
 immutable fragment/short-link form instead.
 
 Live-room imports use the same `planr artifact import <url>` command and write
-generic feedback beneath `.planr/artifacts/<artifact-id>/`; they never mutate
+generic comments beneath `.planr/artifacts/<artifact-id>/`; they never mutate
 the reviewed HTML. Existing immutable links remain readable and importable.
 
 The additive v1.1 contracts are:

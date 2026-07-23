@@ -211,6 +211,22 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
   assert.equal(await page.locator('html').getAttribute('data-planr-presentation'), 'document');
   assert.equal(await page.locator('[data-planr-action="feedback"]').getAttribute('aria-expanded'), 'false');
   await expectHiddenCanvasChrome(page);
+  assert.equal(await page.locator('.planr-toolbar').count(), 0);
+  assert.equal(await page.locator('.planr-floating-actions').count(), 1);
+  await page.keyboard.press('c');
+  assert.equal(await page.locator('.planr-shell').getAttribute('data-planr-review-mode'), 'comment');
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('.planr-shell').getAttribute('data-planr-review-mode'), 'interact');
+  await page.locator('.planr-shell').evaluate((node) => {
+    node.setAttribute('data-planr-room-comments-paused', '');
+  });
+  assert.equal(await page.locator('[data-planr-action="add-comment"]').isDisabled(), true);
+  await page.keyboard.press('c');
+  assert.equal(await page.locator('.planr-shell').getAttribute('data-planr-review-mode'), 'interact');
+  await page.locator('.planr-shell').evaluate((node) => {
+    node.removeAttribute('data-planr-room-comments-paused');
+  });
+  assert.equal(await page.locator('[data-planr-action="add-comment"]').isDisabled(), false);
 
   const initial = await page.evaluate(() => ({
     outerHeight: document.documentElement.scrollHeight,
@@ -249,9 +265,14 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
     addEventListener('planr:artifact-region', (event) => globalThis.__planrDocumentRegions.push(event.detail));
     scrollTo(0, 1_650);
   });
-  await page.locator('[data-planr-mode="comment"]').click();
+  await page.locator('[data-planr-action="add-comment"]').click();
   await page.mouse.click(640, 520);
   await page.waitForFunction(() => globalThis.__planrDocumentRegions?.length === 1);
+  assert.equal(
+    await page.locator('.planr-shell').getAttribute('data-planr-review-mode'),
+    'interact',
+    'document comments are one-shot',
+  );
   const region = await page.evaluate(() => globalThis.__planrDocumentRegions[0]);
   assert.equal(region.artifactId, 'long-document');
   assert.ok(region.region.y > 0.4, 'below-the-fold comments use full-document coordinates');

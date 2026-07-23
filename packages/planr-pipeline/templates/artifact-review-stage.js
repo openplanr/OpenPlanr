@@ -545,7 +545,7 @@ var OpenPlanrArtifactStage = (() => {
   function identityRequired() {
     throw new ArtifactReviewStateError(
       "E_ARTIFACT_REVIEW_IDENTITY_REQUIRED",
-      "Enter your name before adding feedback."
+      "Enter your name before adding a comment."
     );
   }
   function clonePlain(value) {
@@ -1098,7 +1098,7 @@ var OpenPlanrArtifactStage = (() => {
         "data-planr-intent": pin.intent,
         "data-planr-status": pin.status,
         "aria-controls": annotationDomIds(pin.id).pin,
-        "aria-label": `${pin.intent} feedback by ${pin.author.name}`
+        "aria-label": `${pin.intent} comment by ${pin.author.name}`
       }
     });
     const header = createElement(document2, "header");
@@ -1200,10 +1200,13 @@ var OpenPlanrArtifactStage = (() => {
       if (live) live.textContent = message;
     };
     const updateCounts = (pins) => {
-      for (const count2 of root.querySelectorAll('.planr-toolbar [data-planr-action="feedback"] .planr-count, .planr-review-rail > header .planr-count')) {
+      const label = `${pins.length} ${pins.length === 1 ? "comment" : "comments"}`;
+      for (const count2 of root.querySelectorAll('[data-planr-action="feedback"] .planr-count, .planr-review-rail > header .planr-count')) {
         count2.textContent = String(pins.length);
-        count2.setAttribute("aria-label", `${pins.length} feedback items`);
+        count2.setAttribute("aria-label", label);
       }
+      const commentsButton = root.querySelector('[data-planr-action="feedback"]');
+      commentsButton?.setAttribute("aria-label", label);
     };
     const render = () => {
       const { review, activePinId } = controller.getState();
@@ -1211,12 +1214,12 @@ var OpenPlanrArtifactStage = (() => {
       const fragment = document2.createDocumentFragment();
       const list = createElement(document2, "div", {
         className: "planr-thread-list",
-        attributes: { "aria-label": "Feedback threads" }
+        attributes: { "aria-label": "Comment threads" }
       });
       if (pins.length === 0) {
         list.append(createElement(document2, "p", {
           className: "planr-review-empty",
-          text: "Select Comment mode, then choose a point or region in the artifact."
+          text: "No comments yet. Choose Add comment, then select a point or region in the artifact."
         }));
       } else {
         for (const pin of pins) list.append(renderThread(document2, pin, pin.id === activePinId));
@@ -1296,7 +1299,7 @@ var OpenPlanrArtifactStage = (() => {
             pinId,
             status: action.dataset.planrThreadAction === "resolve" ? "resolved" : "open"
           });
-          announce2(action.dataset.planrThreadAction === "resolve" ? "Feedback resolved" : "Feedback reopened");
+          announce2(action.dataset.planrThreadAction === "resolve" ? "Comment resolved" : "Comment reopened");
           focusThread(pinId);
           clearError();
         } catch (error) {
@@ -1601,15 +1604,21 @@ var OpenPlanrArtifactStage = (() => {
       if (timer) window.clearTimeout(timer);
       copyResetTimers.delete(button);
       button.removeAttribute("data-planr-copy-state");
-      button.textContent = button.dataset.planrCopyLabel ?? button.textContent;
+      const label = button.querySelector?.(".planr-action-label");
+      if (label) label.textContent = button.dataset.planrCopyLabel ?? label.textContent;
+      else button.textContent = button.dataset.planrCopyLabel ?? button.textContent;
     }
     function showCopyState(button, stateValue) {
       if (!button) return;
-      if (!button.dataset.planrCopyLabel) button.dataset.planrCopyLabel = button.textContent.trim();
+      const label = button.querySelector?.(".planr-action-label");
+      if (!button.dataset.planrCopyLabel) {
+        button.dataset.planrCopyLabel = (label?.textContent ?? button.textContent).trim();
+      }
       const prior = copyResetTimers.get(button);
       if (prior) window.clearTimeout(prior);
       button.dataset.planrCopyState = stateValue;
-      button.textContent = stateValue === "copied" ? "Copied" : "Try again";
+      if (label) label.textContent = stateValue === "copied" ? "Copied" : "Try again";
+      else button.textContent = stateValue === "copied" ? "Copied" : "Try again";
       copyResetTimers.set(button, window.setTimeout(() => resetCopyButton(button), 1800));
     }
     function resetCopyButtons() {
@@ -1772,8 +1781,11 @@ var OpenPlanrArtifactStage = (() => {
     if (existingRoom) {
       const value = stableShareUrl();
       if (value) {
-        trigger.textContent = "Copy link";
+        const label = trigger.querySelector(".planr-action-label");
+        if (label) label.textContent = "Copy link";
+        else trigger.textContent = "Copy link";
         trigger.dataset.planrCopyLabel = "Copy link";
+        trigger.dataset.planrTooltip = "Copy link";
         trigger.removeAttribute("aria-haspopup");
         trigger.setAttribute("aria-label", "Copy this live review room link");
         listen(trigger, "click", () => {
@@ -2517,6 +2529,7 @@ var OpenPlanrArtifactStage = (() => {
       const tablist = document2.querySelector(".planr-variants");
       const rail = document2.getElementById("planr-review-rail");
       const feedbackButton = document2.querySelector('[data-planr-action="feedback"]');
+      const addCommentButton = document2.querySelector('[data-planr-action="add-comment"]');
       const themeButton = document2.querySelector('[data-planr-action="theme"]');
       const statusSlot = document2.querySelector('[data-planr-slot="status"]');
       const metadata = document2.querySelector(".planr-title-block > span");
@@ -2532,6 +2545,16 @@ var OpenPlanrArtifactStage = (() => {
         if (state.railOpen) rail.removeAttribute("aria-hidden");
       }
       if (feedbackButton) feedbackButton.setAttribute("aria-expanded", String(state.railOpen));
+      if (addCommentButton) {
+        const paused = root.hasAttribute("data-planr-room-comments-paused");
+        addCommentButton.disabled = paused;
+        addCommentButton.setAttribute("aria-pressed", String(state.reviewMode === "comment"));
+        addCommentButton.setAttribute(
+          "aria-label",
+          paused ? "Add comment unavailable: comments are paused" : "Add comment"
+        );
+        addCommentButton.dataset.planrTooltip = paused ? "Comments are paused" : "Add comment (C)";
+      }
       if (themeButton) {
         themeButton.textContent = state.theme;
         themeButton.setAttribute("aria-label", `Shell theme ${state.theme}`);
@@ -2622,6 +2645,11 @@ var OpenPlanrArtifactStage = (() => {
         return;
       }
       switch (target.dataset.planrAction) {
+        case "add-comment":
+          if (!root.hasAttribute("data-planr-room-comments-paused")) {
+            dispatch({ type: "set-review-mode", reviewMode: "comment" });
+          }
+          break;
         case "zoom-out":
           dispatch({ type: "zoom-by", delta: -ARTIFACT_STAGE_LIMITS.zoomStep });
           break;
@@ -2637,6 +2665,20 @@ var OpenPlanrArtifactStage = (() => {
           dispatch({ type: "toggle-rail" });
           break;
         }
+        case "more": {
+          const menu = target.closest(".planr-more")?.querySelector(".planr-more-menu");
+          if (!menu) break;
+          const open = menu.hidden;
+          menu.hidden = !open;
+          target.setAttribute("aria-expanded", String(open));
+          if (open) menu.querySelector('[role="menuitem"]')?.focus();
+          break;
+        }
+        case "sharing-options":
+          target.closest(".planr-more-menu").hidden = true;
+          document2.querySelector('[data-planr-action="more"]')?.setAttribute("aria-expanded", "false");
+          shareController?.open?.();
+          break;
         case "theme":
           dispatch({ type: "cycle-theme" });
           break;
@@ -2652,13 +2694,31 @@ var OpenPlanrArtifactStage = (() => {
           return;
         }
         if (event.key.toLowerCase() === "c") {
-          dispatch({ type: "set-review-mode", reviewMode: "comment" });
+          if (!root.hasAttribute("data-planr-room-comments-paused")) {
+            dispatch({ type: "set-review-mode", reviewMode: "comment" });
+            document2.querySelector('[data-planr-action="add-comment"]')?.focus();
+          }
           return;
         }
-        if (event.key === "Escape" && state.railOpen) {
-          dispatch({ type: "set-rail-open", railOpen: false });
-          document2.querySelector('[data-planr-action="feedback"]')?.focus();
-          return;
+        if (event.key === "Escape") {
+          const more = document2.querySelector(".planr-more-menu:not([hidden])");
+          if (more) {
+            more.hidden = true;
+            const trigger = document2.querySelector('[data-planr-action="more"]');
+            trigger?.setAttribute("aria-expanded", "false");
+            trigger?.focus();
+            return;
+          }
+          if (state.presentation === "document" && state.reviewMode === "comment") {
+            dispatch({ type: "set-review-mode", reviewMode: "interact" });
+            document2.querySelector('[data-planr-action="add-comment"]')?.focus();
+            return;
+          }
+          if (state.railOpen) {
+            dispatch({ type: "set-rail-open", railOpen: false });
+            document2.querySelector('[data-planr-action="feedback"]')?.focus();
+            return;
+          }
         }
       }
       const tab = event.target.closest?.('[role="tab"][data-artifact-id]');
@@ -2686,6 +2746,9 @@ var OpenPlanrArtifactStage = (() => {
       });
       emit(root, window, ARTIFACT_STAGE_EVENTS.region, detail);
       emit(root, window, ARTIFACT_STAGE_EVENTS.point, detail);
+      if (state.presentation === "document") {
+        dispatch({ type: "set-review-mode", reviewMode: "interact" });
+      }
     }
     for (const layer of document2.querySelectorAll("[data-planr-annotation-layer]")) {
       let selection = null;
@@ -2754,6 +2817,24 @@ var OpenPlanrArtifactStage = (() => {
     }
     listen(root, "click", onClick);
     listen(document2, "keydown", onKeyDown);
+    listen(document2, "click", (event) => {
+      const more = document2.querySelector(".planr-more-menu:not([hidden])");
+      if (!more || event.target.closest?.(".planr-more")) return;
+      more.hidden = true;
+      document2.querySelector('[data-planr-action="more"]')?.setAttribute("aria-expanded", "false");
+    });
+    const roomStateObserver = typeof window.MutationObserver === "function" ? new window.MutationObserver(() => {
+      if (root.hasAttribute("data-planr-room-comments-paused") && state.reviewMode === "comment") {
+        dispatch({ type: "set-review-mode", reviewMode: "interact" });
+      } else {
+        render();
+      }
+    }) : null;
+    roomStateObserver?.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-planr-room-comments-paused"]
+    });
+    if (roomStateObserver) cleanup.push(() => roomStateObserver.disconnect());
     render();
     let readyPromise = Promise.resolve(state);
     let feedbackController = null;

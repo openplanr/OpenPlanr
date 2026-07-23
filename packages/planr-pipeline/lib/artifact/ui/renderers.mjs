@@ -173,6 +173,36 @@ ${canvas ? `  <button class="planr-toolbar-action" type="button" data-planr-acti
 </header>`;
 }
 
+function actionIcon(name) {
+  const paths = {
+    comment: '<path d="M12 20a8 8 0 1 0-7.1-4.3L4 20l4.3-.9A8 8 0 0 0 12 20Z"/><path d="M12 8v8M8 12h8"/>',
+    comments: '<path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.8 8.8 0 0 1-3.2-.6L4 20l1.6-4.1A7.4 7.4 0 0 1 4 11.5a8 8 0 0 1 16 0Z"/><path d="M8.5 11.5h7"/>',
+    share: '<path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6h14v-6"/>',
+    more: '<circle cx="5" cy="12" r="1.25"/><circle cx="12" cy="12" r="1.25"/><circle cx="19" cy="12" r="1.25"/>',
+  };
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths[name]}</svg>`;
+}
+
+function commentsLabel(count) {
+  return `${count} ${count === 1 ? 'comment' : 'comments'}`;
+}
+
+export function renderDocumentActionRail(model) {
+  return `<nav class="planr-floating-actions" aria-label="Review actions">
+  <button type="button" data-planr-action="add-comment" aria-label="Add comment" aria-keyshortcuts="C" aria-pressed="${model.reviewMode === 'comment'}" data-planr-tooltip="Add comment (C)">${actionIcon('comment')}</button>
+  <button type="button" data-planr-action="feedback" aria-label="${commentsLabel(model.feedbackCount)}" aria-controls="planr-review-rail" aria-expanded="${model.railOpen}" data-planr-tooltip="Comments">${actionIcon('comments')}<span class="planr-count" aria-hidden="true">${model.feedbackCount}</span></button>
+  <button type="button" data-planr-action="share" aria-label="Share review" aria-haspopup="dialog" data-planr-tooltip="Share">${actionIcon('share')}<span class="planr-action-label">Share</span></button>
+  <div class="planr-more">
+    <button type="button" data-planr-action="more" aria-label="More review options" aria-haspopup="menu" aria-expanded="false" data-planr-tooltip="More">${actionIcon('more')}</button>
+    <div class="planr-more-menu" role="menu" hidden>
+      <div><strong>Private review</strong><span>${escapeHtml(model.privacyLabel)} · Encrypted when shared</span></div>
+      <button type="button" role="menuitem" data-planr-action="sharing-options">Snapshot and sharing options</button>
+      <div data-planr-slot="room-manager" hidden></div>
+    </div>
+  </div>
+</nav>`;
+}
+
 function renderViewButton(mode, model, disabled = false) {
   const label = mode[0].toUpperCase() + mode.slice(1);
   return `<button type="button" data-planr-view="${mode}" aria-pressed="${model.viewMode === mode}"${disabled ? ' disabled' : ''}>${label}</button>`;
@@ -234,10 +264,10 @@ ${model.presentation === 'canvas' ? `  <div class="planr-stage-heading"><span>AR
 
 export function renderArtifactRail(model) {
   const closed = !model.railOpen;
-  return `<aside class="planr-review-rail" id="planr-review-rail" aria-label="Review feedback"${closed ? ' inert aria-hidden="true"' : ''}>
-  <header><h2>Review feedback</h2><div class="planr-review-header-actions"><div class="planr-review-metrics" aria-label="Review metrics"><span data-planr-metric="open">0 open</span><span class="planr-count" data-planr-metric="total" aria-label="${model.feedbackCount} feedback items">${model.feedbackCount}</span></div><button class="planr-rail-close" type="button" data-planr-close-feedback aria-label="Close feedback">×</button></div></header>
+  return `<aside class="planr-review-rail" id="planr-review-rail" aria-label="Review comments"${closed ? ' inert aria-hidden="true"' : ''}>
+  <header><h2>Review comments</h2><div class="planr-review-header-actions"><div class="planr-review-metrics" aria-label="Review metrics"><span data-planr-metric="open">0 open</span><span class="planr-count" data-planr-metric="total" aria-label="${commentsLabel(model.feedbackCount)}">${model.feedbackCount}</span></div><button class="planr-rail-close" type="button" data-planr-close-feedback aria-label="Close comments">×</button></div></header>
   <section class="planr-identity" aria-label="Reviewer identity"><label for="planr-reviewer-name">Your name<input id="planr-reviewer-name" type="text" maxlength="256" autocomplete="name" aria-describedby="planr-identity-status planr-review-error" data-planr-reviewer-name></label><p class="planr-identity-status" id="planr-identity-status" aria-live="polite" data-planr-identity-status>Used to sign your comments.</p><p class="planr-field-error" id="planr-review-error" role="alert" hidden></p></section>
-  <div class="planr-feedback-slot" data-planr-slot="feedback-rail" role="region" aria-label="Feedback threads"><p data-planr-empty-feedback>No feedback yet. Choose Comment, then click or drag on the artifact.</p><div class="planr-thread-list" data-planr-thread-list></div></div>
+  <div class="planr-feedback-slot" data-planr-slot="feedback-rail" role="region" aria-label="Comment threads"><p data-planr-empty-feedback>No comments yet. Choose Add comment, then click or drag on the artifact.</p><div class="planr-thread-list" data-planr-thread-list></div></div>
   <section class="planr-domain-rail" data-planr-slot="domain-rail" aria-label="Artifact workflow details" hidden></section>
   <section class="planr-decision-slot" data-planr-slot="decision" aria-label="Review decision">
     <label for="planr-overall-note">Overall note</label><textarea id="planr-overall-note" maxlength="65536" placeholder="Overall note for the coding agent…" data-planr-overall></textarea>
@@ -253,7 +283,7 @@ export function renderArtifactShareDialog() {
     <header><div><h2 id="planr-share-title">Share this review</h2><p id="planr-share-description">Live review is encrypted and collaborative. Snapshot links are immutable alternatives.</p></div><button type="button" class="planr-dialog-close" data-planr-share-close aria-label="Close share dialog">×</button></header>
     <div class="planr-share-receipt" role="group" aria-label="Privacy receipt">
       <button type="button" class="planr-share-receipt-row is-selected" data-planr-share-transport="live" aria-pressed="true">
-        <span class="planr-share-receipt-icon" aria-hidden="true">●</span><span><strong>Live collaborative review</strong><small>Encrypted artifact and feedback events are stored until expiry. Anyone with the link can comment.</small></span><span class="planr-share-receipt-size">Default</span>
+        <span class="planr-share-receipt-icon" aria-hidden="true">●</span><span><strong>Live collaborative review</strong><small>Encrypted artifact and comment events are stored until expiry. Anyone with the link can comment.</small></span><span class="planr-share-receipt-size">Default</span>
       </button>
       <button type="button" class="planr-share-receipt-row" data-planr-share-transport="fragment" aria-pressed="false">
         <span class="planr-share-receipt-icon" aria-hidden="true">#</span><span><strong>Private fragment</strong><small>Compressed into the URL. Nothing is uploaded.</small></span><span class="planr-share-receipt-size" data-planr-share-fragment-size>Calculating…</span>
@@ -284,7 +314,7 @@ export function renderHostedArtifactViewerSlot() {
 
 export function renderArtifactShellMarkup(model) {
   return `<div class="planr-shell" data-planr-presentation="${model.presentation}" data-planr-view="${model.viewMode}" data-planr-review-mode="${model.reviewMode}" data-planr-state="${model.status}" data-planr-rail-open="${model.railOpen}">
-  ${renderArtifactToolbar(model)}
+  ${model.presentation === 'canvas' ? renderArtifactToolbar(model) : renderDocumentActionRail(model)}
   <div class="planr-workspace">${renderArtifactStage(model)}${renderArtifactRail(model)}</div>
 </div>
 <div data-planr-slot="dialogs">${renderArtifactShareDialog()}</div>

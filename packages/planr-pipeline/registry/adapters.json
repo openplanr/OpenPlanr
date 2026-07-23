@@ -1,11 +1,11 @@
 {
   "schemaVersion": "1.0.0",
   "protocolVersion": "1.1.0",
-  "pipelineVersion": "0.28.5",
+  "pipelineVersion": "0.29.0",
   "adapters": [
     {
       "id": "claude-code",
-      "version": "0.28.5",
+      "version": "0.29.0",
       "capabilityLevel": "product",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -36,7 +36,7 @@
     },
     {
       "id": "codex",
-      "version": "0.28.5",
+      "version": "0.29.0",
       "capabilityLevel": "workflow",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -67,7 +67,7 @@
     },
     {
       "id": "cursor",
-      "version": "0.28.5",
+      "version": "0.29.0",
       "capabilityLevel": "workflow",
       "installScopes": ["project"],
       "entrypoints": {

@@ -11,7 +11,7 @@ import { createArtifactStagePayload } from './stage-payload.mjs';
 import { digestArtifactEnvelope } from '../envelope.mjs';
 import { embedJson, escapeHtml } from '../../design/escape.mjs';
 
-export const ARTIFACT_SHELL_VERSION = '1.1.0';
+export const ARTIFACT_SHELL_VERSION = '1.2.0';
 export const ARTIFACT_SHELL_ASSET_PATHS = Object.freeze({
   template: 'templates/artifact-review-shell.html',
   stageRuntime: 'templates/artifact-review-stage.js',
@@ -119,7 +119,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .planr-room-manager { display: inline-flex; align-items: center; gap: 5px; }
 .planr-room-manager button { height: 28px; border: 1px solid var(--planr-color-rule); border-radius: var(--planr-radius-small); background: var(--planr-color-panel); color: var(--planr-color-text-muted); font: 650 10px/1 var(--planr-font-body); padding: 0 8px; }
 .planr-room-manager button:last-child { border-color: color-mix(in srgb, var(--planr-color-danger) 55%, var(--planr-color-rule)); color: var(--planr-color-danger); }
-.planr-shell[data-planr-room-comments-paused] [data-planr-mode="comment"] { cursor: not-allowed; opacity: .48; }
+.planr-shell[data-planr-room-comments-paused] [data-planr-mode="comment"],
+.planr-shell[data-planr-room-comments-paused] [data-planr-action="add-comment"] { cursor: not-allowed; opacity: .48; }
 .planr-domain-toolbar { min-width: 0; display: inline-flex; align-items: center; gap: 6px; }
 .planr-segment {
   height: 30px;
@@ -168,6 +169,114 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   color: var(--planr-color-text-muted);
   font: 10px/1 var(--planr-font-mono);
 }
+.planr-floating-actions {
+  position: fixed;
+  z-index: 45;
+  top: 50%;
+  right: max(12px, env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid var(--planr-color-rule);
+  border-radius: var(--planr-radius-large);
+  background: color-mix(in srgb, var(--planr-color-chrome) 94%, transparent);
+  box-shadow: 0 12px 36px color-mix(in srgb, var(--planr-color-background) 38%, transparent);
+  backdrop-filter: blur(16px);
+  transform: translateY(-50%);
+}
+.planr-floating-actions > button,
+.planr-floating-actions > .planr-more > button {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--planr-radius-medium);
+  background: transparent;
+  color: var(--planr-color-text);
+  cursor: pointer;
+  transition: color var(--planr-motion-fast), background var(--planr-motion-fast), transform var(--planr-motion-fast);
+}
+.planr-floating-actions button:hover,
+.planr-floating-actions button[aria-pressed="true"],
+.planr-floating-actions button[aria-expanded="true"] {
+  background: var(--planr-color-raised);
+  color: var(--planr-color-primary);
+}
+.planr-floating-actions button:active { transform: scale(.96); }
+.planr-floating-actions button:disabled { cursor: not-allowed; opacity: .48; }
+.planr-floating-actions svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+.planr-floating-actions svg circle { fill: currentColor; stroke: none; }
+.planr-floating-actions [data-planr-action="feedback"] .planr-count {
+  position: absolute;
+  top: 2px;
+  right: 1px;
+  min-width: 16px;
+  height: 16px;
+  padding-inline: 3px;
+  background: var(--planr-color-primary);
+  color: var(--planr-color-background);
+  font-size: 9px;
+}
+.planr-floating-actions [data-planr-tooltip]::after {
+  content: attr(data-planr-tooltip);
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 10px);
+  width: max-content;
+  max-width: 220px;
+  padding: 6px 8px;
+  border-radius: var(--planr-radius-small);
+  background: var(--planr-color-text);
+  color: var(--planr-color-background);
+  font: 650 10px/1.2 var(--planr-font-body);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(4px, -50%);
+  transition: opacity var(--planr-motion-fast), transform var(--planr-motion-fast);
+}
+.planr-floating-actions [data-planr-tooltip]:hover::after,
+.planr-floating-actions [data-planr-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+.planr-action-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.planr-more { position: relative; }
+.planr-more-menu {
+  position: absolute;
+  right: calc(100% + 10px);
+  bottom: 0;
+  width: 250px;
+  padding: 8px;
+  border: 1px solid var(--planr-color-rule);
+  border-radius: var(--planr-radius-medium);
+  background: var(--planr-color-panel);
+  box-shadow: 0 16px 48px color-mix(in srgb, var(--planr-color-background) 42%, transparent);
+}
+.planr-more-menu > div:first-child { display: grid; gap: 2px; padding: 7px 8px 10px; }
+.planr-more-menu strong { font-size: 12px; }
+.planr-more-menu span { color: var(--planr-color-text-muted); font-size: 10px; }
+.planr-more-menu > button {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--planr-radius-small);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.planr-more-menu > button:hover { background: var(--planr-color-raised); }
 .planr-workspace {
   min-width: 0;
   min-height: 0;
@@ -767,12 +876,7 @@ html[data-planr-presentation="document"] body { overflow: visible; }
 .planr-shell[data-planr-presentation="document"] {
   height: auto;
   min-height: 100vh;
-  grid-template-rows: var(--planr-toolbar-height) auto;
-}
-.planr-shell[data-planr-presentation="document"] .planr-toolbar {
-  position: sticky;
-  top: 0;
-  backdrop-filter: blur(16px);
+  display: block;
 }
 .planr-shell[data-planr-presentation="document"] .planr-workspace,
 .planr-shell[data-planr-presentation="document"][data-planr-rail-open="false"] .planr-workspace {
@@ -800,8 +904,8 @@ html[data-planr-presentation="document"] body { overflow: visible; }
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  height: var(--planr-document-height, max(var(--planr-artifact-height), calc(100vh - var(--planr-toolbar-height))));
-  min-height: calc(100vh - var(--planr-toolbar-height));
+  height: var(--planr-document-height, max(var(--planr-artifact-height), 100vh));
+  min-height: 100vh;
 }
 .planr-shell[data-planr-presentation="document"] .planr-frame {
   overflow: visible;
@@ -815,11 +919,11 @@ html[data-planr-presentation="document"] body { overflow: visible; }
   background: transparent;
 }
 .planr-shell[data-planr-presentation="document"] .planr-frame-label { display: none; }
-.planr-shell[data-planr-presentation="document"] .planr-stage-status { inset: 0; min-height: calc(100vh - var(--planr-toolbar-height)); }
+.planr-shell[data-planr-presentation="document"] .planr-stage-status { inset: 0; min-height: 100vh; }
 .planr-shell[data-planr-presentation="document"] .planr-review-rail {
   position: fixed;
   z-index: 50;
-  inset: var(--planr-toolbar-height) 0 0 auto;
+  inset: 0 0 0 auto;
   width: min(var(--planr-review-rail-width), 100vw);
   border-left: 1px solid var(--planr-color-rule);
   box-shadow: -18px 0 60px color-mix(in srgb, var(--planr-color-background) 34%, transparent);
@@ -829,9 +933,27 @@ html[data-planr-presentation="document"] body { overflow: visible; }
   transform: translateX(100%);
 }
 @media (max-width: 900px) {
+  .planr-shell[data-planr-presentation="document"] .planr-floating-actions {
+    top: auto;
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    flex-direction: row;
+    transform: none;
+  }
+  .planr-shell[data-planr-presentation="document"] .planr-floating-actions > button,
+  .planr-shell[data-planr-presentation="document"] .planr-floating-actions > .planr-more > button {
+    width: 44px;
+    height: 44px;
+  }
+  .planr-shell[data-planr-presentation="document"] .planr-floating-actions [data-planr-tooltip]::after { display: none; }
+  .planr-shell[data-planr-presentation="document"] .planr-more-menu {
+    right: 0;
+    bottom: calc(100% + 10px);
+  }
   .planr-shell[data-planr-presentation="document"] .planr-review-rail {
     inset: auto 0 0;
     width: 100%;
+    max-height: 100dvh;
   }
   .planr-shell[data-planr-presentation="document"][data-planr-rail-open="false"] .planr-review-rail {
     transform: translate3d(0, calc(100% + env(safe-area-inset-bottom, 0px)), 0);

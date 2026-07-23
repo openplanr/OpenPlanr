@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-planr-theme="auto" data-planr-presentation="document" data-planr-artifact-shell="1.1.0">
+<html lang="en" data-planr-theme="auto" data-planr-presentation="document" data-planr-artifact-shell="1.2.0">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -186,7 +186,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .planr-room-manager { display: inline-flex; align-items: center; gap: 5px; }
 .planr-room-manager button { height: 28px; border: 1px solid var(--planr-color-rule); border-radius: var(--planr-radius-small); background: var(--planr-color-panel); color: var(--planr-color-text-muted); font: 650 10px/1 var(--planr-font-body); padding: 0 8px; }
 .planr-room-manager button:last-child { border-color: color-mix(in srgb, var(--planr-color-danger) 55%, var(--planr-color-rule)); color: var(--planr-color-danger); }
-.planr-shell[data-planr-room-comments-paused] [data-planr-mode="comment"] { cursor: not-allowed; opacity: .48; }
+.planr-shell[data-planr-room-comments-paused] [data-planr-mode="comment"],
+.planr-shell[data-planr-room-comments-paused] [data-planr-action="add-comment"] { cursor: not-allowed; opacity: .48; }
 .planr-domain-toolbar { min-width: 0; display: inline-flex; align-items: center; gap: 6px; }
 .planr-segment {
   height: 30px;
@@ -235,6 +236,114 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   color: var(--planr-color-text-muted);
   font: 10px/1 var(--planr-font-mono);
 }
+.planr-floating-actions {
+  position: fixed;
+  z-index: 45;
+  top: 50%;
+  right: max(12px, env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid var(--planr-color-rule);
+  border-radius: var(--planr-radius-large);
+  background: color-mix(in srgb, var(--planr-color-chrome) 94%, transparent);
+  box-shadow: 0 12px 36px color-mix(in srgb, var(--planr-color-background) 38%, transparent);
+  backdrop-filter: blur(16px);
+  transform: translateY(-50%);
+}
+.planr-floating-actions > button,
+.planr-floating-actions > .planr-more > button {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--planr-radius-medium);
+  background: transparent;
+  color: var(--planr-color-text);
+  cursor: pointer;
+  transition: color var(--planr-motion-fast), background var(--planr-motion-fast), transform var(--planr-motion-fast);
+}
+.planr-floating-actions button:hover,
+.planr-floating-actions button[aria-pressed="true"],
+.planr-floating-actions button[aria-expanded="true"] {
+  background: var(--planr-color-raised);
+  color: var(--planr-color-primary);
+}
+.planr-floating-actions button:active { transform: scale(.96); }
+.planr-floating-actions button:disabled { cursor: not-allowed; opacity: .48; }
+.planr-floating-actions svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+.planr-floating-actions svg circle { fill: currentColor; stroke: none; }
+.planr-floating-actions [data-planr-action="feedback"] .planr-count {
+  position: absolute;
+  top: 2px;
+  right: 1px;
+  min-width: 16px;
+  height: 16px;
+  padding-inline: 3px;
+  background: var(--planr-color-primary);
+  color: var(--planr-color-background);
+  font-size: 9px;
+}
+.planr-floating-actions [data-planr-tooltip]::after {
+  content: attr(data-planr-tooltip);
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 10px);
+  width: max-content;
+  max-width: 220px;
+  padding: 6px 8px;
+  border-radius: var(--planr-radius-small);
+  background: var(--planr-color-text);
+  color: var(--planr-color-background);
+  font: 650 10px/1.2 var(--planr-font-body);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(4px, -50%);
+  transition: opacity var(--planr-motion-fast), transform var(--planr-motion-fast);
+}
+.planr-floating-actions [data-planr-tooltip]:hover::after,
+.planr-floating-actions [data-planr-tooltip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+.planr-action-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.planr-more { position: relative; }
+.planr-more-menu {
+  position: absolute;
+  right: calc(100% + 10px);
+  bottom: 0;
+  width: 250px;
+  padding: 8px;
+  border: 1px solid var(--planr-color-rule);
+  border-radius: var(--planr-radius-medium);
+  background: var(--planr-color-panel);
+  box-shadow: 0 16px 48px color-mix(in srgb, var(--planr-color-background) 42%, transparent);
+}
+.planr-more-menu > div:first-child { display: grid; gap: 2px; padding: 7px 8px 10px; }
+.planr-more-menu strong { font-size: 12px; }
+.planr-more-menu span { color: var(--planr-color-text-muted); font-size: 10px; }
+.planr-more-menu > button {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--planr-radius-small);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.planr-more-menu > button:hover { background: var(--planr-color-raised); }
 .planr-workspace {
   min-width: 0;
   min-height: 0;
@@ -834,12 +943,7 @@ html[data-planr-presentation="document"] body { overflow: visible; }
 .planr-shell[data-planr-presentation="document"] {
   height: auto;
   min-height: 100vh;
-  grid-template-rows: var(--planr-toolbar-height) auto;
-}
-.planr-shell[data-planr-presentation="document"] .planr-toolbar {
-  position: sticky;
-  top: 0;
-  backdrop-filter: blur(16px);
+  display: block;
 }
 .planr-shell[data-planr-presentation="document"] .planr-workspace,
 .planr-shell[data-planr-presentation="document"][data-planr-rail-open="false"] .planr-workspace {
@@ -867,8 +971,8 @@ html[data-planr-presentation="document"] body { overflow: visible; }
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  height: var(--planr-document-height, max(var(--planr-artifact-height), calc(100vh - var(--planr-toolbar-height))));
-  min-height: calc(100vh - var(--planr-toolbar-height));
+  height: var(--planr-document-height, max(var(--planr-artifact-height), 100vh));
+  min-height: 100vh;
 }
 .planr-shell[data-planr-presentation="document"] .planr-frame {
   overflow: visible;
@@ -882,11 +986,11 @@ html[data-planr-presentation="document"] body { overflow: visible; }
   background: transparent;
 }
 .planr-shell[data-planr-presentation="document"] .planr-frame-label { display: none; }
-.planr-shell[data-planr-presentation="document"] .planr-stage-status { inset: 0; min-height: calc(100vh - var(--planr-toolbar-height)); }
+.planr-shell[data-planr-presentation="document"] .planr-stage-status { inset: 0; min-height: 100vh; }
 .planr-shell[data-planr-presentation="document"] .planr-review-rail {
   position: fixed;
   z-index: 50;
-  inset: var(--planr-toolbar-height) 0 0 auto;
+  inset: 0 0 0 auto;
   width: min(var(--planr-review-rail-width), 100vw);
   border-left: 1px solid var(--planr-color-rule);
   box-shadow: -18px 0 60px color-mix(in srgb, var(--planr-color-background) 34%, transparent);
@@ -896,9 +1000,27 @@ html[data-planr-presentation="document"] body { overflow: visible; }
   transform: translateX(100%);
 }
 @media (max-width: 900px) {
+  .planr-shell[data-planr-presentation="document"] .planr-floating-actions {
+    top: auto;
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    flex-direction: row;
+    transform: none;
+  }
+  .planr-shell[data-planr-presentation="document"] .planr-floating-actions > button,
+  .planr-shell[data-planr-presentation="document"] .planr-floating-actions > .planr-more > button {
+    width: 44px;
+    height: 44px;
+  }
+  .planr-shell[data-planr-presentation="document"] .planr-floating-actions [data-planr-tooltip]::after { display: none; }
+  .planr-shell[data-planr-presentation="document"] .planr-more-menu {
+    right: 0;
+    bottom: calc(100% + 10px);
+  }
   .planr-shell[data-planr-presentation="document"] .planr-review-rail {
     inset: auto 0 0;
     width: 100%;
+    max-height: 100dvh;
   }
   .planr-shell[data-planr-presentation="document"][data-planr-rail-open="false"] .planr-review-rail {
     transform: translate3d(0, calc(100% + env(safe-area-inset-bottom, 0px)), 0);
@@ -916,23 +1038,28 @@ html[data-planr-presentation="document"] body { overflow: visible; }
 </head>
 <body>
 <div class="planr-shell" data-planr-presentation="document" data-planr-view="single" data-planr-review-mode="interact" data-planr-state="loading" data-planr-rail-open="false">
-  <header class="planr-toolbar">
-  <div class="planr-brand" aria-label="OpenPlanr"><span class="planr-mark" aria-hidden="true"></span><span class="planr-title-block"><strong>OpenPlanr artifact review</strong></span></div>
-  <span class="planr-privacy" data-privacy="local">Local review</span>
-  <span class="planr-toolbar-spacer" aria-hidden="true"></span>
-  <div class="planr-segment" role="group" aria-label="Review mode"><button type="button" data-planr-mode="interact" data-planr-short-label="I" aria-pressed="true">Interact</button><button type="button" data-planr-mode="comment" data-planr-short-label="C" aria-pressed="false">Comment</button></div>
-  <button class="planr-toolbar-action" type="button" data-planr-action="feedback" aria-controls="planr-review-rail" aria-expanded="false"><span class="planr-feedback-label">Feedback</span> <span class="planr-count">0</span></button>
-  <button class="planr-toolbar-action planr-share" type="button" data-planr-action="share" aria-haspopup="dialog">Share</button>
-</header>
+  <nav class="planr-floating-actions" aria-label="Review actions">
+  <button type="button" data-planr-action="add-comment" aria-label="Add comment" aria-keyshortcuts="C" aria-pressed="false" data-planr-tooltip="Add comment (C)"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20a8 8 0 1 0-7.1-4.3L4 20l4.3-.9A8 8 0 0 0 12 20Z"/><path d="M12 8v8M8 12h8"/></svg></button>
+  <button type="button" data-planr-action="feedback" aria-label="0 comments" aria-controls="planr-review-rail" aria-expanded="false" data-planr-tooltip="Comments"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.8 8.8 0 0 1-3.2-.6L4 20l1.6-4.1A7.4 7.4 0 0 1 4 11.5a8 8 0 0 1 16 0Z"/><path d="M8.5 11.5h7"/></svg><span class="planr-count" aria-hidden="true">0</span></button>
+  <button type="button" data-planr-action="share" aria-label="Share review" aria-haspopup="dialog" data-planr-tooltip="Share"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6h14v-6"/></svg><span class="planr-action-label">Share</span></button>
+  <div class="planr-more">
+    <button type="button" data-planr-action="more" aria-label="More review options" aria-haspopup="menu" aria-expanded="false" data-planr-tooltip="More"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.25"/><circle cx="12" cy="12" r="1.25"/><circle cx="19" cy="12" r="1.25"/></svg></button>
+    <div class="planr-more-menu" role="menu" hidden>
+      <div><strong>Private review</strong><span>Local review · Encrypted when shared</span></div>
+      <button type="button" role="menuitem" data-planr-action="sharing-options">Snapshot and sharing options</button>
+      <div data-planr-slot="room-manager" hidden></div>
+    </div>
+  </div>
+</nav>
   <div class="planr-workspace"><main class="planr-stage" aria-label="Artifact review stage">
   <div class="planr-stage-scroll"><div class="planr-stage-surface" style="--planr-shell-zoom:0.72" inert aria-hidden="true"><div class="planr-frame-grid" data-planr-layout="single"></div></div></div>
   <div class="planr-stage-status" role="status" aria-live="polite" aria-atomic="true">
   <div><strong>Loading private review</strong><p>Validating the envelope and frozen artifact viewport.</p></div>
 </div>
-</main><aside class="planr-review-rail" id="planr-review-rail" aria-label="Review feedback" inert aria-hidden="true">
-  <header><h2>Review feedback</h2><div class="planr-review-header-actions"><div class="planr-review-metrics" aria-label="Review metrics"><span data-planr-metric="open">0 open</span><span class="planr-count" data-planr-metric="total" aria-label="0 feedback items">0</span></div><button class="planr-rail-close" type="button" data-planr-close-feedback aria-label="Close feedback">×</button></div></header>
+</main><aside class="planr-review-rail" id="planr-review-rail" aria-label="Review comments" inert aria-hidden="true">
+  <header><h2>Review comments</h2><div class="planr-review-header-actions"><div class="planr-review-metrics" aria-label="Review metrics"><span data-planr-metric="open">0 open</span><span class="planr-count" data-planr-metric="total" aria-label="0 comments">0</span></div><button class="planr-rail-close" type="button" data-planr-close-feedback aria-label="Close comments">×</button></div></header>
   <section class="planr-identity" aria-label="Reviewer identity"><label for="planr-reviewer-name">Your name<input id="planr-reviewer-name" type="text" maxlength="256" autocomplete="name" aria-describedby="planr-identity-status planr-review-error" data-planr-reviewer-name></label><p class="planr-identity-status" id="planr-identity-status" aria-live="polite" data-planr-identity-status>Used to sign your comments.</p><p class="planr-field-error" id="planr-review-error" role="alert" hidden></p></section>
-  <div class="planr-feedback-slot" data-planr-slot="feedback-rail" role="region" aria-label="Feedback threads"><p data-planr-empty-feedback>No feedback yet. Choose Comment, then click or drag on the artifact.</p><div class="planr-thread-list" data-planr-thread-list></div></div>
+  <div class="planr-feedback-slot" data-planr-slot="feedback-rail" role="region" aria-label="Comment threads"><p data-planr-empty-feedback>No comments yet. Choose Add comment, then click or drag on the artifact.</p><div class="planr-thread-list" data-planr-thread-list></div></div>
   <section class="planr-domain-rail" data-planr-slot="domain-rail" aria-label="Artifact workflow details" hidden></section>
   <section class="planr-decision-slot" data-planr-slot="decision" aria-label="Review decision">
     <label for="planr-overall-note">Overall note</label><textarea id="planr-overall-note" maxlength="65536" placeholder="Overall note for the coding agent…" data-planr-overall></textarea>
@@ -946,7 +1073,7 @@ html[data-planr-presentation="document"] body { overflow: visible; }
     <header><div><h2 id="planr-share-title">Share this review</h2><p id="planr-share-description">Live review is encrypted and collaborative. Snapshot links are immutable alternatives.</p></div><button type="button" class="planr-dialog-close" data-planr-share-close aria-label="Close share dialog">×</button></header>
     <div class="planr-share-receipt" role="group" aria-label="Privacy receipt">
       <button type="button" class="planr-share-receipt-row is-selected" data-planr-share-transport="live" aria-pressed="true">
-        <span class="planr-share-receipt-icon" aria-hidden="true">●</span><span><strong>Live collaborative review</strong><small>Encrypted artifact and feedback events are stored until expiry. Anyone with the link can comment.</small></span><span class="planr-share-receipt-size">Default</span>
+        <span class="planr-share-receipt-icon" aria-hidden="true">●</span><span><strong>Live collaborative review</strong><small>Encrypted artifact and comment events are stored until expiry. Anyone with the link can comment.</small></span><span class="planr-share-receipt-size">Default</span>
       </button>
       <button type="button" class="planr-share-receipt-row" data-planr-share-transport="fragment" aria-pressed="false">
         <span class="planr-share-receipt-icon" aria-hidden="true">#</span><span><strong>Private fragment</strong><small>Compressed into the URL. Nothing is uploaded.</small></span><span class="planr-share-receipt-size" data-planr-share-fragment-size>Calculating…</span>

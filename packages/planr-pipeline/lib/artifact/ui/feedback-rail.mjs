@@ -48,7 +48,7 @@ function invalid(message) {
 function identityRequired() {
   throw new ArtifactReviewStateError(
     'E_ARTIFACT_REVIEW_IDENTITY_REQUIRED',
-    'Enter your name before adding feedback.',
+    'Enter your name before adding a comment.',
   );
 }
 
@@ -663,7 +663,7 @@ function renderThread(document, pin, active) {
       'data-planr-intent': pin.intent,
       'data-planr-status': pin.status,
       'aria-controls': annotationDomIds(pin.id).pin,
-      'aria-label': `${pin.intent} feedback by ${pin.author.name}`,
+      'aria-label': `${pin.intent} comment by ${pin.author.name}`,
     },
   });
   const header = createElement(document, 'header');
@@ -779,10 +779,13 @@ export function mountArtifactFeedbackRail({
   };
 
   const updateCounts = (pins) => {
-    for (const count of root.querySelectorAll('.planr-toolbar [data-planr-action="feedback"] .planr-count, .planr-review-rail > header .planr-count')) {
+    const label = `${pins.length} ${pins.length === 1 ? 'comment' : 'comments'}`;
+    for (const count of root.querySelectorAll('[data-planr-action="feedback"] .planr-count, .planr-review-rail > header .planr-count')) {
       count.textContent = String(pins.length);
-      count.setAttribute('aria-label', `${pins.length} feedback items`);
+      count.setAttribute('aria-label', label);
     }
+    const commentsButton = root.querySelector('[data-planr-action="feedback"]');
+    commentsButton?.setAttribute('aria-label', label);
   };
 
   const render = () => {
@@ -791,12 +794,12 @@ export function mountArtifactFeedbackRail({
     const fragment = document.createDocumentFragment();
     const list = createElement(document, 'div', {
       className: 'planr-thread-list',
-      attributes: { 'aria-label': 'Feedback threads' },
+      attributes: { 'aria-label': 'Comment threads' },
     });
     if (pins.length === 0) {
       list.append(createElement(document, 'p', {
         className: 'planr-review-empty',
-        text: 'Select Comment mode, then choose a point or region in the artifact.',
+        text: 'No comments yet. Choose Add comment, then select a point or region in the artifact.',
       }));
     } else {
       for (const pin of pins) list.append(renderThread(document, pin, pin.id === activePinId));
@@ -883,7 +886,7 @@ export function mountArtifactFeedbackRail({
           pinId,
           status: action.dataset.planrThreadAction === 'resolve' ? 'resolved' : 'open',
         });
-        announce(action.dataset.planrThreadAction === 'resolve' ? 'Feedback resolved' : 'Feedback reopened');
+        announce(action.dataset.planrThreadAction === 'resolve' ? 'Comment resolved' : 'Comment reopened');
         focusThread(pinId);
         clearError();
       } catch (error) {

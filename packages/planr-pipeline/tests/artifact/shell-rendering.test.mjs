@@ -176,11 +176,13 @@ test('presentation resolution is compatible, explicit, and keeps document chrome
   assert.equal(documentModel.presentation, 'document');
   assert.equal(documentModel.railOpen, false);
   assert.match(documentHtml, /data-planr-presentation="document"/);
-  assert.doesNotMatch(documentHtml, /HTML ·|ARTIFACT \/|Single|Variants|Split|Viewport controls|data-planr-action="theme"/);
-  assert.match(documentHtml, /Interact/);
-  assert.match(documentHtml, /Comment/);
-  assert.match(documentHtml, /Feedback/);
-  assert.match(documentHtml, /Share/);
+  assert.doesNotMatch(documentHtml, /planr-toolbar|planr-brand|HTML ·|ARTIFACT \/|Single|Variants|Split|Viewport controls|data-planr-action="theme"|>Interact<|>Comment<|>Feedback</);
+  assert.match(documentHtml, /class="planr-floating-actions"/);
+  assert.match(documentHtml, /data-planr-action="add-comment"/);
+  assert.match(documentHtml, /data-planr-action="feedback"[^>]+aria-label="0 comments"/);
+  assert.match(documentHtml, /data-planr-action="share"/);
+  assert.match(documentHtml, /data-planr-action="more"/);
+  assert.match(documentHtml, /Review comments/);
 
   const canvasModel = normalizeArtifactShellModel({
     envelope: { artifacts: [artifact('only', 'Only artifact')] },

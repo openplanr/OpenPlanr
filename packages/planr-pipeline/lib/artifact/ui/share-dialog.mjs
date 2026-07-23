@@ -233,16 +233,22 @@ export function mountArtifactShareDialog({
     if (timer) window.clearTimeout(timer);
     copyResetTimers.delete(button);
     button.removeAttribute('data-planr-copy-state');
-    button.textContent = button.dataset.planrCopyLabel ?? button.textContent;
+    const label = button.querySelector?.('.planr-action-label');
+    if (label) label.textContent = button.dataset.planrCopyLabel ?? label.textContent;
+    else button.textContent = button.dataset.planrCopyLabel ?? button.textContent;
   }
 
   function showCopyState(button, stateValue) {
     if (!button) return;
-    if (!button.dataset.planrCopyLabel) button.dataset.planrCopyLabel = button.textContent.trim();
+    const label = button.querySelector?.('.planr-action-label');
+    if (!button.dataset.planrCopyLabel) {
+      button.dataset.planrCopyLabel = (label?.textContent ?? button.textContent).trim();
+    }
     const prior = copyResetTimers.get(button);
     if (prior) window.clearTimeout(prior);
     button.dataset.planrCopyState = stateValue;
-    button.textContent = stateValue === 'copied' ? 'Copied' : 'Try again';
+    if (label) label.textContent = stateValue === 'copied' ? 'Copied' : 'Try again';
+    else button.textContent = stateValue === 'copied' ? 'Copied' : 'Try again';
     copyResetTimers.set(button, window.setTimeout(() => resetCopyButton(button), 1_800));
   }
 
@@ -434,8 +440,11 @@ export function mountArtifactShareDialog({
   if (existingRoom) {
     const value = stableShareUrl();
     if (value) {
-      trigger.textContent = 'Copy link';
+      const label = trigger.querySelector('.planr-action-label');
+      if (label) label.textContent = 'Copy link';
+      else trigger.textContent = 'Copy link';
       trigger.dataset.planrCopyLabel = 'Copy link';
+      trigger.dataset.planrTooltip = 'Copy link';
       trigger.removeAttribute('aria-haspopup');
       trigger.setAttribute('aria-label', 'Copy this live review room link');
       listen(trigger, 'click', () => { void copyExistingRoom(); });

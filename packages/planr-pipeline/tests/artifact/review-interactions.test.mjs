@@ -559,13 +559,13 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
     await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview().pins[0].status),
     'resolved',
   );
-  assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'Feedback resolved');
+  assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'Comment resolved');
   await firstThread.locator('[data-planr-thread-action="reopen"]').click();
   assert.equal(
     await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview().pins[0].status),
     'open',
   );
-  assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'Feedback reopened');
+  assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'Comment reopened');
 
   await page.locator('[data-planr-action="theme"]').click();
   assert.equal(await page.locator('html').getAttribute('data-planr-theme'), 'dark');

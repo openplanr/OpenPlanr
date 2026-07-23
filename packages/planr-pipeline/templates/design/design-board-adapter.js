@@ -4893,7 +4893,7 @@ var OpenPlanrDesignBoardAdapter = (() => {
   function identityRequired() {
     throw new ArtifactReviewStateError(
       "E_ARTIFACT_REVIEW_IDENTITY_REQUIRED",
-      "Enter your name before adding feedback."
+      "Enter your name before adding a comment."
     );
   }
   function deepFreezeArtifactReview(value) {

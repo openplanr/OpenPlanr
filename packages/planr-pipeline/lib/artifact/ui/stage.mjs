@@ -375,6 +375,7 @@ export function mountArtifactStage({
     const tablist = document.querySelector('.planr-variants');
     const rail = document.getElementById('planr-review-rail');
     const feedbackButton = document.querySelector('[data-planr-action="feedback"]');
+    const addCommentButton = document.querySelector('[data-planr-action="add-comment"]');
     const themeButton = document.querySelector('[data-planr-action="theme"]');
     const statusSlot = document.querySelector('[data-planr-slot="status"]');
     const metadata = document.querySelector('.planr-title-block > span');
@@ -393,6 +394,16 @@ export function mountArtifactStage({
       if (state.railOpen) rail.removeAttribute('aria-hidden');
     }
     if (feedbackButton) feedbackButton.setAttribute('aria-expanded', String(state.railOpen));
+    if (addCommentButton) {
+      const paused = root.hasAttribute('data-planr-room-comments-paused');
+      addCommentButton.disabled = paused;
+      addCommentButton.setAttribute('aria-pressed', String(state.reviewMode === 'comment'));
+      addCommentButton.setAttribute(
+        'aria-label',
+        paused ? 'Add comment unavailable: comments are paused' : 'Add comment',
+      );
+      addCommentButton.dataset.planrTooltip = paused ? 'Comments are paused' : 'Add comment (C)';
+    }
     if (themeButton) {
       themeButton.textContent = state.theme;
       themeButton.setAttribute('aria-label', `Shell theme ${state.theme}`);
@@ -493,6 +504,11 @@ export function mountArtifactStage({
       return;
     }
     switch (target.dataset.planrAction) {
+      case 'add-comment':
+        if (!root.hasAttribute('data-planr-room-comments-paused')) {
+          dispatch({ type: 'set-review-mode', reviewMode: 'comment' });
+        }
+        break;
       case 'zoom-out':
         dispatch({ type: 'zoom-by', delta: -ARTIFACT_STAGE_LIMITS.zoomStep });
         break;
@@ -508,6 +524,20 @@ export function mountArtifactStage({
         dispatch({ type: 'toggle-rail' });
         break;
       }
+      case 'more': {
+        const menu = target.closest('.planr-more')?.querySelector('.planr-more-menu');
+        if (!menu) break;
+        const open = menu.hidden;
+        menu.hidden = !open;
+        target.setAttribute('aria-expanded', String(open));
+        if (open) menu.querySelector('[role="menuitem"]')?.focus();
+        break;
+      }
+      case 'sharing-options':
+        target.closest('.planr-more-menu').hidden = true;
+        document.querySelector('[data-planr-action="more"]')?.setAttribute('aria-expanded', 'false');
+        shareController?.open?.();
+        break;
       case 'theme':
         dispatch({ type: 'cycle-theme' });
         break;
@@ -524,13 +554,31 @@ export function mountArtifactStage({
         return;
       }
       if (event.key.toLowerCase() === 'c') {
-        dispatch({ type: 'set-review-mode', reviewMode: 'comment' });
+        if (!root.hasAttribute('data-planr-room-comments-paused')) {
+          dispatch({ type: 'set-review-mode', reviewMode: 'comment' });
+          document.querySelector('[data-planr-action="add-comment"]')?.focus();
+        }
         return;
       }
-      if (event.key === 'Escape' && state.railOpen) {
-        dispatch({ type: 'set-rail-open', railOpen: false });
-        document.querySelector('[data-planr-action="feedback"]')?.focus();
-        return;
+      if (event.key === 'Escape') {
+        const more = document.querySelector('.planr-more-menu:not([hidden])');
+        if (more) {
+          more.hidden = true;
+          const trigger = document.querySelector('[data-planr-action="more"]');
+          trigger?.setAttribute('aria-expanded', 'false');
+          trigger?.focus();
+          return;
+        }
+        if (state.presentation === 'document' && state.reviewMode === 'comment') {
+          dispatch({ type: 'set-review-mode', reviewMode: 'interact' });
+          document.querySelector('[data-planr-action="add-comment"]')?.focus();
+          return;
+        }
+        if (state.railOpen) {
+          dispatch({ type: 'set-rail-open', railOpen: false });
+          document.querySelector('[data-planr-action="feedback"]')?.focus();
+          return;
+        }
       }
     }
 
@@ -564,6 +612,9 @@ export function mountArtifactStage({
     });
     emit(root, window, ARTIFACT_STAGE_EVENTS.region, detail);
     emit(root, window, ARTIFACT_STAGE_EVENTS.point, detail);
+    if (state.presentation === 'document') {
+      dispatch({ type: 'set-review-mode', reviewMode: 'interact' });
+    }
   }
 
   for (const layer of document.querySelectorAll('[data-planr-annotation-layer]')) {
@@ -635,6 +686,26 @@ export function mountArtifactStage({
   }
   listen(root, 'click', onClick);
   listen(document, 'keydown', onKeyDown);
+  listen(document, 'click', (event) => {
+    const more = document.querySelector('.planr-more-menu:not([hidden])');
+    if (!more || event.target.closest?.('.planr-more')) return;
+    more.hidden = true;
+    document.querySelector('[data-planr-action="more"]')?.setAttribute('aria-expanded', 'false');
+  });
+  const roomStateObserver = typeof window.MutationObserver === 'function'
+    ? new window.MutationObserver(() => {
+      if (root.hasAttribute('data-planr-room-comments-paused') && state.reviewMode === 'comment') {
+        dispatch({ type: 'set-review-mode', reviewMode: 'interact' });
+      } else {
+        render();
+      }
+    })
+    : null;
+  roomStateObserver?.observe(root, {
+    attributes: true,
+    attributeFilter: ['data-planr-room-comments-paused'],
+  });
+  if (roomStateObserver) cleanup.push(() => roomStateObserver.disconnect());
 
   render();
 
