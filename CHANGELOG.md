@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.13.2
+
+### Patch Changes
+
+- [`d3e9314`](https://github.com/openplanr/OpenPlanr/commit/d3e9314bd0d3655a65b645d7a63c6dae23f45972) Update the optional `planr-pipeline` runtime to 0.29.0 so `planr artifact`
+  uses the released minimal document review chrome with the floating comments rail.
+
 ## 1.13.1
 
 ### Patch Changes
