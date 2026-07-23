@@ -47,8 +47,8 @@ function resolveInput(program: Command, value: string): string {
   return path.resolve(projectDir(program), value);
 }
 
-function resolveRoot(program: Command, value?: string): string {
-  return path.resolve(projectDir(program), value ?? '.');
+function resolveRoot(program: Command, input: string, value?: string): string {
+  return value === undefined ? path.dirname(input) : path.resolve(projectDir(program), value);
 }
 
 function theme(value?: string): Theme {
@@ -87,9 +87,10 @@ function confirmed(program: Command, local?: boolean): boolean {
 
 async function openArtifact(program: Command, file: string, options: OpenOptions): Promise<void> {
   const cwd = projectDir(program);
+  const input = resolveInput(program, file);
   const prepared = await prepareArtifactEnvelope({
-    file: resolveInput(program, file),
-    root: resolveRoot(program, options.root),
+    file: input,
+    root: resolveRoot(program, input, options.root),
     title: options.title,
     presentation: presentation(options.presentation),
   });
@@ -109,6 +110,9 @@ async function openArtifact(program: Command, file: string, options: OpenOptions
     display.keyValue('Session', String(session.sessionId));
     display.keyValue('URL', String(session.url));
     display.keyValue('Files', String(prepared.bundle.fileCount));
+    if (prepared.bundle.remoteAssetCount) {
+      display.keyValue('Remote assets', String(prepared.bundle.remoteAssetCount));
+    }
     display.keyValue('Bundled', `${prepared.bundle.bytes.toLocaleString()} bytes`);
     display.keyValue('Presentation', prepared.presentation);
     display.blank();
@@ -133,9 +137,10 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
       'Use `planr artifact share <file> --snapshot --short --yes`, or omit both options to create a live room.',
     );
   }
+  const input = resolveInput(program, file);
   const prepared = await prepareArtifactEnvelope({
-    file: resolveInput(program, file),
-    root: resolveRoot(program, options.root),
+    file: input,
+    root: resolveRoot(program, input, options.root),
     title: options.title,
     presentation: presentation(options.presentation),
   });
@@ -176,6 +181,9 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
       logger.success('Encrypted live review room created');
       display.keyValue('Review URL', url);
       display.keyValue('Manage URL', String(result.manageUrl));
+      if (prepared.bundle.remoteAssetCount) {
+        display.keyValue('Remote assets', String(prepared.bundle.remoteAssetCount));
+      }
       display.keyValue('Presentation', prepared.presentation);
       if (result.expiresAt) display.keyValue('Expires', String(result.expiresAt));
       logger.warn(
@@ -227,6 +235,9 @@ async function shareArtifact(program: Command, file: string, options: ShareOptio
     );
     display.keyValue('URL', url);
     display.keyValue('Transport', String(result.transport));
+    if (prepared.bundle.remoteAssetCount) {
+      display.keyValue('Remote assets', String(prepared.bundle.remoteAssetCount));
+    }
     display.keyValue('Presentation', prepared.presentation);
     if (result.expiresAt) display.keyValue('Expires', String(result.expiresAt));
     if (result.deletionToken) {

@@ -65,6 +65,29 @@ describe('planr artifact and PATH-safe pipeline routing', { timeout: 30_000 }, (
     expect(output.url).toMatch(/^https:\/\/share\.openplanr\.dev\/#v1\./);
   });
 
+  it('uses an absolute artifact file parent as the default bundle root', () => {
+    const project = temporary();
+    const artifactDir = temporary();
+    const artifact = join(artifactDir, 'nested.html');
+    writeFileSync(join(artifactDir, 'style.css'), 'body { color: teal; }');
+    writeFileSync(
+      artifact,
+      '<!doctype html><html><head><link rel="stylesheet" href="style.css"></head><body>Outside project</body></html>',
+    );
+
+    const result = run(
+      ['artifact', 'share', artifact, '--snapshot', '--no-open', '--json'],
+      project,
+    );
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      ok: true,
+      transport: 'fragment',
+      presentation: 'document',
+    });
+  });
+
   it('serializes explicit canvas presentation while auto remains a document compatibility fallback', () => {
     const dir = temporary();
     writeFileSync(join(dir, 'artifact.html'), '<!doctype html><html><body>Canvas</body></html>');

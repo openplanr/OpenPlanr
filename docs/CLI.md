@@ -929,6 +929,12 @@ planr artifact import <review-url>... [--output <path>] [--allow-stale] [--json]
 planr artifact export <session-id> [--format json|markdown] [--output <path>]
 ```
 
+When `--root` is omitted, the artifact file's directory is the asset root. This
+makes `planr artifact share /absolute/path/to/artifact.html` work without
+changing directories or supplying a redundant root. Supported public HTTPS
+dependencies are bundled into the immutable artifact automatically; runtime
+network access remains blocked in the review sandbox.
+
 Local sessions bind only to loopback. Sharing is never automatic. New generic
 shares create an encrypted live review room with one stable review URL and a
 separate creator-only manage URL. `--snapshot` selects the older immutable

@@ -29,6 +29,7 @@ interface ArtifactBundle {
   bytes: number;
   inputBytes: number;
   fileCount: number;
+  remoteAssetCount?: number;
 }
 
 export interface ArtifactPipelineApi {
