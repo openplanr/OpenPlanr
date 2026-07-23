@@ -19,15 +19,15 @@ Then install any of the plugins below:
 <!-- ecosystem-table:start -->
 | Component | Version | Compatibility |
 |---|---:|---|
-| OpenPlanr CLI | 1.13.2 | pipeline ^0.29.0 |
-| Pipeline package/plugin | 0.29.0 | CLI ^1.13.2 |
-| Runtime skills | 1.15.0 | CLI ^1.13.2 |
+| OpenPlanr CLI | 1.13.3 | pipeline ^0.29.2 |
+| Pipeline package/plugin | 0.29.2 | CLI ^1.13.3 |
+| Runtime skills | 1.15.0 | CLI ^1.13.3 |
 | Protocol | 1.1.0 | reads v1.0 artifacts; v1.1 capabilities |
 <!-- ecosystem-table:end -->
 
 | Plugin | Version | Description |
 |---|---|---|
-| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.29.0 | Complete PO, Design, Review, DEV, and QA workflow with universal HTML artifact review and private sharing. |
+| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.29.2 | Complete PO, Design, Review, DEV, and QA workflow with universal HTML artifact review and private sharing. |
 | [`openplanr`](https://github.com/openplanr/skills) | 1.15.0 | Unified planning, artifact review, and delivery workflow skills for the certified runtimes. |
 
 Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in the same release-train change.
