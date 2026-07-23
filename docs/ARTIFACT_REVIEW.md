@@ -6,23 +6,28 @@ JavaScript inside the artifact remains interactive in an opaque-origin,
 network-blocked sandbox.
 
 Generic artifacts open in `document` presentation by default: the complete
-artifact is the edge-to-edge page below a quiet 48px review toolbar. The prior
-zoomable artboard is still available as `canvas` presentation and remains the
-default for design boards and multi-variant workflows.
+artifact is the edge-to-edge page with a compact floating comments rail. The
+prior zoomable artboard is still available as `canvas` presentation and remains
+the default for design boards and multi-variant workflows.
 
 ## Local review
 
 ```bash
 planr artifact ./artifact.html
-planr artifact open ./artifact.html --root . --theme auto
+planr artifact open /absolute/path/to/artifact.html --theme auto
 planr artifact open ./artifact.html --presentation canvas
 planr artifact export <session-id> --format markdown --output review.md
 ```
 
-The bundler packages project-local CSS, scripts, modules, images, SVG, fonts,
-`srcset`, and CSS `url()` references. It rejects remote dependencies, forms,
-path traversal, symlink escapes, and unresolved assets. Use `--no-open --json`
-for remote or SSH sessions, then forward the printed loopback port explicitly.
+The bundler packages local CSS, scripts, modules, images, SVG, fonts, `srcset`,
+and CSS `url()` references. With no `--root`, the artifact's own directory is
+the dependency root, so absolute files from Downloads or another project work
+without extra flags. It also vendors safe public HTTPS dependency graphs (such
+as Google Fonts, CDN stylesheets, scripts, images, and fonts) into the immutable
+artifact before review or sharing. Forms, traversal, symlink escapes, unsafe or
+unavailable remote assets, and unresolved dependencies remain rejected. Use
+`--no-open --json` for remote or SSH sessions, then forward the printed loopback
+port explicitly.
 
 `--presentation auto|document|canvas` is available on `open` and `share`.
 `auto` resolves one generic artifact to `document`; explicit overrides win.

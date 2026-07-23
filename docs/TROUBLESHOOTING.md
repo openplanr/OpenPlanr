@@ -129,9 +129,11 @@ then forward the printed port over SSH. Do not bind the review server publicly.
 
 ### An artifact dependency is rejected
 
-The bundler accepts only resolvable files below `--root`. Remote URLs, forms,
-path traversal, symlink escapes, and unresolved dependencies are rejected by
-design. Vendor the dependency locally or choose the correct asset root.
+The bundler resolves local dependencies below `--root` (the artifact's directory
+by default) and vendors supported public HTTPS dependencies automatically. It
+still rejects forms, path traversal, symlink escapes, private or non-HTTPS
+hosts, unsupported resources, and unresolved dependencies. Use `--root` when
+the artifact intentionally depends on a larger local asset tree.
 
 See [Artifact review and private sharing](ARTIFACT_REVIEW.md) for the complete
 privacy and sharing model.
