@@ -1,6 +1,6 @@
 # Artifact Review and Private Sharing
 
-> planr-pipeline 0.29.1 · Protocol v1.0 planning artifacts with additive
+> planr-pipeline 0.29.2 · Protocol v1.0 planning artifacts with additive
 > Protocol v1.1 artifact-review contracts
 
 Artifact review is the portable engine behind `planr artifact`. It turns a
@@ -97,7 +97,7 @@ The package root exports the stable artifact boundary:
 
 | Function | Contract |
 |---|---|
-| `bundleArtifact(options)` | Resolve and inline a local HTML dependency graph beneath `root`, returning deterministic, bounded HTML and asset metadata. |
+| `bundleArtifact(options)` | Resolve and inline a bounded HTML dependency graph beneath `root`, including safe public HTTPS dependencies, returning immutable HTML and asset metadata. |
 | `createArtifactEnvelope(options)` | Create and validate a single-artifact or ordered multi-variant envelope with canonical digests. |
 | `encodeArtifactFragment(value)` | Canonical JSON → raw DEFLATE level 9 → unpadded base64url with a `v1.` prefix. |
 | `decodeArtifactFragment(source)` | Validate, bound, inflate, and parse a v1 fragment or fragment URL. |
@@ -179,7 +179,19 @@ is retained for auditability.
 
 The bundler resolves local scripts/modules, stylesheets, CSS imports and
 `url()` references, images, SVG, fonts, and `srcset` candidates. Every real path
-must remain beneath `--root`, including after symlink resolution.
+must remain beneath `--root`, including after symlink resolution. It also vendors
+public HTTPS dependency graphs at share/open time: a Google Fonts stylesheet and
+its font files, CDN CSS, scripts, images, and fonts are downloaded once, bounded,
+and inlined before encryption. The shared artifact never fetches its source
+dependencies later.
+
+Remote vendoring is on by default. It accepts only public HTTPS hosts on port 443,
+checks every redirect (maximum five), rejects credentials, loopback/private DNS
+targets, unsupported content, and unavailable resources, and accounts downloaded
+bytes and files against the same limits as local input. Set
+`remoteAssets: 'reject'` when using the engine directly to require a fully local
+dependency graph. Remote SVG must already be self-contained; navigation, forms,
+runtime network calls, and every unbundled URI remain rejected.
 
 The following limits are enforced before rendering or sharing:
 

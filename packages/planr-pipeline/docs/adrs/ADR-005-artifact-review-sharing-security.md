@@ -22,9 +22,12 @@ when those scripts are useful and intentionally interactive.
 ### Parsing and dependency graph
 
 - Pin `parse5@8.0.1` as the HTML parser and serializer.
-- Pin `esbuild@0.28.1` for statically resolvable local JavaScript/module and CSS
-  graphs. A local-only resolver rejects remote, protocol-relative, absolute,
-  bare, unresolved, and nonliteral imports.
+- Pin `esbuild@0.28.1` for statically resolvable JavaScript/module and CSS
+  graphs. The resolver packages local dependencies and safe public HTTPS assets
+  at bundle time. It rejects protocol-relative, HTTP, credentialed, non-public,
+  private-DNS, bare, unresolved, and nonliteral imports. Every accepted redirect
+  is revalidated (maximum five), and remote CSS may recursively package its
+  fonts and image assets. The runtime still receives no network permission.
 - Resolve lexical paths beneath the configured root, follow the final realpath,
   and reject symlink escape. Files are read through one accounting layer, once
   per final realpath, with limits of 1,000 unique files and 10 MiB decoded input.
@@ -39,10 +42,13 @@ when those scripts are useful and intentionally interactive.
   reserved placeholder namespace is forbidden in source. `srcset` candidates
   and nested SVG rewrites reserve against the same fixed ceiling before joins or
   serialization.
-- Reject forms, navigation targets, external resources, machine paths,
+- Reject forms, navigation targets, unbundled external resources, machine paths,
   repository remotes, environment references, and recognized secret material.
-  Data-URI module/import rules, SVG SMIL mutation, and SVG base-URL attributes
-  are also rejected rather than delegated to runtime policy.
+  Downloaded remote bytes share the same 1,000-file and 10 MiB decoded-input
+  ceilings as local input, must have supported content types, and are embedded
+  before the canonical digest is calculated. Data-URI module/import rules, SVG
+  SMIL mutation, and SVG base-URL attributes are also rejected rather than
+  delegated to runtime policy. Remote SVG must be self-contained.
 - Supported binary assets become data URLs; content hashes deduplicate graph
   accounting and provide stable asset records.
 
@@ -96,8 +102,9 @@ when those scripts are useful and intentionally interactive.
   a partially self-contained artifact.
 - Identical supported inputs produce identical bundled bytes and digests across
   supported operating systems and Node versions.
-- Dynamic artifact interaction remains possible, but network-dependent apps
-  must provide an offline review build.
+- Dynamic artifact interaction remains possible. Public static dependencies are
+  converted into the offline review build at bundle time; runtime API calls and
+  other network-dependent behavior remain blocked.
 - The Cloudflare Worker and hosted shell remain downstream consumers of the
   package contracts; they cannot redefine canonical bytes or weaken storage and
   sandbox controls.
@@ -106,9 +113,9 @@ when those scripts are useful and intentionally interactive.
 
 - Positive fixtures cover classic/module scripts, recursive CSS, images, SVG,
   fonts, `srcset`, and duplicate content.
-- Negative fixtures cover traversal, symlink escape, remote resources, forms,
-  unresolved dependencies, bare/nonliteral imports, file/byte limits, and
-  machine-data redaction.
+- Negative fixtures cover traversal, symlink escape, unsafe remote targets and
+  redirects, forms, unresolved dependencies, bare/nonliteral imports, file/byte
+  limits, and machine-data redaction.
 - Schema fixtures and Web Crypto tests prove that Node and browser SHA-256 use
   identical canonical bytes.
 - Browser hostile-artifact tests verify internal interaction while outbound

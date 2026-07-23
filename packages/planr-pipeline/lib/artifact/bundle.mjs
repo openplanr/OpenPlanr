@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
+import { lookup as lookupDns } from 'node:dns/promises';
 import { createReadStream, existsSync, realpathSync, statSync } from 'node:fs';
+import { isIP } from 'node:net';
 import { dirname, extname, isAbsolute, relative, resolve } from 'node:path';
 
 import { build, transform } from 'esbuild';
@@ -12,6 +14,8 @@ import { digestArtifact, normalizeUtf8Text } from './envelope.mjs';
 const DEFAULT_MAX_FILES = 1_000;
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
 const MAX_GENERATED_OUTPUT_BYTES = 10 * 1024 * 1024;
+const REMOTE_FETCH_TIMEOUT_MS = 15_000;
+const MAX_REMOTE_REDIRECTS = 5;
 const REMOTE_RE = /^(?:https?:|file:|ftp:|wss?:|\/\/)/i;
 const URI_SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i;
 const WINDOWS_ABSOLUTE_RE = /^[A-Za-z]:[\\/]/;
@@ -71,6 +75,28 @@ const ESBUILD_LOADERS = Object.freeze({
   '.wav': 'file', '.webm': 'file', '.webp': 'file', '.woff': 'file',
   '.woff2': 'file', '.css': 'css', '.cjs': 'js', '.js': 'js', '.jsx': 'jsx',
   '.json': 'json', '.mjs': 'js', '.ts': 'ts', '.tsx': 'tsx',
+});
+
+const REMOTE_CONTENT_TYPES = Object.freeze({
+  'application/ecmascript': 'js',
+  'application/javascript': 'js',
+  'application/json': 'json',
+  'application/ld+json': 'json',
+  'application/x-javascript': 'js',
+  'application/xhtml+xml': 'file',
+  'font/otf': 'file',
+  'font/ttf': 'file',
+  'font/woff': 'file',
+  'font/woff2': 'file',
+  'image/avif': 'file',
+  'image/gif': 'file',
+  'image/jpeg': 'file',
+  'image/png': 'file',
+  'image/svg+xml': 'file',
+  'image/webp': 'file',
+  'text/css': 'css',
+  'text/ecmascript': 'js',
+  'text/javascript': 'js',
 });
 
 function artifactError(code, message, fix = '', details = undefined) {
@@ -232,6 +258,70 @@ function classifyReference(value) {
   return { kind: 'local', value: cleaned };
 }
 
+function remoteUrlFor(reference, baseUrl = undefined) {
+  let url;
+  try {
+    url = baseUrl === undefined ? new URL(reference) : new URL(reference, baseUrl);
+  } catch {
+    throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote asset URL is invalid: ${reference}`);
+  }
+  if (url.protocol !== 'https:') {
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+      `Only HTTPS remote assets can be packaged: ${reference}`,
+      'Download the asset locally or use an HTTPS URL.',
+    );
+  }
+  if (url.username || url.password || (url.port && url.port !== '443')) {
+    throw artifactError(
+      ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+      `Remote asset URL is not safe to package: ${reference}`,
+    );
+  }
+  url.hash = '';
+  return url;
+}
+
+function isPublicIpv4(address) {
+  const values = address.split('.').map(Number);
+  if (values.length !== 4 || values.some((value) => !Number.isInteger(value) || value < 0 || value > 255)) return false;
+  const [first, second] = values;
+  if (first === 0 || first === 10 || first === 127 || first >= 224) return false;
+  if (first === 100 && second >= 64 && second <= 127) return false;
+  if (first === 169 && second === 254) return false;
+  if (first === 172 && second >= 16 && second <= 31) return false;
+  if (first === 192 && (second === 0 || second === 168)) return false;
+  if (first === 198 && (second === 18 || second === 19 || second === 51)) return false;
+  if (first === 203 && second === 0) return false;
+  return true;
+}
+
+function isPublicIpAddress(address) {
+  const type = isIP(address);
+  if (type === 4) return isPublicIpv4(address);
+  if (type !== 6) return false;
+  const normalized = address.toLowerCase();
+  if (normalized === '::' || normalized === '::1' || normalized.startsWith('::ffff:')) return false;
+  if (normalized.startsWith('fc') || normalized.startsWith('fd') || normalized.startsWith('fe8')
+    || normalized.startsWith('fe9') || normalized.startsWith('fea') || normalized.startsWith('feb')
+    || normalized.startsWith('ff')) return false;
+  return true;
+}
+
+function remoteContentType(response, url) {
+  const header = response.headers?.get?.('content-type')?.split(';', 1)[0]?.trim().toLowerCase();
+  if (header && REMOTE_CONTENT_TYPES[header]) return { mediaType: header, loader: REMOTE_CONTENT_TYPES[header] };
+  const extension = extname(url.pathname).toLowerCase();
+  const mediaType = MIME_TYPES[extension];
+  const loader = ESBUILD_LOADERS[extension];
+  if (mediaType && loader) return { mediaType, loader };
+  throw artifactError(
+    ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+    `Remote asset has an unsupported content type: ${url.toString()}`,
+    'Download the dependency locally or use a CSS, JavaScript, image, font, audio, or video asset.',
+  );
+}
+
 function isBaseUrlAttribute(attr) {
   const name = attr?.name?.toLowerCase() ?? '';
   return name === 'base' || name.endsWith(':base') || attr?.prefix?.toLowerCase() === 'xml' && name === 'base';
@@ -322,7 +412,7 @@ function assertSafeEmbeddedSvgDataUris(text, label) {
 }
 
 class BundleContext {
-  constructor({ root, maxFiles, maxBytes, sensitiveValues }) {
+  constructor({ root, maxFiles, maxBytes, sensitiveValues, remoteAssets, fetchImpl, lookupImpl }) {
     if (!existsSync(root)) throw artifactError(ARTIFACT_ERROR_CODES.ROOT_MISSING, `Artifact root does not exist: ${root}`);
     if (sensitiveValues !== undefined && !Array.isArray(sensitiveValues)) {
       throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, 'sensitiveValues must be an array of strings.');
@@ -333,9 +423,21 @@ class BundleContext {
     }
     this.maxFiles = maxFiles;
     this.maxBytes = maxBytes;
+    if (!['bundle', 'reject'].includes(remoteAssets)) {
+      throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, 'remoteAssets must be bundle or reject.');
+    }
+    if (typeof fetchImpl !== 'function' || typeof lookupImpl !== 'function') {
+      throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, 'Remote asset fetch and DNS lookup implementations must be functions.');
+    }
+    this.remoteAssets = remoteAssets;
+    this.fetchImpl = fetchImpl;
+    this.lookupImpl = lookupImpl;
     this.sensitiveValues = [...new Set((sensitiveValues ?? []).filter((value) => typeof value === 'string' && value.length >= 4))];
     this.buffers = new Map();
     this.pendingReads = new Map();
+    this.remoteBuffers = new Map();
+    this.remoteAliases = new Map();
+    this.pendingRemoteReads = new Map();
     this.totalBytes = 0;
     this.generatedOutputBytes = 0;
     this.assets = new Map();
@@ -425,6 +527,126 @@ class BundleContext {
     return { kind: 'local', value: classified.value, path: realPath };
   }
 
+  async resolveRemote(reference, purpose = 'asset', baseUrl = undefined) {
+    if (this.remoteAssets !== 'bundle') {
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+        `External ${purpose} is not allowed: ${reference}`,
+        'Remove the dependency, download it locally, or enable remote asset packaging.',
+      );
+    }
+    const url = remoteUrlFor(reference, baseUrl);
+    const hostname = url.hostname.toLowerCase();
+    if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local')
+      || hostname.endsWith('.internal') || hostname.endsWith('.home')) {
+      throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote asset host is not public: ${url.toString()}`);
+    }
+    if (isIP(hostname)) {
+      if (!isPublicIpAddress(hostname)) {
+        throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote asset host is not public: ${url.toString()}`);
+      }
+      return url;
+    }
+    let addresses;
+    try {
+      addresses = await this.lookupImpl(hostname, { all: true, verbatim: true });
+    } catch {
+      throw artifactError(
+        ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+        `Unable to resolve remote asset host: ${hostname}`,
+        'Check your network connection or download the dependency locally.',
+      );
+    }
+    const values = Array.isArray(addresses) ? addresses : [addresses];
+    if (values.length === 0 || values.some((entry) => !isPublicIpAddress(entry?.address ?? ''))) {
+      throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote asset host is not public: ${url.toString()}`);
+    }
+    return url;
+  }
+
+  async readRemote(reference, purpose = 'asset', baseUrl = undefined) {
+    const initial = await this.resolveRemote(reference, purpose, baseUrl);
+    const initialKey = initial.toString();
+    const alias = this.remoteAliases.get(initialKey);
+    if (alias && this.remoteBuffers.has(alias)) return this.remoteBuffers.get(alias);
+    if (this.remoteBuffers.has(initialKey)) return this.remoteBuffers.get(initialKey);
+    if (this.pendingRemoteReads.has(initialKey)) return this.pendingRemoteReads.get(initialKey);
+    if (this.buffers.size + this.pendingReads.size + this.remoteBuffers.size + this.pendingRemoteReads.size + 1 > this.maxFiles) {
+      throw artifactError(ARTIFACT_ERROR_CODES.FILE_LIMIT, `Artifact graph exceeds ${this.maxFiles} files.`);
+    }
+    const pending = this.readRemoteUncached(initial, purpose);
+    this.pendingRemoteReads.set(initialKey, pending);
+    try {
+      return await pending;
+    } finally {
+      this.pendingRemoteReads.delete(initialKey);
+    }
+  }
+
+  async readRemoteUncached(initial, purpose) {
+    let url = initial;
+    for (let redirect = 0; redirect <= MAX_REMOTE_REDIRECTS; redirect++) {
+      await this.resolveRemote(url.toString(), purpose);
+      let response;
+      try {
+        response = await this.fetchImpl(url, {
+          redirect: 'manual',
+          signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(REMOTE_FETCH_TIMEOUT_MS) : undefined,
+          headers: { accept: 'text/css, text/javascript, application/javascript, image/*, font/*, audio/*, video/*;q=0.8, */*;q=0.1' },
+        });
+      } catch {
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+          `Unable to fetch remote ${purpose}: ${url.toString()}`,
+          'Check the URL and network connection, or download the dependency locally.',
+        );
+      }
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers?.get?.('location');
+        if (!location || redirect === MAX_REMOTE_REDIRECTS) {
+          throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote ${purpose} has an unsafe redirect: ${url.toString()}`);
+        }
+        url = await this.resolveRemote(location, purpose, url);
+        continue;
+      }
+      if (!response.ok) {
+        throw artifactError(
+          ARTIFACT_ERROR_CODES.EXTERNAL_ASSET,
+          `Remote ${purpose} returned HTTP ${response.status}: ${url.toString()}`,
+          'Check the URL or download the dependency locally.',
+        );
+      }
+      const contentLength = Number(response.headers?.get?.('content-length'));
+      if (Number.isFinite(contentLength) && contentLength > this.maxBytes - this.totalBytes) {
+        throw artifactError(ARTIFACT_ERROR_CODES.BYTE_LIMIT, `Artifact graph exceeds ${this.maxBytes} decoded bytes.`);
+      }
+      const chunks = [];
+      let bytes = 0;
+      try {
+        for await (const chunk of response.body ?? []) {
+          const buffer = Buffer.from(chunk);
+          bytes += buffer.byteLength;
+          this.totalBytes += buffer.byteLength;
+          if (this.totalBytes > this.maxBytes) {
+            throw artifactError(ARTIFACT_ERROR_CODES.BYTE_LIMIT, `Artifact graph exceeds ${this.maxBytes} decoded bytes.`);
+          }
+          chunks.push(buffer);
+        }
+      } catch (error) {
+        if (error instanceof PipelineError) throw error;
+        throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Unable to read remote ${purpose}: ${url.toString()}`);
+      }
+      const buffer = Buffer.concat(chunks, bytes);
+      const type = remoteContentType(response, url);
+      const record = { url: url.toString(), buffer, ...type };
+      this.remoteBuffers.set(record.url, record);
+      this.remoteAliases.set(initial.toString(), record.url);
+      this.registerAsset(buffer, url.pathname, type.mediaType);
+      return record;
+    }
+    throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote ${purpose} redirect limit exceeded: ${initial.toString()}`);
+  }
+
   resolveImport(reference, fromDir) {
     const classified = classifyReference(reference);
     if (classified.kind === 'external' || classified.kind === 'absolute') {
@@ -481,7 +703,7 @@ class BundleContext {
     return buffer;
   }
 
-  async readText(path) {
+  async readText(path, { allowRemoteUrls = false } = {}) {
     const buffer = await this.read(path);
     let text;
     try {
@@ -489,30 +711,30 @@ class BundleContext {
     } catch {
       throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, `Artifact text file is not valid UTF-8: ${this.logicalPath(path)}`);
     }
-    this.assertPrivacySafe(text, this.logicalPath(path));
+    this.assertPrivacySafe(text, this.logicalPath(path), { allowRemoteUrls });
     return normalizeUtf8Text(text);
   }
 
-  registerAsset(buffer, path) {
+  registerAsset(buffer, path, mediaType = MIME_TYPES[extname(path).toLowerCase()] ?? 'application/octet-stream') {
     const sha256 = createHash('sha256').update(buffer).digest('hex');
     if (!this.assets.has(sha256)) {
       this.assets.set(sha256, {
         sha256,
         bytes: buffer.byteLength,
-        mediaType: MIME_TYPES[extname(path).toLowerCase()] ?? 'application/octet-stream',
+        mediaType,
       });
     }
     return sha256;
   }
 
-  assertPrivacySafe(text, label) {
+  assertPrivacySafe(text, label, { allowRemoteUrls = false } = {}) {
     let inspected = text;
     for (const allowed of SAFE_XML_URLS) inspected = inspected.split(allowed).join('');
     const forbidden = [
       { pattern: /(?:^|[^A-Za-z0-9._-])\/(?:Users|home|private|Volumes)\/[A-Za-z0-9._-]+\//, reason: 'absolute machine path' },
       { pattern: /[A-Za-z]:\\(?:Users|Documents and Settings)\\/i, reason: 'absolute Windows path' },
       { pattern: /(?:git@|ssh:\/\/|git(?:\+ssh)?:\/\/)[^\s"']+|https?:\/\/[^\s"']+\.git(?:\b|$)/i, reason: 'repository remote' },
-      { pattern: /(?:https?|ftp|file|wss?):\/\/[^\s"')<>]+/i, reason: 'remote URL', code: ARTIFACT_ERROR_CODES.EXTERNAL_ASSET },
+      ...(allowRemoteUrls ? [] : [{ pattern: /(?:https?|ftp|file|wss?):\/\/[^\s"')<>]+/i, reason: 'remote URL', code: ARTIFACT_ERROR_CODES.EXTERNAL_ASSET }]),
       { pattern: /planr-asset:\//i, reason: 'reserved bundler placeholder', code: ARTIFACT_ERROR_CODES.EXTERNAL_ASSET },
       { pattern: /(?:process\.env|import\.meta\.env|__dirname|__filename)\b/, reason: 'machine/environment metadata reference' },
       { pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/, reason: 'private key material' },
@@ -601,11 +823,11 @@ function unwrapBuildError(error) {
   throw artifactError(ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE, `Unable to bundle local dependency graph: ${error.message}`);
 }
 
-function localOnlyPlugin(context) {
+function artifactDependencyPlugin(context) {
   return {
-    name: 'openplanr-local-only',
+    name: 'openplanr-artifact-dependencies',
     setup(api) {
-      api.onResolve({ filter: /.*/ }, (args) => {
+      api.onResolve({ filter: /.*/ }, async (args) => {
         try {
           if (args.kind === 'entry-point' && isAbsolute(args.path)) {
             const realPath = realpathSync(args.path);
@@ -613,6 +835,11 @@ function localOnlyPlugin(context) {
               throw artifactError(ARTIFACT_ERROR_CODES.PATH_TRAVERSAL, 'Bundler entry point escapes the artifact root.');
             }
             return { path: realPath };
+          }
+          if (args.path.startsWith('#')) return { path: args.path, external: true };
+          if (args.namespace === 'openplanr-remote') {
+            const remote = await context.resolveRemote(args.path, 'import', args.importer);
+            return { path: remote.toString(), namespace: 'openplanr-remote' };
           }
           const classified = classifyReference(args.path);
           if (classified.kind === 'data') {
@@ -622,7 +849,11 @@ function localOnlyPlugin(context) {
               `Data URI ${args.kind} is not supported: ${args.path.slice(0, 64)}`,
             );
           }
-          if (classified.kind === 'external' || classified.kind === 'absolute') {
+          if (classified.kind === 'external') {
+            const remote = await context.resolveRemote(args.path, 'import');
+            return { path: remote.toString(), namespace: 'openplanr-remote' };
+          }
+          if (classified.kind === 'absolute') {
             throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `External import is not allowed: ${args.path}`);
           }
           if (!args.path.startsWith('.') && !args.path.startsWith('/')) {
@@ -634,6 +865,34 @@ function localOnlyPlugin(context) {
           return { errors: [{ text: error.message, detail: error }] };
         }
       });
+      api.onLoad({ filter: /.*/, namespace: 'openplanr-remote' }, async (args) => {
+        try {
+          const remote = await context.readRemote(args.path, 'import');
+          let contents = remote.buffer;
+          if (remote.mediaType === 'image/svg+xml') {
+            let markup;
+            try {
+              markup = new TextDecoder('utf-8', { fatal: true }).decode(contents);
+            } catch {
+              throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, `Remote SVG is not valid UTF-8: ${remote.url}`);
+            }
+            assertSafeSvgMarkup(markup, remote.url);
+          }
+          if (['js', 'css', 'json'].includes(remote.loader)) {
+            const text = contents.toString('utf8');
+            context.assertPrivacySafe(text, remote.url, { allowRemoteUrls: true });
+            if (remote.loader === 'js' && /new\s+URL\s*\([\s\S]*?import\.meta\.url/.test(text)) {
+              throw artifactError(
+                ARTIFACT_ERROR_CODES.UNSUPPORTED_MODULE,
+                `new URL(..., import.meta.url) assets are not supported: ${remote.url}`,
+              );
+            }
+          }
+          return { contents, loader: remote.loader };
+        } catch (error) {
+          return { errors: [{ text: error.message, detail: error }] };
+        }
+      });
       api.onLoad({ filter: /.*/ }, async (args) => {
         try {
           let contents = await context.read(args.path);
@@ -641,7 +900,7 @@ function localOnlyPlugin(context) {
             contents = await bundleSvg(context, args.path, contents);
           }
           if (['js', 'jsx', 'ts', 'tsx', 'css', 'json'].includes(esbuildLoader(args.path))) {
-            context.assertPrivacySafe(contents.toString('utf8'), context.logicalPath(args.path));
+            context.assertPrivacySafe(contents.toString('utf8'), context.logicalPath(args.path), { allowRemoteUrls: true });
           }
           if (['js', 'jsx', 'ts', 'tsx'].includes(esbuildLoader(args.path))
             && /new\s+URL\s*\([\s\S]*?import\.meta\.url/.test(contents.toString('utf8'))) {
@@ -686,7 +945,7 @@ async function bundleWithEsbuild(context, { entryPath, source, resolveDir, loade
       assetNames: 'assets/[hash]',
       publicPath,
       metafile: true,
-      plugins: [localOnlyPlugin(context)],
+      plugins: [artifactDependencyPlugin(context)],
       absWorkingDir: context.root,
     });
     const outputFiles = result.outputFiles ?? [];
@@ -895,12 +1154,31 @@ async function bundleSvg(context, path, sourceBuffer) {
 }
 
 async function dataUrlFor(context, reference, fromDir, purpose, outputBudget = undefined) {
-  const classified = context.resolveLocal(reference, fromDir, purpose);
-  if (classified.kind === 'internal' || classified.kind === 'data') return reference;
-  let buffer = await context.read(classified.path);
-  const mediaType = MIME_TYPES[extname(classified.path).toLowerCase()];
+  const classification = classifyReference(reference);
+  if (classification.kind === 'internal' || classification.kind === 'data') return reference;
+  let buffer;
+  let mediaType;
+  if (classification.kind === 'external') {
+    const remote = await context.readRemote(reference, purpose);
+    buffer = remote.buffer;
+    mediaType = remote.mediaType;
+    if (mediaType === 'image/svg+xml') {
+      let markup;
+      try {
+        markup = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+      } catch {
+        throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, `Remote SVG is not valid UTF-8: ${remote.url}`);
+      }
+      assertSafeSvgMarkup(markup, remote.url);
+    }
+  } else {
+    const classified = context.resolveLocal(reference, fromDir, purpose);
+    if (classified.kind === 'internal' || classified.kind === 'data') return reference;
+    buffer = await context.read(classified.path);
+    mediaType = MIME_TYPES[extname(classified.path).toLowerCase()];
+    if (mediaType === 'image/svg+xml') buffer = await bundleSvg(context, classified.path, buffer);
+  }
   if (!mediaType) throw artifactError(ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET, `Unsupported ${purpose} type: ${reference}`);
-  if (mediaType === 'image/svg+xml') buffer = await bundleSvg(context, classified.path, buffer);
   const fragment = reference.includes('#') ? `#${reference.split('#').slice(1).join('#')}` : '';
   const outputBytes = encodedDataUrlBytes(mediaType, buffer, fragment);
   if (outputBudget) {
@@ -990,9 +1268,16 @@ async function rewriteHtml(context, entryPath, input) {
       const rel = (getAttr(node, 'rel') ?? '').toLowerCase().split(/\s+/);
       if (rel.includes('stylesheet')) {
         if (!href) throw artifactError(ARTIFACT_ERROR_CODES.UNRESOLVED_ASSET, 'Stylesheet link requires href.');
-        const resolved = context.resolveLocal(href, fromDir, 'stylesheet');
-        if (resolved.kind !== 'local') throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Stylesheet must be local: ${href}`);
-        const css = await bundleWithEsbuild(context, { entryPath: resolved.path, loader: 'css', kind: 'css' });
+        const classification = classifyReference(href);
+        let entryPath;
+        if (classification.kind === 'external') {
+          entryPath = (await context.resolveRemote(href, 'stylesheet')).toString();
+        } else {
+          const resolved = context.resolveLocal(href, fromDir, 'stylesheet');
+          if (resolved.kind !== 'local') throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Stylesheet must be local: ${href}`);
+          entryPath = resolved.path;
+        }
+        const css = await bundleWithEsbuild(context, { entryPath, loader: 'css', kind: 'css' });
         const replacement = createElement('style');
         const assetDigest = digestArtifact(css);
         context.accountGeneratedAddition(`${assetDigest}${css}`, 'linked stylesheet');
@@ -1042,10 +1327,21 @@ async function rewriteHtml(context, entryPath, input) {
             'External scripts using async or defer cannot be safely inlined.',
           );
         }
-        const resolved = context.resolveLocal(src, fromDir, 'script');
-        if (resolved.kind !== 'local') throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Script must be local: ${src}`);
-        sourcePath = resolved.path;
-        source = await context.readText(sourcePath);
+        const classification = classifyReference(src);
+        if (classification.kind === 'external') {
+          const remote = await context.readRemote(src, 'script');
+          if (remote.loader !== 'js') {
+            throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Remote script is not JavaScript: ${src}`);
+          }
+          sourcePath = remote.url;
+          source = new TextDecoder('utf-8', { fatal: true }).decode(remote.buffer);
+          context.assertPrivacySafe(source, remote.url, { allowRemoteUrls: true });
+        } else {
+          const resolved = context.resolveLocal(src, fromDir, 'script');
+          if (resolved.kind !== 'local') throw artifactError(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET, `Script must be local: ${src}`);
+          sourcePath = resolved.path;
+          source = await context.readText(sourcePath, { allowRemoteUrls: true });
+        }
         removeAttr(node, 'src');
         for (const attr of ['integrity', 'crossorigin', 'referrerpolicy']) removeAttr(node, attr);
       } else {
@@ -1133,6 +1429,9 @@ export async function bundleArtifact(entryOrOptions, maybeOptions = {}) {
     maxFiles: constrainedLimit(provided.maxFiles, DEFAULT_MAX_FILES, 'maxFiles'),
     maxBytes: constrainedLimit(provided.maxBytes, DEFAULT_MAX_BYTES, 'maxBytes'),
     sensitiveValues: provided.sensitiveValues,
+    remoteAssets: provided.remoteAssets ?? 'bundle',
+    fetchImpl: provided.fetchImpl ?? globalThis.fetch,
+    lookupImpl: provided.lookupImpl ?? lookupDns,
   });
   const absoluteEntry = isAbsolute(entry);
   const entryCandidate = absoluteEntry ? resolve(entry) : resolve(context.root, entry);
@@ -1155,7 +1454,7 @@ export async function bundleArtifact(entryOrOptions, maybeOptions = {}) {
   if (!['.html', '.htm'].includes(extname(entryPath).toLowerCase())) {
     throw artifactError(ARTIFACT_ERROR_CODES.INPUT_INVALID, 'Artifact entry must be an HTML file.');
   }
-  const input = await context.readText(entryPath);
+  const input = await context.readText(entryPath, { allowRemoteUrls: context.remoteAssets === 'bundle' });
   const html = await rewriteHtml(context, entryPath, input);
   const bytes = Buffer.byteLength(html, 'utf8');
   return {
@@ -1164,7 +1463,8 @@ export async function bundleArtifact(entryOrOptions, maybeOptions = {}) {
     sha256: digestArtifact(html),
     bytes,
     inputBytes: context.totalBytes,
-    fileCount: context.buffers.size,
+    fileCount: context.buffers.size + context.remoteBuffers.size,
+    remoteAssetCount: context.remoteBuffers.size,
     files: [...context.buffers.keys()].map((path) => context.logicalPath(path)).sort(),
     assets: [...context.assets.values()].sort((left, right) => left.sha256.localeCompare(right.sha256)),
   };

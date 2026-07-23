@@ -37,6 +37,26 @@ function expectCode(code) {
   };
 }
 
+function publicLookup() {
+  return Promise.resolve([{ address: '93.184.216.34', family: 4 }]);
+}
+
+function remoteResponses(entries) {
+  const requests = [];
+  const fetchImpl = async (input, options = {}) => {
+    const url = String(input);
+    requests.push({ url, options });
+    const entry = entries[url];
+    if (!entry) return new Response('missing', { status: 404 });
+    if (entry instanceof Error) throw entry;
+    return new Response(entry.body ?? '', {
+      status: entry.status ?? 200,
+      headers: entry.headers ?? {},
+    });
+  };
+  return { fetchImpl, requests };
+}
+
 function createSupportedGraph(root) {
   const pixel = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   write(root, 'assets/pixel.png', pixel);
@@ -137,7 +157,7 @@ test('static serving follows final realpaths and blocks in-root symlink escape',
   assert.doesNotMatch(response.body, /private/);
 });
 
-test('external resources, forms, and navigation fail closed with named errors', async (t) => {
+test('remote resources can be explicitly rejected while forms and navigation always fail closed', async (t) => {
   const cases = [
     ['remote image', '<img src="https://example.test/a.png">', ARTIFACT_ERROR_CODES.EXTERNAL_ASSET],
     ['protocol-relative script', '<script src="//example.test/a.js"></script>', ARTIFACT_ERROR_CODES.EXTERNAL_ASSET],
@@ -157,9 +177,211 @@ test('external resources, forms, and navigation fail closed with named errors', 
     await t.test(name, async () => {
       const root = fixture();
       write(root, 'index.html', `<!doctype html>${html}`);
-      await assert.rejects(bundleArtifact('index.html', { root }), expectCode(code));
+      await assert.rejects(
+        bundleArtifact('index.html', { root, remoteAssets: 'reject' }),
+        expectCode(code),
+      );
     });
   }
+});
+
+test('safe HTTPS dependency graphs are fetched, bounded, and vendored into immutable HTML', async () => {
+  const root = fixture();
+  write(root, 'index.html', `<!doctype html><html><head>
+    <style>
+      @import url('https://fonts.example.test/css?family=Inter');
+      .hero { background-image: url("https://cdn.example.test/hero.png"); }
+    </style>
+    <script src="https://cdn.example.test/app.js"></script>
+  </head><body><img src="https://cdn.example.test/avatar.webp"><div class="hero">Ready</div></body></html>`);
+  const font = Buffer.from([0x77, 0x4f, 0x46, 0x32, 0x01, 0x02]);
+  const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+  const webp = Buffer.from('RIFFdemoWEBP', 'ascii');
+  const { fetchImpl, requests } = remoteResponses({
+    'https://fonts.example.test/css?family=Inter': {
+      body: '@font-face{font-family:Inter;src:url("https://fonts-cdn.example.test/inter.woff2") format("woff2")}body{font-family:Inter}.shape{filter:url(#arrow)}',
+      headers: { 'content-type': 'text/css; charset=utf-8' },
+    },
+    'https://fonts-cdn.example.test/inter.woff2': {
+      body: font,
+      headers: { 'content-type': 'font/woff2' },
+    },
+    'https://cdn.example.test/hero.png': {
+      body: png,
+      headers: { 'content-type': 'image/png' },
+    },
+    'https://cdn.example.test/avatar.webp': {
+      body: webp,
+      headers: { 'content-type': 'image/webp' },
+    },
+    'https://cdn.example.test/app.js': {
+      body: 'window.remoteAssetReady = true;',
+      headers: { 'content-type': 'text/javascript; charset=utf-8' },
+    },
+  });
+
+  const result = await bundleArtifact('index.html', {
+    root,
+    fetchImpl,
+    lookupImpl: publicLookup,
+  });
+
+  assert.equal(result.remoteAssetCount, 5);
+  assert.equal(result.fileCount, 6);
+  assert.equal(requests.length, 5);
+  assert.ok(requests.every(({ options }) => options.redirect === 'manual'));
+  assert.match(result.html, /data:font\/woff2;base64,/);
+  assert.match(result.html, /data:image\/png;base64,/);
+  assert.match(result.html, /data:image\/webp;base64,/);
+  assert.match(result.html, /window\.remoteAssetReady/);
+  assert.doesNotMatch(result.html, /https?:\/\//);
+  assert.deepEqual(result.files, ['index.html']);
+  assert.ok(result.assets.every((asset) => !('url' in asset)));
+});
+
+test('remote redirects are revalidated and content is fetched once per canonical URL', async () => {
+  const root = fixture();
+  write(root, 'index.html', '<img src="https://assets.example.test/logo">');
+  const { fetchImpl, requests } = remoteResponses({
+    'https://assets.example.test/logo': {
+      status: 302,
+      headers: { location: 'https://cdn.example.test/logo.png' },
+    },
+    'https://cdn.example.test/logo.png': {
+      body: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+      headers: { 'content-type': 'image/png' },
+    },
+  });
+  const result = await bundleArtifact('index.html', {
+    root,
+    fetchImpl,
+    lookupImpl: publicLookup,
+  });
+  assert.equal(result.remoteAssetCount, 1);
+  assert.deepEqual(requests.map(({ url }) => url), [
+    'https://assets.example.test/logo',
+    'https://cdn.example.test/logo.png',
+  ]);
+  assert.match(result.html, /data:image\/png;base64,/);
+});
+
+test('remote linked stylesheets and module imports retain their dependency graph offline', async () => {
+  const root = fixture();
+  write(root, 'index.html', `<!doctype html><head>
+    <link rel="stylesheet" href="https://cdn.example.test/site.css">
+    <script type="module" src="https://cdn.example.test/app.mjs"></script>
+  </head><body></body>`);
+  const { fetchImpl } = remoteResponses({
+    'https://cdn.example.test/site.css': {
+      body: '.cover{background:url("./cover.png")}',
+      headers: { 'content-type': 'text/css' },
+    },
+    'https://cdn.example.test/cover.png': {
+      body: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+      headers: { 'content-type': 'image/png' },
+    },
+    'https://cdn.example.test/app.mjs': {
+      body: 'import { message } from "./message.mjs"; document.body.dataset.message = message;',
+      headers: { 'content-type': 'text/javascript' },
+    },
+    'https://cdn.example.test/message.mjs': {
+      body: 'export const message = "packaged remote module";',
+      headers: { 'content-type': 'text/javascript' },
+    },
+  });
+  const result = await bundleArtifact('index.html', {
+    root,
+    fetchImpl,
+    lookupImpl: publicLookup,
+  });
+  assert.equal(result.remoteAssetCount, 4);
+  assert.match(result.html, /data:image\/png;base64,/);
+  assert.match(result.html, /packaged remote module/);
+  assert.doesNotMatch(result.html, /https?:\/\//);
+});
+
+test('remote vendoring rejects unsafe targets, failures, limits, and runtime network behavior', async (t) => {
+  const unsafe = [
+    'http://cdn.example.test/a.png',
+    'https://127.0.0.1/a.png',
+    'https://[::1]/a.png',
+    'https://user:pass@cdn.example.test/a.png',
+    'https://cdn.example.test:8443/a.png',
+    'https://service.local/a.png',
+  ];
+  for (const url of unsafe) {
+    await t.test(`unsafe target ${url}`, async () => {
+      const root = fixture();
+      write(root, 'index.html', `<img src="${url}">`);
+      await assert.rejects(
+        bundleArtifact('index.html', {
+          root,
+          fetchImpl: async () => {
+            throw new Error('must not fetch');
+          },
+          lookupImpl: publicLookup,
+        }),
+        expectCode(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET),
+      );
+    });
+  }
+
+  await t.test('hostname resolving to a private address', async () => {
+    const root = fixture();
+    write(root, 'index.html', '<img src="https://cdn.example.test/a.png">');
+    await assert.rejects(
+      bundleArtifact('index.html', {
+        root,
+        fetchImpl: async () => new Response('image', { headers: { 'content-type': 'image/png' } }),
+        lookupImpl: async () => [{ address: '10.0.0.4', family: 4 }],
+      }),
+      expectCode(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET),
+    );
+  });
+
+  await t.test('HTTP failure', async () => {
+    const root = fixture();
+    write(root, 'index.html', '<img src="https://cdn.example.test/missing.png">');
+    await assert.rejects(
+      bundleArtifact('index.html', {
+        root,
+        fetchImpl: async () => new Response('missing', { status: 404 }),
+        lookupImpl: publicLookup,
+      }),
+      expectCode(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET),
+    );
+  });
+
+  await t.test('remote graph shares the decoded-byte limit', async () => {
+    const root = fixture();
+    write(root, 'index.html', '<img src="https://cdn.example.test/large.png">');
+    await assert.rejects(
+      bundleArtifact('index.html', {
+        root,
+        maxBytes: 100,
+        fetchImpl: async () => new Response(Buffer.alloc(200), {
+          headers: { 'content-type': 'image/png', 'content-length': '200' },
+        }),
+        lookupImpl: publicLookup,
+      }),
+      expectCode(ARTIFACT_ERROR_CODES.BYTE_LIMIT),
+    );
+  });
+
+  await t.test('downloaded scripts cannot retain network behavior', async () => {
+    const root = fixture();
+    write(root, 'index.html', '<script src="https://cdn.example.test/app.js"></script>');
+    await assert.rejects(
+      bundleArtifact('index.html', {
+        root,
+        fetchImpl: async () => new Response('fetch("https://api.example.test/private")', {
+          headers: { 'content-type': 'text/javascript' },
+        }),
+        lookupImpl: publicLookup,
+      }),
+      expectCode(ARTIFACT_ERROR_CODES.EXTERNAL_ASSET),
+    );
+  });
 });
 
 test('ambiguous srcset and active embedded SVG data fail closed', async (t) => {
