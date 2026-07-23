@@ -1,10 +1,7 @@
 #!/usr/bin/env node
 
-const expected = {
-  pipeline: process.env.PLANR_EXPECT_PIPELINE ?? '0.28.5',
-  cli: process.env.PLANR_EXPECT_CLI ?? '1.13.0',
-  skills: process.env.PLANR_EXPECT_SKILLS ?? '1.15.0',
-};
+const marketplaceManifestUrl =
+  'https://raw.githubusercontent.com/openplanr/marketplace/main/ecosystem.json';
 
 async function json(url) {
   let lastStatus = 0;
@@ -22,6 +19,22 @@ async function requireVersion(name, version) {
   const metadata = await json(`https://registry.npmjs.org/${name}/latest`);
   if (metadata.version !== version) throw new Error(`${name}: expected ${version}, received ${metadata.version}`);
   process.stdout.write(`PASS npm ${name}@${version}\n`);
+}
+
+// The marketplace manifest is the resolved, published compatibility contract.
+// Read it rather than pinning each release in this scheduled canary; explicit
+// environment variables remain available for release-candidate verification.
+const ecosystem = await json(marketplaceManifestUrl);
+const expected = {
+  pipeline: process.env.PLANR_EXPECT_PIPELINE ?? ecosystem.components?.pipeline?.version,
+  cli: process.env.PLANR_EXPECT_CLI ?? ecosystem.components?.cli?.version,
+  skills: process.env.PLANR_EXPECT_SKILLS ?? ecosystem.components?.skills?.version,
+};
+
+for (const [component, version] of Object.entries(expected)) {
+  if (typeof version !== 'string' || version.length === 0) {
+    throw new Error(`Marketplace compatibility manifest has no ${component} version`);
+  }
 }
 
 await requireVersion('planr-pipeline', expected.pipeline);
