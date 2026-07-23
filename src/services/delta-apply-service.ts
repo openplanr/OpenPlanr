@@ -75,7 +75,7 @@ export function applyRefineDeltas(
             '\n' +
             body.slice(sectionEnd);
         } else {
-          body = body.trimEnd() + `\n\n## ${change.heading}\n\n${change.newContent.trimEnd()}\n`;
+          body = `${body.trimEnd()}\n\n## ${change.heading}\n\n${change.newContent.trimEnd()}\n`;
         }
       } else if (
         change.type === 'replaceText' &&
