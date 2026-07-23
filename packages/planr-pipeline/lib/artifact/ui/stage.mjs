@@ -456,8 +456,9 @@ export function mountArtifactStage({
       }
       if (annotationLayer) {
         const enabled = isVisible && state.status === 'ready' && state.reviewMode === 'comment';
+        const hasComposer = Boolean(annotationLayer.querySelector('[data-planr-annotation-composer]'));
         annotationLayer.tabIndex = enabled ? 0 : -1;
-        annotationLayer.setAttribute('aria-disabled', String(!enabled));
+        annotationLayer.setAttribute('aria-disabled', String(!enabled && !hasComposer));
       }
     }
     updateStatus(document, state);

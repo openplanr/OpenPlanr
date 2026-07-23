@@ -278,7 +278,7 @@ export function mountArtifactAnnotations({
             'data-planr-intent': pin.intent,
             'data-planr-status': pin.status,
             'aria-controls': ids.thread,
-            'aria-label': `${pin.intent} feedback ${ordinal}: ${pin.comment}`,
+            'aria-label': `${pin.intent} comment ${ordinal}: ${pin.comment}`,
           },
         });
         setRegionStyle(button, {
@@ -317,6 +317,9 @@ export function mountArtifactAnnotations({
     document.querySelector('[data-planr-annotation-composer]')?.remove();
     draft = null;
     draftToken += 1;
+    if (activeLayer && stageController.getState().reviewMode !== 'comment') {
+      activeLayer.setAttribute('aria-disabled', 'true');
+    }
     if (restoreFocus) activeLayer?.focus();
   }
 
@@ -365,10 +368,10 @@ export function mountArtifactAnnotations({
       className: 'planr-annotation-composer',
       attributes: {
         'data-planr-annotation-composer': '',
-        'aria-label': 'Add artifact feedback',
+        'aria-label': 'Add artifact comment',
       },
     });
-    const heading = make(document, 'strong', { textContent: 'New feedback' });
+    const heading = make(document, 'strong', { textContent: 'New comment' });
     const identityLabel = make(document, 'label', { textContent: 'Your name' });
     const identity = make(document, 'input', {
       attributes: {
@@ -382,7 +385,7 @@ export function mountArtifactAnnotations({
     });
     identityLabel.append(identity);
     const intentPicker = createIntentPicker(document);
-    const commentLabel = make(document, 'label', { textContent: 'Feedback' });
+    const commentLabel = make(document, 'label', { textContent: 'Comment' });
     const comment = make(document, 'textarea', {
       attributes: {
         maxlength: ARTIFACT_ANNOTATION_LIMITS.maxCommentLength,
@@ -404,7 +407,7 @@ export function mountArtifactAnnotations({
         attributes: { type: 'button', 'data-planr-composer-cancel': '' },
       }),
       make(document, 'button', {
-        textContent: 'Add feedback',
+        textContent: 'Add comment',
         attributes: { type: 'submit', 'data-planr-composer-submit': '' },
       }),
     );
@@ -456,7 +459,7 @@ export function mountArtifactAnnotations({
       identity.setAttribute('aria-invalid', String(!author));
       comment.setAttribute('aria-invalid', String(!body));
       if (!author || !body) {
-        error.textContent = !author ? 'Enter your name before adding feedback.' : 'Enter feedback before submitting.';
+        error.textContent = !author ? 'Enter your name before adding a comment.' : 'Enter a comment before submitting.';
         (!author ? identity : comment).focus();
         return;
       }
@@ -479,7 +482,7 @@ export function mountArtifactAnnotations({
       const created = nextReview?.pins?.find?.(({ id }) => !existingIds.has(id));
       closeComposer();
       renderPins();
-      announce(document, `${selectedIntent} feedback added.`);
+      announce(document, `${selectedIntent} comment added.`);
       if (created?.id) queueMicrotask(() => focusThread(created.id));
     });
     comment.focus();
@@ -494,7 +497,8 @@ export function mountArtifactAnnotations({
   listen(root, 'planr:stage-change', () => {
     if (!draft) return;
     const state = stageController.getState();
-    if (state.reviewMode !== 'comment') {
+    if (state.status !== 'ready'
+      || (state.presentation !== 'document' && state.reviewMode !== 'comment')) {
       closeComposer();
       return;
     }

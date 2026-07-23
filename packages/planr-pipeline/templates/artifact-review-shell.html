@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-planr-theme="auto" data-planr-presentation="document" data-planr-artifact-shell="1.2.0">
+<html lang="en" data-planr-theme="auto" data-planr-presentation="document" data-planr-artifact-shell="1.2.1">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -344,6 +344,20 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   cursor: pointer;
 }
 .planr-more-menu > button:hover { background: var(--planr-color-raised); }
+.planr-comments-scrim {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--planr-color-background) 8%, transparent);
+  cursor: default;
+  opacity: 1;
+  transition: opacity var(--planr-motion-fast);
+}
+.planr-shell[data-planr-rail-open="false"] .planr-comments-scrim {
+  opacity: 0;
+  pointer-events: none;
+}
 .planr-workspace {
   min-width: 0;
   min-height: 0;
@@ -1051,6 +1065,7 @@ html[data-planr-presentation="document"] body { overflow: visible; }
     </div>
   </div>
 </nav>
+  <button class="planr-comments-scrim" type="button" data-planr-comments-scrim data-planr-close-feedback aria-label="Close comments" tabindex="-1"></button>
   <div class="planr-workspace"><main class="planr-stage" aria-label="Artifact review stage">
   <div class="planr-stage-scroll"><div class="planr-stage-surface" style="--planr-shell-zoom:0.72" inert aria-hidden="true"><div class="planr-frame-grid" data-planr-layout="single"></div></div></div>
   <div class="planr-stage-status" role="status" aria-live="polite" aria-atomic="true">

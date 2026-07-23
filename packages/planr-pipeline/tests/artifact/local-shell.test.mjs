@@ -254,11 +254,18 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
   await page.waitForFunction((height) => document.documentElement.scrollHeight > height + 400, initial.outerHeight);
 
   const widthBefore = await page.locator('.planr-artifact-panel').evaluate((node) => node.getBoundingClientRect().width);
-  await page.locator('[data-planr-action="feedback"]').click();
+  const commentsAction = page.locator('[data-planr-action="feedback"]');
+  await commentsAction.click();
   const widthAfter = await page.locator('.planr-artifact-panel').evaluate((node) => node.getBoundingClientRect().width);
   assert.equal(widthAfter, widthBefore, 'feedback overlay never resizes document content');
+  const commentsScrim = page.locator('[data-planr-comments-scrim]');
+  assert.equal(await commentsScrim.isVisible(), true, 'document comments expose an outside-click target');
+  await commentsScrim.click({ position: { x: 20, y: 20 } });
+  assert.equal(await commentsAction.getAttribute('aria-expanded'), 'false');
+  assert.equal(await commentsAction.evaluate((node) => document.activeElement === node), true);
+  await commentsAction.click();
   await page.keyboard.press('Escape');
-  assert.equal(await page.locator('[data-planr-action="feedback"]').getAttribute('aria-expanded'), 'false');
+  assert.equal(await commentsAction.getAttribute('aria-expanded'), 'false');
 
   await page.evaluate(() => {
     globalThis.__planrDocumentRegions = [];
@@ -268,15 +275,35 @@ test('document presentation uses authenticated natural sizing, outer scrolling, 
   await page.locator('[data-planr-action="add-comment"]').click();
   await page.mouse.click(640, 520);
   await page.waitForFunction(() => globalThis.__planrDocumentRegions?.length === 1);
+  const composer = page.locator('[data-planr-annotation-composer]');
+  await composer.waitFor();
   assert.equal(
     await page.locator('.planr-shell').getAttribute('data-planr-review-mode'),
     'interact',
     'document comments are one-shot',
   );
+  const composerIdentity = composer.locator('[data-planr-composer-identity]');
+  const composerState = await composer.evaluate((node) => ({
+    inertAncestor: node.closest('[inert]')?.className ?? null,
+    layerDisabled: node.closest('[data-planr-annotation-layer]')?.getAttribute('aria-disabled'),
+    mode: document.querySelector('.planr-shell')?.dataset.planrReviewMode,
+  }));
+  assert.equal(await composerIdentity.isEnabled(), true, JSON.stringify(composerState));
+  await composerIdentity.fill('Asem');
+  await composer.locator('[data-planr-composer-comment]').fill('Keep this learning path clear.');
+  await composer.locator('[data-planr-composer-submit]').click();
+  await page.waitForFunction(() => globalThis.__openPlanrArtifactStage.review.getReview().pins.length === 1);
+  assert.equal(await page.locator('[data-planr-annotation-layer] > [data-planr-pin-id]').count(), 1);
   const region = await page.evaluate(() => globalThis.__planrDocumentRegions[0]);
   assert.equal(region.artifactId, 'long-document');
   assert.ok(region.region.y > 0.4, 'below-the-fold comments use full-document coordinates');
   assert.ok(region.viewport.height > 2_800, 'pin viewport records the measured document height');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert.equal(await commentsAction.getAttribute('aria-expanded'), 'true');
+  assert.equal(await commentsScrim.isVisible(), true);
+  await commentsScrim.click({ position: { x: 12, y: 12 } });
+  assert.equal(await commentsAction.getAttribute('aria-expanded'), 'false');
 });
 
 async function expectHiddenCanvasChrome(page) {

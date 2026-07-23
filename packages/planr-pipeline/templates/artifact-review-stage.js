@@ -267,7 +267,7 @@ var OpenPlanrArtifactStage = (() => {
               "data-planr-intent": pin.intent,
               "data-planr-status": pin.status,
               "aria-controls": ids.thread,
-              "aria-label": `${pin.intent} feedback ${ordinal}: ${pin.comment}`
+              "aria-label": `${pin.intent} comment ${ordinal}: ${pin.comment}`
             }
           });
           setRegionStyle(button, {
@@ -303,6 +303,9 @@ var OpenPlanrArtifactStage = (() => {
       document2.querySelector("[data-planr-annotation-composer]")?.remove();
       draft = null;
       draftToken += 1;
+      if (activeLayer && stageController.getState().reviewMode !== "comment") {
+        activeLayer.setAttribute("aria-disabled", "true");
+      }
       if (restoreFocus) activeLayer?.focus();
     }
     async function resolveAnchor(token, candidate) {
@@ -346,10 +349,10 @@ var OpenPlanrArtifactStage = (() => {
         className: "planr-annotation-composer",
         attributes: {
           "data-planr-annotation-composer": "",
-          "aria-label": "Add artifact feedback"
+          "aria-label": "Add artifact comment"
         }
       });
-      const heading = make(document2, "strong", { textContent: "New feedback" });
+      const heading = make(document2, "strong", { textContent: "New comment" });
       const identityLabel = make(document2, "label", { textContent: "Your name" });
       const identity = make(document2, "input", {
         attributes: {
@@ -363,7 +366,7 @@ var OpenPlanrArtifactStage = (() => {
       });
       identityLabel.append(identity);
       const intentPicker = createIntentPicker(document2);
-      const commentLabel = make(document2, "label", { textContent: "Feedback" });
+      const commentLabel = make(document2, "label", { textContent: "Comment" });
       const comment = make(document2, "textarea", {
         attributes: {
           maxlength: ARTIFACT_ANNOTATION_LIMITS.maxCommentLength,
@@ -385,7 +388,7 @@ var OpenPlanrArtifactStage = (() => {
           attributes: { type: "button", "data-planr-composer-cancel": "" }
         }),
         make(document2, "button", {
-          textContent: "Add feedback",
+          textContent: "Add comment",
           attributes: { type: "submit", "data-planr-composer-submit": "" }
         })
       );
@@ -432,7 +435,7 @@ var OpenPlanrArtifactStage = (() => {
         identity.setAttribute("aria-invalid", String(!author));
         comment.setAttribute("aria-invalid", String(!body));
         if (!author || !body) {
-          error.textContent = !author ? "Enter your name before adding feedback." : "Enter feedback before submitting.";
+          error.textContent = !author ? "Enter your name before adding a comment." : "Enter a comment before submitting.";
           (!author ? identity : comment).focus();
           return;
         }
@@ -455,7 +458,7 @@ var OpenPlanrArtifactStage = (() => {
         const created = nextReview?.pins?.find?.(({ id }) => !existingIds.has(id));
         closeComposer();
         renderPins();
-        announce(document2, `${selectedIntent} feedback added.`);
+        announce(document2, `${selectedIntent} comment added.`);
         if (created?.id) queueMicrotask(() => focusThread(created.id));
       });
       comment.focus();
@@ -469,7 +472,7 @@ var OpenPlanrArtifactStage = (() => {
     listen(root, "planr:stage-change", () => {
       if (!draft) return;
       const state = stageController.getState();
-      if (state.reviewMode !== "comment") {
+      if (state.status !== "ready" || state.presentation !== "document" && state.reviewMode !== "comment") {
         closeComposer();
         return;
       }
@@ -2601,8 +2604,9 @@ var OpenPlanrArtifactStage = (() => {
         }
         if (annotationLayer) {
           const enabled = isVisible && state.status === "ready" && state.reviewMode === "comment";
+          const hasComposer = Boolean(annotationLayer.querySelector("[data-planr-annotation-composer]"));
           annotationLayer.tabIndex = enabled ? 0 : -1;
-          annotationLayer.setAttribute("aria-disabled", String(!enabled));
+          annotationLayer.setAttribute("aria-disabled", String(!enabled && !hasComposer));
         }
       }
       updateStatus(document2, state);

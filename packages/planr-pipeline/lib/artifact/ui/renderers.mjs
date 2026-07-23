@@ -203,6 +203,10 @@ export function renderDocumentActionRail(model) {
 </nav>`;
 }
 
+export function renderDocumentCommentsScrim() {
+  return '<button class="planr-comments-scrim" type="button" data-planr-comments-scrim data-planr-close-feedback aria-label="Close comments" tabindex="-1"></button>';
+}
+
 function renderViewButton(mode, model, disabled = false) {
   const label = mode[0].toUpperCase() + mode.slice(1);
   return `<button type="button" data-planr-view="${mode}" aria-pressed="${model.viewMode === mode}"${disabled ? ' disabled' : ''}>${label}</button>`;
@@ -314,7 +318,9 @@ export function renderHostedArtifactViewerSlot() {
 
 export function renderArtifactShellMarkup(model) {
   return `<div class="planr-shell" data-planr-presentation="${model.presentation}" data-planr-view="${model.viewMode}" data-planr-review-mode="${model.reviewMode}" data-planr-state="${model.status}" data-planr-rail-open="${model.railOpen}">
-  ${model.presentation === 'canvas' ? renderArtifactToolbar(model) : renderDocumentActionRail(model)}
+  ${model.presentation === 'canvas'
+    ? renderArtifactToolbar(model)
+    : `${renderDocumentActionRail(model)}\n  ${renderDocumentCommentsScrim()}`}
   <div class="planr-workspace">${renderArtifactStage(model)}${renderArtifactRail(model)}</div>
 </div>
 <div data-planr-slot="dialogs">${renderArtifactShareDialog()}</div>

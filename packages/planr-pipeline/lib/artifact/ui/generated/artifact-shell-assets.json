@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "name": "OpenPlanr Artifact Review Shell",
-  "shellVersion": "1.2.0",
+  "shellVersion": "1.2.1",
   "entrypoint": "templates/artifact-review-shell.html",
   "sync": "byte-for-byte",
   "browserApi": {
@@ -31,13 +31,13 @@
     },
     {
       "path": "templates/artifact-review-shell.html",
-      "bytes": 52783,
-      "sha256": "ff2263ba45ec029165423d0242edac4fe6f53a582dbf6cfde6e590cb301db695"
+      "bytes": 53294,
+      "sha256": "cb4d3a62922b56d7957e1fc86736f0a389041ab2ab4ce115b0d8dd1faed88a6b"
     },
     {
       "path": "templates/artifact-review-stage.js",
-      "bytes": 127814,
-      "sha256": "2029083960bd23a604ce9bed3e9242d463b999466ed9ffd6c632512f605abd35"
+      "bytes": 128144,
+      "sha256": "3a497a249550ee8b095ce0a6849a8cec81ffd14e6cd51f639006760389d97031"
     },
     {
       "path": "templates/design/design-board-adapter.js",

@@ -519,7 +519,7 @@ test('real browser review supports dynamic artifacts, comments, threads, decisio
   );
   await comment.press('Meta+Enter');
   await page.waitForFunction(() => globalThis.__openPlanrArtifactStage.review?.getReview()?.pins.length === 1);
-  assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'improve feedback added.');
+  assert.equal(await page.locator('[data-planr-slot="review-announcer"]').textContent(), 'improve comment added.');
 
   const firstReview = await page.evaluate(() => globalThis.__openPlanrArtifactStage.review.getReview());
   assert.equal(firstReview.pins[0].intent, 'improve');

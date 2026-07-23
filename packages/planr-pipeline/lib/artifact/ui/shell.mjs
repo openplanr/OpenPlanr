@@ -11,7 +11,7 @@ import { createArtifactStagePayload } from './stage-payload.mjs';
 import { digestArtifactEnvelope } from '../envelope.mjs';
 import { embedJson, escapeHtml } from '../../design/escape.mjs';
 
-export const ARTIFACT_SHELL_VERSION = '1.2.0';
+export const ARTIFACT_SHELL_VERSION = '1.2.1';
 export const ARTIFACT_SHELL_ASSET_PATHS = Object.freeze({
   template: 'templates/artifact-review-shell.html',
   stageRuntime: 'templates/artifact-review-stage.js',
@@ -277,6 +277,20 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   cursor: pointer;
 }
 .planr-more-menu > button:hover { background: var(--planr-color-raised); }
+.planr-comments-scrim {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--planr-color-background) 8%, transparent);
+  cursor: default;
+  opacity: 1;
+  transition: opacity var(--planr-motion-fast);
+}
+.planr-shell[data-planr-rail-open="false"] .planr-comments-scrim {
+  opacity: 0;
+  pointer-events: none;
+}
 .planr-workspace {
   min-width: 0;
   min-height: 0;
