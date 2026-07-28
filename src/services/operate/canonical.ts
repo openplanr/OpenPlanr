@@ -1,0 +1,211 @@
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { mkdir, open, readFile } from 'node:fs/promises';
+import path from 'node:path';
+import type { OperatingContentReference, OperatingSensitivity } from './types.js';
+import { OperateError } from './types.js';
+
+const textEncoder = new TextEncoder();
+
+function serializeNumber(value: number): string {
+  if (!Number.isFinite(value)) {
+    throw new OperateError('E_OPERATE_STATE_INVALID', 'Canonical JSON rejects non-finite numbers.');
+  }
+  return Object.is(value, -0) ? '0' : (JSON.stringify(value) as string);
+}
+
+function assertUnicodeScalarString(value: string): void {
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index);
+    if (unit >= 0xd800 && unit <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) {
+        throw new OperateError(
+          'E_OPERATE_STATE_INVALID',
+          'Canonical JSON rejects lone Unicode surrogate code units.',
+        );
+      }
+      index += 1;
+    } else if (unit >= 0xdc00 && unit <= 0xdfff) {
+      throw new OperateError(
+        'E_OPERATE_STATE_INVALID',
+        'Canonical JSON rejects lone Unicode surrogate code units.',
+      );
+    }
+  }
+}
+
+function serialize(value: unknown, ancestors: Set<object>): string {
+  if (value === null) return 'null';
+  if (typeof value === 'string') {
+    assertUnicodeScalarString(value);
+    return JSON.stringify(value);
+  }
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (typeof value === 'number') return serializeNumber(value);
+  if (typeof value === 'bigint' || typeof value === 'symbol' || typeof value === 'function') {
+    throw new OperateError(
+      'E_OPERATE_STATE_INVALID',
+      `Canonical JSON cannot serialize ${typeof value}.`,
+    );
+  }
+  if (value === undefined) {
+    throw new OperateError('E_OPERATE_STATE_INVALID', 'Canonical JSON rejects undefined values.');
+  }
+  if (typeof value !== 'object') {
+    throw new OperateError('E_OPERATE_STATE_INVALID', 'Unsupported canonical JSON value.');
+  }
+  if (ancestors.has(value)) {
+    throw new OperateError('E_OPERATE_STATE_INVALID', 'Canonical JSON rejects cyclic values.');
+  }
+
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) {
+      const items: string[] = [];
+      for (let index = 0; index < value.length; index += 1) {
+        if (!Object.hasOwn(value, index) || value[index] === undefined) {
+          throw new OperateError(
+            'E_OPERATE_STATE_INVALID',
+            'Canonical JSON rejects sparse or undefined array entries.',
+          );
+        }
+        items.push(serialize(value[index], ancestors));
+      }
+      const extraKeys = Object.keys(value).filter(
+        (key) => !/^(?:0|[1-9]\d*)$/.test(key) || Number(key) >= value.length,
+      );
+      if (extraKeys.length > 0) {
+        throw new OperateError(
+          'E_OPERATE_STATE_INVALID',
+          'Canonical JSON rejects arrays with named properties.',
+        );
+      }
+      return `[${items.join(',')}]`;
+    }
+
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new OperateError(
+        'E_OPERATE_STATE_INVALID',
+        'Canonical JSON accepts plain objects only.',
+      );
+    }
+
+    const object = value as Record<string, unknown>;
+    const entries = Object.keys(object)
+      .sort()
+      .map((key) => {
+        assertUnicodeScalarString(key);
+        return `${JSON.stringify(key)}:${serialize(object[key], ancestors)}`;
+      });
+    return `{${entries.join(',')}}`;
+  } finally {
+    ancestors.delete(value);
+  }
+}
+
+/**
+ * RFC 8785/JCS-compatible serialization for I-JSON values. It deliberately
+ * rejects non-JSON values instead of silently coercing them.
+ */
+export function canonicalize(value: unknown): string {
+  return serialize(value, new Set());
+}
+
+export function canonicalBytes(value: unknown): Uint8Array {
+  return textEncoder.encode(canonicalize(value));
+}
+
+export function sha256Bytes(value: Uint8Array | string): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+export function sha256Digest(value: Uint8Array | string): `sha256:${string}` {
+  return `sha256:${sha256Bytes(value)}`;
+}
+
+export function canonicalDigest(value: unknown): `sha256:${string}` {
+  return sha256Digest(canonicalBytes(value));
+}
+
+export function hmacDigest(value: unknown, key: Uint8Array): `hmac-sha256:${string}` {
+  return `hmac-sha256:${createHmac('sha256', key).update(canonicalBytes(value)).digest('hex')}`;
+}
+
+export function verifyHmacDigest(
+  value: unknown,
+  signature: `hmac-sha256:${string}`,
+  key: Uint8Array,
+): boolean {
+  const expected = hmacDigest(value, key);
+  const left = Buffer.from(expected);
+  const right = Buffer.from(signature);
+  return left.byteLength === right.byteLength && timingSafeEqual(left, right);
+}
+
+export interface ContentStoreOptions {
+  sensitivity?: OperatingSensitivity;
+}
+
+export async function putCanonicalContent(
+  contentRoot: string,
+  value: unknown,
+  options: ContentStoreOptions = {},
+): Promise<OperatingContentReference> {
+  const bytes = canonicalBytes(value);
+  const digest = sha256Digest(bytes);
+  const hex = digest.slice('sha256:'.length);
+  const directory = path.join(contentRoot, hex.slice(0, 2));
+  const target = path.join(directory, `${hex.slice(2)}.json`);
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+
+  try {
+    const handle = await open(target, 'wx', 0o600);
+    try {
+      await handle.writeFile(bytes);
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+    const existing = await readFile(target);
+    if (sha256Digest(existing) !== digest) {
+      throw new OperateError(
+        'E_OPERATE_STATE_INVALID',
+        `Content-addressed object ${digest} does not match its path.`,
+      );
+    }
+  }
+
+  return {
+    algorithm: 'sha256',
+    digest,
+    mediaType: 'application/json',
+    size: bytes.byteLength,
+    sensitivity: options.sensitivity ?? 'internal',
+  };
+}
+
+export async function readCanonicalContent<T>(
+  contentRoot: string,
+  reference: OperatingContentReference,
+): Promise<T> {
+  const hex = reference.digest.slice('sha256:'.length);
+  const target = path.join(contentRoot, hex.slice(0, 2), `${hex.slice(2)}.json`);
+  const bytes = await readFile(target);
+  if (bytes.byteLength !== reference.size || sha256Digest(bytes) !== reference.digest) {
+    throw new OperateError(
+      'E_OPERATE_STATE_INVALID',
+      `Content-addressed object ${reference.digest} failed integrity verification.`,
+    );
+  }
+  const parsed = JSON.parse(bytes.toString('utf8')) as T;
+  if (canonicalize(parsed) !== bytes.toString('utf8')) {
+    throw new OperateError(
+      'E_OPERATE_STATE_INVALID',
+      `Content-addressed object ${reference.digest} is not canonical JSON.`,
+    );
+  }
+  return parsed;
+}

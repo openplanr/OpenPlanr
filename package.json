@@ -31,6 +31,9 @@
     "build": "tsc && node scripts/copy-templates.mjs",
     "dev": "tsx src/cli/index.ts",
     "test": "vitest run",
+    "test:operate:security": "vitest run tests/unit/operate-security.test.ts tests/unit/operate-advisors.test.ts tests/unit/operate-protocol-roundtrip.test.ts tests/integration/operate-preview-boundaries.test.ts",
+    "test:operate:outcomes": "vitest run tests/unit/operate-outcomes.test.ts",
+    "test:operate:packed": "vitest run tests/e2e/operate-packed-install.test.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check src/ tests/",
@@ -56,6 +59,8 @@
     "ai",
     "backlog",
     "sprint",
+    "operating-board",
+    "product-operations",
     "templates",
     "estimation",
     "github",
@@ -86,7 +91,7 @@
     "zod": "^4.3.6"
   },
   "optionalDependencies": {
-    "planr-pipeline": "0.29.2"
+    "planr-pipeline": "0.30.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.9",

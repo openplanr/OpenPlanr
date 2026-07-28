@@ -6,6 +6,7 @@ import { copyFile, mkdir, open, readFile, rename, rm, unlink, writeFile } from '
 import os from 'node:os';
 import path from 'node:path';
 import { spliceManagedBlock } from '../utils/splice-managed-block.js';
+import { diagnoseOperatingBoard } from './operate/doctor.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 import { readOpenPlanrVersion } from './provenance-service.js';
 
@@ -145,6 +146,7 @@ const skillNames = [
   'planr-sync',
   'planr-doctor',
   'planr-artifact',
+  'planr-operate',
 ];
 
 function hash(value: string | Buffer): string {
@@ -364,7 +366,7 @@ function buildRuntimeLock(
     pipelineVersion,
     adapters,
   });
-  const components = { cli: options.cliVersion, pipeline: pipelineVersion, skills: '1.13.0' };
+  const components = { cli: options.cliVersion, pipeline: pipelineVersion, skills: '1.16.0' };
   const manifestDigest = `sha256:${hash(digestInput)}`;
   const lockPath = path.join(options.projectDir, '.planr', 'runtime-lock.json');
   if (existsSync(lockPath)) {
@@ -474,6 +476,16 @@ function buildActions(
           content: readFileSync(path.join(root, 'adapters', 'cursor', 'rules', 'openplanr.mdc')),
           kind: 'file',
           description: 'Install portable Cursor project rule',
+        });
+        actions.push({
+          runtime,
+          scope: 'project',
+          target: path.join(options.projectDir, '.cursor', 'rules', 'openplanr-operate.mdc'),
+          content: readFileSync(
+            path.join(root, 'adapters', 'cursor', 'rules', 'openplanr-operate.mdc'),
+          ),
+          kind: 'file',
+          description: 'Install Cursor Operating Board rule',
         });
         const roleRegistry = JSON.parse(
           readFileSync(path.join(root, 'registry', 'roles.json'), 'utf8'),
@@ -1204,7 +1216,7 @@ export async function runtimeDoctor(
       (file) => file.runtime === 'codex' && file.target.endsWith(`${path.sep}SKILL.md`),
     );
     if (installedSkills.length > 0) {
-      const supported = new Set(['artifact', 'doctor', 'pipeline']);
+      const supported = new Set(['artifact', 'doctor', 'operate', 'pipeline']);
       const violations: string[] = [];
       for (const skill of installedSkills) {
         if (!existsSync(skill.target)) continue;
@@ -1227,6 +1239,66 @@ export async function runtimeDoctor(
             : 'Installed Codex skills reference public planr commands only',
         ...(violations.length > 0
           ? { fix: 'Run `planr setup --runtime codex --scope user` to refresh managed skills.' }
+          : {}),
+      });
+    }
+
+    const operateSkill = installedSkills.find(
+      (skill) => path.basename(path.dirname(skill.target)) === 'planr-operate',
+    );
+    if (installed.runtimes.includes('codex') && !operateSkill) {
+      diagnostics.push({
+        code: 'operate-skill',
+        status: 'warn',
+        message: 'The installed Codex adapter is missing the planr-operate skill',
+        fix: 'Run `planr setup --runtime codex --scope user` to install the managed skill.',
+      });
+    } else if (operateSkill && existsSync(operateSkill.target)) {
+      const content = readFileSync(operateSkill.target, 'utf8');
+      const valid =
+        /^name:\s*planr-operate$/mu.test(content) &&
+        /`planr operate(?:\s|`)/u.test(content) &&
+        !/`planr-pipeline\s+[^`]+`/u.test(content) &&
+        /Never invoke SHIP/u.test(content);
+      diagnostics.push({
+        code: 'operate-skill',
+        status: valid ? 'pass' : 'fail',
+        message: valid
+          ? 'Installed planr-operate skill references the public CLI and preserves the SHIP boundary'
+          : 'Installed planr-operate skill does not satisfy the functional command contract',
+        ...(!valid
+          ? { fix: 'Run `planr setup --runtime codex --scope user` to refresh the managed skill.' }
+          : {}),
+      });
+    }
+
+    const cursorOperateRule = installed.ownedFiles.find(
+      (file) => file.runtime === 'cursor' && path.basename(file.target) === 'openplanr-operate.mdc',
+    );
+    if (installed.runtimes.includes('cursor') && !cursorOperateRule) {
+      diagnostics.push({
+        code: 'operate-cursor-rule',
+        status: 'warn',
+        message: 'The installed Cursor adapter is missing the Operating Board rule',
+        fix: 'Run `planr setup --runtime cursor --scope project` to install the managed rule.',
+      });
+    } else if (cursorOperateRule && existsSync(cursorOperateRule.target)) {
+      const content = readFileSync(cursorOperateRule.target, 'utf8');
+      const valid =
+        /OpenPlanr Operating Board adapter policy/u.test(content) &&
+        /`planr operate`/u.test(content) &&
+        !/`planr-pipeline\s+[^`]+`/u.test(content) &&
+        /Never auto-chain SHIP/u.test(content);
+      diagnostics.push({
+        code: 'operate-cursor-rule',
+        status: valid ? 'pass' : 'fail',
+        message: valid
+          ? 'Installed Cursor Operating Board rule references the public CLI and preserves the SHIP boundary'
+          : 'Installed Cursor Operating Board rule does not satisfy the functional command contract',
+        ...(!valid
+          ? {
+              fix: 'Run `planr setup --runtime cursor --scope project` to refresh the managed rule.',
+            }
           : {}),
       });
     }
@@ -1275,6 +1347,14 @@ export async function runtimeDoctor(
         : {}),
     });
   }
+
+  diagnostics.push(
+    ...(await diagnoseOperatingBoard({
+      projectRoot: projectDir,
+      localRoot: path.join(userHome(), '.planr'),
+      pipelineVersion: pipeline?.version,
+    })),
+  );
 
   if (pipeline) {
     const result = spawnSync(

@@ -13,13 +13,17 @@ import { z } from 'zod';
 import type { AIProvider, AIUsage } from '../../src/ai/types.js';
 import { generateJSON, generateStreamingJSON } from '../../src/services/ai-service.js';
 
-// Mock logger to prevent spinner output in tests
-vi.mock('../../src/utils/logger.js', () => ({
-  createSpinner: () => ({
+const { createSpinnerMock } = vi.hoisted(() => ({
+  createSpinnerMock: vi.fn(() => ({
     stop: vi.fn(),
     succeed: vi.fn(),
     update: vi.fn(),
-  }),
+  })),
+}));
+
+// Mock logger to prevent spinner output in tests
+vi.mock('../../src/utils/logger.js', () => ({
+  createSpinner: createSpinnerMock,
   formatUsage: () => '',
 }));
 
@@ -58,6 +62,19 @@ function createMockProvider(overrides: {
 }
 
 describe('generateJSON truncation detection', () => {
+  it('does not create terminal progress output in quiet mode', async () => {
+    createSpinnerMock.mockClear();
+    const provider = createMockProvider({
+      chatSyncResponses: ['{"title": "Quiet", "items": []}'],
+      usages: [{ inputTokens: 10, outputTokens: 10, truncated: false }],
+    });
+
+    const result = await generateJSON(provider, [], testSchema, { quiet: true });
+
+    expect(result.result).toEqual({ title: 'Quiet', items: [] });
+    expect(createSpinnerMock).not.toHaveBeenCalled();
+  });
+
   it('throws immediately on truncated first response (no retry)', async () => {
     const provider = createMockProvider({
       chatSyncResponses: ['{"title": "incomplete...'],

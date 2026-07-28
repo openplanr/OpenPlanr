@@ -6,11 +6,17 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 const CLI = resolve('src/cli/index.ts');
 const TSX_CLI = resolve('node_modules/tsx/dist/cli.mjs');
+const PIPELINE_ROOT = resolve('../planr-pipeline');
 const run = (args: string, opts?: { cwd?: string; env?: Record<string, string> }) =>
   execFileSync(process.execPath, [TSX_CLI, CLI, ...args.trim().split(/\s+/)], {
     encoding: 'utf-8',
     cwd: opts?.cwd,
-    env: { ...process.env, NO_COLOR: '1', ...opts?.env },
+    env: {
+      ...process.env,
+      NO_COLOR: '1',
+      OPENPLANR_PIPELINE_ROOT: PIPELINE_ROOT,
+      ...opts?.env,
+    },
   });
 
 let tempDirs: string[] = [];
