@@ -1,0 +1,27 @@
+{
+  "kind": "operating-event",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "eventId": "evt-011",
+  "sequence": 11,
+  "timestamp": "2026-07-28T09:09:20Z",
+  "cycleId": "CYCLE-001",
+  "type": "route.accepted",
+  "entityId": "ACT-001",
+  "previousEventHash": "sha256:864761f3874cf25b7d6fa601dce683ae581a3e50513debc59f442559469cdfa7",
+  "eventHash": "sha256:dc9f8a9b61e8789583e8c87a55e93c8a249b4fe11ed9fd0c2ebb4e90716c918c",
+  "actor": {
+    "kind": "engine",
+    "id": "openplanr"
+  },
+  "causationId": null,
+  "correlationId": "run-operating-fixture",
+  "evidenceRefs": [
+    "EVD-repo-payment"
+  ],
+  "payload": {
+    "routeDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "confirmationDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "unexpected": true
+  }
+}

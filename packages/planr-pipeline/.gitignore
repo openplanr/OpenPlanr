@@ -23,6 +23,10 @@ node_modules/
 .planr/
 !conformance/fixtures/dashboard-graph/.planr/
 !conformance/fixtures/dashboard-graph/.planr/config.json
+!conformance/fixtures/operating-dashboard/.planr/
+!conformance/fixtures/operating-dashboard/.planr/operate/
+!conformance/fixtures/operating-dashboard/.planr/operate/projections/
+!conformance/fixtures/operating-dashboard/.planr/operate/projections/state.json
 
 # Internal audit / analysis reports — generated for local review, not shipped with the plugin
 /CODEBASE-REVIEW.md

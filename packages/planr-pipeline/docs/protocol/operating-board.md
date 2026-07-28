@@ -1,0 +1,283 @@
+# Protocol v1.2 Operating Board
+
+The Operating Board is OpenPlanr's evidence-to-decision control plane. It
+continuously answers four questions without replacing planning or delivery:
+
+1. What verified evidence changed?
+2. What is the current constraint?
+3. Which bounded next move should a human accept?
+4. Did the shipped move produce the declared outcome?
+
+## Product boundary
+
+OpenPlanr owns the public `planr operate` command and all mutations.
+planr-pipeline owns the portable contracts, deterministic reduction,
+conformance, and generated runtime guidance. Operating advisor lenses are not
+delivery agents and never enter `registry/roles.json`.
+
+No operating command may auto-chain SHIP, deploy, publish, spend, contact a
+customer, change credentials, make a one-way decision, or mutate production
+data.
+
+## Durable state
+
+Every persisted v1.2 object has:
+
+```json
+{
+  "kind": "operating-event",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0"
+}
+```
+
+The durable model has four layers:
+
+- append-only `operating-event` records with contiguous sequence numbers,
+  previous-event hashes, correlation/causation IDs, evidence references, and
+  typed event discriminators. Every discriminator selects exactly one strict
+  payload schema, and undeclared payload fields are rejected;
+- immutable `operating-record` objects addressed by JCS SHA-256 digests. The
+  `recordType` discriminator selects the canonical schema for `content`;
+- write-ahead `operating-transaction-journal` records for bounded mutations;
+- validated `operating-checkpoint` objects and a disposable
+  `operating-state` projection.
+
+Legacy `.planr/board/` imports append strict
+`migration.legacy-imported` audit events. These events bind source, backup, and
+content-addressed record digests but do not mutate the operating projection;
+the migration manifest remains the authoritative import and rollback record.
+
+Canonicalization is RFC 8785 JCS over already-parsed JSON values. Readers reject
+non-finite numbers, sparse arrays, lone Unicode surrogates, cycles, sequence
+gaps, hash mismatches, unknown fields, and unsupported Protocol versions.
+Checkpoints declare `integrity.status: hash` by default. A runtime may inject an
+external Ed25519 or HMAC-SHA256 signer and verifier to produce
+`integrity.status: signed`; only the algorithm, key identifier, and signature
+are persisted. Key material remains outside the portable checkpoint, and a
+caller may require successful external verification before replay.
+
+## Cycle lifecycle
+
+```text
+preparing → collecting → advising → consolidating → reviewable → closed
+```
+
+`blocked`, `failed`, and `cancelled` are explicit exceptional states. A normal
+successful invocation stops at `reviewable`; a human closes it separately.
+Cycle health is `normal`, `quiet`, `partial`, or `blocked`. Missing non-critical
+evidence can produce a partial or quiet review; missing critical evidence
+blocks the affected route.
+Quiet cycles may close without dispositions. A non-quiet cycle may close only
+after every surfaced finding is terminal or has an applied route, and every
+owner decision is closed or superseded. Route projections expose their
+deduplicated `findingIds` so this close check remains deterministic.
+
+## Evidence readiness
+
+Each role registry entry declares:
+
+- accepted source;
+- required claim types;
+- minimum item count;
+- maximum age;
+- observation window;
+- sensitivity ceiling;
+- whether requirements are all-of or any-of;
+- unready behavior.
+
+The engine evaluates these rules into an
+`operating-evidence-readiness` matrix before any model call. An unready advisor
+is `not_evaluated`, `modelCallAllowed` is false, and a typed data gap records
+what is missing. The Chair has a distinct input contract: it consumes verified
+advisor results from the current cycle rather than raw provider evidence.
+
+Launch providers (`repository`, `planr`, `git`, `github`, `linear`, and
+`file-import`) are read-only. Runtime access may be narrower than the registry
+but never wider. Provider output must pass the shipped conformance kit:
+schema, attribution, determinism, frozen input, item budget, and byte budget.
+Repository evidence may add structured provenance containing the ecosystem
+component ID, canonical remote, exact revision, configured branch, and a
+dirty-worktree fingerprint. Evidence path, digest, freshness, and sensitivity
+remain properties of the individual evidence item.
+Every derived finding declares the highest sensitivity of its cited evidence.
+Consolidation may raise that classification when cited evidence changes, but
+must never lower or omit it.
+Each configured `operating-provider-manifest` records only a safe, redacted
+endpoint display, permitted data classes, provider/local retention, bounded
+request/token/time/cost limits, a policy digest, and first-use or renewal
+consent timestamps. Raw credentials and endpoint authentication stay in
+machine-local OpenPlanr state and never enter the portable manifest. The
+`policyDigest` is JCS SHA-256 over the safe endpoint, permitted data classes,
+retention, capabilities, limits, provider identity/version, and consent policy;
+route planning can therefore bind the exact reviewed provider policy.
+
+OpenPlanr must disclose that safe policy before the first provider call and
+renew consent when the endpoint, permitted data classes, retention,
+configuration, credential policy, or review window changes. A preview cannot
+call a provider. A dry-run may call the disclosed provider but commits no
+operating state, so first-use consent still applies.
+
+Component roots and JSON/CSV import paths are selected through
+`planr operate init` and stored machine-locally. `sources list|show|test`
+inspects or tests the configured read-only provider contract; it never adds a
+source implicitly.
+
+## Advisor and consolidation contract
+
+The five domain lenses are Strategy/Finance, Technology/Risk,
+Product/Activation, Growth/Market, and Operations/Customer. The Chair receives
+their verified results and may merge duplicates, sequence proposals, surface
+conflicts, or return quiet.
+
+Advisor results do not allocate persistent IDs, compute authoritative scores,
+or mutate state. The deterministic engine validates evidence references,
+allocates IDs, computes projections, applies caps, and persists the final
+finding/decision/data-gap records.
+
+## Route governance
+
+```text
+proposed → accepted → prepared → applied
+                         └──────→ failed → rolled_back
+```
+
+`accepted` means the decision owner approved the proposal. It does not write a
+SPEC or any destination artifact. `prepared` binds the route digest, preview
+digest, evidence digest, provider digest, destination digest, and verified
+event head. `applied` requires a separate confirmation digest plus a
+write-ahead transaction ID.
+
+Route application targets either OpenPlanr planning or pipeline PO explicitly.
+Every created SPEC links back to the source cycle/finding and declares a typed
+outcome. Existing PLAN→SHIP review gate R1 remains mandatory.
+
+Finding acceptance and route application are distinct transitions. Acceptance
+records governance only. Application requires a separate digest-bound preview
+and confirmation of the exact local write set.
+
+For Pipeline-PO, the first DEV application calls `preparePlan()` and returns
+`awaiting-plan` with the exact native PLAN invocation and
+`shipInvoked: false`. After the user runs and reviews PLAN, resuming the same
+route calls `completePlan()`, validates route-bound `planr-pipeline` PO
+provenance, and applies the route idempotently. Missing, unknown, or mixed
+planning producers fail closed. No Operating Board transition calls SHIP.
+
+## Gap lifecycle
+
+```text
+open → answered → verified → closed
+```
+
+A human answer is context, not verified evidence. `gap.verified` requires one
+or more explicit evidence IDs before `gap.closed`; runtimes must not infer
+verification from an answer or replace missing evidence with generic advice.
+
+### AGENT artifact generation
+
+AGENT routes use the portable generation lifecycle exported by this package:
+
+```text
+prepared → generating → validated → committed
+                     ↘ failed → prepared (resume, at most three attempts)
+                                ↘ cancelled
+```
+
+`prepareOperatingArtifactGeneration()` binds the input digest, evidence IDs,
+typed/versioned template, output format and contained destination before any
+runtime call. It also declares byte, time, token and cost budgets plus an
+empty-tool, network-disabled sandbox. `validateOperatingArtifactOutput()`
+applies format-specific defenses for Markdown, HTML, JSON and CSV, records the
+output and template digests, and emits provenance before
+`commitOperatingArtifactGeneration()` makes the session eligible for an
+OpenPlanr journal transaction. `runOperatingArtifactGeneration()` provides the
+bounded retry/resume orchestration while accepting generation as an injected
+runtime callback; it does not itself select or contact a provider.
+
+OpenPlanr owns the write-ahead journal and event commit. Runtime adapters only
+dispatch the injected generation call and must not reimplement these
+transitions or write the destination directly.
+
+## Typed outcomes
+
+An `operating-outcome` binds:
+
+- metric and unit;
+- query identity;
+- direction, operator, and aggregation;
+- baseline and target windows;
+- threshold;
+- minimum sample and coverage;
+- stale and missing-data policies;
+- guardrail precedence;
+- observation and verification dates;
+- rollout and rollback statements.
+
+`operating-outcome-observation` records actual value, sample, coverage,
+freshness, guardrail evaluation, and evidence references. Missing or stale data
+never silently becomes success.
+
+Outcome state is evented in three explicit steps: `outcome.registered` records
+the immutable contract, `outcome.observed` accepts only a validated
+`operating-outcome-observation`, and `outcome.evaluated` records the
+deterministic result. An observation cannot create or replace its contract, and
+an unknown outcome ID fails replay.
+
+OpenPlanr’s review-only reconciliation may emit `ship.observed` only after the
+linked spec’s shipped marker, run manifest, QA evidence, and
+`planr-pipeline` shipment provenance agree. Only then may it import due,
+schema-valid observation envelopes. This observes a separately invoked SHIP;
+it never initiates SHIP or calls a model.
+
+## Dashboard contract
+
+The dashboard API reads only:
+
+```text
+.planr/operate/projections/state.json
+```
+
+`GET /api/operate` returns `absent`, `invalid`, `stale`, or `ready`, always with
+`readOnly: true`. It does not expose absolute machine paths. A mismatch against
+the canonical `.planr/operate/checkpoints/current.json` checkpoint is
+diagnostic; the UI never repairs or replays events. Operators inspect integrity
+with `planr operate integrity status` and explicitly recover with
+`planr operate cycles recover`. The coded preview in
+`templates/operating-dashboard-preview.html` was approved on 2026-07-28; the
+production dashboard shell now consumes the same generated tokens and read-only
+projection contract.
+
+## Ecosystem release operations
+
+`ecosystem-release-operation` binds the umbrella SPEC digest to each repository's
+local SPEC ID, target branch/version, commit, pull request, checks, approvals,
+tag, package version, and tarball digest.
+
+Lifecycle:
+
+```text
+drafted → preparing → prepared → promoting → verified → completed
+```
+
+`blocked`, `compensating`, and `forward-fix` preserve non-happy paths. Before
+publication, compensation may restore reversible state. After any package is
+published, the operation is forward-fix-only. The generic `ecosystem-saga`
+provides unique idempotency keys and dependency-safe ready steps.
+
+## Runtime adapters
+
+All runtimes call the public `planr operate` surface:
+
+- Claude Code: `/planr-pipeline:operate`
+- Codex: `$planr-operate`
+- Cursor: `planr operate`
+
+Generated guidance never calls `planr-pipeline` directly and never implements
+state transitions itself. Use `npm run generate:operating-assets` after registry
+changes; CI uses `npm run check:operating-assets`.
+
+## Compatibility
+
+Protocol v1.0 planning artifacts and v1.1 capability contracts remain readable
+and unchanged. Protocol v1.2 is additive. Consumers must reject a v1.2 kind they
+do not support rather than attempting a lossy downgrade.

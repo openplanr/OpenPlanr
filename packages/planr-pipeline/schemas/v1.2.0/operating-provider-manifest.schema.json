@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-provider-manifest.schema.json",
+  "title": "OpenPlanr configured operating provider manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "id", "providerId", "providerVersion", "mode", "readOnly", "endpoint", "permittedDataClasses", "retention", "capabilities", "limits", "consent", "policyDigest", "configurationDigest", "capturedAt"],
+  "properties": {
+    "kind": { "const": "operating-provider-manifest" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "id": { "type": "string", "pattern": "^PRV-[A-Za-z0-9._-]+$" },
+    "providerId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+    "providerVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "mode": { "type": "string", "enum": ["structured", "native-isolated"] },
+    "readOnly": { "const": true },
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "display", "authentication", "redacted"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["local", "remote", "import"] },
+        "display": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/{}-]*$"
+        },
+        "authentication": { "type": "string", "enum": ["none", "machine-local"] },
+        "redacted": { "const": true }
+      }
+    },
+    "permittedDataClasses": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "source-code",
+          "planning-artifacts",
+          "git-metadata",
+          "issue-metadata",
+          "project-metadata",
+          "outcome-observations",
+          "imported-documents"
+        ]
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["providerStoresRequestContent", "maxProviderRetentionDays", "localEvidenceRetention"],
+      "properties": {
+        "providerStoresRequestContent": { "type": "boolean" },
+        "maxProviderRetentionDays": { "type": "integer", "minimum": 0, "maximum": 3650 },
+        "localEvidenceRetention": { "type": "string", "enum": ["cycle", "project", "user-managed"] }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["incremental", "deep", "toolIsolation"],
+      "properties": {
+        "incremental": { "type": "boolean" },
+        "deep": { "type": "boolean" },
+        "toolIsolation": { "type": "string", "enum": ["enforced", "not-applicable"] }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxItems", "maxBytes", "maxDurationMs", "maxRequests", "maxTokens", "maxCostUsd"],
+      "properties": {
+        "maxItems": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "maxBytes": { "type": "integer", "minimum": 1024, "maximum": 52428800 },
+        "maxDurationMs": { "type": "integer", "minimum": 100, "maximum": 600000 },
+        "maxRequests": { "type": ["integer", "null"], "minimum": 1, "maximum": 100000 },
+        "maxTokens": { "type": ["integer", "null"], "minimum": 1, "maximum": 50000000 },
+        "maxCostUsd": { "type": ["number", "null"], "minimum": 0, "maximum": 100000 }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policyVersion", "status", "acceptedAt", "renewedAt", "nextReviewAt", "renewalTriggers"],
+      "properties": {
+        "policyVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "status": { "type": "string", "enum": ["first-use", "renewed"] },
+        "acceptedAt": { "type": "string", "format": "date-time" },
+        "renewedAt": { "type": ["string", "null"], "format": "date-time" },
+        "nextReviewAt": { "type": ["string", "null"], "format": "date-time" },
+        "renewalTriggers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["policy-change", "scope-expansion", "credential-renewal", "scheduled-review"]
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "title": "First-use consent",
+          "properties": {
+            "status": { "const": "first-use" },
+            "renewedAt": { "type": "null" }
+          }
+        },
+        {
+          "title": "Renewed consent",
+          "properties": {
+            "status": { "const": "renewed" },
+            "renewedAt": { "type": "string", "format": "date-time" }
+          }
+        }
+      ]
+    },
+    "policyDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "configurationDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "capturedAt": { "type": "string", "format": "date-time" }
+  }
+}

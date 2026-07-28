@@ -1,0 +1,239 @@
+{
+  "kind": "operating-role-registry",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "roles": [
+    {
+      "id": "strategy-finance",
+      "order": 10,
+      "displayLabel": "CEO",
+      "mandate": "Direction, business model, pricing and packaging, focus, economics, and what to stop.",
+      "forbiddenRecommendationCategories": ["deploy", "publish", "spend", "contract", "customer-contact", "destructive-data"],
+      "permittedEvidenceKinds": ["charter", "repository", "planr", "git", "github", "linear", "file-import", "outcome"],
+      "sensitivityCeiling": "confidential",
+      "capabilityTier": "analysis-high",
+      "inputSchema": "operating-evidence@1.2.0",
+      "outputSchema": "operating-role-result@1.2.0",
+      "readOnly": true,
+      "writeBoundary": "none",
+      "allowedProposalTypes": ["finding", "decision", "data-gap"],
+      "budgets": { "maxInputBytes": 262144, "maxOutputBytes": 32768, "maxProposals": 4 },
+      "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
+      "minimumEvidence": {
+        "match": "any",
+        "requirements": [
+          {
+            "source": "planr",
+            "claimTypes": ["planning", "outcome"],
+            "minimumItems": 1,
+            "maxAgeHours": 168,
+            "observationWindow": "current-state",
+            "sensitivityCeiling": "confidential"
+          },
+          {
+            "source": "git",
+            "claimTypes": ["change-history"],
+            "minimumItems": 1,
+            "maxAgeHours": 720,
+            "observationWindow": "30d",
+            "sensitivityCeiling": "confidential"
+          }
+        ],
+        "onUnready": "skip-and-open-gap"
+      },
+      "failureBehavior": "standard-partial-deep-blocked"
+    },
+    {
+      "id": "technology-risk",
+      "order": 20,
+      "displayLabel": "CTO",
+      "mandate": "Reliability, security, payments, privacy, data integrity, delivery risk, and blast radius.",
+      "forbiddenRecommendationCategories": ["deploy", "publish", "credential-change", "destructive-data", "production-write"],
+      "permittedEvidenceKinds": ["repository", "planr", "git", "github", "linear", "file-import", "outcome"],
+      "sensitivityCeiling": "restricted",
+      "capabilityTier": "analysis-high",
+      "inputSchema": "operating-evidence@1.2.0",
+      "outputSchema": "operating-role-result@1.2.0",
+      "readOnly": true,
+      "writeBoundary": "none",
+      "allowedProposalTypes": ["finding", "decision", "data-gap"],
+      "budgets": { "maxInputBytes": 393216, "maxOutputBytes": 32768, "maxProposals": 5 },
+      "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
+      "minimumEvidence": {
+        "match": "all",
+        "requirements": [
+          {
+            "source": "repository",
+            "claimTypes": ["code", "architecture"],
+            "minimumItems": 1,
+            "maxAgeHours": 168,
+            "observationWindow": "current-state",
+            "sensitivityCeiling": "restricted"
+          },
+          {
+            "source": "git",
+            "claimTypes": ["change-history"],
+            "minimumItems": 1,
+            "maxAgeHours": 720,
+            "observationWindow": "30d",
+            "sensitivityCeiling": "confidential"
+          }
+        ],
+        "onUnready": "skip-and-open-gap"
+      },
+      "failureBehavior": "critical-route-blocked"
+    },
+    {
+      "id": "product-activation",
+      "order": 30,
+      "displayLabel": "CPO",
+      "mandate": "Actor journeys, activation, retention, friction, accessibility, and incomplete product loops.",
+      "forbiddenRecommendationCategories": ["deploy", "publish", "customer-contact", "pricing-commitment", "destructive-data"],
+      "permittedEvidenceKinds": ["charter", "repository", "planr", "git", "github", "linear", "file-import", "outcome"],
+      "sensitivityCeiling": "confidential",
+      "capabilityTier": "analysis-high",
+      "inputSchema": "operating-evidence@1.2.0",
+      "outputSchema": "operating-role-result@1.2.0",
+      "readOnly": true,
+      "writeBoundary": "none",
+      "allowedProposalTypes": ["finding", "decision", "data-gap"],
+      "budgets": { "maxInputBytes": 262144, "maxOutputBytes": 32768, "maxProposals": 4 },
+      "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
+      "minimumEvidence": {
+        "match": "any",
+        "requirements": [
+          {
+            "source": "planr",
+            "claimTypes": ["user-journey", "outcome"],
+            "minimumItems": 1,
+            "maxAgeHours": 168,
+            "observationWindow": "current-state",
+            "sensitivityCeiling": "confidential"
+          },
+          {
+            "source": "repository",
+            "claimTypes": ["user-surface"],
+            "minimumItems": 1,
+            "maxAgeHours": 168,
+            "observationWindow": "current-state",
+            "sensitivityCeiling": "restricted"
+          }
+        ],
+        "onUnready": "skip-and-open-gap"
+      },
+      "failureBehavior": "standard-partial-deep-blocked"
+    },
+    {
+      "id": "growth-market",
+      "order": 40,
+      "displayLabel": "CMO",
+      "mandate": "ICP clarity, organic demand, lifecycle coverage, proof, channel readiness, and bounded experiments.",
+      "forbiddenRecommendationCategories": ["publish", "spend", "customer-contact", "pricing-commitment", "contract"],
+      "permittedEvidenceKinds": ["charter", "repository", "planr", "git", "github", "linear", "file-import", "outcome"],
+      "sensitivityCeiling": "confidential",
+      "capabilityTier": "analysis-high",
+      "inputSchema": "operating-evidence@1.2.0",
+      "outputSchema": "operating-role-result@1.2.0",
+      "readOnly": true,
+      "writeBoundary": "none",
+      "allowedProposalTypes": ["finding", "decision", "data-gap"],
+      "budgets": { "maxInputBytes": 262144, "maxOutputBytes": 32768, "maxProposals": 4 },
+      "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
+      "minimumEvidence": {
+        "match": "any",
+        "requirements": [
+          {
+            "source": "planr",
+            "claimTypes": ["outcome", "activation"],
+            "minimumItems": 1,
+            "maxAgeHours": 720,
+            "observationWindow": "30d",
+            "sensitivityCeiling": "confidential"
+          },
+          {
+            "source": "file-import",
+            "claimTypes": ["market-signal"],
+            "minimumItems": 1,
+            "maxAgeHours": 2160,
+            "observationWindow": "90d",
+            "sensitivityCeiling": "confidential"
+          }
+        ],
+        "onUnready": "skip-and-open-gap"
+      },
+      "failureBehavior": "standard-partial-deep-blocked"
+    },
+    {
+      "id": "operations-customer",
+      "order": 50,
+      "displayLabel": "COO",
+      "mandate": "Human operations, billing and contracts, compliance, support load, vendors, and owner bottlenecks.",
+      "forbiddenRecommendationCategories": ["contract", "customer-contact", "payment", "regulatory-statement", "destructive-data"],
+      "permittedEvidenceKinds": ["charter", "repository", "planr", "git", "github", "linear", "file-import", "outcome"],
+      "sensitivityCeiling": "confidential",
+      "capabilityTier": "analysis-high",
+      "inputSchema": "operating-evidence@1.2.0",
+      "outputSchema": "operating-role-result@1.2.0",
+      "readOnly": true,
+      "writeBoundary": "none",
+      "allowedProposalTypes": ["finding", "decision", "data-gap"],
+      "budgets": { "maxInputBytes": 262144, "maxOutputBytes": 32768, "maxProposals": 4 },
+      "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
+      "minimumEvidence": {
+        "match": "any",
+        "requirements": [
+          {
+            "source": "planr",
+            "claimTypes": ["operations", "support"],
+            "minimumItems": 1,
+            "maxAgeHours": 720,
+            "observationWindow": "30d",
+            "sensitivityCeiling": "confidential"
+          },
+          {
+            "source": "file-import",
+            "claimTypes": ["operations-evidence"],
+            "minimumItems": 1,
+            "maxAgeHours": 2160,
+            "observationWindow": "90d",
+            "sensitivityCeiling": "confidential"
+          }
+        ],
+        "onUnready": "skip-and-open-gap"
+      },
+      "failureBehavior": "standard-partial-deep-blocked"
+    },
+    {
+      "id": "chair",
+      "order": 60,
+      "displayLabel": "Chair",
+      "mandate": "Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals.",
+      "forbiddenRecommendationCategories": ["persist-id", "final-score", "mutate-state", "apply-route", "ship", "deploy", "publish"],
+      "permittedEvidenceKinds": ["verified-advisor-result", "charter", "prior-state", "outcome"],
+      "sensitivityCeiling": "confidential",
+      "capabilityTier": "analysis-high",
+      "inputSchema": "operating-role-result@1.2.0",
+      "outputSchema": "operating-role-result@1.2.0",
+      "readOnly": true,
+      "writeBoundary": "none",
+      "allowedProposalTypes": ["merge", "sequence"],
+      "budgets": { "maxInputBytes": 196608, "maxOutputBytes": 32768, "maxProposals": 12 },
+      "requiredEvidenceFields": ["id", "digest", "producer"],
+      "minimumEvidence": {
+        "match": "all",
+        "requirements": [
+          {
+            "source": "advisor-results",
+            "claimTypes": ["verified-advisor-result"],
+            "minimumItems": 2,
+            "maxAgeHours": 24,
+            "observationWindow": "current-cycle",
+            "sensitivityCeiling": "confidential"
+          }
+        ],
+        "onUnready": "block-cycle"
+      },
+      "failureBehavior": "cycle-blocked"
+    }
+  ]
+}

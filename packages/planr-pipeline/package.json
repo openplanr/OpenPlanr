@@ -1,6 +1,6 @@
 {
   "name": "planr-pipeline",
-  "version": "0.29.2",
+  "version": "0.30.0",
   "private": false,
   "type": "module",
   "description": "OpenPlanr complete PO, Design, DEV, QA, and delivery pipeline",
@@ -15,7 +15,13 @@
   "homepage": "https://github.com/openplanr/planr-pipeline#readme",
   "main": "./lib/pipeline/index.mjs",
   "exports": {
-    ".": "./lib/pipeline/index.mjs"
+    ".": "./lib/pipeline/index.mjs",
+    "./protocol": {
+      "types": "./lib/protocol/index.d.ts",
+      "import": "./lib/protocol/loader.mjs"
+    },
+    "./schemas/*": "./schemas/*",
+    "./registry/*": "./registry/*"
   },
   "bin": {
     "planr-pipeline": "bin/planr-pipeline.mjs"
@@ -28,8 +34,10 @@
     "commands/",
     "conformance/",
     "docs/adrs/ADR-005-artifact-review-sharing-security.md",
+    "docs/adrs/ADR-006-operating-board-protocol.md",
     "docs/artifact-review.md",
     "docs/generated/",
+    "docs/implementation/operating-board.md",
     "docs/protocol/",
     "hooks/",
     "lib/",
@@ -38,6 +46,8 @@
     "schemas/",
     "scripts/doctor.mjs",
     "scripts/generate-artifact-shell.mjs",
+    "scripts/generate-operating-assets.mjs",
+    "scripts/operate-release-canary.mjs",
     "stacks/",
     "templates/",
     "README.md",
@@ -61,9 +71,11 @@
     "pngjs": "7.0.0"
   },
   "scripts": {
-    "test": "npm run test:schema && npm run test:orchestration && npm run test:docs && npm run test:design && npm run test:design-engine && npm run test:artifact && npm run test:dashboard && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard",
+    "test": "npm run test:schema && npm run test:orchestration && npm run test:docs && npm run test:design && npm run test:design-engine && npm run test:artifact && npm run test:dashboard && npm run check:operating-assets && npm run conformance:operate && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard",
     "generate:artifact-shell": "node scripts/generate-artifact-shell.mjs",
     "check:artifact-shell": "node scripts/generate-artifact-shell.mjs --check",
+    "generate:operating-assets": "node scripts/generate-operating-assets.mjs",
+    "check:operating-assets": "node scripts/generate-operating-assets.mjs --check",
     "test:artifact": "node scripts/run-test-group.mjs tests/artifact",
     "test:artifact:browser": "node --test tests/artifact/local-shell.test.mjs tests/artifact/review-interactions.test.mjs tests/artifact/share-ui.test.mjs tests/artifact/sandbox-hostile.test.mjs tests/artifact/design-board-integration.test.mjs",
     "test:artifact:contracts": "node --test tests/artifact/bundle.test.mjs tests/artifact/schemas-envelope.test.mjs",
@@ -77,8 +89,10 @@
     "doctor:versions": "node scripts/doctor.mjs --versions-only",
     "ecosystem:conformance": "node scripts/ecosystem-conformance.mjs",
     "canary:artifact-release": "node scripts/artifact-release-canary.mjs",
+    "canary:operate-release": "node scripts/operate-release-canary.mjs",
     "conformance:native-dispatch": "node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd1-parallel && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd2-advisory-locklist && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd3-dependson && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd4-per-task",
-    "conformance:check": "npm run conformance:native-dispatch && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard",
+    "conformance:check": "npm run conformance:native-dispatch && npm run conformance:operate && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard",
+    "conformance:operate": "node conformance/verify-operating-board.mjs && node conformance/verify-operating-dashboard.mjs",
     "conformance:artifact": "npm run conformance:artifact-review",
     "conformance:artifact-review": "node conformance/verify-artifact-review.mjs",
     "conformance:design-loop": "node conformance/verify-design-loop.mjs",

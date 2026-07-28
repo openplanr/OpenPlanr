@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="en" data-planr-operating-preview="1.0.0">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>OpenPlanr Operating Brief — Preview</title>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-foreground: #ffffff;
+      --background: #ffffff;
+      --surface: #ffffff;
+      --foreground: #0f1419;
+      --muted: #f5f6f8;
+      --muted-foreground: #5a6473;
+      --accent: #eef0ff;
+      --accent-foreground: #312e81;
+      --border: #e4e7ec;
+      --ring: #4f46e5;
+      --success: #15803d;
+      --warning: #92600a;
+      --danger: #b91c1c;
+      --info: #1d4ed8;
+      --signal-track: #c8ccfb;
+      --shadow-sm: 0 1px 2px rgba(15, 20, 25, .06);
+      --shadow-md: 0 12px 36px rgba(15, 20, 25, .09);
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --ease: cubic-bezier(.2, 0, 0, 1);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: #818cf8;
+        --primary-foreground: #0d1117;
+        --background: #0d1117;
+        --surface: #151b23;
+        --foreground: #e6edf3;
+        --muted: #161b22;
+        --muted-foreground: #9aa4b2;
+        --accent: #1e2230;
+        --accent-foreground: #c7cdfb;
+        --border: #2a313d;
+        --ring: #818cf8;
+        --success: #7ee2a8;
+        --warning: #f4c56b;
+        --danger: #f4a3a3;
+        --info: #9ec5ff;
+        --signal-track: #3c426e;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, .24);
+        --shadow-md: 0 18px 48px rgba(0, 0, 0, .24);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--background); }
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      color: var(--foreground);
+      background:
+        linear-gradient(180deg, var(--muted) 0, var(--background) 240px);
+      font: 14px/1.5 var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+    }
+    button { color: inherit; font: inherit; }
+    button, summary { cursor: pointer; }
+    :focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--ring) 62%, transparent);
+      outline-offset: 3px;
+    }
+
+    .brief {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 24px 0 72px;
+    }
+
+    .masthead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      min-height: 44px;
+    }
+    .identity {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .mark {
+      display: grid;
+      width: 32px;
+      height: 32px;
+      place-items: center;
+      border-radius: var(--radius-md);
+      color: var(--primary-foreground);
+      background: var(--primary);
+      font: 700 15px/1 var(--font-mono);
+      box-shadow: var(--shadow-sm);
+    }
+    .identity strong { display: block; font-size: 14px; }
+    .identity span {
+      display: block;
+      color: var(--muted-foreground);
+      font: 11px/1.4 var(--font-mono);
+      letter-spacing: .025em;
+    }
+    .state-switch {
+      display: inline-flex;
+      padding: 3px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+    .state-switch button {
+      min-height: 32px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted-foreground);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .state-switch button[aria-pressed="true"] {
+      color: var(--foreground);
+      background: var(--muted);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 36px;
+      align-items: end;
+      padding: 76px 0 34px;
+      border-bottom: 1px solid var(--border);
+    }
+    .eyebrow {
+      margin: 0 0 16px;
+      color: var(--muted-foreground);
+      font: 600 11px/1.2 var(--font-mono);
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    .hero h1 {
+      max-width: 820px;
+      margin: 0;
+      font-size: clamp(34px, 5vw, 66px);
+      font-weight: 650;
+      letter-spacing: -.048em;
+      line-height: .98;
+      text-wrap: balance;
+    }
+    .hero-copy {
+      max-width: 680px;
+      margin: 22px 0 0;
+      color: var(--muted-foreground);
+      font-size: clamp(15px, 2vw, 18px);
+      line-height: 1.55;
+    }
+    .cycle-seal {
+      display: grid;
+      width: 118px;
+      aspect-ratio: 1;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+      text-align: center;
+    }
+    .cycle-seal strong {
+      display: block;
+      font: 700 27px/1 var(--font-mono);
+    }
+    .cycle-seal span {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted-foreground);
+      font: 10px/1.2 var(--font-mono);
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 31px 0 18px;
+    }
+    .section-head h2 {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .025em;
+    }
+    .section-head p {
+      margin: 0;
+      color: var(--muted-foreground);
+      font: 11px/1.4 var(--font-mono);
+    }
+
+    .causal-thread {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 1.28fr 1fr 1fr;
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .causal-thread::before {
+      position: absolute;
+      z-index: 0;
+      top: 31px;
+      right: 8%;
+      left: 8%;
+      height: 2px;
+      content: "";
+      background:
+        linear-gradient(90deg, var(--success) 0 31%, var(--primary) 31% 66%, var(--signal-track) 66% 100%);
+    }
+    .cause {
+      position: relative;
+      z-index: 1;
+      min-height: 210px;
+      padding: 46px 18px 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--surface) 94%, transparent);
+      box-shadow: var(--shadow-sm);
+    }
+    .cause::before {
+      position: absolute;
+      top: 22px;
+      left: 20px;
+      width: 16px;
+      height: 16px;
+      border: 4px solid var(--surface);
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 0 1px var(--primary);
+      content: "";
+    }
+    .cause[data-step="evidence"]::before { background: var(--success); box-shadow: 0 0 0 1px var(--success); }
+    .cause[data-step="outcome"]::before { background: var(--surface); box-shadow: 0 0 0 1px var(--signal-track); }
+    .cause[data-step="constraint"] {
+      border-color: color-mix(in srgb, var(--danger) 42%, var(--border));
+      box-shadow: var(--shadow-md);
+    }
+    .cause__label {
+      color: var(--muted-foreground);
+      font: 600 10px/1.2 var(--font-mono);
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+    .cause h3 {
+      margin: 13px 0 8px;
+      font-size: 18px;
+      line-height: 1.17;
+      letter-spacing: -.02em;
+    }
+    .cause p { margin: 0; color: var(--muted-foreground); font-size: 13px; }
+    .cause__meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 18px;
+    }
+    .tag {
+      padding: 3px 7px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--muted-foreground);
+      background: var(--muted);
+      font: 10px/1.3 var(--font-mono);
+    }
+    .tag--critical { color: var(--danger); }
+    .tag--route { color: var(--primary); }
+    .tag--verified { color: var(--success); }
+
+    .decision-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) minmax(300px, .75fr);
+      gap: 20px;
+      align-items: start;
+    }
+    .route-sheet, .side-stack > section {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
+    }
+    .route-sheet { padding: 24px; }
+    .route-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .route-top h3 { margin: 4px 0 0; font-size: 21px; letter-spacing: -.02em; }
+    .route-state {
+      padding: 5px 9px;
+      border-radius: 999px;
+      color: var(--primary);
+      background: var(--accent);
+      font: 600 10px/1.2 var(--font-mono);
+      text-transform: uppercase;
+    }
+    .route-body {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .datum span {
+      display: block;
+      color: var(--muted-foreground);
+      font: 10px/1.3 var(--font-mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .datum strong { display: block; margin-top: 7px; font-size: 13px; }
+    .route-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 24px;
+    }
+    .route-actions code {
+      overflow: hidden;
+      color: var(--muted-foreground);
+      font: 11px/1.4 var(--font-mono);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .primary-action {
+      flex: 0 0 auto;
+      min-height: 40px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: var(--radius-md);
+      color: var(--primary-foreground);
+      background: var(--primary);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .side-stack { display: grid; gap: 12px; }
+    .side-stack > section { padding: 18px; }
+    .side-stack h3 {
+      margin: 0 0 12px;
+      font-size: 11px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+    .side-stack p { margin: 0; font-size: 13px; }
+    .side-stack small {
+      display: block;
+      margin-top: 9px;
+      color: var(--muted-foreground);
+      font-size: 12px;
+    }
+    .side-stack .gap { border-left: 3px solid var(--warning); }
+
+    .lens-row {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--surface);
+    }
+    .lens {
+      min-width: 0;
+      padding: 15px;
+      border-right: 1px solid var(--border);
+    }
+    .lens:last-child { border-right: 0; }
+    .lens strong { display: block; font-size: 12px; }
+    .lens span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 8px;
+      color: var(--muted-foreground);
+      font: 10px/1.3 var(--font-mono);
+    }
+    .lens span::before {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      content: "";
+    }
+    .lens[data-ready="false"] span::before { background: var(--warning); }
+
+    dialog {
+      width: min(560px, calc(100% - 32px));
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      color: var(--foreground);
+      background: var(--surface);
+      box-shadow: 0 24px 80px rgba(15, 20, 25, .24);
+    }
+    dialog::backdrop { background: rgba(15, 20, 25, .42); backdrop-filter: blur(3px); }
+    .dialog-head, .dialog-body, .dialog-foot { padding: 20px 22px; }
+    .dialog-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .dialog-head h2 { margin: 0; font-size: 18px; }
+    .icon-button {
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+    }
+    .digest {
+      overflow-wrap: anywhere;
+      padding: 12px;
+      border-radius: var(--radius-md);
+      background: var(--muted);
+      font: 11px/1.5 var(--font-mono);
+    }
+    .dialog-foot {
+      display: flex;
+      justify-content: flex-end;
+      border-top: 1px solid var(--border);
+    }
+
+    [data-health="quiet"] .cause[data-step="constraint"] { border-color: var(--border); box-shadow: var(--shadow-sm); }
+    [data-health="quiet"] .causal-thread::before { background: var(--success); }
+    [data-health="blocked"] .cause[data-step="route"] { border-color: color-mix(in srgb, var(--warning) 55%, var(--border)); }
+    [data-health="blocked"] .causal-thread::before {
+      background: repeating-linear-gradient(90deg, var(--warning) 0 8px, transparent 8px 14px);
+    }
+
+    @media (max-width: 860px) {
+      .brief { width: min(100% - 28px, 720px); padding-top: 14px; }
+      .hero { grid-template-columns: 1fr; padding-top: 52px; }
+      .cycle-seal { width: 92px; grid-row: 1; }
+      .causal-thread { grid-template-columns: 1fr 1fr; }
+      .causal-thread::before { display: none; }
+      .decision-grid { grid-template-columns: 1fr; }
+      .lens-row { grid-template-columns: repeat(3, 1fr); }
+      .lens:nth-child(3) { border-right: 0; }
+      .lens:nth-child(-n+3) { border-bottom: 1px solid var(--border); }
+    }
+
+    @media (max-width: 560px) {
+      .brief { width: min(100% - 24px, 480px); }
+      .masthead { align-items: flex-start; }
+      .state-switch { flex-direction: column; border-radius: var(--radius-lg); }
+      .state-switch button { width: 72px; }
+      .hero { padding-top: 44px; }
+      .hero h1 { font-size: 39px; }
+      .causal-thread {
+        grid-template-columns: 1fr;
+        gap: 0;
+        padding-left: 22px;
+      }
+      .causal-thread::before {
+        display: block;
+        top: 30px;
+        bottom: 30px;
+        left: 7px;
+        width: 2px;
+        height: auto;
+        background: linear-gradient(var(--success), var(--primary), var(--signal-track));
+      }
+      .cause {
+        min-height: 0;
+        margin-bottom: 12px;
+        padding: 18px;
+      }
+      .cause::before { top: 23px; left: -23px; }
+      .route-top { display: grid; }
+      .route-state { justify-self: start; }
+      .route-body { grid-template-columns: 1fr; }
+      .route-actions { align-items: stretch; flex-direction: column; }
+      .primary-action { width: 100%; }
+      .lens-row { grid-template-columns: 1fr 1fr; }
+      .lens:nth-child(2n) { border-right: 0; }
+      .lens:nth-child(-n+4) { border-bottom: 1px solid var(--border); }
+      .lens:nth-child(3) { border-right: 1px solid var(--border); }
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .cause { animation: reveal .42s var(--ease) both; }
+      .cause:nth-child(2) { animation-delay: 70ms; }
+      .cause:nth-child(3) { animation-delay: 140ms; }
+      .cause:nth-child(4) { animation-delay: 210ms; }
+      @keyframes reveal {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="brief" id="brief" data-health="partial">
+    <header class="masthead">
+      <div class="identity">
+        <div class="mark" aria-hidden="true">P</div>
+        <div>
+          <strong>Operating brief</strong>
+          <span>CYCLE-001 · read-only projection</span>
+        </div>
+      </div>
+      <div class="state-switch" role="group" aria-label="Preview operating health">
+        <button type="button" data-preview-state="quiet" aria-pressed="false">Quiet</button>
+        <button type="button" data-preview-state="partial" aria-pressed="true">Partial</button>
+        <button type="button" data-preview-state="blocked" aria-pressed="false">Blocked</button>
+      </div>
+    </header>
+
+    <section class="hero" aria-labelledby="constraint-title">
+      <div>
+        <p class="eyebrow" id="health-label">Current constraint · partial evidence</p>
+        <h1 id="constraint-title">Protect payment webhook idempotency.</h1>
+        <p class="hero-copy" id="constraint-copy">
+          Duplicate delivery can create duplicate ledger effects. The proposed move is bounded,
+          reversible, and prepared for a human decision—not execution.
+        </p>
+      </div>
+      <div class="cycle-seal" aria-label="Finding priority score">
+        <div><strong id="score">75</strong><span>priority score</span></div>
+      </div>
+    </section>
+
+    <section aria-labelledby="thread-heading">
+      <div class="section-head">
+        <h2 id="thread-heading">Why this move, now</h2>
+        <p>verified evidence → constraint → route → outcome</p>
+      </div>
+      <ol class="causal-thread">
+        <li class="cause" data-step="evidence">
+          <span class="cause__label">01 · Verified evidence</span>
+          <h3 id="evidence-title">67 items across 3 sources</h3>
+          <p id="evidence-copy">Repository and Planr are fresh. Git history is partial and explicitly marked stale.</p>
+          <div class="cause__meta">
+            <span class="tag tag--verified">repository · 42</span>
+            <span class="tag tag--verified">planr · 18</span>
+            <span class="tag">git · 7 stale</span>
+          </div>
+        </li>
+        <li class="cause" data-step="constraint">
+          <span class="cause__label">02 · Current constraint</span>
+          <h3 id="thread-constraint">Payment replay safety</h3>
+          <p id="thread-cost">A missing durable replay guard can duplicate downstream ledger effects.</p>
+          <div class="cause__meta">
+            <span class="tag tag--critical">critical override</span>
+            <span class="tag">stalled · 2 cycles</span>
+          </div>
+        </li>
+        <li class="cause" data-step="route">
+          <span class="cause__label">03 · Governed route</span>
+          <h3 id="thread-route">DEV · create SPEC-003</h3>
+          <p id="thread-route-copy">Accepted as a proposal, prepared against exact evidence and destination digests.</p>
+          <div class="cause__meta">
+            <span class="tag tag--route">prepared</span>
+            <span class="tag">1 reversible action</span>
+          </div>
+        </li>
+        <li class="cause" data-step="outcome">
+          <span class="cause__label">04 · Outcome window</span>
+          <h3 id="thread-outcome">0 duplicate effects</h3>
+          <p id="thread-outcome-copy">Observe 100+ deliveries at 95% coverage for 14 days after shipment.</p>
+          <div class="cause__meta">
+            <span class="tag">verify · 15 Aug</span>
+            <span class="tag">guardrail blocks</span>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="move-heading">
+      <div class="section-head">
+        <h2 id="move-heading">Next governed move</h2>
+        <p id="event-head">event head · 17 · cdf37b71</p>
+      </div>
+      <div class="decision-grid">
+        <article class="route-sheet">
+          <div class="route-top">
+            <div>
+              <span class="cause__label">ACT-001 · exact route</span>
+              <h3 id="route-title">Create a reviewed idempotency-ledger specification</h3>
+            </div>
+            <span class="route-state" id="route-state">Prepared</span>
+          </div>
+          <div class="route-body">
+            <div class="datum"><span>Planning engine</span><strong>OpenPlanr</strong></div>
+            <div class="datum"><span>Destination</span><strong>.planr/specs/</strong></div>
+            <div class="datum"><span>Mutation</span><strong>Separate confirmation</strong></div>
+          </div>
+          <div class="route-actions">
+            <code id="route-digest">sha256:eeeeeeee…eeee</code>
+            <button class="primary-action" id="review-route" type="button">Review exact route</button>
+          </div>
+        </article>
+        <div class="side-stack">
+          <section>
+            <h3>Decision due 30 Jul</h3>
+            <p>Should payment hardening displace the current growth experiment?</p>
+            <small>Recommendation: sequence payment safety first. Reversible.</small>
+          </section>
+          <section class="gap">
+            <h3>Evidence gap</h3>
+            <p>What is the duplicate webhook rate over the last 30 days?</p>
+            <small>Growth and operations lenses skipped; no model call was spent.</small>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section aria-labelledby="lenses-heading">
+      <div class="section-head">
+        <h2 id="lenses-heading">Lens readiness</h2>
+        <p>calls run only when minimum evidence is met</p>
+      </div>
+      <div class="lens-row">
+        <div class="lens"><strong>CEO</strong><span>ready</span></div>
+        <div class="lens"><strong>CTO</strong><span>ready</span></div>
+        <div class="lens"><strong>CPO</strong><span>ready</span></div>
+        <div class="lens" data-ready="false"><strong>CMO</strong><span>not evaluated</span></div>
+        <div class="lens" data-ready="false"><strong>COO</strong><span>not evaluated</span></div>
+        <div class="lens"><strong>Chair</strong><span>3 verified inputs</span></div>
+      </div>
+    </section>
+    <p id="state-announcement" role="status" aria-live="polite" hidden></p>
+  </main>
+
+  <dialog id="route-dialog" aria-labelledby="dialog-title">
+    <div class="dialog-head">
+      <div>
+        <span class="cause__label">Read-only route preview</span>
+        <h2 id="dialog-title">ACT-001 cannot apply from this view</h2>
+      </div>
+      <button class="icon-button" id="close-dialog" type="button" aria-label="Close route preview">×</button>
+    </div>
+    <div class="dialog-body">
+      <p>Acceptance records governance only. Applying the route is a separate terminal action bound to the exact confirmation digest.</p>
+      <p class="digest">planr operate route show ACT-001<br>route sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee<br>confirmation sha256:4444444444444444444444444444444444444444444444444444444444444444</p>
+    </div>
+    <div class="dialog-foot">
+      <button class="primary-action" id="done-dialog" type="button">Done</button>
+    </div>
+  </dialog>
+
+  <script id="protocol-fixture" type="application/json">
+    {
+      "kind": "operating-state",
+      "schemaVersion": "1.0.0",
+      "protocolVersion": "1.2.0",
+      "generatedAt": "2026-07-28T09:12:00Z",
+      "eventHead": {
+        "sequence": 17,
+        "hash": "sha256:f22805324e58937161e17932af48f00533792019e273a1ddc77ba8d6d8919652"
+      },
+      "cycles": [{ "id": "CYCLE-001", "state": "reviewable", "health": "partial" }],
+      "findings": [{
+        "id": "FND-001",
+        "title": "Protect payment webhook idempotency",
+        "score": 75,
+        "severity": "critical",
+        "criticalOverride": true,
+        "stalledCycles": 2
+      }],
+      "routes": [{
+        "id": "ACT-001",
+        "state": "prepared",
+        "routeDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "previewDigest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "confirmationDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "actionCount": 1
+      }],
+      "outcomes": [{
+        "id": "OUT-001",
+        "metric": "payments.webhook_duplicate_effects",
+        "verifyAfter": "2026-08-15",
+        "status": "observing"
+      }],
+      "evidenceSources": [
+        { "id": "repository", "freshness": "fresh", "status": "collected", "itemCount": 42 },
+        { "id": "planr", "freshness": "fresh", "status": "collected", "itemCount": 18 },
+        { "id": "git", "freshness": "stale", "status": "partial", "itemCount": 7 }
+      ]
+    }
+  </script>
+  <script>
+    (() => {
+      const fixture = JSON.parse(document.querySelector('#protocol-fixture').textContent);
+      const brief = document.querySelector('#brief');
+      const announcement = document.querySelector('#state-announcement');
+      const states = {
+        partial: {
+          label: 'Current constraint · partial evidence',
+          title: fixture.findings[0].title + '.',
+          copy: 'Duplicate delivery can create duplicate ledger effects. The proposed move is bounded, reversible, and prepared for a human decision—not execution.',
+          score: fixture.findings[0].score,
+          evidenceTitle: '67 items across 3 sources',
+          constraint: 'Payment replay safety',
+          cost: 'A missing durable replay guard can duplicate downstream ledger effects.',
+          route: 'DEV · create SPEC-003',
+          routeCopy: 'Accepted as a proposal, prepared against exact evidence and destination digests.',
+          outcome: '0 duplicate effects',
+          outcomeCopy: 'Observe 100+ deliveries at 95% coverage for 14 days after shipment.',
+          routeState: 'Prepared'
+        },
+        quiet: {
+          label: 'Current cycle · quiet',
+          title: 'No material constraint requires a new route.',
+          copy: 'Verified evidence is stable. Existing work stays in sequence and no advisor needs to manufacture a proposal.',
+          score: '—',
+          evidenceTitle: 'Sources verified; no material delta',
+          constraint: 'No new constraint',
+          cost: 'Current risks remain within declared guardrails.',
+          route: 'No route proposed',
+          routeCopy: 'The cycle remains reviewable with a quiet result.',
+          outcome: 'Continue observation',
+          outcomeCopy: 'Existing outcome windows remain active.',
+          routeState: 'Quiet'
+        },
+        blocked: {
+          label: 'Current constraint · blocked',
+          title: 'Outcome baseline is missing.',
+          copy: 'A governed route cannot be prepared until the duplicate webhook rate has a verified 30-day baseline.',
+          score: '—',
+          evidenceTitle: 'Critical evidence requirement unmet',
+          constraint: 'Missing payment baseline',
+          cost: 'Acting now would make success impossible to evaluate.',
+          route: 'Route blocked',
+          routeCopy: 'Collect the typed data gap, then recompute the exact route digest.',
+          outcome: 'Window unavailable',
+          outcomeCopy: 'No baseline means no defensible target evaluation.',
+          routeState: 'Blocked'
+        }
+      };
+      const bindings = {
+        '#health-label': 'label',
+        '#constraint-title': 'title',
+        '#constraint-copy': 'copy',
+        '#score': 'score',
+        '#evidence-title': 'evidenceTitle',
+        '#thread-constraint': 'constraint',
+        '#thread-cost': 'cost',
+        '#thread-route': 'route',
+        '#thread-route-copy': 'routeCopy',
+        '#thread-outcome': 'outcome',
+        '#thread-outcome-copy': 'outcomeCopy',
+        '#route-state': 'routeState'
+      };
+      function showState(name) {
+        const state = states[name];
+        brief.dataset.health = name;
+        for (const [selector, key] of Object.entries(bindings)) {
+          document.querySelector(selector).textContent = state[key];
+        }
+        document.querySelectorAll('[data-preview-state]').forEach((button) => {
+          button.setAttribute('aria-pressed', String(button.dataset.previewState === name));
+        });
+        announcement.hidden = false;
+        announcement.textContent = `${name} operating state preview selected.`;
+      }
+      document.querySelectorAll('[data-preview-state]').forEach((button) => {
+        button.addEventListener('click', () => showState(button.dataset.previewState));
+      });
+
+      const dialog = document.querySelector('#route-dialog');
+      document.querySelector('#review-route').addEventListener('click', () => dialog.showModal());
+      document.querySelector('#close-dialog').addEventListener('click', () => dialog.close());
+      document.querySelector('#done-dialog').addEventListener('click', () => dialog.close());
+      dialog.addEventListener('click', (event) => {
+        const bounds = dialog.getBoundingClientRect();
+        const outside = event.clientX < bounds.left || event.clientX > bounds.right
+          || event.clientY < bounds.top || event.clientY > bounds.bottom;
+        if (outside) dialog.close();
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -60,6 +60,34 @@ prompts for workflow mode and scope; user scope is the safe default and Cursor
 requires a project. Use `npx openplanr@latest setup` without a global install
 or `planr setup --minimal` for planning only.
 
+## Operating Board
+
+`planr operate` is OpenPlanr’s evidence-to-decision control plane. This package
+owns its Protocol v1.2 contracts, conformance, generated adapters, dashboard
+projection, artifact generator, provider kit, and ecosystem saga primitives;
+the OpenPlanr CLI owns operating state and every mutation.
+
+```bash
+planr operate inspect
+planr operate demo
+planr operate init
+planr operate run --preview # no provider/model calls and no writes
+planr operate run --dry-run # disclosed provider/model calls; no state commit
+planr operate review
+```
+
+Finding acceptance never applies a route. Pipeline-PO DEV application pauses at
+`awaiting-plan`, returns an exact native PLAN command, validates planning
+provenance on resume, and leaves `shipInvoked: false`. Answered evidence gaps
+close only after `gaps verify` cites explicit evidence IDs. A later
+`run --review-only` can observe existing shipment proof and reconcile outcome
+observations, but Operating Board never invokes SHIP.
+
+Planning-only installs retain help, `operate inspect`, and `operate demo`.
+Protocol-dependent commands return `E_PIPELINE_NOT_INSTALLED` with the
+full-install recovery. See
+[`docs/protocol/operating-board.md`](docs/protocol/operating-board.md).
+
 ---
 
 ## 5-minute walkthrough — build a "todo list" feature

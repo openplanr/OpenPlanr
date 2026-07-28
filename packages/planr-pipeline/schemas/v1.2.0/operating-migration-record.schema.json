@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-migration-record.schema.json",
+  "title": "OpenPlanr explicit operating-state migration record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "id", "sourceKind", "sourceDigest", "state", "previewDigest", "backupManifestDigest", "mappings", "conflicts", "createdAt", "updatedAt"],
+  "properties": {
+    "kind": { "const": "operating-migration-record" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "id": { "type": "string", "pattern": "^MIG-[A-Za-z0-9._-]+$" },
+    "sourceKind": { "type": "string", "enum": ["prototype-board", "protocol-upgrade"] },
+    "sourceDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "state": { "type": "string", "enum": ["previewed", "applied", "rolled-back", "conflict", "failed"] },
+    "previewDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "backupManifestDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "mappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sourceId", "targetId", "eventId"],
+        "properties": {
+          "sourceId": { "type": "string", "minLength": 1 },
+          "targetId": { "type": "string", "minLength": 1 },
+          "eventId": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "conflicts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "failureCode": { "type": "string", "pattern": "^E_[A-Z0-9_]+$" }
+  }
+}

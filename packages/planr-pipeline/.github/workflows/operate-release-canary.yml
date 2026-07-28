@@ -1,0 +1,51 @@
+name: Operating Board release canary
+
+on:
+  schedule:
+    - cron: "53 4 * * *"
+  workflow_dispatch:
+    inputs:
+      pipeline_version:
+        description: Optional exact pipeline version
+        required: false
+        type: string
+      cli_version:
+        description: Optional exact OpenPlanr version
+        required: false
+        type: string
+      skills_version:
+        description: Optional exact skills release
+        required: false
+        type: string
+      marketplace_version:
+        description: Optional exact marketplace release
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  released-ecosystem:
+    name: Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install released CLI
+        run: npm install --global openplanr@latest --no-audit --no-fund
+      - name: Verify resolved Operating Board release
+        env:
+          PLANR_EXPECT_PIPELINE: ${{ inputs.pipeline_version }}
+          PLANR_EXPECT_CLI: ${{ inputs.cli_version }}
+          PLANR_EXPECT_SKILLS: ${{ inputs.skills_version }}
+          PLANR_EXPECT_MARKETPLACE: ${{ inputs.marketplace_version }}
+        run: npm run canary:operate-release

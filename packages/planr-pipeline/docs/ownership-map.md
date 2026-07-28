@@ -8,8 +8,8 @@ the owner is updated and checked.
 
 | Repo | Owns | Mirrors |
 |---|---|---|
-| `openplanr/OpenPlanr` | Dedicated planning, setup, runtime lifecycle, routing, locks, migration, rollback, unified doctor | Protocol and adapter contracts |
-| `openplanr/planr-pipeline` | Complete PO–Design–DEV engine, schemas, role/adapter registries, conformance, boards, native Claude adapter | CLI handoff behavior |
+| `openplanr/OpenPlanr` | Dedicated planning, setup, runtime lifecycle, routing, locks, migration, rollback, unified doctor, and `planr operate` behavior/state | Protocol and adapter contracts |
+| `openplanr/planr-pipeline` | Complete PO–Design–DEV engine, schemas, delivery/operating/provider registries, reducers, conformance, boards, native Claude adapter | CLI handoff behavior |
 | `openplanr/skills` | Reusable planning and delivery workflows | Current CLI and pipeline surfaces |
 | `openplanr/marketplace` | Claude metadata and resolved `ecosystem.json` | Released component and adapter versions |
 
@@ -18,7 +18,10 @@ the owner is updated and checked.
 | Contract | Owner | Required check |
 |---|---|---|
 | Protocol schemas | `planr-pipeline` | `npm run test:schema` and `npm run conformance:check` |
-| Adapter and role registries | `planr-pipeline` | v1.1 schema tests and portable-asset scan |
+| Adapter, delivery-role, operating-lens, and provider registries | `planr-pipeline` | schema tests, generated-asset check, and portable-asset scan |
+| Operating event/reducer/checkpoint contracts | `planr-pipeline` | `npm run conformance:operate` |
+| Operating state transactions and provider execution | `OpenPlanr` | CLI state/recovery/provider tests against Protocol v1.2 |
+| Ecosystem release operation | `planr-pipeline` | saga and release-operation tests |
 | Runtime lock and migration | `OpenPlanr` | setup/idempotency/rollback tests |
 | Provenance event schema | `planr-pipeline` | schema validation in both planning engines |
 | `.pipeline-shipped` marker | `planr-pipeline` | schema tests plus markdown contract tests |
@@ -38,6 +41,7 @@ the owner is updated and checked.
 
 ## Current Protocol Decision
 
-`planr-pipeline/schemas/v1.0.0/` remains the canonical schema source for this
-cleanup cycle. A dedicated protocol package can be created later, but only after
-the existing drift checks are stable and green across all four repos.
+`planr-pipeline/schemas/` remains the canonical schema source. v1.0 planning
+artifacts and v1.1 capability contracts remain readable; v1.2 adds the Operating
+Board contract without migrating either namespace. A dedicated protocol package
+can be created later only after the existing drift checks remain green.

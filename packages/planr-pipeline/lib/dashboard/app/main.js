@@ -22,7 +22,13 @@
  * no third-party product codenames.
  */
 
-import { renderShell, setActiveView, setModeChip, populateFilters } from './shell.js';
+import {
+  renderShell,
+  setActiveView,
+  setModeChip,
+  setOperatingAvailable,
+  populateFilters,
+} from './shell.js';
 
 /* ──────────────────────────────────────────────────────────────────────────
  * filterState — authoritative client-side filter state (SPEC-016 / T-007).
@@ -95,6 +101,7 @@ const ROUTES = {
   list: () => import('./views/list.js'),
   sprints: () => import('./views/sprint.js'),
   activity: () => import('./views/activity.js'),
+  operate: () => import('./views/operate.js'),
   detail: () => import('./views/detail.js'),
 };
 
@@ -127,6 +134,8 @@ const dashboard = (window.__dashboard = window.__dashboard || {
    * toggle / labels; the shell reads it to render the mode chip.
    */
   mode: null,
+  /** Validated read-only Operating Board projection, when available. */
+  operating: null,
 });
 
 /** Parse the leading segment of the hash into a known view id. */
@@ -498,6 +507,22 @@ export async function fetchMeta() {
   }
 }
 
+/** Discover the optional Operating Board projection without mutating it. */
+export async function fetchOperatingAvailability() {
+  if (typeof fetch !== 'function') return null;
+  try {
+    const response = await fetch('/api/operate', { headers: { accept: 'application/json' } });
+    if (!response.ok) return null;
+    const projection = await response.json();
+    dashboard.operating = projection;
+    setOperatingAvailable(projection?.status !== 'absent');
+    return projection;
+  } catch {
+    setOperatingAvailable(false);
+    return null;
+  }
+}
+
 /** Boot: theme, shell, router, hashchange wiring. */
 function boot() {
   applyStoredTheme();
@@ -516,6 +541,7 @@ function boot() {
 
   // Shell metadata (T-007): breadcrumb basename + version chip from /api/meta.
   fetchMeta();
+  fetchOperatingAvailability();
 
   // Live sync (T-004): open the SSE stream so .planr/ edits patch in place.
   connectEvents();

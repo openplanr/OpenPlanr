@@ -1,7 +1,8 @@
 # `/planr-pipeline:dashboard`
 
 > Launch the local planr dashboard — a live, read-only visual projection of the
-> `.planr/` graph (Overview · Graph · Board · List · Sprints · Activity).
+> `.planr/` graph (Overview · Graph · Board · List · Sprints · Activity) and
+> the optional read-only Operating Board projection.
 
 ## Synopsis
 
@@ -88,6 +89,23 @@ the file watcher only read and observe; there is no write-back path (drag-to-mov
 on the Board and inline edit on the Detail view are out of scope for this
 release). You can run the dashboard against a working tree without any risk of it
 mutating your planning artifacts.
+
+## Operating Board module
+
+When `.planr/operate/projections/state.json` exists and passes Protocol v1.2
+validation, the rail exposes **Operating**. This view presents the current
+evidence → constraint → route → outcome thread, open owner decisions, evidence
+gaps, linked delivery specs, outcome state, and the six bounded advisory lenses
+(CEO, CTO, CPO, CMO, COO, and Chair).
+
+The module is a disposable projection, not an operating-state engine. It never
+replays events, repairs checkpoints, accepts findings, or applies routes.
+Mutation affordances are exact CLI handoffs such as
+`planr operate review CYCLE-001`. Missing, stale, or invalid state degrades to a
+specific recovery command; the browser does not attempt a repair.
+
+Evidence bodies, prompts, credentials, machine paths, and raw provider responses
+are never included. The server exposes only `GET /api/operate` for this module.
 
 ## Empty state
 

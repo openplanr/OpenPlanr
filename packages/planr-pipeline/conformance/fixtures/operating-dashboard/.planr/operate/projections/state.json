@@ -1,0 +1,175 @@
+{
+  "kind": "operating-state",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "generatedAt": "2026-07-28T09:12:00Z",
+  "eventHead": {
+    "sequence": 17,
+    "hash": "sha256:f22805324e58937161e17932af48f00533792019e273a1ddc77ba8d6d8919652"
+  },
+  "cycles": [
+    {
+      "kind": "operating-cycle-manifest",
+      "schemaVersion": "1.0.0",
+      "protocolVersion": "1.2.0",
+      "id": "CYCLE-001",
+      "state": "reviewable",
+      "health": "partial",
+      "depth": "standard",
+      "focus": [
+        "all"
+      ],
+      "inputDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "enabledRoles": [
+        "strategy-finance",
+        "technology-risk",
+        "product-activation",
+        "growth-market",
+        "operations-customer",
+        "chair"
+      ],
+      "enabledProviders": [
+        "repository",
+        "planr",
+        "git"
+      ],
+      "createdAt": "2026-07-28T09:00:00Z",
+      "updatedAt": "2026-07-28T09:12:00Z",
+      "producer": {
+        "product": "openplanr",
+        "version": "1.14.0",
+        "runtime": "codex"
+      }
+    }
+  ],
+  "findings": [
+    {
+      "id": "FND-001",
+      "cycleId": "CYCLE-001",
+      "title": "Protect payment webhook idempotency",
+      "category": "payment-integrity",
+      "problem": "The payment handler has no durable replay guard.",
+      "cost": "Duplicate delivery can create duplicate ledger effects.",
+      "proposal": "Create a reviewed idempotency-ledger specification.",
+      "status": "proposed",
+      "lane": "DEV",
+      "owner": "planning-engine",
+      "impact": 5,
+      "confidence": 5,
+      "ease": 3,
+      "score": 75,
+      "severity": "critical",
+      "sensitivity": "internal",
+      "criticalOverride": true,
+      "evidenceRefs": [
+        "EVD-repo-payment"
+      ],
+      "stalledCycles": 2,
+      "createdAt": "2026-07-28T09:06:00Z",
+      "updatedAt": "2026-07-28T09:10:00Z",
+      "linkedSpec": "SPEC-003"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "cycleId": "CYCLE-001",
+      "question": "Should payment hardening displace the current growth experiment?",
+      "status": "open",
+      "owner": "decision-owner",
+      "deadline": "2026-07-30T12:00:00Z",
+      "reversibility": "reversible",
+      "recommendation": "Choose A.",
+      "createdAt": "2026-07-28T09:07:00Z",
+      "updatedAt": "2026-07-28T09:07:00Z"
+    }
+  ],
+  "dataGaps": [
+    {
+      "id": "GAP-001",
+      "cycleId": "CYCLE-001",
+      "question": "What is the duplicate webhook rate over the last 30 days?",
+      "reason": "The outcome baseline is not yet instrumented.",
+      "status": "open",
+      "owner": "decision-owner",
+      "unblocks": [
+        "FND-001"
+      ],
+      "createdAt": "2026-07-28T09:08:00Z",
+      "updatedAt": "2026-07-28T09:08:00Z"
+    }
+  ],
+  "routes": [
+    {
+      "id": "ACT-001",
+      "cycleId": "CYCLE-001",
+      "state": "prepared",
+      "routeDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "previewDigest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "confirmationDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "findingIds": [
+        "FND-001"
+      ],
+      "actionCount": 1,
+      "createdAt": "2026-07-28T09:09:00Z",
+      "updatedAt": "2026-07-28T09:09:40Z"
+    }
+  ],
+  "specLinks": [
+    {
+      "specId": "SPEC-003",
+      "cycleId": "CYCLE-001",
+      "findingId": "FND-001",
+      "planningEngine": "openplanr",
+      "state": "planned",
+      "updatedAt": "2026-07-28T09:10:00Z"
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "OUT-001",
+      "specId": "SPEC-003",
+      "status": "positive",
+      "metric": "payments.webhook_duplicate_effects",
+      "verifyAfter": "2026-08-15",
+      "updatedAt": "2026-07-28T09:11:45Z",
+      "lastObservationId": "OBS-001",
+      "lastObservationEvaluation": "positive"
+    }
+  ],
+  "learnings": [],
+  "evidenceSources": [
+    {
+      "id": "git",
+      "freshness": "stale",
+      "status": "partial",
+      "itemCount": 7,
+      "collectedAt": "2026-07-28T09:02:00Z"
+    },
+    {
+      "id": "planr",
+      "freshness": "fresh",
+      "status": "collected",
+      "itemCount": 18,
+      "collectedAt": "2026-07-28T09:02:00Z"
+    },
+    {
+      "id": "repository",
+      "freshness": "fresh",
+      "status": "collected",
+      "itemCount": 42,
+      "collectedAt": "2026-07-28T09:02:00Z"
+    }
+  ],
+  "summary": {
+    "currentCycleId": "CYCLE-001",
+    "currentConstraint": "Protect payment webhook idempotency",
+    "quiet": false,
+    "evidenceFreshness": "mixed",
+    "surfacedFindings": 1,
+    "parkedFindings": 0,
+    "openDecisions": 1,
+    "openGaps": 1,
+    "stalledItems": 1
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-data-gap.schema.json",
+  "title": "OpenPlanr operating data gap",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "id", "cycleId", "question", "reason", "unblocks", "status", "owner", "evidenceRefs", "createdAt", "updatedAt"],
+  "properties": {
+    "kind": { "const": "operating-data-gap" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "id": { "type": "string", "pattern": "^GAP-[0-9]{3,}$" },
+    "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+    "question": { "type": "string", "minLength": 1 },
+    "reason": { "type": "string", "minLength": 1 },
+    "unblocks": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^(?:FND|DEC|GAP|SPEC)-[0-9]{3,}$" } },
+    "affectedRoles": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": ["strategy-finance", "technology-risk", "product-activation", "growth-market", "operations-customer", "chair"]
+      }
+    },
+    "status": { "type": "string", "enum": ["open", "answered", "verified", "closed", "superseded"] },
+    "owner": { "type": "string", "minLength": 1 },
+    "answer": { "type": "string" },
+    "evidenceRefs": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^EVD-[A-Za-z0-9._-]+$" } },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}

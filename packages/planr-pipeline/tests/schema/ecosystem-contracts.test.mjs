@@ -10,15 +10,58 @@ const root = fileURLToPath(new URL('../..', import.meta.url));
 const readJson = (path) => JSON.parse(readFileSync(join(root, path), 'utf8'));
 const schema = (name) => readJson(`schemas/v1.1.0/${name}.schema.json`);
 
-test('canonical adapter registry validates and names the three certified runtimes', () => {
+test('canonical adapter registry validates as Protocol v1.2 and names the three certified runtimes', () => {
   const registry = readJson('registry/adapters.json');
-  assert.deepEqual(validate(registry, schema('adapter-registry')), []);
+  const currentSchema = readJson('schemas/v1.2.0/adapter-registry.schema.json');
+  assert.deepEqual(validate(registry, currentSchema), []);
   assert.deepEqual(registry.adapters.map((adapter) => adapter.id), ['claude-code', 'codex', 'cursor']);
   for (const adapter of registry.adapters) {
     assert.equal(adapter.capabilities.artifactReview, true);
+    assert.equal(adapter.capabilities.operatingBoard, true);
     assert.match(adapter.entrypoints.artifact, /(?:planr artifact|\$planr-artifact)/);
+    assert.match(adapter.entrypoints.operate, /(?:planr operate|\$planr-operate)/);
     assert.ok(adapter.healthChecks.includes('artifact-command-valid'));
   }
+});
+
+test('Protocol v1.1 adapter registries remain readable without v1.2 additions', () => {
+  const legacy = {
+    schemaVersion: '1.0.0',
+    protocolVersion: '1.1.0',
+    pipelineVersion: '0.29.2',
+    adapters: [{
+      id: 'codex',
+      version: '0.29.2',
+      capabilityLevel: 'workflow',
+      installScopes: ['user', 'project'],
+      entrypoints: {
+        plan: '$planr-plan',
+        design: '$planr-design',
+        ship: '$planr-ship',
+        dashboard: '$planr-dashboard',
+        artifact: '$planr-artifact',
+        sync: '$planr-sync',
+        doctor: '$planr-doctor',
+      },
+      capabilities: {
+        subagents: 'dynamic',
+        hooks: true,
+        toolIsolation: 'advisory',
+        parallelDispatch: 'dynamic',
+        headlessLaunch: true,
+        artifactReview: true,
+      },
+      assets: ['skills'],
+      healthChecks: ['skills-present'],
+      drivers: {
+        install: 'openplanr://drivers/codex/install',
+        migrate: 'openplanr://drivers/codex/migrate',
+        rollback: 'openplanr://drivers/codex/rollback',
+        uninstall: 'openplanr://drivers/codex/uninstall',
+      },
+    }],
+  };
+  assert.deepEqual(validate(legacy, schema('adapter-registry')), []);
 });
 
 test('canonical role registry validates and contains exactly nine unique roles', () => {

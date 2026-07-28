@@ -35,6 +35,7 @@ import { writePidFile } from '../design-engine/server-util.mjs';
 import { MIME } from '../design/mime-types.mjs';
 import { serveStaticFile } from '../design/path-util.mjs';
 import { buildGraph, getNode as engineGetNode, detectMode } from './graph-engine.mjs';
+import { readOperatingProjection } from './operate-reader.mjs';
 import { createWatcher } from './watcher.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -46,7 +47,7 @@ export const DEFAULT_PORT = 7473;
  * uses this list to pre-select the landing view and to keep the hash router and
  * the server's notion of "known views" from drifting (one source of truth).
  */
-export const DASHBOARD_VIEWS = ['overview', 'graph', 'board', 'list', 'sprints', 'activity'];
+export const DASHBOARD_VIEWS = ['overview', 'graph', 'board', 'list', 'sprints', 'activity', 'operate'];
 
 /** The landing view the client pre-activates on first load. */
 export const DEFAULT_VIEW = 'overview';
@@ -150,6 +151,7 @@ export function createDashboardServer({
   watch = true,
   getGraph,
   getNode = (id) => engineGetNode(planrDir, id) ?? null,
+  getOperatingProjection = () => readOperatingProjection(planrDir),
 } = {}) {
   // In-memory graph cache: seeded lazily, patched in place by the watcher so
   // fresh page loads and SSE clients see the same up-to-date graph (one truth).
@@ -178,6 +180,10 @@ export function createDashboardServer({
 
       if (req.method === 'GET' && pathname === '/api/graph') {
         return json(res, 200, readGraph());
+      }
+
+      if (req.method === 'GET' && pathname === '/api/operate') {
+        return json(res, 200, getOperatingProjection());
       }
 
       // Shell metadata: lets the client pre-select the landing view, render the

@@ -1,0 +1,41 @@
+{
+  "kind": "operating-event",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "eventId": "evt-security-discontinuity",
+  "sequence": 1,
+  "timestamp": "2026-07-28T09:00:00Z",
+  "cycleId": "CYCLE-000",
+  "type": "security.discontinuity",
+  "entityId": "RCV-sensitive-state-001",
+  "previousEventHash": null,
+  "actor": {
+    "kind": "human",
+    "id": "founder"
+  },
+  "causationId": null,
+  "correlationId": "security-repair-001",
+  "evidenceRefs": [],
+  "payload": {
+    "oldHead": {
+      "sequence": 42,
+      "hash": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+    },
+    "oldCheckpoint": null,
+    "authority": {
+      "kind": "human",
+      "id": "founder",
+      "confirmedAt": "2026-07-28T09:00:00Z"
+    },
+    "remediation": {
+      "reasonDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "guidanceDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "affectedPathsDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "quarantineManifestDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    "recoveryRecordDigest": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+    "requiresSignedCheckpoint": true,
+    "purgedContent": "forbidden"
+  },
+  "eventHash": "sha256:a8278b69741d2cd046deadb8f8d6b0dc3029890403ee787a7874a882bf864546"
+}

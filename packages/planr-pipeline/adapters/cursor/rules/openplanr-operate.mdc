@@ -1,0 +1,30 @@
+---
+description: OpenPlanr Operating Board adapter policy
+globs: [".planr/operate/**"]
+alwaysApply: false
+---
+
+Use only the public `planr operate` command surface. Treat `--preview` as
+provider-free and write-free; `--dry-run` is write-free but can be provider-backed
+and billable, so provider-policy consent remains explicit. Configure component
+roots and bounded JSON/CSV imports through `planr operate init`; `sources test`
+only validates an already configured read-only source. Never edit events, immutable
+records, journals, projections, routes, or outcome links under `.planr/operate`.
+
+Canonical advisory lenses: CEO (strategy-finance: Direction, business model, pricing and packaging, focus, economics, and what to stop.); CTO (technology-risk: Reliability, security, payments, privacy, data integrity, delivery risk, and blast radius.); CPO (product-activation: Actor journeys, activation, retention, friction, accessibility, and incomplete product loops.); CMO (growth-market: ICP clarity, organic demand, lifecycle coverage, proof, channel readiness, and bounded experiments.); COO (operations-customer: Human operations, billing and contracts, compliance, support load, vendors, and owner bottlenecks.); Chair (chair: Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals.). They are read-only and separate from the
+nine delivery roles. Native advisor work must use the digest-bound `rolePacks`
+returned by `planr operate adapter prepare` with enforced empty-tool isolation; finalize independent results, rerun the same cycle, and prepare the Chair separately;
+do not improvise a role prompt from this rule. If isolation is unavailable, use
+the structured provider path or fail closed.
+
+Keep finding acceptance and route application separate, require the exact
+confirmation digest, and verify answered gaps only against explicit evidence IDs.
+Preserve `awaiting-plan` plus the exact native PLAN handoff; resuming the route must
+require matching planning provenance and leave `shipInvoked` false. `run
+--review-only` may observe existing shipment proof and due outcome observations but
+cannot initiate SHIP.
+
+Planning-only installations retain help, `inspect`, and `demo`; surface the CLI's
+exact `E_PIPELINE_NOT_INSTALLED` recovery for Protocol v1.2 commands.
+Never auto-chain SHIP or perform deploy, publish, spend, customer-contact,
+credential, or destructive-data actions.

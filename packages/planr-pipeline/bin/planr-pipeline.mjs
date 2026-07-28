@@ -39,7 +39,7 @@ function fail(error) {
 }
 
 function launch(adapter, phase, slug) {
-  if (!adapter.capabilities.headlessLaunch || noLaunch) return runtimeHandoff(adapter, phase, slug);
+  if (!adapter.capabilities.headlessBridge || noLaunch) return runtimeHandoff(adapter, phase, slug);
   const invocations = {
     'claude-code': ['claude', ['--plugin-dir', root, '-p', `${adapter.entrypoints[phase]} ${slug}`]],
     codex: ['codex', ['exec', `${adapter.entrypoints[phase]} ${slug}`]],

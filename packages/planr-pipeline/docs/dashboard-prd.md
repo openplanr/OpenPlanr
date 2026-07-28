@@ -90,6 +90,10 @@ switcher in the top bar:
 6. **Detail / Inspector** — for any selected artifact: title, body, acceptance criteria (Gherkin
    for stories), subtask checkboxes, `dependsOn`, parent chain breadcrumb, ship/QA state, PR/Linear
    links, and the related design-spec section when one exists.
+7. **Operating** *(optional)* — a read-only Protocol v1.2 projection showing the
+   evidence → constraint → route → outcome causal thread, owner decisions,
+   evidence gaps, advisor-lens readiness, linked specs, and measured outcomes.
+   Operating entities remain outside the delivery graph taxonomy.
 
 Cross-cutting: **global search** (id / title / status), **filters** (status, sprint, feature,
 assignee, label), and **deep-linkable URLs** (`#/graph?feature=FEAT-018`).

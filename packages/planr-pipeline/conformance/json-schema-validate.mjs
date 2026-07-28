@@ -1,6 +1,7 @@
 /**
  * Minimal JSON Schema (draft 2020-12) subset extracted from conformance/runner.mjs.
- * Supports only constructs used by schemas/v1.0.0/*.json — see runner header comment.
+ * Supports the constructs used by packaged Protocol schemas, including local
+ * JSON-pointer and caller-resolved external `$ref` references.
  *
  * Zero third-party deps. Safe to import from node:test suites.
  */
@@ -29,11 +30,51 @@ const matchesType = (v, t) => {
 const FORMAT_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const FORMAT_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 
-const validateNode = (value, schema, path, errs) => {
+function resolveJsonPointer(root, reference) {
+  if (reference === '#') return root;
+  if (!reference.startsWith('#/')) return null;
+  return reference
+    .slice(2)
+    .split('/')
+    .map((part) => part.replaceAll('~1', '/').replaceAll('~0', '~'))
+    .reduce((value, part) => value?.[part], root);
+}
+
+const validateNode = (value, schema, path, errs, context) => {
   if (schema === true) return;
   if (schema === false) {
     errs.push({ path, rule: 'schema:false', detail: 'value not allowed' });
     return;
+  }
+
+  if (typeof schema?.$ref === 'string') {
+    const reference = schema.$ref;
+    let resolved;
+    let nextRoot = context.rootSchema;
+    let resolvedBase = context.base;
+    if (reference.startsWith('#')) {
+      resolved = resolveJsonPointer(context.rootSchema, reference);
+    } else if (typeof context.resolveRef === 'function') {
+      const result = context.resolveRef(reference, { base: context.base });
+      resolved = result?.schema ?? result;
+      nextRoot = result?.rootSchema ?? resolved;
+      resolvedBase = result?.base ?? resolved?.$id ?? context.base;
+    }
+    if (!resolved) {
+      errs.push({ path, rule: '$ref', detail: `could not resolve schema reference ${reference}` });
+      return;
+    }
+    const referenceKey = `${context.base ?? '<root>'}:${reference}`;
+    if (context.referenceStack.includes(referenceKey)) {
+      errs.push({ path, rule: '$ref', detail: `circular schema reference ${reference}` });
+      return;
+    }
+    validateNode(value, resolved, path, errs, {
+      ...context,
+      rootSchema: nextRoot,
+      base: resolvedBase,
+      referenceStack: [...context.referenceStack, referenceKey],
+    });
   }
 
   if (schema.type !== undefined) {
@@ -64,6 +105,9 @@ const validateNode = (value, schema, path, errs) => {
     if (typeof schema.minLength === 'number' && value.length < schema.minLength) {
       errs.push({ path, rule: 'minLength', detail: `length ${value.length} < ${schema.minLength}` });
     }
+    if (typeof schema.maxLength === 'number' && value.length > schema.maxLength) {
+      errs.push({ path, rule: 'maxLength', detail: `length ${value.length} > ${schema.maxLength}` });
+    }
     if (typeof schema.pattern === 'string') {
       try {
         if (!new RegExp(schema.pattern).test(value)) {
@@ -86,12 +130,21 @@ const validateNode = (value, schema, path, errs) => {
     if (typeof schema.minimum === 'number' && value < schema.minimum) {
       errs.push({ path, rule: 'minimum', detail: `value ${value} < ${schema.minimum}` });
     }
+    if (typeof schema.maximum === 'number' && value > schema.maximum) {
+      errs.push({ path, rule: 'maximum', detail: `value ${value} > ${schema.maximum}` });
+    }
   }
 
   if (Array.isArray(value)) {
+    if (typeof schema.minItems === 'number' && value.length < schema.minItems) {
+      errs.push({ path, rule: 'minItems', detail: `length ${value.length} < ${schema.minItems}` });
+    }
+    if (typeof schema.maxItems === 'number' && value.length > schema.maxItems) {
+      errs.push({ path, rule: 'maxItems', detail: `length ${value.length} > ${schema.maxItems}` });
+    }
     if (schema.items) {
       for (let i = 0; i < value.length; i++) {
-        validateNode(value[i], schema.items, `${path}[${i}]`, errs);
+        validateNode(value[i], schema.items, `${path}[${i}]`, errs, context);
       }
     }
     if (schema.uniqueItems === true) {
@@ -124,7 +177,7 @@ const validateNode = (value, schema, path, errs) => {
       }
     }
     for (const [k, v] of Object.entries(value)) {
-      if (props[k]) validateNode(v, props[k], `${path}.${k}`, errs);
+      if (props[k]) validateNode(v, props[k], `${path}.${k}`, errs, context);
     }
   }
 
@@ -132,7 +185,7 @@ const validateNode = (value, schema, path, errs) => {
     let matched = 0;
     for (const sub of schema.oneOf) {
       const e = [];
-      validateNode(value, sub, path, e);
+      validateNode(value, sub, path, e, context);
       if (e.length === 0) matched++;
     }
     if (matched !== 1) {
@@ -147,13 +200,13 @@ const validateNode = (value, schema, path, errs) => {
 
   if (Array.isArray(schema.allOf)) {
     for (const sub of schema.allOf) {
-      validateNode(value, sub, path, errs);
+      validateNode(value, sub, path, errs, context);
     }
   }
 
   if (schema.not !== undefined) {
     const e = [];
-    validateNode(value, schema.not, path, e);
+    validateNode(value, schema.not, path, e, context);
     if (e.length === 0) {
       errs.push({ path, rule: 'not', detail: 'value matched a forbidden subschema' });
     }
@@ -161,9 +214,17 @@ const validateNode = (value, schema, path, errs) => {
 };
 
 /** @returns {{ path: string, rule: string, detail: string }[]} */
-export const validateJson = (value, schema) => {
+export const validateJson = (value, schema, {
+  resolveRef = null,
+  base = schema?.$id ?? null,
+} = {}) => {
   const errs = [];
-  validateNode(value, schema, '$', errs);
+  validateNode(value, schema, '$', errs, {
+    rootSchema: schema,
+    resolveRef,
+    base,
+    referenceStack: [],
+  });
   return errs;
 };
 

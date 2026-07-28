@@ -3,3 +3,13 @@ templates/artifact-review-shell.html text eol=lf
 templates/artifact-review-stage.js text eol=lf
 templates/design/design-board-adapter.js text eol=lf
 tests/artifact/__fixtures__/*.golden.* text eol=lf
+
+# Operating Board assets are generated from the registries and compared
+# byte-for-byte, so they must check out identically on every platform.
+adapters/codex/skills/planr-operate/SKILL.md text eol=lf
+adapters/cursor/rules/openplanr-operate.mdc text eol=lf
+commands/operate.md text eol=lf
+docs/generated/* text eol=lf
+templates/runtime/planr-operate-skill.md.tpl text eol=lf
+conformance/fixtures/operating-board/* text eol=lf
+conformance/fixtures/operating-dashboard/.planr/operate/projections/state.json text eol=lf

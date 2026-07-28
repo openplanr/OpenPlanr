@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-workspace-manifest.schema.json",
+  "title": "OpenPlanr multi-repository operating workspace manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "capturedAt", "workspaceDigest", "controlRepository", "components"],
+  "properties": {
+    "kind": { "const": "operating-workspace-manifest" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "capturedAt": { "type": "string", "format": "date-time" },
+    "workspaceDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "controlRepository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["componentId", "canonicalRemote", "configuredBranch", "pinnedRevision", "dirtyFingerprint", "readOnly"],
+      "properties": {
+        "componentId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "canonicalRemote": { "type": "string", "pattern": "^[A-Za-z0-9._/-]+$" },
+        "configuredBranch": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "pinnedRevision": { "type": "string", "pattern": "^[a-f0-9]{7,64}$" },
+        "dirtyFingerprint": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+        "readOnly": { "const": false }
+      }
+    },
+    "components": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["componentId", "canonicalRemote", "configuredBranch", "pinnedRevision", "dirtyFingerprint", "readOnly"],
+        "properties": {
+          "componentId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "canonicalRemote": { "type": "string", "pattern": "^[A-Za-z0-9._/-]+$" },
+          "configuredBranch": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "pinnedRevision": { "type": "string", "pattern": "^[a-f0-9]{7,64}$" },
+          "dirtyFingerprint": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+          "readOnly": { "const": true }
+        }
+      }
+    }
+  }
+}

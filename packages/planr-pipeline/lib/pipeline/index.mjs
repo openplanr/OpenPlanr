@@ -8,9 +8,62 @@ export {
   prepareShip,
   recordTaskResult,
   runSyncAudit,
-  validateProtocolArtifact,
 } from './engine.mjs';
 export { appendProvenanceEvent, createProvenanceEvent } from './provenance.mjs';
+export {
+  PROTOCOL_SCHEMA_REGISTRY,
+  assertProtocolArtifact,
+  listOperatingProviders,
+  listOperatingRoles,
+  listProtocolSchemas,
+  resolveProtocolSchema,
+  validateProtocolArtifact,
+} from '../protocol/contracts.mjs';
+export { canonicalizeJson, sha256Jcs } from '../protocol/jcs.mjs';
+export {
+  computeOperatingEventHash,
+  createOperatingCheckpoint,
+  createOperatingCheckpointSigningPayload,
+  createOperatingEvent,
+  reduceOperatingEvents,
+  resumeOperatingProjection,
+  validateOperatingCheckpoint,
+  verifyOperatingEventChain,
+} from '../operate/reducer.mjs';
+export {
+  computeEcosystemReleaseOperationDigest,
+  createEcosystemReleaseOperation,
+  createEcosystemSaga,
+  nextEcosystemSagaSteps,
+  reconcileEcosystemReleaseOperation,
+  reconcileEcosystemSaga,
+  recordEcosystemSagaStep,
+} from '../operate/saga.mjs';
+export {
+  computeOperatingProviderPolicyDigest,
+  operatingProviderPolicyPayload,
+  validateOperatingProviderPolicyDigest,
+} from '../operate/provider-policy.mjs';
+export {
+  computeOperatingRoleResultDigest,
+  operatingRoleResultIdentityPayload,
+  validateOperatingRoleResultDigest,
+} from '../operate/role-result.mjs';
+export {
+  createOperatingAdvisorBrief,
+  listOperatingAdvisorBriefs,
+} from '../operate/advisor-brief.mjs';
+export {
+  cancelOperatingArtifactGeneration,
+  commitOperatingArtifactGeneration,
+  failOperatingArtifactGeneration,
+  prepareOperatingArtifactGeneration,
+  renderOperatingArtifactTemplate,
+  resumeOperatingArtifactGeneration,
+  runOperatingArtifactGeneration,
+  startOperatingArtifactGeneration,
+  validateOperatingArtifactOutput,
+} from '../operate/generator.mjs';
 export {
   detectInstalledRuntimes,
   listRuntimeAdapters,

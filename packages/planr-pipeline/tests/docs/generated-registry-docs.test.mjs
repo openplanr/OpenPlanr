@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
 import { renderArtifactThemeAssets } from '../../scripts/generate-artifact-shell.mjs';
+import { renderOperatingAssets } from '../../scripts/generate-operating-assets.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -22,6 +23,46 @@ test('generated role and adapter tables cover the canonical registries', () => {
     assert.match(adapterDocs, new RegExp(adapter.capabilityLevel));
     assert.equal(adapter.capabilities.artifactReview, true);
     assert.match(adapterDocs, new RegExp(adapter.entrypoints.artifact.replaceAll('$', '\\$')));
+  }
+});
+
+test('generated operating adapter assets and docs match their registries byte-for-byte', () => {
+  const generated = renderOperatingAssets();
+  for (const [target, expected] of Object.entries(generated)) {
+    assert.equal(
+      readFileSync(join(root, target), 'utf8'),
+      expected,
+      `${target} must be regenerated with npm run generate:operating-assets`,
+    );
+  }
+
+  const roles = JSON.parse(readFileSync(join(root, 'registry', 'operating-roles.json'), 'utf8'));
+  const providers = JSON.parse(readFileSync(join(root, 'registry', 'operating-providers.json'), 'utf8'));
+  const roleDocs = readFileSync(join(root, 'docs/generated/operating-roles.md'), 'utf8');
+  const providerDocs = readFileSync(join(root, 'docs/generated/operating-providers.md'), 'utf8');
+  for (const role of roles.roles) {
+    assert.match(roleDocs, new RegExp(`\\| ${role.id} \\|`));
+    assert.match(roleDocs, new RegExp(role.displayLabel));
+    assert.match(roleDocs, new RegExp(role.allowedProposalTypes.join(', ')));
+    assert.match(roleDocs, new RegExp(String(role.budgets.maxProposals)));
+    assert.match(roleDocs, new RegExp(role.forbiddenRecommendationCategories[0]));
+  }
+  for (const provider of providers.providers) {
+    assert.match(providerDocs, new RegExp(`\\| ${provider.id} \\|`));
+  }
+
+  for (const target of [
+    'adapters/codex/skills/planr-operate/SKILL.md',
+    'adapters/cursor/rules/openplanr-operate.mdc',
+    'commands/operate.md',
+  ]) {
+    const asset = readFileSync(join(root, target), 'utf8');
+    for (const label of ['CEO', 'CTO', 'CPO', 'CMO', 'COO', 'Chair']) {
+      assert.match(asset, new RegExp(`\\b${label}\\b`), `${target} must name the ${label} lens`);
+    }
+    assert.match(asset, /rolePacks?/);
+    assert.match(asset, /empty-tool\s+isolation/);
+    assert.match(asset, /(?:improvise|role-play)/i);
   }
 });
 

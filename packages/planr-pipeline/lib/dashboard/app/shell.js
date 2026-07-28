@@ -35,6 +35,7 @@ const ICON = {
   list: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>',
   sprints: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 3 2 3H5"/></svg>',
   activity: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2 6 4-14 2 8h6"/></svg>',
+  operate: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v16H5z"/><path d="M8 8h8M8 12h5M8 16h3"/><circle cx="17" cy="16" r="2"/></svg>',
   search: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="m20 20-3.2-3.2"/></svg>',
   hamburger: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
   moon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.2 6.2 0 0 0 10.5 10.5Z"/></svg>',
@@ -51,6 +52,7 @@ const VIEWS = [
   { id: 'list', label: 'List', icon: ICON.list },
   { id: 'sprints', label: 'Sprints', icon: ICON.sprints },
   { id: 'activity', label: 'Activity', icon: ICON.activity },
+  { id: 'operate', label: 'Operating', icon: ICON.operate, optional: true },
 ];
 
 /** Small DOM helper — create an element with class, attrs, html, and children. */
@@ -100,6 +102,7 @@ function buildRail() {
       el('span', { class: 'ds-nav__icon', html: v.icon }),
       el('span', { class: 'ds-nav__text', text: v.label }),
     ]);
+    if (v.optional) link.setAttribute('hidden', 'hidden');
     if (v.id === current) link.setAttribute('aria-current', 'page');
     nav.append(link);
   }
@@ -369,6 +372,15 @@ export function setActiveView(viewId) {
     const v = VIEWS.find((x) => x.id === viewId);
     crumb.textContent = v ? v.label : (viewId || 'Overview');
   }
+}
+
+/** Show the optional Operating route only after its projection is discovered. */
+export function setOperatingAvailable(available) {
+  if (typeof document === 'undefined') return;
+  const link = document.querySelector('.ds-nav__link[data-view="operate"]');
+  if (!link) return;
+  if (available || activeView() === 'operate') link.removeAttribute('hidden');
+  else link.setAttribute('hidden', 'hidden');
 }
 
 export { VIEWS };

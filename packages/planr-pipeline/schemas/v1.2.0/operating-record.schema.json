@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-record.schema.json",
+  "title": "OpenPlanr immutable content-addressed operating record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "digest", "recordType", "createdAt", "correlationId", "contentDigest", "content"],
+  "properties": {
+    "kind": { "const": "operating-record" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "recordType": { "type": "string", "enum": ["evidence-metadata", "advisor-result", "finding", "decision", "data-gap", "route", "spec-link", "outcome", "artifact-manifest", "migration", "recovery"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "correlationId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "contentDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "content": { "type": "object" }
+  },
+  "oneOf": [
+    {
+      "title": "Evidence metadata record",
+      "properties": {
+        "recordType": { "const": "evidence-metadata" },
+        "content": { "$ref": "operating-evidence.schema.json" }
+      }
+    },
+    {
+      "title": "Advisor result record",
+      "properties": {
+        "recordType": { "const": "advisor-result" },
+        "content": { "$ref": "operating-role-result.schema.json" }
+      }
+    },
+    {
+      "title": "Finding record",
+      "properties": {
+        "recordType": { "const": "finding" },
+        "content": { "$ref": "operating-finding.schema.json" }
+      }
+    },
+    {
+      "title": "Decision record",
+      "properties": {
+        "recordType": { "const": "decision" },
+        "content": { "$ref": "operating-decision.schema.json" }
+      }
+    },
+    {
+      "title": "Data-gap record",
+      "properties": {
+        "recordType": { "const": "data-gap" },
+        "content": { "$ref": "operating-data-gap.schema.json" }
+      }
+    },
+    {
+      "title": "Route record",
+      "properties": {
+        "recordType": { "const": "route" },
+        "content": { "$ref": "operating-route-plan.schema.json" }
+      }
+    },
+    {
+      "title": "Specification-link record",
+      "properties": {
+        "recordType": { "const": "spec-link" },
+        "content": { "$ref": "operating-spec-link.schema.json" }
+      }
+    },
+    {
+      "title": "Outcome record",
+      "properties": {
+        "recordType": { "const": "outcome" },
+        "content": { "$ref": "operating-outcome.schema.json" }
+      }
+    },
+    {
+      "title": "Artifact manifest record",
+      "properties": {
+        "recordType": { "const": "artifact-manifest" },
+        "content": { "$ref": "operating-artifact-session.schema.json" }
+      }
+    },
+    {
+      "title": "Migration record",
+      "properties": {
+        "recordType": { "const": "migration" },
+        "content": { "$ref": "operating-migration-record.schema.json" }
+      }
+    },
+    {
+      "title": "Recovery record",
+      "properties": {
+        "recordType": { "const": "recovery" },
+        "content": { "$ref": "operating-recovery-record.schema.json" }
+      }
+    }
+  ]
+}

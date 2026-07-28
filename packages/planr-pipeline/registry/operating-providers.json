@@ -1,0 +1,79 @@
+{
+  "kind": "operating-provider-registry",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "providers": [
+    {
+      "id": "repository",
+      "version": "1.0.0",
+      "kind": "local",
+      "availability": "builtin",
+      "readOnly": true,
+      "supportsIncremental": true,
+      "evidenceKinds": ["repository"],
+      "sensitivityCeiling": "restricted",
+      "limits": { "maxItems": 1000, "maxBytes": 10485760, "maxDurationMs": 30000 },
+      "healthChecks": ["project-root-valid", "realpath-contained"]
+    },
+    {
+      "id": "planr",
+      "version": "1.0.0",
+      "kind": "local",
+      "availability": "builtin",
+      "readOnly": true,
+      "supportsIncremental": true,
+      "evidenceKinds": ["planr", "outcome"],
+      "sensitivityCeiling": "restricted",
+      "limits": { "maxItems": 2000, "maxBytes": 10485760, "maxDurationMs": 30000 },
+      "healthChecks": ["planr-project-valid", "protocol-readable"]
+    },
+    {
+      "id": "git",
+      "version": "1.0.0",
+      "kind": "local",
+      "availability": "builtin",
+      "readOnly": true,
+      "supportsIncremental": true,
+      "evidenceKinds": ["git"],
+      "sensitivityCeiling": "confidential",
+      "limits": { "maxItems": 500, "maxBytes": 5242880, "maxDurationMs": 30000 },
+      "healthChecks": ["git-worktree", "read-only-command-set"]
+    },
+    {
+      "id": "github",
+      "version": "1.0.0",
+      "kind": "remote",
+      "availability": "configured",
+      "readOnly": true,
+      "supportsIncremental": true,
+      "evidenceKinds": ["github"],
+      "sensitivityCeiling": "confidential",
+      "limits": { "maxItems": 500, "maxBytes": 5242880, "maxDurationMs": 60000 },
+      "healthChecks": ["credential-available", "read-scope"]
+    },
+    {
+      "id": "linear",
+      "version": "1.0.0",
+      "kind": "remote",
+      "availability": "configured",
+      "readOnly": true,
+      "supportsIncremental": true,
+      "evidenceKinds": ["linear"],
+      "sensitivityCeiling": "confidential",
+      "limits": { "maxItems": 500, "maxBytes": 5242880, "maxDurationMs": 60000 },
+      "healthChecks": ["credential-available", "selected-teams-readable"]
+    },
+    {
+      "id": "file-import",
+      "version": "1.0.0",
+      "kind": "import",
+      "availability": "explicit",
+      "readOnly": true,
+      "supportsIncremental": false,
+      "evidenceKinds": ["file-import"],
+      "sensitivityCeiling": "restricted",
+      "limits": { "maxItems": 1000, "maxBytes": 10485760, "maxDurationMs": 30000 },
+      "healthChecks": ["format-supported", "realpath-contained", "content-inert"]
+    }
+  ]
+}

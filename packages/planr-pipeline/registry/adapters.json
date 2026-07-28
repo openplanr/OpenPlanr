@@ -1,11 +1,12 @@
 {
-  "schemaVersion": "1.0.0",
-  "protocolVersion": "1.1.0",
-  "pipelineVersion": "0.29.2",
+  "kind": "adapter-registry",
+  "schemaVersion": "1.1.0",
+  "protocolVersion": "1.2.0",
+  "pipelineVersion": "0.30.0",
   "adapters": [
     {
       "id": "claude-code",
-      "version": "0.29.2",
+      "version": "0.30.0",
       "capabilityLevel": "product",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -14,6 +15,7 @@
         "ship": "/planr-pipeline:ship",
         "dashboard": "/planr-pipeline:dashboard",
         "artifact": "planr artifact",
+        "operate": "planr operate",
         "sync": "/planr-pipeline:sync",
         "doctor": "planr pipeline doctor"
       },
@@ -21,9 +23,11 @@
         "subagents": "native",
         "hooks": true,
         "toolIsolation": "enforced",
-        "parallelDispatch": "native",
-        "headlessLaunch": true,
-        "artifactReview": true
+        "parallelDispatch": true,
+        "parallelDispatchMode": "native",
+        "headlessBridge": true,
+        "artifactReview": true,
+        "operatingBoard": true
       },
       "assets": ["commands", "agents", "procedures", "hooks", "templates", "schemas", "artifact-review"],
       "healthChecks": ["plugin-installed", "commands-present", "hook-readable", "artifact-command-valid"],
@@ -36,7 +40,7 @@
     },
     {
       "id": "codex",
-      "version": "0.29.2",
+      "version": "0.30.0",
       "capabilityLevel": "workflow",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -45,6 +49,7 @@
         "ship": "$planr-ship",
         "dashboard": "$planr-dashboard",
         "artifact": "$planr-artifact",
+        "operate": "$planr-operate",
         "sync": "$planr-sync",
         "doctor": "$planr-doctor"
       },
@@ -52,9 +57,11 @@
         "subagents": "dynamic",
         "hooks": true,
         "toolIsolation": "advisory",
-        "parallelDispatch": "dynamic",
-        "headlessLaunch": true,
-        "artifactReview": true
+        "parallelDispatch": true,
+        "parallelDispatchMode": "dynamic",
+        "headlessBridge": true,
+        "artifactReview": true,
+        "operatingBoard": true
       },
       "assets": ["skills", "project-guidance", "schemas", "templates", "artifact-review"],
       "healthChecks": ["skills-present", "project-guidance-current", "runtime-authenticated", "artifact-command-valid"],
@@ -67,7 +74,7 @@
     },
     {
       "id": "cursor",
-      "version": "0.29.2",
+      "version": "0.30.0",
       "capabilityLevel": "workflow",
       "installScopes": ["project"],
       "entrypoints": {
@@ -76,6 +83,7 @@
         "ship": "ship {feature}",
         "dashboard": "open planr dashboard",
         "artifact": "planr artifact",
+        "operate": "planr operate",
         "sync": "sync planr",
         "doctor": "planr pipeline doctor"
       },
@@ -83,9 +91,11 @@
         "subagents": "advisory",
         "hooks": false,
         "toolIsolation": "advisory",
-        "parallelDispatch": "host",
-        "headlessLaunch": false,
-        "artifactReview": true
+        "parallelDispatch": false,
+        "parallelDispatchMode": "host",
+        "headlessBridge": false,
+        "artifactReview": true,
+        "operatingBoard": true
       },
       "assets": ["rules", "roles", "schemas", "templates", "artifact-review"],
       "healthChecks": ["rules-present", "portable-assets-present", "no-foreign-runtime-paths", "artifact-command-valid"],

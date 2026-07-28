@@ -1,6 +1,6 @@
-# Compatibility Matrix - Protocol v1.0 artifacts + v1.1 capabilities
+# Compatibility Matrix - Protocol v1.0 artifacts + v1.1/v1.2 capabilities
 
-> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.29.2.
+> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.30.0.
 
 ## TL;DR
 
@@ -40,6 +40,9 @@ Same `.planr/specs/` directories. Same SPEC, US, Task, stack, graph, and `.pipel
 | Encrypted expiring short links | Supported | Supported | Supported |
 | Review import/export | Supported | Supported | Supported |
 | Dashboard command | Available | Available through router | `$planr-dashboard` / router |
+| Operating Board | `/planr-pipeline:operate` → `planr operate` | Generated `planr operate` rule | Installed `$planr-operate` skill |
+| Operating state transitions | OpenPlanr engine | OpenPlanr engine | OpenPlanr engine |
+| Operating advisor isolation | Native tool isolation where available | Advisory host boundary | Dynamic isolation; sequential fallback |
 | Sync command | Available | Available through router | `$planr-sync` / router |
 | Status command | Native and router | Router | Router/skill |
 | Conformance | Canonical local conformance suite | Artifact conformance target | Artifact conformance target |
@@ -51,6 +54,15 @@ Compatibility is reported at three explicit levels:
 - **Artifact:** a SPEC authored by OpenPlanr CLI or one runtime can be consumed by the others.
 - **Workflow:** PLAN, Design, SHIP, dashboard, status, and sync are reachable through the adapter.
 - **Product:** native runtime enforcement and the full host-integrated experience.
+- Protocol v1.2 Operating Board events, immutable records, checkpoints, routes,
+  and outcomes are runtime-neutral. Runtime guidance delegates to `planr
+  operate`; it does not reimplement state transitions.
+- All adapters preserve the same governance boundaries: `--preview` makes no
+  provider/model calls or writes, `--dry-run` may use a consented provider but
+  commits no state, finding acceptance is separate from route application,
+  answered gaps require evidence-backed verification, Pipeline-PO DEV routes
+  resume from `awaiting-plan`, and outcome reconciliation observes but never
+  invokes SHIP.
 - Stories, tasks, stack files, design specs, graph output, run manifests, and shipped markers use schemas under `schemas/v1.0.0/`.
 - The canonical schema source for this cleanup cycle is `planr-pipeline/schemas/v1.0.0/`; OpenPlanr CLI docs mirror that contract for CLI users.
 
@@ -157,4 +169,4 @@ For runtime-operated fixtures, use `conformance/runner.mjs` with `--setup`, then
 
 ---
 
-*OpenPlanr Protocol v1.0 artifacts + v1.1 ecosystem contracts - compatibility matrix for planr-pipeline v0.29.2.*
+*OpenPlanr Protocol v1.0 artifacts + v1.1/v1.2 ecosystem contracts - compatibility matrix for planr-pipeline v0.30.0.*

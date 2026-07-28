@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-decision.schema.json",
+  "title": "OpenPlanr operating decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "id", "cycleId", "question", "options", "recommendation", "consequences", "reversibility", "deadline", "proposedDefault", "unblocks", "status", "owner", "evidenceRefs", "createdAt", "updatedAt"],
+  "properties": {
+    "kind": { "const": "operating-decision" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "id": { "type": "string", "pattern": "^DEC-[0-9]{3,}$" },
+    "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+    "question": { "type": "string", "minLength": 1 },
+    "options": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "label": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "recommendation": { "type": "string", "minLength": 1 },
+    "consequences": { "type": "string", "minLength": 1 },
+    "reversibility": { "type": "string", "enum": ["reversible", "costly", "one-way"] },
+    "deadline": { "type": "string", "format": "date-time" },
+    "proposedDefault": { "type": ["string", "null"] },
+    "unblocks": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^(?:FND|DEC|GAP|SPEC)-[0-9]{3,}$" } },
+    "status": { "type": "string", "enum": ["open", "answered", "closed", "default-due", "superseded"] },
+    "owner": { "type": "string", "minLength": 1 },
+    "selectedOption": { "type": "string", "minLength": 1 },
+    "note": { "type": "string" },
+    "evidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^EVD-[A-Za-z0-9._-]+$" } },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}

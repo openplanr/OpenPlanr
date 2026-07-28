@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-recovery-record.schema.json",
+  "title": "OpenPlanr explicit operating recovery record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "id", "transactionId", "action", "reason", "previewDigest", "fromHead", "toHead", "outcome", "confirmedBy", "createdAt"],
+  "properties": {
+    "kind": { "const": "operating-recovery-record" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "id": { "type": "string", "pattern": "^RCV-[A-Za-z0-9._-]+$" },
+    "transactionId": { "type": ["string", "null"], "pattern": "^TXN-[A-Za-z0-9._-]+$" },
+    "action": { "type": "string", "enum": ["rebuild-projection", "recover-journal", "rollback", "forward-fix", "restore-backup"] },
+    "reason": { "type": "string", "minLength": 1 },
+    "previewDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "fromHead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "hash"],
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 0 },
+        "hash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "toHead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "hash"],
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 0 },
+        "hash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "outcome": { "type": "string", "enum": ["recovered", "blocked", "failed"] },
+    "confirmedBy": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

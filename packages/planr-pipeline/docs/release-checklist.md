@@ -27,6 +27,7 @@ npm run ecosystem:conformance -- --strict
 npm run test:docs
 npm test
 npm run conformance:check
+node --test tests/ecosystem/operate-release-contract.test.mjs
 git diff --check
 ```
 
@@ -67,6 +68,7 @@ After merge and tag creation, run:
 
 ```bash
 npm run doctor -- --release --strict
+npm run canary:operate-release
 ```
 
 The release audit checks:
@@ -79,6 +81,10 @@ The release audit checks:
 - `OpenPlanr` has a package version and published release when checked.
 - Git tags and GitHub releases exist for versioned repos.
 - Cross-repo graph output matches through `npm run ecosystem:conformance -- --strict`.
+- Operating Board is advertised only after the marketplace resolves Protocol
+  v1.2, the exact `pipeline → CLI → skills → marketplace` promotion order,
+  registry integrity for both npm packages, the final skills release, and a
+  one-line installed `planr operate inspect --json` canary.
 
 ## Rollback Notes
 

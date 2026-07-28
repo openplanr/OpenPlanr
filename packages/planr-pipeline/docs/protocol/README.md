@@ -1,10 +1,12 @@
 # OpenPlanr Protocol
 
 > Artifact version: **1.0.0**
-> Ecosystem contracts: **1.1.0**
+> Ecosystem contracts: **1.1.0 + additive Operating Board 1.2.0**
 > Status: v1.0 artifact frontmatter remains stable. v1.1 adds optional adapter,
-> runtime-lock, compatibility, role-registry, provenance, and artifact-review contracts.
-> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.29.2.
+> runtime-lock, compatibility, role-registry, provenance, and artifact-review
+> contracts. v1.2 adds operating evidence, advisory, governance, outcome, and
+> ecosystem-operation contracts.
+> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.30.0.
 
 The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI development. It defines:
 
@@ -16,6 +18,9 @@ The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI devel
 - **Artifact review** — portable HTML envelopes, encrypted live-room events,
   immutable snapshots, and ciphertext-only sharing boundaries without changing
   planning frontmatter.
+- **Operating Board** — attributed evidence, read-only advisor lenses,
+  deterministic consolidation, governed planning routes, and typed outcome
+  reconciliation.
 
 ## Why a protocol
 
@@ -43,8 +48,11 @@ The protocol is the contract. Runtimes are adapters.
 | `commands.md` | `PLAN` and `SHIP` as command contracts. Mode detection, validation, orchestration, exits. R1 normative. |
 | `runtime-adapters.md` | How Claude Code plugin, Cursor MDC rules, and Codex AGENTS.md implement this protocol. |
 | `../artifact-review.md` | Engine API, `planr artifact` commands, sandbox, privacy, sharing, and design-board integration. |
+| `operating-board.md` | Protocol v1.2 evidence, advisors, lifecycle, route governance, outcomes, recovery, and release operations. |
 | `../generated/roles.md` | Generated nine-role registry table. |
 | `../generated/adapters.md` | Generated certified-adapter capability table. |
+| `../generated/operating-roles.md` | Generated six-lens operating registry table. |
+| `../generated/operating-providers.md` | Generated read-only evidence provider table. |
 
 ## Pinning rule
 
@@ -71,6 +79,11 @@ Artifact review adds these v1.1 schemas:
 These schemas use `schemaVersion: "1.0.0"` for their own payload format while
 living in the additive Protocol v1.1 capability namespace. They are not SPEC,
 story, or task frontmatter and do not alter existing Protocol v1.0 artifacts.
+
+Operating Board schemas live under [`../../schemas/v1.2.0/`](../../schemas/v1.2.0/).
+Every persisted v1.2 object declares top-level `kind`,
+`schemaVersion: "1.0.0"`, and `protocolVersion: "1.2.0"`. They are additive and
+do not rewrite v1.0 planning artifacts or v1.1 runtime contracts.
 
 ## Artifact review workflow
 
