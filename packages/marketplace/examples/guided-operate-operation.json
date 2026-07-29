@@ -8,8 +8,8 @@
   "title": "Release Guided Operating Board Runtime Experience",
   "capability": "guidedOperatingBoard",
   "createdAt": "2026-07-29T20:30:00.000Z",
-  "updatedAt": "2026-07-29T22:50:00.000Z",
-  "state": "preparing",
+  "updatedAt": "2026-07-29T23:38:31.000Z",
+  "state": "verified",
   "ledger": {
     "kind": "marketplace-draft-pr",
     "repository": "openplanr/marketplace",
@@ -17,7 +17,7 @@
     "pullRequest": {
       "number": 76,
       "url": "https://github.com/openplanr/marketplace/pull/76",
-      "state": "draft"
+      "state": "merged"
     }
   },
   "participantOrder": [
@@ -187,23 +187,23 @@
       "repository": "openplanr/marketplace",
       "currentVersion": "1.1.0",
       "targetVersion": "1.2.0",
-      "phase": "preparing",
+      "phase": "verified",
       "branch": "ecosystem-release/operate-spec-003-guided-runtime",
       "targetBranch": "main",
-      "commitSha": null,
+      "commitSha": "7b1c88daa16f8adb66db2f388555a3bdba67df2f",
       "pullRequest": {
         "number": 76,
         "url": "https://github.com/openplanr/marketplace/pull/76",
-        "state": "draft"
+        "state": "merged"
       },
       "package": null,
-      "tag": null,
-      "tarballDigest": null,
+      "tag": "v1.2.0",
+      "tarballDigest": "sha256:1347698510f0b2b10bdc148543ad32a43cbca63fb0a5df541db4f7b64f89efce",
       "checks": [
         {
           "name": "ci",
-          "status": "expected",
-          "url": null
+          "status": "passed",
+          "url": "https://github.com/openplanr/marketplace/actions/runs/30498709793"
         }
       ],
       "approvals": [
@@ -228,58 +228,58 @@
         "skills"
       ],
       "compensation": "withhold-manifest",
-      "nextSafeAction": "Merge the still-unavailable ledger, tag marketplace v1.2.0, then run the exact-commit canary before finalization."
+      "nextSafeAction": "Verified at v1.2.0; preserve the merged ledger and post-tag finalization as the durable release record."
     }
   ],
   "releaseEvidence": [
     {
       "id": "packed-cli",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30500020245",
+      "digest": "sha256:fab14b883ab25b00ff41a32333e9dc95aea3a98d22560a45e831cf2befee27b8",
+      "checkedAt": "2026-07-29T23:37:16.226Z"
     },
     {
       "id": "protocol-v1.2",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30500020245",
+      "digest": "sha256:e66db2d88e1056edd6a0d7dea309b671aa515c77b7115baa6348e7d90b68bc3a",
+      "checkedAt": "2026-07-29T23:37:16.226Z"
     },
     {
       "id": "event-replay",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30500020245",
+      "digest": "sha256:31f262ae8eed23579e78326f1e2323ffe5eb75c0af61136389f21cd15c5a2ea0",
+      "checkedAt": "2026-07-29T23:37:16.226Z"
     },
     {
       "id": "security-boundaries",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30500020245",
+      "digest": "sha256:5704f2dc060f5e159918f367e987c35091510bb7370e80cbc5db12df3748c97d",
+      "checkedAt": "2026-07-29T23:37:16.226Z"
     },
     {
       "id": "outcome-reconciliation",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30500020245",
+      "digest": "sha256:6e6b939af32df2e705edfc4bc5688c4c34be4e82e29459d9804e8941a5f745b2",
+      "checkedAt": "2026-07-29T23:37:16.226Z"
     }
   ],
-  "prepareDigest": null,
-  "confirmationDigest": null,
+  "prepareDigest": "sha256:5b741831449bb9bb6d48981ddbfa696adaae0ec8c62088494aa3fd985c716313",
+  "confirmationDigest": "sha256:8d51338a15fd79724d053d11d95847de8fd2069cdc558738753e3119d80a351f",
   "blockedReason": null,
-  "nextSafeAction": "Merge the still-unavailable marketplace ledger, tag v1.2.0, and run the exact-commit canary before finalization.",
+  "nextSafeAction": "Archive the verified guided Operating Board release ledger and audit it after the first minor release.",
   "recovery": {
     "mode": "forward-fix",
     "reason": "planr-pipeline 0.31.0 and openplanr 1.15.0 are public on npm.",
-    "nextSafeAction": "Published packages cannot be withdrawn; correct any defect with a forward-fix release while the marketplace capability remains withheld."
+    "nextSafeAction": "Published packages cannot be withdrawn; correct any defect with a forward-fix release and record it in a new ecosystem operation."
   },
   "reconciliation": {
-    "status": "pending",
-    "checkedAt": null,
+    "status": "matched",
+    "checkedAt": "2026-07-29T23:38:31.000Z",
     "sources": [
       "github-pr",
       "git-commit",
@@ -290,7 +290,7 @@
       "operating-canary"
     ],
     "drift": [],
-    "nextSafeAction": "Record the marketplace merge/tag and exact-commit canary before authoritative final reconciliation."
+    "nextSafeAction": "All authoritative PR, commit, tag, CI, npm, marketplace-manifest, and six-platform canary state matches."
   },
   "history": [
     {
@@ -310,6 +310,24 @@
       "participant": null,
       "digest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7",
       "note": "Pipeline 0.31.0 and OpenPlanr 1.15.0 are verified on npm; skills 1.17.2 includes the Windows line-ending and PowerShell test-runner forward fixes and is merged, tagged, and certified. Marketplace preparation and the exact-commit canary remain withheld."
+    },
+    {
+      "eventId": "44cdffcd-4187-4c50-a9de-9f7b395738fe",
+      "timestamp": "2026-07-29T23:38:30.000Z",
+      "type": "reconciliation.recorded",
+      "actor": "maintainer",
+      "participant": "marketplace",
+      "digest": "sha256:fab14b883ab25b00ff41a32333e9dc95aea3a98d22560a45e831cf2befee27b8",
+      "note": "Authoritative PR, commit, tag, CI, npm, marketplace v1.2.0 archive, and exact-commit Node 20/22 canaries on Ubuntu, macOS, and Windows matched."
+    },
+    {
+      "eventId": "c4e2bfa0-10e2-43f7-a451-17530fa65954",
+      "timestamp": "2026-07-29T23:38:31.000Z",
+      "type": "operation.verified",
+      "actor": "maintainer",
+      "participant": "marketplace",
+      "digest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7",
+      "note": "Guided Operating Board ecosystem release verified and approved for marketplace availability."
     }
   ]
 }

@@ -26,15 +26,15 @@ function adapters() {
   }));
 }
 
-test('guided release ledger records prepared participants while capability stays unadvertised', async () => {
+test('guided release ledger records the verified cross-repository transaction', async () => {
   const operation = await readJson('../examples/guided-operate-operation.json');
   assert.deepEqual(validateOperation(operation), []);
   assert.equal(operation.operationDigest, calculateOperationDigest(operation));
   assert.equal(operation.umbrellaSpecId, 'SPEC-003');
-  assert.equal(operation.state, 'preparing');
+  assert.equal(operation.state, 'verified');
   assert.equal(operation.ledger.pullRequest.number, 76);
-  assert.equal(operation.ledger.pullRequest.state, 'draft');
-  assert.equal(isVerifiedOperation(operation), false);
+  assert.equal(operation.ledger.pullRequest.state, 'merged');
+  assert.equal(isVerifiedOperation(operation), true);
   assert.deepEqual(
     operation.participants.map(({ targetVersion }) => targetVersion),
     ['0.31.0', '1.15.0', '1.17.2', '1.2.0'],
@@ -45,7 +45,7 @@ test('guided release ledger records prepared participants while capability stays
       'a3df691ba5000828cee2580252b2d1e2ba5ed6eb',
       '37ec90c946c52a7b9e4488e78bbf5b85aef195d7',
       '714d5f6aa587f00f2d09ba148f31d85da4d84405',
-      null,
+      '7b1c88daa16f8adb66db2f388555a3bdba67df2f',
     ],
   );
 });
@@ -88,13 +88,13 @@ test('guided capability opens only after versions, interaction metadata, and rel
   assert.deepEqual(missingCapability.missing, ['adapters']);
 });
 
-test('published compatibility advances only released participants while guided train is preparing', async () => {
+test('published compatibility exposes the verified guided release set', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const guided = ecosystem.capabilities.guidedOperatingBoard;
   assert.equal(ecosystem.capabilities.operatingBoard.status, 'available');
-  assert.equal(guided.status, 'unavailable');
+  assert.equal(guided.status, 'available');
   assert.equal(guided.releaseOperation.operationId, 'OPERATE-SPEC-003');
-  assert.equal(guided.releaseOperation.state, 'preparing');
+  assert.equal(guided.releaseOperation.state, 'verified');
   assert.deepEqual(guided.components, {
     pipeline: '0.31.0',
     cli: '1.15.0',
@@ -102,9 +102,9 @@ test('published compatibility advances only released participants while guided t
     marketplace: '1.2.0',
   });
   assert.deepEqual(ecosystem.components, {
-    cli: { version: '1.14.3', pipelineRange: '^0.30.0' },
-    pipeline: { version: '0.30.0', cliRange: '^1.14.3' },
-    skills: { version: '1.16.0', cliRange: '^1.14.3' },
+    cli: { version: '1.15.0', pipelineRange: '^0.31.0' },
+    pipeline: { version: '0.31.0', cliRange: '^1.15.0' },
+    skills: { version: '1.17.2', cliRange: '^1.15.0' },
     marketplace: { version: '1.2.0' },
   });
 });
