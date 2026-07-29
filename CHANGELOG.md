@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.14.1
+
+### Patch Changes
+
+- [`c0136af`](https://github.com/openplanr/OpenPlanr/commit/c0136afcadef87fe9d3795e6223fea0cb5f559f0) Point `test:operate:packed` at the config that owns the packed-install suite.
+  The suite moved out of the default vitest project so it could not saturate the
+  shared worker pool, but the script still used the default config, where the file
+  is now excluded — so it exited "No test files found" instead of running.
+
+- [`5c7c05b`](https://github.com/openplanr/OpenPlanr/commit/5c7c05b5188312e461e3464e8c7c27bf5d100ff8) Stabilize the native Operating Board lifecycle under parallel CI load and close
+  the operating lock file safely when its initial durable write fails.
+
 ## 1.14.0
 
 ### Minor Changes
