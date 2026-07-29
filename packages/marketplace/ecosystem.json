@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAt": "2026-07-29T16:32:44.308Z",
+  "generatedAt": "2026-07-29T17:26:40.061Z",
   "protocol": {
     "current": "1.2.0",
     "supported": [
@@ -11,16 +11,16 @@
   },
   "components": {
     "cli": {
-      "version": "1.14.2",
+      "version": "1.14.3",
       "pipelineRange": "^0.30.0"
     },
     "pipeline": {
       "version": "0.30.0",
-      "cliRange": "^1.14.2"
+      "cliRange": "^1.14.3"
     },
     "skills": {
       "version": "1.16.0",
-      "cliRange": "^1.14.2"
+      "cliRange": "^1.14.3"
     },
     "marketplace": {
       "version": "1.1.0"
@@ -68,7 +68,7 @@
       "protocolRange": "^1.2.0",
       "components": {
         "pipeline": "0.30.0",
-        "cli": "1.14.2",
+        "cli": "1.14.3",
         "skills": "1.16.0",
         "marketplace": "1.1.0"
       },
@@ -80,7 +80,7 @@
       "missing": [],
       "releaseOperation": {
         "operationId": "OPERATE-SPEC-002",
-        "operationDigest": "sha256:7f07dbf099064e49f8e462a87fa5b94be3442588ee6fcec8faf8c1a085e01cd5",
+        "operationDigest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc",
         "state": "verified",
         "reconciliation": "matched"
       }

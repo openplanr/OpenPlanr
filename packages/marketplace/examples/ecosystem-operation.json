@@ -3,12 +3,12 @@
   "kind": "openplanr-ecosystem-operation",
   "protocolVersion": "1.2.0",
   "operationId": "OPERATE-SPEC-002",
-  "operationDigest": "sha256:7f07dbf099064e49f8e462a87fa5b94be3442588ee6fcec8faf8c1a085e01cd5",
+  "operationDigest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc",
   "umbrellaSpecId": "SPEC-002",
   "title": "Release OpenPlanr Operating Board",
   "capability": "operatingBoard",
   "createdAt": "2026-07-28T12:00:00.000Z",
-  "updatedAt": "2026-07-29T16:31:19.000Z",
+  "updatedAt": "2026-07-29T17:23:27.000Z",
   "state": "verified",
   "ledger": {
     "kind": "marketplace-draft-pr",
@@ -64,14 +64,14 @@
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-28T12:00:00.000Z",
-          "digest": "sha256:7f07dbf099064e49f8e462a87fa5b94be3442588ee6fcec8faf8c1a085e01cd5"
+          "digest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc"
         },
         {
           "gate": "release",
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-29T15:36:00.000Z",
-          "digest": "sha256:7f07dbf099064e49f8e462a87fa5b94be3442588ee6fcec8faf8c1a085e01cd5"
+          "digest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc"
         }
       ],
       "prerequisites": [],
@@ -84,29 +84,29 @@
       "repoLocalWorkItem": "docs/implementation/OPERATE-SPEC-002.md",
       "repository": "openplanr/OpenPlanr",
       "currentVersion": "1.13.3",
-      "targetVersion": "1.14.2",
+      "targetVersion": "1.14.3",
       "phase": "verified",
       "branch": "changeset-release/main",
       "targetBranch": "main",
-      "commitSha": "fdff3e34690df9e3b8159c3c8038c09fa279ae59",
+      "commitSha": "39cd0ecf7631b157c03eadc83e210b9856602703",
       "pullRequest": {
-        "number": 154,
-        "url": "https://github.com/openplanr/OpenPlanr/pull/154",
+        "number": 157,
+        "url": "https://github.com/openplanr/OpenPlanr/pull/157",
         "state": "merged"
       },
       "package": {
         "name": "openplanr",
-        "version": "1.14.2",
+        "version": "1.14.3",
         "status": "verified",
-        "integrity": "sha512-BKnoQLtAv300axql73y5igfSLEIrGgXPvIyxl8YunNAbGRqpNTGqY/RIR7SvsEdfr5C6eBOiBA3qbqutcSTnCg=="
+        "integrity": "sha512-benE+ToxEkvRXLPl9fpt/gzao8tjyzXkOVSeP7U8eF/AZr5aEu0eIsrFFkxzABl1XotatoPBb7rsrx9oa+U8+w=="
       },
-      "tag": "v1.14.2",
-      "tarballDigest": "sha256:007238ed835c4cc7f706863cd79e3c6173db53f46b3a4a4299e55af6946e8887",
+      "tag": "v1.14.3",
+      "tarballDigest": "sha256:f213907db85e5dcb74caf85530ad7e3ede8c4e6ed579ac8c4adc6b7f7d18342a",
       "checks": [
         {
           "name": "ci",
           "status": "passed",
-          "url": "https://github.com/openplanr/OpenPlanr/actions/runs/30468449776"
+          "url": "https://github.com/openplanr/OpenPlanr/actions/runs/30473820389"
         }
       ],
       "approvals": [
@@ -115,21 +115,21 @@
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-28T12:00:00.000Z",
-          "digest": "sha256:7f07dbf099064e49f8e462a87fa5b94be3442588ee6fcec8faf8c1a085e01cd5"
+          "digest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc"
         },
         {
           "gate": "release",
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-29T15:36:00.000Z",
-          "digest": "sha256:7f07dbf099064e49f8e462a87fa5b94be3442588ee6fcec8faf8c1a085e01cd5"
+          "digest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc"
         }
       ],
       "prerequisites": [
         "pipeline"
       ],
       "compensation": "forward-fix",
-      "nextSafeAction": "Verified at v1.14.2. Any published correction must use a forward-fix release."
+      "nextSafeAction": "Verified at v1.14.3. Any published correction must use a forward-fix release."
     },
     {
       "component": "skills",
@@ -163,14 +163,14 @@
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-28T12:00:00.000Z",
-          "digest": "sha256:7f07dbf099064e49f8e462a87fa5b94be3442588ee6fcec8faf8c1a085e01cd5"
+          "digest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc"
         },
         {
           "gate": "release",
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-29T15:36:00.000Z",
-          "digest": "sha256:7f07dbf099064e49f8e462a87fa5b94be3442588ee6fcec8faf8c1a085e01cd5"
+          "digest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc"
         }
       ],
       "prerequisites": [
@@ -212,14 +212,14 @@
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-28T12:00:00.000Z",
-          "digest": "sha256:7f07dbf099064e49f8e462a87fa5b94be3442588ee6fcec8faf8c1a085e01cd5"
+          "digest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc"
         },
         {
           "gate": "release",
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-29T15:36:00.000Z",
-          "digest": "sha256:7f07dbf099064e49f8e462a87fa5b94be3442588ee6fcec8faf8c1a085e01cd5"
+          "digest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc"
         }
       ],
       "prerequisites": [
@@ -235,37 +235,37 @@
     {
       "id": "packed-cli",
       "status": "passed",
-      "url": "https://github.com/openplanr/marketplace/actions/runs/30469844454",
-      "digest": "sha256:c553c74231d9e5c9e8affd2f32bfabe09c0d534fef01757f21ddfda5c068d07d",
-      "checkedAt": "2026-07-29T16:16:03.613Z"
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30474970784",
+      "digest": "sha256:7c9b90c5fd836169f3cc997ea557a6d334b47e3e6b6420eec3f4da32b156dc90",
+      "checkedAt": "2026-07-29T17:22:48.461Z"
     },
     {
       "id": "protocol-v1.2",
       "status": "passed",
-      "url": "https://github.com/openplanr/marketplace/actions/runs/30469844454",
-      "digest": "sha256:58a4edf8d2570a0ea50d08127fc6f91a63ed6481d7be0b2c4754f4221b5f66dd",
-      "checkedAt": "2026-07-29T16:16:03.613Z"
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30474970784",
+      "digest": "sha256:3400f83a49676ade30ffd46285aa79b5b85d92b278d30b52c2ed1f8f58c1d49f",
+      "checkedAt": "2026-07-29T17:22:48.461Z"
     },
     {
       "id": "event-replay",
       "status": "passed",
-      "url": "https://github.com/openplanr/marketplace/actions/runs/30469844454",
-      "digest": "sha256:8c7cbd0cc642dfa1475884c55278abb59691c964deb1dc34f5d25daaf167d3cd",
-      "checkedAt": "2026-07-29T16:16:03.613Z"
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30474970784",
+      "digest": "sha256:a6c52ec230c30b3295187b06be266b571fd572496ca5ea36f9cf4fd8a162aa95",
+      "checkedAt": "2026-07-29T17:22:48.461Z"
     },
     {
       "id": "security-boundaries",
       "status": "passed",
-      "url": "https://github.com/openplanr/marketplace/actions/runs/30469844454",
-      "digest": "sha256:a4de1b2028137a9326513b60eed7e1c77e617737c231b38e25dde3896eabfcb5",
-      "checkedAt": "2026-07-29T16:16:03.613Z"
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30474970784",
+      "digest": "sha256:d1e4864a6cd1f59240063ab14a21f6182a005b5bb17e3d543d7e1cf47a82a6cd",
+      "checkedAt": "2026-07-29T17:22:48.461Z"
     },
     {
       "id": "outcome-reconciliation",
       "status": "passed",
-      "url": "https://github.com/openplanr/marketplace/actions/runs/30469844454",
-      "digest": "sha256:53407d5c96b1afeb8cd845bf0b9ad2ddf9d562aff3ebfac152d64e4598f5e8b5",
-      "checkedAt": "2026-07-29T16:16:03.613Z"
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30474970784",
+      "digest": "sha256:e94e01750563a1ef5d818158c8ea780e5fd41e3efc433b0d309bda557db1ad1d",
+      "checkedAt": "2026-07-29T17:22:48.461Z"
     }
   ],
   "prepareDigest": "sha256:afdb649148a835d03e70cc1a7b6232141bf03ecce47f18015695cd31a058d6a8",
@@ -274,12 +274,12 @@
   "nextSafeAction": "Archive the verified operation ledger and audit it again after the first Operating Board minor release.",
   "recovery": {
     "mode": "forward-fix",
-    "reason": "planr-pipeline 0.30.0 and openplanr 1.14.2 are public on npm.",
+    "reason": "planr-pipeline 0.30.0 and openplanr 1.14.3 are public on npm.",
     "nextSafeAction": "Published packages cannot be withdrawn; correct any defect with a forward-fix release."
   },
   "reconciliation": {
     "status": "matched",
-    "checkedAt": "2026-07-29T16:31:19.000Z",
+    "checkedAt": "2026-07-29T17:23:27.000Z",
     "sources": [
       "github-pr",
       "git-commit",
@@ -336,7 +336,34 @@
       "actor": "maintainer",
       "participant": "marketplace",
       "digest": "sha256:7f07dbf099064e49f8e462a87fa5b94be3442588ee6fcec8faf8c1a085e01cd5",
-      "note": "Operating Board ecosystem release verified and approved for marketplace availability."
+      "note": "Operating Board ecosystem release verified at OpenPlanr 1.14.2 and approved for marketplace availability."
+    },
+    {
+      "eventId": "ad9e88ec-efb0-4ad6-8813-36625c9cf965",
+      "timestamp": "2026-07-29T17:23:27.000Z",
+      "type": "participant.verified",
+      "actor": "maintainer",
+      "participant": "cli",
+      "digest": "sha256:f213907db85e5dcb74caf85530ad7e3ede8c4e6ed579ac8c4adc6b7f7d18342a",
+      "note": "OpenPlanr 1.14.3 verified installed-version provenance and the credential-free first-run failure contract."
+    },
+    {
+      "eventId": "81035233-bd4d-4e50-9408-e97d6383a29c",
+      "timestamp": "2026-07-29T17:23:27.000Z",
+      "type": "reconciliation.recorded",
+      "actor": "maintainer",
+      "participant": "marketplace",
+      "digest": "sha256:7c9b90c5fd836169f3cc997ea557a6d334b47e3e6b6420eec3f4da32b156dc90",
+      "note": "Final Node 20/22 canary verified the immutable pipeline 0.30.0, OpenPlanr 1.14.3, and skills 1.16.0 release commits."
+    },
+    {
+      "eventId": "5af13d13-322d-4e88-8581-8662359abb04",
+      "timestamp": "2026-07-29T17:23:28.000Z",
+      "type": "operation.verified",
+      "actor": "maintainer",
+      "participant": "marketplace",
+      "digest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc",
+      "note": "Operating Board ecosystem release reverified at OpenPlanr 1.14.3 after final cross-repository canaries."
     }
   ]
 }
