@@ -300,4 +300,122 @@ describe('native operating advisor lifecycle', () => {
       chair.rolePacks.chair.evidence.items.some((item) => item.source === 'advisor-results'),
     ).toBe(true);
   });
+
+  it('refuses a native result carrying a secret and persists nothing', async () => {
+    const fixture = await advisingCycle();
+    const session = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'secret-scan',
+    })) as { roles: string[]; roleInputDigests: Record<string, `sha256:${string}`>; lease: string };
+
+    const protocol = await loadOperatingProtocol();
+    const role = session.roles[0] as OperatingRoleResult['roleId'];
+    const unsigned = {
+      kind: 'operating-role-result' as const,
+      schemaVersion: '1.0.0' as const,
+      protocolVersion: '1.2.0' as const,
+      cycleId: 'CYCLE-001',
+      roleId: role,
+      inputDigest: session.roleInputDigests[role],
+      outcome: 'proposals' as const,
+      proposals: [
+        {
+          proposalKey: 'leaky',
+          type: 'finding' as const,
+          title: 'Rotate the exposed key',
+          // A native runtime echoing a credential it saw. The structured path
+          // would have redacted this; this path must refuse it outright.
+          problem:
+            'The deploy script embeds ghp_abcdefghijklmnopqrstuvwxyz0123456789 in plain text.',
+          proposal: 'Move the credential into the secret manager.',
+          impact: 4,
+          confidence: 3,
+          ease: 3,
+          severity: 'high' as const,
+          evidenceRefs: ['EVD-repo'],
+        },
+      ],
+      gaps: [],
+      conflicts: [],
+      producer: {
+        product: 'openplanr',
+        version: '1.14.0',
+        runtime: 'claude',
+        capability: 'analysis-high' as const,
+      },
+    };
+    const result = {
+      ...unsigned,
+      resultDigest: protocol.computeOperatingRoleResultDigest(unsigned as OperatingRoleResult),
+    };
+
+    await expect(
+      operateAdapterLifecycle({
+        ...fixture,
+        action: 'record',
+        cycleId: 'CYCLE-001',
+        lease: session.lease,
+        idempotencyKey: 'secret-scan',
+        role,
+        stdin: JSON.stringify(result),
+      }),
+    ).rejects.toThrowError(expect.objectContaining({ code: 'E_OPERATE_SECRET_DETECTED' }));
+
+    // Nothing may be persisted: no advisory.recorded event reaches the stream.
+    const replay = await new OperatingEventStore(fixture.projectRoot, {
+      localRoot: fixture.localRoot,
+    }).replay();
+    expect(replay.events.filter((event) => event.type === 'advisory.recorded')).toEqual([]);
+  });
+
+  it('applies the native secret boundary to gap and conflict text', async () => {
+    const fixture = await advisingCycle();
+    const session = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'secret-scan-gap',
+    })) as { roles: string[]; roleInputDigests: Record<string, `sha256:${string}`>; lease: string };
+
+    const protocol = await loadOperatingProtocol();
+    const role = session.roles[0] as OperatingRoleResult['roleId'];
+    const unsigned = {
+      kind: 'operating-role-result' as const,
+      schemaVersion: '1.0.0' as const,
+      protocolVersion: '1.2.0' as const,
+      cycleId: 'CYCLE-001',
+      roleId: role,
+      inputDigest: session.roleInputDigests[role],
+      outcome: 'quiet' as const,
+      proposals: [],
+      gaps: ['Missing source token ghp_abcdefghijklmnopqrstuvwxyz0123456789'],
+      conflicts: [],
+      producer: {
+        product: 'openplanr',
+        version: '1.14.1',
+        runtime: 'claude',
+        capability: 'analysis-high' as const,
+      },
+    };
+    const result = {
+      ...unsigned,
+      resultDigest: protocol.computeOperatingRoleResultDigest(unsigned as OperatingRoleResult),
+    };
+
+    await expect(
+      operateAdapterLifecycle({
+        ...fixture,
+        action: 'record',
+        cycleId: 'CYCLE-001',
+        lease: session.lease,
+        idempotencyKey: 'secret-scan-gap',
+        role,
+        stdin: JSON.stringify(result),
+      }),
+    ).rejects.toThrowError(expect.objectContaining({ code: 'E_OPERATE_SECRET_DETECTED' }));
+  });
 });

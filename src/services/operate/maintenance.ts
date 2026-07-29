@@ -838,6 +838,41 @@ export async function operateAdapterLifecycle(input: {
     }
     const result = JSON.parse(input.stdin) as OperatingRoleResult;
     await assertOperatingArtifact('operating-role-result', result);
+    // The structured provider path runs every proposal's free text through
+    // sanitizeGeneratedPlainText before it is persisted. Native runtimes hand
+    // their output in here instead, so the same post-output secret scan has to
+    // happen on this path — otherwise a token in a proposal title reaches the
+    // commit-safe records and the brief projection unredacted.
+    //
+    // This rejects rather than redacts: the result is bound by resultDigest, so
+    // rewriting the content in place would invalidate the binding that proves
+    // the runtime returned exactly this. A runtime that emits a secret must
+    // produce a clean result, not have one silently edited underneath it.
+    const generatedText = [
+      ...(result.proposals ?? []).flatMap((proposal) =>
+        (['title', 'problem', 'proposal'] as const).map((field) => ({
+          location: `proposal.${proposal.proposalKey}.${field}`,
+          value: proposal[field],
+        })),
+      ),
+      ...(result.gaps ?? []).map((value, index) => ({
+        location: `gaps.${index}`,
+        value,
+      })),
+      ...(result.conflicts ?? []).map((value, index) => ({
+        location: `conflicts.${index}`,
+        value,
+      })),
+    ];
+    for (const field of generatedText) {
+      if (typeof field.value === 'string' && containsSecret(field.value)) {
+        throw new OperateError(
+          'E_OPERATE_SECRET_DETECTED',
+          `Recorded advisor output contains a secret at ${field.location}; nothing was persisted.`,
+          { roleId: input.role, field: field.location },
+        );
+      }
+    }
     if (result.cycleId !== input.cycleId || result.roleId !== input.role) {
       throw new OperateError(
         'E_OPERATE_ADVISOR_ISOLATION',
