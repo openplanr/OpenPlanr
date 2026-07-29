@@ -11,6 +11,7 @@ src/
 │   └── commands/           # One file per command (epic.ts, feature.ts, ...)
 │
 ├── services/               # Core business logic
+│   ├── operate/             # Event-sourced evidence-to-decision operating engine
 │   ├── artifact-service.ts # CRUD for markdown artifacts (create, read, list, update)
 │   ├── artifact-gathering.ts # Gathers related artifacts for AI context
 │   ├── ai-service.ts       # AI provider orchestration (streaming, JSON generation)
@@ -61,6 +62,22 @@ src/
 ```
 
 ## Data Flow
+
+### Operating Board
+
+`planr operate` owns the behavioral engine and CLI. Protocol v1.2 schemas,
+canonical reducers, provider manifests, projections, and cross-repository saga
+contracts are owned by `planr-pipeline`.
+
+Operating state is append-only and content-addressed. Commit-safe records live
+under `.planr/operate/`; raw evidence and other machine-specific or sensitive
+material live under `~/.planr/operate/`. Independent advisors see a bounded,
+role-filtered immutable evidence snapshot. Deterministic consolidation produces
+one lane and owner per finding, and route acceptance remains separate from
+digest-bound application.
+
+The dashboard is a disposable read-only projection. PLAN and SHIP remain
+separate user invocations.
 
 ### Artifact Creation
 

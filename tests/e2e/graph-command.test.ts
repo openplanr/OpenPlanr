@@ -32,5 +32,5 @@ describe('planr graph', () => {
       to: 'SPEC-001/T-001',
       kind: 'depends_on',
     });
-  }, 20_000);
+  });
 });

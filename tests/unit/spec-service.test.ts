@@ -70,7 +70,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   if (projectDir && existsSync(projectDir)) {
-    await fs.rm(projectDir, { recursive: true, force: true });
+    await fs.rm(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
 

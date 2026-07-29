@@ -84,7 +84,7 @@ describe('runApplyFromAudit', () => {
   });
 
   afterAll(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('applies the plan to disk and returns exit code 0', async () => {

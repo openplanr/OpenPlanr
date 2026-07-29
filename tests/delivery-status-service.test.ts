@@ -43,7 +43,7 @@ beforeEach(async () => {
   );
 });
 
-afterEach(() => rmSync(dir, { recursive: true, force: true }));
+afterEach(() => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }));
 
 describe('collectDeliveryStatus', () => {
   it('rolls up specs + quick + backlog in spec-driven mode (offline, no network)', async () => {

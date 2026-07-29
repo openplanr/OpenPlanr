@@ -23,7 +23,7 @@ const makeTempDir = () => {
 
 afterEach(() => {
   for (const dir of tempDirs) {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
   tempDirs = [];
 });
@@ -74,5 +74,5 @@ describe('CLI smoke tests', () => {
 
     const output = run('status', { cwd: dir });
     expect(output).toBeDefined();
-  }, 30_000); // `status` runs two CLI invocations; give it a bit more headroom.
+  });
 });

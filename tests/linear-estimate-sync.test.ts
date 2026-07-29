@@ -230,7 +230,7 @@ describe('runLinearPush — estimate field (QT push)', () => {
     config = p.config;
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('sends estimate on create for a Fibonacci team', async () => {

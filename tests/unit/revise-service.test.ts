@@ -77,7 +77,7 @@ describe('reviseArtifact', () => {
   });
 
   afterAll(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('returns a validated revise decision for a valid artifact (US-035 scenario 1)', async () => {
@@ -240,7 +240,7 @@ describe('applyDecision — unchanged-by-agent short-circuit', () => {
   });
 
   afterAll(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   function makeWriter() {

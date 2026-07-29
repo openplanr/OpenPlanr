@@ -58,6 +58,17 @@ Installing or updating one adapter is additive: it keeps every other managed
 adapter and preserves each adapter's existing scope. For example, adding Codex
 at user scope does not widen an existing project-only Cursor installation.
 
+Full setup also installs the generated Operating Board entrypoint:
+
+- Claude Code and Cursor route to the public `planr operate` command.
+- Codex installs the thin `planr-operate` skill at user scope.
+
+The adapters contain workflow guidance only. Evidence policy, scoring, state,
+route confirmation, and outcome evaluation remain in OpenPlanr and Protocol
+v1.2. Native operating advisors run only when the selected adapter reports
+enforced empty-tool isolation. An advisory-only runtime uses the structured
+provider path or fails closed; it is never treated as enforceably isolated.
+
 Removal deletes only recorded OpenPlanr-owned files whose hashes still match.
 Modified or unknown files produce `E_MIGRATION_CONFLICT` before any adapter
 bytes are removed. User-scope assets shared by multiple projects are
@@ -70,6 +81,11 @@ After npm packages and runtime assets are installed, planning artifacts,
 runtime routing, status, sync audit, dashboard, design boards, and doctor work
 without fetching OpenPlanr sources. Provider-backed generation still requires
 the selected provider or a local model runtime.
+
+`planr operate demo` and `planr operate inspect` are credential-free.
+`planr operate run --offline` uses only locally available, sanitized evidence
+and deterministic providers; a lens without its required evidence is reported
+as `not_evaluated`.
 
 On remote/SSH machines use `--scope user` for reusable skills and `--scope project`
 for repository policy. Boards bind only to loopback; forward a loopback port

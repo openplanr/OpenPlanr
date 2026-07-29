@@ -45,7 +45,7 @@ beforeEach(() => {
 afterEach(() => {
   delete process.env.OPENPLANR_HOME;
   delete process.env.OPENPLANR_PIPELINE_ROOT;
-  rmSync(root, { recursive: true, force: true });
+  rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 });
 
 describe('runtime setup', () => {
@@ -158,6 +158,7 @@ describe('runtime setup', () => {
     });
     expect(existsSync(join(projectDir, '.planr', 'runtime-lock.json'))).toBe(true);
     expect(existsSync(join(projectDir, '.cursor', 'rules', 'openplanr.mdc'))).toBe(true);
+    expect(existsSync(join(projectDir, '.cursor', 'rules', 'openplanr-operate.mdc'))).toBe(true);
   });
 
   it('previews exact changes without writing', async () => {
@@ -192,9 +193,10 @@ describe('runtime setup', () => {
     expect(lock.components).toEqual({
       cli: cliVersion,
       pipeline: pipelineVersion,
-      skills: '1.13.0',
+      skills: '1.16.0',
     });
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-artifact', 'SKILL.md'))).toBe(true);
+    expect(existsSync(join(userHome, '.codex', 'skills', 'planr-operate', 'SKILL.md'))).toBe(true);
     expect(lock.adapters).toHaveLength(1);
 
     const second = await previewSetup({
@@ -211,6 +213,14 @@ describe('runtime setup', () => {
     expect(doctor.diagnostics.find((item) => item.code === 'skill-commands')).toMatchObject({
       status: 'pass',
       message: 'Installed Codex skills reference public planr commands only',
+    });
+    expect(doctor.diagnostics.find((item) => item.code === 'operate-skill')).toMatchObject({
+      status: 'pass',
+      message:
+        'Installed planr-operate skill references the public CLI and preserves the SHIP boundary',
+    });
+    expect(doctor.diagnostics.find((item) => item.code === 'operate-protocol')).toMatchObject({
+      status: 'pass',
     });
   });
 
@@ -310,7 +320,15 @@ describe('runtime setup', () => {
       { runtime: 'codex', installScope: 'both' },
     ]);
     expect(existsSync(join(projectDir, '.cursor', 'rules', 'openplanr.mdc'))).toBe(true);
+    expect(existsSync(join(projectDir, '.cursor', 'rules', 'openplanr-operate.mdc'))).toBe(true);
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-plan', 'SKILL.md'))).toBe(true);
+
+    const doctor = await runtimeDoctor(projectDir);
+    expect(doctor.diagnostics.find((item) => item.code === 'operate-cursor-rule')).toMatchObject({
+      status: 'pass',
+      message:
+        'Installed Cursor Operating Board rule references the public CLI and preserves the SHIP boundary',
+    });
 
     await removeRuntime('codex', projectDir);
     lock = JSON.parse(readFileSync(lockPath, 'utf8'));

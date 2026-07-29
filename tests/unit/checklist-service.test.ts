@@ -52,7 +52,7 @@ describe('createChecklist / readChecklist / resetChecklist', () => {
   });
 
   afterAll(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('creates a checklist file', async () => {
@@ -71,7 +71,7 @@ describe('createChecklist / readChecklist / resetChecklist', () => {
     await ensureDir(join(emptyDir, config.outputPaths.agile, 'checklists'));
     const content = await readChecklist(emptyDir, config);
     expect(content).toBeNull();
-    rmSync(emptyDir, { recursive: true, force: true });
+    rmSync(emptyDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('resetChecklist recreates the checklist', async () => {

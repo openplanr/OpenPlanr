@@ -12,7 +12,7 @@ describe('atomicWriteFile', () => {
   });
 
   afterAll(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('writes a new file when the target does not exist', async () => {
@@ -81,7 +81,7 @@ describe('backupIfPresent', () => {
   });
 
   afterAll(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('returns undefined when the source does not exist', async () => {

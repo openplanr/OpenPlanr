@@ -55,6 +55,76 @@ These options apply to **all** commands:
 
 ## Commands
 
+### `planr operate`
+
+Build a cited operating brief from a product charter and verified evidence,
+then govern DEV, OWNER, and AGENT routes without deploying or invoking SHIP.
+
+```bash
+planr operate inspect
+planr operate demo
+planr operate init --preview
+planr operate run --preview
+planr operate run --dry-run
+planr operate review
+```
+
+`--preview` performs no writes, evidence-provider calls, or model calls.
+`--dry-run` may perform the disclosed evidence/model work but commits no
+operating state. A remote dry-run can therefore require provider consent.
+
+| Command group | Purpose |
+|---|---|
+| `inspect` / `demo` | Credential-free readiness and deterministic first-use example; both remain available in planning-only installs |
+| `init` / `config` / `profiles` | Configure and validate the product charter, profile, workspace, runtime, privacy, and decision owner |
+| `sources list\|show\|test` | Inspect or read-only test configured sources; source and JSON/CSV import paths are selected by `operate init` |
+| `run` / `review` / `brief` / `status` | Produce and inspect a cycle that ends at the human review gate |
+| `findings accept\|reject\|supersede` | Record governance; accepting never applies the route |
+| `routes apply\|rollback` | Preview and confirm exact local writes, or restore reversible prior bytes |
+| `decisions decide` | Record the named human owner’s decision |
+| `gaps answer` / `gaps verify` | Record an answer, then separately verify it against explicit evidence IDs |
+| `run --review-only` | Observe verified pipeline shipment proof and reconcile due outcome observations without model calls |
+| `cycles` / `migrate` / `migrations` | Resume, recover, close, migrate, or roll back lifecycle state |
+| `cache` / `integrity` / `diagnostics` / `security` | Inspect local retention and integrity or perform explicit maintenance |
+
+Typical governed route flow:
+
+```bash
+planr operate findings accept FND-001 --yes
+planr operate routes apply ACT-001 --preview --json
+planr operate routes apply ACT-001 \
+  --preview-digest "sha256:<digest>" \
+  --yes \
+  --json
+```
+
+With planning engine `pipeline-po`, the first DEV apply may return
+`state: "awaiting-plan"` plus the exact
+`planr pipeline plan "<feature>" --runtime <runtime>` invocation. Run and review
+PLAN, then repeat the same route apply. Completion validates Pipeline-PO
+provenance and still returns `shipInvoked: false`; Operating Board never invokes
+SHIP.
+
+Gap answers are not evidence until explicitly verified:
+
+```bash
+printf '%s' "$ANSWER" |
+  planr operate gaps answer GAP-001 --stdin --yes --json
+planr operate gaps verify GAP-001 --evidence-ref EVD-001 --yes --json
+```
+
+The first configured provider call discloses endpoint, permitted data classes,
+retention, execution limits, and a policy digest. Interactive mode asks for
+approval; `--json` returns `E_OPERATE_AUTHORITY_REQUIRED` instead of prompting.
+Review that result before rerunning the same named action with `--yes`.
+
+Planning-only (`--minimal`) installations support help, `inspect`, and `demo`.
+Other Operating Board commands fail before provider use with
+`E_PIPELINE_NOT_INSTALLED` and the exact full-install recovery command.
+
+See [OPERATING_BOARD.md](./OPERATING_BOARD.md) for the complete lifecycle,
+privacy, automation, routing, recovery, and outcome contracts.
+
 ### `planr init`
 
 Initialize Planr in the current project.

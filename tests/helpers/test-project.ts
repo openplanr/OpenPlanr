@@ -36,7 +36,7 @@ export async function createTestProject(projectName = 'test-project'): Promise<T
   return {
     dir,
     config,
-    cleanup: () => rmSync(dir, { recursive: true, force: true }),
+    cleanup: () => rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }),
   };
 }
 

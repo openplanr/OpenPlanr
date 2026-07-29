@@ -51,7 +51,7 @@ describe('checkGraphIntegrity', () => {
   });
 
   afterEach(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('reports ok when every parent reference resolves', async () => {

@@ -49,7 +49,7 @@ describe('updateArtifactFields — regex backreference handling (M1)', () => {
   });
 
   afterAll(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('preserves `$1` in a field value (pre-M1, this got eaten as a regex backreference)', async () => {

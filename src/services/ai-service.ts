@@ -81,6 +81,14 @@ export interface AIGenerateResult<T> {
   usage?: AIUsage;
 }
 
+export interface AIGenerateOptions extends AIRequestOptions {
+  /**
+   * Suppress all progress output. Machine-readable commands must enable this
+   * so stdout remains a single protocol document.
+   */
+  quiet?: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Shared helpers
 // ---------------------------------------------------------------------------
@@ -114,10 +122,17 @@ async function generateCore<T>(
   schema: ZodSchema<T>,
   requestOptions: AIRequestOptions,
   fetchResponse: () => Promise<string>,
+  quiet = false,
 ): Promise<AIGenerateResult<T>> {
   const totalUsage: AIUsage = { inputTokens: 0, outputTokens: 0 };
 
-  const spinner = createSpinner('Generating...');
+  const spinner = quiet
+    ? {
+        update() {},
+        stop() {},
+        succeed() {},
+      }
+    : createSpinner('Generating...');
   try {
     // --- First attempt ---
     let rawResponse = await fetchResponse();
@@ -181,16 +196,22 @@ export async function generateJSON<T>(
   provider: AIProvider,
   messages: AIMessage[],
   schema: ZodSchema<T>,
-  options?: AIRequestOptions,
+  options?: AIGenerateOptions,
 ): Promise<AIGenerateResult<T>> {
+  const { quiet = false, ...providerOptions } = options ?? {};
   const requestOptions: AIRequestOptions = {
     temperature: DEFAULT_TEMPERATURE,
-    ...options,
+    ...providerOptions,
     jsonMode: true,
   };
 
-  return generateCore(provider, messages, schema, requestOptions, () =>
-    provider.chatSync(messages, requestOptions),
+  return generateCore(
+    provider,
+    messages,
+    schema,
+    requestOptions,
+    () => provider.chatSync(messages, requestOptions),
+    quiet,
   );
 }
 
@@ -202,22 +223,30 @@ export async function generateStreamingJSON<T>(
   provider: AIProvider,
   messages: AIMessage[],
   schema: ZodSchema<T>,
-  options?: AIRequestOptions,
+  options?: AIGenerateOptions,
 ): Promise<AIGenerateResult<T>> {
+  const { quiet = false, ...providerOptions } = options ?? {};
   const requestOptions: AIRequestOptions = {
     temperature: DEFAULT_TEMPERATURE,
-    ...options,
+    ...providerOptions,
     jsonMode: true,
   };
 
-  return generateCore(provider, messages, schema, requestOptions, async () => {
-    const chunks: string[] = [];
-    const stream = provider.chat(messages, requestOptions);
-    for await (const chunk of stream) {
-      chunks.push(chunk);
-    }
-    return chunks.join('');
-  });
+  return generateCore(
+    provider,
+    messages,
+    schema,
+    requestOptions,
+    async () => {
+      const chunks: string[] = [];
+      const stream = provider.chat(messages, requestOptions);
+      for await (const chunk of stream) {
+        chunks.push(chunk);
+      }
+      return chunks.join('');
+    },
+    quiet,
+  );
 }
 
 // ---------------------------------------------------------------------------

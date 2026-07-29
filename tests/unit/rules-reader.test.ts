@@ -13,7 +13,7 @@ describe('readProjectRules', () => {
   });
 
   afterEach(async () => {
-    await rm(tmpDir, { recursive: true, force: true });
+    await rm(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('returns null when .planr/rules.md does not exist', async () => {

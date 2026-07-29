@@ -31,7 +31,7 @@ describe('git-service', () => {
   });
 
   afterAll(() => {
-    rmSync(repo, { recursive: true, force: true });
+    rmSync(repo, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('reports a clean tree after an initial commit', async () => {
@@ -84,7 +84,7 @@ describe('git-service', () => {
       const status = await inspectGitTree(bare);
       expect(status.kind).toBe('not-a-repo');
     } finally {
-      rmSync(bare, { recursive: true, force: true });
+      rmSync(bare, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
     }
   });
 
@@ -96,7 +96,7 @@ describe('git-service', () => {
       expect(result.message).toContain('git');
       expect(result.message).toContain('--allow-dirty');
     } finally {
-      rmSync(bare, { recursive: true, force: true });
+      rmSync(bare, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
     }
   });
 
@@ -107,7 +107,7 @@ describe('git-service', () => {
       expect(result.ok).toBe(true);
       expect(result.message).toContain('disabled');
     } finally {
-      rmSync(bare, { recursive: true, force: true });
+      rmSync(bare, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
     }
   });
 });

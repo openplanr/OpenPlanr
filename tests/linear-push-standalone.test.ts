@@ -157,7 +157,7 @@ describe('runLinearPush — QT push', () => {
     await writeQuickTask(projectDir, 'QT-007');
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('creates the QT as a top-level issue in the standalone project', async () => {
@@ -232,7 +232,7 @@ describe('runLinearPush — BL push', () => {
     await writeBacklogItem(projectDir, 'BL-001');
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('ensures a `backlog` team label and attaches it to the created issue', async () => {
@@ -306,7 +306,7 @@ describe('runLinearPush — standalone-project config missing', () => {
     await writeBacklogItem(projectDir, 'BL-001');
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('QT push errors with an actionable message; zero API calls', async () => {
@@ -366,7 +366,7 @@ describe('runLinearPush — QT status → Linear stateId', () => {
     projectDir = p.dir;
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('sends stateId on create when local status matches pushStateIds', async () => {
@@ -429,7 +429,7 @@ describe('runLinearPush — BL status → Linear stateId', () => {
     projectDir = p.dir;
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('sends stateId on create when BL status key is in pushStateIds', async () => {
@@ -498,7 +498,7 @@ describe('runLinearPush — zero-config auto-derived stateIds', () => {
     projectDir = p.dir;
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   const teamStatesFixture = [

@@ -57,7 +57,7 @@ describe('updateArtifactFields — linearStatusReconciled baseline invalidation'
   });
 
   afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   async function writeQT(id: string, reconciled: string): Promise<string> {
