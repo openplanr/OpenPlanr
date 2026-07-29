@@ -3,7 +3,7 @@
   "kind": "openplanr-ecosystem-operation",
   "protocolVersion": "1.2.0",
   "operationId": "OPERATE-SPEC-003",
-  "operationDigest": "sha256:040fae014cdd13d21ef0a9457d1eb69b470799b622f6b6591b05d06ada3c9658",
+  "operationDigest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7",
   "umbrellaSpecId": "SPEC-003",
   "title": "Release Guided Operating Board Runtime Experience",
   "capability": "guidedOperatingBoard",
@@ -64,14 +64,14 @@
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-29T22:00:00.000Z",
-          "digest": "sha256:040fae014cdd13d21ef0a9457d1eb69b470799b622f6b6591b05d06ada3c9658"
+          "digest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7"
         },
         {
           "gate": "plan",
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-29T18:00:00.000Z",
-          "digest": "sha256:040fae014cdd13d21ef0a9457d1eb69b470799b622f6b6591b05d06ada3c9658"
+          "digest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7"
         }
       ],
       "prerequisites": [],
@@ -115,14 +115,14 @@
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-29T22:00:00.000Z",
-          "digest": "sha256:040fae014cdd13d21ef0a9457d1eb69b470799b622f6b6591b05d06ada3c9658"
+          "digest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7"
         },
         {
           "gate": "plan",
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-29T18:00:00.000Z",
-          "digest": "sha256:040fae014cdd13d21ef0a9457d1eb69b470799b622f6b6591b05d06ada3c9658"
+          "digest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7"
         }
       ],
       "prerequisites": [
@@ -137,24 +137,24 @@
       "repoLocalWorkItem": "docs/implementation/guided-operating-board.md",
       "repository": "openplanr/skills",
       "currentVersion": "1.16.0",
-      "targetVersion": "1.17.1",
+      "targetVersion": "1.17.2",
       "phase": "verified",
-      "branch": "fix/windows-generated-skill-eol",
+      "branch": "fix/windows-node-test-discovery",
       "targetBranch": "main",
-      "commitSha": "b5073bfe648fdff26f62440cfad69ae12bdc0c2c",
+      "commitSha": "714d5f6aa587f00f2d09ba148f31d85da4d84405",
       "pullRequest": {
-        "number": 23,
-        "url": "https://github.com/openplanr/skills/pull/23",
+        "number": 24,
+        "url": "https://github.com/openplanr/skills/pull/24",
         "state": "merged"
       },
       "package": null,
-      "tag": "v1.17.1",
-      "tarballDigest": "sha256:572d8bedbc95b7a1498c4a5b236bb9ef7a74fb6dc3e1353b94865828beef97d4",
+      "tag": "v1.17.2",
+      "tarballDigest": "sha256:09b30303c25cb1145295622d191b77d1a4588f496f5a940106eb85a6b99c9341",
       "checks": [
         {
           "name": "ci",
           "status": "passed",
-          "url": "https://github.com/openplanr/skills/actions/runs/30499162965"
+          "url": "https://github.com/openplanr/skills/actions/runs/30499582272"
         }
       ],
       "approvals": [
@@ -163,14 +163,14 @@
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-29T22:00:00.000Z",
-          "digest": "sha256:040fae014cdd13d21ef0a9457d1eb69b470799b622f6b6591b05d06ada3c9658"
+          "digest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7"
         },
         {
           "gate": "plan",
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-29T18:00:00.000Z",
-          "digest": "sha256:040fae014cdd13d21ef0a9457d1eb69b470799b622f6b6591b05d06ada3c9658"
+          "digest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7"
         }
       ],
       "prerequisites": [
@@ -178,7 +178,7 @@
         "cli"
       ],
       "compensation": "forward-fix",
-      "nextSafeAction": "Verified at v1.17.1 after the Windows line-ending forward fix. Repository release only; no npm artifact."
+      "nextSafeAction": "Verified at v1.17.2 after the Windows line-ending and PowerShell test-runner forward fixes. Repository release only; no npm artifact."
     },
     {
       "component": "marketplace",
@@ -212,14 +212,14 @@
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-29T22:00:00.000Z",
-          "digest": "sha256:040fae014cdd13d21ef0a9457d1eb69b470799b622f6b6591b05d06ada3c9658"
+          "digest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7"
         },
         {
           "gate": "plan",
           "actor": "Asem",
           "status": "approved",
           "timestamp": "2026-07-29T18:00:00.000Z",
-          "digest": "sha256:040fae014cdd13d21ef0a9457d1eb69b470799b622f6b6591b05d06ada3c9658"
+          "digest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7"
         }
       ],
       "prerequisites": [
@@ -299,7 +299,7 @@
       "type": "operation.created",
       "actor": "maintainer",
       "participant": null,
-      "digest": "sha256:040fae014cdd13d21ef0a9457d1eb69b470799b622f6b6591b05d06ada3c9658",
+      "digest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7",
       "note": "Draft ledger created before participant preparation; external merge, publish, tag, and deployment remain unapproved."
     },
     {
@@ -308,8 +308,8 @@
       "type": "prepare.started",
       "actor": "maintainer",
       "participant": null,
-      "digest": "sha256:040fae014cdd13d21ef0a9457d1eb69b470799b622f6b6591b05d06ada3c9658",
-      "note": "Pipeline 0.31.0 and OpenPlanr 1.15.0 are verified on npm; skills 1.17.1 includes the Windows line-ending forward fix and is merged, tagged, and certified. Marketplace preparation and the exact-commit canary remain withheld."
+      "digest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7",
+      "note": "Pipeline 0.31.0 and OpenPlanr 1.15.0 are verified on npm; skills 1.17.2 includes the Windows line-ending and PowerShell test-runner forward fixes and is merged, tagged, and certified. Marketplace preparation and the exact-commit canary remain withheld."
     }
   ]
 }
