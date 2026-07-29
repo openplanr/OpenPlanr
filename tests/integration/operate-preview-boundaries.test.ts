@@ -20,6 +20,7 @@ import type { OperatingRoleResult } from '../../src/services/operate/types.js';
 
 const execFileAsync = promisify(execFile);
 const temporaryDirectories: string[] = [];
+const OPERATING_INTEGRATION_TIMEOUT_MS = 30_000;
 
 async function temporaryDirectory(prefix: string): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), prefix));
@@ -182,82 +183,86 @@ afterEach(async () => {
 });
 
 describe('Operating Board preview and dry-run boundaries', () => {
-  it('persists one native handoff before any executive advisor is invoked', async () => {
-    const projectRoot = await createGitProject();
-    const localRoot = await temporaryDirectory('openplanr-operate-native-local-');
-    await initialize(projectRoot, localRoot, 'claude', [
-      'strategy-finance',
-      'technology-risk',
-      'chair',
-    ]);
-    const invoke = vi.fn();
+  it(
+    'persists one native handoff before any executive advisor is invoked',
+    async () => {
+      const projectRoot = await createGitProject();
+      const localRoot = await temporaryDirectory('openplanr-operate-native-local-');
+      await initialize(projectRoot, localRoot, 'claude', [
+        'strategy-finance',
+        'technology-risk',
+        'chair',
+      ]);
+      const invoke = vi.fn();
 
-    const cycle = await runOperatingCycle({
-      projectRoot,
-      localRoot,
-      runtime: 'claude',
-      confirmed: true,
-      deferAdvisors: true,
-      adapter: fixtureAdapter(invoke),
-    });
+      const cycle = await runOperatingCycle({
+        projectRoot,
+        localRoot,
+        runtime: 'claude',
+        confirmed: true,
+        deferAdvisors: true,
+        adapter: fixtureAdapter(invoke),
+      });
 
-    expect(invoke).not.toHaveBeenCalled();
-    expect(cycle.nativeHandoff).toMatchObject({
-      phase: 'advisors',
-      cycleId: 'CYCLE-001',
-      evidenceDigest: cycle.evidence?.fingerprint,
-      roles: expect.arrayContaining(['technology-risk']),
-    });
-    expect(cycle.state?.cycles.at(-1)).toMatchObject({
-      id: 'CYCLE-001',
-      state: 'advising',
-    });
+      expect(invoke).not.toHaveBeenCalled();
+      expect(cycle.nativeHandoff).toMatchObject({
+        phase: 'advisors',
+        cycleId: 'CYCLE-001',
+        evidenceDigest: cycle.evidence?.fingerprint,
+        roles: expect.arrayContaining(['technology-risk']),
+      });
+      expect(cycle.state?.cycles.at(-1)).toMatchObject({
+        id: 'CYCLE-001',
+        state: 'advising',
+      });
 
-    await recordQuietNativeResults({
-      projectRoot,
-      localRoot,
-      cycleId: cycle.nativeHandoff?.cycleId as string,
-      evidenceDigest: cycle.nativeHandoff?.evidenceDigest as `sha256:${string}`,
-      roles: cycle.nativeHandoff?.roles as string[],
-      idempotencyKey: 'native-advisors',
-    });
-    const chairHandoff = await runOperatingCycle({
-      projectRoot,
-      localRoot,
-      runtime: 'claude',
-      confirmed: true,
-      deferAdvisors: true,
-      adapter: fixtureAdapter(invoke),
-    });
-    expect(chairHandoff.nativeHandoff).toMatchObject({
-      phase: 'chair',
-      roles: ['chair'],
-    });
-    await recordQuietNativeResults({
-      projectRoot,
-      localRoot,
-      cycleId: chairHandoff.nativeHandoff?.cycleId as string,
-      evidenceDigest: chairHandoff.nativeHandoff?.evidenceDigest as `sha256:${string}`,
-      roles: ['chair'],
-      idempotencyKey: 'native-chair',
-    });
-    const completed = await runOperatingCycle({
-      projectRoot,
-      localRoot,
-      runtime: 'claude',
-      confirmed: true,
-      deferAdvisors: true,
-      adapter: fixtureAdapter(invoke),
-    });
-    expect(completed.nativeHandoff).toBeUndefined();
-    expect(completed.roleResults?.map(({ roleId }) => roleId).sort()).toEqual([
-      'chair',
-      'strategy-finance',
-      'technology-risk',
-    ]);
-    expect(completed.state?.cycles.at(-1)?.state).not.toBe('advising');
-    expect(invoke).not.toHaveBeenCalled();
-  });
+      await recordQuietNativeResults({
+        projectRoot,
+        localRoot,
+        cycleId: cycle.nativeHandoff?.cycleId as string,
+        evidenceDigest: cycle.nativeHandoff?.evidenceDigest as `sha256:${string}`,
+        roles: cycle.nativeHandoff?.roles as string[],
+        idempotencyKey: 'native-advisors',
+      });
+      const chairHandoff = await runOperatingCycle({
+        projectRoot,
+        localRoot,
+        runtime: 'claude',
+        confirmed: true,
+        deferAdvisors: true,
+        adapter: fixtureAdapter(invoke),
+      });
+      expect(chairHandoff.nativeHandoff).toMatchObject({
+        phase: 'chair',
+        roles: ['chair'],
+      });
+      await recordQuietNativeResults({
+        projectRoot,
+        localRoot,
+        cycleId: chairHandoff.nativeHandoff?.cycleId as string,
+        evidenceDigest: chairHandoff.nativeHandoff?.evidenceDigest as `sha256:${string}`,
+        roles: ['chair'],
+        idempotencyKey: 'native-chair',
+      });
+      const completed = await runOperatingCycle({
+        projectRoot,
+        localRoot,
+        runtime: 'claude',
+        confirmed: true,
+        deferAdvisors: true,
+        adapter: fixtureAdapter(invoke),
+      });
+      expect(completed.nativeHandoff).toBeUndefined();
+      expect(completed.roleResults?.map(({ roleId }) => roleId).sort()).toEqual([
+        'chair',
+        'strategy-finance',
+        'technology-risk',
+      ]);
+      expect(completed.state?.cycles.at(-1)?.state).not.toBe('advising');
+      expect(invoke).not.toHaveBeenCalled();
+    },
+    OPERATING_INTEGRATION_TIMEOUT_MS,
+  );
 
   it('routes the Claude CLI run into the isolated machine lifecycle', async () => {
     const projectRoot = await createGitProject();
@@ -680,97 +685,97 @@ describe('Operating Board preview and dry-run boundaries', () => {
     });
   });
 
-  it.each([
-    'collecting',
-    'advising',
-    'consolidating',
-  ] as const)('resumes %s from persisted records without duplicate collection or completed advisor calls', async (phase) => {
-    const projectRoot = await createGitProject();
-    const localRoot = await temporaryDirectory(`openplanr-operate-resume-${phase}-local-`);
-    await initialize(projectRoot, localRoot);
-    const seedAdapter = fixtureAdapter();
-    const at = new Date('2026-07-28T13:00:00.000Z');
-    const seeded = await runOperatingCycle({
-      projectRoot,
-      localRoot,
-      dryRun: true,
-      adapter: seedAdapter,
-      now: at,
-    });
-    const store = new OperatingEventStore(projectRoot, { localRoot });
-    let head = (await store.replay()).eventHead;
-    const append = async (
-      type: Parameters<OperatingEventStore['append']>[0]['type'],
-      payload: Record<string, unknown>,
-      entityId = seeded.cycle.id,
-      evidenceRefs: string[] = [],
-    ) => {
-      const event = await store.append({
-        type,
-        cycleId: seeded.cycle.id,
-        entityId,
-        payload,
-        evidenceRefs,
-        expectedHead: head.hash,
+  it.each(['collecting', 'advising', 'consolidating'] as const)(
+    'resumes %s from persisted records without duplicate collection or completed advisor calls',
+    async (phase) => {
+      const projectRoot = await createGitProject();
+      const localRoot = await temporaryDirectory(`openplanr-operate-resume-${phase}-local-`);
+      await initialize(projectRoot, localRoot);
+      const seedAdapter = fixtureAdapter();
+      const at = new Date('2026-07-28T13:00:00.000Z');
+      const seeded = await runOperatingCycle({
+        projectRoot,
+        localRoot,
+        dryRun: true,
+        adapter: seedAdapter,
+        now: at,
       });
-      head = { sequence: event.sequence, hash: event.eventHash };
-    };
-    await append('cycle.preparing', { record: seeded.cycle });
-    await append('cycle.collecting', {});
-    const evidence = seeded.evidence;
-    if (!evidence) {
-      throw new Error('Expected the seeded cycle to include evidence.');
-    }
-    const evidenceRecord = await store.putRecord(
-      'evidence-metadata',
-      evidence as unknown as Record<string, unknown>,
-      { correlationId: seeded.cycle.id, createdAt: at.toISOString() },
-    );
-    await append(
-      'evidence.collected',
-      {
-        recordDigest: evidenceRecord.digest,
-        sources: evidenceProjectionSources(evidence),
-      },
-      seeded.cycle.id,
-      evidence.items.map((item) => item.id),
-    );
-    if (phase !== 'collecting') {
-      await append('cycle.advising', {});
-      for (const result of seeded.roleResults ?? []) {
-        const record = await store.putRecord(
-          'advisor-result',
-          result as unknown as Record<string, unknown>,
-          { correlationId: seeded.cycle.id, createdAt: at.toISOString() },
-        );
-        await append(
-          'advisory.recorded',
-          { recordDigest: record.digest },
-          `${seeded.cycle.id}-${result.roleId}`,
-          result.proposals.flatMap((proposal) => proposal.evidenceRefs),
-        );
+      const store = new OperatingEventStore(projectRoot, { localRoot });
+      let head = (await store.replay()).eventHead;
+      const append = async (
+        type: Parameters<OperatingEventStore['append']>[0]['type'],
+        payload: Record<string, unknown>,
+        entityId = seeded.cycle.id,
+        evidenceRefs: string[] = [],
+      ) => {
+        const event = await store.append({
+          type,
+          cycleId: seeded.cycle.id,
+          entityId,
+          payload,
+          evidenceRefs,
+          expectedHead: head.hash,
+        });
+        head = { sequence: event.sequence, hash: event.eventHash };
+      };
+      await append('cycle.preparing', { record: seeded.cycle });
+      await append('cycle.collecting', {});
+      const evidence = seeded.evidence;
+      if (!evidence) {
+        throw new Error('Expected the seeded cycle to include evidence.');
       }
-    }
-    if (phase === 'consolidating') {
-      await append('cycle.consolidating', {});
-    }
-    const invoke = vi.fn();
-    const resumed = await runOperatingCycle({
-      projectRoot,
-      localRoot,
-      adapter: fixtureAdapter(invoke),
-      now: at,
-    });
-    const events = (await store.replay()).events;
-    expect(events.filter((event) => event.type === 'evidence.collected')).toHaveLength(1);
-    expect(events.filter((event) => event.type === 'advisory.recorded')).toHaveLength(
-      seeded.roleResults?.length ?? 0,
-    );
-    if (phase === 'collecting') {
-      expect(invoke).toHaveBeenCalled();
-    } else {
-      expect(invoke).not.toHaveBeenCalled();
-      expect(resumed.modelCalls).toBe(0);
-    }
-  });
+      const evidenceRecord = await store.putRecord(
+        'evidence-metadata',
+        evidence as unknown as Record<string, unknown>,
+        { correlationId: seeded.cycle.id, createdAt: at.toISOString() },
+      );
+      await append(
+        'evidence.collected',
+        {
+          recordDigest: evidenceRecord.digest,
+          sources: evidenceProjectionSources(evidence),
+        },
+        seeded.cycle.id,
+        evidence.items.map((item) => item.id),
+      );
+      if (phase !== 'collecting') {
+        await append('cycle.advising', {});
+        for (const result of seeded.roleResults ?? []) {
+          const record = await store.putRecord(
+            'advisor-result',
+            result as unknown as Record<string, unknown>,
+            { correlationId: seeded.cycle.id, createdAt: at.toISOString() },
+          );
+          await append(
+            'advisory.recorded',
+            { recordDigest: record.digest },
+            `${seeded.cycle.id}-${result.roleId}`,
+            result.proposals.flatMap((proposal) => proposal.evidenceRefs),
+          );
+        }
+      }
+      if (phase === 'consolidating') {
+        await append('cycle.consolidating', {});
+      }
+      const invoke = vi.fn();
+      const resumed = await runOperatingCycle({
+        projectRoot,
+        localRoot,
+        adapter: fixtureAdapter(invoke),
+        now: at,
+      });
+      const events = (await store.replay()).events;
+      expect(events.filter((event) => event.type === 'evidence.collected')).toHaveLength(1);
+      expect(events.filter((event) => event.type === 'advisory.recorded')).toHaveLength(
+        seeded.roleResults?.length ?? 0,
+      );
+      if (phase === 'collecting') {
+        expect(invoke).toHaveBeenCalled();
+      } else {
+        expect(invoke).not.toHaveBeenCalled();
+        expect(resumed.modelCalls).toBe(0);
+      }
+    },
+    OPERATING_INTEGRATION_TIMEOUT_MS,
+  );
 });
