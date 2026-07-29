@@ -16,6 +16,7 @@ import { governOperatingFinding } from '../../src/services/operate/lifecycle.js'
 import { recordOperatingOutcomeObservation } from '../../src/services/operate/outcomes.js';
 import { applyOperatingRoute, readOperatingRoute } from '../../src/services/operate/routes.js';
 import { resolveOperatingPaths } from '../../src/services/operate/workspace.js';
+import { OPENPLANR_VERSION } from '../../src/utils/package-version.js';
 
 const execFileAsync = promisify(execFile);
 const temporaryDirectories: string[] = [];
@@ -178,6 +179,7 @@ describe('committed Operating Board route lanes', () => {
       confirmed: true,
       now: new Date('2026-07-28T13:00:00.000Z'),
     });
+    expect(cycle.cycle.producer.version).toBe(OPENPLANR_VERSION);
     const config = await validateOperatingConfiguration(projectRoot);
     const routes = cycle.routes ?? [];
     expect(

@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { OPENPLANR_VERSION } from '../../utils/package-version.js';
 import { canonicalDigest, sha256Digest } from './canonical.js';
 import { applyJournalTransaction, prepareJournalTransaction } from './journal.js';
 import { assertOperatingArtifact } from './protocol.js';
@@ -53,7 +54,7 @@ export async function createArtifactSession(input: {
     evidenceRefs: [...new Set(input.evidenceRefs)].sort(),
     producer: {
       product: 'openplanr',
-      version: '1.14.0',
+      version: OPENPLANR_VERSION,
       runtime: input.runtime,
       capability: input.capability ?? 'analysis-standard',
     },

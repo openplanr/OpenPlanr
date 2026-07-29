@@ -17,6 +17,7 @@ import type {
   OperatingEvidenceReadiness,
   OperatingRoleId,
 } from '../../src/services/operate/types.js';
+import { OPENPLANR_VERSION } from '../../src/utils/package-version.js';
 
 const digest = (character: string): `sha256:${string}` => `sha256:${character.repeat(64)}`;
 
@@ -493,7 +494,7 @@ describe('advisor isolation', () => {
     expect(result.results[0]).toMatchObject({
       roleId: 'technology-risk',
       outcome: 'quiet',
-      producer: { runtime: 'fixture' },
+      producer: { runtime: 'fixture', version: OPENPLANR_VERSION },
     });
     expect(result.skipped).toEqual([
       {
