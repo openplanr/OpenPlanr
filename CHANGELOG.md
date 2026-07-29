@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.15.0
+
+### Minor Changes
+
+- [`1b829e8`](https://github.com/openplanr/OpenPlanr/commit/1b829e8ccd8b025a214811ecf02cc2ac9adb1b89) Add CLI-owned guided Operating Board questionnaires, resumable typed-answer
+  sessions, digest-scoped actions, deterministic charter assistance, value-free
+  evidence recovery, runtime-native presentation contracts, and setup/doctor
+  diagnostics without weakening PLAN, SHIP, provider, or route authority gates.
+
 ## 1.14.4
 
 ### Patch Changes
