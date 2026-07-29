@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.14.4
+
+### Patch Changes
+
+- [`e4fdfb3`](https://github.com/openplanr/OpenPlanr/commit/e4fdfb3ba9c44ac7da13de9ae9fbab52836048d6) Prevent Operating Board evidence redaction from quarantining safe assignments or reprocessing its own redaction sentinels.
+
 ## 1.14.3
 
 ### Patch Changes
