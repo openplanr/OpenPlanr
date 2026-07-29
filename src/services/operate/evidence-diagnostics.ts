@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { resolveGuidedInteractionValidators } from '../pipeline-package-service.js';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
@@ -62,6 +62,7 @@ async function atomicDiagnosticWrite(
   const temporary = `${target}.${process.pid}.tmp`;
   await writeFile(temporary, `${canonicalize(diagnostic)}\n`, { mode: 0o600 });
   await rename(temporary, target);
+  await chmod(target, 0o600);
 }
 
 export async function createEvidenceDiagnostic(input: {

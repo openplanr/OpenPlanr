@@ -9,6 +9,7 @@ import {
   readEvidenceDiagnostic,
 } from '../../src/services/operate/evidence-diagnostics.js';
 import type { CollectedEvidenceItem } from '../../src/services/operate/types.js';
+import { resolveOperatingPaths } from '../../src/services/operate/workspace.js';
 
 const execFileAsync = promisify(execFile);
 const directories: string[] = [];
@@ -88,15 +89,14 @@ describe('Operating Board evidence diagnostics', () => {
       localRoot,
       candidateId: diagnostic.candidateId,
     });
-    const files = await execFileAsync('find', [
-      join(localRoot, 'operate'),
-      '-name',
+    const target = join(
+      resolveOperatingPaths(projectRoot, { localRoot }).quarantine,
+      'diagnostics',
       `${diagnostic.candidateId}.json`,
-      '-print',
-    ]);
-    const target = files.stdout.trim();
-    expect(target).not.toBe('');
-    expect((await stat(target)).mode & 0o777).toBe(0o600);
+    );
+    if (process.platform !== 'win32') {
+      expect((await stat(target)).mode & 0o777).toBe(0o600);
+    }
     const serialized = await readFile(target, 'utf8');
     expect(serialized).not.toContain('placeholder');
     expect(serialized).not.toContain(projectRoot);

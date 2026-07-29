@@ -74,7 +74,9 @@ describe('guided question sessions', () => {
       resolveOperatingPaths(value.projectRoot, { localRoot: value.localRoot }).sessions,
       `${value.session.sessionId}.json`,
     );
-    expect((await stat(target)).mode & 0o777).toBe(0o600);
+    if (process.platform !== 'win32') {
+      expect((await stat(target)).mode & 0o777).toBe(0o600);
+    }
     const raw = await readFile(target, 'utf8');
     expect(raw).toContain('decision-owner');
     expect(raw).not.toContain('never-write-this');

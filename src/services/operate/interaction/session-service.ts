@@ -239,7 +239,10 @@ export async function readGuidedSession(input: {
   }
   try {
     const info = await stat(target);
-    if ((info.mode & 0o077) !== 0) {
+    // POSIX mode bits are not meaningful on Windows (Node reports the
+    // synthesized 0o666 value even after chmod). Windows relies on the
+    // machine-local user profile ACL and the integrity MAC instead.
+    if (process.platform !== 'win32' && (info.mode & 0o077) !== 0) {
       throw new OperateError(
         'E_OPERATE_SESSION_INVALID',
         'Guided session permissions are unsafe; the session was rejected.',
