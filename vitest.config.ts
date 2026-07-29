@@ -5,13 +5,15 @@ export default defineConfig({
     globals: true,
     root: '.',
     include: ['tests/**/*.test.ts'],
-    // The two I/O-heavy suites run separately via vitest.heavy.config.ts so
-    // they cannot saturate this pool. `npm test` runs both configs.
+    // The I/O-heavy operate suites run sequentially via vitest.heavy.config.ts
+    // so they cannot saturate this pool. `npm test` runs both configs, so
+    // nothing is skipped — only rescheduled.
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
       'tests/e2e/operate-packed-install.test.ts',
       'tests/unit/operate-checkpoint-scale.test.ts',
+      'tests/integration/operate-*.test.ts',
     ],
     // Budgets are sized for the slowest supported platform, not the fastest.
     //
@@ -35,6 +37,7 @@ export default defineConfig({
     // cascade seen locally under heavy load. Capping workers there trades a
     // little wall-clock for a deterministic result; other platforms keep the
     // default.
+    maxWorkers: process.platform === 'win32' ? 2 : undefined,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary', 'lcov'],
