@@ -1,0 +1,57 @@
+[
+  {
+    "id": "yaml-secret-with-quoted-synthetic-value",
+    "input": "STRIPE_SECRET_KEY: \"sk_test_dummy_for_ci\"",
+    "expected": "STRIPE_SECRET_KEY: \"[REDACTED]\""
+  },
+  {
+    "id": "environment-secret-with-unquoted-placeholder",
+    "input": "NEXTAUTH_SECRET=placeholder",
+    "expected": "NEXTAUTH_SECRET=[REDACTED]"
+  },
+  {
+    "id": "environment-secret-with-comment",
+    "input": "export AUTH_TOKEN='synthetic-only' # CI placeholder",
+    "expected": "export AUTH_TOKEN='[REDACTED]' # CI placeholder"
+  },
+  {
+    "id": "ordinary-password-ui-identifier",
+    "input": "passwordInput: placeholder",
+    "expected": "passwordInput: placeholder"
+  },
+  {
+    "id": "ordinary-token-source-identifier",
+    "input": "tokenizerInput: placeholder",
+    "expected": "tokenizerInput: placeholder"
+  },
+  {
+    "id": "structured-refresh-token",
+    "input": "refreshToken: value",
+    "expected": "refreshToken: [REDACTED]"
+  },
+  {
+    "id": "structured-json-secret",
+    "input": "{\"clientSecret\":\"synthetic-example-only\"}",
+    "expected": "{\"clientSecret\":\"[REDACTED]\"}"
+  },
+  {
+    "id": "scanner-sentinel",
+    "input": "apiKey: [REDACTED]",
+    "expected": "apiKey: [REDACTED]"
+  },
+  {
+    "id": "quoted-scanner-sentinel",
+    "input": "{\"password\":\"[REDACTED]\"}",
+    "expected": "{\"password\":\"[REDACTED]\"}"
+  },
+  {
+    "id": "whitespace-only-assignment",
+    "input": "API_KEY:   ",
+    "expected": "API_KEY:   "
+  },
+  {
+    "id": "multiline-mixed-source",
+    "input": "passwordInput: placeholder\nNEXTAUTH_SECRET: \"example-only\" # local fixture\nrefreshToken: synthetic",
+    "expected": "passwordInput: placeholder\nNEXTAUTH_SECRET: \"[REDACTED]\" # local fixture\nrefreshToken: [REDACTED]"
+  }
+]

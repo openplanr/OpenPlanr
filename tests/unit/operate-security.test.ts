@@ -1,6 +1,7 @@
+import { readFileSync } from 'node:fs';
 import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   parseStrictCsv,
@@ -26,6 +27,9 @@ import {
 import { resolveContainedPath } from '../../src/services/operate/workspace.js';
 
 const temporaryDirectories: string[] = [];
+const safeRedactionCorpus = JSON.parse(
+  readFileSync(resolve('tests/fixtures/operate/redaction-safe-corpus.json'), 'utf8'),
+) as Array<{ id: string; input: string; expected: string }>;
 
 async function temporaryDirectory(prefix: string): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), prefix));
@@ -164,6 +168,35 @@ describe('untrusted text and secret handling', () => {
     expect(containsSecret('lin_api_abcdefghijklmnopqrstuvwxyz123456')).toBe(true);
     expect(containsSecret('{"apiKey":"opaque-credential-0123456789abcdef"}')).toBe(true);
     expect(containsSecret('apiKey: [REDACTED]')).toBe(false);
+  });
+
+  it('redacts the safe assignment corpus without false quarantine or syntax corruption', () => {
+    for (const fixture of safeRedactionCorpus) {
+      const first = redactSensitiveText(fixture.input);
+      const second = redactSensitiveText(first.value);
+      expect(first.value, fixture.id).toBe(fixture.expected);
+      expect(second.value, `${fixture.id} must be byte-idempotent`).toBe(first.value);
+      expect(containsSecret(first.value), fixture.id).toBe(false);
+    }
+  });
+
+  it('preserves genuine secret-shape detection while keeping scanner sentinels inert', () => {
+    const genuineSecretShapes = [
+      'authorization: Bearer synthetic-bearer-value',
+      'lin_api_abcdefghijklmnopqrstuvwxyz123456',
+      'eyJzeW50aGV0aWMiOiJvbmx5In0.eyJub3QiOiJhLXJlYWwtdG9rZW4ifQ.synthetic_signature',
+      'https://synthetic-user:synthetic-password@example.invalid/path',
+      'clientSecret: synthetic-example-only',
+      'OPENPLANR_API_KEY=synthetic-example-only',
+      '-----BEGIN PRIVATE KEY-----\nsynthetic-test-material-only\n-----END PRIVATE KEY-----',
+    ];
+
+    for (const value of genuineSecretShapes) {
+      expect(containsSecret(value), value.split('\n')[0]).toBe(true);
+      const redacted = redactSensitiveText(value);
+      expect(containsSecret(redacted.value), redacted.value).toBe(false);
+      expect(redactSensitiveText(redacted.value).value).toBe(redacted.value);
+    }
   });
 
   it('sanitizes generated active and remotely loaded content', () => {
