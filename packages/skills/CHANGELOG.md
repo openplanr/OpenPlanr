@@ -2,6 +2,20 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.17.0] — 2026-07-29
+
+### Changed
+
+- `planr-operate` now presents CLI-owned guided questions through native
+  runtime capabilities, transports typed answers through resumable sessions,
+  and stops separately at every digest-bound non-read-only action.
+- Evidence quarantine recovery uses only the public value-free
+  `planr operate evidence diagnose/classify` flow; skills never trial-edit
+  operating configuration or weaken secret detection.
+- Validation now enforces byte parity with the generated pipeline asset and
+  rejects copied question wording, inferred `--yes`, nested pipeline commands,
+  and unsafe state-edit instructions.
+
 ## [1.16.0] — 2026-07-28
 
 ### Added

@@ -72,8 +72,12 @@ The runtime skill is deliberately thin: all evidence policy, advisor isolation,
 scoring, state transitions, route confirmation, and recovery remain inside the
 public `planr operate` command. `--preview` calls no providers and writes
 nothing; `--dry-run` may use a disclosed, consented provider but commits no
-state. Finding acceptance and route application are separate. Answered gaps
-require `gaps verify` with explicit evidence IDs.
+state. Runtime-native prompts render CLI-owned questionnaires and return typed
+answers through resumable sessions; the skill never embeds defaults or infers
+authority. Each non-read-only action has a separate confirmation digest.
+Evidence quarantine returns a value-free public diagnose/classify flow instead
+of encouraging config edits. Finding acceptance and route application are
+separate. Answered gaps require `gaps verify` with explicit evidence IDs.
 
 Pipeline-PO DEV routes pause at `awaiting-plan` and return the exact native PLAN
 invocation. The skill resumes that same route only after human review and

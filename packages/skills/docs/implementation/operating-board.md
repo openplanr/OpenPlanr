@@ -4,12 +4,17 @@
 - **Umbrella specification:** `openplanr/planr-pipeline` —
   `.planr/specs/SPEC-002-openplanr-operating-board/SPEC-002-openplanr-operating-board.md`
 - **Repository:** `openplanr/skills`
-- **Target:** `@openplanr/skills` 1.16.0
+- **Target:** `@openplanr/skills` 1.17.0
 
 ## Repository-only scope
 
 - Add the thin `planr-operate` workflow and register it with the standalone
   skill marketplace.
+- Present only CLI-returned questionnaires and typed actions, submit typed
+  answer envelopes through resumable sessions, and stop at every separate
+  confirmation scope.
+- Route evidence quarantine through value-free diagnose/classify commands;
+  never trial-edit project configuration or infer scanner exclusions.
 - Route exclusively through the public `planr operate` CLI. Preserve separate
   preview, run, acceptance, apply, PLAN review, and SHIP boundaries.
 - Update unified guidance, README inventory, release metadata, and changelog.
@@ -27,9 +32,10 @@ repository.
 npm test
 ```
 
-Validation must reject runtime vendor/model leakage, direct
-`planr-pipeline` execution, non-operate command routing, missing safety
-boundaries, metadata/version drift, and canonical generated-skill drift.
+Validation must reject runtime vendor/model leakage, direct `planr-pipeline`
+execution, non-operate command routing, copied questions/defaults, implicit
+authority, missing safety boundaries, metadata/version drift, and canonical
+generated-skill drift.
 
 ## Rollback boundary
 

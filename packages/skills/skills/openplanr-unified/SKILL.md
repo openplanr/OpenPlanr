@@ -58,8 +58,12 @@ paths, the three-correction limit, and frontend/backend ownership boundaries.
 For a recurring operating cycle, use the dedicated `planr-operate` skill or the
 public `planr operate` surface. Preview provider use and writes first, keep
 finding acceptance separate from route application, and follow only the
-machine-readable next action or recovery command returned by the CLI. Do not
-edit `.planr/operate` state directly.
+machine-readable questionnaire, typed action, or recovery command returned by
+the CLI. Present CLI-owned questions through the active runtime, submit typed
+answers through the returned session, and stop separately before every
+non-read-only action. Never infer answers, append `--yes`, execute legacy prose
+next steps, trial-edit source configuration, or edit `.planr/operate` state
+directly.
 
 For universal HTML review, use `planr artifact <file>`. Sharing is explicit:
 `planr artifact share <file>` creates a stable AES-GCM encrypted live room by

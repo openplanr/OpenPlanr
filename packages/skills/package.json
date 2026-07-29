@@ -1,12 +1,12 @@
 {
   "name": "@openplanr/skills",
-  "version": "1.16.0",
+  "version": "1.17.0",
   "private": true,
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "test": "node scripts/validate.mjs"
+    "test": "node scripts/validate.mjs && node --test tests/*.test.mjs"
   }
 }

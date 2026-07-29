@@ -7,8 +7,15 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      OPENPLANR_ECOSYSTEM_ROOT: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: openplanr/planr-pipeline
+          ref: v0.31.0
+          path: planr-pipeline
       - uses: actions/setup-node@v4
         with:
           node-version: 20

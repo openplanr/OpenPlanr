@@ -68,6 +68,11 @@ if (existsSync(operateSkillPath)) {
   }
   for (const required of [
     'public `planr operate` command surface',
+    'schema-valid `questionnaire` and `actions`',
+    'preserving question IDs and declared',
+    'Never add `--yes`',
+    '`planr operate evidence diagnose …`',
+    'Never trial-edit sources',
     'Never invoke SHIP',
     'Do not edit `.planr/operate`',
   ]) {
@@ -88,6 +93,22 @@ if (existsSync(operateSkillPath)) {
   );
   if (existsSync(canonicalPath) && readFileSync(canonicalPath, 'utf8') !== operateSkill) {
     errors.push(`Generated planr-operate skill drifts from ${canonicalPath}`);
+  }
+  const questionnairePath = join(
+    workspace,
+    'planr-pipeline',
+    'conformance',
+    'fixtures',
+    'guided-runtime-parity',
+    'questionnaire.json',
+  );
+  if (existsSync(questionnairePath)) {
+    const questionnaire = JSON.parse(readFileSync(questionnairePath, 'utf8'));
+    for (const question of questionnaire.questions ?? []) {
+      if (typeof question.label === 'string' && operateSkill.includes(question.label)) {
+        errors.push(`planr-operate copies a CLI-owned question label: ${question.label}`);
+      }
+    }
   }
 }
 
