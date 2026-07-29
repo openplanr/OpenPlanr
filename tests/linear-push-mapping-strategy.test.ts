@@ -189,7 +189,7 @@ describe('Epic push — project strategy (default, v1)', () => {
     await writeStory(projectDir, 'US-001', 'FEAT-001');
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('project strategy: creates one Linear project + descendants; no milestone/label calls', async () => {
@@ -222,7 +222,7 @@ describe('Epic push — milestone-of strategy', () => {
     await writeStory(projectDir, 'US-001', 'FEAT-001');
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('creates a milestone in the target project; descendants carry projectMilestoneId', async () => {
@@ -270,7 +270,7 @@ describe('Epic push — label-on strategy', () => {
     await writeStory(projectDir, 'US-001', 'FEAT-001');
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('ensures a team label; descendants carry labelIds containing the epic label', async () => {
@@ -319,7 +319,7 @@ describe('Epic push — restrategize guard (Phase 5 is out of scope)', () => {
     await writeFeature(projectDir, 'FEAT-001', 'EPIC-001');
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('errors when --as picks a different strategy than the epic already has stored', async () => {

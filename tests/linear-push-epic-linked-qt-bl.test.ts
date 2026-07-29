@@ -194,7 +194,7 @@ describe('Epic-linked QT push', () => {
     config = p.config;
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('QT with epicId + epic mapped as project → issue in epic project, no standalone project needed', async () => {
@@ -318,7 +318,7 @@ describe('Epic-linked BL push', () => {
     config = p.config;
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('BL with epicId + label-on strategy → labelIds contains BOTH backlog + epic label', async () => {
@@ -380,7 +380,7 @@ describe('Epic-scope push cascades to linked QT/BL', () => {
     config = p.config;
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('pushing an epic creates project + linked QTs + linked BLs', async () => {

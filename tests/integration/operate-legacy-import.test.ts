@@ -55,7 +55,9 @@ afterEach(async () => {
   await Promise.all(
     temporaryDirectories
       .splice(0)
-      .map((directory) => rm(directory, { recursive: true, force: true })),
+      .map((directory) =>
+        rm(directory, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 }),
+      ),
   );
 });
 
@@ -509,7 +511,7 @@ describe('legacy .planr/board migration', () => {
     });
     const paths = resolveOperatingPaths(projectRoot, { localRoot });
     await rm(paths.checkpoint, { force: true });
-    await rm(paths.projections, { recursive: true, force: true });
+    await rm(paths.projections, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 
     await expect(
       rollbackOperatingMigration({

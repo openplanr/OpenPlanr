@@ -40,7 +40,11 @@ const ORIGINAL_BETA = 'beta: original contents\n';
 const roots: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(roots.splice(0).map((root) => rm(root, { force: true, recursive: true })));
+  await Promise.all(
+    roots
+      .splice(0)
+      .map((root) => rm(root, { force: true, recursive: true, maxRetries: 10, retryDelay: 100 })),
+  );
 });
 
 async function project(): Promise<{ projectRoot: string; localRoot: string }> {

@@ -39,7 +39,7 @@ describe('verifyEvidence', () => {
   });
 
   afterAll(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('accepts file_exists when the ref resolves under projectDir', async () => {
@@ -221,7 +221,7 @@ describe('verifyDecision', () => {
   });
 
   afterAll(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('passes through a decision whose evidence all verifies', async () => {

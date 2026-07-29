@@ -222,7 +222,7 @@ describe('buildLinearPushPlan — per-scope plans', () => {
     await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001');
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('epic scope: 1 project + 1 feature + 1 story + 1 tasklist (v1 behavior preserved)', async () => {
@@ -293,7 +293,7 @@ describe('runLinearPush — parent-chain pre-flight', () => {
     config = p.config;
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('FEAT push with unmapped parent epic and no --push-parents: throws, zero API calls', async () => {
@@ -376,7 +376,7 @@ describe('runLinearPush — unsupported prefixes', () => {
     config = p.config;
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('rejects ADR-/SPRINT-/checklist- ids with a pointer to the parent epic', async () => {
@@ -431,7 +431,7 @@ describe('runLinearPush — --no-cascade (granular scope control)', () => {
     await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001');
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('FEAT push with --no-cascade creates only the feature issue (no stories, no tasklist)', async () => {
@@ -510,7 +510,7 @@ describe('buildLinearPushPlan — --no-cascade row counts', () => {
     await writeTaskFile(projectDir, 'TASK-001', 'FEAT-001');
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('FEAT plan with --no-cascade lists only the feature row', async () => {
@@ -553,7 +553,7 @@ describe('runLinearPush — TASK status aggregates to merged TaskList stateId', 
     });
   });
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('all task files done → TaskList stateId = team.completed (Done)', async () => {

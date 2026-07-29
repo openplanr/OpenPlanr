@@ -23,7 +23,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.OPENPLANR_PIPELINE_ROOT;
-  rmSync(root, { recursive: true, force: true });
+  rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 });
 
 describe('Operating Board doctor', () => {

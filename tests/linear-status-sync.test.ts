@@ -161,7 +161,7 @@ describe('syncLinearStatusIntoArtifacts — QT status pull', () => {
   });
 
   afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('updates QT frontmatter when Linear state differs from local', async () => {
@@ -199,7 +199,7 @@ describe('syncLinearStatusIntoArtifacts — BL status pull', () => {
   });
 
   afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('Linear "Done" transitions local BL open → closed', async () => {
@@ -257,7 +257,7 @@ describe('syncLinearStatusIntoArtifacts — bidirectional sync (three-way merge)
   });
 
   afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
+    rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('pushes local to Linear when base=remote (local changed since last sync)', async () => {

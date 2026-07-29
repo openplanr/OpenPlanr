@@ -99,7 +99,7 @@ describe('collectLinearMappingTable — strategy-aware epic rows', () => {
   });
 
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('milestone-of epic shows `milestone:<id-prefix>` and the project URL', async () => {

@@ -186,7 +186,7 @@ describe('Operating Board advisor honeytoken containment', () => {
   afterEach(async () => {
     delete process.env.OPENPLANR_HONEYTOKEN;
     fetchSpy.mockRestore();
-    await rm(projectRoot, { force: true, recursive: true });
+    await rm(projectRoot, { force: true, recursive: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('leaks no filesystem, environment, tool, or network honeytoken into the advisor payload', async () => {

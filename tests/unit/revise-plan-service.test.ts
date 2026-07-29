@@ -58,7 +58,7 @@ describe('readPlanFromAudit', () => {
   });
 
   afterAll(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('extracts scope and all entries from a real-shaped audit', () => {
@@ -152,7 +152,7 @@ describe('filterReplayable', () => {
   });
 
   afterAll(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('returns only would-apply entries that have a diff and artifact path', () => {

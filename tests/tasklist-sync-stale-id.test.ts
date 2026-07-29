@@ -89,7 +89,7 @@ describe('runLinearTaskCheckboxSync — stale-id screening (BL-016)', () => {
   });
 
   afterEach(() => {
-    rmSync(projectDir, { recursive: true, force: true });
+    rmSync(projectDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('accepts a valid UUIDv4 issue id and processes the task (no false-positive skip)', async () => {

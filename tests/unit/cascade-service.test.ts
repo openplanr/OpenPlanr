@@ -55,7 +55,7 @@ describe('buildCascadeOrder', () => {
   });
 
   afterAll(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
+    rmSync(tmpDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   });
 
   it('produces top-down order for an epic root: epic → features → stories → tasks', async () => {
