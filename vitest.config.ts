@@ -19,6 +19,22 @@ export default defineConfig({
     // still fails the run rather than stalling it.
     testTimeout: 45_000,
     hookTimeout: 60_000,
+    // Windows runners pair a modest core count with markedly slower file I/O,
+    // and these suites are I/O-bound: real git repositories, fsynced journals,
+    // and npm pack/install in the packed-install e2e. At vitest's default
+    // worker count they saturate the runner and starve each other, which shows
+    // up as several unrelated files timing out in the same run — the same
+    // cascade seen locally under heavy load. Capping workers there trades a
+    // little wall-clock for a deterministic result; other platforms keep the
+    // default.
+    poolOptions: {
+      threads: {
+        maxThreads: process.platform === 'win32' ? 2 : undefined,
+      },
+      forks: {
+        maxForks: process.platform === 'win32' ? 2 : undefined,
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary', 'lcov'],
