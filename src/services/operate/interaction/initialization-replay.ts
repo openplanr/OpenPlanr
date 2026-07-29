@@ -58,7 +58,14 @@ export function decodeOperatingInitializationReplay(token: string): OperatingIni
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       throw new Error('replay payload is not an object');
     }
-    return normalizeOperatingInitializationAnswers(parsed as OperatingInitAnswers);
+    const normalized = normalizeOperatingInitializationAnswers(parsed as OperatingInitAnswers);
+    // Raw DEFLATE decoders may accept and ignore trailing bytes. Re-encode the
+    // validated payload so every accepted token has exactly one canonical byte
+    // representation and appended data cannot survive as a valid replay.
+    if (encodeOperatingInitializationReplay(normalized) !== token) {
+      throw new Error('non-canonical replay token');
+    }
+    return normalized;
   } catch (error) {
     if (error instanceof OperateError) throw error;
     throw new OperateError(
