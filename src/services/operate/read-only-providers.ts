@@ -1,20 +1,15 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { parseStrictJson } from './evidence-import.js';
+import { minimalSubprocessEnvironment } from './subprocess-env.js';
 import { OperateError } from './types.js';
 
 const execFileAsync = promisify(execFile);
 const MAX_PROVIDER_OUTPUT = 5 * 1024 * 1024;
 const DEFAULT_REMOTE_TIMEOUT_MS = 20_000;
 const DEFAULT_REMOTE_MAX_BYTES = 5 * 1024 * 1024;
-const SAFE_ENV_KEYS = ['PATH', 'HOME', 'LANG', 'LC_ALL', 'TMPDIR'] as const;
-
 function minimalEnvironment(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
-  const environment: NodeJS.ProcessEnv = {};
-  for (const key of SAFE_ENV_KEYS) {
-    if (process.env[key]) environment[key] = process.env[key];
-  }
-  return { ...environment, ...extra };
+  return minimalSubprocessEnvironment(extra);
 }
 
 const GIT_READ_COMMANDS = new Set([

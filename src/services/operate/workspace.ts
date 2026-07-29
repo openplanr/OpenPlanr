@@ -6,6 +6,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
 import { assertOperatingArtifact } from './protocol.js';
+import { minimalSubprocessEnvironment } from './subprocess-env.js';
 import {
   OPERATE_PROTOCOL_VERSION,
   OPERATE_SCHEMA_VERSION,
@@ -145,14 +146,10 @@ export async function resolveContainedPath(
 async function git(projectRoot: string, args: string[]): Promise<string> {
   const { stdout } = await execFileAsync('git', args, {
     cwd: projectRoot,
-    env: {
-      PATH: process.env.PATH,
-      HOME: process.env.HOME,
-      LANG: process.env.LANG,
-      LC_ALL: process.env.LC_ALL,
+    env: minimalSubprocessEnvironment({
       GIT_OPTIONAL_LOCKS: '0',
       GIT_TERMINAL_PROMPT: '0',
-    },
+    }),
     timeout: 15_000,
     maxBuffer: 5 * 1024 * 1024,
   });

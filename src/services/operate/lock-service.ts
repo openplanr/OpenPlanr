@@ -6,6 +6,7 @@ import { hostname } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { canonicalize } from './canonical.js';
+import { minimalSubprocessEnvironment } from './subprocess-env.js';
 import { OperateError, type OperatingEventHead, type OperatingLockRecord } from './types.js';
 import { resolveOperatingPaths } from './workspace.js';
 
@@ -65,10 +66,15 @@ function processIsAlive(pid: number): boolean {
   }
 }
 
+/**
+ * Returns null where the platform offers no `ps` — notably Windows. Callers
+ * treat a null identity as "cannot corroborate", so lock ownership falls back
+ * to the lease and heartbeat rather than to a fabricated identity.
+ */
 export async function readProcessStartIdentity(pid: number): Promise<string | null> {
   try {
     const { stdout } = await execFileAsync('ps', ['-o', 'lstart=', '-p', String(pid)], {
-      env: { PATH: process.env.PATH, LANG: 'C', LC_ALL: 'C' },
+      env: minimalSubprocessEnvironment({ LANG: 'C', LC_ALL: 'C' }),
       timeout: 2_000,
       maxBuffer: 4096,
     });
