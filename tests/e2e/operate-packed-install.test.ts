@@ -49,6 +49,28 @@ function packageCli(packageRoot: string): string {
   return join(packageRoot, 'bin', 'planr.js');
 }
 
+/**
+ * Directory holding the real `git`, so the isolated PATH can stay minimal
+ * without removing a documented prerequisite.
+ *
+ * The previous list hardcoded `/usr/bin`, which contains git on POSIX by
+ * coincidence. Windows got only System32, where git is absent — so the CLI
+ * failed with `spawn git ENOENT` and reported "requires a Git worktree" inside
+ * a repository it had just created. Resolving git makes the intent explicit on
+ * every platform: isolate everything except the tools the product declares.
+ */
+function gitDirectory(): string | null {
+  const probe = spawnSync(process.platform === 'win32' ? 'where' : 'which', ['git'], {
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+  const first = probe.stdout
+    ?.split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean);
+  return first ? dirname(first) : null;
+}
+
 function isolatedEnvironment(installRoot: string): NodeJS.ProcessEnv {
   const binDirectory = join(installRoot, 'node_modules', '.bin');
   return {
@@ -61,6 +83,7 @@ function isolatedEnvironment(installRoot: string): NodeJS.ProcessEnv {
     PATH: [
       binDirectory,
       dirname(process.execPath),
+      gitDirectory(),
       ...(process.platform === 'win32'
         ? [process.env.SystemRoot ? join(process.env.SystemRoot, 'System32') : '']
         : ['/usr/bin', '/bin']),
