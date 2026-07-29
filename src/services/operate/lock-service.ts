@@ -157,7 +157,13 @@ export async function acquireOperatingLock(
       owner,
     });
   }
-  await writeRecord(handle, record);
+  try {
+    await writeRecord(handle, record);
+  } catch (error) {
+    await handle.close().catch(() => undefined);
+    await unlink(lockPath).catch(() => undefined);
+    throw error;
+  }
   let released = false;
 
   const verifyOwnership = async (): Promise<void> => {
