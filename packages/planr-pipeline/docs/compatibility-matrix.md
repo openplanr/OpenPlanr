@@ -1,6 +1,6 @@
 # Compatibility Matrix - Protocol v1.0 artifacts + v1.1/v1.2 capabilities
 
-> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.30.0.
+> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.31.0.
 
 ## TL;DR
 
@@ -41,6 +41,7 @@ Same `.planr/specs/` directories. Same SPEC, US, Task, stack, graph, and `.pipel
 | Review import/export | Supported | Supported | Supported |
 | Dashboard command | Available | Available through router | `$planr-dashboard` / router |
 | Operating Board | `/planr-pipeline:operate` → `planr operate` | Generated `planr operate` rule | Installed `$planr-operate` skill |
+| Guided Operating questions | Native when the active host verifies the question surface; chat/terminal/handoff fallback | Structured Composer chat; terminal/handoff fallback | Native when dynamically reported; structured chat, terminal, then handoff |
 | Operating state transitions | OpenPlanr engine | OpenPlanr engine | OpenPlanr engine |
 | Operating advisor isolation | Native tool isolation where available | Advisory host boundary | Dynamic isolation; sequential fallback |
 | Sync command | Available | Available through router | `$planr-sync` / router |
@@ -63,6 +64,18 @@ Compatibility is reported at three explicit levels:
   answered gaps require evidence-backed verification, Pipeline-PO DEV routes
   resume from `awaiting-plan`, and outcome reconciliation observes but never
   invokes SHIP.
+- Protocol v1.2 guided questions and typed actions keep OpenPlanr as the
+  behavioral owner. Adapter `interactiveQuestions` metadata controls
+  presentation only and cannot authorize a write, provider call, PLAN, or SHIP.
+- The interaction resolver treats the registry mode as a ceiling rather than
+  proof that a runtime tool is present. It selects native UI only from a
+  positive active-runtime report and emits a named downgrade diagnostic for
+  chat, attached-terminal, or fail-closed handoff.
+- Native, chat, and terminal adapters submit the same typed, bounded answer
+  envelope. Runtime identity and submission time are excluded from the reduced
+  preview input, so equivalent answers remain byte-equivalent across transports.
+  Every non-read-only structured action is confirmed independently with the
+  exact digest returned by the CLI.
 - Stories, tasks, stack files, design specs, graph output, run manifests, and shipped markers use schemas under `schemas/v1.0.0/`.
 - The canonical schema source for this cleanup cycle is `planr-pipeline/schemas/v1.0.0/`; OpenPlanr CLI docs mirror that contract for CLI users.
 
@@ -169,4 +182,4 @@ For runtime-operated fixtures, use `conformance/runner.mjs` with `--setup`, then
 
 ---
 
-*OpenPlanr Protocol v1.0 artifacts + v1.1/v1.2 ecosystem contracts - compatibility matrix for planr-pipeline v0.30.0.*
+*OpenPlanr Protocol v1.0 artifacts + v1.1/v1.2 ecosystem contracts - compatibility matrix for planr-pipeline v0.31.0.*

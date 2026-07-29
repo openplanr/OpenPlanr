@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/structured-action.schema.json",
+  "title": "OpenPlanr Protocol v1.2 structured next action",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "id",
+    "label",
+    "command",
+    "effect",
+    "providerUse",
+    "requiresConfirmation",
+    "confirmationScope",
+    "confirmationDigest",
+    "recommended"
+  ],
+  "properties": {
+    "kind": { "const": "structured-action" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,127}$" },
+    "label": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "command": { "type": "string", "pattern": "^planr [^\\r\\n]{1,1024}$" },
+    "effect": {
+      "type": "string",
+      "enum": ["read-only", "machine-local-write", "project-write", "provider-call", "external-effect"]
+    },
+    "providerUse": { "type": "boolean" },
+    "requiresConfirmation": { "type": "boolean" },
+    "confirmationScope": {
+      "oneOf": [
+        { "type": "string", "minLength": 1, "maxLength": 500 },
+        { "type": "null" }
+      ]
+    },
+    "confirmationDigest": {
+      "oneOf": [
+        { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        { "type": "null" }
+      ]
+    },
+    "recommended": { "type": "boolean" }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "title": "Confirmation-free read",
+          "properties": {
+            "effect": { "const": "read-only" },
+            "providerUse": { "const": false },
+            "requiresConfirmation": { "const": false },
+            "confirmationScope": { "type": "null" },
+            "confirmationDigest": { "type": "null" }
+          }
+        },
+        {
+          "title": "Digest-bound confirmed action",
+          "properties": {
+            "requiresConfirmation": { "const": true },
+            "confirmationScope": { "type": "string", "minLength": 1, "maxLength": 500 },
+            "confirmationDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "title": "Provider action",
+          "properties": {
+            "effect": { "const": "provider-call" },
+            "providerUse": { "const": true }
+          }
+        },
+        {
+          "title": "Non-provider action",
+          "properties": {
+            "effect": { "enum": ["read-only", "machine-local-write", "project-write", "external-effect"] },
+            "providerUse": { "const": false }
+          }
+        }
+      ]
+    }
+  ]
+}

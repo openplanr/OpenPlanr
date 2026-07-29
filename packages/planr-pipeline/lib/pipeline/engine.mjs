@@ -15,11 +15,129 @@ import { fileURLToPath } from 'node:url';
 import { validateJson } from '../../conformance/json-schema-validate.mjs';
 import { parseFrontmatter, splitFrontmatter } from '../dashboard/graph-reader.mjs';
 import { buildGraph } from '../dashboard/graph-engine.mjs';
+import { validateProtocolArtifact as validateCanonicalProtocolArtifact } from '../protocol/contracts.mjs';
 import { PipelineError } from './errors.mjs';
 import { appendProvenanceEvent, createProvenanceEvent } from './provenance.mjs';
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const pkg = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'));
+
+export const GUIDED_INTERACTION_CONTRACTS = Object.freeze({
+  'guided-question': Object.freeze({ protocolVersion: '1.2.0', schemaVersion: '1.0.0' }),
+  'guided-questionnaire': Object.freeze({ protocolVersion: '1.2.0', schemaVersion: '1.0.0' }),
+  'guided-answer-envelope': Object.freeze({ protocolVersion: '1.2.0', schemaVersion: '1.0.0' }),
+  'guided-session': Object.freeze({ protocolVersion: '1.2.0', schemaVersion: '1.0.0' }),
+  'guided-confirmation': Object.freeze({ protocolVersion: '1.2.0', schemaVersion: '1.0.0' }),
+  'structured-action': Object.freeze({ protocolVersion: '1.2.0', schemaVersion: '1.0.0' }),
+  'evidence-diagnostic': Object.freeze({ protocolVersion: '1.2.0', schemaVersion: '1.0.0' }),
+});
+
+function guidedContract(kind) {
+  const contract = GUIDED_INTERACTION_CONTRACTS[kind];
+  if (!contract) {
+    throw new PipelineError(
+      'E_GUIDED_INTERACTION_KIND_INVALID',
+      `Unsupported guided interaction artifact kind: ${kind}`,
+    );
+  }
+  return contract;
+}
+
+export function validateGuidedInteractionArtifact(kind, value, options = {}) {
+  const contract = guidedContract(kind);
+  const protocolVersion = options.protocolVersion ?? value?.protocolVersion ?? contract.protocolVersion;
+  if (protocolVersion !== contract.protocolVersion) {
+    return [{
+      path: '$.protocolVersion',
+      rule: 'version',
+      detail: `${kind} supports Protocol ${contract.protocolVersion}, not ${protocolVersion}`,
+    }];
+  }
+  const errors = validateCanonicalProtocolArtifact(kind, value, { protocolVersion });
+  if (errors.length) return errors;
+
+  const duplicateIds = (records, key) => {
+    const seen = new Set();
+    return records.find((record) => {
+      const id = record?.[key];
+      if (seen.has(id)) return true;
+      seen.add(id);
+      return false;
+    })?.[key];
+  };
+  if (kind === 'guided-question' && value.choices) {
+    const duplicate = duplicateIds(value.choices, 'id');
+    if (duplicate) errors.push({
+      path: '$.choices',
+      rule: 'uniqueChoiceId',
+      detail: `duplicate choice id ${duplicate}`,
+    });
+  }
+  if (kind === 'guided-questionnaire') {
+    const duplicate = duplicateIds(value.questions, 'questionId');
+    if (duplicate) errors.push({
+      path: '$.questions',
+      rule: 'uniqueQuestionId',
+      detail: `duplicate question id ${duplicate}`,
+    });
+    if (value.step > value.totalSteps) errors.push({
+      path: '$.step',
+      rule: 'stepRange',
+      detail: `step ${value.step} exceeds totalSteps ${value.totalSteps}`,
+    });
+  }
+  if (kind === 'guided-answer-envelope') {
+    const duplicate = duplicateIds(value.answers, 'questionId');
+    if (duplicate) errors.push({
+      path: '$.answers',
+      rule: 'uniqueQuestionId',
+      detail: `duplicate answer for question ${duplicate}`,
+    });
+  }
+  if (kind === 'evidence-diagnostic' && value.classification) {
+    for (const field of ['ruleId', 'contentDigest', 'projectHead']) {
+      if (value.classification[field] !== value[field]) errors.push({
+        path: `$.classification.${field}`,
+        rule: 'exactEvidenceBinding',
+        detail: `${field} must match the diagnosed candidate`,
+      });
+    }
+  }
+  return errors;
+}
+
+export function normalizeGuidedInteractionArtifact(kind, value) {
+  const contract = guidedContract(kind);
+  const normalized = {
+    ...structuredClone(value ?? {}),
+    kind,
+    schemaVersion: value?.schemaVersion ?? contract.schemaVersion,
+    protocolVersion: value?.protocolVersion ?? contract.protocolVersion,
+  };
+  const errors = validateGuidedInteractionArtifact(kind, normalized);
+  if (errors.length) {
+    throw new PipelineError(
+      'E_GUIDED_INTERACTION_INVALID',
+      `${kind}: ${errors[0].path} ${errors[0].detail}`,
+    );
+  }
+  return normalized;
+}
+
+export const validateGuidedQuestion = (value, options) =>
+  validateGuidedInteractionArtifact('guided-question', value, options);
+export const validateGuidedQuestionnaire = (value, options) =>
+  validateGuidedInteractionArtifact('guided-questionnaire', value, options);
+export const validateGuidedAnswerEnvelope = (value, options) =>
+  validateGuidedInteractionArtifact('guided-answer-envelope', value, options);
+export const validateGuidedSession = (value, options) =>
+  validateGuidedInteractionArtifact('guided-session', value, options);
+export const validateGuidedConfirmation = (value, options) =>
+  validateGuidedInteractionArtifact('guided-confirmation', value, options);
+export const validateStructuredAction = (value, options) =>
+  validateGuidedInteractionArtifact('structured-action', value, options);
+export const validateEvidenceDiagnostic = (value, options) =>
+  validateGuidedInteractionArtifact('evidence-diagnostic', value, options);
 
 function slugify(value) {
   const slug = String(value ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

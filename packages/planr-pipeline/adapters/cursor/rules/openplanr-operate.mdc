@@ -11,6 +11,18 @@ roots and bounded JSON/CSV imports through `planr operate init`; `sources test`
 only validates an already configured read-only source. Never edit events, immutable
 records, journals, projections, routes, or outcome links under `.planr/operate`.
 
+Consume only schema-valid `questionnaire` and `actions` returned by the
+CLI. Present questions verbatim through a positively verified native question
+surface; otherwise downgrade to structured chat, an attached terminal, or the
+CLI's named handoff. Submit typed answers only through the bounded stdin/resume
+lifecycle. Never copy question definitions, infer missing answers, or reconstruct
+commands from conversation.
+
+After a preview, ask separately for the exact named non-read-only action. Echo
+only its CLI-returned command and confirmation digest. Field answers and prior
+confirmations never authorize initialization, cycle start, provider use, route
+application, PLAN, or SHIP. Stop after every selected action.
+
 Canonical advisory lenses: CEO (strategy-finance: Direction, business model, pricing and packaging, focus, economics, and what to stop.); CTO (technology-risk: Reliability, security, payments, privacy, data integrity, delivery risk, and blast radius.); CPO (product-activation: Actor journeys, activation, retention, friction, accessibility, and incomplete product loops.); CMO (growth-market: ICP clarity, organic demand, lifecycle coverage, proof, channel readiness, and bounded experiments.); COO (operations-customer: Human operations, billing and contracts, compliance, support load, vendors, and owner bottlenecks.); Chair (chair: Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals.). They are read-only and separate from the
 nine delivery roles. Native advisor work must use the digest-bound `rolePacks`
 returned by `planr operate adapter prepare` with enforced empty-tool isolation; finalize independent results, rerun the same cycle, and prepare the Chair separately;

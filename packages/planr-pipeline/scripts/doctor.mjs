@@ -380,17 +380,38 @@ function runEcosystemChecks(pkg) {
   const marketplaceManifest = marketplaceRoot
     ? join(marketplaceRoot, '.claude-plugin/marketplace.json')
     : null;
+  const ecosystemManifest = marketplaceRoot
+    ? join(marketplaceRoot, 'ecosystem.json')
+    : null;
   const skillsManifest = skillsRoot
     ? join(skillsRoot, '.claude-plugin/marketplace.json')
     : null;
   const openPlanrPackage = openPlanrRoot ? join(openPlanrRoot, 'package.json') : null;
 
   let marketplace = null;
+  const marketplaceEcosystem =
+    ecosystemManifest && existsSync(ecosystemManifest)
+      ? readJsonFile(ecosystemManifest)
+      : null;
+  const guidedCandidate = marketplaceEcosystem?.capabilities?.guidedOperatingBoard;
+  const guidedWithheld =
+    guidedCandidate?.status === 'unavailable'
+    && guidedCandidate?.releaseOperation?.state !== 'verified';
   if (marketplaceManifest && existsSync(marketplaceManifest)) {
     marketplace = readJsonFile(marketplaceManifest);
     const pipelinePlugin = (marketplace.plugins || []).find((entry) => entry.name === 'planr-pipeline');
     if (pipelinePlugin?.version === version) {
       ok('ecosystem.marketplace-pipeline-version', 'Ecosystem', `marketplace planr-pipeline version matches ${version}`);
+    } else if (
+      guidedWithheld
+      && guidedCandidate?.components?.pipeline === version
+      && pipelinePlugin?.version === marketplaceEcosystem?.components?.pipeline?.version
+    ) {
+      ok(
+        'ecosystem.marketplace-pipeline-version',
+        'Ecosystem',
+        `marketplace correctly withholds candidate planr-pipeline ${version} until its guided release ledger is verified`,
+      );
     } else {
       warn('ecosystem.marketplace-pipeline-version', 'Ecosystem', `marketplace planr-pipeline version is ${pipelinePlugin?.version || '(missing)'}, expected ${version}`, 'Update marketplace/.claude-plugin/marketplace.json.', true);
     }
@@ -431,6 +452,18 @@ function runEcosystemChecks(pkg) {
     const marketplaceSkill = (marketplace?.plugins || []).find((entry) => entry.name === 'openplanr');
     if (marketplace && skillVersion && marketplaceSkill?.version === skillVersion) {
       ok('ecosystem.marketplace-skills-version', 'Ecosystem', `marketplace openplanr version matches skills ${skillVersion}`);
+    } else if (
+      marketplace
+      && skillVersion
+      && guidedWithheld
+      && guidedCandidate?.components?.skills === skillVersion
+      && marketplaceSkill?.version === marketplaceEcosystem?.components?.skills?.version
+    ) {
+      ok(
+        'ecosystem.marketplace-skills-version',
+        'Ecosystem',
+        `marketplace correctly withholds candidate skills ${skillVersion} until its guided release ledger is verified`,
+      );
     } else if (marketplace && skillVersion) {
       warn('ecosystem.marketplace-skills-version', 'Ecosystem', `marketplace openplanr version is ${marketplaceSkill?.version || '(missing)'}, expected ${skillVersion}`, 'Update marketplace/.claude-plugin/marketplace.json.', true);
     }

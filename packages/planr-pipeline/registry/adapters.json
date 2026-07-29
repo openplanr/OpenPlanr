@@ -2,11 +2,11 @@
   "kind": "adapter-registry",
   "schemaVersion": "1.1.0",
   "protocolVersion": "1.2.0",
-  "pipelineVersion": "0.30.0",
+  "pipelineVersion": "0.31.0",
   "adapters": [
     {
       "id": "claude-code",
-      "version": "0.30.0",
+      "version": "0.31.0",
       "capabilityLevel": "product",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -27,10 +27,11 @@
         "parallelDispatchMode": "native",
         "headlessBridge": true,
         "artifactReview": true,
-        "operatingBoard": true
+        "operatingBoard": true,
+        "interactiveQuestions": "native"
       },
-      "assets": ["commands", "agents", "procedures", "hooks", "templates", "schemas", "artifact-review"],
-      "healthChecks": ["plugin-installed", "commands-present", "hook-readable", "artifact-command-valid"],
+      "assets": ["commands", "agents", "procedures", "hooks", "templates", "schemas", "artifact-review", "guided-interaction"],
+      "healthChecks": ["plugin-installed", "commands-present", "hook-readable", "artifact-command-valid", "guided-native-capability-reported"],
       "drivers": {
         "install": "openplanr://drivers/claude-code/install",
         "migrate": "openplanr://drivers/claude-code/migrate",
@@ -40,7 +41,7 @@
     },
     {
       "id": "codex",
-      "version": "0.30.0",
+      "version": "0.31.0",
       "capabilityLevel": "workflow",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -61,10 +62,11 @@
         "parallelDispatchMode": "dynamic",
         "headlessBridge": true,
         "artifactReview": true,
-        "operatingBoard": true
+        "operatingBoard": true,
+        "interactiveQuestions": "native"
       },
-      "assets": ["skills", "project-guidance", "schemas", "templates", "artifact-review"],
-      "healthChecks": ["skills-present", "project-guidance-current", "runtime-authenticated", "artifact-command-valid"],
+      "assets": ["skills", "project-guidance", "schemas", "templates", "artifact-review", "guided-interaction"],
+      "healthChecks": ["skills-present", "project-guidance-current", "runtime-authenticated", "artifact-command-valid", "guided-dynamic-capability-reported"],
       "drivers": {
         "install": "openplanr://drivers/codex/install",
         "migrate": "openplanr://drivers/codex/migrate",
@@ -74,7 +76,7 @@
     },
     {
       "id": "cursor",
-      "version": "0.30.0",
+      "version": "0.31.0",
       "capabilityLevel": "workflow",
       "installScopes": ["project"],
       "entrypoints": {
@@ -95,10 +97,11 @@
         "parallelDispatchMode": "host",
         "headlessBridge": false,
         "artifactReview": true,
-        "operatingBoard": true
+        "operatingBoard": true,
+        "interactiveQuestions": "chat"
       },
-      "assets": ["rules", "roles", "schemas", "templates", "artifact-review"],
-      "healthChecks": ["rules-present", "portable-assets-present", "no-foreign-runtime-paths", "artifact-command-valid"],
+      "assets": ["rules", "roles", "schemas", "templates", "artifact-review", "guided-interaction"],
+      "healthChecks": ["rules-present", "portable-assets-present", "no-foreign-runtime-paths", "artifact-command-valid", "guided-chat-capability-reported"],
       "drivers": {
         "install": "openplanr://drivers/cursor/install",
         "migrate": "openplanr://drivers/cursor/migrate",

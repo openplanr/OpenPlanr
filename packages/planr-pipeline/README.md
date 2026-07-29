@@ -76,6 +76,12 @@ planr operate run --dry-run # disclosed provider/model calls; no state commit
 planr operate review
 ```
 
+Initialization and recovery are guided by CLI-owned, schema-valid questions and
+actions. Certified runtimes present those artifacts using native questions,
+structured chat, an attached terminal, or an exact handoff; adapters do not
+invent defaults or implicit consent. See
+[`docs/guided-operating-board.md`](docs/guided-operating-board.md).
+
 Finding acceptance never applies a route. Pipeline-PO DEV application pauses at
 `awaiting-plan`, returns an exact native PLAN command, validates planning
 provenance on resume, and leaves `shipInvoked: false`. Answered evidence gaps

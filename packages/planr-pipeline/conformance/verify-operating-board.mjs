@@ -6,9 +6,12 @@ import {
   assertProtocolArtifact,
   canonicalizeJson,
   computeOperatingProviderPolicyDigest,
+  createGuidedAnswerEnvelope,
   createOperatingAdvisorBrief,
+  guidedAnswerPreviewDigest,
   listOperatingProviders,
   listOperatingRoles,
+  resolveGuidedInteraction,
   sha256Jcs,
 } from '../lib/pipeline/index.mjs';
 
@@ -56,6 +59,57 @@ for (const adapter of adapters.adapters) {
   if (!adapter.capabilities.operatingBoard || !adapter.entrypoints.operate) {
     throw new Error(`Adapter ${adapter.id} lacks Protocol v1.2 operating capability metadata.`);
   }
+  if (!['native', 'chat', 'terminal', 'none'].includes(adapter.capabilities.interactiveQuestions)) {
+    throw new Error(`Adapter ${adapter.id} lacks truthful guided-question presentation metadata.`);
+  }
+}
+
+const guidedQuestionnaire = readJson('conformance/fixtures/guided-interactions/questionnaire-valid.json');
+const guidedAction = readJson('conformance/fixtures/guided-interactions/structured-action-valid.json');
+const invalidGuidedAction = readJson('conformance/fixtures/guided-interactions/structured-action-invalid.json');
+assertProtocolArtifact('guided-questionnaire', guidedQuestionnaire);
+assertProtocolArtifact('structured-action', guidedAction);
+let invalidGuidedActionRejected = false;
+try {
+  assertProtocolArtifact('structured-action', invalidGuidedAction);
+} catch {
+  invalidGuidedActionRejected = true;
+}
+if (!invalidGuidedActionRejected) {
+  throw new Error('A mutating guided action bypassed digest-bound confirmation.');
+}
+const guidedJourneys = readJson('conformance/fixtures/guided-operate-journeys/journeys.json');
+const guidedParityQuestionnaire = readJson(
+  'conformance/fixtures/guided-runtime-parity/questionnaire.json',
+);
+const guidedParityAnswers = readJson(
+  'conformance/fixtures/guided-runtime-parity/answers.json',
+);
+const guidedDigests = [];
+for (const journey of guidedJourneys.journeys) {
+  const resolved = resolveGuidedInteraction({
+    registry: adapters,
+    runtime: journey.runtime,
+    runtimeReport: journey.runtimeReport,
+  });
+  if (
+    resolved.mode !== journey.expectedMode
+    || resolved.fallback !== journey.expectedFallback
+  ) {
+    throw new Error(`Guided journey ${journey.id} did not follow its certified fallback.`);
+  }
+  if (resolved.mode === 'none') continue;
+  guidedDigests.push(guidedAnswerPreviewDigest(createGuidedAnswerEnvelope({
+    questionnaire: guidedParityQuestionnaire,
+    answers: guidedParityAnswers,
+    runtime: journey.runtime,
+    runtimeVersion: journey.runtimeVersion,
+    interaction: resolved.mode,
+    submittedAt: '2026-07-29T09:30:00.000Z',
+  })));
+}
+if (new Set(guidedDigests).size !== 1) {
+  throw new Error('Equal guided answers do not produce a transport-neutral preview digest.');
 }
 
 const vectors = readJson('conformance/fixtures/operating-board/jcs-vectors.json');
@@ -124,4 +178,4 @@ if (computeOperatingProviderPolicyDigest(providerManifest) !== providerManifest.
   throw new Error('Provider manifest policy digest does not bind the declared consented policy.');
 }
 
-process.stdout.write(`Operating Board conformance passed (${roleRegistry.roles.length} roles, ${providerRegistry.providers.length} providers, ${vectors.vectors.length} JCS vectors, readiness and provider-policy fixtures valid).\n`);
+process.stdout.write(`Operating Board conformance passed (${roleRegistry.roles.length} roles, ${providerRegistry.providers.length} providers, ${guidedJourneys.journeys.length} guided journeys, ${vectors.vectors.length} JCS vectors, readiness and provider-policy fixtures valid).\n`);

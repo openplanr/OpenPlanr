@@ -16,6 +16,18 @@ consolidation, state, route previews, recovery, and outcome reconciliation. Neve
 edit `.planr/operate` directly and never invoke `planr-pipeline` as a nested
 executable.
 
+Consume only schema-valid `questionnaire` and `actions` returned by the
+CLI. Present questions verbatim through a positively verified native question
+surface; otherwise downgrade to structured chat, an attached terminal, or the
+CLI's named handoff. Submit typed answers only through the bounded stdin/resume
+lifecycle. Never copy question definitions, infer missing answers, or reconstruct
+commands from conversation.
+
+After a preview, ask separately for the exact named non-read-only action. Echo
+only its CLI-returned command and confirmation digest. Field answers and prior
+confirmations never authorize initialization, cycle start, provider use, route
+application, PLAN, or SHIP. Stop after every selected action.
+
 Treat `--preview` as provider-free and write-free; `--dry-run` may use a disclosed,
 consented provider but commits no state. Configure component roots and bounded
 JSON/CSV import paths through `planr operate init`; `sources test` only validates

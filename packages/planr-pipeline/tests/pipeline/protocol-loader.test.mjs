@@ -20,7 +20,7 @@ test('stable protocol subpath exposes schemas, registries, validators, and reduc
   const bundle = loadOperatingContractBundle();
   assert.equal(bundle.kind, 'operating-contract-bundle');
   assert.equal(bundle.protocolVersion, '1.2.0');
-  assert.equal(Object.keys(bundle.schemas).length, 27);
+  assert.equal(Object.keys(bundle.schemas).length, 34);
   assert.equal(bundle.roles.length, 6);
   assert.equal(bundle.providers.length, 6);
 

@@ -46,4 +46,22 @@ jobs:
           node conformance/runner.mjs \
             --runtime claude-code \
             --validate-schema conformance/fixtures/default-mode/
+
+  guided-operate:
+    name: Guided operate (Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm run test:guided-acceptance
+      - run: npm run canary:guided-operate
+      - run: npm run check:guided-adapters
 # ##planr-devops-agent:end##

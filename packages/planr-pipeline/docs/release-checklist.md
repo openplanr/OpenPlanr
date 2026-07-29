@@ -28,6 +28,8 @@ npm run test:docs
 npm test
 npm run conformance:check
 node --test tests/ecosystem/operate-release-contract.test.mjs
+node --test tests/ecosystem/guided-operate-acceptance.test.mjs
+node scripts/guided-operate-canary.mjs --fixtures
 git diff --check
 ```
 
@@ -85,6 +87,8 @@ The release audit checks:
   v1.2, the exact `pipeline → CLI → skills → marketplace` promotion order,
   registry integrity for both npm packages, the final skills release, and a
   one-line installed `planr operate inspect --json` canary.
+- Guided Operating Board adapters pass the native/chat/terminal/handoff parity
+  fixtures, evidence recovery test, and five-minute first-preview budget.
 
 ## Rollback Notes
 

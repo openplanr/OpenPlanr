@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/guided-questionnaire.schema.json",
+  "title": "OpenPlanr Protocol v1.2 guided questionnaire",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "sessionId",
+    "digest",
+    "questionnaireVersion",
+    "command",
+    "projectIdentity",
+    "projectHead",
+    "configHead",
+    "adapter",
+    "stage",
+    "step",
+    "totalSteps",
+    "title",
+    "questions",
+    "createdAt",
+    "expiresAt"
+  ],
+  "properties": {
+    "kind": { "const": "guided-questionnaire" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "sessionId": { "type": "string", "pattern": "^GIS-[A-Za-z0-9._-]{8,128}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "questionnaireVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "command": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,127}$" },
+    "projectIdentity": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "projectHead": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "configHead": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "version", "interaction"],
+      "properties": {
+        "runtime": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "version": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "interaction": { "type": "string", "enum": ["native", "chat", "terminal", "none"] }
+      }
+    },
+    "stage": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,63}$" },
+    "step": { "type": "integer", "minimum": 1, "maximum": 100 },
+    "totalSteps": { "type": "integer", "minimum": 1, "maximum": 100 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "description": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "$ref": "https://openplanr.dev/schemas/v1.2.0/guided-question.schema.json"
+      }
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" }
+  }
+}

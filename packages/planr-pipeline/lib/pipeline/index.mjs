@@ -3,11 +3,21 @@ export {
   completePlan,
   detectPipelineMode,
   finalizeShip,
+  GUIDED_INTERACTION_CONTRACTS,
   nextShipBatch,
+  normalizeGuidedInteractionArtifact,
   preparePlan,
   prepareShip,
   recordTaskResult,
   runSyncAudit,
+  validateEvidenceDiagnostic,
+  validateGuidedAnswerEnvelope,
+  validateGuidedConfirmation,
+  validateGuidedInteractionArtifact,
+  validateGuidedQuestion,
+  validateGuidedQuestionnaire,
+  validateGuidedSession,
+  validateStructuredAction,
 } from './engine.mjs';
 export { appendProvenanceEvent, createProvenanceEvent } from './provenance.mjs';
 export {
@@ -72,6 +82,16 @@ export {
   runtimeHandoff,
   validateRuntimeLock,
 } from './runtime.mjs';
+export {
+  GUIDED_INTERACTION_MODES,
+  assertGuidedCliResult,
+  createGuidedAnswerEnvelope,
+  encodeGuidedAnswerStdin,
+  guidedAnswerPreviewDigest,
+  reduceGuidedAnswerEnvelope,
+  resolveGuidedInteraction,
+  selectGuidedAction,
+} from './guided-interaction.mjs';
 export { createDashboardServer as startDashboard } from '../dashboard/server.mjs';
 export {
   bundleArtifact,

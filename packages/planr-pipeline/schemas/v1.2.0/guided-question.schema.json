@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/guided-question.schema.json",
+  "title": "OpenPlanr Protocol v1.2 guided question",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "questionId",
+    "questionVersion",
+    "type",
+    "label",
+    "explanation",
+    "required",
+    "sensitivity",
+    "persistence",
+    "valueSemantics"
+  ],
+  "properties": {
+    "kind": { "const": "guided-question" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "questionId": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,63}$" },
+    "questionVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "type": {
+      "type": "string",
+      "enum": [
+        "text",
+        "secret",
+        "single-select",
+        "multi-select",
+        "confirmation",
+        "path",
+        "repeated-text",
+        "informational"
+      ]
+    },
+    "label": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "explanation": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "required": { "type": "boolean" },
+    "sensitivity": { "type": "string", "enum": ["public", "internal", "sensitive"] },
+    "persistence": { "type": "string", "enum": ["none", "session"] },
+    "valueSemantics": { "type": "string", "enum": ["none", "suggestion", "default"] },
+    "suggestedValue": {
+      "oneOf": [
+        { "type": "string", "maxLength": 4096 },
+        { "type": "boolean" },
+        {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": { "type": "string", "maxLength": 256 }
+        }
+      ]
+    },
+    "suggestionReason": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "defaultValue": {
+      "oneOf": [
+        { "type": "string", "maxLength": 4096 },
+        { "type": "boolean" },
+        {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": { "type": "string", "maxLength": 256 }
+        }
+      ]
+    },
+    "defaultReason": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "choices": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
+          "label": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "description": { "type": "string", "minLength": 1, "maxLength": 500 }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minLength": { "type": "integer", "minimum": 0, "maximum": 4096 },
+        "maxLength": { "type": "integer", "minimum": 1, "maximum": 4096 },
+        "minItems": { "type": "integer", "minimum": 0, "maximum": 50 },
+        "maxItems": { "type": "integer", "minimum": 1, "maximum": 50 }
+      }
+    },
+    "visibleWhen": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["questionId", "operator"],
+        "properties": {
+          "questionId": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,63}$" },
+          "operator": {
+            "type": "string",
+            "enum": ["equals", "not-equals", "contains", "not-contains", "answered", "not-answered"]
+          },
+          "value": {
+            "oneOf": [
+              { "type": "string", "maxLength": 256 },
+              { "type": "boolean" },
+              { "type": "array", "maxItems": 50, "items": { "type": "string", "maxLength": 256 } }
+            ]
+          }
+        },
+        "oneOf": [
+          {
+            "title": "Value comparison",
+            "required": ["value"],
+            "properties": {
+              "operator": { "enum": ["equals", "not-equals", "contains", "not-contains"] }
+            }
+          },
+          {
+            "title": "Presence comparison",
+            "properties": {
+              "operator": { "enum": ["answered", "not-answered"] }
+            },
+            "not": { "required": ["value"] }
+          }
+        ]
+      }
+    }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "title": "Sensitive transient question",
+          "properties": {
+            "type": { "const": "secret" },
+            "sensitivity": { "const": "sensitive" },
+            "persistence": { "const": "none" },
+            "valueSemantics": { "const": "none" }
+          }
+        },
+        {
+          "title": "Non-sensitive question",
+          "properties": {
+            "type": {
+              "enum": [
+                "text",
+                "single-select",
+                "multi-select",
+                "confirmation",
+                "path",
+                "repeated-text",
+                "informational"
+              ]
+            },
+            "sensitivity": { "enum": ["public", "internal"] }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "title": "Choice question",
+          "required": ["choices"],
+          "properties": { "type": { "enum": ["single-select", "multi-select"] } }
+        },
+        {
+          "title": "Non-choice question",
+          "properties": {
+            "type": {
+              "enum": ["text", "secret", "confirmation", "path", "repeated-text", "informational"]
+            }
+          },
+          "not": { "required": ["choices"] }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "title": "No proposed value",
+          "properties": { "valueSemantics": { "const": "none" } },
+          "allOf": [
+            { "not": { "required": ["suggestedValue"] } },
+            { "not": { "required": ["defaultValue"] } }
+          ]
+        },
+        {
+          "title": "Suggested value",
+          "required": ["suggestedValue", "suggestionReason"],
+          "properties": { "valueSemantics": { "const": "suggestion" } },
+          "not": { "required": ["defaultValue"] }
+        },
+        {
+          "title": "Default value",
+          "required": ["defaultValue", "defaultReason"],
+          "properties": { "valueSemantics": { "const": "default" } },
+          "not": { "required": ["suggestedValue"] }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "title": "Informational question",
+          "properties": {
+            "type": { "const": "informational" },
+            "required": { "const": false },
+            "persistence": { "const": "none" },
+            "valueSemantics": { "const": "none" }
+          }
+        },
+        {
+          "title": "Answerable question",
+          "properties": {
+            "type": {
+              "enum": [
+                "text",
+                "secret",
+                "single-select",
+                "multi-select",
+                "confirmation",
+                "path",
+                "repeated-text"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

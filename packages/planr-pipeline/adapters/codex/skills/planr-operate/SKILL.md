@@ -11,6 +11,31 @@ state, evidence collection, advisor dispatch, deterministic consolidation,
 routing, recovery, and outcome reconciliation; this skill must not reimplement
 those behaviors.
 
+## Guided interaction
+
+Consume only schema-valid `questionnaire` and `actions` returned by the CLI.
+Present questions verbatim through the active runtime's verified interaction
+surface; if native questions are unavailable, use structured chat, then an
+attached terminal, otherwise return the CLI handoff. Submit typed answers only
+through the bounded stdin/resume lifecycle, preserving question IDs and declared
+answer types. Do not copy question definitions, infer missing answers or
+defaults, rebuild commands from chat, or edit operating configuration to answer
+a question.
+
+After a preview, ask separately for the exact named action. Echo only the
+CLI-returned command and confirmation digest for that choice. A field answer or
+prior confirmation never authorizes initialization, cycle start, provider use,
+route application, PLAN, or SHIP. Stop after each selected non-read-only action.
+Never add `--yes`, execute prose-only legacy `next` strings, or treat a previous
+answer as authority for the next action.
+
+When the CLI returns `E_OPERATE_SECRET_DETECTED`, use only the returned
+`planr operate evidence diagnose …` command. Present its value-free recovery
+choices and stop for the user's selection. Never trial-edit sources or
+`.planr/operate` state to isolate a candidate. Exact false-positive
+classification requires its own reason, preview digest, and confirmation;
+known credential signatures remain blocked.
+
 Canonical advisory lenses: CEO (strategy-finance: Direction, business model, pricing and packaging, focus, economics, and what to stop.); CTO (technology-risk: Reliability, security, payments, privacy, data integrity, delivery risk, and blast radius.); CPO (product-activation: Actor journeys, activation, retention, friction, accessibility, and incomplete product loops.); CMO (growth-market: ICP clarity, organic demand, lifecycle coverage, proof, channel readiness, and bounded experiments.); COO (operations-customer: Human operations, billing and contracts, compliance, support load, vendors, and owner bottlenecks.); Chair (chair: Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals.). They are independent,
 read-only executive perspectives—not delivery agents and not permission to
 role-play without evidence. A native runtime must follow the exact handoff returned

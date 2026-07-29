@@ -24,7 +24,7 @@ test('Protocol v1.2 schema catalog is complete, parseable, and version-addressab
   const files = readdirSync(join(root, 'schemas/v1.2.0'))
     .filter((file) => file.endsWith('.schema.json'))
     .sort();
-  assert.equal(files.length, 27);
+  assert.equal(files.length, 34);
   for (const file of files) assert.doesNotThrow(() => readJson(`schemas/v1.2.0/${file}`));
 
   const registered = listProtocolSchemas()
@@ -53,6 +53,9 @@ test('operating and adapter registries are schema-valid, unique, and read-only',
   assert.ok(adapters.adapters.every((adapter) => (
     typeof adapter.capabilities.parallelDispatch === 'boolean'
     && typeof adapter.capabilities.headlessBridge === 'boolean'
+    && ['native', 'chat', 'terminal', 'none'].includes(
+      adapter.capabilities.interactiveQuestions,
+    )
   )));
 });
 

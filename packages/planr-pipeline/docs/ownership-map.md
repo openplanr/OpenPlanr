@@ -20,6 +20,8 @@ the owner is updated and checked.
 | Protocol schemas | `planr-pipeline` | `npm run test:schema` and `npm run conformance:check` |
 | Adapter, delivery-role, operating-lens, and provider registries | `planr-pipeline` | schema tests, generated-asset check, and portable-asset scan |
 | Operating event/reducer/checkpoint contracts | `planr-pipeline` | `npm run conformance:operate` |
+| Guided question, answer, session, action, and diagnostic contracts | `planr-pipeline` | `npm run test:guided-contracts` and `npm run conformance:operate` |
+| Guided question wording, validation, sessions, confirmations, and mutations | `OpenPlanr` | strict CLI and Operating Board interaction tests |
 | Operating state transactions and provider execution | `OpenPlanr` | CLI state/recovery/provider tests against Protocol v1.2 |
 | Ecosystem release operation | `planr-pipeline` | saga and release-operation tests |
 | Runtime lock and migration | `OpenPlanr` | setup/idempotency/rollback tests |
@@ -45,3 +47,7 @@ the owner is updated and checked.
 artifacts and v1.1 capability contracts remain readable; v1.2 adds the Operating
 Board contract without migrating either namespace. A dedicated protocol package
 can be created later only after the existing drift checks remain green.
+
+Adapter `interactiveQuestions` values describe only how a validated
+questionnaire can be presented. They never confer mutation or provider
+authority; OpenPlanr remains the authority owner.

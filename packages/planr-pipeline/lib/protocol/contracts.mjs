@@ -47,6 +47,13 @@ const paths = {
   'operating-recovery-record': { '1.2.0': 'schemas/v1.2.0/operating-recovery-record.schema.json' },
   'ecosystem-saga': { '1.2.0': 'schemas/v1.2.0/ecosystem-saga.schema.json' },
   'ecosystem-release-operation': { '1.2.0': 'schemas/v1.2.0/ecosystem-release-operation.schema.json' },
+  'guided-question': { '1.2.0': 'schemas/v1.2.0/guided-question.schema.json' },
+  'guided-questionnaire': { '1.2.0': 'schemas/v1.2.0/guided-questionnaire.schema.json' },
+  'guided-answer-envelope': { '1.2.0': 'schemas/v1.2.0/guided-answer-envelope.schema.json' },
+  'guided-session': { '1.2.0': 'schemas/v1.2.0/guided-session.schema.json' },
+  'guided-confirmation': { '1.2.0': 'schemas/v1.2.0/guided-confirmation.schema.json' },
+  'structured-action': { '1.2.0': 'schemas/v1.2.0/structured-action.schema.json' },
+  'evidence-diagnostic': { '1.2.0': 'schemas/v1.2.0/evidence-diagnostic.schema.json' },
 };
 
 export const PROTOCOL_SCHEMA_REGISTRY = Object.freeze(Object.fromEntries(

@@ -1,0 +1,69 @@
+{
+  "kind": "guided-questionnaire",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "sessionId": "GIS-runtime-parity-0001",
+  "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "questionnaireVersion": "1.0.0",
+  "command": "operate.init",
+  "projectIdentity": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "projectHead": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "configHead": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "adapter": {
+    "runtime": "codex",
+    "version": "fixture",
+    "interaction": "native"
+  },
+  "stage": "foundation",
+  "step": 1,
+  "totalSteps": 1,
+  "title": "Configure the Operating Board",
+  "questions": [
+    {
+      "kind": "guided-question",
+      "schemaVersion": "1.0.0",
+      "protocolVersion": "1.2.0",
+      "questionId": "decision-owner",
+      "questionVersion": "1.0.0",
+      "type": "text",
+      "label": "Who owns final operating decisions?",
+      "explanation": "This person approves governance decisions.",
+      "required": true,
+      "sensitivity": "internal",
+      "persistence": "session",
+      "valueSemantics": "none",
+      "validation": {
+        "minLength": 1,
+        "maxLength": 160
+      }
+    },
+    {
+      "kind": "guided-question",
+      "schemaVersion": "1.0.0",
+      "protocolVersion": "1.2.0",
+      "questionId": "cadence",
+      "questionVersion": "1.0.0",
+      "type": "single-select",
+      "label": "How often should the board review the product?",
+      "explanation": "The cadence determines when the next review is due.",
+      "required": true,
+      "sensitivity": "internal",
+      "persistence": "session",
+      "valueSemantics": "default",
+      "defaultValue": "weekly",
+      "defaultReason": "Weekly is the standard SaaS operating cadence.",
+      "choices": [
+        {
+          "id": "weekly",
+          "label": "Weekly"
+        },
+        {
+          "id": "monthly",
+          "label": "Monthly"
+        }
+      ]
+    }
+  ],
+  "createdAt": "2026-07-29T09:00:00.000Z",
+  "expiresAt": "2026-07-30T09:00:00.000Z"
+}
