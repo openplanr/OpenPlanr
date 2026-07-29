@@ -46,12 +46,17 @@ jobs:
       - name: Run tests
         run: npm test
 
+      # Coverage is a property of the code, not of the host, so it is measured
+      # once rather than on every matrix leg. Instrumenting the whole suite is
+      # expensive, and doing it on Windows — already the slowest platform for
+      # this I/O-bound suite — pushed integration tests past their budget for
+      # no additional signal.
       - name: Run coverage
-        if: matrix.node-version == 22
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == 22
         run: npm run test:coverage
 
       - name: Upload coverage report
-        if: matrix.node-version == 22
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == 22
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report-${{ matrix.os }}-node-${{ matrix.node-version }}

@@ -132,6 +132,12 @@ function install(installRoot: string, tarballs: string[], omitOptional: boolean)
       '--no-audit',
       '--no-fund',
       '--package-lock=false',
+      // Resolve dependencies from the local npm cache where possible. CI warms
+      // it via setup-node, and these installs are the dominant cost of the
+      // fixture — on Windows the whole setup runs roughly eight times slower
+      // than on Linux or macOS, where network round-trips dominate.
+      '--prefer-offline',
+      '--no-progress',
       ...tarballs,
     ],
     {
@@ -192,7 +198,13 @@ beforeAll(() => {
   execFileSync('git', ['commit', '--quiet', '-m', 'fixture'], {
     cwd: projectRoot,
   });
-}, 240_000);
+  // Budget set from measurement, not estimate. This hook packs two real
+  // tarballs and performs two real npm installs; measured cost is ~28s on
+  // macOS, ~35s on Linux, and ~236s on Windows. The previous 240s left four
+  // seconds of headroom on Windows, so the job passed or failed on chance.
+  // Ten minutes keeps a genuine hang bounded while giving the slowest observed
+  // platform room to vary.
+}, 600_000);
 
 afterAll(() => {
   rmSync(root, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
