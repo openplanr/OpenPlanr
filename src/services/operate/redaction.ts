@@ -71,7 +71,106 @@ const EMBEDDED_INSTRUCTION_PATTERNS: Array<{
   },
 ];
 
-const SECRET_PATTERNS: Array<{ label: string; pattern: RegExp; replacement: string }> = [
+const REDACTION_SENTINEL = '[REDACTED]';
+const REDACTION_SENTINEL_SOURCE = String.raw`\[REDACTED(?:_[A-Z_]+)?\]`;
+const COMPLETE_REDACTED_VALUE = new RegExp(
+  String.raw`^(?:"${REDACTION_SENTINEL_SOURCE}"|'${REDACTION_SENTINEL_SOURCE}'|${REDACTION_SENTINEL_SOURCE})(?:[ \t]*[,;])?(?:[ \t]+(?:#|//).*)?[ \t]*$`,
+);
+
+const ENVIRONMENT_SECRET_KEY_SOURCE =
+  '(?:[A-Za-z0-9]+[_-])*(?:SECRET|TOKEN|PASSWORD|PASSWD|API[_-]?KEY|PRIVATE[_-]?KEY)(?:[_-][A-Za-z0-9]+)*';
+const STRUCTURED_SECRET_KEY_SOURCE =
+  '(?:api[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|password|passwd|secret|token)';
+
+type RedactionReplacement = string | ((match: string, ...capturesAndContext: unknown[]) => string);
+
+interface RedactionPattern {
+  label: string;
+  pattern: RegExp;
+  replacement: RedactionReplacement;
+  sensitiveCapture?: number;
+}
+
+export interface SecretDetectionMetadata {
+  ruleId: string;
+  category:
+    | 'assignment'
+    | 'known-token'
+    | 'authorization'
+    | 'private-key'
+    | 'jwt'
+    | 'credential-url'
+    | 'structured-secret';
+  line: number;
+  hardBlock: boolean;
+}
+
+const DETECTION_CATEGORY: Record<
+  string,
+  { category: SecretDetectionMetadata['category']; hardBlock: boolean }
+> = {
+  'secret-assignment': { category: 'assignment', hardBlock: false },
+  'known-token': { category: 'known-token', hardBlock: true },
+  authorization: { category: 'authorization', hardBlock: true },
+  'private-key': { category: 'private-key', hardBlock: true },
+  jwt: { category: 'jwt', hardBlock: true },
+  'credential-url': { category: 'credential-url', hardBlock: true },
+  'structured-secret': { category: 'structured-secret', hardBlock: false },
+};
+
+function isCompleteRedactedValue(value: string): boolean {
+  return COMPLETE_REDACTED_VALUE.test(value);
+}
+
+function closingQuoteIndex(value: string, quote: '"' | "'"): number {
+  for (let index = 1; index < value.length; index += 1) {
+    if (value[index] !== quote) continue;
+    let backslashes = 0;
+    for (let cursor = index - 1; cursor >= 0 && value[cursor] === '\\'; cursor -= 1) {
+      backslashes += 1;
+    }
+    if (backslashes % 2 === 0) return index;
+  }
+  return -1;
+}
+
+function redactAssignmentValue(value: string): string {
+  if (isCompleteRedactedValue(value)) return value;
+  const first = value[0];
+  if (first === '"' || first === "'") {
+    const closing = closingQuoteIndex(value, first);
+    if (closing >= 0) {
+      return `${first}${REDACTION_SENTINEL}${first}${value.slice(closing + 1)}`;
+    }
+  }
+  const comment = value.match(/[ \t]+(?:#|\/\/).*$/)?.[0] ?? '';
+  return `${REDACTION_SENTINEL}${comment}`;
+}
+
+function assignmentReplacement(match: string, ...capturesAndContext: unknown[]): string {
+  const prefix = capturesAndContext[0];
+  const value = capturesAndContext[1];
+  if (typeof prefix !== 'string' || typeof value !== 'string') return match;
+  return `${prefix}${redactAssignmentValue(value)}`;
+}
+
+function structuredSecretReplacement(match: string, ...capturesAndContext: unknown[]): string {
+  const prefix = capturesAndContext[0];
+  const value = capturesAndContext[1];
+  if (typeof prefix !== 'string' || typeof value !== 'string') return match;
+  if (isCompleteRedactedValue(value)) return match;
+  const quote = value[0] === '"' || value[0] === "'" ? value[0] : '';
+  return `${prefix}${quote}${REDACTION_SENTINEL}${quote}`;
+}
+
+function applyRedaction(value: string, candidate: RedactionPattern): string {
+  if (typeof candidate.replacement === 'string') {
+    return value.replace(candidate.pattern, candidate.replacement);
+  }
+  return value.replace(candidate.pattern, candidate.replacement);
+}
+
+const SECRET_PATTERNS: RedactionPattern[] = [
   {
     label: 'private-key',
     pattern:
@@ -96,15 +195,21 @@ const SECRET_PATTERNS: Array<{ label: string; pattern: RegExp; replacement: stri
   },
   {
     label: 'secret-assignment',
-    pattern:
-      /^([ \t]*(?:export[ \t]+)?[A-Za-z0-9_]*(?:SECRET|TOKEN|PASSWORD|PASSWD|API_?KEY|PRIVATE_?KEY)[A-Za-z0-9_]*[ \t]*[=:][ \t]*)(.+)$/gim,
-    replacement: '$1[REDACTED]',
+    pattern: new RegExp(
+      String.raw`^([ \t]*(?:export[ \t]+)?${ENVIRONMENT_SECRET_KEY_SOURCE}[ \t]*[=:][ \t]*)(\S.*)$`,
+      'gim',
+    ),
+    replacement: assignmentReplacement,
+    sensitiveCapture: 2,
   },
   {
     label: 'structured-secret',
-    pattern:
-      /((?:"|')?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|password|passwd|secret|token)(?:"|')?[ \t]*[:=][ \t]*)(?:"[^"\r\n]*"|'[^'\r\n]*'|[^\s,}\]\r\n#]+)/gi,
-    replacement: '$1"[REDACTED]"',
+    pattern: new RegExp(
+      String.raw`((?:"|')?${STRUCTURED_SECRET_KEY_SOURCE}(?:"|')?[ \t]*[:=][ \t]*)("${REDACTION_SENTINEL_SOURCE}"|'${REDACTION_SENTINEL_SOURCE}'|${REDACTION_SENTINEL_SOURCE}|"(?:\\.|[^"\\\r\n])*"|'(?:\\.|[^'\\\r\n])*'|[^\s,}\]\r\n#]+)`,
+      'gi',
+    ),
+    replacement: structuredSecretReplacement,
+    sensitiveCapture: 2,
   },
   {
     label: 'credential-url',
@@ -283,29 +388,58 @@ export function redactSensitiveText(
     if (candidate.pattern.test(value)) {
       redactions.push(candidate.label);
       candidate.pattern.lastIndex = 0;
-      value = value.replace(candidate.pattern, candidate.replacement);
+      value = applyRedaction(value, candidate);
     }
   }
-  if (containsSecret(value)) {
+  const residual = detectSecretMetadata(value);
+  if (residual.length > 0) {
     throw new OperateError(
       'E_OPERATE_SECRET_DETECTED',
       'Evidence still contains a secret-like value after redaction.',
+      {
+        ruleId: residual[0]?.ruleId,
+        category: residual[0]?.category,
+        line: residual[0]?.line,
+        hardBlock: residual[0]?.hardBlock,
+        contentDigest: inputDigest,
+        valueDisclosed: false,
+      },
     );
   }
   return { value, redactions: [...new Set(redactions)].sort(), inputDigest };
 }
 
-export function containsSecret(value: string): boolean {
-  const candidate = value
-    .replace(
-      /(?:"|')?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|password|passwd|secret|token)(?:"|')?[ \t]*[:=][ \t]*(?:"|')?\[REDACTED(?:_[A-Z_]+)?\](?:"|')?/gi,
-      '',
-    )
-    .replace(/\[REDACTED(?:_[A-Z_]+)?\]/g, '');
-  return SECRET_PATTERNS.some(({ pattern }) => {
+export function detectSecretMetadata(value: string): SecretDetectionMetadata[] {
+  const detections: SecretDetectionMetadata[] = [];
+  for (const { label, pattern, sensitiveCapture } of SECRET_PATTERNS) {
     pattern.lastIndex = 0;
-    return pattern.test(candidate);
-  });
+    let match = pattern.exec(value);
+    while (match) {
+      const sensitiveValue =
+        sensitiveCapture === undefined ? match[0] : (match[sensitiveCapture] ?? match[0]);
+      if (!isCompleteRedactedValue(sensitiveValue)) {
+        const policy = DETECTION_CATEGORY[label] ?? {
+          category: 'structured-secret' as const,
+          hardBlock: false,
+        };
+        detections.push({
+          ruleId: `${label}.v1`,
+          category: policy.category,
+          line: value.slice(0, match.index).split('\n').length,
+          hardBlock: policy.hardBlock,
+        });
+      }
+      if (!pattern.global) break;
+      match = pattern.exec(value);
+    }
+  }
+  return detections.sort(
+    (left, right) => left.line - right.line || left.ruleId.localeCompare(right.ruleId),
+  );
+}
+
+export function containsSecret(value: string): boolean {
+  return detectSecretMetadata(value).length > 0;
 }
 
 export function sanitizeEvidenceItem(input: CollectedEvidenceItem): OperatingEvidenceItem {
