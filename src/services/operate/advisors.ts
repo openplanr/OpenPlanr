@@ -5,6 +5,7 @@ import { z } from 'zod';
 import type { AIMessage, AIProvider } from '../../ai/types.js';
 import { DEFAULT_MODELS } from '../../ai/types.js';
 import type { OpenPlanrConfig } from '../../models/types.js';
+import { OPENPLANR_VERSION } from '../../utils/package-version.js';
 import { generateJSON, getAIProvider, isAIConfigured } from '../ai-service.js';
 import { loadConfig } from '../config-service.js';
 import { canonicalDigest, canonicalize } from './canonical.js';
@@ -780,7 +781,7 @@ export async function dispatchOperatingAdvisors(input: {
       conflicts: output.conflicts,
       producer: {
         product: 'openplanr',
-        version: '1.14.0',
+        version: OPENPLANR_VERSION,
         runtime: input.runtime ?? input.adapter.id,
         capability: capabilityByRole.get(role.roleId) ?? 'analysis-high',
       },
