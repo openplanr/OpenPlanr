@@ -14,6 +14,23 @@ import { pathToFileURL } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const onWindows = process.platform === 'win32';
+
+/**
+ * Windows resolves `npm` to `npm.cmd`, and Node refuses to execFile a `.cmd`
+ * without a shell (the CVE-2024-27980 mitigation), so the shell is mandatory
+ * there. A shell re-parses the argument list, so every argument is quoted —
+ * several of these carry temporary directory paths.
+ */
+function npmExec(
+  args: string[],
+  options: Parameters<typeof execFileSync>[2] = {},
+): string | Buffer {
+  return execFileSync(npm, onWindows ? args.map((arg) => `"${arg}"`) : args, {
+    ...options,
+    ...(onWindows ? { shell: true } : {}),
+  });
+}
 const repositoryRoot = resolve('.');
 const pipelineRoot = resolve(
   process.env.OPENPLANR_PIPELINE_ROOT ?? join(repositoryRoot, '..', 'planr-pipeline'),
@@ -72,18 +89,17 @@ function jsonResult(cli: string, installRoot: string, args: string[]): Record<st
 
 function pack(directory: string): string {
   const packed = JSON.parse(
-    execFileSync(npm, ['pack', '--json', '--ignore-scripts', '--pack-destination', root], {
+    npmExec(['pack', '--json', '--ignore-scripts', '--pack-destination', root], {
       cwd: directory,
       encoding: 'utf8',
       windowsHide: true,
-    }),
+    }) as string,
   ) as Array<{ filename: string }>;
   return join(root, packed[0].filename);
 }
 
 function install(installRoot: string, tarballs: string[], omitOptional: boolean): void {
-  execFileSync(
-    npm,
+  npmExec(
     [
       'install',
       '--prefix',
@@ -126,7 +142,7 @@ beforeAll(() => {
     cwd: projectRoot,
   });
   writeFileSync(join(projectRoot, 'README.md'), '# Packed Operating Board fixture\n');
-  execFileSync(npm, ['run', 'build'], {
+  npmExec(['run', 'build'], {
     cwd: repositoryRoot,
     stdio: 'pipe',
     windowsHide: true,
