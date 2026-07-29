@@ -263,7 +263,7 @@ describe('Operating Board AGENT route generation', () => {
       transactionId: applied.transactionId,
     });
     expect(observedRequests).toHaveLength(1);
-  }, 15_000);
+  });
 
   it('fails closed when the selected adapter cannot generate the typed format', async () => {
     const { projectRoot, localRoot, route } = await acceptedAgentRoute();
@@ -353,7 +353,7 @@ describe('Operating Board AGENT route generation', () => {
     expect(exhaustedInvocations).toBe(3);
     await expect(rejected()).rejects.toMatchObject({ code: 'E_OPERATE_ARTIFACT_REJECTED' });
     expect(exhaustedInvocations).toBe(3);
-  }, 20_000);
+  });
 
   it('resumes a durably failed attempt without regenerating attempt one', async () => {
     const fixture = await acceptedAgentRoute();
@@ -401,5 +401,5 @@ describe('Operating Board AGENT route generation', () => {
       },
     });
     expect(attempts).toEqual([1, 2]);
-  }, 15_000);
+  });
 });

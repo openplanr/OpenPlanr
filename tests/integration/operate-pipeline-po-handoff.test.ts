@@ -374,7 +374,7 @@ describe('Operating Board asynchronous Pipeline-PO handoff', () => {
         (event) => event.type === 'spec.linked' && event.cycleId === route.cycleId,
       ),
     ).toHaveLength(1);
-  }, 20_000);
+  });
 
   it('rejects PLAN artifacts attributed to conflicting decomposition producers', async () => {
     const { projectRoot, localRoot } = await initializePipelinePoWorkspace();
@@ -416,5 +416,5 @@ describe('Operating Board asynchronous Pipeline-PO handoff', () => {
     await expect(access(join(specDirectory, '.pipeline-shipped'))).rejects.toMatchObject({
       code: 'ENOENT',
     });
-  }, 20_000);
+  });
 });

@@ -368,7 +368,7 @@ describe('committed Operating Board route lanes', () => {
         })
       ).applied,
     ).toBe(false);
-  }, 30_000);
+  });
 
   it('rejects an accepted route when the control-repository revision moves', async () => {
     const { projectRoot, localRoot } = await initialize();
@@ -413,5 +413,5 @@ describe('committed Operating Board route lanes', () => {
     await expect(
       access(join(projectRoot, acceptedRoute.actions[0]?.targetPath as string)),
     ).rejects.toMatchObject({ code: 'ENOENT' });
-  }, 15_000);
+  });
 });

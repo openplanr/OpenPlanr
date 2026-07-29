@@ -387,7 +387,7 @@ describe('Operating Board shipped-outcome reconciliation', () => {
       }).replay();
       expect(replay.events.some((event) => event.type === 'ship.observed')).toBe(false);
     }
-  }, 15_000);
+  });
 
   it('is idempotent when the same shipment proof is reconciled repeatedly', async () => {
     const fixture = await initializeShipmentFixture();

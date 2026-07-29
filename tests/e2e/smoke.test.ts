@@ -74,5 +74,5 @@ describe('CLI smoke tests', () => {
 
     const output = run('status', { cwd: dir });
     expect(output).toBeDefined();
-  }, 30_000); // `status` runs two CLI invocations; give it a bit more headroom.
+  });
 });
