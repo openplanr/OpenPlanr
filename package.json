@@ -1,7 +1,7 @@
 {
   "name": "openplanr",
   "version": "1.14.0",
-  "description": "AI-powered planning CLI — backlog, sprints, task templates, estimation, GitHub and Linear sync, and AI agent rules for Cursor, Claude Code, and Codex",
+  "description": "AI-powered planning CLI \u2014 backlog, sprints, task templates, estimation, GitHub and Linear sync, and AI agent rules for Cursor, Claude Code, and Codex",
   "type": "module",
   "main": "./dist/cli/index.js",
   "types": "./dist/cli/index.d.ts",
@@ -33,7 +33,7 @@
     "test": "vitest run && vitest run --config vitest.heavy.config.ts",
     "test:operate:security": "vitest run tests/unit/operate-security.test.ts tests/unit/operate-advisors.test.ts tests/unit/operate-protocol-roundtrip.test.ts tests/integration/operate-preview-boundaries.test.ts",
     "test:operate:outcomes": "vitest run tests/unit/operate-outcomes.test.ts",
-    "test:operate:packed": "vitest run tests/e2e/operate-packed-install.test.ts",
+    "test:operate:packed": "vitest run --config vitest.heavy.config.ts tests/e2e/operate-packed-install.test.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check src/ tests/",
