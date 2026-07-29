@@ -1,48 +1,113 @@
 {
-  "schemaVersion": "1.0.0",
-  "generatedAt": "2026-07-23T19:44:05.029Z",
+  "schemaVersion": "1.1.0",
+  "generatedAt": "2026-07-29T11:52:00.016Z",
   "protocol": {
-    "current": "1.1.0",
+    "current": "1.2.0",
     "supported": [
       "1.0.x",
-      "1.1.x"
+      "1.1.x",
+      "1.2.x"
     ]
   },
   "components": {
     "cli": {
-      "version": "1.13.3",
-      "pipelineRange": "^0.29.2"
+      "version": "1.14.0",
+      "pipelineRange": "^0.30.0"
     },
     "pipeline": {
-      "version": "0.29.2",
-      "cliRange": "^1.13.3"
+      "version": "0.30.0",
+      "cliRange": "^1.14.0"
     },
     "skills": {
-      "version": "1.15.0",
-      "cliRange": "^1.13.3"
+      "version": "1.16.0",
+      "cliRange": "^1.14.0"
     },
     "marketplace": {
-      "version": "1.0.0"
+      "version": "1.1.0"
     }
   },
   "adapters": [
     {
       "runtime": "claude-code",
-      "version": "0.29.2",
+      "version": "0.30.0",
       "capabilityLevel": "product",
-      "pipelineRange": "^0.29.2"
+      "pipelineRange": "^0.30.0",
+      "operatingBoard": {
+        "declared": true,
+        "available": false,
+        "entrypoint": "planr operate"
+      }
     },
     {
       "runtime": "codex",
-      "version": "0.29.2",
+      "version": "0.30.0",
       "capabilityLevel": "workflow",
-      "pipelineRange": "^0.29.2"
+      "pipelineRange": "^0.30.0",
+      "operatingBoard": {
+        "declared": true,
+        "available": false,
+        "entrypoint": "$planr-operate"
+      }
     },
     {
       "runtime": "cursor",
-      "version": "0.29.2",
+      "version": "0.30.0",
       "capabilityLevel": "workflow",
-      "pipelineRange": "^0.29.2"
+      "pipelineRange": "^0.30.0",
+      "operatingBoard": {
+        "declared": true,
+        "available": false,
+        "entrypoint": "planr operate"
+      }
     }
-  ]
+  ],
+  "capabilities": {
+    "operatingBoard": {
+      "status": "unavailable",
+      "command": "planr operate",
+      "protocolRange": "^1.2.0",
+      "components": {
+        "pipeline": "0.30.0",
+        "cli": "1.14.0",
+        "skills": "1.16.0",
+        "marketplace": "1.1.0"
+      },
+      "certifiedRuntimes": [],
+      "missing": [
+        "release"
+      ],
+      "releaseOperation": {
+        "operationId": "OPERATE-SPEC-002",
+        "operationDigest": "sha256:c2f350926bef6c4f4e385c6ed5788b28b689c79096dea3b38e5cf8a785ae2f1f",
+        "state": "promoting",
+        "reconciliation": "incomplete"
+      }
+    }
+  },
+  "releaseTransaction": {
+    "model": "coordinated-saga",
+    "atomicity": "participant-local",
+    "ledger": {
+      "kind": "marketplace-draft-pr",
+      "repository": "openplanr/marketplace",
+      "schema": "schemas/ecosystem-operation.schema.json"
+    },
+    "participantOrder": [
+      "pipeline",
+      "cli",
+      "skills",
+      "marketplace"
+    ],
+    "closeout": {
+      "model": "two-step-marketplace-finalization",
+      "sequence": [
+        "merge-unavailable-ledger",
+        "tag-and-verify-marketplace",
+        "record-finalization-and-expose"
+      ],
+      "availabilityGate": "verified-operation-after-ledger-merge-and-marketplace-tag"
+    },
+    "recovery": "reconcile-and-resume",
+    "publishedCompensation": "forward-fix"
+  }
 }

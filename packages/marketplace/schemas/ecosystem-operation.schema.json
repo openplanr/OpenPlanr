@@ -1,0 +1,744 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/ecosystem-operation/1.0.0",
+  "title": "OpenPlanr ecosystem operation ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "protocolVersion",
+    "operationId",
+    "operationDigest",
+    "umbrellaSpecId",
+    "title",
+    "capability",
+    "createdAt",
+    "updatedAt",
+    "state",
+    "ledger",
+    "participantOrder",
+    "participants",
+    "releaseEvidence",
+    "prepareDigest",
+    "confirmationDigest",
+    "blockedReason",
+    "nextSafeAction",
+    "recovery",
+    "reconciliation",
+    "history"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "kind": {
+      "const": "openplanr-ecosystem-operation"
+    },
+    "protocolVersion": {
+      "const": "1.2.0"
+    },
+    "operationId": {
+      "type": "string",
+      "pattern": "^OPERATE-SPEC-[0-9]{3,}$"
+    },
+    "operationDigest": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/digest"
+        }
+      ],
+      "description": "SHA-256 of the RFC 8785 canonical operation intent projection: kind, protocolVersion, operationId, umbrellaSpecId, capability, participantOrder, required release-evidence IDs, and each participant's component, repoLocalSpecId, repoLocalWorkItem, repository, targetVersion, targetBranch, and prerequisites."
+    },
+    "umbrellaSpecId": {
+      "const": "SPEC-002"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    },
+    "capability": {
+      "type": "string",
+      "pattern": "^[a-z][A-Za-z0-9]{1,63}$"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "state": {
+      "enum": [
+        "drafted",
+        "preparing",
+        "prepared",
+        "promoting",
+        "completed",
+        "verified",
+        "blocked",
+        "compensating",
+        "compensated",
+        "failed"
+      ]
+    },
+    "ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "repository", "headRef", "pullRequest"],
+      "properties": {
+        "kind": {
+          "const": "marketplace-draft-pr"
+        },
+        "repository": {
+          "const": "openplanr/marketplace"
+        },
+        "headRef": {
+          "type": "string",
+          "pattern": "^ecosystem-release/[a-z0-9][a-z0-9._/-]*$"
+        },
+        "pullRequest": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["number", "url", "state"],
+              "properties": {
+                "number": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri",
+                  "pattern": "^https://github\\.com/openplanr/marketplace/pull/[0-9]+$"
+                },
+                "state": {
+                  "enum": ["draft", "ready", "merged", "closed"]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "participantOrder": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "const": "pipeline"
+        },
+        {
+          "const": "cli"
+        },
+        {
+          "const": "skills"
+        },
+        {
+          "const": "marketplace"
+        }
+      ],
+      "items": false,
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "participants": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/participant"
+      }
+    },
+    "releaseEvidence": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/canaryEvidence",
+          "properties": { "id": { "const": "packed-cli" } }
+        },
+        {
+          "$ref": "#/$defs/canaryEvidence",
+          "properties": { "id": { "const": "protocol-v1.2" } }
+        },
+        {
+          "$ref": "#/$defs/canaryEvidence",
+          "properties": { "id": { "const": "event-replay" } }
+        },
+        {
+          "$ref": "#/$defs/canaryEvidence",
+          "properties": { "id": { "const": "security-boundaries" } }
+        },
+        {
+          "$ref": "#/$defs/canaryEvidence",
+          "properties": { "id": { "const": "outcome-reconciliation" } }
+        }
+      ],
+      "items": false,
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "prepareDigest": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/digest"
+        }
+      ]
+    },
+    "confirmationDigest": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/digest"
+        }
+      ]
+    },
+    "blockedReason": {
+      "type": ["string", "null"],
+      "maxLength": 1000
+    },
+    "nextSafeAction": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "recovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "reason", "nextSafeAction"],
+      "properties": {
+        "mode": {
+          "enum": ["compensate-before-publish", "forward-fix"]
+        },
+        "reason": {
+          "type": ["string", "null"],
+          "maxLength": 1000
+        },
+        "nextSafeAction": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      }
+    },
+    "reconciliation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "checkedAt", "sources", "drift", "nextSafeAction"],
+      "properties": {
+        "status": {
+          "enum": ["pending", "matched", "incomplete", "drift"]
+        },
+        "checkedAt": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "sources": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 7,
+          "items": {
+            "enum": [
+              "github-pr",
+              "git-commit",
+              "git-tag",
+              "github-checks",
+              "npm-registry",
+              "marketplace-manifest",
+              "operating-canary"
+            ]
+          }
+        },
+        "drift": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "nextSafeAction": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      }
+    },
+    "history": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/historyEvent"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "verified"
+          }
+        },
+        "required": ["state"]
+      },
+      "then": {
+        "properties": {
+          "ledger": {
+            "properties": {
+              "pullRequest": {
+                "type": "object",
+                "properties": {
+                  "state": {
+                    "const": "merged"
+                  }
+                }
+              }
+            }
+          },
+          "reconciliation": {
+            "properties": {
+              "status": {
+                "const": "matched"
+              },
+              "checkedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "history": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {
+                    "type": {
+                      "const": "reconciliation.recorded"
+                    }
+                  },
+                  "required": ["type"]
+                }
+              },
+              {
+                "contains": {
+                  "properties": {
+                    "type": {
+                      "const": "operation.verified"
+                    }
+                  },
+                  "required": ["type"]
+                }
+              }
+            ]
+          },
+          "participants": {
+            "items": {
+              "allOf": [
+                {
+                  "properties": {
+                    "phase": {
+                      "const": "verified"
+                    },
+                    "pullRequest": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "const": "merged"
+                        }
+                      }
+                    },
+                    "tag": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "tarballDigest": {
+                      "$ref": "#/$defs/digest"
+                    },
+                    "checks": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "properties": {
+                          "status": {
+                            "const": "passed"
+                          }
+                        }
+                      }
+                    },
+                    "approvals": {
+                      "contains": {
+                        "properties": {
+                          "gate": {
+                            "const": "release"
+                          }
+                        },
+                        "required": ["gate"]
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "package": {
+                        "type": "object"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "package": {
+                        "properties": {
+                          "status": {
+                            "const": "verified"
+                          },
+                          "integrity": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "releaseEvidence": {
+            "items": {
+              "properties": {
+                "status": { "const": "passed" },
+                "url": { "type": "string", "format": "uri" },
+                "digest": { "$ref": "#/$defs/digest" },
+                "checkedAt": { "type": "string", "format": "date-time" }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "semver": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "participant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "component",
+        "repoLocalSpecId",
+        "repoLocalWorkItem",
+        "repository",
+        "currentVersion",
+        "targetVersion",
+        "phase",
+        "branch",
+        "targetBranch",
+        "commitSha",
+        "pullRequest",
+        "package",
+        "tag",
+        "tarballDigest",
+        "checks",
+        "approvals",
+        "prerequisites",
+        "compensation",
+        "nextSafeAction"
+      ],
+      "properties": {
+        "component": {
+          "enum": ["pipeline", "cli", "skills", "marketplace"]
+        },
+        "repoLocalSpecId": {
+          "type": "string",
+          "pattern": "^OPERATE-SPEC-002:(pipeline|cli|skills|marketplace)$"
+        },
+        "repoLocalWorkItem": {
+          "type": "string",
+          "pattern": "^(?:docs/implementation/(?:operating-board|OPERATE-SPEC-002)\\.md)$"
+        },
+        "repository": {
+          "enum": [
+            "openplanr/planr-pipeline",
+            "openplanr/OpenPlanr",
+            "openplanr/skills",
+            "openplanr/marketplace"
+          ]
+        },
+        "currentVersion": {
+          "$ref": "#/$defs/semver"
+        },
+        "targetVersion": {
+          "$ref": "#/$defs/semver"
+        },
+        "phase": {
+          "enum": [
+            "pending",
+            "preparing",
+            "prepared",
+            "promoting",
+            "merged",
+            "published",
+            "verified",
+            "blocked",
+            "compensated"
+          ]
+        },
+        "branch": {
+          "type": ["string", "null"],
+          "maxLength": 255
+        },
+        "targetBranch": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "commitSha": {
+          "type": ["string", "null"],
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "pullRequest": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["number", "url", "state"],
+              "properties": {
+                "number": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "state": {
+                  "enum": ["draft", "ready", "merged", "closed"]
+                }
+              }
+            }
+          ]
+        },
+        "package": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "version", "status", "integrity"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "version": {
+                  "$ref": "#/$defs/semver"
+                },
+                "status": {
+                  "enum": ["not-applicable", "pending", "published", "verified", "deprecated"]
+                },
+                "integrity": {
+                  "type": ["string", "null"],
+                  "maxLength": 256
+                }
+              }
+            }
+          ]
+        },
+        "tag": {
+          "type": ["string", "null"],
+          "maxLength": 255
+        },
+        "tarballDigest": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/digest"
+            }
+          ]
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "status", "url"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              },
+              "status": {
+                "enum": ["expected", "pending", "passed", "failed", "skipped"]
+              },
+              "url": {
+                "type": ["string", "null"],
+                "format": "uri"
+              }
+            }
+          }
+        },
+        "approvals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/approval"
+          }
+        },
+        "prerequisites": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": ["pipeline", "cli", "skills", "marketplace"]
+          }
+        },
+        "compensation": {
+          "enum": ["none", "close-pr", "revert-pr", "forward-fix", "deprecate-package", "withhold-manifest"]
+        },
+        "nextSafeAction": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "error": {
+          "type": ["string", "null"],
+          "maxLength": 1000
+        }
+      }
+    },
+    "canaryEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "url", "digest", "checkedAt"],
+      "properties": {
+        "id": {
+          "enum": [
+            "packed-cli",
+            "protocol-v1.2",
+            "event-replay",
+            "security-boundaries",
+            "outcome-reconciliation"
+          ]
+        },
+        "status": {
+          "enum": ["pending", "passed", "failed"]
+        },
+        "url": {
+          "type": ["string", "null"],
+          "format": "uri",
+          "pattern": "^https://github\\.com/openplanr/marketplace/actions/runs/[0-9]+(?:[/?#].*)?$"
+        },
+        "digest": {
+          "anyOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/digest" }
+          ]
+        },
+        "checkedAt": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate", "actor", "status", "timestamp", "digest"],
+      "properties": {
+        "gate": {
+          "enum": ["plan", "prepare", "promote", "release"]
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "status": {
+          "const": "approved"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "digest": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/digest"
+            }
+          ],
+          "description": "Must equal the operationDigest approved at this gate."
+        }
+      }
+    },
+    "historyEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eventId", "timestamp", "type", "actor", "participant", "digest"],
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "type": {
+          "enum": [
+            "operation.created",
+            "prepare.started",
+            "participant.prepared",
+            "promotion.started",
+            "participant.promoted",
+            "participant.verified",
+            "operation.blocked",
+            "compensation.started",
+            "participant.compensated",
+            "operation.completed",
+            "operation.verified",
+            "operation.failed",
+            "reconciliation.recorded"
+          ]
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "participant": {
+          "type": ["string", "null"],
+          "enum": ["pipeline", "cli", "skills", "marketplace", null]
+        },
+        "digest": {
+          "$ref": "#/$defs/digest"
+        },
+        "note": {
+          "type": ["string", "null"],
+          "maxLength": 1000
+        }
+      }
+    }
+  }
+}

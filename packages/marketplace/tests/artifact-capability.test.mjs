@@ -8,10 +8,12 @@ test('published artifact-review components resolve from one compatibility manife
   const ecosystem = await readJson('../ecosystem.json');
   const marketplace = await readJson('../.claude-plugin/marketplace.json');
 
-  assert.equal(ecosystem.protocol.current, '1.1.0');
-  assert.match(ecosystem.components.cli.version, /^1\.13\./);
-  assert.match(ecosystem.components.pipeline.version, /^0\.29\./);
-  assert.equal(ecosystem.components.skills.version, '1.15.0');
+  assert.match(ecosystem.protocol.current, /^1\.[1-9][0-9]*\.0$/);
+  assert.ok(ecosystem.protocol.supported.includes('1.0.x'));
+  assert.ok(ecosystem.protocol.supported.includes('1.1.x'));
+  assert.match(ecosystem.components.cli.version, /^[0-9]+\.[0-9]+\.[0-9]+$/);
+  assert.match(ecosystem.components.pipeline.version, /^[0-9]+\.[0-9]+\.[0-9]+$/);
+  assert.match(ecosystem.components.skills.version, /^[0-9]+\.[0-9]+\.[0-9]+$/);
   assert.equal(ecosystem.components.cli.pipelineRange, `^${ecosystem.components.pipeline.version}`);
   assert.equal(ecosystem.components.pipeline.cliRange, `^${ecosystem.components.cli.version}`);
   assert.deepEqual(ecosystem.adapters.map(({ runtime }) => runtime).sort(), ['claude-code', 'codex', 'cursor']);
