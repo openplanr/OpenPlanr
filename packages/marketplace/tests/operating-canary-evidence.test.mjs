@@ -19,6 +19,20 @@ const pendingEvidence = () =>
     checkedAt: null,
   }));
 
+test('guided canary builds the CLI before packed-install verification', async () => {
+  const workflow = await readFile(
+    new URL('../.github/workflows/guided-operate-canary.yml', import.meta.url),
+    'utf8',
+  );
+  const buildIndex = workflow.indexOf('npm --prefix OpenPlanr run build');
+  const verificationIndex = workflow.indexOf('npm --prefix OpenPlanr run test:operate:guided');
+  assert.ok(buildIndex >= 0, 'guided canary must build the exact CLI source');
+  assert.ok(
+    verificationIndex > buildIndex,
+    'packed-install verification must run after the CLI build',
+  );
+});
+
 test('draft evidence is valid but cannot satisfy the verified release gate', () => {
   const evidence = pendingEvidence();
   assert.deepEqual(validateOperatingCanaryEvidence(evidence), []);

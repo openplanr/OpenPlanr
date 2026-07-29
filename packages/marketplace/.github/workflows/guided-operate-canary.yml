@@ -57,6 +57,8 @@ jobs:
             OpenPlanr/package-lock.json
       - run: npm --prefix planr-pipeline ci
       - run: npm --prefix OpenPlanr ci
+      - name: Build the exact CLI release source before packed-install checks
+        run: npm --prefix OpenPlanr run build
       - name: Verify guided contracts, parity, and first-preview budget
         run: |
           npm --prefix planr-pipeline run test:guided-acceptance
