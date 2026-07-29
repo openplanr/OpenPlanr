@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.14.3
+
+### Patch Changes
+
+- [`e986fc0`](https://github.com/openplanr/OpenPlanr/commit/e986fc02e552f6c9741bd9117bc02a1503335953) Derive Operating Board producer provenance from the installed OpenPlanr package version instead of a copied release literal.
+
+- [`08349b3`](https://github.com/openplanr/OpenPlanr/commit/08349b3be8aa8acdc1b5c636f279550b291a4703) Report a missing OpenPlanr configuration as the actionable advisor error instead
+  of an unexpected internal failure. `planr operate init` writes
+  `.planr/operate/config.json`, not the project-wide `.planr/config.json`, so a
+  project that ran only the operate initializer reached the structured adapter
+  with no config at all and surfaced "an unexpected internal Operating Board
+  error" on the primary first-run path.
+
 ## 1.14.2
 
 ### Patch Changes
