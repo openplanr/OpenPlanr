@@ -162,3 +162,9 @@ test('guided reconciliation checks the guided capability, not the legacy board g
       entry.includes('manifest.capabilities.guidedOperatingBoard.status')),
   );
 });
+
+test('marketplace test discovery is portable across POSIX shells and PowerShell', async () => {
+  const packageJson = await readJson('../package.json');
+  assert.equal(packageJson.scripts.test, 'node --test');
+  assert.doesNotMatch(packageJson.scripts.test, /[*?[\]{}]/);
+});

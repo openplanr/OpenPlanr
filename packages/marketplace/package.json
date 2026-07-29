@@ -10,6 +10,6 @@
     "canary:report": "node scripts/operating-canary-evidence.mjs",
     "canary:materialize": "node scripts/materialize-operating-canary.mjs",
     "reconcile:operation": "node scripts/reconcile-operation.mjs",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test"
   }
 }
