@@ -24,6 +24,14 @@ import type { OperatingEvent } from '../../src/services/operate/types.js';
 
 const TOTAL_EVENTS = 10_000;
 
+/**
+ * Chaining, replaying, and reducing 10,000 events runs ~16s locally and
+ * meaningfully longer on CI runners under v8 coverage instrumentation. The
+ * event count is fixed by the SPEC-002 scale target, so the budget flexes
+ * instead. A genuine hang still fails well inside the job timeout.
+ */
+const SCALE_TIMEOUT_MS = 180_000;
+
 const temporaryDirectories: string[] = [];
 const digest = (character: string): `sha256:${string}` => `sha256:${character.repeat(64)}`;
 
@@ -135,67 +143,79 @@ async function storeWith(events: OperatingEvent[]): Promise<OperatingEventStore>
 }
 
 describe('Operating Board checkpoints at 10,000 events', () => {
-  it('replays, verifies, checkpoints, and re-projects a 10,000-event stream without drift', async () => {
-    const store = await storeWith(stream);
-    const protocol = await loadOperatingProtocol();
+  it(
+    'replays, verifies, checkpoints, and re-projects a 10,000-event stream without drift',
+    async () => {
+      const store = await storeWith(stream);
+      const protocol = await loadOperatingProtocol();
 
-    const replay = await store.replay();
-    expect(replay.events).toHaveLength(TOTAL_EVENTS);
-    expect(replay.eventHead).toEqual({
-      sequence: TOTAL_EVENTS,
-      hash: stream.at(-1)?.eventHash,
-    });
-    expect(protocol.verifyOperatingEventChain(replay.events)).toEqual(replay.eventHead);
+      const replay = await store.replay();
+      expect(replay.events).toHaveLength(TOTAL_EVENTS);
+      expect(replay.eventHead).toEqual({
+        sequence: TOTAL_EVENTS,
+        hash: stream.at(-1)?.eventHash,
+      });
+      expect(protocol.verifyOperatingEventChain(replay.events)).toEqual(replay.eventHead);
 
-    // Full projection from genesis.
-    const full = await store.state();
-    expect(full.evidenceSources).toHaveLength(TOTAL_EVENTS - 1);
+      // Full projection from genesis.
+      const full = await store.state();
+      expect(full.evidenceSources).toHaveLength(TOTAL_EVENTS - 1);
 
-    const checkpoint = await store.writeCheckpoint(full);
-    expect(checkpoint.eventHead).toEqual(replay.eventHead);
-    expect(await store.readCheckpoint()).toEqual(checkpoint);
+      const checkpoint = await store.writeCheckpoint(full);
+      expect(checkpoint.eventHead).toEqual(replay.eventHead);
+      expect(await store.readCheckpoint()).toEqual(checkpoint);
 
-    // Resuming from a checkpoint whose head is the log head applies no further
-    // events and must reproduce the genesis projection exactly.
-    const fromCheckpoint = await store.state(checkpoint);
-    expect(canonicalDigest(fromCheckpoint)).toBe(canonicalDigest(full));
-  });
+      // Resuming from a checkpoint whose head is the log head applies no further
+      // events and must reproduce the genesis projection exactly.
+      const fromCheckpoint = await store.state(checkpoint);
+      expect(canonicalDigest(fromCheckpoint)).toBe(canonicalDigest(full));
+    },
+    SCALE_TIMEOUT_MS,
+  );
 
-  it('projects a post-checkpoint tail identically to a full replay from genesis', async () => {
-    const store = await storeWith(stream);
-    const checkpoint = await store.writeCheckpoint();
-    expect(checkpoint.eventHead.sequence).toBe(TOTAL_EVENTS);
+  it(
+    'projects a post-checkpoint tail identically to a full replay from genesis',
+    async () => {
+      const store = await storeWith(stream);
+      const checkpoint = await store.writeCheckpoint();
+      expect(checkpoint.eventHead.sequence).toBe(TOTAL_EVENTS);
 
-    // Extend the stream past the checkpoint.
-    let previous = stream.at(-1) as OperatingEvent;
-    const tail: OperatingEvent[] = [];
-    for (let offset = 1; offset <= 250; offset += 1) {
-      const event = await evidenceEvent(TOTAL_EVENTS + offset, previous);
-      tail.push(event);
-      previous = event;
-    }
-    await appendFile(
-      store.paths.events,
-      `${tail.map((event) => canonicalize(event)).join('\n')}\n`,
-      'utf8',
-    );
+      // Extend the stream past the checkpoint.
+      let previous = stream.at(-1) as OperatingEvent;
+      const tail: OperatingEvent[] = [];
+      for (let offset = 1; offset <= 250; offset += 1) {
+        const event = await evidenceEvent(TOTAL_EVENTS + offset, previous);
+        tail.push(event);
+        previous = event;
+      }
+      await appendFile(
+        store.paths.events,
+        `${tail.map((event) => canonicalize(event)).join('\n')}\n`,
+        'utf8',
+      );
 
-    const incremental = await store.state(checkpoint);
-    const fromGenesis = await store.state();
-    expect(canonicalDigest(incremental)).toBe(canonicalDigest(fromGenesis));
-    expect(fromGenesis.evidenceSources).toHaveLength(TOTAL_EVENTS - 1 + tail.length);
-  });
+      const incremental = await store.state(checkpoint);
+      const fromGenesis = await store.state();
+      expect(canonicalDigest(incremental)).toBe(canonicalDigest(fromGenesis));
+      expect(fromGenesis.evidenceSources).toHaveLength(TOTAL_EVENTS - 1 + tail.length);
+    },
+    SCALE_TIMEOUT_MS,
+  );
 
-  it('rejects a single tampered event buried in the middle of a 10,000-event log', async () => {
-    const store = await storeWith(stream);
+  it(
+    'rejects a single tampered event buried in the middle of a 10,000-event log',
+    async () => {
+      const store = await storeWith(stream);
 
-    // Rewrite event 5,000's payload while leaving its recorded hash intact.
-    const lines = (await readFile(store.paths.events, 'utf8')).trimEnd().split('\n');
-    const target = JSON.parse(lines[4_999]) as OperatingEvent;
-    (target.payload as { sources: Array<{ itemCount: number }> }).sources[0].itemCount = 999;
-    lines[4_999] = canonicalize(target);
-    await writeFile(store.paths.events, `${lines.join('\n')}\n`, 'utf8');
+      // Rewrite event 5,000's payload while leaving its recorded hash intact.
+      const lines = (await readFile(store.paths.events, 'utf8')).trimEnd().split('\n');
+      const target = JSON.parse(lines[4_999]) as OperatingEvent;
+      (target.payload as { sources: Array<{ itemCount: number }> }).sources[0].itemCount = 999;
+      lines[4_999] = canonicalize(target);
+      await writeFile(store.paths.events, `${lines.join('\n')}\n`, 'utf8');
 
-    await expect(store.replay()).rejects.toThrowError(/hash check|invalid/i);
-  });
+      await expect(store.replay()).rejects.toThrowError(/hash check|invalid/i);
+    },
+    SCALE_TIMEOUT_MS,
+  );
 });
