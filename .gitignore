@@ -41,3 +41,8 @@ Thumbs.db
 
 # Debug / misc
 .cache/
+
+# CI checks the sibling pipeline out here so the packed-install e2e can pack
+# it. It lives inside the workspace, so without this the release automation
+# sweeps it into a commit as a broken gitlink.
+.ci/
