@@ -649,8 +649,15 @@ export async function createConfiguredStructuredAdapter(
   projectRoot: string,
   options: { quiet?: boolean } = {},
 ): Promise<AdvisorAdapter> {
-  const config = await loadConfig(projectRoot);
-  if (!isAIConfigured(config)) {
+  // `planr operate init` writes .planr/operate/config.json, not the project-wide
+  // .planr/config.json that loadConfig requires. A project that ran only the
+  // operate initializer therefore reaches this with no OpenPlanr config at all,
+  // and loadConfig throws ConfigNotFoundError — an untyped failure that surfaces
+  // as "an unexpected internal Operating Board error" on the primary first-run
+  // path. Both the missing config and the unconfigured provider mean the same
+  // thing to the operator, so both resolve to the same actionable error.
+  const config = await loadConfig(projectRoot).catch(() => null);
+  if (!config || !isAIConfigured(config)) {
     throw new OperateError(
       'E_OPERATE_ADVISOR_FAILED',
       'No structured AI provider is configured; use --offline or configure OpenPlanr AI.',
