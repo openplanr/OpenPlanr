@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAt": "2026-07-29T11:52:00.016Z",
+  "generatedAt": "2026-07-29T16:32:44.308Z",
   "protocol": {
     "current": "1.2.0",
     "supported": [
@@ -11,16 +11,16 @@
   },
   "components": {
     "cli": {
-      "version": "1.14.0",
+      "version": "1.14.2",
       "pipelineRange": "^0.30.0"
     },
     "pipeline": {
       "version": "0.30.0",
-      "cliRange": "^1.14.0"
+      "cliRange": "^1.14.2"
     },
     "skills": {
       "version": "1.16.0",
-      "cliRange": "^1.14.0"
+      "cliRange": "^1.14.2"
     },
     "marketplace": {
       "version": "1.1.0"
@@ -34,7 +34,7 @@
       "pipelineRange": "^0.30.0",
       "operatingBoard": {
         "declared": true,
-        "available": false,
+        "available": true,
         "entrypoint": "planr operate"
       }
     },
@@ -45,7 +45,7 @@
       "pipelineRange": "^0.30.0",
       "operatingBoard": {
         "declared": true,
-        "available": false,
+        "available": true,
         "entrypoint": "$planr-operate"
       }
     },
@@ -56,31 +56,33 @@
       "pipelineRange": "^0.30.0",
       "operatingBoard": {
         "declared": true,
-        "available": false,
+        "available": true,
         "entrypoint": "planr operate"
       }
     }
   ],
   "capabilities": {
     "operatingBoard": {
-      "status": "unavailable",
+      "status": "available",
       "command": "planr operate",
       "protocolRange": "^1.2.0",
       "components": {
         "pipeline": "0.30.0",
-        "cli": "1.14.0",
+        "cli": "1.14.2",
         "skills": "1.16.0",
         "marketplace": "1.1.0"
       },
-      "certifiedRuntimes": [],
-      "missing": [
-        "release"
+      "certifiedRuntimes": [
+        "claude-code",
+        "codex",
+        "cursor"
       ],
+      "missing": [],
       "releaseOperation": {
         "operationId": "OPERATE-SPEC-002",
-        "operationDigest": "sha256:c2f350926bef6c4f4e385c6ed5788b28b689c79096dea3b38e5cf8a785ae2f1f",
-        "state": "promoting",
-        "reconciliation": "incomplete"
+        "operationDigest": "sha256:7f07dbf099064e49f8e462a87fa5b94be3442588ee6fcec8faf8c1a085e01cd5",
+        "state": "verified",
+        "reconciliation": "matched"
       }
     }
   },

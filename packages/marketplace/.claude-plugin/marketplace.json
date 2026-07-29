@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "planr-pipeline",
-      "description": "Complete PO → Design → Review → DEV → QA workflow with feature-local planning, universal HTML artifact review, private sharing, boards, sync, dashboard, and native Claude Code enforcement.",
+      "description": "Complete PO → Design → Review → DEV → QA workflow with feature-local planning, Protocol operating contracts, universal HTML artifact review, private sharing, boards, sync, dashboard, and native Claude Code enforcement.",
       "source": {
         "source": "github",
         "repo": "openplanr/planr-pipeline"
@@ -18,7 +18,7 @@
     },
     {
       "name": "openplanr",
-      "description": "Reusable planning, artifact review, PLAN, Design, SHIP, dashboard, sync, and doctor skills with truthful product and runtime routing.",
+      "description": "Reusable operating, planning, artifact review, PLAN, Design, SHIP, dashboard, sync, and doctor skills with truthful product and runtime routing.",
       "source": {
         "source": "github",
         "repo": "openplanr/skills"

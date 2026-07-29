@@ -89,7 +89,7 @@ async function verifiedFixture() {
 function liveStateFor(operation) {
   return {
     checkedAt: '2026-07-28T13:00:00.000Z',
-    participants: operation.participants.map((participant) => ({
+    participants: operation.participants.map((participant, index) => ({
       component: participant.component,
       repository: participant.repository,
       targetBranch: participant.targetBranch,
@@ -97,7 +97,8 @@ function liveStateFor(operation) {
       pullRequest: {
         ...participant.pullRequest,
         baseBranch: participant.targetBranch,
-        headSha: participant.commitSha,
+        headSha: sha(String(index + 5)),
+        mergeCommitSha: participant.commitSha,
       },
       tag: {
         name: participant.tag,
@@ -137,6 +138,20 @@ test('reconcile compares authoritative PR, commit, tag, CI, npm, and manifest st
   assert.equal(drift.status, 'drift');
   assert.match(drift.nextSafeAction, /Stop promotion/);
   assert.ok(drift.drift.some((message) => message.includes('pipeline.tag.name')));
+});
+
+test('reconcile binds the released commit to the PR merge commit, not its squash head', async () => {
+  const operation = await verifiedFixture();
+  const liveState = liveStateFor(operation);
+  assert.notEqual(
+    liveState.participants[0].pullRequest.headSha,
+    operation.participants[0].commitSha,
+  );
+  assert.equal(
+    liveState.participants[0].pullRequest.mergeCommitSha,
+    operation.participants[0].commitSha,
+  );
+  assert.equal(reconcileOperation(operation, liveState).status, 'matched');
 });
 
 test('merged ledger and marketplace tag remain unavailable before finalization', async () => {

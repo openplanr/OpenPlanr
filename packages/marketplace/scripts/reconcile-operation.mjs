@@ -50,9 +50,9 @@ export function reconcileOperation(operation, liveState) {
       );
       compareValue(
         drift,
-        `${expected.component}.pullRequest.headSha`,
+        `${expected.component}.pullRequest.mergeCommitSha`,
         expected.commitSha,
-        live.pullRequest?.headSha,
+        live.pullRequest?.mergeCommitSha,
       );
     }
     if (expected.tag) {

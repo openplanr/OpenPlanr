@@ -1,13 +1,17 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { validateOperation } from '../scripts/validate-operation.mjs';
+import {
+  isVerifiedOperation,
+  validateOperation,
+} from '../scripts/validate-operation.mjs';
 
 const readJson = async (path) => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'));
 
-test('draft ecosystem operation follows the coordinated saga contract', async () => {
+test('verified ecosystem operation follows the coordinated saga contract', async () => {
   const operation = await readJson('../examples/ecosystem-operation.json');
   assert.deepEqual(validateOperation(operation), []);
+  assert.equal(isVerifiedOperation(operation), true);
   assert.equal(operation.operationId, 'OPERATE-SPEC-002');
   assert.deepEqual(operation.participantOrder, ['pipeline', 'cli', 'skills', 'marketplace']);
   assert.equal(operation.ledger.kind, 'marketplace-draft-pr');
@@ -20,13 +24,20 @@ test('draft ecosystem operation follows the coordinated saga contract', async ()
   );
   assert.deepEqual(
     operation.releaseEvidence.map(({ status }) => status),
-    Array.from({ length: 5 }, () => 'pending'),
+    Array.from({ length: 5 }, () => 'passed'),
+  );
+  assert.ok(
+    operation.participants.every(({ approvals }) =>
+      approvals.some(({ gate }) => gate === 'release'),
+    ),
   );
 });
 
 test('completed operation requires verified participants and a merged ledger', async () => {
   const operation = await readJson('../examples/ecosystem-operation.json');
   operation.state = 'completed';
+  operation.participants[0].phase = 'published';
+  operation.ledger.pullRequest = null;
   // The example ledger carries real digests once an operation is under way, so
   // clear them here rather than relying on the fixture still being blank. The
   // rule under test is that completion demands them, not that the example
@@ -43,6 +54,12 @@ test('completed operation requires verified participants and a merged ledger', a
 test('verified operation cannot omit deterministic canary evidence', async () => {
   const operation = await readJson('../examples/ecosystem-operation.json');
   operation.state = 'verified';
+  for (const evidence of operation.releaseEvidence) {
+    evidence.status = 'pending';
+    evidence.url = null;
+    evidence.digest = null;
+    evidence.checkedAt = null;
+  }
   const errors = validateOperation(operation);
   for (const id of [
     'packed-cli',
@@ -58,6 +75,9 @@ test('verified operation cannot omit deterministic canary evidence', async () =>
 test('verified closeout requires an ordered post-merge finalization record', async () => {
   const operation = await readJson('../examples/ecosystem-operation.json');
   operation.state = 'verified';
+  operation.history = operation.history.filter(
+    ({ type }) => !['reconciliation.recorded', 'operation.verified'].includes(type),
+  );
   let errors = validateOperation(operation);
   assert.ok(
     errors.includes('verified operation requires a reconciliation.recorded history event'),
