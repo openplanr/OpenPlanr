@@ -21,7 +21,9 @@ export default defineConfig({
     root: '.',
     include: [
       'tests/e2e/operate-packed-install.test.ts',
+      'tests/e2e/operate-guided-packed-install.test.ts',
       'tests/unit/operate-checkpoint-scale.test.ts',
+      'tests/integration/doctor-guided-operate.test.ts',
       // Every operate integration suite builds real git projects and drives the
       // fsynced write-ahead journal. Measured on one CI run, operate-route-lanes
       // took 9-14s on macOS and Linux, 31s on one Windows runner, and 115s on

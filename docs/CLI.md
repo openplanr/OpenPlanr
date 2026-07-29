@@ -73,6 +73,36 @@ planr operate review
 `--dry-run` may perform the disclosed evidence/model work but commits no
 operating state. A remote dry-run can therefore require provider consent.
 
+Strict JSON results expose schema-validated `actions` as the authoritative
+next-step contract. Each action declares whether it is read-only,
+machine-local, project-writing, provider-backed, or external. Non-read-only
+actions carry a fresh confirmation digest bound to the project, configuration,
+event/evidence heads, exact arguments, destinations, provider policy, and
+writes. The legacy `next` and `nextActions` strings remain informational for
+two minor releases and never grant authority.
+
+Initialization is a two-step mutation. A direct flag-based preview returns both
+`--preview-created-at` and `--confirm` values; a guided session returns a
+resumable action:
+
+```bash
+planr operate init <all-explicit-options> --preview --json
+planr operate init <same-options> \
+  --preview-created-at "<returned-timestamp>" \
+  --confirm "sha256:<returned-action-digest>" \
+  --yes \
+  --json
+
+planr operate init --resume GIS-... \
+  --confirm "sha256:<returned-action-digest>" \
+  --yes \
+  --json
+```
+
+`--yes` alone, a questionnaire answer, a prior confirmation, or a prose
+acknowledgment cannot apply initialization or authorize a later cycle, route,
+PLAN handoff, or SHIP invocation. Drift invalidates the digest before writes.
+
 | Command group | Purpose |
 |---|---|
 | `inspect` / `demo` | Credential-free readiness and deterministic first-use example; both remain available in planning-only installs |
@@ -83,6 +113,7 @@ operating state. A remote dry-run can therefore require provider consent.
 | `routes apply\|rollback` | Preview and confirm exact local writes, or restore reversible prior bytes |
 | `decisions decide` | Record the named human owner’s decision |
 | `gaps answer` / `gaps verify` | Record an answer, then separately verify it against explicit evidence IDs |
+| `evidence diagnose\|classify` | Inspect a value-free quarantine candidate and confirm one exact eligible classification without weakening secret policy |
 | `run --review-only` | Observe verified pipeline shipment proof and reconcile due outcome observations without model calls |
 | `cycles` / `migrate` / `migrations` | Resume, recover, close, migrate, or roll back lifecycle state |
 | `cache` / `integrity` / `diagnostics` / `security` | Inspect local retention and integrity or perform explicit maintenance |
@@ -121,6 +152,13 @@ Review that result before rerunning the same named action with `--yes`.
 Planning-only (`--minimal`) installations support help, `inspect`, and `demo`.
 Other Operating Board commands fail before provider use with
 `E_PIPELINE_NOT_INSTALLED` and the exact full-install recovery command.
+
+Before initialization, `operate run` (including `--preview --json`) returns
+`E_OPERATE_NOT_INITIALIZED` plus a typed `planr operate init` action; it never
+enters the cycle engine. JSON mode is non-interactive and emits exactly one
+versioned stdout object. Guided questions are submitted as a bounded typed
+answer envelope through `init --resume ... --stdin`; every subsequent
+non-read-only action requires its own digest-bound confirmation.
 
 See [OPERATING_BOARD.md](./OPERATING_BOARD.md) for the complete lifecycle,
 privacy, automation, routing, recovery, and outcome contracts.

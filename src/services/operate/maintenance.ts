@@ -12,7 +12,10 @@ import { operatingProjectKey } from './config.js';
 import { buildChairEvidence } from './engine.js';
 import { OperatingEventStore } from './event-store.js';
 import { OperatingEvidenceCache } from './evidence-cache.js';
+import { purgeStaleEvidenceClassifications } from './evidence-classifications.js';
+import { listEvidenceDiagnostics } from './evidence-diagnostics.js';
 import { evaluateEvidenceReadiness } from './evidence-readiness.js';
+import { guidedSessionStatus, purgeGuidedSessions } from './interaction/session-service.js';
 import { assertCommittedOperatingView, recoverOperatingTransactions } from './journal.js';
 import { withOperatingLock } from './lock-service.js';
 import { assertOperatingArtifact, loadOperatingProtocol } from './protocol.js';
@@ -120,7 +123,28 @@ export async function operatingCacheAction(input: {
     paths.evidence,
     preferences.sensitivityCeiling ?? 'internal',
   );
-  if (input.action === 'status') return cache.status();
+  if (input.action === 'status') {
+    const diagnostics = await listEvidenceDiagnostics({
+      projectRoot: input.projectRoot,
+      localRoot: input.localRoot,
+    });
+    const classifications = await purgeStaleEvidenceClassifications({
+      projectRoot: input.projectRoot,
+      localRoot: input.localRoot,
+    });
+    return {
+      evidence: await cache.status(),
+      sessions: await guidedSessionStatus({
+        projectRoot: input.projectRoot,
+        localRoot: input.localRoot,
+      }),
+      diagnostics: {
+        candidates: diagnostics.length,
+        classified: diagnostics.filter((entry) => entry.classification).length,
+        staleClassifications: classifications.stale,
+      },
+    };
+  }
   if (!input.confirmed) {
     throw new OperateError(
       'E_OPERATE_AUTHORITY_REQUIRED',
@@ -128,7 +152,21 @@ export async function operatingCacheAction(input: {
     );
   }
   const removed = await cache.purgeExpired(new Date(), { all: true });
-  return { removed: removed.length, entries: removed };
+  const sessions = await purgeGuidedSessions({
+    projectRoot: input.projectRoot,
+    localRoot: input.localRoot,
+  });
+  const classifications = await purgeStaleEvidenceClassifications({
+    projectRoot: input.projectRoot,
+    localRoot: input.localRoot,
+    purge: true,
+  });
+  return {
+    removed: removed.length + sessions.removed + classifications.purged,
+    evidence: { removed: removed.length, entries: removed },
+    sessions,
+    classifications,
+  };
 }
 
 function integrityKeyPath(projectRoot: string, localRoot?: string): string {

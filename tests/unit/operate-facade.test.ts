@@ -26,7 +26,7 @@ describe('operate runtime-neutral facade', () => {
     });
   });
 
-  it('requires all governance choices during non-interactive initialization', async () => {
+  it('returns canonical questions for missing non-interactive governance input', async () => {
     await expect(
       executeOperateAction({
         action: 'init',
@@ -37,10 +37,12 @@ describe('operate runtime-neutral facade', () => {
       }),
     ).resolves.toMatchObject({
       ok: false,
-      code: 'E_OPERATE_CONFIG_INVALID',
-      exitCode: 2,
-      data: {
-        missing: ['profile', 'decisionOwner', 'planningEngine'],
+      action: 'input_required',
+      code: 'E_OPERATE_INPUT_REQUIRED',
+      exitCode: 4,
+      questionnaire: {
+        kind: 'guided-questionnaire',
+        stage: 'foundation',
       },
     });
   });
@@ -138,5 +140,28 @@ describe('operate runtime-neutral facade', () => {
       message: 'An unexpected internal Operating Board error occurred.',
     });
     expect(result.message).not.toContain('/definitely/not/a/project');
+  });
+
+  it('returns a stable recovery action for an absent guided session', async () => {
+    const projectRoot = await mkdtemp(join(tmpdir(), 'openplanr-operate-session-missing-'));
+    const localRoot = await mkdtemp(join(tmpdir(), 'openplanr-operate-session-state-'));
+    const result = await executeOperateAction({
+      action: 'init',
+      arguments: {},
+      interactive: false,
+      options: {
+        json: true,
+        localRoot,
+        resume: 'GIS-12345678',
+      },
+      projectRoot,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'E_OPERATE_SESSION_INVALID',
+      exitCode: 2,
+      nextActions: ['planr operate init --json'],
+    });
   });
 });

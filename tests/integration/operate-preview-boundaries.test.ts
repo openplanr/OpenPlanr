@@ -379,7 +379,16 @@ describe('Operating Board preview and dry-run boundaries', () => {
         timezone: 'UTC',
         sensitivityCeiling: 'internal',
         sources: ['repository', 'git'],
-        charter: { purpose: 'Preview the board.' },
+        charter: {
+          purpose: 'Preview the board.',
+          stage: 'growth',
+          businessModel: 'subscription SaaS',
+          idealCustomer: 'technical product teams',
+          goals: ['Produce reviewable operating decisions.'],
+          successMetrics: ['Time to a cited operating brief'],
+          guardrails: ['Humans approve every mutation.'],
+          knownUnknowns: ['Current activation baseline'],
+        },
         preview: true,
         dryRun: false,
       },
@@ -394,11 +403,15 @@ describe('Operating Board preview and dry-run boundaries', () => {
       ok: true,
       action: 'init',
       protocolVersion: '1.2.0',
-      state: null,
+      state: 'preview-ready',
       paths: {},
       counts: {},
       warnings: [],
-      nextActions: ['planr operate init --yes'],
+      nextActions: [
+        expect.stringMatching(
+          /^planr operate init --preview-created-at .* --confirm sha256:[a-f0-9]{64} --yes$/,
+        ),
+      ],
     });
     expect(preview.changedPaths.slice(0, 3)).toEqual([
       '.planr/operate/config.json',

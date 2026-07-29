@@ -4,6 +4,7 @@ import path from 'node:path';
 import { canonicalDigest } from './canonical.js';
 import { operatingProjectKey } from './config.js';
 import { OperatingEventStore } from './event-store.js';
+import { guidedSessionStatus } from './interaction/session-service.js';
 import { readJournal } from './journal.js';
 import { readOperatingLock } from './lock-service.js';
 import { inspectOperatingProjectionDrift } from './projection-persistence.js';
@@ -345,6 +346,21 @@ export async function diagnoseOperatingBoard(input: {
     });
     return diagnostics;
   }
+  const sessions = await guidedSessionStatus({
+    projectRoot: input.projectRoot,
+    localRoot: input.localRoot,
+  });
+  diagnostics.push({
+    code: 'operate-guided-sessions',
+    status: sessions.expired > 0 ? 'warn' : 'pass',
+    message:
+      sessions.expired > 0
+        ? `${sessions.expired} expired guided interaction session(s) require explicit cleanup`
+        : `${sessions.active} active guided interaction session(s); no expired sessions detected`,
+    ...(sessions.expired > 0
+      ? { fix: 'Run `planr operate cache purge --yes` after reviewing the cache status.' }
+      : {}),
+  });
   diagnostics.push(
     ...(await diagnoseEventState(input.projectRoot, input.localRoot)),
     await diagnoseLocks(input.projectRoot, input.localRoot),

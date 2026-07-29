@@ -26,6 +26,7 @@ import {
   type OperatingConfig,
   type OperatingEvent,
   type OperatingEventHead,
+  type OperatingInitAnswers,
   type OperatingLocalPreferences,
   type OperatingProfile,
   type OperatingRecordEnvelope,
@@ -279,6 +280,36 @@ export function normalizeCharter(input: Partial<OperatingCharter> = {}): Operati
   };
 }
 
+/** Normalize already-validated questionnaire or explicit CLI answers once. */
+export function normalizeOperatingInitializationAnswers(
+  input: OperatingInitAnswers,
+): OperatingInitAnswers {
+  const list = (values: string[] | undefined): string[] | undefined =>
+    values === undefined
+      ? undefined
+      : [...new Set(values.map((value) => value.trim()).filter(Boolean))];
+  return {
+    ...(input.profile === undefined ? {} : { profile: input.profile }),
+    ...(input.profileFile?.trim() ? { profileFile: input.profileFile.trim() } : {}),
+    ...(input.decisionOwner?.trim() ? { decisionOwner: input.decisionOwner.trim() } : {}),
+    ...(input.planningEngine === undefined ? {} : { planningEngine: input.planningEngine }),
+    ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+    ...(input.cadence === undefined ? {} : { cadence: input.cadence }),
+    ...(input.timezone?.trim() ? { timezone: input.timezone.trim() } : {}),
+    ...(input.sensitivityCeiling === undefined
+      ? {}
+      : { sensitivityCeiling: input.sensitivityCeiling }),
+    ...(input.sources === undefined ? {} : { sources: list(input.sources) ?? [] }),
+    ...(input.evidenceFiles === undefined
+      ? {}
+      : { evidenceFiles: list(input.evidenceFiles) ?? [] }),
+    ...(input.componentRoots === undefined
+      ? {}
+      : { componentRoots: list(input.componentRoots) ?? [] }),
+    ...(input.charter === undefined ? {} : { charter: normalizeCharter(input.charter) }),
+  };
+}
+
 function markdownList(values: string[], fallback: string): string {
   return values.length > 0 ? values.map((value) => `- ${value}`).join('\n') : `- ${fallback}`;
 }
@@ -340,6 +371,7 @@ export interface OperatingInitializationPreview {
   preferencesChanged: boolean;
   writes: JournalWrite[];
   componentRoots: string[];
+  expectedEventHead: OperatingEventHead;
   resultingEventHead: OperatingEventHead;
 }
 
@@ -647,11 +679,13 @@ export async function prepareOperatingInitialization(input: {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return '';
     throw error;
   });
+  let expectedEventHead: OperatingEventHead = { sequence: 0, hash: null };
   let resultingEventHead: OperatingEventHead = { sequence: 0, hash: null };
   if (existingEvents.trim()) {
     const replay = await new OperatingEventStore(input.projectRoot, {
       localRoot: input.localRoot,
     }).replay();
+    expectedEventHead = replay.eventHead;
     resultingEventHead = replay.eventHead;
   } else {
     const initial = await buildInitialOperatingState({
@@ -676,11 +710,19 @@ export async function prepareOperatingInitialization(input: {
       changedPaths.push(write.relativePath);
     }
   }
+  const exactWrites = writes.map((write) => ({
+    relativePath: write.relativePath,
+    operation: write.operation ?? 'replace',
+    contentDigest: sha256Digest(write.content),
+  }));
   const previewDigest = canonicalDigest({
     config,
     preferences,
     charterDigest: sha256Digest(charter),
     workspaceDigest: workspace.workspaceDigest,
+    expectedEventHead,
+    resultingEventHead,
+    exactWrites,
     changedPaths,
     preferencesChanged,
   });
@@ -694,6 +736,7 @@ export async function prepareOperatingInitialization(input: {
     preferencesChanged,
     writes,
     componentRoots,
+    expectedEventHead,
     resultingEventHead,
   };
 }
@@ -738,11 +781,25 @@ export async function applyOperatingInitialization(input: {
   });
   const store = new OperatingEventStore(input.projectRoot, { localRoot: input.localRoot });
   const initial = await store.replay();
+  if (
+    initial.eventHead.sequence !== input.preview.expectedEventHead.sequence ||
+    initial.eventHead.hash !== input.preview.expectedEventHead.hash
+  ) {
+    throw new OperateError(
+      'E_OPERATE_ROUTE_DRIFT',
+      'Operating state changed after initialization preview.',
+      {
+        changedDimensions: ['eventHead'],
+        expectedEventHead: input.preview.expectedEventHead,
+        currentEventHead: initial.eventHead,
+      },
+    );
+  }
   await withOperatingLock(
     input.projectRoot,
     {
       projectKey: operatingProjectKey(input.projectRoot),
-      expectedEventHead: initial.eventHead,
+      expectedEventHead: input.preview.expectedEventHead,
       currentEventHead: initial.eventHead,
       localRoot: input.localRoot,
     },
@@ -833,7 +890,22 @@ export async function validateOperatingConfiguration(
   projectRoot: string,
 ): Promise<OperatingConfig> {
   const paths = resolveOperatingPaths(projectRoot);
-  const config = JSON.parse(await readFile(paths.config, 'utf8')) as OperatingConfig;
+  let config: OperatingConfig;
+  try {
+    config = JSON.parse(await readFile(paths.config, 'utf8')) as OperatingConfig;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new OperateError(
+        'E_OPERATE_NOT_INITIALIZED',
+        'Operating Board is not initialized for this project.',
+        { recoveryCommand: 'planr operate init' },
+      );
+    }
+    throw new OperateError(
+      'E_OPERATE_CONFIG_INVALID',
+      'Operating Board configuration is not valid JSON.',
+    );
+  }
   await assertOperatingArtifact('operating-config', config);
   const protocol = await loadOperatingProtocol();
   const knownRoles = new Set(protocol.listOperatingRoles().map((entry) => entry.id));

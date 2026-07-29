@@ -217,7 +217,7 @@ describe('packed planning-only Operating Board', () => {
     const manifest = JSON.parse(readFileSync(join(minimalPackageRoot, 'package.json'), 'utf8')) as {
       optionalDependencies?: Record<string, string>;
     };
-    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe('0.30.0');
+    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe('0.31.0');
   });
 
   it('keeps help, inspect, and demo provider-free and functional', () => {
@@ -271,7 +271,7 @@ describe('packed full Operating Board lifecycle', () => {
   });
 
   it('initializes idempotently and supports an immediate committed cycle', async () => {
-    const initArguments = [
+    const initInputs = [
       'operate',
       'init',
       '--profile',
@@ -286,22 +286,51 @@ describe('packed full Operating Board lifecycle', () => {
       'manual',
       '--timezone',
       'UTC',
+      '--sensitivity-ceiling',
+      'internal',
       '--source',
       'repository',
       '--source',
       'git',
-      '--yes',
+      '--purpose',
+      'Exercise the packed Operating Board lifecycle.',
+      '--product-stage',
+      'growth',
+      '--business-model',
+      'subscription SaaS',
+      '--ideal-customer',
+      'technical product teams',
+      '--goal',
+      'Produce reviewable operating decisions.',
+      '--success-metric',
+      'Time to a cited operating brief',
+      '--guardrail',
+      'Humans approve every mutation.',
+      '--known-unknown',
+      'Current activation baseline',
       '--json',
     ];
-    expect(jsonResult(fullCli, fullInstallRoot, initArguments)).toMatchObject({
-      ok: true,
-      action: 'init',
-    });
+    const initialize = (): Record<string, unknown> => {
+      const preview = jsonResult(fullCli, fullInstallRoot, [...initInputs, '--preview']);
+      const action = (
+        preview.actions as Array<{ id?: string; confirmationDigest?: string }> | undefined
+      )?.find((entry) => entry.id === 'operate.init.apply');
+      const createdAt = (preview.preview as { previewCreatedAt?: string } | undefined)
+        ?.previewCreatedAt;
+      expect(action?.confirmationDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+      expect(createdAt).toBeTruthy();
+      return jsonResult(fullCli, fullInstallRoot, [
+        ...initInputs,
+        '--preview-created-at',
+        createdAt as string,
+        '--confirm',
+        action?.confirmationDigest as string,
+        '--yes',
+      ]);
+    };
+    expect(initialize()).toMatchObject({ ok: true, action: 'init' });
     const firstConfig = readFileSync(join(projectRoot, '.planr', 'operate', 'config.json'));
-    expect(jsonResult(fullCli, fullInstallRoot, initArguments)).toMatchObject({
-      ok: true,
-      action: 'init',
-    });
+    expect(initialize()).toMatchObject({ ok: true, action: 'init' });
     expect(readFileSync(join(projectRoot, '.planr', 'operate', 'config.json'))).toEqual(
       firstConfig,
     );

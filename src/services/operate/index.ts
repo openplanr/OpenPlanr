@@ -1,16 +1,40 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { canonicalDigest, sha256Digest } from './canonical.js';
 import {
   applyOperatingInitialization,
   getOperatingProfile,
   listOperatingProfiles,
   normalizeCustomOperatingProfile,
+  normalizeOperatingInitializationAnswers,
+  type OperatingInitializationPreview,
   prepareOperatingInitialization,
   validateOperatingConfiguration,
 } from './config.js';
 import { runOperatingCycle } from './engine.js';
 import { OperatingEventStore } from './event-store.js';
+import { classifyEvidenceDiagnostic } from './evidence-classifications.js';
+import { listEvidenceDiagnostics, readEvidenceDiagnostic } from './evidence-diagnostics.js';
 import { parseStrictJson, readImportedEvidenceFile } from './evidence-import.js';
+import { createOperatingAction } from './interaction/action-service.js';
+import {
+  persistableOperatingInitAnswers,
+  resumeGuidedSession,
+  submitGuidedAnswers,
+} from './interaction/answer-service.js';
+import { assertOperatingConfirmation } from './interaction/confirmation-service.js';
+import {
+  createOperatingInitQuestionnaire,
+  evaluateOperatingInitQuestions,
+  operatingInitAnswersFromOptions,
+} from './interaction/question-engine.js';
+import {
+  cancelGuidedSession,
+  createGuidedSession,
+  createGuidedSessionId,
+  currentGuidedSessionBindings,
+  updateGuidedSession,
+} from './interaction/session-service.js';
 import { assertCommittedOperatingView } from './journal.js';
 import {
   applyOperatingMigration,
@@ -223,11 +247,16 @@ const OPERATE_EXIT_CODES = {
   E_OPERATE_CHARTER_INCOMPLETE: 2,
   E_OPERATE_CONFIG_INVALID: 2,
   E_OPERATE_INPUT_TOO_LARGE: 2,
+  E_OPERATE_QUESTIONNAIRE_INVALID: 2,
   E_OPERATE_PATH_ESCAPE: 2,
   E_OPERATE_NOT_INITIALIZED: 3,
   E_OPERATE_PROJECT_REQUIRED: 3,
   E_PIPELINE_NOT_INSTALLED: 3,
+  E_PIPELINE_VERSION_INCOMPATIBLE: 3,
   E_OPERATE_AUTHORITY_REQUIRED: 4,
+  E_OPERATE_INPUT_REQUIRED: 4,
+  E_OPERATE_SESSION_CANCELLED: 4,
+  E_OPERATE_SESSION_EXPIRED: 4,
   E_OPERATE_ROUTE_CONFIRMATION_REQUIRED: 4,
   E_OPERATE_CHECKPOINT_INVALID: 5,
   E_OPERATE_CYCLE_ACTIVE: 5,
@@ -243,6 +272,8 @@ const OPERATE_EXIT_CODES = {
   E_OPERATE_STALE_LOCK_UNSAFE: 5,
   E_OPERATE_STATE_INVALID: 5,
   E_OPERATE_TRANSACTION_INVALID: 5,
+  E_OPERATE_SESSION_REPLAY_CONFLICT: 5,
+  E_OPERATE_SESSION_STALE: 5,
   E_OPERATE_ADVISOR_FAILED: 6,
   E_OPERATE_ADVISOR_ISOLATION: 6,
   E_OPERATE_CAP_EXCEEDED: 6,
@@ -252,6 +283,7 @@ const OPERATE_EXIT_CODES = {
   E_OPERATE_EVIDENCE_REJECTED: 6,
   E_OPERATE_PROVIDER_READ_ONLY: 6,
   E_OPERATE_SECRET_DETECTED: 6,
+  E_OPERATE_SESSION_INVALID: 2,
 } as const satisfies Readonly<Record<OperateErrorCode, number>>;
 
 function operateExitCode(code: OperateErrorCode): number {
@@ -260,8 +292,13 @@ function operateExitCode(code: OperateErrorCode): number {
 
 function failure(action: string, error: unknown): OperateActionResult {
   const code = error instanceof OperateError ? error.code : 'E_OPERATE_INTERNAL';
+  const explicitRecovery =
+    error instanceof OperateError && typeof error.details?.recoveryCommand === 'string'
+      ? [error.details.recoveryCommand]
+      : null;
   const nextActions =
-    code === 'E_PIPELINE_NOT_INSTALLED'
+    explicitRecovery ??
+    (code === 'E_PIPELINE_NOT_INSTALLED'
       ? ['npm install -g openplanr@latest', 'planr setup --scope user', 'planr operate inspect']
       : code === 'E_OPERATE_NOT_INITIALIZED'
         ? ['planr operate init']
@@ -289,7 +326,7 @@ function failure(action: string, error: unknown): OperateActionResult {
                           code.startsWith('E_OPERATE_PROVIDER') ||
                           code.startsWith('E_OPERATE_ADVISOR')
                         ? ['planr operate sources list', 'planr operate run --preview --json']
-                        : ['planr operate diagnostics export'];
+                        : ['planr operate diagnostics export']);
   return {
     schemaVersion: '1.0.0',
     protocolVersion: '1.2.0',
@@ -309,6 +346,117 @@ function failure(action: string, error: unknown): OperateActionResult {
     next: nextActions,
     exitCode: operateExitCode(code),
   };
+}
+
+function publicActionCommands(nextActions: readonly string[]): string[] {
+  return [
+    ...new Set(
+      nextActions
+        .flatMap((value) => value.split(/\s+&&\s+/))
+        .map((value) =>
+          value
+            .trim()
+            .replace(/\s+--yes(?=\s|$)/g, '')
+            .replace(/\s+--confirm\s+\S+/g, '')
+            .replace(/\s+--preview-digest\s+\S+/g, ''),
+        )
+        .filter((value) => /^planr\s+/.test(value)),
+    ),
+  ];
+}
+
+function actionEffect(command: string): import('./types.js').OperatingActionEffect {
+  if (
+    /\b(?:inspect|status|brief|review|list|show)\b/.test(command) ||
+    /\bconfig validate\b/.test(command) ||
+    /\bprofiles validate\b/.test(command) ||
+    /\bsources test\b/.test(command) ||
+    /\brun\b.*\b--preview\b/.test(command) ||
+    /\bmigrate inspect\b/.test(command) ||
+    /\bcache status\b/.test(command) ||
+    /\bintegrity status\b/.test(command)
+  ) {
+    return 'read-only';
+  }
+  if (/\boperate run\b/.test(command) && !/\b--offline\b/.test(command)) {
+    return 'provider-call';
+  }
+  if (
+    /\b(?:adapter (?:prepare|record|resume|finalize|cancel)|cache purge|diagnostics export)\b/.test(
+      command,
+    )
+  ) {
+    return 'machine-local-write';
+  }
+  if (/\bpipeline (?:plan|ship)\b/.test(command)) return 'external-effect';
+  return 'project-write';
+}
+
+async function attachStructuredActions(
+  request: OperateActionRequest,
+  result: OperateActionResult,
+): Promise<OperateActionResult> {
+  if (result.actions?.length || result.action === 'input_required') return result;
+  const commands = publicActionCommands(result.nextActions);
+  if (commands.length === 0) return result;
+  // Planning-only installations intentionally omit the portable pipeline and
+  // therefore its Protocol v1.2 action validators. Provider-free inspection
+  // and demonstration must still work; their legacy nextActions remain the
+  // compatible fallback until the full package is installed.
+  if (!resolveOperatingPipelineRoot()) return result;
+  const bindings = await currentGuidedSessionBindings(request.projectRoot);
+  const eventHead = await new OperatingEventStore(request.projectRoot)
+    .replay()
+    .then((value) => (value.eventHead.hash ? value.eventHead : null))
+    .catch(() => null);
+  const requestDigest = canonicalDigest({
+    action: request.action,
+    arguments: request.arguments ?? {},
+    options: Object.fromEntries(
+      Object.entries(request.options)
+        .filter(([key]) => !['yes', 'confirm', 'stdin'].includes(key))
+        .map(([key, value]) => [key, canonicalDigest({ value })]),
+    ),
+  });
+  const sessionId = `GIS-action-${requestDigest.slice('sha256:'.length, 'sha256:'.length + 24)}`;
+  const actions = [];
+  for (const [index, command] of commands.entries()) {
+    const effect = actionEffect(command);
+    const id = `operate.next.${canonicalDigest({ command }).slice(
+      'sha256:'.length,
+      'sha256:'.length + 20,
+    )}`.toLowerCase();
+    const created = await createOperatingAction({
+      id,
+      label: (() => {
+        const publicLabel = command.replace(/^planr\s+/, '');
+        return publicLabel.length <= 160
+          ? publicLabel
+          : `${publicLabel.slice(0, 157).trimEnd()}...`;
+      })(),
+      description: `Run the named ${effect} action returned by ${request.action}.`,
+      command,
+      effect,
+      recommended: index === 0,
+      ...(effect === 'read-only'
+        ? {}
+        : {
+            confirmation: {
+              sessionId,
+              confirmationScope: `${request.action}:${index + 1}`,
+              projectIdentity: bindings.projectIdentity,
+              projectHead: bindings.projectHead,
+              configHead: bindings.configHead,
+              eventHead,
+              arguments: [requestDigest],
+              destinations: [],
+              writes: [],
+            },
+          }),
+    });
+    actions.push(created.action);
+  }
+  return { ...result, actions };
 }
 
 async function inspect(request: OperateActionRequest): Promise<OperateActionResult> {
@@ -434,95 +582,317 @@ function demo(request: OperateActionRequest): OperateActionResult {
   });
 }
 
+async function initializationApplyAction(input: {
+  request: OperateActionRequest;
+  preview: OperatingInitializationPreview;
+  bindings: Awaited<ReturnType<typeof currentGuidedSessionBindings>>;
+  sessionId?: string;
+  answers: unknown;
+}): Promise<Awaited<ReturnType<typeof createOperatingAction>>> {
+  const sessionId =
+    input.sessionId ??
+    `GIS-init-${input.preview.previewDigest.slice('sha256:'.length, 'sha256:'.length + 24)}`;
+  const command = input.sessionId
+    ? `planr operate init --resume ${input.sessionId}`
+    : `planr operate init --preview-created-at ${input.preview.workspace.capturedAt}`;
+  return createOperatingAction({
+    id: 'operate.init.apply',
+    label: 'Apply Operating Board configuration',
+    description:
+      'Write only the reviewed charter, workspace, configuration, and machine-local preferences.',
+    command,
+    effect: 'project-write',
+    recommended: true,
+    confirmation: {
+      sessionId,
+      confirmationScope: 'operate.init.apply',
+      projectIdentity: input.bindings.projectIdentity,
+      projectHead: input.bindings.projectHead,
+      configHead: input.bindings.configHead,
+      eventHead: input.preview.expectedEventHead.hash ? input.preview.expectedEventHead : null,
+      arguments: [
+        `answers=${canonicalDigest(input.answers)}`,
+        `preview=${input.preview.previewDigest}`,
+      ],
+      destinations: [
+        ...input.preview.changedPaths,
+        ...(input.preview.preferencesChanged ? ['~/.planr/operate/preferences.json'] : []),
+      ],
+      writes: input.preview.writes.map(
+        (write) =>
+          `${write.relativePath}:${write.operation ?? 'replace'}:${sha256Digest(write.content)}`,
+      ),
+    },
+  });
+}
+
 async function initialize(request: OperateActionRequest): Promise<OperateActionResult> {
   await loadOperatingProtocol();
-  if (!request.interactive) {
-    const missing = ['profile', 'decisionOwner', 'planningEngine'].filter(
-      (name) =>
-        !Object.hasOwn(request.options, name) ||
-        String(request.options[name] ?? '').trim().length === 0,
-    );
-    if (missing.length > 0) {
+  let supplied = normalizeOperatingInitializationAnswers(
+    operatingInitAnswersFromOptions(request.options),
+  );
+  const resumeId = option<string | undefined>(request, 'resume', undefined);
+  const localRoot = option<string | undefined>(request, 'localRoot', undefined);
+  if (option(request, 'cancelSession', false)) {
+    if (!resumeId) {
       throw new OperateError(
-        'E_OPERATE_CONFIG_INVALID',
-        `Non-interactive initialization requires explicit ${missing
-          .map((name) => `--${name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`)
-          .join(', ')}.`,
-        { missing },
+        'E_OPERATE_SESSION_INVALID',
+        '--cancel-session requires --resume <session-id>.',
       );
+    }
+    return success(request.action, {
+      message: 'Guided initialization session cancelled.',
+      state: 'cancelled',
+      data: await cancelGuidedSession({
+        projectRoot: request.projectRoot,
+        sessionId: resumeId,
+        localRoot,
+      }),
+      next: ['planr operate init --json'],
+    });
+  }
+  if (request.stdin !== undefined && !resumeId) {
+    throw new OperateError('E_OPERATE_SESSION_INVALID', '--stdin requires --resume <session-id>.');
+  }
+  const bindings = await currentGuidedSessionBindings(request.projectRoot);
+  let resumedSession:
+    | Awaited<ReturnType<typeof resumeGuidedSession>>
+    | Awaited<ReturnType<typeof submitGuidedAnswers>>
+    | null = null;
+  if (resumeId) {
+    resumedSession =
+      request.stdin === undefined
+        ? await resumeGuidedSession({
+            projectRoot: request.projectRoot,
+            sessionId: resumeId,
+            bindings,
+            localRoot,
+          })
+        : await submitGuidedAnswers({
+            projectRoot: request.projectRoot,
+            sessionId: resumeId,
+            raw: request.stdin,
+            bindings,
+            localRoot,
+          });
+    supplied = normalizeOperatingInitializationAnswers(resumedSession.answers);
+    if (resumedSession.status === 'input-required') {
+      return {
+        schemaVersion: '1.0.0',
+        protocolVersion: '1.2.0',
+        ok: false,
+        action: 'input_required',
+        code: 'E_OPERATE_INPUT_REQUIRED',
+        message: 'Operating Board initialization needs explicit human input.',
+        state: resumedSession.session.state,
+        paths: {},
+        counts: {},
+        warnings: [],
+        nextActions: [],
+        next: [],
+        questionnaire: resumedSession.questionnaire,
+        exitCode: operateExitCode('E_OPERATE_INPUT_REQUIRED'),
+      };
     }
   }
-  const profile = option<OperatingProfile['id']>(request, 'profile', 'saas');
   let customProfile: Partial<OperatingProfile> | undefined;
-  const profileFile = option<string | undefined>(request, 'profileFile', undefined);
-  if (profile === 'custom') {
-    if (!profileFile) {
-      throw new OperateError(
-        'E_OPERATE_CONFIG_INVALID',
-        'The custom profile requires --profile-file inside the project.',
-      );
-    }
-    customProfile = await readCustomOperatingProfile(request.projectRoot, profileFile);
-  } else if (profileFile) {
+  if (supplied.profile === 'custom' && supplied.profileFile) {
+    customProfile = await readCustomOperatingProfile(request.projectRoot, supplied.profileFile);
+  } else if (
+    supplied.profile !== undefined &&
+    supplied.profile !== 'custom' &&
+    supplied.profileFile
+  ) {
     throw new OperateError(
       'E_OPERATE_CONFIG_INVALID',
       '--profile-file is valid only with --profile custom.',
     );
   }
-  const decisionOwner = option<string>(request, 'decisionOwner', '').trim();
-  const planningEngine = option<OperatingConfig['planningEngine']>(
-    request,
-    'planningEngine',
-    'openplanr',
-  );
-  const rawCharter = option<Partial<OperatingCharter>>(request, 'charter', {});
+  const context = {
+    projectRoot: request.projectRoot,
+    ...bindings,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    availableSources: ['repository', 'planr', 'git', 'file-import'],
+    runtime: option<string>(request, 'runtime', 'unknown'),
+    interaction: request.interactive ? ('terminal' as const) : ('none' as const),
+  };
+  const questionState = await evaluateOperatingInitQuestions({
+    answers: supplied,
+    context,
+    requireCharter: true,
+  });
+  if (questionState.status === 'input-required') {
+    const sessionId = createGuidedSessionId();
+    const questionnaire = await createOperatingInitQuestionnaire({
+      context,
+      questions: questionState.questions,
+      stage: questionState.stage,
+      sessionId,
+    });
+    await createGuidedSession({
+      projectRoot: request.projectRoot,
+      questionnaire,
+      persistedAnswers: persistableOperatingInitAnswers(questionState.answers, context),
+      localRoot,
+    });
+    return {
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.2.0',
+      ok: false,
+      action: 'input_required',
+      code: 'E_OPERATE_INPUT_REQUIRED',
+      message: 'Operating Board initialization needs explicit human input.',
+      state: null,
+      paths: {},
+      counts: {},
+      warnings: [],
+      nextActions: [],
+      next: [],
+      questionnaire,
+      exitCode: operateExitCode('E_OPERATE_INPUT_REQUIRED'),
+    };
+  }
+  const profile = supplied.profile as OperatingProfile['id'];
+  const decisionOwner =
+    supplied.decisionOwner ?? option<string>(request, 'decisionOwner', '').trim();
+  const planningEngine =
+    supplied.planningEngine ??
+    option<OperatingConfig['planningEngine']>(request, 'planningEngine', 'openplanr');
+  const rawCharter = supplied.charter ?? option<Partial<OperatingCharter>>(request, 'charter', {});
   const preview = await prepareOperatingInitialization({
     projectRoot: request.projectRoot,
     profile,
     decisionOwner,
     planningEngine,
-    runtime: option(request, 'runtime', 'auto'),
-    cadence: option(request, 'cadence', 'manual'),
-    timezone: option(request, 'timezone', Intl.DateTimeFormat().resolvedOptions().timeZone),
-    sensitivityCeiling: option(request, 'sensitivityCeiling', 'internal'),
-    enabledProviders: stringList(request.options.sources).length
-      ? stringList(request.options.sources)
+    runtime: supplied.runtime ?? option(request, 'runtime', 'auto'),
+    cadence: supplied.cadence ?? option(request, 'cadence', 'manual'),
+    timezone:
+      supplied.timezone ??
+      option(request, 'timezone', Intl.DateTimeFormat().resolvedOptions().timeZone),
+    sensitivityCeiling:
+      supplied.sensitivityCeiling ?? option(request, 'sensitivityCeiling', 'internal'),
+    enabledProviders: (supplied.sources ?? stringList(request.options.sources)).length
+      ? (supplied.sources ?? stringList(request.options.sources))
       : undefined,
-    evidenceFiles: stringList(request.options.evidenceFile),
+    evidenceFiles: supplied.evidenceFiles ?? stringList(request.options.evidenceFile),
     charter: rawCharter,
     customProfile,
-    componentRoots: stringList(request.options.components),
+    componentRoots: supplied.componentRoots ?? stringList(request.options.components),
+    localRoot,
+    now:
+      resumedSession?.session.createdAt ??
+      option<string | undefined>(request, 'previewCreatedAt', undefined),
   });
   const legacyMigration = await inspectOperatingMigration({
     projectRoot: request.projectRoot,
   });
   const previewData = {
     previewDigest: preview.previewDigest,
+    expectedEventHead: preview.expectedEventHead,
+    resultingEventHead: preview.resultingEventHead,
     changedPaths: preview.changedPaths,
     localPreferencesChanged: preview.preferencesChanged,
+    previewCreatedAt: preview.workspace.capturedAt,
     workspaceDigest: preview.workspace.workspaceDigest,
     config: preview.config,
     legacyMigration,
+    ...(resumedSession ? { sessionId: resumedSession.session.sessionId } : {}),
   };
+  const { action: applyAction, confirmation } = await initializationApplyAction({
+    request,
+    preview,
+    bindings,
+    sessionId: resumedSession?.session.sessionId,
+    answers: questionState.answers,
+  });
+  const requestedConfirmation = option<string | undefined>(request, 'confirm', undefined);
+  const confirmed = option(request, 'yes', false);
+  if (resumedSession) {
+    await updateGuidedSession({
+      projectRoot: request.projectRoot,
+      localRoot,
+      session: {
+        ...resumedSession.session,
+        state: 'preview-ready',
+        previewDigest: preview.previewDigest,
+        confirmationDigest: confirmation?.confirmationDigest,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+    if (!confirmed || !requestedConfirmation) {
+      return success(request.action, {
+        message: 'Operating Board initialization preview is ready; no state was written.',
+        state: 'preview-ready',
+        preview: { ...previewData, confirmation },
+        actions: [applyAction],
+        next: [
+          `planr operate init --resume ${resumedSession.session.sessionId} --confirm ${confirmation?.confirmationDigest} --yes --json`,
+        ],
+      });
+    }
+  }
   if (option(request, 'preview', false) || option(request, 'dryRun', false)) {
     return success(request.action, {
       message: 'Operating Board initialization preview is ready; no state was written.',
-      preview: previewData,
-      next: ['planr operate init --yes'],
+      state: 'preview-ready',
+      preview: { ...previewData, confirmation },
+      actions: [applyAction],
+      next: [
+        `planr operate init --preview-created-at ${preview.workspace.capturedAt} --confirm ${confirmation?.confirmationDigest} --yes`,
+      ],
     });
   }
-  if (!request.interactive && !option(request, 'yes', false)) {
+  if (!confirmed || !requestedConfirmation || !confirmation) {
     throw new OperateError(
       'E_OPERATE_ROUTE_CONFIRMATION_REQUIRED',
-      'Non-interactive initialization requires --yes after reviewing --preview.',
-      { preview: previewData },
+      'Initialization requires the exact named confirmation returned by its preview.',
+      {
+        preview: { ...previewData, confirmation },
+        action: applyAction,
+      },
     );
+  }
+  const accepted = assertOperatingConfirmation({
+    expected: confirmation,
+    actionId: applyAction.id,
+    confirmationDigest: requestedConfirmation,
+    confirmed,
+  });
+  if (resumedSession) {
+    await updateGuidedSession({
+      projectRoot: request.projectRoot,
+      localRoot,
+      session: {
+        ...resumedSession.session,
+        state: 'confirmed',
+        previewDigest: preview.previewDigest,
+        confirmationDigest: accepted.confirmationDigest,
+        confirmedAt: accepted.confirmedAt,
+        updatedAt: accepted.confirmedAt ?? new Date().toISOString(),
+      },
+    });
   }
   const applied = await applyOperatingInitialization({
     projectRoot: request.projectRoot,
     preview,
     confirmationDigest: preview.previewDigest,
   });
+  if (resumedSession) {
+    const appliedAt = new Date().toISOString();
+    await updateGuidedSession({
+      projectRoot: request.projectRoot,
+      localRoot,
+      session: {
+        ...resumedSession.session,
+        state: 'applied',
+        previewDigest: preview.previewDigest,
+        confirmationDigest: accepted.confirmationDigest,
+        confirmedAt: accepted.confirmedAt,
+        appliedAt,
+        updatedAt: appliedAt,
+      },
+    });
+  }
   return success(request.action, {
     message: applied.initialized
       ? 'Operating Board initialized.'
@@ -681,6 +1051,7 @@ async function status(request: OperateActionRequest): Promise<OperateActionResul
 }
 
 async function run(request: OperateActionRequest): Promise<OperateActionResult> {
+  await validateOperatingConfiguration(request.projectRoot);
   const requestedRuntime = option(request, 'runtime', 'auto');
   const deferAdvisors =
     !option(request, 'offline', false) &&
@@ -783,6 +1154,78 @@ async function collections(request: OperateActionRequest): Promise<OperateAction
     throw new OperateError('E_OPERATE_STATE_INVALID', `Unknown ${collection} record ${id}.`);
   }
   return success(request.action, { data });
+}
+
+async function evidenceRecovery(request: OperateActionRequest): Promise<OperateActionResult> {
+  const candidateId = argument(request, 'candidateId');
+  if (request.action === 'evidence.diagnose') {
+    const data = candidateId
+      ? await readEvidenceDiagnostic({
+          projectRoot: request.projectRoot,
+          candidateId,
+          localRoot: option(request, 'localRoot', undefined),
+        })
+      : await listEvidenceDiagnostics({
+          projectRoot: request.projectRoot,
+          localRoot: option(request, 'localRoot', undefined),
+        });
+    const diagnostic = Array.isArray(data) ? null : data;
+    return success(request.action, {
+      data: {
+        diagnostic: data,
+        valueDisclosed: false,
+        recovery: diagnostic
+          ? {
+              repairOrRemove: diagnostic.location
+                ? `Repair or remove the candidate at ${diagnostic.location}${diagnostic.line ? `:${diagnostic.line}` : ''}, then rerun.`
+                : 'Repair or remove the candidate in the identified component, then rerun.',
+              rotateCredential:
+                'If this is a real credential, rotate it before removing it from source history.',
+              eligibleExclusion:
+                'Exclude only the exact eligible source path through operating source policy; broad scanner bypasses are not supported.',
+              falsePositive: `planr operate evidence classify ${diagnostic.candidateId} --status false-positive --reason "<reason>" --json`,
+              rerun: 'planr operate run --offline',
+            }
+          : null,
+      },
+      actions: diagnostic?.actions,
+      next: diagnostic
+        ? [
+            `planr operate evidence classify ${diagnostic.candidateId} --status false-positive --reason "<reason>" --json`,
+            'planr operate run --offline',
+          ]
+        : [],
+    });
+  }
+  if (!candidateId) {
+    throw new OperateError('E_OPERATE_CONFIG_INVALID', 'Evidence candidate ID is required.');
+  }
+  const status = option<string>(request, 'status', '');
+  if (status !== 'false-positive' && status !== 'confirmed-secret') {
+    throw new OperateError(
+      'E_OPERATE_CONFIG_INVALID',
+      'Evidence classification status must be false-positive or confirmed-secret.',
+    );
+  }
+  const config = await validateOperatingConfiguration(request.projectRoot);
+  const data = await classifyEvidenceDiagnostic({
+    projectRoot: request.projectRoot,
+    candidateId,
+    status,
+    reason: option(request, 'reason', ''),
+    classifiedBy: config.decisionOwner,
+    confirmationDigest: option(request, 'confirm', undefined),
+    confirmed: option(request, 'yes', false),
+    localRoot: option(request, 'localRoot', undefined),
+  });
+  return success(request.action, {
+    data,
+    actions: data.state === 'preview' && data.action ? [data.action] : undefined,
+    message:
+      data.state === 'classified'
+        ? `Evidence candidate ${candidateId} was classified without storing or exposing its value.`
+        : 'Review and confirm the exact evidence classification action.',
+  });
 }
 
 async function cycleMutation(request: OperateActionRequest): Promise<OperateActionResult> {
@@ -889,6 +1332,7 @@ async function maintenance(request: OperateActionRequest): Promise<OperateAction
         projectRoot: request.projectRoot,
         action: request.action.endsWith('purge') ? 'purge' : 'status',
         confirmed: option(request, 'yes', false),
+        localRoot: option(request, 'localRoot', undefined),
       }),
     });
   }
@@ -1006,6 +1450,8 @@ const HANDLERS: Record<
   'gaps.verify': answerMutation,
   'evidence.list': collections,
   'evidence.show': collections,
+  'evidence.diagnose': evidenceRecovery,
+  'evidence.classify': evidenceRecovery,
   'migrate.inspect': maintenance,
   'migrate.apply': maintenance,
   'migrations.list': collections,
@@ -1040,8 +1486,12 @@ export async function executeOperateAction(
         `Unknown Operating Board action: ${request.action}.`,
       );
     }
-    return await handler(request);
+    return await attachStructuredActions(request, await handler(request));
   } catch (error) {
-    return failure(request.action, error);
+    try {
+      return await attachStructuredActions(request, failure(request.action, error));
+    } catch {
+      return failure(request.action, error);
+    }
   }
 }

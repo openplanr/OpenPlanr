@@ -21,6 +21,7 @@ vi.mock('../../src/services/prompt-service.js', () => ({
   promptCheckbox: vi.fn(),
   promptConfirm: mocks.promptConfirm,
   promptMultiText: vi.fn(),
+  promptSecret: vi.fn(),
   promptSelect: vi.fn(),
   promptText: vi.fn(),
 }));
@@ -132,6 +133,8 @@ describe('operate command contract', () => {
         'operate diagnostics',
         'operate diagnostics export',
         'operate evidence',
+        'operate evidence classify',
+        'operate evidence diagnose',
         'operate evidence list',
         'operate evidence show',
         'operate findings',
@@ -344,6 +347,46 @@ describe('operate command contract', () => {
     });
   });
 
+  it('forwards bounded guided answer stdin and session lifecycle options', async () => {
+    const program = createProgram();
+    const input = '{"kind":"guided-answer-envelope"}';
+    replaceStdin([input]);
+
+    await parse(program, ['operate', 'init', '--resume', 'GIS-12345678', '--stdin', '--json']);
+
+    expect(mocks.executeOperateAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'init',
+        interactive: false,
+        stdin: input,
+        options: expect.objectContaining({
+          resume: 'GIS-12345678',
+          stdin: true,
+          json: true,
+        }),
+      }),
+    );
+
+    const cancelled = createProgram();
+    await parse(cancelled, [
+      'operate',
+      'init',
+      '--resume',
+      'GIS-12345678',
+      '--cancel-session',
+      '--json',
+    ]);
+    expect(mocks.executeOperateAction).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        action: 'init',
+        options: expect.objectContaining({
+          resume: 'GIS-12345678',
+          cancelSession: true,
+        }),
+      }),
+    );
+  });
+
   it('previews and confirms interactive initialization before writing', async () => {
     const program = createProgram();
     mocks.executeOperateAction
@@ -354,8 +397,15 @@ describe('operate command contract', () => {
         protocolVersion: '1.2.0',
         preview: {
           previewDigest: `sha256:${'a'.repeat(64)}`,
+          previewCreatedAt: '2026-07-29T10:00:00.000Z',
           changedPaths: ['.planr/operate/config.json'],
         },
+        actions: [
+          {
+            id: 'operate.init.apply',
+            confirmationDigest: `sha256:${'b'.repeat(64)}`,
+          },
+        ],
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -374,6 +424,32 @@ describe('operate command contract', () => {
       'Product owner',
       '--planning-engine',
       'openplanr',
+      '--runtime',
+      'codex',
+      '--cadence',
+      'weekly',
+      '--timezone',
+      'Europe/Istanbul',
+      '--sensitivity-ceiling',
+      'internal',
+      '--source',
+      'repository',
+      '--purpose',
+      'Help technical founders operate one SaaS with evidence.',
+      '--product-stage',
+      'Early growth',
+      '--business-model',
+      'Subscription SaaS',
+      '--ideal-customer',
+      'Technical founders and product-engineering leads',
+      '--goal',
+      'Produce a cited operating brief',
+      '--success-metric',
+      'First useful brief within five minutes',
+      '--guardrail',
+      'Never invoke SHIP automatically',
+      '--known-unknown',
+      'Which product signal will become the leading indicator',
     ]);
 
     expect(mocks.executeOperateAction).toHaveBeenCalledTimes(2);
@@ -388,7 +464,12 @@ describe('operate command contract', () => {
     );
     expect(mocks.executeOperateAction.mock.calls[1]?.[0]).toMatchObject({
       action: 'init',
-      options: expect.objectContaining({ preview: false, yes: true }),
+      options: expect.objectContaining({
+        preview: false,
+        yes: true,
+        confirm: `sha256:${'b'.repeat(64)}`,
+        previewCreatedAt: '2026-07-29T10:00:00.000Z',
+      }),
     });
   });
 
