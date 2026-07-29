@@ -11,6 +11,13 @@ jobs:
   release:
     runs-on: ubuntu-latest
 
+    # The release gate runs the same suite as CI, so it needs the same sibling
+    # pipeline fixture. Without it the packed-install e2e test packs a
+    # directory that does not exist, which surfaces as `spawnSync npm ENOENT`
+    # and blocks the version PR.
+    env:
+      OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/.ci/planr-pipeline
+
     permissions:
       contents: write
       id-token: write
@@ -20,6 +27,13 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Checkout released pipeline fixture
+        uses: actions/checkout@v6
+        with:
+          repository: openplanr/planr-pipeline
+          ref: v0.30.0
+          path: .ci/planr-pipeline
 
       - uses: actions/setup-node@v6
         with:

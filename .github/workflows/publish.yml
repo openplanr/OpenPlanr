@@ -8,12 +8,25 @@ jobs:
   publish:
     runs-on: ubuntu-latest
 
+    # Publishing re-runs the full suite, which includes the packed-install e2e
+    # test. That test packs the sibling pipeline, so the fixture has to be
+    # present here exactly as it is in CI and release.
+    env:
+      OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/.ci/planr-pipeline
+
     permissions:
       contents: read
       id-token: write
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Checkout released pipeline fixture
+        uses: actions/checkout@v6
+        with:
+          repository: openplanr/planr-pipeline
+          ref: v0.30.0
+          path: .ci/planr-pipeline
 
       - uses: actions/setup-node@v6
         with:
