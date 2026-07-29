@@ -87,6 +87,11 @@ test('the standalone skill remains byte-identical to the canonical generated Cod
   assert.equal(skill, canonical);
 });
 
+test('Windows checkouts preserve canonical generated-skill bytes', () => {
+  const attributes = readFileSync(join(root, '.gitattributes'), 'utf8');
+  assert.match(attributes, /^skills\/planr-operate\/SKILL\.md text eol=lf$/m);
+});
+
 test('guided conversation fixtures preserve every stop boundary', () => {
   for (const fixture of fixtures) {
     if (fixture.result.action === 'input_required') {

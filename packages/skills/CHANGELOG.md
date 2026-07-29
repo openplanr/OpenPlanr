@@ -2,6 +2,13 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.17.1] — 2026-07-30
+
+### Fixed
+
+- Pin the generated `planr-operate` skill to LF line endings so Windows clones
+  preserve byte identity with the canonical pipeline asset.
+
 ## [1.17.0] — 2026-07-29
 
 ### Changed
