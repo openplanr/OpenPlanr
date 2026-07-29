@@ -313,19 +313,21 @@ describe('packed full Operating Board lifecycle', () => {
     const initialize = (): Record<string, unknown> => {
       const preview = jsonResult(fullCli, fullInstallRoot, [...initInputs, '--preview']);
       const action = (
-        preview.actions as Array<{ id?: string; confirmationDigest?: string }> | undefined
+        preview.actions as
+          | Array<{ id?: string; command?: string; confirmationDigest?: string }>
+          | undefined
       )?.find((entry) => entry.id === 'operate.init.apply');
-      const createdAt = (preview.preview as { previewCreatedAt?: string } | undefined)
-        ?.previewCreatedAt;
       expect(action?.confirmationDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
-      expect(createdAt).toBeTruthy();
+      expect(action?.command).toMatch(
+        /^planr operate init --answers-token [A-Za-z0-9_-]+ --preview-created-at /,
+      );
+      const replayArguments = action?.command?.split(' ').slice(1) ?? [];
       return jsonResult(fullCli, fullInstallRoot, [
-        ...initInputs,
-        '--preview-created-at',
-        createdAt as string,
+        ...replayArguments,
         '--confirm',
         action?.confirmationDigest as string,
         '--yes',
+        '--json',
       ]);
     };
     expect(initialize()).toMatchObject({ ok: true, action: 'init' });

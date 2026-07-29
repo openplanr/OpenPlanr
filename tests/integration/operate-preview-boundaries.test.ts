@@ -409,7 +409,7 @@ describe('Operating Board preview and dry-run boundaries', () => {
       warnings: [],
       nextActions: [
         expect.stringMatching(
-          /^planr operate init --preview-created-at .* --confirm sha256:[a-f0-9]{64} --yes$/,
+          /^planr operate init --answers-token [A-Za-z0-9_-]+ --preview-created-at .* --confirm sha256:[a-f0-9]{64} --yes$/,
         ),
       ],
     });

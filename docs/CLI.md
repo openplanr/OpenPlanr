@@ -81,13 +81,16 @@ event/evidence heads, exact arguments, destinations, provider policy, and
 writes. The legacy `next` and `nextActions` strings remain informational for
 two minor releases and never grant authority.
 
-Initialization is a two-step mutation. A direct flag-based preview returns both
-`--preview-created-at` and `--confirm` values; a guided session returns a
-resumable action:
+Initialization is a two-step mutation. A direct flag-based preview returns an
+exact replay action containing a compressed, base64url `--answers-token` plus
+the `--preview-created-at` and `--confirm` bindings. The token is encoded, not
+encrypted, contains no secret-type answers, and grants no authority without the
+matching confirmation digest. A guided session returns a resumable action:
 
 ```bash
 planr operate init <all-explicit-options> --preview --json
-planr operate init <same-options> \
+planr operate init \
+  --answers-token "<returned-token>" \
   --preview-created-at "<returned-timestamp>" \
   --confirm "sha256:<returned-action-digest>" \
   --yes \
