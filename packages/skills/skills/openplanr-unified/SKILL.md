@@ -15,6 +15,9 @@ OpenPlanr and planr-pipeline are separate products with an intentional planning 
   workflow. Its PO phase performs feature-local planning directly connected to delivery.
 - Both read Protocol v1.0 artifacts. Runtime locks, adapter manifests,
   compatibility manifests, and provenance are additive v1.1 contracts.
+- `planr operate` is the evidence-to-decision control plane for recurring
+  operating cycles. It proposes and routes reviewed work but never crosses the
+  PLAN review gate or invokes SHIP.
 
 ## Routing
 
@@ -51,6 +54,12 @@ planr pipeline finalize-ship <feature> --runtime <active-runtime> --json
 PLAN and SHIP are always separate user invocations. Never infer SHIP approval from
 PLAN completion. Honor runtime selection precedence, task dependencies, Preserve
 paths, the three-correction limit, and frontend/backend ownership boundaries.
+
+For a recurring operating cycle, use the dedicated `planr-operate` skill or the
+public `planr operate` surface. Preview provider use and writes first, keep
+finding acceptance separate from route application, and follow only the
+machine-readable next action or recovery command returned by the CLI. Do not
+edit `.planr/operate` state directly.
 
 For universal HTML review, use `planr artifact <file>`. Sharing is explicit:
 `planr artifact share <file>` creates a stable AES-GCM encrypted live room by

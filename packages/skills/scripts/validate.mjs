@@ -16,7 +16,9 @@ const expectedPortableSkills = new Set([
   'planr-dashboard',
   'planr-sync',
   'planr-doctor',
+  'planr-operate',
 ]);
+const operateSkillPath = join(root, 'skills', 'planr-operate', 'SKILL.md');
 
 if (packageJson.version !== marketplace.metadata?.version) {
   errors.push(
@@ -50,6 +52,43 @@ for (const expected of expectedPortableSkills) {
 }
 for (const name of names) {
   if (!expectedPortableSkills.has(name)) errors.push(`Unexpected portable skill: ${name}`);
+}
+
+if (existsSync(operateSkillPath)) {
+  const operateSkill = readFileSync(operateSkillPath, 'utf8');
+  const commands = operateSkill.match(/`planr[^`]*`/g) ?? [];
+  for (const command of commands) {
+    if (
+      /^`planr\s/.test(command) &&
+      !/^`planr operate(?:\s|`)/.test(command) &&
+      command !== '`planr-pipeline`'
+    ) {
+      errors.push(`planr-operate references a non-operate command: ${command}`);
+    }
+  }
+  for (const required of [
+    'public `planr operate` command surface',
+    'Never invoke SHIP',
+    'Do not edit `.planr/operate`',
+  ]) {
+    if (!operateSkill.includes(required)) {
+      errors.push(`planr-operate is missing boundary guidance: ${required}`);
+    }
+  }
+
+  const workspace = resolve(process.env.OPENPLANR_ECOSYSTEM_ROOT ?? join(root, '..'));
+  const canonicalPath = join(
+    workspace,
+    'planr-pipeline',
+    'adapters',
+    'codex',
+    'skills',
+    'planr-operate',
+    'SKILL.md',
+  );
+  if (existsSync(canonicalPath) && readFileSync(canonicalPath, 'utf8') !== operateSkill) {
+    errors.push(`Generated planr-operate skill drifts from ${canonicalPath}`);
+  }
 }
 
 if (errors.length) {

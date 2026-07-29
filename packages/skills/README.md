@@ -37,7 +37,10 @@ Once installed, any Claude agent understands:
 > *"Prioritize the backlog by impact and effort."*
 > *"Generate `CLAUDE.md` and `AGENTS.md` from our planning artifacts."*
 
-The skill detects the planning intent, runs the right `planr` command with the right flags (always in non-interactive `--yes` mode), and summarizes the artifacts it produced.
+The skill detects the planning intent, runs the appropriate public `planr`
+command, and summarizes the artifacts it produced. It uses `--yes` only after
+the user has authorized that named action; it never treats a prior approval as
+blanket consent for provider use, route application, PLAN, or SHIP.
 
 ## How it works
 
@@ -49,10 +52,34 @@ The skill detects the planning intent, runs the right `planr` command with the r
                                             then implements against
 ```
 
-The bundle provides a unified router plus focused artifact review, PLAN, Design,
-SHIP, dashboard, sync, and doctor skills. Codex installation is handled by
-`planr setup`; Claude Code can consume this marketplace; Cursor uses generated
-project rules.
+The bundle provides a unified router plus focused Operating Board, artifact
+review, PLAN, Design, SHIP, dashboard, sync, and doctor skills. Codex
+installation is handled by `planr setup`; Claude Code can consume this
+marketplace; Cursor uses generated project rules.
+
+Operating Board turns verified project evidence into a cited brief, decisions,
+data gaps, and reviewed routes:
+
+```bash
+planr operate init
+planr operate run --preview
+planr operate run --dry-run
+planr operate run
+planr operate brief
+```
+
+The runtime skill is deliberately thin: all evidence policy, advisor isolation,
+scoring, state transitions, route confirmation, and recovery remain inside the
+public `planr operate` command. `--preview` calls no providers and writes
+nothing; `--dry-run` may use a disclosed, consented provider but commits no
+state. Finding acceptance and route application are separate. Answered gaps
+require `gaps verify` with explicit evidence IDs.
+
+Pipeline-PO DEV routes pause at `awaiting-plan` and return the exact native PLAN
+invocation. The skill resumes that same route only after human review and
+matching planning provenance, with `shipInvoked: false`. `run --review-only`
+may reconcile separately produced shipment proof and due outcome observations;
+it never invokes SHIP or an external action.
 
 Generic HTML review uses a quiet, edge-to-edge document presentation by
 default. Design boards retain the zoomable canvas. Both use the same bundled,
@@ -137,6 +164,7 @@ skills/planr-ship/              # DEV + QA + finalization
 skills/planr-dashboard/         # Local project visualization
 skills/planr-sync/              # Read-only reconciliation audit
 skills/planr-doctor/            # Unified diagnostics
+skills/planr-operate/           # Evidence-to-decision operating cycles
 skills/openplanr/               # Legacy skill retained for deprecation window
 ├── SKILL.md
 ├── references/

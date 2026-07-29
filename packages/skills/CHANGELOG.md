@@ -2,6 +2,20 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.16.0] — 2026-07-28
+
+### Added
+
+- `planr-operate`, a thin cross-runtime workflow for evidence-backed operating
+  cycles through the public `planr operate` command.
+
+### Changed
+
+- Unified guidance now preserves separate preview, cycle, acceptance, route,
+  PLAN review, and SHIP boundaries for Operating Board work.
+- Runtime instructions align with `openplanr@1.14.0`,
+  `planr-pipeline@0.30.0`, and Protocol v1.2 operating capabilities.
+
 ## [1.15.0] — 2026-07-16
 
 ### Changed
