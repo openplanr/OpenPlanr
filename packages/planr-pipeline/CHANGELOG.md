@@ -4,6 +4,34 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.30.0] — 2026-07-29
+
+### Added
+
+- Protocol v1.2 operating contracts: 27 additive operating schemas covering
+  events, immutable records, checkpoints, the transaction journal, cycles,
+  evidence, findings, decisions, gaps, routes, outcomes, providers, workspace
+  manifests, and migration records.
+- Operating role and provider registries, kept mechanically separate from the
+  canonical nine delivery roles.
+- RFC 8785/JCS canonicalization with golden vectors, hash-chained event
+  reduction, and checkpoint resume for the operating event stream.
+- Ecosystem release saga primitives with `drafted → preparing → prepared →
+  promoting → verified → completed` and blocked, compensating, and forward-fix
+  recovery.
+- Read-only operating dashboard projection, generated runtime and documentation
+  assets with drift detection, and operating conformance suites.
+
+### Fixed
+
+- Schema `$ref` containment now normalizes path separators before comparison.
+  On Windows it rejected every valid cross-file reference while its traversal
+  guard silently never matched.
+- Generated operating assets and operating fixtures are pinned to LF so their
+  byte-for-byte comparisons hold on every platform.
+- The operating dashboard conformance fixture is no longer excluded by the
+  `.planr/` ignore rule.
+
 ## [0.28.5] — 2026-07-22
 
 ### Fixed
