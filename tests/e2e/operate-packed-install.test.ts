@@ -165,11 +165,18 @@ beforeAll(() => {
     cwd: projectRoot,
   });
   writeFileSync(join(projectRoot, 'README.md'), '# Packed Operating Board fixture\n');
-  npmExec(['run', 'build'], {
-    cwd: repositoryRoot,
-    stdio: 'pipe',
-    windowsHide: true,
-  });
+  // Packing needs a current dist/, but CI already runs `npm run build` in the
+  // step before `npm test`. Repeating the full tsc compile here is pure
+  // duplication, and on Windows it was enough to push this hook past four
+  // minutes. Build only when nothing usable is present — locally that still
+  // produces one, and CI reuses the artifact it just built.
+  if (!existsSync(join(repositoryRoot, 'dist', 'cli', 'index.js'))) {
+    npmExec(['run', 'build'], {
+      cwd: repositoryRoot,
+      stdio: 'pipe',
+      windowsHide: true,
+    });
+  }
   const pipelineTarball = pack(pipelineRoot);
   const cliTarball = pack(repositoryRoot);
   install(minimalInstallRoot, [cliTarball], true);
