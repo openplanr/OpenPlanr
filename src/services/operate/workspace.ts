@@ -161,23 +161,35 @@ export async function resolveOperatingProject(projectRoot: string): Promise<stri
   if (requested === path.resolve(homedir())) {
     throw new OperateError('E_OPERATE_PROJECT_REQUIRED', 'The home directory is not a project.');
   }
+  let gitFailure: string | null = null;
   try {
     return await realpath(await git(requested, ['rev-parse', '--show-toplevel']));
-  } catch {
-    const config = path.join(requested, '.planr', 'config.json');
-    if (
-      await access(config).then(
-        () => true,
-        () => false,
-      )
-    ) {
-      return requested;
-    }
-    throw new OperateError(
-      'E_OPERATE_PROJECT_REQUIRED',
-      'Operating Board requires a Git worktree or initialized OpenPlanr project.',
-    );
+  } catch (error) {
+    // Preserve why git could not answer. A bare catch here reports "not a Git
+    // worktree" for causes that have nothing to do with the worktree — git not
+    // on PATH, a refused spawn, or git declining the repository outright (for
+    // example `detected dubious ownership`). Those are actionable, and
+    // discarding them makes the failure undiagnosable from the message alone.
+    const detail = error instanceof Error ? error.message : String(error);
+    gitFailure = detail.replace(/\s+/g, ' ').trim().slice(0, 300) || null;
   }
+
+  const config = path.join(requested, '.planr', 'config.json');
+  if (
+    await access(config).then(
+      () => true,
+      () => false,
+    )
+  ) {
+    return requested;
+  }
+  throw new OperateError(
+    'E_OPERATE_PROJECT_REQUIRED',
+    gitFailure
+      ? `Operating Board requires a Git worktree or initialized OpenPlanr project. git could not resolve one at ${requested}: ${gitFailure}`
+      : 'Operating Board requires a Git worktree or initialized OpenPlanr project.',
+    gitFailure ? { gitFailure, projectRoot: requested } : undefined,
+  );
 }
 
 export async function assertOperatingProject(projectRoot: string): Promise<string> {

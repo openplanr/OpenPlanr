@@ -78,11 +78,18 @@ function cycleManifest() {
   };
 }
 
-async function evidenceEvent(
+type OperatingProtocol = Awaited<ReturnType<typeof loadOperatingProtocol>>;
+
+/**
+ * Takes the protocol as an argument rather than awaiting it per call. Resolving
+ * it inside the loop meant 10,000 awaits to build one stream, which held a
+ * worker for minutes and starved every other test file into timing out.
+ */
+function evidenceEvent(
+  protocol: OperatingProtocol,
   sequence: number,
   previous: OperatingEvent | null,
-): Promise<OperatingEvent> {
-  const protocol = await loadOperatingProtocol();
+): OperatingEvent {
   const isGenesis = sequence === 1;
   return protocol.createOperatingEvent(
     {
@@ -120,14 +127,15 @@ async function evidenceEvent(
 let stream: OperatingEvent[];
 
 beforeAll(async () => {
+  const protocol = await loadOperatingProtocol();
   stream = [];
   let previous: OperatingEvent | null = null;
   for (let sequence = 1; sequence <= TOTAL_EVENTS; sequence += 1) {
-    const event = await evidenceEvent(sequence, previous);
+    const event = evidenceEvent(protocol, sequence, previous);
     stream.push(event);
     previous = event;
   }
-}, 120_000);
+}, SCALE_TIMEOUT_MS);
 
 async function storeWith(events: OperatingEvent[]): Promise<OperatingEventStore> {
   const projectRoot = await temporaryDirectory('openplanr-operate-scale-project-');
@@ -181,10 +189,11 @@ describe('Operating Board checkpoints at 10,000 events', () => {
       expect(checkpoint.eventHead.sequence).toBe(TOTAL_EVENTS);
 
       // Extend the stream past the checkpoint.
+      const protocol = await loadOperatingProtocol();
       let previous = stream.at(-1) as OperatingEvent;
       const tail: OperatingEvent[] = [];
       for (let offset = 1; offset <= 250; offset += 1) {
-        const event = await evidenceEvent(TOTAL_EVENTS + offset, previous);
+        const event = evidenceEvent(protocol, TOTAL_EVENTS + offset, previous);
         tail.push(event);
         previous = event;
       }
