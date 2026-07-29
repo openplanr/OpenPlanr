@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.14.0
+
+### Minor Changes
+
+- [`8e95efb`](https://github.com/openplanr/OpenPlanr/commit/8e95efbfedc0e23e341de1d130ab9df558d6a9d5) Add `planr operate`, an evidence-to-decision operating control plane with safe
+  workspace initialization, event-sourced cycles, isolated advisory lenses,
+  separate finding acceptance and route application, typed outcomes, recovery,
+  strict JSON automation, and cross-runtime workflow support.
+
 ## 1.13.3
 
 ### Patch Changes
