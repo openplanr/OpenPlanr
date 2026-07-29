@@ -5,7 +5,10 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { AdvisorAdapter } from '../../src/services/operate/advisors.js';
-import type { OperatingArtifactGeneratorAdapter } from '../../src/services/operate/artifact-route-generation.js';
+import {
+  type OperatingArtifactGeneratorAdapter,
+  readStoredOperatingArtifactGeneration,
+} from '../../src/services/operate/artifact-route-generation.js';
 import { canonicalDigest } from '../../src/services/operate/canonical.js';
 import {
   applyOperatingInitialization,
@@ -16,6 +19,7 @@ import { runOperatingCycle } from '../../src/services/operate/engine.js';
 import { OperatingEventStore } from '../../src/services/operate/event-store.js';
 import { governOperatingFinding } from '../../src/services/operate/lifecycle.js';
 import { applyOperatingRoute, readOperatingRoute } from '../../src/services/operate/routes.js';
+import { OPENPLANR_VERSION } from '../../src/utils/package-version.js';
 
 const execFileAsync = promisify(execFile);
 const temporaryDirectories: string[] = [];
@@ -206,6 +210,15 @@ describe('Operating Board AGENT route generation', () => {
         attempts: [{ attempt: 1, state: 'generated' }],
       },
       shipInvoked: false,
+    });
+    await expect(
+      readStoredOperatingArtifactGeneration({ projectRoot, localRoot, route }),
+    ).resolves.toMatchObject({
+      session: {
+        producer: {
+          version: OPENPLANR_VERSION,
+        },
+      },
     });
     expect(observedRequests).toHaveLength(1);
     expect(observedRequests[0]).toMatchObject({

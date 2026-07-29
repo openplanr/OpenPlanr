@@ -1,11 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { Command, CommanderError } from 'commander';
 import { ConfigNotFoundError, findProjectRoot } from '../services/config-service.js';
 import { setNonInteractive } from '../services/interactive-state.js';
 import { RuntimeManagerError } from '../services/runtime-manager-service.js';
 import { display, logger, setVerbose } from '../utils/logger.js';
+import { OPENPLANR_VERSION } from '../utils/package-version.js';
 import { registerArtifactCommand } from './commands/artifact.js';
 import { registerBacklogCommand } from './commands/backlog.js';
 import { registerChecklistCommand } from './commands/checklist.js';
@@ -42,20 +40,7 @@ import { registerTemplateCommand } from './commands/template.js';
 import { registerUpdateCommand } from './commands/update.js';
 import { registerVoiceCommand } from './commands/voice.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-function readVersion(): string {
-  // Try multiple relative paths to support both source (src/cli/) and compiled (dist/cli/) layouts
-  for (const rel of ['../../package.json', '../../../package.json']) {
-    const candidate = resolve(__dirname, rel);
-    if (existsSync(candidate)) {
-      const pkg = JSON.parse(readFileSync(candidate, 'utf-8'));
-      if (typeof pkg.version === 'string') return pkg.version;
-    }
-  }
-  return '0.0.0';
-}
-const version = readVersion();
+const version = OPENPLANR_VERSION;
 
 const program = new Command();
 const isOperateJsonInvocation = (): boolean =>

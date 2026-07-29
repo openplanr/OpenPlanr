@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AIMessage, AIProvider } from '../../ai/types.js';
+import { OPENPLANR_VERSION } from '../../utils/package-version.js';
 import { getAIProvider, isAIConfigured } from '../ai-service.js';
 import { loadConfig } from '../config-service.js';
 import { configuredAdvisorProviderPolicy } from './advisors.js';
@@ -380,7 +381,7 @@ export async function generateOperatingRouteArtifact(input: {
       evidenceRefs: input.plan.evidenceRefs,
       producer: {
         product: 'openplanr',
-        version: '1.14.0',
+        version: OPENPLANR_VERSION,
         runtime: input.adapter.runtime,
         capability: input.adapter.capability,
       },

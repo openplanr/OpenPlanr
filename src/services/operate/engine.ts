@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { OPENPLANR_VERSION } from '../../utils/package-version.js';
 import { loadConfig } from '../config-service.js';
 import {
   type AdvisorAdapter,
@@ -60,8 +61,6 @@ import {
   refreshOperatingWorkspaceManifest,
   resolveOperatingPaths,
 } from './workspace.js';
-
-const PRODUCT_VERSION = '1.14.0';
 
 export interface RunOperatingCycleInput {
   projectRoot: string;
@@ -340,7 +339,7 @@ async function createCycleManifest(input: {
     updatedAt: input.now,
     producer: {
       product: 'openplanr',
-      version: PRODUCT_VERSION,
+      version: OPENPLANR_VERSION,
       runtime: input.runtime,
     },
   } satisfies OperatingCycleManifest);
