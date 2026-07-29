@@ -37,14 +37,14 @@ test('guided release ledger records prepared participants while capability stays
   assert.equal(isVerifiedOperation(operation), false);
   assert.deepEqual(
     operation.participants.map(({ targetVersion }) => targetVersion),
-    ['0.31.0', '1.15.0', '1.17.0', '1.2.0'],
+    ['0.31.0', '1.15.0', '1.17.1', '1.2.0'],
   );
   assert.deepEqual(
     operation.participants.map(({ commitSha }) => commitSha),
     [
       'a3df691ba5000828cee2580252b2d1e2ba5ed6eb',
       '37ec90c946c52a7b9e4488e78bbf5b85aef195d7',
-      '5e8c5406ee13f2a62a8b9cabae10b70389925245',
+      'b5073bfe648fdff26f62440cfad69ae12bdc0c2c',
       null,
     ],
   );
@@ -55,7 +55,7 @@ test('guided capability opens only after versions, interaction metadata, and rel
     protocolVersion: '1.2.0',
     pipelineVersion: '0.31.0',
     cliVersion: '1.15.0',
-    skillsVersion: '1.17.0',
+    skillsVersion: '1.17.1',
     marketplaceVersion: '1.2.0',
     adapters: adapters(),
     guidedContractsPresent: true,
@@ -98,7 +98,7 @@ test('published compatibility advances only released participants while guided t
   assert.deepEqual(guided.components, {
     pipeline: '0.31.0',
     cli: '1.15.0',
-    skills: '1.17.0',
+    skills: '1.17.1',
     marketplace: '1.2.0',
   });
   assert.deepEqual(ecosystem.components, {

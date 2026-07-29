@@ -72,7 +72,7 @@ Operating Board never invokes SHIP.
 
 Guided Operating Board remains withheld. Missing release gates: release.
 
-Candidate component versions: pipeline 0.31.0, CLI 1.15.0, skills 1.17.0, marketplace 1.2.0.
+Candidate component versions: pipeline 0.31.0, CLI 1.15.0, skills 1.17.1, marketplace 1.2.0.
 <!-- guided-operating-capability:end -->
 
 The guided capability lets certified runtimes present CLI-owned questions and

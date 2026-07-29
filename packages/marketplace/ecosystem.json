@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAt": "2026-07-29T23:11:06.745Z",
+  "generatedAt": "2026-07-29T23:21:26.751Z",
   "protocol": {
     "current": "1.2.0",
     "supported": [
@@ -92,7 +92,7 @@
       "components": {
         "pipeline": "0.31.0",
         "cli": "1.15.0",
-        "skills": "1.17.0",
+        "skills": "1.17.1",
         "marketplace": "1.2.0"
       },
       "certifiedRuntimes": [],
@@ -101,7 +101,7 @@
       ],
       "releaseOperation": {
         "operationId": "OPERATE-SPEC-003",
-        "operationDigest": "sha256:a3c4093799c0b1801af4aaaf3757eaf32fa8879d332ffeb51c0df3c29c077918",
+        "operationDigest": "sha256:040fae014cdd13d21ef0a9457d1eb69b470799b622f6b6591b05d06ada3c9658",
         "state": "preparing",
         "reconciliation": "pending"
       }
