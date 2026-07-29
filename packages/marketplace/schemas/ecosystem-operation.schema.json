@@ -51,7 +51,8 @@
       "description": "SHA-256 of the RFC 8785 canonical operation intent projection: kind, protocolVersion, operationId, umbrellaSpecId, capability, participantOrder, required release-evidence IDs, and each participant's component, repoLocalSpecId, repoLocalWorkItem, repository, targetVersion, targetBranch, and prerequisites."
     },
     "umbrellaSpecId": {
-      "const": "SPEC-002"
+      "type": "string",
+      "pattern": "^SPEC-[0-9]{3,}$"
     },
     "title": {
       "type": "string",
@@ -81,7 +82,8 @@
         "blocked",
         "compensating",
         "compensated",
-        "failed"
+        "failed",
+        "forward-fix"
       ]
     },
     "ledger": {
@@ -466,11 +468,11 @@
         },
         "repoLocalSpecId": {
           "type": "string",
-          "pattern": "^OPERATE-SPEC-002:(pipeline|cli|skills|marketplace)$"
+          "pattern": "^OPERATE-SPEC-[0-9]{3,}:(pipeline|cli|skills|marketplace)$"
         },
         "repoLocalWorkItem": {
           "type": "string",
-          "pattern": "^(?:docs/implementation/(?:operating-board|OPERATE-SPEC-002)\\.md)$"
+          "pattern": "^(?:docs/implementation/(?:operating-board|guided-operating-board|OPERATE-SPEC-[0-9]{3,})\\.md)$"
         },
         "repository": {
           "enum": [

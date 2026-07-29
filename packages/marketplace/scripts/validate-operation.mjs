@@ -22,10 +22,18 @@ const repositoryDirectories = {
   marketplace: 'marketplace',
 };
 const repoLocalWorkItems = {
-  pipeline: 'docs/implementation/operating-board.md',
-  cli: 'docs/implementation/OPERATE-SPEC-002.md',
-  skills: 'docs/implementation/operating-board.md',
-  marketplace: 'docs/implementation/operating-board.md',
+  'SPEC-002': {
+    pipeline: 'docs/implementation/operating-board.md',
+    cli: 'docs/implementation/OPERATE-SPEC-002.md',
+    skills: 'docs/implementation/operating-board.md',
+    marketplace: 'docs/implementation/operating-board.md',
+  },
+  'SPEC-003': {
+    pipeline: 'docs/implementation/guided-operating-board.md',
+    cli: 'docs/implementation/OPERATE-SPEC-003.md',
+    skills: 'docs/implementation/guided-operating-board.md',
+    marketplace: 'docs/implementation/guided-operating-board.md',
+  },
 };
 const states = new Set([
   'drafted',
@@ -38,6 +46,7 @@ const states = new Set([
   'compensating',
   'compensated',
   'failed',
+  'forward-fix',
 ]);
 const phases = new Set([
   'pending',
@@ -110,8 +119,12 @@ export function validateOperation(operation) {
   } else if (operation.operationDigest !== calculateOperationDigest(operation)) {
     errors.push('operationDigest does not match the canonical operation intent');
   }
-  if (operation?.umbrellaSpecId !== 'SPEC-002') {
-    errors.push('umbrellaSpecId must identify SPEC-002');
+  const operationSpecId = operation?.operationId?.replace(/^OPERATE-/, '');
+  if (
+    !/^SPEC-[0-9]{3,}$/.test(operation?.umbrellaSpecId ?? '')
+    || operation.umbrellaSpecId !== operationSpecId
+  ) {
+    errors.push('umbrellaSpecId must match the operation SPEC ID');
   }
   if (!states.has(operation?.state)) errors.push(`unsupported operation state: ${operation?.state}`);
   if (!isDateTime(operation?.createdAt) || !isDateTime(operation?.updatedAt)) {
@@ -143,9 +156,12 @@ export function validateOperation(operation) {
       if (participant?.repoLocalSpecId !== `${operation.operationId}:${expected}`) {
         errors.push(`${expected} repoLocalSpecId must link the operation and participant`);
       }
-      if (participant?.repoLocalWorkItem !== repoLocalWorkItems[expected]) {
+      const expectedWorkItem = repoLocalWorkItems[operation.umbrellaSpecId]?.[expected];
+      if (!expectedWorkItem) {
+        errors.push(`unsupported repo-local work-item map: ${operation.umbrellaSpecId}`);
+      } else if (participant?.repoLocalWorkItem !== expectedWorkItem) {
         errors.push(
-          `${expected} repoLocalWorkItem must be ${repoLocalWorkItems[expected]}`,
+          `${expected} repoLocalWorkItem must be ${expectedWorkItem}`,
         );
       }
       const workspaceRoot = process.env.OPENPLANR_ECOSYSTEM_ROOT;
@@ -157,10 +173,11 @@ export function validateOperation(operation) {
             : null;
       if (
         workItemRoot &&
-        !existsSync(join(workItemRoot, repoLocalWorkItems[expected]))
+        expectedWorkItem
+        && !existsSync(join(workItemRoot, expectedWorkItem))
       ) {
         errors.push(
-          `${expected} repoLocalWorkItem does not exist: ${repoLocalWorkItems[expected]}`,
+          `${expected} repoLocalWorkItem does not exist: ${expectedWorkItem}`,
         );
       }
       if (seen.has(participant?.component)) {

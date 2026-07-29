@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -8,6 +8,7 @@ import {
   createOperatingCanaryReport,
   validateOperatingCanaryEvidence,
 } from '../scripts/operating-canary-evidence.mjs';
+import { materializeOperatingCanary } from '../scripts/materialize-operating-canary.mjs';
 
 const pendingEvidence = () =>
   REQUIRED_OPERATING_CANARY_EVIDENCE.map((id) => ({
@@ -57,6 +58,34 @@ test('canary report hashes one non-empty artifact for every required release pro
     );
     assert.ok(report.evidence.every(({ status }) => status === 'passed'));
     assert.ok(report.evidence.every(({ digest }) => /^sha256:[a-f0-9]{64}$/.test(digest)));
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('materialized evidence binds the successful matrix to exact participant commits', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'openplanr-operating-materialized-'));
+  try {
+    const participants = {
+      pipelineCommit: 'a'.repeat(40),
+      cliCommit: 'b'.repeat(40),
+      skillsCommit: 'c'.repeat(40),
+    };
+    const result = materializeOperatingCanary({
+      directory,
+      ...participants,
+      runId: '126',
+      repository: 'openplanr/marketplace',
+    });
+    assert.equal(result.count, REQUIRED_OPERATING_CANARY_EVIDENCE.length);
+    const proof = JSON.parse(await readFile(join(directory, 'packed-cli.log'), 'utf8'));
+    assert.deepEqual(proof.participants, {
+      pipeline: participants.pipelineCommit,
+      cli: participants.cliCommit,
+      skills: participants.skillsCommit,
+    });
+    assert.equal(proof.runId, '126');
+    assert.equal(proof.status, 'passed');
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

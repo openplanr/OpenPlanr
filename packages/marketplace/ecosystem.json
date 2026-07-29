@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAt": "2026-07-29T17:26:40.061Z",
+  "generatedAt": "2026-07-29T23:11:06.745Z",
   "protocol": {
     "current": "1.2.0",
     "supported": [
@@ -23,7 +23,7 @@
       "cliRange": "^1.14.3"
     },
     "marketplace": {
-      "version": "1.1.0"
+      "version": "1.2.0"
     }
   },
   "adapters": [
@@ -70,7 +70,7 @@
         "pipeline": "0.30.0",
         "cli": "1.14.3",
         "skills": "1.16.0",
-        "marketplace": "1.1.0"
+        "marketplace": "1.2.0"
       },
       "certifiedRuntimes": [
         "claude-code",
@@ -83,6 +83,27 @@
         "operationDigest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc",
         "state": "verified",
         "reconciliation": "matched"
+      }
+    },
+    "guidedOperatingBoard": {
+      "status": "unavailable",
+      "command": "planr operate",
+      "protocolRange": "^1.2.0",
+      "components": {
+        "pipeline": "0.31.0",
+        "cli": "1.15.0",
+        "skills": "1.17.0",
+        "marketplace": "1.2.0"
+      },
+      "certifiedRuntimes": [],
+      "missing": [
+        "release"
+      ],
+      "releaseOperation": {
+        "operationId": "OPERATE-SPEC-003",
+        "operationDigest": "sha256:a3c4093799c0b1801af4aaaf3757eaf32fa8879d332ffeb51c0df3c29c077918",
+        "state": "preparing",
+        "reconciliation": "pending"
       }
     }
   },

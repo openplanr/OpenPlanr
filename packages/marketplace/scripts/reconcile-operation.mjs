@@ -172,11 +172,16 @@ export function reconcileOperation(operation, liveState) {
       );
     }
     if (operation.state === 'verified') {
+      const capabilityStatus =
+        liveState.manifest.capabilities?.[operation.capability]?.status
+        ?? (operation.capability === 'operatingBoard'
+          ? liveState.manifest.operatingBoardStatus
+          : undefined);
       compareValue(
         drift,
-        'manifest.capabilities.operatingBoard.status',
+        `manifest.capabilities.${operation.capability}.status`,
         'available',
-        liveState.manifest.operatingBoardStatus,
+        capabilityStatus,
       );
     }
   } else {

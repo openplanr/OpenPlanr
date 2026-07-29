@@ -1,7 +1,10 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolveOperatingBoard } from './operating-capability.mjs';
+import {
+  resolveGuidedOperatingBoard,
+  resolveOperatingBoard,
+} from './operating-capability.mjs';
 import { isVerifiedOperation } from './validate-operation.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -19,6 +22,15 @@ function supportedProtocolRanges(current) {
   return Array.from({ length: minor + 1 }, (_, index) => `1.${index}.x`);
 }
 
+function capabilityComponentPresent(capability, component) {
+  return Boolean(capability) && !(capability.missing ?? []).includes(component);
+}
+
+function participantTarget(operation, component, fallback) {
+  return operation?.participants?.find((participant) => participant.component === component)
+    ?.targetVersion ?? fallback;
+}
+
 const marketplacePackage = readJson(join(repo, 'package.json'));
 const current = readJson(join(repo, 'ecosystem.json'));
 const generatedAt = check ? current.generatedAt : new Date().toISOString();
@@ -33,6 +45,10 @@ const ecosystemPaths = {
 };
 const operationPath = join(repo, 'examples', 'ecosystem-operation.json');
 const releaseOperation = existsSync(operationPath) ? readJson(operationPath) : null;
+const guidedOperationPath = join(repo, 'examples', 'guided-operate-operation.json');
+const guidedReleaseOperation = existsSync(guidedOperationPath)
+  ? readJson(guidedOperationPath)
+  : null;
 const requiredWorkspaceInputs = [
   ecosystemPaths.cli,
   ecosystemPaths.pipeline,
@@ -42,23 +58,55 @@ const requiredWorkspaceInputs = [
 const hasWorkspace =
   requiredWorkspaceInputs.every(existsSync) &&
   (!check || Boolean(process.env.OPENPLANR_ECOSYSTEM_ROOT));
-const cliVersion = hasWorkspace
+const observedCliVersion = hasWorkspace
   ? readJson(ecosystemPaths.cli).version
   : current.components.cli.version;
-const pipelineVersion = hasWorkspace
+const observedPipelineVersion = hasWorkspace
   ? readJson(ecosystemPaths.pipeline).version
   : current.components.pipeline.version;
-const skillsVersion = hasWorkspace
+const observedSkillsVersion = hasWorkspace
   ? readJson(ecosystemPaths.skills).version
   : current.components.skills.version;
 const adapterRegistry = hasWorkspace ? readJson(ecosystemPaths.adapters) : null;
 const protocolVersion = adapterRegistry?.protocolVersion ?? current.protocol.current;
-let resolvedAdapters = adapterRegistry
+const guidedReleaseVerified = isVerifiedOperation(guidedReleaseOperation);
+const candidateCliVersion = participantTarget(
+  guidedReleaseOperation,
+  'cli',
+  observedCliVersion,
+);
+const candidatePipelineVersion = participantTarget(
+  guidedReleaseOperation,
+  'pipeline',
+  observedPipelineVersion,
+);
+const candidateSkillsVersion = participantTarget(
+  guidedReleaseOperation,
+  'skills',
+  observedSkillsVersion,
+);
+const candidateMarketplaceVersion = participantTarget(
+  guidedReleaseOperation,
+  'marketplace',
+  marketplacePackage.version,
+);
+const cliVersion = guidedReleaseVerified ? observedCliVersion : current.components.cli.version;
+const pipelineVersion = guidedReleaseVerified
+  ? observedPipelineVersion
+  : current.components.pipeline.version;
+const skillsVersion = guidedReleaseVerified
+  ? observedSkillsVersion
+  : current.components.skills.version;
+// The marketplace repository is the release artifact for this manifest. Its
+// own version advances when the still-withheld ledger is merged, independently
+// of whether the guided capability has passed finalization.
+const marketplaceVersion = marketplacePackage.version;
+const candidateAdapters = adapterRegistry
   ? adapterRegistry.adapters.map((adapter) => ({
       runtime: adapter.id,
       version: adapter.version,
       capabilityLevel: adapter.capabilityLevel,
-      pipelineRange: `^${pipelineVersion}`,
+      pipelineRange: `^${candidatePipelineVersion}`,
       operatingBoard: {
         declared: Boolean(
           adapter.capabilities?.operatingBoard && adapter.entrypoints?.operate,
@@ -66,8 +114,10 @@ let resolvedAdapters = adapterRegistry
         available: false,
         entrypoint: adapter.entrypoints?.operate ?? null,
       },
+      interactiveQuestions: adapter.capabilities?.interactiveQuestions ?? 'none',
     }))
   : current.adapters;
+let resolvedAdapters = guidedReleaseVerified ? candidateAdapters : current.adapters;
 
 let operatingBoard;
 if (hasWorkspace) {
@@ -76,7 +126,7 @@ if (hasWorkspace) {
     pipelineVersion,
     cliVersion,
     skillsVersion,
-    marketplaceVersion: marketplacePackage.version,
+    marketplaceVersion,
     operatingRolesPresent: existsSync(ecosystemPaths.operatingRoles),
     cliCommandPresent: existsSync(ecosystemPaths.cliCommand),
     operateSkillPresent: existsSync(ecosystemPaths.operateSkill),
@@ -97,10 +147,52 @@ if (hasWorkspace) {
       pipeline: pipelineVersion,
       cli: cliVersion,
       skills: skillsVersion,
-      marketplace: marketplacePackage.version,
+      marketplace: marketplaceVersion,
     },
   };
 }
+
+const guidedOperatingBoard = hasWorkspace
+  ? resolveGuidedOperatingBoard({
+      protocolVersion,
+      pipelineVersion: candidatePipelineVersion,
+      cliVersion: candidateCliVersion,
+      skillsVersion: candidateSkillsVersion,
+      marketplaceVersion: candidateMarketplaceVersion,
+      guidedContractsPresent: existsSync(
+        join(workspace, 'planr-pipeline', 'schemas', 'v1.2.0', 'guided-questionnaire.schema.json'),
+      ),
+      evidenceDiagnosticsPresent: existsSync(
+        join(workspace, 'OpenPlanr', 'src', 'services', 'operate', 'evidence-diagnostics.ts'),
+      ),
+      adapters: candidateAdapters,
+      releaseVerified: guidedReleaseVerified,
+    })
+  : current.capabilities?.guidedOperatingBoard ?? resolveGuidedOperatingBoard({
+      protocolVersion,
+      pipelineVersion: candidatePipelineVersion,
+      cliVersion: candidateCliVersion,
+      skillsVersion: candidateSkillsVersion,
+      marketplaceVersion: candidateMarketplaceVersion,
+      guidedContractsPresent: capabilityComponentPresent(
+        current.capabilities?.guidedOperatingBoard,
+        'pipeline',
+      ),
+      evidenceDiagnosticsPresent: capabilityComponentPresent(
+        current.capabilities?.guidedOperatingBoard,
+        'cli',
+      ),
+      adapters: candidateAdapters,
+      releaseVerified: guidedReleaseVerified,
+    });
+guidedOperatingBoard.releaseOperation = guidedReleaseOperation
+  ? {
+      operationId: guidedReleaseOperation.operationId,
+      operationDigest: guidedReleaseOperation.operationDigest,
+      state: guidedReleaseOperation.state,
+      reconciliation: guidedReleaseOperation.reconciliation.status,
+    }
+  : null;
 
 operatingBoard.releaseOperation = releaseOperation
   ? {
@@ -135,12 +227,13 @@ const ecosystem = {
     cli: { version: cliVersion, pipelineRange: `^${pipelineVersion}` },
     pipeline: { version: pipelineVersion, cliRange: `^${cliVersion}` },
     skills: { version: skillsVersion, cliRange: `^${cliVersion}` },
-    marketplace: { version: marketplacePackage.version },
+    marketplace: { version: marketplaceVersion },
   },
   adapters: resolvedAdapters,
   capabilities: {
     ...(current.capabilities ?? {}),
     operatingBoard,
+    guidedOperatingBoard,
   },
   releaseTransaction: {
     model: 'coordinated-saga',
@@ -209,6 +302,17 @@ const operatingCapability = [
   `Resolved component versions: pipeline ${operatingBoard.components.pipeline}, CLI ${operatingBoard.components.cli}, skills ${operatingBoard.components.skills}, marketplace ${operatingBoard.components.marketplace}.`,
   '<!-- operating-capability:end -->',
 ].join('\n');
+const guidedCapability = [
+  '<!-- guided-operating-capability:start -->',
+  `**Resolved status:** \`${guidedOperatingBoard.status}\``,
+  '',
+  guidedOperatingBoard.status === 'available'
+    ? `Guided Operating Board is certified for ${guidedOperatingBoard.certifiedRuntimes.join(', ')} through \`${guidedOperatingBoard.command}\`.`
+    : `Guided Operating Board remains withheld. Missing release gates: ${guidedOperatingBoard.missing.join(', ')}.`,
+  '',
+  `Candidate component versions: pipeline ${guidedOperatingBoard.components.pipeline}, CLI ${guidedOperatingBoard.components.cli}, skills ${guidedOperatingBoard.components.skills}, marketplace ${guidedOperatingBoard.components.marketplace}.`,
+  '<!-- guided-operating-capability:end -->',
+].join('\n');
 const pluginTable = [
   '<!-- plugin-table:start -->',
   '| Plugin | Version | Description |',
@@ -224,11 +328,15 @@ const readmeText = readme
     /<!-- operating-capability:start -->[\s\S]*?<!-- operating-capability:end -->/,
     operatingCapability,
   );
+const finalReadmeText = readmeText.replace(
+  /<!-- guided-operating-capability:start -->[\s\S]*?<!-- guided-operating-capability:end -->/,
+  guidedCapability,
+);
 
 const outputs = [
   [join(repo, 'ecosystem.json'), ecosystemText],
   [manifestPath, manifestText],
-  [readmePath, readmeText],
+  [readmePath, finalReadmeText],
 ];
 if (check) {
   const drift = outputs.filter(([path, expected]) => readFileSync(path, 'utf8') !== expected);

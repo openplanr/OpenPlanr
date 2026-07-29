@@ -70,3 +70,49 @@ export function resolveOperatingBoard({
     missing,
   };
 }
+
+export function resolveGuidedOperatingBoard({
+  protocolVersion,
+  pipelineVersion,
+  cliVersion,
+  skillsVersion,
+  marketplaceVersion,
+  adapters,
+  guidedContractsPresent,
+  evidenceDiagnosticsPresent,
+  releaseVerified,
+}) {
+  const certifiedAdapterIds = new Set(['claude-code', 'codex', 'cursor']);
+  const certifiedAdapters = adapters.filter(({ runtime }) => certifiedAdapterIds.has(runtime));
+  const interactive = (adapter) =>
+    ['native', 'chat', 'terminal'].includes(adapter.interactiveQuestions);
+  const readiness = {
+    protocol: atLeast(protocolVersion, '1.2.0'),
+    pipeline: atLeast(pipelineVersion, '0.31.0') && guidedContractsPresent,
+    cli: atLeast(cliVersion, '1.15.0') && evidenceDiagnosticsPresent,
+    skills: atLeast(skillsVersion, '1.17.0'),
+    marketplace: atLeast(marketplaceVersion, '1.2.0'),
+    adapters:
+      certifiedAdapters.length === certifiedAdapterIds.size
+      && certifiedAdapters.every(interactive),
+    release: releaseVerified === true,
+  };
+  const missing = Object.entries(readiness)
+    .filter(([, ready]) => !ready)
+    .map(([name]) => name);
+  return {
+    status: missing.length ? 'unavailable' : 'available',
+    command: 'planr operate',
+    protocolRange: '^1.2.0',
+    components: {
+      pipeline: pipelineVersion,
+      cli: cliVersion,
+      skills: skillsVersion,
+      marketplace: marketplaceVersion,
+    },
+    certifiedRuntimes: missing.length
+      ? []
+      : certifiedAdapters.map(({ runtime }) => runtime),
+    missing,
+  };
+}
