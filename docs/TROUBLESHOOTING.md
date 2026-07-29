@@ -257,3 +257,44 @@ Open an issue at [github.com/openplanr/OpenPlanr/issues](https://github.com/open
 - The full error output
 - Your Node.js version (`node --version`)
 - Your OS
+# Operating Board evidence quarantine
+
+`E_OPERATE_SECRET_DETECTED` means an evidence item could not be made safe for an
+advisor pack. OpenPlanr does not print the matched value or an excerpt. The
+failure includes one opaque candidate ID and an exact recovery command:
+
+```bash
+planr operate evidence diagnose EVC-... --json
+```
+
+The diagnostic reports only the source, component, policy-safe relative
+location/line, detector rule, content digest, and project head. It offers these
+bounded recovery choices:
+
+- repair or remove the source value and rerun;
+- rotate the credential first when the value is genuine;
+- exclude only an eligible exact source path through source policy;
+- classify one exact non-credential candidate as a false positive;
+- rerun the cycle after remediation.
+
+False-positive classification requires a reason and the confirmation digest
+returned by its preview:
+
+```bash
+planr operate evidence classify EVC-... \
+  --status false-positive \
+  --reason "UI selector name, not credential material" \
+  --json
+
+planr operate evidence classify EVC-... \
+  --status false-positive \
+  --reason "UI selector name, not credential material" \
+  --confirm sha256:... --yes --json
+```
+
+The classification applies only to the same rule, content digest, relative
+location, and project head. Drift invalidates it. Known provider tokens,
+authorization headers, private keys, JWTs, and credential-bearing URLs can
+never be classified as false positives; repair and rotation are required.
+Diagnostic and audit files are machine-local, mode `0600`, and contain no
+matched value or excerpt.

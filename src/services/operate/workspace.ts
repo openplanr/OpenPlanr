@@ -42,6 +42,7 @@ export interface OperatingPaths {
   evidence: string;
   advisors: string;
   quarantine: string;
+  sessions: string;
 }
 
 export function projectMachineKey(projectRoot: string): string {
@@ -89,6 +90,7 @@ export function resolveOperatingPaths(
     evidence: path.join(localRoot, 'evidence'),
     advisors: path.join(localRoot, 'advisors'),
     quarantine: path.join(localRoot, 'quarantine'),
+    sessions: path.join(localRoot, 'sessions'),
   };
 }
 
@@ -412,6 +414,7 @@ export async function ensureOperatingDirectories(
       paths.evidence,
       paths.advisors,
       paths.quarantine,
+      paths.sessions,
     ].map((directory) => mkdir(directory, { recursive: true, mode: 0o700 })),
   );
   return paths;

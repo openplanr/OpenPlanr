@@ -48,6 +48,63 @@ repository, read-only component repositories, decision owner, planning engine,
 runtime, privacy policy, evidence sources, cadence, and IANA display timezone.
 The default cadence is manual.
 
+### Guided initialization
+
+One canonical question registry drives both the terminal flow and
+machine-readable runtimes. It progresses through:
+
+1. **Foundation** — profile, explicit decision owner, planning engine, runtime,
+   cadence, timezone, evidence sensitivity, sources, imports, and component
+   roots.
+2. **Product charter** — purpose, stage, business model, ideal customer, goals,
+   success metrics, human guardrails, and known unknowns.
+3. **Review** — exact writes, warnings, evidence readiness, and a write-free
+   preview.
+
+Suggestions such as the Git user name, detected runtime, and local timezone are
+visibly suggestions: accepting one is an explicit answer. OpenPlanr never
+infers the decision owner, planning authority, goals, business facts, metrics,
+guardrails, or known unknowns.
+
+For the charter purpose only, OpenPlanr may offer a deterministic local draft
+from a sanitized `package.json#description` or, when that is absent, the Planr
+project name. The question includes its source, evidence digest, confidence
+category, and rule-engine version. The user must explicitly accept, replace,
+or skip the draft. Instruction-shaped or secret-bearing metadata is ignored;
+unsupported charter fields stay blank. This assistance performs no
+provider/model call and writes no project state.
+
+In `--json` mode, omitted input returns `E_OPERATE_INPUT_REQUIRED` and a
+Protocol v1.2 `guided-questionnaire` instead of prompting or returning a generic
+configuration error. Fully specified flag-based automation remains supported:
+
+```bash
+planr operate init \
+  --profile saas \
+  --decision-owner "Product owner" \
+  --planning-engine openplanr \
+  --runtime codex \
+  --cadence manual \
+  --timezone UTC \
+  --sensitivity-ceiling internal \
+  --source repository \
+  --source git \
+  --purpose "Help technical founders make cited operating decisions" \
+  --product-stage "Early growth" \
+  --business-model "Subscription SaaS" \
+  --ideal-customer "Technical founders and product-engineering leads" \
+  --goal "Produce a trustworthy operating brief" \
+  --success-metric "First useful brief within five minutes" \
+  --guardrail "Never invoke SHIP automatically" \
+  --known-unknown "Which signal will become the leading indicator" \
+  --preview \
+  --json
+```
+
+Question collection is write-free and provider-free. Reviewing or answering a
+question does not authorize initialization, starting a cycle, provider use,
+route application, PLAN, or SHIP.
+
 ## Advisory lenses
 
 Operating Board uses six canonical, read-only lenses:

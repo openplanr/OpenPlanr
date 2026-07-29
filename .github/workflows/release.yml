@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: openplanr/planr-pipeline
-          ref: v0.30.0
+          ref: v0.31.0
           path: .ci/planr-pipeline
 
       - uses: actions/setup-node@v6

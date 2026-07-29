@@ -63,6 +63,14 @@ Full setup also installs the generated Operating Board entrypoint:
 - Claude Code and Cursor route to the public `planr operate` command.
 - Codex installs the thin `planr-operate` skill at user scope.
 
+Each adapter declares its guided-question ceiling (`native`, `chat`,
+`terminal`, or `none`). The CLI owns question wording, types, validation,
+sessions, previews, and confirmation digests. Adapters only present the
+returned questionnaire and submit typed answers. Fallback is deterministic:
+native UI → structured chat → attached terminal → machine-readable handoff.
+`planr doctor` reports the selected capability, generated-skill drift, and
+expired guided sessions without calling a provider.
+
 The adapters contain workflow guidance only. Evidence policy, scoring, state,
 route confirmation, and outcome evaluation remain in OpenPlanr and Protocol
 v1.2. Native operating advisors run only when the selected adapter reports
@@ -107,5 +115,8 @@ absolute paths remain in the user runtime state and backups.
   preview and second health check; it never kills or inspects unrelated processes.
 - Credentials are not written to runtime locks or provenance.
 - Doctor redacts secrets and only fixes owned files after preview.
+- Expired guided sessions remain machine-local. Inspect them with
+  `planr operate cache status`; purge them only with an explicitly confirmed
+  `planr operate cache purge`.
 - Provenance is append-only. Recovery requires an explicit event rather than
   fabricated history.

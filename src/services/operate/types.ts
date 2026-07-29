@@ -9,6 +9,234 @@ export interface ProtocolArtifact<K extends string> {
 
 export type OperatingSensitivity = 'public' | 'internal' | 'confidential' | 'restricted';
 export type OperatingPlanningEngine = 'openplanr' | 'pipeline-po';
+export type GuidedQuestionValue = string | boolean | string[];
+export type GuidedQuestionType =
+  | 'text'
+  | 'secret'
+  | 'single-select'
+  | 'multi-select'
+  | 'confirmation'
+  | 'path'
+  | 'repeated-text'
+  | 'informational';
+
+export interface GuidedQuestion {
+  kind: 'guided-question';
+  schemaVersion: '1.0.0';
+  protocolVersion: '1.2.0';
+  questionId: string;
+  questionVersion: '1.0.0';
+  type: GuidedQuestionType;
+  label: string;
+  explanation: string;
+  required: boolean;
+  sensitivity: 'public' | 'internal' | 'sensitive';
+  persistence: 'none' | 'session';
+  valueSemantics: 'none' | 'suggestion' | 'default';
+  suggestedValue?: GuidedQuestionValue;
+  suggestionReason?: string;
+  defaultValue?: GuidedQuestionValue;
+  defaultReason?: string;
+  choices?: Array<{ id: string; label: string; description?: string }>;
+  validation?: {
+    minLength?: number;
+    maxLength?: number;
+    minItems?: number;
+    maxItems?: number;
+  };
+  visibleWhen?: Array<{
+    questionId: string;
+    operator: 'equals' | 'not-equals' | 'contains' | 'not-contains' | 'answered' | 'not-answered';
+    value?: GuidedQuestionValue;
+  }>;
+}
+
+export interface GuidedQuestionnaire {
+  kind: 'guided-questionnaire';
+  schemaVersion: '1.0.0';
+  protocolVersion: '1.2.0';
+  sessionId: string;
+  digest: `sha256:${string}`;
+  questionnaireVersion: '1.0.0';
+  command: 'operate.init';
+  projectIdentity: `sha256:${string}`;
+  projectHead: `sha256:${string}`;
+  configHead: `sha256:${string}`;
+  adapter: {
+    runtime: string;
+    version: string;
+    interaction: 'native' | 'chat' | 'terminal' | 'none';
+  };
+  stage: 'foundation' | 'product-charter' | 'review';
+  step: number;
+  totalSteps: 3;
+  title: string;
+  description?: string;
+  questions: GuidedQuestion[];
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface GuidedAnswer {
+  questionId: string;
+  questionVersion: '1.0.0';
+  sensitivity: 'public' | 'internal' | 'sensitive';
+  value: GuidedQuestionValue;
+}
+
+export interface GuidedAnswerEnvelope {
+  kind: 'guided-answer-envelope';
+  schemaVersion: '1.0.0';
+  protocolVersion: '1.2.0';
+  sessionId: string;
+  questionnaireDigest: `sha256:${string}`;
+  questionnaireVersion: '1.0.0';
+  command: 'operate.init';
+  projectIdentity: `sha256:${string}`;
+  projectHead: `sha256:${string}`;
+  configHead: `sha256:${string}`;
+  answers: GuidedAnswer[];
+  adapter: GuidedQuestionnaire['adapter'];
+  submittedAt: string;
+}
+
+export type GuidedSessionState =
+  | 'created'
+  | 'awaiting-input'
+  | 'preview-ready'
+  | 'confirmed'
+  | 'applied'
+  | 'cancelled'
+  | 'expired'
+  | 'stale'
+  | 'invalid';
+
+export interface GuidedSession {
+  kind: 'guided-session';
+  schemaVersion: '1.0.0';
+  protocolVersion: '1.2.0';
+  sessionId: string;
+  state: GuidedSessionState;
+  command: 'operate.init';
+  projectIdentity: `sha256:${string}`;
+  projectHead: `sha256:${string}`;
+  configHead: `sha256:${string}`;
+  questionnaireDigest: `sha256:${string}`;
+  questionnaireVersion: '1.0.0';
+  adapter: GuidedQuestionnaire['adapter'];
+  persistedAnswers: Array<
+    Omit<GuidedAnswer, 'sensitivity'> & { sensitivity: 'public' | 'internal' }
+  >;
+  previewDigest?: `sha256:${string}`;
+  confirmationDigest?: `sha256:${string}`;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string;
+  confirmedAt?: string;
+  appliedAt?: string;
+  terminalReason?: string;
+}
+
+export type OperatingActionEffect =
+  | 'read-only'
+  | 'machine-local-write'
+  | 'project-write'
+  | 'provider-call'
+  | 'external-effect';
+
+export interface StructuredOperatingAction {
+  kind: 'structured-action';
+  schemaVersion: '1.0.0';
+  protocolVersion: '1.2.0';
+  id: string;
+  label: string;
+  description?: string;
+  command: string;
+  effect: OperatingActionEffect;
+  providerUse: boolean;
+  requiresConfirmation: boolean;
+  confirmationScope: string | null;
+  confirmationDigest: `sha256:${string}` | null;
+  recommended: boolean;
+}
+
+export interface GuidedConfirmation {
+  kind: 'guided-confirmation';
+  schemaVersion: '1.0.0';
+  protocolVersion: '1.2.0';
+  confirmationId: string;
+  state: 'preview' | 'confirmed' | 'rejected' | 'expired' | 'stale';
+  actionId: string;
+  sessionId: string;
+  command: string;
+  effect: OperatingActionEffect;
+  providerUse: boolean;
+  confirmationScope: string;
+  confirmationDigest: `sha256:${string}`;
+  projectIdentity: `sha256:${string}`;
+  projectHead: `sha256:${string}`;
+  configHead: `sha256:${string}`;
+  eventHead: OperatingEventHead | null;
+  arguments: string[];
+  destinations: string[];
+  writes: string[];
+  createdAt: string;
+  expiresAt: string;
+  confirmedAt?: string;
+  confirmedBy?: string;
+  terminalReason?: string;
+}
+
+export interface EvidenceDiagnosticClassification {
+  status: 'false-positive' | 'confirmed-secret';
+  ruleId: string;
+  contentDigest: `sha256:${string}`;
+  projectHead: `sha256:${string}`;
+  reason: string;
+  confirmationDigest: `sha256:${string}`;
+  classifiedAt: string;
+  classifiedBy: string;
+}
+
+export interface EvidenceDiagnostic {
+  kind: 'evidence-diagnostic';
+  schemaVersion: '1.0.0';
+  protocolVersion: '1.2.0';
+  candidateId: string;
+  source: 'repository' | 'planr' | 'git' | 'import-json' | 'import-csv' | 'github' | 'linear';
+  componentId: string;
+  location?: string;
+  line?: number;
+  ruleId: string;
+  category:
+    | 'assignment'
+    | 'known-token'
+    | 'authorization'
+    | 'private-key'
+    | 'jwt'
+    | 'credential-url'
+    | 'structured-secret';
+  contentDigest: `sha256:${string}`;
+  projectHead: `sha256:${string}`;
+  valueDisclosed: false;
+  classification?: EvidenceDiagnosticClassification;
+  actions: StructuredOperatingAction[];
+}
+
+export interface OperatingInitAnswers {
+  profile?: 'saas' | 'product' | 'engineering' | 'custom';
+  profileFile?: string;
+  decisionOwner?: string;
+  planningEngine?: OperatingPlanningEngine;
+  runtime?: 'auto' | 'claude' | 'codex' | 'cursor';
+  cadence?: 'manual' | 'weekly' | 'monthly';
+  timezone?: string;
+  sensitivityCeiling?: OperatingSensitivity;
+  sources?: string[];
+  evidenceFiles?: string[];
+  componentRoots?: string[];
+  charter?: Partial<OperatingCharter>;
+}
 export type OperatingRoleId =
   | 'strategy-finance'
   | 'technology-risk'
@@ -104,6 +332,14 @@ export type OperateErrorCode =
   | 'E_OPERATE_MIGRATION_CONFLICT'
   | 'E_OPERATE_SECURITY_REPAIR_REQUIRED'
   | 'E_OPERATE_INPUT_TOO_LARGE'
+  | 'E_OPERATE_INPUT_REQUIRED'
+  | 'E_OPERATE_QUESTIONNAIRE_INVALID'
+  | 'E_OPERATE_SESSION_INVALID'
+  | 'E_OPERATE_SESSION_EXPIRED'
+  | 'E_OPERATE_SESSION_STALE'
+  | 'E_OPERATE_SESSION_CANCELLED'
+  | 'E_OPERATE_SESSION_REPLAY_CONFLICT'
+  | 'E_PIPELINE_VERSION_INCOMPATIBLE'
   | 'E_OPERATE_ACTION_UNKNOWN'
   | 'E_PIPELINE_NOT_INSTALLED';
 
@@ -845,6 +1081,8 @@ export interface OperateActionResult {
   counts: Record<string, number>;
   warnings: string[];
   nextActions: string[];
+  actions?: StructuredOperatingAction[];
+  questionnaire?: GuidedQuestionnaire;
   data?: unknown;
   preview?: unknown;
   next?: string[];

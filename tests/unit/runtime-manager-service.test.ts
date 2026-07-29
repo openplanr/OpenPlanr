@@ -27,9 +27,9 @@ let root: string;
 let projectDir: string;
 let userHome: string;
 const cliVersion = JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version as string;
-const pipelineVersion = JSON.parse(readFileSync(resolve('package.json'), 'utf8'))
-  .optionalDependencies['planr-pipeline'] as string;
 const pipelineRoot = process.env.OPENPLANR_PIPELINE_ROOT ?? resolve('../planr-pipeline');
+const pipelineVersion = JSON.parse(readFileSync(join(pipelineRoot, 'package.json'), 'utf8'))
+  .version as string;
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'openplanr-runtime-'));
@@ -193,7 +193,7 @@ describe('runtime setup', () => {
     expect(lock.components).toEqual({
       cli: cliVersion,
       pipeline: pipelineVersion,
-      skills: '1.16.0',
+      skills: '1.17.0',
     });
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-artifact', 'SKILL.md'))).toBe(true);
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-operate', 'SKILL.md'))).toBe(true);

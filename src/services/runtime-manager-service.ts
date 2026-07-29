@@ -19,6 +19,9 @@ interface AdapterRegistryEntry {
   version: string;
   capabilityLevel: 'artifact' | 'workflow' | 'product';
   installScopes: Array<'user' | 'project'>;
+  capabilities?: {
+    interactiveQuestions?: 'native' | 'chat' | 'terminal' | 'none';
+  };
 }
 
 interface AdapterRegistry {
@@ -366,7 +369,7 @@ function buildRuntimeLock(
     pipelineVersion,
     adapters,
   });
-  const components = { cli: options.cliVersion, pipeline: pipelineVersion, skills: '1.16.0' };
+  const components = { cli: options.cliVersion, pipeline: pipelineVersion, skills: '1.17.0' };
   const manifestDigest = `sha256:${hash(digestInput)}`;
   const lockPath = path.join(options.projectDir, '.planr', 'runtime-lock.json');
   if (existsSync(lockPath)) {
@@ -1076,7 +1079,8 @@ export async function runtimeDoctor(
   });
   const state = await loadState();
   const installed = state.projects[projectKey(projectDir)];
-  for (const result of detectRuntimes()) {
+  const detectedRuntimes = detectRuntimes();
+  for (const result of detectedRuntimes) {
     const configured = installed?.runtimes.includes(result.runtime) ?? false;
     diagnostics.push({
       code: `runtime-${result.runtime}`,
@@ -1098,6 +1102,25 @@ export async function runtimeDoctor(
     message: pipeline ? `planr-pipeline ${pipeline.version}` : 'Planning-only installation',
     ...(!pipeline ? { fix: 'Install openplanr without omitting optional dependencies.' } : {}),
   });
+  if (pipeline) {
+    const registry = listRuntimeAdapters();
+    for (const adapter of registry) {
+      const detected = detectedRuntimes.find((entry) => entry.runtime === adapter.id)?.installed;
+      const configured = installed?.runtimes.includes(adapter.id) ?? false;
+      if (!detected && !configured) continue;
+      const mode = adapter.capabilities?.interactiveQuestions;
+      diagnostics.push({
+        code: `runtime-interaction-${adapter.id}`,
+        status: mode ? 'pass' : 'fail',
+        message: mode
+          ? `${adapter.id} declares ${mode} guided questions with native → chat → terminal → handoff fallback`
+          : `${adapter.id} does not declare a guided interaction capability`,
+        ...(!mode
+          ? { fix: 'Install the exact compatible planr-pipeline release and rerun setup.' }
+          : {}),
+      });
+    }
+  }
   const expectsProjectLock =
     installed?.ownedFiles.some((file) => file.scope === 'project') ?? false;
   const lock = path.join(projectDir, '.planr', 'runtime-lock.json');
@@ -1258,6 +1281,9 @@ export async function runtimeDoctor(
       const valid =
         /^name:\s*planr-operate$/mu.test(content) &&
         /`planr operate(?:\s|`)/u.test(content) &&
+        /schema-valid `questionnaire` and `actions`/u.test(content) &&
+        /Never add `--yes`/u.test(content) &&
+        /planr operate evidence diagnose/u.test(content) &&
         !/`planr-pipeline\s+[^`]+`/u.test(content) &&
         /Never invoke SHIP/u.test(content);
       diagnostics.push({

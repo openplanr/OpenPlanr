@@ -3,6 +3,7 @@ import path from 'node:path';
 import { loadConfig } from '../config-service.js';
 import { resolveApiKey } from '../credentials-service.js';
 import { canonicalDigest, canonicalize } from './canonical.js';
+import { createEvidenceDiagnostic } from './evidence-diagnostics.js';
 import { readImportedEvidenceFile } from './evidence-import.js';
 import { assertOperatingArtifact } from './protocol.js';
 import {
@@ -12,7 +13,7 @@ import {
   executeRestReadOnlyJson,
   type ReadOnlyFetch,
 } from './read-only-providers.js';
-import { compareSensitivity, sanitizeEvidenceItem } from './redaction.js';
+import { compareSensitivity, detectSecretMetadata, sanitizeEvidenceItem } from './redaction.js';
 import {
   type CollectedEvidenceItem,
   type EvidenceBudget,
@@ -1190,10 +1191,66 @@ export async function collectOperatingEvidence(
       `${rejected.length} evidence item(s) exceeded the configured sensitivity ceiling.`,
     );
   }
-  const flattened = raw
-    .filter((item) => compareSensitivity(item.sensitivity, input.sensitivityCeiling) <= 0)
-    .slice(0, input.budgets.maxItems)
-    .map(sanitizeEvidenceItem);
+  const flattened: OperatingEvidenceItem[] = [];
+  for (const item of raw
+    .filter((candidate) => compareSensitivity(candidate.sensitivity, input.sensitivityCeiling) <= 0)
+    .slice(0, input.budgets.maxItems)) {
+    try {
+      flattened.push(sanitizeEvidenceItem(item));
+    } catch (error) {
+      if (!(error instanceof OperateError) || error.code !== 'E_OPERATE_SECRET_DETECTED') {
+        throw error;
+      }
+      const details = error.details ?? {};
+      const fallback = detectSecretMetadata(item.content)[0];
+      const ruleId =
+        typeof details.ruleId === 'string' ? details.ruleId : (fallback?.ruleId ?? 'unknown.v1');
+      const category =
+        typeof details.category === 'string'
+          ? (details.category as NonNullable<typeof fallback>['category'])
+          : (fallback?.category ?? 'structured-secret');
+      const diagnostic = await createEvidenceDiagnostic({
+        projectRoot: input.projectRoot,
+        item,
+        localRoot: input.localRoot,
+        detection: {
+          ruleId,
+          category,
+          line:
+            typeof details.line === 'number' && Number.isInteger(details.line)
+              ? details.line
+              : (fallback?.line ?? 1),
+          hardBlock:
+            typeof details.hardBlock === 'boolean'
+              ? details.hardBlock
+              : (fallback?.hardBlock ?? false),
+        },
+      });
+      if (diagnostic.classification?.status === 'false-positive') {
+        warnings.push(
+          `Evidence candidate ${diagnostic.candidateId} was omitted under its exact false-positive classification.`,
+        );
+        continue;
+      }
+      throw new OperateError(
+        'E_OPERATE_SECRET_DETECTED',
+        `Evidence candidate ${diagnostic.candidateId} requires safe review before advisors can run.`,
+        {
+          candidateId: diagnostic.candidateId,
+          source: diagnostic.source,
+          componentId: diagnostic.componentId,
+          ...(diagnostic.location ? { location: diagnostic.location } : {}),
+          ...(diagnostic.line ? { line: diagnostic.line } : {}),
+          ruleId: diagnostic.ruleId,
+          category: diagnostic.category,
+          contentDigest: diagnostic.contentDigest,
+          projectHead: diagnostic.projectHead,
+          valueDisclosed: false,
+          recoveryCommand: `planr operate evidence diagnose ${diagnostic.candidateId} --json`,
+        },
+      );
+    }
+  }
   if (Date.now() >= deadline) {
     truncated = true;
     warnings.push('Evidence collection reached the configured duration budget.');
@@ -1272,8 +1329,7 @@ export async function unqualifiedCommercialEvidenceGaps(input: {
     .filter(
       (item) =>
         item.claimTypes.includes('commercial-metric') &&
-        (!item.metric ||
-          !item.metric.identity.trim() ||
+        (!item.metric?.identity.trim() ||
           !item.metric.query.trim() ||
           !validIsoWindow(item.metric.observedFrom, item.metric.observedTo)),
     )

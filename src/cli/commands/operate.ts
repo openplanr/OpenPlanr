@@ -6,12 +6,15 @@ import {
   type OperateActionResult,
 } from '../../services/operate/index.js';
 import {
-  promptCheckbox,
-  promptConfirm,
-  promptMultiText,
-  promptSelect,
-  promptText,
-} from '../../services/prompt-service.js';
+  evaluateOperatingInitQuestions,
+  mergeOperatingInitAnswersIntoOptions,
+  operatingInitAnswersFromOptions,
+} from '../../services/operate/interaction/question-engine.js';
+import {
+  detectOperatingQuestionContext,
+  renderOperatingInitQuestions,
+} from '../../services/operate/interaction/terminal-renderer.js';
+import { promptConfirm } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
 
 const MAX_STDIN_BYTES = 64 * 1024;
@@ -207,118 +210,21 @@ async function executeRunWithProviderConsent(
   );
 }
 
-async function guidedInitOptions(options: OptionValues): Promise<OptionValues> {
-  if (isNonInteractive()) return options;
-  const noChoices =
-    options.profile === undefined &&
-    options.profileFile === undefined &&
-    options.decisionOwner === undefined &&
-    options.planningEngine === undefined &&
-    options.runtime === undefined &&
-    options.cadence === undefined &&
-    options.timezone === undefined &&
-    (!Array.isArray(options.component) || options.component.length === 0) &&
-    (!Array.isArray(options.source) || options.source.length === 0) &&
-    (!Array.isArray(options.evidenceFile) || options.evidenceFile.length === 0) &&
-    options.sensitivityCeiling === undefined;
-  if (!noChoices) return options;
-
-  logger.heading('OpenPlanr Operating Board');
-  logger.dim('Configure one product workspace. Component repositories remain read-only.');
-  const profile = await promptSelect(
-    'Operating profile:',
-    [
-      { name: 'SaaS — balanced product, growth, risk, and operations', value: 'saas' },
-      { name: 'Product — activation and customer outcomes', value: 'product' },
-      { name: 'Engineering — delivery, reliability, and risk', value: 'engineering' },
-      { name: 'Custom — validated profile file', value: 'custom' },
-    ],
-    'saas',
-  );
-  const profileFile =
-    profile === 'custom' ? await promptText('Validated custom profile file:') : undefined;
-  const decisionOwner = await promptText('Who owns final operating decisions?');
-  const planningEngine = await promptSelect(
-    'Which engine creates accepted DEV specs?',
-    [
-      { name: 'OpenPlanr — dedicated planning CLI', value: 'openplanr' },
-      { name: 'Pipeline PO — feature-local planning handoff', value: 'pipeline-po' },
-    ],
-    'openplanr',
-  );
-  const runtime = await promptSelect(
-    'Preferred coding runtime:',
-    [
-      { name: 'Auto-detect a compatible runtime', value: 'auto' },
-      { name: 'Claude Code', value: 'claude' },
-      { name: 'Codex', value: 'codex' },
-      { name: 'Cursor', value: 'cursor' },
-    ],
-    'auto',
-  );
-  const cadence = await promptSelect(
-    'Operating cadence:',
-    [
-      { name: 'Manual — run only when requested', value: 'manual' },
-      { name: 'Weekly display cadence', value: 'weekly' },
-      { name: 'Monthly display cadence', value: 'monthly' },
-    ],
-    'manual',
-  );
-  const timezone = await promptText(
-    'Display timezone (IANA):',
-    Intl.DateTimeFormat().resolvedOptions().timeZone,
-  );
-  const sensitivityCeiling = await promptSelect(
-    'Highest evidence class allowed in this workspace:',
-    [
-      { name: 'Internal — recommended', value: 'internal' },
-      { name: 'Public only', value: 'public' },
-      { name: 'Confidential', value: 'confidential' },
-      { name: 'Restricted', value: 'restricted' },
-    ],
-    'internal',
-  );
-  const sources = await promptCheckbox('Evidence sources:', [
-    { name: 'Repository files and metadata', value: 'repository', checked: true },
-    { name: 'OpenPlanr planning and delivery records', value: 'planr', checked: true },
-    { name: 'Git history and working-tree metadata', value: 'git', checked: true },
-    { name: 'GitHub (read-only; requires configured credentials)', value: 'github' },
-    { name: 'Linear (read-only; requires configured credentials)', value: 'linear' },
-    { name: 'Local JSON/CSV files (workspace-contained)', value: 'file-import' },
-  ]);
-  const evidenceFiles = sources.includes('file-import')
-    ? await promptMultiText('Workspace-contained JSON/CSV evidence paths', 'comma-separated paths')
-    : [];
-  const components = await promptMultiText(
-    'Read-only component repository paths (leave empty for this repository only)',
-    'comma-separated paths',
-  );
-  const charter = {
-    purpose: await promptText('What product outcome does this workspace exist to create?'),
-    stage: await promptText('Current product stage:'),
-    businessModel: await promptText('Business model:', 'Not yet specified'),
-    idealCustomer: await promptText('Ideal customer profile:', 'Not yet specified'),
-    goals: await promptMultiText('Current goals', 'comma-separated'),
-    successMetrics: await promptMultiText('Success metrics', 'comma-separated'),
-    guardrails: await promptMultiText('Human authority and product guardrails', 'comma-separated'),
-    knownUnknowns: await promptMultiText('Known unknowns', 'comma-separated'),
-  };
-  return {
-    ...options,
-    profile,
-    ...(profileFile ? { profileFile } : {}),
-    decisionOwner,
-    planningEngine,
-    runtime,
-    cadence,
-    timezone,
-    sensitivityCeiling,
-    sources,
-    evidenceFile: evidenceFiles,
-    components,
-    charter,
-  };
+async function guidedInitOptions(program: Command, options: OptionValues): Promise<OptionValues> {
+  if (options.resume || options.cancelSession || options.stdin) return options;
+  if (isNonInteractive() || options.json === true || program.opts().json === true) return options;
+  const answers = operatingInitAnswersFromOptions(options);
+  const context = await detectOperatingQuestionContext(projectDir(program));
+  const state = await evaluateOperatingInitQuestions({
+    answers,
+    context,
+    requireCharter: true,
+  });
+  if (state.status === 'preview-ready') {
+    return mergeOperatingInitAnswersIntoOptions(options, state.answers);
+  }
+  const resolved = await renderOperatingInitQuestions({ initialAnswers: answers, context });
+  return mergeOperatingInitAnswersIntoOptions(options, resolved);
 }
 
 function json(command: Command): Command {
@@ -412,12 +318,37 @@ export function registerOperateCommand(program: Command): void {
             collect,
             [],
           )
-          .option('--sensitivity-ceiling <class>', 'public, internal, confidential, or restricted'),
+          .option('--sensitivity-ceiling <class>', 'public, internal, confidential, or restricted')
+          .option('--purpose <text>', 'product outcome for the operating charter')
+          .option('--product-stage <stage>', 'current product stage')
+          .option('--business-model <model>', 'explicit business model')
+          .option('--ideal-customer <profile>', 'explicit ideal customer profile')
+          .option('--goal <text>', 'current product goal (repeatable)', collect, [])
+          .option('--success-metric <text>', 'success metric (repeatable)', collect, [])
+          .option(
+            '--guardrail <text>',
+            'human authority or product guardrail (repeatable)',
+            collect,
+            [],
+          )
+          .option('--known-unknown <text>', 'known unknown (repeatable)', collect, [])
+          .option('--resume <session-id>', 'resume a machine-local guided initialization session')
+          .option(
+            '--stdin',
+            `read one guided answer envelope (maximum ${MAX_STDIN_BYTES} bytes)`,
+            false,
+          )
+          .option('--cancel-session', 'cancel and remove the resumed guided session', false)
+          .option(
+            '--preview-created-at <timestamp>',
+            'bind a direct flag-based apply to the timestamp returned by its preview',
+          )
+          .option('--confirm <digest>', 'confirm the exact session preview digest'),
       ),
     ),
   ).action(function (this: Command, opts) {
     return (async () => {
-      const resolved = await guidedInitOptions(opts);
+      const resolved = await guidedInitOptions(program, opts);
       const interactive =
         !wantsJson(this, resolved) && !isNonInteractive() && !resolved.yes && !program.opts().yes;
       let result: OperateActionResult;
@@ -436,6 +367,15 @@ export function registerOperateCommand(program: Command): void {
         if (!(await promptConfirm('Apply this exact Operating Board configuration?', true))) {
           return;
         }
+        const confirmationDigest = (
+          previewResult.actions?.find((action) => action.id === 'operate.init.apply') ?? null
+        )?.confirmationDigest;
+        const previewCreatedAt = (
+          previewResult.preview as { previewCreatedAt?: string } | undefined
+        )?.previewCreatedAt;
+        if (!confirmationDigest) {
+          throw new Error('Initialization preview did not return a confirmation digest.');
+        }
         result = await executeForResult(
           program,
           this,
@@ -445,6 +385,8 @@ export function registerOperateCommand(program: Command): void {
             ...resolved,
             preview: false,
             yes: true,
+            confirm: confirmationDigest,
+            previewCreatedAt,
           },
         );
       } else {
@@ -730,12 +672,31 @@ export function registerOperateCommand(program: Command): void {
     return execute(program, this, 'gaps.verify', { gapId }, opts);
   });
 
-  readGroup(
+  const evidence = readGroup(
     program,
     operate.command('evidence').description('Inspect sanitized evidence metadata'),
     'evidence',
     'evidenceId',
   );
+  json(
+    evidence
+      .command('diagnose [candidateId]')
+      .description('Inspect value-free evidence diagnostics and supported recovery actions'),
+  ).action(function (this: Command, candidateId: string | undefined, opts) {
+    return execute(program, this, 'evidence.diagnose', { candidateId }, opts);
+  });
+  json(
+    confirmed(
+      evidence
+        .command('classify <candidateId>')
+        .description('Classify one exact evidence candidate without weakening scanner policy')
+        .requiredOption('--status <status>', 'false-positive or confirmed-secret')
+        .requiredOption('--reason <text>', 'bounded audit reason')
+        .option('--confirm <digest>', 'confirm the exact classification preview digest'),
+    ),
+  ).action(function (this: Command, candidateId: string, opts) {
+    return execute(program, this, 'evidence.classify', { candidateId }, opts);
+  });
 
   const migrate = operate.command('migrate').description('Inspect or apply legacy board migration');
   json(migrate.command('inspect')).action(function (this: Command, opts) {
