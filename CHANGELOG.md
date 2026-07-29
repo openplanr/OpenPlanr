@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.14.2
+
+### Patch Changes
+
+- [`0e792eb`](https://github.com/openplanr/OpenPlanr/commit/0e792ebed92f0d7e4a424388390236bb96b0e78e) Reject secrets in native Operating Board advisor results before any commit-safe event or projection is persisted, and pin Changesets' development-only YAML parsers to patched versions.
+
 ## 1.14.1
 
 ### Patch Changes
