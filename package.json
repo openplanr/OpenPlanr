@@ -1,7 +1,7 @@
 {
   "name": "openplanr",
   "version": "1.13.3",
-  "description": "AI-powered planning CLI — backlog, sprints, task templates, estimation, GitHub and Linear sync, and AI agent rules for Cursor, Claude Code, and Codex",
+  "description": "AI-powered planning CLI \u2014 backlog, sprints, task templates, estimation, GitHub and Linear sync, and AI agent rules for Cursor, Claude Code, and Codex",
   "type": "module",
   "main": "./dist/cli/index.js",
   "types": "./dist/cli/index.d.ts",
@@ -30,7 +30,7 @@
   "scripts": {
     "build": "tsc && node scripts/copy-templates.mjs",
     "dev": "tsx src/cli/index.ts",
-    "test": "vitest run",
+    "test": "vitest run && vitest run --config vitest.heavy.config.ts",
     "test:operate:security": "vitest run tests/unit/operate-security.test.ts tests/unit/operate-advisors.test.ts tests/unit/operate-protocol-roundtrip.test.ts tests/integration/operate-preview-boundaries.test.ts",
     "test:operate:outcomes": "vitest run tests/unit/operate-outcomes.test.ts",
     "test:operate:packed": "vitest run tests/e2e/operate-packed-install.test.ts",
@@ -44,7 +44,8 @@
     "prepublishOnly": "npm run build",
     "release": "node scripts/publish-if-needed.mjs",
     "changeset": "changeset",
-    "version-packages": "changeset version"
+    "version-packages": "changeset version",
+    "test:heavy": "vitest run --config vitest.heavy.config.ts"
   },
   "engines": {
     "node": ">=20.0.0"

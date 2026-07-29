@@ -5,6 +5,14 @@ export default defineConfig({
     globals: true,
     root: '.',
     include: ['tests/**/*.test.ts'],
+    // The two I/O-heavy suites run separately via vitest.heavy.config.ts so
+    // they cannot saturate this pool. `npm test` runs both configs.
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      'tests/e2e/operate-packed-install.test.ts',
+      'tests/unit/operate-checkpoint-scale.test.ts',
+    ],
     // Budgets are sized for the slowest supported platform, not the fastest.
     //
     // Operating Board tests create real git projects, fsync a write-ahead
@@ -27,14 +35,6 @@ export default defineConfig({
     // cascade seen locally under heavy load. Capping workers there trades a
     // little wall-clock for a deterministic result; other platforms keep the
     // default.
-    poolOptions: {
-      threads: {
-        maxThreads: process.platform === 'win32' ? 2 : undefined,
-      },
-      forks: {
-        maxForks: process.platform === 'win32' ? 2 : undefined,
-      },
-    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary', 'lcov'],
