@@ -222,6 +222,12 @@ export async function transitionOperatingCycle(input: {
   if (!cycle) {
     throw new OperateError('E_OPERATE_STATE_INVALID', `Unknown cycle ${input.cycleId}.`);
   }
+  if (input.action === 'cancel' && cycle.state === 'cancelled') {
+    return {
+      cycle,
+      idempotent: true,
+    };
+  }
   if (input.action === 'recover') {
     const { recoverOperatingTransactions } = await import('./journal.js');
     const recovered = await recoverOperatingTransactions(input.projectRoot, {

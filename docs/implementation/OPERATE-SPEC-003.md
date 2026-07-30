@@ -6,7 +6,7 @@ Release participant: `openplanr@1.16.0`
 OpenPlanr owns the canonical progressive questionnaire, resumable local
 sessions, digest-bound actions, deterministic charter suggestions, value-free
 evidence diagnosis/classification, strict JSON automation, setup, and doctor.
-It consumes `planr-pipeline@0.32.0` after that package is verified. Schema 1.1
+It consumes `planr-pipeline@0.32.1` after that package is verified. Schema 1.1
 questionnaires carry the exact answer submission contract needed by a fresh
 runtime to complete initialization without guessing or manual command rescue.
 

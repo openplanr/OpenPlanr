@@ -266,6 +266,26 @@ export function normalizeUntrustedText(value: string): string {
   return value.normalize('NFC').replace(ANSI_ESCAPE, '').replace(BIDI_AND_INVISIBLE, '');
 }
 
+/**
+ * Truncate by UTF-16 storage units without splitting a valid Unicode scalar.
+ *
+ * Operating evidence is later serialized with RFC 8785/JCS, which correctly
+ * rejects lone surrogate units. JavaScript's String#slice can manufacture one
+ * when a supplementary character (for example an emoji) straddles the limit.
+ */
+export function truncateUnicodeScalarText(value: string, maximumCodeUnits: number): string {
+  if (!Number.isSafeInteger(maximumCodeUnits) || maximumCodeUnits < 0) {
+    throw new OperateError(
+      'E_OPERATE_EVIDENCE_REJECTED',
+      'Text truncation requires a non-negative safe-integer limit.',
+    );
+  }
+  if (value.length <= maximumCodeUnits) return value;
+  const truncated = value.slice(0, maximumCodeUnits);
+  const finalUnit = truncated.charCodeAt(truncated.length - 1);
+  return finalUnit >= 0xd800 && finalUnit <= 0xdbff ? truncated.slice(0, -1) : truncated;
+}
+
 export interface RedactionResult {
   value: string;
   redactions: string[];
@@ -475,7 +495,7 @@ export function sanitizeEvidenceItem(input: CollectedEvidenceItem): OperatingEvi
           },
         }
       : {}),
-    summary: redacted.value.slice(0, 4_096),
+    summary: truncateUnicodeScalarText(redacted.value, 4_096),
   };
 }
 

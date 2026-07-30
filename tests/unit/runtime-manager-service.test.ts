@@ -224,6 +224,28 @@ describe('runtime setup', () => {
     });
   });
 
+  it('reports questionnaire-first operate skills as stale', async () => {
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'user',
+    });
+    const skillPath = join(userHome, '.codex', 'skills', 'planr-operate', 'SKILL.md');
+    const content = readFileSync(skillPath, 'utf8').replace(
+      /## Default workflow[\s\S]*?## Guided interaction/u,
+      '## Guided interaction',
+    );
+    writeFileSync(skillPath, content);
+
+    const doctor = await runtimeDoctor(projectDir);
+    expect(doctor.diagnostics.find((item) => item.code === 'operate-skill')).toMatchObject({
+      status: 'fail',
+      message: 'Installed planr-operate skill does not satisfy the functional command contract',
+      fix: 'Run `planr setup --runtime codex --scope user` to refresh the managed skill.',
+    });
+  });
+
   it('treats an unselected missing runtime as informational and a configured one as a warning', async () => {
     const originalPath = process.env.PATH;
     process.env.PATH = '';

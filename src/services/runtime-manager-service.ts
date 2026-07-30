@@ -1281,9 +1281,16 @@ export async function runtimeDoctor(
       const valid =
         /^name:\s*planr-operate$/mu.test(content) &&
         /`planr operate(?:\s|`)/u.test(content) &&
+        /## Default workflow/u.test(content) &&
+        /planr operate inspect --json/u.test(content) &&
+        /When `data\.initialized` is `true`, do not reopen initialization/u.test(content) &&
+        /bare skill invocation as the explicit request for one cycle/u.test(content) &&
+        /structured chat one\s+question at a time/u.test(content) &&
+        /never dump the whole questionnaire as a form/u.test(content) &&
+        /planr operate report/u.test(content) &&
         /schema-valid `questionnaire` and `actions`/u.test(content) &&
         /explicit request to \*\*run one Operating Board cycle\*\*/u.test(content) &&
-        /Do not ask the user to paste or manually rerun/u.test(content) &&
+        /Do not ask\s+the user to paste or manually rerun/u.test(content) &&
         /operating-advisor-response@1\.2\.0/u.test(content) &&
         /CEO, CTO, CPO, CMO, COO, and Chair reports/u.test(content) &&
         /planr operate evidence diagnose/u.test(content) &&
@@ -1316,6 +1323,10 @@ export async function runtimeDoctor(
       const valid =
         /OpenPlanr Operating Board adapter policy/u.test(content) &&
         /`planr operate`/u.test(content) &&
+        /planr operate inspect\s+--json/u.test(content) &&
+        /bare invocation is the explicit cycle\s+request/u.test(content) &&
+        /one\s+question at a time/u.test(content) &&
+        /Never dump the full questionnaire as a form/u.test(content) &&
         !/`planr-pipeline\s+[^`]+`/u.test(content) &&
         /Never auto-chain SHIP/u.test(content);
       diagnostics.push({
