@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAt": "2026-07-29T23:41:25.788Z",
+  "generatedAt": "2026-07-30T00:26:16.809Z",
   "protocol": {
     "current": "1.2.0",
     "supported": [
@@ -89,26 +89,24 @@
       }
     },
     "guidedOperatingBoard": {
-      "status": "available",
+      "status": "unavailable",
       "command": "planr operate",
       "protocolRange": "^1.2.0",
       "components": {
         "pipeline": "0.31.0",
-        "cli": "1.15.0",
+        "cli": "1.15.1",
         "skills": "1.17.2",
         "marketplace": "1.2.0"
       },
-      "certifiedRuntimes": [
-        "claude-code",
-        "codex",
-        "cursor"
+      "certifiedRuntimes": [],
+      "missing": [
+        "release"
       ],
-      "missing": [],
       "releaseOperation": {
         "operationId": "OPERATE-SPEC-003",
-        "operationDigest": "sha256:3d354666b32a3d79105070dcb28e5051773913f513def02581161f215eb94fc7",
-        "state": "verified",
-        "reconciliation": "matched"
+        "operationDigest": "sha256:2fd8ed95813f266d7b15a2171beeedc26cde1210c94b7adb37accf614b1068fe",
+        "state": "preparing",
+        "reconciliation": "pending"
       }
     }
   },

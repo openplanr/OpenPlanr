@@ -26,24 +26,24 @@ function adapters() {
   }));
 }
 
-test('guided release ledger records the verified cross-repository transaction', async () => {
+test('guided release ledger withholds the CLI forward fix pending a fresh canary', async () => {
   const operation = await readJson('../examples/guided-operate-operation.json');
   assert.deepEqual(validateOperation(operation), []);
   assert.equal(operation.operationDigest, calculateOperationDigest(operation));
   assert.equal(operation.umbrellaSpecId, 'SPEC-003');
-  assert.equal(operation.state, 'verified');
-  assert.equal(operation.ledger.pullRequest.number, 76);
-  assert.equal(operation.ledger.pullRequest.state, 'merged');
-  assert.equal(isVerifiedOperation(operation), true);
+  assert.equal(operation.state, 'preparing');
+  assert.equal(operation.ledger.pullRequest.number, 82);
+  assert.equal(operation.ledger.pullRequest.state, 'draft');
+  assert.equal(isVerifiedOperation(operation), false);
   assert.deepEqual(
     operation.participants.map(({ targetVersion }) => targetVersion),
-    ['0.31.0', '1.15.0', '1.17.2', '1.2.0'],
+    ['0.31.0', '1.15.1', '1.17.2', '1.2.0'],
   );
   assert.deepEqual(
     operation.participants.map(({ commitSha }) => commitSha),
     [
       'a3df691ba5000828cee2580252b2d1e2ba5ed6eb',
-      '37ec90c946c52a7b9e4488e78bbf5b85aef195d7',
+      '2c3e774a279088304b5db5d3d633480a0b7cbad5',
       '714d5f6aa587f00f2d09ba148f31d85da4d84405',
       '7b1c88daa16f8adb66db2f388555a3bdba67df2f',
     ],
@@ -54,7 +54,7 @@ test('guided capability opens only after versions, interaction metadata, and rel
   const input = {
     protocolVersion: '1.2.0',
     pipelineVersion: '0.31.0',
-    cliVersion: '1.15.0',
+    cliVersion: '1.15.1',
     skillsVersion: '1.17.2',
     marketplaceVersion: '1.2.0',
     adapters: adapters(),
@@ -88,16 +88,16 @@ test('guided capability opens only after versions, interaction metadata, and rel
   assert.deepEqual(missingCapability.missing, ['adapters']);
 });
 
-test('published compatibility exposes the verified guided release set', async () => {
+test('published compatibility withholds the forward fix until reconciliation', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const guided = ecosystem.capabilities.guidedOperatingBoard;
   assert.equal(ecosystem.capabilities.operatingBoard.status, 'available');
-  assert.equal(guided.status, 'available');
+  assert.equal(guided.status, 'unavailable');
   assert.equal(guided.releaseOperation.operationId, 'OPERATE-SPEC-003');
-  assert.equal(guided.releaseOperation.state, 'verified');
+  assert.equal(guided.releaseOperation.state, 'preparing');
   assert.deepEqual(guided.components, {
     pipeline: '0.31.0',
-    cli: '1.15.0',
+    cli: '1.15.1',
     skills: '1.17.2',
     marketplace: '1.2.0',
   });

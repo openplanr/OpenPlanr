@@ -68,11 +68,11 @@ Operating Board never invokes SHIP.
 ## Guided Operating Board capability
 
 <!-- guided-operating-capability:start -->
-**Resolved status:** `available`
+**Resolved status:** `unavailable`
 
-Guided Operating Board is certified for claude-code, codex, cursor through `planr operate`.
+Guided Operating Board remains withheld. Missing release gates: release.
 
-Candidate component versions: pipeline 0.31.0, CLI 1.15.0, skills 1.17.2, marketplace 1.2.0.
+Candidate component versions: pipeline 0.31.0, CLI 1.15.1, skills 1.17.2, marketplace 1.2.0.
 <!-- guided-operating-capability:end -->
 
 The guided capability lets certified runtimes present CLI-owned questions and
