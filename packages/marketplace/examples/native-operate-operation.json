@@ -8,8 +8,8 @@
   "title": "Release Native Operating Board Runtime Experience",
   "capability": "guidedOperatingBoard",
   "createdAt": "2026-07-30T16:30:00.000Z",
-  "updatedAt": "2026-07-30T16:45:30.000Z",
-  "state": "preparing",
+  "updatedAt": "2026-07-30T16:52:00.000Z",
+  "state": "verified",
   "ledger": {
     "kind": "marketplace-draft-pr",
     "repository": "openplanr/marketplace",
@@ -17,7 +17,7 @@
     "pullRequest": {
       "number": 84,
       "url": "https://github.com/openplanr/marketplace/pull/84",
-      "state": "ready"
+      "state": "merged"
     }
   },
   "participantOrder": [
@@ -171,23 +171,23 @@
       "repository": "openplanr/marketplace",
       "currentVersion": "1.2.0",
       "targetVersion": "1.3.0",
-      "phase": "prepared",
+      "phase": "verified",
       "branch": "ecosystem-release/operate-spec-003-r2-native-runtime",
       "targetBranch": "main",
-      "commitSha": "5fe04db76fe7e0ec575ba38ae8e043bf9df78f3b",
+      "commitSha": "71e4aa193411024f0838cabe0b4216863a2f4b67",
       "pullRequest": {
         "number": 84,
         "url": "https://github.com/openplanr/marketplace/pull/84",
-        "state": "ready"
+        "state": "merged"
       },
       "package": null,
-      "tag": null,
-      "tarballDigest": null,
+      "tag": "v1.3.0",
+      "tarballDigest": "sha256:52a50f44d156a3dce1ad586beefca6e9924cab43096b2957fb02462c2c65e943",
       "checks": [
         {
           "name": "ci",
-          "status": "pending",
-          "url": "https://github.com/openplanr/marketplace/actions/runs/30563067765"
+          "status": "passed",
+          "url": "https://github.com/openplanr/marketplace/actions/runs/30563137252"
         }
       ],
       "approvals": [
@@ -205,58 +205,58 @@
         "skills"
       ],
       "compensation": "withhold-manifest",
-      "nextSafeAction": "Keep compatibility unavailable until every participant and the exact-commit canary verify."
+      "nextSafeAction": "Verified at v1.3.0 with exact-commit canary evidence; retain the immutable ledger for audit."
     }
   ],
   "releaseEvidence": [
     {
       "id": "packed-cli",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30563175997",
+      "digest": "sha256:87e534f959b37beea01f45ce30f602269e3e102e4660a28043b48b3a8689cbd7",
+      "checkedAt": "2026-07-30T16:51:28.675Z"
     },
     {
       "id": "protocol-v1.2",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30563175997",
+      "digest": "sha256:d5e2b2278d130d5cb40dab742f2f141127d9a803a9b9b4c957dfbec5362f75ae",
+      "checkedAt": "2026-07-30T16:51:28.675Z"
     },
     {
       "id": "event-replay",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30563175997",
+      "digest": "sha256:9d417d63b9c55a8304dc8bd860acba1b2d0fb33eb399b27eb7967701dc42631e",
+      "checkedAt": "2026-07-30T16:51:28.675Z"
     },
     {
       "id": "security-boundaries",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30563175997",
+      "digest": "sha256:9f676c7ac7f2a63b53f112c844ef96ea51887498f16b21e4a01698404ff2dfa5",
+      "checkedAt": "2026-07-30T16:51:28.675Z"
     },
     {
       "id": "outcome-reconciliation",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30563175997",
+      "digest": "sha256:a1582c7c59fb87f9a760b52fa1a135960cb3ea40fc769015a83260c2a2607727",
+      "checkedAt": "2026-07-30T16:51:28.675Z"
     }
   ],
-  "prepareDigest": null,
-  "confirmationDigest": null,
+  "prepareDigest": "sha256:1cf118e2dbcca54ba73a58c33e9007625e7f5f1dabc0ca1b2b4175245ec2a248",
+  "confirmationDigest": "sha256:c1c4c402c4656be8e942c393c10b173b4cdaa74ef4b8d21e4979d211130fa20c",
   "blockedReason": null,
-  "nextSafeAction": "Merge the unavailable marketplace ledger, tag v1.3.0, then run exact-commit canaries before finalization.",
+  "nextSafeAction": "Archive the verified operation and monitor production Operating Board journeys.",
   "recovery": {
     "mode": "forward-fix",
     "reason": "planr-pipeline@0.32.0 is already public.",
     "nextSafeAction": "Use forward-fix releases for published components and keep marketplace availability withheld on drift."
   },
   "reconciliation": {
-    "status": "pending",
-    "checkedAt": null,
+    "status": "matched",
+    "checkedAt": "2026-07-30T16:52:00.000Z",
     "sources": [
       "github-pr",
       "git-commit",
@@ -267,7 +267,7 @@
       "operating-canary"
     ],
     "drift": [],
-    "nextSafeAction": "Reconcile authoritative state after every participant is released."
+    "nextSafeAction": "All authoritative release, manifest, and canary evidence matches the reviewed operation."
   },
   "history": [
     {
@@ -305,6 +305,24 @@
       "participant": "skills",
       "digest": "sha256:d2beec890230afc8f95895d21ec60828171171eb8c349d922383b0e44ec18c4c",
       "note": "OpenPlanr Skills 1.18.0 was merged, tagged, archived, and verified by validation and release-check workflows."
+    },
+    {
+      "eventId": "b838a1aa-ef45-4ec5-b16e-7672290bdd6f",
+      "timestamp": "2026-07-30T16:52:00.000Z",
+      "type": "reconciliation.recorded",
+      "actor": "Codex release coordinator",
+      "participant": "marketplace",
+      "digest": "sha256:c1c4c402c4656be8e942c393c10b173b4cdaa74ef4b8d21e4979d211130fa20c",
+      "note": "Pipeline 0.32.0, OpenPlanr 1.16.0, skills 1.18.0, marketplace 1.3.0, npm state, and exact-commit Node 20/22 canaries on Ubuntu, macOS, and Windows matched."
+    },
+    {
+      "eventId": "02c8899c-d84a-4ab4-a6e8-d4fc887bd2a3",
+      "timestamp": "2026-07-30T16:52:01.000Z",
+      "type": "operation.verified",
+      "actor": "Codex release coordinator",
+      "participant": "marketplace",
+      "digest": "sha256:0e6a0d8f6a90a201ce51e8a17cc01e4a592ea2fed10d6628ecc27feb3a075ced",
+      "note": "The native Operating Board runtime experience is verified for ecosystem availability."
     }
   ]
 }

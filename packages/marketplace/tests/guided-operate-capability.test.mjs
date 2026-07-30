@@ -140,15 +140,15 @@ test('adapter normalization fails closed when native dispatch is undeclared', ()
   );
 });
 
-test('candidate compatibility withholds the native runtime train before reconciliation', async () => {
+test('verified compatibility promotes the native runtime train after reconciliation', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const guided = ecosystem.capabilities.guidedOperatingBoard;
   assert.equal(ecosystem.capabilities.operatingBoard.status, 'available');
-  assert.equal(guided.status, 'unavailable');
-  assert.deepEqual(guided.missing, ['release']);
+  assert.equal(guided.status, 'available');
+  assert.deepEqual(guided.missing, []);
   assert.equal(guided.releaseOperation.operationId, 'OPERATE-SPEC-003-R2');
-  assert.equal(guided.releaseOperation.state, 'preparing');
-  assert.equal(guided.releaseOperation.reconciliation, 'pending');
+  assert.equal(guided.releaseOperation.state, 'verified');
+  assert.equal(guided.releaseOperation.reconciliation, 'matched');
   assert.deepEqual(guided.components, {
     pipeline: '0.32.0',
     cli: '1.16.0',
@@ -156,9 +156,9 @@ test('candidate compatibility withholds the native runtime train before reconcil
     marketplace: '1.3.0',
   });
   assert.deepEqual(ecosystem.components, {
-    cli: { version: '1.15.1', pipelineRange: '^0.31.0' },
-    pipeline: { version: '0.31.0', cliRange: '^1.15.1' },
-    skills: { version: '1.17.2', cliRange: '^1.15.1' },
+    cli: { version: '1.16.0', pipelineRange: '^0.32.0' },
+    pipeline: { version: '0.32.0', cliRange: '^1.16.0' },
+    skills: { version: '1.18.0', cliRange: '^1.16.0' },
     marketplace: { version: '1.3.0' },
   });
 });
