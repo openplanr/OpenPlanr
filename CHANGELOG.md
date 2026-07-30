@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.16.2
+
+### Patch Changes
+
+- [`7d85669`](https://github.com/openplanr/OpenPlanr/commit/7d8566968e6e75aa7f5d2fce05157b0257498e08) Manage compatible Claude Code marketplace plugins during confirmed setup and
+  runtime updates, and diagnose stale versions or invalid plugin identities.
+
 ## 1.16.1
 
 ### Patch Changes
