@@ -55,6 +55,17 @@ function printPreview(preview: Awaited<ReturnType<typeof previewSetup>>): void {
       display.bullet(`${action.operation.padEnd(9)} ${action.target}`);
     }
   }
+  if (preview.runtimeOperations.length > 0) {
+    display.blank();
+    display.line('  Claude Code runtime:');
+    for (const operation of preview.runtimeOperations) {
+      display.bullet(operation.description);
+    }
+  }
+  for (const diagnostic of preview.runtimeDiagnostics.filter((item) => item.status !== 'pass')) {
+    display.line(`  ${diagnostic.status.toUpperCase()} ${diagnostic.message}`);
+    if (diagnostic.fix) display.line(`       Fix: ${diagnostic.fix}`);
+  }
 }
 
 export function registerSetupCommand(program: Command, cliVersion: string) {
@@ -201,6 +212,15 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
       else {
         logger.success('Setup complete');
         if (result.backupDir) display.keyValue('Backup', result.backupDir);
+        if (result.appliedRuntimeOperations?.length) {
+          display.keyValue(
+            'Claude Code',
+            `${result.appliedRuntimeOperations.length} marketplace/plugin operation(s) applied`,
+          );
+        }
+        if (result.restartRequired) {
+          logger.warn('Restart Claude Code to load the updated OpenPlanr plugins.');
+        }
         display.blank();
         display.line('Verify:');
         display.line('  planr doctor');

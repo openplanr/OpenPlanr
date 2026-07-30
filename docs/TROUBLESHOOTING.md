@@ -26,8 +26,24 @@ actually selected it. A selected runtime that disappears remains a warning.
 - `E_LOCK_INCOMPATIBLE`: run the exact `planr runtime update ...` command shown.
 - `E_MIGRATION_CONFLICT`: a managed file changed after setup; preview, preserve
   the edit, or use `planr runtime rollback`.
+- `E_CLAUDE_PLUGIN_INSPECTION_FAILED`: update Claude Code so its plugin manager
+  is available, then rerun `planr setup --runtime claude --scope user`.
+- `E_CLAUDE_PLUGIN_UPDATE_FAILED`: verify GitHub/marketplace connectivity, run
+  `planr runtime update claude --scope user`, and restart Claude Code.
 - `E_PROVENANCE_WRITE`: repair permissions, then append an explicit recovery
   event; doctor never invents history silently.
+
+If doctor reports `runtime-claude-plugins`, the installed plugin version or
+manifest identity does not match the compatible release. Run:
+
+```bash
+planr runtime update claude --scope user
+```
+
+Review and confirm the listed marketplace/plugin operations, then restart
+Claude Code. A legacy `openplanr@openplanr-skills` installation is reported
+separately and is never silently removed; verify `openplanr@openplanr` first,
+then remove the legacy plugin from Claude Code.
 
 Setup backups live under `~/.planr/backups/<project-hash>/<timestamp>/`. Machine
 state and paths live under `~/.planr/runtime/state.json`; the committed project

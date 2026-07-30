@@ -1044,6 +1044,7 @@ planr setup --dry-run
 planr setup --minimal
 planr runtime detect
 planr runtime install codex --scope user
+planr runtime update claude --scope user
 planr runtime rollback
 planr doctor --strict
 ```
@@ -1053,6 +1054,14 @@ the default; project scope requires a Git worktree or initialized OpenPlanr
 project. Setup previews mutations, backs up existing bytes, preserves content
 outside managed markers, writes `.planr/runtime-lock.json` only for project
 installations, and is idempotent. `--minimal` keeps only the dedicated planning CLI.
+
+For user-scoped Claude Code setup, the preview also lists external marketplace
+and plugin operations. After confirmation, setup refreshes
+`openplanr/marketplace` and installs or updates `openplanr@openplanr` and
+`planr-pipeline@openplanr` to the versions compatible with this CLI.
+`planr doctor` checks those versions and each plugin's stable manifest identity
+without mutating Claude Code. `doctor --fix` never changes plugin packages.
+Restart Claude Code when setup or `runtime update` reports a plugin change.
 
 Use `planr pipeline plan|design|design-loop|design-review|ship|status|dashboard|sync|doctor`
 to route the complete delivery workflow.

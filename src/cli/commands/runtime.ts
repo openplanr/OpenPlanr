@@ -5,12 +5,13 @@ import {
   detectRuntimes,
   type InstallScope,
   listRuntimeAdapters,
+  previewSetup,
   type RuntimeId,
   removeRuntime,
   rollbackRuntime,
   runtimeDoctor,
 } from '../../services/runtime-manager-service.js';
-import { display } from '../../utils/logger.js';
+import { display, logger } from '../../utils/logger.js';
 
 function print(value: unknown, json: boolean) {
   if (json) display.line(JSON.stringify(value));
@@ -51,11 +52,29 @@ export function registerRuntimeCommand(program: Command, cliVersion: string) {
           dryRun: Boolean(opts.dryRun),
           merge: true,
         };
-        if (!opts.dryRun && !opts.yes && !program.opts().yes) {
+        const preview = await previewSetup(options);
+        if (opts.dryRun) {
+          print(preview, opts.json);
+          return;
+        }
+        if (!opts.json) {
+          display.heading(`OpenPlanr runtime ${operation} preview`);
+          for (const action of preview.actions.filter((item) => item.operation !== 'unchanged')) {
+            display.bullet(`${action.operation} ${action.target}`);
+          }
+          for (const runtimeOperation of preview.runtimeOperations) {
+            display.bullet(runtimeOperation.description);
+          }
+        }
+        if (!opts.yes && !program.opts().yes) {
           const ok = await promptConfirm(`${operation} the ${runtimeId} adapter?`, true);
           if (!ok) return;
         }
-        print(await applySetup(options), opts.json);
+        const result = await applySetup(options);
+        print(result, opts.json);
+        if (!opts.json && result.restartRequired) {
+          logger.warn('Restart Claude Code to load the updated OpenPlanr plugins.');
+        }
       });
   }
 

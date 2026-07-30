@@ -75,7 +75,7 @@ remains project initialization; it is no longer overloaded with user installatio
 
 | Runtime | What gets installed | How the workflow activates |
 |---|---|---|
-| **Claude Code** | Portable package with the native plugin commands and tool-enforced agents; existing marketplace installs remain compatible | Existing slash commands or the packaged headless router |
+| **Claude Code** | Official `openplanr@openplanr` and `planr-pipeline@openplanr` marketplace plugins at compatible versions | Native plugin skills/commands and the packaged headless router |
 | **Cursor** | Portable project rules plus nine generated role files using relative paths | Composer handoff with sequential fallback |
 | **Codex** | User-scope skills; `AGENTS.md` contains only project policy and artifact pointers | Skills, native subagents when available, sequential fallback otherwise |
 
@@ -97,7 +97,10 @@ planr doctor
 The installer installs the CLI only. Guided setup detects coding agents and
 prompts for workflow mode, runtimes, and scope; user scope is the safe default.
 Use `planr setup --dry-run` to preview, `planr setup --minimal` for planning
-only, and `planr runtime rollback` to restore exact pre-migration bytes.
+only, and `planr runtime rollback` to restore exact pre-migration bytes. When
+Claude Code is selected, confirmed setup also refreshes the official
+OpenPlanr marketplace and installs or updates its compatible plugins. Restart
+Claude Code when setup reports that runtime packages changed.
 
 ### Initialise a project
 
