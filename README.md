@@ -175,8 +175,9 @@ planr operate inspect     # no initialization or credentials required
 planr operate demo        # deterministic, credential-free, no project writes
 planr operate init
 planr operate run --preview # no writes and no provider/model calls
-planr operate run           # provider calls require disclosed consent
+planr operate run           # native runtimes complete the local cycle in one flow
 planr operate review
+planr operate report --lens CTO
 ```
 
 Operating Board governs direction; it never deploys, publishes, spends,
@@ -200,6 +201,7 @@ return `E_PIPELINE_NOT_INSTALLED` with the full-install recovery command. See th
 | `planr operate init` | Guide charter, workspace, runtime, privacy, and source setup |
 | `planr operate run` | Collect evidence and stop at a reviewable operating cycle |
 | `planr operate review` / `brief` / `status` | Review the concise brief and canonical lifecycle state |
+| `planr operate report [cycle]` | Print CEO, CTO, CPO, CMO, COO, and Chair output as Markdown or strict JSON with exact planning conversion commands |
 | `planr operate findings accept <id>` | Record governance without applying a route |
 | `planr operate routes apply <id>` | Apply one confirmed, digest-bound local route; Pipeline-PO DEV routes may return `awaiting-plan` and an exact native PLAN command |
 | `planr operate decisions decide <id>` | Record an owner decision |

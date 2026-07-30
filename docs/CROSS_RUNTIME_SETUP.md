@@ -66,7 +66,10 @@ Full setup also installs the generated Operating Board entrypoint:
 Each adapter declares its guided-question ceiling (`native`, `chat`,
 `terminal`, or `none`). The CLI owns question wording, types, validation,
 sessions, previews, and confirmation digests. Adapters only present the
-returned questionnaire and submit typed answers. Fallback is deterministic:
+returned questionnaire and submit typed answers. Schema 1.1 questionnaires
+include exact argv tokens, immutable envelope fields, answer metadata, and
+dynamic digest/time sources, so adapters do not guess the stdin contract.
+Fallback is deterministic:
 native UI → structured chat → attached terminal → machine-readable handoff.
 `planr doctor` reports the selected capability, generated-skill drift, and
 expired guided sessions without calling a provider.

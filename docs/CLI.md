@@ -67,6 +67,8 @@ planr operate init --preview
 planr operate run --preview
 planr operate run --dry-run
 planr operate review
+planr operate report --lens CTO
+planr operate report --json
 ```
 
 `--preview` performs no writes, evidence-provider calls, or model calls.
@@ -102,6 +104,11 @@ planr operate init --resume GIS-... \
   --json
 ```
 
+For JSON-guided initialization, use only the questionnaire's `submission`
+descriptor: copy its fixed envelope fields, add values to the declared typed
+answer items, resolve the questionnaire digest and runtime timestamp as
+specified, then pass one JSON document to its exact argv on bounded stdin.
+
 `--yes` alone, a questionnaire answer, a prior confirmation, or a prose
 acknowledgment cannot apply initialization or authorize a later cycle, route,
 PLAN handoff, or SHIP invocation. Drift invalidates the digest before writes.
@@ -112,6 +119,7 @@ PLAN handoff, or SHIP invocation. Drift invalidates the digest before writes.
 | `init` / `config` / `profiles` | Configure and validate the product charter, profile, workspace, runtime, privacy, and decision owner |
 | `sources list\|show\|test` | Inspect or read-only test configured sources; source and JSON/CSV import paths are selected by `operate init` |
 | `run` / `review` / `brief` / `status` | Produce and inspect a cycle that ends at the human review gate |
+| `report [cycleId]` | Render the cycle brief plus separate CEO, CTO, CPO, CMO, COO, and Chair results as Markdown or strict JSON, including exact planning conversion commands |
 | `findings accept\|reject\|supersede` | Record governance; accepting never applies the route |
 | `routes apply\|rollback` | Preview and confirm exact local writes, or restore reversible prior bytes |
 | `decisions decide` | Record the named human owner’s decision |
@@ -162,6 +170,27 @@ enters the cycle engine. JSON mode is non-interactive and emits exactly one
 versioned stdout object. Guided questions are submitted as a bounded typed
 answer envelope through `init --resume ... --stdin`; every subsequent
 non-read-only action requires its own digest-bound confirmation.
+
+An explicit user request to run one cycle authorizes its reversible local native
+adapter lifecycle through `reviewable`, `blocked`, or `failed`; the runtime does
+not stop to ask the user to paste `adapter prepare`, `record`, `finalize`, Chair,
+or report commands. External provider consent, finding acceptance, route
+application, planning artifacts, PLAN, SHIP, and external effects remain
+separate named actions.
+
+Native run and adapter results include a Protocol-validated
+`operating-adapter-handoff`. Its binding fixes the cycle, evidence digest,
+runtime, lease, idempotency key, and expiry. Runtime integrations execute only
+the exact argv arrays currently present in `handoff.next`; they never derive
+arguments, suffix the idempotency key, reuse a prior-state action, or probe
+internal commands with `--help`. Record actions resolve their role pack and
+schema through absolute pointers into the retained prepare result.
+`handoff.recovery` is used only after a failed current action.
+
+Prepare, record, and cancel are machine-local writes; resume is read-only;
+finalize and the cycle-bound continuation are project writes. Continuation
+re-enters the governed cycle and grants no authority for a later
+provider call, route application, PLAN, SHIP, or external effect.
 
 See [OPERATING_BOARD.md](./OPERATING_BOARD.md) for the complete lifecycle,
 privacy, automation, routing, recovery, and outcome contracts.

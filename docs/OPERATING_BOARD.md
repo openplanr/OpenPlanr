@@ -43,6 +43,13 @@ planr operate run
 planr operate review
 ```
 
+When the configured runtime exposes a certified native advisor bridge, one
+explicit request to run a cycle continues through independent CEO, CTO, CPO,
+CMO, and COO analysis, Chair consolidation, and report rendering without asking
+you to copy internal adapter commands. That intent authorizes reversible local
+cycle work only. Provider consent, finding disposition, route application,
+planning artifacts, PLAN, SHIP, and external effects remain separate gates.
+
 Initialization guides you through a profile, product charter, control
 repository, read-only component repositories, decision owner, planning engine,
 runtime, privacy policy, evidence sources, cadence, and IANA display timezone.
@@ -76,7 +83,10 @@ provider/model call and writes no project state.
 
 In `--json` mode, omitted input returns `E_OPERATE_INPUT_REQUIRED` and a
 Protocol v1.2 `guided-questionnaire` instead of prompting or returning a generic
-configuration error. Fully specified flag-based automation remains supported:
+configuration error. New questionnaires use additive schema 1.1 and include a
+self-describing, digest-safe bounded-stdin `submission` contract. Original
+schema 1.0 questionnaires remain readable. Fully specified flag-based
+automation remains supported:
 
 ```bash
 planr operate init \
@@ -125,10 +135,77 @@ the Protocol-owned operating-role registry. OpenPlanr derives an immutable,
 digest-bound role pack for each invocation: trusted brief, role-filtered
 untrusted evidence, bounded operating context, and input digest. Structured
 providers consume that pack directly. A certified native runtime may execute
-the same pack only with enforced empty-tool isolation; it records and finalizes
-independent lenses before OpenPlanr prepares the Chair pack from their verified
-results. This avoids divergent hand-written CEO or CTO prompt files while
-preserving explicit, testable prompt contracts.
+the same pack in either `native-isolated` or `native-bounded` mode. An isolated
+adapter enforces an empty tool set. A bounded adapter such as Codex receives
+only the immutable role pack and must not inspect the workspace, environment,
+network, or other tools while acting as that advisor. It returns the compact
+`operating-advisor-response@1.2.0`; OpenPlanr validates evidence references and
+budgets, then adds canonical IDs, producer metadata, and digests. Independent
+lenses are finalized before OpenPlanr prepares the Chair pack from their
+verified results. This avoids divergent hand-written CEO or CTO prompt files
+while preserving explicit, testable prompt contracts.
+
+### Native adapter lifecycle
+
+When native execution is required, the public run result returns a
+Protocol-validated `operating-adapter-handoff` before prepare. That object is
+the complete state-aware execution contract for the current boundary:
+
+- `phase` and `state` identify the independent-advisor or Chair boundary;
+- the binding fixes the cycle, evidence digest, runtime, CLI-owned idempotency
+  key, nullable pre-prepare lease, and nullable expiry;
+- `next[]` contains only exact argv arrays legal in the current state;
+- `recovery[]` contains only valid interrupted-session actions.
+
+The runtime executes those arrays verbatim. It must not add a role suffix to
+the idempotency key, replace any binding field, derive a command from prose, or
+call an internal command with `--help` to discover what comes next. Each
+successful record returns a new handoff containing only the roles still
+missing. Once every role is recorded, finalize is the sole next action; after
+finalize, a cycle-bound continuation is the sole next action.
+
+```text
+independent advisors or Chair:
+prepare-required → record-required → finalize-required → continue-required
+                            └───────────────→ cancelled
+```
+
+`resume` returns the current state of the same unexpired, digest-bound session.
+`cancel` ends only that private session. Invalid, expired, or drifted bindings
+fail closed; the runtime follows the exact recovery action returned by the CLI
+and never invents a new lease or idempotency key.
+
+Lifecycle effects are fixed and intentionally narrow:
+
+| Action | Effect |
+|---|---|
+| prepare, record, cancel | Machine-local write |
+| resume | Read-only session inspection |
+| finalize | Project write of validated advisor results |
+| continue | Governed cycle continuation; later boundaries retain their own effect and authority checks |
+
+This lifecycle is covered by the user's explicit request to run the current
+cycle. It does not authorize provider consent, findings, routes, planning
+artifacts, PLAN, SHIP, or external actions.
+
+### Human-readable and machine-readable results
+
+The dashboard is optional. Every reviewable cycle can be rendered directly in
+the terminal or returned as strict JSON:
+
+```bash
+planr operate report                    # concise Markdown for all lenses
+planr operate report --lens CTO         # one executive lens
+planr operate report --format json      # structured terminal output
+planr operate report --json             # one versioned automation result
+```
+
+The report includes the cycle brief, separate CEO/CTO/CPO/CMO/COO/Chair
+recommendations, cited evidence gaps and conflicts, and exact next commands.
+Governed DEV routes remain the preferred path to a substantive spec and PLAN
+decomposition. A user may also create an OpenPlanr quick task or task from a
+specific finding using the report's explicit conversion command; nothing is
+converted or applied automatically.
 
 ### Planning-only installations
 
@@ -189,9 +266,13 @@ planr operate cache purge
 ```
 
 Evidence is untrusted data. It is role-filtered, bounded, scanned for secrets,
-and never inserted into system instructions. Provider consent is bound to the
-provider endpoint, retention policy, and permitted data classes, and is renewed
-when any of those change.
+and never inserted into system instructions. Values that can be safely redacted
+remain useful as redacted evidence. An unsafe item is quarantined individually
+and omitted from every advisor pack; unrelated evidence and ready lenses
+continue. A lens becomes `not_evaluated` only when the remaining evidence no
+longer meets its declared minimum. Provider consent is bound to the provider
+endpoint, retention policy, and permitted data classes, and is renewed when any
+of those change.
 
 Every persisted finding inherits the highest sensitivity of all cited evidence.
 This classification is deterministic and may be raised when evidence changes;
@@ -364,6 +445,7 @@ result on stdout. Every result carries `ok`, `action`, `state`, relative
 ```bash
 planr operate inspect --json
 planr operate run --offline --json
+planr operate report --json
 printf '%s' "$SENSITIVE_ANSWER" |
   planr operate gaps answer GAP-001 --stdin --yes --json
 planr operate gaps verify GAP-001 --evidence-ref EVD-001 --yes --json

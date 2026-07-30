@@ -83,6 +83,11 @@ describe('Operating Board authority boundaries', () => {
       ok: false,
       code: 'E_OPERATE_ROUTE_CONFIRMATION_REQUIRED',
       exitCode: 4,
+      nextActions: [
+        expect.stringMatching(
+          /^planr operate init --answers-token [A-Za-z0-9_-]+ --preview-created-at .* --confirm sha256:[a-f0-9]{64} --yes$/,
+        ),
+      ],
     });
 
     const applied = await executeOperateAction({

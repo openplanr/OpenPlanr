@@ -217,7 +217,7 @@ describe('packed planning-only Operating Board', () => {
     const manifest = JSON.parse(readFileSync(join(minimalPackageRoot, 'package.json'), 'utf8')) as {
       optionalDependencies?: Record<string, string>;
     };
-    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe('0.31.0');
+    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe('0.32.0');
   });
 
   it('keeps help, inspect, and demo provider-free and functional', () => {
@@ -391,6 +391,29 @@ describe('packed full Operating Board lifecycle', () => {
       ).toMatchObject({
         ok: true,
         action: 'review',
+      });
+      expect(
+        jsonResult(fullCli, fullInstallRoot, [
+          'operate',
+          'report',
+          cycle.cycle.id,
+          '--lens',
+          'CTO',
+          '--json',
+        ]),
+      ).toMatchObject({
+        ok: true,
+        action: 'report',
+        data: {
+          cycleId: cycle.cycle.id,
+          reports: [
+            expect.objectContaining({
+              roleId: 'technology-risk',
+              label: 'CTO',
+            }),
+          ],
+          actions: expect.any(Array),
+        },
       });
     } finally {
       if (priorStateRoot === undefined) delete process.env.OPENPLANR_STATE_ROOT;

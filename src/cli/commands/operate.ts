@@ -33,6 +33,13 @@ function wantsJson(command: Command, options: OptionValues): boolean {
 
 async function readBoundedStdin(enabled: boolean): Promise<string | undefined> {
   if (!enabled) return undefined;
+  if (process.stdin.isTTY) {
+    const error = new Error(
+      'No piped JSON input is connected. Attach the complete bounded document and EOF before launching a --stdin action.',
+    );
+    error.name = 'E_OPERATE_STDIN_REQUIRED';
+    throw error;
+  }
   const chunks: Buffer[] = [];
   let bytes = 0;
   for await (const value of process.stdin) {
@@ -122,22 +129,27 @@ async function executeForResult(
   try {
     stdin = await readBoundedStdin(Boolean(options.stdin));
   } catch (error) {
+    const code =
+      error instanceof Error && error.name.startsWith('E_')
+        ? error.name
+        : 'E_OPERATE_INPUT_TOO_LARGE';
+    const recovery =
+      code === 'E_OPERATE_STDIN_REQUIRED'
+        ? 'Attach one bounded JSON document to stdin before launching this exact command.'
+        : 'Reduce the stdin payload to 65536 bytes or fewer and retry.';
     const result: OperateActionResult = {
       schemaVersion: '1.0.0',
       protocolVersion: '1.2.0',
       ok: false,
       action,
-      code:
-        error instanceof Error && error.name.startsWith('E_')
-          ? error.name
-          : 'E_OPERATE_INPUT_TOO_LARGE',
+      code,
       message: error instanceof Error ? error.message : String(error),
       state: null,
       paths: {},
       counts: {},
       warnings: [],
-      nextActions: ['Reduce the stdin payload to 65536 bytes or fewer and retry.'],
-      next: ['Reduce the stdin payload to 65536 bytes or fewer and retry.'],
+      nextActions: [recovery],
+      next: [recovery],
       exitCode: 2,
     };
     if (json) display.line(JSON.stringify(result));
@@ -295,6 +307,16 @@ export function registerOperateCommand(program: Command): void {
       ),
   ).action(function (this: Command, opts) {
     return execute(program, this, 'demo', {}, opts);
+  });
+
+  json(
+    operate
+      .command('report [cycleId]')
+      .description('Print the cycle brief and CEO/CTO/CPO/CMO/COO/Chair reports')
+      .option('--lens <lens>', 'CEO, CTO, CPO, CMO, COO, Chair, or all', 'all')
+      .option('--format <format>', 'markdown or json'),
+  ).action(function (this: Command, cycleId: string | undefined, opts) {
+    return execute(program, this, 'report', { cycleId }, opts);
   });
 
   json(
@@ -485,7 +507,11 @@ export function registerOperateCommand(program: Command): void {
   json(sources.command('show <source>')).action(function (this: Command, source: string, opts) {
     return execute(program, this, 'sources.show', { source }, opts);
   });
-  json(sources.command('test <source>')).action(function (this: Command, source: string, opts) {
+  json(
+    sources
+      .command('test [source]')
+      .description('Test one source, or every configured source when omitted'),
+  ).action(function (this: Command, source: string | undefined, opts) {
     return execute(program, this, 'sources.test', { source }, opts);
   });
 
@@ -495,6 +521,7 @@ export function registerOperateCommand(program: Command): void {
         operate
           .command('run')
           .description('Collect evidence and produce a reviewable operating cycle')
+          .option('--cycle-id <cycleId>', 'resume exactly this operating cycle')
           .option('--focus <lens>', 'evaluate one lens (repeatable)', collect, [])
           .option('--depth <depth>', 'standard or deep', 'standard')
           .option('--runtime <runtime>', 'auto, claude, codex, or cursor', 'auto')
@@ -800,17 +827,23 @@ export function registerOperateCommand(program: Command): void {
     .command('adapter')
     .description('Machine-only, lease-bound runtime adapter lifecycle');
   json(
-    machineBinding(adapter.command('prepare')).option(
-      '--role <roles>',
-      'comma-separated advisor roles bound to this isolated dispatch',
-    ),
+    machineBinding(
+      adapter
+        .command('prepare')
+        .description('Prepare immutable role packs and their compact response schema'),
+    ).option('--role <roles>', 'comma-separated advisor roles bound to this isolated dispatch'),
   ).action(function (this: Command, opts) {
     return execute(program, this, 'adapter.prepare', {}, { ...opts, json: true });
   });
   json(
     stdin(
       machineBinding(
-        adapter.command('record').requiredOption('--role <role>', 'operating advisor role'),
+        adapter
+          .command('record')
+          .description(
+            'Record JSON matching rolePack.roleBrief.output.jsonSchema from adapter prepare',
+          )
+          .requiredOption('--role <role>', 'operating advisor role'),
       ),
     ),
   ).action(function (this: Command, opts) {

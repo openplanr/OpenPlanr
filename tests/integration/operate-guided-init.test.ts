@@ -37,10 +37,18 @@ describe('guided Operating Board initialization', () => {
       exitCode: 4,
       questionnaire: {
         kind: 'guided-questionnaire',
+        schemaVersion: '1.1.0',
         command: 'operate.init',
         stage: 'foundation',
         step: 1,
         totalSteps: 3,
+        submission: {
+          kind: 'guided-answer-submission',
+          transport: {
+            kind: 'stdin-json',
+            maxBytes: 65536,
+          },
+        },
       },
     });
     expect(result.questionnaire?.questions.map((question) => question.questionId)).toContain(
@@ -49,6 +57,35 @@ describe('guided Operating Board initialization', () => {
     await expect(
       readFile(join(projectRoot, '.planr', 'operate', 'config.json')),
     ).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('names a machine-local state-root write denial without exposing its path', async () => {
+    const projectRoot = await gitProject();
+    const unavailableRoot = join(projectRoot, 'state-root-is-a-file');
+    await writeFile(unavailableRoot, 'not a directory\n');
+
+    const result = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { json: true, localRoot: unavailableRoot },
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      action: 'init',
+      code: 'E_OPERATE_STATE_UNAVAILABLE',
+      exitCode: 3,
+      message: expect.stringContaining('Grant the active runtime sandbox write access'),
+      data: {
+        stateClass: 'machine-local',
+        requiredPermission: 'write',
+        platformCode: 'ENOTDIR',
+        recoveryCommand: 'planr operate init --json',
+      },
+      nextActions: ['planr operate init --json'],
+    });
+    expect(JSON.stringify(result)).not.toContain(unavailableRoot);
   });
 
   it('returns only unanswered canonical questions for partial machine input', async () => {

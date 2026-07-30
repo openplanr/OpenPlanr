@@ -1,4 +1,6 @@
+import { mkdtempSync, rmSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { EncryptedFileBackend } from '../../src/services/credential-backends.js';
@@ -9,6 +11,13 @@ import { EncryptedFileBackend } from '../../src/services/credential-backends.js'
  * so we focus on the encrypted file backend which is the universal fallback.
  */
 
+const testPlanrDir = mkdtempSync(join(tmpdir(), 'openplanr-credentials-test-'));
+const backend = new EncryptedFileBackend(testPlanrDir);
+
+afterAll(() => {
+  rmSync(testPlanrDir, { recursive: true, force: true });
+});
+
 describe('EncryptedFileBackend', () => {
   it('is always available', async () => {
     const backend = new EncryptedFileBackend();
@@ -17,12 +26,10 @@ describe('EncryptedFileBackend', () => {
 });
 
 describe('EncryptedFileBackend roundtrip (real file)', () => {
-  // We test the actual encrypt/decrypt logic by using the real backend
-  // which writes to ~/.planr/credentials.enc. We use a provider name
-  // that won't conflict with real credentials.
+  // Exercise the actual encrypt/decrypt implementation in an isolated Planr
+  // directory. Tests must never rewrite a developer's credential ciphertext.
   const TEST_PROVIDER = '__test_provider_roundtrip__';
   const TEST_KEY = 'sk-test-key-12345-roundtrip';
-  const backend = new EncryptedFileBackend();
 
   afterAll(async () => {
     // Clean up
@@ -63,7 +70,6 @@ describe('EncryptedFileBackend roundtrip (real file)', () => {
 describe('Encrypted file is not plaintext', () => {
   const TEST_PROVIDER = '__plaintext_check__';
   const TEST_KEY = 'sk-secret-should-not-appear-in-file';
-  const backend = new EncryptedFileBackend();
 
   afterAll(async () => {
     await backend.delete(TEST_PROVIDER);
@@ -73,8 +79,7 @@ describe('Encrypted file is not plaintext', () => {
     await backend.set(TEST_PROVIDER, TEST_KEY);
 
     // Read the raw encrypted file
-    const homedir = (await import('node:os')).homedir();
-    const encPath = join(homedir, '.planr', 'credentials.enc');
+    const encPath = join(testPlanrDir, 'credentials.enc');
     const raw = await readFile(encPath, 'utf-8');
 
     // The raw file should NOT contain the plaintext key

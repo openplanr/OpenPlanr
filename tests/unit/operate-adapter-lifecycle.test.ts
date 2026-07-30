@@ -3,8 +3,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { OperatingEventStore } from '../../src/services/operate/event-store.js';
-import { operateAdapterLifecycle } from '../../src/services/operate/maintenance.js';
-import { loadOperatingProtocol } from '../../src/services/operate/protocol.js';
+import {
+  createOperatingAdapterStartHandoff,
+  operateAdapterLifecycle,
+} from '../../src/services/operate/maintenance.js';
 import type { OperatingRoleResult } from '../../src/services/operate/types.js';
 import { resolveOperatingPaths } from '../../src/services/operate/workspace.js';
 
@@ -184,7 +186,15 @@ describe('native operating advisor lifecycle', () => {
             writeBoundary: string;
             forbiddenRecommendationCategories: string[];
           };
-          output: { allowedProposalTypes: string[] };
+          output: {
+            schema: string;
+            jsonSchema: {
+              required: string[];
+              properties: { outcome: { enum: string[] } };
+              examples: Array<Record<string, unknown>>;
+            };
+            allowedProposalTypes: string[];
+          };
           briefDigest: `sha256:${string}`;
         }
       >;
@@ -194,6 +204,21 @@ describe('native operating advisor lifecycle', () => {
         { inputDigest: `sha256:${string}`; evidence: { items: unknown[] } }
       >;
       lease: string;
+      idempotencyKey: string;
+      handoff: {
+        kind: string;
+        state: string;
+        next: Array<{
+          action: string;
+          role: string;
+          argv: string[];
+          stdin?: {
+            schemaPointer: string;
+            schemaSource: string;
+            maxBytes: number;
+          };
+        }>;
+      };
     };
 
     expect(session.roles).toEqual(['strategy-finance', 'technology-risk']);
@@ -209,8 +234,55 @@ describe('native operating advisor lifecycle', () => {
         writeBoundary: 'none',
       });
       expect(brief.authority.forbiddenRecommendationCategories.length).toBeGreaterThan(0);
+      expect(brief.output.schema).toBe('operating-advisor-response@1.2.0');
+      expect(brief.output.jsonSchema.required).toEqual([
+        'outcome',
+        'proposals',
+        'gaps',
+        'conflicts',
+      ]);
+      expect(brief.output.jsonSchema.properties.outcome.enum).toEqual(['proposals', 'quiet']);
+      expect(brief.output.jsonSchema.examples[0]).toEqual({
+        outcome: 'quiet',
+        proposals: [],
+        gaps: [],
+        conflicts: [],
+      });
       expect(session.roleInputDigests[role]).toBe(session.rolePacks[role].inputDigest);
       expect(session.rolePacks[role].evidence.items.length).toBeGreaterThan(0);
+    }
+    expect(session.handoff.kind).toBe('operating-adapter-handoff');
+    expect(session.handoff.state).toBe('record-required');
+    const recordActions = session.handoff.next.filter(({ action }) => action === 'adapter.record');
+    expect(recordActions.map(({ role }) => role)).toEqual(['strategy-finance']);
+    for (const record of recordActions) {
+      expect(record.argv).toEqual([
+        'planr',
+        'operate',
+        'adapter',
+        'record',
+        '--role',
+        record.role,
+        '--cycle-id',
+        'CYCLE-001',
+        '--evidence-digest',
+        fixture.evidenceDigest,
+        '--lease',
+        session.lease,
+        '--idempotency-key',
+        session.idempotencyKey,
+        '--stdin',
+        '--json',
+      ]);
+      expect(record.stdin).toEqual({
+        schemaPointer: `/data/rolePacks/${record.role}/roleBrief/output/jsonSchema`,
+        schemaSource: 'adapter.prepare-result',
+        maxBytes: 32768,
+        kind: 'stdin-json',
+        mediaType: 'application/json',
+        encoding: 'utf-8',
+        schema: 'https://openplanr.dev/schemas/v1.2.0/operating-advisor-response.schema.json',
+      });
     }
 
     const persisted = JSON.parse(
@@ -226,29 +298,72 @@ describe('native operating advisor lifecycle', () => {
     ) as typeof session;
     expect(persisted.roleBriefs).toEqual(session.roleBriefs);
 
-    const protocol = await loadOperatingProtocol();
-    for (const role of session.roles) {
-      const unsigned = {
-        kind: 'operating-role-result' as const,
-        schemaVersion: '1.0.0' as const,
-        protocolVersion: '1.2.0' as const,
+    await expect(
+      operateAdapterLifecycle({
+        ...fixture,
+        action: 'record',
         cycleId: 'CYCLE-001',
-        roleId: role as OperatingRoleResult['roleId'],
-        inputDigest: session.roleInputDigests[role],
+        lease: session.lease,
+        idempotencyKey: 'prepare-role-briefs',
+        role: 'technology-risk',
+        stdin: JSON.stringify({
+          outcome: 'quiet',
+          proposals: [],
+          gaps: [],
+          conflicts: [],
+        }),
+      }),
+    ).rejects.toMatchObject({
+      code: 'E_OPERATE_ADVISOR_ISOLATION',
+      details: {
+        expectedRole: 'strategy-finance',
+        recoveryCommand: expect.stringContaining('operate adapter resume'),
+      },
+    });
+
+    for (const [index, role] of session.roles.entries()) {
+      if (index === 0) {
+        const recorded = await operateAdapterLifecycle({
+          ...fixture,
+          action: 'record',
+          cycleId: 'CYCLE-001',
+          lease: session.lease,
+          idempotencyKey: 'prepare-role-briefs',
+          role,
+          stdin: JSON.stringify({
+            outcome: 'quiet',
+            proposals: [],
+            gaps: [],
+            conflicts: [],
+          }),
+        });
+        expect(recorded).toMatchObject({
+          recorded: role,
+          result: {
+            kind: 'operating-role-result',
+            roleId: role,
+            inputDigest: session.roleInputDigests[role],
+            outcome: 'quiet',
+          },
+          session: {
+            cycleId: 'CYCLE-001',
+            recordedRoles: [role],
+            state: 'recording',
+          },
+          handoff: {
+            state: 'record-required',
+            next: [{ action: 'adapter.record', role: 'technology-risk' }],
+          },
+        });
+        expect(recorded).not.toHaveProperty('session.rolePacks');
+        expect(recorded).not.toHaveProperty('session.roleBriefs');
+        continue;
+      }
+      const result = {
         outcome: 'quiet' as const,
         proposals: [],
         gaps: [],
         conflicts: [],
-        producer: {
-          product: 'openplanr',
-          version: '1.14.0',
-          runtime: 'claude',
-          capability: 'analysis-high' as const,
-        },
-      };
-      const result = {
-        ...unsigned,
-        resultDigest: protocol.computeOperatingRoleResultDigest(unsigned as OperatingRoleResult),
       };
       await operateAdapterLifecycle({
         ...fixture,
@@ -260,13 +375,66 @@ describe('native operating advisor lifecycle', () => {
         stdin: JSON.stringify(result),
       });
     }
-    await operateAdapterLifecycle({
+    const finalized = await operateAdapterLifecycle({
       ...fixture,
       action: 'finalize',
       cycleId: 'CYCLE-001',
       lease: session.lease,
       idempotencyKey: 'prepare-role-briefs',
     });
+    expect(finalized).toMatchObject({
+      session: {
+        cycleId: 'CYCLE-001',
+        state: 'finalized',
+        recordedRoles: ['strategy-finance', 'technology-risk'],
+      },
+      results: [{ roleId: 'strategy-finance' }, { roleId: 'technology-risk' }],
+    });
+    expect(finalized).not.toHaveProperty('session.rolePacks');
+    expect(finalized).not.toHaveProperty('session.roleBriefs');
+    expect(finalized).toMatchObject({
+      handoff: {
+        state: 'continue-required',
+        next: [
+          {
+            action: 'run.continue',
+            argv: [
+              'planr',
+              'operate',
+              'run',
+              '--cycle-id',
+              'CYCLE-001',
+              '--runtime',
+              'fixture',
+              '--json',
+            ],
+          },
+        ],
+      },
+    });
+    expect(JSON.stringify(finalized).length).toBeLessThan(8_000);
+    for (const action of ['record', 'resume', 'cancel'] as const) {
+      await expect(
+        operateAdapterLifecycle({
+          ...fixture,
+          action,
+          cycleId: 'CYCLE-001',
+          lease: session.lease,
+          idempotencyKey: 'prepare-role-briefs',
+          ...(action === 'record'
+            ? {
+                role: session.roles[0],
+                stdin: JSON.stringify({
+                  outcome: 'quiet',
+                  proposals: [],
+                  gaps: [],
+                  conflicts: [],
+                }),
+              }
+            : {}),
+        }),
+      ).rejects.toMatchObject({ code: 'E_OPERATE_STATE_INVALID' });
+    }
     const replay = await new OperatingEventStore(fixture.projectRoot, {
       localRoot: fixture.localRoot,
     }).replay();
@@ -301,6 +469,55 @@ describe('native operating advisor lifecycle', () => {
     ).toBe(true);
   });
 
+  it('rejects a partial canonical wrapper with compact-schema recovery and persists nothing', async () => {
+    const fixture = await advisingCycle();
+    const session = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'reject-partial-wrapper',
+    })) as {
+      roles: string[];
+      lease: string;
+    };
+    const role = session.roles[0] as OperatingRoleResult['roleId'];
+
+    await expect(
+      operateAdapterLifecycle({
+        ...fixture,
+        action: 'record',
+        cycleId: 'CYCLE-001',
+        lease: session.lease,
+        idempotencyKey: 'reject-partial-wrapper',
+        role,
+        stdin: JSON.stringify({
+          kind: 'operating-role-result',
+          outcome: 'quiet',
+          proposals: [],
+          gaps: [],
+          conflicts: [],
+        }),
+      }),
+    ).rejects.toMatchObject({
+      code: 'E_OPERATE_ADVISOR_FAILED',
+      details: expect.objectContaining({
+        expectedSchema: 'operating-advisor-response@1.2.0',
+        recoveryCommand: expect.stringContaining('planr operate run --cycle-id CYCLE-001'),
+      }),
+    });
+
+    await expect(
+      readFile(
+        join(
+          resolveOperatingPaths(fixture.projectRoot, { localRoot: fixture.localRoot }).advisors,
+          `CYCLE-001.${role}.json`,
+        ),
+        'utf8',
+      ),
+    ).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('refuses a native result carrying a secret and persists nothing', async () => {
     const fixture = await advisingCycle();
     const session = (await operateAdapterLifecycle({
@@ -309,17 +526,16 @@ describe('native operating advisor lifecycle', () => {
       cycleId: 'CYCLE-001',
       evidenceDigest: fixture.evidenceDigest,
       idempotencyKey: 'secret-scan',
-    })) as { roles: string[]; roleInputDigests: Record<string, `sha256:${string}`>; lease: string };
+    })) as {
+      roles: string[];
+      roleInputDigests: Record<string, `sha256:${string}`>;
+      rolePacks: Record<string, { evidence: { items: Array<{ id: string }> } }>;
+      lease: string;
+    };
 
-    const protocol = await loadOperatingProtocol();
     const role = session.roles[0] as OperatingRoleResult['roleId'];
-    const unsigned = {
-      kind: 'operating-role-result' as const,
-      schemaVersion: '1.0.0' as const,
-      protocolVersion: '1.2.0' as const,
-      cycleId: 'CYCLE-001',
-      roleId: role,
-      inputDigest: session.roleInputDigests[role],
+    const evidenceRef = session.rolePacks[role].evidence.items[0].id;
+    const result = {
       outcome: 'proposals' as const,
       proposals: [
         {
@@ -335,21 +551,11 @@ describe('native operating advisor lifecycle', () => {
           confidence: 3,
           ease: 3,
           severity: 'high' as const,
-          evidenceRefs: ['EVD-repo'],
+          evidenceRefs: [evidenceRef],
         },
       ],
       gaps: [],
       conflicts: [],
-      producer: {
-        product: 'openplanr',
-        version: '1.14.0',
-        runtime: 'claude',
-        capability: 'analysis-high' as const,
-      },
-    };
-    const result = {
-      ...unsigned,
-      resultDigest: protocol.computeOperatingRoleResultDigest(unsigned as OperatingRoleResult),
     };
 
     await expect(
@@ -381,29 +587,12 @@ describe('native operating advisor lifecycle', () => {
       idempotencyKey: 'secret-scan-gap',
     })) as { roles: string[]; roleInputDigests: Record<string, `sha256:${string}`>; lease: string };
 
-    const protocol = await loadOperatingProtocol();
     const role = session.roles[0] as OperatingRoleResult['roleId'];
-    const unsigned = {
-      kind: 'operating-role-result' as const,
-      schemaVersion: '1.0.0' as const,
-      protocolVersion: '1.2.0' as const,
-      cycleId: 'CYCLE-001',
-      roleId: role,
-      inputDigest: session.roleInputDigests[role],
+    const result = {
       outcome: 'quiet' as const,
       proposals: [],
       gaps: ['Missing source token ghp_abcdefghijklmnopqrstuvwxyz0123456789'],
       conflicts: [],
-      producer: {
-        product: 'openplanr',
-        version: '1.14.1',
-        runtime: 'claude',
-        capability: 'analysis-high' as const,
-      },
-    };
-    const result = {
-      ...unsigned,
-      resultDigest: protocol.computeOperatingRoleResultDigest(unsigned as OperatingRoleResult),
     };
 
     await expect(
@@ -417,5 +606,199 @@ describe('native operating advisor lifecycle', () => {
         stdin: JSON.stringify(result),
       }),
     ).rejects.toThrowError(expect.objectContaining({ code: 'E_OPERATE_SECRET_DETECTED' }));
+  });
+
+  it('exposes an exact pre-prepare handoff and rejects binding drift', async () => {
+    const fixture = await advisingCycle();
+    const handoff = await createOperatingAdapterStartHandoff({
+      ...fixture,
+      cycleId: 'CYCLE-001',
+      runtime: 'fixture',
+      phase: 'advisors',
+      roles: ['strategy-finance', 'technology-risk'],
+    });
+    expect(handoff).toMatchObject({
+      phase: 'advisors',
+      state: 'prepare-required',
+      binding: {
+        cycleId: 'CYCLE-001',
+        evidenceDigest: fixture.evidenceDigest,
+        runtime: 'fixture',
+        lease: null,
+        expiresAt: null,
+      },
+      next: [{ action: 'adapter.prepare', effect: 'machine-local-write' }],
+      recovery: [],
+    });
+    expect(handoff.next[0].argv.at(-1)).toBe('--json');
+
+    const session = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      idempotencyKey: handoff.binding.idempotencyKey,
+      role: 'strategy-finance,technology-risk',
+    })) as { lease: string };
+
+    await expect(
+      operateAdapterLifecycle({
+        ...fixture,
+        evidenceDigest: digest('f'),
+        action: 'record',
+        cycleId: 'CYCLE-001',
+        idempotencyKey: handoff.binding.idempotencyKey,
+        lease: session.lease,
+        role: 'strategy-finance',
+        stdin: JSON.stringify({
+          outcome: 'quiet',
+          proposals: [],
+          gaps: [],
+          conflicts: [],
+        }),
+      }),
+    ).rejects.toMatchObject({ code: 'E_OPERATE_ADVISOR_ISOLATION' });
+
+    await expect(
+      operateAdapterLifecycle({
+        ...fixture,
+        action: 'prepare',
+        cycleId: 'CYCLE-001',
+        idempotencyKey: handoff.binding.idempotencyKey,
+        role: 'technology-risk',
+      }),
+    ).rejects.toMatchObject({ code: 'E_OPERATE_ADVISOR_ISOLATION' });
+  });
+
+  it('makes cancellation terminal for its lease and issues a fresh exact retry', async () => {
+    const fixture = await advisingCycle();
+    const initial = await createOperatingAdapterStartHandoff({
+      ...fixture,
+      cycleId: 'CYCLE-001',
+      runtime: 'fixture',
+      phase: 'advisors',
+      roles: ['strategy-finance', 'technology-risk'],
+    });
+    const session = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      idempotencyKey: initial.binding.idempotencyKey,
+    })) as { lease: string };
+    const cancelled = await operateAdapterLifecycle({
+      ...fixture,
+      action: 'cancel',
+      cycleId: 'CYCLE-001',
+      idempotencyKey: initial.binding.idempotencyKey,
+      lease: session.lease,
+    });
+    expect(cancelled).toMatchObject({
+      handoff: { state: 'cancelled', next: [], recovery: [] },
+    });
+    for (const action of ['record', 'resume', 'finalize'] as const) {
+      await expect(
+        operateAdapterLifecycle({
+          ...fixture,
+          action,
+          cycleId: 'CYCLE-001',
+          idempotencyKey: initial.binding.idempotencyKey,
+          lease: session.lease,
+          ...(action === 'record'
+            ? {
+                role: 'strategy-finance',
+                stdin: JSON.stringify({
+                  outcome: 'quiet',
+                  proposals: [],
+                  gaps: [],
+                  conflicts: [],
+                }),
+              }
+            : {}),
+        }),
+      ).rejects.toMatchObject({ code: 'E_OPERATE_STATE_INVALID' });
+    }
+
+    const retry = await createOperatingAdapterStartHandoff({
+      ...fixture,
+      cycleId: 'CYCLE-001',
+      runtime: 'fixture',
+      phase: 'advisors',
+      roles: ['strategy-finance', 'technology-risk'],
+    });
+    expect(retry.state).toBe('prepare-required');
+    expect(retry.binding.idempotencyKey).not.toBe(initial.binding.idempotencyKey);
+    const restarted = await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      idempotencyKey: retry.binding.idempotencyKey,
+    });
+    expect(restarted).toMatchObject({
+      state: 'prepared',
+      handoff: { state: 'record-required' },
+    });
+  });
+
+  it('recovers valid recorded work after expiry with a fresh lease', async () => {
+    const fixture = await advisingCycle();
+    const initial = await createOperatingAdapterStartHandoff({
+      ...fixture,
+      cycleId: 'CYCLE-001',
+      runtime: 'fixture',
+      phase: 'advisors',
+      roles: ['strategy-finance', 'technology-risk'],
+    });
+    const session = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      idempotencyKey: initial.binding.idempotencyKey,
+    })) as { roles: string[]; lease: string };
+    await operateAdapterLifecycle({
+      ...fixture,
+      action: 'record',
+      cycleId: 'CYCLE-001',
+      idempotencyKey: initial.binding.idempotencyKey,
+      lease: session.lease,
+      role: session.roles[0],
+      stdin: JSON.stringify({
+        outcome: 'quiet',
+        proposals: [],
+        gaps: [],
+        conflicts: [],
+      }),
+    });
+    const sessionPath = join(
+      resolveOperatingPaths(fixture.projectRoot, { localRoot: fixture.localRoot }).advisors,
+      'CYCLE-001.json',
+    );
+    const persisted = JSON.parse(await readFile(sessionPath, 'utf8')) as Record<string, unknown>;
+    await writeFile(
+      sessionPath,
+      `${JSON.stringify({ ...persisted, expiresAt: '2000-01-01T00:00:00.000Z' })}\n`,
+      { mode: 0o600 },
+    );
+
+    const retry = await createOperatingAdapterStartHandoff({
+      ...fixture,
+      cycleId: 'CYCLE-001',
+      runtime: 'fixture',
+      phase: 'advisors',
+      roles: ['strategy-finance', 'technology-risk'],
+    });
+    const recovered = await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      idempotencyKey: retry.binding.idempotencyKey,
+    });
+    expect(recovered).toMatchObject({
+      recordedRoles: [session.roles[0]],
+      state: 'recording',
+      handoff: {
+        state: 'record-required',
+        next: [{ role: session.roles[1] }],
+      },
+    });
+    expect((recovered as { lease: string }).lease).not.toBe(session.lease);
   });
 });

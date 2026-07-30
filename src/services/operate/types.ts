@@ -53,7 +53,7 @@ export interface GuidedQuestion {
 
 export interface GuidedQuestionnaire {
   kind: 'guided-questionnaire';
-  schemaVersion: '1.0.0';
+  schemaVersion: '1.1.0';
   protocolVersion: '1.2.0';
   sessionId: string;
   digest: `sha256:${string}`;
@@ -73,6 +73,43 @@ export interface GuidedQuestionnaire {
   title: string;
   description?: string;
   questions: GuidedQuestion[];
+  submission: {
+    kind: 'guided-answer-submission';
+    version: '1.0.0';
+    schema: 'https://openplanr.dev/schemas/v1.2.0/guided-answer-envelope.schema.json';
+    transport: {
+      kind: 'stdin-json';
+      mediaType: 'application/json';
+      encoding: 'utf-8';
+      maxBytes: 65536;
+      argv: ['planr', 'operate', 'init', '--resume', string, '--stdin', '--json'];
+    };
+    envelope: {
+      fixedFields: Omit<GuidedAnswerEnvelope, 'questionnaireDigest' | 'answers' | 'submittedAt'>;
+      dynamicFields: {
+        questionnaireDigest: {
+          source: 'questionnaire';
+          pointer: '/digest';
+        };
+        submittedAt: {
+          source: 'runtime-clock';
+          format: 'date-time';
+        };
+        answers: {
+          source: 'chosen-values-by-question-id';
+          copyFields: ['questionId', 'questionVersion', 'sensitivity'];
+          omitUnansweredOptional: true;
+          items: Array<{
+            questionId: string;
+            questionVersion: '1.0.0';
+            sensitivity: 'public' | 'internal' | 'sensitive';
+            required: boolean;
+            valueType: 'string' | 'boolean' | 'string-array';
+          }>;
+        };
+      };
+    };
+  };
   createdAt: string;
   expiresAt: string;
 }
@@ -286,7 +323,8 @@ export interface OperatingAdvisorBrief {
     minimum: Record<string, unknown>;
   };
   output: {
-    schema: string;
+    schema: 'operating-advisor-response@1.2.0';
+    jsonSchema: Record<string, unknown>;
     allowedProposalTypes: Array<'finding' | 'decision' | 'data-gap' | 'merge' | 'sequence'>;
     maximumProposals: number;
     maximumOutputBytes: number;
@@ -298,6 +336,59 @@ export interface OperatingAdvisorBrief {
   briefDigest: `sha256:${string}`;
 }
 
+export interface OperatingAdapterMachineAction {
+  id: string;
+  action:
+    | 'adapter.prepare'
+    | 'adapter.record'
+    | 'adapter.finalize'
+    | 'adapter.resume'
+    | 'adapter.cancel'
+    | 'run.continue';
+  effect: OperatingActionEffect;
+  role?: string;
+  argv: string[];
+  dispatch?: {
+    source: 'adapter.prepare-result';
+    rolePackPointer: string;
+    isolation: 'enforced-empty-tools';
+  };
+  stdin?: {
+    kind: 'stdin-json';
+    mediaType: 'application/json';
+    encoding: 'utf-8';
+    maxBytes: 32768;
+    schema: 'https://openplanr.dev/schemas/v1.2.0/operating-advisor-response.schema.json';
+    schemaSource: 'adapter.prepare-result';
+    schemaPointer: string;
+  };
+}
+
+export interface OperatingAdapterHandoff extends ProtocolArtifact<'operating-adapter-handoff'> {
+  phase: 'advisors' | 'chair';
+  state:
+    | 'prepare-required'
+    | 'record-required'
+    | 'finalize-required'
+    | 'continue-required'
+    | 'cancelled';
+  binding: {
+    cycleId: string;
+    evidenceDigest: `sha256:${string}`;
+    runtime: string;
+    idempotencyKey: string;
+    lease: string | null;
+    expiresAt: string | null;
+  };
+  roles: Array<{
+    roleId: string;
+    status: 'awaiting-prepare' | 'pending' | 'recorded';
+    inputDigest: `sha256:${string}` | null;
+  }>;
+  next: OperatingAdapterMachineAction[];
+  recovery: OperatingAdapterMachineAction[];
+}
+
 export type OperateErrorCode =
   | 'E_OPERATE_INTERNAL'
   | 'E_OPERATE_PROJECT_REQUIRED'
@@ -306,6 +397,7 @@ export type OperateErrorCode =
   | 'E_OPERATE_CHARTER_INCOMPLETE'
   | 'E_OPERATE_PATH_ESCAPE'
   | 'E_OPERATE_STATE_INVALID'
+  | 'E_OPERATE_STATE_UNAVAILABLE'
   | 'E_OPERATE_HEAD_DIVERGED'
   | 'E_OPERATE_CHECKPOINT_INVALID'
   | 'E_OPERATE_CYCLE_ACTIVE'
@@ -1082,6 +1174,7 @@ export interface OperateActionResult {
   warnings: string[];
   nextActions: string[];
   actions?: StructuredOperatingAction[];
+  handoff?: OperatingAdapterHandoff;
   questionnaire?: GuidedQuestionnaire;
   data?: unknown;
   preview?: unknown;

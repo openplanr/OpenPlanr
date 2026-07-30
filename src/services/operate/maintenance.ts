@@ -2,8 +2,10 @@ import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypt
 import { mkdir, readdir, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
+  advisorResponseContractDetails,
   assertAdvisorOutputMatchesBrief,
   buildAdvisorOperatingContext,
+  createNativeOperatingRoleResult,
   createOperatingAdvisorPack,
   type OperatingAdvisorPack,
 } from './advisors.js';
@@ -24,6 +26,7 @@ import {
   OPERATE_PROTOCOL_VERSION,
   OPERATE_SCHEMA_VERSION,
   OperateError,
+  type OperatingAdapterHandoff,
   type OperatingAdvisorBrief,
   type OperatingEvidence,
   type OperatingRecoveryRecord,
@@ -37,6 +40,8 @@ interface PrivateAdvisorSession {
   implementation: 'openplanr-operate-adapter';
   cycleId: string;
   evidenceDigest: string;
+  phase: 'advisors' | 'chair';
+  runtime: string;
   lease: string;
   idempotencyKey: string;
   state: 'prepared' | 'recording' | 'finalized' | 'cancelled';
@@ -46,6 +51,61 @@ interface PrivateAdvisorSession {
   roleInputDigests: Record<string, `sha256:${string}`>;
   roleBriefs: Record<string, OperatingAdvisorBrief>;
   rolePacks: Record<string, OperatingAdvisorPack>;
+}
+
+function adapterSessionSummary(
+  session: PrivateAdvisorSession,
+): Omit<PrivateAdvisorSession, 'roleBriefs' | 'rolePacks'> {
+  const { roleBriefs: _roleBriefs, rolePacks: _rolePacks, ...summary } = session;
+  return summary;
+}
+
+async function adapterHandoff(session: PrivateAdvisorSession): Promise<OperatingAdapterHandoff> {
+  const recorded = new Set(session.recordedRoles);
+  const state: OperatingAdapterHandoff['state'] =
+    session.state === 'cancelled'
+      ? 'cancelled'
+      : session.state === 'finalized'
+        ? 'continue-required'
+        : session.roles.some((role) => !recorded.has(role))
+          ? 'record-required'
+          : 'finalize-required';
+  const protocol = await loadOperatingProtocol();
+  const handoff = protocol.createOperatingAdapterHandoff({
+    phase: session.phase,
+    state,
+    cycleId: session.cycleId,
+    evidenceDigest: session.evidenceDigest,
+    runtime: session.runtime,
+    idempotencyKey: session.idempotencyKey,
+    lease: session.lease,
+    expiresAt: session.expiresAt,
+    roles: session.roles.map((role) => ({
+      roleId: role,
+      status: recorded.has(role) ? 'recorded' : 'pending',
+      inputDigest: session.roleInputDigests[role],
+    })),
+  });
+  return protocol.validateOperatingAdapterHandoffBindings(handoff);
+}
+
+function adapterPhase(roles: readonly string[]): 'advisors' | 'chair' {
+  return roles.length === 1 && roles[0] === 'chair' ? 'chair' : 'advisors';
+}
+
+function sameRoleSet(left: readonly string[], right: readonly string[]): boolean {
+  return (
+    left.length === right.length &&
+    [...left].sort().every((role, index) => role === [...right].sort()[index])
+  );
+}
+
+function sessionExpired(session: PrivateAdvisorSession): boolean {
+  return Date.parse(session.expiresAt) <= Date.now();
+}
+
+function retryRunCommand(session: Pick<PrivateAdvisorSession, 'cycleId' | 'runtime'>): string {
+  return `planr operate run --cycle-id ${session.cycleId} --runtime ${session.runtime} --json`;
 }
 
 async function atomicPrivateWrite(target: string, value: unknown): Promise<void> {
@@ -636,7 +696,7 @@ async function persistedAdapterEvidence(
   );
 }
 
-async function persistedAdapterResults(
+export async function readPersistedOperatingRoleResults(
   store: OperatingEventStore,
   cycleId: string,
 ): Promise<OperatingRoleResult[]> {
@@ -671,14 +731,22 @@ async function readAdapterSession(
   cycleId: string,
   localRoot?: string,
 ): Promise<PrivateAdvisorSession> {
-  const session = JSON.parse(
+  const parsed = JSON.parse(
     await readFile(adapterSessionPath(projectRoot, cycleId, localRoot), 'utf8'),
   ) as PrivateAdvisorSession;
-  if (
-    session.implementation !== 'openplanr-operate-adapter' ||
-    Date.parse(session.expiresAt) <= Date.now()
-  ) {
-    throw new OperateError('E_OPERATE_ADVISOR_FAILED', 'Adapter session is invalid or expired.');
+  const session: PrivateAdvisorSession = {
+    ...parsed,
+    phase: parsed.phase ?? adapterPhase(parsed.roles ?? []),
+    runtime: parsed.runtime ?? 'auto',
+  };
+  if (session.implementation !== 'openplanr-operate-adapter') {
+    throw new OperateError('E_OPERATE_ADVISOR_FAILED', 'Adapter session is invalid.');
+  }
+  if (sessionExpired(session)) {
+    throw new OperateError('E_OPERATE_ADVISOR_FAILED', 'Adapter session expired.', {
+      cycleId,
+      recoveryCommand: retryRunCommand(session),
+    });
   }
   return session;
 }
@@ -687,13 +755,111 @@ function assertAdapterBinding(
   session: PrivateAdvisorSession,
   lease: string,
   idempotencyKey: string,
+  evidenceDigest: string | undefined,
 ): void {
-  if (session.lease !== lease || session.idempotencyKey !== idempotencyKey) {
+  if (
+    session.lease !== lease ||
+    session.idempotencyKey !== idempotencyKey ||
+    session.evidenceDigest !== evidenceDigest
+  ) {
     throw new OperateError(
       'E_OPERATE_ADVISOR_ISOLATION',
-      'Adapter lease or idempotency binding does not match the prepared session.',
+      'Adapter evidence, lease, or idempotency binding does not match the prepared session.',
     );
   }
+}
+
+async function assertAdapterCycleBinding(
+  input: {
+    projectRoot: string;
+    cycleId: string;
+    localRoot?: string;
+  },
+  session: PrivateAdvisorSession,
+): Promise<void> {
+  const store = new OperatingEventStore(input.projectRoot, { localRoot: input.localRoot });
+  const state = await store.state();
+  const cycle = state.cycles.find((record) => record.id === input.cycleId);
+  if (!cycle || !['advising', 'blocked'].includes(cycle.state)) {
+    throw new OperateError(
+      'E_OPERATE_STATE_INVALID',
+      `Adapter session requires cycle ${input.cycleId} to remain advising or blocked.`,
+    );
+  }
+  const cycleManifest = cycle as unknown as {
+    producer: { runtime: string };
+  };
+  if (cycleManifest.producer.runtime !== session.runtime) {
+    throw new OperateError(
+      'E_OPERATE_ADVISOR_ISOLATION',
+      'Adapter runtime no longer matches the immutable cycle runtime.',
+    );
+  }
+  const evidence = await persistedAdapterEvidence(store, input.cycleId);
+  if (evidence.fingerprint !== session.evidenceDigest) {
+    throw new OperateError(
+      'E_OPERATE_ADVISOR_ISOLATION',
+      'Adapter evidence no longer matches the committed cycle snapshot.',
+    );
+  }
+}
+
+export async function createOperatingAdapterStartHandoff(input: {
+  projectRoot: string;
+  cycleId: string;
+  evidenceDigest: `sha256:${string}`;
+  runtime: string;
+  phase: 'advisors' | 'chair';
+  roles: string[];
+  localRoot?: string;
+}): Promise<OperatingAdapterHandoff> {
+  const target = adapterSessionPath(input.projectRoot, input.cycleId, input.localRoot);
+  const existing = await readFile(target, 'utf8')
+    .then((raw) => JSON.parse(raw) as PrivateAdvisorSession)
+    .catch(() => null);
+  if (existing) {
+    const normalized: PrivateAdvisorSession = {
+      ...existing,
+      phase: existing.phase ?? adapterPhase(existing.roles ?? []),
+      runtime: existing.runtime ?? 'auto',
+    };
+    const exact =
+      normalized.evidenceDigest === input.evidenceDigest &&
+      normalized.runtime === input.runtime &&
+      normalized.phase === input.phase &&
+      sameRoleSet(normalized.roles, input.roles);
+    if (!sessionExpired(normalized) && normalized.state !== 'cancelled' && exact) {
+      return adapterHandoff(normalized);
+    }
+    if (
+      !sessionExpired(normalized) &&
+      ['prepared', 'recording'].includes(normalized.state) &&
+      !exact
+    ) {
+      throw new OperateError(
+        'E_OPERATE_ADVISOR_ISOLATION',
+        `Cycle ${input.cycleId} already has a different active adapter session.`,
+        { recoveryCommand: retryRunCommand(normalized) },
+      );
+    }
+  }
+  const protocol = await loadOperatingProtocol();
+  const handoff = protocol.createOperatingAdapterHandoff({
+    phase: input.phase,
+    state: 'prepare-required',
+    cycleId: input.cycleId,
+    evidenceDigest: input.evidenceDigest,
+    runtime: input.runtime,
+    idempotencyKey: `native-${input.cycleId}-${input.phase}-${randomBytes(12).toString('hex')}`,
+    lease: null,
+    expiresAt: null,
+    roles: [...new Set(input.roles)].sort().map((roleId) => ({
+      roleId,
+      status: 'awaiting-prepare',
+      inputDigest: null,
+    })),
+  });
+  return protocol.validateOperatingAdapterHandoffBindings(handoff);
 }
 
 export async function operateAdapterLifecycle(input: {
@@ -732,10 +898,6 @@ export async function operateAdapterLifecycle(input: {
         'Adapter prepare requires an advising or blocked cycle.',
       );
     }
-    const existing = await readFile(target, 'utf8')
-      .then((raw) => JSON.parse(raw) as PrivateAdvisorSession)
-      .catch(() => null);
-    if (existing?.idempotencyKey === input.idempotencyKey) return existing;
     const protocol = await loadOperatingProtocol();
     const knownRoles = new Set(
       protocol.listOperatingRoles().map((role) => role.id as OperatingRoleId),
@@ -784,11 +946,66 @@ export async function operateAdapterLifecycle(input: {
         'Adapter evidence digest does not match the committed cycle snapshot.',
       );
     }
+    const phase = adapterPhase(roles);
+    const runtime = (cycle as unknown as { producer: { runtime: string } }).producer.runtime;
+    const existing = await readFile(target, 'utf8')
+      .then((raw) => JSON.parse(raw) as PrivateAdvisorSession)
+      .catch(() => null);
+    let recoverableSession: PrivateAdvisorSession | null = null;
+    if (existing) {
+      const normalized: PrivateAdvisorSession = {
+        ...existing,
+        phase: existing.phase ?? adapterPhase(existing.roles ?? []),
+        runtime: existing.runtime ?? 'auto',
+      };
+      const exact =
+        normalized.cycleId === input.cycleId &&
+        normalized.evidenceDigest === input.evidenceDigest &&
+        normalized.runtime === runtime &&
+        normalized.phase === phase &&
+        sameRoleSet(normalized.roles, roles);
+      if (normalized.idempotencyKey === input.idempotencyKey) {
+        if (!exact) {
+          throw new OperateError(
+            'E_OPERATE_ADVISOR_ISOLATION',
+            'Idempotent adapter prepare does not match its original cycle, evidence, runtime, phase, or role binding.',
+          );
+        }
+        if (sessionExpired(normalized) || normalized.state === 'cancelled') {
+          throw new OperateError(
+            'E_OPERATE_ADVISOR_FAILED',
+            'The prepared adapter session is expired or cancelled; request a fresh CLI-owned handoff.',
+            { recoveryCommand: retryRunCommand(normalized) },
+          );
+        }
+        return { ...normalized, handoff: await adapterHandoff(normalized) };
+      }
+      if (!sessionExpired(normalized) && ['prepared', 'recording'].includes(normalized.state)) {
+        throw new OperateError(
+          'E_OPERATE_ADVISOR_ISOLATION',
+          `Cycle ${input.cycleId} already has an active adapter session with another binding.`,
+          { recoveryCommand: retryRunCommand(normalized) },
+        );
+      }
+      if (
+        normalized.state === 'finalized' &&
+        !(normalized.phase === 'advisors' && phase === 'chair')
+      ) {
+        throw new OperateError(
+          'E_OPERATE_ADVISOR_ISOLATION',
+          `Cycle ${input.cycleId} already finalized its ${normalized.phase} adapter phase.`,
+          { recoveryCommand: retryRunCommand(normalized) },
+        );
+      }
+      if (exact && (sessionExpired(normalized) || normalized.state === 'cancelled')) {
+        recoverableSession = normalized;
+      }
+    }
     const roleEvidence =
       roles[0] === 'chair'
         ? buildChairEvidence(
             baseEvidence,
-            await persistedAdapterResults(store, input.cycleId),
+            await readPersistedOperatingRoleResults(store, input.cycleId),
             new Date().toISOString(),
           )
         : baseEvidence;
@@ -815,32 +1032,60 @@ export async function operateAdapterLifecycle(input: {
       state,
       cycleId: input.cycleId,
     });
-    const rolePacks = Object.fromEntries(
-      await Promise.all(
-        readiness.roles.map(async (role) => [
-          role.roleId,
-          await createOperatingAdvisorPack({
-            cycleId: input.cycleId as string,
-            role,
-            evidence: roleEvidence,
-            context,
-          }),
-        ]),
-      ),
-    ) as Record<string, OperatingAdvisorPack>;
+    const rolePacks =
+      recoverableSession?.rolePacks ??
+      (Object.fromEntries(
+        await Promise.all(
+          readiness.roles.map(async (role) => [
+            role.roleId,
+            await createOperatingAdvisorPack({
+              cycleId: input.cycleId as string,
+              role,
+              evidence: roleEvidence,
+              context,
+            }),
+          ]),
+        ),
+      ) as Record<string, OperatingAdvisorPack>);
     const roleBriefs = Object.fromEntries(
       Object.entries(rolePacks).map(([role, pack]) => [role, pack.roleBrief]),
     );
+    const validRecordedRoles: string[] = [];
+    for (const role of roles) {
+      const prior: OperatingRoleResult | null = await readFile(
+        path.join(path.dirname(target), `${input.cycleId}.${role}.json`),
+        'utf8',
+      )
+        .then((raw) => JSON.parse(raw) as OperatingRoleResult)
+        .catch(() => null);
+      if (
+        prior &&
+        prior.cycleId === input.cycleId &&
+        prior.roleId === role &&
+        prior.inputDigest === rolePacks[role].inputDigest
+      ) {
+        try {
+          await assertOperatingArtifact('operating-role-result', prior);
+          protocol.validateOperatingRoleResultDigest(prior);
+          validRecordedRoles.push(role);
+        } catch {
+          // A stale or invalid machine-local role file is never trusted as a
+          // recovered result; the new session will request that role again.
+        }
+      }
+    }
     const session: PrivateAdvisorSession = {
       implementation: 'openplanr-operate-adapter',
       cycleId: input.cycleId,
       evidenceDigest: input.evidenceDigest,
+      phase,
+      runtime,
       lease: randomBytes(32).toString('base64url'),
       idempotencyKey: input.idempotencyKey,
-      state: 'prepared',
+      state: validRecordedRoles.length > 0 ? 'recording' : 'prepared',
       expiresAt: new Date(Date.now() + 15 * 60 * 1_000).toISOString(),
       roles,
-      recordedRoles: [],
+      recordedRoles: validRecordedRoles.sort(),
       roleBriefs,
       rolePacks,
       roleInputDigests: Object.fromEntries(
@@ -848,20 +1093,60 @@ export async function operateAdapterLifecycle(input: {
       ),
     };
     await atomicPrivateWrite(target, session);
-    return session;
+    return { ...session, handoff: await adapterHandoff(session) };
   }
   if (!input.lease) {
     throw new OperateError('E_OPERATE_ADVISOR_ISOLATION', 'Adapter lease is required.');
   }
   const session = await readAdapterSession(input.projectRoot, input.cycleId, input.localRoot);
-  assertAdapterBinding(session, input.lease, input.idempotencyKey);
-  if (input.action === 'resume') return session;
+  assertAdapterBinding(session, input.lease, input.idempotencyKey, input.evidenceDigest);
+  await assertAdapterCycleBinding(
+    {
+      projectRoot: input.projectRoot,
+      cycleId: input.cycleId,
+      localRoot: input.localRoot,
+    },
+    session,
+  );
+  if (input.action === 'resume') {
+    if (!['prepared', 'recording'].includes(session.state)) {
+      throw new OperateError(
+        'E_OPERATE_STATE_INVALID',
+        `Adapter resume is not valid after the session is ${session.state}.`,
+        { recoveryCommand: retryRunCommand(session) },
+      );
+    }
+    return { ...session, handoff: await adapterHandoff(session) };
+  }
   if (input.action === 'cancel') {
+    if (session.state === 'finalized') {
+      throw new OperateError(
+        'E_OPERATE_STATE_INVALID',
+        'A finalized adapter session cannot be cancelled.',
+        { recoveryCommand: retryRunCommand(session) },
+      );
+    }
+    if (session.state === 'cancelled') {
+      return {
+        session: adapterSessionSummary(session),
+        handoff: await adapterHandoff(session),
+      };
+    }
     const cancelled = { ...session, state: 'cancelled' as const };
     await atomicPrivateWrite(target, cancelled);
-    return cancelled;
+    return {
+      session: adapterSessionSummary(cancelled),
+      handoff: await adapterHandoff(cancelled),
+    };
   }
   if (input.action === 'record') {
+    if (!['prepared', 'recording'].includes(session.state)) {
+      throw new OperateError(
+        'E_OPERATE_STATE_INVALID',
+        `Adapter record is not valid after the session is ${session.state}.`,
+        { recoveryCommand: retryRunCommand(session) },
+      );
+    }
     if (!input.role || !input.stdin) {
       throw new OperateError(
         'E_OPERATE_CONFIG_INVALID',
@@ -874,7 +1159,103 @@ export async function operateAdapterLifecycle(input: {
         `Role ${input.role} was not bound by adapter prepare.`,
       );
     }
-    const result = JSON.parse(input.stdin) as OperatingRoleResult;
+    const currentHandoff = await adapterHandoff(session);
+    const authorizedRecord = currentHandoff.next.find(
+      (action) => action.action === 'adapter.record',
+    );
+    if (!authorizedRecord || authorizedRecord.role !== input.role) {
+      throw new OperateError(
+        'E_OPERATE_ADVISOR_ISOLATION',
+        `Role ${input.role} is not the current serialized adapter record action.`,
+        {
+          expectedRole: authorizedRecord?.role ?? null,
+          recoveryCommand: currentHandoff.recovery
+            .find((action) => action.action === 'adapter.resume')
+            ?.argv.join(' '),
+        },
+      );
+    }
+    const outputLimit = Math.min(32_768, session.roleBriefs[input.role].output.maximumOutputBytes);
+    if (Buffer.byteLength(input.stdin, 'utf8') > outputLimit) {
+      throw new OperateError(
+        'E_OPERATE_ADVISOR_FAILED',
+        `Native advisor response exceeds the ${outputLimit}-byte bound.`,
+        {
+          ...advisorResponseContractDetails(session.roleBriefs[input.role]),
+          recoveryCommand: retryRunCommand(session),
+        },
+      );
+    }
+    let submitted: unknown;
+    try {
+      submitted = JSON.parse(input.stdin) as unknown;
+    } catch {
+      throw new OperateError(
+        'E_OPERATE_ADVISOR_FAILED',
+        'Native advisor response must be one valid JSON document.',
+        {
+          ...advisorResponseContractDetails(session.roleBriefs[input.role]),
+          recoveryCommand: retryRunCommand(session),
+        },
+      );
+    }
+    const submittedRecord =
+      submitted && typeof submitted === 'object' ? (submitted as Record<string, unknown>) : {};
+    let result: OperatingRoleResult;
+    if (submittedRecord.kind === 'operating-role-result') {
+      throw new OperateError(
+        'E_OPERATE_ADVISOR_FAILED',
+        'Native advisors must submit only the compact response contract; OpenPlanr owns canonical result metadata.',
+        {
+          ...advisorResponseContractDetails(session.roleBriefs[input.role]),
+          recoveryCommand: retryRunCommand(session),
+        },
+      );
+    } else {
+      const submittedProposals = Array.isArray(submittedRecord.proposals)
+        ? submittedRecord.proposals
+        : [];
+      const submittedText = [
+        ...submittedProposals.flatMap((proposal, index) => {
+          if (!proposal || typeof proposal !== 'object' || Array.isArray(proposal)) return [];
+          const record = proposal as Record<string, unknown>;
+          return ['title', 'problem', 'proposal'].map((field) => ({
+            location: `proposals.${index}.${field}`,
+            value: record[field],
+          }));
+        }),
+        ...(Array.isArray(submittedRecord.gaps) ? submittedRecord.gaps : []).map(
+          (value, index) => ({ location: `gaps.${index}`, value }),
+        ),
+        ...(Array.isArray(submittedRecord.conflicts) ? submittedRecord.conflicts : []).map(
+          (value, index) => ({ location: `conflicts.${index}`, value }),
+        ),
+      ];
+      for (const field of submittedText) {
+        if (typeof field.value === 'string' && containsSecret(field.value)) {
+          throw new OperateError(
+            'E_OPERATE_SECRET_DETECTED',
+            `Native advisor response contains a secret at ${field.location}; nothing was persisted.`,
+            { roleId: input.role, field: field.location },
+          );
+        }
+      }
+      try {
+        result = await createNativeOperatingRoleResult({
+          pack: session.rolePacks[input.role],
+          response: submitted,
+          runtime: session.runtime,
+        });
+      } catch (error) {
+        if (error instanceof OperateError && error.code === 'E_OPERATE_ADVISOR_FAILED') {
+          throw new OperateError(error.code, error.message, {
+            ...error.details,
+            recoveryCommand: retryRunCommand(session),
+          });
+        }
+        throw error;
+      }
+    }
     await assertOperatingArtifact('operating-role-result', result);
     // The structured provider path runs every proposal's free text through
     // sanitizeGeneratedPlainText before it is persisted. Native runtimes hand
@@ -954,7 +1335,41 @@ export async function operateAdapterLifecycle(input: {
       recordedRoles: [...new Set([...session.recordedRoles, input.role])].sort(),
     };
     await atomicPrivateWrite(target, updated);
-    return { recorded: input.role, session: updated };
+    return {
+      recorded: input.role,
+      result,
+      session: adapterSessionSummary(updated),
+      handoff: await adapterHandoff(updated),
+    };
+  }
+  if (session.state === 'cancelled') {
+    throw new OperateError(
+      'E_OPERATE_STATE_INVALID',
+      'A cancelled adapter session cannot be finalized.',
+      { recoveryCommand: retryRunCommand(session) },
+    );
+  }
+  if (session.state === 'finalized') {
+    const summaries = await Promise.all(
+      session.recordedRoles.map((role) =>
+        readFile(path.join(path.dirname(target), `${input.cycleId}.${role}.json`), 'utf8').then(
+          (raw) => {
+            const result = JSON.parse(raw) as OperatingRoleResult;
+            return {
+              roleId: result.roleId,
+              outcome: result.outcome,
+              inputDigest: result.inputDigest,
+              resultDigest: result.resultDigest,
+            };
+          },
+        ),
+      ),
+    );
+    return {
+      session: adapterSessionSummary(session),
+      results: summaries,
+      handoff: await adapterHandoff(session),
+    };
   }
   const missingRoles = session.roles.filter((role) => !session.recordedRoles.includes(role));
   if (missingRoles.length > 0) {
@@ -998,7 +1413,7 @@ export async function operateAdapterLifecycle(input: {
     async (lock) => {
       let head = initial.eventHead;
       const existing = new Map(
-        (await persistedAdapterResults(store, input.cycleId as string)).map((result) => [
+        (await readPersistedOperatingRoleResults(store, input.cycleId as string)).map((result) => [
           result.roleId,
           result,
         ]),
@@ -1042,5 +1457,14 @@ export async function operateAdapterLifecycle(input: {
   );
   const finalized: PrivateAdvisorSession = { ...session, state: 'finalized' };
   await atomicPrivateWrite(target, finalized);
-  return { session: finalized, results };
+  return {
+    session: adapterSessionSummary(finalized),
+    results: results.map((result) => ({
+      roleId: result.roleId,
+      outcome: result.outcome,
+      inputDigest: result.inputDigest,
+      resultDigest: result.resultDigest,
+    })),
+    handoff: await adapterHandoff(finalized),
+  };
 }

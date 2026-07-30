@@ -1232,22 +1232,17 @@ export async function collectOperatingEvidence(
         );
         continue;
       }
-      throw new OperateError(
-        'E_OPERATE_SECRET_DETECTED',
-        `Evidence candidate ${diagnostic.candidateId} requires safe review before advisors can run.`,
-        {
-          candidateId: diagnostic.candidateId,
-          source: diagnostic.source,
-          componentId: diagnostic.componentId,
-          ...(diagnostic.location ? { location: diagnostic.location } : {}),
-          ...(diagnostic.line ? { line: diagnostic.line } : {}),
-          ruleId: diagnostic.ruleId,
-          category: diagnostic.category,
-          contentDigest: diagnostic.contentDigest,
-          projectHead: diagnostic.projectHead,
-          valueDisclosed: false,
-          recoveryCommand: `planr operate evidence diagnose ${diagnostic.candidateId} --json`,
-        },
+      // Quarantine the item instead of aborting the entire evidence snapshot.
+      // The immutable role-filtered packs never receive its bytes. Readiness
+      // evaluation below decides whether enough eligible evidence remains for
+      // each lens; an affected lens becomes not_evaluated with a governed gap
+      // rather than preventing unrelated lenses from producing useful work.
+      warnings.push(
+        [
+          `Evidence candidate ${diagnostic.candidateId} was quarantined`,
+          `(${diagnostic.category}); its value was not persisted or dispatched.`,
+          `Inspect with: planr operate evidence diagnose ${diagnostic.candidateId} --json`,
+        ].join(' '),
       );
     }
   }

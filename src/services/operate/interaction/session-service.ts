@@ -26,6 +26,29 @@ export interface GuidedSessionBindings {
 
 const SESSION_ID = /^GIS-[A-Za-z0-9._-]{8,128}$/;
 const execFileAsync = promisify(execFile);
+const STATE_WRITE_ERROR_CODES = new Set([
+  'EACCES',
+  'EDQUOT',
+  'ENOSPC',
+  'ENOTDIR',
+  'EPERM',
+  'EROFS',
+]);
+
+function guidedStateWriteError(error: unknown): OperateError | null {
+  const code = (error as NodeJS.ErrnoException | undefined)?.code;
+  if (!code || !STATE_WRITE_ERROR_CODES.has(code)) return null;
+  return new OperateError(
+    'E_OPERATE_STATE_UNAVAILABLE',
+    'Operating Board cannot write its machine-local guided-session state. Grant the active runtime sandbox write access to OPENPLANR_STATE_ROOT (or the default ~/.planr state root), then retry.',
+    {
+      stateClass: 'machine-local',
+      requiredPermission: 'write',
+      platformCode: code,
+      recoveryCommand: 'planr operate init --json',
+    },
+  );
+}
 
 export function createGuidedSessionId(): string {
   return `GIS-${randomBytes(18).toString('base64url')}`;
@@ -135,19 +158,25 @@ async function atomicSessionWrite(
   localRoot?: string,
 ): Promise<void> {
   await validateSession(session);
-  const target = sessionPath(projectRoot, session.sessionId, localRoot);
-  await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
-  const raw = `${canonicalize(session)}\n`;
-  const key = await loadOrCreateSessionKey(projectRoot, localRoot);
-  const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
-  const macTarget = sessionMacPath(projectRoot, session.sessionId, localRoot);
-  const macTemporary = `${macTarget}.${process.pid}.${randomUUID()}.tmp`;
-  await writeFile(temporary, raw, { mode: 0o600, flag: 'wx' });
-  await writeFile(macTemporary, `${sessionMac(raw, key)}\n`, { mode: 0o600, flag: 'wx' });
-  await rename(temporary, target);
-  await rename(macTemporary, macTarget);
-  await chmod(target, 0o600);
-  await chmod(macTarget, 0o600);
+  try {
+    const target = sessionPath(projectRoot, session.sessionId, localRoot);
+    await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+    const raw = `${canonicalize(session)}\n`;
+    const key = await loadOrCreateSessionKey(projectRoot, localRoot);
+    const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
+    const macTarget = sessionMacPath(projectRoot, session.sessionId, localRoot);
+    const macTemporary = `${macTarget}.${process.pid}.${randomUUID()}.tmp`;
+    await writeFile(temporary, raw, { mode: 0o600, flag: 'wx' });
+    await writeFile(macTemporary, `${sessionMac(raw, key)}\n`, { mode: 0o600, flag: 'wx' });
+    await rename(temporary, target);
+    await rename(macTemporary, macTarget);
+    await chmod(target, 0o600);
+    await chmod(macTarget, 0o600);
+  } catch (error) {
+    const normalized = guidedStateWriteError(error);
+    if (normalized) throw normalized;
+    throw error;
+  }
 }
 
 export async function createGuidedSession(input: {

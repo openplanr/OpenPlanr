@@ -5,6 +5,24 @@ import { describe, expect, it } from 'vitest';
 import { executeOperateAction } from '../../src/services/operate/index.js';
 
 describe('operate runtime-neutral facade', () => {
+  it('reports the effective isolated state root during inspection', async () => {
+    const projectRoot = await mkdtemp(join(tmpdir(), 'openplanr-operate-inspect-'));
+    const localRoot = await mkdtemp(join(tmpdir(), 'openplanr-operate-state-'));
+    const result = await executeOperateAction({
+      action: 'inspect',
+      interactive: false,
+      options: { json: true, localRoot },
+      projectRoot,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        machineLocalState: expect.stringContaining(join(localRoot, 'operate')),
+      },
+    });
+  });
+
   it('uses the documented invalid-invocation exit class', async () => {
     await expect(
       executeOperateAction({

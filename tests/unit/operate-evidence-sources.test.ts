@@ -313,6 +313,29 @@ describe('Operating Board evidence sources', () => {
           writeBoundary: 'none',
         }),
       });
+      await expect(
+        executeOperateAction({
+          action: 'sources.test',
+          projectRoot,
+          interactive: false,
+          arguments: {},
+          options: { json: true },
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        message: '1 configured evidence source test(s) passed.',
+        data: {
+          healthy: true,
+          configuredSources: ['file-import'],
+          results: [
+            expect.objectContaining({
+              healthy: true,
+              observation: 'files:1',
+              writeBoundary: 'none',
+            }),
+          ],
+        },
+      });
     } finally {
       if (previousStateRoot === undefined) delete process.env.OPENPLANR_STATE_ROOT;
       else process.env.OPENPLANR_STATE_ROOT = previousStateRoot;
@@ -366,6 +389,46 @@ describe('Operating Board evidence sources', () => {
     expect(first.items[0]?.summary).toContain('Remote issue version 1');
     expect(second.items[0]?.summary).toContain('Remote issue version 2');
     expect(first.fingerprint).not.toBe(second.fingerprint);
+  });
+
+  it('redacts one secret-bearing item without blocking eligible repository evidence', async () => {
+    const projectRoot = await createGitProject();
+    const localRoot = await temporaryDirectory('openplanr-operate-quarantine-local-');
+    await writeFile(
+      join(projectRoot, 'unsafe.ts'),
+      'export const token = "npm_abcdefghijklmnopqrstuvwxyz0123456789";\n',
+    );
+    await writeFile(
+      join(projectRoot, 'architecture.ts'),
+      'export const architecture = "bounded native operating packs";\n',
+    );
+    await execFileAsync('git', ['add', 'unsafe.ts', 'architecture.ts'], { cwd: projectRoot });
+    await execFileAsync('git', ['commit', '--quiet', '-m', 'quarantine fixture'], {
+      cwd: projectRoot,
+    });
+    const workspace = await buildWorkspaceManifest(projectRoot, [], {
+      localRoot,
+      persistRoots: true,
+      capturedAt: '2026-07-28T10:00:00.000Z',
+    });
+
+    const evidence = await collectOperatingEvidence({
+      projectRoot,
+      localRoot,
+      cycleId: 'CYCLE-001',
+      workspace,
+      providers: ['repository'],
+      sensitivityCeiling: 'internal',
+      budgets: budgets(),
+      now: new Date('2026-07-28T10:01:00.000Z'),
+    });
+
+    expect(evidence.items.some((item) => item.location.endsWith('/architecture.ts'))).toBe(true);
+    const unsafe = evidence.items.find((item) => item.location.endsWith('/unsafe.ts'));
+    expect(unsafe).toBeDefined();
+    expect(unsafe?.summary).toContain('[REDACTED_TOKEN]');
+    expect(evidence.warnings).toEqual([]);
+    expect(JSON.stringify(evidence)).not.toContain('npm_');
   });
 
   it('fails closed when a tracked repository file is a symlink escape', async () => {

@@ -106,6 +106,7 @@ describe('guided question sessions', () => {
         projectRoot: stale.projectRoot,
         localRoot: stale.localRoot,
         sessionId: stale.session.sessionId,
+        now: new Date(createdAt),
       }),
     ).rejects.toMatchObject({ code: 'E_OPERATE_SESSION_STALE' });
 
@@ -123,6 +124,7 @@ describe('guided question sessions', () => {
         localRoot: tampered.localRoot,
         sessionId: tampered.session.sessionId,
         bindings: tampered.bindings,
+        now: new Date(createdAt),
       }),
     ).rejects.toMatchObject({ code: 'E_OPERATE_SESSION_INVALID' });
   });

@@ -259,9 +259,16 @@ Open an issue at [github.com/openplanr/OpenPlanr/issues](https://github.com/open
 - Your OS
 # Operating Board evidence quarantine
 
-`E_OPERATE_SECRET_DETECTED` means an evidence item could not be made safe for an
-advisor pack. OpenPlanr does not print the matched value or an excerpt. The
-failure includes one opaque candidate ID and an exact recovery command:
+OpenPlanr first redacts a detected value and keeps the sanitized evidence when
+that result is safe. If one item cannot be made safe, it is quarantined instead
+of aborting the complete cycle. Unrelated evidence and ready executive lenses
+continue; an affected lens becomes `not_evaluated` only when its declared
+minimum evidence is no longer available.
+
+`E_OPERATE_SECRET_DETECTED` is returned when required evidence remains blocked
+or when a directly supplied value cannot be made safe. OpenPlanr does not print
+the matched value or an excerpt. The warning or failure includes one opaque
+candidate ID and an exact recovery command:
 
 ```bash
 planr operate evidence diagnose EVC-... --json
