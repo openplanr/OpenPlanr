@@ -68,10 +68,17 @@ if (existsSync(operateSkillPath)) {
   }
   for (const required of [
     'public `planr operate` command surface',
+    '## Default workflow',
+    'planr operate inspect --json',
+    'When `data.initialized` is `true`, do not reopen initialization',
+    'bare skill invocation as the explicit request for one cycle',
+    'structured chat one\nquestion at a time',
+    'never dump the whole questionnaire as a form',
+    'planr operate report',
     'schema-valid `questionnaire` and `actions`',
     'preserving question IDs and declared',
     'explicit request to **run one Operating Board cycle**',
-    'Do not ask the user to paste or manually rerun',
+    'the user to paste or manually rerun',
     '`planr operate evidence diagnose …`',
     'Never trial-edit sources',
     'rolePack.roleBrief.output.jsonSchema',

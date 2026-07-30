@@ -108,7 +108,7 @@ test('guided conversation fixtures preserve every stop boundary', () => {
   for (const fixture of fixtures) {
     if (fixture.result.action === 'input_required') {
       assert.match(skill, /Present questions verbatim/);
-      assert.match(skill, /bounded stdin\/resume lifecycle/);
+      assert.match(skill, /bounded\s+stdin\/resume lifecycle/);
       assert.match(skill, /submission\.envelope\.fixedFields/);
       assert.match(skill, /answers\.copyFields/);
       assert.match(skill, /required.*valueType.*constraints|constraints.*required.*valueType/s);
@@ -122,7 +122,7 @@ test('guided conversation fixtures preserve every stop boundary', () => {
     if (fixture.result.actions?.some((action) => action.requiresConfirmation)) {
       if (fixture.expected === 'continue-native-cycle') {
         assert.match(skill, /explicit request to \*\*run one Operating Board cycle\*\*/);
-        assert.match(skill, /Do not ask the user to paste or manually rerun/);
+        assert.match(skill, /Do not ask\s+the user to paste or manually rerun/);
         assert.match(skill, /top-level `handoff` as the only lifecycle command/);
         assert.match(skill, /`handoff\.next\[\]\.argv`/);
         assert.match(skill, /`handoff\.recovery` only after a\s+failed current action/);
@@ -137,8 +137,23 @@ test('guided conversation fixtures preserve every stop boundary', () => {
   }
 });
 
+test('bare invocation runs one complete cycle while explicit read-only commands stay scoped', () => {
+  assert.match(skill, /## Default workflow/);
+  assert.match(skill, /planr operate inspect --json/);
+  assert.match(skill, /When `data\.initialized` is `true`, do not reopen initialization/);
+  assert.match(skill, /bare skill invocation as the explicit request for one cycle/);
+  assert.match(skill, /CEO, CTO,\s+CPO, CMO, COO, and Chair/);
+  assert.match(skill, /planr operate report/);
+  assert.match(skill, /perform only that command/);
+});
+
 test('the skill contains no copied question/default logic or unsafe command routing', () => {
-  assert.match(skill, /Start guided setup with exactly `planr operate init --json`/);
+  assert.match(
+    skill,
+    /Start guided setup with exactly `planr operate init --json` only after inspect/,
+  );
+  assert.match(skill, /structured chat one\s+question at a time/);
+  assert.match(skill, /never dump the whole questionnaire as a form/);
   assert.doesNotMatch(skill, /planr operate init --guided/);
   assert.match(skill, /rolePack\.roleBrief\.output\.jsonSchema/);
   assert.match(skill, /operating-advisor-response@1\.2\.0/);

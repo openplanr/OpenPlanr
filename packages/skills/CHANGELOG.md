@@ -2,6 +2,19 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.18.1] — 2026-07-30
+
+### Fixed
+
+- A bare `planr-operate` invocation now runs the complete native Operating
+  Board cycle and stops at its human review gate; users no longer need to write
+  the orchestration prompt or relay adapter commands.
+- Initialization runs only when inspection reports it missing. Guided fallback
+  prefers native questions or Planr's attached terminal and asks at most one
+  structured chat question at a time.
+- Runtime guidance aligns with `planr-pipeline@0.32.1` and
+  `openplanr@1.16.1`.
+
 ## [1.18.0] — 2026-07-30
 
 ### Changed
