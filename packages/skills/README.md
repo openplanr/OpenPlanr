@@ -117,14 +117,16 @@ the safe default; it never writes project files into your home directory.
 
 ### Claude Code
 
-Two commands — the first registers this repo as a plugin marketplace, the second installs the OpenPlanr plugin from it:
+Use the official OpenPlanr marketplace:
 
 ```bash
-/plugin marketplace add openplanr/skills
-/plugin install openplanr@openplanr-skills
+/plugin marketplace add openplanr/marketplace
+/plugin install openplanr@openplanr
 ```
 
-Alternatively, after adding the marketplace, run `/plugin` to browse and install interactively. Claude Code activates the skill automatically when it detects planning intent.
+`planr setup` manages this installation when Claude Code is selected. After an
+update, restart Claude Code so it reloads the new plugin manifest and skills.
+Alternatively, run `/plugin` to browse and install interactively.
 
 ### Claude.ai (Pro, Max, Team, Enterprise)
 

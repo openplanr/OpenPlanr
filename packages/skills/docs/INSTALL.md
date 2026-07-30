@@ -11,14 +11,19 @@ Three channels, each self-contained. Pick the one that matches your environment.
 ### Two-step install
 
 ```bash
-/plugin marketplace add openplanr/skills
-/plugin install openplanr@openplanr-skills
+/plugin marketplace add openplanr/marketplace
+/plugin install openplanr@openplanr
 ```
 
-The first command registers this repo as a plugin marketplace. The second installs
+The first command registers the official ecosystem marketplace. The second installs
 the OpenPlanr plugin from that marketplace. It includes the unified planner plus
 focused artifact review, PLAN, Design, SHIP, dashboard, sync, and doctor skills.
 Claude Code activates the relevant skill from the user's intent.
+
+When installed through the OpenPlanr CLI, `planr setup` performs the same
+marketplace registration and updates stale Claude plugins after showing a
+confirmed preview. Restart Claude Code after an update so the runtime reloads
+the plugin.
 
 ### Verify
 
@@ -155,8 +160,8 @@ If a trigger fails, please [open an issue](https://github.com/openplanr/skills/i
 ### Claude Code
 
 ```
-/plugin uninstall openplanr@openplanr-skills
-/plugin marketplace remove openplanr-skills
+/plugin uninstall openplanr@openplanr
+/plugin marketplace remove openplanr
 ```
 
 ### Claude.ai

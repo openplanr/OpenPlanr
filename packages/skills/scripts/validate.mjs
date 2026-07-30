@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const marketplace = JSON.parse(readFileSync(join(root, '.claude-plugin', 'marketplace.json'), 'utf8'));
+const pluginManifestPath = join(root, '.claude-plugin', 'plugin.json');
+const pluginManifest = existsSync(pluginManifestPath)
+  ? JSON.parse(readFileSync(pluginManifestPath, 'utf8'))
+  : null;
 const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const names = new Set();
 const errors = [];
@@ -24,6 +28,29 @@ if (packageJson.version !== marketplace.metadata?.version) {
   errors.push(
     `Version drift: package.json=${packageJson.version} marketplace=${marketplace.metadata?.version}`,
   );
+}
+
+if (!pluginManifest) {
+  errors.push('Missing stable Claude plugin manifest: .claude-plugin/plugin.json');
+} else {
+  if (pluginManifest.$schema !== 'https://json.schemastore.org/claude-code-plugin.json') {
+    errors.push('Claude plugin manifest has an invalid $schema');
+  }
+  if (pluginManifest.name !== 'openplanr') {
+    errors.push(`Claude plugin identity drift: expected openplanr, got ${pluginManifest.name}`);
+  }
+  if (pluginManifest.version !== packageJson.version) {
+    errors.push(
+      `Version drift: package.json=${packageJson.version} plugin.json=${pluginManifest.version}`,
+    );
+  }
+  if (pluginManifest.repository !== 'https://github.com/openplanr/skills') {
+    errors.push(`Claude plugin repository drift: ${pluginManifest.repository}`);
+  }
+}
+
+if ((marketplace.plugins ?? []).length !== 1 || marketplace.plugins[0]?.name !== 'openplanr') {
+  errors.push('Marketplace must expose exactly one stable openplanr plugin identity');
 }
 
 for (const plugin of marketplace.plugins ?? []) {
