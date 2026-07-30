@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  normalizeOperatingAdapter,
   resolveGuidedOperatingBoard,
   resolveOperatingBoard,
 } from './operating-capability.mjs';
@@ -45,7 +46,10 @@ const ecosystemPaths = {
 };
 const operationPath = join(repo, 'examples', 'ecosystem-operation.json');
 const releaseOperation = existsSync(operationPath) ? readJson(operationPath) : null;
-const guidedOperationPath = join(repo, 'examples', 'guided-operate-operation.json');
+const nativeOperationPath = join(repo, 'examples', 'native-operate-operation.json');
+const guidedOperationPath = existsSync(nativeOperationPath)
+  ? nativeOperationPath
+  : join(repo, 'examples', 'guided-operate-operation.json');
 const guidedReleaseOperation = existsSync(guidedOperationPath)
   ? readJson(guidedOperationPath)
   : null;
@@ -102,20 +106,8 @@ const skillsVersion = guidedReleaseVerified
 // of whether the guided capability has passed finalization.
 const marketplaceVersion = marketplacePackage.version;
 const candidateAdapters = adapterRegistry
-  ? adapterRegistry.adapters.map((adapter) => ({
-      runtime: adapter.id,
-      version: adapter.version,
-      capabilityLevel: adapter.capabilityLevel,
-      pipelineRange: `^${candidatePipelineVersion}`,
-      operatingBoard: {
-        declared: Boolean(
-          adapter.capabilities?.operatingBoard && adapter.entrypoints?.operate,
-        ),
-        available: false,
-        entrypoint: adapter.entrypoints?.operate ?? null,
-      },
-      interactiveQuestions: adapter.capabilities?.interactiveQuestions ?? 'none',
-    }))
+  ? adapterRegistry.adapters.map((adapter) =>
+      normalizeOperatingAdapter(adapter, candidatePipelineVersion))
   : current.adapters;
 let resolvedAdapters = guidedReleaseVerified ? candidateAdapters : current.adapters;
 

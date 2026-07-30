@@ -76,7 +76,6 @@ jobs:
         env:
           OPENPLANR_ECOSYSTEM_ROOT: ${{ github.workspace }}
         run: |
-          npm --prefix marketplace run generate
           npm --prefix marketplace run check
           npm --prefix marketplace test
 

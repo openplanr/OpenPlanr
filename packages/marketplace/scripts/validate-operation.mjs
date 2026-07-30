@@ -111,15 +111,18 @@ export function validateOperation(operation) {
   if (operation?.protocolVersion !== '1.2.0') {
     errors.push('protocolVersion must be 1.2.0');
   }
-  if (!/^OPERATE-SPEC-[0-9]{3,}$/.test(operation?.operationId ?? '')) {
-    errors.push('operationId must use OPERATE-SPEC-NNN');
+  const operationIdMatch = /^OPERATE-(SPEC-[0-9]{3,})(?:-R[1-9][0-9]*)?$/.exec(
+    operation?.operationId ?? '',
+  );
+  if (!operationIdMatch) {
+    errors.push('operationId must use OPERATE-SPEC-NNN or OPERATE-SPEC-NNN-RN');
   }
   if (!digestPattern.test(operation?.operationDigest ?? '')) {
     errors.push('operationDigest must be sha256');
   } else if (operation.operationDigest !== calculateOperationDigest(operation)) {
     errors.push('operationDigest does not match the canonical operation intent');
   }
-  const operationSpecId = operation?.operationId?.replace(/^OPERATE-/, '');
+  const operationSpecId = operationIdMatch?.[1];
   if (
     !/^SPEC-[0-9]{3,}$/.test(operation?.umbrellaSpecId ?? '')
     || operation.umbrellaSpecId !== operationSpecId

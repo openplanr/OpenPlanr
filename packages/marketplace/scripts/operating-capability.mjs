@@ -22,6 +22,25 @@ export function atLeast(actual, minimum) {
   return true;
 }
 
+export function normalizeOperatingAdapter(adapter, pipelineVersion) {
+  return {
+    runtime: adapter.id,
+    version: adapter.version,
+    capabilityLevel: adapter.capabilityLevel,
+    pipelineRange: `^${pipelineVersion}`,
+    operatingBoard: {
+      declared: Boolean(
+        adapter.capabilities?.operatingBoard && adapter.entrypoints?.operate,
+      ),
+      available: false,
+      entrypoint: adapter.entrypoints?.operate ?? null,
+    },
+    interactiveQuestions: adapter.capabilities?.interactiveQuestions ?? 'none',
+    operatingAdvisorDispatch:
+      adapter.capabilities?.operatingAdvisorDispatch ?? null,
+  };
+}
+
 export function resolveOperatingBoard({
   protocolVersion,
   pipelineVersion,
@@ -86,6 +105,10 @@ export function resolveGuidedOperatingBoard({
   const certifiedAdapters = adapters.filter(({ runtime }) => certifiedAdapterIds.has(runtime));
   const interactive = (adapter) =>
     ['native', 'chat', 'terminal'].includes(adapter.interactiveQuestions);
+  const dispatchDeclared = (adapter) =>
+    ['native-isolated', 'native-bounded', 'structured-provider'].includes(
+      adapter.operatingAdvisorDispatch,
+    );
   const readiness = {
     protocol: atLeast(protocolVersion, '1.2.0'),
     pipeline: atLeast(pipelineVersion, '0.31.0') && guidedContractsPresent,
@@ -94,7 +117,9 @@ export function resolveGuidedOperatingBoard({
     marketplace: atLeast(marketplaceVersion, '1.2.0'),
     adapters:
       certifiedAdapters.length === certifiedAdapterIds.size
-      && certifiedAdapters.every(interactive),
+      && certifiedAdapters.every(
+        (adapter) => interactive(adapter) && dispatchDeclared(adapter),
+      ),
     release: releaseVerified === true,
   };
   const missing = Object.entries(readiness)
@@ -113,6 +138,12 @@ export function resolveGuidedOperatingBoard({
     certifiedRuntimes: missing.length
       ? []
       : certifiedAdapters.map(({ runtime }) => runtime),
+    advisorDispatch: Object.fromEntries(
+      certifiedAdapters.map(({ runtime, operatingAdvisorDispatch }) => [
+        runtime,
+        operatingAdvisorDispatch,
+      ]),
+    ),
     missing,
   };
 }

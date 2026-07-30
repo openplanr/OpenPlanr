@@ -6,6 +6,7 @@ on:
       - 'ecosystem.json'
       - 'examples/ecosystem-operation.json'
       - 'examples/guided-operate-operation.json'
+      - 'examples/native-operate-operation.json'
       - 'operations/**'
       - 'schemas/ecosystem-operation.schema.json'
       - 'scripts/generate-ecosystem.mjs'

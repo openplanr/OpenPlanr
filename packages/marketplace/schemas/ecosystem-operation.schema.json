@@ -40,7 +40,7 @@
     },
     "operationId": {
       "type": "string",
-      "pattern": "^OPERATE-SPEC-[0-9]{3,}$"
+      "pattern": "^OPERATE-SPEC-[0-9]{3,}(?:-R[1-9][0-9]*)?$"
     },
     "operationDigest": {
       "allOf": [
@@ -468,7 +468,7 @@
         },
         "repoLocalSpecId": {
           "type": "string",
-          "pattern": "^OPERATE-SPEC-[0-9]{3,}:(pipeline|cli|skills|marketplace)$"
+          "pattern": "^OPERATE-SPEC-[0-9]{3,}(?:-R[1-9][0-9]*)?:(pipeline|cli|skills|marketplace)$"
         },
         "repoLocalWorkItem": {
           "type": "string",

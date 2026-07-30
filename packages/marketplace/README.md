@@ -41,7 +41,7 @@ Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in t
 
 OpenPlanr Operating Board is certified for claude-code, codex, cursor through `planr operate`.
 
-Resolved component versions: pipeline 0.31.0, CLI 1.15.1, skills 1.17.2, marketplace 1.2.0.
+Resolved component versions: pipeline 0.31.0, CLI 1.15.1, skills 1.17.2, marketplace 1.3.0.
 <!-- operating-capability:end -->
 
 `planr operate` is the recurring evidence-to-decision control plane. It creates
@@ -65,14 +65,23 @@ invocation and resume only after matching planning provenance. A later
 `run --review-only` may observe verified shipment proof and due outcomes, but
 Operating Board never invokes SHIP.
 
+One explicit request to run a cycle may continue its reversible local native
+adapter lifecycle through independent advisors, Chair consolidation, and a
+reviewable result without manual internal commands. Adapter metadata declares
+`native-isolated`, `native-bounded`, or `structured-provider` dispatch.
+`planr operate report` renders the brief plus separate CEO, CTO, CPO, CMO, COO,
+and Chair results as Markdown or strict JSON and includes exact governed
+conversion commands for specs, tasks, and quick tasks. The visual dashboard is
+optional.
+
 ## Guided Operating Board capability
 
 <!-- guided-operating-capability:start -->
-**Resolved status:** `available`
+**Resolved status:** `unavailable`
 
-Guided Operating Board is certified for claude-code, codex, cursor through `planr operate`.
+Guided Operating Board remains withheld. Missing release gates: release.
 
-Candidate component versions: pipeline 0.31.0, CLI 1.15.1, skills 1.17.2, marketplace 1.2.0.
+Candidate component versions: pipeline 0.32.0, CLI 1.16.0, skills 1.18.0, marketplace 1.3.0.
 <!-- guided-operating-capability:end -->
 
 The guided capability lets certified runtimes present CLI-owned questions and
@@ -108,7 +117,11 @@ npm run reconcile:operation -- operations/OPERATE-SPEC-002.json live-state.json
 ```
 
 For the guided release train, use
-`examples/guided-operate-operation.json`. It becomes verified only after
+`examples/guided-operate-operation.json`. Subsequent forward-fix trains preserve
+that verified ledger and use a revisioned operation such as
+`examples/native-operate-operation.json`. A revision suffix identifies a new
+release transaction for the same umbrella specification; it does not rewrite
+the earlier operation. The current operation becomes verified only after
 authoritative PR, commit, tag, npm, tarball, reconciliation, and canary evidence
 all match.
 
@@ -131,8 +144,9 @@ truthfully record its own merge commit or the tag created from that merge:
    `unavailable` while the pipeline, CLI, and skills are released and verified.
    Record their immutable commits, PRs, tags, package/tarball digests, and
    checks in the open ledger.
-2. Merge that still-unavailable ledger PR. Tag and verify marketplace `1.2.0`
-   from the merged revision. This installs the canary workflow on the default
+2. Merge that still-unavailable ledger PR. Tag and verify the operation's
+   marketplace target version from the merged revision. This installs the
+   canary workflow on the default
    branch without exposing the guided capability.
 3. Run the exact-commit canary against the released pipeline, CLI, and skills.
    Preserve its immutable report, then open a follow-up finalization update.

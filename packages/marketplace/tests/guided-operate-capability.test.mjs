@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
+  normalizeOperatingAdapter,
   resolveGuidedOperatingBoard,
 } from '../scripts/operating-capability.mjs';
 import {
@@ -17,12 +18,13 @@ const readJson = async (path) =>
 
 function adapters() {
   return [
-    ['claude-code', 'native'],
-    ['codex', 'native'],
-    ['cursor', 'chat'],
-  ].map(([runtime, interactiveQuestions]) => ({
+    ['claude-code', 'native', 'native-isolated'],
+    ['codex', 'native', 'native-bounded'],
+    ['cursor', 'chat', 'structured-provider'],
+  ].map(([runtime, interactiveQuestions, operatingAdvisorDispatch]) => ({
     runtime,
     interactiveQuestions,
+    operatingAdvisorDispatch,
   }));
 }
 
@@ -75,6 +77,11 @@ test('guided capability opens only after versions, interaction metadata, and rel
     available.certifiedRuntimes.sort(),
     ['claude-code', 'codex', 'cursor'],
   );
+  assert.deepEqual(available.advisorDispatch, {
+    'claude-code': 'native-isolated',
+    codex: 'native-bounded',
+    cursor: 'structured-provider',
+  });
 
   const missingCapability = resolveGuidedOperatingBoard({
     ...input,
@@ -86,27 +93,73 @@ test('guided capability opens only after versions, interaction metadata, and rel
     releaseVerified: true,
   });
   assert.deepEqual(missingCapability.missing, ['adapters']);
+
+  const missingDispatch = resolveGuidedOperatingBoard({
+    ...input,
+    adapters: adapters().map((adapter) => (
+      adapter.runtime === 'codex'
+        ? { ...adapter, operatingAdvisorDispatch: undefined }
+        : adapter
+    )),
+    releaseVerified: true,
+  });
+  assert.deepEqual(missingDispatch.missing, ['adapters']);
 });
 
-test('published compatibility exposes the reconciled forward fix', async () => {
+test('adapter normalization fails closed when native dispatch is undeclared', () => {
+  const normalized = normalizeOperatingAdapter(
+    {
+      id: 'codex',
+      version: '1.0.0',
+      capabilityLevel: 'workflow',
+      capabilities: {
+        operatingBoard: true,
+        interactiveQuestions: 'native',
+      },
+      entrypoints: { operate: '$planr-operate' },
+    },
+    '0.32.0',
+  );
+  assert.equal(normalized.operatingAdvisorDispatch, null);
+  assert.equal(
+    resolveGuidedOperatingBoard({
+      protocolVersion: '1.2.0',
+      pipelineVersion: '0.32.0',
+      cliVersion: '1.16.0',
+      skillsVersion: '1.18.0',
+      marketplaceVersion: '1.3.0',
+      adapters: [
+        normalized,
+        ...adapters().filter(({ runtime }) => runtime !== 'codex'),
+      ],
+      guidedContractsPresent: true,
+      evidenceDiagnosticsPresent: true,
+      releaseVerified: true,
+    }).status,
+    'unavailable',
+  );
+});
+
+test('candidate compatibility withholds the native runtime train before reconciliation', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const guided = ecosystem.capabilities.guidedOperatingBoard;
   assert.equal(ecosystem.capabilities.operatingBoard.status, 'available');
-  assert.equal(guided.status, 'available');
-  assert.equal(guided.releaseOperation.operationId, 'OPERATE-SPEC-003');
-  assert.equal(guided.releaseOperation.state, 'verified');
-  assert.equal(guided.releaseOperation.reconciliation, 'matched');
+  assert.equal(guided.status, 'unavailable');
+  assert.deepEqual(guided.missing, ['release']);
+  assert.equal(guided.releaseOperation.operationId, 'OPERATE-SPEC-003-R2');
+  assert.equal(guided.releaseOperation.state, 'preparing');
+  assert.equal(guided.releaseOperation.reconciliation, 'pending');
   assert.deepEqual(guided.components, {
-    pipeline: '0.31.0',
-    cli: '1.15.1',
-    skills: '1.17.2',
-    marketplace: '1.2.0',
+    pipeline: '0.32.0',
+    cli: '1.16.0',
+    skills: '1.18.0',
+    marketplace: '1.3.0',
   });
   assert.deepEqual(ecosystem.components, {
     cli: { version: '1.15.1', pipelineRange: '^0.31.0' },
     pipeline: { version: '0.31.0', cliRange: '^1.15.1' },
     skills: { version: '1.17.2', cliRange: '^1.15.1' },
-    marketplace: { version: '1.2.0' },
+    marketplace: { version: '1.3.0' },
   });
 });
 
@@ -125,6 +178,25 @@ test('operation schema supports audited lifecycle and forward-fix state', async 
     assert.ok(schema.properties.state.enum.includes(state));
   }
   assert.equal(schema.properties.umbrellaSpecId.pattern, '^SPEC-[0-9]{3,}$');
+  assert.equal(
+    schema.properties.operationId.pattern,
+    '^OPERATE-SPEC-[0-9]{3,}(?:-R[1-9][0-9]*)?$',
+  );
+});
+
+test('a revisioned release transaction preserves its umbrella specification identity', async () => {
+  const operation = await readJson('../examples/guided-operate-operation.json');
+  operation.operationId = 'OPERATE-SPEC-003-R2';
+  for (const participant of operation.participants) {
+    participant.repoLocalSpecId = `OPERATE-SPEC-003-R2:${participant.component}`;
+  }
+  operation.operationDigest = calculateOperationDigest(operation);
+  for (const participant of operation.participants) {
+    for (const approval of participant.approvals) {
+      approval.digest = operation.operationDigest;
+    }
+  }
+  assert.deepEqual(validateOperation(operation), []);
 });
 
 test('guided reconciliation checks the guided capability, not the legacy board gate', async () => {
