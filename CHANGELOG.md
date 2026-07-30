@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.16.1
+
+### Patch Changes
+
+- [`935e43b`](https://github.com/openplanr/OpenPlanr/commit/935e43b2ca4c07b2053a728ae2f90af24a151e6d) Complete bare Planr Operate invocations through the native runtime cycle, prevent Unicode evidence truncation from corrupting state, quarantine advisor-ineligible excerpts before readiness, make cancellation retry-safe, and diagnose stale questionnaire-first runtime skills.
+
 ## 1.16.0
 
 ### Minor Changes
