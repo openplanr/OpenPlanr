@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.15.1
+
+### Patch Changes
+
+- [`656b673`](https://github.com/openplanr/OpenPlanr/commit/656b673f5506c49e18b5ca3759027d6150cd7c9c) Make direct Operating Board initialization previews return a self-contained, digest-bound replay command that applies without restarting the questionnaire, and route focused integration gates through their executable Vitest configuration.
+
 ## 1.15.0
 
 ### Minor Changes
