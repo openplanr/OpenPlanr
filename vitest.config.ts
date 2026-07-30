@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     root: '.',
+    setupFiles: ['tests/setup/isolate-user-state.ts'],
     include: ['tests/**/*.test.ts'],
     // The I/O-heavy operate suites run sequentially via vitest.heavy.config.ts
     // so they cannot saturate this pool. `npm test` runs both configs, so

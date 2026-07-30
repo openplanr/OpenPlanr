@@ -64,6 +64,7 @@ import {
 
 export interface RunOperatingCycleInput {
   projectRoot: string;
+  cycleId?: string;
   focus?: OperatingCycleManifest['focus'];
   depth?: OperatingCycleManifest['depth'];
   runtime?: string;
@@ -573,6 +574,18 @@ export async function runOperatingCycle(
   const initialState = await store.state();
   const current = activeCycle(initialState);
   const timestamp = now.toISOString();
+  if (input.cycleId && current?.id !== input.cycleId) {
+    throw new OperateError(
+      'E_OPERATE_CYCLE_INPUT_CONFLICT',
+      current
+        ? `Operating continuation is bound to ${input.cycleId}, but ${current.id} is active.`
+        : `Operating continuation is bound to ${input.cycleId}, but no resumable cycle is active.`,
+      {
+        expectedCycleId: input.cycleId,
+        activeCycleId: current?.id ?? null,
+      },
+    );
+  }
   if (input.reviewOnly) {
     const persisted = initialState.cycles.at(-1);
     if (!persisted) {
@@ -626,8 +639,16 @@ export async function runOperatingCycle(
   const focus = normalizeFocus(
     input.focus ?? (current?.focus as OperatingCycleManifest['focus'] | undefined),
   );
-  const resolvedRuntime =
+  const currentProducer = current ? (current as unknown as OperatingCycleManifest).producer : null;
+  const requestedRuntime =
     input.runtime && input.runtime !== 'auto' ? input.runtime : preferences.runtime;
+  if (current && requestedRuntime !== 'auto' && requestedRuntime !== currentProducer?.runtime) {
+    throw new OperateError(
+      'E_OPERATE_CYCLE_INPUT_CONFLICT',
+      `Operating cycle ${current.id} is bound to runtime ${currentProducer?.runtime}, not ${requestedRuntime}.`,
+    );
+  }
+  const resolvedRuntime = currentProducer?.runtime ?? requestedRuntime;
   const cycleStart = current
     ? initial.events.find(
         (event) =>
@@ -790,6 +811,13 @@ export async function runOperatingCycle(
       (role) => role.roleId !== 'chair' && !existingByRole.has(role.roleId),
     );
     const runnableMissingNonChair = missingNonChair.filter((role) => role.modelCallAllowed);
+    const skippedMissingNonChair = missingNonChair
+      .filter((role) => !role.modelCallAllowed || role.readiness === 'not_evaluated')
+      .map((role) => ({
+        roleId: role.roleId,
+        gapId: role.gapId as string,
+        reason: role.missingEvidence.join('; '),
+      }));
     if (input.deferAdvisors && runnableMissingNonChair.length > 0) {
       return {
         preview: false,
@@ -815,7 +843,7 @@ export async function runOperatingCycle(
     }
     await assertCycleWorkspace();
     const first =
-      missingNonChair.length > 0
+      runnableMissingNonChair.length > 0
         ? await dispatchOperatingAdvisors({
             cycleId: cycle.id,
             evidence,
@@ -825,7 +853,13 @@ export async function runOperatingCycle(
             depth,
             runtime: resolvedRuntime,
           })
-        : { results: [], modelCalls: 0, blocked: false, skipped: [], failed: [] };
+        : {
+            results: [],
+            modelCalls: 0,
+            blocked: false,
+            skipped: skippedMissingNonChair,
+            failed: [],
+          };
     let roleResults = [
       ...existingRoleResults.filter((result) => result.roleId !== 'chair'),
       ...first.results,

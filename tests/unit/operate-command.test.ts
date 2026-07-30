@@ -71,10 +71,17 @@ function commandPaths(command: Command, prefix: string[] = []): string[] {
   });
 }
 
-function replaceStdin(chunks: Array<string | Buffer>): void {
+function replaceStdin(chunks: Array<string | Buffer>, options: { isTTY?: boolean } = {}): void {
+  const stream = Readable.from(chunks);
+  if (options.isTTY !== undefined) {
+    Object.defineProperty(stream, 'isTTY', {
+      configurable: true,
+      value: options.isTTY,
+    });
+  }
   Object.defineProperty(process, 'stdin', {
     configurable: true,
-    value: Readable.from(chunks),
+    value: stream,
   });
 }
 
@@ -191,6 +198,9 @@ describe('operate command contract', () => {
     const routes = operate?.commands.find((command) => command.name() === 'routes');
     expect(routes?.helpInformation()).toContain('apply');
     expect(routes?.helpInformation()).toContain('rollback');
+    const sources = operate?.commands.find((command) => command.name() === 'sources');
+    expect(sources?.helpInformation()).toContain('test [options] [source]');
+    expect(sources?.helpInformation()).toContain('every configured source');
   });
 
   it('makes --json execution strictly non-interactive and emits one JSON result', async () => {
@@ -277,6 +287,8 @@ describe('operate command contract', () => {
     await parse(program, [
       'operate',
       'run',
+      '--cycle-id',
+      'CYCLE-007',
       '--focus',
       'growth',
       '--focus',
@@ -298,6 +310,7 @@ describe('operate command contract', () => {
       interactive: false,
       options: expect.objectContaining({
         depth: 'deep',
+        cycleId: 'CYCLE-007',
         dryRun: false,
         focus: ['growth', 'technology'],
         json: true,
@@ -386,6 +399,26 @@ describe('operate command contract', () => {
         }),
       }),
     );
+  });
+
+  it('fails immediately when --stdin is launched on an attached terminal without input', async () => {
+    const program = createProgram();
+    replaceStdin([], { isTTY: true });
+
+    await parse(program, ['operate', 'init', '--resume', 'GIS-12345678', '--stdin', '--json']);
+
+    expect(mocks.executeOperateAction).not.toHaveBeenCalled();
+    expect(mocks.displayLine).toHaveBeenCalledOnce();
+    expect(JSON.parse(String(mocks.displayLine.mock.calls[0]?.[0]))).toMatchObject({
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.2.0',
+      ok: false,
+      action: 'init',
+      code: 'E_OPERATE_STDIN_REQUIRED',
+      next: ['Attach one bounded JSON document to stdin before launching this exact command.'],
+      exitCode: 2,
+    });
+    expect(process.exitCode).toBe(2);
   });
 
   it('previews and confirms interactive initialization before writing', async () => {

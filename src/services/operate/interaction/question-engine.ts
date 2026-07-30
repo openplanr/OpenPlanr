@@ -52,6 +52,17 @@ export function operatingInitAnswersFromOptions(
           .map((entry) => entry.trim())
           .filter(Boolean)
       : undefined;
+  const nonEmptyList = (value: unknown): string[] | undefined => {
+    const entries = list(value);
+    return entries?.length ? entries : undefined;
+  };
+  const goals = nonEmptyList(options.goal);
+  const successMetrics = nonEmptyList(options.successMetric);
+  const guardrails = nonEmptyList(options.guardrail);
+  const knownUnknowns = nonEmptyList(options.knownUnknown);
+  const sources = nonEmptyList(options.sources ?? options.source);
+  const evidenceFiles = nonEmptyList(options.evidenceFile);
+  const componentRoots = nonEmptyList(options.components ?? options.component);
   const charter =
     options.charter && typeof options.charter === 'object' && !Array.isArray(options.charter)
       ? (options.charter as OperatingInitAnswers['charter'])
@@ -64,10 +75,10 @@ export function operatingInitAnswersFromOptions(
           ...(typeof options.idealCustomer === 'string'
             ? { idealCustomer: options.idealCustomer }
             : {}),
-          ...(list(options.goal) ? { goals: list(options.goal) } : {}),
-          ...(list(options.successMetric) ? { successMetrics: list(options.successMetric) } : {}),
-          ...(list(options.guardrail) ? { guardrails: list(options.guardrail) } : {}),
-          ...(list(options.knownUnknown) ? { knownUnknowns: list(options.knownUnknown) } : {}),
+          ...(goals ? { goals } : {}),
+          ...(successMetrics ? { successMetrics } : {}),
+          ...(guardrails ? { guardrails } : {}),
+          ...(knownUnknowns ? { knownUnknowns } : {}),
         };
   return {
     ...(typeof options.profile === 'string'
@@ -91,13 +102,9 @@ export function operatingInitAnswersFromOptions(
             options.sensitivityCeiling as OperatingInitAnswers['sensitivityCeiling'],
         }
       : {}),
-    ...(list(options.sources ?? options.source)
-      ? { sources: list(options.sources ?? options.source) }
-      : {}),
-    ...(list(options.evidenceFile) ? { evidenceFiles: list(options.evidenceFile) } : {}),
-    ...(list(options.components ?? options.component)
-      ? { componentRoots: list(options.components ?? options.component) }
-      : {}),
+    ...(sources ? { sources } : {}),
+    ...(evidenceFiles ? { evidenceFiles } : {}),
+    ...(componentRoots ? { componentRoots } : {}),
     ...(Object.keys(charter ?? {}).length > 0 ? { charter } : {}),
   };
 }
@@ -341,9 +348,9 @@ export async function createOperatingInitQuestionnaire(input: {
   const sessionId =
     input.sessionId ??
     `GIS-${canonicalDigest(seed).slice('sha256:'.length, 'sha256:'.length + 24)}`;
-  const withoutDigest = {
+  const questionnaireBase = {
     kind: 'guided-questionnaire' as const,
-    schemaVersion: '1.0.0' as const,
+    schemaVersion: '1.1.0' as const,
     protocolVersion: '1.2.0' as const,
     sessionId,
     questionnaireVersion: '1.0.0' as const,
@@ -368,10 +375,6 @@ export async function createOperatingInitQuestionnaire(input: {
     createdAt,
     expiresAt,
   };
-  const questionnaire: GuidedQuestionnaire = {
-    ...withoutDigest,
-    digest: canonicalDigest(withoutDigest),
-  };
   let validators: Awaited<ReturnType<typeof resolveGuidedInteractionValidators>>;
   try {
     validators = await resolveGuidedInteractionValidators();
@@ -383,6 +386,14 @@ export async function createOperatingInitQuestionnaire(input: {
       error instanceof Error ? error.message : 'Compatible guided validators are unavailable.',
     );
   }
+  const withoutDigest = {
+    ...questionnaireBase,
+    submission: validators.createGuidedAnswerSubmission(questionnaireBase),
+  };
+  const questionnaire: GuidedQuestionnaire = {
+    ...withoutDigest,
+    digest: canonicalDigest(withoutDigest),
+  };
   const errors = validators.validateGuidedQuestionnaire(questionnaire);
   if (errors.length > 0) {
     throw new OperateError(

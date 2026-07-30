@@ -261,11 +261,31 @@ export async function resumeGuidedSession(input: {
     now,
   );
   if (progress.questionnaire.digest !== session.questionnaireDigest) {
-    throw new OperateError(
-      'E_OPERATE_SESSION_INVALID',
-      'Guided session questionnaire digest was changed or is incompatible.',
-      { state: 'invalid', recoveryCommand: 'planr operate init --json' },
-    );
+    const {
+      digest: _currentDigest,
+      submission: _submission,
+      ...currentQuestionnaire
+    } = progress.questionnaire;
+    const legacyDigest = canonicalDigest({
+      ...currentQuestionnaire,
+      schemaVersion: '1.0.0',
+    });
+    if (legacyDigest !== session.questionnaireDigest) {
+      throw new OperateError(
+        'E_OPERATE_SESSION_INVALID',
+        'Guided session questionnaire digest was changed or is incompatible.',
+        { state: 'invalid', recoveryCommand: 'planr operate init --json' },
+      );
+    }
+    const upgraded = guidedSessionState(session, session.state, now, {
+      questionnaireDigest: progress.questionnaire.digest,
+    });
+    await updateGuidedSession({
+      projectRoot: input.projectRoot,
+      session: upgraded,
+      localRoot: input.localRoot,
+    });
+    return { session: upgraded, ...progress };
   }
   return { session, ...progress };
 }

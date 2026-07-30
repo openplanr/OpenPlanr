@@ -104,6 +104,11 @@ planr operate init --resume GIS-... \
   --json
 ```
 
+For JSON-guided initialization, use only the questionnaire's `submission`
+descriptor: copy its fixed envelope fields, add values to the declared typed
+answer items, resolve the questionnaire digest and runtime timestamp as
+specified, then pass one JSON document to its exact argv on bounded stdin.
+
 `--yes` alone, a questionnaire answer, a prior confirmation, or a prose
 acknowledgment cannot apply initialization or authorize a later cycle, route,
 PLAN handoff, or SHIP invocation. Drift invalidates the digest before writes.
@@ -172,6 +177,20 @@ not stop to ask the user to paste `adapter prepare`, `record`, `finalize`, Chair
 or report commands. External provider consent, finding acceptance, route
 application, planning artifacts, PLAN, SHIP, and external effects remain
 separate named actions.
+
+Native run and adapter results include a Protocol-validated
+`operating-adapter-handoff`. Its binding fixes the cycle, evidence digest,
+runtime, lease, idempotency key, and expiry. Runtime integrations execute only
+the exact argv arrays currently present in `handoff.next`; they never derive
+arguments, suffix the idempotency key, reuse a prior-state action, or probe
+internal commands with `--help`. Record actions resolve their role pack and
+schema through absolute pointers into the retained prepare result.
+`handoff.recovery` is used only after a failed current action.
+
+Prepare, record, and cancel are machine-local writes; resume is read-only;
+finalize and the cycle-bound continuation are project writes. Continuation
+re-enters the governed cycle and grants no authority for a later
+provider call, route application, PLAN, SHIP, or external effect.
 
 See [OPERATING_BOARD.md](./OPERATING_BOARD.md) for the complete lifecycle,
 privacy, automation, routing, recovery, and outcome contracts.

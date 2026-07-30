@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import type { GuidedQuestionnaire } from './operate/types.js';
 
 const require = createRequire(import.meta.url);
 
@@ -14,6 +15,7 @@ export interface PipelinePackage {
 }
 
 export interface GuidedInteractionValidators {
+  createGuidedAnswerSubmission(value: unknown): GuidedQuestionnaire['submission'];
   validateGuidedQuestion(value: unknown): unknown[];
   validateGuidedQuestionnaire(value: unknown): unknown[];
   validateGuidedAnswerEnvelope(value: unknown): unknown[];
@@ -93,6 +95,7 @@ export async function resolveGuidedInteractionValidators(): Promise<GuidedIntera
         pathToFileURL(modulePath).href
       )) as Partial<GuidedInteractionValidators>;
       if (
+        typeof loaded.createGuidedAnswerSubmission === 'function' &&
         typeof loaded.validateGuidedQuestion === 'function' &&
         typeof loaded.validateGuidedQuestionnaire === 'function' &&
         typeof loaded.validateGuidedAnswerEnvelope === 'function' &&

@@ -148,6 +148,20 @@ describe('Operating Board question engine', () => {
     );
   });
 
+  it('does not persist Commander empty repeatable defaults as guided answers', () => {
+    expect(
+      operatingInitAnswersFromOptions({
+        source: [],
+        component: [],
+        evidenceFile: [],
+        goal: [],
+        successMetric: [],
+        guardrail: [],
+        knownUnknown: [],
+      }),
+    ).toEqual({});
+  });
+
   it('emits a deterministic Protocol-valid questionnaire for a fixed context', async () => {
     const state = await evaluateOperatingInitQuestions({ context });
     if (state.status !== 'input-required') throw new Error('Expected foundation questions.');
@@ -164,10 +178,46 @@ describe('Operating Board question engine', () => {
     expect(first).toEqual(second);
     expect(first).toMatchObject({
       kind: 'guided-questionnaire',
+      schemaVersion: '1.1.0',
       protocolVersion: '1.2.0',
       stage: 'foundation',
       step: 1,
       totalSteps: 3,
+      submission: {
+        kind: 'guided-answer-submission',
+        transport: {
+          kind: 'stdin-json',
+          maxBytes: 65536,
+          argv: ['planr', 'operate', 'init', '--resume', first.sessionId, '--stdin', '--json'],
+        },
+        envelope: {
+          fixedFields: {
+            sessionId: first.sessionId,
+            adapter: first.adapter,
+          },
+        },
+      },
     });
+    expect(first.submission.envelope.dynamicFields.answers.items).toEqual(
+      first.questions
+        .filter((question) => question.type !== 'informational')
+        .map((question) => ({
+          questionId: question.questionId,
+          questionVersion: question.questionVersion,
+          sensitivity: question.sensitivity,
+          required: question.required,
+          valueType:
+            question.type === 'confirmation'
+              ? 'boolean'
+              : ['multi-select', 'repeated-text'].includes(question.type)
+                ? 'string-array'
+                : 'string',
+        })),
+    );
+    expect(first.submission.envelope.dynamicFields.answers.copyFields).toEqual([
+      'questionId',
+      'questionVersion',
+      'sensitivity',
+    ]);
   });
 });

@@ -26,32 +26,49 @@ import {
   type OperatingState,
 } from './types.js';
 
-const proposalSchema = z.object({
-  proposalKey: z.string().regex(/^[A-Za-z0-9._-]+$/),
-  type: z.enum(['finding', 'decision', 'data-gap', 'merge', 'sequence']),
-  title: z.string().min(1),
-  problem: z.string().min(1),
-  proposal: z.string().min(1),
-  impact: z.number().int().min(1).max(5),
-  confidence: z.number().int().min(1).max(5),
-  ease: z.number().int().min(1).max(5),
-  severity: z.enum(['low', 'medium', 'high', 'critical']),
-  evidenceRefs: z.array(z.string().regex(/^EVD-[A-Za-z0-9._-]+$/)).min(1),
-  dependsOnProposalKeys: z.array(z.string().regex(/^[A-Za-z0-9._-]+$/)).optional(),
-  conflictsWithProposalKeys: z.array(z.string().regex(/^[A-Za-z0-9._-]+$/)).optional(),
-  sequenceProposalKeys: z
-    .array(z.string().regex(/^[A-Za-z0-9._-]+$/))
-    .min(2)
-    .optional(),
-});
-const advisorOutputSchema = z.object({
-  outcome: z.enum(['proposals', 'quiet']),
-  proposals: z.array(proposalSchema).max(20),
-  gaps: z.array(z.string()),
-  conflicts: z.array(z.string()),
-});
+const proposalSchema = z
+  .object({
+    proposalKey: z.string().regex(/^[A-Za-z0-9._-]+$/),
+    type: z.enum(['finding', 'decision', 'data-gap', 'merge', 'sequence']),
+    title: z.string().min(1),
+    problem: z.string().min(1),
+    proposal: z.string().min(1),
+    impact: z.number().int().min(1).max(5),
+    confidence: z.number().int().min(1).max(5),
+    ease: z.number().int().min(1).max(5),
+    severity: z.enum(['low', 'medium', 'high', 'critical']),
+    evidenceRefs: z.array(z.string().regex(/^EVD-[A-Za-z0-9._-]+$/)).min(1),
+    dependsOnProposalKeys: z.array(z.string().regex(/^[A-Za-z0-9._-]+$/)).optional(),
+    conflictsWithProposalKeys: z.array(z.string().regex(/^[A-Za-z0-9._-]+$/)).optional(),
+    sequenceProposalKeys: z
+      .array(z.string().regex(/^[A-Za-z0-9._-]+$/))
+      .min(2)
+      .optional(),
+  })
+  .strict();
+const advisorOutputSchema = z
+  .object({
+    outcome: z.enum(['proposals', 'quiet']),
+    proposals: z.array(proposalSchema).max(20),
+    gaps: z.array(z.string()),
+    conflicts: z.array(z.string()),
+  })
+  .strict();
 export type OperatingAdvisorResponse = z.infer<typeof advisorOutputSchema>;
 type AdvisorOutput = OperatingAdvisorResponse;
+
+export function advisorResponseContractDetails(brief: OperatingAdvisorBrief): {
+  expectedSchema: 'operating-advisor-response@1.2.0';
+  example: unknown;
+} {
+  const examples = (brief.output.jsonSchema as { examples?: unknown } | undefined)?.examples;
+  return {
+    expectedSchema: 'operating-advisor-response@1.2.0',
+    example: Array.isArray(examples)
+      ? examples
+      : [{ outcome: 'quiet', proposals: [], gaps: [], conflicts: [] }],
+  };
+}
 
 export function assertAdvisorOutputMatchesBrief(
   brief: OperatingAdvisorBrief,
@@ -566,12 +583,27 @@ export async function createNativeOperatingRoleResult(input: {
   response: unknown;
   runtime: string;
 }): Promise<OperatingRoleResult> {
+  const contractIssues = (await loadOperatingProtocol()).validateProtocolArtifact(
+    'operating-advisor-response',
+    input.response,
+  );
+  if (contractIssues.length > 0) {
+    throw new OperateError(
+      'E_OPERATE_ADVISOR_FAILED',
+      `Native ${input.pack.roleId} response does not match operating-advisor-response@1.2.0.`,
+      {
+        ...advisorResponseContractDetails(input.pack.roleBrief),
+        issues: contractIssues.slice(0, 8),
+      },
+    );
+  }
   const parsed = advisorOutputSchema.safeParse(input.response);
   if (!parsed.success) {
     throw new OperateError(
-      'E_OPERATE_ADVISOR_FAILED',
-      `Native ${input.pack.roleId} response does not match the compact advisor response contract.`,
+      'E_OPERATE_INTERNAL',
+      'Protocol and OpenPlanr disagree on the compact advisor response contract.',
       {
+        ...advisorResponseContractDetails(input.pack.roleBrief),
         issues: parsed.error.issues.slice(0, 8).map((issue) => ({
           path: issue.path.join('.'),
           code: issue.code,

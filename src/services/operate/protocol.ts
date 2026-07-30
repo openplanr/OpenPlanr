@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import {
   OperateError,
+  type OperatingAdapterHandoff,
   type OperatingAdvisorBrief,
   type OperatingCheckpoint,
   type OperatingEvent,
@@ -66,6 +67,22 @@ interface PipelineProtocolApi {
     manifest: OperatingProviderManifest,
   ): OperatingProviderManifest;
   createOperatingAdvisorBrief(roleId: string): OperatingAdvisorBrief;
+  createOperatingAdapterHandoff(input: {
+    phase: 'advisors' | 'chair';
+    state: OperatingAdapterHandoff['state'];
+    cycleId: string;
+    evidenceDigest: string;
+    runtime: string;
+    idempotencyKey: string;
+    lease?: string | null;
+    expiresAt?: string | null;
+    roles: Array<{
+      roleId: string;
+      status: OperatingAdapterHandoff['roles'][number]['status'];
+      inputDigest?: string | null;
+    }>;
+  }): OperatingAdapterHandoff;
+  validateOperatingAdapterHandoffBindings(value: OperatingAdapterHandoff): OperatingAdapterHandoff;
   listOperatingRoles(): Array<Record<string, unknown> & { id: string }>;
   listOperatingProviders(): Array<Record<string, unknown> & { id: string }>;
 }

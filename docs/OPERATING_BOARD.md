@@ -83,7 +83,10 @@ provider/model call and writes no project state.
 
 In `--json` mode, omitted input returns `E_OPERATE_INPUT_REQUIRED` and a
 Protocol v1.2 `guided-questionnaire` instead of prompting or returning a generic
-configuration error. Fully specified flag-based automation remains supported:
+configuration error. New questionnaires use additive schema 1.1 and include a
+self-describing, digest-safe bounded-stdin `submission` contract. Original
+schema 1.0 questionnaires remain readable. Fully specified flag-based
+automation remains supported:
 
 ```bash
 planr operate init \
@@ -141,6 +144,49 @@ budgets, then adds canonical IDs, producer metadata, and digests. Independent
 lenses are finalized before OpenPlanr prepares the Chair pack from their
 verified results. This avoids divergent hand-written CEO or CTO prompt files
 while preserving explicit, testable prompt contracts.
+
+### Native adapter lifecycle
+
+When native execution is required, the public run result returns a
+Protocol-validated `operating-adapter-handoff` before prepare. That object is
+the complete state-aware execution contract for the current boundary:
+
+- `phase` and `state` identify the independent-advisor or Chair boundary;
+- the binding fixes the cycle, evidence digest, runtime, CLI-owned idempotency
+  key, nullable pre-prepare lease, and nullable expiry;
+- `next[]` contains only exact argv arrays legal in the current state;
+- `recovery[]` contains only valid interrupted-session actions.
+
+The runtime executes those arrays verbatim. It must not add a role suffix to
+the idempotency key, replace any binding field, derive a command from prose, or
+call an internal command with `--help` to discover what comes next. Each
+successful record returns a new handoff containing only the roles still
+missing. Once every role is recorded, finalize is the sole next action; after
+finalize, a cycle-bound continuation is the sole next action.
+
+```text
+independent advisors or Chair:
+prepare-required → record-required → finalize-required → continue-required
+                            └───────────────→ cancelled
+```
+
+`resume` returns the current state of the same unexpired, digest-bound session.
+`cancel` ends only that private session. Invalid, expired, or drifted bindings
+fail closed; the runtime follows the exact recovery action returned by the CLI
+and never invents a new lease or idempotency key.
+
+Lifecycle effects are fixed and intentionally narrow:
+
+| Action | Effect |
+|---|---|
+| prepare, record, cancel | Machine-local write |
+| resume | Read-only session inspection |
+| finalize | Project write of validated advisor results |
+| continue | Governed cycle continuation; later boundaries retain their own effect and authority checks |
+
+This lifecycle is covered by the user's explicit request to run the current
+cycle. It does not authorize provider consent, findings, routes, planning
+artifacts, PLAN, SHIP, or external actions.
 
 ### Human-readable and machine-readable results
 

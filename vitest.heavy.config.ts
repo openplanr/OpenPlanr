@@ -19,6 +19,7 @@ export default defineConfig({
   test: {
     globals: true,
     root: '.',
+    setupFiles: ['tests/setup/isolate-user-state.ts'],
     include: [
       'tests/e2e/operate-packed-install.test.ts',
       'tests/e2e/operate-guided-packed-install.test.ts',

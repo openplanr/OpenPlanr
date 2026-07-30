@@ -313,6 +313,29 @@ describe('Operating Board evidence sources', () => {
           writeBoundary: 'none',
         }),
       });
+      await expect(
+        executeOperateAction({
+          action: 'sources.test',
+          projectRoot,
+          interactive: false,
+          arguments: {},
+          options: { json: true },
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        message: '1 configured evidence source test(s) passed.',
+        data: {
+          healthy: true,
+          configuredSources: ['file-import'],
+          results: [
+            expect.objectContaining({
+              healthy: true,
+              observation: 'files:1',
+              writeBoundary: 'none',
+            }),
+          ],
+        },
+      });
     } finally {
       if (previousStateRoot === undefined) delete process.env.OPENPLANR_STATE_ROOT;
       else process.env.OPENPLANR_STATE_ROOT = previousStateRoot;

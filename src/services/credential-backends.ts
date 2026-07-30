@@ -105,9 +105,6 @@ export class KeychainBackend implements CredentialBackend {
 // 2. Encrypted File Backend
 // ---------------------------------------------------------------------------
 
-const ENC_FILE = path.join(PLANR_DIR, 'credentials.enc');
-const SALT_FILE = path.join(PLANR_DIR, '.credential-salt');
-
 /** Derive a 256-bit key from machine identity + per-installation salt. */
 function deriveKey(salt: Buffer): Buffer {
   const machineId = `${os.hostname()}:${os.userInfo().username}`;
@@ -115,16 +112,16 @@ function deriveKey(salt: Buffer): Buffer {
 }
 
 /** Get or create the per-installation salt. */
-async function getSalt(): Promise<Buffer> {
-  await mkdir(PLANR_DIR, { recursive: true });
+async function getSalt(planrDir: string, saltFile: string): Promise<Buffer> {
+  await mkdir(planrDir, { recursive: true });
 
-  if (await pathExists(SALT_FILE)) {
-    const hex = await readFile(SALT_FILE, 'utf-8');
+  if (await pathExists(saltFile)) {
+    const hex = await readFile(saltFile, 'utf-8');
     return Buffer.from(hex.trim(), 'hex');
   }
 
   const salt = crypto.randomBytes(16);
-  await writeFile(SALT_FILE, salt.toString('hex'), { encoding: 'utf-8', mode: 0o600 });
+  await writeFile(saltFile, salt.toString('hex'), { encoding: 'utf-8', mode: 0o600 });
   return salt;
 }
 
@@ -158,18 +155,27 @@ function decrypt(envelope: EncryptedEnvelope, key: Buffer): string {
 
 export class EncryptedFileBackend implements CredentialBackend {
   readonly name = 'encrypted-file' as const;
+  private readonly planrDir: string;
+  private readonly encryptedFile: string;
+  private readonly saltFile: string;
+
+  constructor(planrDir = PLANR_DIR) {
+    this.planrDir = planrDir;
+    this.encryptedFile = path.join(planrDir, 'credentials.enc');
+    this.saltFile = path.join(planrDir, '.credential-salt');
+  }
 
   async isAvailable(): Promise<boolean> {
     return true; // Always available as the universal fallback
   }
 
   private async loadAll(): Promise<Record<string, string>> {
-    if (!(await pathExists(ENC_FILE))) return {};
+    if (!(await pathExists(this.encryptedFile))) return {};
 
     try {
-      const raw = await readFile(ENC_FILE, 'utf-8');
+      const raw = await readFile(this.encryptedFile, 'utf-8');
       const envelope: EncryptedEnvelope = JSON.parse(raw);
-      const salt = await getSalt();
+      const salt = await getSalt(this.planrDir, this.saltFile);
       const key = deriveKey(salt);
       const json = decrypt(envelope, key);
       return JSON.parse(json) as Record<string, string>;
@@ -178,8 +184,8 @@ export class EncryptedFileBackend implements CredentialBackend {
       // Backup corrupted/unreadable file before it gets overwritten by a
       // subsequent set() call — avoids silent credential loss.
       try {
-        const backupPath = `${ENC_FILE}.bak`;
-        const raw = await readFile(ENC_FILE);
+        const backupPath = `${this.encryptedFile}.bak`;
+        const raw = await readFile(this.encryptedFile);
         await writeFile(backupPath, raw, { mode: 0o600 });
       } catch (err) {
         logger.debug('Failed to backup corrupted credentials file', err);
@@ -190,11 +196,11 @@ export class EncryptedFileBackend implements CredentialBackend {
   }
 
   private async saveAll(credentials: Record<string, string>): Promise<void> {
-    await mkdir(PLANR_DIR, { recursive: true });
-    const salt = await getSalt();
+    await mkdir(this.planrDir, { recursive: true });
+    const salt = await getSalt(this.planrDir, this.saltFile);
     const key = deriveKey(salt);
     const envelope = encrypt(JSON.stringify(credentials), key);
-    await writeFile(ENC_FILE, JSON.stringify(envelope, null, 2), {
+    await writeFile(this.encryptedFile, JSON.stringify(envelope, null, 2), {
       encoding: 'utf-8',
       mode: 0o600,
     });

@@ -16,7 +16,7 @@ import { evidenceProjectionSources } from '../../src/services/operate/evidence.j
 import { executeOperateAction } from '../../src/services/operate/index.js';
 import { operateAdapterLifecycle } from '../../src/services/operate/maintenance.js';
 import { loadOperatingProtocol } from '../../src/services/operate/protocol.js';
-import type { OperatingRoleResult } from '../../src/services/operate/types.js';
+import type { OperatingRoleId } from '../../src/services/operate/types.js';
 
 const execFileAsync = promisify(execFile);
 const temporaryDirectories: string[] = [];
@@ -75,7 +75,7 @@ async function initialize(
   projectRoot: string,
   localRoot: string,
   runtime: 'claude' | 'codex' = 'codex',
-  enabledRoles?: Array<'strategy-finance' | 'technology-risk' | 'chair'>,
+  enabledRoles?: OperatingRoleId[],
 ): Promise<void> {
   const preview = await prepareOperatingInitialization({
     projectRoot,
@@ -134,35 +134,19 @@ async function recordQuietNativeResults(input: {
     lease: string;
     roleInputDigests: Record<string, `sha256:${string}`>;
   };
-  const protocol = await loadOperatingProtocol();
   for (const role of input.roles) {
-    const unsigned = {
-      kind: 'operating-role-result' as const,
-      schemaVersion: '1.0.0' as const,
-      protocolVersion: '1.2.0' as const,
-      cycleId: input.cycleId,
-      roleId: role as OperatingRoleResult['roleId'],
-      inputDigest: session.roleInputDigests[role],
+    const response = {
       outcome: 'quiet' as const,
       proposals: [],
       gaps: [],
       conflicts: [],
-      producer: {
-        product: 'openplanr',
-        version: '1.14.0',
-        runtime: 'claude',
-        capability: 'analysis-high' as const,
-      },
     };
     await operateAdapterLifecycle({
       ...input,
       action: 'record',
       lease: session.lease,
       role,
-      stdin: JSON.stringify({
-        ...unsigned,
-        resultDigest: protocol.computeOperatingRoleResultDigest(unsigned as OperatingRoleResult),
-      }),
+      stdin: JSON.stringify(response),
     });
   }
   await operateAdapterLifecycle({
@@ -191,6 +175,9 @@ describe('Operating Board preview and dry-run boundaries', () => {
       await initialize(projectRoot, localRoot, 'claude', [
         'strategy-finance',
         'technology-risk',
+        'product-activation',
+        'growth-market',
+        'operations-customer',
         'chair',
       ]);
       const invoke = vi.fn();
@@ -236,6 +223,12 @@ describe('Operating Board preview and dry-run boundaries', () => {
         phase: 'chair',
         roles: ['chair'],
       });
+      expect(
+        chairHandoff.readiness?.roles
+          .filter((role) => role.readiness === 'not_evaluated')
+          .map((role) => role.roleId)
+          .sort(),
+      ).toEqual(['growth-market', 'operations-customer', 'product-activation']);
       await recordQuietNativeResults({
         projectRoot,
         localRoot,
@@ -301,7 +294,7 @@ describe('Operating Board preview and dry-run boundaries', () => {
     OPERATING_INTEGRATION_TIMEOUT_MS,
   );
 
-  it('routes the Claude CLI run into the isolated machine lifecycle', async () => {
+  it('binds an explicit runtime override into the exact isolated lifecycle handoff', async () => {
     const projectRoot = await createGitProject();
     const preview = await prepareOperatingInitialization({
       projectRoot,
@@ -325,7 +318,7 @@ describe('Operating Board preview and dry-run boundaries', () => {
       action: 'run',
       projectRoot,
       interactive: false,
-      options: { json: true, runtime: 'claude', yes: true },
+      options: { json: true, runtime: 'codex', yes: true },
     });
 
     expect(result).toMatchObject({
@@ -335,7 +328,24 @@ describe('Operating Board preview and dry-run boundaries', () => {
       nextActions: [
         expect.stringMatching(/^planr operate adapter prepare .* --role .*technology-risk/),
       ],
+      handoff: {
+        state: 'prepare-required',
+        binding: {
+          cycleId: 'CYCLE-001',
+          runtime: 'codex',
+          lease: null,
+        },
+        next: [
+          {
+            action: 'adapter.prepare',
+            argv: expect.arrayContaining(['--json']),
+          },
+        ],
+      },
       data: {
+        cycle: {
+          producer: { runtime: 'codex' },
+        },
         nativeHandoff: {
           phase: 'advisors',
           cycleId: 'CYCLE-001',
@@ -343,6 +353,7 @@ describe('Operating Board preview and dry-run boundaries', () => {
         },
       },
     });
+    expect((result.handoff?.next[0].argv ?? []).some((token) => token === '--runtime')).toBe(false);
   });
 
   it('initializes safely on an unborn Git branch before the first commit', async () => {
