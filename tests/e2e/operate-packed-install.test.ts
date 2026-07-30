@@ -217,7 +217,7 @@ describe('packed planning-only Operating Board', () => {
     const manifest = JSON.parse(readFileSync(join(minimalPackageRoot, 'package.json'), 'utf8')) as {
       optionalDependencies?: Record<string, string>;
     };
-    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe('0.32.0');
+    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe('0.32.1');
   });
 
   it('keeps help, inspect, and demo provider-free and functional', () => {

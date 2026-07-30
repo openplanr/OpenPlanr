@@ -3,6 +3,7 @@ import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { canonicalize } from '../../src/services/operate/canonical.js';
 import {
   parseStrictCsv,
   parseStrictJson,
@@ -22,7 +23,9 @@ import {
   containsSecret,
   normalizeUntrustedText,
   redactSensitiveText,
+  sanitizeEvidenceItem,
   sanitizeGeneratedPlainText,
+  truncateUnicodeScalarText,
 } from '../../src/services/operate/redaction.js';
 import { resolveContainedPath } from '../../src/services/operate/workspace.js';
 
@@ -207,6 +210,30 @@ describe('untrusted text and secret handling', () => {
     expect(sanitized).toContain('blocked:run');
     expect(sanitized).toContain('[REMOTE_IMAGE_REMOVED]');
     expect(sanitized).not.toContain('tracker.example');
+  });
+
+  it('keeps bounded evidence summaries valid when an emoji crosses the truncation boundary', () => {
+    const content = `${'a'.repeat(4_095)}😀after`;
+    const sanitized = sanitizeEvidenceItem({
+      id: 'EVD-repository-unicode-boundary',
+      source: 'repository',
+      location: 'control/unicode-boundary.ts',
+      content,
+      collectedAt: '2026-07-30T00:00:00.000Z',
+      observedFrom: null,
+      observedTo: '2026-07-30T00:00:00.000Z',
+      freshness: 'fresh',
+      sensitivity: 'internal',
+      claimTypes: ['code'],
+      quality: 'observed',
+      coverage: 'partial',
+    });
+
+    expect(sanitized.summary).toBe('a'.repeat(4_095));
+    expect(() => canonicalize(sanitized)).not.toThrow();
+    expect(truncateUnicodeScalarText('ab😀cd', 3)).toBe('ab');
+    expect(truncateUnicodeScalarText('ab😀cd', 4)).toBe('ab😀');
+    expect(truncateUnicodeScalarText('ab😀cd', 5)).toBe('ab😀c');
   });
 });
 

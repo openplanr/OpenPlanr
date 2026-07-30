@@ -244,6 +244,35 @@ describe('operating cycle close disposal', () => {
   });
 });
 
+describe('operating cycle cancellation', () => {
+  it('treats a retried cancellation as an idempotent no-op', async () => {
+    const { projectRoot, localRoot, store } = await reviewableDecisionFixture();
+
+    await transitionOperatingCycle({
+      projectRoot,
+      localRoot,
+      cycleId: 'CYCLE-001',
+      action: 'cancel',
+      confirmed: true,
+    });
+    const retried = await transitionOperatingCycle({
+      projectRoot,
+      localRoot,
+      cycleId: 'CYCLE-001',
+      action: 'cancel',
+      confirmed: true,
+    });
+
+    expect(retried).toMatchObject({
+      idempotent: true,
+      cycle: { id: 'CYCLE-001', state: 'cancelled' },
+    });
+    expect(
+      (await store.replay()).events.filter((event) => event.type === 'cycle.cancelled'),
+    ).toHaveLength(1);
+  });
+});
+
 describe('operating decision lifecycle', () => {
   it('resumes an interrupted answered decision by appending only decision.closed', async () => {
     const { projectRoot, localRoot, store } = await reviewableDecisionFixture();

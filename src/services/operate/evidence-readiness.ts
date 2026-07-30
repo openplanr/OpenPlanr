@@ -1,6 +1,6 @@
 import { canonicalDigest } from './canonical.js';
 import { assertOperatingArtifact, loadOperatingProtocol } from './protocol.js';
-import { compareSensitivity } from './redaction.js';
+import { compareSensitivity, prepareAdvisorEvidenceText } from './redaction.js';
 import {
   type EvidenceRequirement,
   OPERATE_PROTOCOL_VERSION,
@@ -34,6 +34,14 @@ export async function evaluateEvidenceReadiness(input: {
   const registry = (
     await loadOperatingProtocol()
   ).listOperatingRoles() as unknown as RegistryRole[];
+  const eligibleItems = input.evidence.items.filter(
+    (item) =>
+      !prepareAdvisorEvidenceText({
+        evidenceId: item.id,
+        digest: item.digest,
+        value: item.summary ?? '',
+      }).quarantined,
+  );
   let gapNumber = 1;
   const roles = input.enabledRoles.map((roleId) => {
     const role = registry.find((entry) => entry.id === roleId);
@@ -48,7 +56,7 @@ export async function evaluateEvidenceReadiness(input: {
       },
     ];
     const requirements = configured.map((requirement) => {
-      const matching = input.evidence.items.filter(
+      const matching = eligibleItems.filter(
         (item) =>
           item.source === requirement.source &&
           requirement.claimTypes.some((claim) => item.claimTypes.includes(claim)) &&
@@ -87,7 +95,7 @@ export async function evaluateEvidenceReadiness(input: {
           (requirement) =>
             `${requirement.source}:${requirement.claimTypes.join('+')} (${requirement.observedItems}/${requirement.minimumItems})`,
         ),
-      evidenceRefs: input.evidence.items
+      evidenceRefs: eligibleItems
         .filter((item) =>
           requirements.some(
             (requirement) =>
@@ -109,6 +117,7 @@ export async function evaluateEvidenceReadiness(input: {
     inputDigest: canonicalDigest({
       evidence: input.evidence.fingerprint,
       roles: input.enabledRoles,
+      advisorEligibleEvidenceRefs: eligibleItems.map((item) => item.id).sort(),
     }),
     evaluatedAt: now.toISOString(),
     roles,
