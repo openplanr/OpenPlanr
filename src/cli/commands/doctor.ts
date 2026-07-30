@@ -41,6 +41,7 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
               runtimes: managedRuntimes,
               scope: 'user',
               preserveExistingScopes: true,
+              manageExternalRuntimes: false,
               dryRun: true,
             })
           : null;
@@ -83,6 +84,7 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
               runtimes: managedRuntimes,
               scope: 'user',
               preserveExistingScopes: true,
+              manageExternalRuntimes: false,
             });
           }
           result = await runtimeDoctor(projectDir);

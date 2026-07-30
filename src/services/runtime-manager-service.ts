@@ -6,6 +6,13 @@ import { copyFile, mkdir, open, readFile, rename, rm, unlink, writeFile } from '
 import os from 'node:os';
 import path from 'node:path';
 import { spliceManagedBlock } from '../utils/splice-managed-block.js';
+import {
+  applyClaudePluginIntegration,
+  type ClaudeCommandRunner,
+  type ClaudePluginOperation,
+  inspectClaudePluginIntegration,
+  OPENPLANR_SKILLS_VERSION,
+} from './claude-plugin-service.js';
 import { diagnoseOperatingBoard } from './operate/doctor.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 import { readOpenPlanrVersion } from './provenance-service.js';
@@ -93,6 +100,10 @@ export interface SetupOptions {
   merge?: boolean;
   /** Reuse every recorded adapter scope when doctor repairs managed assets. */
   preserveExistingScopes?: boolean;
+  /** Disable external runtime package changes for owned-file-only repair flows. */
+  manageExternalRuntimes?: boolean;
+  /** Injectable Claude command boundary for deterministic runtime integration tests. */
+  claudeCommandRunner?: ClaudeCommandRunner;
 }
 
 export interface SetupPreview {
@@ -117,6 +128,13 @@ export interface SetupPreview {
     target: string;
     operation: 'create' | 'update' | 'unchanged';
     description: string;
+  }>;
+  runtimeOperations: ClaudePluginOperation[];
+  runtimeDiagnostics: Array<{
+    runtime: RuntimeId;
+    status: 'pass' | 'warn' | 'fail';
+    message: string;
+    fix?: string;
   }>;
 }
 
@@ -369,7 +387,11 @@ function buildRuntimeLock(
     pipelineVersion,
     adapters,
   });
-  const components = { cli: options.cliVersion, pipeline: pipelineVersion, skills: '1.17.0' };
+  const components = {
+    cli: options.cliVersion,
+    pipeline: pipelineVersion,
+    skills: OPENPLANR_SKILLS_VERSION,
+  };
   const manifestDigest = `sha256:${hash(digestInput)}`;
   const lockPath = path.join(options.projectDir, '.planr', 'runtime-lock.json');
   if (existsSync(lockPath)) {
@@ -678,6 +700,48 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     }
   }
   const actions = buildActions(options, runtimes, runtimeScopes);
+  const manageClaudePlugins =
+    options.manageExternalRuntimes !== false &&
+    !options.minimal &&
+    runtimes.includes('claude-code') &&
+    ['user', 'both'].includes(runtimeScopes['claude-code'] ?? scope) &&
+    (Boolean(options.claudeCommandRunner) ||
+      detectRuntimes().some((runtime) => runtime.runtime === 'claude-code' && runtime.installed));
+  const claudeInspection =
+    manageClaudePlugins && pipeline
+      ? inspectClaudePluginIntegration(pipeline.version, options.claudeCommandRunner)
+      : undefined;
+  const runtimeDiagnostics: SetupPreview['runtimeDiagnostics'] = [];
+  if (claudeInspection) {
+    if (claudeInspection.error) {
+      runtimeDiagnostics.push({
+        runtime: 'claude-code',
+        status: 'fail',
+        message: `Claude plugin state could not be inspected: ${claudeInspection.error}`,
+        fix: 'Update Claude Code, then rerun `planr setup --runtime claude --scope user`.',
+      });
+    } else if (claudeInspection.ready) {
+      runtimeDiagnostics.push({
+        runtime: 'claude-code',
+        status: 'pass',
+        message: 'Claude plugins match the OpenPlanr compatibility versions',
+      });
+    } else {
+      runtimeDiagnostics.push({
+        runtime: 'claude-code',
+        status: 'warn',
+        message: 'Claude plugins will be installed or updated after confirmation',
+      });
+    }
+    if (claudeInspection.legacyPluginIds.length > 0) {
+      runtimeDiagnostics.push({
+        runtime: 'claude-code',
+        status: 'warn',
+        message: `Legacy Claude plugin installation detected: ${claudeInspection.legacyPluginIds.join(', ')}`,
+        fix: 'After verifying the official plugin, remove the legacy plugin from Claude Code.',
+      });
+    }
+  }
   return {
     ok: true,
     dryRun: Boolean(options.dryRun),
@@ -701,12 +765,18 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
       operation: operationFor(action),
       description: action.description,
     })),
+    runtimeOperations: claudeInspection?.operations ?? [],
+    runtimeDiagnostics,
   };
 }
 
-export async function applySetup(
-  options: SetupOptions,
-): Promise<SetupPreview & { backupDir?: string }> {
+export async function applySetup(options: SetupOptions): Promise<
+  SetupPreview & {
+    backupDir?: string;
+    appliedRuntimeOperations?: ClaudePluginOperation[];
+    restartRequired?: boolean;
+  }
+> {
   const preview = await previewSetup(options);
   if (options.dryRun || options.minimal) return preview;
   await mkdir(runtimeRoot(), { recursive: true });
@@ -724,50 +794,87 @@ export async function applySetup(
   try {
     const actions = buildActions(options, preview.runtimes, preview.runtimeScopes);
     const changed = actions.filter((action) => operationFor(action) !== 'unchanged');
-    if (changed.length === 0) return preview;
-    let backup: { dir: string; manifest: BackupManifest };
-    try {
-      backup = await createBackup(options.projectDir, changed);
-    } catch (cause) {
-      throw new RuntimeManagerError(
-        'E_BACKUP_FAILED',
-        `Could not create byte-for-byte migration backup: ${cause instanceof Error ? cause.message : String(cause)}`,
-        'No setup files were changed. Fix backup permissions and rerun setup.',
+    let backup: { dir: string; manifest: BackupManifest } | undefined;
+    if (changed.length > 0) {
+      try {
+        backup = await createBackup(options.projectDir, changed);
+      } catch (cause) {
+        throw new RuntimeManagerError(
+          'E_BACKUP_FAILED',
+          `Could not create byte-for-byte migration backup: ${cause instanceof Error ? cause.message : String(cause)}`,
+          'No setup files were changed. Fix backup permissions and rerun setup.',
+        );
+      }
+
+      const owned: OwnedFile[] = [];
+      for (const action of actions) {
+        const content = actionBytes(action);
+        await atomicWrite(action.target, content);
+        owned.push({
+          runtime: action.runtime,
+          scope: action.scope,
+          target: action.target,
+          kind: action.kind,
+          marker: action.marker,
+          hash: ownershipHash(content, action.kind, action.marker),
+        });
+        const backupEntry = backup.manifest.files.find((entry) => entry.target === action.target);
+        if (backupEntry) backupEntry.afterHash = hash(content);
+      }
+      await atomicWrite(
+        path.join(backup.dir, 'migration-manifest.json'),
+        Buffer.from(`${JSON.stringify(backup.manifest, null, 2)}\n`),
       );
+
+      const state = await loadState();
+      state.projects[projectKey(options.projectDir)] = {
+        projectDir: path.resolve(options.projectDir),
+        updatedAt: new Date().toISOString(),
+        backupDir: backup.dir,
+        runtimes: preview.runtimes,
+        runtimeScopes: preview.runtimeScopes,
+        ...(preview.runtimes.length === 1 ? { activeRuntime: preview.runtimes[0] } : {}),
+        ownedFiles: owned,
+      };
+      await atomicWrite(statePath(), Buffer.from(`${JSON.stringify(state, null, 2)}\n`));
     }
 
-    const owned: OwnedFile[] = [];
-    for (const action of actions) {
-      const content = actionBytes(action);
-      await atomicWrite(action.target, content);
-      owned.push({
-        runtime: action.runtime,
-        scope: action.scope,
-        target: action.target,
-        kind: action.kind,
-        marker: action.marker,
-        hash: ownershipHash(content, action.kind, action.marker),
-      });
-      const backupEntry = backup.manifest.files.find((entry) => entry.target === action.target);
-      if (backupEntry) backupEntry.afterHash = hash(content);
+    let appliedRuntimeOperations: ClaudePluginOperation[] | undefined;
+    let restartRequired = false;
+    if (preview.runtimeOperations.length > 0 && preview.pipelineVersion) {
+      const inspection = inspectClaudePluginIntegration(
+        preview.pipelineVersion,
+        options.claudeCommandRunner,
+      );
+      if (inspection.error) {
+        throw new RuntimeManagerError(
+          'E_CLAUDE_PLUGIN_INSPECTION_FAILED',
+          `Could not inspect Claude plugins: ${inspection.error}`,
+          'Update Claude Code, then rerun `planr setup --runtime claude --scope user`.',
+        );
+      }
+      try {
+        const result = applyClaudePluginIntegration(
+          preview.pipelineVersion,
+          inspection,
+          options.claudeCommandRunner,
+        );
+        appliedRuntimeOperations = result.operations;
+        restartRequired = result.restartRequired;
+      } catch (cause) {
+        throw new RuntimeManagerError(
+          'E_CLAUDE_PLUGIN_UPDATE_FAILED',
+          `Claude plugin update failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+          'Run `planr runtime update claude --scope user` after checking Claude Code marketplace access.',
+        );
+      }
     }
-    await atomicWrite(
-      path.join(backup.dir, 'migration-manifest.json'),
-      Buffer.from(`${JSON.stringify(backup.manifest, null, 2)}\n`),
-    );
-
-    const state = await loadState();
-    state.projects[projectKey(options.projectDir)] = {
-      projectDir: path.resolve(options.projectDir),
-      updatedAt: new Date().toISOString(),
-      backupDir: backup.dir,
-      runtimes: preview.runtimes,
-      runtimeScopes: preview.runtimeScopes,
-      ...(preview.runtimes.length === 1 ? { activeRuntime: preview.runtimes[0] } : {}),
-      ownedFiles: owned,
+    return {
+      ...preview,
+      ...(backup ? { backupDir: backup.dir } : {}),
+      ...(appliedRuntimeOperations ? { appliedRuntimeOperations } : {}),
+      restartRequired,
     };
-    await atomicWrite(statePath(), Buffer.from(`${JSON.stringify(state, null, 2)}\n`));
-    return { ...preview, backupDir: backup.dir };
   } finally {
     await lockHandle.close();
     await unlink(lockPath).catch(() => undefined);
@@ -1044,7 +1151,10 @@ export async function cleanupHomeProjectInstall(): Promise<{ ok: true; removed: 
 
 export async function runtimeDoctor(
   projectDir: string,
-  options: { pipelineRepair?: 'preview' | 'apply' } = {},
+  options: {
+    pipelineRepair?: 'preview' | 'apply';
+    claudeCommandRunner?: ClaudeCommandRunner;
+  } = {},
 ): Promise<{
   ok: boolean;
   repairs: Array<{ id: string; operation: 'remove'; target: string; applied: boolean }>;
@@ -1121,6 +1231,66 @@ export async function runtimeDoctor(
       });
     }
   }
+  const claudeManagedAtUserScope = Object.values(state.projects).some(
+    (project) =>
+      project.runtimes.includes('claude-code') &&
+      ['user', 'both'].includes(
+        project.runtimeScopes?.['claude-code'] ??
+          inferRuntimeScope(project.ownedFiles, 'claude-code'),
+      ),
+  );
+  const claudeDetected =
+    Boolean(options.claudeCommandRunner) ||
+    (detectedRuntimes.find((runtime) => runtime.runtime === 'claude-code')?.installed ?? false);
+  if (pipeline && claudeDetected && claudeManagedAtUserScope) {
+    const inspection = inspectClaudePluginIntegration(
+      pipeline.version,
+      options.claudeCommandRunner,
+    );
+    if (inspection.error) {
+      diagnostics.push({
+        code: 'runtime-claude-plugins',
+        status: 'fail',
+        message: `Claude plugin state could not be inspected: ${inspection.error}`,
+        fix: 'Update Claude Code, then run `planr runtime update claude --scope user`.',
+      });
+    } else {
+      const drift = inspection.plugins.filter(
+        (plugin) =>
+          !plugin.installed ||
+          !plugin.enabled ||
+          !plugin.identityValid ||
+          plugin.installedVersion !== plugin.expectedVersion,
+      );
+      diagnostics.push({
+        code: 'runtime-claude-plugins',
+        status: inspection.ready ? 'pass' : 'fail',
+        message: inspection.ready
+          ? `Claude plugins match compatibility versions (${inspection.plugins
+              .map((plugin) => `${plugin.name} ${plugin.expectedVersion}`)
+              .join(', ')})`
+          : `Claude plugin drift detected: ${drift
+              .map(
+                (plugin) =>
+                  `${plugin.id} ${plugin.installedVersion ?? 'missing'} → ${plugin.expectedVersion}${
+                    !plugin.identityValid ? ' (invalid identity)' : ''
+                  }`,
+              )
+              .join(', ')}`,
+        ...(!inspection.ready
+          ? { fix: 'Run `planr runtime update claude --scope user` and restart Claude Code.' }
+          : {}),
+      });
+      if (inspection.legacyPluginIds.length > 0) {
+        diagnostics.push({
+          code: 'runtime-claude-legacy-plugin',
+          status: 'warn',
+          message: `Legacy Claude plugin installation detected: ${inspection.legacyPluginIds.join(', ')}`,
+          fix: 'Verify `openplanr@openplanr`, then remove the legacy plugin from Claude Code.',
+        });
+      }
+    }
+  }
   const expectsProjectLock =
     installed?.ownedFiles.some((file) => file.scope === 'project') ?? false;
   const lock = path.join(projectDir, '.planr', 'runtime-lock.json');
@@ -1143,7 +1313,7 @@ export async function runtimeDoctor(
   } else {
     try {
       const value = JSON.parse(readFileSync(lock, 'utf8')) as {
-        components?: { cli?: string; pipeline?: string };
+        components?: { cli?: string; pipeline?: string; skills?: string };
         protocolVersion?: string;
         manifestDigest?: string;
         adapters?: Array<{
@@ -1157,7 +1327,8 @@ export async function runtimeDoctor(
       const cliVersion = readOpenPlanrVersion();
       const componentDrift =
         value.components?.cli !== cliVersion ||
-        (pipeline && value.components?.pipeline !== pipeline.version);
+        (pipeline && value.components?.pipeline !== pipeline.version) ||
+        value.components?.skills !== OPENPLANR_SKILLS_VERSION;
       const expectedDigest = `sha256:${hash(
         JSON.stringify({
           protocol: value.protocolVersion,

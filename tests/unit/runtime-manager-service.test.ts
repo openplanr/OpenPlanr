@@ -13,6 +13,10 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
+  type ClaudeCommandRunner,
+  OPENPLANR_SKILLS_VERSION,
+} from '../../src/services/claude-plugin-service.js';
+import {
   applySetup,
   cleanupHomeProjectInstall,
   inspectProjectContext,
@@ -193,7 +197,7 @@ describe('runtime setup', () => {
     expect(lock.components).toEqual({
       cli: cliVersion,
       pipeline: pipelineVersion,
-      skills: '1.17.0',
+      skills: '1.18.2',
     });
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-artifact', 'SKILL.md'))).toBe(true);
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-operate', 'SKILL.md'))).toBe(true);
@@ -243,6 +247,127 @@ describe('runtime setup', () => {
       status: 'fail',
       message: 'Installed planr-operate skill does not satisfy the functional command contract',
       fix: 'Run `planr setup --runtime codex --scope user` to refresh the managed skill.',
+    });
+  });
+
+  it('reports a runtime lock that pins an obsolete skill bundle', async () => {
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'project',
+    });
+    const lockPath = join(projectDir, '.planr', 'runtime-lock.json');
+    const lock = JSON.parse(readFileSync(lockPath, 'utf8'));
+    lock.components.skills = '1.18.1';
+    writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
+
+    const doctor = await runtimeDoctor(projectDir);
+
+    expect(doctor.diagnostics.find((item) => item.code === 'lock-drift')).toMatchObject({
+      status: 'fail',
+      fix: 'Run `planr runtime update all --scope project`.',
+    });
+  });
+
+  it('previews, applies, and diagnoses the managed Claude plugin release set', async () => {
+    const skillsPath = join(root, 'claude-openplanr');
+    const pipelinePath = join(root, 'claude-pipeline');
+    const pluginState = {
+      skillsVersion: '1.18.1',
+      skillsIdentity: false,
+    };
+    const writeManifest = (pluginRoot: string, name: string, version: string) => {
+      mkdirSync(join(pluginRoot, '.claude-plugin'), { recursive: true });
+      writeFileSync(
+        join(pluginRoot, '.claude-plugin', 'plugin.json'),
+        `${JSON.stringify({ name, version })}\n`,
+      );
+    };
+    writeManifest(pipelinePath, 'planr-pipeline', pipelineVersion);
+    const runner: ClaudeCommandRunner = (args) => {
+      if (args[0] === '--version') return { status: 0, stdout: '2.1.0\n', stderr: '' };
+      if (args[1] === 'marketplace' && args[2] === 'list') {
+        return {
+          status: 0,
+          stdout: JSON.stringify([{ name: 'openplanr', repo: 'openplanr/marketplace' }]),
+          stderr: '',
+        };
+      }
+      if (args[1] === 'list') {
+        return {
+          status: 0,
+          stdout: JSON.stringify([
+            {
+              id: 'openplanr@openplanr',
+              version: pluginState.skillsVersion,
+              scope: 'user',
+              enabled: true,
+              installPath: skillsPath,
+            },
+            {
+              id: 'planr-pipeline@openplanr',
+              version: pipelineVersion,
+              scope: 'user',
+              enabled: true,
+              installPath: pipelinePath,
+            },
+          ]),
+          stderr: '',
+        };
+      }
+      if (args[1] === 'marketplace' && args[2] === 'update') {
+        return { status: 0, stdout: '', stderr: '' };
+      }
+      if (args[1] === 'update' && args[2] === 'openplanr@openplanr') {
+        pluginState.skillsVersion = OPENPLANR_SKILLS_VERSION;
+        pluginState.skillsIdentity = true;
+        writeManifest(skillsPath, 'openplanr', OPENPLANR_SKILLS_VERSION);
+        return { status: 0, stdout: '', stderr: '' };
+      }
+      return {
+        status: 1,
+        stdout: '',
+        stderr: `Unexpected Claude command: ${args.join(' ')}`,
+      };
+    };
+
+    const preview = await previewSetup({
+      projectDir,
+      cliVersion,
+      runtime: 'claude-code',
+      scope: 'user',
+      claudeCommandRunner: runner,
+    });
+    expect(preview.runtimeOperations.map((operation) => operation.kind)).toEqual([
+      'refresh-marketplace',
+      'update',
+    ]);
+
+    const applied = await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'claude-code',
+      scope: 'user',
+      claudeCommandRunner: runner,
+    });
+    expect(applied.restartRequired).toBe(true);
+    expect(pluginState.skillsIdentity).toBe(true);
+    expect(
+      (await runtimeDoctor(projectDir, { claudeCommandRunner: runner })).diagnostics.find(
+        (item) => item.code === 'runtime-claude-plugins',
+      ),
+    ).toMatchObject({ status: 'pass' });
+
+    pluginState.skillsVersion = '1.18.1';
+    rmSync(join(skillsPath, '.claude-plugin'), { recursive: true, force: true });
+    expect(
+      (await runtimeDoctor(projectDir, { claudeCommandRunner: runner })).diagnostics.find(
+        (item) => item.code === 'runtime-claude-plugins',
+      ),
+    ).toMatchObject({
+      status: 'fail',
+      fix: 'Run `planr runtime update claude --scope user` and restart Claude Code.',
     });
   });
 

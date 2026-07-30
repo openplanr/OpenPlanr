@@ -40,12 +40,20 @@ every target. Existing files are copied byte-for-byte to
 `~/.planr/backups/` with hashes and a migration manifest. Only managed marker
 blocks are replaced; content outside those blocks is preserved.
 
+When Claude Code is selected at user scope, the same preview includes the
+official marketplace and plugin operations. Confirmed setup refreshes
+`openplanr/marketplace`, installs missing OpenPlanr plugins, and updates stale
+ones to the compatibility versions recorded by the CLI. This is intentionally
+not performed by the piped web installer. Restart Claude Code when setup says a
+plugin changed.
+
 For CI and provisioning, supply choices explicitly:
 
 ```bash
 planr setup --runtime auto --scope user --yes
 planr setup --runtime codex --scope project --yes
 planr setup --runtime all --scope both --yes
+planr runtime update claude --scope user --yes
 ```
 
 Repeated setup is idempotent. To restore the last pre-setup state:
@@ -116,6 +124,9 @@ absolute paths remain in the user runtime state and backups.
   `$HOME`, but only when their recorded ownership hashes still match.
 - `doctor --fix` can remove unreachable design/dashboard daemon state after a
   preview and second health check; it never kills or inspects unrelated processes.
+- `doctor` detects stale or malformed Claude plugins read-only. `doctor --fix`
+  does not install or update them; use the explicit runtime update command it
+  prints.
 - Credentials are not written to runtime locks or provenance.
 - Doctor redacts secrets and only fixes owned files after preview.
 - Expired guided sessions remain machine-local. Inspect them with
