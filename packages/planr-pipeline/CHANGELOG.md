@@ -4,6 +4,29 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.32.0] — 2026-07-30
+
+### Added
+
+- A bounded native-advisor handoff contract for Operating Board cycles, with
+  digest-bound leases, serial CEO/CTO/Chair dispatch, compact validated advisor
+  responses, idempotent resume, and fail-closed finalization.
+- Self-describing guided questionnaires and runtime-owned submission metadata so
+  Codex, Claude Code, and Cursor can collect answers through their native
+  interaction surfaces without duplicating CLI validation rules.
+- Generated runtime instructions and conformance fixtures for actionable
+  Markdown and JSON operating reports that can route accepted findings into
+  OpenPlanr planning without invoking PLAN or SHIP automatically.
+
+### Changed
+
+- Runtime adapters now keep stdin connected before launch, enforce bounded EOF
+  handling, and follow the CLI-owned next-action contract instead of asking
+  users to manually relay internal lifecycle commands.
+- Operating role guidance now separates executive judgment from deterministic
+  orchestration while preserving evidence citations, route ownership, and
+  safety boundaries.
+
 ## [0.30.0] — 2026-07-29
 
 ### Added

@@ -7,6 +7,7 @@ import {
   canonicalizeJson,
   computeOperatingProviderPolicyDigest,
   createGuidedAnswerEnvelope,
+  createGuidedAnswerSubmission,
   createOperatingAdvisorBrief,
   guidedAnswerPreviewDigest,
   listOperatingProviders,
@@ -68,6 +69,33 @@ const guidedQuestionnaire = readJson('conformance/fixtures/guided-interactions/q
 const guidedAction = readJson('conformance/fixtures/guided-interactions/structured-action-valid.json');
 const invalidGuidedAction = readJson('conformance/fixtures/guided-interactions/structured-action-invalid.json');
 assertProtocolArtifact('guided-questionnaire', guidedQuestionnaire);
+const { digest: _legacyQuestionnaireDigest, ...guidedQuestionnaireCore } = guidedQuestionnaire;
+const selfDescribingQuestionnaireWithoutDigest = {
+  ...guidedQuestionnaireCore,
+  schemaVersion: '1.1.0',
+  submission: createGuidedAnswerSubmission({
+    ...guidedQuestionnaireCore,
+    schemaVersion: '1.1.0',
+  }),
+};
+const selfDescribingQuestionnaire = {
+  ...selfDescribingQuestionnaireWithoutDigest,
+  digest: sha256Jcs(selfDescribingQuestionnaireWithoutDigest),
+};
+assertProtocolArtifact('guided-questionnaire', selfDescribingQuestionnaire);
+const answerContract =
+  selfDescribingQuestionnaire.submission.envelope.dynamicFields.answers;
+const answerDescriptor = answerContract.items[0];
+const projectedAnswer = Object.fromEntries(
+  answerContract.copyFields.map((field) => [field, answerDescriptor[field]]),
+);
+const literalAnswerEnvelope = {
+  ...selfDescribingQuestionnaire.submission.envelope.fixedFields,
+  questionnaireDigest: selfDescribingQuestionnaire.digest,
+  answers: [{ ...projectedAnswer, value: 'Asem' }],
+  submittedAt: '2026-07-29T09:30:00.000Z',
+};
+assertProtocolArtifact('guided-answer-envelope', literalAnswerEnvelope);
 assertProtocolArtifact('structured-action', guidedAction);
 let invalidGuidedActionRejected = false;
 try {

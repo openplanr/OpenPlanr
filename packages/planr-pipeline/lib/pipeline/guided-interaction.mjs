@@ -1,6 +1,7 @@
 import { PipelineError } from './errors.mjs';
 import {
   validateGuidedAnswerEnvelope,
+  validateGuidedQuestion,
   validateGuidedQuestionnaire,
   validateStructuredAction,
 } from './engine.mjs';
@@ -26,6 +27,21 @@ const FALLBACKS = Object.freeze({
   terminal: Object.freeze(['terminal', 'none']),
   none: Object.freeze(['none']),
 });
+
+const ANSWER_VALUE_TYPES = Object.freeze({
+  text: 'string',
+  secret: 'string',
+  'single-select': 'string',
+  path: 'string',
+  confirmation: 'boolean',
+  'multi-select': 'string-array',
+  'repeated-text': 'string-array',
+});
+const ANSWER_COPY_FIELDS = Object.freeze([
+  'questionId',
+  'questionVersion',
+  'sensitivity',
+]);
 
 function fail(code, message, details = {}) {
   throw new PipelineError(code, message, undefined, details);
@@ -140,6 +156,111 @@ function normalizedAnswers(questionnaire, answers) {
 }
 
 /**
+ * Describe the exact bounded stdin document a runtime must submit.
+ *
+ * The questionnaire digest is calculated before this transport-only contract
+ * is attached, avoiding a self-referential digest while still binding every
+ * immutable answer-envelope field to the questionnaire.
+ */
+export function createGuidedAnswerSubmission(questionnaire) {
+  if (!questionnaire || typeof questionnaire !== 'object' || Array.isArray(questionnaire)) {
+    fail('E_GUIDED_ADAPTER_INPUT_INVALID', 'Questionnaire input must be an object.');
+  }
+  for (const question of questionnaire.questions ?? []) {
+    const questionErrors = validateGuidedQuestion(question);
+    if (questionErrors.length) validationFailure('guided-question', questionErrors);
+  }
+  const answers = questionnaire.questions
+    .filter(({ type }) => type !== 'informational')
+    .map((question) => ({
+      questionId: question.questionId,
+      questionVersion: question.questionVersion,
+      sensitivity: question.sensitivity,
+      required: question.required,
+      valueType: ANSWER_VALUE_TYPES[question.type],
+    }));
+  return Object.freeze({
+    kind: 'guided-answer-submission',
+    version: '1.0.0',
+    schema: 'https://openplanr.dev/schemas/v1.2.0/guided-answer-envelope.schema.json',
+    transport: Object.freeze({
+      kind: 'stdin-json',
+      mediaType: 'application/json',
+      encoding: 'utf-8',
+      maxBytes: 64 * 1024,
+      argv: Object.freeze([
+        'planr',
+        'operate',
+        'init',
+        '--resume',
+        questionnaire.sessionId,
+        '--stdin',
+        '--json',
+      ]),
+    }),
+    envelope: Object.freeze({
+      fixedFields: Object.freeze({
+        kind: 'guided-answer-envelope',
+        schemaVersion: '1.0.0',
+        protocolVersion: '1.2.0',
+        sessionId: questionnaire.sessionId,
+        questionnaireVersion: questionnaire.questionnaireVersion,
+        command: questionnaire.command,
+        projectIdentity: questionnaire.projectIdentity,
+        projectHead: questionnaire.projectHead,
+        configHead: questionnaire.configHead,
+        adapter: Object.freeze(structuredClone(questionnaire.adapter)),
+      }),
+      dynamicFields: Object.freeze({
+        questionnaireDigest: Object.freeze({
+          source: 'questionnaire',
+          pointer: '/digest',
+        }),
+        submittedAt: Object.freeze({
+          source: 'runtime-clock',
+          format: 'date-time',
+        }),
+        answers: Object.freeze({
+          source: 'chosen-values-by-question-id',
+          copyFields: ANSWER_COPY_FIELDS,
+          omitUnansweredOptional: true,
+          items: Object.freeze(answers.map((answer) => Object.freeze(answer))),
+        }),
+      }),
+    }),
+  });
+}
+
+/**
+ * Materialize a new self-describing questionnaire's exact answer envelope.
+ * Runtime metadata is copied verbatim from the digest-bound questionnaire;
+ * callers provide only chosen values and their wall-clock submission time.
+ */
+export function createGuidedAnswerEnvelopeFromQuestionnaire({
+  questionnaire,
+  answers,
+  submittedAt,
+} = {}) {
+  const questionErrors = validateGuidedQuestionnaire(questionnaire);
+  if (questionErrors.length) validationFailure('guided-questionnaire', questionErrors);
+  if (!questionnaire.submission) {
+    fail(
+      'E_GUIDED_ADAPTER_SUBMISSION_UNAVAILABLE',
+      'Questionnaire does not expose a self-describing answer submission contract.',
+    );
+  }
+  const envelope = {
+    ...structuredClone(questionnaire.submission.envelope.fixedFields),
+    questionnaireDigest: questionnaire.digest,
+    answers: normalizedAnswers(questionnaire, answers),
+    submittedAt,
+  };
+  const errors = validateGuidedAnswerEnvelope(envelope);
+  if (errors.length) validationFailure('guided-answer-envelope', errors);
+  return envelope;
+}
+
+/**
  * Build the bounded stdin envelope. Question labels and explanations are never
  * accepted as inputs, so an adapter cannot rewrite the CLI-owned questionnaire.
  */
@@ -155,6 +276,12 @@ export function createGuidedAnswerEnvelope({
   if (questionErrors.length) validationFailure('guided-questionnaire', questionErrors);
   if (!GUIDED_INTERACTION_MODES.includes(interaction) || interaction === 'none') {
     fail('E_GUIDED_ADAPTER_INTERACTION_INVALID', 'Answers require native, chat, or terminal interaction.');
+  }
+  if (questionnaire.submission) {
+    fail(
+      'E_GUIDED_ADAPTER_SUBMISSION_REQUIRED',
+      'Use createGuidedAnswerEnvelopeFromQuestionnaire() for a self-describing questionnaire.',
+    );
   }
   const envelope = {
     kind: 'guided-answer-envelope',

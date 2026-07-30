@@ -26,7 +26,7 @@
   ],
   "properties": {
     "kind": { "const": "guided-questionnaire" },
-    "schemaVersion": { "const": "1.0.0" },
+    "schemaVersion": { "type": "string", "enum": ["1.0.0", "1.1.0"] },
     "protocolVersion": { "const": "1.2.0" },
     "sessionId": { "type": "string", "pattern": "^GIS-[A-Za-z0-9._-]{8,128}$" },
     "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
@@ -58,7 +58,221 @@
         "$ref": "https://openplanr.dev/schemas/v1.2.0/guided-question.schema.json"
       }
     },
+    "submission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "version",
+        "schema",
+        "transport",
+        "envelope"
+      ],
+      "properties": {
+        "kind": { "const": "guided-answer-submission" },
+        "version": { "const": "1.0.0" },
+        "schema": {
+          "const": "https://openplanr.dev/schemas/v1.2.0/guided-answer-envelope.schema.json"
+        },
+        "transport": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "mediaType", "encoding", "maxBytes", "argv"],
+          "properties": {
+            "kind": { "const": "stdin-json" },
+            "mediaType": { "const": "application/json" },
+            "encoding": { "const": "utf-8" },
+            "maxBytes": { "const": 65536 },
+            "argv": {
+              "type": "array",
+              "minItems": 7,
+              "maxItems": 7,
+              "prefixItems": [
+                { "const": "planr" },
+                { "const": "operate" },
+                { "const": "init" },
+                { "const": "--resume" },
+                { "type": "string", "pattern": "^GIS-[A-Za-z0-9._-]{8,128}$" },
+                { "const": "--stdin" },
+                { "const": "--json" }
+              ],
+              "items": false
+            }
+          }
+        },
+        "envelope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fixedFields", "dynamicFields"],
+          "properties": {
+            "fixedFields": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "schemaVersion",
+                "protocolVersion",
+                "sessionId",
+                "questionnaireVersion",
+                "command",
+                "projectIdentity",
+                "projectHead",
+                "configHead",
+                "adapter"
+              ],
+              "properties": {
+                "kind": { "const": "guided-answer-envelope" },
+                "schemaVersion": { "const": "1.0.0" },
+                "protocolVersion": { "const": "1.2.0" },
+                "sessionId": {
+                  "type": "string",
+                  "pattern": "^GIS-[A-Za-z0-9._-]{8,128}$"
+                },
+                "questionnaireVersion": {
+                  "type": "string",
+                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                },
+                "command": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9.-]{0,127}$"
+                },
+                "projectIdentity": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                },
+                "projectHead": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                },
+                "configHead": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}$"
+                },
+                "adapter": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["runtime", "version", "interaction"],
+                  "properties": {
+                    "runtime": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9-]*$"
+                    },
+                    "version": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "interaction": {
+                      "type": "string",
+                      "enum": ["native", "chat", "terminal", "none"]
+                    }
+                  }
+                }
+              }
+            },
+            "dynamicFields": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["questionnaireDigest", "submittedAt", "answers"],
+              "properties": {
+                "questionnaireDigest": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["source", "pointer"],
+                  "properties": {
+                    "source": { "const": "questionnaire" },
+                    "pointer": { "const": "/digest" }
+                  }
+                },
+                "submittedAt": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["source", "format"],
+                  "properties": {
+                    "source": { "const": "runtime-clock" },
+                    "format": { "const": "date-time" }
+                  }
+                },
+                "answers": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "source",
+                    "copyFields",
+                    "omitUnansweredOptional",
+                    "items"
+                  ],
+                  "properties": {
+                    "source": { "const": "chosen-values-by-question-id" },
+                    "copyFields": {
+                      "type": "array",
+                      "minItems": 3,
+                      "maxItems": 3,
+                      "prefixItems": [
+                        { "const": "questionId" },
+                        { "const": "questionVersion" },
+                        { "const": "sensitivity" }
+                      ],
+                      "items": false
+                    },
+                    "omitUnansweredOptional": { "const": true },
+                    "items": {
+                      "type": "array",
+                      "minItems": 0,
+                      "maxItems": 50,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "questionId",
+                          "questionVersion",
+                          "sensitivity",
+                          "required",
+                          "valueType"
+                        ],
+                        "properties": {
+                          "questionId": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9.-]{0,63}$"
+                          },
+                          "questionVersion": {
+                            "type": "string",
+                            "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                          },
+                          "sensitivity": {
+                            "type": "string",
+                            "enum": ["public", "internal", "sensitive"]
+                          },
+                          "required": { "type": "boolean" },
+                          "valueType": {
+                            "type": "string",
+                            "enum": ["string", "boolean", "string-array"]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "createdAt": { "type": "string", "format": "date-time" },
     "expiresAt": { "type": "string", "format": "date-time" }
-  }
+  },
+  "oneOf": [
+    {
+      "title": "Original questionnaire",
+      "properties": { "schemaVersion": { "const": "1.0.0" } },
+      "not": { "required": ["submission"] }
+    },
+    {
+      "title": "Self-describing questionnaire",
+      "properties": { "schemaVersion": { "const": "1.1.0" } },
+      "required": ["submission"]
+    }
+  ]
 }

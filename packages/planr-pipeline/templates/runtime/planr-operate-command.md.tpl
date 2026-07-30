@@ -72,7 +72,7 @@ and matching planning provenance; `shipInvoked` stays false. `run --review-only`
 observes existing shipment proof and due outcome observations but does not start
 SHIP.
 
-Canonical advisory lenses: CEO (strategy-finance: Direction, business model, pricing and packaging, focus, economics, and what to stop.); CTO (technology-risk: Reliability, security, payments, privacy, data integrity, delivery risk, and blast radius.); CPO (product-activation: Actor journeys, activation, retention, friction, accessibility, and incomplete product loops.); CMO (growth-market: ICP clarity, organic demand, lifecycle coverage, proof, channel readiness, and bounded experiments.); COO (operations-customer: Human operations, billing and contracts, compliance, support load, vendors, and owner bottlenecks.); Chair (chair: Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals.). They are independent, read-only
+Canonical advisory lenses: {{OPERATING_LENSES}}. They are independent, read-only
 executive perspectives—not delivery agents and not permission to role-play
 without evidence. Native advisor work must consume the digest-bound `rolePacks`
 returned by `planr operate adapter prepare` under the adapter's declared

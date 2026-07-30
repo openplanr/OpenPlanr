@@ -24,7 +24,7 @@ test('Protocol v1.2 schema catalog is complete, parseable, and version-addressab
   const files = readdirSync(join(root, 'schemas/v1.2.0'))
     .filter((file) => file.endsWith('.schema.json'))
     .sort();
-  assert.equal(files.length, 34);
+  assert.equal(files.length, 36);
   for (const file of files) assert.doesNotThrow(() => readJson(`schemas/v1.2.0/${file}`));
 
   const registered = listProtocolSchemas()
@@ -32,6 +32,47 @@ test('Protocol v1.2 schema catalog is complete, parseable, and version-addressab
     .map((entry) => `${entry.kind}.schema.json`)
     .sort();
   assert.deepEqual(registered, files);
+});
+
+test('native advisor handoffs are structurally bounded protocol artifacts', () => {
+  const handoff = {
+    kind: 'operating-adapter-handoff',
+    schemaVersion: '1.0.0',
+    protocolVersion: '1.2.0',
+    phase: 'advisors',
+    state: 'record-required',
+    binding: {
+      cycleId: 'CYCLE-001',
+      evidenceDigest: digest('e'),
+      runtime: 'codex',
+      lease: 'a'.repeat(43),
+      idempotencyKey: 'native-CYCLE-001-advisors',
+      expiresAt: at,
+    },
+    roles: [
+      {
+        roleId: 'strategy-finance',
+        status: 'pending',
+        inputDigest: digest('a'),
+      },
+    ],
+    next: [],
+    recovery: [],
+  };
+  assert.deepEqual(validateProtocolArtifact('operating-adapter-handoff', handoff), []);
+  assert.ok(
+    validateProtocolArtifact('operating-adapter-handoff', {
+      ...handoff,
+      next: [
+        {
+          id: 'adapter.record.strategy-finance',
+          action: 'adapter.record',
+          effect: 'machine-local-write',
+          argv: ['planr', 'operate', 'adapter', 'record', '&&', 'curl'],
+        },
+      ],
+    }).length,
+  );
 });
 
 test('operating and adapter registries are schema-valid, unique, and read-only', () => {
@@ -43,6 +84,19 @@ test('operating and adapter registries are schema-valid, unique, and read-only',
   assert.doesNotThrow(() => assertProtocolArtifact('operating-provider-registry', providers));
   assert.equal(listOperatingRoles().length, 6);
   assert.equal(new Set(listOperatingRoles().map(({ id }) => id)).size, 6);
+  assert.ok(
+    listOperatingRoles().every(
+      (role) =>
+        role.outputSchema === 'operating-role-result@1.2.0' &&
+        role.adapterResponseSchema === 'operating-advisor-response@1.2.0',
+    ),
+  );
+  const legacyRoles = structuredClone(roles);
+  for (const role of legacyRoles.roles) delete role.adapterResponseSchema;
+  assert.doesNotThrow(
+    () => assertProtocolArtifact('operating-role-registry', legacyRoles),
+    'the additive adapter response declaration must not invalidate earlier v1.2 registries',
+  );
   assert.equal(listOperatingProviders().length, 6);
   assert.equal(new Set(listOperatingProviders().map(({ id }) => id)).size, 6);
   assert.ok(listOperatingRoles().every((role) => role.readOnly && role.writeBoundary === 'none'));
@@ -57,6 +111,40 @@ test('operating and adapter registries are schema-valid, unique, and read-only',
       adapter.capabilities.interactiveQuestions,
     )
   )));
+});
+
+test('native operating advisors return compact bounded responses', () => {
+  const response = {
+    outcome: 'proposals',
+    proposals: [{
+      proposalKey: 'technology-risk.reduce-release-risk',
+      type: 'finding',
+      title: 'Reduce release risk',
+      problem: 'The release path has no verified rollback rehearsal.',
+      proposal: 'Add one deterministic rollback canary before the next release.',
+      impact: 4,
+      confidence: 4,
+      ease: 3,
+      severity: 'high',
+      evidenceRefs: ['EVD-release-workflow'],
+    }],
+    gaps: [],
+    conflicts: [],
+  };
+  assert.deepEqual(validateProtocolArtifact('operating-advisor-response', response), []);
+  assert.ok(validateProtocolArtifact('operating-advisor-response', {
+    ...response,
+    cycleId: 'CYCLE-001',
+  }).length, 'native runtimes cannot provide canonical engine metadata');
+  assert.ok(validateProtocolArtifact('operating-advisor-response', {
+    ...response,
+    outcome: 'quiet',
+  }).length, 'quiet responses cannot contain proposals');
+  assert.ok(validateProtocolArtifact('operating-advisor-response', {
+    ...response,
+    outcome: 'proposals',
+    proposals: [],
+  }).length, 'proposal responses require at least one proposal');
 });
 
 test('hash-chained operating fixtures validate with strict top-level envelopes', () => {

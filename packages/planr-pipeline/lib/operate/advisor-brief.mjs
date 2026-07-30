@@ -1,5 +1,5 @@
 import { PipelineError } from '../pipeline/errors.mjs';
-import { listOperatingRoles } from '../protocol/contracts.mjs';
+import { listOperatingRoles, resolveProtocolSchema } from '../protocol/contracts.mjs';
 import { sha256Jcs } from '../protocol/jcs.mjs';
 
 const SHARED_BOUNDARIES = Object.freeze([
@@ -38,6 +38,9 @@ function roleById(roleId) {
 export function createOperatingAdvisorBrief(roleId) {
   const role = structuredClone(roleById(roleId));
   const chair = role.id === 'chair';
+  const responseContract = resolveProtocolSchema('operating-advisor-response', {
+    protocolVersion: '1.2.0',
+  });
   const unsigned = {
     kind: 'operating-advisor-brief',
     schemaVersion: '1.0.0',
@@ -61,7 +64,8 @@ export function createOperatingAdvisorBrief(roleId) {
       minimum: structuredClone(role.minimumEvidence),
     },
     output: {
-      schema: role.outputSchema,
+      schema: role.adapterResponseSchema,
+      jsonSchema: responseContract.schema,
       allowedProposalTypes: [...role.allowedProposalTypes].sort(),
       maximumProposals: role.budgets.maxProposals,
       maximumOutputBytes: role.budgets.maxOutputBytes,

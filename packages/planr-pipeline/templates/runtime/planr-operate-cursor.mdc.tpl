@@ -51,7 +51,7 @@ a recorded response. Use `handoff.recovery` only after a failed current action.
 Never derive, suffix, or replace a returned idempotency key, lease, digest,
 cycle, role, runtime, or argv token; never probe machine commands with `--help`.
 
-Canonical advisory lenses: CEO (strategy-finance: Direction, business model, pricing and packaging, focus, economics, and what to stop.); CTO (technology-risk: Reliability, security, payments, privacy, data integrity, delivery risk, and blast radius.); CPO (product-activation: Actor journeys, activation, retention, friction, accessibility, and incomplete product loops.); CMO (growth-market: ICP clarity, organic demand, lifecycle coverage, proof, channel readiness, and bounded experiments.); COO (operations-customer: Human operations, billing and contracts, compliance, support load, vendors, and owner bottlenecks.); Chair (chair: Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals.). They are read-only and separate
+Canonical advisory lenses: {{OPERATING_LENSES}}. They are read-only and separate
 from delivery roles. Native advisor work must use the digest-bound `rolePacks`
 returned by `planr operate adapter prepare` under the declared
 `operatingAdvisorDispatch` mode. A `native-bounded` advisor uses only the

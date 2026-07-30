@@ -157,6 +157,24 @@ test('generated adapter docs and runtime-asset digests are current', () => {
   );
   const rendered = renderGuidedAdapterAssets({ projectRoot: root });
   assert.match(rendered['docs/runtime-guided-interactions.md'], /Native presentation is selected only/u);
+  for (const path of [
+    'adapters/codex/skills/planr-operate/SKILL.md',
+    'adapters/cursor/rules/openplanr-operate.mdc',
+    'commands/operate.md',
+  ]) {
+    const content = readFileSync(join(root, path), 'utf8');
+    assert.match(content, /Start guided setup with exactly `planr operate init --json`/u);
+    assert.doesNotMatch(content, /planr operate init --guided/u);
+    assert.match(content, /answers\.copyFields/u);
+    assert.match(content, /required.*valueType.*constraints|constraints.*required.*valueType/su);
+    assert.match(content, /Never launch a bare\s+`--stdin` action/u);
+    assert.match(content, /closes EOF in the\s+same invocation/u);
+    assert.match(content, /higher-sensitivity\s+answers/u);
+    assert.match(content, /Independent advisor inference may\s+run in parallel/u);
+    assert.match(content, /adapter lifecycle mutations are serial/u);
+    assert.match(content, /wait for its returned handoff/u);
+    assert.match(content, /replay it byte-for-byte/u);
+  }
 });
 
 test('generated adapter checks are stable on CRLF worktrees', () => {

@@ -238,6 +238,7 @@ var OpenPlanrArtifactStage = (() => {
     }
     function renderPins() {
       const pins = Array.isArray(review()?.pins) ? review().pins : [];
+      const focusedPinId = document2.activeElement?.dataset?.planrPinId ?? null;
       for (const layer of document2.querySelectorAll("[data-planr-annotation-layer]")) {
         for (const existing of layer.querySelectorAll("[data-planr-pin-id]")) existing.remove();
         for (const existing of layer.querySelectorAll("[data-planr-pin-region-id]")) existing.remove();
@@ -296,6 +297,9 @@ var OpenPlanrArtifactStage = (() => {
             });
           }
         }
+      }
+      if (focusedPinId) {
+        document2.getElementById(annotationDomIds(focusedPinId).pin)?.focus?.({ preventScroll: true });
       }
     }
     function closeComposer({ restoreFocus = false } = {}) {

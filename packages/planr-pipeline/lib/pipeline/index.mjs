@@ -64,6 +64,10 @@ export {
   listOperatingAdvisorBriefs,
 } from '../operate/advisor-brief.mjs';
 export {
+  createOperatingAdapterHandoff,
+  validateOperatingAdapterHandoffBindings,
+} from '../operate/adapter-handoff.mjs';
+export {
   cancelOperatingArtifactGeneration,
   commitOperatingArtifactGeneration,
   failOperatingArtifactGeneration,
@@ -85,7 +89,9 @@ export {
 export {
   GUIDED_INTERACTION_MODES,
   assertGuidedCliResult,
+  createGuidedAnswerSubmission,
   createGuidedAnswerEnvelope,
+  createGuidedAnswerEnvelopeFromQuestionnaire,
   encodeGuidedAnswerStdin,
   guidedAnswerPreviewDigest,
   reduceGuidedAnswerEnvelope,

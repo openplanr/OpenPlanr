@@ -35,7 +35,9 @@ order and audit commands are in `docs/release-checklist.md`.
 The CLI owns the Operating Board questionnaire, typed answer validation,
 preview, and exact next actions. Runtime skills are presentation adapters only:
 they may use a verified native question tool, structured chat, an attached
-terminal, or return a terminal handoff. They must never infer answers, append
+terminal, or return a terminal handoff. Schema 1.1 questionnaires include the
+exact bounded-stdin submission contract, so adapters never reconstruct envelope
+metadata. They must never infer answers, append
 `--yes`, bypass evidence recovery, or continue after a mutating/provider action
 without a distinct user selection. See
 [`guided-operating-board.md`](guided-operating-board.md).

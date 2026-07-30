@@ -27,6 +27,8 @@ const paths = {
   'operating-cycle-manifest': { '1.2.0': 'schemas/v1.2.0/operating-cycle-manifest.schema.json' },
   'operating-state': { '1.2.0': 'schemas/v1.2.0/operating-state.schema.json' },
   'operating-evidence': { '1.2.0': 'schemas/v1.2.0/operating-evidence.schema.json' },
+  'operating-advisor-response': { '1.2.0': 'schemas/v1.2.0/operating-advisor-response.schema.json' },
+  'operating-adapter-handoff': { '1.2.0': 'schemas/v1.2.0/operating-adapter-handoff.schema.json' },
   'operating-role-result': { '1.2.0': 'schemas/v1.2.0/operating-role-result.schema.json' },
   'operating-finding': { '1.2.0': 'schemas/v1.2.0/operating-finding.schema.json' },
   'operating-decision': { '1.2.0': 'schemas/v1.2.0/operating-decision.schema.json' },

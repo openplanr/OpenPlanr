@@ -16,6 +16,7 @@ import { validateJson } from '../../conformance/json-schema-validate.mjs';
 import { parseFrontmatter, splitFrontmatter } from '../dashboard/graph-reader.mjs';
 import { buildGraph } from '../dashboard/graph-engine.mjs';
 import { validateProtocolArtifact as validateCanonicalProtocolArtifact } from '../protocol/contracts.mjs';
+import { canonicalizeJson } from '../protocol/jcs.mjs';
 import { PipelineError } from './errors.mjs';
 import { appendProvenanceEvent, createProvenanceEvent } from './provenance.mjs';
 
@@ -31,6 +32,21 @@ export const GUIDED_INTERACTION_CONTRACTS = Object.freeze({
   'structured-action': Object.freeze({ protocolVersion: '1.2.0', schemaVersion: '1.0.0' }),
   'evidence-diagnostic': Object.freeze({ protocolVersion: '1.2.0', schemaVersion: '1.0.0' }),
 });
+
+const GUIDED_ANSWER_VALUE_TYPES = Object.freeze({
+  text: 'string',
+  secret: 'string',
+  'single-select': 'string',
+  path: 'string',
+  confirmation: 'boolean',
+  'multi-select': 'string-array',
+  'repeated-text': 'string-array',
+});
+const GUIDED_ANSWER_COPY_FIELDS = Object.freeze([
+  'questionId',
+  'questionVersion',
+  'sensitivity',
+]);
 
 function guidedContract(kind) {
   const contract = GUIDED_INTERACTION_CONTRACTS[kind];
@@ -85,6 +101,68 @@ export function validateGuidedInteractionArtifact(kind, value, options = {}) {
       rule: 'stepRange',
       detail: `step ${value.step} exceeds totalSteps ${value.totalSteps}`,
     });
+    if (value.submission) {
+      const bindings = {
+        sessionId: value.sessionId,
+        questionnaireVersion: value.questionnaireVersion,
+        command: value.command,
+        projectIdentity: value.projectIdentity,
+        projectHead: value.projectHead,
+        configHead: value.configHead,
+        adapter: value.adapter,
+      };
+      for (const [field, expected] of Object.entries(bindings)) {
+        if (
+          canonicalizeJson(value.submission.envelope.fixedFields[field])
+          !== canonicalizeJson(expected)
+        ) errors.push({
+          path: `$.submission.envelope.fixedFields.${field}`,
+          rule: 'exactQuestionnaireBinding',
+          detail: `${field} must match the questionnaire`,
+        });
+      }
+      const expectedArgv = [
+        'planr',
+        'operate',
+        'init',
+        '--resume',
+        value.sessionId,
+        '--stdin',
+        '--json',
+      ];
+      if (JSON.stringify(value.submission.transport.argv) !== JSON.stringify(expectedArgv)) {
+        errors.push({
+          path: '$.submission.transport.argv',
+          rule: 'exactSubmissionCommand',
+          detail: 'submission argv must resume this questionnaire session',
+        });
+      }
+      const expectedAnswers = value.questions
+        .filter(({ type }) => type !== 'informational')
+        .map((question) => ({
+          questionId: question.questionId,
+          questionVersion: question.questionVersion,
+          sensitivity: question.sensitivity,
+          required: question.required,
+          valueType: GUIDED_ANSWER_VALUE_TYPES[question.type],
+        }));
+      if (
+        JSON.stringify(value.submission.envelope.dynamicFields.answers.items)
+        !== JSON.stringify(expectedAnswers)
+      ) errors.push({
+        path: '$.submission.envelope.dynamicFields.answers.items',
+        rule: 'exactAnswerDescriptors',
+        detail: 'answer descriptors must match the ordered answerable questions',
+      });
+      if (
+        JSON.stringify(value.submission.envelope.dynamicFields.answers.copyFields)
+        !== JSON.stringify(GUIDED_ANSWER_COPY_FIELDS)
+      ) errors.push({
+        path: '$.submission.envelope.dynamicFields.answers.copyFields',
+        rule: 'exactAnswerCopyFields',
+        detail: 'answer copy fields must match the guided answer envelope schema',
+      });
+    }
   }
   if (kind === 'guided-answer-envelope') {
     const duplicate = duplicateIds(value.answers, 'questionId');

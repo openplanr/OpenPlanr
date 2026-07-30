@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  createGuidedAnswerEnvelopeFromQuestionnaire,
+  createGuidedAnswerSubmission,
   listProtocolSchemas,
   normalizeGuidedInteractionArtifact,
+  sha256Jcs,
   validateEvidenceDiagnostic,
   validateGuidedAnswerEnvelope,
   validateGuidedConfirmation,
@@ -56,6 +59,23 @@ const questionnaire = {
   createdAt,
   expiresAt,
 };
+
+function selfDescribingQuestionnaire() {
+  const core = {
+    ...questionnaire,
+    schemaVersion: '1.1.0',
+    adapter: { ...questionnaire.adapter, interaction: 'none' },
+  };
+  delete core.digest;
+  const withoutDigest = {
+    ...core,
+    submission: createGuidedAnswerSubmission(core),
+  };
+  return {
+    ...withoutDigest,
+    digest: sha256Jcs(withoutDigest),
+  };
+}
 
 const answerEnvelope = {
   kind: 'guided-answer-envelope',
@@ -125,6 +145,125 @@ test('questions and questionnaires reject executable conditions and duplicate id
     ...questionnaire,
     step: 4,
   }).some(({ rule }) => rule === 'stepRange'));
+});
+
+test('self-describing questionnaires preserve v1.0 compatibility and bind exact stdin metadata', () => {
+  const current = selfDescribingQuestionnaire();
+  assert.deepEqual(validateGuidedQuestionnaire(questionnaire), []);
+  assert.deepEqual(validateGuidedQuestionnaire(current), []);
+  assert.ok(validateGuidedQuestionnaire({
+    ...questionnaire,
+    submission: current.submission,
+  }).length, 'schema 1.0 cannot claim the new submission contract');
+  const { submission: _submission, ...missingSubmission } = current;
+  assert.ok(validateGuidedQuestionnaire(missingSubmission).length);
+  assert.ok(validateGuidedQuestionnaire({
+    ...current,
+    submission: {
+      ...current.submission,
+      transport: {
+        ...current.submission.transport,
+        argv: current.submission.transport.argv.map((part) =>
+          part === current.sessionId ? 'GIS-different-session' : part),
+      },
+    },
+  }).some(({ rule }) => rule === 'exactSubmissionCommand'));
+  assert.deepEqual(
+    current.submission.envelope.dynamicFields.answers.copyFields,
+    ['questionId', 'questionVersion', 'sensitivity'],
+  );
+  assert.ok(validateGuidedQuestionnaire({
+    ...current,
+    submission: {
+      ...current.submission,
+      envelope: {
+        ...current.submission.envelope,
+        dynamicFields: {
+          ...current.submission.envelope.dynamicFields,
+          answers: {
+            ...current.submission.envelope.dynamicFields.answers,
+            copyFields: ['questionId', 'required', 'valueType'],
+          },
+        },
+      },
+    },
+  }).some(({ rule }) => rule === 'exactAnswerCopyFields'));
+  assert.equal(
+    current.digest,
+    sha256Jcs(Object.fromEntries(Object.entries(current).filter(([key]) => key !== 'digest'))),
+    'the descriptor uses a digest pointer and can participate in the questionnaire digest',
+  );
+});
+
+test('a literal runtime can materialize a valid envelope from declared copy fields', () => {
+  const current = selfDescribingQuestionnaire();
+  const answersContract = current.submission.envelope.dynamicFields.answers;
+  const descriptor = answersContract.items.find(
+    ({ questionId }) => questionId === question.questionId,
+  );
+  const answer = Object.fromEntries(
+    answersContract.copyFields.map((field) => [field, descriptor[field]]),
+  );
+  answer.value = 'Asem';
+  const envelope = {
+    ...structuredClone(current.submission.envelope.fixedFields),
+    questionnaireDigest: current.digest,
+    answers: [answer],
+    submittedAt: createdAt,
+  };
+
+  assert.deepEqual(validateGuidedAnswerEnvelope(envelope), []);
+  assert.deepEqual(Object.keys(envelope.answers[0]).sort(), [
+    'questionId',
+    'questionVersion',
+    'sensitivity',
+    'value',
+  ]);
+  assert.equal('required' in envelope.answers[0], false);
+  assert.equal('valueType' in envelope.answers[0], false);
+  const helperEnvelope = createGuidedAnswerEnvelopeFromQuestionnaire({
+    questionnaire: current,
+    answers: { 'decision-owner': 'Asem' },
+    submittedAt: createdAt,
+  });
+  assert.deepEqual(envelope, helperEnvelope);
+
+  const invalidEnvelope = {
+    ...envelope,
+    answers: [{
+      ...structuredClone(descriptor),
+      value: 'Asem',
+    }],
+  };
+  const invalidErrors = validateGuidedAnswerEnvelope(invalidEnvelope);
+  assert.ok(invalidErrors.some(
+    ({ path, detail }) => path === '$.answers[0]' && detail.includes("'required'"),
+  ));
+  assert.ok(invalidErrors.some(
+    ({ path, detail }) => path === '$.answers[0]' && detail.includes("'valueType'"),
+  ));
+});
+
+test('a runtime can materialize a valid envelope from only the questionnaire and chosen values', () => {
+  const current = selfDescribingQuestionnaire();
+  const envelope = createGuidedAnswerEnvelopeFromQuestionnaire({
+    questionnaire: current,
+    answers: { 'decision-owner': 'Asem' },
+    submittedAt: createdAt,
+  });
+  assert.deepEqual(validateGuidedAnswerEnvelope(envelope), []);
+  assert.deepEqual(envelope, {
+    ...current.submission.envelope.fixedFields,
+    questionnaireDigest: current.digest,
+    answers: [{
+      questionId: question.questionId,
+      questionVersion: question.questionVersion,
+      sensitivity: question.sensitivity,
+      value: 'Asem',
+    }],
+    submittedAt: createdAt,
+  });
+  assert.equal(envelope.adapter.interaction, 'none');
 });
 
 test('answer and session contracts are identity-bound and never persist sensitive answers', () => {

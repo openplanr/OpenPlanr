@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
@@ -63,6 +70,37 @@ test('generated operating adapter assets and docs match their registries byte-fo
     assert.match(asset, /rolePacks?/);
     assert.match(asset, /empty-tool\s+isolation/);
     assert.match(asset, /(?:improvise|role-play)/i);
+  }
+});
+
+test('operating adapter generation normalizes CRLF templates to LF', () => {
+  const projectRoot = mkdtempSync(join(tmpdir(), 'planr-operating-assets-'));
+  const paths = [
+    'package.json',
+    'registry/adapters.json',
+    'registry/operating-roles.json',
+    'registry/operating-providers.json',
+    'templates/runtime/planr-operate-skill.md.tpl',
+    'templates/runtime/planr-operate-cursor.mdc.tpl',
+    'templates/runtime/planr-operate-command.md.tpl',
+  ];
+  try {
+    for (const path of paths) {
+      const target = join(projectRoot, path);
+      mkdirSync(dirname(target), { recursive: true });
+      const bytes = readFileSync(join(root, path), 'utf8');
+      writeFileSync(target, bytes.replace(/\r\n?/gu, '\n').replace(/\n/gu, '\r\n'), 'utf8');
+    }
+    const generated = renderOperatingAssets({ projectRoot });
+    for (const target of [
+      'adapters/codex/skills/planr-operate/SKILL.md',
+      'adapters/cursor/rules/openplanr-operate.mdc',
+      'commands/operate.md',
+    ]) {
+      assert.doesNotMatch(generated[target], /\r/u, `${target} must remain LF-only`);
+    }
+  } finally {
+    rmSync(projectRoot, { recursive: true, force: true });
   }
 });
 

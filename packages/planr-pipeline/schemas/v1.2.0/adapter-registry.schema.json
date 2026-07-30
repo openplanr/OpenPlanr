@@ -46,7 +46,7 @@
           "capabilities": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["subagents", "hooks", "toolIsolation", "parallelDispatch", "parallelDispatchMode", "headlessBridge", "artifactReview", "operatingBoard", "interactiveQuestions"],
+            "required": ["subagents", "hooks", "toolIsolation", "parallelDispatch", "parallelDispatchMode", "headlessBridge", "artifactReview", "operatingBoard", "operatingAdvisorDispatch", "interactiveQuestions"],
             "properties": {
               "subagents": { "type": "string", "enum": ["native", "advisory", "sequential", "dynamic"] },
               "hooks": { "type": "boolean" },
@@ -56,6 +56,10 @@
               "headlessBridge": { "type": "boolean" },
               "artifactReview": { "type": "boolean" },
               "operatingBoard": { "type": "boolean" },
+              "operatingAdvisorDispatch": {
+                "type": "string",
+                "enum": ["native-isolated", "native-bounded", "structured-provider"]
+              },
               "interactiveQuestions": { "type": "string", "enum": ["native", "chat", "terminal", "none"] }
             }
           },

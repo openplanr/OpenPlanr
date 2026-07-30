@@ -249,6 +249,7 @@ export function mountArtifactAnnotations({
 
   function renderPins() {
     const pins = Array.isArray(review()?.pins) ? review().pins : [];
+    const focusedPinId = document.activeElement?.dataset?.planrPinId ?? null;
     for (const layer of document.querySelectorAll('[data-planr-annotation-layer]')) {
       for (const existing of layer.querySelectorAll('[data-planr-pin-id]')) existing.remove();
       for (const existing of layer.querySelectorAll('[data-planr-pin-region-id]')) existing.remove();
@@ -309,6 +310,9 @@ export function mountArtifactAnnotations({
             .catch(() => {});
         }
       }
+    }
+    if (focusedPinId) {
+      document.getElementById(annotationDomIds(focusedPinId).pin)?.focus?.({ preventScroll: true });
     }
   }
 

@@ -22,6 +22,20 @@ test('executive advisor briefs are registry-derived, distinct, and digest-bound'
   );
   assert.ok(ceo.authority.sharedBoundaries.some((boundary) => /untrusted data/.test(boundary)));
   assert.ok(cto.authority.forbiddenRecommendationCategories.includes('production-write'));
+  assert.equal(ceo.output.schema, 'operating-advisor-response@1.2.0');
+  assert.deepEqual(ceo.output.jsonSchema.required, [
+    'outcome',
+    'proposals',
+    'gaps',
+    'conflicts',
+  ]);
+  assert.deepEqual(ceo.output.jsonSchema.properties.outcome.enum, ['proposals', 'quiet']);
+  assert.deepEqual(ceo.output.jsonSchema.examples[0], {
+    outcome: 'quiet',
+    proposals: [],
+    gaps: [],
+    conflicts: [],
+  });
   assert.deepEqual(ceo.output.allowedProposalTypes, ['data-gap', 'decision', 'finding']);
 });
 

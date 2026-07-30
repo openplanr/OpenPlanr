@@ -29,10 +29,16 @@ test('all certified adapters declare truthful presentation modes only', () => {
   for (const adapter of adapters.adapters) {
     assert.ok(modes.has(adapter.capabilities.interactiveQuestions));
     assert.equal(typeof adapter.capabilities.operatingBoard, 'boolean');
+    assert.ok([
+      'native-isolated',
+      'native-bounded',
+      'structured-provider',
+    ].includes(adapter.capabilities.operatingAdvisorDispatch));
     assert.equal(typeof adapter.capabilities.toolIsolation, 'string');
   }
   const codex = adapters.adapters.find(({ id }) => id === 'codex');
   assert.equal(codex.capabilities.toolIsolation, 'advisory');
+  assert.equal(codex.capabilities.operatingAdvisorDispatch, 'native-bounded');
   assert.equal(codex.capabilities.interactiveQuestions, 'native');
 });
 

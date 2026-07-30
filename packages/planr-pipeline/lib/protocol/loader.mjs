@@ -32,6 +32,10 @@ import {
   createOperatingAdvisorBrief,
   listOperatingAdvisorBriefs,
 } from '../operate/advisor-brief.mjs';
+import {
+  createOperatingAdapterHandoff,
+  validateOperatingAdapterHandoffBindings,
+} from '../operate/adapter-handoff.mjs';
 
 export const OPERATING_PROTOCOL_VERSION = '1.2.0';
 
@@ -75,6 +79,7 @@ export {
   computeOperatingProviderPolicyDigest,
   computeOperatingRoleResultDigest,
   createOperatingAdvisorBrief,
+  createOperatingAdapterHandoff,
   computeOperatingEventHash,
   createOperatingCheckpoint,
   createOperatingCheckpointSigningPayload,
@@ -92,6 +97,7 @@ export {
   validateOperatingCheckpoint,
   validateOperatingProviderPolicyDigest,
   validateOperatingRoleResultDigest,
+  validateOperatingAdapterHandoffBindings,
   validateProtocolArtifact,
   verifyOperatingEventChain,
 };

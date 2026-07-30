@@ -10,26 +10,82 @@ artifacts and return answers by canonical question ID.
 planr operate inspect
 planr operate init
 planr operate run --preview
-planr operate run --offline
+planr operate run
 planr operate review
+planr operate report
 ```
 
 In an interactive terminal, the CLI asks the questions directly. In a coding
 runtime, the installed `planr-operate` workflow requests `--json`, presents the
 returned questionnaire through a verified native question surface or structured
-chat, and sends the typed answer envelope on bounded stdin. If neither is
+chat, then constructs the typed answer envelope from the questionnaire's
+self-describing `submission` contract and sends it on bounded stdin. If neither is
 available, it returns the exact terminal handoff. Adapters never invent answers,
-defaults, questions, commands, or consent.
+defaults, questions, commands, envelope metadata, or consent.
 
-Every mutating or provider-using step stops on a preview. Selecting one returned
-action confirms only its exact digest; answering a field does not authorize the
-next step. `--preview` performs no writes and no provider calls. `--dry-run` may
-use a provider after disclosure but commits no operating state.
+One explicit request to run a cycle selects its exact cycle-start action and
+authorizes the reversible local adapter lifecycle through independent advisors,
+Chair consolidation, and a `reviewable`, `blocked`, or `failed` result. The
+runtime does not ask the user to paste `adapter prepare`, `record`, `finalize`,
+Chair, or report commands. Provider consent, finding disposition, route
+application, planning artifacts, PLAN, SHIP, and external effects remain
+separate named gates. `--preview` performs no writes and no provider calls.
+`--dry-run` may use a provider after disclosure but commits no operating state.
+
+Claude Code uses `native-isolated` advisor dispatch. Codex uses
+`native-bounded`: each native advisor receives only one immutable role pack and
+may not inspect the workspace, environment, network, or other tools. Cursor
+uses the structured-provider path. All adapters return
+`operating-advisor-response@1.2.0`; OpenPlanr owns canonical metadata and
+digests.
+
+### Native adapter handoff
+
+When a native cycle reaches an advisor boundary, the public `run` result returns
+a validated `operating-adapter-handoff` in `prepare-required` state. It is the
+complete machine contract for that boundary, not a hint that a runtime must
+turn into commands. Its `phase`, `state`, `binding`, and `roles` bind every
+current action to the exact cycle, evidence digest, runtime, lease,
+idempotency key, and expiry. Lease and expiry are null until prepare succeeds.
+
+The runtime must:
+
+1. execute only the current `handoff.next[].argv` token arrays exactly as
+   returned;
+2. for a record action, resolve its role pack and compact response schema from
+   the retained `adapter.prepare` result using the declared absolute pointers;
+3. use the same returned lease and idempotency key—never add a role suffix or
+   derive a replacement; and
+4. use `handoff.recovery` only after a failed current action.
+
+The state sequence is `prepare-required` → `record-required` →
+`finalize-required` → `continue-required`. Each successful record returns a
+fresh handoff containing only unfinished role actions. Recovery contains
+read-only resume and machine-local cancel only while recording/finalizing.
+Cancelled sessions expose no executable action.
+Runtimes must not reconstruct lifecycle commands from prose, probe them with
+`--help`, or guess the next phase. On an error, follow the exact returned
+handoff or named recovery action. A new Chair handoff is prepared only after
+independent advisor results have been finalized and committed.
+
+Lifecycle effects remain deliberately bounded:
+
+| Action | Effect |
+|---|---|
+| `prepare`, `record`, `cancel` | `machine-local-write` |
+| `resume` | `read-only` |
+| `finalize`, `continue` | `project-write` |
+
+These machine-only actions never authorize finding acceptance, route
+application, planning artifacts, PLAN, SHIP, provider consent, or an external
+effect.
 
 ## Evidence recovery
 
-A possible secret stops collection before advisor dispatch. Run the exact
-value-free diagnostic action:
+A safely redacted evidence item remains useful. An item that cannot be made
+safe is quarantined individually, while unrelated evidence and ready lenses
+continue. Only when required evidence is blocked should the runtime run the
+exact value-free diagnostic action:
 
 ```bash
 planr operate evidence diagnose <candidate-id>
@@ -53,9 +109,16 @@ sessions and adapter interaction capability.
 ## Automation
 
 `--json` is one versioned object on stdout and is non-interactive. Scripts must
-choose a returned action ID and echo its exact confirmation digest. Do not parse
-human labels or add a broad `--yes`. Missing pipeline/runtime capability fails
-before provider use with a named recovery command.
+choose a returned action ID and echo its exact confirmation digest. A runtime
+may add `--yes` only to the exact cycle-start action selected by an explicit
+cycle request. Do not parse human labels or add a broad `--yes`. Missing
+pipeline/runtime capability fails before provider use with a named recovery
+command.
+
+The dashboard is optional. `planr operate report` prints the concise brief and
+separate CEO, CTO, CPO, CMO, COO, and Chair reports as Markdown, while
+`planr operate report --json` returns structured results and exact governed
+conversion commands for findings, routes, specs, tasks, and quick tasks.
 
 ## Troubleshooting
 

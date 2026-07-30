@@ -2,11 +2,11 @@
   "kind": "adapter-registry",
   "schemaVersion": "1.1.0",
   "protocolVersion": "1.2.0",
-  "pipelineVersion": "0.31.0",
+  "pipelineVersion": "0.32.0",
   "adapters": [
     {
       "id": "claude-code",
-      "version": "0.31.0",
+      "version": "0.32.0",
       "capabilityLevel": "product",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -28,6 +28,7 @@
         "headlessBridge": true,
         "artifactReview": true,
         "operatingBoard": true,
+        "operatingAdvisorDispatch": "native-isolated",
         "interactiveQuestions": "native"
       },
       "assets": ["commands", "agents", "procedures", "hooks", "templates", "schemas", "artifact-review", "guided-interaction"],
@@ -41,7 +42,7 @@
     },
     {
       "id": "codex",
-      "version": "0.31.0",
+      "version": "0.32.0",
       "capabilityLevel": "workflow",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -63,6 +64,7 @@
         "headlessBridge": true,
         "artifactReview": true,
         "operatingBoard": true,
+        "operatingAdvisorDispatch": "native-bounded",
         "interactiveQuestions": "native"
       },
       "assets": ["skills", "project-guidance", "schemas", "templates", "artifact-review", "guided-interaction"],
@@ -76,7 +78,7 @@
     },
     {
       "id": "cursor",
-      "version": "0.31.0",
+      "version": "0.32.0",
       "capabilityLevel": "workflow",
       "installScopes": ["project"],
       "entrypoints": {
@@ -98,6 +100,7 @@
         "headlessBridge": false,
         "artifactReview": true,
         "operatingBoard": true,
+        "operatingAdvisorDispatch": "structured-provider",
         "interactiveQuestions": "chat"
       },
       "assets": ["rules", "roles", "schemas", "templates", "artifact-review", "guided-interaction"],

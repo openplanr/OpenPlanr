@@ -135,6 +135,53 @@ or mutate state. The deterministic engine validates evidence references,
 allocates IDs, computes projections, applies caps, and persists the final
 finding/decision/data-gap records.
 
+### State-aware native adapter handoff
+
+A native advisor boundary returns a strict Protocol v1.2
+`operating-adapter-handoff`. The handoff is self-describing and contains:
+
+- the advisor/Chair `phase` and lifecycle `state`;
+- the binding tuple: cycle ID, immutable evidence digest, selected runtime,
+  CLI-owned idempotency key, nullable pre-prepare lease, and nullable expiry;
+- role status plus an input digest after preparation;
+- only the exact currently valid actions in `next`, with interrupted-session
+  actions separately identified in `recovery`;
+- absolute role-pack and compact-response schema pointers into the retained
+  `adapter.prepare` result.
+
+Argument tokens use the Protocol safe-token grammar and are executed as an
+argument vector, never through shell evaluation. A runtime must not parse
+human-readable next-step strings, append role-specific data to the
+idempotency key, substitute a lease or digest, or probe lifecycle commands with
+`--help`. The returned arrays are the only lifecycle invocation contract.
+
+The adapter session progresses:
+
+```text
+prepare-required → record-required → finalize-required → continue-required
+                            └───────────────→ cancelled
+```
+
+Independent advisor roles and the Chair are distinct dispatch phases. Every
+successful record response includes a new handoff whose `next` array contains
+only missing record actions. Once every role is recorded, `next` contains only
+finalize; after commit it contains only the cycle-bound continuation. Resume and
+cancel appear only in `recovery` for an unexpired recording/finalizing session.
+Expired or cancelled sessions require a fresh CLI-owned prepare binding; valid
+already-recorded role results are recovered by digest.
+
+The fixed effect classification is:
+
+| Lifecycle action | Effect classification |
+|---|---|
+| prepare, record, cancel | `machine-local-write` |
+| resume | `read-only` |
+| finalize | `project-write` |
+| continue | `project-write` |
+
+No handoff grants provider consent, finding disposition, route application,
+planning, PLAN, SHIP, or `external-effect` authority.
+
 ## Route governance
 
 ```text
