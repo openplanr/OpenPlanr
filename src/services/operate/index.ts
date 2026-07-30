@@ -65,6 +65,7 @@ import {
 import { renderOperatingBrief } from './projection.js';
 import { loadOperatingProtocol, resolveOperatingPipelineRoot } from './protocol.js';
 import { executeGitHubReadOnly, executeGitReadOnly } from './read-only-providers.js';
+import { readOperatingReport } from './reports.js';
 import {
   type OperateActionRequest,
   type OperateActionResult,
@@ -163,15 +164,33 @@ async function usesNativeOperatingAdvisors(
         JSON.parse(raw) as {
           adapters?: Array<{
             id?: string;
-            capabilities?: { toolIsolation?: string; operatingBoard?: boolean };
+            capabilities?: {
+              toolIsolation?: string;
+              operatingBoard?: boolean;
+              operatingAdvisorDispatch?: string;
+              subagents?: string;
+              headlessBridge?: boolean;
+            };
           }>;
         },
     )
     .catch(() => ({ adapters: [] }));
   const adapter = registry.adapters?.find((entry) => entry.id === adapterId);
+  if (adapter?.capabilities?.operatingBoard !== true) return false;
+  if (
+    ['native-isolated', 'native-bounded'].includes(
+      adapter.capabilities.operatingAdvisorDispatch ?? '',
+    )
+  ) {
+    return true;
+  }
+  // Compatibility with Protocol v1.2 registries published before the
+  // operatingAdvisorDispatch capability was added.
   return (
-    adapter?.capabilities?.operatingBoard === true &&
-    adapter.capabilities.toolIsolation === 'enforced'
+    adapter.capabilities.toolIsolation === 'enforced' ||
+    (adapterId === 'codex' &&
+      adapter.capabilities.subagents === 'dynamic' &&
+      adapter.capabilities.headlessBridge === true)
   );
 }
 
@@ -370,20 +389,39 @@ function publicActionCommands(nextActions: readonly string[]): string[] {
   ];
 }
 
-function actionEffect(command: string): import('./types.js').OperatingActionEffect {
+function hasFlag(command: string, flag: string): boolean {
+  return new RegExp(`(?:^|\\s)${flag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:\\s|$)`).test(
+    command,
+  );
+}
+
+async function actionEffect(
+  request: OperateActionRequest,
+  command: string,
+): Promise<import('./types.js').OperatingActionEffect> {
   if (
-    /\b(?:inspect|status|brief|review|list|show)\b/.test(command) ||
+    /\b(?:inspect|status|brief|report|review|list|show)\b/.test(command) ||
     /\bconfig validate\b/.test(command) ||
     /\bprofiles validate\b/.test(command) ||
     /\bsources test\b/.test(command) ||
-    /\brun\b.*\b--preview\b/.test(command) ||
+    (/\brun\b/.test(command) && hasFlag(command, '--preview')) ||
     /\bmigrate inspect\b/.test(command) ||
     /\bcache status\b/.test(command) ||
     /\bintegrity status\b/.test(command)
   ) {
     return 'read-only';
   }
-  if (/\boperate run\b/.test(command) && !/\b--offline\b/.test(command)) {
+  if (/\boperate run\b/.test(command)) {
+    if (hasFlag(command, '--offline')) return 'project-write';
+    const commandRuntime = command.match(/(?:^|\s)--runtime\s+(\S+)/)?.[1];
+    if (
+      await usesNativeOperatingAdvisors(
+        request.projectRoot,
+        commandRuntime ?? option(request, 'runtime', 'auto'),
+      )
+    ) {
+      return 'project-write';
+    }
     return 'provider-call';
   }
   if (
@@ -426,7 +464,7 @@ async function attachStructuredActions(
   const sessionId = `GIS-action-${requestDigest.slice('sha256:'.length, 'sha256:'.length + 24)}`;
   const actions = [];
   for (const [index, command] of commands.entries()) {
-    const effect = actionEffect(command);
+    const effect = await actionEffect(request, command);
     const id = `operate.next.${canonicalDigest({ command }).slice(
       'sha256:'.length,
       'sha256:'.length + 20,
@@ -1061,11 +1099,13 @@ async function status(request: OperateActionRequest): Promise<OperateActionResul
 async function run(request: OperateActionRequest): Promise<OperateActionResult> {
   await validateOperatingConfiguration(request.projectRoot);
   const requestedRuntime = option(request, 'runtime', 'auto');
+  const resolvedRuntime = await resolvedOperatingRuntime(request.projectRoot, requestedRuntime);
+  const nativeAdvisors = await usesNativeOperatingAdvisors(request.projectRoot, requestedRuntime);
   const deferAdvisors =
     !option(request, 'offline', false) &&
     !option(request, 'dryRun', false) &&
     !option(request, 'reviewOnly', false) &&
-    (await usesNativeOperatingAdvisors(request.projectRoot, requestedRuntime));
+    nativeAdvisors;
   const result = await runOperatingCycle({
     projectRoot: request.projectRoot,
     focus: stringList(request.options.focus) as Parameters<typeof runOperatingCycle>[0]['focus'],
@@ -1090,7 +1130,13 @@ async function run(request: OperateActionRequest): Promise<OperateActionResult> 
     artifacts: 0,
   };
   const nextActions = result.preview
-    ? ['planr operate run --offline']
+    ? [
+        option(request, 'offline', false)
+          ? 'planr operate run --offline'
+          : nativeAdvisors
+            ? `planr operate run --runtime ${resolvedRuntime}`
+            : 'planr operate run',
+      ]
     : result.nativeHandoff
       ? [
           `planr operate adapter prepare --cycle-id ${result.nativeHandoff.cycleId} --evidence-digest ${result.nativeHandoff.evidenceDigest} --idempotency-key native-${result.nativeHandoff.cycleId}-${result.nativeHandoff.phase} --role ${result.nativeHandoff.roles.join(',')}`,
@@ -1133,6 +1179,27 @@ async function reviewOrBrief(request: OperateActionRequest): Promise<OperateActi
       request.action === 'review'
         ? 'This is the mandatory human review gate. No route has been applied.'
         : undefined,
+  });
+}
+
+async function report(request: OperateActionRequest): Promise<OperateActionResult> {
+  const requestedFormat = option<string | undefined>(request, 'format', undefined);
+  if (requestedFormat && !['markdown', 'json'].includes(requestedFormat)) {
+    throw new OperateError(
+      'E_OPERATE_CONFIG_INVALID',
+      `Unknown report format ${requestedFormat}. Use markdown or json.`,
+    );
+  }
+  const data = await readOperatingReport({
+    projectRoot: request.projectRoot,
+    cycleId: argument(request, 'cycleId'),
+    lens: option(request, 'lens', 'all'),
+    localRoot: option(request, 'localRoot', undefined),
+  });
+  const format = requestedFormat ?? (option(request, 'json', false) ? 'json' : 'markdown');
+  return success(request.action, {
+    data: format === 'json' ? data : data.markdown,
+    message: `Operating report is ready for ${data.cycleId}.`,
   });
 }
 
@@ -1433,6 +1500,7 @@ const HANDLERS: Record<
   run,
   review: reviewOrBrief,
   brief: reviewOrBrief,
+  report,
   status,
   'cycles.list': collections,
   'cycles.show': collections,

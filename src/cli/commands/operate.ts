@@ -298,6 +298,16 @@ export function registerOperateCommand(program: Command): void {
   });
 
   json(
+    operate
+      .command('report [cycleId]')
+      .description('Print the cycle brief and CEO/CTO/CPO/CMO/COO/Chair reports')
+      .option('--lens <lens>', 'CEO, CTO, CPO, CMO, COO, Chair, or all', 'all')
+      .option('--format <format>', 'markdown or json'),
+  ).action(function (this: Command, cycleId: string | undefined, opts) {
+    return execute(program, this, 'report', { cycleId }, opts);
+  });
+
+  json(
     confirmed(
       preview(
         operate

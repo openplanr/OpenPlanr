@@ -227,7 +227,33 @@ describe('native operating advisor lifecycle', () => {
     expect(persisted.roleBriefs).toEqual(session.roleBriefs);
 
     const protocol = await loadOperatingProtocol();
-    for (const role of session.roles) {
+    for (const [index, role] of session.roles.entries()) {
+      if (index === 0) {
+        const recorded = await operateAdapterLifecycle({
+          ...fixture,
+          action: 'record',
+          cycleId: 'CYCLE-001',
+          lease: session.lease,
+          idempotencyKey: 'prepare-role-briefs',
+          role,
+          stdin: JSON.stringify({
+            outcome: 'quiet',
+            proposals: [],
+            gaps: [],
+            conflicts: [],
+          }),
+        });
+        expect(recorded).toMatchObject({
+          recorded: role,
+          result: {
+            kind: 'operating-role-result',
+            roleId: role,
+            inputDigest: session.roleInputDigests[role],
+            outcome: 'quiet',
+          },
+        });
+        continue;
+      }
       const unsigned = {
         kind: 'operating-role-result' as const,
         schemaVersion: '1.0.0' as const,

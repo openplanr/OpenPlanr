@@ -164,6 +164,7 @@ describe('operate command contract', () => {
         'operate profiles list',
         'operate profiles show',
         'operate profiles validate',
+        'operate report',
         'operate review',
         'operate routes',
         'operate routes apply',

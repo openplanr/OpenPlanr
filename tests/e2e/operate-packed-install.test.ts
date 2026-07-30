@@ -392,6 +392,29 @@ describe('packed full Operating Board lifecycle', () => {
         ok: true,
         action: 'review',
       });
+      expect(
+        jsonResult(fullCli, fullInstallRoot, [
+          'operate',
+          'report',
+          cycle.cycle.id,
+          '--lens',
+          'CTO',
+          '--json',
+        ]),
+      ).toMatchObject({
+        ok: true,
+        action: 'report',
+        data: {
+          cycleId: cycle.cycle.id,
+          reports: [
+            expect.objectContaining({
+              roleId: 'technology-risk',
+              label: 'CTO',
+            }),
+          ],
+          actions: expect.any(Array),
+        },
+      });
     } finally {
       if (priorStateRoot === undefined) delete process.env.OPENPLANR_STATE_ROOT;
       else process.env.OPENPLANR_STATE_ROOT = priorStateRoot;

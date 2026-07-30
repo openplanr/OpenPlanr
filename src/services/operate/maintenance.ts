@@ -4,6 +4,7 @@ import path from 'node:path';
 import {
   assertAdvisorOutputMatchesBrief,
   buildAdvisorOperatingContext,
+  createNativeOperatingRoleResult,
   createOperatingAdvisorPack,
   type OperatingAdvisorPack,
 } from './advisors.js';
@@ -37,6 +38,7 @@ interface PrivateAdvisorSession {
   implementation: 'openplanr-operate-adapter';
   cycleId: string;
   evidenceDigest: string;
+  runtime?: string;
   lease: string;
   idempotencyKey: string;
   state: 'prepared' | 'recording' | 'finalized' | 'cancelled';
@@ -636,7 +638,7 @@ async function persistedAdapterEvidence(
   );
 }
 
-async function persistedAdapterResults(
+export async function readPersistedOperatingRoleResults(
   store: OperatingEventStore,
   cycleId: string,
 ): Promise<OperatingRoleResult[]> {
@@ -788,7 +790,7 @@ export async function operateAdapterLifecycle(input: {
       roles[0] === 'chair'
         ? buildChairEvidence(
             baseEvidence,
-            await persistedAdapterResults(store, input.cycleId),
+            await readPersistedOperatingRoleResults(store, input.cycleId),
             new Date().toISOString(),
           )
         : baseEvidence;
@@ -835,6 +837,15 @@ export async function operateAdapterLifecycle(input: {
       implementation: 'openplanr-operate-adapter',
       cycleId: input.cycleId,
       evidenceDigest: input.evidenceDigest,
+      runtime: await readFile(
+        path.join(
+          resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot }).localRoot,
+          'preferences.json',
+        ),
+        'utf8',
+      )
+        .then((raw) => String((JSON.parse(raw) as { runtime?: unknown }).runtime ?? 'auto'))
+        .catch(() => 'auto'),
       lease: randomBytes(32).toString('base64url'),
       idempotencyKey: input.idempotencyKey,
       state: 'prepared',
@@ -874,7 +885,17 @@ export async function operateAdapterLifecycle(input: {
         `Role ${input.role} was not bound by adapter prepare.`,
       );
     }
-    const result = JSON.parse(input.stdin) as OperatingRoleResult;
+    const submitted = JSON.parse(input.stdin) as unknown;
+    const submittedRecord =
+      submitted && typeof submitted === 'object' ? (submitted as Record<string, unknown>) : {};
+    const result =
+      submittedRecord.kind === 'operating-role-result'
+        ? (submitted as OperatingRoleResult)
+        : await createNativeOperatingRoleResult({
+            pack: session.rolePacks[input.role],
+            response: submitted,
+            runtime: session.runtime ?? 'native-runtime',
+          });
     await assertOperatingArtifact('operating-role-result', result);
     // The structured provider path runs every proposal's free text through
     // sanitizeGeneratedPlainText before it is persisted. Native runtimes hand
@@ -954,7 +975,7 @@ export async function operateAdapterLifecycle(input: {
       recordedRoles: [...new Set([...session.recordedRoles, input.role])].sort(),
     };
     await atomicPrivateWrite(target, updated);
-    return { recorded: input.role, session: updated };
+    return { recorded: input.role, result, session: updated };
   }
   const missingRoles = session.roles.filter((role) => !session.recordedRoles.includes(role));
   if (missingRoles.length > 0) {
@@ -998,7 +1019,7 @@ export async function operateAdapterLifecycle(input: {
     async (lock) => {
       let head = initial.eventHead;
       const existing = new Map(
-        (await persistedAdapterResults(store, input.cycleId as string)).map((result) => [
+        (await readPersistedOperatingRoleResults(store, input.cycleId as string)).map((result) => [
           result.roleId,
           result,
         ]),

@@ -50,7 +50,8 @@ const advisorOutputSchema = z.object({
   gaps: z.array(z.string()),
   conflicts: z.array(z.string()),
 });
-type AdvisorOutput = z.infer<typeof advisorOutputSchema>;
+export type OperatingAdvisorResponse = z.infer<typeof advisorOutputSchema>;
+type AdvisorOutput = OperatingAdvisorResponse;
 
 export function assertAdvisorOutputMatchesBrief(
   brief: OperatingAdvisorBrief,
@@ -553,6 +554,70 @@ function sanitizeOutput(output: AdvisorOutput): AdvisorOutput {
     gaps: [...new Set(output.gaps.map(sanitizeGeneratedPlainText))].sort(),
     conflicts: [...new Set(output.conflicts.map(sanitizeGeneratedPlainText))].sort(),
   };
+}
+
+/**
+ * Convert a compact native-harness response into the canonical, digest-bound
+ * Protocol result. Runtime adapters should not manufacture protocol metadata,
+ * producer fields, or JCS digests themselves.
+ */
+export async function createNativeOperatingRoleResult(input: {
+  pack: OperatingAdvisorPack;
+  response: unknown;
+  runtime: string;
+}): Promise<OperatingRoleResult> {
+  const parsed = advisorOutputSchema.safeParse(input.response);
+  if (!parsed.success) {
+    throw new OperateError(
+      'E_OPERATE_ADVISOR_FAILED',
+      `Native ${input.pack.roleId} response does not match the compact advisor response contract.`,
+      {
+        issues: parsed.error.issues.slice(0, 8).map((issue) => ({
+          path: issue.path.join('.'),
+          code: issue.code,
+        })),
+      },
+    );
+  }
+  const output = sanitizeOutput(parsed.data);
+  assertAdvisorOutputMatchesBrief(input.pack.roleBrief, output);
+  const permittedEvidenceRefs = new Set(input.pack.evidence.items.map((item) => item.id));
+  const outsideRoleView = output.proposals
+    .flatMap((proposal) => proposal.evidenceRefs)
+    .filter((reference) => !permittedEvidenceRefs.has(reference));
+  if (outsideRoleView.length > 0) {
+    throw new OperateError(
+      'E_OPERATE_ADVISOR_ISOLATION',
+      `Native ${input.pack.roleId} response cites evidence outside its role-filtered pack.`,
+      { evidenceRefs: [...new Set(outsideRoleView)].sort() },
+    );
+  }
+  const protocol = await loadOperatingProtocol();
+  const unsigned = {
+    kind: 'operating-role-result' as const,
+    schemaVersion: OPERATE_SCHEMA_VERSION,
+    protocolVersion: OPERATE_PROTOCOL_VERSION,
+    cycleId: input.pack.cycleId,
+    roleId: input.pack.roleId,
+    inputDigest: input.pack.inputDigest,
+    outcome: output.outcome,
+    proposals: output.proposals,
+    gaps: output.gaps,
+    conflicts: output.conflicts,
+    producer: {
+      product: 'openplanr',
+      version: OPENPLANR_VERSION,
+      runtime: input.runtime,
+      capability: input.pack.roleBrief.role.capabilityTier,
+    },
+  };
+  const result: OperatingRoleResult = {
+    ...unsigned,
+    resultDigest: protocol.computeOperatingRoleResultDigest(unsigned as OperatingRoleResult),
+  };
+  await assertOperatingArtifact('operating-role-result', result);
+  protocol.validateOperatingRoleResultDigest(result);
+  return result;
 }
 
 function safeFailureMessage(error: unknown): string {

@@ -67,6 +67,8 @@ planr operate init --preview
 planr operate run --preview
 planr operate run --dry-run
 planr operate review
+planr operate report --lens CTO
+planr operate report --json
 ```
 
 `--preview` performs no writes, evidence-provider calls, or model calls.
@@ -112,6 +114,7 @@ PLAN handoff, or SHIP invocation. Drift invalidates the digest before writes.
 | `init` / `config` / `profiles` | Configure and validate the product charter, profile, workspace, runtime, privacy, and decision owner |
 | `sources list\|show\|test` | Inspect or read-only test configured sources; source and JSON/CSV import paths are selected by `operate init` |
 | `run` / `review` / `brief` / `status` | Produce and inspect a cycle that ends at the human review gate |
+| `report [cycleId]` | Render the cycle brief plus separate CEO, CTO, CPO, CMO, COO, and Chair results as Markdown or strict JSON, including exact planning conversion commands |
 | `findings accept\|reject\|supersede` | Record governance; accepting never applies the route |
 | `routes apply\|rollback` | Preview and confirm exact local writes, or restore reversible prior bytes |
 | `decisions decide` | Record the named human owner’s decision |
@@ -162,6 +165,13 @@ enters the cycle engine. JSON mode is non-interactive and emits exactly one
 versioned stdout object. Guided questions are submitted as a bounded typed
 answer envelope through `init --resume ... --stdin`; every subsequent
 non-read-only action requires its own digest-bound confirmation.
+
+An explicit user request to run one cycle authorizes its reversible local native
+adapter lifecycle through `reviewable`, `blocked`, or `failed`; the runtime does
+not stop to ask the user to paste `adapter prepare`, `record`, `finalize`, Chair,
+or report commands. External provider consent, finding acceptance, route
+application, planning artifacts, PLAN, SHIP, and external effects remain
+separate named actions.
 
 See [OPERATING_BOARD.md](./OPERATING_BOARD.md) for the complete lifecycle,
 privacy, automation, routing, recovery, and outcome contracts.

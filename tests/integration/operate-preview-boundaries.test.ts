@@ -260,6 +260,43 @@ describe('Operating Board preview and dry-run boundaries', () => {
       ]);
       expect(completed.state?.cycles.at(-1)?.state).not.toBe('advising');
       expect(invoke).not.toHaveBeenCalled();
+
+      const report = await executeOperateAction({
+        action: 'report',
+        projectRoot,
+        arguments: { cycleId: 'CYCLE-001' },
+        options: { lens: 'all', format: 'markdown', localRoot, json: true },
+        interactive: false,
+      });
+      expect(report).toMatchObject({ ok: true, action: 'report' });
+      expect(report.data).toEqual(expect.stringContaining('## CEO'));
+      expect(report.data).toEqual(expect.stringContaining('## CTO'));
+      expect(report.data).toEqual(expect.stringContaining('# Exact next actions'));
+
+      const jsonReport = await executeOperateAction({
+        action: 'report',
+        projectRoot,
+        arguments: { cycleId: 'CYCLE-001' },
+        options: { lens: 'CTO', localRoot, json: true },
+        interactive: false,
+      });
+      expect(jsonReport.data).toMatchObject({
+        cycleId: 'CYCLE-001',
+        reports: [expect.objectContaining({ roleId: 'technology-risk', label: 'CTO' })],
+        actions: expect.any(Array),
+      });
+      expect(
+        (
+          jsonReport.data as {
+            actions: Array<{ command: string }>;
+          }
+        ).actions.every(
+          ({ command }) =>
+            command.startsWith('planr operate ') ||
+            /^planr (?:quick|task) create "[^$`]*"$/.test(command) ||
+            /^planr task create --story <US-ID> --title "[^$`]*" --manual$/.test(command),
+        ),
+      ).toBe(true);
     },
     OPERATING_INTEGRATION_TIMEOUT_MS,
   );
@@ -506,6 +543,42 @@ describe('Operating Board preview and dry-run boundaries', () => {
       },
       warnings: [],
       nextActions: ['planr operate run --offline'],
+    });
+  });
+
+  it('recommends native Codex dispatch without misclassifying it as provider use', async () => {
+    const projectRoot = await createGitProject();
+    const localRoot = await temporaryDirectory('openplanr-operate-native-preview-local-');
+    await initialize(projectRoot, localRoot, 'codex');
+
+    const result = await executeOperateAction({
+      action: 'run',
+      projectRoot,
+      interactive: false,
+      options: {
+        preview: true,
+        dryRun: false,
+        offline: false,
+        reviewOnly: false,
+        focus: [],
+        depth: 'standard',
+        runtime: 'codex',
+        json: true,
+      },
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      action: 'run',
+      nextActions: ['planr operate run --runtime codex'],
+      actions: [
+        {
+          command: 'planr operate run --runtime codex',
+          effect: 'project-write',
+          providerUse: false,
+          requiresConfirmation: true,
+        },
+      ],
     });
   });
 

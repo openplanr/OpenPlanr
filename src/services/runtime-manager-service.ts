@@ -1282,7 +1282,10 @@ export async function runtimeDoctor(
         /^name:\s*planr-operate$/mu.test(content) &&
         /`planr operate(?:\s|`)/u.test(content) &&
         /schema-valid `questionnaire` and `actions`/u.test(content) &&
-        /Never add `--yes`/u.test(content) &&
+        /explicit request to \*\*run one Operating Board cycle\*\*/u.test(content) &&
+        /Do not ask the user to paste or manually rerun/u.test(content) &&
+        /operating-advisor-response@1\.2\.0/u.test(content) &&
+        /CEO, CTO, CPO, CMO, COO, and Chair reports/u.test(content) &&
         /planr operate evidence diagnose/u.test(content) &&
         !/`planr-pipeline\s+[^`]+`/u.test(content) &&
         /Never invoke SHIP/u.test(content);
