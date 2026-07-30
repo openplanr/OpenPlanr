@@ -4,7 +4,15 @@
 boundaries. Claude Code, Codex, Cursor, and a terminal only present those
 artifacts and return answers by canonical question ID.
 
-## First use
+## First use in a coding runtime
+
+Invoke the installed `planr-operate` workflow with no arguments. That single
+invocation inspects the project, initializes only when needed, runs one complete
+native cycle, prints the CEO/CTO/CPO/CMO/COO/Chair report, and stops at review.
+No orchestration prompt or manual adapter commands are required. Explicit
+subcommands such as `inspect`, `status`, or `report` perform only that command.
+
+## First use in a terminal
 
 ```bash
 planr operate inspect
@@ -16,21 +24,25 @@ planr operate report
 ```
 
 In an interactive terminal, the CLI asks the questions directly. In a coding
-runtime, the installed `planr-operate` workflow requests `--json`, presents the
-returned questionnaire through a verified native question surface or structured
-chat, then constructs the typed answer envelope from the questionnaire's
-self-describing `submission` contract and sends it on bounded stdin. If neither is
+runtime, the installed `planr-operate` workflow first calls `inspect --json` and
+skips initialization when it is already complete. When setup is required, it
+presents the returned questionnaire through a verified native question surface,
+then an attached CLI-owned interactive terminal, then structured chat one
+question at a time. It never dumps the questionnaire as a form. The runtime
+constructs the typed answer envelope from the questionnaire's self-describing
+`submission` contract and sends it on bounded stdin. If no interaction path is
 available, it returns the exact terminal handoff. Adapters never invent answers,
 defaults, questions, commands, envelope metadata, or consent.
 
-One explicit request to run a cycle selects its exact cycle-start action and
-authorizes the reversible local adapter lifecycle through independent advisors,
-Chair consolidation, and a `reviewable`, `blocked`, or `failed` result. The
-runtime does not ask the user to paste `adapter prepare`, `record`, `finalize`,
-Chair, or report commands. Provider consent, finding disposition, route
-application, planning artifacts, PLAN, SHIP, and external effects remain
-separate named gates. `--preview` performs no writes and no provider calls.
-`--dry-run` may use a provider after disclosure but commits no operating state.
+A bare workflow invocation or explicit request to run a cycle selects its exact
+cycle-start action and authorizes the reversible local adapter lifecycle through
+independent advisors, Chair consolidation, and a `reviewable`, `blocked`, or
+`failed` result. The runtime does not ask the user to paste `adapter prepare`,
+`record`, `finalize`, Chair, or report commands. Provider consent, finding
+disposition, route application, planning artifacts, PLAN, SHIP, and external
+effects remain separate named gates. `--preview` performs no writes and no
+provider calls. `--dry-run` may use a provider after disclosure but commits no
+operating state.
 
 Claude Code uses `native-isolated` advisor dispatch. Codex uses
 `native-bounded`: each native advisor receives only one immutable role pack and

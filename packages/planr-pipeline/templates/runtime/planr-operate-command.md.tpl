@@ -5,7 +5,16 @@ argument-hint: "<command> [options]"
 
 # /planr-pipeline:operate
 
-Delegate this request to the public OpenPlanr CLI:
+With no arguments, run one complete Operating Board cycle and stop at review:
+
+1. Run `planr operate inspect --json`.
+2. Skip initialization when `data.initialized` is already `true`.
+3. Otherwise complete CLI-owned guided initialization.
+4. Preview and execute the exact returned cycle action.
+5. Complete the native CEO, CTO, CPO, CMO, COO, and Chair lifecycle.
+6. Print `planr operate report` as concise Markdown.
+
+With explicit arguments, delegate only that public command:
 
 ```bash
 planr operate $ARGUMENTS
@@ -16,16 +25,19 @@ deterministic consolidation, state, route previews, recovery, and outcome
 reconciliation. Never edit `.planr/operate` directly and never invoke
 `planr-pipeline` as a nested executable.
 
-Start guided setup with exactly `planr operate init --json`. Guided mode is the
-self-describing response from that command; there is no `--guided` flag. Do not
-probe `operate --help` or `init --help` to discover the questionnaire transport.
+Start guided setup with exactly `planr operate init --json` only after inspect
+reports that initialization is absent, or when reconfiguration was explicitly
+requested. Guided mode is the self-describing response from that command; there
+is no `--guided` flag. Do not probe `operate --help` or `init --help` to
+discover the questionnaire transport.
 
 Consume only schema-valid `questionnaire` and `actions` returned by the CLI.
 Present questions verbatim through a positively verified native question
-surface; otherwise downgrade to structured chat, an attached terminal, or the
-CLI's named handoff. Submit typed answers only through the bounded stdin/resume
-lifecycle. Never copy question definitions, infer missing answers, or
-reconstruct commands from conversation.
+surface; otherwise prefer the CLI-owned interactive flow in an attached
+terminal, then structured chat one question at a time, then the CLI's named
+handoff. Never dump the full questionnaire as a form. Submit typed answers only
+through the bounded stdin/resume lifecycle. Never copy question definitions,
+infer missing answers, or reconstruct commands from conversation.
 
 For a self-describing questionnaire, copy `submission.envelope.fixedFields`
 verbatim, resolve its declared dynamic fields, and for each chosen descriptor
@@ -40,13 +52,13 @@ answers require the CLI handoff and must not enter argv, shell text, logs, or
 temporary files. Never guess metadata. If `submission` is absent, return the
 compatible CLI update/handoff.
 
-An explicit request to run one Operating Board cycle selects the exact
-CLI-returned cycle-start action and authorizes only its reversible local native
-continuation through `reviewable`, `blocked`, or `failed`. Preview first, then
-perform adapter prepare/record/finalize, resume, Chair, and report steps without
-asking the user to paste commands. Ask separately for external provider consent,
-finding acceptance, route application or rollback, planning-artifact creation,
-PLAN, SHIP, and external effects.
+A no-argument command or explicit request to run one Operating Board cycle
+selects the exact CLI-returned cycle-start action and authorizes only its
+reversible local native continuation through `reviewable`, `blocked`, or
+`failed`. Preview first, then perform adapter prepare/record/finalize, resume,
+Chair, and report steps without asking the user to paste commands. Ask
+separately for external provider consent, finding acceptance, route application
+or rollback, planning-artifact creation, PLAN, SHIP, and external effects.
 
 Treat every top-level `handoff` as the only lifecycle command contract. Execute
 only its current `handoff.next[].argv` token arrays, never an action from a prior

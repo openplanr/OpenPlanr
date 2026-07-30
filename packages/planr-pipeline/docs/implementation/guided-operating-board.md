@@ -1,7 +1,7 @@
 # OPERATE-SPEC-003 pipeline work item
 
 Umbrella specification: `SPEC-003`
-Release participant: `planr-pipeline@0.32.0`
+Release participant: `planr-pipeline@0.32.1`
 
 This repository owns the additive guided interaction schemas, adapter capability
 registry, transport-neutral answer reduction, generated runtime assets,
@@ -19,5 +19,5 @@ npm run canary:guided-operate
 npm pack --dry-run --json
 ```
 
-Rollback before publication is repository-local. After `0.32.0` is public,
+Rollback before publication is repository-local. After `0.32.1` is public,
 corrections use a forward-fix package release.

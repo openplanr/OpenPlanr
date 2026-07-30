@@ -90,8 +90,9 @@ and emits a named diagnostic. \`none\` is a fail-closed handoff.
 4. Assemble typed answers only from the questionnaire's self-describing
    \`submission\` contract and send one bounded JSON envelope on stdin.
 5. Render the CLI preview without applying it.
-6. Treat an explicit request to run one cycle as selection of the exact
-   cycle-start action.
+6. Treat a bare Operating Board skill/command invocation, or an explicit request
+   to run one cycle, as selection of the exact cycle-start action. Explicit
+   read-only subcommands remain read-only.
 7. Continue its reversible native adapter lifecycle to a terminal cycle state.
 8. Ask separately for external provider consent, finding acceptance, route
    mutation, planning-artifact creation, PLAN, SHIP, and external effects.

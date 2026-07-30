@@ -3,6 +3,6 @@
 
 | Runtime | Adapter | Compatibility | Artifact entrypoint | Operate entrypoint | Advisor dispatch | Subagents | Isolation | Parallel dispatch | Headless bridge |
 |---|---:|---|---|---|---|---|---|---|---|
-| claude-code | 0.32.0 | product | planr artifact | planr operate | native-isolated | native | enforced | native | yes |
-| codex | 0.32.0 | workflow | $planr-artifact | $planr-operate | native-bounded | dynamic | advisory | dynamic | yes |
-| cursor | 0.32.0 | workflow | planr artifact | planr operate | structured-provider | advisory | advisory | no | no |
+| claude-code | 0.32.1 | product | planr artifact | planr operate | native-isolated | native | enforced | native | yes |
+| codex | 0.32.1 | workflow | $planr-artifact | $planr-operate | native-bounded | dynamic | advisory | dynamic | yes |
+| cursor | 0.32.1 | workflow | planr artifact | planr operate | structured-provider | advisory | advisory | no | no |

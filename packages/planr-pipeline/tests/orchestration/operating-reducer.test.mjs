@@ -198,6 +198,36 @@ test('cycle close accepts an applied route and a closed owner decision', () => {
   assert.equal(reduceOperatingEvents(events).cycles[0].state, 'closed');
 });
 
+test('cycle cancellation replay is idempotent for an equivalent empty retry', () => {
+  const { events } = buildOperatingFixture();
+  const first = createOperatingEvent({
+    eventId: 'evt-cycle-cancelled',
+    timestamp: '2026-07-28T09:20:00Z',
+    cycleId: 'CYCLE-001',
+    type: 'cycle.cancelled',
+    entityId: 'CYCLE-001',
+    actor: { kind: 'human', id: 'founder' },
+    correlationId: 'cancel-cycle',
+    evidenceRefs: [],
+    payload: {},
+  }, { previousEvent: events.at(-1) });
+  const retry = createOperatingEvent({
+    eventId: 'evt-cycle-cancelled-retry',
+    timestamp: '2026-07-28T09:21:00Z',
+    cycleId: 'CYCLE-001',
+    type: 'cycle.cancelled',
+    entityId: 'CYCLE-001',
+    actor: { kind: 'human', id: 'founder' },
+    correlationId: 'cancel-cycle-retry',
+    evidenceRefs: [],
+    payload: {},
+  }, { previousEvent: first });
+
+  const state = reduceOperatingEvents([...events, first, retry]);
+  assert.equal(state.cycles[0].state, 'cancelled');
+  assert.equal(state.cycles[0].updatedAt, first.timestamp);
+});
+
 test('route proposals reject unknown and cross-cycle finding references', () => {
   const { events } = buildOperatingFixture();
   const prefix = events.slice(0, 9);

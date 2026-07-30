@@ -6,23 +6,23 @@
   "assets": [
     {
       "path": "adapters/claude-code/README.md",
-      "digest": "sha256:a66fb2a53202d515f119018f0185470a80040c3618226afe2cc31bc369a20dd0"
+      "digest": "sha256:203e3d19826bf24dad1f62d8ed87d402b085f1900ef56a5e3c8434b7066850fd"
     },
     {
       "path": "adapters/codex/skills/planr-operate/SKILL.md",
-      "digest": "sha256:0525bb7df14f197dd06ef783c77b3e11ec9903739c9f4320f16c30de1128bb20"
+      "digest": "sha256:116ec5c9ddaa8196d1a669218e7cc49f3d31d9cf63fc2ae842015c4461a64c1d"
     },
     {
       "path": "adapters/codex/project-guidance.md",
-      "digest": "sha256:bf88a7b60c1058f19be49a1d840a72363ec5e3cf1ae30546cb5b012b3c581357"
+      "digest": "sha256:44bd3588b425c72763cb542a3cf2a3b0987a421799a22ff34ddc7e1f38810525"
     },
     {
       "path": "adapters/cursor/rules/openplanr-operate.mdc",
-      "digest": "sha256:d8974b1d69285231994665f076b2f4602c05a7334f893c67add42c9365416847"
+      "digest": "sha256:98a8fb6def4c1784c1a1d99ab6384d0d93d4c9566205d5a7f5059bb1c0b45262"
     },
     {
       "path": "commands/operate.md",
-      "digest": "sha256:7c23db1ca13bf04a9154a6941c385ee97844b220277389f197f32fb83694b45e"
+      "digest": "sha256:3758159e8c5ea560dd23cd30a637cb79979f3f4143c038bd1d2121c71b20e9d1"
     }
   ]
 }

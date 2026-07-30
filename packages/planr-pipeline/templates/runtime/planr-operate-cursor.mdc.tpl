@@ -9,14 +9,25 @@ provider-free and write-free; `--dry-run` is write-free but can be
 provider-backed and billable. Never edit events, immutable records, journals,
 projections, routes, or outcome links under `.planr/operate`.
 
-Start guided setup with exactly `planr operate init --json`. Guided mode is the
-self-describing response from that command; there is no `--guided` flag. Do not
-probe `operate --help` or `init --help` to discover the questionnaire transport.
+When no explicit public subcommand is requested, run `planr operate inspect
+--json`, initialize only if `data.initialized` is false, then preview and
+complete one native CEO, CTO, CPO, CMO, COO, and Chair cycle through its review
+state. Print the Markdown report. A bare invocation is the explicit cycle
+request; it does not authorize finding acceptance, route application, PLAN, or
+SHIP. An explicit read-only subcommand performs only that command.
+
+Start guided setup with exactly `planr operate init --json` only when inspect
+reports that initialization is absent or reconfiguration was requested. Guided
+mode is the self-describing response from that command; there is no `--guided`
+flag. Do not probe `operate --help` or `init --help` to discover the
+questionnaire transport.
 
 Consume only schema-valid `questionnaire` and `actions` returned by the CLI.
-Present questions through a verified runtime question surface, structured chat,
-or an attached terminal. Submit typed answers through the bounded stdin/resume
-lifecycle. Never copy questions, infer answers, or reconstruct commands.
+Present questions through a verified runtime question surface, then the
+CLI-owned interactive flow in an attached terminal, then structured chat one
+question at a time. Never dump the full questionnaire as a form. Submit typed
+answers through the bounded stdin/resume lifecycle. Never copy questions, infer
+answers, or reconstruct commands.
 
 For a self-describing questionnaire, copy `submission.envelope.fixedFields`
 verbatim, resolve its declared dynamic fields, and for each chosen descriptor

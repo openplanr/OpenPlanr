@@ -1,6 +1,6 @@
 ---
 name: planr-operate
-description: Run the OpenPlanr evidence-to-decision operating loop without crossing human or SHIP boundaries.
+description: Initialize when needed, run one complete OpenPlanr operating cycle, and present the executive report without crossing human or SHIP boundaries.
 license: MIT
 ---
 
@@ -11,20 +11,46 @@ state, evidence collection, advisor dispatch, deterministic consolidation,
 routing, recovery, and outcome reconciliation; this skill must not reimplement
 those behaviors.
 
+## Default workflow
+
+Invoking `planr-operate` without an explicit public subcommand means: run one
+complete Operating Board cycle and stop at its review gate. The user must not
+write an orchestration prompt or run adapter commands.
+
+1. Run `planr operate inspect --json`.
+2. When `data.initialized` is `true`, do not reopen initialization. Continue
+   directly to the provider-free cycle preview.
+3. When `data.initialized` is `false`, complete guided initialization, then
+   continue to the cycle preview in the same invocation.
+4. Treat this bare skill invocation as the explicit request for one cycle. Run
+   the exact CLI-returned start and native advisor lifecycle through CEO, CTO,
+   CPO, CMO, COO, and Chair until `reviewable`, `blocked`, or `failed`.
+   Evidence-unready lenses still appear as `not_evaluated`; never invent advice.
+5. Render `planr operate report` as concise Markdown in chat, including every
+   lens result, gaps, findings, and exact proposed next actions. The dashboard
+   is optional.
+
+When the user supplies an explicit public subcommand such as `inspect`,
+`status`, `report`, or `findings list`, perform only that command. Do not turn a
+read-only inspection request into a new cycle.
+
 ## Guided interaction
 
-Start guided setup with exactly `planr operate init --json`. Guided mode is the
-self-describing response from that command; there is no `--guided` flag. Do not
-probe `operate --help` or `init --help` to discover the questionnaire transport.
+Start guided setup with exactly `planr operate init --json` only after inspect
+reports that initialization is absent, or when the user explicitly requests
+reconfiguration. Guided mode is the self-describing response from that command;
+there is no `--guided` flag. Do not probe `operate --help` or `init --help` to
+discover the questionnaire transport.
 
 Consume only schema-valid `questionnaire` and `actions` returned by the CLI.
 Present questions verbatim through the active runtime's verified interaction
-surface; if native questions are unavailable, use structured chat, then an
-attached terminal, otherwise return the CLI handoff. Submit typed answers only
-through the bounded stdin/resume lifecycle, preserving question IDs and declared
-answer types. Do not copy question definitions, infer missing answers or
-defaults, rebuild commands from chat, or edit operating configuration to answer
-a question.
+surface. If native questions are unavailable, prefer the CLI-owned interactive
+flow in an attached terminal. If neither is available, use structured chat one
+question at a time; never dump the whole questionnaire as a form. Otherwise
+return the CLI handoff. Submit typed answers only through the bounded
+stdin/resume lifecycle, preserving question IDs and declared answer types. Do
+not copy question definitions, infer missing answers or defaults, rebuild
+commands from chat, or edit operating configuration to answer a question.
 
 For a self-describing questionnaire, construct the JSON document only from its
 `submission` contract: copy `submission.envelope.fixedFields` verbatim, resolve
@@ -43,14 +69,15 @@ handoff instead of putting JSON in argv, shell text, logs, or temporary files. D
 not guess envelope metadata. If `submission` is absent, return the CLI's
 compatible update/handoff instead of reverse-engineering it.
 
-Treat an explicit request to **run one Operating Board cycle** as authority for
-that cycle's reversible local continuation only. Preview first, then execute the
-CLI-returned cycle start and its digest-bound adapter prepare, record, finalize,
-resume, Chair, and read-only report steps until the cycle is `reviewable`,
-`blocked`, or `failed`. Do not ask the user to paste or manually rerun those
-internal commands. `--yes` may be supplied only to the exact cycle-start action
-selected by that explicit request; never infer it from a questionnaire answer,
-a generic request for status, or a prior action.
+Treat an explicit request to **run one Operating Board cycle**, including a bare
+`planr-operate` invocation, as authority for that cycle's reversible local
+continuation only. Preview first, then execute the CLI-returned cycle start and
+its digest-bound adapter prepare, record, finalize, resume, Chair, and read-only
+report steps until the cycle is `reviewable`, `blocked`, or `failed`. Do not ask
+the user to paste or manually rerun those internal commands. `--yes` may be
+supplied only to the exact cycle-start action selected by that explicit request;
+never infer it from a questionnaire answer, an explicit read-only subcommand, or
+a prior action.
 
 Treat every top-level `handoff` as the only lifecycle command contract. Execute
 only its current `handoff.next[].argv` token arrays, never an action from a prior

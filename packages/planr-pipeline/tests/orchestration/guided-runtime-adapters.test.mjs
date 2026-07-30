@@ -163,7 +163,15 @@ test('generated adapter docs and runtime-asset digests are current', () => {
     'commands/operate.md',
   ]) {
     const content = readFileSync(join(root, path), 'utf8');
-    assert.match(content, /Start guided setup with exactly `planr operate init --json`/u);
+    assert.match(content, /Start guided setup with exactly `planr operate init --json` only/u);
+    assert.match(content, /planr operate inspect\s+--json/u);
+    assert.match(content, /initialization is (?:absent|false)/u);
+    assert.match(content, /one\s+question at a time/u);
+    assert.match(content, /[Nn]ever dump the (?:whole|full) questionnaire as a form/u);
+    assert.match(
+      content,
+      /(?:bare|no-argument).*(?:invocation|command).*(?:explicit request|cycle request)/su,
+    );
     assert.doesNotMatch(content, /planr operate init --guided/u);
     assert.match(content, /answers\.copyFields/u);
     assert.match(content, /required.*valueType.*constraints|constraints.*required.*valueType/su);

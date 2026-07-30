@@ -38,9 +38,11 @@ Certified adapters declare one Operating Board advisor mode:
 - `structured-provider`: OpenPlanr invokes a separately configured provider
   under its provider-consent policy.
 
-An explicit user request to run one Operating Board cycle authorizes the
-reversible local continuation steps needed to reach `reviewable` for that
-cycle. The runtime previews first, then may perform cycle start, adapter
+A bare Operating Board workflow invocation, or an explicit user request to run
+one cycle, authorizes the reversible local continuation steps needed to reach
+`reviewable` for that cycle. An explicit read-only subcommand such as `inspect`
+or `status` remains read-only. The runtime inspects initialization first,
+initializes only when absent, previews, then may perform cycle start, adapter
 prepare, advisor record/finalize, Chair record/finalize, and read-only report
 rendering without asking the user to paste or re-run commands.
 

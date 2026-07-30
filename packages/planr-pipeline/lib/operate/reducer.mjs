@@ -403,6 +403,14 @@ function moveEntity(index, family, event, nextStatus) {
     }
   } else {
     const stateKey = family === 'cycle' || family === 'route' ? 'state' : 'status';
+    if (
+      family === 'cycle'
+      && current[stateKey] === 'cancelled'
+      && nextStatus === 'cancelled'
+      && Object.keys(event.payload ?? {}).length === 0
+    ) {
+      return;
+    }
     const allowed = transitions[family][current[stateKey]] ?? [];
     if (!allowed.includes(nextStatus)) {
       throw stateError(`Invalid ${family} transition ${current.state ?? current.status} → ${nextStatus} for ${event.entityId}.`);
