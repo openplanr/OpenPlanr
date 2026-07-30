@@ -26,15 +26,15 @@ function adapters() {
   }));
 }
 
-test('guided release ledger withholds the CLI forward fix pending a fresh canary', async () => {
+test('guided release ledger verifies the CLI forward fix against fresh canary evidence', async () => {
   const operation = await readJson('../examples/guided-operate-operation.json');
   assert.deepEqual(validateOperation(operation), []);
   assert.equal(operation.operationDigest, calculateOperationDigest(operation));
   assert.equal(operation.umbrellaSpecId, 'SPEC-003');
-  assert.equal(operation.state, 'preparing');
+  assert.equal(operation.state, 'verified');
   assert.equal(operation.ledger.pullRequest.number, 82);
-  assert.equal(operation.ledger.pullRequest.state, 'draft');
-  assert.equal(isVerifiedOperation(operation), false);
+  assert.equal(operation.ledger.pullRequest.state, 'merged');
+  assert.equal(isVerifiedOperation(operation), true);
   assert.deepEqual(
     operation.participants.map(({ targetVersion }) => targetVersion),
     ['0.31.0', '1.15.1', '1.17.2', '1.2.0'],
@@ -88,13 +88,14 @@ test('guided capability opens only after versions, interaction metadata, and rel
   assert.deepEqual(missingCapability.missing, ['adapters']);
 });
 
-test('published compatibility withholds the forward fix until reconciliation', async () => {
+test('published compatibility exposes the reconciled forward fix', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const guided = ecosystem.capabilities.guidedOperatingBoard;
   assert.equal(ecosystem.capabilities.operatingBoard.status, 'available');
-  assert.equal(guided.status, 'unavailable');
+  assert.equal(guided.status, 'available');
   assert.equal(guided.releaseOperation.operationId, 'OPERATE-SPEC-003');
-  assert.equal(guided.releaseOperation.state, 'preparing');
+  assert.equal(guided.releaseOperation.state, 'verified');
+  assert.equal(guided.releaseOperation.reconciliation, 'matched');
   assert.deepEqual(guided.components, {
     pipeline: '0.31.0',
     cli: '1.15.1',
@@ -102,9 +103,9 @@ test('published compatibility withholds the forward fix until reconciliation', a
     marketplace: '1.2.0',
   });
   assert.deepEqual(ecosystem.components, {
-    cli: { version: '1.15.0', pipelineRange: '^0.31.0' },
-    pipeline: { version: '0.31.0', cliRange: '^1.15.0' },
-    skills: { version: '1.17.2', cliRange: '^1.15.0' },
+    cli: { version: '1.15.1', pipelineRange: '^0.31.0' },
+    pipeline: { version: '0.31.0', cliRange: '^1.15.1' },
+    skills: { version: '1.17.2', cliRange: '^1.15.1' },
     marketplace: { version: '1.2.0' },
   });
 });

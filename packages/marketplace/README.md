@@ -19,9 +19,9 @@ Then install any of the plugins below:
 <!-- ecosystem-table:start -->
 | Component | Version | Compatibility |
 |---|---:|---|
-| OpenPlanr CLI | 1.15.0 | pipeline ^0.31.0 |
-| Pipeline package/plugin | 0.31.0 | CLI ^1.15.0 |
-| Runtime skills | 1.17.2 | CLI ^1.15.0 |
+| OpenPlanr CLI | 1.15.1 | pipeline ^0.31.0 |
+| Pipeline package/plugin | 0.31.0 | CLI ^1.15.1 |
+| Runtime skills | 1.17.2 | CLI ^1.15.1 |
 | Protocol | 1.2.0 | reads v1.0 artifacts; additive capabilities through v1.2.0 |
 <!-- ecosystem-table:end -->
 
@@ -41,7 +41,7 @@ Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in t
 
 OpenPlanr Operating Board is certified for claude-code, codex, cursor through `planr operate`.
 
-Resolved component versions: pipeline 0.31.0, CLI 1.15.0, skills 1.17.2, marketplace 1.2.0.
+Resolved component versions: pipeline 0.31.0, CLI 1.15.1, skills 1.17.2, marketplace 1.2.0.
 <!-- operating-capability:end -->
 
 `planr operate` is the recurring evidence-to-decision control plane. It creates
@@ -68,18 +68,18 @@ Operating Board never invokes SHIP.
 ## Guided Operating Board capability
 
 <!-- guided-operating-capability:start -->
-**Resolved status:** `unavailable`
+**Resolved status:** `available`
 
-Guided Operating Board remains withheld. Missing release gates: release.
+Guided Operating Board is certified for claude-code, codex, cursor through `planr operate`.
 
 Candidate component versions: pipeline 0.31.0, CLI 1.15.1, skills 1.17.2, marketplace 1.2.0.
 <!-- guided-operating-capability:end -->
 
 The guided capability lets certified runtimes present CLI-owned questions and
 typed next actions without reconstructing commands or expanding authority. Its
-separate `OPERATE-SPEC-003` draft ledger preserves the already verified
-SPEC-002 Operating Board capability while the 0.31/1.15/1.17/1.2 release train
-is prepared and independently verified.
+separate `OPERATE-SPEC-003` ledger preserves the already verified SPEC-002
+Operating Board capability and records the independently verified
+0.31/1.15/1.17/1.2 release train.
 
 Planning-only installations keep help, `operate inspect`, and `operate demo`.
 Protocol-dependent commands fail before provider use with
@@ -108,8 +108,9 @@ npm run reconcile:operation -- operations/OPERATE-SPEC-002.json live-state.json
 ```
 
 For the guided release train, use
-`examples/guided-operate-operation.json`; keep it drafted until authoritative
-PR, commit, tag, npm, tarball, and canary evidence exists.
+`examples/guided-operate-operation.json`. It becomes verified only after
+authoritative PR, commit, tag, npm, tarball, reconciliation, and canary evidence
+all match.
 
 The operation digest and approvals bind promotion to the reviewed targets.
 Verification additionally requires passed, digest-addressed evidence for the

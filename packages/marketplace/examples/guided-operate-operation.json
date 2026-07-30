@@ -8,8 +8,8 @@
   "title": "Release Guided Operating Board Runtime Experience",
   "capability": "guidedOperatingBoard",
   "createdAt": "2026-07-29T20:30:00.000Z",
-  "updatedAt": "2026-07-30T00:22:00.000Z",
-  "state": "preparing",
+  "updatedAt": "2026-07-30T00:31:21.000Z",
+  "state": "verified",
   "ledger": {
     "kind": "marketplace-draft-pr",
     "repository": "openplanr/marketplace",
@@ -17,7 +17,7 @@
     "pullRequest": {
       "number": 82,
       "url": "https://github.com/openplanr/marketplace/pull/82",
-      "state": "draft"
+      "state": "merged"
     }
   },
   "participantOrder": [
@@ -234,52 +234,52 @@
   "releaseEvidence": [
     {
       "id": "packed-cli",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30502809402",
+      "digest": "sha256:ebfeca46d5d88bef8f6c4830969978958df52ec1a2635177ff9064d5d3b8fde8",
+      "checkedAt": "2026-07-30T00:31:20.119Z"
     },
     {
       "id": "protocol-v1.2",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30502809402",
+      "digest": "sha256:ce70d1effa392be59af68706f2f0a435f201901326e18ecc22fbcb41a8b640af",
+      "checkedAt": "2026-07-30T00:31:20.119Z"
     },
     {
       "id": "event-replay",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30502809402",
+      "digest": "sha256:35197900eb50ccd38bb4090d31f1f20dc2e732a357c38b7472cac74a52f94b4b",
+      "checkedAt": "2026-07-30T00:31:20.119Z"
     },
     {
       "id": "security-boundaries",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30502809402",
+      "digest": "sha256:4cd849051d639d3b5cd607305bf2458221c2f424fb598f973a3222fd8cb9c7be",
+      "checkedAt": "2026-07-30T00:31:20.119Z"
     },
     {
       "id": "outcome-reconciliation",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30502809402",
+      "digest": "sha256:397de98b9dca063e0ec9bccd8dfbd0db6d7c8fdfde26ddbbad7cf02ed7f72dd1",
+      "checkedAt": "2026-07-30T00:31:20.119Z"
     }
   ],
-  "prepareDigest": null,
-  "confirmationDigest": null,
+  "prepareDigest": "sha256:2ffc546c02c4843aacc00e3d39ae6e044f06c6355f2d17dbb3b6d34ed5ab8f21",
+  "confirmationDigest": "sha256:13ee499f477ddd09b5bf83122053d479e85c6b54b08b9c252a0bf35b7e03c53e",
   "blockedReason": null,
-  "nextSafeAction": "Run the exact-commit six-platform canary for openplanr 1.15.1, then reconcile and finalize the manifest.",
+  "nextSafeAction": "Archive the verified operation and monitor the first production guided Operating Board journeys.",
   "recovery": {
     "mode": "forward-fix",
     "reason": "planr-pipeline 0.31.0 and openplanr 1.15.1 are public on npm.",
-    "nextSafeAction": "Published packages cannot be withdrawn; verify the forward fix and expose only its reconciled compatibility set."
+    "nextSafeAction": "Published packages cannot be withdrawn; any future correction must use a new forward-fix release."
   },
   "reconciliation": {
-    "status": "pending",
-    "checkedAt": null,
+    "status": "matched",
+    "checkedAt": "2026-07-30T00:31:20.119Z",
     "sources": [
       "github-pr",
       "git-commit",
@@ -290,7 +290,7 @@
       "operating-canary"
     ],
     "drift": [],
-    "nextSafeAction": "Collect fresh exact-commit canary evidence for openplanr 1.15.1 before final reconciliation."
+    "nextSafeAction": "All authoritative release, manifest, and canary evidence matches the reviewed operation."
   },
   "history": [
     {
@@ -337,6 +337,24 @@
       "participant": "cli",
       "digest": "sha256:2fd8ed95813f266d7b15a2171beeedc26cde1210c94b7adb37accf614b1068fe",
       "note": "Production canary found that a generated initialization preview action omitted reviewed answers. OpenPlanr 1.15.1 adds a bounded, digest-bound replay token and cross-platform canonical-token validation; fresh exact-commit canary evidence is required before the compatibility manifest advances."
+    },
+    {
+      "eventId": "3a977926-a4c2-4bf2-8c06-155b60c73371",
+      "timestamp": "2026-07-30T00:31:20.119Z",
+      "type": "reconciliation.recorded",
+      "actor": "maintainer",
+      "participant": "marketplace",
+      "digest": "sha256:13ee499f477ddd09b5bf83122053d479e85c6b54b08b9c252a0bf35b7e03c53e",
+      "note": "OpenPlanr 1.15.1, pipeline 0.31.0, skills 1.17.2, marketplace 1.2.0, and exact-commit Node 20/22 canaries on Ubuntu, macOS, and Windows matched authoritative release state."
+    },
+    {
+      "eventId": "4b31c44b-eea9-43ec-8f96-f6237a557e23",
+      "timestamp": "2026-07-30T00:31:21.000Z",
+      "type": "operation.verified",
+      "actor": "maintainer",
+      "participant": "marketplace",
+      "digest": "sha256:2fd8ed95813f266d7b15a2171beeedc26cde1210c94b7adb37accf614b1068fe",
+      "note": "Guided Operating Board runtime experience and its initialization replay forward fix are verified for ecosystem availability."
     }
   ]
 }
