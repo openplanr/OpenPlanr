@@ -21,7 +21,7 @@ Then install any of the plugins below:
 |---|---:|---|
 | OpenPlanr CLI | 1.16.1 | pipeline ^0.32.1 |
 | Pipeline package/plugin | 0.32.1 | CLI ^1.16.1 |
-| Runtime skills | 1.18.1 | CLI ^1.16.1 |
+| Runtime skills | 1.18.2 | CLI ^1.16.1 |
 | Protocol | 1.2.0 | reads v1.0 artifacts; additive capabilities through v1.2.0 |
 <!-- ecosystem-table:end -->
 
@@ -29,7 +29,7 @@ Then install any of the plugins below:
 | Plugin | Version | Description |
 |---|---|---|
 | [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.32.1 | Complete PO, Design, Review, DEV, and QA workflow with universal HTML artifact review and private sharing. |
-| [`openplanr`](https://github.com/openplanr/skills) | 1.18.1 | Unified operating, planning, artifact review, and delivery workflow skills for the certified runtimes. |
+| [`openplanr`](https://github.com/openplanr/skills) | 1.18.2 | Unified operating, planning, artifact review, and delivery workflow skills for the certified runtimes. |
 <!-- plugin-table:end -->
 
 Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in the same release-train change.
@@ -41,7 +41,7 @@ Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in t
 
 OpenPlanr Operating Board is certified for claude-code, codex, cursor through `planr operate`.
 
-Resolved component versions: pipeline 0.32.1, CLI 1.16.1, skills 1.18.1, marketplace 1.3.1.
+Resolved component versions: pipeline 0.32.1, CLI 1.16.1, skills 1.18.2, marketplace 1.3.2.
 <!-- operating-capability:end -->
 
 `planr operate` is the recurring evidence-to-decision control plane. It creates
@@ -180,6 +180,10 @@ planr doctor
 The web installer installs only the CLI. Guided setup runs separately in an
 interactive terminal, displays detected coding agents, and defaults to safe
 user scope. Project scope requires a Git or initialized OpenPlanr project.
+When Claude Code is selected at user scope, the confirmed setup refreshes this
+marketplace and installs or updates `openplanr@openplanr` and
+`planr-pipeline@openplanr` to compatible versions. `planr doctor` reports
+version or plugin-identity drift read-only; restart Claude Code after an update.
 
 ## Artifact review and private sharing
 

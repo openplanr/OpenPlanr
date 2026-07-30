@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAt": "2026-07-30T18:28:58.939Z",
+  "generatedAt": "2026-07-30T19:01:40.856Z",
   "protocol": {
     "current": "1.2.0",
     "supported": [
@@ -19,11 +19,11 @@
       "cliRange": "^1.16.1"
     },
     "skills": {
-      "version": "1.18.1",
+      "version": "1.18.2",
       "cliRange": "^1.16.1"
     },
     "marketplace": {
-      "version": "1.3.1"
+      "version": "1.3.2"
     }
   },
   "adapters": [
@@ -75,8 +75,8 @@
       "components": {
         "pipeline": "0.32.1",
         "cli": "1.16.1",
-        "skills": "1.18.1",
-        "marketplace": "1.3.1"
+        "skills": "1.18.2",
+        "marketplace": "1.3.2"
       },
       "certifiedRuntimes": [
         "claude-code",

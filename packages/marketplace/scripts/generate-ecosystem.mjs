@@ -42,6 +42,12 @@ const ecosystemPaths = {
   adapters: join(workspace, 'planr-pipeline', 'registry', 'adapters.json'),
   operatingRoles: join(workspace, 'planr-pipeline', 'registry', 'operating-roles.json'),
   skills: join(workspace, 'skills', 'package.json'),
+  skillsPluginManifest: join(
+    workspace,
+    'skills',
+    '.claude-plugin',
+    'plugin.json',
+  ),
   operateSkill: join(workspace, 'skills', 'skills', 'planr-operate', 'SKILL.md'),
 };
 const operationPath = join(repo, 'examples', 'ecosystem-operation.json');
@@ -58,6 +64,7 @@ const requiredWorkspaceInputs = [
   ecosystemPaths.pipeline,
   ecosystemPaths.adapters,
   ecosystemPaths.skills,
+  ecosystemPaths.skillsPluginManifest,
 ];
 const hasWorkspace =
   requiredWorkspaceInputs.every(existsSync) &&
@@ -71,6 +78,17 @@ const observedPipelineVersion = hasWorkspace
 const observedSkillsVersion = hasWorkspace
   ? readJson(ecosystemPaths.skills).version
   : current.components.skills.version;
+if (hasWorkspace) {
+  const skillsPluginManifest = readJson(ecosystemPaths.skillsPluginManifest);
+  if (
+    skillsPluginManifest.name !== 'openplanr' ||
+    skillsPluginManifest.version !== observedSkillsVersion
+  ) {
+    throw new Error(
+      `Skills plugin identity drift: expected openplanr@${observedSkillsVersion}, got ${skillsPluginManifest.name}@${skillsPluginManifest.version}`,
+    );
+  }
+}
 const adapterRegistry = hasWorkspace ? readJson(ecosystemPaths.adapters) : null;
 const protocolVersion = adapterRegistry?.protocolVersion ?? current.protocol.current;
 const guidedReleaseVerified = isVerifiedOperation(guidedReleaseOperation);
