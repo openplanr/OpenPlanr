@@ -2,6 +2,22 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.18.0] — 2026-07-30
+
+### Changed
+
+- `planr-operate` now completes bounded native advisor handoffs inside Claude
+  Code, Codex, and Cursor instead of asking users to manually shuttle lifecycle
+  commands between the CLI and runtime.
+- Operating cycles surface cited Markdown/JSON briefs and exact governed
+  conversions into specs, stories, tasks, quick tasks, gaps, decisions, and
+  owner actions while preserving the separate PLAN and SHIP gates.
+- Evidence-safety recovery follows Planr's value-free quarantine and
+  classification flow so one unsafe evidence item does not block unrelated
+  advisory lenses.
+- Runtime guidance and byte-parity validation now target
+  `planr-pipeline@0.32.0` and the `openplanr@1.16.0` Operating Board contract.
+
 ## [1.17.2] — 2026-07-30
 
 ### Fixed

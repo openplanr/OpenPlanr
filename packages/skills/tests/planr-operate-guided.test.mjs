@@ -47,9 +47,21 @@ const fixtures = [
     },
     expected: 'diagnose',
   },
+  {
+    name: 'selected native cycle start',
+    result: {
+      ok: true,
+      actions: [{
+        id: 'operate.run.start',
+        effect: 'project-write',
+        requiresConfirmation: true,
+        confirmationDigest: `sha256:${'a'.repeat(64)}`,
+      }],
+    },
+    expected: 'continue-native-cycle',
+  },
   ...[
     'operate.init.apply',
-    'operate.run.start',
     'operate.provider.call',
     'operate.routes.apply',
     'operate.plan.handoff',
@@ -97,23 +109,46 @@ test('guided conversation fixtures preserve every stop boundary', () => {
     if (fixture.result.action === 'input_required') {
       assert.match(skill, /Present questions verbatim/);
       assert.match(skill, /bounded stdin\/resume lifecycle/);
+      assert.match(skill, /submission\.envelope\.fixedFields/);
+      assert.match(skill, /answers\.copyFields/);
+      assert.match(skill, /required.*valueType.*constraints|constraints.*required.*valueType/s);
+      assert.match(skill, /transport\.argv/);
+      assert.match(skill, /Do\s+not guess envelope metadata/);
     }
     if (fixture.result.code === 'E_OPERATE_SECRET_DETECTED') {
       assert.match(skill, /planr operate evidence diagnose/);
       assert.match(skill, /Never trial-edit sources/);
     }
     if (fixture.result.actions?.some((action) => action.requiresConfirmation)) {
-      assert.match(skill, /Stop after each selected non-read-only action/);
-      assert.match(skill, /Never add `--yes`/);
+      if (fixture.expected === 'continue-native-cycle') {
+        assert.match(skill, /explicit request to \*\*run one Operating Board cycle\*\*/);
+        assert.match(skill, /Do not ask the user to paste or manually rerun/);
+        assert.match(skill, /top-level `handoff` as the only lifecycle command/);
+        assert.match(skill, /`handoff\.next\[\]\.argv`/);
+        assert.match(skill, /`handoff\.recovery` only after a\s+failed current action/);
+        assert.match(skill, /retained `adapter\.prepare` JSON result/);
+        assert.match(skill, /never\s+probe\s+(?:these\s+)?machine\s+commands\s+with\s+`--help`/);
+      } else {
+        assert.match(skill, /Ask separately for external provider consent/);
+        assert.match(skill, /planning-artifact creation, PLAN, SHIP/);
+      }
     }
     assert.ok(fixture.expected, fixture.name);
   }
 });
 
 test('the skill contains no copied question/default logic or unsafe command routing', () => {
+  assert.match(skill, /Start guided setup with exactly `planr operate init --json`/);
+  assert.doesNotMatch(skill, /planr operate init --guided/);
+  assert.match(skill, /rolePack\.roleBrief\.output\.jsonSchema/);
+  assert.match(skill, /operating-advisor-response@1\.2\.0/);
+  assert.match(
+    skill,
+    /do not add\s+`kind`, cycle, role, input-digest, producer, or result-digest metadata/,
+  );
   assert.doesNotMatch(skill, /Who owns final operating decisions\?/);
   assert.doesNotMatch(skill, /Operating profile:/);
   assert.doesNotMatch(skill, /(?:^|\n)\s*(?:sed|perl|python|node)\s+.*\.planr\/operate/m);
-  assert.doesNotMatch(skill, /`planr operate[^`]*--yes[^`]*`/);
+  assert.doesNotMatch(skill, /(?:^|\n)\s*planr operate[^\n]*--yes/m);
   assert.doesNotMatch(skill, /(?:^|\n)\s*planr-pipeline\s+/m);
 });

@@ -63,9 +63,9 @@ data gaps, and reviewed routes:
 ```bash
 planr operate init
 planr operate run --preview
-planr operate run --dry-run
-planr operate run
+planr operate run --runtime codex
 planr operate brief
+planr operate report --lens all --format markdown
 ```
 
 The runtime skill is deliberately thin: all evidence policy, advisor isolation,
@@ -73,11 +73,17 @@ scoring, state transitions, route confirmation, and recovery remain inside the
 public `planr operate` command. `--preview` calls no providers and writes
 nothing; `--dry-run` may use a disclosed, consented provider but commits no
 state. Runtime-native prompts render CLI-owned questionnaires and return typed
-answers through resumable sessions; the skill never embeds defaults or infers
-authority. Each non-read-only action has a separate confirmation digest.
-Evidence quarantine returns a value-free public diagnose/classify flow instead
-of encouraging config edits. Finding acceptance and route application are
-separate. Answered gaps require `gaps verify` with explicit evidence IDs.
+answers from their self-describing bounded-stdin submission contracts through
+resumable sessions. An explicit request to run one cycle
+authorizes its bounded native advisor lifecycle through a reviewable, blocked,
+or failed state, so users are not asked to paste internal prepare/record/finalize
+commands. Each native advisor returns the exact compact JSON schema embedded in
+its immutable role pack; OpenPlanr—not the runtime—binds canonical IDs, producer
+metadata, and digests. External provider consent, finding acceptance, route application,
+planning changes, PLAN, and SHIP remain separate decisions. Unsafe evidence is
+quarantined without exposing its value or blocking unrelated ready lenses.
+Per-lens CEO, CTO, CPO, CMO, COO, and Chair reports are available as Markdown or
+strict JSON; the visual dashboard is optional.
 
 Pipeline-PO DEV routes pause at `awaiting-plan` and return the exact native PLAN
 invocation. The skill resumes that same route only after human review and
