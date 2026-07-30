@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.16.0
+
+### Minor Changes
+
+- [`e1f5127`](https://github.com/openplanr/OpenPlanr/commit/e1f5127d7250ca785723c91cdf03c2ab08a2e614) Run Operating Board cycles through bounded native runtime advisors, quarantine unsafe evidence without blocking unrelated lenses, and add actionable Markdown/JSON executive reports.
+
 ## 1.15.1
 
 ### Patch Changes
