@@ -140,15 +140,15 @@ test('adapter normalization fails closed when native dispatch is undeclared', ()
   );
 });
 
-test('candidate compatibility remains withheld before exact-commit reconciliation', async () => {
+test('verified compatibility promotes the default native cycle after reconciliation', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const guided = ecosystem.capabilities.guidedOperatingBoard;
   assert.equal(ecosystem.capabilities.operatingBoard.status, 'available');
-  assert.equal(guided.status, 'unavailable');
-  assert.deepEqual(guided.missing, ['release']);
+  assert.equal(guided.status, 'available');
+  assert.deepEqual(guided.missing, []);
   assert.equal(guided.releaseOperation.operationId, 'OPERATE-SPEC-003-R3');
-  assert.equal(guided.releaseOperation.state, 'promoting');
-  assert.equal(guided.releaseOperation.reconciliation, 'incomplete');
+  assert.equal(guided.releaseOperation.state, 'verified');
+  assert.equal(guided.releaseOperation.reconciliation, 'matched');
   assert.deepEqual(guided.components, {
     pipeline: '0.32.1',
     cli: '1.16.1',
@@ -156,9 +156,9 @@ test('candidate compatibility remains withheld before exact-commit reconciliatio
     marketplace: '1.3.1',
   });
   assert.deepEqual(ecosystem.components, {
-    cli: { version: '1.16.0', pipelineRange: '^0.32.0' },
-    pipeline: { version: '0.32.0', cliRange: '^1.16.0' },
-    skills: { version: '1.18.0', cliRange: '^1.16.0' },
+    cli: { version: '1.16.1', pipelineRange: '^0.32.1' },
+    pipeline: { version: '0.32.1', cliRange: '^1.16.1' },
+    skills: { version: '1.18.1', cliRange: '^1.16.1' },
     marketplace: { version: '1.3.1' },
   });
 });

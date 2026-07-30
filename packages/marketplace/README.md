@@ -19,17 +19,17 @@ Then install any of the plugins below:
 <!-- ecosystem-table:start -->
 | Component | Version | Compatibility |
 |---|---:|---|
-| OpenPlanr CLI | 1.16.0 | pipeline ^0.32.0 |
-| Pipeline package/plugin | 0.32.0 | CLI ^1.16.0 |
-| Runtime skills | 1.18.0 | CLI ^1.16.0 |
+| OpenPlanr CLI | 1.16.1 | pipeline ^0.32.1 |
+| Pipeline package/plugin | 0.32.1 | CLI ^1.16.1 |
+| Runtime skills | 1.18.1 | CLI ^1.16.1 |
 | Protocol | 1.2.0 | reads v1.0 artifacts; additive capabilities through v1.2.0 |
 <!-- ecosystem-table:end -->
 
 <!-- plugin-table:start -->
 | Plugin | Version | Description |
 |---|---|---|
-| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.32.0 | Complete PO, Design, Review, DEV, and QA workflow with universal HTML artifact review and private sharing. |
-| [`openplanr`](https://github.com/openplanr/skills) | 1.18.0 | Unified operating, planning, artifact review, and delivery workflow skills for the certified runtimes. |
+| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.32.1 | Complete PO, Design, Review, DEV, and QA workflow with universal HTML artifact review and private sharing. |
+| [`openplanr`](https://github.com/openplanr/skills) | 1.18.1 | Unified operating, planning, artifact review, and delivery workflow skills for the certified runtimes. |
 <!-- plugin-table:end -->
 
 Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in the same release-train change.
@@ -41,7 +41,7 @@ Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in t
 
 OpenPlanr Operating Board is certified for claude-code, codex, cursor through `planr operate`.
 
-Resolved component versions: pipeline 0.32.0, CLI 1.16.0, skills 1.18.0, marketplace 1.3.1.
+Resolved component versions: pipeline 0.32.1, CLI 1.16.1, skills 1.18.1, marketplace 1.3.1.
 <!-- operating-capability:end -->
 
 `planr operate` is the recurring evidence-to-decision control plane. It creates
@@ -77,9 +77,9 @@ optional.
 ## Guided Operating Board capability
 
 <!-- guided-operating-capability:start -->
-**Resolved status:** `unavailable`
+**Resolved status:** `available`
 
-Guided Operating Board remains withheld. Missing release gates: release.
+Guided Operating Board is certified for claude-code, codex, cursor through `planr operate`.
 
 Candidate component versions: pipeline 0.32.1, CLI 1.16.1, skills 1.18.1, marketplace 1.3.1.
 <!-- guided-operating-capability:end -->
