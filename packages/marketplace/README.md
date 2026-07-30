@@ -41,7 +41,7 @@ Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in t
 
 OpenPlanr Operating Board is certified for claude-code, codex, cursor through `planr operate`.
 
-Resolved component versions: pipeline 0.32.0, CLI 1.16.0, skills 1.18.0, marketplace 1.3.0.
+Resolved component versions: pipeline 0.32.0, CLI 1.16.0, skills 1.18.0, marketplace 1.3.1.
 <!-- operating-capability:end -->
 
 `planr operate` is the recurring evidence-to-decision control plane. It creates
@@ -77,11 +77,11 @@ optional.
 ## Guided Operating Board capability
 
 <!-- guided-operating-capability:start -->
-**Resolved status:** `available`
+**Resolved status:** `unavailable`
 
-Guided Operating Board is certified for claude-code, codex, cursor through `planr operate`.
+Guided Operating Board remains withheld. Missing release gates: release.
 
-Candidate component versions: pipeline 0.32.0, CLI 1.16.0, skills 1.18.0, marketplace 1.3.0.
+Candidate component versions: pipeline 0.32.1, CLI 1.16.1, skills 1.18.1, marketplace 1.3.1.
 <!-- guided-operating-capability:end -->
 
 The guided capability lets certified runtimes present CLI-owned questions and
