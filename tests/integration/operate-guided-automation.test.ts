@@ -5,6 +5,10 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 import { executeOperateAction } from '../../src/services/operate/index.js';
+import {
+  decodeOperatingInitializationReplay,
+  encodeOperatingInitializationReplay,
+} from '../../src/services/operate/interaction/initialization-replay.js';
 
 const execFileAsync = promisify(execFile);
 const directories: string[] = [];
@@ -91,8 +95,54 @@ describe('Operating Board strict guided automation', () => {
           id: 'operate.init.apply',
           effect: 'project-write',
           requiresConfirmation: true,
+          command: expect.stringMatching(
+            /^planr operate init --answers-token [A-Za-z0-9_-]+ --preview-created-at /,
+          ),
         },
       ],
+    });
+    const action = result.actions?.find((candidate) => candidate.id === 'operate.init.apply');
+    const token = action?.command.match(/--answers-token ([A-Za-z0-9_-]+)/)?.[1];
+    const previewCreatedAt = (result.preview as { previewCreatedAt?: string } | undefined)
+      ?.previewCreatedAt;
+    expect(token).toBeTruthy();
+    expect(previewCreatedAt).toBeTruthy();
+
+    const tamperedAnswers = decodeOperatingInitializationReplay(token as string);
+    tamperedAnswers.decisionOwner = 'Different owner';
+    const rejected = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: {
+        json: true,
+        answersToken: encodeOperatingInitializationReplay(tamperedAnswers),
+        previewCreatedAt,
+        confirm: action?.confirmationDigest,
+        yes: true,
+      },
+    });
+    expect(rejected).toMatchObject({
+      ok: false,
+      code: 'E_OPERATE_ROUTE_CONFIRMATION_REQUIRED',
+    });
+
+    const applied = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: {
+        json: true,
+        answersToken: token,
+        previewCreatedAt,
+        confirm: action?.confirmationDigest,
+        yes: true,
+      },
+    });
+    expect(applied).toMatchObject({
+      ok: true,
+      action: 'init',
+      message: 'Operating Board initialized.',
     });
   });
 });

@@ -24,6 +24,10 @@ import {
 } from './interaction/answer-service.js';
 import { assertOperatingConfirmation } from './interaction/confirmation-service.js';
 import {
+  decodeOperatingInitializationReplay,
+  encodeOperatingInitializationReplay,
+} from './interaction/initialization-replay.js';
+import {
   createOperatingInitQuestionnaire,
   evaluateOperatingInitQuestions,
   operatingInitAnswersFromOptions,
@@ -68,6 +72,7 @@ import {
   type OperateErrorCode,
   type OperatingCharter,
   type OperatingConfig,
+  type OperatingInitAnswers,
   type OperatingProfile,
   type OperatingState,
 } from './types.js';
@@ -587,14 +592,18 @@ async function initializationApplyAction(input: {
   preview: OperatingInitializationPreview;
   bindings: Awaited<ReturnType<typeof currentGuidedSessionBindings>>;
   sessionId?: string;
-  answers: unknown;
+  answers: OperatingInitAnswers;
 }): Promise<Awaited<ReturnType<typeof createOperatingAction>>> {
   const sessionId =
     input.sessionId ??
     `GIS-init-${input.preview.previewDigest.slice('sha256:'.length, 'sha256:'.length + 24)}`;
   const command = input.sessionId
     ? `planr operate init --resume ${input.sessionId}`
-    : `planr operate init --preview-created-at ${input.preview.workspace.capturedAt}`;
+    : [
+        'planr operate init',
+        `--answers-token ${encodeOperatingInitializationReplay(input.answers)}`,
+        `--preview-created-at ${input.preview.workspace.capturedAt}`,
+      ].join(' ');
   return createOperatingAction({
     id: 'operate.init.apply',
     label: 'Apply Operating Board configuration',
@@ -628,9 +637,10 @@ async function initializationApplyAction(input: {
 
 async function initialize(request: OperateActionRequest): Promise<OperateActionResult> {
   await loadOperatingProtocol();
-  let supplied = normalizeOperatingInitializationAnswers(
-    operatingInitAnswersFromOptions(request.options),
-  );
+  const replayToken = option<string | undefined>(request, 'answersToken', undefined);
+  let supplied = replayToken
+    ? decodeOperatingInitializationReplay(replayToken)
+    : normalizeOperatingInitializationAnswers(operatingInitAnswersFromOptions(request.options));
   const resumeId = option<string | undefined>(request, 'resume', undefined);
   const localRoot = option<string | undefined>(request, 'localRoot', undefined);
   if (option(request, 'cancelSession', false)) {
@@ -837,9 +847,7 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
       state: 'preview-ready',
       preview: { ...previewData, confirmation },
       actions: [applyAction],
-      next: [
-        `planr operate init --preview-created-at ${preview.workspace.capturedAt} --confirm ${confirmation?.confirmationDigest} --yes`,
-      ],
+      next: [`${applyAction.command} --confirm ${confirmation?.confirmationDigest} --yes`],
     });
   }
   if (!confirmed || !requestedConfirmation || !confirmation) {

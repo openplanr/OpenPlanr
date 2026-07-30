@@ -343,6 +343,10 @@ export function registerOperateCommand(program: Command): void {
             '--preview-created-at <timestamp>',
             'bind a direct flag-based apply to the timestamp returned by its preview',
           )
+          .option(
+            '--answers-token <token>',
+            'replay the exact non-secret initialization answers returned by a preview',
+          )
           .option('--confirm <digest>', 'confirm the exact session preview digest'),
       ),
     ),
