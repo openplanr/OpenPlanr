@@ -1,6 +1,11 @@
 import type { Command, OptionValues } from 'commander';
 import { isNonInteractive } from '../../services/interactive-state.js';
 import {
+  applyOperatingDispatchModeOverrides,
+  parseOperatingDispatchModeOverrideFlags,
+} from '../../services/operate/config.js';
+import { writeOperatingDecisionBriefArtifact } from '../../services/operate/decision-brief.js';
+import {
   executeOperateAction,
   type OperateActionRequest,
   type OperateActionResult,
@@ -14,6 +19,7 @@ import {
   detectOperatingQuestionContext,
   renderOperatingInitQuestions,
 } from '../../services/operate/interaction/terminal-renderer.js';
+import { readOperatingDecisionBriefSource } from '../../services/operate/reports.js';
 import { promptConfirm } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
 
@@ -190,6 +196,149 @@ async function execute(
   await executeForResult(program, command, action, args, options);
 }
 
+function dispatchModeOverrideFlags(options: OptionValues): string[] {
+  return Array.isArray(options.dispatchModeOverride)
+    ? (options.dispatchModeOverride as string[])
+    : [];
+}
+
+/**
+ * Persist repeatable `--dispatch-mode-override <roleId>=<pack|mission>` flags into
+ * the machine-local operating preferences (FR4 / E-004) so an operator can roll a
+ * single lens back to the v1.2 pack path without hand-editing config. Returns the
+ * emitted result, or null when no override flag was supplied.
+ */
+async function applyDispatchModeOverrideFlags(
+  program: Command,
+  command: Command,
+  action: string,
+  options: OptionValues,
+): Promise<OperateActionResult | null> {
+  const flags = dispatchModeOverrideFlags(options);
+  if (flags.length === 0) return null;
+  const overrides = parseOperatingDispatchModeOverrideFlags(flags);
+  const applied = await applyOperatingDispatchModeOverrides({
+    projectRoot: projectDir(program),
+    overrides,
+  });
+  const summary = Object.entries(applied.dispatchModeOverrides)
+    .map(([roleId, mode]) => `${roleId}=${mode}`)
+    .sort()
+    .join(', ');
+  const result: OperateActionResult = {
+    schemaVersion: '1.0.0',
+    protocolVersion: '1.2.0',
+    ok: true,
+    action,
+    message: summary
+      ? `Dispatch-mode overrides set: ${summary}.`
+      : 'Dispatch-mode overrides cleared.',
+    state: null,
+    paths: {},
+    counts: {},
+    warnings: [],
+    nextActions: ['planr operate config show'],
+    next: [],
+    data: { dispatchModeOverrides: applied.dispatchModeOverrides, changed: applied.changed },
+    exitCode: 0,
+  };
+  if (wantsJson(command, options)) display.line(JSON.stringify(result));
+  else renderHuman(result);
+  return result;
+}
+
+/**
+ * FR7 / E-007 — render `operate brief` / `operate decisions show` into a
+ * self-contained, offline artifact via the pipeline builder, then write it to
+ * the operator-supplied `--render <path>`. This is a share-on-request boundary:
+ * it runs only when `--render` is present and never publishes. Sensitivity
+ * ceilings are enforced during rendering (above-ceiling evidence is dropped),
+ * and an external `http(s)://` reference fails closed via the pipeline error.
+ */
+async function renderDecisionBriefArtifact(
+  program: Command,
+  command: Command,
+  target: { cycleId?: string; decisionId?: string; destination: string },
+  options: OptionValues,
+): Promise<OperateActionResult> {
+  const action = target.decisionId ? 'decisions.render' : 'brief.render';
+  const json = wantsJson(command, options);
+  const localRoot = typeof options.localRoot === 'string' ? { localRoot: options.localRoot } : {};
+  try {
+    const source = await readOperatingDecisionBriefSource({
+      projectRoot: projectDir(program),
+      ...(target.cycleId ? { cycleId: target.cycleId } : {}),
+      ...(target.decisionId ? { decisionId: target.decisionId } : {}),
+      ...localRoot,
+    });
+    const written = await writeOperatingDecisionBriefArtifact({
+      projectRoot: projectDir(program),
+      destination: target.destination,
+      source,
+      ...localRoot,
+    });
+    const result: OperateActionResult = {
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.2.0',
+      ok: true,
+      action,
+      message: `Rendered a self-contained offline decision brief to ${target.destination}.`,
+      cycleId: source.cycleId || null,
+      state: null,
+      paths: { artifact: written.path },
+      counts: { redactedEvidence: written.redactedEvidenceRefs.length },
+      warnings:
+        written.redactedEvidenceRefs.length > 0
+          ? [
+              `Withheld ${written.redactedEvidenceRefs.length} citation(s) above the ${written.sensitivityCeiling} sensitivity ceiling.`,
+            ]
+          : [],
+      nextActions: [`Open ${target.destination} in a browser to review it offline.`],
+      next: [],
+      data: {
+        path: written.path,
+        sha256: written.sha256,
+        offline: written.offline,
+        sandbox: written.sandbox,
+        sensitivityCeiling: written.sensitivityCeiling,
+        redactedEvidenceRefs: written.redactedEvidenceRefs,
+      },
+      exitCode: 0,
+    };
+    if (json) display.line(JSON.stringify(result));
+    else renderHuman(result);
+    return result;
+  } catch (error) {
+    const code =
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      typeof (error as { code: unknown }).code === 'string' &&
+      /^E_[A-Z0-9_]+$/.test((error as { code: string }).code)
+        ? (error as { code: string }).code
+        : 'E_OPERATE_INTERNAL';
+    const result: OperateActionResult = {
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.2.0',
+      ok: false,
+      action,
+      code,
+      message: error instanceof Error ? error.message : String(error),
+      state: null,
+      paths: {},
+      counts: {},
+      warnings: [],
+      nextActions: [],
+      next: [],
+      exitCode: 1,
+    };
+    if (json) display.line(JSON.stringify(result));
+    else renderHuman(result);
+    process.exitCode = result.exitCode;
+    return result;
+  }
+}
+
 async function executeRunWithProviderConsent(
   program: Command,
   command: Command,
@@ -274,13 +423,32 @@ function readGroup(
   parent: Command,
   noun: string,
   singularArgument: string,
+  configure: {
+    augmentShow?: (command: Command) => Command;
+    showAction?: (context: {
+      command: Command;
+      id: string;
+      opts: OptionValues;
+    }) => Promise<boolean> | boolean;
+  } = {},
 ): Command {
   json(parent.command('list').description(`List ${noun}`)).action(function (this: Command, opts) {
     return execute(program, this, `${noun}.list`, {}, opts);
   });
-  json(
-    parent.command(`show <${singularArgument}>`).description(`Show one ${noun.replace(/s$/, '')}`),
-  ).action(function (this: Command, id: string, opts) {
+  const showCommand = parent
+    .command(`show <${singularArgument}>`)
+    .description(`Show one ${noun.replace(/s$/, '')}`);
+  json(configure.augmentShow ? configure.augmentShow(showCommand) : showCommand).action(function (
+    this: Command,
+    id: string,
+    opts,
+  ) {
+    if (configure.showAction) {
+      return (async () => {
+        const handled = await configure.showAction?.({ command: this, id, opts });
+        if (!handled) await execute(program, this, `${noun}.show`, { id }, opts);
+      })();
+    }
     return execute(program, this, `${noun}.show`, { id }, opts);
   });
   return parent;
@@ -340,6 +508,12 @@ export function registerOperateCommand(program: Command): void {
             collect,
             [],
           )
+          .option(
+            '--dispatch-mode-override <roleId=mode>',
+            'force a role to pack or mission dispatch (repeatable)',
+            collect,
+            [],
+          )
           .option('--sensitivity-ceiling <class>', 'public, internal, confidential, or restricted')
           .option('--purpose <text>', 'product outcome for the operating charter')
           .option('--product-stage <stage>', 'current product stage')
@@ -374,6 +548,9 @@ export function registerOperateCommand(program: Command): void {
     ),
   ).action(function (this: Command, opts) {
     return (async () => {
+      // Validate any dispatch-mode overrides BEFORE init runs so an invalid flag
+      // aborts before touching state; they are persisted after a committed apply.
+      parseOperatingDispatchModeOverrideFlags(dispatchModeOverrideFlags(opts));
       const resolved = await guidedInitOptions(program, opts);
       const interactive =
         !wantsJson(this, resolved) && !isNonInteractive() && !resolved.yes && !program.opts().yes;
@@ -417,6 +594,11 @@ export function registerOperateCommand(program: Command): void {
         );
       } else {
         result = await executeForResult(program, this, 'init', {}, resolved);
+      }
+      // Persist dispatch-mode overrides only once the project is actually
+      // initialized (committed apply), never on a preview or dry run.
+      if (result.ok && !resolved.preview && !resolved.dryRun) {
+        await applyDispatchModeOverrideFlags(program, this, 'init.dispatch-mode', opts);
       }
       const legacyMigration = (
         result.data as
@@ -482,8 +664,26 @@ export function registerOperateCommand(program: Command): void {
   json(config.command('show')).action(function (this: Command, opts) {
     return execute(program, this, 'config.show', {}, opts);
   });
-  json(config.command('edit')).action(function (this: Command, opts) {
-    return execute(program, this, 'config.edit', {}, opts);
+  json(
+    config
+      .command('edit')
+      .option(
+        '--dispatch-mode-override <roleId=mode>',
+        'force a role to pack or mission dispatch (repeatable)',
+        collect,
+        [],
+      ),
+  ).action(function (this: Command, opts) {
+    return (async () => {
+      const applied = await applyDispatchModeOverrideFlags(
+        program,
+        this,
+        'config.set-dispatch-mode',
+        opts,
+      );
+      if (applied) return;
+      await execute(program, this, 'config.edit', {}, opts);
+    })();
   });
   json(config.command('validate')).action(function (this: Command, opts) {
     return execute(program, this, 'config.validate', {}, opts);
@@ -544,11 +744,25 @@ export function registerOperateCommand(program: Command): void {
   ) {
     return execute(program, this, 'status', {}, opts);
   });
-  json(operate.command('brief [cycleId]').description('Render the concise operating brief')).action(
-    function (this: Command, cycleId: string | undefined, opts) {
-      return execute(program, this, 'brief', { cycleId }, opts);
-    },
-  );
+  json(
+    operate
+      .command('brief [cycleId]')
+      .description('Render the concise operating brief')
+      .option(
+        '--render <path>',
+        'render a self-contained, offline decision brief to <path> (project-relative)',
+      ),
+  ).action(function (this: Command, cycleId: string | undefined, opts) {
+    if (typeof opts.render === 'string' && opts.render.trim()) {
+      return renderDecisionBriefArtifact(
+        program,
+        this,
+        { cycleId, destination: opts.render },
+        opts,
+      ).then(() => undefined);
+    }
+    return execute(program, this, 'brief', { cycleId }, opts);
+  });
 
   const cycles = readGroup(
     program,
@@ -659,6 +873,23 @@ export function registerOperateCommand(program: Command): void {
     operate.command('decisions').description('Inspect and answer owner decisions'),
     'decisions',
     'decisionId',
+    {
+      augmentShow: (command) =>
+        command.option(
+          '--render <path>',
+          'render a self-contained, offline decision brief to <path> (project-relative)',
+        ),
+      showAction: async ({ command, id, opts }) => {
+        if (typeof opts.render !== 'string' || !opts.render.trim()) return false;
+        await renderDecisionBriefArtifact(
+          program,
+          command,
+          { decisionId: id, destination: opts.render },
+          opts,
+        );
+        return true;
+      },
+    },
   );
   json(
     confirmed(

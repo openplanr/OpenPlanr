@@ -33,6 +33,7 @@ import { persistOperatingProjections } from './projection-persistence.js';
 import { assertOperatingArtifact } from './protocol.js';
 import { sanitizeGeneratedPlainText } from './redaction.js';
 import {
+  OPERATE_MISSION_PROTOCOL_VERSION,
   OPERATE_PROTOCOL_VERSION,
   OPERATE_SCHEMA_VERSION,
   OperateError,
@@ -51,12 +52,34 @@ import {
   resolveOperatingPaths,
 } from './workspace.js';
 
-const ROUTE_MANAGED_WORKSPACE_PATHS = ['.planr/specs', '.planr/provenance.jsonl'] as const;
+const ROUTE_MANAGED_WORKSPACE_PATHS = [
+  '.planr/specs',
+  '.planr/quick',
+  '.planr/provenance.jsonl',
+] as const;
+
+/**
+ * A DEV-lane finding is "small, bounded implementation work" — routable to the
+ * quick-task delivery surface instead of a full reviewed SPEC — when it is
+ * low-risk (`severity: 'low'`), easy (`ease >= 4`), and small in blast radius
+ * (`impact <= 2`). Anything heavier stays on `create-spec`. Instrumentation is
+ * still classified ahead of this by `actionKind`.
+ */
+function isSmallBoundedImplementation(finding: OperatingFinding): boolean {
+  return (
+    finding.lane === 'DEV' &&
+    !finding.category.includes('instrument') &&
+    finding.severity === 'low' &&
+    finding.ease >= 4 &&
+    finding.impact <= 2
+  );
+}
 
 function actionKind(finding: OperatingFinding): OperatingRouteAction['kind'] {
   if (finding.lane === 'OWNER') return 'create-decision';
   if (finding.lane === 'AGENT') return 'create-cycle-artifact';
   if (finding.category.includes('instrument')) return 'create-instrumentation-spec';
+  if (isSmallBoundedImplementation(finding)) return 'create-quick-task';
   return 'create-spec';
 }
 
@@ -128,7 +151,14 @@ export async function createOperatingRoutePlan(input: {
       ? `.planr/specs/${input.specId ?? `SPEC-${String(input.sequence).padStart(3, '0')}`}-${slug}/${input.specId ?? `SPEC-${String(input.sequence).padStart(3, '0')}`}-${slug}.md`
       : kind === 'create-cycle-artifact'
         ? `.planr/operate/cycles/${input.cycleId}/artifacts/ART-${id.slice('ACT-'.length)}-${slug}.md`
-        : `.planr/operate/decisions/${id}.json`;
+        : kind === 'create-quick-task'
+          ? `.planr/quick/QUICK-${id.slice('ACT-'.length)}-${slug}.md`
+          : `.planr/operate/decisions/${id}.json`;
+  // A quick-task route validates against the additive v1.3 route-plan schema —
+  // the only route-plan schema whose kind enum includes `create-quick-task`.
+  // Every other kind keeps the frozen v1.2 envelope untouched.
+  const protocolVersion =
+    kind === 'create-quick-task' ? OPERATE_MISSION_PROTOCOL_VERSION : OPERATE_PROTOCOL_VERSION;
   const action: OperatingRouteAction = {
     id,
     findingId: input.finding.id,
@@ -169,7 +199,7 @@ export async function createOperatingRoutePlan(input: {
   const provisional: OperatingRoutePlan = {
     kind: 'operating-route-plan',
     schemaVersion: OPERATE_SCHEMA_VERSION,
-    protocolVersion: OPERATE_PROTOCOL_VERSION,
+    protocolVersion,
     id,
     cycleId: input.cycleId,
     inputDigest,
@@ -211,7 +241,7 @@ export async function createOperatingRoutePlan(input: {
   const route: OperatingRoutePlan = {
     kind: 'operating-route-plan',
     schemaVersion: OPERATE_SCHEMA_VERSION,
-    protocolVersion: OPERATE_PROTOCOL_VERSION,
+    protocolVersion,
     id,
     cycleId: input.cycleId,
     inputDigest,
@@ -624,6 +654,55 @@ async function buildRouteWrites(input: {
             evidenceRefs: action.evidenceRefs,
             status: 'open',
           })}\n`,
+        },
+      ],
+    };
+  }
+
+  if (action.kind === 'create-quick-task') {
+    const quickId = `QUICK-${action.id.slice('ACT-'.length)}`;
+    const created = input.now.slice(0, 10);
+    // Real `.planr/quick/QUICK-NNN-{slug}.md` file matching the existing
+    // quick-task frontmatter shape (`storyId`/`featureId` optional, `status:
+    // "pending"`). Provenance — the source cycle, finding, owner, and cited
+    // evidence — is embedded exactly the way `create-decision` records it above.
+    const quickTask = [
+      '---',
+      `id: ${JSON.stringify(quickId)}`,
+      `title: ${JSON.stringify(title)}`,
+      `created: ${JSON.stringify(created)}`,
+      `updated: ${JSON.stringify(created)}`,
+      'status: "pending"',
+      `cycleId: ${JSON.stringify(input.route.cycleId)}`,
+      `findingId: ${JSON.stringify(action.findingId)}`,
+      `owner: ${JSON.stringify(action.owner)}`,
+      `evidenceRefs: ${JSON.stringify([...action.evidenceRefs])}`,
+      '---',
+      '',
+      `# ${quickId}: ${title}`,
+      '',
+      '## Context',
+      problem,
+      '',
+      '## Tasks',
+      `- [ ] ${proposal}`,
+      '',
+      '## Provenance',
+      `Routed from Operating Board cycle ${input.route.cycleId}, finding ${action.findingId}, owned by ${action.owner}.`,
+      ...(action.evidenceRefs.length > 0
+        ? ['', 'Evidence:', ...action.evidenceRefs.map((reference) => `- ${reference}`)]
+        : []),
+      '',
+      '## Notes',
+      '_Small, bounded implementation work. Apply through your coding agent; PLAN and SHIP are never invoked automatically._',
+      '',
+    ].join('\n');
+    return {
+      writes: [
+        {
+          relativePath: action.targetPath,
+          operation: 'create',
+          content: quickTask,
         },
       ],
     };

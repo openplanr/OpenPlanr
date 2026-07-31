@@ -1,5 +1,6 @@
+import { canonicalize } from './canonical.js';
 import { attachOperatingStalledItems, operatingStalledItems } from './stalled-item-service.js';
-import type { OperatingState } from './types.js';
+import type { OperatingRoleId, OperatingState } from './types.js';
 
 function text(record: Record<string, unknown>, key: string, fallback: string): string {
   const value = record[key];
@@ -123,6 +124,96 @@ export function renderOperatingBrief(state: OperatingState): string {
     '`planr operate findings list` · `planr operate decisions list` · `planr operate gaps list` · `planr operate routes list`',
   ];
   return lines.join('\n');
+}
+
+export interface OperatingBoardRole {
+  id: OperatingRoleId;
+  label: string;
+}
+
+/**
+ * The complete advisory board (FR5). Every role renders a `board/<role>.md`
+ * lens report for each reviewable/closed cycle — roles a cycle did not enable
+ * are still written explicitly as `not_evaluated` so the readable tree never
+ * hides a silent lens.
+ */
+export const OPERATING_BOARD_ROLES: readonly OperatingBoardRole[] = [
+  { id: 'strategy-finance', label: 'Strategy & Finance (CEO)' },
+  { id: 'technology-risk', label: 'Technology & Risk (CTO)' },
+  { id: 'product-activation', label: 'Product & Activation (CPO)' },
+  { id: 'growth-market', label: 'Growth & Market (CMO)' },
+  { id: 'operations-customer', label: 'Operations & Customer (COO)' },
+  { id: 'chair', label: 'Chair' },
+];
+
+function cycleEnablesRole(state: OperatingState, cycleId: string, roleId: string): boolean {
+  const cycle = state.cycles.find((entry) => entry.id === cycleId);
+  const enabled = cycle?.enabledRoles;
+  return Array.isArray(enabled) && enabled.some((role) => role === roleId);
+}
+
+/**
+ * State-derived lens report for a single board role and cycle. Role proposals
+ * live outside the projected state, so the persisted board report carries the
+ * cycle-local, role-attributable facts (evaluation status and the evidence gaps
+ * that name the role) and points at the live `planr operate report` lens for
+ * the full advisory output.
+ */
+export function renderOperatingBoardReport(
+  state: OperatingState,
+  cycleId: string,
+  role: OperatingBoardRole,
+): string {
+  const evaluated = cycleEnablesRole(state, cycleId, role.id);
+  const lines = [
+    `# ${role.label} — ${cycleId}`,
+    '',
+    `Status: ${evaluated ? 'evaluated' : 'not_evaluated'}`,
+    '',
+  ];
+  if (!evaluated) {
+    lines.push(
+      `This advisory lens was not enabled for ${cycleId}; no evidence-backed lens report was produced.`,
+    );
+    return lines.join('\n');
+  }
+  const gaps = state.dataGaps.filter(
+    (gap) =>
+      gap.cycleId === cycleId &&
+      Array.isArray(gap.affectedRoles) &&
+      (gap.affectedRoles as unknown[]).some((entry) => entry === role.id),
+  );
+  lines.push(
+    '## Evidence gaps',
+    '',
+    ...(gaps.length > 0
+      ? gaps.map(
+          (gap) =>
+            `- **${text(gap, 'id', 'GAP')}:** ${bounded(text(gap, 'question', 'Evidence required'), 28)}`,
+        )
+      : ['- None.']),
+    '',
+    `Full lens report: \`planr operate report --cycle ${cycleId} --lens ${role.id}\``,
+  );
+  return lines.join('\n');
+}
+
+/**
+ * Canonical machine-readable evidence index (FR5). The projected state carries
+ * evidence-source summaries rather than the full v1.3 evidence items, so this
+ * index reflects those sources deterministically for the readable tree.
+ */
+export function renderOperatingEvidenceIndex(state: OperatingState): string {
+  const sources = [...state.evidenceSources].sort((left, right) =>
+    String(left.id).localeCompare(String(right.id)),
+  );
+  return `${canonicalize({
+    kind: 'operating-evidence-index',
+    generatedAt: state.generatedAt,
+    eventHead: state.eventHead,
+    evidenceFreshness: state.summary.evidenceFreshness,
+    sources,
+  })}\n`;
 }
 
 export function selectCycleState(state: OperatingState, cycleId?: string): OperatingState {

@@ -468,16 +468,16 @@ describe('Operating Board preview and dry-run boundaries', () => {
     ]);
     expect(preview.changedPaths).toEqual(
       expect.arrayContaining([
-        expect.stringMatching(
-          /^\.planr\/operate\/records\/sha256\/[a-f0-9]{2}\/[a-f0-9]{62}\.json$/,
-        ),
-        '.planr/operate/checkpoints/current.json',
+        // Protocol v1.3 collapses the append-only internals under `.state/`:
+        // records become a single append-only records.jsonl.
+        '.planr/operate/.state/records.jsonl',
+        '.planr/operate/.state/checkpoint.json',
         '.planr/operate/projections/state.json',
         '.planr/operate/projections/register.md',
         '.planr/operate/projections/decisions.md',
         '.planr/operate/projections/data-gaps.md',
         '.planr/operate/projections/backlog.md',
-        '.planr/operate/events.jsonl',
+        '.planr/operate/.state/events.jsonl',
       ]),
     );
     expect(preview.previewDigest).toMatch(/^sha256:[a-f0-9]{64}$/);

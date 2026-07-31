@@ -187,25 +187,72 @@ describe('Operating Board projection persistence', () => {
     const second = renderOperatingProjectionFiles(structuredClone(current));
 
     expect(second).toEqual(first);
+    // The FR5 readable tree renders above the `.state/` internals alongside the
+    // projections directory: one consolidated Markdown file per register plus
+    // `evidence-index.json`, and a `board/<role>.md` for every board role of
+    // each reviewable/closed cycle (including roles the cycle did not evaluate).
     expect(first.map((file) => file.relativePath)).toEqual([
       '.planr/operate/projections/state.json',
+      '.planr/operate/evidence-index.json',
       '.planr/operate/projections/register.md',
       '.planr/operate/projections/decisions.md',
       '.planr/operate/projections/data-gaps.md',
       '.planr/operate/projections/backlog.md',
+      '.planr/operate/brief.md',
+      '.planr/operate/findings.md',
+      '.planr/operate/decisions.md',
+      '.planr/operate/gaps.md',
+      '.planr/operate/routes.md',
       '.planr/operate/cycles/CYCLE-001/brief.md',
+      '.planr/operate/cycles/CYCLE-001/board/strategy-finance.md',
+      '.planr/operate/cycles/CYCLE-001/board/technology-risk.md',
+      '.planr/operate/cycles/CYCLE-001/board/product-activation.md',
+      '.planr/operate/cycles/CYCLE-001/board/growth-market.md',
+      '.planr/operate/cycles/CYCLE-001/board/operations-customer.md',
+      '.planr/operate/cycles/CYCLE-001/board/chair.md',
     ]);
     expect(first[0]?.content).toBe(`${canonicalize(current)}\n`);
 
-    const register = first.find(
-      (file) => file.relativePath === OPERATING_PROJECTION_PATHS.register,
-    )?.managedContent;
+    const byPath = new Map(first.map((file) => [file.relativePath, file]));
+    const register = byPath.get(OPERATING_PROJECTION_PATHS.register)?.managedContent;
     expect(register?.indexOf('FND-001')).toBeLessThan(register?.indexOf('FND-002') ?? 0);
     expect(register).toContain('Event head: 15 /');
 
-    const brief = first.find((file) => file.relativePath.endsWith('/brief.md'))?.managedContent;
-    expect(brief).toContain('# OpenPlanr Operating Brief');
-    expect(brief?.split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(900);
+    // The readable-tree `findings.md` reuses the register renderer, so it is
+    // byte-identical to the projections register managed block.
+    const findings = byPath.get(OPERATING_PROJECTION_PATHS.findings)?.managedContent;
+    expect(findings).toBe(register);
+
+    const routes = byPath.get(OPERATING_PROJECTION_PATHS.routes)?.managedContent;
+    expect(routes).toContain('Operating Routes');
+    expect(routes).toContain('ACT-001');
+
+    // `evidence-index.json` is canonical, non-managed bytes (like `state.json`).
+    const evidenceIndex = byPath.get(OPERATING_PROJECTION_PATHS.evidenceIndex);
+    expect(evidenceIndex?.markerName).toBeUndefined();
+    expect(evidenceIndex?.content).toContain('"kind":"operating-evidence-index"');
+    expect(evidenceIndex?.content).toContain('"id":"repository"');
+
+    const topBrief = byPath.get(OPERATING_PROJECTION_PATHS.brief)?.managedContent;
+    expect(topBrief).toContain('# OpenPlanr Operating Brief');
+
+    const cycleBrief = byPath.get('.planr/operate/cycles/CYCLE-001/brief.md')?.managedContent;
+    expect(cycleBrief).toContain('# OpenPlanr Operating Brief');
+    expect(cycleBrief?.split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(900);
+
+    // The fixture cycle enables only `technology-risk`; every other board role
+    // still renders explicitly as `not_evaluated`.
+    const evaluatedBoard = byPath.get(
+      '.planr/operate/cycles/CYCLE-001/board/technology-risk.md',
+    )?.managedContent;
+    expect(evaluatedBoard).toContain('Status: evaluated');
+    expect(evaluatedBoard).toContain('## Evidence gaps');
+
+    const notEvaluatedBoard = byPath.get(
+      '.planr/operate/cycles/CYCLE-001/board/strategy-finance.md',
+    )?.managedContent;
+    expect(notEvaluatedBoard).toContain('Status: not_evaluated');
+    expect(notEvaluatedBoard).toContain('was not enabled for CYCLE-001');
   });
 
   it('commits all changed files atomically and becomes byte-idempotent', async () => {
@@ -219,7 +266,13 @@ describe('Operating Board projection persistence', () => {
       now: '2026-07-28T10:06:00.000Z',
     });
 
-    expect(first.changedPaths).toHaveLength(6);
+    expect(first.changedPaths).toHaveLength(18);
+    expect(first.changedPaths).toContain('.planr/operate/evidence-index.json');
+    expect(first.changedPaths).toContain('.planr/operate/findings.md');
+    expect(first.changedPaths).toContain('.planr/operate/routes.md');
+    expect(first.changedPaths).toContain(
+      '.planr/operate/cycles/CYCLE-001/board/strategy-finance.md',
+    );
     expect(first.transactionId).toBe('TXN-projection-first');
     expect(await readFile(path.join(projectRoot, OPERATING_PROJECTION_PATHS.state), 'utf8')).toBe(
       `${canonicalize(state())}\n`,

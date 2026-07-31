@@ -24,6 +24,10 @@ export interface OperatingPaths {
   config: string;
   charter: string;
   workspace: string;
+  // Protocol v1.3 (FR5/E-005) collapses the append-only internals under a single
+  // dot-prefixed `.state/` directory: `events.jsonl`, the single-file
+  // `records.jsonl` append log, and `checkpoint.json`.
+  state: string;
   events: string;
   checkpoint: string;
   records: string;
@@ -33,6 +37,14 @@ export interface OperatingPaths {
   outcomes: string;
   artifacts: string;
   migrations: string;
+  // Readable top-level tree (FR5): one consolidated Markdown file per register
+  // plus the evidence index, rendered above the `.state/` internals.
+  brief: string;
+  findingsDoc: string;
+  decisionsDoc: string;
+  gapsDoc: string;
+  routesDoc: string;
+  evidenceIndex: string;
   localRoot: string;
   roots: string;
   journals: string;
@@ -63,6 +75,7 @@ export function resolveOperatingPaths(
 ): OperatingPaths {
   const resolvedProject = path.resolve(projectRoot);
   const root = path.join(resolvedProject, '.planr', 'operate');
+  const state = path.join(root, '.state');
   const stateBase = path.resolve(
     options.localRoot ?? process.env.OPENPLANR_STATE_ROOT ?? path.join(homedir(), '.planr'),
   );
@@ -72,15 +85,22 @@ export function resolveOperatingPaths(
     config: path.join(root, 'config.json'),
     charter: path.join(root, 'charter.md'),
     workspace: path.join(root, 'workspace.json'),
-    events: path.join(root, 'events.jsonl'),
-    checkpoint: path.join(root, 'checkpoints', 'current.json'),
-    records: path.join(root, 'records', 'sha256'),
+    state,
+    events: path.join(state, 'events.jsonl'),
+    checkpoint: path.join(state, 'checkpoint.json'),
+    records: path.join(state, 'records.jsonl'),
     cycles: path.join(root, 'cycles'),
     projections: path.join(root, 'projections'),
     routes: path.join(root, 'routes'),
     outcomes: path.join(root, 'outcomes'),
     artifacts: path.join(root, 'artifacts'),
     migrations: path.join(root, 'migrations'),
+    brief: path.join(root, 'brief.md'),
+    findingsDoc: path.join(root, 'findings.md'),
+    decisionsDoc: path.join(root, 'decisions.md'),
+    gapsDoc: path.join(root, 'gaps.md'),
+    routesDoc: path.join(root, 'routes.md'),
+    evidenceIndex: path.join(root, 'evidence-index.json'),
     localRoot,
     roots: path.join(localRoot, 'workspace-roots.json'),
     journals: path.join(localRoot, 'journals'),
@@ -398,8 +418,9 @@ export async function ensureOperatingDirectories(
   await Promise.all(
     [
       paths.root,
-      path.dirname(paths.checkpoint),
-      paths.records,
+      // `.state/` holds events.jsonl, records.jsonl, and checkpoint.json; a
+      // single directory create covers all three (they share this parent).
+      paths.state,
       paths.cycles,
       paths.projections,
       paths.routes,

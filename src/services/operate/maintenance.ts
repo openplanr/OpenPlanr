@@ -233,6 +233,14 @@ function integrityKeyPath(projectRoot: string, localRoot?: string): string {
   return path.join(resolveOperatingPaths(projectRoot, { localRoot }).localRoot, 'integrity.key');
 }
 
+// The committed checkpoint moved under `.state/` in Protocol v1.3; derive its
+// project-relative display path from the resolver so these results never drift
+// from the on-disk layout again.
+function operatingCheckpointRelativePath(projectRoot: string, localRoot?: string): string {
+  const paths = resolveOperatingPaths(projectRoot, { localRoot });
+  return path.relative(projectRoot, paths.checkpoint).split(path.sep).join('/');
+}
+
 async function loadIntegrityKey(projectRoot: string, localRoot?: string): Promise<Buffer | null> {
   return readFile(integrityKeyPath(projectRoot, localRoot)).catch(() => null);
 }
@@ -295,7 +303,7 @@ export async function operatingIntegrityAction(input: {
           status: checkpoint.integrity.status,
           keyId:
             checkpoint.integrity.status === 'signed' ? checkpoint.integrity.signature.keyId : null,
-          checkpoint: '.planr/operate/checkpoints/current.json',
+          checkpoint: operatingCheckpointRelativePath(input.projectRoot, input.localRoot),
         };
       },
     );
@@ -606,7 +614,7 @@ export async function repairOperatingSecurity(input: {
           },
           checkpoint: {
             integrity: checkpoint.integrity,
-            path: '.planr/operate/checkpoints/current.json',
+            path: operatingCheckpointRelativePath(input.projectRoot, input.localRoot),
           },
           guidance,
         };

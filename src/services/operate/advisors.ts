@@ -9,9 +9,22 @@ import { OPENPLANR_VERSION } from '../../utils/package-version.js';
 import { generateJSON, getAIProvider, isAIConfigured } from '../ai-service.js';
 import { loadConfig } from '../config-service.js';
 import { canonicalDigest, canonicalize } from './canonical.js';
-import { assertOperatingArtifact, loadOperatingProtocol } from './protocol.js';
+import {
+  type OperatingDispatchIsolation,
+  type OperatingDispatchMode,
+  operatingRegistryDispatchMode,
+  operatingRuntimeEnforcesBoundedReadOnly,
+  resolveOperatingDispatchMode,
+  runMissionDispatchFanOut,
+} from './mission-dispatch.js';
+import {
+  assertOperatingArtifact,
+  loadOperatingMissionApi,
+  loadOperatingProtocol,
+} from './protocol.js';
 import { prepareAdvisorEvidenceText, sanitizeGeneratedPlainText } from './redaction.js';
 import {
+  OPERATE_MISSION_PROTOCOL_VERSION,
   OPERATE_PROTOCOL_VERSION,
   OPERATE_SCHEMA_VERSION,
   OperateError,
@@ -19,7 +32,10 @@ import {
   type OperatingCharter,
   type OperatingDataGap,
   type OperatingEvidence,
+  type OperatingEvidenceIndexItem,
   type OperatingEvidenceReadiness,
+  type OperatingMissionPacket,
+  type OperatingMissionPacketState,
   type OperatingProviderManifest,
   type OperatingRoleId,
   type OperatingRoleResult,
@@ -457,6 +473,113 @@ export async function createOperatingAdvisorPack(input: {
   };
 }
 
+/**
+ * Derive a role's mission-mode input budget from the pipeline's published pack
+ * budget. Mission packets carry only an evidence INDEX (no bodies), so their
+ * budget is a single-digit-KiB fraction of the role's v1.2 pack budget, clamped
+ * to `[1, 9]` KiB. This DERIVES a new value; it never mutates the frozen v1.2
+ * `maxInputBytes` that pack mode still enforces.
+ */
+export function deriveOperatingMissionBudget(packMaxInputBytes: number): number {
+  const kib = Math.min(9, Math.max(1, Math.round(packMaxInputBytes / (32 * 1024))));
+  return kib * 1024;
+}
+
+/**
+ * The per-role mission input budget registry, derived once from the pipeline's
+ * role registry. Every value is single-digit KiB.
+ */
+export async function deriveOperatingMissionBudgets(): Promise<Record<string, number>> {
+  const roles = (await loadOperatingProtocol()).listOperatingRoles();
+  return Object.fromEntries(
+    roles.map((role) => {
+      const budgets = (role as { budgets?: { maxInputBytes?: number } }).budgets;
+      const packMax = typeof budgets?.maxInputBytes === 'number' ? budgets.maxInputBytes : 262_144;
+      return [role.id, deriveOperatingMissionBudget(packMax)];
+    }),
+  );
+}
+
+function isMissionBudgetError(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (code === 'E_OPERATE_MISSION_PACKET_BUDGET') return true;
+  return error instanceof Error && error.message.includes('E_OPERATE_MISSION_PACKET_BUDGET');
+}
+
+export interface OperatingMissionPacketInput extends OperatingMissionPacketState {
+  roleId: OperatingRoleId;
+  evidenceIndex: OperatingEvidenceIndexItem[];
+  maxEvidenceItems?: number;
+}
+
+/**
+ * Build a digest-bound Protocol v1.3 mission packet (FR1) by calling the
+ * pipeline's `createOperatingMissionPacket` with the live non-evidence payload
+ * and the index-only (body-free) evidence. The packet is measured against the
+ * role's DERIVED single-digit-KiB mission budget; when it would exceed that
+ * budget the assembler fails closed with `E_OPERATE_MISSION_PACKET_BUDGET`
+ * naming the role, before any dispatch call is made — the packet is never
+ * truncated to fit. This is a separate construction path from
+ * `createOperatingAdvisorPack`; pack-mode role-filtered body content is
+ * unaffected.
+ */
+export async function buildOperatingMissionPacket(
+  input: OperatingMissionPacketInput,
+): Promise<OperatingMissionPacket> {
+  const mission = await loadOperatingMissionApi();
+  const protocol = await loadOperatingProtocol();
+  const role = protocol.listOperatingRoles().find((candidate) => candidate.id === input.roleId);
+  if (!role) {
+    throw new OperateError(
+      'E_OPERATE_ADVISOR_FAILED',
+      `Mission packet requested for unknown role ${input.roleId}.`,
+    );
+  }
+  const packBudget = (role as { budgets?: { maxInputBytes?: number } }).budgets?.maxInputBytes;
+  const derivedBudget = deriveOperatingMissionBudget(
+    typeof packBudget === 'number' ? packBudget : 262_144,
+  );
+  let packet: OperatingMissionPacket;
+  try {
+    packet = mission.createOperatingMissionPacket(input.roleId, input.evidenceIndex, {
+      protocolVersion: OPERATE_MISSION_PROTOCOL_VERSION,
+      cycleId: input.cycleId,
+      pinnedRevision: input.pinnedRevision,
+      charter: input.charter,
+      priorCycleSummary: input.priorCycleSummary,
+      planningStatus: input.planningStatus,
+      declaredRoots: input.declaredRoots,
+      maxEvidenceItems: input.maxEvidenceItems,
+    });
+  } catch (error) {
+    if (isMissionBudgetError(error)) {
+      throw new OperateError(
+        'E_OPERATE_MISSION_PACKET_BUDGET',
+        `Mission packet for role ${input.roleId} exceeds its mission input budget; ` +
+          'the evidence index is not truncated to fit.',
+        { roleId: input.roleId },
+      );
+    }
+    throw new OperateError(
+      'E_OPERATE_ADVISOR_FAILED',
+      `Mission packet construction failed for role ${input.roleId}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      { roleId: input.roleId },
+    );
+  }
+  const actualBytes = Buffer.byteLength(canonicalize(packet), 'utf8');
+  if (actualBytes > derivedBudget) {
+    throw new OperateError(
+      'E_OPERATE_MISSION_PACKET_BUDGET',
+      `Mission packet for role ${input.roleId} is ${actualBytes} bytes, exceeding its ` +
+        `derived ${derivedBudget}-byte mission budget; the evidence index is not truncated to fit.`,
+      { roleId: input.roleId, actualBytes, maxInputBytes: derivedBudget },
+    );
+  }
+  return packet;
+}
+
 export interface AdvisorAdapter {
   id: string;
   mode: 'structured' | 'native-isolated';
@@ -531,6 +654,12 @@ export interface AdvisorDispatchResult {
     adapterId: string;
     capability: 'analysis-standard' | 'analysis-high';
     dispatch: 'parallel' | 'sequential';
+    /** Configured dispatch mode: registry default overridden by dispatchModeOverrides. */
+    dispatchMode: OperatingDispatchMode;
+    /** Effective isolation after the FR2/FR4 reconciliation (E-002/E-004). */
+    isolation: OperatingDispatchIsolation;
+    /** Audit note explaining the isolation decision (e.g. codex/cursor fail-closed). */
+    reconciliation: string;
   }>;
   skipped: Array<{ roleId: OperatingRoleId; gapId: string; reason: string }>;
   failed: Array<{ roleId: OperatingRoleId; message: string }>;
@@ -776,16 +905,49 @@ export async function dispatchOperatingAdvisors(input: {
   adapter: AdvisorAdapter;
   depth: 'standard' | 'deep' | 'review-only';
   runtime?: string;
+  /**
+   * Per-project dispatch-mode overrides (FR4 / E-004). A role listed here uses
+   * the given mode instead of the v1.3 registry default; unlisted roles keep the
+   * registry default (`mission`). An operator rolls a single lens back to the
+   * v1.2 pack path with `{ <roleId>: 'pack' }` without waiting for a registry
+   * release. When omitted, every role follows the derived registry default.
+   */
+  dispatchModeOverrides?: Readonly<Record<string, OperatingDispatchMode>>;
 }): Promise<AdvisorDispatchResult> {
   assertAdvisorIsolation(input.adapter);
   const roleRegistry = (await loadOperatingProtocol()).listOperatingRoles() as Array<{
     id: OperatingRoleId;
     capabilityTier?: 'analysis-standard' | 'analysis-high';
+    dispatchMode?: unknown;
   }>;
   const protocol = await loadOperatingProtocol();
   const capabilityByRole = new Map(
     roleRegistry.map((role) => [role.id, role.capabilityTier ?? 'analysis-high']),
   );
+  // Canonical registry order so results and provenance are byte-identical across
+  // parallel/sequential dispatch and across the order roles arrive in (FR4).
+  const roleOrder = new Map(roleRegistry.map((role, index) => [role.id, index]));
+  const registryDefaultMode = new Map(
+    roleRegistry.map((role) => [role.id, operatingRegistryDispatchMode(role)]),
+  );
+  // The runtime's ability to enforce the bounded read-only boundary is resolved
+  // once per dispatch and fails closed: a runtime whose isolation cannot be
+  // verified never receives a native lens (FR2).
+  const runtimeEnforcesBoundedReadOnly = await operatingRuntimeEnforcesBoundedReadOnly(
+    input.runtime,
+  );
+  // A structured adapter can never host a native lens; only a native-isolated
+  // adapter (whose isolation `assertAdvisorIsolation` has already proven to be
+  // enforced) is native-capable.
+  const adapterNativeCapable = input.adapter.mode === 'native-isolated';
+  const resolveMode = (roleId: OperatingRoleId): ReturnType<typeof resolveOperatingDispatchMode> =>
+    resolveOperatingDispatchMode({
+      roleId,
+      registryDefault: registryDefaultMode.get(roleId) ?? 'mission',
+      override: input.dispatchModeOverrides?.[roleId],
+      runtimeEnforcesBoundedReadOnly,
+      adapterNativeCapable,
+    });
   const skipped: AdvisorDispatchResult['skipped'] = [];
   const runnable: OperatingEvidenceReadiness['roles'] = [];
   for (const role of input.readiness.roles) {
@@ -892,24 +1054,16 @@ export async function dispatchOperatingAdvisors(input: {
     return { ok: true, result, modelCalls: roleModelCalls };
   }
 
-  const dispatched = input.adapter.parallelDispatch
-    ? await Promise.all(runnable.map((role) => dispatchRole(role)))
-    : await runnable.reduce<
-        Promise<
-          Array<
-            | { ok: true; result: OperatingRoleResult; modelCalls: number }
-            | {
-                ok: false;
-                roleId: OperatingRoleId;
-                message: string;
-                modelCalls: number;
-              }
-          >
-        >
-      >(
-        async (pending, role) => [...(await pending), await dispatchRole(role)],
-        Promise.resolve([]),
-      );
+  // Fan the per-role dispatch out in parallel where the adapter reports it,
+  // sequentially otherwise. The orchestrator returns results in `runnable` order
+  // regardless of dispatch style, and results are sorted into canonical registry
+  // order below so the reduced events are byte-identical across parallel and
+  // sequential dispatch and across dispatch order (FR4/E-004).
+  const dispatched = await runMissionDispatchFanOut({
+    items: runnable,
+    parallel: Boolean(input.adapter.parallelDispatch),
+    run: (role) => dispatchRole(role),
+  });
   const results = dispatched
     .filter(
       (
@@ -920,7 +1074,12 @@ export async function dispatchOperatingAdvisors(input: {
         modelCalls: number;
       } => entry.ok,
     )
-    .map((entry) => entry.result);
+    .map((entry) => entry.result)
+    .sort(
+      (left, right) =>
+        (roleOrder.get(left.roleId) ?? Number.MAX_SAFE_INTEGER) -
+        (roleOrder.get(right.roleId) ?? Number.MAX_SAFE_INTEGER),
+    );
   const failed = dispatched
     .filter(
       (
@@ -936,13 +1095,19 @@ export async function dispatchOperatingAdvisors(input: {
   const modelCalls = dispatched.reduce((total, entry) => total + entry.modelCalls, 0);
   return {
     results,
-    provenance: results.map((result) => ({
-      roleId: result.roleId,
-      runtime: input.runtime ?? input.adapter.id,
-      adapterId: input.adapter.id,
-      capability: input.adapter.capability,
-      dispatch: input.adapter.parallelDispatch ? 'parallel' : 'sequential',
-    })),
+    provenance: results.map((result) => {
+      const resolution = resolveMode(result.roleId);
+      return {
+        roleId: result.roleId,
+        runtime: input.runtime ?? input.adapter.id,
+        adapterId: input.adapter.id,
+        capability: input.adapter.capability,
+        dispatch: input.adapter.parallelDispatch ? ('parallel' as const) : ('sequential' as const),
+        dispatchMode: resolution.mode,
+        isolation: resolution.isolation,
+        reconciliation: resolution.reconciliation,
+      };
+    }),
     skipped,
     failed,
     blocked:

@@ -3,7 +3,7 @@ import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spliceManagedBlock } from '../../utils/splice-managed-block.js';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
-import { OperatingEventStore } from './event-store.js';
+import { OperatingEventStore, operatingRecordsLogLine } from './event-store.js';
 import { resolveEvidenceImportPath } from './evidence-import.js';
 import {
   applyJournalTransaction,
@@ -12,6 +12,7 @@ import {
   rollbackJournalTransaction,
 } from './journal.js';
 import { withOperatingLock } from './lock-service.js';
+import type { OperatingDispatchMode } from './mission-dispatch.js';
 import {
   prepareOperatingProjectionPersistence,
   renderOperatingProjectionFiles,
@@ -31,6 +32,7 @@ import {
   type OperatingProfile,
   type OperatingRecordEnvelope,
   type OperatingRecoveryRecord,
+  type OperatingRoleId,
   type OperatingState,
   type OperatingWorkspaceManifest,
 } from './types.js';
@@ -263,6 +265,218 @@ export function normalizeCustomOperatingProfile(value: unknown): Partial<Operati
   return normalized;
 }
 
+/**
+ * Per-project dispatch-mode overrides (FR4 / E-004). A map of role IDs to a
+ * `pack | mission` selection that overrides the derived v1.3 registry default.
+ *
+ * These live in the machine-local `preferences.json`, NOT the schema-frozen
+ * `operating-config` artifact: the v1.2 on-disk config surface is frozen
+ * (`additionalProperties: false`), so v1.3 dispatch policy is carried in the
+ * local operating preferences alongside `sensitivityCeiling` and `runtime`.
+ */
+export type OperatingDispatchModeOverrides = Record<OperatingRoleId, OperatingDispatchMode>;
+
+type OperatingPreferencesRecord = OperatingLocalPreferences & {
+  dispatchModeOverrides?: OperatingDispatchModeOverrides;
+  /**
+   * FR8 / E-008 cadence marker: the RFC 3339 UTC instant of the most recent cycle
+   * that reached a terminal reviewable/blocked/closed state. Machine-local, next
+   * to `dispatchModeOverrides` — the schema-frozen `operating-config` artifact
+   * never carries it. Absent until the first cycle completes (weekly/monthly then
+   * become due immediately per the pipeline calculator).
+   */
+  lastRunAt?: string;
+};
+
+const DISPATCH_MODES = new Set<OperatingDispatchMode>(['pack', 'mission']);
+
+/**
+ * Strictly allowlist per-project dispatch-mode overrides before they are echoed,
+ * persisted, or consumed by dispatch — mirroring the `normalizeCustomOperatingProfile`
+ * pattern. Keys must be known registry role IDs; values must be exactly `pack`
+ * or `mission`. Unknown roles or values fail closed with `E_OPERATE_CONFIG_INVALID`.
+ */
+export function normalizeOperatingDispatchModeOverrides(
+  value: unknown,
+): OperatingDispatchModeOverrides {
+  const record = plainRecord(value, 'dispatchModeOverrides');
+  const entries = Object.entries(record);
+  if (entries.length > ALL_ROLES.length) {
+    throw new OperateError(
+      'E_OPERATE_CONFIG_INVALID',
+      'dispatchModeOverrides contains more entries than there are operating roles.',
+    );
+  }
+  const normalized = {} as OperatingDispatchModeOverrides;
+  for (const [roleId, mode] of entries) {
+    if (!ALL_ROLES.includes(roleId as OperatingRoleId)) {
+      throw new OperateError(
+        'E_OPERATE_CONFIG_INVALID',
+        `dispatchModeOverrides references an unknown role: ${roleId}.`,
+      );
+    }
+    if (typeof mode !== 'string' || !DISPATCH_MODES.has(mode as OperatingDispatchMode)) {
+      throw new OperateError(
+        'E_OPERATE_CONFIG_INVALID',
+        `dispatchModeOverrides value for ${roleId} must be "pack" or "mission".`,
+      );
+    }
+    normalized[roleId as OperatingRoleId] = mode as OperatingDispatchMode;
+  }
+  return normalized;
+}
+
+/**
+ * Parse repeatable `--dispatch-mode-override <roleId>=<pack|mission>` CLI tokens
+ * into a validated override map. Each token must be exactly `roleId=mode`.
+ */
+export function parseOperatingDispatchModeOverrideFlags(
+  flags: readonly string[] = [],
+): OperatingDispatchModeOverrides {
+  const raw: Record<string, string> = {};
+  for (const flag of flags) {
+    const separator = flag.indexOf('=');
+    if (separator <= 0) {
+      throw new OperateError(
+        'E_OPERATE_CONFIG_INVALID',
+        `--dispatch-mode-override must be "<roleId>=<pack|mission>", received "${flag}".`,
+      );
+    }
+    const roleId = flag.slice(0, separator).trim();
+    const mode = flag.slice(separator + 1).trim();
+    if (raw[roleId] && raw[roleId] !== mode) {
+      throw new OperateError(
+        'E_OPERATE_CONFIG_INVALID',
+        `--dispatch-mode-override sets conflicting modes for role ${roleId}.`,
+      );
+    }
+    raw[roleId] = mode;
+  }
+  return normalizeOperatingDispatchModeOverrides(raw);
+}
+
+async function readOperatingPreferencesRecord(
+  projectRoot: string,
+  options: { localRoot?: string } = {},
+): Promise<OperatingPreferencesRecord | null> {
+  const paths = resolveOperatingPaths(projectRoot, { localRoot: options.localRoot });
+  const raw = await readFile(path.join(paths.localRoot, 'preferences.json'), 'utf8').catch(
+    () => null,
+  );
+  if (raw === null) return null;
+  try {
+    return JSON.parse(raw) as OperatingPreferencesRecord;
+  } catch {
+    throw new OperateError(
+      'E_OPERATE_CONFIG_INVALID',
+      'Operating preferences.json is not valid JSON.',
+    );
+  }
+}
+
+/** Read the validated per-project dispatch-mode overrides, or `{}` when none set. */
+export async function readOperatingDispatchModeOverrides(
+  projectRoot: string,
+  options: { localRoot?: string } = {},
+): Promise<OperatingDispatchModeOverrides> {
+  const preferences = await readOperatingPreferencesRecord(projectRoot, options);
+  if (!preferences?.dispatchModeOverrides) return {} as OperatingDispatchModeOverrides;
+  return normalizeOperatingDispatchModeOverrides(preferences.dispatchModeOverrides);
+}
+
+/**
+ * Merge validated dispatch-mode overrides into the machine-local preferences and
+ * persist atomically (temp + rename, mode 0o600), matching how initialization
+ * writes preferences.json. An override set to the registry default can be
+ * cleared by omitting it. Requires the project to have been initialized.
+ */
+export async function applyOperatingDispatchModeOverrides(input: {
+  projectRoot: string;
+  localRoot?: string;
+  overrides: OperatingDispatchModeOverrides;
+}): Promise<{ dispatchModeOverrides: OperatingDispatchModeOverrides; changed: boolean }> {
+  const preferences = await readOperatingPreferencesRecord(input.projectRoot, {
+    localRoot: input.localRoot,
+  });
+  if (!preferences) {
+    throw new OperateError(
+      'E_OPERATE_NOT_INITIALIZED',
+      'Operating Board is not initialized in this project; run `planr operate init` first.',
+    );
+  }
+  const validated = normalizeOperatingDispatchModeOverrides(input.overrides);
+  const merged: OperatingDispatchModeOverrides = {
+    ...(preferences.dispatchModeOverrides ?? ({} as OperatingDispatchModeOverrides)),
+    ...validated,
+  };
+  const next: OperatingPreferencesRecord = { ...preferences };
+  if (Object.keys(merged).length > 0) next.dispatchModeOverrides = merged;
+  else delete next.dispatchModeOverrides;
+  const paths = resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot });
+  const preferencePath = path.join(paths.localRoot, 'preferences.json');
+  const before = await readFile(preferencePath, 'utf8').catch(() => null);
+  const serialized = `${canonicalize(next)}\n`;
+  const changed = before !== serialized;
+  if (changed) {
+    await mkdir(paths.localRoot, { recursive: true, mode: 0o700 });
+    const temporary = `${preferencePath}.${process.pid}.${randomUUID()}.tmp`;
+    await writeFile(temporary, serialized, { mode: 0o600 });
+    await rename(temporary, preferencePath);
+  }
+  return { dispatchModeOverrides: merged, changed };
+}
+
+/**
+ * Read the persisted per-project cadence `lastRunAt` marker (FR8 / E-008), or
+ * `null` when no cycle has completed yet. Machine-local, alongside
+ * `dispatchModeOverrides`.
+ */
+export async function readOperatingLastRunAt(
+  projectRoot: string,
+  options: { localRoot?: string } = {},
+): Promise<string | null> {
+  const preferences = await readOperatingPreferencesRecord(projectRoot, options);
+  const value = preferences?.lastRunAt;
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+/**
+ * Persist the per-project cadence `lastRunAt` marker into the machine-local
+ * preferences atomically (temp + rename, mode 0o600), matching how dispatch-mode
+ * overrides are written. FR8 / E-008: recorded whenever a cycle reaches
+ * reviewable/blocked/closed so `operate status` can surface the pipeline's
+ * `nextDueAt` under an injected clock. `lastRunAt` is the injected cycle instant,
+ * never a wall-clock read here. Requires an initialized project.
+ */
+export async function recordOperatingLastRunAt(input: {
+  projectRoot: string;
+  localRoot?: string;
+  lastRunAt: string;
+}): Promise<{ lastRunAt: string; changed: boolean }> {
+  const preferences = await readOperatingPreferencesRecord(input.projectRoot, {
+    localRoot: input.localRoot,
+  });
+  if (!preferences) {
+    throw new OperateError(
+      'E_OPERATE_NOT_INITIALIZED',
+      'Operating Board is not initialized in this project; run `planr operate init` first.',
+    );
+  }
+  const next: OperatingPreferencesRecord = { ...preferences, lastRunAt: input.lastRunAt };
+  const paths = resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot });
+  const preferencePath = path.join(paths.localRoot, 'preferences.json');
+  const before = await readFile(preferencePath, 'utf8').catch(() => null);
+  const serialized = `${canonicalize(next)}\n`;
+  const changed = before !== serialized;
+  if (changed) {
+    await mkdir(paths.localRoot, { recursive: true, mode: 0o700 });
+    const temporary = `${preferencePath}.${process.pid}.${randomUUID()}.tmp`;
+    await writeFile(temporary, serialized, { mode: 0o600 });
+    await rename(temporary, preferencePath);
+  }
+  return { lastRunAt: input.lastRunAt, changed };
+}
+
 export function normalizeCharter(input: Partial<OperatingCharter> = {}): OperatingCharter {
   const list = (values: string[] | undefined): string[] => [
     ...new Set((values ?? []).map((value) => value.trim()).filter(Boolean)),
@@ -378,10 +592,12 @@ export interface OperatingInitializationPreview {
 const INITIALIZATION_RECOVERY_ID = 'RCV-operating-board-initialized';
 const INITIALIZATION_CORRELATION_ID = 'operate-initialization-v1';
 
-function operatingRecordPath(digest: `sha256:${string}`): string {
-  const hex = digest.slice('sha256:'.length);
-  return `.planr/operate/records/sha256/${hex.slice(0, 2)}/${hex.slice(2)}.json`;
-}
+// Protocol v1.3 (FR5/E-005) init layout: internals collapse under `.state/`
+// (events.jsonl, records.jsonl, checkpoint.json). Fresh `operate init` writes
+// this layout directly — there is no SPEC-002 tree to migrate for a new project.
+const OPERATE_STATE_EVENTS = '.planr/operate/.state/events.jsonl';
+const OPERATE_STATE_RECORDS = '.planr/operate/.state/records.jsonl';
+const OPERATE_STATE_CHECKPOINT = '.planr/operate/.state/checkpoint.json';
 
 async function buildInitialOperatingState(input: {
   projectRoot: string;
@@ -470,12 +686,12 @@ async function buildInitialOperatingState(input: {
   const projectionByPath = new Map(projection.files.map((file) => [file.relativePath, file]));
   const writes: JournalWrite[] = [
     {
-      relativePath: operatingRecordPath(record.digest),
-      content: canonicalize(record),
+      relativePath: OPERATE_STATE_RECORDS,
+      content: `${operatingRecordsLogLine(record)}\n`,
       operation: 'create',
     },
     {
-      relativePath: '.planr/operate/checkpoints/current.json',
+      relativePath: OPERATE_STATE_CHECKPOINT,
       content: `${canonicalize(checkpoint)}\n`,
     },
     ...renderOperatingProjectionFiles(state).map((file) => ({
@@ -485,7 +701,7 @@ async function buildInitialOperatingState(input: {
     // Keep the canonical event last: journal head revalidation remains at
     // genesis for every preceding write, then changes exactly once.
     {
-      relativePath: '.planr/operate/events.jsonl',
+      relativePath: OPERATE_STATE_EVENTS,
       content: `${canonicalize(event)}\n`,
       operation: 'create' as const,
     },
@@ -508,6 +724,7 @@ export async function prepareOperatingInitialization(input: {
   charter?: Partial<OperatingCharter>;
   customProfile?: Partial<OperatingProfile>;
   componentRoots?: string[];
+  dispatchModeOverrides?: OperatingDispatchModeOverrides;
   localRoot?: string;
   now?: string;
 }): Promise<OperatingInitializationPreview> {
@@ -629,7 +846,14 @@ export async function prepareOperatingInitialization(input: {
     ]);
     resolvedImportPaths.push(resolved.absolutePath);
   }
-  const preferences: OperatingLocalPreferences = {
+  // Dispatch-mode overrides are validated once here and carried in the
+  // machine-local preferences (the v1.2 config artifact surface is frozen).
+  // Omitted entirely when empty so a project with no overrides keeps a
+  // byte-identical preferences payload and preview digest.
+  const dispatchModeOverrides = input.dispatchModeOverrides
+    ? normalizeOperatingDispatchModeOverrides(input.dispatchModeOverrides)
+    : ({} as OperatingDispatchModeOverrides);
+  const preferences: OperatingPreferencesRecord = {
     runtime: input.runtime ?? 'auto',
     timezone,
     sensitivityCeiling: input.sensitivityCeiling ?? 'internal',
@@ -638,6 +862,7 @@ export async function prepareOperatingInitialization(input: {
     ...(resolvedImportPaths.length > 0
       ? { importPaths: [...new Set(resolvedImportPaths)].sort() }
       : {}),
+    ...(Object.keys(dispatchModeOverrides).length > 0 ? { dispatchModeOverrides } : {}),
   };
   const paths = resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot });
   const existingWorkspace = await readFile(paths.workspace, 'utf8')
