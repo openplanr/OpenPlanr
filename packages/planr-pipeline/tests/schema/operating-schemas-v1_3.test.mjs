@@ -51,7 +51,7 @@ test('Protocol v1.3 schema catalog matches the schemas/v1.3.0 directory and is v
   const files = readdirSync(join(root, 'schemas/v1.3.0'))
     .filter((file) => file.endsWith('.schema.json'))
     .sort();
-  assert.equal(files.length, 15);
+  assert.equal(files.length, 17);
   for (const file of files) assert.doesNotThrow(() => readJson(`schemas/v1.3.0/${file}`));
 
   const registered = listProtocolSchemas()

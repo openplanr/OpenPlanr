@@ -10,6 +10,7 @@ import {
   validateProtocolArtifact,
 } from '../lib/protocol/contracts.mjs';
 import { createOperatingMissionPacket } from '../lib/operate/mission-packet.mjs';
+import { createOperatingEvent } from '../lib/operate/reducer.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (path) => JSON.parse(readFileSync(join(root, path), 'utf8'));
@@ -37,6 +38,8 @@ const EXPECTED_V13_KINDS = [
   'operating-records-log-entry',
   'operating-migration-record',
   'operating-cadence-status',
+  'operating-event',
+  'operating-record',
 ];
 
 const registeredV13 = new Set(
@@ -413,7 +416,36 @@ assertProtocolArtifact('adapter-registry', adapterRegistry, { protocolVersion: P
 assertProtocolArtifact('operating-role-registry', readJson('registry/operating-roles.json'));
 assertProtocolArtifact('adapter-registry', readJson('registry/adapters.json'));
 
+// ── v1.3 route events/records: a create-quick-task route enters the log ─────
+{
+  const quickRoute = fixture('route-quick-task-valid.json');
+  const quickEvent = createOperatingEvent({
+    eventId: 'evt-quick-conf',
+    timestamp: '2026-07-31T00:00:00.000Z',
+    cycleId: 'CYCLE-001',
+    type: 'route.proposed',
+    entityId: quickRoute.id ?? 'ACT-001',
+    actor: { kind: 'engine', id: 'openplanr' },
+    correlationId: 'quick-task-conformance',
+    payload: { record: quickRoute },
+    protocolVersion: '1.3.0',
+  }, { previousEvent: null, sequence: 1 });
+  assertProtocolArtifact('operating-event', quickEvent, { protocolVersion: '1.3.0' });
+  const quickRecord = fixture('record-route-quick-task-v1-3-valid.json');
+  assertProtocolArtifact('operating-record', quickRecord, { protocolVersion: '1.3.0' });
+  // Frozen direction: the same content must STILL be rejected at v1.2 —
+  // the widening is additive, never retroactive.
+  const rejectedAtV12 = validateProtocolArtifact('operating-event', {
+    ...quickEvent,
+    protocolVersion: '1.2.0',
+  });
+  if (rejectedAtV12.length === 0) {
+    throw new Error('A create-quick-task route validated inside a v1.2 event; the frozen surface leaked.');
+  }
+}
+
 process.stdout.write(
   `Operating Board v1.3 conformance passed (${EXPECTED_V13_KINDS.length} additive schemas, `
-  + 'mission-packet body-free and size-enforced, citation resolution fails closed).\n',
+  + 'mission-packet body-free and size-enforced, citation resolution fails closed, '
+  + 'v1.3 route events enter the log with the v1.2 surface frozen).\n',
 );

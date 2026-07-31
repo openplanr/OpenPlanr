@@ -3,7 +3,7 @@
   "commands/ship.md": "sha256:ec49ca74173c3a46c957b2d81a181b80608daf9402da4acec51ea5c0f5392e36",
   "conformance/fixtures/operating-board/event-invalid.json": "sha256:ad3b576788c183393a87f1b288c24c302ec98d539d733eb2141fdfe250cd382b",
   "conformance/fixtures/operating-board/event-valid.json": "sha256:fcf0d15c9cac877e8d4fd4e1e4626be902164f9c6c6ef542780f83c51a06cc61",
-  "lib/operate/reducer.mjs": "sha256:9a706592698a8b9b2e9f6fb7f76ec93e2a9cb88e593579fda85f7dd4dc57c82c",
+  "lib/operate/reducer.mjs": "sha256:2af55382d85e30f6db1727a7fb78f7309c72d8527119618551bf749918398f4a",
   "schemas/v1.2.0/adapter-registry.schema.json": "sha256:5f392eb8a742d5ea1b1e634f0a4193f47ed65fe5b2440b89b67c26050447d7d0",
   "schemas/v1.2.0/operating-adapter-handoff.schema.json": "sha256:56ee6111818540fb59e3860faced9b01eb85eb0ba8d51ea71005242271b9cd2a",
   "schemas/v1.2.0/operating-advisor-response.schema.json": "sha256:b5612576875fdddc2dd4b1ab838b0fd625726ba7037bfc7623a77989bac02f8d",

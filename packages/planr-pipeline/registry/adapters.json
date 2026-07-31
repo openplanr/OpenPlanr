@@ -2,11 +2,11 @@
   "kind": "adapter-registry",
   "schemaVersion": "1.1.0",
   "protocolVersion": "1.2.0",
-  "pipelineVersion": "0.33.0",
+  "pipelineVersion": "0.33.1",
   "adapters": [
     {
       "id": "claude-code",
-      "version": "0.33.0",
+      "version": "0.33.1",
       "capabilityLevel": "product",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -42,7 +42,7 @@
     },
     {
       "id": "codex",
-      "version": "0.33.0",
+      "version": "0.33.1",
       "capabilityLevel": "workflow",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -78,7 +78,7 @@
     },
     {
       "id": "cursor",
-      "version": "0.33.0",
+      "version": "0.33.1",
       "capabilityLevel": "workflow",
       "installScopes": ["project"],
       "entrypoints": {

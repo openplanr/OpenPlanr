@@ -92,6 +92,11 @@ export function createOperatingEvent({
   correlationId,
   evidenceRefs = [],
   payload = {},
+  // Additive: events default to the frozen v1.2 contract. A caller embedding
+  // v1.3-only content (a create-quick-task route plan) stamps 1.3.0, whose
+  // schema accepts either route-plan version; every existing caller is
+  // byte-identical.
+  protocolVersion = '1.2.0',
 }, {
   previousEvent = null,
   sequence = previousEvent ? previousEvent.sequence + 1 : 1,
@@ -99,7 +104,7 @@ export function createOperatingEvent({
   const event = {
     kind: 'operating-event',
     schemaVersion: '1.0.0',
-    protocolVersion: '1.2.0',
+    protocolVersion,
     eventId,
     sequence,
     timestamp,

@@ -4,6 +4,17 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.33.1] — 2026-07-31
+
+### Fixed
+
+- A `create-quick-task` route can now enter the operating event log: additive
+  `operating-event@1.3.0` and `operating-record@1.3.0` schemas accept either
+  route-plan version in their route branches, and `createOperatingEvent` gains
+  an additive `protocolVersion` passthrough (default unchanged). The v1.2
+  surface stays frozen — the same route still rejects at 1.2.0, proven in
+  conformance.
+
 ## [0.33.0] — 2026-07-31
 
 ### Added
