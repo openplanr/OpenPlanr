@@ -90,6 +90,201 @@ export async function executeGitReadOnly(
   return stdout;
 }
 
+const GIT_CITATION_REVISION_PATTERN = /^[a-f0-9]{7,64}$/;
+// Mirrors the canonical `operating-citation.repositoryPath` pattern: a bounded,
+// dot-traversal-free, repository-relative path that never begins with a dot.
+const GIT_CITATION_PATH_PATTERN = /^(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+// The `.planr/` control-artifact surface is dot-prefixed, so citation-by-artifact
+// reads validate against a distinct, still-bounded `.planr`-rooted pattern.
+const PLANR_CITATION_PATH_PATTERN = /^\.planr(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)*$/;
+const MAX_CITATION_SNAPSHOT_BYTES = 1024 * 1024;
+
+export function assertGitCitationRevision(revision: string): void {
+  if (typeof revision !== 'string' || !GIT_CITATION_REVISION_PATTERN.test(revision)) {
+    throw new OperateError(
+      'E_OPERATE_PROVIDER_READ_ONLY',
+      `Git citation revision must be a bounded hex object name: ${revision ?? '(missing)'}.`,
+    );
+  }
+}
+
+function assertGitCitationRepositoryPath(relativePath: string): void {
+  if (
+    typeof relativePath !== 'string' ||
+    relativePath.length === 0 ||
+    relativePath.length > 1024 ||
+    relativePath.startsWith('/') ||
+    !GIT_CITATION_PATH_PATTERN.test(relativePath)
+  ) {
+    throw new OperateError(
+      'E_OPERATE_PROVIDER_READ_ONLY',
+      `Git citation path must be a bounded repository-relative path: ${relativePath ?? '(missing)'}.`,
+    );
+  }
+}
+
+function assertGitPlanrCitationPath(relativePath: string): void {
+  if (
+    typeof relativePath !== 'string' ||
+    relativePath.length === 0 ||
+    relativePath.length > 1024 ||
+    relativePath.startsWith('/') ||
+    relativePath.includes('..') ||
+    !PLANR_CITATION_PATH_PATTERN.test(relativePath)
+  ) {
+    throw new OperateError(
+      'E_OPERATE_PROVIDER_READ_ONLY',
+      `Planr citation path must be a bounded .planr-relative path: ${relativePath ?? '(missing)'}.`,
+    );
+  }
+}
+
+function countTextLines(content: string): number {
+  if (content.length === 0) return 0;
+  const trimmed = content.endsWith('\n') ? content.slice(0, -1) : content;
+  return trimmed.split('\n').length;
+}
+
+export interface GitCitationBlob {
+  exists: boolean;
+  content: string | null;
+  lineCount: number;
+}
+
+async function readGitBlob(
+  projectRoot: string,
+  revision: string,
+  gitPath: string,
+  options: { maxBytes?: number; timeoutMs?: number },
+): Promise<GitCitationBlob> {
+  const maxBytes = Math.max(
+    1,
+    Math.min(options.maxBytes ?? MAX_CITATION_SNAPSHOT_BYTES, MAX_PROVIDER_OUTPUT),
+  );
+  // `<revision>:<path>` is a single object-name token; the revision and path are
+  // pattern-validated above, so neither can inject a leading `-` git option.
+  try {
+    const stdout = await executeGitReadOnly(projectRoot, ['show', `${revision}:${gitPath}`], {
+      timeoutMs: options.timeoutMs,
+    });
+    if (Buffer.byteLength(stdout, 'utf8') > maxBytes) {
+      throw new OperateError(
+        'E_OPERATE_EVIDENCE_REJECTED',
+        `Cited content ${gitPath} exceeds the ${maxBytes}-byte snapshot bound.`,
+      );
+    }
+    return { exists: true, content: stdout, lineCount: countTextLines(stdout) };
+  } catch (error) {
+    if (error instanceof OperateError && error.code === 'E_OPERATE_EVIDENCE_REJECTED') throw error;
+    // `git show` exits non-zero when the path or revision is absent — a missing
+    // citation target, not a provider failure, so the resolver can fail closed.
+    return { exists: false, content: null, lineCount: 0 };
+  }
+}
+
+/**
+ * Read one repository-relative file at a pinned revision through the read-only
+ * `show` surface for a repository-path citation. Returns `exists: false` when the
+ * path is absent at that revision instead of throwing, so a fabricated or drifted
+ * citation becomes a fail-closed rejection rather than an error.
+ */
+export async function readGitPathAtRevision(
+  projectRoot: string,
+  revision: string,
+  relativePath: string,
+  options: { maxBytes?: number; timeoutMs?: number } = {},
+): Promise<GitCitationBlob> {
+  assertGitCitationRevision(revision);
+  assertGitCitationRepositoryPath(relativePath);
+  return readGitBlob(projectRoot, revision, relativePath, options);
+}
+
+/** Read a `.planr/`-rooted control artifact at a pinned revision for a planr-artifact citation. */
+export async function readGitPlanrPathAtRevision(
+  projectRoot: string,
+  revision: string,
+  planrPath: string,
+  options: { maxBytes?: number; timeoutMs?: number } = {},
+): Promise<GitCitationBlob> {
+  assertGitCitationRevision(revision);
+  assertGitPlanrCitationPath(planrPath);
+  return readGitBlob(projectRoot, revision, planrPath, options);
+}
+
+function parseGitTreeListing(stdout: string): string[] {
+  const entries: string[] = [];
+  const lines = stdout.split('\n');
+  for (let index = 0; index < lines.length; index += 1) {
+    // `git show <rev>:<dir>` prefixes the listing with a `tree <rev>:<dir>`
+    // header line followed by a blank line; both are skipped here.
+    if (index === 0 && /^tree \S+:/.test(lines[index])) continue;
+    const name = lines[index].trim();
+    if (name) entries.push(name.replace(/\/$/, ''));
+  }
+  return entries;
+}
+
+/**
+ * List the immediate entry names of a `.planr/`-rooted tree at a pinned revision.
+ * Returns an empty list when the tree is absent, so an unresolved planr-artifact
+ * citation fails closed rather than throwing.
+ */
+export async function listGitPlanrTreeAtRevision(
+  projectRoot: string,
+  revision: string,
+  planrTreePath: string,
+  options: { timeoutMs?: number } = {},
+): Promise<string[]> {
+  assertGitCitationRevision(revision);
+  assertGitPlanrCitationPath(planrTreePath);
+  try {
+    const stdout = await executeGitReadOnly(projectRoot, ['show', `${revision}:${planrTreePath}`], {
+      timeoutMs: options.timeoutMs,
+    });
+    return parseGitTreeListing(stdout);
+  } catch {
+    return [];
+  }
+}
+
+/** Whether a cited revision resolves to a commit object, using the read-only rev-parse surface. */
+export async function gitRevisionResolves(
+  projectRoot: string,
+  revision: string,
+  options: { timeoutMs?: number } = {},
+): Promise<boolean> {
+  assertGitCitationRevision(revision);
+  try {
+    const stdout = await executeGitReadOnly(
+      projectRoot,
+      ['rev-parse', '--verify', '--quiet', `${revision}^{commit}`],
+      { timeoutMs: options.timeoutMs },
+    );
+    return stdout.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** A compact, snapshot-safe commit summary (hash, ISO commit date, subject) for a git-revision citation. */
+export async function readGitCommitSummary(
+  projectRoot: string,
+  revision: string,
+  options: { timeoutMs?: number } = {},
+): Promise<string | null> {
+  assertGitCitationRevision(revision);
+  try {
+    const stdout = await executeGitReadOnly(
+      projectRoot,
+      ['log', '-1', '--no-color', '--format=%H%n%cI%n%s', revision],
+      { timeoutMs: options.timeoutMs },
+    );
+    return stdout.trim().length > 0 ? stdout.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 const GH_READ_COMMANDS: Record<string, Set<string>> = {
   issue: new Set(['list', 'view']),
   pr: new Set(['list', 'view', 'checks']),

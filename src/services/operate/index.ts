@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { computeNextDueAt } from './cadence.js';
 import { canonicalDigest, sha256Digest } from './canonical.js';
 import {
   applyOperatingInitialization,
@@ -8,7 +9,9 @@ import {
   normalizeCustomOperatingProfile,
   normalizeOperatingInitializationAnswers,
   type OperatingInitializationPreview,
+  parseOperatingDispatchModeOverrideFlags,
   prepareOperatingInitialization,
+  readOperatingLastRunAt,
   validateOperatingConfiguration,
 } from './config.js';
 import { runOperatingCycle } from './engine.js';
@@ -63,6 +66,7 @@ import {
   operatingIntegrityAction,
   repairOperatingSecurity,
 } from './maintenance.js';
+import { migrateOperatingStorageLayoutOnOpen } from './migration.js';
 import { renderOperatingBrief } from './projection.js';
 import { loadOperatingProtocol, resolveOperatingPipelineRoot } from './protocol.js';
 import { executeGitHubReadOnly, executeGitReadOnly } from './read-only-providers.js';
@@ -310,6 +314,8 @@ const OPERATE_EXIT_CODES = {
   E_OPERATE_EVIDENCE_REJECTED: 6,
   E_OPERATE_PROVIDER_READ_ONLY: 6,
   E_OPERATE_SECRET_DETECTED: 6,
+  E_OPERATE_MISSION_PACKET_BUDGET: 6,
+  E_OPERATE_MISSION_UNAVAILABLE: 3,
   E_OPERATE_SESSION_INVALID: 2,
 } as const satisfies Readonly<Record<OperateErrorCode, number>>;
 
@@ -824,6 +830,14 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
     supplied.planningEngine ??
     option<OperatingConfig['planningEngine']>(request, 'planningEngine', 'openplanr');
   const rawCharter = supplied.charter ?? option<Partial<OperatingCharter>>(request, 'charter', {});
+  // FR4 / E-004 fold-in: forward the CLI-validated per-project dispatch-mode
+  // overrides into initialization so they are part of the committed machine-local
+  // preferences (and thus the preview digest), rather than a separate post-apply
+  // patch. Omitted entirely when no override flag was supplied, keeping the
+  // no-override preview digest byte-identical.
+  const dispatchModeOverrides = parseOperatingDispatchModeOverrideFlags(
+    stringList(request.options.dispatchModeOverride),
+  );
   const preview = await prepareOperatingInitialization({
     projectRoot: request.projectRoot,
     profile,
@@ -831,6 +845,7 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
     planningEngine,
     runtime: supplied.runtime ?? option(request, 'runtime', 'auto'),
     cadence: supplied.cadence ?? option(request, 'cadence', 'manual'),
+    ...(Object.keys(dispatchModeOverrides).length > 0 ? { dispatchModeOverrides } : {}),
     timezone:
       supplied.timezone ??
       option(request, 'timezone', Intl.DateTimeFormat().resolvedOptions().timeZone),
@@ -1149,16 +1164,27 @@ async function testOperatingSource(
 }
 
 async function status(request: OperateActionRequest): Promise<OperateActionResult> {
-  await validateOperatingConfiguration(request.projectRoot);
-  await assertCommittedOperatingView(request.projectRoot);
-  const store = new OperatingEventStore(request.projectRoot);
+  const config = await validateOperatingConfiguration(request.projectRoot);
+  const localRoot = option<string | undefined>(request, 'localRoot', undefined);
+  await assertCommittedOperatingView(request.projectRoot, localRoot ? { localRoot } : {});
+  const store = new OperatingEventStore(request.projectRoot, localRoot ? { localRoot } : {});
   const state = await store.state();
   const activeCycle = [...state.cycles]
     .filter((cycle) => !['closed', 'cancelled'].includes(cycle.state))
     .sort((left, right) => left.id.localeCompare(right.id))
     .at(-1);
+  // FR8 / E-008: surface `nextDueAt` via the pipeline's pure calculator with an
+  // INJECTED clock. This CLI boundary supplies `now` (an explicit option or the
+  // wall clock); the calculator itself reads no `Date.now()`. `manual` → null;
+  // `weekly` / `monthly` → the computed due date from the persisted `lastRunAt`.
+  const now = option<string | undefined>(request, 'now', undefined) ?? new Date().toISOString();
+  const lastRunAt = await readOperatingLastRunAt(
+    request.projectRoot,
+    localRoot ? { localRoot } : {},
+  );
+  const nextDueAt = await computeNextDueAt(config.cadence, lastRunAt, now);
   return success(request.action, {
-    data: state,
+    data: { ...state, cadence: { mode: config.cadence, lastRunAt, nextDueAt } },
     message:
       activeCycle?.state === 'blocked'
         ? `Operating Board is blocked on ${state.summary.openGaps} evidence or advisor readiness gap(s).`
@@ -1638,6 +1664,48 @@ const HANDLERS: Record<
 };
 
 /**
+ * Actions that only read committed state. A SPEC-002-layout project stays
+ * readable through these without being migrated; only a mutating action opening
+ * such a project triggers the automatic, journal-safe v1.3 migration (FR5/E-005).
+ */
+const OPERATE_READ_ONLY_ACTIONS = new Set<string>([
+  'inspect',
+  'demo',
+  'config.show',
+  'config.validate',
+  'config.edit',
+  'profiles.list',
+  'profiles.show',
+  'profiles.validate',
+  'sources.list',
+  'sources.show',
+  'sources.test',
+  'status',
+  'review',
+  'brief',
+  'report',
+  'cycles.list',
+  'cycles.show',
+  'findings.list',
+  'findings.show',
+  'routes.list',
+  'routes.show',
+  'decisions.list',
+  'decisions.show',
+  'gaps.list',
+  'gaps.show',
+  'evidence.list',
+  'evidence.show',
+  'evidence.diagnose',
+  'migrate.inspect',
+  'migrations.list',
+  'migrations.show',
+  'cache.status',
+  'integrity.status',
+  'adapter.resume',
+]);
+
+/**
  * Stable runtime-neutral Operating Board facade. Public CLI adapters only parse
  * arguments and render this structured result; all state and security semantics
  * live behind this function.
@@ -1652,6 +1720,13 @@ export async function executeOperateAction(
         'E_OPERATE_ACTION_UNKNOWN',
         `Unknown Operating Board action: ${request.action}.`,
       );
+    }
+    // Any mutating action that opens a SPEC-002-layout project migrates it to the
+    // v1.3 storage layout, through the write-ahead journal, before proceeding.
+    if (!OPERATE_READ_ONLY_ACTIONS.has(request.action)) {
+      await migrateOperatingStorageLayoutOnOpen(request.projectRoot, {
+        localRoot: option<string | undefined>(request, 'localRoot', undefined),
+      });
     }
     return await attachStructuredActions(request, await handler(request));
   } catch (error) {

@@ -22,6 +22,7 @@ import {
   OperateError,
   type OperatingDataGap,
   type OperatingEvidence,
+  type OperatingEvidenceIndexItem,
   type OperatingEvidenceItem,
   type OperatingSensitivity,
   type OperatingWorkspaceComponent,
@@ -1378,4 +1379,128 @@ export function evidenceProjectionSources(evidence: OperatingEvidence): Array<{
     status: source.status,
     itemCount: source.itemCount,
   }));
+}
+
+// The Protocol v1.3 index-item schema pins these patterns; every index item we
+// emit must satisfy them or the pipeline's mission-packet validator fails
+// closed. Building here — rather than trusting the caller — keeps a malformed
+// path or revision out of a dispatched packet.
+const INDEX_PATH_PATTERN = /^(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+const INDEX_REVISION_PATTERN = /^[a-f0-9]{7,64}$/;
+
+const INDEX_SOURCE_CLASSIFICATION: Record<OperatingEvidenceIndexItem['source'], string> = {
+  repository: 'source-code',
+  planr: 'planning-artifact',
+  git: 'change-history',
+  'file-import': 'imported-record',
+  github: 'integration-record',
+  linear: 'integration-record',
+};
+
+/**
+ * Derive a stable, schema-conformant index-item id (`EVX-…`) from the source
+ * evidence id. The evidence ids are unique, so the derived ids are too.
+ */
+function evidenceIndexItemId(evidenceId: string): `EVX-${string}` {
+  return `EVX-${canonicalDigest(evidenceId).slice('sha256:'.length, 27)}`;
+}
+
+/**
+ * Strip the leading component id from an evidence `location`
+ * (`<componentId>/<relativePath>`) to recover the repository-relative path, or
+ * return null when the result cannot be a schema-valid index path (for example
+ * dot-prefixed `.planr/…` paths, which the pattern forbids).
+ */
+function evidenceIndexPath(location: string): string | null {
+  const relative = location.split('/').slice(1).join('/');
+  return relative && INDEX_PATH_PATTERN.test(relative) ? relative : null;
+}
+
+function evidenceIndexSignals(item: OperatingEvidenceItem): string[] {
+  const signals = new Set<string>();
+  for (const claim of item.claimTypes) {
+    const trimmed = claim.trim();
+    if (trimmed) signals.add(trimmed.slice(0, 256));
+  }
+  if (item.freshness === 'stale') signals.add('stale-evidence');
+  if (item.repository?.dirtyFingerprint) signals.add('uncommitted-working-tree');
+  return [...signals].sort();
+}
+
+/**
+ * Build Protocol v1.3 evidence index items (`operating-evidence-index-item@1.3.0`)
+ * from a collected evidence snapshot for mission-mode dispatch. Each item is a
+ * pointer only — path OR revision, content hash, source, classification,
+ * freshness, sensitivity, and detected signals — and carries NO file body. Git
+ * evidence is referenced by its pinned revision; repository/planr/file-import
+ * evidence by its repository-relative path. Items that cannot be represented as
+ * a schema-valid path or revision pointer (github/linear records, dot-prefixed
+ * planr paths) are omitted from the index rather than emitted malformed.
+ */
+export function buildOperatingEvidenceIndex(
+  evidence: OperatingEvidence,
+  options: { sensitivityCeiling?: OperatingSensitivity } = {},
+): OperatingEvidenceIndexItem[] {
+  const seen = new Set<string>();
+  const items: OperatingEvidenceIndexItem[] = [];
+  for (const item of evidence.items) {
+    if (
+      options.sensitivityCeiling &&
+      compareSensitivity(item.sensitivity, options.sensitivityCeiling) > 0
+    ) {
+      continue;
+    }
+    const source = item.source as OperatingEvidenceIndexItem['source'];
+    const classification = INDEX_SOURCE_CLASSIFICATION[source];
+    if (!classification) continue;
+    const base = {
+      id: evidenceIndexItemId(item.id),
+      contentHash: item.digest,
+      source,
+      classification,
+      freshness: item.freshness,
+      sensitivity: item.sensitivity,
+      signals: evidenceIndexSignals(item),
+    } satisfies Omit<OperatingEvidenceIndexItem, 'path' | 'revision'>;
+    if (seen.has(base.id)) continue;
+    if (source === 'git') {
+      const revision = item.repository?.revision;
+      if (revision && INDEX_REVISION_PATTERN.test(revision)) {
+        seen.add(base.id);
+        items.push({ ...base, revision });
+      }
+      continue;
+    }
+    if (source === 'repository' || source === 'planr' || source === 'file-import') {
+      const relativePath = evidenceIndexPath(item.location);
+      if (relativePath) {
+        seen.add(base.id);
+        items.push({ ...base, path: relativePath });
+      }
+    }
+  }
+  return items.sort((left, right) => {
+    if (left.source !== right.source) return left.source < right.source ? -1 : 1;
+    const leftRef = left.path ?? left.revision ?? '';
+    const rightRef = right.path ?? right.revision ?? '';
+    if (leftRef !== rightRef) return leftRef < rightRef ? -1 : 1;
+    return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
+  });
+}
+
+/**
+ * The read roots a mission agent may traverse, derived from the top-level
+ * directory segment of every path-referenced index item. Schema-valid and
+ * deduplicated; empty when the index carries only revision pointers.
+ */
+export function deriveOperatingDeclaredRoots(
+  index: readonly OperatingEvidenceIndexItem[],
+): string[] {
+  const roots = new Set<string>();
+  for (const item of index) {
+    if (!item.path) continue;
+    const top = item.path.split('/')[0];
+    if (top && INDEX_PATH_PATTERN.test(top)) roots.add(top);
+  }
+  return [...roots].sort();
 }

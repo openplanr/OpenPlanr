@@ -8,10 +8,29 @@ import {
   type OperatingAdvisorBrief,
   type OperatingCheckpoint,
   type OperatingEvent,
+  type OperatingEvidenceIndexItem,
+  type OperatingMissionPacket,
+  type OperatingMissionToolGrant,
   type OperatingProviderManifest,
   type OperatingRoleResult,
   type OperatingState,
 } from './types.js';
+
+/**
+ * Options accepted by the pipeline's Protocol v1.3 `createOperatingMissionPacket`.
+ * The engine sources every non-evidence value from live cycle/workspace state.
+ */
+export interface CreateOperatingMissionPacketOptions {
+  protocolVersion?: string;
+  cycleId: string;
+  pinnedRevision?: string;
+  charter: OperatingMissionPacket['charter'];
+  priorCycleSummary: OperatingMissionPacket['priorCycleSummary'];
+  planningStatus: OperatingMissionPacket['planningStatus'];
+  declaredRoots?: string[];
+  toolGrant?: OperatingMissionToolGrant;
+  maxEvidenceItems?: number;
+}
 
 interface PipelineProtocolApi {
   assertProtocolArtifact(kind: string, value: unknown): unknown;
@@ -85,10 +104,42 @@ interface PipelineProtocolApi {
   validateOperatingAdapterHandoffBindings(value: OperatingAdapterHandoff): OperatingAdapterHandoff;
   listOperatingRoles(): Array<Record<string, unknown> & { id: string }>;
   listOperatingProviders(): Array<Record<string, unknown> & { id: string }>;
+  /**
+   * Protocol v1.3 mission-packet surface. Present only when the resolved
+   * pipeline install ships the v1.3 schema directory and mission-packet module;
+   * a v1.2-only install (pack mode) leaves these undefined.
+   */
+  createOperatingMissionPacket?: (
+    roleId: string,
+    evidenceItems: OperatingEvidenceIndexItem[],
+    options: CreateOperatingMissionPacketOptions,
+  ) => OperatingMissionPacket;
+  createMissionToolGrant?: (roots?: string[]) => OperatingMissionToolGrant;
+  MISSION_READ_ONLY_TOOLS?: readonly string[];
+}
+
+/**
+ * The Protocol v1.3 mission-packet functions, imported directly from the
+ * pipeline's `lib/operate/mission-packet.mjs`. The published protocol loader
+ * (`lib/protocol/loader.mjs`) intentionally does not re-export these, so mission
+ * mode resolves them from a v1.3-complete pipeline root of its own.
+ */
+export interface PipelineMissionApi {
+  createOperatingMissionPacket: (
+    roleId: string,
+    evidenceItems: OperatingEvidenceIndexItem[],
+    options: CreateOperatingMissionPacketOptions,
+  ) => OperatingMissionPacket;
+  createMissionToolGrant: (roots?: string[]) => OperatingMissionToolGrant;
+  MISSION_READ_ONLY_TOOLS: readonly string[];
 }
 
 const require = createRequire(import.meta.url);
 let cached: Promise<PipelineProtocolApi> | undefined;
+let cachedMission: Promise<PipelineMissionApi> | undefined;
+
+const MISSION_PACKET_SCHEMA = ['schemas', 'v1.3.0', 'operating-mission-packet.schema.json'];
+const MISSION_PACKET_MODULE = ['lib', 'operate', 'mission-packet.mjs'];
 
 function candidateRoots(): string[] {
   const here = path.dirname(fileURLToPath(import.meta.url));
@@ -110,20 +161,38 @@ function candidateRoots(): string[] {
   return [...new Set(roots.map((root) => path.resolve(root)))];
 }
 
-export function resolveOperatingPipelineRoot(): string | null {
+export function resolveOperatingPipelineRoot(
+  options: { requireMission?: boolean } = {},
+): string | null {
   for (const root of candidateRoots()) {
-    if (
+    const hasBaseContract =
       existsSync(path.join(root, 'lib', 'protocol', 'loader.mjs')) &&
-      existsSync(path.join(root, 'schemas', 'v1.2.0', 'operating-event.schema.json'))
+      existsSync(path.join(root, 'schemas', 'v1.2.0', 'operating-event.schema.json'));
+    if (!hasBaseContract) continue;
+    // Pack mode resolves on the v1.2 contract alone, so a v1.2-only pipeline
+    // install still resolves. Mission mode additionally requires the v1.3
+    // schema directory and mission-packet module before it will bind a root.
+    if (
+      options.requireMission &&
+      !(
+        existsSync(path.join(root, ...MISSION_PACKET_SCHEMA)) &&
+        existsSync(path.join(root, ...MISSION_PACKET_MODULE))
+      )
     ) {
-      return root;
+      continue;
     }
+    return root;
   }
   return null;
 }
 
 export function operatingPipelineAvailable(): boolean {
   return resolveOperatingPipelineRoot() !== null;
+}
+
+/** Whether a Protocol v1.3 mission-capable pipeline install is resolvable. */
+export function operatingMissionProtocolAvailable(): boolean {
+  return resolveOperatingPipelineRoot({ requireMission: true }) !== null;
 }
 
 export async function loadOperatingProtocol(): Promise<PipelineProtocolApi> {
@@ -139,9 +208,54 @@ export async function loadOperatingProtocol(): Promise<PipelineProtocolApi> {
     );
   }
   cached ??= import(pathToFileURL(path.join(root, 'lib', 'protocol', 'loader.mjs')).href).then(
-    (value) => value as unknown as PipelineProtocolApi,
+    async (value) => {
+      const api = value as unknown as PipelineProtocolApi;
+      // Attach the v1.3 mission surface when the install ships it. The pack path
+      // never depends on it, so any resolution/import failure is swallowed and
+      // pack-mode callers keep the frozen v1.2 API unchanged.
+      try {
+        const missionRoot = resolveOperatingPipelineRoot({ requireMission: true });
+        if (missionRoot) {
+          const mission = (await import(
+            pathToFileURL(path.join(missionRoot, ...MISSION_PACKET_MODULE)).href
+          )) as unknown as PipelineMissionApi;
+          return {
+            ...api,
+            createOperatingMissionPacket: mission.createOperatingMissionPacket,
+            createMissionToolGrant: mission.createMissionToolGrant,
+            MISSION_READ_ONLY_TOOLS: mission.MISSION_READ_ONLY_TOOLS,
+          } satisfies PipelineProtocolApi;
+        }
+      } catch {
+        // Mission surface is optional; pack mode is unaffected.
+      }
+      return api;
+    },
   );
   return cached;
+}
+
+/**
+ * Load the Protocol v1.3 mission-packet API directly from a v1.3-complete
+ * pipeline root. Fails closed with a named error when only a v1.2 (pack-mode)
+ * pipeline is installed, so a mission dispatch can never silently degrade.
+ */
+export async function loadOperatingMissionApi(): Promise<PipelineMissionApi> {
+  const root = resolveOperatingPipelineRoot({ requireMission: true });
+  if (!root) {
+    throw new OperateError(
+      'E_OPERATE_MISSION_UNAVAILABLE',
+      'Mission-mode dispatch requires the pipeline package with Protocol v1.3 (mission packets).',
+      {
+        recovery:
+          'Install a pipeline build that ships schemas/v1.3.0 (planr-pipeline@0.33.0 or later), then re-run.',
+      },
+    );
+  }
+  cachedMission ??= import(pathToFileURL(path.join(root, ...MISSION_PACKET_MODULE)).href).then(
+    (value) => value as unknown as PipelineMissionApi,
+  );
+  return cachedMission;
 }
 
 export async function assertOperatingArtifact<T>(kind: string, value: T): Promise<T> {

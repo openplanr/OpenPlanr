@@ -104,12 +104,14 @@ describe('explicit Operating Board sensitive-state repair', () => {
       },
     };
     await writeFile(paths.checkpoint, JSON.stringify(oldCheckpoint));
-    const leakedRecordPath = join(paths.records, 'aa', 'leaked-record.json');
+    // Protocol v1.3 keeps records in `.state/records.jsonl`; a stray sensitive
+    // file dropped under `.state/` still has to be detected and purged.
+    const leakedRecordPath = join(paths.state, 'aa', 'leaked-record.json');
     await writeFile(
       charterPath,
       `${await readFile(charterPath, 'utf8')}\nAuthorization: Bearer ${rawSecret}\n`,
     );
-    await mkdir(join(paths.records, 'aa'), { recursive: true });
+    await mkdir(join(paths.state, 'aa'), { recursive: true });
     await writeFile(leakedRecordPath, JSON.stringify({ token: rawSecret }));
     const localLeakPaths = [
       join(paths.cache, 'cached-evidence.json'),
@@ -133,7 +135,7 @@ describe('explicit Operating Board sensitive-state repair', () => {
       confirmed: false,
     })) as { affected: string[] };
     expect(preview.affected).toContain('.planr/operate/charter.md');
-    expect(preview.affected).toContain('.planr/operate/records/sha256/aa/leaked-record.json');
+    expect(preview.affected).toContain('.planr/operate/.state/aa/leaked-record.json');
 
     let quarantineReached!: () => void;
     let resumeRepair!: () => void;

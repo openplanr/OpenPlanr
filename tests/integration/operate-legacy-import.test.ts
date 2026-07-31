@@ -429,7 +429,7 @@ describe('legacy .planr/board migration', () => {
       }),
     ).rejects.toThrow('simulated checkpoint interruption');
     await expect(
-      readFile(join(projectRoot, '.planr', 'operate', 'checkpoints', 'current.json')),
+      readFile(join(projectRoot, '.planr', 'operate', '.state', 'checkpoint.json')),
     ).rejects.toMatchObject({ code: 'ENOENT' });
 
     const applied = await applyOperatingMigration({
@@ -439,7 +439,7 @@ describe('legacy .planr/board migration', () => {
     });
     expect(applied?.state).toBe('applied');
     await expect(
-      readFile(join(projectRoot, '.planr', 'operate', 'checkpoints', 'current.json'), 'utf8'),
+      readFile(join(projectRoot, '.planr', 'operate', '.state', 'checkpoint.json'), 'utf8'),
     ).resolves.toContain('"kind":"operating-checkpoint"');
     expect(
       (await new OperatingEventStore(projectRoot, { localRoot }).replay()).events.filter(

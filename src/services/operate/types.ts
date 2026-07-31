@@ -1,6 +1,20 @@
 export const OPERATE_PROTOCOL_VERSION = '1.2.0' as const;
 export const OPERATE_SCHEMA_VERSION = '1.0.0' as const;
 
+/**
+ * Protocol v1.3 is delivered ADDITIVELY. The v1.2 on-disk artifact envelope —
+ * stamped through `OPERATE_PROTOCOL_VERSION` and every `ProtocolArtifact` — is
+ * frozen at `1.2.0` so pack-mode artifacts (operating-evidence,
+ * operating-workspace-manifest, operating-outcome, …) keep validating against
+ * the schemas the pipeline publishes only at 1.2.0. Mutating that shared symbol
+ * would restamp those frozen artifacts to `1.3.0`, where no schema exists, and
+ * fail closed inside `assertOperatingArtifact` for every pack-mode caller. The
+ * v1.3 surface is instead the new mission-packet family, whose dedicated
+ * schemas the pipeline publishes exclusively at 1.3.0; it carries its own
+ * protocol version through this constant.
+ */
+export const OPERATE_MISSION_PROTOCOL_VERSION = '1.3.0' as const;
+
 export interface ProtocolArtifact<K extends string> {
   kind: K;
   schemaVersion: typeof OPERATE_SCHEMA_VERSION;
@@ -433,6 +447,8 @@ export type OperateErrorCode =
   | 'E_OPERATE_SESSION_REPLAY_CONFLICT'
   | 'E_PIPELINE_VERSION_INCOMPATIBLE'
   | 'E_OPERATE_ACTION_UNKNOWN'
+  | 'E_OPERATE_MISSION_PACKET_BUDGET'
+  | 'E_OPERATE_MISSION_UNAVAILABLE'
   | 'E_PIPELINE_NOT_INSTALLED';
 
 export class OperateError extends Error {
@@ -536,7 +552,18 @@ export interface OperatingContentReference {
   sensitivity: OperatingSensitivity;
 }
 
-export interface OperatingRecordEnvelope extends ProtocolArtifact<'operating-record'> {
+export interface OperatingRecordEnvelope
+  extends Omit<ProtocolArtifact<'operating-record'>, 'protocolVersion'> {
+  /**
+   * Frozen v1.2 for every record EXCEPT a route record whose content is a v1.3
+   * (`create-quick-task`) route plan, which is stamped v1.3
+   * (`OPERATE_MISSION_PROTOCOL_VERSION`) so it validates against the additive
+   * v1.3 operating-record schema — the only record schema whose route content
+   * accepts a v1.3 route plan. Every other record envelope, including a v1.2
+   * route record, stays frozen at v1.2. The stamp is a pure function of the
+   * record content, so the write path and the `records.jsonl` read-back agree.
+   */
+  protocolVersion: typeof OPERATE_PROTOCOL_VERSION | typeof OPERATE_MISSION_PROTOCOL_VERSION;
   digest: `sha256:${string}`;
   recordType:
     | 'evidence-metadata'
@@ -675,6 +702,95 @@ export interface OperatingEvidenceItem {
     observedTo: string;
   };
   summary?: string;
+  /**
+   * Index-only enrichment for Protocol v1.3 mission dispatch (additive). These
+   * are NEVER serialized into the frozen v1.2 operating-evidence artifact — its
+   * schema is closed. They are derived on demand when an evidence index item is
+   * built for a mission packet, alongside the existing `sensitivity`/`freshness`
+   * fields, and carry no file body.
+   */
+  classification?: string;
+  signals?: string[];
+}
+
+/**
+ * A single Protocol v1.3 evidence index pointer (`operating-evidence-index-item@1.3.0`).
+ * It references content by repository path OR git revision — never both — and
+ * carries the content hash, source, classification, freshness, sensitivity, and
+ * detected signals. It deliberately carries NO file body; a mission-mode agent
+ * reads the referenced content on demand within its declared roots.
+ */
+export interface OperatingEvidenceIndexItem {
+  id: `EVX-${string}`;
+  path?: string;
+  revision?: string;
+  contentHash: `sha256:${string}`;
+  source: 'repository' | 'planr' | 'git' | 'github' | 'linear' | 'file-import';
+  classification: string;
+  freshness: 'fresh' | 'stale' | 'unknown';
+  sensitivity: OperatingSensitivity;
+  signals: string[];
+}
+
+export interface OperatingMissionCharter {
+  productCharter: string;
+  currentGoals: string[];
+}
+
+export interface OperatingMissionPriorCycleSummary {
+  cycleId?: string;
+  summary: string;
+  openDecisions?: string[];
+  openGaps?: string[];
+  pendingOutcomes?: string[];
+}
+
+export interface OperatingMissionPlanningStatus {
+  planningEngine: string;
+  planning: string;
+  delivery: string;
+}
+
+/**
+ * The non-evidence payload of a mission packet, sourced from live cycle and
+ * workspace state by the engine and passed into the pipeline's
+ * `createOperatingMissionPacket`.
+ */
+export interface OperatingMissionPacketState {
+  cycleId: string;
+  pinnedRevision?: string;
+  charter: OperatingMissionCharter;
+  priorCycleSummary: OperatingMissionPriorCycleSummary;
+  planningStatus: OperatingMissionPlanningStatus;
+  declaredRoots: string[];
+}
+
+export interface OperatingMissionToolGrant {
+  allowed: string[];
+  roots: string[];
+}
+
+/**
+ * A digest-bound Protocol v1.3 mission packet (`operating-mission-packet@1.3.0`).
+ * NOT a `ProtocolArtifact<…>`: its envelope is pinned to the v1.3 protocol
+ * version, independent of the frozen v1.2 `OPERATE_PROTOCOL_VERSION`.
+ */
+export interface OperatingMissionPacket {
+  kind: 'operating-mission-packet';
+  schemaVersion: '1.0.0';
+  protocolVersion: typeof OPERATE_MISSION_PROTOCOL_VERSION;
+  cycleId: string;
+  roleId: OperatingRoleId;
+  packetDigest: `sha256:${string}`;
+  pinnedRevision?: string;
+  charter: OperatingMissionCharter;
+  priorCycleSummary: OperatingMissionPriorCycleSummary;
+  planningStatus: OperatingMissionPlanningStatus;
+  role: Record<string, unknown>;
+  declaredRoots: string[];
+  toolGrant: OperatingMissionToolGrant;
+  evidenceIndex: OperatingEvidenceIndexItem[];
+  budgets: { maxInputBytes: number; maxEvidenceItems?: number };
 }
 
 export interface CollectedEvidenceItem {
@@ -942,7 +1058,12 @@ export interface OperatingRouteAction {
   findingId: string;
   lane: OperatingLane;
   owner: string;
-  kind: 'create-spec' | 'create-instrumentation-spec' | 'create-decision' | 'create-cycle-artifact';
+  kind:
+    | 'create-spec'
+    | 'create-instrumentation-spec'
+    | 'create-decision'
+    | 'create-cycle-artifact'
+    | 'create-quick-task';
   dependsOn: string[];
   evidenceRefs: string[];
   reversible: true;
@@ -950,7 +1071,16 @@ export interface OperatingRouteAction {
   targetPath?: string;
 }
 
-export interface OperatingRoutePlan extends ProtocolArtifact<'operating-route-plan'> {
+export interface OperatingRoutePlan
+  extends Omit<ProtocolArtifact<'operating-route-plan'>, 'protocolVersion'> {
+  /**
+   * Frozen v1.2 for the spec/decision/agent/instrumentation kinds. A
+   * `create-quick-task` route is stamped v1.3 (`OPERATE_MISSION_PROTOCOL_VERSION`)
+   * so it validates against the additive v1.3 route-plan schema — the only
+   * route-plan schema whose action-kind enum includes `create-quick-task`. Every
+   * other operating artifact envelope stays frozen at v1.2.
+   */
+  protocolVersion: typeof OPERATE_PROTOCOL_VERSION | typeof OPERATE_MISSION_PROTOCOL_VERSION;
   id: string;
   cycleId: string;
   inputDigest: `sha256:${string}`;

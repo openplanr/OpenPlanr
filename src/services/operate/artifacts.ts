@@ -4,13 +4,15 @@ import { OPENPLANR_VERSION } from '../../utils/package-version.js';
 import { canonicalDigest, sha256Digest } from './canonical.js';
 import { applyJournalTransaction, prepareJournalTransaction } from './journal.js';
 import { assertOperatingArtifact } from './protocol.js';
-import { sanitizeGeneratedPlainText } from './redaction.js';
+import { listGitPlanrTreeAtRevision, readGitPlanrPathAtRevision } from './read-only-providers.js';
+import { redactSensitiveText, sanitizeGeneratedPlainText } from './redaction.js';
 import {
   OPERATE_PROTOCOL_VERSION,
   OPERATE_SCHEMA_VERSION,
   OperateError,
   type OperatingArtifactSession,
   type OperatingEventHead,
+  type OperatingSensitivity,
 } from './types.js';
 
 const EXTENSIONS: Record<OperatingArtifactSession['artifactType'], string> = {
@@ -121,6 +123,149 @@ export async function commitGeneratedArtifact(input: {
     currentEventHead: input.eventHead,
   });
   return committed;
+}
+
+// Planr-artifact citations name a control artifact by its stable ID; the file
+// lives in a prefix-derived `.planr/` directory but its slug is unknown, so the
+// resolver lists the directory at the pinned revision and matches on the ID.
+const PLANR_ARTIFACT_DIRECTORIES: Record<string, string[]> = {
+  EPIC: ['.planr/epics'],
+  FEAT: ['.planr/features'],
+  US: ['.planr/stories'],
+  SPEC: ['.planr/specs'],
+  TASK: ['.planr/tasks'],
+  ADR: ['.planr/adrs'],
+  DEC: ['.planr/decisions', '.planr/operate/decisions'],
+  FND: ['.planr/findings', '.planr/operate/findings'],
+  GAP: ['.planr/gaps', '.planr/operate/gaps'],
+  OUT: ['.planr/outcomes', '.planr/operate/outcomes'],
+};
+
+const PLANR_ARTIFACT_ID_PATTERN =
+  /^(?:EPIC|FEAT|US|SPEC|TASK|ADR|DEC|FND|GAP|OUT)-[A-Za-z0-9._-]+$/;
+
+export interface PlanrArtifactCitationResolution {
+  /** Engine-computed existence fact the citation resolver consumes fail-closed. */
+  artifactExists: boolean;
+  /** The `.planr/`-relative path that was snapshotted, or null when nothing resolved. */
+  location: string | null;
+  /** Redacted artifact content, snapshotted through the same path repository citations use. */
+  content: string | null;
+  sensitivity: OperatingSensitivity;
+  redactions: string[];
+}
+
+function planrArtifactPrefix(artifactId: string): string | null {
+  const match = artifactId.match(/^([A-Z]+)-/);
+  return match ? match[1] : null;
+}
+
+/** Whether a listed directory entry names the artifact ID (`ID`, `ID-slug`, or `ID.ext`). */
+function entryMatchesArtifact(entry: string, artifactId: string): boolean {
+  return (
+    entry === artifactId || entry.startsWith(`${artifactId}-`) || entry.startsWith(`${artifactId}.`)
+  );
+}
+
+/**
+ * Resolve a planr-artifact citation against `.planr/` at the cycle's pinned
+ * revision (FR3/E-003). Computes the `artifactExists` fact the citation resolver
+ * consumes and, when the artifact is a readable markdown/text file, snapshots its
+ * content through the same redaction path repository citations use. Existence is
+ * checked at the pinned revision, so an in-flight artifact that is not yet
+ * committed does not resolve.
+ */
+export async function resolvePlanrArtifactCitation(input: {
+  projectRoot: string;
+  pinnedRevision: string;
+  artifactId: string;
+  sensitivity?: OperatingSensitivity;
+  maxBytes?: number;
+  timeoutMs?: number;
+}): Promise<PlanrArtifactCitationResolution> {
+  const sensitivity = input.sensitivity ?? 'internal';
+  const empty: PlanrArtifactCitationResolution = {
+    artifactExists: false,
+    location: null,
+    content: null,
+    sensitivity,
+    redactions: [],
+  };
+  if (!PLANR_ARTIFACT_ID_PATTERN.test(input.artifactId)) return empty;
+  const prefix = planrArtifactPrefix(input.artifactId);
+  const directories = prefix ? PLANR_ARTIFACT_DIRECTORIES[prefix] : undefined;
+  if (!directories) return empty;
+
+  for (const directory of directories) {
+    const entries = await listGitPlanrTreeAtRevision(
+      input.projectRoot,
+      input.pinnedRevision,
+      directory,
+      {
+        timeoutMs: input.timeoutMs,
+      },
+    );
+    const match = entries.find((entry) => entryMatchesArtifact(entry, input.artifactId));
+    if (!match) continue;
+    // The ID resolves at the pinned revision. Snapshot the artifact body when it
+    // is a directly readable file; a directory-shaped artifact (e.g. a SPEC
+    // bundle) still resolves, and its primary markdown is snapshotted when present.
+    const directFile = `${directory}/${match}`;
+    const directBlob = path.extname(match)
+      ? await readGitPlanrPathAtRevision(input.projectRoot, input.pinnedRevision, directFile, {
+          maxBytes: input.maxBytes,
+          timeoutMs: input.timeoutMs,
+        })
+      : { exists: false, content: null, lineCount: 0 };
+    if (directBlob.exists && directBlob.content !== null) {
+      const redacted = redactSensitiveText(directBlob.content);
+      return {
+        artifactExists: true,
+        location: directFile,
+        content: redacted.value,
+        sensitivity,
+        redactions: redacted.redactions,
+      };
+    }
+    // Directory-shaped artifact: look one level in for a same-ID markdown file.
+    const nested = await listGitPlanrTreeAtRevision(
+      input.projectRoot,
+      input.pinnedRevision,
+      directFile,
+      { timeoutMs: input.timeoutMs },
+    );
+    const nestedMarkdown =
+      nested.find(
+        (entry) => entryMatchesArtifact(entry, input.artifactId) && entry.endsWith('.md'),
+      ) ?? nested.find((entry) => entry.endsWith('.md'));
+    if (nestedMarkdown) {
+      const nestedBlob = await readGitPlanrPathAtRevision(
+        input.projectRoot,
+        input.pinnedRevision,
+        `${directFile}/${nestedMarkdown}`,
+        { maxBytes: input.maxBytes, timeoutMs: input.timeoutMs },
+      );
+      if (nestedBlob.exists && nestedBlob.content !== null) {
+        const redacted = redactSensitiveText(nestedBlob.content);
+        return {
+          artifactExists: true,
+          location: `${directFile}/${nestedMarkdown}`,
+          content: redacted.value,
+          sensitivity,
+          redactions: redacted.redactions,
+        };
+      }
+    }
+    // The ID exists as a tree even if no snapshot-able body was found.
+    return {
+      artifactExists: true,
+      location: directFile,
+      content: null,
+      sensitivity,
+      redactions: [],
+    };
+  }
+  return empty;
 }
 
 export function artifactInputDigest(input: {

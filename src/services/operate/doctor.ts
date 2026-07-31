@@ -1,12 +1,13 @@
 import { existsSync } from 'node:fs';
-import { readdir } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { canonicalDigest } from './canonical.js';
-import { operatingProjectKey } from './config.js';
+import { operatingProjectKey, readOperatingDispatchModeOverrides } from './config.js';
 import { OperatingEventStore } from './event-store.js';
 import { guidedSessionStatus } from './interaction/session-service.js';
 import { readJournal } from './journal.js';
 import { readOperatingLock } from './lock-service.js';
+import { detectOperatingStorageLayout } from './migration.js';
 import { inspectOperatingProjectionDrift } from './projection-persistence.js';
 import { loadOperatingProtocol, operatingPipelineAvailable } from './protocol.js';
 import type { OperatingState } from './types.js';
@@ -329,6 +330,174 @@ async function diagnoseJournals(
   };
 }
 
+/**
+ * Additive Protocol v1.3 (FR10 / E-010) check: detect the on-disk storage
+ * layout (SPEC-002 v1.2 vs the v1.3 `.state/` view) and name any inconsistency
+ * — an interrupted migration that left the v1.3 view alongside SPEC-002 residue,
+ * or a project still on the legacy layout — with the automatic-migration repair.
+ */
+async function diagnoseStorageLayout(
+  projectRoot: string,
+  localRoot: string | undefined,
+): Promise<OperatingDoctorDiagnostic> {
+  const paths = resolveOperatingPaths(projectRoot, { localRoot });
+  const layout = await detectOperatingStorageLayout(projectRoot, { localRoot });
+  // SPEC-002 internals that must not coexist with the v1.3 `.state/` view: the
+  // root events log, the per-digest-prefix records tree, and the checkpoint dir.
+  const residue = [
+    path.join(paths.root, 'events.jsonl'),
+    path.join(paths.root, 'records'),
+    path.join(paths.root, 'checkpoints'),
+  ].filter((target) => existsSync(target));
+  if (layout === 'v1.3' && residue.length > 0) {
+    return {
+      code: 'operate-layout',
+      status: 'warn',
+      message: `Operating storage is on the v1.3 \`.state/\` layout but ${residue.length} SPEC-002 residue path(s) remain from an interrupted migration`,
+      fix: 'Run `planr operate migrate apply --yes` to clear the residual SPEC-002 layout.',
+    };
+  }
+  if (layout === 'v1.2') {
+    return {
+      code: 'operate-layout',
+      status: 'warn',
+      message:
+        'Operating storage is on the legacy SPEC-002 layout and has not migrated to the v1.3 `.state/` layout',
+      fix: 'Run `planr operate migrate apply --yes` to migrate the storage layout to v1.3.',
+    };
+  }
+  return {
+    code: 'operate-layout',
+    status: 'pass',
+    message:
+      layout === 'v1.3'
+        ? 'Operating storage is on the v1.3 `.state/` layout with no SPEC-002 residue'
+        : 'No Operating Board storage layout is present yet',
+  };
+}
+
+/**
+ * Additive Protocol v1.3 (FR10 / E-010) check: verify every line of the
+ * append-only `.state/records.jsonl` is parseable and carries consistent
+ * content-address digests. The record digest is a pure function of
+ * `(recordType, createdAt, correlationId, contentDigest)` and `contentDigest`
+ * is the canonical digest of the content, so both are recomputed exactly as the
+ * write path and `readRecord` do. A v1.2 (unmigrated) project keeps records in
+ * the SPEC-002 tree and has no `.state/records.jsonl` yet — that is a pass.
+ */
+async function diagnoseRecordsLog(
+  projectRoot: string,
+  localRoot: string | undefined,
+): Promise<OperatingDoctorDiagnostic> {
+  const paths = resolveOperatingPaths(projectRoot, { localRoot });
+  const raw = await readFile(paths.records, 'utf8').catch((error) => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  });
+  if (raw === null) {
+    return {
+      code: 'operate-records',
+      status: 'pass',
+      message: 'No v1.3 `.state/records.jsonl` log is present yet',
+    };
+  }
+  let counted = 0;
+  for (const [index, line] of raw.split('\n').entries()) {
+    if (!line.trim()) continue;
+    counted += 1;
+    let entry: {
+      digest?: unknown;
+      contentDigest?: unknown;
+      recordType?: unknown;
+      createdAt?: unknown;
+      correlationId?: unknown;
+      content?: unknown;
+    };
+    try {
+      entry = JSON.parse(line) as typeof entry;
+    } catch {
+      return {
+        code: 'operate-records',
+        status: 'fail',
+        message: `Operating \`.state/records.jsonl\` line ${index + 1} is not valid JSON`,
+        fix: 'Run `planr operate integrity status`; do not edit .state/records.jsonl by hand.',
+      };
+    }
+    if (
+      typeof entry.digest !== 'string' ||
+      !entry.digest.startsWith('sha256:') ||
+      typeof entry.contentDigest !== 'string' ||
+      !entry.contentDigest.startsWith('sha256:')
+    ) {
+      return {
+        code: 'operate-records',
+        status: 'fail',
+        message: `Operating \`.state/records.jsonl\` line ${index + 1} is missing its content-address digests`,
+        fix: 'Run `planr operate integrity status`; do not edit .state/records.jsonl by hand.',
+      };
+    }
+    const consistent =
+      entry.content !== undefined &&
+      entry.contentDigest === canonicalDigest(entry.content) &&
+      entry.digest ===
+        canonicalDigest({
+          recordType: entry.recordType,
+          createdAt: entry.createdAt,
+          correlationId: entry.correlationId,
+          contentDigest: entry.contentDigest,
+        });
+    if (!consistent) {
+      return {
+        code: 'operate-records',
+        status: 'fail',
+        message: `Operating \`.state/records.jsonl\` line ${index + 1} digest does not match its content`,
+        fix: 'Run `planr operate integrity status`, then recover the affected cycle from the verified event chain.',
+      };
+    }
+  }
+  return {
+    code: 'operate-records',
+    status: 'pass',
+    message: `${counted} operating records.jsonl ${
+      counted === 1 ? 'entry is' : 'entries are'
+    } parseable with consistent content-address digests`,
+  };
+}
+
+/**
+ * Additive Protocol v1.3 (FR10 / E-010) check: the persisted per-project
+ * dispatch-mode overrides (machine-local `preferences.json`) must reference only
+ * known registry role IDs and `pack`/`mission` modes. Reuses the same strict
+ * validation the write path enforces; an invalid map fails closed with the
+ * repair rather than throwing out of the doctor run.
+ */
+async function diagnoseDispatchModes(
+  projectRoot: string,
+  localRoot: string | undefined,
+): Promise<OperatingDoctorDiagnostic> {
+  try {
+    const overrides = await readOperatingDispatchModeOverrides(projectRoot, { localRoot });
+    const count = Object.keys(overrides).length;
+    return {
+      code: 'operate-dispatch-mode',
+      status: 'pass',
+      message:
+        count === 0
+          ? 'No per-project dispatch-mode overrides are configured'
+          : `${count} per-project dispatch-mode override(s) reference known roles and valid pack/mission modes`,
+    };
+  } catch (error) {
+    return {
+      code: 'operate-dispatch-mode',
+      status: 'fail',
+      message: `Operating dispatch-mode overrides are invalid: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+      fix: 'Run `planr operate config edit --dispatch-mode-override <roleId>=<pack|mission>` to restore valid overrides.',
+    };
+  }
+}
+
 export async function diagnoseOperatingBoard(input: {
   projectRoot: string;
   localRoot?: string;
@@ -365,6 +534,12 @@ export async function diagnoseOperatingBoard(input: {
     ...(await diagnoseEventState(input.projectRoot, input.localRoot)),
     await diagnoseLocks(input.projectRoot, input.localRoot),
     await diagnoseJournals(input.projectRoot, input.localRoot),
+    // Additive Protocol v1.3 (FR10 / E-010) diagnostics layered on the
+    // SPEC-003 surface: storage-layout version, records-log integrity, and
+    // persisted dispatch-mode override validity.
+    await diagnoseStorageLayout(input.projectRoot, input.localRoot),
+    await diagnoseRecordsLog(input.projectRoot, input.localRoot),
+    await diagnoseDispatchModes(input.projectRoot, input.localRoot),
   );
   return diagnostics;
 }

@@ -52,9 +52,14 @@ async function syncDirectory(directory: string): Promise<void> {
   }
 }
 
-async function atomicBytes(target: string, bytes: Uint8Array, mode = 0o600): Promise<void> {
+async function atomicBytes(
+  target: string,
+  bytes: Uint8Array,
+  mode = 0o600,
+  options: { parentSyncedByCaller?: boolean } = {},
+): Promise<void> {
   const directory = path.dirname(target);
-  await mkdir(directory, { recursive: true, mode: 0o700 });
+  if (!options.parentSyncedByCaller) await mkdir(directory, { recursive: true, mode: 0o700 });
   const temporary = path.join(directory, `.${path.basename(target)}.${randomUUID()}.tmp`);
   const handle = await open(temporary, 'wx', mode);
   try {
@@ -64,7 +69,7 @@ async function atomicBytes(target: string, bytes: Uint8Array, mode = 0o600): Pro
     await handle.close();
   }
   await rename(temporary, target);
-  await syncDirectory(directory);
+  if (!options.parentSyncedByCaller) await syncDirectory(directory);
 }
 
 async function writeJournal(target: string, record: OperatingTransactionJournal): Promise<void> {
@@ -168,8 +173,13 @@ export async function prepareJournalTransaction(
   await writeJournal(manifestPath, record);
   try {
     for (const [index, material] of materials.entries()) {
-      if (material.before) await atomicBytes(path.join(beforeRoot, String(index)), material.before);
-      await atomicBytes(path.join(afterRoot, String(index)), material.after);
+      if (material.before)
+        await atomicBytes(path.join(beforeRoot, String(index)), material.before, 0o600, {
+          parentSyncedByCaller: true,
+        });
+      await atomicBytes(path.join(afterRoot, String(index)), material.after, 0o600, {
+        parentSyncedByCaller: true,
+      });
     }
     await Promise.all([syncDirectory(beforeRoot), syncDirectory(afterRoot), syncDirectory(root)]);
     record.state = 'staged-fsynced';

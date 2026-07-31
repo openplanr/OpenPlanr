@@ -6,13 +6,21 @@ import {
   type JournalWrite,
   prepareJournalTransaction,
 } from './journal.js';
-import { renderOperatingBrief, selectCycleState } from './projection.js';
+import {
+  OPERATING_BOARD_ROLES,
+  renderOperatingBoardReport,
+  renderOperatingBrief,
+  renderOperatingEvidenceIndex,
+  selectCycleState,
+} from './projection.js';
 import { assertOperatingArtifact } from './protocol.js';
 import { operatingStalledItems } from './stalled-item-service.js';
 import { OperateError, type OperatingEventHead, type OperatingState } from './types.js';
 
-const PROJECTION_ROOT = '.planr/operate/projections';
+const OPERATE_ROOT = '.planr/operate';
+const PROJECTION_ROOT = `${OPERATE_ROOT}/projections`;
 const STATE_PATH = `${PROJECTION_ROOT}/state.json`;
+const EVIDENCE_INDEX_PATH = `${OPERATE_ROOT}/evidence-index.json`;
 const MARKDOWN_PROJECTIONS = [
   {
     relativePath: `${PROJECTION_ROOT}/register.md`,
@@ -35,7 +43,39 @@ const MARKDOWN_PROJECTIONS = [
     render: renderBacklogRegister,
   },
 ] as const;
+// FR5 readable tree: one consolidated Markdown file per register rendered at the
+// top level (the workspace path getters T-001 added), above the `.state/`
+// internals. `findings.md`/`decisions.md`/`gaps.md` reuse the register renderers
+// so the readable tree and the projections directory stay byte-consistent.
+const READABLE_TREE_PROJECTIONS = [
+  {
+    relativePath: `${OPERATE_ROOT}/brief.md`,
+    markerName: 'operate-brief',
+    render: renderOperatingBrief,
+  },
+  {
+    relativePath: `${OPERATE_ROOT}/findings.md`,
+    markerName: 'operate-findings-register',
+    render: renderFindingRegister,
+  },
+  {
+    relativePath: `${OPERATE_ROOT}/decisions.md`,
+    markerName: 'operate-decisions-register',
+    render: renderDecisionRegister,
+  },
+  {
+    relativePath: `${OPERATE_ROOT}/gaps.md`,
+    markerName: 'operate-data-gaps-register',
+    render: renderDataGapRegister,
+  },
+  {
+    relativePath: `${OPERATE_ROOT}/routes.md`,
+    markerName: 'operate-routes-register',
+    render: renderRouteRegister,
+  },
+] as const;
 const CYCLE_BRIEF_MARKER = 'operate-cycle-brief';
+const BOARD_MARKER = 'operate-board';
 
 export type OperatingProjectionDriftStatus = 'absent' | 'current' | 'drift';
 
@@ -221,6 +261,39 @@ function renderBacklogRegister(state: OperatingState): string {
   ].join('\n');
 }
 
+function renderRouteRegister(state: OperatingState): string {
+  const routes = [...state.routes].sort((left, right) => left.id.localeCompare(right.id));
+  return [
+    ...generatedHeader(state, 'Operating Routes'),
+    '| Route | Cycle | State | Findings | Actions | Route digest |',
+    '|---|---|---|---|---:|---|',
+    ...(routes.length > 0
+      ? routes.map((route) => {
+          const actions = Array.isArray(route.actions)
+            ? (route.actions as Array<{ findingId?: unknown }>)
+            : [];
+          const findingIds = Array.isArray(route.findingIds)
+            ? route.findingIds.filter((entry): entry is string => typeof entry === 'string')
+            : [
+                ...new Set(
+                  actions
+                    .map((action) => action.findingId)
+                    .filter((entry): entry is string => typeof entry === 'string'),
+                ),
+              ];
+          const actionCount =
+            typeof route.actionCount === 'number' ? route.actionCount : actions.length;
+          return `| ${markdownCell(route.id)} | ${markdownCell(route.cycleId)} | ${markdownCell(
+            route.state,
+          )} | ${markdownCell(findingIds.sort().join(', '))} | ${markdownCell(
+            actionCount,
+            '0',
+          )} | ${markdownCell(route.routeDigest)} |`;
+        })
+      : ['| — | — | — | — | 0 | No routes recorded. |']),
+  ].join('\n');
+}
+
 function renderCycleBrief(state: OperatingState, cycleId: string): string {
   const selected = selectCycleState(state, cycleId);
   const brief = renderOperatingBrief(selected);
@@ -313,20 +386,27 @@ function markdownProjectionSpecs(state: OperatingState): Array<{
   markerName: string;
   managedContent: string;
 }> {
-  const registers = MARKDOWN_PROJECTIONS.map((projection) => ({
+  const registers = [...MARKDOWN_PROJECTIONS, ...READABLE_TREE_PROJECTIONS].map((projection) => ({
     relativePath: projection.relativePath,
     markerName: projection.markerName,
     managedContent: projection.render(state),
   }));
-  const briefs = [...state.cycles]
+  const cycleArtifacts = [...state.cycles]
     .filter((cycle) => cycle.state === 'reviewable' || cycle.state === 'closed')
     .sort((left, right) => left.id.localeCompare(right.id))
-    .map((cycle) => ({
-      relativePath: `.planr/operate/cycles/${cycle.id}/brief.md`,
-      markerName: CYCLE_BRIEF_MARKER,
-      managedContent: renderCycleBrief(state, cycle.id),
-    }));
-  return [...registers, ...briefs];
+    .flatMap((cycle) => [
+      {
+        relativePath: `${OPERATE_ROOT}/cycles/${cycle.id}/brief.md`,
+        markerName: CYCLE_BRIEF_MARKER,
+        managedContent: renderCycleBrief(state, cycle.id),
+      },
+      ...OPERATING_BOARD_ROLES.map((role) => ({
+        relativePath: `${OPERATE_ROOT}/cycles/${cycle.id}/board/${role.id}.md`,
+        markerName: BOARD_MARKER,
+        managedContent: renderOperatingBoardReport(state, cycle.id, role),
+      })),
+    ]);
+  return [...registers, ...cycleArtifacts];
 }
 
 export function renderOperatingProjectionFiles(state: OperatingState): OperatingProjectionFile[] {
@@ -334,13 +414,17 @@ export function renderOperatingProjectionFiles(state: OperatingState): Operating
     relativePath: STATE_PATH,
     content: `${canonicalize(state)}\n`,
   };
+  const evidenceIndexFile: OperatingProjectionFile = {
+    relativePath: EVIDENCE_INDEX_PATH,
+    content: renderOperatingEvidenceIndex(state),
+  };
   const markdownFiles = markdownProjectionSpecs(state).map((projection) => ({
     relativePath: projection.relativePath,
     markerName: projection.markerName,
     managedContent: projection.managedContent,
     content: spliceProjectionBlock('', projection.markerName, projection.managedContent),
   }));
-  return [stateFile, ...markdownFiles];
+  return [stateFile, evidenceIndexFile, ...markdownFiles];
 }
 
 async function inspectProjectionFile(
@@ -534,4 +618,11 @@ export const OPERATING_PROJECTION_PATHS = {
   decisions: `${PROJECTION_ROOT}/decisions.md`,
   dataGaps: `${PROJECTION_ROOT}/data-gaps.md`,
   backlog: `${PROJECTION_ROOT}/backlog.md`,
+  // FR5 readable tree at the workspace path getters (T-001).
+  evidenceIndex: EVIDENCE_INDEX_PATH,
+  brief: `${OPERATE_ROOT}/brief.md`,
+  findings: `${OPERATE_ROOT}/findings.md`,
+  readableDecisions: `${OPERATE_ROOT}/decisions.md`,
+  gaps: `${OPERATE_ROOT}/gaps.md`,
+  routes: `${OPERATE_ROOT}/routes.md`,
 } as const;
