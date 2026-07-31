@@ -127,7 +127,15 @@ const candidateAdapters = adapterRegistry
   ? adapterRegistry.adapters.map((adapter) =>
       normalizeOperatingAdapter(adapter, candidatePipelineVersion))
   : current.adapters;
-let resolvedAdapters = guidedReleaseVerified ? candidateAdapters : current.adapters;
+// Top-level adapters describe the released ecosystem, so their pipelineRange
+// must track the observed (released) pipeline version and stay consistent
+// with components.cli.pipelineRange. The guided candidate resolution instead
+// stays pinned to its ledger targets via candidateAdapters above.
+const releaseAdapters = adapterRegistry
+  ? adapterRegistry.adapters.map((adapter) =>
+      normalizeOperatingAdapter(adapter, pipelineVersion))
+  : current.adapters;
+let resolvedAdapters = guidedReleaseVerified ? releaseAdapters : current.adapters;
 
 let operatingBoard;
 if (hasWorkspace) {

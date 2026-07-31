@@ -22,7 +22,7 @@ Then install any of the plugins below:
 | OpenPlanr CLI | 1.17.0 | pipeline ^0.33.1 |
 | Pipeline package/plugin | 0.33.1 | CLI ^1.17.0 |
 | Runtime skills | 1.19.0 | CLI ^1.17.0 |
-| Protocol | 1.3.0 | reads v1.0 artifacts; additive capabilities through v1.3.0 |
+| Protocol | 1.2.0 | reads v1.0 artifacts; additive capabilities through v1.2.0 |
 <!-- ecosystem-table:end -->
 
 <!-- plugin-table:start -->
