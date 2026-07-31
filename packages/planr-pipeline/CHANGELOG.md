@@ -4,6 +4,43 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.34.0] — 2026-07-31
+
+### Added
+
+- The v1.3 mission-mode record action now names the generated lens agent to
+  dispatch: `dispatch.agent` is `operating-<roleId>` alongside the existing
+  `missionPacketPointer`, bounded read-only `toolGrant`, and `isolation`
+  (`schemas/v1.3.0/operating-adapter-handoff.schema.json` gains an optional,
+  pattern-bound `agent` property; `lib/operate/adapter-handoff.mjs` emits it).
+  Without this field a mission handoff carried a packet pointer with no agent
+  for a runtime to act on, which forced pack mode in every field run.
+- Additive optional per-choice `preselected` boolean on
+  `schemas/v1.2.0/guided-question.schema.json` choice items, so a guided
+  questionnaire can pre-check a suggested-and-safe choice without a runtime
+  fabricating an option. Existing choice documents without the field keep
+  validating; `additionalProperties: false` and `required: ["id", "label"]`
+  are unchanged.
+- `commands/operate.md` and the codex `planr-operate` skill gain the mission
+  dispatch branch: when a record action's `dispatch` carries a
+  `missionPacketPointer` (not a `rolePackPointer`), dispatch the named
+  `operating-<role>` subagent with only the mission packet and the bounded
+  read-only tool grant, then record its v1.3 citation-bearing
+  `operating-advisor-response@1.3.0`. Both surfaces also document the interim
+  rule that a CLI exit code 4 on a guided-stage or authority continuation is an
+  interaction handoff, not a failure, until the CLI ships its own `ok:true`
+  continuation shape.
+
+### Changed
+
+- `registry/operating-roles.json` is published at `protocolVersion` 1.3.0 with an
+  explicit per-role `dispatchMode` (`mission` for all six lenses).
+- `registry/adapters.json` is modernized to `protocolVersion` 1.3.0:
+  `claude-code.capabilities.operatingAdvisorDispatch` is `native-read-only` and
+  `codex.capabilities.operatingAdvisorDispatch` is `structured-provider`
+  (cursor stays `structured-provider`), aligning the registry with the
+  fail-closed reconciliation the engine already enforces.
+
 ## [0.33.1] — 2026-07-31
 
 ### Fixed

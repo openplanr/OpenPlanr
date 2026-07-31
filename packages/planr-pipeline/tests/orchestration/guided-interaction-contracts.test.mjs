@@ -33,13 +33,19 @@ test('all certified adapters declare truthful presentation modes only', () => {
       'native-isolated',
       'native-bounded',
       'structured-provider',
+      'native-read-only',
     ].includes(adapter.capabilities.operatingAdvisorDispatch));
     assert.equal(typeof adapter.capabilities.toolIsolation, 'string');
   }
-  const codex = adapters.adapters.find(({ id }) => id === 'codex');
+  const byId = (id) => adapters.adapters.find((adapter) => adapter.id === id);
+  const codex = byId('codex');
   assert.equal(codex.capabilities.toolIsolation, 'advisory');
-  assert.equal(codex.capabilities.operatingAdvisorDispatch, 'native-bounded');
+  assert.equal(codex.capabilities.operatingAdvisorDispatch, 'structured-provider');
   assert.equal(codex.capabilities.interactiveQuestions, 'native');
+  // The modernized v1.3 dispatch capabilities: claude-code natively enforces the
+  // bounded read-only boundary; codex and cursor fail closed to the provider.
+  assert.equal(byId('claude-code').capabilities.operatingAdvisorDispatch, 'native-read-only');
+  assert.equal(byId('cursor').capabilities.operatingAdvisorDispatch, 'structured-provider');
 });
 
 test('normalization cannot manufacture authority from adapter capabilities', () => {

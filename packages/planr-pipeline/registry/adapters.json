@@ -1,12 +1,12 @@
 {
   "kind": "adapter-registry",
   "schemaVersion": "1.1.0",
-  "protocolVersion": "1.2.0",
-  "pipelineVersion": "0.33.1",
+  "protocolVersion": "1.3.0",
+  "pipelineVersion": "0.34.0",
   "adapters": [
     {
       "id": "claude-code",
-      "version": "0.33.1",
+      "version": "0.34.0",
       "capabilityLevel": "product",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -28,7 +28,7 @@
         "headlessBridge": true,
         "artifactReview": true,
         "operatingBoard": true,
-        "operatingAdvisorDispatch": "native-isolated",
+        "operatingAdvisorDispatch": "native-read-only",
         "interactiveQuestions": "native"
       },
       "assets": ["commands", "agents", "procedures", "hooks", "templates", "schemas", "artifact-review", "guided-interaction"],
@@ -42,7 +42,7 @@
     },
     {
       "id": "codex",
-      "version": "0.33.1",
+      "version": "0.34.0",
       "capabilityLevel": "workflow",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -64,7 +64,7 @@
         "headlessBridge": true,
         "artifactReview": true,
         "operatingBoard": true,
-        "operatingAdvisorDispatch": "native-bounded",
+        "operatingAdvisorDispatch": "structured-provider",
         "interactiveQuestions": "native"
       },
       "assets": ["skills", "project-guidance", "schemas", "templates", "artifact-review", "guided-interaction"],
@@ -78,7 +78,7 @@
     },
     {
       "id": "cursor",
-      "version": "0.33.1",
+      "version": "0.34.0",
       "capabilityLevel": "workflow",
       "installScopes": ["project"],
       "entrypoints": {

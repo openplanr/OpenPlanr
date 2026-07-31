@@ -182,6 +182,8 @@ test('a v1.3 handoff dispatches a mission packet with a bounded read-only grant'
   const [action] = record.next;
   assert.equal(action.action, 'adapter.record');
   assert.equal(action.dispatch.source, 'adapter.prepare-result');
+  // The v1.3 mission dispatch names the generated lens agent to dispatch.
+  assert.equal(action.dispatch.agent, 'operating-strategy-finance');
   assert.equal(action.dispatch.missionPacketPointer, '/data/missionPackets/strategy-finance');
   assert.equal(action.dispatch.isolation, 'enforced-read-only-bounded');
   assert.deepEqual(action.dispatch.toolGrant.allowed, READ_ONLY_TOOLS);
@@ -206,12 +208,16 @@ test('a v1.3 handoff fails closed to the structured provider when the runtime ca
     runtime: 'codex',
   }));
   assert.equal(record.next[0].dispatch.isolation, 'fail-closed-structured-provider');
+  // The lens agent is named on every v1.3 mission record action, even when
+  // isolation fails closed to the structured provider path.
+  assert.equal(record.next[0].dispatch.agent, 'operating-strategy-finance');
   // A cursor handoff must fail closed for the same reason.
   const cursor = createOperatingAdapterHandoff(input('record-required', {
     protocolVersion: '1.3.0',
     runtime: 'cursor',
   }));
   assert.equal(cursor.next[0].dispatch.isolation, 'fail-closed-structured-provider');
+  assert.equal(cursor.next[0].dispatch.agent, 'operating-strategy-finance');
 });
 
 test('the v1.3 tool grant can never carry a write, exec, network, or environment capability', () => {

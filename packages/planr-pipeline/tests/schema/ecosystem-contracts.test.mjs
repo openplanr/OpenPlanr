@@ -10,9 +10,9 @@ const root = fileURLToPath(new URL('../..', import.meta.url));
 const readJson = (path) => JSON.parse(readFileSync(join(root, path), 'utf8'));
 const schema = (name) => readJson(`schemas/v1.1.0/${name}.schema.json`);
 
-test('canonical adapter registry validates as Protocol v1.2 and names the three certified runtimes', () => {
+test('canonical adapter registry validates as Protocol v1.3 and names the three certified runtimes', () => {
   const registry = readJson('registry/adapters.json');
-  const currentSchema = readJson('schemas/v1.2.0/adapter-registry.schema.json');
+  const currentSchema = readJson('schemas/v1.3.0/adapter-registry.schema.json');
   assert.deepEqual(validate(registry, currentSchema), []);
   assert.deepEqual(registry.adapters.map((adapter) => adapter.id), ['claude-code', 'codex', 'cursor']);
   for (const adapter of registry.adapters) {

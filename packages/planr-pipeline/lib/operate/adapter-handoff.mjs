@@ -40,6 +40,10 @@ function missionDispatch(binding, roleId) {
     && adapterEnforcesBoundedReadOnly(binding.runtime);
   return {
     source: 'adapter.prepare-result',
+    // Name the generated lens agent (`agents/operating/<roleId>.md`) a runtime
+    // must dispatch for this mission-mode record action. Without it a mission
+    // handoff carries a packet pointer with no agent for a runtime to act on.
+    agent: `operating-${roleId}`,
     missionPacketPointer: `/data/missionPackets/${roleId}`,
     // The concrete read roots are bound in the referenced mission packet; the
     // dispatch declares the canonical read-only tool policy and defers roots to

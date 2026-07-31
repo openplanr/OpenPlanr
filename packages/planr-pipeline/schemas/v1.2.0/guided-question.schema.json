@@ -81,7 +81,8 @@
         "properties": {
           "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
           "label": { "type": "string", "minLength": 1, "maxLength": 160 },
-          "description": { "type": "string", "minLength": 1, "maxLength": 500 }
+          "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "preselected": { "type": "boolean" }
         }
       }
     },

@@ -113,6 +113,60 @@ test('operating and adapter registries are schema-valid, unique, and read-only',
   )));
 });
 
+test('the operating role registry publishes at protocolVersion 1.3.0 with an explicit per-role dispatchMode', () => {
+  const roles = readJson('registry/operating-roles.json');
+  assert.equal(roles.protocolVersion, '1.3.0');
+  assert.equal(roles.roles.length, 6);
+  assert.ok(
+    roles.roles.every((role) => ['mission', 'pack'].includes(role.dispatchMode)),
+    'every role must carry an explicit dispatchMode',
+  );
+  // Resolves against operating-role-registry@1.3.0 via its own protocolVersion.
+  assert.deepEqual(validateProtocolArtifact('operating-role-registry', roles), []);
+  const missingMode = structuredClone(roles);
+  delete missingMode.roles[0].dispatchMode;
+  assert.ok(
+    validateProtocolArtifact('operating-role-registry', missingMode).length,
+    'dispatchMode is required per role at protocolVersion 1.3.0',
+  );
+});
+
+test('a guided-question choice validates with and without the additive preselected field', () => {
+  const choiceQuestion = (firstChoice) => ({
+    kind: 'guided-question',
+    schemaVersion: '1.0.0',
+    protocolVersion: '1.2.0',
+    questionId: 'sources',
+    questionVersion: '1.0.0',
+    type: 'single-select',
+    label: 'Which evidence source should the board prefer?',
+    explanation: 'Choose the primary read-only evidence source for this cycle.',
+    required: true,
+    sensitivity: 'internal',
+    persistence: 'session',
+    valueSemantics: 'none',
+    choices: [
+      { id: 'repository', label: 'Repository', ...firstChoice },
+      { id: 'planr', label: 'Planr' },
+    ],
+  });
+  // Both documents validate against schemas/v1.2.0/guided-question.schema.json.
+  assert.deepEqual(validateProtocolArtifact('guided-question', choiceQuestion({})), []);
+  assert.deepEqual(
+    validateProtocolArtifact('guided-question', choiceQuestion({ preselected: true })),
+    [],
+  );
+  // The additive field keeps its declared boolean type; other keys stay closed.
+  assert.ok(
+    validateProtocolArtifact('guided-question', choiceQuestion({ preselected: 'yes' })).length,
+    'preselected must be a boolean',
+  );
+  assert.ok(
+    validateProtocolArtifact('guided-question', choiceQuestion({ surprise: true })).length,
+    'choice items remain additionalProperties:false',
+  );
+});
+
 test('native operating advisors return compact bounded responses', () => {
   const response = {
     outcome: 'proposals',
