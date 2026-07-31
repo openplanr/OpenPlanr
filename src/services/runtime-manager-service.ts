@@ -1325,8 +1325,9 @@ export async function runtimeDoctor(
       };
       lockedAdapters = value.adapters;
       const cliVersion = readOpenPlanrVersion();
+      const cliDrift = value.components?.cli !== cliVersion;
       const componentDrift =
-        value.components?.cli !== cliVersion ||
+        cliDrift ||
         (pipeline && value.components?.pipeline !== pipeline.version) ||
         value.components?.skills !== OPENPLANR_SKILLS_VERSION;
       const expectedDigest = `sha256:${hash(
@@ -1347,13 +1348,32 @@ export async function runtimeDoctor(
         );
       });
       const drift = componentDrift || digestDrift || adapterDrift;
+      // FR11: an OpenPlanr upgrade advances the CLI version the lock recorded.
+      // When the CLI component trails the installed build and nothing that
+      // governs Operating Board dispatch (runtime adapters, manifest digest)
+      // diverged, the lock is simply behind an expected upgrade — surface it as
+      // an informational `warn`, not a `fail` implying the board is broken. A
+      // digest/adapter drift, or a component drift that does not include the CLI
+      // (for example a pinned obsolete skill bundle), remains a genuine `fail`.
+      const genuineDrift = digestDrift || adapterDrift;
+      const upgradeOnlyDrift = drift && !genuineDrift && cliDrift;
       diagnostics.push({
         code: drift ? 'lock-drift' : 'runtime-lock',
-        status: drift ? 'fail' : 'pass',
-        message: drift
+        status: genuineDrift ? 'fail' : upgradeOnlyDrift ? 'warn' : drift ? 'fail' : 'pass',
+        message: genuineDrift
           ? `Runtime lock drift detected (components: ${componentDrift}, digest: ${digestDrift}, adapters: ${adapterDrift})`
-          : 'Project runtime lock matches installed component versions',
-        ...(drift ? { fix: 'Run `planr runtime update all --scope project`.' } : {}),
+          : upgradeOnlyDrift
+            ? `Runtime lock component versions trail an OpenPlanr upgrade (components: ${componentDrift}); this is expected after upgrading and does not affect Operating Board execution`
+            : drift
+              ? `Runtime lock drift detected (components: ${componentDrift}, digest: ${digestDrift}, adapters: ${adapterDrift})`
+              : 'Project runtime lock matches installed component versions',
+        ...(drift
+          ? {
+              fix: upgradeOnlyDrift
+                ? 'Run `planr runtime update all --scope project` to refresh the lock to the upgraded component versions.'
+                : 'Run `planr runtime update all --scope project`.',
+            }
+          : {}),
       });
     } catch {
       diagnostics.push({

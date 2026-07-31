@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import type { Command, OptionValues } from 'commander';
 import { isNonInteractive } from '../../services/interactive-state.js';
 import {
@@ -61,6 +62,35 @@ async function readBoundedStdin(enabled: boolean): Promise<string | undefined> {
   return Buffer.concat(chunks).toString('utf8').trimEnd();
 }
 
+/**
+ * Resolve one bounded guided-answer document for the init flow. `--answers-file
+ * <path>` is a stdin-parity alias: it reads the same 64 KiB-bounded UTF-8 string
+ * `--stdin` would, so the downstream strict parser and digest binding are
+ * identical — it never introduces an inline-JSON code path. TTY-guard semantics
+ * are preserved: only `--stdin` requires a connected non-TTY pipe. Exported for
+ * direct parity testing.
+ */
+export async function readBoundedInitAnswers(options: OptionValues): Promise<string | undefined> {
+  const answersFile =
+    typeof options.answersFile === 'string' && options.answersFile.trim()
+      ? options.answersFile
+      : undefined;
+  if (answersFile === undefined) return readBoundedStdin(Boolean(options.stdin));
+  const buffer = await readFile(answersFile).catch(() => {
+    const error = new Error(
+      `Unable to read the answers file at ${answersFile}. Provide a readable bounded JSON document.`,
+    );
+    error.name = 'E_OPERATE_STDIN_REQUIRED';
+    throw error;
+  });
+  if (buffer.byteLength > MAX_STDIN_BYTES) {
+    const error = new Error(`The answers file exceeds the ${MAX_STDIN_BYTES}-byte limit.`);
+    error.name = 'E_OPERATE_INPUT_TOO_LARGE';
+    throw error;
+  }
+  return buffer.toString('utf8').trimEnd();
+}
+
 function renderHuman(result: OperateActionResult): void {
   if (result.message) {
     if (result.ok) logger.success(result.message);
@@ -112,6 +142,32 @@ function renderHuman(result: OperateActionResult): void {
     } else if (typeof result.data === 'string') display.line(result.data);
     else display.line(JSON.stringify(result.data, null, 2));
   }
+  // FR10 / T-008: surface the adapter session lease (expiry + remaining) as a
+  // plain human line so an operator inspecting a lifecycle result sees, without
+  // reading raw JSON, how long the prepared session is still valid.
+  if (
+    typeof result.action === 'string' &&
+    result.action.startsWith('adapter.') &&
+    result.data &&
+    typeof result.data === 'object' &&
+    !Array.isArray(result.data)
+  ) {
+    const lease = (result.data as Record<string, unknown>).leaseStatus;
+    if (lease && typeof lease === 'object' && !Array.isArray(lease)) {
+      const status = lease as {
+        expiresAt?: unknown;
+        remainingSeconds?: unknown;
+        expired?: unknown;
+      };
+      const remaining =
+        typeof status.remainingSeconds === 'number' ? `${status.remainingSeconds}s` : 'unknown';
+      display.line(
+        status.expired === true
+          ? `Adapter lease: expired at ${String(status.expiresAt)}`
+          : `Adapter lease: expires ${String(status.expiresAt)} (${remaining} remaining)`,
+      );
+    }
+  }
   if (result.preview !== undefined) {
     display.heading('Preview:');
     display.line(JSON.stringify(result.preview, null, 2));
@@ -133,7 +189,7 @@ async function executeForResult(
   const json = wantsJson(command, options);
   let stdin: string | undefined;
   try {
-    stdin = await readBoundedStdin(Boolean(options.stdin));
+    stdin = await readBoundedInitAnswers(options);
   } catch (error) {
     const code =
       error instanceof Error && error.name.startsWith('E_')
@@ -345,12 +401,11 @@ async function executeRunWithProviderConsent(
   options: OptionValues,
 ): Promise<OperateActionResult> {
   const first = await executeForResult(program, command, 'run', {}, options);
-  if (
-    first.ok ||
-    first.code !== 'E_OPERATE_AUTHORITY_REQUIRED' ||
-    wantsJson(command, options) ||
-    isNonInteractive()
-  ) {
+  // FR7/E-007: first-use provider consent now returns an `ok: true` handoff
+  // (`flow: 'handoff'`, code `E_OPERATE_AUTHORITY_REQUIRED`), not a failure.
+  // Detect that continuation to disclose the policy and retry with authority.
+  const consentHandoff = first.flow === 'handoff' && first.code === 'E_OPERATE_AUTHORITY_REQUIRED';
+  if (!consentHandoff || wantsJson(command, options) || isNonInteractive()) {
     return first;
   }
   const approved = await promptConfirm(
@@ -372,7 +427,8 @@ async function executeRunWithProviderConsent(
 }
 
 async function guidedInitOptions(program: Command, options: OptionValues): Promise<OptionValues> {
-  if (options.resume || options.cancelSession || options.stdin) return options;
+  if (options.resume || options.cancelSession || options.stdin || options.answersFile)
+    return options;
   if (isNonInteractive() || options.json === true || program.opts().json === true) return options;
   const answers = operatingInitAnswersFromOptions(options);
   const context = await detectOperatingQuestionContext(projectDir(program));
@@ -534,6 +590,10 @@ export function registerOperateCommand(program: Command): void {
             `read one guided answer envelope (maximum ${MAX_STDIN_BYTES} bytes)`,
             false,
           )
+          .option(
+            '--answers-file <path>',
+            `read one guided answer envelope from a file (stdin parity, maximum ${MAX_STDIN_BYTES} bytes)`,
+          )
           .option('--cancel-session', 'cancel and remove the resumed guided session', false)
           .option(
             '--preview-created-at <timestamp>',
@@ -566,7 +626,9 @@ export function registerOperateCommand(program: Command): void {
             preview: true,
           },
         );
-        if (!previewResult.ok) return;
+        // A guided-stage advance is now an `ok: true` handoff (FR7/E-007), not a
+        // failure: it still carries no apply action, so stop before confirming.
+        if (!previewResult.ok || previewResult.flow === 'handoff') return;
         if (!(await promptConfirm('Apply this exact Operating Board configuration?', true))) {
           return;
         }

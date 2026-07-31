@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
+import { AIError } from '../../ai/errors.js';
 import type { AIMessage, AIProvider } from '../../ai/types.js';
 import { DEFAULT_MODELS } from '../../ai/types.js';
 import type { OpenPlanrConfig } from '../../models/types.js';
@@ -10,6 +11,9 @@ import { generateJSON, getAIProvider, isAIConfigured } from '../ai-service.js';
 import { loadConfig } from '../config-service.js';
 import { canonicalDigest, canonicalize } from './canonical.js';
 import {
+  createMissionToolset,
+  MISSION_READ_ONLY_TOOLS,
+  narrowMissionRootsToCeiling,
   type OperatingDispatchIsolation,
   type OperatingDispatchMode,
   operatingRegistryDispatchMode,
@@ -72,6 +76,70 @@ const advisorOutputSchema = z
   .strict();
 export type OperatingAdvisorResponse = z.infer<typeof advisorOutputSchema>;
 type AdvisorOutput = OperatingAdvisorResponse;
+
+// The Protocol v1.3 mission (`operating-advisor-response@1.3.0`) proposal shape:
+// each proposal carries `citations` (repository path / git revision / planr
+// artifact, each bound to the cycle's frozen `pinnedRevision`) INSTEAD of the
+// v1.2 `evidenceRefs`. The pipeline snapshots each citation after the lens
+// returns; OpenPlanr never widens the set. Kept in lockstep with the installed
+// `schemas/v1.3.0/operating-citation.schema.json` so a locally parsed response
+// and the pipeline-validated one cannot drift.
+const missionCitationSchema = z
+  .object({
+    citationKey: z
+      .string()
+      .regex(/^[A-Za-z0-9._-]+$/)
+      .max(128)
+      .optional(),
+    repositoryPath: z
+      .string()
+      .max(1024)
+      .regex(/^(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9._/-]*$/)
+      .optional(),
+    lineRange: z
+      .object({ start: z.number().int().min(1), end: z.number().int().min(1) })
+      .strict()
+      .optional(),
+    gitRevision: z
+      .string()
+      .regex(/^[a-f0-9]{7,64}$/)
+      .optional(),
+    planrArtifactId: z
+      .string()
+      .regex(/^(?:EPIC|FEAT|US|SPEC|TASK|ADR|DEC|FND|GAP|OUT)-[A-Za-z0-9._-]+$/)
+      .optional(),
+    pinnedRevision: z.string().regex(/^[a-f0-9]{7,64}$/),
+  })
+  .strict();
+const missionProposalSchema = z
+  .object({
+    proposalKey: z.string().regex(/^[A-Za-z0-9._-]+$/),
+    type: z.enum(['finding', 'decision', 'data-gap', 'merge', 'sequence']),
+    title: z.string().min(1),
+    problem: z.string().min(1),
+    proposal: z.string().min(1),
+    impact: z.number().int().min(1).max(5),
+    confidence: z.number().int().min(1).max(5),
+    ease: z.number().int().min(1).max(5),
+    severity: z.enum(['low', 'medium', 'high', 'critical']),
+    citations: z.array(missionCitationSchema).min(1).max(50),
+    dependsOnProposalKeys: z.array(z.string().regex(/^[A-Za-z0-9._-]+$/)).optional(),
+    conflictsWithProposalKeys: z.array(z.string().regex(/^[A-Za-z0-9._-]+$/)).optional(),
+    sequenceProposalKeys: z
+      .array(z.string().regex(/^[A-Za-z0-9._-]+$/))
+      .min(2)
+      .optional(),
+  })
+  .strict();
+const missionAdvisorOutputSchema = z
+  .object({
+    outcome: z.enum(['proposals', 'quiet']),
+    proposals: z.array(missionProposalSchema).max(20),
+    gaps: z.array(z.string()),
+    conflicts: z.array(z.string()),
+  })
+  .strict();
+type MissionAdvisorOutput = z.infer<typeof missionAdvisorOutputSchema>;
 
 export function advisorResponseContractDetails(brief: OperatingAdvisorBrief): {
   expectedSchema: 'operating-advisor-response@1.2.0';
@@ -453,7 +521,8 @@ export async function createOperatingAdvisorPack(input: {
       })),
     }),
   };
-  const roleBrief = (await loadOperatingProtocol()).createOperatingAdvisorBrief(input.role.roleId);
+  const protocol = await loadOperatingProtocol();
+  const roleBrief = protocol.createOperatingAdvisorBrief(input.role.roleId);
   const inputDigest = canonicalDigest({
     cycleId: input.cycleId,
     roleId: input.role.roleId,
@@ -462,7 +531,7 @@ export async function createOperatingAdvisorPack(input: {
     evidenceRefs: roleItems.map((item) => item.id).sort(),
     context,
   });
-  return {
+  const pack: OperatingAdvisorPack = {
     implementation: 'openplanr-operating-advisor-pack',
     cycleId: input.cycleId,
     roleId: input.role.roleId,
@@ -471,6 +540,61 @@ export async function createOperatingAdvisorPack(input: {
     context,
     inputDigest,
   };
+  // FR2: measure the canonicalized v1.2 pack against the role's published
+  // `maxInputBytes` and fail closed BEFORE returning it. Redaction quarantines
+  // a single oversized excerpt (its 16 KiB per-item gate) but never bounds the
+  // AGGREGATE pack, so a role carrying many in-gate excerpts can still exceed
+  // its input budget — the field incident shipped a 2,736,185-byte pack against
+  // a 393,216-byte role budget with nothing catching it. The pack is never
+  // truncated to fit; the role fails closed instead, mirroring the mission
+  // budget's `E_OPERATE_MISSION_PACKET_BUDGET` semantics with the existing
+  // `E_OPERATE_EVIDENCE_BUDGET` code (no new OperateErrorCode is minted).
+  assertOperatingAdvisorPackWithinBudget(
+    pack,
+    resolveOperatingPackBudget(protocol, input.role.roleId),
+  );
+  return pack;
+}
+
+/**
+ * A role's v1.2 pack input budget, read from the pipeline's published role
+ * registry (the same authoritative source `deriveOperatingMissionBudgets` reads).
+ * A registry entry that omits `budgets.maxInputBytes` falls back to the same
+ * 256 KiB default the mission-budget derivation uses, so an unpublished budget
+ * still fails closed rather than admitting an unbounded pack.
+ */
+function resolveOperatingPackBudget(
+  protocol: Awaited<ReturnType<typeof loadOperatingProtocol>>,
+  roleId: OperatingRoleId,
+): number {
+  const role = protocol.listOperatingRoles().find((candidate) => candidate.id === roleId) as
+    | { budgets?: { maxInputBytes?: number } }
+    | undefined;
+  const maxInputBytes = role?.budgets?.maxInputBytes;
+  return typeof maxInputBytes === 'number' ? maxInputBytes : 262_144;
+}
+
+/**
+ * Measure a canonicalized advisor pack and fail closed when it exceeds the
+ * role's v1.2 `maxInputBytes`. Shared by `createOperatingAdvisorPack` (fresh
+ * construction) and `operateAdapterLifecycle`'s prepare branch (which also
+ * guards packs restored from an on-disk session that may predate this check),
+ * so an oversized pack can never reach a provider or native adapter from either
+ * call site. Reuses the existing `E_OPERATE_EVIDENCE_BUDGET` code.
+ */
+export function assertOperatingAdvisorPackWithinBudget(
+  pack: OperatingAdvisorPack,
+  maxInputBytes: number,
+): void {
+  const actualBytes = Buffer.byteLength(canonicalize(pack), 'utf8');
+  if (actualBytes > maxInputBytes) {
+    throw new OperateError(
+      'E_OPERATE_EVIDENCE_BUDGET',
+      `Advisor pack for role ${pack.roleId} is ${actualBytes} bytes, exceeding its ` +
+        `${maxInputBytes}-byte v1.2 pack input budget; the pack is not truncated to fit.`,
+      { roleId: pack.roleId, actualBytes, maxInputBytes },
+    );
+  }
 }
 
 /**
@@ -478,7 +602,8 @@ export async function createOperatingAdvisorPack(input: {
  * budget. Mission packets carry only an evidence INDEX (no bodies), so their
  * budget is a single-digit-KiB fraction of the role's v1.2 pack budget, clamped
  * to `[1, 9]` KiB. This DERIVES a new value; it never mutates the frozen v1.2
- * `maxInputBytes` that pack mode still enforces.
+ * `maxInputBytes`. Enforcing that pack-mode budget is a separate concern handled
+ * by `assertOperatingAdvisorPackWithinBudget` at pack construction, not here.
  */
 export function deriveOperatingMissionBudget(packMaxInputBytes: number): number {
   const kib = Math.min(9, Math.max(1, Math.round(packMaxInputBytes / (32 * 1024))));
@@ -667,6 +792,18 @@ export interface AdvisorDispatchResult {
   modelCalls: number;
 }
 
+/**
+ * What a single role's dispatch actually resolved to, captured at dispatch time
+ * so provenance reflects the executed path rather than a value re-derived after
+ * the fact. `isolation` reads `enforced-read-only-bounded` only when the bounded
+ * read-only grant was genuinely enforced for that role.
+ */
+interface RoleDispatchProvenance {
+  dispatchMode: OperatingDispatchMode;
+  isolation: OperatingDispatchIsolation;
+  reconciliation: string;
+}
+
 function sanitizeOutput(output: AdvisorOutput): AdvisorOutput {
   return {
     outcome: output.outcome,
@@ -781,6 +918,196 @@ export async function createNativeOperatingRoleResult(input: {
   return result;
 }
 
+/**
+ * Sanitize a v1.3 mission advisor response's free text exactly as the v1.2
+ * `sanitizeOutput` does, but PRESERVE each proposal's structured `citations`
+ * verbatim: they are schema-pattern-bounded locators (repository path, git
+ * revision, or planr artifact — never free prose), which the engine resolves and
+ * snapshots after the lens returns. Dropping them would silence every proposal.
+ */
+function sanitizeMissionOutput(output: MissionAdvisorOutput): MissionAdvisorOutput {
+  return {
+    outcome: output.outcome,
+    proposals: output.proposals
+      .map((proposal) => ({
+        ...proposal,
+        title: sanitizeGeneratedPlainText(proposal.title).replace(/\s+/g, ' ').trim(),
+        problem: sanitizeGeneratedPlainText(proposal.problem).replace(/\s+/g, ' ').trim(),
+        proposal: sanitizeGeneratedPlainText(proposal.proposal).replace(/\s+/g, ' ').trim(),
+        citations: [...proposal.citations],
+        ...(proposal.dependsOnProposalKeys
+          ? { dependsOnProposalKeys: [...new Set(proposal.dependsOnProposalKeys)].sort() }
+          : {}),
+        ...(proposal.conflictsWithProposalKeys
+          ? { conflictsWithProposalKeys: [...new Set(proposal.conflictsWithProposalKeys)].sort() }
+          : {}),
+        ...(proposal.sequenceProposalKeys
+          ? { sequenceProposalKeys: [...proposal.sequenceProposalKeys] }
+          : {}),
+      }))
+      .sort(
+        (left, right) =>
+          left.proposalKey.localeCompare(right.proposalKey) ||
+          left.type.localeCompare(right.type) ||
+          left.problem.localeCompare(right.problem),
+      ),
+    gaps: [...new Set(output.gaps.map(sanitizeGeneratedPlainText))].sort(),
+    conflicts: [...new Set(output.conflicts.map(sanitizeGeneratedPlainText))].sort(),
+  };
+}
+
+/**
+ * A mission packet's `role.output` facet mirrors the v1.2 brief's output
+ * contract (allowed proposal types, maxima), so a v1.3 response is validated
+ * against exactly the same invariants a pack response is — reusing the pipeline's
+ * registry-derived brief as the single source of truth.
+ */
+export async function createNativeMissionOperatingRoleResult(input: {
+  packet: OperatingMissionPacket;
+  response: unknown;
+  runtime: string;
+  /**
+   * Injected citation resolver so the mission response's citations flow into the
+   * engine's already-live `gateRecordedProposalCitations` WITHOUT advisors.ts
+   * importing engine.ts (which would create an import cycle). Given the
+   * intermediate citation-bearing role result, it returns the gated result
+   * (minted `evidenceRefs` merged in, unresolvable-citation proposals dropped)
+   * plus the opened unresolvable-citation gaps.
+   */
+  resolveCitations: (
+    roleResults: OperatingRoleResult[],
+  ) => Promise<{ roleResults: OperatingRoleResult[]; gaps: OperatingDataGap[] }>;
+}): Promise<{ result: OperatingRoleResult; gaps: OperatingDataGap[] }> {
+  const protocol = await loadOperatingProtocol();
+  // Validate against the INSTALLED v1.3 schema explicitly — the compact response
+  // carries no protocol envelope, so the pipeline additively resolves to v1.2
+  // unless the version is passed.
+  const contractIssues = protocol.validateProtocolArtifact(
+    'operating-advisor-response',
+    input.response,
+    { protocolVersion: '1.3.0' },
+  );
+  if (contractIssues.length > 0) {
+    throw new OperateError(
+      'E_OPERATE_ADVISOR_FAILED',
+      `Native ${input.packet.roleId} response does not match operating-advisor-response@1.3.0.`,
+      { issues: contractIssues.slice(0, 8) },
+    );
+  }
+  const parsed = missionAdvisorOutputSchema.safeParse(input.response);
+  if (!parsed.success) {
+    throw new OperateError(
+      'E_OPERATE_INTERNAL',
+      'Protocol and OpenPlanr disagree on the v1.3 mission advisor response contract.',
+      {
+        issues: parsed.error.issues.slice(0, 8).map((issue) => ({
+          path: issue.path.join('.'),
+          code: issue.code,
+        })),
+      },
+    );
+  }
+  const output = sanitizeMissionOutput(parsed.data);
+  const brief = protocol.createOperatingAdvisorBrief(input.packet.roleId);
+  assertAdvisorOutputMatchesBrief(
+    brief,
+    output as unknown as Pick<OperatingRoleResult, 'outcome' | 'proposals'>,
+  );
+  const capability = ((input.packet.role as { capabilityTier?: unknown }).capabilityTier ??
+    brief.role.capabilityTier) as 'analysis-standard' | 'analysis-high';
+  // The intermediate result: proposals carry their v1.3 citations and an empty
+  // evidenceRefs set. It is deliberately NOT yet a v1.2-valid committed
+  // operating-role-result — the citation gate mints the evidenceRefs that make
+  // it one. `inputDigest` is the packet's digest, so the record path's
+  // input-digest binding (prepare stored the same packet digest) holds.
+  const intermediate = {
+    kind: 'operating-role-result' as const,
+    schemaVersion: OPERATE_SCHEMA_VERSION,
+    protocolVersion: OPERATE_PROTOCOL_VERSION,
+    cycleId: input.packet.cycleId,
+    roleId: input.packet.roleId,
+    inputDigest: input.packet.packetDigest,
+    resultDigest: input.packet.packetDigest,
+    outcome: output.outcome,
+    proposals: output.proposals.map((proposal) => ({
+      proposalKey: proposal.proposalKey,
+      type: proposal.type,
+      title: proposal.title,
+      problem: proposal.problem,
+      proposal: proposal.proposal,
+      impact: proposal.impact,
+      confidence: proposal.confidence,
+      ease: proposal.ease,
+      severity: proposal.severity,
+      evidenceRefs: [] as string[],
+      ...(proposal.dependsOnProposalKeys
+        ? { dependsOnProposalKeys: proposal.dependsOnProposalKeys }
+        : {}),
+      ...(proposal.conflictsWithProposalKeys
+        ? { conflictsWithProposalKeys: proposal.conflictsWithProposalKeys }
+        : {}),
+      ...(proposal.sequenceProposalKeys
+        ? { sequenceProposalKeys: proposal.sequenceProposalKeys }
+        : {}),
+      citations: proposal.citations,
+    })),
+    gaps: output.gaps,
+    conflicts: output.conflicts,
+    producer: {
+      product: 'openplanr',
+      version: OPENPLANR_VERSION,
+      runtime: input.runtime,
+      capability,
+    },
+  } as unknown as OperatingRoleResult;
+
+  // A quiet response has no proposals/citations, so it never touches the gate; a
+  // proposals response threads its citations through the already-live gate.
+  const gated =
+    output.proposals.length > 0
+      ? await input.resolveCitations([intermediate])
+      : { roleResults: [intermediate], gaps: [] as OperatingDataGap[] };
+  const resolved = gated.roleResults[0] ?? intermediate;
+
+  // Finalize into a v1.2-valid committed operating-role-result: strip the
+  // now-resolved citations, keep the minted evidenceRefs, and let the surviving
+  // proposal count set the honest outcome (an all-unresolvable response commits
+  // as quiet, its citations preserved only as the opened gaps).
+  const survivingProposals = resolved.proposals
+    .map((proposal) => {
+      const { citations: _citations, ...rest } = proposal as typeof proposal & {
+        citations?: unknown;
+      };
+      return rest;
+    })
+    .filter((proposal) => proposal.evidenceRefs.length > 0);
+  const unsigned = {
+    kind: 'operating-role-result' as const,
+    schemaVersion: OPERATE_SCHEMA_VERSION,
+    protocolVersion: OPERATE_PROTOCOL_VERSION,
+    cycleId: input.packet.cycleId,
+    roleId: input.packet.roleId,
+    inputDigest: input.packet.packetDigest,
+    outcome: survivingProposals.length > 0 ? ('proposals' as const) : ('quiet' as const),
+    proposals: survivingProposals,
+    gaps: output.gaps,
+    conflicts: output.conflicts,
+    producer: {
+      product: 'openplanr',
+      version: OPENPLANR_VERSION,
+      runtime: input.runtime,
+      capability,
+    },
+  };
+  const result: OperatingRoleResult = {
+    ...unsigned,
+    resultDigest: protocol.computeOperatingRoleResultDigest(unsigned as OperatingRoleResult),
+  } as OperatingRoleResult;
+  await assertOperatingArtifact('operating-role-result', result);
+  protocol.validateOperatingRoleResultDigest(result);
+  return { result, gaps: gated.gaps };
+}
+
 function safeFailureMessage(error: unknown): string {
   try {
     return sanitizeGeneratedPlainText(error instanceof Error ? error.message : String(error));
@@ -872,6 +1199,39 @@ class OpenPlanrStructuredAdapter implements AdvisorAdapter {
   }
 }
 
+/** Redacted error class label for diagnostics — no message or stack, ever. */
+function redactedProviderErrorClass(error: unknown): string {
+  if (error instanceof AIError) return `AIError:${error.code}`;
+  if (error instanceof Error && typeof error.name === 'string' && error.name.length > 0) {
+    return error.name;
+  }
+  return 'UnknownError';
+}
+
+/**
+ * Build the actionable remedy for a failed structured-provider bootstrap,
+ * preserving the underlying provider guidance (e.g. the `planr config set-key`
+ * block an AIError already carries) and always naming the `--offline` escape.
+ */
+function structuredProviderBootstrapRemedy(error: unknown, provider?: string): string {
+  const detail =
+    error instanceof AIError
+      ? error.userMessage
+      : error instanceof Error
+        ? error.message
+        : String(error);
+  const trimmed = detail.trim();
+  const suffixParts: string[] = [];
+  if (!/config set-key/.test(trimmed)) {
+    suffixParts.push(`Configure a key with \`planr config set-key ${provider ?? '<provider>'}\``);
+  }
+  if (!/--offline/.test(trimmed)) {
+    suffixParts.push('or run the cycle offline with --offline');
+  }
+  const suffix = suffixParts.length > 0 ? ` ${suffixParts.join(' ')}.` : '';
+  return `Structured AI provider bootstrap failed: ${trimmed}${suffix}`;
+}
+
 export async function createConfiguredStructuredAdapter(
   projectRoot: string,
   options: { quiet?: boolean } = {},
@@ -890,8 +1250,24 @@ export async function createConfiguredStructuredAdapter(
       'No structured AI provider is configured; use --offline or configure OpenPlanr AI.',
     );
   }
+  // A named provider whose key cannot be resolved in this (possibly sandboxed)
+  // subprocess environment makes getAIProvider throw a raw AIError. Left
+  // unguarded it reaches index.ts's failure() as E_OPERATE_INTERNAL — the exact
+  // masked crash the audit reproduced. Convert any provider-bootstrap failure
+  // into a typed E_OPERATE_ADVISOR_FAILED that preserves the actionable remedy
+  // (`planr config set-key …` / `--offline`) and records a redacted error class.
+  let provider: AIProvider;
+  try {
+    provider = await getAIProvider(config);
+  } catch (error) {
+    throw new OperateError(
+      'E_OPERATE_ADVISOR_FAILED',
+      structuredProviderBootstrapRemedy(error, config.ai?.provider),
+      { errorClass: redactedProviderErrorClass(error) },
+    );
+  }
   return new OpenPlanrStructuredAdapter(
-    await getAIProvider(config),
+    provider,
     config.ai?.provider ?? 'ai',
     options.quiet ?? false,
   );
@@ -963,14 +1339,32 @@ export async function dispatchOperatingAdvisors(input: {
   }
 
   async function dispatchRole(role: OperatingEvidenceReadiness['roles'][number]): Promise<
-    | { ok: true; result: OperatingRoleResult; modelCalls: number }
+    | {
+        ok: true;
+        result: OperatingRoleResult;
+        modelCalls: number;
+        dispatch: RoleDispatchProvenance;
+      }
     | {
         ok: false;
         roleId: OperatingRoleId;
         message: string;
         modelCalls: number;
+        dispatch: RoleDispatchProvenance;
       }
   > {
+    // Resolve THIS role's dispatch mode once and derive provenance from what is
+    // actually dispatched below — never re-derived after the fact. A role that
+    // resolves to a native bounded lens has its read-only tool grant enforced
+    // before the lens runs (below); every other role fails closed to the pack
+    // path, so `isolation` can only read `enforced-read-only-bounded` when the
+    // bounded grant was genuinely enforced, never as a bare label over a pack.
+    const resolution = resolveMode(role.roleId);
+    const dispatch: RoleDispatchProvenance = {
+      dispatchMode: resolution.mode,
+      isolation: resolution.isolation,
+      reconciliation: resolution.reconciliation,
+    };
     let pack: OperatingAdvisorPack;
     try {
       pack = await createOperatingAdvisorPack({
@@ -985,7 +1379,32 @@ export async function dispatchOperatingAdvisors(input: {
         roleId: role.roleId,
         message: safeFailureMessage(error),
         modelCalls: 0,
+        dispatch,
       };
+    }
+    if (resolution.native) {
+      // Route through mission-dispatch.ts's granted-tool-set enforcement: the
+      // native lens is confined to the bounded read-only toolset over its
+      // sensitivity-ceiling-narrowed declared roots. Constructing the toolset is
+      // what makes `enforced-read-only-bounded` true; a callable outside the
+      // read-only grant simply does not exist on the surface it hands the lens.
+      const ceiling = pack.roleBrief.evidence.sensitivityCeiling;
+      const declaredRoots = [
+        ...new Set(
+          pack.evidence.items
+            .map((item) => item.location.split('/')[0])
+            .filter((segment): segment is string => Boolean(segment)),
+        ),
+      ].sort();
+      const roots = narrowMissionRootsToCeiling({ declaredRoots, evidenceIndex: [], ceiling });
+      const toolset = createMissionToolset({ roots, ceiling });
+      const grantedTools = Object.keys(toolset);
+      if (grantedTools.some((tool) => !MISSION_READ_ONLY_TOOLS.includes(tool as never))) {
+        throw new OperateError(
+          'E_OPERATE_PROVIDER_READ_ONLY',
+          `Mission dispatch for ${role.roleId} assembled a tool outside the bounded read-only grant.`,
+        );
+      }
     }
     const permittedEvidenceRefs = new Set(role.evidenceRefs);
     let output: AdvisorOutput | undefined;
@@ -1025,6 +1444,7 @@ export async function dispatchOperatingAdvisors(input: {
         roleId: role.roleId,
         message: safeFailureMessage(lastError),
         modelCalls: roleModelCalls,
+        dispatch,
       };
     }
     const unsigned = {
@@ -1051,7 +1471,7 @@ export async function dispatchOperatingAdvisors(input: {
     };
     await assertOperatingArtifact('operating-role-result', result);
     protocol.validateOperatingRoleResultDigest(result);
-    return { ok: true, result, modelCalls: roleModelCalls };
+    return { ok: true, result, modelCalls: roleModelCalls, dispatch };
   }
 
   // Fan the per-role dispatch out in parallel where the adapter reports it,
@@ -1064,6 +1484,13 @@ export async function dispatchOperatingAdvisors(input: {
     parallel: Boolean(input.adapter.parallelDispatch),
     run: (role) => dispatchRole(role),
   });
+  // The per-role dispatch descriptor captured inside `dispatchRole` — provenance
+  // reads it rather than re-resolving, so it can only report the isolation the
+  // role was actually dispatched under.
+  const dispatchByRole = new Map<OperatingRoleId, RoleDispatchProvenance>();
+  for (const entry of dispatched) {
+    dispatchByRole.set(entry.ok ? entry.result.roleId : entry.roleId, entry.dispatch);
+  }
   const results = dispatched
     .filter(
       (
@@ -1072,6 +1499,7 @@ export async function dispatchOperatingAdvisors(input: {
         ok: true;
         result: OperatingRoleResult;
         modelCalls: number;
+        dispatch: RoleDispatchProvenance;
       } => entry.ok,
     )
     .map((entry) => entry.result)
@@ -1089,6 +1517,7 @@ export async function dispatchOperatingAdvisors(input: {
         roleId: OperatingRoleId;
         message: string;
         modelCalls: number;
+        dispatch: RoleDispatchProvenance;
       } => !entry.ok,
     )
     .map(({ roleId, message }) => ({ roleId, message }));
@@ -1096,16 +1525,20 @@ export async function dispatchOperatingAdvisors(input: {
   return {
     results,
     provenance: results.map((result) => {
-      const resolution = resolveMode(result.roleId);
+      const dispatchProvenance = dispatchByRole.get(result.roleId) ?? {
+        dispatchMode: resolveMode(result.roleId).mode,
+        isolation: resolveMode(result.roleId).isolation,
+        reconciliation: resolveMode(result.roleId).reconciliation,
+      };
       return {
         roleId: result.roleId,
         runtime: input.runtime ?? input.adapter.id,
         adapterId: input.adapter.id,
         capability: input.adapter.capability,
         dispatch: input.adapter.parallelDispatch ? ('parallel' as const) : ('sequential' as const),
-        dispatchMode: resolution.mode,
-        isolation: resolution.isolation,
-        reconciliation: resolution.reconciliation,
+        dispatchMode: dispatchProvenance.dispatchMode,
+        isolation: dispatchProvenance.isolation,
+        reconciliation: dispatchProvenance.reconciliation,
       };
     }),
     skipped,

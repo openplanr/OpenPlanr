@@ -54,10 +54,11 @@ describe('operate runtime-neutral facade', () => {
         projectRoot: process.cwd(),
       }),
     ).resolves.toMatchObject({
-      ok: false,
+      // FR7/E-007: a guided-stage advance is an `ok: true` handoff, not exit 4.
+      ok: true,
+      flow: 'handoff',
       action: 'input_required',
       code: 'E_OPERATE_INPUT_REQUIRED',
-      exitCode: 4,
       questionnaire: {
         kind: 'guided-questionnaire',
         stage: 'foundation',

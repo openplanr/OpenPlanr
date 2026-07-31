@@ -208,6 +208,16 @@ export interface StructuredOperatingAction {
   requiresConfirmation: boolean;
   confirmationScope: string | null;
   confirmationDigest: `sha256:${string}` | null;
+  /**
+   * The exact, directly executable argv for a digest-confirmable action
+   * (FR8/E-008): the public command tokens followed by its real confirmation
+   * flag and `--yes`. Present only when the command's CLI accepts a
+   * digest-bound confirm flag (`--confirm`), so a runner never has to
+   * re-synthesize the confirmation token itself. Commands whose only authority
+   * is `--yes` never carry a confirmationDigest and never receive a
+   * confirmArgv here.
+   */
+  confirmArgv?: readonly string[];
   recommended: boolean;
 }
 
@@ -1306,6 +1316,15 @@ export interface OperateActionResult {
   actions?: StructuredOperatingAction[];
   handoff?: OperatingAdapterHandoff;
   questionnaire?: GuidedQuestionnaire;
+  /**
+   * Machine-readable continuation discriminator (FR7/E-007). A guided-stage
+   * advance (`E_OPERATE_INPUT_REQUIRED`) or first-use provider consent
+   * (`E_OPERATE_AUTHORITY_REQUIRED`) is a healthy pause that hands control back
+   * to the operator/runtime, not a failure: those results carry `ok: true` and
+   * `flow: 'handoff'`, mirroring `run`'s adapter handoff, so a continuation
+   * never paints the happy path red.
+   */
+  flow?: 'handoff';
   data?: unknown;
   preview?: unknown;
   next?: string[];

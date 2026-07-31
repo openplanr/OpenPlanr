@@ -4,14 +4,24 @@ import path from 'node:path';
 import {
   advisorResponseContractDetails,
   assertAdvisorOutputMatchesBrief,
+  assertOperatingAdvisorPackWithinBudget,
   buildAdvisorOperatingContext,
+  createNativeMissionOperatingRoleResult,
   createNativeOperatingRoleResult,
   createOperatingAdvisorPack,
   type OperatingAdvisorPack,
 } from './advisors.js';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
-import { operatingProjectKey } from './config.js';
-import { buildChairEvidence } from './engine.js';
+import {
+  operatingProjectKey,
+  readOperatingAdapterLeaseDurationMs,
+  readOperatingDispatchModeOverrides,
+} from './config.js';
+import {
+  buildChairEvidence,
+  buildOperatingMissionPackets,
+  gateRecordedProposalCitations,
+} from './engine.js';
 import { OperatingEventStore } from './event-store.js';
 import { OperatingEvidenceCache } from './evidence-cache.js';
 import { purgeStaleEvidenceClassifications } from './evidence-classifications.js';
@@ -20,6 +30,12 @@ import { evaluateEvidenceReadiness } from './evidence-readiness.js';
 import { guidedSessionStatus, purgeGuidedSessions } from './interaction/session-service.js';
 import { assertCommittedOperatingView, recoverOperatingTransactions } from './journal.js';
 import { withOperatingLock } from './lock-service.js';
+import {
+  narrowMissionRootsToCeiling,
+  operatingRegistryDispatchMode,
+  operatingRuntimeEnforcesBoundedReadOnly,
+  resolveOperatingDispatchMode,
+} from './mission-dispatch.js';
 import { assertOperatingArtifact, loadOperatingProtocol } from './protocol.js';
 import { containsSecret, redactSensitiveText } from './redaction.js';
 import {
@@ -28,16 +44,30 @@ import {
   OperateError,
   type OperatingAdapterHandoff,
   type OperatingAdvisorBrief,
+  type OperatingDataGap,
   type OperatingEvidence,
+  type OperatingEvidenceIndexItem,
+  type OperatingMissionPacket,
   type OperatingRecoveryRecord,
   type OperatingRoleId,
   type OperatingRoleResult,
   type OperatingSensitivity,
 } from './types.js';
-import { resolveContainedPath, resolveOperatingPaths } from './workspace.js';
+import {
+  readOperatingConfig,
+  refreshOperatingWorkspaceManifest,
+  resolveContainedPath,
+  resolveOperatingPaths,
+} from './workspace.js';
 
 interface PrivateAdvisorSession {
   implementation: 'openplanr-operate-adapter';
+  // FR4: the committed event-chain genesis hash of the board that owns this
+  // machine-local session. Two successive board generations at the same project
+  // path re-genesis the event chain, so a session from a superseded generation
+  // never matches (or collides with) the current board. Legacy sessions written
+  // before this field are normalized to '' on read and treated as superseded.
+  boardIdentity: string;
   cycleId: string;
   evidenceDigest: string;
   phase: 'advisors' | 'chair';
@@ -51,12 +81,34 @@ interface PrivateAdvisorSession {
   roleInputDigests: Record<string, `sha256:${string}`>;
   roleBriefs: Record<string, OperatingAdvisorBrief>;
   rolePacks: Record<string, OperatingAdvisorPack>;
+  // FR1: the Protocol v1.3 mission packets for roles that resolved to native
+  // bounded read-only dispatch (`resolveOperatingDispatchMode(...).native`). A
+  // role appears here XOR in `rolePacks`. Omitted entirely for a pure v1.2
+  // pack-mode session so its on-disk shape stays byte-compatible.
+  roleMissionPackets?: Record<string, OperatingMissionPacket>;
+}
+
+/**
+ * Whether any bound role of this session resolved to native mission dispatch, so
+ * both adapter-handoff call sites can pass `protocolVersion: '1.3.0'` and the
+ * pipeline emits the v1.3 mission record action (`dispatch.agent` +
+ * `dispatch.missionPacketPointer`) instead of the v1.2 `rolePackPointer`.
+ */
+function sessionHasMissionRole(
+  session: Pick<PrivateAdvisorSession, 'roleMissionPackets'>,
+): boolean {
+  return Boolean(session.roleMissionPackets && Object.keys(session.roleMissionPackets).length > 0);
 }
 
 function adapterSessionSummary(
   session: PrivateAdvisorSession,
-): Omit<PrivateAdvisorSession, 'roleBriefs' | 'rolePacks'> {
-  const { roleBriefs: _roleBriefs, rolePacks: _rolePacks, ...summary } = session;
+): Omit<PrivateAdvisorSession, 'roleBriefs' | 'rolePacks' | 'roleMissionPackets'> {
+  const {
+    roleBriefs: _roleBriefs,
+    rolePacks: _rolePacks,
+    roleMissionPackets: _roleMissionPackets,
+    ...summary
+  } = session;
   return summary;
 }
 
@@ -72,6 +124,10 @@ async function adapterHandoff(session: PrivateAdvisorSession): Promise<Operating
           : 'finalize-required';
   const protocol = await loadOperatingProtocol();
   const handoff = protocol.createOperatingAdapterHandoff({
+    // v1.3 when any bound role resolved mission, so the record action names the
+    // generated lens agent and points at its mission packet; v1.2 (pack) default
+    // otherwise, byte-compatible with the pack-mode handoff.
+    ...(sessionHasMissionRole(session) ? { protocolVersion: '1.3.0' } : {}),
     phase: session.phase,
     state,
     cycleId: session.cycleId,
@@ -100,8 +156,82 @@ function sameRoleSet(left: readonly string[], right: readonly string[]): boolean
   );
 }
 
-function sessionExpired(session: PrivateAdvisorSession): boolean {
-  return Date.parse(session.expiresAt) <= Date.now();
+function sessionExpired(session: PrivateAdvisorSession, nowMs: number = Date.now()): boolean {
+  return Date.parse(session.expiresAt) <= nowMs;
+}
+
+/**
+ * FR4: the board's identity is the hash of its event-chain genesis event (the
+ * event whose `previousEventHash` is null). It is immutable for a board
+ * generation — appending events never rewrites the genesis — and a board
+ * re-inited at the same path re-genesises the chain, so the identity changes.
+ * Machine-local adapter sessions are bound to it so a session from a superseded
+ * generation is never matched or reused by the current board. Returns '' when
+ * no committed chain exists yet, or if the chain cannot be read/verified (that
+ * failure is surfaced by the dedicated event-replay diagnostics, not here).
+ */
+async function committedBoardIdentity(store: OperatingEventStore): Promise<string> {
+  try {
+    const { events } = await store.replay();
+    const genesis = events.find((event) => event.previousEventHash === null) ?? events[0];
+    return genesis?.eventHash ?? '';
+  } catch {
+    return '';
+  }
+}
+
+async function removeMachineLocalCacheDir(target: string): Promise<number> {
+  const entries = await readdir(target, { withFileTypes: true }).catch(() => []);
+  const removed = entries.filter((entry) => entry.isFile() && entry.name.endsWith('.json')).length;
+  await rm(target, { recursive: true, force: true });
+  return removed;
+}
+
+/**
+ * FR4: purge the board's machine-local advisor sessions (`<localRoot>/advisors/`)
+ * and incremental evidence baselines (`<localRoot>/evidence/incremental/`). A
+ * committed `operate init` apply calls this so a board re-inited at the same path
+ * never inherits a prior generation's sessions or cached baselines, and
+ * `operate cache purge` calls it so the doctor's staleness diagnostics have a
+ * scoped fix command. Both surfaces are rebuildable machine-local caches, never
+ * committed protocol artifacts.
+ */
+export async function purgeBoardMachineLocalCaches(input: {
+  projectRoot: string;
+  localRoot?: string;
+}): Promise<{ removedAdvisorSessions: number; removedIncrementalBaselines: number }> {
+  const paths = resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot });
+  const removedAdvisorSessions = await removeMachineLocalCacheDir(paths.advisors);
+  const removedIncrementalBaselines = await removeMachineLocalCacheDir(
+    path.join(paths.evidence, 'incremental'),
+  );
+  return { removedAdvisorSessions, removedIncrementalBaselines };
+}
+
+/**
+ * Surface the adapter session lease ergonomically (FR10 / T-008): the absolute
+ * `expiresAt` plus the remaining time relative to the resolved clock. Included in
+ * every adapter lifecycle response so a native runtime can see, at a glance, how
+ * long its prepared session is still valid and when it must resume or re-run —
+ * rather than parsing `expiresAt` against wall-clock itself. `remainingMs` is
+ * floored at zero so an already-lapsed lease reads as `expired`, never negative.
+ */
+function adapterLeaseStatus(
+  session: Pick<PrivateAdvisorSession, 'expiresAt'>,
+  nowMs: number,
+): {
+  expiresAt: string;
+  remainingMs: number;
+  remainingSeconds: number;
+  expired: boolean;
+} {
+  const remainingMs = Math.max(0, Date.parse(session.expiresAt) - nowMs);
+  return {
+    expiresAt: session.expiresAt,
+    remainingMs,
+    remainingSeconds: Math.floor(remainingMs / 1_000),
+    expired: remainingMs <= 0,
+  };
 }
 
 function retryRunCommand(session: Pick<PrivateAdvisorSession, 'cycleId' | 'runtime'>): string {
@@ -221,11 +351,25 @@ export async function operatingCacheAction(input: {
     localRoot: input.localRoot,
     purge: true,
   });
+  // FR4/FR11: clearing machine-local caches also drops board-bound adapter
+  // sessions and incremental evidence baselines, so this is the scoped fix the
+  // doctor names for stale adapter sessions and stale incremental baselines.
+  const board = await purgeBoardMachineLocalCaches({
+    projectRoot: input.projectRoot,
+    localRoot: input.localRoot,
+  });
   return {
-    removed: removed.length + sessions.removed + classifications.purged,
+    removed:
+      removed.length +
+      sessions.removed +
+      classifications.purged +
+      board.removedAdvisorSessions +
+      board.removedIncrementalBaselines,
     evidence: { removed: removed.length, entries: removed },
     sessions,
     classifications,
+    adapterSessions: { removed: board.removedAdvisorSessions },
+    incrementalBaselines: { removed: board.removedIncrementalBaselines },
   };
 }
 
@@ -738,6 +882,7 @@ async function readAdapterSession(
   projectRoot: string,
   cycleId: string,
   localRoot?: string,
+  nowMs: number = Date.now(),
 ): Promise<PrivateAdvisorSession> {
   const parsed = JSON.parse(
     await readFile(adapterSessionPath(projectRoot, cycleId, localRoot), 'utf8'),
@@ -750,7 +895,10 @@ async function readAdapterSession(
   if (session.implementation !== 'openplanr-operate-adapter') {
     throw new OperateError('E_OPERATE_ADVISOR_FAILED', 'Adapter session is invalid.');
   }
-  if (sessionExpired(session)) {
+  // Expiry is evaluated against the resolved clock (an injected clock in tests,
+  // wall-clock in production) so a lease that lapsed after its refresh window is
+  // still rejected here even when the caller supplies a deterministic clock.
+  if (sessionExpired(session, nowMs)) {
     throw new OperateError('E_OPERATE_ADVISOR_FAILED', 'Adapter session expired.', {
       cycleId,
       recoveryCommand: retryRunCommand(session),
@@ -812,6 +960,109 @@ async function assertAdapterCycleBinding(
   }
 }
 
+/**
+ * The machine-local sensitivity ceiling (default `internal`), read the same way
+ * the evidence cache and cycle engine read it. Mission packets and their tool
+ * grants are narrowed to this ceiling.
+ */
+async function readAdapterSensitivityCeiling(
+  projectRoot: string,
+  localRoot?: string,
+): Promise<OperatingSensitivity> {
+  const paths = resolveOperatingPaths(projectRoot, { localRoot });
+  return readFile(path.join(paths.localRoot, 'preferences.json'), 'utf8')
+    .then(
+      (raw) =>
+        (JSON.parse(raw) as { sensitivityCeiling?: OperatingSensitivity }).sensitivityCeiling ??
+        'internal',
+    )
+    .catch(() => 'internal' as OperatingSensitivity);
+}
+
+/**
+ * FR2: deny-list every declared read root that contains an above-ceiling evidence
+ * item BEFORE the mission packet is built, so no above-ceiling file is reachable
+ * even inside a granted root. Uses `mission-dispatch.ts`'s
+ * `narrowMissionRootsToCeiling` over the FULL (pre-ceiling-filter) evidence, then
+ * drops the items in the denied roots. `buildOperatingMissionPackets` then derives
+ * the packet's `declaredRoots` (and thus its tool grant) from only the narrowed
+ * roots. This is the belt to the bounded reader's read-time-ceiling suspenders.
+ */
+function narrowEvidenceToMissionCeiling(
+  evidence: OperatingEvidence,
+  ceiling: OperatingSensitivity,
+): OperatingEvidence {
+  const topSegment = (location: string): string | null => {
+    const [top] = location.split('/');
+    return top && top.length > 0 ? top : null;
+  };
+  const declaredRoots = [
+    ...new Set(
+      evidence.items
+        .map((item) => topSegment(item.location))
+        .filter((segment): segment is string => Boolean(segment)),
+    ),
+  ];
+  const evidenceIndex = evidence.items.map((item) => ({
+    path: item.location,
+    sensitivity: item.sensitivity,
+  })) as unknown as OperatingEvidenceIndexItem[];
+  const allowedRoots = new Set(
+    narrowMissionRootsToCeiling({ declaredRoots, evidenceIndex, ceiling }),
+  );
+  return {
+    ...evidence,
+    items: evidence.items.filter((item) => {
+      const top = topSegment(item.location);
+      return top === null || allowedRoots.has(top);
+    }),
+  };
+}
+
+/**
+ * Resolve every requested role's effective dispatch mode for THIS runtime (FR1):
+ * the v1.3 registry default, overridden by the machine-local
+ * `dispatchModeOverrides`, reconciled against whether the runtime natively
+ * enforces the bounded read-only boundary. The adapter lifecycle IS the native
+ * runtime path, so the hosting adapter is native-capable by construction; the
+ * runtime's own enforceability then decides whether a role receives a native
+ * bounded mission lens (`resolution.native`) or falls closed to the v1.2 pack.
+ */
+async function resolveBoundRoleDispatchModes(input: {
+  projectRoot: string;
+  localRoot?: string;
+  runtime: string;
+  roles: readonly string[];
+}): Promise<Map<string, ReturnType<typeof resolveOperatingDispatchMode>>> {
+  const protocol = await loadOperatingProtocol();
+  const registryDefaults = new Map(
+    (protocol.listOperatingRoles() as Array<{ id: string; dispatchMode?: unknown }>).map((role) => [
+      role.id,
+      operatingRegistryDispatchMode(role),
+    ]),
+  );
+  const overrides = await readOperatingDispatchModeOverrides(input.projectRoot, {
+    localRoot: input.localRoot,
+  });
+  const runtimeEnforcesBoundedReadOnly = await operatingRuntimeEnforcesBoundedReadOnly(
+    input.runtime,
+  );
+  const resolved = new Map<string, ReturnType<typeof resolveOperatingDispatchMode>>();
+  for (const roleId of input.roles) {
+    resolved.set(
+      roleId,
+      resolveOperatingDispatchMode({
+        roleId: roleId as OperatingRoleId,
+        registryDefault: registryDefaults.get(roleId) ?? 'mission',
+        override: overrides[roleId as OperatingRoleId],
+        runtimeEnforcesBoundedReadOnly,
+        adapterNativeCapable: true,
+      }),
+    );
+  }
+  return resolved;
+}
+
 export async function createOperatingAdapterStartHandoff(input: {
   projectRoot: string;
   cycleId: string;
@@ -852,7 +1103,19 @@ export async function createOperatingAdapterStartHandoff(input: {
     }
   }
   const protocol = await loadOperatingProtocol();
+  // FR1 call site 2 (the start / prepare-required handoff): stamp v1.3 whenever
+  // any bound role would resolve to native mission dispatch on this runtime, so
+  // the whole lifecycle — including the record actions built after prepare —
+  // carries the mission protocol version rather than defaulting to pack.
+  const dispatchModes = await resolveBoundRoleDispatchModes({
+    projectRoot: input.projectRoot,
+    localRoot: input.localRoot,
+    runtime: input.runtime,
+    roles: input.roles,
+  });
+  const anyMission = [...dispatchModes.values()].some((resolution) => resolution.native);
   const handoff = protocol.createOperatingAdapterHandoff({
+    ...(anyMission ? { protocolVersion: '1.3.0' } : {}),
     phase: input.phase,
     state: 'prepare-required',
     cycleId: input.cycleId,
@@ -880,6 +1143,12 @@ export async function operateAdapterLifecycle(input: {
   role?: string;
   stdin?: string;
   localRoot?: string;
+  /**
+   * Injectable clock (FR10 / T-008). Defaults to wall-clock. Tests supply a
+   * deterministic clock to prove the lease refreshes forward on `record` and that
+   * expiry is still enforced once the refreshed window lapses.
+   */
+  now?: () => Date;
 }): Promise<unknown> {
   if (!input.cycleId || !input.idempotencyKey) {
     throw new OperateError(
@@ -887,6 +1156,13 @@ export async function operateAdapterLifecycle(input: {
       'Adapter calls require --cycle-id and --idempotency-key.',
     );
   }
+  const nowMs = (input.now?.() ?? new Date()).getTime();
+  // The lease window is a machine-local preference (default 15 minutes). Resolved
+  // once so both the fresh `prepare` expiry and the per-`record` refresh use the
+  // same configured duration.
+  const leaseDurationMs = await readOperatingAdapterLeaseDurationMs(input.projectRoot, {
+    localRoot: input.localRoot,
+  });
   const target = adapterSessionPath(input.projectRoot, input.cycleId, input.localRoot);
   if (input.action === 'prepare') {
     if (!input.evidenceDigest?.startsWith('sha256:')) {
@@ -899,6 +1175,9 @@ export async function operateAdapterLifecycle(input: {
       localRoot: input.localRoot,
     });
     const state = await store.state();
+    // FR4: the identity of the board that owns this prepare. A machine-local
+    // session bound to any other genesis belongs to a superseded generation.
+    const boardIdentity = await committedBoardIdentity(store);
     const cycle = state.cycles.find((record) => record.id === input.cycleId);
     if (!cycle || !['advising', 'blocked'].includes(cycle.state)) {
       throw new OperateError(
@@ -959,54 +1238,75 @@ export async function operateAdapterLifecycle(input: {
     const existing = await readFile(target, 'utf8')
       .then((raw) => JSON.parse(raw) as PrivateAdvisorSession)
       .catch(() => null);
+    // Recovery semantics (FR10 / T-008, behavior unchanged — documented here so
+    // the lease ergonomics read coherently): when a prior session for this cycle
+    // exists and its binding is an *exact* match (same cycle, evidence digest,
+    // runtime, phase, and role set) but it has lapsed or was cancelled, its
+    // deterministic role packs are reused rather than rebuilt. The reused packs
+    // carry the same per-role `inputDigest`, so any machine-local role result that
+    // still matches that digest is re-adopted below as already-recorded work — the
+    // lease is reissued fresh (new token + refreshed `expiresAt`) while the proven,
+    // digest-bound advisory output is preserved. A non-exact prior binding is never
+    // recovered; it fails closed above with `E_OPERATE_ADVISOR_ISOLATION`.
     let recoverableSession: PrivateAdvisorSession | null = null;
     if (existing) {
       const normalized: PrivateAdvisorSession = {
         ...existing,
         phase: existing.phase ?? adapterPhase(existing.roles ?? []),
         runtime: existing.runtime ?? 'auto',
+        boardIdentity: existing.boardIdentity ?? '',
       };
-      const exact =
-        normalized.cycleId === input.cycleId &&
-        normalized.evidenceDigest === input.evidenceDigest &&
-        normalized.runtime === runtime &&
-        normalized.phase === phase &&
-        sameRoleSet(normalized.roles, roles);
-      if (normalized.idempotencyKey === input.idempotencyKey) {
-        if (!exact) {
+      // FR4: a session bound to a superseded board generation (its genesis no
+      // longer matches the committed event chain) never blocks, matches, or is
+      // reused by the current board — it is silently superseded by the fresh
+      // session written below. This is what lets a board re-inited at the same
+      // path — whose CYCLE-NNN ordinal collides with a prior generation's
+      // finalized session — prepare cleanly instead of dead-ending on
+      // `E_OPERATE_ADVISOR_ISOLATION` / a whole-cycle cancel.
+      const sessionMatchesBoard = normalized.boardIdentity === boardIdentity;
+      if (sessionMatchesBoard) {
+        const exact =
+          normalized.cycleId === input.cycleId &&
+          normalized.evidenceDigest === input.evidenceDigest &&
+          normalized.runtime === runtime &&
+          normalized.phase === phase &&
+          sameRoleSet(normalized.roles, roles);
+        if (normalized.idempotencyKey === input.idempotencyKey) {
+          if (!exact) {
+            throw new OperateError(
+              'E_OPERATE_ADVISOR_ISOLATION',
+              'Idempotent adapter prepare does not match its original cycle, evidence, runtime, phase, or role binding.',
+            );
+          }
+          if (sessionExpired(normalized) || normalized.state === 'cancelled') {
+            throw new OperateError(
+              'E_OPERATE_ADVISOR_FAILED',
+              'The prepared adapter session is expired or cancelled; request a fresh CLI-owned handoff.',
+              { recoveryCommand: retryRunCommand(normalized) },
+            );
+          }
+          return {
+            ...normalized,
+            leaseStatus: adapterLeaseStatus(normalized, nowMs),
+            handoff: await adapterHandoff(normalized),
+          };
+        }
+        if (!sessionExpired(normalized) && ['prepared', 'recording'].includes(normalized.state)) {
           throw new OperateError(
             'E_OPERATE_ADVISOR_ISOLATION',
-            'Idempotent adapter prepare does not match its original cycle, evidence, runtime, phase, or role binding.',
-          );
-        }
-        if (sessionExpired(normalized) || normalized.state === 'cancelled') {
-          throw new OperateError(
-            'E_OPERATE_ADVISOR_FAILED',
-            'The prepared adapter session is expired or cancelled; request a fresh CLI-owned handoff.',
+            `Cycle ${input.cycleId} already has an active adapter session with another binding.`,
             { recoveryCommand: retryRunCommand(normalized) },
           );
         }
-        return { ...normalized, handoff: await adapterHandoff(normalized) };
-      }
-      if (!sessionExpired(normalized) && ['prepared', 'recording'].includes(normalized.state)) {
-        throw new OperateError(
-          'E_OPERATE_ADVISOR_ISOLATION',
-          `Cycle ${input.cycleId} already has an active adapter session with another binding.`,
-          { recoveryCommand: retryRunCommand(normalized) },
-        );
-      }
-      if (
-        normalized.state === 'finalized' &&
-        !(normalized.phase === 'advisors' && phase === 'chair')
-      ) {
-        throw new OperateError(
-          'E_OPERATE_ADVISOR_ISOLATION',
-          `Cycle ${input.cycleId} already finalized its ${normalized.phase} adapter phase.`,
-          { recoveryCommand: retryRunCommand(normalized) },
-        );
-      }
-      if (exact && (sessionExpired(normalized) || normalized.state === 'cancelled')) {
-        recoverableSession = normalized;
+        // FR4: a finalized/expired/cancelled same-board session no longer forces
+        // a whole-cycle-cancelling error on a new compatible prepare. The
+        // advisors→chair continuation and a same-phase re-prepare both fall
+        // through and supersede the dead session; an exact dead session still
+        // recovers its already-built packs so recorded advisory work is reused
+        // rather than recomputed.
+        if (exact && (sessionExpired(normalized) || normalized.state === 'cancelled')) {
+          recoverableSession = normalized;
+        }
       }
     }
     const roleEvidence =
@@ -1040,11 +1340,27 @@ export async function operateAdapterLifecycle(input: {
       state,
       cycleId: input.cycleId,
     });
-    const rolePacks =
+    // FR1: resolve each requested role's dispatch mode for THIS runtime. A role
+    // that resolves to a native bounded lens (`resolution.native`) gets a
+    // body-free v1.3 mission packet; every other role keeps the v1.2 role pack.
+    // A recovered dead-but-exact session reuses its stored packs/packets verbatim.
+    const dispatchModes = await resolveBoundRoleDispatchModes({
+      projectRoot: input.projectRoot,
+      localRoot: input.localRoot,
+      runtime,
+      roles,
+    });
+    const missionRoleIds = readiness.roles
+      .map((role) => role.roleId)
+      .filter((roleId) => dispatchModes.get(roleId)?.native);
+    const packReadinessRoles = readiness.roles.filter(
+      (role) => !dispatchModes.get(role.roleId)?.native,
+    );
+    const rolePacks: Record<string, OperatingAdvisorPack> =
       recoverableSession?.rolePacks ??
       (Object.fromEntries(
         await Promise.all(
-          readiness.roles.map(async (role) => [
+          packReadinessRoles.map(async (role) => [
             role.roleId,
             await createOperatingAdvisorPack({
               cycleId: input.cycleId as string,
@@ -1055,9 +1371,75 @@ export async function operateAdapterLifecycle(input: {
           ]),
         ),
       ) as Record<string, OperatingAdvisorPack>);
-    const roleBriefs = Object.fromEntries(
-      Object.entries(rolePacks).map(([role, pack]) => [role, pack.roleBrief]),
+    // FR1: build the natively-dispatched roles' mission packets from live
+    // cycle/workspace state. Only reached when a role actually resolved mission,
+    // so a pure pack-mode prepare never loads config/workspace and stays
+    // byte-compatible with the v1.2 path. The evidence is ceiling-narrowed by
+    // `narrowMissionRootsToCeiling` first, so a declared read root can never reach
+    // an above-ceiling file even before the bounded reader's read-time check.
+    const roleMissionPackets: Record<string, OperatingMissionPacket> =
+      recoverableSession?.roleMissionPackets ??
+      (missionRoleIds.length > 0
+        ? await (async () => {
+            const [config, workspace, sensitivityCeiling] = await Promise.all([
+              readOperatingConfig(input.projectRoot, { localRoot: input.localRoot }),
+              refreshOperatingWorkspaceManifest(input.projectRoot, { localRoot: input.localRoot }),
+              readAdapterSensitivityCeiling(input.projectRoot, input.localRoot),
+            ]);
+            const packets = await buildOperatingMissionPackets({
+              cycleId: input.cycleId as string,
+              config,
+              workspace,
+              context,
+              evidence: narrowEvidenceToMissionCeiling(roleEvidence, sensitivityCeiling),
+              roleIds: missionRoleIds as OperatingRoleId[],
+              sensitivityCeiling,
+            });
+            return Object.fromEntries(packets.map((packet) => [packet.roleId, packet]));
+          })()
+        : {});
+    // FR2: fail closed before a native adapter session is assembled. A freshly
+    // built pack is already measured inside `createOperatingAdvisorPack`, but the
+    // session may instead be RECOVERED from disk (`recoverableSession`) — possibly
+    // written before pack-budget enforcement existed. Re-measure every pack that
+    // will back this session against its role's published v1.2 `maxInputBytes`, so
+    // an oversized pack can never reach the adapter from either source instead of
+    // silently constructing an oversized session. (Mission packets are measured
+    // against their derived mission budget inside `buildOperatingMissionPackets`.)
+    const packInputBudgets = new Map(
+      protocol.listOperatingRoles().map((role) => {
+        const maxInputBytes = (role as { budgets?: { maxInputBytes?: number } }).budgets
+          ?.maxInputBytes;
+        return [role.id, typeof maxInputBytes === 'number' ? maxInputBytes : 262_144] as const;
+      }),
     );
+    for (const [roleId, pack] of Object.entries(rolePacks)) {
+      assertOperatingAdvisorPackWithinBudget(pack, packInputBudgets.get(roleId) ?? 262_144);
+    }
+    // A mission role's brief facet is the same registry-derived brief pack mode
+    // uses, so the record path's brief-bound machinery (output limits, contract
+    // details, output-vs-brief checks) applies uniformly across both modes.
+    const roleBriefs: Record<string, OperatingAdvisorBrief> = {
+      ...Object.fromEntries(
+        Object.entries(rolePacks).map(([role, pack]) => [role, pack.roleBrief]),
+      ),
+      ...Object.fromEntries(
+        Object.keys(roleMissionPackets).map((role) => [
+          role,
+          protocol.createOperatingAdvisorBrief(role),
+        ]),
+      ),
+    };
+    // A role's committed input digest is its pack's `inputDigest` (pack mode) or
+    // its mission packet's `packetDigest` (mission mode). The record path binds a
+    // recorded result to exactly this value, and a recovered machine-local result
+    // is re-adopted only when it still matches it.
+    const roleInputDigests = Object.fromEntries(
+      roles.map((role) => {
+        const digest = roleMissionPackets[role]?.packetDigest ?? rolePacks[role]?.inputDigest;
+        return [role, digest] as const;
+      }),
+    ) as Record<string, `sha256:${string}`>;
     const validRecordedRoles: string[] = [];
     for (const role of roles) {
       const prior: OperatingRoleResult | null = await readFile(
@@ -1070,7 +1452,7 @@ export async function operateAdapterLifecycle(input: {
         prior &&
         prior.cycleId === input.cycleId &&
         prior.roleId === role &&
-        prior.inputDigest === rolePacks[role].inputDigest
+        prior.inputDigest === roleInputDigests[role]
       ) {
         try {
           await assertOperatingArtifact('operating-role-result', prior);
@@ -1084,6 +1466,7 @@ export async function operateAdapterLifecycle(input: {
     }
     const session: PrivateAdvisorSession = {
       implementation: 'openplanr-operate-adapter',
+      boardIdentity,
       cycleId: input.cycleId,
       evidenceDigest: input.evidenceDigest,
       phase,
@@ -1091,22 +1474,36 @@ export async function operateAdapterLifecycle(input: {
       lease: randomBytes(32).toString('base64url'),
       idempotencyKey: input.idempotencyKey,
       state: validRecordedRoles.length > 0 ? 'recording' : 'prepared',
-      expiresAt: new Date(Date.now() + 15 * 60 * 1_000).toISOString(),
+      expiresAt: new Date(nowMs + leaseDurationMs).toISOString(),
       roles,
       recordedRoles: validRecordedRoles.sort(),
       roleBriefs,
       rolePacks,
-      roleInputDigests: Object.fromEntries(
-        roles.map((role) => [role, rolePacks[role].inputDigest]),
-      ),
+      // Omitted entirely for a pure pack-mode session so its on-disk shape stays
+      // byte-compatible with the v1.2 path.
+      ...(Object.keys(roleMissionPackets).length > 0 ? { roleMissionPackets } : {}),
+      roleInputDigests,
     };
     await atomicPrivateWrite(target, session);
-    return { ...session, handoff: await adapterHandoff(session) };
+    return {
+      ...session,
+      // Expose the mission packets at `/data/missionPackets/<role>` so the v1.3
+      // record action's `dispatch.missionPacketPointer` resolves against the
+      // prepare result; pack roles keep resolving at `/data/rolePacks/<role>`.
+      ...(Object.keys(roleMissionPackets).length > 0 ? { missionPackets: roleMissionPackets } : {}),
+      leaseStatus: adapterLeaseStatus(session, nowMs),
+      handoff: await adapterHandoff(session),
+    };
   }
   if (!input.lease) {
     throw new OperateError('E_OPERATE_ADVISOR_ISOLATION', 'Adapter lease is required.');
   }
-  const session = await readAdapterSession(input.projectRoot, input.cycleId, input.localRoot);
+  const session = await readAdapterSession(
+    input.projectRoot,
+    input.cycleId,
+    input.localRoot,
+    nowMs,
+  );
   assertAdapterBinding(session, input.lease, input.idempotencyKey, input.evidenceDigest);
   await assertAdapterCycleBinding(
     {
@@ -1124,7 +1521,11 @@ export async function operateAdapterLifecycle(input: {
         { recoveryCommand: retryRunCommand(session) },
       );
     }
-    return { ...session, handoff: await adapterHandoff(session) };
+    return {
+      ...session,
+      leaseStatus: adapterLeaseStatus(session, nowMs),
+      handoff: await adapterHandoff(session),
+    };
   }
   if (input.action === 'cancel') {
     if (session.state === 'finalized') {
@@ -1137,6 +1538,7 @@ export async function operateAdapterLifecycle(input: {
     if (session.state === 'cancelled') {
       return {
         session: adapterSessionSummary(session),
+        leaseStatus: adapterLeaseStatus(session, nowMs),
         handoff: await adapterHandoff(session),
       };
     }
@@ -1144,6 +1546,7 @@ export async function operateAdapterLifecycle(input: {
     await atomicPrivateWrite(target, cancelled);
     return {
       session: adapterSessionSummary(cancelled),
+      leaseStatus: adapterLeaseStatus(cancelled, nowMs),
       handoff: await adapterHandoff(cancelled),
     };
   }
@@ -1210,6 +1613,9 @@ export async function operateAdapterLifecycle(input: {
     const submittedRecord =
       submitted && typeof submitted === 'object' ? (submitted as Record<string, unknown>) : {};
     let result: OperatingRoleResult;
+    // FR1: unresolvable-citation gaps opened while resolving a mission response's
+    // citations, surfaced in the record response for observability.
+    let recordGaps: OperatingDataGap[] = [];
     if (submittedRecord.kind === 'operating-role-result') {
       throw new OperateError(
         'E_OPERATE_ADVISOR_FAILED',
@@ -1248,12 +1654,54 @@ export async function operateAdapterLifecycle(input: {
           );
         }
       }
+      const missionPacket = session.roleMissionPackets?.[input.role];
       try {
-        result = await createNativeOperatingRoleResult({
-          pack: session.rolePacks[input.role],
-          response: submitted,
-          runtime: session.runtime,
-        });
+        if (missionPacket) {
+          // FR1: a mission-mode role submits the v1.3 citation-bearing response.
+          // Its citations flow into the engine's already-live citation gate,
+          // which resolves them against the cycle's pinned revision and mints the
+          // evidenceRefs that make the committed result v1.2-valid — the pack
+          // path is untouched.
+          const gated = await createNativeMissionOperatingRoleResult({
+            packet: missionPacket,
+            response: submitted,
+            runtime: session.runtime,
+            resolveCitations: async (roleResults) => {
+              const [workspace, sensitivityCeiling, config] = await Promise.all([
+                refreshOperatingWorkspaceManifest(input.projectRoot, {
+                  localRoot: input.localRoot,
+                }),
+                readAdapterSensitivityCeiling(input.projectRoot, input.localRoot),
+                readOperatingConfig(input.projectRoot, { localRoot: input.localRoot }).catch(
+                  () => null,
+                ),
+              ]);
+              return gateRecordedProposalCitations({
+                roleResults,
+                context: {
+                  projectRoot: input.projectRoot,
+                  cycleId: input.cycleId as string,
+                  descriptor: workspace.controlRepository,
+                  cache: new OperatingEvidenceCache(
+                    resolveOperatingPaths(input.projectRoot, {
+                      localRoot: input.localRoot,
+                    }).evidence,
+                    sensitivityCeiling,
+                  ),
+                  owner: config?.decisionOwner,
+                },
+              });
+            },
+          });
+          result = gated.result;
+          recordGaps = gated.gaps;
+        } else {
+          result = await createNativeOperatingRoleResult({
+            pack: session.rolePacks[input.role],
+            response: submitted,
+            runtime: session.runtime,
+          });
+        }
       } catch (error) {
         if (error instanceof OperateError && error.code === 'E_OPERATE_ADVISOR_FAILED') {
           throw new OperateError(error.code, error.message, {
@@ -1337,16 +1785,23 @@ export async function operateAdapterLifecycle(input: {
       path.join(path.dirname(target), `${input.cycleId}.${input.role}.json`),
       result,
     );
+    // A successful record refreshes the lease forward from now (FR10 / T-008):
+    // an advisor making steady progress across a multi-role dispatch keeps its
+    // session alive without a separate keep-alive call, while a session that goes
+    // idle past the refreshed window still lapses and is rejected on the next call.
     const updated: PrivateAdvisorSession = {
       ...session,
       state: 'recording',
       recordedRoles: [...new Set([...session.recordedRoles, input.role])].sort(),
+      expiresAt: new Date(nowMs + leaseDurationMs).toISOString(),
     };
     await atomicPrivateWrite(target, updated);
     return {
       recorded: input.role,
       result,
+      ...(recordGaps.length > 0 ? { citationGaps: recordGaps } : {}),
       session: adapterSessionSummary(updated),
+      leaseStatus: adapterLeaseStatus(updated, nowMs),
       handoff: await adapterHandoff(updated),
     };
   }
@@ -1376,6 +1831,7 @@ export async function operateAdapterLifecycle(input: {
     return {
       session: adapterSessionSummary(session),
       results: summaries,
+      leaseStatus: adapterLeaseStatus(session, nowMs),
       handoff: await adapterHandoff(session),
     };
   }
@@ -1473,6 +1929,7 @@ export async function operateAdapterLifecycle(input: {
       inputDigest: result.inputDigest,
       resultDigest: result.resultDigest,
     })),
+    leaseStatus: adapterLeaseStatus(finalized, nowMs),
     handoff: await adapterHandoff(finalized),
   };
 }

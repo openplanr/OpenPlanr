@@ -1,5 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { resolveAIProviderReadiness } from '../ai-service.js';
+import { loadConfig } from '../config-service.js';
 import { computeNextDueAt } from './cadence.js';
 import { canonicalDigest, sha256Digest } from './canonical.js';
 import {
@@ -22,6 +24,9 @@ import { parseStrictJson, readImportedEvidenceFile } from './evidence-import.js'
 import { createOperatingAction } from './interaction/action-service.js';
 import {
   persistableOperatingInitAnswers,
+  probeAvailableEvidenceSources,
+  probeGitUserName,
+  probePipelineInstalled,
   resumeGuidedSession,
   submitGuidedAnswers,
 } from './interaction/answer-service.js';
@@ -64,6 +69,7 @@ import {
   operateAdapterLifecycle,
   operatingCacheAction,
   operatingIntegrityAction,
+  purgeBoardMachineLocalCaches,
   repairOperatingSecurity,
 } from './maintenance.js';
 import { migrateOperatingStorageLayoutOnOpen } from './migration.js';
@@ -142,9 +148,26 @@ function stringList(value: unknown): string[] {
   return [];
 }
 
+/**
+ * Probe the coding-runtime identity of the host process from the environment
+ * markers set by the agent that launched the CLI. Mirrors the compatible-runtime
+ * detection in terminal-renderer.ts's `detectOperatingQuestionContext`, but keys
+ * off the launcher's env markers so a non-interactive/JSON invocation can stamp a
+ * truthful adapter block and resolve `auto` instead of stamping `unknown`/`none`
+ * or silently disabling native dispatch.
+ */
+function detectOperatingHostRuntime(): 'claude' | 'codex' | 'cursor' | undefined {
+  const env = process.env;
+  const marker = (value: string | undefined): boolean => (value ?? '').length > 0;
+  if (marker(env.CLAUDECODE) || marker(env.CLAUDE_CODE_ENTRYPOINT)) return 'claude';
+  if (marker(env.CURSOR_TRACE_ID) || marker(env.CURSOR_AGENT)) return 'cursor';
+  if (marker(env.CODEX_SANDBOX) || marker(env.CODEX_HOME)) return 'codex';
+  return undefined;
+}
+
 async function resolvedOperatingRuntime(projectRoot: string, requested: string): Promise<string> {
   if (requested !== 'auto') return requested;
-  return readFile(
+  const persisted = await readFile(
     path.join(resolveOperatingPaths(projectRoot).localRoot, 'preferences.json'),
     'utf8',
   )
@@ -153,9 +176,15 @@ async function resolvedOperatingRuntime(projectRoot: string, requested: string):
       return typeof runtime === 'string' && runtime ? runtime : 'auto';
     })
     .catch(() => 'auto');
+  if (persisted !== 'auto') return persisted;
+  // A persisted (or absent) `auto` preference must never silently disable native
+  // dispatch inside a capable host: resolve it to the detected runtime identity
+  // so `usesNativeOperatingAdvisors` evaluates the real host, not the `auto`
+  // placeholder that always returns false.
+  return detectOperatingHostRuntime() ?? 'auto';
 }
 
-async function usesNativeOperatingAdvisors(
+export async function usesNativeOperatingAdvisors(
   projectRoot: string,
   requestedRuntime: string,
 ): Promise<boolean> {
@@ -184,7 +213,9 @@ async function usesNativeOperatingAdvisors(
   const adapter = registry.adapters?.find((entry) => entry.id === adapterId);
   if (adapter?.capabilities?.operatingBoard !== true) return false;
   if (
-    ['native-isolated', 'native-bounded'].includes(
+    // `native-read-only` is the US-001/T-001 adapters-registry capability name that
+    // supersedes the earlier isolation labels; recognize it alongside them.
+    ['native-isolated', 'native-bounded', 'native-read-only'].includes(
       adapter.capabilities.operatingAdvisorDispatch ?? '',
     )
   ) {
@@ -258,6 +289,58 @@ function success(
 }
 
 /**
+ * A healthy continuation (FR7/E-007): a guided-stage advance
+ * (`E_OPERATE_INPUT_REQUIRED`) or first-use provider consent
+ * (`E_OPERATE_AUTHORITY_REQUIRED`) is not a failure. It is returned as an
+ * `ok: true` handoff carrying a machine-readable `flow: 'handoff'` discriminator
+ * (and the originating `code`), mirroring `run`'s adapter-handoff shape so a
+ * harness reads the pause without treating it as a red exit. No `exitCode` is
+ * set: the CLI leaves the process exit code at 0 for `ok: true` results.
+ */
+function handoffContinuation(
+  action: string,
+  code: 'E_OPERATE_INPUT_REQUIRED' | 'E_OPERATE_AUTHORITY_REQUIRED',
+  value: Partial<
+    Omit<OperateActionResult, 'schemaVersion' | 'protocolVersion' | 'ok' | 'action' | 'flow'>
+  > = {},
+): OperateActionResult {
+  return { ...success(action, value), code, flow: 'handoff' };
+}
+
+/**
+ * First-use / renewal provider consent is disclosed by
+ * `ensureOperatingProviderConsent` (advisors.ts) as an
+ * `E_OPERATE_AUTHORITY_REQUIRED` carrying the full policy disclosure
+ * (`endpoint`, `permittedDataClasses`, `policyDigest`). That specific
+ * disclosure is a continuation, not a refusal — unlike every other
+ * `E_OPERATE_AUTHORITY_REQUIRED` (a mutation attempted without `--yes`), which
+ * stays an `ok: false` exit-4 failure so the authority model is unchanged.
+ */
+function isProviderConsentHandoff(error: unknown): error is OperateError {
+  if (!(error instanceof OperateError) || error.code !== 'E_OPERATE_AUTHORITY_REQUIRED') {
+    return false;
+  }
+  const details = error.details;
+  return (
+    typeof details === 'object' &&
+    details !== null &&
+    'policyDigest' in details &&
+    'endpoint' in details &&
+    'permittedDataClasses' in details
+  );
+}
+
+function providerConsentContinuation(action: string, error: OperateError): OperateActionResult {
+  const retry = `planr operate ${action} --yes`;
+  return handoffContinuation(action, 'E_OPERATE_AUTHORITY_REQUIRED', {
+    message: error.message,
+    data: error.details,
+    nextActions: [retry],
+    next: [retry],
+  });
+}
+
+/**
  * Stable process exit classes for automation.
  *
  * 2 — invalid invocation or configuration
@@ -269,6 +352,15 @@ function success(
  *
  * Keep this exhaustive so adding a public Operate error cannot silently fall
  * through to the internal-error class.
+ *
+ * FR7/E-007 continuation note: `E_OPERATE_INPUT_REQUIRED` and
+ * `E_OPERATE_AUTHORITY_REQUIRED` keep this class-4 mapping for the cases that
+ * are genuine refusals — a mutation attempted without `--yes` still fails with
+ * `ok: false` and exit 4. But a *healthy continuation* — a guided-stage advance
+ * or first-use provider consent — is not a failure: it is returned as an
+ * `ok: true` handoff (`flow: 'handoff'`) with no failure exit code, mirroring
+ * `run`'s adapter handoff, so a harness never paints the happy path red. The
+ * numeric class below is therefore only consulted for the failure branch.
  */
 const OPERATE_EXIT_CODES = {
   E_OPERATE_INTERNAL: 1,
@@ -323,8 +415,17 @@ function operateExitCode(code: OperateErrorCode): number {
   return OPERATE_EXIT_CODES[code];
 }
 
-function failure(action: string, error: unknown): OperateActionResult {
+export function failure(action: string, error: unknown): OperateActionResult {
   const code = error instanceof OperateError ? error.code : 'E_OPERATE_INTERNAL';
+  // E_OPERATE_INTERNAL must never be zero-information: record the redacted error
+  // class/name (no message or stack, which can carry paths or secrets) so the
+  // diagnostics export and automation callers can classify the internal failure.
+  const internalErrorClass =
+    code === 'E_OPERATE_INTERNAL'
+      ? error instanceof Error && typeof error.name === 'string' && error.name.length > 0
+        ? error.name
+        : 'Error'
+      : undefined;
   const confirmationAction =
     error instanceof OperateError &&
     error.details?.action &&
@@ -389,12 +490,31 @@ function failure(action: string, error: unknown): OperateActionResult {
     counts: {},
     warnings: [],
     nextActions,
-    data: error instanceof OperateError ? error.details : undefined,
+    data:
+      error instanceof OperateError
+        ? error.details
+        : internalErrorClass
+          ? { errorClass: internalErrorClass }
+          : undefined,
     next: nextActions,
     exitCode: operateExitCode(code),
   };
 }
 
+/**
+ * Reduce recovery `nextActions` to the set of public `planr operate` commands
+ * that back the structured actions. The digest-bound authority flags
+ * (`--yes`, `--confirm <digest>`, `--preview-digest <digest>`) are stripped from
+ * the *command* string — a raw sha256 digest must never enter a structured
+ * command (it would trip the sensitive-data guard in `assertSafeCommand`).
+ *
+ * FR8/E-008: stripping them here no longer strands a runner. For a
+ * digest-confirmable command the exact, ready-to-run argv (including the real
+ * `--confirm <digest> --yes` token) is re-surfaced on the structured action as
+ * `confirmArgv` in `attachStructuredActions`, so the runner never has to
+ * re-synthesize a confirmation token it was handed. A command whose only
+ * authority is `--yes` is never given a confirmationDigest at all.
+ */
 function publicActionCommands(nextActions: readonly string[]): string[] {
   return [
     ...new Set(
@@ -410,6 +530,18 @@ function publicActionCommands(nextActions: readonly string[]): string[] {
         .filter((value) => /^planr\s+/.test(value)),
     ),
   ];
+}
+
+/**
+ * The digest-bound confirmation flag a public command's CLI actually accepts, or
+ * `null` when its only authority is `--yes`. A confirmationDigest is meaningful
+ * only for a command that can consume it via `--confirm`; a `--yes`-only command
+ * (e.g. `operate run`) must never be handed one (FR8/E-008).
+ */
+function commandConfirmFlag(command: string): '--confirm' | null {
+  return /\boperate\s+init\b/.test(command) || /\bevidence\s+classify\b/.test(command)
+    ? '--confirm'
+    : null;
 }
 
 function hasFlag(command: string, flag: string): boolean {
@@ -460,7 +592,9 @@ async function attachStructuredActions(
   request: OperateActionRequest,
   result: OperateActionResult,
 ): Promise<OperateActionResult> {
-  if (result.actions?.length || result.action === 'input_required') return result;
+  if (result.actions?.length || result.action === 'input_required' || result.flow === 'handoff') {
+    return result;
+  }
   const commands = publicActionCommands(result.nextActions);
   if (commands.length === 0) return result;
   // Planning-only installations intentionally omit the portable pipeline and
@@ -486,6 +620,7 @@ async function attachStructuredActions(
   const actions = [];
   for (const [index, command] of commands.entries()) {
     const effect = await actionEffect(request, command);
+    const confirmFlag = commandConfirmFlag(command);
     const id = `operate.next.${canonicalDigest({ command }).slice(
       'sha256:'.length,
       'sha256:'.length + 20,
@@ -518,8 +653,29 @@ async function attachStructuredActions(
             },
           }),
     });
-    actions.push(created.action);
+    let action = created.action;
+    // FR8/E-008: `operate run` authorizes with `--yes` alone — its CLI accepts no
+    // `--confirm` flag — so it must never carry a confirmationDigest a runner
+    // could never pass. It still appears as a structured action (mirroring the
+    // handoff `run` continuation) but with its digest binding cleared.
+    if (/\boperate\s+run\b/.test(command)) {
+      action = {
+        ...action,
+        requiresConfirmation: false,
+        confirmationScope: null,
+        confirmationDigest: null,
+      };
+    }
+    // A digest-confirmable action (`--confirm <digest>`) carries its exact,
+    // ready-to-run argv so a runner never has to re-synthesize the confirmation
+    // token it was already handed.
+    const confirmArgv =
+      confirmFlag && action.confirmationDigest
+        ? [...command.split(/\s+/), confirmFlag, action.confirmationDigest, '--yes']
+        : undefined;
+    actions.push(confirmArgv ? { ...action, confirmArgv } : action);
   }
+  if (actions.length === 0) return result;
   return { ...result, actions };
 }
 
@@ -748,22 +904,14 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
           });
     supplied = normalizeOperatingInitializationAnswers(resumedSession.answers);
     if (resumedSession.status === 'input-required') {
-      return {
-        schemaVersion: '1.0.0',
-        protocolVersion: '1.2.0',
-        ok: false,
-        action: 'input_required',
-        code: 'E_OPERATE_INPUT_REQUIRED',
+      // FR7/E-007: a guided-stage advance is a healthy continuation, not a
+      // failure. Report it as an `ok: true` handoff (`flow: 'handoff'`) carrying
+      // the next questionnaire, mirroring `run`'s adapter handoff.
+      return handoffContinuation('input_required', 'E_OPERATE_INPUT_REQUIRED', {
         message: 'Operating Board initialization needs explicit human input.',
         state: resumedSession.session.state,
-        paths: {},
-        counts: {},
-        warnings: [],
-        nextActions: [],
-        next: [],
         questionnaire: resumedSession.questionnaire,
-        exitCode: operateExitCode('E_OPERATE_INPUT_REQUIRED'),
-      };
+      });
     }
   }
   let customProfile: Partial<OperatingProfile> | undefined;
@@ -779,13 +927,37 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
       '--profile-file is valid only with --profile custom.',
     );
   }
+  // Probe the real host runtime instead of stamping `unknown`/`none`: an explicit
+  // --runtime flag wins, otherwise the launcher's env markers name the host so the
+  // questionnaire's adapter block is truthful (and the runtime question can be a
+  // detect-don't-ask suggestion rather than a required prompt).
+  const detectedHostRuntime = detectOperatingHostRuntime();
+  const requestedRuntimeOption = option<string>(request, 'runtime', 'auto');
+  // Probe the same signals the terminal path does so the JSON/native init path is
+  // equally truthful: the decision-owner suggestion reaches this path (gitUserName),
+  // the "locally available" source claim is real (availableSources), and the
+  // planning-engine detects pipeline-po when a compatible pipeline is installed.
+  const [gitUserName, availableSources] = await Promise.all([
+    probeGitUserName(request.projectRoot),
+    probeAvailableEvidenceSources(request.projectRoot),
+  ]);
   const context = {
     projectRoot: request.projectRoot,
     ...bindings,
+    ...(detectedHostRuntime ? { detectedRuntime: detectedHostRuntime } : {}),
+    ...(gitUserName ? { gitUserName } : {}),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    availableSources: ['repository', 'planr', 'git', 'file-import'],
-    runtime: option<string>(request, 'runtime', 'unknown'),
-    interaction: request.interactive ? ('terminal' as const) : ('none' as const),
+    availableSources,
+    pipelineInstalled: probePipelineInstalled(),
+    runtime:
+      requestedRuntimeOption && requestedRuntimeOption !== 'auto'
+        ? requestedRuntimeOption
+        : (detectedHostRuntime ?? (request.interactive ? 'terminal' : 'unknown')),
+    interaction: detectedHostRuntime
+      ? ('native' as const)
+      : request.interactive
+        ? ('terminal' as const)
+        : ('none' as const),
   };
   const questionState = await evaluateOperatingInitQuestions({
     answers: supplied,
@@ -806,22 +978,12 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
       persistedAnswers: persistableOperatingInitAnswers(questionState.answers, context),
       localRoot,
     });
-    return {
-      schemaVersion: '1.0.0',
-      protocolVersion: '1.2.0',
-      ok: false,
-      action: 'input_required',
-      code: 'E_OPERATE_INPUT_REQUIRED',
-      message: 'Operating Board initialization needs explicit human input.',
-      state: null,
-      paths: {},
-      counts: {},
-      warnings: [],
-      nextActions: [],
-      next: [],
+    // FR7/E-007: the first guided-stage prompt is a healthy continuation — an
+    // `ok: true` handoff (`flow: 'handoff'`) carrying the questionnaire, not an
+    // exit-4 failure.
+    return handoffContinuation('input_required', 'E_OPERATE_INPUT_REQUIRED', {
       questionnaire,
-      exitCode: operateExitCode('E_OPERATE_INPUT_REQUIRED'),
-    };
+    });
   }
   const profile = supplied.profile as OperatingProfile['id'];
   const decisionOwner =
@@ -955,6 +1117,11 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
     preview,
     confirmationDigest: preview.previewDigest,
   });
+  // FR4: a committed init apply is a fresh (re-genesised) board. Purge the
+  // machine-local advisor sessions and incremental evidence baselines a prior
+  // generation left at this path so the new board never inherits a stale
+  // session or a baseline bound to a superseded workspace/board identity.
+  await purgeBoardMachineLocalCaches({ projectRoot: request.projectRoot, localRoot });
   if (resumedSession) {
     const appliedAt = new Date().toISOString();
     await updateGuidedSession({
@@ -1204,6 +1371,30 @@ async function run(request: OperateActionRequest): Promise<OperateActionResult> 
     !option(request, 'dryRun', false) &&
     !option(request, 'reviewOnly', false) &&
     nativeAdvisors;
+  // Preflight the structured-provider key on a non-offline, non-native preview so
+  // `run --preview` names a missing key before any cycle starts, rather than
+  // surfacing it only when a real cycle reaches the provider path. Native and
+  // offline runs never need the structured key, so they skip the check.
+  const previewProviderWarnings: string[] = [];
+  if (
+    option(request, 'preview', false) &&
+    !option(request, 'offline', false) &&
+    !option(request, 'reviewOnly', false) &&
+    !nativeAdvisors
+  ) {
+    const openPlanrConfig = await loadConfig(request.projectRoot).catch(() => null);
+    const readiness = openPlanrConfig
+      ? await resolveAIProviderReadiness(openPlanrConfig)
+      : {
+          configured: false,
+          keyResolvable: false,
+          remedy:
+            'No AI provider is configured. Run `planr config set-provider <name>` then `planr config set-key <provider>`, or run offline with --offline.',
+        };
+    if (!readiness.keyResolvable && readiness.remedy) {
+      previewProviderWarnings.push(readiness.remedy);
+    }
+  }
   const result = await runOperatingCycle({
     projectRoot: request.projectRoot,
     cycleId: option(request, 'cycleId', undefined),
@@ -1267,7 +1458,13 @@ async function run(request: OperateActionRequest): Promise<OperateActionResult> 
     },
     counts,
     handoff,
-    warnings: [...new Set([...(result.cycle.warnings ?? []), ...stringList(projected?.warnings)])],
+    warnings: [
+      ...new Set([
+        ...(result.cycle.warnings ?? []),
+        ...stringList(projected?.warnings),
+        ...previewProviderWarnings,
+      ]),
+    ],
     nextActions,
     data: result,
     next: nextActions,
@@ -1276,10 +1473,16 @@ async function run(request: OperateActionRequest): Promise<OperateActionResult> 
 
 async function reviewOrBrief(request: OperateActionRequest): Promise<OperateActionResult> {
   const cycleId = argument(request, 'cycleId');
+  // FR3/E-003: the human review gate renders report Markdown (brief + per-role
+  // lens reports + exact next actions), never a raw `JSON.stringify` of the
+  // state. `--json` keeps returning the exact raw state object, byte-unchanged.
+  const human = request.action === 'review' && !option(request, 'json', false);
   const data = await readOperatingReview({
     projectRoot: request.projectRoot,
     cycleId,
     brief: request.action === 'brief',
+    human,
+    localRoot: option<string | undefined>(request, 'localRoot', undefined),
   });
   return success(request.action, {
     data,
@@ -1730,6 +1933,17 @@ export async function executeOperateAction(
     }
     return await attachStructuredActions(request, await handler(request));
   } catch (error) {
+    // FR7/E-007: first-use provider consent is a healthy continuation, not a
+    // failure — return the `ok: true` handoff shape instead of an exit-4 error.
+    // Every other authority/error stays a genuine failure.
+    if (isProviderConsentHandoff(error)) {
+      const continuation = providerConsentContinuation(request.action, error);
+      try {
+        return await attachStructuredActions(request, continuation);
+      } catch {
+        return continuation;
+      }
+    }
     try {
       return await attachStructuredActions(request, failure(request.action, error));
     } catch {

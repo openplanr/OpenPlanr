@@ -15,6 +15,7 @@ import type {
   AIRequestOptions,
   AIUsage,
 } from '../ai/types.js';
+import { ENV_KEY_MAP } from '../ai/types.js';
 import type { OpenPlanrConfig } from '../models/types.js';
 import { createSpinner, formatUsage } from '../utils/logger.js';
 import { resolveApiKey } from './credentials-service.js';
@@ -53,9 +54,64 @@ export async function getAIProvider(config: OpenPlanrConfig): Promise<AIProvider
 
 /**
  * Check whether AI is configured and available for a given project config.
+ *
+ * This is the cheap synchronous "a provider is named" check. It intentionally
+ * does NOT resolve the API key — a named provider whose key is unreachable in
+ * the current (possibly sandboxed) process still returns `true` here. Use
+ * {@link resolveAIProviderReadiness} for the key-resolvability preflight before
+ * a run so a missing key is named up front instead of crashing mid-cycle.
  */
 export function isAIConfigured(config: OpenPlanrConfig): boolean {
   return config.ai != null && config.ai.provider != null;
+}
+
+/** Outcome of the AI provider readiness preflight. */
+export interface AIProviderReadiness {
+  /** A provider is named in the project config. */
+  configured: boolean;
+  /** The provider's credential could be resolved (or the provider needs none). */
+  keyResolvable: boolean;
+  /** The named provider, when one is configured. */
+  provider?: string;
+  /** Actionable remedy text when the provider is not ready. */
+  remedy?: string;
+}
+
+/**
+ * Preflight the AI provider for a project: confirm a provider is named AND that
+ * its API key actually resolves in this environment (env var, OS keychain, or
+ * encrypted file). Local providers (Ollama) authenticate against a local
+ * endpoint and need no key. Returns an actionable remedy naming the missing key
+ * so `run --preview`/readiness can surface it before a cycle starts.
+ */
+export async function resolveAIProviderReadiness(
+  config: OpenPlanrConfig,
+): Promise<AIProviderReadiness> {
+  if (!isAIConfigured(config) || config.ai == null) {
+    return {
+      configured: false,
+      keyResolvable: false,
+      remedy:
+        'No AI provider is configured. Run `planr config set-provider <name>` then `planr config set-key <provider>`, or run offline with --offline.',
+    };
+  }
+  const provider = config.ai.provider;
+  if (provider === 'ollama') {
+    return { configured: true, keyResolvable: true, provider };
+  }
+  const apiKey = await resolveApiKey(provider);
+  if (apiKey) {
+    return { configured: true, keyResolvable: true, provider };
+  }
+  const envVar = ENV_KEY_MAP[provider];
+  return {
+    configured: true,
+    keyResolvable: false,
+    provider,
+    remedy: `No API key resolved for ${provider}. Run \`planr config set-key ${provider}\`${
+      envVar ? ` or export ${envVar}` : ''
+    }, or run offline with --offline.`,
+  };
 }
 
 /**

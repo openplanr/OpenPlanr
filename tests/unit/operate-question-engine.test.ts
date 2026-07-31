@@ -33,7 +33,7 @@ const foundation: OperatingInitAnswers = {
 
 const charter: OperatingInitAnswers['charter'] = {
   purpose: 'Help product teams make cited operating decisions.',
-  stage: 'Growth',
+  stage: 'growth',
   businessModel: 'Subscription SaaS',
   idealCustomer: 'Technical founders',
   goals: ['Reach a trustworthy operating brief quickly'],
@@ -55,7 +55,47 @@ describe('Operating Board question engine', () => {
       required: true,
     });
     expect(result.answers.decisionOwner).toBeUndefined();
-    expect(result.questions.map((question) => question.questionId)).toContain('component-roots');
+    // Dieted first-run batch: only required-missing plus explicitly flagged
+    // (suggestion-bearing) questions ship. The detected runtime is a suggestion,
+    // so it is surfaced; cadence (defaulted), component-roots (optional), and the
+    // removed timezone question are not dumped into the batch.
+    const foundationIds = result.questions.map((question) => question.questionId);
+    expect(foundationIds).toEqual(
+      expect.arrayContaining([
+        'profile',
+        'decision-owner',
+        'planning-engine',
+        'sensitivity-ceiling',
+        'sources',
+        'runtime',
+      ]),
+    );
+    expect(foundationIds).not.toContain('cadence');
+    expect(foundationIds).not.toContain('component-roots');
+    expect(foundationIds).not.toContain('timezone');
+  });
+
+  it('reaches preview-ready with cadence and component-roots unanswered', async () => {
+    const answers: OperatingInitAnswers = {
+      profile: 'saas',
+      decisionOwner: 'Asem',
+      planningEngine: 'openplanr',
+      sensitivityCeiling: 'internal',
+      sources: ['repository', 'planr', 'git'],
+      // cadence, componentRoots, runtime (detected), and known-unknowns are
+      // intentionally omitted — none of them block reaching the write-free preview.
+      charter: {
+        purpose: 'Help product teams make cited operating decisions.',
+        stage: 'growth',
+        businessModel: 'Subscription SaaS',
+        idealCustomer: 'Technical founders',
+        goals: ['Reach a trustworthy operating brief quickly'],
+        successMetrics: ['Time to first brief under five minutes'],
+        guardrails: ['No external effects without explicit approval'],
+      },
+    };
+    const result = await evaluateOperatingInitQuestions({ answers, context });
+    expect(result).toMatchObject({ status: 'preview-ready', stage: 'review' });
   });
 
   it('advances through Foundation, Product charter, and Review without inferring governance', async () => {
@@ -65,6 +105,7 @@ describe('Operating Board question engine', () => {
     });
     expect(product).toMatchObject({ status: 'input-required', stage: 'product-charter' });
     if (product.status !== 'input-required') return;
+    // known-unknowns is now optional and no longer part of the required batch.
     expect(product.questions.map((question) => question.questionId)).toEqual([
       'purpose',
       'product-stage',
@@ -73,7 +114,6 @@ describe('Operating Board question engine', () => {
       'goals',
       'success-metrics',
       'guardrails',
-      'known-unknowns',
     ]);
 
     const review = await evaluateOperatingInitQuestions({
@@ -127,7 +167,6 @@ describe('Operating Board question engine', () => {
       ['planning-engine', 'openplanr'],
       ['runtime', 'codex'],
       ['cadence', 'manual'],
-      ['timezone', 'Europe/Istanbul'],
       ['sensitivity-ceiling', 'internal'],
       ['sources', ['repository', 'planr', 'git']],
     ] as const) {
@@ -139,7 +178,6 @@ describe('Operating Board question engine', () => {
       planningEngine: 'openplanr',
       runtime: 'codex',
       cadence: 'manual',
-      timezone: 'Europe/Istanbul',
       sensitivityCeiling: 'internal',
       sources: ['repository', 'planr', 'git'],
     });

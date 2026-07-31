@@ -801,4 +801,237 @@ describe('native operating advisor lifecycle', () => {
     });
     expect((recovered as { lease: string }).lease).not.toBe(session.lease);
   });
+
+  it('surfaces the lease expiry and remaining time in prepare output and handoff (default 15 minutes)', async () => {
+    const fixture = await advisingCycle();
+    const base = Date.parse('2026-07-28T10:00:00.000Z');
+    const fifteenMinutes = 15 * 60 * 1_000;
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'lease-surface',
+      now: () => new Date(base),
+    })) as {
+      expiresAt: string;
+      leaseStatus: {
+        expiresAt: string;
+        remainingMs: number;
+        remainingSeconds: number;
+        expired: boolean;
+      };
+      handoff: { binding: { expiresAt: string | null } };
+    };
+
+    // With no machine-local preference, the lease keeps its historical 15-minute
+    // default, measured from the injected clock rather than wall-clock.
+    expect(prepared.expiresAt).toBe(new Date(base + fifteenMinutes).toISOString());
+    expect(prepared.leaseStatus).toEqual({
+      expiresAt: new Date(base + fifteenMinutes).toISOString(),
+      remainingMs: fifteenMinutes,
+      remainingSeconds: 900,
+      expired: false,
+    });
+    // The handoff a native runtime consumes surfaces the same expiry it must honor.
+    expect(prepared.handoff.binding.expiresAt).toBe(prepared.expiresAt);
+  });
+
+  it('refreshes the lease on each successful record and still enforces expiry after the window lapses', async () => {
+    const fixture = await advisingCycle();
+    let clockMs = Date.parse('2026-07-28T10:00:00.000Z');
+    const now = () => new Date(clockMs);
+    const fifteenMinutes = 15 * 60 * 1_000;
+
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'lease-refresh',
+      now,
+    })) as { roles: string[]; lease: string; expiresAt: string };
+    const preparedExpiry = prepared.expiresAt;
+    expect(Date.parse(preparedExpiry)).toBe(clockMs + fifteenMinutes);
+
+    // Advance five minutes and record the first role: the record must push expiry
+    // forward to now + 15 minutes, not leave the original prepare-time expiry.
+    clockMs += 5 * 60 * 1_000;
+    const recorded = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'record',
+      cycleId: 'CYCLE-001',
+      lease: prepared.lease,
+      idempotencyKey: 'lease-refresh',
+      role: prepared.roles[0],
+      stdin: JSON.stringify({ outcome: 'quiet', proposals: [], gaps: [], conflicts: [] }),
+      now,
+    })) as {
+      session: { expiresAt: string };
+      leaseStatus: { expiresAt: string; remainingMs: number };
+      handoff: { binding: { expiresAt: string | null } };
+    };
+    const refreshedExpiry = new Date(clockMs + fifteenMinutes).toISOString();
+    expect(recorded.session.expiresAt).toBe(refreshedExpiry);
+    expect(Date.parse(recorded.session.expiresAt)).toBeGreaterThan(Date.parse(preparedExpiry));
+    expect(recorded.leaseStatus.expiresAt).toBe(refreshedExpiry);
+    expect(recorded.leaseStatus.remainingMs).toBe(fifteenMinutes);
+    expect(recorded.handoff.binding.expiresAt).toBe(refreshedExpiry);
+
+    // The refresh is persisted to the session file, not just echoed in the response.
+    const sessionPath = join(
+      resolveOperatingPaths(fixture.projectRoot, { localRoot: fixture.localRoot }).advisors,
+      'CYCLE-001.json',
+    );
+    const persisted = JSON.parse(await readFile(sessionPath, 'utf8')) as { expiresAt: string };
+    expect(persisted.expiresAt).toBe(refreshedExpiry);
+
+    // Let the refreshed window lapse and attempt the next record: expiry is still
+    // enforced even though an earlier record had pushed it forward.
+    clockMs += fifteenMinutes + 1;
+    await expect(
+      operateAdapterLifecycle({
+        ...fixture,
+        action: 'record',
+        cycleId: 'CYCLE-001',
+        lease: prepared.lease,
+        idempotencyKey: 'lease-refresh',
+        role: prepared.roles[1],
+        stdin: JSON.stringify({ outcome: 'quiet', proposals: [], gaps: [], conflicts: [] }),
+        now,
+      }),
+    ).rejects.toMatchObject({
+      code: 'E_OPERATE_ADVISOR_FAILED',
+      details: { recoveryCommand: expect.stringContaining('operate run') },
+    });
+  });
+
+  it('honors a machine-local configured lease duration on prepare', async () => {
+    const fixture = await advisingCycle();
+    const base = Date.parse('2026-07-28T10:00:00.000Z');
+    const thirtyMinutes = 30 * 60 * 1_000;
+    const paths = resolveOperatingPaths(fixture.projectRoot, { localRoot: fixture.localRoot });
+    await mkdir(paths.localRoot, { recursive: true });
+    await writeFile(
+      join(paths.localRoot, 'preferences.json'),
+      `${JSON.stringify({
+        runtime: 'auto',
+        timezone: 'UTC',
+        sensitivityCeiling: 'internal',
+        evidenceTtlMs: 7 * 24 * 60 * 60 * 1_000,
+        enabledSources: ['repository'],
+        adapterLeaseDurationMs: thirtyMinutes,
+      })}\n`,
+      { mode: 0o600 },
+    );
+
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'lease-configurable',
+      now: () => new Date(base),
+    })) as { expiresAt: string; leaseStatus: { remainingMs: number } };
+
+    // Prepare honors the configured 30-minute lease instead of the 15-minute default.
+    expect(prepared.expiresAt).toBe(new Date(base + thirtyMinutes).toISOString());
+    expect(prepared.leaseStatus.remainingMs).toBe(thirtyMinutes);
+  });
+
+  it('supersedes a finalized session from a superseded board generation instead of a fatal cancel', async () => {
+    const fixture = await advisingCycle();
+    const paths = resolveOperatingPaths(fixture.projectRoot, { localRoot: fixture.localRoot });
+    const sessionPath = join(paths.advisors, 'CYCLE-001.json');
+    await mkdir(paths.advisors, { recursive: true });
+    // A finalized adapter session left at this cycle path by a PRIOR board
+    // generation: its boardIdentity does not match the current committed genesis.
+    // Before FR4 this dead session forced E_OPERATE_ADVISOR_ISOLATION ("already
+    // finalized") with only a whole-cycle re-run as the path forward.
+    await writeFile(
+      sessionPath,
+      `${JSON.stringify({
+        implementation: 'openplanr-operate-adapter',
+        boardIdentity: `sha256:${'0'.repeat(64)}`,
+        cycleId: 'CYCLE-001',
+        evidenceDigest: fixture.evidenceDigest,
+        phase: 'advisors',
+        runtime: 'fixture',
+        lease: 'prior-generation-lease',
+        idempotencyKey: 'prior-generation-key',
+        state: 'finalized',
+        expiresAt: '2099-01-01T00:00:00.000Z',
+        roles: ['strategy-finance', 'technology-risk'],
+        recordedRoles: ['strategy-finance', 'technology-risk'],
+        roleInputDigests: {},
+        roleBriefs: {},
+        rolePacks: {},
+      })}\n`,
+      { mode: 0o600 },
+    );
+
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'current-generation-prepare',
+    })) as { state: string; roles: string[] };
+
+    // The stale finalized session is superseded, not fatal: a fresh compatible
+    // prepare succeeds and returns a working session for the current board.
+    expect(prepared.state).toBe('prepared');
+    expect(prepared.roles).toEqual(['strategy-finance', 'technology-risk']);
+  });
+
+  it('binds adapter sessions to board identity so a re-inited board never collides with a prior generation', async () => {
+    const fixture = await advisingCycle();
+    const replay = await new OperatingEventStore(fixture.projectRoot, {
+      localRoot: fixture.localRoot,
+    }).replay();
+    const genesis = replay.events.find((event) => event.previousEventHash === null)?.eventHash;
+    expect(genesis).toMatch(/^sha256:[a-f0-9]{64}$/);
+    const priorGeneration = `sha256:${'0'.repeat(64)}`;
+    expect(genesis).not.toBe(priorGeneration);
+
+    const paths = resolveOperatingPaths(fixture.projectRoot, { localRoot: fixture.localRoot });
+    const sessionPath = join(paths.advisors, 'CYCLE-001.json');
+    await mkdir(paths.advisors, { recursive: true });
+    await writeFile(
+      sessionPath,
+      `${JSON.stringify({
+        implementation: 'openplanr-operate-adapter',
+        boardIdentity: priorGeneration,
+        cycleId: 'CYCLE-001',
+        evidenceDigest: fixture.evidenceDigest,
+        phase: 'advisors',
+        runtime: 'fixture',
+        lease: 'prior-generation-lease',
+        idempotencyKey: 'prior-generation-key',
+        state: 'prepared',
+        expiresAt: '2099-01-01T00:00:00.000Z',
+        roles: ['strategy-finance', 'technology-risk'],
+        recordedRoles: [],
+        roleInputDigests: {},
+        roleBriefs: {},
+        rolePacks: {},
+      })}\n`,
+      { mode: 0o600 },
+    );
+
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'generation-b-prepare',
+    })) as { boardIdentity: string };
+
+    // Generation B binds the session to its own genesis and is never blocked by,
+    // nor adopts, the prior generation's identity.
+    expect(prepared.boardIdentity).toBe(genesis);
+    expect(prepared.boardIdentity).not.toBe(priorGeneration);
+    const persisted = JSON.parse(await readFile(sessionPath, 'utf8')) as { boardIdentity: string };
+    expect(persisted.boardIdentity).toBe(genesis);
+  });
 });

@@ -1,7 +1,12 @@
+import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { resolveGuidedInteractionValidators } from '../../pipeline-package-service.js';
+import { promisify } from 'node:util';
+import {
+  resolveGuidedInteractionValidators,
+  resolvePipelinePackage,
+} from '../../pipeline-package-service.js';
 import { canonicalDigest } from '../canonical.js';
 import { parseStrictJson } from '../evidence-import.js';
 import {
@@ -32,6 +37,50 @@ import {
 const MAX_ANSWER_SCALARS = 256;
 const MAX_ANSWER_DEPTH = 12;
 
+const execFileAsync = promisify(execFile);
+
+/**
+ * The configured Git user name, used as the `decision-owner` suggestion. Shared
+ * so the JSON/native init path and the terminal path make the same probe.
+ */
+export async function probeGitUserName(projectRoot: string): Promise<string | undefined> {
+  return execFileAsync('git', ['config', 'user.name'], { cwd: projectRoot })
+    .then(({ stdout }) => stdout.trim() || undefined)
+    .catch(() => undefined);
+}
+
+/** Locally probeable evidence sources that require no in-flow credentials. */
+const OPTIONAL_EVIDENCE_SOURCE_PROBES: readonly { id: string; marker: string }[] = [
+  { id: 'planr', marker: '.planr' },
+  { id: 'git', marker: '.git' },
+];
+
+/**
+ * Honestly probe which evidence sources are locally available for this project
+ * instead of asserting a static list. Repository files and local JSON/CSV import
+ * are always available; `planr`/`git` are included only when their marker exists.
+ * Remote integrations (github/linear) require credentials that cannot be
+ * configured in this flow and are never claimed here — so an offered source can
+ * never hard-fail availability validation. Shared by both the JSON/native init
+ * path and the terminal path so the "locally available" claim is real in both.
+ */
+export async function probeAvailableEvidenceSources(projectRoot: string): Promise<string[]> {
+  const optional = await Promise.all(
+    OPTIONAL_EVIDENCE_SOURCE_PROBES.map(({ id, marker }) =>
+      stat(path.join(projectRoot, marker)).then(
+        () => id,
+        () => undefined,
+      ),
+    ),
+  );
+  return ['repository', ...optional.filter((id): id is string => id !== undefined), 'file-import'];
+}
+
+/** Whether a compatible planr-pipeline is resolvable (drives planning-engine detection). */
+export function probePipelineInstalled(): boolean {
+  return resolvePipelinePackage(false) !== null;
+}
+
 export interface GuidedSessionProgress {
   session: GuidedSession;
   questionnaire: Awaited<ReturnType<typeof createOperatingInitQuestionnaire>>;
@@ -39,17 +88,25 @@ export interface GuidedSessionProgress {
   status: 'input-required' | 'preview-ready';
 }
 
-function interactionContext(
+async function interactionContext(
   projectRoot: string,
   session: GuidedSession,
   bindings: GuidedSessionBindings,
   now: Date,
-): OperatingQuestionEngineContext {
+): Promise<OperatingQuestionEngineContext> {
+  const [gitUserName, availableSources] = await Promise.all([
+    probeGitUserName(projectRoot),
+    probeAvailableEvidenceSources(projectRoot),
+  ]);
   return {
     projectRoot,
     ...bindings,
+    ...(gitUserName ? { gitUserName } : {}),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    availableSources: ['repository', 'planr', 'git', 'file-import'],
+    availableSources,
+    pipelineInstalled: probePipelineInstalled(),
+    // The registry rehydrates the effective detected runtime from `runtime`, so
+    // detect-don't-ask stays byte-identical between create and this resume path.
     runtime: session.adapter.runtime,
     interaction: session.adapter.interaction,
     now: now.toISOString(),
@@ -226,7 +283,7 @@ async function questionnaireFor(
   questionnaire: GuidedSessionProgress['questionnaire'];
   status: GuidedSessionProgress['status'];
 }> {
-  const context = interactionContext(projectRoot, session, bindings, now);
+  const context = await interactionContext(projectRoot, session, bindings, now);
   const state = await evaluateOperatingInitQuestions({
     answers,
     context,
@@ -252,7 +309,7 @@ export async function resumeGuidedSession(input: {
 }): Promise<GuidedSessionProgress> {
   const now = input.now ?? new Date();
   const session = await readGuidedSession({ ...input, now });
-  const context = interactionContext(input.projectRoot, session, input.bindings, now);
+  const context = await interactionContext(input.projectRoot, session, input.bindings, now);
   const progress = await questionnaireFor(
     input.projectRoot,
     session,
@@ -333,7 +390,7 @@ export async function submitGuidedAnswers(input: {
       },
     );
   }
-  const context = interactionContext(input.projectRoot, current.session, input.bindings, now);
+  const context = await interactionContext(input.projectRoot, current.session, input.bindings, now);
   const persisted = new Map(
     current.session.persistedAnswers.map((answer) => [answer.questionId, answer.value]),
   );

@@ -3,8 +3,59 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { readBoundedInitAnswers } from '../../src/cli/commands/operate.js';
 import { executeOperateAction } from '../../src/services/operate/index.js';
+import type {
+  GuidedAnswerEnvelope,
+  GuidedQuestionnaire,
+  GuidedQuestionValue,
+} from '../../src/services/operate/types.js';
+
+function buildAnswerEnvelope(
+  questionnaire: GuidedQuestionnaire,
+  values: Record<string, GuidedQuestionValue>,
+): GuidedAnswerEnvelope {
+  const descriptors = new Map(
+    questionnaire.submission.envelope.dynamicFields.answers.items.map((item) => [
+      item.questionId,
+      item,
+    ]),
+  );
+  const answers = Object.entries(values).map(([questionId, value]) => {
+    const descriptor = descriptors.get(questionId);
+    if (!descriptor) throw new Error(`Missing answer descriptor for ${questionId}.`);
+    return Object.assign(
+      Object.fromEntries(
+        questionnaire.submission.envelope.dynamicFields.answers.copyFields.map((field) => [
+          field,
+          descriptor[field],
+        ]),
+      ),
+      { value },
+    ) as GuidedAnswerEnvelope['answers'][number];
+  });
+  return {
+    ...questionnaire.submission.envelope.fixedFields,
+    questionnaireDigest: questionnaire.digest,
+    answers,
+    submittedAt: new Date(Date.parse(questionnaire.createdAt) + 1).toISOString(),
+  };
+}
+
+const RUNTIME_MARKERS = [
+  'CLAUDECODE',
+  'CLAUDE_CODE_ENTRYPOINT',
+  'CURSOR_TRACE_ID',
+  'CURSOR_AGENT',
+  'CODEX_SANDBOX',
+  'CODEX_HOME',
+];
+
+/** Neutralize any ambient coding-runtime markers so detection is deterministic. */
+function clearRuntimeMarkers(): void {
+  for (const marker of RUNTIME_MARKERS) vi.stubEnv(marker, '');
+}
 
 const execFileAsync = promisify(execFile);
 
@@ -20,6 +71,67 @@ async function gitProject(): Promise<string> {
 }
 
 describe('guided Operating Board initialization', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  // FR6 / DoD #4 — the JSON init path probes the real host runtime from launcher
+  // env markers and stamps a truthful adapter block instead of unknown/none.
+  it('detects the host runtime from env markers instead of stamping unknown/none', async () => {
+    const projectRoot = await gitProject();
+    clearRuntimeMarkers();
+    vi.stubEnv('CLAUDECODE', '1');
+
+    const result = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { json: true },
+    });
+
+    expect(result.code).toBe('E_OPERATE_INPUT_REQUIRED');
+    expect(result.questionnaire?.adapter).toEqual({
+      runtime: 'claude',
+      version: 'detected',
+      interaction: 'native',
+    });
+    // Detect-don't-ask: a clearly detected runtime is a non-required suggestion.
+    const runtimeQuestion = result.questionnaire?.questions.find(
+      (question) => question.questionId === 'runtime',
+    );
+    if (runtimeQuestion) {
+      expect(runtimeQuestion).toMatchObject({
+        required: false,
+        valueSemantics: 'suggestion',
+        suggestedValue: 'claude',
+      });
+    }
+  });
+
+  it('stamps an honest headless adapter block when no runtime is detectable', async () => {
+    const projectRoot = await gitProject();
+    clearRuntimeMarkers();
+
+    const result = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { json: true },
+    });
+
+    expect(result.code).toBe('E_OPERATE_INPUT_REQUIRED');
+    expect(result.questionnaire?.adapter).toEqual({
+      runtime: 'unknown',
+      version: 'detected',
+      interaction: 'none',
+    });
+    // With no detected runtime the question is ambiguous and therefore required.
+    const runtimeQuestion = result.questionnaire?.questions.find(
+      (question) => question.questionId === 'runtime',
+    );
+    expect(runtimeQuestion).toMatchObject({ required: true });
+  });
+
   it('returns Protocol input_required instead of invalid config when JSON input is missing', async () => {
     const projectRoot = await gitProject();
     const result = await executeOperateAction({
@@ -30,11 +142,11 @@ describe('guided Operating Board initialization', () => {
     });
 
     expect(result).toMatchObject({
-      ok: false,
+      ok: true,
+      flow: 'handoff',
       action: 'input_required',
       code: 'E_OPERATE_INPUT_REQUIRED',
       protocolVersion: '1.2.0',
-      exitCode: 4,
       questionnaire: {
         kind: 'guided-questionnaire',
         schemaVersion: '1.1.0',
@@ -57,6 +169,30 @@ describe('guided Operating Board initialization', () => {
     await expect(
       readFile(join(projectRoot, '.planr', 'operate', 'config.json')),
     ).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  // FR8 / E-008 — a digest-confirmable recovery action is directly executable:
+  // it hands the runner the exact confirm argv, so no token is re-synthesized.
+  it('hands the runner a directly executable confirmArgv on a digest-confirmable action', async () => {
+    const projectRoot = await gitProject();
+    const result = await executeOperateAction({
+      action: 'run',
+      projectRoot,
+      interactive: false,
+      options: { json: true, preview: true, runtime: 'codex' },
+    });
+
+    expect(result).toMatchObject({ ok: false, code: 'E_OPERATE_NOT_INITIALIZED' });
+    const initAction = result.actions?.find((action) => action.command === 'planr operate init');
+    expect(initAction?.confirmationDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(initAction?.confirmArgv).toEqual([
+      'planr',
+      'operate',
+      'init',
+      '--confirm',
+      initAction?.confirmationDigest,
+      '--yes',
+    ]);
   });
 
   it('names a machine-local state-root write denial without exposing its path', async () => {
@@ -106,6 +242,79 @@ describe('guided Operating Board initialization', () => {
     );
   });
 
+  it('suggests the decision owner from the git user on the JSON init path', async () => {
+    const projectRoot = await gitProject();
+    clearRuntimeMarkers();
+
+    const result = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { json: true },
+    });
+
+    const owner = result.questionnaire?.questions.find(
+      (question) => question.questionId === 'decision-owner',
+    );
+    expect(owner).toMatchObject({
+      valueSemantics: 'suggestion',
+      suggestedValue: 'OpenPlanr Test',
+    });
+  });
+
+  it('accepts --answers-file as a bounded stdin-parity alias with the same 64 KiB cap', async () => {
+    const projectRoot = await gitProject();
+    clearRuntimeMarkers();
+
+    const start = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { json: true },
+    });
+    const questionnaire = start.questionnaire as GuidedQuestionnaire;
+    const raw = JSON.stringify(
+      buildAnswerEnvelope(questionnaire, {
+        profile: 'saas',
+        'decision-owner': 'Asem',
+        'planning-engine': 'openplanr',
+        runtime: 'codex',
+        'sensitivity-ceiling': 'internal',
+        sources: ['repository', 'git'],
+      }),
+    );
+    // Write the answers document outside the project root so it never dirties the
+    // working tree the session fingerprint is bound to.
+    const scratch = await mkdtemp(join(tmpdir(), 'openplanr-answers-file-'));
+    const answersFile = join(scratch, 'answers.json');
+    await writeFile(answersFile, `${raw}\n`);
+
+    // --answers-file yields exactly the bounded UTF-8 string --stdin would.
+    await expect(readBoundedInitAnswers({ answersFile })).resolves.toBe(raw);
+
+    // Submitting the file-derived document advances the session through the same
+    // strict parser and digest binding as --stdin.
+    const advanced = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { json: true, resume: questionnaire.sessionId },
+      stdin: await readBoundedInitAnswers({ answersFile }),
+    });
+    expect(advanced).toMatchObject({
+      ok: true,
+      flow: 'handoff',
+      questionnaire: { stage: 'product-charter' },
+    });
+
+    // Same 64 KiB bound as --stdin.
+    const oversizeFile = join(scratch, 'oversize.json');
+    await writeFile(oversizeFile, 'x'.repeat(65 * 1024));
+    await expect(readBoundedInitAnswers({ answersFile: oversizeFile })).rejects.toMatchObject({
+      name: 'E_OPERATE_INPUT_TOO_LARGE',
+    });
+  });
+
   it('preserves fully specified flag automation and produces a write-free preview', async () => {
     const projectRoot = await gitProject();
     const result = await executeOperateAction({
@@ -124,7 +333,7 @@ describe('guided Operating Board initialization', () => {
         sensitivityCeiling: 'internal',
         sources: ['repository', 'git'],
         purpose: 'Help product teams make cited operating decisions.',
-        productStage: 'Growth',
+        productStage: 'growth',
         businessModel: 'Subscription SaaS',
         idealCustomer: 'Technical founders',
         goal: ['Reach a trustworthy operating brief quickly'],

@@ -286,6 +286,14 @@ type OperatingPreferencesRecord = OperatingLocalPreferences & {
    * become due immediately per the pipeline calculator).
    */
   lastRunAt?: string;
+  /**
+   * FR10 / T-008 adapter session lease duration, in milliseconds. Machine-local,
+   * alongside `dispatchModeOverrides`/`evidenceTtlMs` — the v1.2 `operating-config`
+   * artifact surface is frozen (`additionalProperties: false`), so this policy knob
+   * lives in `preferences.json`, not `config.json`. Absent means the 15-minute
+   * default; a present value is bounded-validated before it is honored.
+   */
+  adapterLeaseDurationMs?: number;
 };
 
 const DISPATCH_MODES = new Set<OperatingDispatchMode>(['pack', 'mission']);
@@ -475,6 +483,59 @@ export async function recordOperatingLastRunAt(input: {
     await rename(temporary, preferencePath);
   }
   return { lastRunAt: input.lastRunAt, changed };
+}
+
+/**
+ * FR10 / T-008 default adapter session lease: 15 minutes. A prepared native
+ * adapter session expires this long after `prepare`, and each successful `record`
+ * refreshes the window forward from the moment the record lands. This was a
+ * hardcoded constant in `maintenance.ts`; it is now the machine-local default,
+ * overridable per project via `preferences.json`.
+ */
+export const DEFAULT_ADAPTER_LEASE_DURATION_MS = 15 * 60 * 1_000;
+
+/** Bounded adapter-lease range: one minute to one hour. */
+const MIN_ADAPTER_LEASE_DURATION_MS = 60 * 1_000;
+const MAX_ADAPTER_LEASE_DURATION_MS = 60 * 60 * 1_000;
+
+/**
+ * Strictly validate an optional adapter-lease duration (milliseconds) before it is
+ * echoed, persisted, or honored by the adapter lifecycle — mirroring the strict
+ * `normalizeOperatingDispatchModeOverrides` allowlisting pattern. The value must be
+ * an integer within [1 minute, 60 minutes]. A non-integer or out-of-range value
+ * fails closed with `E_OPERATE_CONFIG_INVALID` rather than silently clamping, so a
+ * corrupt preference never quietly weakens or extends the lease.
+ */
+export function normalizeOperatingAdapterLeaseDurationMs(value: unknown): number {
+  if (
+    typeof value !== 'number' ||
+    !Number.isInteger(value) ||
+    value < MIN_ADAPTER_LEASE_DURATION_MS ||
+    value > MAX_ADAPTER_LEASE_DURATION_MS
+  ) {
+    throw new OperateError(
+      'E_OPERATE_CONFIG_INVALID',
+      `adapterLeaseDurationMs must be an integer from ${MIN_ADAPTER_LEASE_DURATION_MS} to ${MAX_ADAPTER_LEASE_DURATION_MS} milliseconds.`,
+    );
+  }
+  return value;
+}
+
+/**
+ * Read the machine-local adapter-lease duration (milliseconds), or the 15-minute
+ * default when unset. Machine-local, alongside `dispatchModeOverrides` and
+ * `evidenceTtlMs`; a present value is bounded-validated so a corrupt preference is
+ * rejected rather than trusted.
+ */
+export async function readOperatingAdapterLeaseDurationMs(
+  projectRoot: string,
+  options: { localRoot?: string } = {},
+): Promise<number> {
+  const preferences = await readOperatingPreferencesRecord(projectRoot, options);
+  if (preferences?.adapterLeaseDurationMs === undefined) {
+    return DEFAULT_ADAPTER_LEASE_DURATION_MS;
+  }
+  return normalizeOperatingAdapterLeaseDurationMs(preferences.adapterLeaseDurationMs);
 }
 
 export function normalizeCharter(input: Partial<OperatingCharter> = {}): OperatingCharter {
