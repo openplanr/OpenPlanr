@@ -159,7 +159,7 @@ test('the skill contains no copied question/default logic or unsafe command rout
   assert.match(skill, /operating-advisor-response@1\.2\.0/);
   assert.match(
     skill,
-    /do not add\s+`kind`, cycle, role, input-digest, producer, or result-digest metadata/,
+    /do not add\s+`kind`,\s+cycle,\s+role,\s+input-digest,\s+producer,\s+or\s+result-digest\s+metadata/,
   );
   assert.doesNotMatch(skill, /Who owns final operating decisions\?/);
   assert.doesNotMatch(skill, /Operating profile:/);

@@ -2,6 +2,19 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.20.0] — 2026-07-31
+
+### Changed
+
+- Re-mirror the generated `planr-operate` skill from the pipeline's 0.34.0
+  runtime assets: the skill gains the mission branch (dispatch the named
+  `operating-<role>` subagent with only its mission packet and bounded
+  read-only tool grant, and record the v1.3 citation-bearing response),
+  alongside the preserved pack path, plus the exit-4-is-handoff rule so
+  healthy guided continuations stop rendering as failures.
+- Validate against `planr-pipeline` `v0.34.0` in CI (was `v0.33.1`), so the
+  byte-for-byte mirror check tracks the field-fix contract release.
+
 ## [1.19.0] — 2026-07-31
 
 ### Changed

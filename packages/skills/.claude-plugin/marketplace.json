@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Agent skills for OpenPlanr — operating decisions, planning, and complete delivery workflows for AI coding agents",
-    "version": "1.19.0"
+    "version": "1.20.0"
   },
   "plugins": [
     {

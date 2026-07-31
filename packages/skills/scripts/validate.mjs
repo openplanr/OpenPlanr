@@ -99,7 +99,7 @@ if (existsSync(operateSkillPath)) {
     'planr operate inspect --json',
     'When `data.initialized` is `true`, do not reopen initialization',
     'bare skill invocation as the explicit request for one cycle',
-    'structured chat one\nquestion at a time',
+    'structured chat one question at a time',
     'never dump the whole questionnaire as a form',
     'planr operate report',
     'schema-valid `questionnaire` and `actions`',
@@ -110,11 +110,14 @@ if (existsSync(operateSkillPath)) {
     'Never trial-edit sources',
     'rolePack.roleBrief.output.jsonSchema',
     'operating-advisor-response@1.2.0',
-    'do not add\n`kind`, cycle, role, input-digest, producer, or result-digest metadata',
+    'do not add `kind`, cycle, role, input-digest, producer, or result-digest metadata',
     'Never invoke SHIP',
     'Do not edit `.planr/operate`',
   ]) {
-    if (!operateSkill.includes(required)) {
+    // Wrap-insensitive: the skill is a generated mirror and its paragraph
+    // wrapping may change between pipeline releases without changing meaning.
+    const normalize = (text) => text.replace(/\s+/g, ' ');
+    if (!normalize(operateSkill).includes(normalize(required))) {
       errors.push(`planr-operate is missing boundary guidance: ${required}`);
     }
   }
