@@ -170,7 +170,16 @@ if (hasWorkspace) {
   };
 }
 
-const guidedOperatingBoard = hasWorkspace
+// Once the guided release operation is verified, the stored guided record is
+// frozen history pinned to its ledger targets. Re-deriving it from the live
+// adapter registry would rewrite that verified record whenever the registry
+// evolves (the 0.34.0 registry modernizes advisor-dispatch labels to protocol
+// 1.3 values that postdate guided certification), so the stored record is
+// carried forward byte-for-byte instead.
+const storedGuidedOperatingBoard = current.capabilities?.guidedOperatingBoard ?? null;
+const guidedOperatingBoard = guidedReleaseVerified && storedGuidedOperatingBoard
+  ? structuredClone(storedGuidedOperatingBoard)
+  : hasWorkspace
   ? resolveGuidedOperatingBoard({
       protocolVersion,
       pipelineVersion: candidatePipelineVersion,
@@ -186,7 +195,7 @@ const guidedOperatingBoard = hasWorkspace
       adapters: candidateAdapters,
       releaseVerified: guidedReleaseVerified,
     })
-  : current.capabilities?.guidedOperatingBoard ?? resolveGuidedOperatingBoard({
+  : storedGuidedOperatingBoard ?? resolveGuidedOperatingBoard({
       protocolVersion,
       pipelineVersion: candidatePipelineVersion,
       cliVersion: candidateCliVersion,

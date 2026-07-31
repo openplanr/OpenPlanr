@@ -156,10 +156,10 @@ test('verified compatibility promotes the default native cycle after reconciliat
     marketplace: '1.3.1',
   });
   assert.deepEqual(ecosystem.components, {
-    cli: { version: '1.17.0', pipelineRange: '^0.33.1' },
-    pipeline: { version: '0.33.1', cliRange: '^1.17.0' },
-    skills: { version: '1.19.0', cliRange: '^1.17.0' },
-    marketplace: { version: '1.4.0' },
+    cli: { version: '1.18.0', pipelineRange: '^0.34.0' },
+    pipeline: { version: '0.34.0', cliRange: '^1.18.0' },
+    skills: { version: '1.20.0', cliRange: '^1.18.0' },
+    marketplace: { version: '1.5.0' },
   });
 });
 

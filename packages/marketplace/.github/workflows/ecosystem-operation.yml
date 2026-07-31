@@ -8,6 +8,7 @@ on:
       - 'examples/guided-operate-operation.json'
       - 'examples/native-operate-operation.json'
       - 'examples/agentic-operate-operation.json'
+      - 'examples/field-fix-operate-operation.json'
       - 'operations/**'
       - 'schemas/ecosystem-operation.schema.json'
       - 'scripts/generate-ecosystem.mjs'
