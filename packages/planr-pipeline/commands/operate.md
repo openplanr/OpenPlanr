@@ -5,6 +5,14 @@ argument-hint: "<command> [options]"
 
 # /planr-pipeline:operate
 
+This command owns the end-to-end interactive workflow and orchestrates the adapter
+`prepare → record → finalize` lifecycle invisibly, so you are never required to
+type an adapter lifecycle subcommand. The `planr operate` CLI remains the complete,
+scriptable, authoritative surface for state, locks, validation, provenance,
+routing, and recovery. Cadence-triggered runs obey the same rule: R1 applies —
+nothing auto-chains to PLAN or SHIP, and a scheduled run never accepts findings or
+applies routes.
+
 With no arguments, run one complete Operating Board cycle and stop at review:
 
 1. Run `planr operate inspect --json`.

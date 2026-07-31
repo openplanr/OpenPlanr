@@ -15,8 +15,47 @@ import {
 import { fileURLToPath } from 'node:url';
 
 import { assertProtocolArtifact } from '../lib/protocol/contracts.mjs';
+import { createMissionToolGrant } from '../lib/operate/mission-packet.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+const LENS_AGENT_TEMPLATE = 'templates/runtime/operating-lens-agent.md.tpl';
+const LENS_AGENT_DOCS = 'docs/generated/operating-lens-agents.md';
+
+/**
+ * The nine canonical delivery agents. A generated Operating Board lens agent must
+ * never collide with one of these paths. Lens agents are written under
+ * `agents/operating/` so a collision is structurally impossible; the guard in
+ * `renderOperatingLensAgentAssets` asserts it anyway.
+ */
+const CANONICAL_DELIVERY_AGENTS = Object.freeze([
+  'agents/backend-agent.md',
+  'agents/frontend-agent.md',
+  'agents/db-agent.md',
+  'agents/designer-agent.md',
+  'agents/specification-agent.md',
+  'agents/qa-agent.md',
+  'agents/devops-agent.md',
+  'agents/doc-gen-agent.md',
+  'agents/entity-scaffold-agent.md',
+]);
+
+/**
+ * Deterministic bounded read-only grant -> Claude Code `tools:` mapping (FR2/FR4).
+ * Every mission-mode lens receives the same closed, read-only grant, so this is
+ * the only place a capability ID becomes a Claude tool string. It never emits
+ * Edit, Write, or an unscoped `Bash(*)`; a capability outside this table is a
+ * hard generation failure rather than a silently dropped grant.
+ */
+const TOOL_GRANT_TO_CLAUDE_TOOL = Object.freeze({
+  'file-read': ['Read'],
+  glob: ['Glob'],
+  'content-search': ['Grep'],
+  'git-log': ['Bash(git log:*)'],
+  'git-show': ['Bash(git show:*)'],
+  'git-diff': ['Bash(git diff:*)'],
+  'git-blame': ['Bash(git blame:*)'],
+});
 
 export class OperatingAssetGenerationError extends Error {
   constructor(code, message, details = {}) {
@@ -79,6 +118,146 @@ function operatingLensSummary(registry) {
     .join('; ');
 }
 
+/**
+ * Map the canonical bounded read-only tool grant to a single Claude Code `tools:`
+ * string. The grant is fixed policy (the seven mission read-only tools), so the
+ * string is identical for every mission-mode lens and never contains a write,
+ * execute, network, or environment capability.
+ */
+function missionToolsString() {
+  const { allowed } = createMissionToolGrant();
+  const tools = [];
+  for (const capability of allowed) {
+    const mapped = TOOL_GRANT_TO_CLAUDE_TOOL[capability];
+    if (!mapped) {
+      throw new OperatingAssetGenerationError(
+        'E_OPERATING_LENS_AGENT_TOOL_UNMAPPED',
+        `Read-only grant capability "${capability}" has no Claude Code tool mapping.`,
+        { capability },
+      );
+    }
+    for (const tool of mapped) {
+      if (!tools.includes(tool)) tools.push(tool);
+    }
+  }
+  return tools.join(', ');
+}
+
+/**
+ * Project the registry roles into registry order and derive each lens's
+ * `dispatchMode` in-memory, defaulting to `mission` (FR10). The on-disk registry
+ * stays valid at Protocol v1.2.0 for v1.2 readers; the v1.3 `dispatchMode` field
+ * is derived here so this generator can decide which lenses become native agents
+ * without breaking the additionalProperties-closed v1.2 role-registry contract.
+ */
+function lensRolesInOrder(roles) {
+  return [...roles.roles]
+    .sort((left, right) => left.order - right.order)
+    .map((role) => ({ ...role, dispatchMode: role.dispatchMode ?? 'mission' }));
+}
+
+/**
+ * Prove the derived, dispatchMode-carrying registry satisfies
+ * operating-role-registry@1.3.0 so the in-memory default can never drift away
+ * from the canonical v1.3 contract.
+ */
+function assertDerivedRoleRegistryV13(roles, derivedRoles) {
+  assertProtocolArtifact(
+    'operating-role-registry',
+    { ...roles, protocolVersion: '1.3.0', roles: derivedRoles },
+    { protocolVersion: '1.3.0' },
+  );
+}
+
+/**
+ * Render one generated runtime agent asset per mission-mode lens, keyed by its
+ * `agents/operating/<role-id>.md` target path. Pack-mode lenses are skipped (they
+ * run through the packaged loop and generate no native agent). Each asset mirrors
+ * the delivery-agent frontmatter shape (name/description/tools/model) and carries
+ * only the bounded read-only tool grant.
+ */
+export function renderOperatingLensAgentAssets(roles, { projectRoot = root } = {}) {
+  const derived = lensRolesInOrder(roles);
+  assertDerivedRoleRegistryV13(roles, derived);
+  const template = readCanonicalText(projectRoot, LENS_AGENT_TEMPLATE);
+  const tools = missionToolsString();
+  const assets = {};
+  for (const role of derived) {
+    if (role.dispatchMode !== 'mission') continue;
+    const target = `agents/operating/${role.id}.md`;
+    if (CANONICAL_DELIVERY_AGENTS.includes(target)) {
+      throw new OperatingAssetGenerationError(
+        'E_OPERATING_LENS_AGENT_PATH_COLLISION',
+        `Generated lens agent ${target} collides with a canonical delivery agent.`,
+        { target },
+      );
+    }
+    assets[target] = template
+      .replaceAll('{{ROLE_ID}}', role.id)
+      .replaceAll('{{DISPLAY_LABEL}}', role.displayLabel)
+      .replaceAll('{{MANDATE}}', role.mandate)
+      .replaceAll('{{TOOLS}}', tools);
+  }
+  return assets;
+}
+
+/**
+ * Render the human-readable companion doc: one row per lens in registry order,
+ * naming the generated agent file and its tool grant, and recording every
+ * pack-mode lens as an explicit "no native agent generated" row rather than a
+ * silent omission.
+ */
+export function renderOperatingLensAgentDocs(roles) {
+  const derived = lensRolesInOrder(roles);
+  assertDerivedRoleRegistryV13(roles, derived);
+  const tools = missionToolsString();
+  const rows = derived.map((role) => (
+    role.dispatchMode === 'mission'
+      ? `| ${role.order} | ${role.id} | ${markdownCell(role.displayLabel)} | agents/operating/${role.id}.md | ${markdownCell(tools)} |`
+      : `| ${role.order} | ${role.id} | ${markdownCell(role.displayLabel)} | pack-mode, no native agent generated | — |`
+  ));
+  return `<!-- Generated by scripts/generate-operating-assets.mjs. Do not edit. -->\n# Operating lens agents\n\nEach mission-mode lens is generated from \`registry/operating-roles.json\` as a read-only advisory agent under \`agents/operating/\`. These are not delivery agents and never enter \`registry/roles.json\`. A pack-mode lens runs through the packaged Operating Board loop and generates no native agent.\n\n| Order | ID | Label | Generated agent | Tool grant |\n|---:|---|---|---|---|\n${rows.join('\n')}\n`;
+}
+
+/**
+ * Render the static Operating Board cadence guidance doc (FR8). This is generated
+ * *guidance* — a fixed summary of the `manual`/`weekly`/`monthly` contract and of
+ * what "computes without executing" means — not a live per-project cadence
+ * dashboard (that is OpenPlanr's `status`/dashboard surface). It reads nothing
+ * from disk and derives nothing from mutable per-project state, so it renders
+ * identically for every project and stays byte-stable for drift detection.
+ */
+export function renderOperatingCadenceDocs() {
+  return [
+    '<!-- Generated by scripts/generate-operating-assets.mjs. Do not edit. -->',
+    '# Operating cadence',
+    '',
+    'Cadence decides *when* a cycle is due, never *what* a run may do. Computing a',
+    'due date is a pure calculation over the last run instant and an injected clock:',
+    'it reads no project state, calls no provider, and dispatches no advisor. All',
+    'surfaced timestamps are UTC.',
+    '',
+    '| Cadence | Runs | Next due date |',
+    '|---|---|---|',
+    '| `manual` | Only on explicit request | none (`nextDueAt` is `null`) |',
+    '| `weekly` | On request; due date surfaced in `status` | `lastRunAt + 7 days`, or now on the first run |',
+    '| `monthly` | On request; due date surfaced in `status` | `lastRunAt + 1 calendar month` (same day-of-month, clamped to a shorter month), or now on the first run |',
+    '',
+    '## Computes without executing',
+    '',
+    'Surfacing a `weekly` or `monthly` due date is not a trigger to act. Optional',
+    'scheduled execution MAY be enabled through the runtime, but a cadence- or',
+    'schedule-triggered run MUST NOT accept findings, apply routes, invoke PLAN, or',
+    'invoke SHIP. R1 remains mandatory: nothing auto-chains to PLAN or SHIP. A',
+    'scheduled run stops at the same review gate as a manual run.',
+    '',
+    'The skill or plugin orchestrates the cycle lifecycle invisibly; the `planr',
+    'operate` CLI stays the authoritative surface for state, locks, validation, and',
+    'the cadence values shown in `status`.',
+    '',
+  ].join('\n');
+}
+
 export function renderOperatingAssets({ projectRoot = root } = {}) {
   const packageJson = readJson(projectRoot, 'package.json');
   const adapters = readJson(projectRoot, 'registry/adapters.json');
@@ -99,7 +278,7 @@ export function renderOperatingAssets({ projectRoot = root } = {}) {
       `Adapter versions must match pipeline package ${packageJson.version}.`,
     );
   }
-  return {
+  const assets = {
     'adapters/codex/skills/planr-operate/SKILL.md': readCanonicalText(
       projectRoot,
       'templates/runtime/planr-operate-skill.md.tpl',
@@ -115,7 +294,18 @@ export function renderOperatingAssets({ projectRoot = root } = {}) {
     'docs/generated/adapters.md': renderAdapterDocs(adapters),
     'docs/generated/operating-providers.md': renderOperatingProviderDocs(providers),
     'docs/generated/operating-roles.md': renderOperatingRoleDocs(roles),
+    'docs/generated/operating-cadence.md': renderOperatingCadenceDocs(),
   };
+  // Fold the generated lens agents + companion doc into the same asset map so
+  // staleTargets()/--check cover them automatically. Guarded on the template's
+  // presence so a caller that seeds a partial projectRoot (e.g. the CRLF fixture)
+  // is not forced to also stage this template; the real repository always ships
+  // it, so drift detection is unconditional there.
+  if (existsSync(resolve(projectRoot, LENS_AGENT_TEMPLATE))) {
+    Object.assign(assets, renderOperatingLensAgentAssets(roles, { projectRoot }));
+    assets[LENS_AGENT_DOCS] = renderOperatingLensAgentDocs(roles);
+  }
+  return assets;
 }
 
 function staleTargets(projectRoot, assets) {

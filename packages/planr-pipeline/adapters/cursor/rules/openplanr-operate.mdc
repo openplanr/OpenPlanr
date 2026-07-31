@@ -9,6 +9,14 @@ provider-free and write-free; `--dry-run` is write-free but can be
 provider-backed and billable. Never edit events, immutable records, journals,
 projections, routes, or outcome links under `.planr/operate`.
 
+The skill or plugin owns this chat-native workflow and orchestrates the adapter
+`prepare → record → finalize` lifecycle invisibly, so you are never required to
+type an adapter lifecycle subcommand. The `planr operate` CLI remains the
+complete, scriptable, authoritative surface for state, locks, validation,
+provenance, routing, and recovery. Cadence-triggered runs obey the same rule: R1
+holds — nothing auto-chains to PLAN or SHIP, and a scheduled run never accepts
+findings or applies routes.
+
 When no explicit public subcommand is requested, run `planr operate inspect
 --json`, initialize only if `data.initialized` is false, then preview and
 complete one native CEO, CTO, CPO, CMO, COO, and Chair cycle through its review

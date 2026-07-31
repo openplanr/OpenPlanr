@@ -238,7 +238,7 @@ screen_name, iterations (prior+1 on evolve, else 0), generated_at, branch, spec_
 html_file }`.
 
 If a `.run-manifest.jsonl` exists for the feature, append a `design.generate` stage record
-(`stage`, `agent: null`, `started_at`/`ended_at`, `files_written`, `exit_status: success`).
+(`stage`, `agent: null`, `started_at`/`ended_at`, `files_written`, `files_modified: []`, `exit_status: success`, `error_summary: null`).
 
 ## C.6 — Scoped `.gitignore` (keep the repo clean — v0.13.3)
 

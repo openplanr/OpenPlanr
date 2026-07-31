@@ -66,7 +66,7 @@ For every ready task `T` in `${TASKS}` (ready = all `dependsOn` entries have `st
 1. **Pre-dispatch status transition (single-writer).** The orchestrator writes the task frontmatter:
    - `status: in-progress`
    - `updated: <today's ISO date>`
-   Append one manifest record `{ stage: "ship.task:<T.id>", agent: "<T.agent>", started_at: <now>, exit_status: "pending" }` per task. The `.run-manifest.jsonl` and the task `.md` `status` field are written only by the orchestrator — they stay single-writer (SPEC-014 FR12/FR13).
+   Hold each task's `started_at` in memory at dispatch — no manifest row is written yet (`run-manifest.schema.json` requires a terminal `exit_status` and a string `ended_at`, so an interim row cannot validate; the frontmatter `status: in-progress` stamp, not the manifest, is the crash-detection surface §2a recovers). At close-out, append the ONE complete record per task — `started_at` from dispatch, `ended_at` now, terminal `exit_status`, populated `files_written`/`files_modified`, `error_summary` null unless failure. The `.run-manifest.jsonl` and the task `.md` `status` field are written only by the orchestrator — they stay single-writer (SPEC-014 FR12/FR13).
 2. **One Agent tool-call per ready task.** The orchestrator emits one `Agent` tool-call per ready task — many in a single assistant turn when several are ready at once — each with:
    - `subagent_type`: the task's `agent` field (`frontend-agent`, `backend-agent`, `db-agent`, …).
    - `description`: short label `"<T.id> — <task-title-first-35-chars>"`.

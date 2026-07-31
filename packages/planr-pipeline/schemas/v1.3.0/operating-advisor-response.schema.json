@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json",
+  "title": "OpenPlanr Protocol v1.3 compact native operating advisor response",
+  "description": "The bounded response a native runtime returns to the OpenPlanr engine after bounded read-only investigation. Each proposal cites repository paths, line ranges, revisions, or planr artifacts instead of pre-loaded evidence IDs; the engine resolves and snapshots those citations. The engine supplies cycle, role, producer, and digest metadata when it creates the canonical operating-role-result.",
+  "type": "object",
+  "additionalProperties": false,
+  "examples": [
+    {
+      "outcome": "quiet",
+      "proposals": [],
+      "gaps": [],
+      "conflicts": []
+    }
+  ],
+  "required": ["outcome", "proposals", "gaps", "conflicts"],
+  "properties": {
+    "outcome": {
+      "type": "string",
+      "enum": ["proposals", "quiet"]
+    },
+    "proposals": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["proposalKey", "type", "title", "problem", "proposal", "impact", "confidence", "ease", "severity", "citations"],
+        "properties": {
+          "proposalKey": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "type": { "type": "string", "enum": ["finding", "decision", "data-gap", "merge", "sequence"] },
+          "title": { "type": "string", "minLength": 1 },
+          "problem": { "type": "string", "minLength": 1 },
+          "proposal": { "type": "string", "minLength": 1 },
+          "impact": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "ease": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+          "citations": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 50,
+            "items": { "$ref": "operating-citation.schema.json" }
+          },
+          "dependsOnProposalKeys": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }
+          },
+          "conflictsWithProposalKeys": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }
+          },
+          "sequenceProposalKeys": {
+            "type": "array",
+            "minItems": 2,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }
+          }
+        }
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "conflicts": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "oneOf": [
+    {
+      "title": "quiet response",
+      "required": ["outcome", "proposals"],
+      "properties": {
+        "outcome": { "const": "quiet" },
+        "proposals": { "maxItems": 0 }
+      }
+    },
+    {
+      "title": "proposals response",
+      "required": ["outcome", "proposals"],
+      "properties": {
+        "outcome": { "const": "proposals" },
+        "proposals": { "minItems": 1 }
+      }
+    }
+  ]
+}

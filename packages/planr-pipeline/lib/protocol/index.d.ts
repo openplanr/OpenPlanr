@@ -271,17 +271,27 @@ export interface OperatingAdapterMachineAction {
   effect: 'read-only' | 'machine-local-write' | 'project-write';
   role?: string;
   argv: string[];
-  dispatch?: {
-    source: 'adapter.prepare-result';
-    rolePackPointer: string;
-    isolation: 'enforced-empty-tools';
-  };
+  dispatch?:
+    | {
+        source: 'adapter.prepare-result';
+        rolePackPointer: string;
+        isolation: 'enforced-empty-tools';
+      }
+    | {
+        source: 'adapter.prepare-result';
+        missionPacketPointer: string;
+        declaredRoots: string[];
+        toolGrant: { allowed: string[]; roots: string[] };
+        isolation: 'enforced-read-only-bounded' | 'fail-closed-structured-provider';
+      };
   stdin?: {
     kind: 'stdin-json';
     mediaType: 'application/json';
     encoding: 'utf-8';
     maxBytes: 32768;
-    schema: 'https://openplanr.dev/schemas/v1.2.0/operating-advisor-response.schema.json';
+    schema:
+      | 'https://openplanr.dev/schemas/v1.2.0/operating-advisor-response.schema.json'
+      | 'https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json';
     schemaSource: 'adapter.prepare-result';
     schemaPointer: string;
   };
@@ -290,7 +300,7 @@ export interface OperatingAdapterMachineAction {
 export interface OperatingAdapterHandoff {
   kind: 'operating-adapter-handoff';
   schemaVersion: '1.0.0';
-  protocolVersion: '1.2.0';
+  protocolVersion: '1.2.0' | '1.3.0';
   phase: 'advisors' | 'chair';
   state: OperatingAdapterHandoffState;
   binding: {
@@ -485,6 +495,7 @@ export function createOperatingAdapterHandoff(input: {
   state: OperatingAdapterHandoffState;
   cycleId: string;
   evidenceDigest: string;
+  protocolVersion?: '1.2.0' | '1.3.0';
   runtime: string;
   idempotencyKey: string;
   lease?: string | null;

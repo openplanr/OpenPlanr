@@ -183,7 +183,8 @@ Entered only when `DISPATCH_MODE == multi-task`. `per-task` / `single-task` neve
 
    ```
    stamp(E):  for each T in E → frontmatter status:in-progress, updated:<today>;
-              append manifest { stage:"ship.task:<T.id>", agent:"<T.agent>", started_at:<now>, exit_status:"pending" }
+              remember started_at:<now> in memory (the manifest row is appended
+              once, complete, at close-out — schema forbids interim rows)
    dispatch:  ONE assistant turn · ONE Agent call per T in E (subagent_type=<T.agent>) ·
               prompt = the §2c per-task prompt · NO `isolation` field · NO width cap.
    ```
@@ -200,9 +201,9 @@ Entered only when `DISPATCH_MODE == multi-task`. `per-task` / `single-task` neve
 
 When `DISPATCH_STYLE == workflow`, drive the **Workflow tool** instead of hand-emitting `Agent` calls. planr **declares** the graph; the host **schedules** it. Do NOT revive a planr-side scheduler, worktrees, or waves — that machinery was deleted in SPEC-014 and must not return; determinism comes from the host's Workflow tool, not from planr.
 
-1. **Pre-stamp EVERY feature task** (the whole live set up front — not just the first eligible set that native's per-turn `stamp(E)` covers), before authoring the workflow: for each task T → frontmatter `status: in-progress`, `updated: <today>`; append manifest `{ stage: "ship.task:<T.id>", agent: "<T.agent>", started_at: <now>, exit_status: "pending" }`. Stamping all tasks up front is correct here (unlike native, which rolls forward and stamps each task just before it runs) because the whole DAG commits to run in this one orchestrator turn — a mid-workflow crash then leaves dependents at `in-progress` (which §2a recovers) rather than at `pending`, indistinguishable from never-started. The trade is intentional: in workflow style a deep dependent's `started_at` is the author-time stamp, not its true dispatch instant (acceptable — the manifest captures the run's outer timeline, and `ended_at` from the node is exact); native style keeps exact per-task `started_at` via its roll-forward stamp.
+1. **Pre-stamp EVERY feature task** (the whole live set up front — not just the first eligible set that native's per-turn `stamp(E)` covers), before authoring the workflow: for each task T → frontmatter `status: in-progress`, `updated: <today>`; remember `started_at: <now>` for each (the single complete manifest row is appended at close-out from the returned node results). Stamping all tasks up front is correct here (unlike native, which rolls forward and stamps each task just before it runs) because the whole DAG commits to run in this one orchestrator turn — a mid-workflow crash then leaves dependents at `in-progress` (which §2a recovers) rather than at `pending`, indistinguishable from never-started. The trade is intentional: in workflow style a deep dependent's `started_at` is the author-time stamp, not its true dispatch instant (acceptable — the manifest captures the run's outer timeline, and `ended_at` from the node is exact); native style keeps exact per-task `started_at` via its roll-forward stamp.
 2. **Author one workflow** whose nodes are the feature's tasks and whose edges are the `dependsOn` graph (`pipeline`/`parallel` so independent tasks run concurrently and a dependent waits on its dependency's node). Each node dispatches the task's agent with the §2c per-task prompt and **returns a structured result**: `{ id, status: done|blocked, ended_at, files_written[], files_modified[], error_summary?, errorReport? }` — where on `blocked`, `error_summary` is the one concise line for the manifest and `errorReport` is the FULL `${CLAUDE_PLUGIN_ROOT}/templates/error-report.md`-shaped body (per-pass attempt log + file lists + suspected root cause), so the orchestrator can write the report verbatim. Nodes do **NOT** write status or manifest themselves.
-3. **Commit bookkeeping from the returned results** (orchestrator, single-writer): per node result, close the task frontmatter (`done`, or `blocked` + write `T-<id>-error-report.md` verbatim from the node's `errorReport`) and close its manifest record (`exit_status`, `ended_at` from the node, `files_written`/`files_modified` populated, `error_summary` from the node on failure). FR12/FR13 hold — the schedule is the host's, the writes are still the orchestrator's, and every record carries `started_at` (step 1) + `ended_at` (the node).
+3. **Commit bookkeeping from the returned results** (orchestrator, single-writer): per node result, close the task frontmatter (`done`, or `blocked` + write `T-<id>-error-report.md` verbatim from the node's `errorReport`) and append its single complete manifest record (`started_at` from step 1's stamp time, `ended_at` from the node, terminal `exit_status`, `files_written`/`files_modified` populated, `error_summary` from the node on failure). FR12/FR13 hold — the schedule is the host's, the writes are still the orchestrator's, and every record carries `started_at` (step 1) + `ended_at` (the node).
 
 **Termination (both styles).** When the queue drains, fall through to **Step 3 (QA Gate)** — it audits every task that ran this invocation (NFR1; wide dispatch speeds DEV, it never weakens QA).
 
@@ -211,7 +212,7 @@ When `DISPATCH_STYLE == workflow`, drive the **Workflow tool** instead of hand-e
 This is the per-task state machine — the prompt body and close-out applied to **each** dispatched task. It does **not** govern iteration order: in `multi-task` mode §2b-multi dispatches all eligible tasks at once (per-task / single-task modes apply this to their one task). Read it as "what each task's dispatch looks like," not "do these one at a time."
 
 1. **Read** the task file frontmatter. Capture `id`, `type`, `agent`, current `status`, `updated`.
-2. **Write** updated frontmatter: `status: in-progress`, `updated: <today's ISO date>`. Append manifest `{ stage: "ship.task:T-NNN", agent: <agent slug>, started_at: <now>, exit_status: <pending until close-out> }`.
+2. **Write** updated frontmatter: `status: in-progress`, `updated: <today's ISO date>`. Remember `started_at: <now>`; the task's single manifest record is appended complete at close-out (step 5).
 3. **Read** the task's `Type` field:
    - `UI` → delegate to **frontend-agent** subagent (Opus 4.8)
    - `Tech` → delegate to **backend-agent** subagent (Opus 4.8) or **db-agent** if the agent field says so
@@ -220,8 +221,8 @@ This is the per-task state machine — the prompt body and close-out applied to 
    - Iteration 2: re-read task spec + design-spec/schema, fix holistically
    - Iteration 3: minimal safe fix, flag remaining issues
 5. **Close out the task** by writing the final `status` to the task's frontmatter:
-   - **Success:** `status: done`, `updated: <today>`. Manifest record closes with `exit_status: "success"`, `ended_at: <now>`, `files_written + files_modified` populated.
-   - **R6 failure (3 iterations exhausted):** `status: blocked`, `updated: <today>`. Write `${CLAUDE_PLUGIN_ROOT}/templates/error-report.md`-shaped content to `tasks/T-NNN-error-report.md` (same folder as task markdown — **never** the legacy singleton `tasks/error-report.md`). Manifest record closes with `exit_status: "failure"`, `error_summary: <one concise line>`. Continue to the next task in the queue (do not abort the run unless all queued tasks are blocked).
+   - **Success:** `status: done`, `updated: <today>`. Append the task's single manifest record: `started_at` (from step 2), `ended_at: <now>`, `exit_status: "success"`, `files_written + files_modified` populated, `error_summary: null`.
+   - **R6 failure (3 iterations exhausted):** `status: blocked`, `updated: <today>`. Write `${CLAUDE_PLUGIN_ROOT}/templates/error-report.md`-shaped content to `tasks/T-NNN-error-report.md` (same folder as task markdown — **never** the legacy singleton `tasks/error-report.md`). Append the task's single manifest record: `started_at` (from step 2), `ended_at: <now>`, `exit_status: "failure"`, `error_summary: <one concise line>`. Continue to the next task in the queue (do not abort the run unless all queued tasks are blocked).
    - **Default mode:** report path is `output/feats/feat-${SLUG}/us-{N}/tasks/T-NNN-error-report.md`
    - **Spec-driven mode:** report path is `<SPEC_DIR>/tasks/T-NNN-error-report.md`
 

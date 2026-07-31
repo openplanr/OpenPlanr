@@ -328,3 +328,105 @@ changes; CI uses `npm run check:operating-assets`.
 Protocol v1.0 planning artifacts and v1.1 capability contracts remain readable
 and unchanged. Protocol v1.2 is additive. Consumers must reject a v1.2 kind they
 do not support rather than attempting a lossy downgrade.
+
+## Protocol v1.3 agentic execution
+
+Protocol v1.3.0 is additive. Every v1.2 contract above remains in force and v1.2
+readers continue to read v1.2 artifacts unchanged. The new kinds live in
+`schemas/v1.3.0/` and are registered alongside — never in place of — their v1.2
+entries. See ADR-010 for the full amendment record against SPEC-002 and the list
+of clauses that remain binding.
+
+### Mission packet replaces the role pack
+
+Each dispatched lens receives an `operating-mission-packet` instead of a
+pre-loaded role pack. The packet is compact, digest-bound, and carries the
+product charter and current goals, the prior-cycle summary, planning and
+delivery status, the role mandate/authority/output contract, the declared
+read-only roots, the bounded tool grant, and an **evidence index**. Each
+`operating-evidence-index-item` is a pointer only — path or revision, content
+hash, source, classification, freshness, sensitivity, and detected signals. The
+packet MUST NOT contain file bodies; `additionalProperties` is `false` at every
+level so a body field cannot be added without a schema bump. `maxInputBytes` is
+enforced at construction and fails closed with a named error identifying the
+offending role.
+
+### Bounded read-only tool grant and fail-closed dispatch
+
+An `operating-tool-grant` lists only read-only capabilities — `file-read`,
+`glob`, `content-search`, and read-only git history (`git-log`, `git-show`,
+`git-diff`, `git-blame`) — and the repo-relative roots they are confined to. A
+native advisory agent MUST NOT write, edit, execute commands, run build or test
+steps, open network connections, read environment variables, or read outside its
+declared roots. The `operating-adapter-handoff` dispatch selects an `isolation`
+of `enforced-read-only-bounded`; runtimes that cannot enforce that boundary fall
+back to `fail-closed-structured-provider`. Adapter capabilities gain
+`toolIsolation: enforced-read-only` and `operatingAdvisorDispatch:
+native-read-only` additively; all v1.2 capability values keep validating.
+
+### Citation resolution, snapshot, and reject
+
+Every proposal cites at least one `operating-citation` — a repository path with
+an optional line range, a git revision, or a planr artifact — each bound to the
+cycle's pinned revision. After the agent returns, the engine records an
+`operating-citation-resolution` per citation: a `resolved` verdict snapshots the
+cited content into machine-local evidence and records the `evidenceId` and
+`snapshotDigest`; a `rejected` verdict records the reason (`fabricated-path`,
+`wrong-line-range`, `stale-revision`, or `unresolvable`) and the opened `gapId`.
+A proposal with any unresolvable citation is rejected and surfaced as a
+release-blocking data gap of category `unresolvable-citation`. Snapshotted
+citation content is subject to the same redaction and secret-scan rules as
+collected evidence.
+
+### `.state/records.jsonl` layout
+
+Content-addressed records move from the v1.2 directory-per-digest-prefix layout
+to a single append-only `.state/records.jsonl`, one
+`operating-records-log-entry` per line, retaining the digest as a field. Route
+records are never one file per route in the readable tree. Migration from the
+v1.2 layout is automatic, reversible, and lossless: an `operating-migration-record`
+carries `sourceLayout`/`targetLayout` and before/after `recordCount` and
+`eventCount` pairs so losslessness can be asserted mechanically.
+
+### `dispatchMode` coexistence
+
+The `operating-role-registry` carries a required per-role `dispatchMode:
+"pack" | "mission"`. `pack` continues the v1.2 role-pack execution model;
+`mission` uses the v1.3 mission packet. Both models can run during migration and
+reduce identically, so a project can move roles over one at a time.
+
+### Cadence contract
+
+`operating-cadence-status` makes cadence a real contract. `manual` runs only on
+request and has no next due date (`nextDueAt` is `null`). `weekly` and `monthly`
+compute and surface the next due date in status. Optional scheduled execution
+never accepts findings, applies routes, invokes PLAN, or invokes SHIP; R1
+remains mandatory.
+
+### FR6 route targets
+
+Accepted findings route to the delivery surfaces the product already has.
+Nothing invokes SHIP, and R1 remains mandatory.
+
+| Shape of work | Route target |
+|---|---|
+| Small, bounded implementation | Quick task (`create-quick-task`, under `.planr/quick/`) |
+| Substantial product or technical work | Spec + mandatory PLAN review |
+| Human or business choice | Decision record |
+| Research, content, or report | Agent artifact |
+
+The v1.3 `operating-route-plan` adds the `create-quick-task` action kind so
+small, bounded work reaches the existing quick-task surface directly. Every
+action stays reversible and requires confirmation.
+
+### Decision brief rendering
+
+Operating briefs and owner decisions render as self-contained artifacts through
+the existing artifact-review infrastructure.
+`createOperatingDecisionBriefArtifact` turns a brief — its question, evidence,
+options, and what the decision blocks — plus an optional owner decision into one
+HTML artifact carried by an `artifact-envelope@1.1.0`, so a non-technical owner
+can read it without a terminal. The rendered document references no remote CSS,
+JS, or font; a decision owner opens it fully offline, and the renderer fails
+closed if any `http(s)` reference is present. Rendering is local and
+share-on-request; nothing publishes automatically.

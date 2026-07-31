@@ -1,0 +1,8 @@
+{
+  "kind": "operating-cadence-status",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.3.0",
+  "cadence": "monthly",
+  "lastRunAt": "2026-07-01T09:00:00Z",
+  "nextDueAt": "2026-08-01T09:00:00Z"
+}

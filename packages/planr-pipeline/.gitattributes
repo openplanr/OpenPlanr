@@ -7,6 +7,8 @@ tests/artifact/__fixtures__/*.golden.* text eol=lf
 # Operating Board assets are generated from the registries and compared
 # byte-for-byte, so they must check out identically on every platform.
 adapters/codex/skills/planr-operate/SKILL.md text eol=lf
+agents/operating/* text eol=lf
+templates/runtime/operating-lens-agent.md.tpl text eol=lf
 adapters/cursor/rules/openplanr-operate.mdc text eol=lf
 commands/operate.md text eol=lf
 docs/generated/* text eol=lf

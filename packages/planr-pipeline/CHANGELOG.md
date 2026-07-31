@@ -4,6 +4,37 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.33.0] — 2026-07-31
+
+### Added
+
+- Protocol v1.3 agentic-execution contracts: mission packets carrying an
+  evidence index instead of file bodies, size-enforced at construction with a
+  named role-scoped budget error; bounded read-only tool grants; citation and
+  citation-resolution contracts that fail closed on any unresolvable
+  component; a single-file records-log entry contract with a lossless,
+  reversible directory-layout migration transform; per-role dispatch-mode
+  coexistence; cadence due-date calculation; and offline decision-brief
+  rendering through the artifact sandbox.
+- Six generated advisory lens agents under `agents/operating/` with strictly
+  read-only tool grants, produced from the canonical role registry with CI
+  drift detection (`check:operating-assets`).
+- Three new release-blocking conformance gates folded into
+  `conformance:operate`: v1.3 contract verification, records-migration
+  losslessness with entry-level schema validation, and an amendment gate
+  proving 32 preserved v1.2 surfaces byte-identical.
+- ADR-010 recording the agentic-execution amendment to the Operating Board
+  execution model.
+
+### Fixed
+
+- The `/ship` procedure no longer instructs interim run-manifest rows that its
+  own schema rejects; each task appends one complete record at close-out.
+- The v1.3 adapter-handoff `schemaPointer` now targets a field the mission
+  packet actually carries.
+- Published `./protocol` type declarations cover both v1.2 and v1.3
+  adapter-handoff shapes.
+
 ## [0.32.1] — 2026-07-30
 
 ### Fixed

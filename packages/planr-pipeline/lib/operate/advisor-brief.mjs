@@ -19,7 +19,7 @@ const SCORING_RUBRIC = Object.freeze({
     'Scores are advisory inputs. The deterministic engine assigns canonical IDs, confidence ceilings, final scores, lanes, owners, and attention caps.',
 });
 
-function roleById(roleId) {
+export function roleById(roleId) {
   const role = listOperatingRoles().find(({ id }) => id === roleId);
   if (!role) {
     throw new PipelineError(

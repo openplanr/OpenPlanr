@@ -20,6 +20,19 @@
 
 ---
 
+## Operating Board Advisory Lenses (generated)
+
+The six generated lens agents under `agents/operating/` (strategy-finance,
+technology-risk, product-activation, growth-market, operations-customer,
+chair) are assigned **Sonnet 5** (`model: claude-sonnet-5`, templated at
+`templates/runtime/operating-lens-agent.md.tpl`). Rationale: they perform
+read-only advisory analysis — search, read, cite — with no code generation
+and a strict output contract, the same profile class as the decomposition
+agents below. Their tool grant is the seven mission read-only tools only; no
+Edit, Write, or unscoped Bash. Do not hand-edit these files — they are
+generated from the role registry and `npm run check:operating-assets` fails
+on drift.
+
 ## Why Sonnet 5 for Decomposition Phases?
 
 ```

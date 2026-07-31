@@ -168,6 +168,102 @@ test('semantic validation rejects every tampered capability binding', () => {
   });
 });
 
+const READ_ONLY_TOOLS = [
+  'file-read', 'glob', 'content-search', 'git-log', 'git-show', 'git-diff', 'git-blame',
+];
+
+test('a v1.3 handoff dispatches a mission packet with a bounded read-only grant', () => {
+  // claude-code natively enforces tool isolation, so the bounded boundary holds.
+  const record = createOperatingAdapterHandoff(input('record-required', {
+    protocolVersion: '1.3.0',
+    runtime: 'claude-code',
+  }));
+
+  const [action] = record.next;
+  assert.equal(action.action, 'adapter.record');
+  assert.equal(action.dispatch.source, 'adapter.prepare-result');
+  assert.equal(action.dispatch.missionPacketPointer, '/data/missionPackets/strategy-finance');
+  assert.equal(action.dispatch.isolation, 'enforced-read-only-bounded');
+  assert.deepEqual(action.dispatch.toolGrant.allowed, READ_ONLY_TOOLS);
+  assert.deepEqual(action.dispatch.declaredRoots, []);
+  assert.ok(!('rolePackPointer' in action.dispatch));
+
+  assert.equal(
+    action.stdin.schema,
+    'https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json',
+  );
+  assert.equal(
+    action.stdin.schemaPointer,
+    '/data/missionPackets/strategy-finance/role/output/schema',
+  );
+  assert.equal(action.stdin.maxBytes, 32768);
+});
+
+test('a v1.3 handoff fails closed to the structured provider when the runtime cannot enforce', () => {
+  // codex reports advisory isolation, so the bounded boundary cannot be enforced.
+  const record = createOperatingAdapterHandoff(input('record-required', {
+    protocolVersion: '1.3.0',
+    runtime: 'codex',
+  }));
+  assert.equal(record.next[0].dispatch.isolation, 'fail-closed-structured-provider');
+  // A cursor handoff must fail closed for the same reason.
+  const cursor = createOperatingAdapterHandoff(input('record-required', {
+    protocolVersion: '1.3.0',
+    runtime: 'cursor',
+  }));
+  assert.equal(cursor.next[0].dispatch.isolation, 'fail-closed-structured-provider');
+});
+
+test('the v1.3 tool grant can never carry a write, exec, network, or environment capability', () => {
+  for (const runtime of ['claude-code', 'codex', 'cursor']) {
+    const record = createOperatingAdapterHandoff(input('record-required', {
+      protocolVersion: '1.3.0',
+      runtime,
+    }));
+    const { dispatch } = record.next[0];
+    assert.ok([
+      'enforced-read-only-bounded',
+      'fail-closed-structured-provider',
+    ].includes(dispatch.isolation), 'isolation must be a closed-world enum value');
+    for (const tool of dispatch.toolGrant.allowed) {
+      assert.doesNotMatch(tool, /write|edit|exec|run|shell|spawn|network|http|fetch|env|delete|remove/i);
+    }
+  }
+});
+
+test('the v1.2 dispatch output is byte-identical to its pre-task shape', () => {
+  // No protocolVersion in the input resolves to the v1.2 envelope.
+  const legacy = createOperatingAdapterHandoff(input('record-required'));
+  const explicit = createOperatingAdapterHandoff(input('record-required', {
+    protocolVersion: '1.2.0',
+  }));
+  assert.equal(legacy.protocolVersion, '1.2.0');
+  assert.equal(JSON.stringify(legacy), JSON.stringify(explicit));
+
+  const dispatch = legacy.next[0].dispatch;
+  assert.equal(
+    JSON.stringify(dispatch),
+    JSON.stringify({
+      source: 'adapter.prepare-result',
+      rolePackPointer: '/data/rolePacks/strategy-finance',
+      isolation: 'enforced-empty-tools',
+    }),
+  );
+  const stdin = legacy.next[0].stdin;
+  assert.equal(
+    JSON.stringify(stdin),
+    JSON.stringify({
+      kind: 'stdin-json',
+      mediaType: 'application/json',
+      encoding: 'utf-8',
+      maxBytes: 32768,
+      schema: 'https://openplanr.dev/schemas/v1.2.0/operating-advisor-response.schema.json',
+      schemaSource: 'adapter.prepare-result',
+      schemaPointer: '/data/rolePacks/strategy-finance/roleBrief/output/jsonSchema',
+    }),
+  );
+});
+
 test('semantic validation rejects invalid role and state combinations', () => {
   assert.throws(
     () => createOperatingAdapterHandoff(input('record-required', {

@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.3.0/operating-records-log-entry.schema.json",
+  "title": "OpenPlanr Protocol v1.3 operating records-log entry",
+  "description": "One immutable content-addressed record serialized as a single line in the append-only .state/records.jsonl. Same field set as the v1.2 operating-record, but declared as one line per record rather than a directory-per-digest-prefix file. The digest is retained as a field.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "digest",
+    "recordType",
+    "createdAt",
+    "correlationId",
+    "contentDigest",
+    "content"
+  ],
+  "properties": {
+    "kind": {
+      "const": "operating-records-log-entry"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.3.0"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "recordType": {
+      "type": "string",
+      "enum": [
+        "evidence-metadata",
+        "advisor-result",
+        "finding",
+        "decision",
+        "data-gap",
+        "route",
+        "spec-link",
+        "outcome",
+        "artifact-manifest",
+        "migration",
+        "recovery"
+      ]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "contentDigest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "content": {
+      "type": "object"
+    }
+  },
+  "oneOf": [
+    {
+      "title": "Evidence metadata record",
+      "properties": {
+        "recordType": {
+          "const": "evidence-metadata"
+        },
+        "content": {
+          "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-evidence.schema.json"
+        }
+      }
+    },
+    {
+      "title": "Advisor result record",
+      "properties": {
+        "recordType": {
+          "const": "advisor-result"
+        },
+        "content": {
+          "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-role-result.schema.json"
+        }
+      }
+    },
+    {
+      "title": "Finding record",
+      "properties": {
+        "recordType": {
+          "const": "finding"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-finding.schema.json"
+            },
+            {
+              "$ref": "operating-finding.schema.json"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Decision record",
+      "properties": {
+        "recordType": {
+          "const": "decision"
+        },
+        "content": {
+          "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-decision.schema.json"
+        }
+      }
+    },
+    {
+      "title": "Data-gap record",
+      "properties": {
+        "recordType": {
+          "const": "data-gap"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-data-gap.schema.json"
+            },
+            {
+              "$ref": "operating-data-gap.schema.json"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Route record",
+      "properties": {
+        "recordType": {
+          "const": "route"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-route-plan.schema.json"
+            },
+            {
+              "$ref": "operating-route-plan.schema.json"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Specification-link record",
+      "properties": {
+        "recordType": {
+          "const": "spec-link"
+        },
+        "content": {
+          "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-spec-link.schema.json"
+        }
+      }
+    },
+    {
+      "title": "Outcome record",
+      "properties": {
+        "recordType": {
+          "const": "outcome"
+        },
+        "content": {
+          "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-outcome.schema.json"
+        }
+      }
+    },
+    {
+      "title": "Artifact manifest record",
+      "properties": {
+        "recordType": {
+          "const": "artifact-manifest"
+        },
+        "content": {
+          "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-artifact-session.schema.json"
+        }
+      }
+    },
+    {
+      "title": "Migration record",
+      "properties": {
+        "recordType": {
+          "const": "migration"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-migration-record.schema.json"
+            },
+            {
+              "$ref": "operating-migration-record.schema.json"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Recovery record",
+      "properties": {
+        "recordType": {
+          "const": "recovery"
+        },
+        "content": {
+          "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-recovery-record.schema.json"
+        }
+      }
+    }
+  ]
+}

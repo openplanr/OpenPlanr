@@ -45,8 +45,11 @@ the owner is updated and checked.
 
 `planr-pipeline/schemas/` remains the canonical schema source. v1.0 planning
 artifacts and v1.1 capability contracts remain readable; v1.2 adds the Operating
-Board contract without migrating either namespace. A dedicated protocol package
-can be created later only after the existing drift checks remain green.
+Board contract without migrating either namespace. v1.3 replaces the Operating
+Board advisor execution model — mission packets, bounded read-only tool grants,
+and citation resolution — without migrating the v1.0/v1.1/v1.2 namespaces. A
+dedicated protocol package can be created later only after the existing drift
+checks remain green.
 
 Adapter `interactiveQuestions` values describe only how a validated
 questionnaire can be presented. They never confer mutation or provider

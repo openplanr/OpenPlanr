@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.3.0/operating-migration-record.schema.json",
+  "title": "OpenPlanr Protocol v1.3 explicit operating-state migration record",
+  "description": "Identical to the v1.2 migration record, plus source/target layout identifiers and before/after record and event counts so a migration from the directory-per-digest-prefix layout to records.jsonl can be asserted lossless mechanically.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "id", "sourceKind", "sourceDigest", "state", "previewDigest", "backupManifestDigest", "mappings", "conflicts", "sourceLayout", "targetLayout", "recordCount", "eventCount", "createdAt", "updatedAt"],
+  "properties": {
+    "kind": { "const": "operating-migration-record" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.3.0" },
+    "id": { "type": "string", "pattern": "^MIG-[A-Za-z0-9._-]+$" },
+    "sourceKind": { "type": "string", "enum": ["prototype-board", "protocol-upgrade"] },
+    "sourceDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "state": { "type": "string", "enum": ["previewed", "applied", "rolled-back", "conflict", "failed"] },
+    "previewDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "backupManifestDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "sourceLayout": { "type": "string", "enum": ["directory-per-digest-prefix", "records-jsonl"] },
+    "targetLayout": { "type": "string", "enum": ["directory-per-digest-prefix", "records-jsonl"] },
+    "recordCount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["before", "after"],
+      "properties": {
+        "before": { "type": "integer", "minimum": 0 },
+        "after": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "eventCount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["before", "after"],
+      "properties": {
+        "before": { "type": "integer", "minimum": 0 },
+        "after": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "mappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sourceId", "targetId", "eventId"],
+        "properties": {
+          "sourceId": { "type": "string", "minLength": 1 },
+          "targetId": { "type": "string", "minLength": 1 },
+          "eventId": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "conflicts": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "failureCode": { "type": "string", "pattern": "^E_[A-Z0-9_]+$" }
+  }
+}

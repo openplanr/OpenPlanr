@@ -78,6 +78,13 @@ export {
   startOperatingArtifactGeneration,
   validateOperatingArtifactOutput,
 } from '../operate/generator.mjs';
+export { createOperatingMissionPacket } from '../operate/mission-packet.mjs';
+export {
+  resolveOperatingCitation,
+  validateOperatingCitation,
+} from '../operate/citation.mjs';
+export { computeNextDueDate } from '../operate/cadence.mjs';
+export { createOperatingDecisionBriefArtifact } from '../operate/decision-brief-artifact.mjs';
 export {
   detectInstalledRuntimes,
   listRuntimeAdapters,

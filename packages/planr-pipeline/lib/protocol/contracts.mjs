@@ -15,38 +15,67 @@ const paths = {
   'adapter-registry': {
     '1.1.0': 'schemas/v1.1.0/adapter-registry.schema.json',
     '1.2.0': 'schemas/v1.2.0/adapter-registry.schema.json',
+    '1.3.0': 'schemas/v1.3.0/adapter-registry.schema.json',
   },
   'ecosystem-manifest': { '1.1.0': 'schemas/v1.1.0/ecosystem-manifest.schema.json' },
   'artifact-envelope': { '1.1.0': 'schemas/v1.1.0/artifact-envelope.schema.json' },
   'artifact-review': { '1.1.0': 'schemas/v1.1.0/artifact-review.schema.json' },
   'artifact-paste': { '1.1.0': 'schemas/v1.1.0/artifact-paste.schema.json' },
   'artifact-room-event': { '1.1.0': 'schemas/v1.1.0/artifact-room-event.schema.json' },
-  'operating-role-registry': { '1.2.0': 'schemas/v1.2.0/operating-role-registry.schema.json' },
+  'operating-role-registry': {
+    '1.2.0': 'schemas/v1.2.0/operating-role-registry.schema.json',
+    '1.3.0': 'schemas/v1.3.0/operating-role-registry.schema.json',
+  },
   'operating-provider-registry': { '1.2.0': 'schemas/v1.2.0/operating-provider-registry.schema.json' },
   'operating-config': { '1.2.0': 'schemas/v1.2.0/operating-config.schema.json' },
   'operating-cycle-manifest': { '1.2.0': 'schemas/v1.2.0/operating-cycle-manifest.schema.json' },
   'operating-state': { '1.2.0': 'schemas/v1.2.0/operating-state.schema.json' },
   'operating-evidence': { '1.2.0': 'schemas/v1.2.0/operating-evidence.schema.json' },
-  'operating-advisor-response': { '1.2.0': 'schemas/v1.2.0/operating-advisor-response.schema.json' },
-  'operating-adapter-handoff': { '1.2.0': 'schemas/v1.2.0/operating-adapter-handoff.schema.json' },
+  'operating-advisor-response': {
+    '1.2.0': 'schemas/v1.2.0/operating-advisor-response.schema.json',
+    '1.3.0': 'schemas/v1.3.0/operating-advisor-response.schema.json',
+  },
+  'operating-adapter-handoff': {
+    '1.2.0': 'schemas/v1.2.0/operating-adapter-handoff.schema.json',
+    '1.3.0': 'schemas/v1.3.0/operating-adapter-handoff.schema.json',
+  },
   'operating-role-result': { '1.2.0': 'schemas/v1.2.0/operating-role-result.schema.json' },
-  'operating-finding': { '1.2.0': 'schemas/v1.2.0/operating-finding.schema.json' },
+  'operating-finding': {
+    '1.2.0': 'schemas/v1.2.0/operating-finding.schema.json',
+    '1.3.0': 'schemas/v1.3.0/operating-finding.schema.json',
+  },
   'operating-decision': { '1.2.0': 'schemas/v1.2.0/operating-decision.schema.json' },
-  'operating-data-gap': { '1.2.0': 'schemas/v1.2.0/operating-data-gap.schema.json' },
-  'operating-route-plan': { '1.2.0': 'schemas/v1.2.0/operating-route-plan.schema.json' },
+  'operating-data-gap': {
+    '1.2.0': 'schemas/v1.2.0/operating-data-gap.schema.json',
+    '1.3.0': 'schemas/v1.3.0/operating-data-gap.schema.json',
+  },
+  'operating-route-plan': {
+    '1.2.0': 'schemas/v1.2.0/operating-route-plan.schema.json',
+    '1.3.0': 'schemas/v1.3.0/operating-route-plan.schema.json',
+  },
   'operating-event': { '1.2.0': 'schemas/v1.2.0/operating-event.schema.json' },
   'operating-outcome': { '1.2.0': 'schemas/v1.2.0/operating-outcome.schema.json' },
   'operating-spec-link': { '1.2.0': 'schemas/v1.2.0/operating-spec-link.schema.json' },
   'operating-checkpoint': { '1.2.0': 'schemas/v1.2.0/operating-checkpoint.schema.json' },
   'operating-workspace-manifest': { '1.2.0': 'schemas/v1.2.0/operating-workspace-manifest.schema.json' },
   'operating-record': { '1.2.0': 'schemas/v1.2.0/operating-record.schema.json' },
+  'operating-records-log-entry': { '1.3.0': 'schemas/v1.3.0/operating-records-log-entry.schema.json' },
   'operating-transaction-journal': { '1.2.0': 'schemas/v1.2.0/operating-transaction-journal.schema.json' },
   'operating-artifact-session': { '1.2.0': 'schemas/v1.2.0/operating-artifact-session.schema.json' },
   'operating-provider-manifest': { '1.2.0': 'schemas/v1.2.0/operating-provider-manifest.schema.json' },
   'operating-evidence-readiness': { '1.2.0': 'schemas/v1.2.0/operating-evidence-readiness.schema.json' },
   'operating-outcome-observation': { '1.2.0': 'schemas/v1.2.0/operating-outcome-observation.schema.json' },
-  'operating-migration-record': { '1.2.0': 'schemas/v1.2.0/operating-migration-record.schema.json' },
+  'operating-migration-record': {
+    '1.2.0': 'schemas/v1.2.0/operating-migration-record.schema.json',
+    '1.3.0': 'schemas/v1.3.0/operating-migration-record.schema.json',
+  },
   'operating-recovery-record': { '1.2.0': 'schemas/v1.2.0/operating-recovery-record.schema.json' },
+  'operating-mission-packet': { '1.3.0': 'schemas/v1.3.0/operating-mission-packet.schema.json' },
+  'operating-evidence-index-item': { '1.3.0': 'schemas/v1.3.0/operating-evidence-index-item.schema.json' },
+  'operating-tool-grant': { '1.3.0': 'schemas/v1.3.0/operating-tool-grant.schema.json' },
+  'operating-citation': { '1.3.0': 'schemas/v1.3.0/operating-citation.schema.json' },
+  'operating-citation-resolution': { '1.3.0': 'schemas/v1.3.0/operating-citation-resolution.schema.json' },
+  'operating-cadence-status': { '1.3.0': 'schemas/v1.3.0/operating-cadence-status.schema.json' },
   'ecosystem-saga': { '1.2.0': 'schemas/v1.2.0/ecosystem-saga.schema.json' },
   'ecosystem-release-operation': { '1.2.0': 'schemas/v1.2.0/ecosystem-release-operation.schema.json' },
   'guided-question': { '1.2.0': 'schemas/v1.2.0/guided-question.schema.json' },
@@ -97,11 +126,28 @@ function referencedSchemaPath(basePath, reference) {
   return packageRelative;
 }
 
+function compareProtocolVersions(left, right) {
+  const leftParts = left.split('.').map(Number);
+  const rightParts = right.split('.').map(Number);
+  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index += 1) {
+    const difference = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
 function inferredVersion(kind, value, explicitVersion) {
   if (explicitVersion) return explicitVersion;
   if (typeof value?.protocolVersion === 'string') return value.protocolVersion;
   const versions = Object.keys(PROTOCOL_SCHEMA_REGISTRY[kind] ?? {});
   if (versions.length === 1) return versions[0];
+  if (versions.length > 1) {
+    // The value is version-agnostic (for example the compact advisor response,
+    // which carries no protocol envelope). Additively resolve to the earliest
+    // registered version so a v1.2 reader keeps validating v1.2 artifacts
+    // unchanged; v1.3 callers pass protocolVersion explicitly.
+    return [...versions].sort(compareProtocolVersions)[0];
+  }
   throw new PipelineError(
     'E_SCHEMA_VERSION_REQUIRED',
     `Protocol artifact "${kind}" supports multiple versions; pass protocolVersion explicitly.`,

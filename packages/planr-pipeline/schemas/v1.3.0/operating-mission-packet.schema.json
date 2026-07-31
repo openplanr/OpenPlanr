@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.3.0/operating-mission-packet.schema.json",
+  "title": "OpenPlanr Protocol v1.3 operating mission packet",
+  "description": "The compact, digest-bound packet dispatched to a native advisory agent. It carries the charter, prior-cycle summary, planning status, role mandate/authority/output contract, declared read-only roots, a bounded tool grant, and an evidence index of pointers only. No property in this contract, at any nesting level, may carry a file body: additionalProperties is false everywhere so a body field cannot be added without a schema bump.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "cycleId",
+    "roleId",
+    "packetDigest",
+    "charter",
+    "priorCycleSummary",
+    "planningStatus",
+    "role",
+    "declaredRoots",
+    "toolGrant",
+    "evidenceIndex",
+    "budgets"
+  ],
+  "properties": {
+    "kind": { "const": "operating-mission-packet" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.3.0" },
+    "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+    "roleId": {
+      "type": "string",
+      "enum": [
+        "strategy-finance",
+        "technology-risk",
+        "product-activation",
+        "growth-market",
+        "operations-customer",
+        "chair"
+      ]
+    },
+    "packetDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "pinnedRevision": { "type": "string", "pattern": "^[a-f0-9]{7,64}$" },
+    "charter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["productCharter", "currentGoals"],
+      "properties": {
+        "productCharter": { "type": "string", "minLength": 1, "maxLength": 8192 },
+        "currentGoals": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+        }
+      }
+    },
+    "priorCycleSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary"],
+      "properties": {
+        "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 8192 },
+        "openDecisions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^DEC-[0-9]{3,}$" }
+        },
+        "openGaps": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^GAP-[A-Za-z0-9._-]+$" }
+        },
+        "pendingOutcomes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^OUT-[0-9]{3,}$" }
+        }
+      }
+    },
+    "planningStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["planningEngine", "planning", "delivery"],
+      "properties": {
+        "planningEngine": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "planning": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "delivery": { "type": "string", "minLength": 1, "maxLength": 2048 }
+      }
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayLabel", "mandate", "authority", "output"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": [
+            "strategy-finance",
+            "technology-risk",
+            "product-activation",
+            "growth-market",
+            "operations-customer",
+            "chair"
+          ]
+        },
+        "displayLabel": { "type": "string", "minLength": 1 },
+        "mandate": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "capabilityTier": {
+          "type": "string",
+          "enum": ["analysis-standard", "analysis-high"]
+        },
+        "authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["readOnly", "writeBoundary", "forbiddenRecommendationCategories"],
+          "properties": {
+            "readOnly": { "const": true },
+            "writeBoundary": { "const": "none" },
+            "sharedBoundaries": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+            },
+            "forbiddenRecommendationCategories": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "output": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schema", "allowedProposalTypes", "maximumProposals"],
+          "properties": {
+            "schema": { "type": "string", "pattern": "^operating-advisor-response@1\\.3\\.0$" },
+            "allowedProposalTypes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1 }
+            },
+            "maximumProposals": { "type": "integer", "minimum": 1, "maximum": 20 },
+            "maximumOutputBytes": { "type": "integer", "minimum": 1024, "maximum": 131072 }
+          }
+        }
+      }
+    },
+    "declaredRoots": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "maxLength": 512,
+        "pattern": "^(?!.*\\.\\.)[A-Za-z0-9][A-Za-z0-9._/-]*$"
+      }
+    },
+    "toolGrant": { "$ref": "operating-tool-grant.schema.json" },
+    "evidenceIndex": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": { "$ref": "operating-evidence-index-item.schema.json" }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxInputBytes"],
+      "properties": {
+        "maxInputBytes": { "type": "integer", "minimum": 1024, "maximum": 1048576 },
+        "maxEvidenceItems": { "type": "integer", "minimum": 1, "maximum": 10000 }
+      }
+    }
+  }
+}

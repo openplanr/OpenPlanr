@@ -92,7 +92,8 @@ When feedback carries `preferred` (or the user picked "Approve as-is"):
    feature has one already; else skip silently):
    `{ "stage": "design.review", "agent": null, "started_at": …, "ended_at": …,
       "files_written": [artifact, "design-spec.md", "finalized.json"],
-      "exit_status": "success", "pins_addressed": N }`.
+      "files_modified": [], "exit_status": "success", "error_summary": null,
+      "cost_hint": "pins_addressed=N" }`.
 4. Release the lock. Approval does not share or publish the artifact. **R1 STOP** — print:
    ```
    ✓ design-review: <N> pins addressed across <M> screens · lint 0 errors · iterations=<k>

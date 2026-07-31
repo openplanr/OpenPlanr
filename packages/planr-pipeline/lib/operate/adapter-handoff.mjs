@@ -1,14 +1,54 @@
 import { PipelineError } from '../pipeline/errors.mjs';
-import { assertProtocolArtifact } from '../protocol/contracts.mjs';
+import { assertProtocolArtifact, listOperatingRoles } from '../protocol/contracts.mjs';
+import { listRuntimeAdapters, normalizeRuntime } from '../pipeline/runtime.mjs';
+import { createMissionToolGrant } from './mission-packet.mjs';
 
 const ADVISOR_RESPONSE_SCHEMA =
   'https://openplanr.dev/schemas/v1.2.0/operating-advisor-response.schema.json';
+const ADVISOR_RESPONSE_SCHEMA_V13 =
+  'https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json';
 
 function fail(detail) {
   throw new PipelineError(
     'E_PROTOCOL_ARTIFACT_INVALID',
     `operating-adapter-handoff: ${detail}`,
   );
+}
+
+function adapterEnforcesBoundedReadOnly(runtime) {
+  const id = normalizeRuntime(runtime);
+  const adapter = listRuntimeAdapters().find((entry) => entry.id === id);
+  // Only a runtime that natively enforces tool isolation can guarantee the
+  // bounded read-only boundary (FR2). Every other runtime must fail closed to
+  // the structured provider path. The existing `enforced` capability already
+  // distinguishes the native-read-only adapter from the advisory ones, so the
+  // classification is derived from the published registry rather than a new
+  // field the v1.2/v1.3 registry schemas cannot carry.
+  return adapter?.capabilities?.toolIsolation === 'enforced';
+}
+
+function roleDispatchMode(roleId) {
+  // dispatchMode is a v1.3 role-registry field (FR10). While the registry is
+  // still published at v1.2 it is absent, so a mission-model v1.3 handoff
+  // defaults to 'mission'; a role explicitly marked 'pack' fails closed.
+  const role = listOperatingRoles().find((entry) => entry.id === roleId);
+  return role?.dispatchMode ?? 'mission';
+}
+
+function missionDispatch(binding, roleId) {
+  const bounded = roleDispatchMode(roleId) === 'mission'
+    && adapterEnforcesBoundedReadOnly(binding.runtime);
+  return {
+    source: 'adapter.prepare-result',
+    missionPacketPointer: `/data/missionPackets/${roleId}`,
+    // The concrete read roots are bound in the referenced mission packet; the
+    // dispatch declares the canonical read-only tool policy and defers roots to
+    // that packet, so an empty grant here confines to nothing rather than
+    // widening access.
+    declaredRoots: [],
+    toolGrant: createMissionToolGrant([]),
+    isolation: bounded ? 'enforced-read-only-bounded' : 'fail-closed-structured-provider',
+  };
 }
 
 function lifecycleArgv(binding, action, role) {
@@ -53,7 +93,26 @@ function prepareAction(binding, roles) {
   };
 }
 
-function recordAction(binding, roleId) {
+function recordAction(binding, roleId, protocolVersion) {
+  if (protocolVersion === '1.3.0') {
+    return {
+      id: `adapter.record.${roleId}`,
+      action: 'adapter.record',
+      effect: 'machine-local-write',
+      role: roleId,
+      argv: lifecycleArgv(binding, 'record', roleId),
+      dispatch: missionDispatch(binding, roleId),
+      stdin: {
+        kind: 'stdin-json',
+        mediaType: 'application/json',
+        encoding: 'utf-8',
+        maxBytes: 32768,
+        schema: ADVISOR_RESPONSE_SCHEMA_V13,
+        schemaSource: 'adapter.prepare-result',
+        schemaPointer: `/data/missionPackets/${roleId}/role/output/schema`,
+      },
+    };
+  }
   return {
     id: `adapter.record.${roleId}`,
     action: 'adapter.record',
@@ -118,7 +177,7 @@ function expectedActions(value) {
         // lease-bound session. Authorize one pending role at a time so runtimes
         // cannot race session snapshots or lose an already recorded role.
         next: pending.length > 0
-          ? [recordAction(value.binding, pending[0].roleId)]
+          ? [recordAction(value.binding, pending[0].roleId, value.protocolVersion)]
           : [],
         recovery: [
           boundAction(value.binding, 'resume', 'read-only'),
@@ -212,7 +271,7 @@ export function createOperatingAdapterHandoff(input) {
   const value = {
     kind: 'operating-adapter-handoff',
     schemaVersion: '1.0.0',
-    protocolVersion: '1.2.0',
+    protocolVersion: input.protocolVersion ?? '1.2.0',
     phase: input.phase,
     state: input.state,
     binding: {
