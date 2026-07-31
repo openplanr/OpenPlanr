@@ -19,7 +19,7 @@
       "writeBoundary": "none",
       "dispatchMode": "mission",
       "allowedProposalTypes": ["finding", "decision", "data-gap"],
-      "budgets": { "maxInputBytes": 262144, "maxOutputBytes": 32768, "maxProposals": 4 },
+      "budgets": { "maxInputBytes": 524288, "maxOutputBytes": 32768, "maxProposals": 4 },
       "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
       "minimumEvidence": {
         "match": "any",
@@ -61,7 +61,7 @@
       "writeBoundary": "none",
       "dispatchMode": "mission",
       "allowedProposalTypes": ["finding", "decision", "data-gap"],
-      "budgets": { "maxInputBytes": 393216, "maxOutputBytes": 32768, "maxProposals": 5 },
+      "budgets": { "maxInputBytes": 655360, "maxOutputBytes": 32768, "maxProposals": 5 },
       "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
       "minimumEvidence": {
         "match": "all",
@@ -103,7 +103,7 @@
       "writeBoundary": "none",
       "dispatchMode": "mission",
       "allowedProposalTypes": ["finding", "decision", "data-gap"],
-      "budgets": { "maxInputBytes": 262144, "maxOutputBytes": 32768, "maxProposals": 4 },
+      "budgets": { "maxInputBytes": 524288, "maxOutputBytes": 32768, "maxProposals": 4 },
       "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
       "minimumEvidence": {
         "match": "any",
@@ -145,7 +145,7 @@
       "writeBoundary": "none",
       "dispatchMode": "mission",
       "allowedProposalTypes": ["finding", "decision", "data-gap"],
-      "budgets": { "maxInputBytes": 262144, "maxOutputBytes": 32768, "maxProposals": 4 },
+      "budgets": { "maxInputBytes": 524288, "maxOutputBytes": 32768, "maxProposals": 4 },
       "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
       "minimumEvidence": {
         "match": "any",
@@ -187,7 +187,7 @@
       "writeBoundary": "none",
       "dispatchMode": "mission",
       "allowedProposalTypes": ["finding", "decision", "data-gap"],
-      "budgets": { "maxInputBytes": 262144, "maxOutputBytes": 32768, "maxProposals": 4 },
+      "budgets": { "maxInputBytes": 524288, "maxOutputBytes": 32768, "maxProposals": 4 },
       "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
       "minimumEvidence": {
         "match": "any",

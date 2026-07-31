@@ -165,7 +165,9 @@
       "required": ["maxInputBytes"],
       "properties": {
         "maxInputBytes": { "type": "integer", "minimum": 1024, "maximum": 1048576 },
-        "maxEvidenceItems": { "type": "integer", "minimum": 1, "maximum": 10000 }
+        "maxEvidenceItems": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "truncatedEvidenceItems": { "type": "boolean" },
+        "evidenceItemsBeforeTruncation": { "type": "integer", "minimum": 1 }
       }
     }
   }

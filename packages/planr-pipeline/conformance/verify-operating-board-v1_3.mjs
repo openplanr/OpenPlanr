@@ -67,6 +67,23 @@ assertProtocolArtifact('operating-citation', fixture('citation-valid.json'));
 assertProtocolArtifact('operating-cadence-status', fixture('cadence-weekly-due.json'));
 assertProtocolArtifact('operating-cadence-status', fixture('cadence-monthly-due.json'));
 
+// A truncated mission-packet fixture records the drop loudly in its budgets (FR4).
+const truncatedFixture = fixture('mission-packet-truncated-valid.json');
+assertProtocolArtifact('operating-mission-packet', truncatedFixture);
+if (truncatedFixture.budgets.truncatedEvidenceItems !== true
+  || typeof truncatedFixture.budgets.evidenceItemsBeforeTruncation !== 'number'
+  || truncatedFixture.budgets.evidenceItemsBeforeTruncation <= truncatedFixture.budgets.maxEvidenceItems) {
+  throw new Error('The truncated mission-packet fixture must record a loud truncation in budgets.');
+}
+
+// A create-epic route validates additively against the v1.3 route-plan schema (FR8).
+const epicRoute = fixture('route-epic-valid.json');
+assertProtocolArtifact('operating-route-plan', epicRoute, { protocolVersion: PROTOCOL });
+if (epicRoute.actions[0].kind !== 'create-epic'
+  || !epicRoute.actions[0].targetPath.startsWith('.planr/epics/')) {
+  throw new Error('The create-epic fixture must route to a .planr/epics/ target.');
+}
+
 // ── Negative citation fixtures must be rejected ──────────────────────────────
 for (const name of [
   'citation-fabricated-path-invalid.json',
@@ -123,6 +140,41 @@ for (const name of [
   }
   if (!failedClosed) {
     throw new Error('An oversized mission packet was not rejected; maxInputBytes must fail closed.');
+  }
+}
+
+// ── maxEvidenceItems truncates loudly and rescues an otherwise-oversized index ─
+// The same 500-item index that fails closed above assembles successfully once
+// maxEvidenceItems caps it, proving truncation is enforced (not merely recorded)
+// and that the byte gate is never tripped solely by a large PRE-truncation index.
+{
+  const oversizedEvidence = Array.from({ length: 500 }, (_, index) => ({
+    id: `EVX-repo-${String(index).padStart(4, '0')}`,
+    path: `src/module-${index}/${'segment/'.repeat(6)}file-${index}.mjs`,
+    contentHash: `sha256:${'a'.repeat(64)}`,
+    source: 'repository',
+    classification: 'code',
+    freshness: 'fresh',
+    sensitivity: 'internal',
+    signals: Array.from({ length: 4 }, (_, k) => `signal-${index}-${k}-${'x'.repeat(200)}`),
+  }));
+  const packet = createOperatingMissionPacket('strategy-finance', oversizedEvidence, {
+    cycleId: 'CYCLE-001',
+    pinnedRevision: 'a'.repeat(40),
+    declaredRoots: ['src'],
+    charter: {
+      productCharter: 'A portable planning and delivery engine for solo founders.',
+      currentGoals: ['Enforce mission budgets.'],
+    },
+    priorCycleSummary: { cycleId: 'CYCLE-000', summary: 'Prior cycle established the mission budget.' },
+    planningStatus: { planningEngine: 'openplanr', planning: 'One spec decomposed.', delivery: 'One task shipped.' },
+    maxEvidenceItems: 40,
+  });
+  assertProtocolArtifact('operating-mission-packet', packet, { protocolVersion: PROTOCOL });
+  if (packet.evidenceIndex.length !== 40
+    || packet.budgets.truncatedEvidenceItems !== true
+    || packet.budgets.evidenceItemsBeforeTruncation !== 500) {
+    throw new Error('maxEvidenceItems must truncate the index to the cap and record the drop loudly.');
   }
 }
 
@@ -444,8 +496,35 @@ assertProtocolArtifact('adapter-registry', readJson('registry/adapters.json'));
   }
 }
 
+// ── v1.3 route events: a create-epic route also enters the log additively ─────
+{
+  const epicRoutePlan = fixture('route-epic-valid.json');
+  const epicEvent = createOperatingEvent({
+    eventId: 'evt-epic-conf',
+    timestamp: '2026-07-31T00:00:00.000Z',
+    cycleId: 'CYCLE-011',
+    type: 'route.proposed',
+    entityId: epicRoutePlan.id ?? 'ACT-021',
+    actor: { kind: 'engine', id: 'openplanr' },
+    correlationId: 'create-epic-conformance',
+    payload: { record: epicRoutePlan },
+    protocolVersion: '1.3.0',
+  }, { previousEvent: null, sequence: 1 });
+  assertProtocolArtifact('operating-event', epicEvent, { protocolVersion: '1.3.0' });
+  // The additive widening is never retroactive: the same content must still be
+  // rejected at v1.2, where create-epic does not exist.
+  const epicRejectedAtV12 = validateProtocolArtifact('operating-event', {
+    ...epicEvent,
+    protocolVersion: '1.2.0',
+  });
+  if (epicRejectedAtV12.length === 0) {
+    throw new Error('A create-epic route validated inside a v1.2 event; the frozen surface leaked.');
+  }
+}
+
 process.stdout.write(
   `Operating Board v1.3 conformance passed (${EXPECTED_V13_KINDS.length} additive schemas, `
-  + 'mission-packet body-free and size-enforced, citation resolution fails closed, '
-  + 'v1.3 route events enter the log with the v1.2 surface frozen).\n',
+  + 'mission-packet body-free, size-enforced, and maxEvidenceItems-truncated loudly, '
+  + 'citation resolution fails closed, create-quick-task and create-epic route events '
+  + 'enter the log with the v1.2 surface frozen).\n',
 );

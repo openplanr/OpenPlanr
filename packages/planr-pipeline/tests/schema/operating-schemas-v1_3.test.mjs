@@ -113,11 +113,22 @@ test('mission packet fixtures validate and maxInputBytes fails closed with a nam
   // deliberately accepts the shape here.
   assert.deepEqual(validateProtocolArtifact('operating-mission-packet', oversized), []);
 
+  // The additive truncation budget fields validate and record the loud drop.
+  const truncated = fixture('mission-packet-truncated-valid.json');
+  assert.deepEqual(validateProtocolArtifact('operating-mission-packet', truncated), []);
+  assert.equal(truncated.budgets.truncatedEvidenceItems, true);
+  assert.ok(truncated.budgets.evidenceItemsBeforeTruncation > truncated.budgets.maxEvidenceItems);
+
   // additionalProperties:false forbids adding a raw body field.
   assert.ok(validateProtocolArtifact('operating-mission-packet', {
     ...valid,
     content: 'const secret = 1;',
   }).length, 'a body-shaped extra property must be rejected');
+  // additionalProperties:false on budgets forbids an unknown truncation field.
+  assert.ok(validateProtocolArtifact('operating-mission-packet', {
+    ...valid,
+    budgets: { ...valid.budgets, evidenceItemsAfterTruncation: 3 },
+  }).length, 'an unknown budgets field must be rejected');
 });
 
 test('citations bind to a pinned revision and reject fabricated, mis-ranged, or unpinned references', () => {
@@ -281,6 +292,54 @@ test('role registry adds a required dispatchMode and route plans add the quick-t
     createdAt: at,
   };
   assert.deepEqual(validateProtocolArtifact('operating-route-plan', route), []);
+});
+
+test('the route-plan kind enum additively accepts create-epic without breaking create-quick-task', () => {
+  const base = {
+    kind: 'operating-route-plan',
+    schemaVersion: '1.0.0',
+    protocolVersion: V,
+    id: 'ACT-021',
+    cycleId: 'CYCLE-011',
+    inputDigest: digest('1'),
+    routeDigest: digest('2'),
+    previewDigest: digest('3'),
+    workspaceDigest: digest('4'),
+    evidenceDigest: digest('5'),
+    providerDigest: digest('6'),
+    destinationDigest: digest('7'),
+    eventHead: { sequence: 1, hash: digest('8') },
+    state: 'proposed',
+    actions: [{
+      id: 'ACT-021',
+      findingId: 'FND-021',
+      lane: 'OWNER',
+      owner: 'founder',
+      kind: 'create-epic',
+      dependsOn: [],
+      evidenceRefs: ['EVD-activation-friction-theme'],
+      reversible: true,
+      requiresConfirmation: true,
+      targetPath: '.planr/epics/EPIC-activation-friction.md',
+    }],
+    createdAt: at,
+  };
+
+  // The fixture and an inline document both validate.
+  assert.deepEqual(validateProtocolArtifact('operating-route-plan', fixture('route-epic-valid.json')), []);
+  assert.deepEqual(validateProtocolArtifact('operating-route-plan', base), []);
+
+  // The sibling create-quick-task kind is untouched by the addition.
+  assert.deepEqual(validateProtocolArtifact('operating-route-plan', {
+    ...base,
+    actions: [{ ...base.actions[0], kind: 'create-quick-task', targetPath: '.planr/quick/QUICK-x.md' }],
+  }), []);
+
+  // A non-enumerated kind is still rejected — the enum only gained one sibling.
+  assert.ok(validateProtocolArtifact('operating-route-plan', {
+    ...base,
+    actions: [{ ...base.actions[0], kind: 'create-release' }],
+  }).length, 'the kind enum stays closed');
 });
 
 test('migration records assert lossless layout moves and records-log entries wrap content', () => {

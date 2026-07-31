@@ -144,27 +144,111 @@ test('the permitted-evidence-kinds filter drops sources the role may not read', 
   );
 });
 
-test('maxInputBytes fails closed with a named, role-scoped error and never truncates', () => {
-  const role = listOperatingRoles().find(({ id }) => id === 'strategy-finance');
-  const oversized = Array.from({ length: 500 }, (_, index) => ({
-    id: `EVX-repo-${String(index).padStart(4, '0')}`,
-    path: `src/module-${index}/${'segment/'.repeat(6)}file-${index}.mjs`,
-    contentHash: digest('a'),
-    source: 'repository',
-    classification: 'code',
-    freshness: 'fresh',
-    sensitivity: 'internal',
-    signals: Array.from({ length: 4 }, (_, k) => `signal-${index}-${k}-${'x'.repeat(200)}`),
-  }));
+const oversizedItem = (index) => ({
+  id: `EVX-repo-${String(index).padStart(4, '0')}`,
+  path: `src/module-${index}/${'segment/'.repeat(6)}file-${index}.mjs`,
+  contentHash: digest('a'),
+  source: 'repository',
+  classification: 'code',
+  freshness: 'fresh',
+  sensitivity: 'internal',
+  signals: Array.from({ length: 4 }, (_, k) => `signal-${index}-${k}-${'x'.repeat(200)}`),
+});
 
+test('maxInputBytes fails closed with a named, role-scoped error on the post-truncation payload', () => {
+  const role = listOperatingRoles().find(({ id }) => id === 'strategy-finance');
+  const oversized = Array.from({ length: 500 }, (_, index) => oversizedItem(index));
+
+  // No maxEvidenceItems cap, so nothing is truncated: the full 500-item payload
+  // exceeds the role budget and the byte gate fails closed.
   assert.throws(
-    () => createOperatingMissionPacket('strategy-finance', oversized, runtimeContext),
+    () => createOperatingMissionPacket('strategy-finance', oversized, {
+      ...runtimeContext,
+      maxEvidenceItems: undefined,
+    }),
     (error) => {
       assert.equal(error.code, 'E_OPERATE_MISSION_PACKET_BUDGET');
       assert.match(error.message, /role strategy-finance/);
       assert.match(error.message, new RegExp(`exceeding maxInputBytes ${role.budgets.maxInputBytes}`));
       return true;
     },
+  );
+});
+
+test('maxEvidenceItems truncates an over-limit index to exactly the cap and records the drop', () => {
+  // Caller order is priority order (FR3). Give descending paths so caller order
+  // deliberately disagrees with the packet's (source, path) canonical sort, then
+  // prove the RETAINED items are the caller's highest-priority ones, not the
+  // alphabetically-first ones.
+  const prioritized = Array.from({ length: 5 }, (_, i) => ({
+    id: `EVX-priority-${i}`,
+    path: `src/z${5 - i}/keep.mjs`,
+    contentHash: digest('a'),
+    source: 'repository',
+    classification: 'code',
+    freshness: 'fresh',
+    sensitivity: 'internal',
+    signals: [`signal-${i}`],
+  }));
+
+  const packet = createOperatingMissionPacket('technology-risk', prioritized, {
+    ...runtimeContext,
+    maxEvidenceItems: 3,
+  });
+
+  assert.equal(packet.evidenceIndex.length, 3);
+  assert.equal(packet.budgets.truncatedEvidenceItems, true);
+  assert.equal(packet.budgets.evidenceItemsBeforeTruncation, 5);
+  // The survivors are the caller's first three (priority 0,1,2) — NOT the
+  // alphabetical-path-first items a naive sort-then-slice would have kept.
+  assert.deepEqual(
+    packet.evidenceIndex.map((item) => item.id).sort(),
+    ['EVX-priority-0', 'EVX-priority-1', 'EVX-priority-2'],
+  );
+  // The retained set is still canonically sorted inside the packet.
+  assert.deepEqual(
+    validateProtocolArtifact('operating-mission-packet', packet, { protocolVersion: '1.3.0' }),
+    [],
+  );
+});
+
+test('an index at or under maxEvidenceItems is untouched and records no truncation', () => {
+  // Two items, cap of three: nothing is dropped.
+  const packet = createOperatingMissionPacket('technology-risk', [repoItem, gitItem], {
+    ...runtimeContext,
+    maxEvidenceItems: 3,
+  });
+  assert.equal(packet.evidenceIndex.length, 2);
+  assert.ok(
+    !('truncatedEvidenceItems' in packet.budgets) || packet.budgets.truncatedEvidenceItems === false,
+    'truncatedEvidenceItems must be absent or false when nothing is dropped',
+  );
+  assert.ok(!('evidenceItemsBeforeTruncation' in packet.budgets));
+
+  // Exactly at the cap is still "at or under" — no truncation.
+  const atCap = createOperatingMissionPacket('technology-risk', [repoItem, gitItem], {
+    ...runtimeContext,
+    maxEvidenceItems: 2,
+  });
+  assert.equal(atCap.evidenceIndex.length, 2);
+  assert.ok(!('truncatedEvidenceItems' in atCap.budgets));
+});
+
+test('a large pre-truncation index that fits after truncation is accepted, never fail-closed', () => {
+  // The same 500-item index that fails closed uncapped assembles successfully
+  // once maxEvidenceItems caps it under the byte budget — the gate never trips
+  // solely because the PRE-truncation index was large.
+  const oversized = Array.from({ length: 500 }, (_, index) => oversizedItem(index));
+  const packet = createOperatingMissionPacket('strategy-finance', oversized, {
+    ...runtimeContext,
+    maxEvidenceItems: 40,
+  });
+  assert.equal(packet.evidenceIndex.length, 40);
+  assert.equal(packet.budgets.truncatedEvidenceItems, true);
+  assert.equal(packet.budgets.evidenceItemsBeforeTruncation, 500);
+  assert.deepEqual(
+    validateProtocolArtifact('operating-mission-packet', packet, { protocolVersion: '1.3.0' }),
+    [],
   );
 });
 

@@ -72,13 +72,23 @@ function withoutUndefined(object) {
 }
 
 /**
- * Assemble a size-bounded Protocol v1.3 mission packet (FR1). The packet reuses
- * the registry-derived role brief (mandate, authority, output contract) and
- * attaches a caller-supplied evidence INDEX restricted to the role's permitted
- * evidence kinds — never any file body. The assembled packet is measured against
- * the role's `maxInputBytes` before it is signed; when it would exceed that
- * budget the assembler fails closed with a named, role-scoped error instead of
- * truncating the evidence index to fit.
+ * Assemble a size-bounded Protocol v1.3 mission packet (FR1/FR4). The packet
+ * reuses the registry-derived role brief (mandate, authority, output contract)
+ * and attaches a caller-supplied evidence INDEX restricted to the role's
+ * permitted evidence kinds — never any file body.
+ *
+ * The caller is responsible for prioritized ordering (FR3): the items arrive in
+ * priority order and, when the permitted index is longer than `maxEvidenceItems`,
+ * the assembler keeps the first `maxEvidenceItems` (the highest-priority items)
+ * and records the truncation loudly in the signed packet — `budgets.truncated
+ * EvidenceItems: true` and `budgets.evidenceItemsBeforeTruncation: <n>` — never a
+ * silent drop. Truncation follows caller priority, not the packet's canonical
+ * sort, so a capped repository walk is never re-starved alphabetically.
+ *
+ * The assembled packet is then measured against the role's `maxInputBytes`
+ * before it is signed; when the POST-truncation payload still exceeds that budget
+ * the assembler fails closed with a named, role-scoped error. It never fails
+ * closed solely because the PRE-truncation index was large.
  */
 export function createOperatingMissionPacket(roleId, evidenceItems = [], options = {}) {
   const {
@@ -105,11 +115,21 @@ export function createOperatingMissionPacket(roleId, evidenceItems = [], options
   const permitted = new Set(role.permittedEvidenceKinds);
   const roots = sortedDeclaredRoots(declaredRoots);
 
-  const evidenceIndex = sortEvidenceIndex(
-    (Array.isArray(evidenceItems) ? evidenceItems : [])
-      .filter((item) => item && permitted.has(item.source))
-      .map((item) => structuredClone(item)),
-  );
+  // Preserve the caller's prioritized order (FR3) while dropping sources the
+  // role may not read.
+  const prioritized = (Array.isArray(evidenceItems) ? evidenceItems : [])
+    .filter((item) => item && permitted.has(item.source))
+    .map((item) => structuredClone(item));
+
+  // Enforce maxEvidenceItems as a loud, reported truncation: keep the first
+  // (highest-priority) entries and record what was dropped. The canonical sort
+  // is applied AFTER truncation so it fixes packet order without deciding which
+  // items survive.
+  const evidenceItemsBeforeTruncation = prioritized.length;
+  const truncated = typeof maxEvidenceItems === 'number'
+    && prioritized.length > maxEvidenceItems;
+  const retained = truncated ? prioritized.slice(0, maxEvidenceItems) : prioritized;
+  const evidenceIndex = sortEvidenceIndex(retained);
 
   const missionRole = {
     id: brief.role.id,
@@ -147,6 +167,8 @@ export function createOperatingMissionPacket(roleId, evidenceItems = [], options
     budgets: withoutUndefined({
       maxInputBytes: role.budgets.maxInputBytes,
       maxEvidenceItems,
+      truncatedEvidenceItems: truncated ? true : undefined,
+      evidenceItemsBeforeTruncation: truncated ? evidenceItemsBeforeTruncation : undefined,
     }),
   });
 

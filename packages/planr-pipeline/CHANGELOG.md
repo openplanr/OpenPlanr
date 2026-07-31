@@ -4,6 +4,44 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.35.0] — 2026-08-01
+
+### Added
+
+- `create-epic` is now an accepted action kind in the v1.3
+  `operating-route-plan` schema, added additively alongside `create-quick-task`
+  so a group of related accepted findings can route to epic creation. The action
+  keeps a single anchor `findingId`; the full member-finding list lives in the
+  generated `.planr/epics/EPIC-NNN-<slug>.md` document, not a new schema surface.
+  The existing `create-quick-task` behavior and the frozen v1.2 route surface are
+  untouched — a v1.2 event still rejects a `create-epic` route
+  (`schemas/v1.3.0/operating-route-plan.schema.json`).
+- `schemas/v1.3.0/operating-mission-packet.schema.json` gains two additive
+  optional `budgets` fields — `truncatedEvidenceItems` (boolean) and
+  `evidenceItemsBeforeTruncation` (integer) — so a truncated mission packet
+  records its drop loudly. `additionalProperties: false` still rejects any other
+  budgets field.
+
+### Changed
+
+- `maxEvidenceItems` is now an enforced, loudly-reported truncation in
+  `createOperatingMissionPacket` (`lib/operate/mission-packet.mjs`): when the
+  caller's prioritized evidence index is longer than `maxEvidenceItems`, the
+  packet keeps the first (highest-priority) entries and records
+  `budgets.truncatedEvidenceItems: true` with
+  `budgets.evidenceItemsBeforeTruncation`. Truncation follows caller priority
+  (FR3), never the packet's canonical sort, so a capped repository walk is not
+  re-starved alphabetically. The `maxInputBytes` fail-closed check now applies to
+  the POST-truncation payload only, and never trips solely because the
+  pre-truncation index was large. Previously `maxEvidenceItems` was recorded but
+  enforced by nothing.
+- `registry/operating-roles.json` per-role mission budgets are reviewed against
+  real index-item byte costs: a mission packet carries pointer-sized index items
+  (~1 KiB each), not pack-mode evidence bodies, so the five repository-reading
+  lenses' `maxInputBytes` rises to 512 KiB (`technology-risk` to 640 KiB) to give
+  the full ~1,000-item collected index real headroom; `chair` is unchanged (it
+  reconciles a handful of advisor-result pointers, not a repository-scaled index).
+
 ## [0.34.0] — 2026-07-31
 
 ### Added
