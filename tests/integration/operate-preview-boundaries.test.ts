@@ -587,10 +587,18 @@ describe('Operating Board preview and dry-run boundaries', () => {
           command: 'planr operate run --runtime codex',
           effect: 'project-write',
           providerUse: false,
-          requiresConfirmation: true,
         },
       ],
     });
+    // FR8/E-008: `operate run` accepts no `--confirm` flag, so its structured
+    // action is never handed a confirmationDigest a runner could never pass —
+    // native dispatch is still recommended, it is simply authorized by `--yes`.
+    const runAction = result.actions?.find((action) =>
+      action.command.startsWith('planr operate run'),
+    );
+    expect(runAction?.requiresConfirmation).toBe(false);
+    expect(runAction?.confirmationScope).toBeNull();
+    expect(runAction?.confirmationDigest).toBeNull();
   });
 
   it('allows disclosed dry-run advisor calls but commits no bytes or cycle ID', async () => {

@@ -83,6 +83,14 @@ export async function readOperatingReview(input: {
   projectRoot: string;
   cycleId?: string;
   brief?: boolean;
+  /**
+   * FR3/E-003: render the human review gate as report Markdown (brief +
+   * per-role lens reports + exact next actions) by reusing `reports.ts`'s
+   * `readOperatingReport` assembly, instead of returning the raw state object a
+   * machine (`--json`) surface consumes. `--json` callers omit `human` and keep
+   * receiving the exact, byte-unchanged raw state.
+   */
+  human?: boolean;
   localRoot?: string;
 }): Promise<unknown> {
   const store = new OperatingEventStore(input.projectRoot, { localRoot: input.localRoot });
@@ -90,7 +98,24 @@ export async function readOperatingReview(input: {
   if (input.cycleId && state.cycles.length === 0) {
     throw new OperateError('E_OPERATE_STATE_INVALID', `Unknown operating cycle ${input.cycleId}.`);
   }
-  return input.brief ? renderOperatingBrief(state) : state;
+  if (input.brief) return renderOperatingBrief(state);
+  if (input.human) {
+    const reportCycleId = input.cycleId ?? state.summary?.currentCycleId;
+    if (reportCycleId && state.cycles.some((cycle) => cycle.id === reportCycleId)) {
+      const { readOperatingReport } = await import('./reports.js');
+      const report = await readOperatingReport({
+        projectRoot: input.projectRoot,
+        cycleId: reportCycleId,
+        lens: 'all',
+        localRoot: input.localRoot,
+      });
+      return report.markdown;
+    }
+    // No governed cycle to report yet: still render readable Markdown (the
+    // concise brief), never a raw `JSON.stringify` of the state object.
+    return renderOperatingBrief(state);
+  }
+  return state;
 }
 
 async function mutateEvent(input: {

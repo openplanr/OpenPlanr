@@ -91,6 +91,15 @@ function markdownLens(report: OperatingLensReport): string {
   return lines.join('\n');
 }
 
+/**
+ * Assemble the human report for a governed cycle: the concise brief, the
+ * per-role advisory lens reports, and the exact next actions, plus a single
+ * rendered `markdown` string. This is the shared review/report Markdown
+ * assembly — `lifecycle.ts`'s `readOperatingReview` human path reuses this
+ * `markdown` output for `operate review` (FR3/E-003) rather than re-deriving the
+ * per-role/actions logic, while the raw state object stays reserved for the
+ * `--json` surface.
+ */
 export async function readOperatingReport(input: {
   projectRoot: string;
   cycleId?: string;

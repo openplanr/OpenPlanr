@@ -132,7 +132,8 @@ describe('guided initialization resume lifecycle', () => {
     });
 
     expect(result).toMatchObject({
-      ok: false,
+      ok: true,
+      flow: 'handoff',
       action: 'input_required',
       questionnaire: {
         schemaVersion: '1.1.0',
@@ -157,13 +158,14 @@ describe('guided initialization resume lifecycle', () => {
       'decision-owner': 'Asem',
       'planning-engine': 'openplanr',
       runtime: 'codex',
-      cadence: 'manual',
-      timezone: 'UTC',
+      // cadence (defaulted) and the removed timezone question are no longer part
+      // of the first-run batch, so they carry no answer descriptor to submit.
       'sensitivity-ceiling': 'internal',
       sources: ['repository', 'git'],
     });
     expect(first.result).toMatchObject({
-      ok: false,
+      ok: true,
+      flow: 'handoff',
       action: 'input_required',
       code: 'E_OPERATE_INPUT_REQUIRED',
       questionnaire: { stage: 'product-charter' },
@@ -185,13 +187,13 @@ describe('guided initialization resume lifecycle', () => {
     const charter = first.result.questionnaire as GuidedQuestionnaire;
     const second = await answer(input, charter, {
       purpose: 'Turn evidence into trustworthy operating decisions.',
-      'product-stage': 'Growth',
+      'product-stage': 'growth',
       'business-model': 'Subscription SaaS',
       'ideal-customer': 'Technical founders',
       goals: ['Reach a cited brief quickly'],
       'success-metrics': ['First useful brief within five minutes'],
       guardrails: ['No external effects without explicit confirmation'],
-      'known-unknowns': ['Provider readiness'],
+      // known-unknowns is now optional and is not part of the required batch.
     });
     expect(second.result).toMatchObject({
       ok: true,
@@ -217,8 +219,7 @@ describe('guided initialization resume lifecycle', () => {
       'decision-owner': 'Asem',
       'planning-engine': 'openplanr',
       runtime: 'codex',
-      cadence: 'manual',
-      timezone: 'UTC',
+      // cadence and the removed timezone question are no longer batched.
       'sensitivity-ceiling': 'internal',
       sources: ['repository'],
     });

@@ -11,6 +11,7 @@ import {
   createOperatingInitQuestionnaire,
   evaluateOperatingInitQuestions,
 } from '../../src/services/operate/interaction/question-engine.js';
+import { operatingInitQuestionRegistry } from '../../src/services/operate/interaction/question-registry.js';
 import {
   cancelGuidedSession,
   createGuidedSession,
@@ -157,6 +158,63 @@ describe('guided question sessions', () => {
     await expect(
       purgeGuidedSessions({ projectRoot: second.projectRoot, localRoot: second.localRoot }),
     ).resolves.toEqual({ removed: 1 });
+  });
+
+  it('has no timezone question and no longer batches cadence or component-roots', async () => {
+    const baseContext = {
+      projectRoot: process.cwd(),
+      timezone: 'UTC',
+      availableSources: ['repository', 'planr', 'git', 'file-import'],
+      runtime: 'codex',
+      interaction: 'native' as const,
+    };
+    const state = await evaluateOperatingInitQuestions({ context: baseContext });
+    if (state.status !== 'input-required') throw new Error('Expected foundation questions.');
+    const ids = state.questions.map((question) => question.questionId);
+    expect(ids).not.toContain('timezone');
+    expect(ids).not.toContain('cadence');
+    expect(ids).not.toContain('component-roots');
+    // The cadence question still exists in the registry with its default; it is
+    // simply no longer required (so it never blocks or gets batched).
+    const cadence = operatingInitQuestionRegistry(baseContext).find(
+      (definition) => definition.question.questionId === 'cadence',
+    );
+    expect(cadence?.question.required).toBe(false);
+    expect(cadence?.question.defaultValue).toBe('manual');
+    expect(
+      operatingInitQuestionRegistry(baseContext).some(
+        (definition) => definition.question.questionId === 'timezone',
+      ),
+    ).toBe(false);
+  });
+
+  it('suggests pipeline-po for planning-engine when planr-pipeline is installed', async () => {
+    const baseContext = {
+      projectRoot: process.cwd(),
+      timezone: 'UTC',
+      availableSources: ['repository', 'planr', 'git', 'file-import'],
+      runtime: 'codex',
+      interaction: 'native' as const,
+    };
+    const withoutPipeline = await evaluateOperatingInitQuestions({ context: baseContext });
+    const withPipeline = await evaluateOperatingInitQuestions({
+      context: { ...baseContext, pipelineInstalled: true },
+    });
+    if (withoutPipeline.status !== 'input-required' || withPipeline.status !== 'input-required') {
+      throw new Error('Expected foundation questions.');
+    }
+    const plain = withoutPipeline.questions.find(
+      (question) => question.questionId === 'planning-engine',
+    );
+    expect(plain?.valueSemantics).toBe('none');
+    expect(plain).not.toHaveProperty('suggestedValue');
+    const detected = withPipeline.questions.find(
+      (question) => question.questionId === 'planning-engine',
+    );
+    expect(detected).toMatchObject({
+      valueSemantics: 'suggestion',
+      suggestedValue: 'pipeline-po',
+    });
   });
 
   it('rejects oversized, deeply nested, and prototype-bearing stdin', async () => {

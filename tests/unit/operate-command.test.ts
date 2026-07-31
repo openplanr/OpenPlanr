@@ -281,6 +281,43 @@ describe('operate command contract', () => {
     ]);
   });
 
+  // FR3 / E-003 — the human review gate renders the report Markdown the service
+  // pre-selects as a string, never a raw `JSON.stringify` of the state object.
+  it('renders the review gate as Markdown by default and raw state only under --json', async () => {
+    const markdown = '# OpenPlanr Operating Brief — CYCLE-001\n\n## Chair\n\n- No route applied.';
+    const humanProgram = createProgram();
+    mocks.executeOperateAction.mockResolvedValueOnce({
+      ok: true,
+      action: 'review',
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.2.0',
+      message: 'This is the mandatory human review gate. No route has been applied.',
+      data: markdown,
+    });
+
+    await parse(humanProgram, ['operate', 'review', 'CYCLE-001']);
+
+    expect(mocks.displayLine).toHaveBeenCalledWith(markdown);
+    expect(mocks.displayLine.mock.calls.every(([line]) => !/^\{/.test(String(line)))).toBe(true);
+
+    // --json keeps returning the exact raw state object, emitted as one JSON line.
+    mocks.displayLine.mockReset();
+    const jsonProgram = createProgram();
+    const rawState = {
+      ok: true,
+      action: 'review',
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.2.0',
+      data: { kind: 'operating-state', cycles: [{ id: 'CYCLE-001', state: 'reviewable' }] },
+    };
+    mocks.executeOperateAction.mockResolvedValueOnce(rawState);
+
+    await parse(jsonProgram, ['operate', 'review', 'CYCLE-001', '--json']);
+
+    expect(mocks.displayLine).toHaveBeenCalledOnce();
+    expect(mocks.displayLine).toHaveBeenCalledWith(JSON.stringify(rawState));
+  });
+
   it('forwards repeatable and boolean options without losing defaults', async () => {
     const program = createProgram();
 
@@ -471,7 +508,7 @@ describe('operate command contract', () => {
       '--purpose',
       'Help technical founders operate one SaaS with evidence.',
       '--product-stage',
-      'Early growth',
+      'growth',
       '--business-model',
       'Subscription SaaS',
       '--ideal-customer',
@@ -569,8 +606,12 @@ describe('operate command contract', () => {
   it('discloses and explicitly confirms first-use provider consent before retrying a run', async () => {
     const program = createProgram();
     mocks.executeOperateAction
+      // FR7/E-007: first-use provider consent is a healthy `ok: true` handoff
+      // (flow: 'handoff'), not an exit-4 failure — the CLI still discloses the
+      // policy and retries with explicit authority.
       .mockResolvedValueOnce({
-        ok: false,
+        ok: true,
+        flow: 'handoff',
         action: 'run',
         schemaVersion: '1.0.0',
         protocolVersion: '1.2.0',
@@ -582,7 +623,6 @@ describe('operate command contract', () => {
           retention: { maxProviderRetentionDays: 30 },
           limits: { maxCostUsd: 2 },
         },
-        exitCode: 4,
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -609,21 +649,23 @@ describe('operate command contract', () => {
 
   it('never prompts or retries provider consent in JSON mode', async () => {
     const program = createProgram();
+    // The JSON surface receives the same `ok: true` handoff and keeps a clean
+    // exit code — a harness discriminates on `flow: 'handoff'`, never a red exit.
     mocks.executeOperateAction.mockResolvedValue({
-      ok: false,
+      ok: true,
+      flow: 'handoff',
       action: 'run',
       schemaVersion: '1.0.0',
       protocolVersion: '1.2.0',
       code: 'E_OPERATE_AUTHORITY_REQUIRED',
       message: 'Provider policy approval is required.',
-      exitCode: 4,
     });
 
     await parse(program, ['operate', 'run', '--json']);
 
     expect(mocks.promptConfirm).not.toHaveBeenCalled();
     expect(mocks.executeOperateAction).toHaveBeenCalledOnce();
-    expect(process.exitCode).toBe(4);
+    expect(process.exitCode).toBeUndefined();
   });
 
   it('accepts stdin at the 64 KiB boundary and forwards it verbatim', async () => {

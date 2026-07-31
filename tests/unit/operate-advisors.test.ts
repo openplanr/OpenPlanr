@@ -1,5 +1,38 @@
-import { describe, expect, it, vi } from 'vitest';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Mock the credential backends so provider-bootstrap and readiness preflights are
+// deterministic regardless of the developer's real keychain / encrypted file.
+vi.mock('../../src/services/credential-backends.js', () => ({
+  keychainBackend: {
+    isAvailable: vi.fn().mockResolvedValue(false),
+    get: vi.fn().mockResolvedValue(undefined),
+    set: vi.fn().mockResolvedValue(undefined),
+    delete: vi.fn().mockResolvedValue(false),
+  },
+  encryptedFileBackend: {
+    isAvailable: vi.fn().mockResolvedValue(true),
+    get: vi.fn().mockResolvedValue(undefined),
+    set: vi.fn().mockResolvedValue(undefined),
+    delete: vi.fn().mockResolvedValue(false),
+  },
+  legacyBackend: {
+    exists: vi.fn().mockResolvedValue(false),
+    loadAll: vi.fn().mockResolvedValue({}),
+    remove: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 import type { OpenPlanrConfig } from '../../src/models/types.js';
+import { resolveAIProviderReadiness } from '../../src/services/ai-service.js';
+import {
+  encryptedFileBackend,
+  keychainBackend,
+  legacyBackend,
+} from '../../src/services/credential-backends.js';
+import { _resetMigration } from '../../src/services/credentials-service.js';
 import {
   type AdvisorAdapter,
   type AdvisorOperatingContext,
@@ -7,17 +40,21 @@ import {
   assertAdvisorIsolation,
   assertAdvisorOutputMatchesBrief,
   configuredAdvisorProviderPolicy,
+  createConfiguredStructuredAdapter,
   createOperatingAdvisorPack,
   dispatchOperatingAdvisors,
   operatingAdvisorMessages,
 } from '../../src/services/operate/advisors.js';
 import { evaluateEvidenceReadiness } from '../../src/services/operate/evidence-readiness.js';
-import type {
-  OperatingAdvisorBrief,
-  OperatingEvidence,
-  OperatingEvidenceReadiness,
-  OperatingRoleId,
+import { failure, usesNativeOperatingAdvisors } from '../../src/services/operate/index.js';
+import {
+  OperateError,
+  type OperatingAdvisorBrief,
+  type OperatingEvidence,
+  type OperatingEvidenceReadiness,
+  type OperatingRoleId,
 } from '../../src/services/operate/types.js';
+import { resolveOperatingPaths } from '../../src/services/operate/workspace.js';
 import { OPENPLANR_VERSION } from '../../src/utils/package-version.js';
 
 const digest = (character: string): `sha256:${string}` => `sha256:${character.repeat(64)}`;
@@ -147,6 +184,49 @@ function readiness(roles: OperatingEvidenceReadiness['roles']): OperatingEvidenc
   };
 }
 
+// Benign filler: plain words that match none of redaction's instruction/secret
+// patterns, so each excerpt is framed (not quarantined) and counts toward the
+// pack budget the way a real evidence body would.
+const BENIGN_FILLER = 'alpha bravo charlie delta foxtrot golf hotel india juliet kilo lima mike ';
+
+function benignSummary(bytes: number): string {
+  return BENIGN_FILLER.repeat(Math.ceil(bytes / BENIGN_FILLER.length)).slice(0, bytes);
+}
+
+// Evidence whose per-item excerpts each stay under redaction's 16 KiB quarantine
+// gate but whose AGGREGATE canonicalized pack is tuned by `count` — the shape FR2
+// must catch (many in-gate excerpts that together blow the role input budget).
+function budgetStressEvidence(count: number, summaryBytes: number): OperatingEvidence {
+  const snapshot = evidence();
+  const items: OperatingEvidence['items'] = [];
+  for (let index = 0; index < count; index += 1) {
+    items.push({
+      id: `EVD-budget-${String(index).padStart(4, '0')}`,
+      source: 'repository',
+      location: `src/module-${index}.ts`,
+      digest: `sha256:${String(index).padStart(64, '0')}`,
+      collectedAt: snapshot.collectedAt,
+      observedFrom: null,
+      observedTo: null,
+      freshness: 'fresh',
+      sensitivity: 'internal',
+      claimTypes: ['code', 'architecture'],
+      summary: benignSummary(summaryBytes),
+    });
+  }
+  snapshot.items = items;
+  snapshot.sources = [
+    {
+      id: 'repository',
+      fingerprint: digest('3'),
+      status: 'collected',
+      itemCount: count,
+      byteCount: count * summaryBytes,
+    },
+  ];
+  return snapshot;
+}
+
 describe('advisor isolation', () => {
   it('builds immutable role-filtered CEO and CTO advisor packs', async () => {
     const snapshot = evidence();
@@ -218,6 +298,40 @@ describe('advisor isolation', () => {
     expect(cto.evidence.items.map(({ id }) => id)).toEqual(['EVD-shared', 'EVD-technology']);
     expect(cto.context.openGaps.map(({ id }) => id)).toEqual(['GAP-001']);
     expect(ceo.inputDigest).not.toBe(cto.inputDigest);
+  });
+
+  it('fails a role pack closed when it exceeds the role v1.2 maxInputBytes, and admits a bounded pack', async () => {
+    const context = advisorContext();
+    // technology-risk carries a real ~384 KiB (393,216-byte) v1.2 pack budget.
+    const oversized = budgetStressEvidence(30, 15_000);
+    await expect(
+      createOperatingAdvisorPack({
+        cycleId: 'CYCLE-001',
+        role: {
+          ...roleReadiness('technology-risk', true, null),
+          evidenceRefs: oversized.items.map((item) => item.id),
+        },
+        evidence: oversized,
+        context,
+      }),
+    ).rejects.toMatchObject({
+      code: 'E_OPERATE_EVIDENCE_BUDGET',
+      details: { roleId: 'technology-risk', maxInputBytes: 393_216 },
+    });
+
+    // The same shape, well within budget, still builds exactly as before.
+    const bounded = budgetStressEvidence(3, 15_000);
+    const pack = await createOperatingAdvisorPack({
+      cycleId: 'CYCLE-001',
+      role: {
+        ...roleReadiness('technology-risk', true, null),
+        evidenceRefs: bounded.items.map((item) => item.id),
+      },
+      evidence: bounded,
+      context,
+    });
+    expect(pack.inputDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(pack.evidence.items).toHaveLength(3);
   });
 
   it('rejects role output that widens the canonical brief', () => {
@@ -690,5 +804,258 @@ describe('advisor isolation', () => {
       }),
     ]);
     expect(gaps[0]?.reason).not.toContain('super-secret-fixture');
+  });
+});
+
+describe('T-006 — typed provider bootstrap and runtime detection (FR5/FR6)', () => {
+  const RUNTIME_MARKERS = [
+    'CLAUDECODE',
+    'CLAUDE_CODE_ENTRYPOINT',
+    'CURSOR_TRACE_ID',
+    'CURSOR_AGENT',
+    'CODEX_SANDBOX',
+    'CODEX_HOME',
+  ];
+  const tmpDirs: string[] = [];
+
+  async function tempDir(prefix: string): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), prefix));
+    tmpDirs.push(dir);
+    return dir;
+  }
+
+  /** Neutralize any ambient coding-runtime markers so detection is deterministic. */
+  function clearRuntimeMarkers(): void {
+    for (const marker of RUNTIME_MARKERS) vi.stubEnv(marker, '');
+  }
+
+  async function writeProjectConfig(root: string, ai: NonNullable<OpenPlanrConfig['ai']>) {
+    await mkdir(join(root, '.planr'), { recursive: true });
+    await writeFile(join(root, '.planr', 'config.json'), JSON.stringify(projectConfig(ai)));
+  }
+
+  beforeEach(() => {
+    _resetMigration();
+    vi.clearAllMocks();
+    vi.mocked(keychainBackend.isAvailable).mockResolvedValue(false);
+    vi.mocked(keychainBackend.get).mockResolvedValue(undefined);
+    vi.mocked(encryptedFileBackend.get).mockResolvedValue(undefined);
+    vi.mocked(legacyBackend.exists).mockResolvedValue(false);
+    clearRuntimeMarkers();
+    vi.stubEnv('ANTHROPIC_API_KEY', '');
+    vi.stubEnv('OPENAI_API_KEY', '');
+  });
+
+  afterEach(async () => {
+    vi.unstubAllEnvs();
+    await Promise.all(tmpDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+  });
+
+  // FR5 / DoD #1 — the exact audit crash scenario: a provider is named in config
+  // but no key resolves in this (sandboxed) subprocess env.
+  it('surfaces a provider bootstrap failure as a typed E_OPERATE_ADVISOR_FAILED with remedy', async () => {
+    const projectRoot = await tempDir('openplanr-advisor-bootstrap-');
+    await writeProjectConfig(projectRoot, { provider: 'anthropic', model: 'claude-x' });
+
+    const error = await createConfiguredStructuredAdapter(projectRoot).catch((err) => err);
+
+    expect(error).toBeInstanceOf(OperateError);
+    expect(error).toMatchObject({ code: 'E_OPERATE_ADVISOR_FAILED' });
+    // The actionable remedy is preserved and never degrades to E_OPERATE_INTERNAL.
+    expect((error as OperateError).message).toContain('planr config set-key anthropic');
+    expect((error as OperateError).message).toContain('--offline');
+    // A redacted error class is recorded for diagnostics — no message/stack leakage.
+    expect((error as OperateError).details).toMatchObject({ errorClass: 'AIError:missing_key' });
+  });
+
+  // FR5 / DoD #3 — the run --preview/readiness preflight names the missing key.
+  it('names a missing provider key in the readiness preflight before a cycle starts', async () => {
+    const readiness = await resolveAIProviderReadiness(
+      projectConfig({ provider: 'anthropic', model: 'claude-x' }),
+    );
+
+    expect(readiness).toMatchObject({
+      configured: true,
+      keyResolvable: false,
+      provider: 'anthropic',
+    });
+    expect(readiness.remedy).toContain('planr config set-key anthropic');
+    expect(readiness.remedy).toContain('--offline');
+  });
+
+  it('treats a local Ollama provider as key-ready and reports unconfigured projects', async () => {
+    const ollama = await resolveAIProviderReadiness(
+      projectConfig({
+        provider: 'ollama',
+        model: 'llama-test',
+        ollamaBaseUrl: 'http://localhost:11434',
+      }),
+    );
+    expect(ollama).toMatchObject({ configured: true, keyResolvable: true, provider: 'ollama' });
+
+    const unconfigured = await resolveAIProviderReadiness({
+      ...projectConfig({ provider: 'anthropic', model: 'claude-x' }),
+      ai: undefined,
+    });
+    expect(unconfigured).toMatchObject({ configured: false, keyResolvable: false });
+    expect(unconfigured.remedy).toContain('--offline');
+  });
+
+  // FR5 / DoD #2 — failure() records a redacted error class for E_OPERATE_INTERNAL.
+  it('records a redacted error class for E_OPERATE_INTERNAL without leaking the message', () => {
+    const result = failure('run', new TypeError('boom /secret/path/api-key'));
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: 'E_OPERATE_INTERNAL',
+      message: 'An unexpected internal Operating Board error occurred.',
+      data: { errorClass: 'TypeError' },
+    });
+    expect(JSON.stringify(result)).not.toContain('boom');
+    expect(JSON.stringify(result)).not.toContain('/secret/path/api-key');
+  });
+
+  it('keeps typed OperateError details untouched instead of stamping an error class', () => {
+    const result = failure('run', new OperateError('E_OPERATE_ADVISOR_FAILED', 'typed remedy'));
+
+    expect(result).toMatchObject({ code: 'E_OPERATE_ADVISOR_FAILED', message: 'typed remedy' });
+    expect((result.data as { errorClass?: unknown } | undefined)?.errorClass).toBeUndefined();
+  });
+
+  // FR6 / DoD #5 + #6 — a persisted `auto` preference resolves to the detected host
+  // and native-read-only is recognized, so native dispatch is never silently off.
+  async function seedNativePipeline(dispatch: string): Promise<{ projectRoot: string }> {
+    const pipelineRoot = await tempDir('openplanr-pipeline-root-');
+    await mkdir(join(pipelineRoot, 'lib', 'protocol'), { recursive: true });
+    await mkdir(join(pipelineRoot, 'schemas', 'v1.2.0'), { recursive: true });
+    await mkdir(join(pipelineRoot, 'registry'), { recursive: true });
+    await writeFile(join(pipelineRoot, 'lib', 'protocol', 'loader.mjs'), 'export default {};\n');
+    await writeFile(join(pipelineRoot, 'schemas', 'v1.2.0', 'operating-event.schema.json'), '{}\n');
+    await writeFile(
+      join(pipelineRoot, 'registry', 'adapters.json'),
+      JSON.stringify({
+        adapters: [
+          {
+            id: 'claude-code',
+            capabilities: { operatingBoard: true, operatingAdvisorDispatch: dispatch },
+          },
+        ],
+      }),
+    );
+    vi.stubEnv('OPENPLANR_PIPELINE_ROOT', pipelineRoot);
+
+    const stateRoot = await tempDir('openplanr-state-root-');
+    vi.stubEnv('OPENPLANR_STATE_ROOT', stateRoot);
+    const projectRoot = await tempDir('openplanr-native-project-');
+    const localRoot = resolveOperatingPaths(projectRoot).localRoot;
+    await mkdir(localRoot, { recursive: true });
+    await writeFile(join(localRoot, 'preferences.json'), JSON.stringify({ runtime: 'auto' }));
+    return { projectRoot };
+  }
+
+  it('resolves a persisted auto runtime to the detected host and honors native-read-only', async () => {
+    const { projectRoot } = await seedNativePipeline('native-read-only');
+    vi.stubEnv('CLAUDECODE', '1');
+
+    await expect(usesNativeOperatingAdvisors(projectRoot, 'auto')).resolves.toBe(true);
+  });
+
+  it('leaves auto disabled when no host runtime is detectable', async () => {
+    const { projectRoot } = await seedNativePipeline('native-read-only');
+    // No runtime markers set — detection returns undefined, auto stays auto.
+
+    await expect(usesNativeOperatingAdvisors(projectRoot, 'auto')).resolves.toBe(false);
+  });
+
+  it('does not treat a non-native dispatch capability as native even when detected', async () => {
+    const { projectRoot } = await seedNativePipeline('structured');
+    vi.stubEnv('CLAUDECODE', '1');
+
+    await expect(usesNativeOperatingAdvisors(projectRoot, 'auto')).resolves.toBe(false);
+  });
+});
+
+describe('T-003 — dispatch is execution-effective, provenance never lies (FR1)', () => {
+  // A native-isolated adapter on an enforcing runtime is the one combination that
+  // can host a bounded read-only mission lens in `dispatchOperatingAdvisors`.
+  function nativeAdapter(): AdvisorAdapter {
+    return {
+      id: 'native-lens-fixture',
+      mode: 'native-isolated',
+      toolIsolation: 'enforced',
+      capability: 'analysis-high',
+      parallelDispatch: false,
+      invoke: vi.fn(async () => ({
+        outcome: 'quiet' as const,
+        proposals: [],
+        gaps: [],
+        conflicts: [],
+      })),
+    };
+  }
+
+  it('routes a default-mission role through the bounded read-only lens and records enforced-read-only-bounded provenance', async () => {
+    const result = await dispatchOperatingAdvisors({
+      cycleId: 'CYCLE-001',
+      evidence: evidence(),
+      readiness: readiness([roleReadiness('technology-risk', true, null)]),
+      context: advisorContext(),
+      adapter: nativeAdapter(),
+      depth: 'standard',
+      runtime: 'claude',
+    });
+    expect(result.provenance).toHaveLength(1);
+    expect(result.provenance[0]).toMatchObject({
+      roleId: 'technology-risk',
+      dispatchMode: 'mission',
+      isolation: 'enforced-read-only-bounded',
+    });
+  });
+
+  it('makes --dispatch-mode-override=pack execution-effective: the role packs, and provenance never reads mission for a packed role', async () => {
+    const result = await dispatchOperatingAdvisors({
+      cycleId: 'CYCLE-001',
+      evidence: evidence(),
+      readiness: readiness([roleReadiness('technology-risk', true, null)]),
+      context: advisorContext(),
+      adapter: nativeAdapter(),
+      depth: 'standard',
+      runtime: 'claude',
+      dispatchModeOverrides: { 'technology-risk': 'pack' },
+    });
+    expect(result.provenance).toHaveLength(1);
+    // The override rolled the role back to the v1.2 empty-tool pack path: provenance
+    // reports pack + enforced-empty-tools, never a native bounded lens.
+    expect(result.provenance[0]).toMatchObject({
+      roleId: 'technology-risk',
+      dispatchMode: 'pack',
+      isolation: 'enforced-empty-tools',
+    });
+    expect(result.provenance[0].isolation).not.toBe('enforced-read-only-bounded');
+  });
+
+  it('runs a native mixed-mode cycle: one role a bounded lens, one rolled back to pack, both honestly labelled', async () => {
+    const result = await dispatchOperatingAdvisors({
+      cycleId: 'CYCLE-001',
+      evidence: evidence(),
+      readiness: readiness([
+        roleReadiness('technology-risk', true, null),
+        roleReadiness('growth-market', true, null),
+      ]),
+      context: advisorContext(),
+      adapter: nativeAdapter(),
+      depth: 'standard',
+      runtime: 'claude',
+      dispatchModeOverrides: { 'growth-market': 'pack' },
+    });
+    const byRole = new Map(result.provenance.map((entry) => [entry.roleId, entry]));
+    expect(byRole.get('technology-risk')).toMatchObject({
+      dispatchMode: 'mission',
+      isolation: 'enforced-read-only-bounded',
+    });
+    expect(byRole.get('growth-market')).toMatchObject({
+      dispatchMode: 'pack',
+      isolation: 'enforced-empty-tools',
+    });
   });
 });

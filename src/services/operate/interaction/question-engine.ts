@@ -262,30 +262,39 @@ export async function evaluateOperatingInitQuestions(input: {
         stage === 'product-charter'
           ? await buildOperatingCharterSuggestions({ projectRoot: input.context.projectRoot })
           : null;
+      // Ship the required-missing questions plus the explicitly flagged ones — the
+      // unanswered questions that carry a suggestion the human should confirm
+      // (e.g. a detected runtime). Optional, defaulted, or 'none' questions
+      // (cadence, component-roots, known-unknowns) are intentionally NOT dumped
+      // into the first-run batch just because they are unanswered and visible.
+      const toAsk = visible.filter(
+        (definition) =>
+          definition.question.type !== 'informational' &&
+          !answered(definition.read(answers)) &&
+          (definition.question.required || definition.question.valueSemantics === 'suggestion'),
+      );
       return {
         status: 'input-required',
         stage: stage as 'foundation' | 'product-charter',
         answers,
-        questions: visible
-          .filter((definition) => !answered(definition.read(answers)))
-          .map((definition) => {
-            const question = structuredClone(definition.question);
-            const suggestion = suggestions?.suggestions.find(
-              (entry) => entry.field === question.questionId,
-            );
-            if (!suggestion) return question;
-            return {
-              ...question,
-              valueSemantics: 'suggestion' as const,
-              suggestedValue: suggestion.value,
-              suggestionReason: [
-                `Draft from ${suggestion.citation.location}`,
-                `${suggestion.confidence} confidence`,
-                `evidence ${suggestion.citation.digest}`,
-                `rules ${suggestion.engineVersion}`,
-              ].join('; '),
-            };
-          }),
+        questions: toAsk.map((definition) => {
+          const question = structuredClone(definition.question);
+          const suggestion = suggestions?.suggestions.find(
+            (entry) => entry.field === question.questionId,
+          );
+          if (!suggestion) return question;
+          return {
+            ...question,
+            valueSemantics: 'suggestion' as const,
+            suggestedValue: suggestion.value,
+            suggestionReason: [
+              `Draft from ${suggestion.citation.location}`,
+              `${suggestion.confidence} confidence`,
+              `evidence ${suggestion.citation.digest}`,
+              `rules ${suggestion.engineVersion}`,
+            ].join('; '),
+          };
+        }),
       };
     }
   }

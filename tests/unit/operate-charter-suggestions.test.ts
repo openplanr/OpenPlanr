@@ -3,6 +3,20 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { buildOperatingCharterSuggestions } from '../../src/services/operate/interaction/charter-suggestions.js';
+import {
+  type OperatingQuestionContext,
+  operatingInitQuestionRegistry,
+} from '../../src/services/operate/interaction/question-registry.js';
+
+const charterContext: OperatingQuestionContext = {
+  timezone: 'UTC',
+  availableSources: ['repository', 'planr', 'git', 'file-import'],
+};
+
+const charterQuestion = (questionId: string) =>
+  operatingInitQuestionRegistry(charterContext).find(
+    (definition) => definition.question.questionId === questionId,
+  )?.question;
 
 async function fixture(): Promise<string> {
   return mkdtemp(join(tmpdir(), 'openplanr-charter-suggestions-'));
@@ -86,5 +100,44 @@ describe('Operating Board charter suggestions', () => {
     await buildOperatingCharterSuggestions({ projectRoot: root });
     expect(fetchSpy).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
+  });
+});
+
+describe('Operating Board charter question defaults', () => {
+  it('offers "Not yet specified" deferral defaults on business-model and ideal-customer', () => {
+    expect(charterQuestion('business-model')).toMatchObject({
+      required: true,
+      valueSemantics: 'default',
+      defaultValue: 'Not yet specified',
+    });
+    expect(charterQuestion('ideal-customer')).toMatchObject({
+      required: true,
+      valueSemantics: 'default',
+      defaultValue: 'Not yet specified',
+    });
+  });
+
+  it('makes known-unknowns optional', () => {
+    expect(charterQuestion('known-unknowns')?.required).toBe(false);
+  });
+
+  it('turns product-stage into a select with real stage choices', () => {
+    const stage = charterQuestion('product-stage');
+    expect(stage?.type).toBe('single-select');
+    expect(stage?.choices?.map((choice) => choice.id)).toEqual(
+      expect.arrayContaining(['idea', 'prototype', 'launched', 'growth', 'mature']),
+    );
+  });
+
+  it('seeds guardrails with the engine standing boundaries as a suggestion', () => {
+    const guardrails = charterQuestion('guardrails');
+    expect(guardrails).toMatchObject({ required: true, valueSemantics: 'suggestion' });
+    expect(guardrails?.suggestedValue).toEqual(
+      expect.arrayContaining([
+        'No external or irreversible action without explicit human authority.',
+      ]),
+    );
+    expect(Array.isArray(guardrails?.suggestedValue)).toBe(true);
+    expect((guardrails?.suggestedValue as string[]).length).toBeGreaterThanOrEqual(2);
   });
 });

@@ -73,7 +73,9 @@ describe('Operating Board strict guided automation', () => {
         cadence: 'weekly',
         timezone: 'UTC',
         sensitivityCeiling: 'internal',
-        sources: ['repository', 'planr', 'git'],
+        // Honest source availability: this bare fixture has no .planr planning
+        // records, so only the locally probeable sources are selected.
+        sources: ['repository', 'git'],
         charter: {
           purpose: 'Guide an evidence-backed product.',
           stage: 'growth',

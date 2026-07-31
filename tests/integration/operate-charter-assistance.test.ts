@@ -34,7 +34,9 @@ describe('Operating Board charter assistance', () => {
     });
 
     expect(result).toMatchObject({
-      ok: false,
+      // FR7/E-007: a guided-stage advance is an `ok: true` handoff, not a failure.
+      ok: true,
+      flow: 'handoff',
       code: 'E_OPERATE_INPUT_REQUIRED',
       questionnaire: {
         stage: 'product-charter',

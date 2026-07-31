@@ -3,6 +3,7 @@ import path from 'node:path';
 import { loadConfig } from '../config-service.js';
 import { resolveApiKey } from '../credentials-service.js';
 import { canonicalDigest, canonicalize } from './canonical.js';
+import { OperatingEventStore } from './event-store.js';
 import { createEvidenceDiagnostic } from './evidence-diagnostics.js';
 import { readImportedEvidenceFile } from './evidence-import.js';
 import { assertOperatingArtifact } from './protocol.js';
@@ -997,6 +998,26 @@ function incrementalEvidencePath(input: EvidenceCollectionInput, key: `sha256:${
   );
 }
 
+/**
+ * FR4: the board's identity is the hash of its event-chain genesis event. The
+ * incremental cache key incorporates it so a board re-inited at the same path —
+ * whose workspace components (remote/branch) are unchanged and would otherwise
+ * compute an identical key — never reuses a prior generation's baseline. Returns
+ * '' when no committed chain exists yet or it cannot be read (the collection then
+ * behaves exactly as before this change).
+ */
+async function evidenceBoardIdentity(input: EvidenceCollectionInput): Promise<string> {
+  try {
+    const { events } = await new OperatingEventStore(input.projectRoot, {
+      localRoot: input.localRoot,
+    }).replay();
+    const genesis = events.find((event) => event.previousEventHash === null) ?? events[0];
+    return genesis?.eventHash ?? '';
+  } catch {
+    return '';
+  }
+}
+
 async function readIncrementalEvidence(
   input: EvidenceCollectionInput,
   key: `sha256:${string}`,
@@ -1007,6 +1028,13 @@ async function readIncrementalEvidence(
       await readFile(incrementalEvidencePath(input, key), 'utf8'),
     ) as IncrementalEvidenceRecord;
     if (record.implementation !== 'openplanr-operate-incremental-evidence' || record.key !== key) {
+      return null;
+    }
+    // FR4: honor the baseline's own already-written workspaceDigest. A record
+    // whose captured workspace no longer matches the current one is treated as
+    // no-baseline so the cycle recollects deep, rather than trusting a snapshot
+    // bound to a superseded workspace (for example, a prior board generation).
+    if (record.workspaceDigest !== input.workspace.workspaceDigest) {
       return null;
     }
     await assertOperatingArtifact('operating-evidence', record.evidence);
@@ -1103,6 +1131,7 @@ export async function collectOperatingEvidence(
   const now = input.now ?? new Date();
   const deadline = started + input.budgets.maxDurationMs;
   const incrementalKey = canonicalDigest({
+    boardIdentity: await evidenceBoardIdentity(input),
     workspaceComponents: [input.workspace.controlRepository, ...input.workspace.components]
       .map((component) => ({
         componentId: component.componentId,

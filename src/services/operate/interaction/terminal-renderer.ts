@@ -11,6 +11,11 @@ import {
 } from '../../prompt-service.js';
 import type { GuidedQuestion, GuidedQuestionValue, OperatingInitAnswers } from '../types.js';
 import {
+  probeAvailableEvidenceSources,
+  probeGitUserName,
+  probePipelineInstalled,
+} from './answer-service.js';
+import {
   applyOperatingInitAnswer,
   evaluateOperatingInitQuestions,
   type OperatingQuestionEngineContext,
@@ -28,23 +33,41 @@ async function commandAvailable(command: string): Promise<boolean> {
 export async function detectOperatingQuestionContext(
   projectRoot: string,
 ): Promise<OperatingQuestionEngineContext> {
-  const [gitUserName, claude, codex, cursor] = await Promise.all([
-    execFileAsync('git', ['config', 'user.name'], { cwd: projectRoot })
-      .then(({ stdout }) => stdout.trim() || undefined)
-      .catch(() => undefined),
+  const [gitUserName, availableSources, claude, codex, cursor] = await Promise.all([
+    probeGitUserName(projectRoot),
+    probeAvailableEvidenceSources(projectRoot),
     commandAvailable('claude'),
     commandAvailable('codex'),
     commandAvailable('cursor'),
   ]);
   return {
     projectRoot,
-    gitUserName,
+    ...(gitUserName ? { gitUserName } : {}),
     detectedRuntime: claude ? 'claude' : codex ? 'codex' : cursor ? 'cursor' : undefined,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    availableSources: ['repository', 'planr', 'git', 'file-import'],
+    availableSources,
+    pipelineInstalled: probePipelineInstalled(),
     runtime: 'terminal',
     interaction: 'terminal',
   };
+}
+
+/**
+ * Map a multi-select question's choices to terminal checkbox items, pre-checking
+ * a choice when it is either in the proposed/suggested value or carries the
+ * additive `preselected: true` schema flag (planr-pipeline >= 0.34.0). Exported so
+ * the preselected-to-checked mapping is directly testable.
+ */
+export function operatingCheckboxChoices(
+  question: GuidedQuestion,
+  proposed?: GuidedQuestionValue,
+): Array<{ name: string; value: string; checked: boolean }> {
+  const suggested = new Set(Array.isArray(proposed) ? proposed : []);
+  return (question.choices ?? []).map((choice) => ({
+    name: choice.description ? `${choice.label} — ${choice.description}` : choice.label,
+    value: choice.id,
+    checked: suggested.has(choice.id) || (choice as { preselected?: boolean }).preselected === true,
+  }));
 }
 
 function proposedValue(question: GuidedQuestion): GuidedQuestionValue | undefined {
@@ -80,26 +103,21 @@ async function promptQuestion(question: GuidedQuestion): Promise<GuidedQuestionV
     case 'informational':
       logger.dim(question.label);
       return undefined;
-    case 'single-select':
+    case 'single-select': {
+      const preselected = (question.choices ?? []).find(
+        (choice) => (choice as { preselected?: boolean }).preselected === true,
+      )?.id;
       return promptSelect(
         question.label,
         (question.choices ?? []).map((choice) => ({
           name: choice.description ? `${choice.label} — ${choice.description}` : choice.label,
           value: choice.id,
         })),
-        typeof proposed === 'string' ? proposed : undefined,
-      );
-    case 'multi-select': {
-      const checked = new Set(Array.isArray(proposed) ? proposed : []);
-      return promptCheckbox(
-        question.label,
-        (question.choices ?? []).map((choice) => ({
-          name: choice.description ? `${choice.label} — ${choice.description}` : choice.label,
-          value: choice.id,
-          checked: checked.has(choice.id),
-        })),
+        (typeof proposed === 'string' ? proposed : undefined) ?? preselected,
       );
     }
+    case 'multi-select':
+      return promptCheckbox(question.label, operatingCheckboxChoices(question, proposed));
     case 'confirmation':
       return promptConfirm(question.label, typeof proposed === 'boolean' ? proposed : false);
     case 'repeated-text':

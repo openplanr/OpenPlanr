@@ -35,7 +35,7 @@ function completeOptions(localRoot: string) {
     sensitivityCeiling: 'internal',
     sources: ['repository', 'git'],
     purpose: 'Turn verified evidence into operating decisions.',
-    productStage: 'Growth',
+    productStage: 'growth',
     businessModel: 'Subscription SaaS',
     idealCustomer: 'Technical founders',
     goal: ['Reach a cited brief quickly'],

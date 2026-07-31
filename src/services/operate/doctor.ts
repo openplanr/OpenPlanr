@@ -498,6 +498,128 @@ async function diagnoseDispatchModes(
   }
 }
 
+/**
+ * FR11: detect machine-local adapter sessions that are bound to a superseded
+ * board generation (their `boardIdentity` no longer matches the committed
+ * event-chain genesis) or to a cycle that is no longer present in committed
+ * state. These are exactly the sessions that used to dead-end a re-inited board
+ * with a misleading `E_OPERATE_ADVISOR_ISOLATION`; they now supersede cleanly,
+ * and this diagnostic names the scoped purge so an operator can clear them
+ * before the next dispatch. Reads only machine-local session files and never
+ * mutates state.
+ */
+async function diagnoseAdapterSessions(
+  projectRoot: string,
+  localRoot: string | undefined,
+): Promise<OperatingDoctorDiagnostic> {
+  const paths = resolveOperatingPaths(projectRoot, { localRoot });
+  let boardIdentity = '';
+  let committedCycleIds = new Set<string>();
+  try {
+    const store = new OperatingEventStore(projectRoot, { localRoot });
+    const { events } = await store.replay();
+    const genesis = events.find((event) => event.previousEventHash === null) ?? events[0];
+    boardIdentity = genesis?.eventHash ?? '';
+    const state = await store.state();
+    committedCycleIds = new Set(state.cycles.map((cycle) => cycle.id));
+  } catch {
+    // A broken/absent event chain is diagnosed by the event-replay checks;
+    // adapter-session staleness is only meaningful against a readable board.
+    return {
+      code: 'operate-adapter-sessions',
+      status: 'pass',
+      message: 'No committed board identity is available to validate adapter sessions against yet',
+    };
+  }
+  const entries = (await readdir(paths.advisors, { withFileTypes: true }).catch(() => [])).filter(
+    (entry) => entry.isFile() && entry.name.endsWith('.json'),
+  );
+  const stale: string[] = [];
+  for (const entry of entries) {
+    const raw = await readFile(path.join(paths.advisors, entry.name), 'utf8').catch(() => null);
+    if (raw === null) continue;
+    let session: { implementation?: string; boardIdentity?: string; cycleId?: string };
+    try {
+      session = JSON.parse(raw) as typeof session;
+    } catch {
+      continue;
+    }
+    if (session.implementation !== 'openplanr-operate-adapter') continue;
+    const boundToBoard = (session.boardIdentity ?? '') === boardIdentity;
+    const boundToCommittedCycle =
+      typeof session.cycleId === 'string' && committedCycleIds.has(session.cycleId);
+    if (!boundToBoard || !boundToCommittedCycle) stale.push(entry.name);
+  }
+  if (stale.length > 0) {
+    return {
+      code: 'operate-adapter-sessions',
+      status: 'warn',
+      message: `${stale.length} machine-local adapter session(s) are bound to a superseded board generation or a cycle absent from committed state`,
+      fix: 'Run `planr operate cache purge --yes` to clear the stale adapter sessions before the next dispatch.',
+    };
+  }
+  return {
+    code: 'operate-adapter-sessions',
+    status: 'pass',
+    message:
+      'Machine-local adapter sessions are bound to the current board identity and its cycles',
+  };
+}
+
+/**
+ * FR11: detect incremental evidence baselines whose captured `workspaceDigest`
+ * no longer matches the committed workspace manifest — a baseline collected
+ * against a superseded workspace (for example, a prior board generation). Such a
+ * baseline is already rejected on read (recollect deep), so this is a `warn`,
+ * not a `fail`; it names the scoped purge that drops the orphaned baselines.
+ */
+async function diagnoseIncrementalBaselines(
+  projectRoot: string,
+  localRoot: string | undefined,
+): Promise<OperatingDoctorDiagnostic> {
+  const paths = resolveOperatingPaths(projectRoot, { localRoot });
+  const committed = await readFile(paths.workspace, 'utf8')
+    .then((raw) => JSON.parse(raw) as { workspaceDigest?: string })
+    .catch(() => null);
+  if (!committed?.workspaceDigest) {
+    return {
+      code: 'operate-incremental-baseline',
+      status: 'pass',
+      message: 'No committed workspace digest is available to validate incremental baselines yet',
+    };
+  }
+  const directory = path.join(paths.evidence, 'incremental');
+  const entries = (await readdir(directory, { withFileTypes: true }).catch(() => [])).filter(
+    (entry) => entry.isFile() && entry.name.endsWith('.json'),
+  );
+  const stale: string[] = [];
+  for (const entry of entries) {
+    const raw = await readFile(path.join(directory, entry.name), 'utf8').catch(() => null);
+    if (raw === null) continue;
+    let record: { implementation?: string; workspaceDigest?: string };
+    try {
+      record = JSON.parse(raw) as typeof record;
+    } catch {
+      continue;
+    }
+    if (record.implementation !== 'openplanr-operate-incremental-evidence') continue;
+    if ((record.workspaceDigest ?? '') !== committed.workspaceDigest) stale.push(entry.name);
+  }
+  if (stale.length > 0) {
+    return {
+      code: 'operate-incremental-baseline',
+      status: 'warn',
+      message: `${stale.length} incremental evidence baseline(s) no longer match the committed workspace digest and will be recollected deep`,
+      fix: 'Run `planr operate cache purge --yes` to drop the stale incremental baselines.',
+    };
+  }
+  return {
+    code: 'operate-incremental-baseline',
+    status: 'pass',
+    message: 'Incremental evidence baselines match the committed workspace digest',
+  };
+}
+
 export async function diagnoseOperatingBoard(input: {
   projectRoot: string;
   localRoot?: string;
@@ -540,6 +662,10 @@ export async function diagnoseOperatingBoard(input: {
     await diagnoseStorageLayout(input.projectRoot, input.localRoot),
     await diagnoseRecordsLog(input.projectRoot, input.localRoot),
     await diagnoseDispatchModes(input.projectRoot, input.localRoot),
+    // FR11: the two staleness detectors for the machine-local caches FR4 binds
+    // to board identity — stale adapter sessions and stale incremental baselines.
+    await diagnoseAdapterSessions(input.projectRoot, input.localRoot),
+    await diagnoseIncrementalBaselines(input.projectRoot, input.localRoot),
   );
   return diagnostics;
 }

@@ -5,8 +5,77 @@ export type OperatingInitStage = 'foundation' | 'product-charter' | 'review';
 export interface OperatingQuestionContext {
   gitUserName?: string;
   detectedRuntime?: 'claude' | 'codex' | 'cursor';
+  /**
+   * The adapter/host runtime carried by the questionnaire. On the create path
+   * this equals the detected coding runtime; on the resume path it is rehydrated
+   * from the persisted `session.adapter.runtime`. It lets the registry recover
+   * the effective detected runtime so detect-don't-ask stays byte-identical
+   * across create and resume even though only `runtime` is persisted.
+   */
+  runtime?: string;
   timezone: string;
   availableSources: string[];
+  /**
+   * Whether a compatible planr-pipeline is resolvable. When true the
+   * `planning-engine` question detects `pipeline-po` as its suggested handoff.
+   */
+  pipelineInstalled?: boolean;
+}
+
+/** Coding runtimes that a detected/persisted `runtime` can name. */
+const KNOWN_CODING_RUNTIMES = ['claude', 'codex', 'cursor'] as const;
+
+/**
+ * The Operating Board's standing boundaries, seeded as suggested `guardrails`
+ * items so onboarding starts from the invariants the engine already enforces
+ * (mirroring the review-boundary explanation and the charter guardrails
+ * placeholder) rather than a blank field. The decision owner confirms, edits, or
+ * extends them.
+ */
+const STANDING_GUARDRAILS: readonly string[] = [
+  'No external or irreversible action without explicit human authority.',
+  'Advisors never start a cycle, call a provider, invoke PLAN, or invoke SHIP automatically.',
+  'Commercial and customer facts come from the decision owner, never inferred from source code.',
+];
+
+/**
+ * Locally collectable evidence sources offered during onboarding. Remote
+ * integrations (github/linear) are intentionally absent: they require
+ * credentials that cannot be configured in this flow, so offering them would let
+ * a chosen source hard-fail availability validation. They return once configurable
+ * in-flow. Every offered choice is gated by `availableSources`, so an offered
+ * source is always submittable.
+ */
+const EVIDENCE_SOURCE_CATALOG: readonly { id: string; label: string }[] = [
+  { id: 'repository', label: 'Repository files and metadata' },
+  { id: 'planr', label: 'OpenPlanr planning and delivery records' },
+  { id: 'git', label: 'Git history and working-tree metadata' },
+  { id: 'file-import', label: 'Local JSON/CSV files' },
+];
+
+const PRODUCT_STAGE_CHOICES: readonly { id: string; label: string; description: string }[] = [
+  { id: 'idea', label: 'Idea', description: 'Exploring a problem before a committed build.' },
+  { id: 'prototype', label: 'Prototype', description: 'Building toward a first usable release.' },
+  { id: 'launched', label: 'Launched', description: 'Live with early adopters and initial usage.' },
+  { id: 'growth', label: 'Growth', description: 'Scaling adoption against validated outcomes.' },
+  { id: 'mature', label: 'Mature', description: 'Established product in steady-state operation.' },
+];
+
+/**
+ * The effective detected coding runtime. Prefers the persisted adapter `runtime`
+ * when it names a known coding runtime (the value that survives create -> resume),
+ * and falls back to the explicit `detectedRuntime` (used by the terminal path,
+ * whose `runtime` is the `terminal` surface). Keying off the persisted `runtime`
+ * keeps the runtime question's detect-don't-ask shape byte-identical between the
+ * create context and the resume context, so a session created inside a detected
+ * host still validates its own answer envelope on resume.
+ */
+function effectiveDetectedRuntime(
+  context: OperatingQuestionContext,
+): 'claude' | 'codex' | 'cursor' | undefined {
+  return (
+    KNOWN_CODING_RUNTIMES.find((runtime) => runtime === context.runtime) ?? context.detectedRuntime
+  );
 }
 
 export interface OperatingInitQuestionDefinition {
@@ -91,6 +160,18 @@ export function operatingInitQuestionRegistry(
   const sourceSuggestion = context.availableSources.filter((source) =>
     ['repository', 'planr', 'git'].includes(source),
   );
+  // Offer only sources the host actually probed as available, and carry per-choice
+  // `preselected` (additive guided-question schema field, planr-pipeline >= 0.34.0)
+  // so a native surface can pre-check the same sources named by `suggestedValue`.
+  const sourceChoices: { id: string; label: string; preselected?: boolean }[] =
+    EVIDENCE_SOURCE_CATALOG.filter((choice) => context.availableSources.includes(choice.id)).map(
+      (choice) => ({
+        id: choice.id,
+        label: choice.label,
+        ...(sourceSuggestion.includes(choice.id) ? { preselected: true } : {}),
+      }),
+    );
+  const detectedRuntime = effectiveDetectedRuntime(context);
   return [
     scalar(
       'foundation',
@@ -169,10 +250,21 @@ export function operatingInitQuestionRegistry(
       question(
         'planning-engine',
         'single-select',
-        'Which engine creates accepted DEV specs?',
-        'This selects the planning handoff only; it never authorizes PLAN or SHIP.',
+        'Which planning engine turns accepted work into DEV specs?',
+        'This records the planning handoff only; it never authorizes PLAN or SHIP, which always stay explicit human actions.',
         {
           required: true,
+          // Detect-don't-ask: when a compatible planr-pipeline is installed, the
+          // feature-local Pipeline PO handoff is the reachable default, so it is
+          // surfaced as a suggestion the owner can confirm or replace.
+          ...(context.pipelineInstalled
+            ? {
+                valueSemantics: 'suggestion' as const,
+                suggestedValue: 'pipeline-po',
+                suggestionReason:
+                  'Suggested because a compatible planr-pipeline is installed; confirm or choose OpenPlanr.',
+              }
+            : {}),
           choices: [
             { id: 'openplanr', label: 'OpenPlanr', description: 'Dedicated planning CLI.' },
             {
@@ -193,11 +285,15 @@ export function operatingInitQuestionRegistry(
         'Preferred coding runtime',
         'The runtime presents questions and dispatches advisors; it receives no additional authority.',
         {
-          required: true,
-          ...(context.detectedRuntime
+          // Detect-don't-ask: a clearly detected runtime is surfaced as a
+          // suggestion only and never a required blocker; the question is
+          // required (asked) only when the runtime is ambiguous. Schema shape is
+          // unchanged — only whether/how it is surfaced as required.
+          required: !detectedRuntime,
+          ...(detectedRuntime
             ? {
                 valueSemantics: 'suggestion' as const,
-                suggestedValue: context.detectedRuntime,
+                suggestedValue: detectedRuntime,
                 suggestionReason: 'Suggested from a detected compatible runtime.',
               }
             : {
@@ -224,7 +320,10 @@ export function operatingInitQuestionRegistry(
         'Operating cadence',
         'Cadence controls display and reminders only; cycles still start only when requested.',
         {
-          required: true,
+          // Demoted out of the blocking first-run batch: cadence keeps its default
+          // (used silently downstream) but is no longer a required question, so it
+          // is not asked unless the owner opts to change it via a flag.
+          required: false,
           valueSemantics: 'default',
           defaultValue: 'manual',
           defaultReason: 'Manual cadence avoids implying background or scheduled execution.',
@@ -236,23 +335,10 @@ export function operatingInitQuestionRegistry(
         },
       ),
     ),
-    scalar(
-      'foundation',
-      'timezone',
-      question(
-        'timezone',
-        'text',
-        'Display timezone (IANA)',
-        'Persisted timestamps remain UTC; this IANA zone controls human-readable display.',
-        {
-          required: true,
-          valueSemantics: 'suggestion',
-          suggestedValue: context.timezone,
-          suggestionReason: 'Suggested from the current environment.',
-          validation: { minLength: 1, maxLength: 128 },
-        },
-      ),
-    ),
+    // The display timezone is derived silently from the environment (see
+    // index.ts / answer-service interaction context and prepareOperatingInitialization)
+    // and is no longer asked: it was write-only onboarding friction with no consumer
+    // that the environment cannot already supply.
     scalar(
       'foundation',
       'sensitivityCeiling',
@@ -283,21 +369,14 @@ export function operatingInitQuestionRegistry(
         'sources',
         'multi-select',
         'Evidence sources',
-        'Sources are collected read-only. Unavailable integrations must be configured or left disabled.',
+        'Sources are collected read-only. Only sources this host verified as available are offered.',
         {
           required: true,
           valueSemantics: 'suggestion',
           suggestedValue: sourceSuggestion,
           suggestionReason: 'Suggested from locally available provider capabilities.',
           validation: { minItems: 1, maxItems: 6 },
-          choices: [
-            { id: 'repository', label: 'Repository files and metadata' },
-            { id: 'planr', label: 'OpenPlanr planning and delivery records' },
-            { id: 'git', label: 'Git history and working-tree metadata' },
-            { id: 'github', label: 'GitHub (read-only)' },
-            { id: 'linear', label: 'Linear (read-only)' },
-            { id: 'file-import', label: 'Local JSON/CSV files' },
-          ],
+          choices: sourceChoices,
         },
       ),
     ),
@@ -341,10 +420,10 @@ export function operatingInitQuestionRegistry(
       'stage',
       question(
         'product-stage',
-        'text',
+        'single-select',
         'Current product stage',
         'Stage calibrates evidence expectations and recommendation confidence.',
-        { required: true, validation: { minLength: 1, maxLength: 256 } },
+        { required: true, choices: [...PRODUCT_STAGE_CHOICES] },
       ),
     ),
     charter(
@@ -354,7 +433,15 @@ export function operatingInitQuestionRegistry(
         'text',
         'Business model',
         'Commercial facts must come from the decision owner and are never inferred from source code.',
-        { required: true, validation: { minLength: 1, maxLength: 512 } },
+        {
+          required: true,
+          // Deferral default: the owner can accept "Not yet specified" to record the
+          // charter without stating commercials yet, instead of guessing them.
+          valueSemantics: 'default',
+          defaultValue: 'Not yet specified',
+          defaultReason: 'Commercial facts can be deferred; advisors never invent them.',
+          validation: { minLength: 1, maxLength: 512 },
+        },
       ),
     ),
     charter(
@@ -364,7 +451,15 @@ export function operatingInitQuestionRegistry(
         'text',
         'Ideal customer profile',
         'Customer claims are governance context and are never guessed by advisors.',
-        { required: true, validation: { minLength: 1, maxLength: 1000 } },
+        {
+          required: true,
+          // Deferral default: an owner without a stated ICP can accept "Not yet
+          // specified" rather than have one inferred.
+          valueSemantics: 'default',
+          defaultValue: 'Not yet specified',
+          defaultReason: 'The ideal customer can be deferred; advisors never guess it.',
+          validation: { minLength: 1, maxLength: 1000 },
+        },
       ),
     ),
     charter(
@@ -394,7 +489,15 @@ export function operatingInitQuestionRegistry(
         'repeated-text',
         'Human authority and product guardrails',
         'Guardrails define what advisors and routes must not do without new human authority.',
-        { required: true, validation: { minItems: 1, maxItems: 50 } },
+        {
+          required: true,
+          // Seed the engine's standing boundaries as a suggestion so onboarding
+          // starts from the invariants already enforced; the owner edits or extends.
+          valueSemantics: 'suggestion',
+          suggestedValue: [...STANDING_GUARDRAILS],
+          suggestionReason: "Seeded from the Operating Board's standing boundaries.",
+          validation: { minItems: 1, maxItems: 50 },
+        },
       ),
     ),
     charter(
@@ -404,7 +507,9 @@ export function operatingInitQuestionRegistry(
         'repeated-text',
         'Known unknowns',
         'Uncertainty is recorded as a gap instead of being filled with generic model advice.',
-        { required: true, validation: { minItems: 1, maxItems: 50 } },
+        // Optional: recording unknowns is encouraged but never blocks reaching the
+        // write-free preview.
+        { required: false, validation: { minItems: 1, maxItems: 50 } },
       ),
     ),
     {

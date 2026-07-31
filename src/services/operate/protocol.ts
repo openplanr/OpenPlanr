@@ -37,6 +37,10 @@ interface PipelineProtocolApi {
   validateProtocolArtifact(
     kind: string,
     value: unknown,
+    // v1.3 callers (e.g. the mission-mode `operating-advisor-response`, which
+    // carries no protocol envelope) pass the version explicitly; a v1.2 caller
+    // omits it and the pipeline additively resolves to the earliest schema.
+    options?: { protocolVersion?: string },
   ): Array<{
     path: string;
     detail: string;
@@ -87,6 +91,11 @@ interface PipelineProtocolApi {
   ): OperatingProviderManifest;
   createOperatingAdvisorBrief(roleId: string): OperatingAdvisorBrief;
   createOperatingAdapterHandoff(input: {
+    // Passed through to the pipeline's `adapter-handoff.mjs`, which defaults it
+    // to '1.2.0' (pack mode) and switches the record action to the v1.3 mission
+    // dispatch shape — `dispatch.agent` + `dispatch.missionPacketPointer` — when
+    // '1.3.0'. Passthrough only; the pipeline owns validation.
+    protocolVersion?: string;
     phase: 'advisors' | 'chair';
     state: OperatingAdapterHandoff['state'];
     cycleId: string;
