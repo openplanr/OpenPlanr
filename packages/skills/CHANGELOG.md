@@ -2,6 +2,19 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.19.0] — 2026-07-31
+
+### Changed
+
+- Re-mirror the generated `planr-operate` skill from the pipeline's 0.33.1
+  runtime assets: the skill now explicitly owns the end-to-end interactive
+  workflow, orchestrating the adapter `prepare → record → finalize`
+  lifecycle invisibly, and cadence-triggered runs remain review-only (no
+  auto-chain to PLAN or SHIP, no accepting findings or applying routes).
+- Validate against `planr-pipeline` `v0.33.1` in CI (was `v0.32.1`), so the
+  byte-for-byte mirror check tracks the Protocol v1.3 agentic-execution
+  release.
+
 ## [1.18.2] — 2026-07-30
 
 ### Fixed

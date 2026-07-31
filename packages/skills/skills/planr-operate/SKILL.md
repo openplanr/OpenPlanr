@@ -11,6 +11,14 @@ state, evidence collection, advisor dispatch, deterministic consolidation,
 routing, recovery, and outcome reconciliation; this skill must not reimplement
 those behaviors.
 
+This skill owns the end-to-end interactive workflow: it orchestrates the adapter
+`prepare → record → finalize` lifecycle invisibly, so you are never required to
+type an adapter lifecycle subcommand. The `planr operate` CLI stays the complete,
+scriptable, authoritative surface for state, locks, validation, provenance,
+routing, and recovery. Cadence-triggered runs obey the same boundaries: R1 still
+applies — nothing auto-chains to PLAN or SHIP, and a scheduled run never accepts
+findings or applies routes.
+
 ## Default workflow
 
 Invoking `planr-operate` without an explicit public subcommand means: run one
