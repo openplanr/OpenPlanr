@@ -161,7 +161,15 @@ describe('operate decision-brief rendering (FR7/E-007)', () => {
     expect(onDisk).toBe(written.html);
     expect(/https?:\/\//i.test(onDisk)).toBe(false);
     const info = await stat(written.path);
-    expect(info.mode & 0o777).toBe(0o600);
+    // The renderer requests a restrictive 0o600 write (see
+    // writeOperatingDecisionBriefArtifact). POSIX permission bits are only
+    // meaningful where the OS honors them: on Windows, NTFS does not implement
+    // the Unix mode, so Node reports 0o666 (438) regardless of the requested
+    // mode. Assert the restrictive-write contract only where it is enforceable
+    // rather than accommodate a value the platform cannot produce.
+    if (process.platform !== 'win32') {
+      expect(info.mode & 0o777).toBe(0o600);
+    }
   });
 
   it('refuses a destination that escapes the project', async () => {

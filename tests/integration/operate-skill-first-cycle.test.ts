@@ -218,7 +218,16 @@ describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => 
         yes: true,
       },
     });
-    expect(initialized.ok).toBe(true);
+    expect(
+      initialized.ok,
+      JSON.stringify({
+        step: 'init.apply',
+        action: initialized.action,
+        code: initialized.code,
+        message: initialized.message,
+        data: initialized.data,
+      }),
+    ).toBe(true);
     expect(initialized.nextActions).toContain('planr operate run');
 
     // 4. run — a native (claude) runtime defers advisors and hands back an adapter
@@ -262,7 +271,24 @@ describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => 
       }
 
       result = await run(requestFromEmittedArgv(next.argv, projectRoot));
-      expect(result.ok).toBe(true);
+      // Carry the failing step's context and the result's error payload so a
+      // platform-specific failure (this has surfaced only on ubuntu/Node-20)
+      // names the real error in CI instead of a bare `expected false to be
+      // true`. The result shape has no `.error`; the diagnostic fields are
+      // `code`/`message`/`data` (see failure() in services/operate/index.ts).
+      expect(
+        result.ok,
+        JSON.stringify({
+          step: next.action,
+          argv: next.argv,
+          handoffState: handoffStates.at(-1),
+          action: result.action,
+          state: result.state,
+          code: result.code,
+          message: result.message,
+          data: result.data,
+        }),
+      ).toBe(true);
       if (result.action === 'run') runStates.push(String(result.state));
       // Parity is re-checked at every lifecycle/continue step end to end.
       if (result.handoff && (result.handoff.next?.length ?? 0) > 0) {

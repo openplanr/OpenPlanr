@@ -417,6 +417,19 @@ async function* walkRoot(root: string): AsyncGenerator<string> {
   }
 }
 
+/**
+ * Render a filesystem path with forward-slash separators so a glob pattern —
+ * always authored with `/` — matches identically on every platform. `path.join`
+ * yields `\` separators on Windows, which the pattern's `/` can never match, so
+ * a recursive `.ts` glob would otherwise return nothing on Windows. Normalizing
+ * only the candidate fed to the matcher (never the stored/returned path) keeps
+ * the emitted matches in native form for the caller's own containment checks. On
+ * POSIX `path.sep` is `/`, so this is a no-op.
+ */
+function toGlobMatchPath(target: string): string {
+  return target.split(path.sep).join('/');
+}
+
 function simplePatternToRegExp(pattern: string): RegExp {
   let out = '';
   let index = 0;
@@ -448,7 +461,7 @@ async function globWithinRoots(
   const matches: string[] = [];
   for (const searchRoot of roots) {
     for await (const file of walkRoot(searchRoot)) {
-      if (!matcher.test(file)) continue;
+      if (!matcher.test(toGlobMatchPath(file))) continue;
       try {
         assertBelowCeiling(boundary, file);
       } catch {
