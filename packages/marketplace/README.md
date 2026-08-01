@@ -41,7 +41,7 @@ Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in t
 
 OpenPlanr Operating Board is certified for claude-code, codex, cursor through `planr operate`.
 
-Resolved component versions: pipeline 0.35.0, CLI 1.19.0, skills 1.21.0, marketplace 1.6.0.
+Resolved component versions: pipeline 0.35.0, CLI 1.19.0, skills 1.21.0, marketplace 1.7.0.
 <!-- operating-capability:end -->
 
 `planr operate` is the recurring evidence-to-decision control plane. It creates

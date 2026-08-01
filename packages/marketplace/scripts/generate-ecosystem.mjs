@@ -59,6 +59,10 @@ const guidedOperationPath = existsSync(nativeOperationPath)
 const guidedReleaseOperation = existsSync(guidedOperationPath)
   ? readJson(guidedOperationPath)
   : null;
+const agenticOperationPath = join(repo, 'examples', 'operate-agent-harness-operation.json');
+const agenticReleaseOperation = existsSync(agenticOperationPath)
+  ? readJson(agenticOperationPath)
+  : null;
 const requiredWorkspaceInputs = [
   ecosystemPaths.cli,
   ecosystemPaths.pipeline,
@@ -112,17 +116,45 @@ const candidateMarketplaceVersion = participantTarget(
   'marketplace',
   marketplacePackage.version,
 );
-const cliVersion = guidedReleaseVerified ? observedCliVersion : current.components.cli.version;
-const pipelineVersion = guidedReleaseVerified
-  ? observedPipelineVersion
-  : current.components.pipeline.version;
-const skillsVersion = guidedReleaseVerified
-  ? observedSkillsVersion
-  : current.components.skills.version;
-// The marketplace repository is the release artifact for this manifest. Its
-// own version advances when the still-withheld ledger is merged, independently
-// of whether the guided capability has passed finalization.
-const marketplaceVersion = marketplacePackage.version;
+const agenticCliVersion = participantTarget(agenticReleaseOperation, 'cli', observedCliVersion);
+const agenticPipelineVersion = participantTarget(
+  agenticReleaseOperation,
+  'pipeline',
+  observedPipelineVersion,
+);
+const agenticSkillsVersion = participantTarget(
+  agenticReleaseOperation,
+  'skills',
+  observedSkillsVersion,
+);
+const agenticMarketplaceVersion = participantTarget(
+  agenticReleaseOperation,
+  'marketplace',
+  marketplacePackage.version,
+);
+const agenticReleaseVerified = isVerifiedOperation(agenticReleaseOperation);
+const agenticReleaseStaged = Boolean(agenticReleaseOperation) && !agenticReleaseVerified;
+// A staged operation exposes its candidate component tuple only inside the
+// withheld capability. Top-level versions and plugin pins remain the last
+// verified ecosystem until npm, tags, CI, and canaries reconcile.
+const cliVersion = agenticReleaseStaged
+  ? current.components.cli.version
+  : guidedReleaseVerified
+    ? observedCliVersion
+    : current.components.cli.version;
+const pipelineVersion = agenticReleaseStaged
+  ? current.components.pipeline.version
+  : guidedReleaseVerified
+    ? observedPipelineVersion
+    : current.components.pipeline.version;
+const skillsVersion = agenticReleaseStaged
+  ? current.components.skills.version
+  : guidedReleaseVerified
+    ? observedSkillsVersion
+    : current.components.skills.version;
+const marketplaceVersion = agenticReleaseStaged
+  ? current.components.marketplace.version
+  : marketplacePackage.version;
 const candidateAdapters = adapterRegistry
   ? adapterRegistry.adapters.map((adapter) =>
       normalizeOperatingAdapter(adapter, candidatePipelineVersion))
@@ -135,7 +167,11 @@ const releaseAdapters = adapterRegistry
   ? adapterRegistry.adapters.map((adapter) =>
       normalizeOperatingAdapter(adapter, pipelineVersion))
   : current.adapters;
-let resolvedAdapters = guidedReleaseVerified ? releaseAdapters : current.adapters;
+let resolvedAdapters = agenticReleaseStaged
+  ? current.adapters
+  : guidedReleaseVerified
+    ? releaseAdapters
+    : current.adapters;
 
 let operatingBoard;
 if (hasWorkspace) {
@@ -221,6 +257,47 @@ guidedOperatingBoard.releaseOperation = guidedReleaseOperation
     }
   : null;
 
+const agenticAdapters = adapterRegistry
+  ? adapterRegistry.adapters.map((adapter) =>
+      normalizeOperatingAdapter(adapter, agenticPipelineVersion))
+  : Object.entries(
+      current.capabilities?.agenticOperatingBoard?.advisorDispatch ?? {},
+    ).map(([runtime, operatingAdvisorDispatch]) => ({
+      runtime,
+      operatingAdvisorDispatch,
+    }));
+const agenticOperatingBoard = {
+  status: agenticReleaseVerified ? 'available' : 'unavailable',
+  command: 'planr operate',
+  protocolRange: '^1.3.0',
+  components: {
+    pipeline: agenticPipelineVersion,
+    cli: agenticCliVersion,
+    skills: agenticSkillsVersion,
+    marketplace: agenticMarketplaceVersion,
+  },
+  certifiedRuntimes: agenticReleaseVerified
+    ? agenticAdapters
+        .filter(({ operatingAdvisorDispatch }) => operatingAdvisorDispatch === 'mandate-capable')
+        .map(({ runtime }) => runtime)
+    : [],
+  advisorDispatch: Object.fromEntries(
+    agenticAdapters.map(({ runtime, operatingAdvisorDispatch }) => [
+      runtime,
+      operatingAdvisorDispatch,
+    ]),
+  ),
+  missing: agenticReleaseVerified ? [] : ['release'],
+  releaseOperation: agenticReleaseOperation
+    ? {
+        operationId: agenticReleaseOperation.operationId,
+        operationDigest: agenticReleaseOperation.operationDigest,
+        state: agenticReleaseOperation.state,
+        reconciliation: agenticReleaseOperation.reconciliation.status,
+      }
+    : null,
+};
+
 operatingBoard.releaseOperation = releaseOperation
   ? {
       operationId: releaseOperation.operationId,
@@ -261,6 +338,7 @@ const ecosystem = {
     ...(current.capabilities ?? {}),
     operatingBoard,
     guidedOperatingBoard,
+    agenticOperatingBoard,
   },
   releaseTransaction: {
     model: 'coordinated-saga',

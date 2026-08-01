@@ -120,7 +120,7 @@ test('adapter normalization fails closed when native dispatch is undeclared', ()
     },
     '0.32.0',
   );
-  assert.equal(normalized.operatingAdvisorDispatch, null);
+  assert.equal(normalized.operatingAdvisorDispatch, 'unsupported');
   assert.equal(
     resolveGuidedOperatingBoard({
       protocolVersion: '1.2.0',
@@ -159,8 +159,30 @@ test('verified compatibility promotes the default native cycle after reconciliat
     cli: { version: '1.19.0', pipelineRange: '^0.35.0' },
     pipeline: { version: '0.35.0', cliRange: '^1.19.0' },
     skills: { version: '1.21.0', cliRange: '^1.19.0' },
-    marketplace: { version: '1.6.0' },
+    marketplace: { version: '1.7.0' },
   });
+});
+
+test('the Protocol v1.3 harness remains withheld while its release ledger is staged', async () => {
+  const ecosystem = await readJson('../ecosystem.json');
+  const agentic = ecosystem.capabilities.agenticOperatingBoard;
+  assert.equal(agentic.status, 'unavailable');
+  assert.deepEqual(agentic.missing, ['release']);
+  assert.deepEqual(agentic.components, {
+    pipeline: '0.36.1',
+    cli: '1.20.0',
+    skills: '1.22.0',
+    marketplace: '1.7.0',
+  });
+  assert.deepEqual(agentic.advisorDispatch, {
+    'claude-code': 'mandate-capable',
+    codex: 'unsupported',
+    cursor: 'unsupported',
+  });
+  assert.deepEqual(agentic.certifiedRuntimes, []);
+  assert.equal(agentic.releaseOperation.operationId, 'OPERATE-SPEC-007');
+  assert.equal(agentic.releaseOperation.state, 'promoting');
+  assert.equal(agentic.releaseOperation.reconciliation, 'incomplete');
 });
 
 test('operation schema supports audited lifecycle and forward-fix state', async () => {
