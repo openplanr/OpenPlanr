@@ -18,35 +18,20 @@ import { operatingStalledItems } from './stalled-item-service.js';
 import { OperateError, type OperatingEventHead, type OperatingState } from './types.js';
 
 const OPERATE_ROOT = '.planr/operate';
-const PROJECTION_ROOT = `${OPERATE_ROOT}/projections`;
-const STATE_PATH = `${PROJECTION_ROOT}/state.json`;
+// Protocol v1.3 (FR6): the legacy `.planr/operate/projections/` directory —
+// which duplicated the top-level register/decision/gap tree byte-for-byte and
+// was the only home of the parked-findings backlog — is retired. `state.json`
+// is the sole canonical projection that survives; it moves under the `.state/`
+// internals beside `checkpoint.json`/`records.jsonl`/`events.jsonl`, and every
+// readable register is now emitted exactly once at the top level.
+const STATE_INTERNAL_ROOT = `${OPERATE_ROOT}/.state`;
+const STATE_PATH = `${STATE_INTERNAL_ROOT}/state.json`;
 const EVIDENCE_INDEX_PATH = `${OPERATE_ROOT}/evidence-index.json`;
-const MARKDOWN_PROJECTIONS = [
-  {
-    relativePath: `${PROJECTION_ROOT}/register.md`,
-    markerName: 'operate-findings-register',
-    render: renderFindingRegister,
-  },
-  {
-    relativePath: `${PROJECTION_ROOT}/decisions.md`,
-    markerName: 'operate-decisions-register',
-    render: renderDecisionRegister,
-  },
-  {
-    relativePath: `${PROJECTION_ROOT}/data-gaps.md`,
-    markerName: 'operate-data-gaps-register',
-    render: renderDataGapRegister,
-  },
-  {
-    relativePath: `${PROJECTION_ROOT}/backlog.md`,
-    markerName: 'operate-backlog-register',
-    render: renderBacklogRegister,
-  },
-] as const;
-// FR5 readable tree: one consolidated Markdown file per register rendered at the
-// top level (the workspace path getters T-001 added), above the `.state/`
-// internals. `findings.md`/`decisions.md`/`gaps.md` reuse the register renderers
-// so the readable tree and the projections directory stay byte-consistent.
+// FR5/FR6 readable tree: one consolidated Markdown file per register rendered at
+// the top level (the workspace path getters T-001 added), above the `.state/`
+// internals. `backlog.md` (parked findings with their full parked reasons) is
+// promoted here from the retired projections directory so parked intelligence
+// has exactly one authoritative readable copy.
 const READABLE_TREE_PROJECTIONS = [
   {
     relativePath: `${OPERATE_ROOT}/brief.md`,
@@ -73,8 +58,14 @@ const READABLE_TREE_PROJECTIONS = [
     markerName: 'operate-routes-register',
     render: renderRouteRegister,
   },
+  {
+    relativePath: `${OPERATE_ROOT}/backlog.md`,
+    markerName: 'operate-backlog-register',
+    render: renderBacklogRegister,
+  },
 ] as const;
 const CYCLE_BRIEF_MARKER = 'operate-cycle-brief';
+const CYCLE_REPORT_MARKER = 'operate-cycle-report';
 const BOARD_MARKER = 'operate-board';
 
 export type OperatingProjectionDriftStatus = 'absent' | 'current' | 'drift';
@@ -381,12 +372,77 @@ function spliceProjectionBlock(
   return `${existing.slice(0, beginStart)}${block}${existing.slice(afterStart)}`;
 }
 
-function markdownProjectionSpecs(state: OperatingState): Array<{
+/**
+ * The rich, event-log-derived board/report content for one governed cycle.
+ * `reportMarkdown` is the full `readOperatingReport({cycleId}).markdown`;
+ * `boardByRole` holds each role's `markdownLens` output (the exact per-role
+ * Markdown `planr operate report <cycleId> --lens <role>` emits); and
+ * `evaluatedRoleIds` names the roles that actually produced an advisor-result
+ * record — the source of truth for a board's `Status:` line (FR1).
+ */
+export interface OperatingRichCycleArtifact {
+  reportMarkdown: string;
+  boardByRole: ReadonlyMap<string, string>;
+  evaluatedRoleIds: ReadonlySet<string>;
+}
+
+/**
+ * Re-read the committed event log to assemble the rich board/report content for
+ * every reviewable/closed cycle. The persisted `report.md`/`board/<role>.md`
+ * files must be the same scored, cited analysis the transient `review`/`report`
+ * commands render — not the cheap state-only projection — so persistence and
+ * drift-inspection both derive them here from the one `readOperatingReport`
+ * assembly (FR1). Determinism from the immutable event log guarantees the
+ * inspect re-render reproduces the persisted bytes.
+ */
+export async function readOperatingRichCycleArtifacts(input: {
+  projectRoot: string;
+  state: OperatingState;
+  localRoot?: string;
+}): Promise<Map<string, OperatingRichCycleArtifact>> {
+  const artifacts = new Map<string, OperatingRichCycleArtifact>();
+  const cycles = input.state.cycles.filter(
+    (cycle) => cycle.state === 'reviewable' || cycle.state === 'closed',
+  );
+  if (cycles.length === 0) return artifacts;
+  const { readOperatingReport, markdownLens } = await import('./reports.js');
+  for (const cycle of cycles) {
+    try {
+      const report = await readOperatingReport({
+        projectRoot: input.projectRoot,
+        cycleId: cycle.id,
+        lens: 'all',
+        localRoot: input.localRoot,
+      });
+      artifacts.set(cycle.id, {
+        reportMarkdown: report.markdown,
+        boardByRole: new Map(report.reports.map((entry) => [entry.roleId, markdownLens(entry)])),
+        evaluatedRoleIds: new Set(
+          report.reports
+            .filter((entry) => entry.outcome !== 'not_evaluated')
+            .map((entry) => entry.roleId),
+        ),
+      });
+    } catch {
+      // The rich assembly re-reads the committed event log. If a cycle's records
+      // cannot be re-read (for example a hand-built state with no backing event
+      // store), skip its artifact: `report.md` is omitted and each
+      // `board/<role>.md` falls back to the honest not-evaluated state renderer
+      // rather than fabricating scored analysis it cannot source.
+    }
+  }
+  return artifacts;
+}
+
+function markdownProjectionSpecs(
+  state: OperatingState,
+  richArtifacts: ReadonlyMap<string, OperatingRichCycleArtifact>,
+): Array<{
   relativePath: string;
   markerName: string;
   managedContent: string;
 }> {
-  const registers = [...MARKDOWN_PROJECTIONS, ...READABLE_TREE_PROJECTIONS].map((projection) => ({
+  const registers = READABLE_TREE_PROJECTIONS.map((projection) => ({
     relativePath: projection.relativePath,
     markerName: projection.markerName,
     managedContent: projection.render(state),
@@ -394,22 +450,47 @@ function markdownProjectionSpecs(state: OperatingState): Array<{
   const cycleArtifacts = [...state.cycles]
     .filter((cycle) => cycle.state === 'reviewable' || cycle.state === 'closed')
     .sort((left, right) => left.id.localeCompare(right.id))
-    .flatMap((cycle) => [
-      {
-        relativePath: `${OPERATE_ROOT}/cycles/${cycle.id}/brief.md`,
-        markerName: CYCLE_BRIEF_MARKER,
-        managedContent: renderCycleBrief(state, cycle.id),
-      },
-      ...OPERATING_BOARD_ROLES.map((role) => ({
-        relativePath: `${OPERATE_ROOT}/cycles/${cycle.id}/board/${role.id}.md`,
-        markerName: BOARD_MARKER,
-        managedContent: renderOperatingBoardReport(state, cycle.id, role),
-      })),
-    ]);
+    .flatMap((cycle) => {
+      const rich = richArtifacts.get(cycle.id);
+      return [
+        {
+          relativePath: `${OPERATE_ROOT}/cycles/${cycle.id}/brief.md`,
+          markerName: CYCLE_BRIEF_MARKER,
+          managedContent: renderCycleBrief(state, cycle.id),
+        },
+        // The full, uncapped lens report — byte-identical to
+        // `readOperatingReport({cycleId}).markdown`. Emitted only when the rich
+        // assembly is available; the 900-word cap `renderCycleBrief` enforces on
+        // `brief.md` is deliberately NOT applied to `report.md`.
+        ...(rich
+          ? [
+              {
+                relativePath: `${OPERATE_ROOT}/cycles/${cycle.id}/report.md`,
+                markerName: CYCLE_REPORT_MARKER,
+                managedContent: rich.reportMarkdown,
+              },
+            ]
+          : []),
+        ...OPERATING_BOARD_ROLES.map((role) => ({
+          relativePath: `${OPERATE_ROOT}/cycles/${cycle.id}/board/${role.id}.md`,
+          markerName: BOARD_MARKER,
+          // Rich per-role lens Markdown (identical to `report --lens <role>`)
+          // when the advisor-result records are readable; otherwise the honest
+          // state-only renderer whose `Status:` derives from the absence of an
+          // advisor-result record, never from `enabledRoles`.
+          managedContent:
+            rich?.boardByRole.get(role.id) ??
+            renderOperatingBoardReport(state, cycle.id, role, rich?.evaluatedRoleIds ?? new Set()),
+        })),
+      ];
+    });
   return [...registers, ...cycleArtifacts];
 }
 
-export function renderOperatingProjectionFiles(state: OperatingState): OperatingProjectionFile[] {
+export function renderOperatingProjectionFiles(
+  state: OperatingState,
+  richArtifacts: ReadonlyMap<string, OperatingRichCycleArtifact> = new Map(),
+): OperatingProjectionFile[] {
   const stateFile: OperatingProjectionFile = {
     relativePath: STATE_PATH,
     content: `${canonicalize(state)}\n`,
@@ -418,7 +499,7 @@ export function renderOperatingProjectionFiles(state: OperatingState): Operating
     relativePath: EVIDENCE_INDEX_PATH,
     content: renderOperatingEvidenceIndex(state),
   };
-  const markdownFiles = markdownProjectionSpecs(state).map((projection) => ({
+  const markdownFiles = markdownProjectionSpecs(state, richArtifacts).map((projection) => ({
     relativePath: projection.relativePath,
     markerName: projection.markerName,
     managedContent: projection.managedContent,
@@ -494,15 +575,25 @@ async function inspectProjectionFile(
 export async function inspectOperatingProjectionDrift(input: {
   projectRoot: string;
   state: OperatingState;
+  localRoot?: string;
+  richCycleArtifacts?: ReadonlyMap<string, OperatingRichCycleArtifact>;
 }): Promise<OperatingProjectionDrift[]> {
   await assertOperatingArtifact('operating-state', input.state);
-  const expected = renderOperatingProjectionFiles(input.state);
+  const richArtifacts =
+    input.richCycleArtifacts ??
+    (await readOperatingRichCycleArtifacts({
+      projectRoot: input.projectRoot,
+      state: input.state,
+      localRoot: input.localRoot,
+    }));
+  const expected = renderOperatingProjectionFiles(input.state, richArtifacts);
   return Promise.all(expected.map((file) => inspectProjectionFile(input.projectRoot, file)));
 }
 
 export async function assertOperatingProjectionsCurrent(input: {
   projectRoot: string;
   state: OperatingState;
+  localRoot?: string;
 }): Promise<void> {
   const drift = await inspectOperatingProjectionDrift(input);
   const mismatches = drift.filter((entry) => entry.status !== 'current');
@@ -518,9 +609,18 @@ export async function assertOperatingProjectionsCurrent(input: {
 export async function prepareOperatingProjectionPersistence(input: {
   projectRoot: string;
   state: OperatingState;
+  localRoot?: string;
 }): Promise<OperatingProjectionPreview> {
   await assertOperatingArtifact('operating-state', input.state);
-  const rendered = renderOperatingProjectionFiles(input.state);
+  // Assemble the rich board/report content once and thread the same map into
+  // both the rendered files and the drift inspection below, so a single persist
+  // can never write bytes the drift check would then flag as stale.
+  const richArtifacts = await readOperatingRichCycleArtifacts({
+    projectRoot: input.projectRoot,
+    state: input.state,
+    localRoot: input.localRoot,
+  });
+  const rendered = renderOperatingProjectionFiles(input.state, richArtifacts);
   const files: OperatingProjectionFile[] = [];
   for (const file of rendered) {
     if (!file.markerName) {
@@ -550,7 +650,10 @@ export async function prepareOperatingProjectionPersistence(input: {
       changedPaths.push(file.relativePath);
     }
   }
-  const drift = await inspectOperatingProjectionDrift(input);
+  const drift = await inspectOperatingProjectionDrift({
+    ...input,
+    richCycleArtifacts: richArtifacts,
+  });
   const stateDigest = canonicalDigest(input.state);
   const previewDigest = canonicalDigest({
     kind: 'operating-projection-preview',
@@ -613,16 +716,15 @@ export async function persistOperatingProjections(input: {
 }
 
 export const OPERATING_PROJECTION_PATHS = {
+  // The sole surviving canonical projection, relocated under `.state/` now that
+  // the legacy `projections/` directory is retired (FR6).
   state: STATE_PATH,
-  register: `${PROJECTION_ROOT}/register.md`,
-  decisions: `${PROJECTION_ROOT}/decisions.md`,
-  dataGaps: `${PROJECTION_ROOT}/data-gaps.md`,
-  backlog: `${PROJECTION_ROOT}/backlog.md`,
-  // FR5 readable tree at the workspace path getters (T-001).
   evidenceIndex: EVIDENCE_INDEX_PATH,
+  // The one authoritative readable copy of every register, at the top level.
   brief: `${OPERATE_ROOT}/brief.md`,
   findings: `${OPERATE_ROOT}/findings.md`,
-  readableDecisions: `${OPERATE_ROOT}/decisions.md`,
+  decisions: `${OPERATE_ROOT}/decisions.md`,
   gaps: `${OPERATE_ROOT}/gaps.md`,
   routes: `${OPERATE_ROOT}/routes.md`,
+  backlog: `${OPERATE_ROOT}/backlog.md`,
 } as const;

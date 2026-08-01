@@ -21,8 +21,9 @@ import { resolveOperatingPaths } from '../../src/services/operate/workspace.js';
 // the field incident's payload necessarily arrived as MANY in-gate excerpts whose
 // aggregate no gate caught — that is the shape this scale test reproduces.
 const FIELD_INCIDENT_BYTES = 2_736_185;
-// technology-risk's real, published v1.2 pack budget (~384 KiB).
-const TECHNOLOGY_RISK_BUDGET = 393_216;
+// technology-risk's real, published v1.2 pack budget (~640 KiB) after the
+// reviewed registry raised it for real-repository economics.
+const TECHNOLOGY_RISK_BUDGET = 655_360;
 // < the v1.2 evidence summary schema cap (4096 chars) AND < redaction's 16 KiB
 // quarantine gate, so every item is a valid, framed, in-gate excerpt.
 const ITEM_SUMMARY_BYTES = 4_000;

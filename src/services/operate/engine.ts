@@ -13,8 +13,10 @@ import {
   configuredAdvisorProviderPolicy,
   createConfiguredStructuredAdapter,
   createOfflineAdvisorAdapter,
+  deriveOperatingMissionEvidenceCaps,
   dispatchOperatingAdvisors,
   ensureOperatingProviderConsent,
+  type OperatingMissionEvidenceTruncation,
 } from './advisors.js';
 import { recordOperatingCadenceRun } from './cadence.js';
 import { canonicalDigest, canonicalize } from './canonical.js';
@@ -248,14 +250,31 @@ export function sourceOperatingMissionPacketState(input: {
   };
 }
 
+export interface OperatingMissionPacketsResult {
+  packets: OperatingMissionPacket[];
+  /**
+   * One entry per role whose prioritized evidence index the published pipeline
+   * truncated to its `maxEvidenceItems` cap. Empty on a healthy repository under
+   * its cap; the caller appends these to the cycle's evidence warnings so a drop
+   * is always reported, never silent.
+   */
+  truncations: OperatingMissionEvidenceTruncation[];
+}
+
 /**
  * Build the Protocol v1.3 mission packets (FR1/E-001) for a cycle from live
  * state: derive the body-free evidence index from the collected snapshot,
  * source the non-evidence payload once, and construct one digest-bound packet
- * per requested role. Each packet is measured against its role's derived
- * single-digit-KiB mission budget and fails closed with
- * `E_OPERATE_MISSION_PACKET_BUDGET` naming the role before any dispatch. Pack
- * mode (`createOperatingAdvisorPack`) is untouched.
+ * per requested role. Each packet is measured against its role's derived mission
+ * budget and fails closed with `E_OPERATE_MISSION_PACKET_BUDGET` naming the role
+ * before any dispatch. Pack mode (`createOperatingAdvisorPack`) is untouched.
+ *
+ * `maxEvidenceItems` is the caller's upper bound (`config.budgets.maxItems`); the
+ * effective per-role cap is the smaller of it and the role's registry-sized
+ * default (`deriveOperatingMissionEvidenceCap`), so a large-budget lens keeps
+ * more items than a small-budget one and a healthy repository under the cap is
+ * never truncated. When a role's index exceeds its cap the pipeline keeps the
+ * highest-priority items and the drop is returned in `truncations`.
  */
 export async function buildOperatingMissionPackets(input: {
   cycleId: string;
@@ -266,7 +285,7 @@ export async function buildOperatingMissionPackets(input: {
   roleIds?: OperatingRoleId[];
   sensitivityCeiling?: OperatingSensitivity;
   maxEvidenceItems?: number;
-}): Promise<OperatingMissionPacket[]> {
+}): Promise<OperatingMissionPacketsResult> {
   const evidenceIndex = buildOperatingEvidenceIndex(input.evidence, {
     sensitivityCeiling: input.sensitivityCeiling,
   });
@@ -278,18 +297,20 @@ export async function buildOperatingMissionPackets(input: {
     evidenceIndex,
   });
   const roleIds = input.roleIds ?? input.config.enabledRoles;
+  const evidenceCaps = await deriveOperatingMissionEvidenceCaps(input.maxEvidenceItems);
   const packets: OperatingMissionPacket[] = [];
+  const truncations: OperatingMissionEvidenceTruncation[] = [];
   for (const roleId of roleIds) {
-    packets.push(
-      await buildOperatingMissionPacket({
-        roleId,
-        ...state,
-        evidenceIndex,
-        maxEvidenceItems: input.maxEvidenceItems,
-      }),
-    );
+    const { packet, truncation } = await buildOperatingMissionPacket({
+      roleId,
+      ...state,
+      evidenceIndex,
+      maxEvidenceItems: evidenceCaps[roleId],
+    });
+    packets.push(packet);
+    if (truncation) truncations.push(truncation);
   }
-  return packets;
+  return { packets, truncations };
 }
 
 async function snapshotWorkspace(

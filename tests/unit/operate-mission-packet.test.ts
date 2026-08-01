@@ -8,6 +8,8 @@ import {
   type AdvisorOperatingContext,
   buildOperatingMissionPacket,
   deriveOperatingMissionBudget,
+  deriveOperatingMissionBudgets,
+  describeOperatingMissionTruncation,
 } from '../../src/services/operate/advisors.js';
 import { canonicalize } from '../../src/services/operate/canonical.js';
 import {
@@ -247,7 +249,7 @@ describe('Operating Board mission packets (FR1/E-001)', () => {
     // The git-history evidence is revision-referenced at the pinned revision.
     expect(index.some((item) => item.revision === pin)).toBe(true);
 
-    const packets = await buildOperatingMissionPackets({
+    const { packets } = await buildOperatingMissionPackets({
       cycleId: 'CYCLE-001',
       config: config(),
       workspace,
@@ -284,7 +286,7 @@ describe('Operating Board mission packets (FR1/E-001)', () => {
     expect(state.planningStatus.planningEngine).toBe('openplanr');
     expect(state.declaredRoots).toContain('src');
 
-    const packet = await buildOperatingMissionPacket({
+    const { packet } = await buildOperatingMissionPacket({
       roleId: 'strategy-finance',
       ...state,
       evidenceIndex: index,
@@ -295,26 +297,26 @@ describe('Operating Board mission packets (FR1/E-001)', () => {
     expect(JSON.stringify(packet)).not.toContain(BODY_MARKER);
   });
 
-  it('keeps every role mission packet within its single-digit-KiB derived budget', async () => {
+  it('keeps every role mission packet within its derived mission budget', async () => {
     const { workspace, evidence } = await collectRealEvidence();
-    const packets = await buildOperatingMissionPackets({
+    const { packets } = await buildOperatingMissionPackets({
       cycleId: 'CYCLE-001',
       config: config(),
       workspace,
       context: advisorContext(),
       evidence,
     });
+    const derivedBudgets = await deriveOperatingMissionBudgets();
     for (const packet of packets) {
       const bytes = Buffer.byteLength(canonicalize(packet), 'utf8');
-      // Single-digit KiB: strictly under 10 KiB.
-      expect(bytes).toBeLessThan(10 * 1024);
+      // Every packet fits its own role's derived budget — no longer a flat
+      // single-digit-KiB cap, but the registry-proportional [1, 32] KiB spread.
+      expect(bytes).toBeLessThanOrEqual(derivedBudgets[packet.roleId]);
     }
-    // The derived budget is single-digit KiB for every role.
-    for (const packMax of [262_144, 393_216, 196_608]) {
-      const derived = deriveOperatingMissionBudget(packMax);
-      expect(derived).toBeGreaterThanOrEqual(1024);
-      expect(derived).toBeLessThanOrEqual(9 * 1024);
-    }
+    // The derived budget tracks the registry spread instead of the old 9-KiB cap.
+    expect(deriveOperatingMissionBudget(655_360)).toBe(20 * 1024);
+    expect(deriveOperatingMissionBudget(524_288)).toBe(16 * 1024);
+    expect(deriveOperatingMissionBudget(196_608)).toBe(6 * 1024);
   });
 
   it('fails closed with E_OPERATE_MISSION_PACKET_BUDGET naming the role before dispatch', async () => {
@@ -327,9 +329,11 @@ describe('Operating Board mission packets (FR1/E-001)', () => {
       context: advisorContext(),
       evidenceIndex: index,
     });
-    // Synthesize an oversized index — well over the single-digit-KiB derived
-    // budget but under the pipeline producer's own 256-KiB ceiling — so the
-    // engine's derived-budget gate is the one that fires.
+    // Synthesize an oversized index with NO maxEvidenceItems, so no truncation
+    // happens: it is well over strategy-finance's 16-KiB derived budget yet under
+    // the pipeline producer's own 512-KiB maxInputBytes, so the engine's derived
+    // -budget gate is the one that fires (an untruncated oversized index still
+    // fails closed — truncation only applies when a cap is supplied).
     const oversized: OperatingEvidenceIndexItem[] = Array.from({ length: 300 }, (_, ordinal) => ({
       id: `EVX-oversized${String(ordinal).padStart(4, '0')}`,
       path: `src/generated/module${String(ordinal).padStart(4, '0')}/file${ordinal}.ts`,
@@ -351,5 +355,129 @@ describe('Operating Board mission packets (FR1/E-001)', () => {
       code: 'E_OPERATE_MISSION_PACKET_BUDGET',
       message: expect.stringContaining('strategy-finance'),
     });
+  });
+
+  it('truncates a monorepo-scale index to the cap, fits the budget, and reports the drop (FR4)', async () => {
+    const { workspace, evidence } = await collectRealEvidence();
+    const index = buildOperatingEvidenceIndex(evidence);
+    const state = sourceOperatingMissionPacketState({
+      cycleId: 'CYCLE-001',
+      config: config(),
+      workspace,
+      context: advisorContext(),
+      evidenceIndex: index,
+    });
+    // A monorepo-scale prioritized index (hundreds of repository pointers). The
+    // caller's collection order is the priority order; the pipeline keeps the
+    // first `cap` and truncates the rest — never an alphabetical re-starve.
+    const monorepo: OperatingEvidenceIndexItem[] = Array.from({ length: 400 }, (_, ordinal) => ({
+      id: `EVX-monorepo${String(ordinal).padStart(4, '0')}`,
+      path: `packages/service-${String(ordinal).padStart(4, '0')}/src/index.ts`,
+      contentHash: digest('b'),
+      source: 'repository',
+      classification: 'source-code',
+      freshness: 'fresh',
+      sensitivity: 'internal',
+      signals: ['code', 'architecture'],
+    }));
+    const cap = 40;
+
+    const { packet, truncation } = await buildOperatingMissionPacket({
+      roleId: 'technology-risk',
+      ...state,
+      evidenceIndex: monorepo,
+      maxEvidenceItems: cap,
+    });
+
+    // The packet fits: exactly `cap` items, within the role's derived budget —
+    // no fail-closed on a healthy (if large) repository.
+    expect(packet.evidenceIndex).toHaveLength(cap);
+    const derivedBudgets = await deriveOperatingMissionBudgets();
+    expect(Buffer.byteLength(canonicalize(packet), 'utf8')).toBeLessThanOrEqual(
+      derivedBudgets['technology-risk'],
+    );
+    // The highest-priority items survived (the first `cap` in caller order).
+    const kept = new Set(packet.evidenceIndex.map((item) => item.id));
+    expect(kept.has('EVX-monorepo0000')).toBe(true);
+    expect(kept.has('EVX-monorepo0399')).toBe(false);
+
+    // The drop is loud provenance on the signed packet AND a returned record.
+    const budgets = packet.budgets as {
+      maxEvidenceItems?: number;
+      truncatedEvidenceItems?: boolean;
+      evidenceItemsBeforeTruncation?: number;
+    };
+    expect(budgets.truncatedEvidenceItems).toBe(true);
+    expect(budgets.evidenceItemsBeforeTruncation).toBe(400);
+    expect(truncation).toMatchObject({
+      roleId: 'technology-risk',
+      evidenceItemsBeforeTruncation: 400,
+      keptItems: cap,
+      droppedItems: 400 - cap,
+      maxEvidenceItems: cap,
+    });
+    // A human-readable warning is producible for the cycle's warnings channel.
+    if (!truncation) throw new Error('expected a truncation record');
+    expect(describeOperatingMissionTruncation(truncation)).toContain('technology-risk');
+    expect(describeOperatingMissionTruncation(truncation)).toContain('360');
+  });
+
+  it('surfaces per-role truncations from buildOperatingMissionPackets so the cycle can warn (FR4)', async () => {
+    const { workspace, evidence } = await collectRealEvidence();
+    const index = buildOperatingEvidenceIndex(evidence);
+    // The real index carries more than one permitted item for a repository-reading
+    // role, so a cap of 1 forces a reported truncation.
+    expect(index.length).toBeGreaterThan(1);
+
+    const { packets, truncations } = await buildOperatingMissionPackets({
+      cycleId: 'CYCLE-001',
+      config: config(),
+      workspace,
+      context: advisorContext(),
+      evidence,
+      maxEvidenceItems: 1,
+    });
+
+    // Every role still built a packet — nothing failed closed.
+    expect(packets).toHaveLength(ALL_ROLES.length);
+    // At least one role's index exceeded the cap and was reported, never dropped
+    // silently.
+    expect(truncations.length).toBeGreaterThan(0);
+    for (const truncation of truncations) {
+      expect(truncation.maxEvidenceItems).toBe(1);
+      expect(truncation.keptItems).toBe(1);
+      expect(truncation.droppedItems).toBeGreaterThanOrEqual(1);
+      expect(truncation.evidenceItemsBeforeTruncation).toBe(
+        truncation.keptItems + truncation.droppedItems,
+      );
+    }
+    // Each truncated role's packet carries exactly its capped item count.
+    for (const truncation of truncations) {
+      const packet = packets.find((entry) => entry.roleId === truncation.roleId);
+      expect(packet?.evidenceIndex).toHaveLength(1);
+    }
+  });
+
+  it('leaves a healthy repository under its cap untouched — no warning, no fail-closed (FR4)', async () => {
+    const { workspace, evidence } = await collectRealEvidence();
+    const { packets, truncations } = await buildOperatingMissionPackets({
+      cycleId: 'CYCLE-001',
+      config: config(),
+      workspace,
+      context: advisorContext(),
+      evidence,
+      // The configured item budget; each role's effective cap is the smaller of
+      // it and the registry-sized default — both far above this tiny repo's index.
+      maxEvidenceItems: config().budgets.maxItems,
+    });
+
+    // No fail-closed: every enabled role produced a packet.
+    expect(packets).toHaveLength(ALL_ROLES.length);
+    // No truncation warning, and no packet carries a truncation flag.
+    expect(truncations).toEqual([]);
+    for (const packet of packets) {
+      const budgets = packet.budgets as { truncatedEvidenceItems?: boolean };
+      expect(budgets.truncatedEvidenceItems).toBeUndefined();
+    }
   });
 });

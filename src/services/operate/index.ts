@@ -1034,6 +1034,11 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
     resultingEventHead: preview.resultingEventHead,
     changedPaths: preview.changedPaths,
     localPreferencesChanged: preview.preferencesChanged,
+    // FR5 / T-005: name the machine-local preference keys a re-init will actually
+    // change (dispatch-mode overrides, adapter lease, cadence marker), so the
+    // operator sees the field-level delta — not just that preferences.json is in
+    // the affected-files list — before confirming.
+    changedPreferenceKeys: preview.changedPreferenceKeys,
     previewCreatedAt: preview.workspace.capturedAt,
     workspaceDigest: preview.workspace.workspaceDigest,
     config: preview.config,

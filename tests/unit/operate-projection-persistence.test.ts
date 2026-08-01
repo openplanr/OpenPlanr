@@ -187,22 +187,22 @@ describe('Operating Board projection persistence', () => {
     const second = renderOperatingProjectionFiles(structuredClone(current));
 
     expect(second).toEqual(first);
-    // The FR5 readable tree renders above the `.state/` internals alongside the
-    // projections directory: one consolidated Markdown file per register plus
-    // `evidence-index.json`, and a `board/<role>.md` for every board role of
-    // each reviewable/closed cycle (including roles the cycle did not evaluate).
+    // The FR6 readable tree renders above the `.state/` internals: the sole
+    // surviving `state.json` projection (relocated under `.state/`),
+    // `evidence-index.json`, one consolidated Markdown file per register
+    // (backlog promoted to the top level), and — with no rich lens artifacts
+    // injected — a state-only `board/<role>.md` for every board role of each
+    // reviewable/closed cycle. `report.md` is emitted only when the rich
+    // assembly is available (proven in the dedicated test below).
     expect(first.map((file) => file.relativePath)).toEqual([
-      '.planr/operate/projections/state.json',
+      '.planr/operate/.state/state.json',
       '.planr/operate/evidence-index.json',
-      '.planr/operate/projections/register.md',
-      '.planr/operate/projections/decisions.md',
-      '.planr/operate/projections/data-gaps.md',
-      '.planr/operate/projections/backlog.md',
       '.planr/operate/brief.md',
       '.planr/operate/findings.md',
       '.planr/operate/decisions.md',
       '.planr/operate/gaps.md',
       '.planr/operate/routes.md',
+      '.planr/operate/backlog.md',
       '.planr/operate/cycles/CYCLE-001/brief.md',
       '.planr/operate/cycles/CYCLE-001/board/strategy-finance.md',
       '.planr/operate/cycles/CYCLE-001/board/technology-risk.md',
@@ -211,17 +211,24 @@ describe('Operating Board projection persistence', () => {
       '.planr/operate/cycles/CYCLE-001/board/operations-customer.md',
       '.planr/operate/cycles/CYCLE-001/board/chair.md',
     ]);
+    // The retired projections/ directory must not appear anywhere.
+    expect(first.some((file) => file.relativePath.startsWith('.planr/operate/projections/'))).toBe(
+      false,
+    );
     expect(first[0]?.content).toBe(`${canonicalize(current)}\n`);
 
     const byPath = new Map(first.map((file) => [file.relativePath, file]));
-    const register = byPath.get(OPERATING_PROJECTION_PATHS.register)?.managedContent;
-    expect(register?.indexOf('FND-001')).toBeLessThan(register?.indexOf('FND-002') ?? 0);
-    expect(register).toContain('Event head: 15 /');
-
-    // The readable-tree `findings.md` reuses the register renderer, so it is
-    // byte-identical to the projections register managed block.
     const findings = byPath.get(OPERATING_PROJECTION_PATHS.findings)?.managedContent;
-    expect(findings).toBe(register);
+    expect(findings?.indexOf('FND-001')).toBeLessThan(findings?.indexOf('FND-002') ?? 0);
+    expect(findings).toContain('Event head: 15 /');
+    expect(findings).toContain('# Operating Findings Register');
+
+    // The parked-findings backlog is promoted to exactly one top-level readable
+    // copy, carrying each parked finding's full parked reason.
+    const backlog = byPath.get(OPERATING_PROJECTION_PATHS.backlog)?.managedContent;
+    expect(backlog).toContain('# Operating Backlog');
+    expect(backlog).toContain('FND-002');
+    expect(backlog).toContain('Activation is the current constraint.');
 
     const routes = byPath.get(OPERATING_PROJECTION_PATHS.routes)?.managedContent;
     expect(routes).toContain('Operating Routes');
@@ -240,19 +247,121 @@ describe('Operating Board projection persistence', () => {
     expect(cycleBrief).toContain('# OpenPlanr Operating Brief');
     expect(cycleBrief?.split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(900);
 
-    // The fixture cycle enables only `technology-risk`; every other board role
-    // still renders explicitly as `not_evaluated`.
+    // With no rich lens artifacts injected, every board role renders through the
+    // honest state-only fallback: the hand-built state carries no advisor-result
+    // records, so no role — not even the enabled `technology-risk` — claims to be
+    // evaluated, and `report.md` is not emitted.
+    expect(byPath.has('.planr/operate/cycles/CYCLE-001/report.md')).toBe(false);
+    for (const roleId of [
+      'strategy-finance',
+      'technology-risk',
+      'product-activation',
+      'growth-market',
+      'operations-customer',
+      'chair',
+    ]) {
+      const board = byPath.get(
+        `.planr/operate/cycles/CYCLE-001/board/${roleId}.md`,
+      )?.managedContent;
+      expect(board).toContain('Status: not_evaluated');
+      expect(board).toContain('produced no advisor-result record for CYCLE-001');
+    }
+  });
+
+  it('renders cycles/<id>/report.md and rich board files from the assembled lens artifacts', () => {
+    const current = state();
+    // A single rich assembly (as `readOperatingReport` produces) drives both
+    // `report.md` and every `board/<role>.md` — no contradicting renderers.
+    const technologyBoard = `## Technology & Risk (CTO)
+
+Own technical and delivery risk.
+
+Status: proposals
+
+### Recommendations
+
+- **Instrument activation** (high; I3 C3 E4) — Add one bounded instrumentation spec. Evidence: \`EVD-repository\`.
+
+### Evidence gaps
+
+- None.
+
+### Conflicts
+
+- None.`;
+    const strategyBoard = `## Strategy & Finance (CEO)
+
+Own strategy and finance.
+
+Status: not_evaluated
+
+### Recommendations
+
+- No evidence-backed recommendation was produced.
+
+### Evidence gaps
+
+- None.
+
+### Conflicts
+
+- None.`;
+    const reportMarkdown = `# OpenPlanr Operating Brief — CYCLE-001
+
+# Advisory lens reports
+
+${technologyBoard}
+
+# Exact next actions
+
+- **Review the governed cycle:** \`planr operate review CYCLE-001\``;
+    const richArtifacts = new Map([
+      [
+        'CYCLE-001',
+        {
+          reportMarkdown,
+          boardByRole: new Map([
+            ['technology-risk', technologyBoard],
+            ['strategy-finance', strategyBoard],
+          ]),
+          evaluatedRoleIds: new Set(['technology-risk']),
+        },
+      ],
+    ]);
+
+    const files = renderOperatingProjectionFiles(current, richArtifacts);
+    const byPath = new Map(files.map((file) => [file.relativePath, file]));
+
+    // `report.md` is the full, uncapped lens report — byte-identical to the
+    // injected `readOperatingReport({cycleId}).markdown`.
+    const report = byPath.get('.planr/operate/cycles/CYCLE-001/report.md');
+    expect(report?.markerName).toBe('operate-cycle-report');
+    expect(report?.managedContent).toBe(reportMarkdown);
+
+    // The evaluated board renders the exact per-role lens Markdown (I/C/E scores,
+    // evidence refs) that `planr operate report --lens technology-risk` emits.
     const evaluatedBoard = byPath.get(
       '.planr/operate/cycles/CYCLE-001/board/technology-risk.md',
     )?.managedContent;
-    expect(evaluatedBoard).toContain('Status: evaluated');
-    expect(evaluatedBoard).toContain('## Evidence gaps');
+    expect(evaluatedBoard).toBe(technologyBoard);
+    expect(evaluatedBoard).toContain('Status: proposals');
+    expect(evaluatedBoard).toContain('I3 C3 E4');
+    expect(evaluatedBoard).toContain('`EVD-repository`');
 
+    // A role with an injected lens report but no result renders honestly.
     const notEvaluatedBoard = byPath.get(
       '.planr/operate/cycles/CYCLE-001/board/strategy-finance.md',
     )?.managedContent;
+    expect(notEvaluatedBoard).toBe(strategyBoard);
     expect(notEvaluatedBoard).toContain('Status: not_evaluated');
-    expect(notEvaluatedBoard).toContain('was not enabled for CYCLE-001');
+
+    // A board role absent from the assembly falls back to the honest state-only
+    // renderer whose Status derives from the (empty) evaluated-role set.
+    const fallbackBoard = byPath.get(
+      '.planr/operate/cycles/CYCLE-001/board/growth-market.md',
+    )?.managedContent;
+    expect(fallbackBoard).toContain('Status: not_evaluated');
+    expect(fallbackBoard).toContain('produced no advisor-result record for CYCLE-001');
   });
 
   it('commits all changed files atomically and becomes byte-idempotent', async () => {
@@ -266,13 +375,19 @@ describe('Operating Board projection persistence', () => {
       now: '2026-07-28T10:06:00.000Z',
     });
 
-    expect(first.changedPaths).toHaveLength(18);
+    expect(first.changedPaths).toHaveLength(15);
     expect(first.changedPaths).toContain('.planr/operate/evidence-index.json');
     expect(first.changedPaths).toContain('.planr/operate/findings.md');
     expect(first.changedPaths).toContain('.planr/operate/routes.md');
+    expect(first.changedPaths).toContain('.planr/operate/backlog.md');
+    expect(first.changedPaths).toContain('.planr/operate/.state/state.json');
     expect(first.changedPaths).toContain(
       '.planr/operate/cycles/CYCLE-001/board/strategy-finance.md',
     );
+    // The retired projections/ directory is never written.
+    expect(
+      first.changedPaths.some((entry) => entry.startsWith('.planr/operate/projections/')),
+    ).toBe(false);
     expect(first.transactionId).toBe('TXN-projection-first');
     expect(await readFile(path.join(projectRoot, OPERATING_PROJECTION_PATHS.state), 'utf8')).toBe(
       `${canonicalize(state())}\n`,
@@ -293,8 +408,8 @@ describe('Operating Board projection persistence', () => {
   it('reports generated-row drift and repairs it without changing hand-authored bytes', async () => {
     const projectRoot = await temporaryDirectory('openplanr-projection-project-');
     const localRoot = await temporaryDirectory('openplanr-projection-local-');
-    await mkdir(path.join(projectRoot, '.planr/operate/projections'), { recursive: true });
-    const registerPath = path.join(projectRoot, OPERATING_PROJECTION_PATHS.register);
+    await mkdir(path.join(projectRoot, '.planr/operate'), { recursive: true });
+    const registerPath = path.join(projectRoot, OPERATING_PROJECTION_PATHS.findings);
     await writeFile(registerPath, 'Founder note before generated content.\n');
 
     await persistOperatingProjections({
@@ -311,7 +426,7 @@ describe('Operating Board projection persistence', () => {
     );
 
     const drift = await inspectOperatingProjectionDrift({ projectRoot, state: state() });
-    expect(drift.find((entry) => entry.path === OPERATING_PROJECTION_PATHS.register)).toMatchObject(
+    expect(drift.find((entry) => entry.path === OPERATING_PROJECTION_PATHS.findings)).toMatchObject(
       {
         status: 'drift',
         reason: 'Generated projection rows differ from event replay.',
@@ -325,7 +440,7 @@ describe('Operating Board projection persistence', () => {
       projectRoot,
       state: state(),
     });
-    expect(preview.changedPaths).toEqual([OPERATING_PROJECTION_PATHS.register]);
+    expect(preview.changedPaths).toEqual([OPERATING_PROJECTION_PATHS.findings]);
     await persistOperatingProjections({
       projectRoot,
       localRoot,
@@ -346,19 +461,19 @@ describe('Operating Board projection persistence', () => {
 
   it('treats duplicate managed markers as explicit drift', async () => {
     const projectRoot = await temporaryDirectory('openplanr-projection-project-');
-    await mkdir(path.join(projectRoot, '.planr/operate/projections'), { recursive: true });
+    await mkdir(path.join(projectRoot, '.planr/operate'), { recursive: true });
     const expected = renderOperatingProjectionFiles(state());
     for (const file of expected) {
       const target = path.join(projectRoot, file.relativePath);
       await mkdir(path.dirname(target), { recursive: true });
       await writeFile(target, file.content);
     }
-    const registerPath = path.join(projectRoot, OPERATING_PROJECTION_PATHS.register);
+    const registerPath = path.join(projectRoot, OPERATING_PROJECTION_PATHS.findings);
     const current = await readFile(registerPath, 'utf8');
     await writeFile(registerPath, `${current}\n${current}`);
 
     const drift = await inspectOperatingProjectionDrift({ projectRoot, state: state() });
-    expect(drift.find((entry) => entry.path === OPERATING_PROJECTION_PATHS.register)).toMatchObject(
+    expect(drift.find((entry) => entry.path === OPERATING_PROJECTION_PATHS.findings)).toMatchObject(
       {
         status: 'drift',
         reason: 'Managed projection markers are malformed or duplicated.',

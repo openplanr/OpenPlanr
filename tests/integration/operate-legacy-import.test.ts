@@ -511,7 +511,11 @@ describe('legacy .planr/board migration', () => {
     });
     const paths = resolveOperatingPaths(projectRoot, { localRoot });
     await rm(paths.checkpoint, { force: true });
-    await rm(paths.projections, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    // The legacy projections/ tree is retired: the surviving `state.json`
+    // projection lives under `.state/`, and the findings register is the
+    // top-level `findings.md`. Remove both to prove the retry repairs them.
+    await rm(join(paths.state, 'state.json'), { force: true });
+    await rm(paths.findingsDoc, { force: true });
 
     await expect(
       rollbackOperatingMigration({
@@ -524,10 +528,10 @@ describe('legacy .planr/board migration', () => {
     await expect(readFile(paths.checkpoint, 'utf8')).resolves.toContain(
       '"kind":"operating-checkpoint"',
     );
-    await expect(readFile(join(paths.projections, 'state.json'), 'utf8')).resolves.toContain(
+    await expect(readFile(join(paths.state, 'state.json'), 'utf8')).resolves.toContain(
       '"kind":"operating-state"',
     );
-    await expect(readFile(join(paths.projections, 'register.md'), 'utf8')).resolves.toContain(
+    await expect(readFile(paths.findingsDoc, 'utf8')).resolves.toContain(
       '# Operating Findings Register',
     );
   });

@@ -146,25 +146,28 @@ export const OPERATING_BOARD_ROLES: readonly OperatingBoardRole[] = [
   { id: 'chair', label: 'Chair' },
 ];
 
-function cycleEnablesRole(state: OperatingState, cycleId: string, roleId: string): boolean {
-  const cycle = state.cycles.find((entry) => entry.id === cycleId);
-  const enabled = cycle?.enabledRoles;
-  return Array.isArray(enabled) && enabled.some((role) => role === roleId);
-}
-
 /**
  * State-derived lens report for a single board role and cycle. Role proposals
  * live outside the projected state, so the persisted board report carries the
  * cycle-local, role-attributable facts (evaluation status and the evidence gaps
  * that name the role) and points at the live `planr operate report` lens for
  * the full advisory output.
+ *
+ * `Status:` derives from whether a persisted `advisor-result` record actually
+ * exists for the role+cycle (`evaluatedRoleIds`), never from `config.enabledRoles`
+ * or `cycle.enabledRoles` — a role a cycle enabled but that never produced a
+ * result must read `not_evaluated`, not "evaluated" (FR1). The rich
+ * `markdownLens` assembly in `reports.ts` is the primary board renderer; this
+ * state-only renderer is the honest fallback when the advisor-result records
+ * cannot be re-read from the event log.
  */
 export function renderOperatingBoardReport(
   state: OperatingState,
   cycleId: string,
   role: OperatingBoardRole,
+  evaluatedRoleIds: ReadonlySet<string> = new Set(),
 ): string {
-  const evaluated = cycleEnablesRole(state, cycleId, role.id);
+  const evaluated = evaluatedRoleIds.has(role.id);
   const lines = [
     `# ${role.label} — ${cycleId}`,
     '',
@@ -173,7 +176,7 @@ export function renderOperatingBoardReport(
   ];
   if (!evaluated) {
     lines.push(
-      `This advisory lens was not enabled for ${cycleId}; no evidence-backed lens report was produced.`,
+      `This advisory lens produced no advisor-result record for ${cycleId}; it was not evaluated.`,
     );
     return lines.join('\n');
   }
@@ -193,7 +196,7 @@ export function renderOperatingBoardReport(
         )
       : ['- None.']),
     '',
-    `Full lens report: \`planr operate report --cycle ${cycleId} --lens ${role.id}\``,
+    `Full lens report: \`planr operate report ${cycleId} --lens ${role.id}\``,
   );
   return lines.join('\n');
 }

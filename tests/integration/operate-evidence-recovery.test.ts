@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -8,9 +8,17 @@ import {
   applyOperatingInitialization,
   prepareOperatingInitialization,
 } from '../../src/services/operate/config.js';
+import {
+  buildOperatingEvidenceIndex,
+  collectOperatingEvidence,
+  starvedRoleEvidenceGaps,
+} from '../../src/services/operate/evidence.js';
 import { createEvidenceDiagnostic } from '../../src/services/operate/evidence-diagnostics.js';
+import { evaluateEvidenceReadiness } from '../../src/services/operate/evidence-readiness.js';
 import { executeOperateAction } from '../../src/services/operate/index.js';
+import { narrowEvidenceToMissionCeiling } from '../../src/services/operate/maintenance.js';
 import type { CollectedEvidenceItem } from '../../src/services/operate/types.js';
+import { buildWorkspaceManifest } from '../../src/services/operate/workspace.js';
 
 const execFileAsync = promisify(execFile);
 const directories: string[] = [];
@@ -144,6 +152,90 @@ describe('Operating Board evidence recovery', () => {
           classification: { status: 'false-positive', classifiedBy: 'Asem' },
         },
       },
+    });
+  });
+
+  it('gates a starved repository role with a governed gap while other roles still dispatch (FR2)', async () => {
+    const projectRoot = await mkdtemp(join(tmpdir(), 'operate-evidence-starve-'));
+    const localRoot = await mkdtemp(join(tmpdir(), 'operate-evidence-starve-local-'));
+    directories.push(projectRoot, localRoot);
+    await execFileAsync('git', ['init', '--quiet'], { cwd: projectRoot });
+    await execFileAsync('git', ['config', 'user.name', 'OpenPlanr Test'], { cwd: projectRoot });
+    await execFileAsync('git', ['config', 'user.email', 'test@openplanr.invalid'], {
+      cwd: projectRoot,
+    });
+    await execFileAsync(
+      'git',
+      ['remote', 'add', 'origin', 'https://github.com/openplanr/starve-fixture.git'],
+      { cwd: projectRoot },
+    );
+    // Every tracked file lives under a dot-prefixed tree, so all repository items
+    // are dropped by the mission index path pattern — the post-index evidence
+    // retains zero repository items.
+    await mkdir(join(projectRoot, '.planr', 'stories'), { recursive: true });
+    await writeFile(
+      join(projectRoot, '.planr', 'stories', 'US-001.md'),
+      '# Roadmap\nActivation and retention are the current priorities.\n',
+    );
+    await execFileAsync('git', ['add', '-A'], { cwd: projectRoot });
+    await execFileAsync('git', ['commit', '--quiet', '-m', 'dot-only fixture'], {
+      cwd: projectRoot,
+    });
+    const workspace = await buildWorkspaceManifest(projectRoot, [], {
+      localRoot,
+      persistRoots: true,
+      capturedAt: '2026-07-29T12:00:00.000Z',
+    });
+
+    const evidence = await collectOperatingEvidence({
+      projectRoot,
+      localRoot,
+      cycleId: 'CYCLE-001',
+      workspace,
+      providers: ['repository', 'planr', 'git'],
+      sensitivityCeiling: 'internal',
+      budgets: {
+        maxFiles: 100,
+        maxItems: 100,
+        maxBytes: 2 * 1024 * 1024,
+        maxItemBytes: 256 * 1024,
+        maxDurationMs: 10_000,
+      },
+      now: new Date('2026-07-29T12:01:00.000Z'),
+    });
+
+    const missionEvidenceIndex = buildOperatingEvidenceIndex(
+      narrowEvidenceToMissionCeiling(evidence, 'internal'),
+      { sensitivityCeiling: 'internal' },
+    );
+    expect(missionEvidenceIndex.some((item) => item.source === 'repository')).toBe(false);
+
+    const readiness = await evaluateEvidenceReadiness({
+      cycleId: 'CYCLE-001',
+      evidence,
+      enabledRoles: ['technology-risk', 'strategy-finance'],
+      now: new Date('2026-07-29T12:01:00.000Z'),
+      missionEvidenceIndex,
+    });
+    const starved = readiness.roles.filter((role) => !role.modelCallAllowed).map((r) => r.roleId);
+    const ready = readiness.roles.filter((role) => role.modelCallAllowed).map((r) => r.roleId);
+    // The repository-dependent role is gated; a repository-independent role still
+    // dispatches — the batch is not thrown wholesale.
+    expect(starved).toEqual(['technology-risk']);
+    expect(ready).toContain('strategy-finance');
+
+    const gaps = await starvedRoleEvidenceGaps({
+      cycleId: 'CYCLE-001',
+      roleIds: starved,
+      owner: 'Asem',
+      now: '2026-07-29T12:01:00.000Z',
+    });
+    expect(gaps).toHaveLength(1);
+    expect(gaps[0]).toMatchObject({
+      kind: 'operating-data-gap',
+      affectedRoles: ['technology-risk'],
+      status: 'open',
+      owner: 'Asem',
     });
   });
 
