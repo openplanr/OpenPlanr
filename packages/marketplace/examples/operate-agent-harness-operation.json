@@ -8,8 +8,8 @@
   "title": "Stage the Protocol v1.3 Operating Board Agent Harness",
   "capability": "agenticOperatingBoard",
   "createdAt": "2026-08-01T21:00:00.000Z",
-  "updatedAt": "2026-08-01T22:26:58.000Z",
-  "state": "promoting",
+  "updatedAt": "2026-08-01T22:32:18.000Z",
+  "state": "verified",
   "ledger": {
     "kind": "marketplace-draft-pr",
     "repository": "openplanr/marketplace",
@@ -17,7 +17,7 @@
     "pullRequest": {
       "number": 97,
       "url": "https://github.com/openplanr/marketplace/pull/97",
-      "state": "ready"
+      "state": "merged"
     }
   },
   "participantOrder": [
@@ -186,19 +186,35 @@
       "repository": "openplanr/marketplace",
       "currentVersion": "1.6.0",
       "targetVersion": "1.7.0",
-      "phase": "pending",
+      "phase": "verified",
       "branch": "ecosystem-release/operate-spec-007-agent-harness",
       "targetBranch": "main",
-      "commitSha": null,
+      "commitSha": "25e5f94ef7875bca32c08f5c4b788547134d894a",
       "pullRequest": {
         "number": 97,
         "url": "https://github.com/openplanr/marketplace/pull/97",
-        "state": "ready"
+        "state": "merged"
       },
       "package": null,
-      "tag": null,
-      "tarballDigest": null,
-      "checks": [],
+      "tag": "v1.7.0",
+      "tarballDigest": "sha256:8141eb175f1872469cd439ad3a6cebdd7a148e4790d926ea4a6fc21a3badf0d1",
+      "checks": [
+        {
+          "name": "ci",
+          "status": "passed",
+          "url": "https://github.com/openplanr/marketplace/actions/runs/30721370808"
+        },
+        {
+          "name": "operation-ledger",
+          "status": "passed",
+          "url": "https://github.com/openplanr/marketplace/actions/runs/30721370832"
+        },
+        {
+          "name": "exact-commit-canary",
+          "status": "passed",
+          "url": "https://github.com/openplanr/marketplace/actions/runs/30721406553"
+        }
+      ],
       "approvals": [
         {
           "gate": "release",
@@ -214,58 +230,58 @@
         "skills"
       ],
       "compensation": "withhold-manifest",
-      "nextSafeAction": "Merge and tag the withheld 1.7.0 ledger, then run exact-commit canaries before finalization."
+      "nextSafeAction": "Verified at v1.7.0 with exact-commit Node 20/22 canary evidence; retain the immutable ledger for audit."
     }
   ],
   "releaseEvidence": [
     {
       "id": "packed-cli",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30721406553",
+      "digest": "sha256:9099a9772232389945f4ff175d28c8bb3e90662c18ff90d377699cbd3407a7ba",
+      "checkedAt": "2026-08-01T22:31:36.710Z"
     },
     {
       "id": "protocol-v1.2",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30721406553",
+      "digest": "sha256:0232bc181c840f65bea3a44430aabc01b41e90deb1122cd176c5927b3f57ca8d",
+      "checkedAt": "2026-08-01T22:31:36.710Z"
     },
     {
       "id": "event-replay",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30721406553",
+      "digest": "sha256:dbbf4038deb554a8d98386d9e146be222412a903239e5acf2eaa7de46d1fe0f8",
+      "checkedAt": "2026-08-01T22:31:36.710Z"
     },
     {
       "id": "security-boundaries",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30721406553",
+      "digest": "sha256:638f3261858fa4342f803cc60fd3aa81d4cf08b7bbca50b4af31e945b17fab1b",
+      "checkedAt": "2026-08-01T22:31:36.710Z"
     },
     {
       "id": "outcome-reconciliation",
-      "status": "pending",
-      "url": null,
-      "digest": null,
-      "checkedAt": null
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30721406553",
+      "digest": "sha256:7006c1f98382cf494142bb65753b168016893358512ecb24159b41f747016e72",
+      "checkedAt": "2026-08-01T22:31:36.710Z"
     }
   ],
   "prepareDigest": "sha256:a0f9a895d9c37e426876096d9148196948ac463024e6b520d63f7080aa6d3b13",
   "confirmationDigest": "sha256:220bee24a21cc6219a931a05b3f4294def0adbae0517150b48428d8818b8aecd",
   "blockedReason": null,
-  "nextSafeAction": "Merge and tag marketplace 1.7.0, run exact-commit canaries, then finalize the compatibility manifest.",
+  "nextSafeAction": "Archive the verified operation and monitor production Operating Board journeys.",
   "recovery": {
     "mode": "forward-fix",
     "reason": "planr-pipeline@0.36.1 and openplanr@1.20.0 are already public.",
     "nextSafeAction": "Use forward-fix releases for published components and keep marketplace availability withheld until exact-commit canaries pass."
   },
   "reconciliation": {
-    "status": "incomplete",
-    "checkedAt": "2026-08-01T22:26:58.000Z",
+    "status": "matched",
+    "checkedAt": "2026-08-01T22:32:18.000Z",
     "sources": [
       "github-pr",
       "git-commit",
@@ -276,7 +292,7 @@
       "operating-canary"
     ],
     "drift": [],
-    "nextSafeAction": "Publish the withheld marketplace ledger and collect exact-commit canary evidence before exposing compatibility."
+    "nextSafeAction": "All authoritative releases, tags, manifests, and exact-commit canary evidence match the reviewed operation."
   },
   "history": [
     {
@@ -332,6 +348,24 @@
       "participant": "marketplace",
       "digest": "sha256:220bee24a21cc6219a931a05b3f4294def0adbae0517150b48428d8818b8aecd",
       "note": "Prepared marketplace 1.7.0 with compatibility withheld until exact-commit canaries pass."
+    },
+    {
+      "eventId": "62054044-f73f-4eef-bfb1-e347f3ebacb2",
+      "timestamp": "2026-08-01T22:32:18.000Z",
+      "type": "reconciliation.recorded",
+      "actor": "Release coordinator",
+      "participant": "marketplace",
+      "digest": "sha256:220bee24a21cc6219a931a05b3f4294def0adbae0517150b48428d8818b8aecd",
+      "note": "Pipeline 0.36.1, OpenPlanr 1.20.0, skills 1.22.0, marketplace 1.7.0, npm state, and exact-commit Node 20/22 canaries matched."
+    },
+    {
+      "eventId": "ad553604-d978-48d0-9ab1-c811927a2b5e",
+      "timestamp": "2026-08-01T22:32:19.000Z",
+      "type": "operation.verified",
+      "actor": "Release coordinator",
+      "participant": "marketplace",
+      "digest": "sha256:bb45a15af7f7ea332b208fc66fa7088b85555046b7315df338d7f2fbf02fd0f7",
+      "note": "The Protocol v1.3 mandate-session Operating Board agent harness is verified for ecosystem availability."
     }
   ]
 }

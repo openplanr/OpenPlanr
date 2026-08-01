@@ -156,18 +156,18 @@ test('verified compatibility promotes the default native cycle after reconciliat
     marketplace: '1.3.1',
   });
   assert.deepEqual(ecosystem.components, {
-    cli: { version: '1.19.0', pipelineRange: '^0.35.0' },
-    pipeline: { version: '0.35.0', cliRange: '^1.19.0' },
-    skills: { version: '1.21.0', cliRange: '^1.19.0' },
+    cli: { version: '1.20.0', pipelineRange: '^0.36.1' },
+    pipeline: { version: '0.36.1', cliRange: '^1.20.0' },
+    skills: { version: '1.22.0', cliRange: '^1.20.0' },
     marketplace: { version: '1.7.0' },
   });
 });
 
-test('the Protocol v1.3 harness remains withheld while its release ledger is staged', async () => {
+test('the Protocol v1.3 harness opens only after its release ledger is verified', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const agentic = ecosystem.capabilities.agenticOperatingBoard;
-  assert.equal(agentic.status, 'unavailable');
-  assert.deepEqual(agentic.missing, ['release']);
+  assert.equal(agentic.status, 'available');
+  assert.deepEqual(agentic.missing, []);
   assert.deepEqual(agentic.components, {
     pipeline: '0.36.1',
     cli: '1.20.0',
@@ -179,10 +179,10 @@ test('the Protocol v1.3 harness remains withheld while its release ledger is sta
     codex: 'unsupported',
     cursor: 'unsupported',
   });
-  assert.deepEqual(agentic.certifiedRuntimes, []);
+  assert.deepEqual(agentic.certifiedRuntimes, ['claude-code']);
   assert.equal(agentic.releaseOperation.operationId, 'OPERATE-SPEC-007');
-  assert.equal(agentic.releaseOperation.state, 'promoting');
-  assert.equal(agentic.releaseOperation.reconciliation, 'incomplete');
+  assert.equal(agentic.releaseOperation.state, 'verified');
+  assert.equal(agentic.releaseOperation.reconciliation, 'matched');
 });
 
 test('operation schema supports audited lifecycle and forward-fix state', async () => {
