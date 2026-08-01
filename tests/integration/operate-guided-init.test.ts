@@ -5,6 +5,11 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readBoundedInitAnswers } from '../../src/cli/commands/operate.js';
+import {
+  applyOperatingInitialization,
+  parseOperatingDispatchModeOverrideFlags,
+  prepareOperatingInitialization,
+} from '../../src/services/operate/config.js';
 import { executeOperateAction } from '../../src/services/operate/index.js';
 import type {
   GuidedAnswerEnvelope,
@@ -357,5 +362,91 @@ describe('guided Operating Board initialization', () => {
     await expect(
       readFile(join(projectRoot, '.planr', 'operate', 'config.json')),
     ).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  // FR5 / T-005 — the init preview names the machine-local preference keys a
+  // re-init will change, so an operator sees the field-level delta (not merely that
+  // preferences.json is in the affected-files list) before confirming.
+  it('names exactly which machine-local preferences a re-init will change in the preview', async () => {
+    const projectRoot = await gitProject();
+    const localRoot = await mkdtemp(join(tmpdir(), 'openplanr-guided-init-preview-delta-'));
+    clearRuntimeMarkers();
+
+    const charter = {
+      purpose: 'Prove the init preview names changed preferences.',
+      stage: 'growth',
+      businessModel: 'subscription SaaS',
+      idealCustomer: 'technical product teams',
+      goals: ['Show the field-level preference delta before confirming.'],
+      successMetrics: ['Time to a cited operating brief'],
+      guardrails: ['Humans approve every mutation.'],
+      knownUnknowns: ['Current activation baseline'],
+    };
+
+    // Seed: a prior cycle committed machine-local policy (an override, a custom
+    // adapter lease, and a cadence marker) alongside the base preferences.
+    const seedPreview = await prepareOperatingInitialization({
+      projectRoot,
+      localRoot,
+      profile: 'engineering',
+      decisionOwner: 'Product owner',
+      planningEngine: 'openplanr',
+      runtime: 'codex',
+      cadence: 'manual',
+      timezone: 'UTC',
+      sensitivityCeiling: 'internal',
+      enabledProviders: ['repository', 'git'],
+      charter,
+      dispatchModeOverrides: parseOperatingDispatchModeOverrideFlags(['chair=mission']),
+      adapterLeaseDurationMs: 5 * 60 * 1000,
+      lastRunAt: '2026-07-30T12:00:00.000Z',
+    });
+    await applyOperatingInitialization({
+      projectRoot,
+      localRoot,
+      preview: seedPreview,
+      confirmationDigest: seedPreview.previewDigest,
+    });
+
+    // Base answers the re-init previews rebuild — identical to the seed base so
+    // only the machine-local policy fields can differ.
+    const initFlags = {
+      json: true,
+      localRoot,
+      profile: 'engineering',
+      decisionOwner: 'Product owner',
+      planningEngine: 'openplanr',
+      runtime: 'codex',
+      cadence: 'manual',
+      timezone: 'UTC',
+      sensitivityCeiling: 'internal',
+      sources: ['repository', 'git'],
+      charter,
+    };
+
+    // A re-init preview with no override flag carries all three forward, so the
+    // preview reports no changed preference keys at all.
+    const carryForward = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { ...initFlags, preview: true },
+    });
+    expect(carryForward.preview).toMatchObject({
+      changedPreferenceKeys: [],
+      localPreferencesChanged: false,
+    });
+
+    // A re-init preview with an explicit override names exactly the one key it
+    // changes — the lease and cadence marker still carry forward silently.
+    const changed = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { ...initFlags, preview: true, dispatchModeOverride: ['chair=pack'] },
+    });
+    expect(
+      (changed.preview as { changedPreferenceKeys?: string[] } | undefined)?.changedPreferenceKeys,
+    ).toEqual(['dispatchModeOverrides']);
   });
 });

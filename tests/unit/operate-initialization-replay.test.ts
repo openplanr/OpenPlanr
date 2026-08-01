@@ -1,9 +1,15 @@
 import { execFile } from 'node:child_process';
-import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
+import { canonicalize } from '../../src/services/operate/canonical.js';
+import {
+  applyOperatingInitialization,
+  parseOperatingDispatchModeOverrideFlags,
+  prepareOperatingInitialization,
+} from '../../src/services/operate/config.js';
 import { executeOperateAction } from '../../src/services/operate/index.js';
 import {
   decodeOperatingInitializationReplay,
@@ -161,5 +167,145 @@ describe('Operating Board initialization replay', () => {
     // board never inherits a prior generation's sessions or baselines.
     expect(await readdir(paths.advisors).catch(() => [])).toEqual([]);
     expect(await readdir(incrementalDir).catch(() => [])).toEqual([]);
+  });
+});
+
+// FR5 / T-005 — a routine re-init merges the existing machine-local preferences
+// forward instead of rebuilding from scratch, so policy a prior cycle depended on
+// (dispatch-mode overrides, the adapter lease, the cadence marker) is never wiped.
+describe('Operating Board re-initialization preserves machine-local preferences', () => {
+  type PrepareInput = Parameters<typeof prepareOperatingInitialization>[0];
+
+  const CHARTER = {
+    purpose: 'Prove machine-local preferences survive a routine re-init.',
+    stage: 'growth',
+    businessModel: 'subscription SaaS',
+    idealCustomer: 'technical product teams',
+    goals: ['Never silently wipe a prior cycle policy.'],
+    constraints: [],
+    successMetrics: ['Time to a cited operating brief'],
+    guardrails: ['Humans approve every mutation.'],
+    knownUnknowns: ['Current activation baseline'],
+  };
+
+  function baseInput(projectRoot: string, localRoot: string, extra: Partial<PrepareInput> = {}) {
+    return {
+      projectRoot,
+      localRoot,
+      profile: 'engineering',
+      decisionOwner: 'Product owner',
+      planningEngine: 'openplanr',
+      runtime: 'codex',
+      cadence: 'manual',
+      timezone: 'UTC',
+      sensitivityCeiling: 'internal',
+      enabledProviders: ['repository', 'git'],
+      charter: CHARTER,
+      ...extra,
+    } satisfies PrepareInput;
+  }
+
+  async function directInit(
+    projectRoot: string,
+    localRoot: string,
+    extra: Partial<PrepareInput> = {},
+  ): Promise<Awaited<ReturnType<typeof prepareOperatingInitialization>>> {
+    const preview = await prepareOperatingInitialization(baseInput(projectRoot, localRoot, extra));
+    await applyOperatingInitialization({
+      projectRoot,
+      localRoot,
+      preview,
+      confirmationDigest: preview.previewDigest,
+    });
+    return preview;
+  }
+
+  it('carries dispatchModeOverrides, adapterLeaseDurationMs, and lastRunAt forward on a re-init with no flags (field repro)', async () => {
+    const projectRoot = await createGitProject();
+    const localRoot = await temporaryDirectory('openplanr-operate-reinit-preserve-local-');
+    const preferencePath = join(
+      resolveOperatingPaths(projectRoot, { localRoot }).localRoot,
+      'preferences.json',
+    );
+
+    // A prior cycle persisted machine-local policy: an override applied via
+    // --dispatch-mode-override, a custom adapter lease, and a cadence marker.
+    await directInit(projectRoot, localRoot, {
+      dispatchModeOverrides: parseOperatingDispatchModeOverrideFlags(['chair=mission']),
+      adapterLeaseDurationMs: 5 * 60 * 1000,
+      lastRunAt: '2026-07-30T12:00:00.000Z',
+    });
+    const before = await readFile(preferencePath, 'utf8');
+    expect(JSON.parse(before)).toMatchObject({
+      dispatchModeOverrides: { chair: 'mission' },
+      adapterLeaseDurationMs: 5 * 60 * 1000,
+      lastRunAt: '2026-07-30T12:00:00.000Z',
+    });
+
+    // Re-init with NONE of those flags — the exact incident that wiped them.
+    const rePreview = await directInit(projectRoot, localRoot, {});
+    const after = await readFile(preferencePath, 'utf8');
+
+    expect(after).toBe(before); // byte-for-byte preservation
+    expect(rePreview.preferencesChanged).toBe(false);
+    expect(rePreview.changedPreferenceKeys).toEqual([]);
+  });
+
+  it('lets an explicit --dispatch-mode-override change only that field while the lease and lastRunAt are preserved', async () => {
+    const projectRoot = await createGitProject();
+    const localRoot = await temporaryDirectory('openplanr-operate-reinit-override-local-');
+    const preferencePath = join(
+      resolveOperatingPaths(projectRoot, { localRoot }).localRoot,
+      'preferences.json',
+    );
+
+    await directInit(projectRoot, localRoot, {
+      dispatchModeOverrides: parseOperatingDispatchModeOverrideFlags(['chair=mission']),
+      adapterLeaseDurationMs: 5 * 60 * 1000,
+      lastRunAt: '2026-07-30T12:00:00.000Z',
+    });
+
+    // Re-init passing a fresh override for the same role — the flag wins for its
+    // role; the two flag-less fields must carry forward untouched.
+    const rePreview = await directInit(projectRoot, localRoot, {
+      dispatchModeOverrides: parseOperatingDispatchModeOverrideFlags(['chair=pack']),
+    });
+    const after = JSON.parse(await readFile(preferencePath, 'utf8'));
+
+    expect(after.dispatchModeOverrides).toEqual({ chair: 'pack' });
+    expect(after.adapterLeaseDurationMs).toBe(5 * 60 * 1000);
+    expect(after.lastRunAt).toBe('2026-07-30T12:00:00.000Z');
+    // The preview names exactly the one preference key that changed.
+    expect(rePreview.changedPreferenceKeys).toEqual(['dispatchModeOverrides']);
+  });
+
+  it('leaves a first-time init byte-identical to prior behavior — no carried-forward keys, deterministic payload', async () => {
+    const BASE_KEYS = [
+      'enabledSources',
+      'evidenceTtlMs',
+      'runtime',
+      'sensitivityCeiling',
+      'timezone',
+    ];
+
+    const projectA = await createGitProject();
+    const localA = await temporaryDirectory('openplanr-operate-firsttime-a-');
+    const previewA = await prepareOperatingInitialization(baseInput(projectA, localA));
+
+    // No existing preferences.json → nothing to merge; the three machine-local
+    // policy keys stay omitted (the SPEC-001 omit-empty-fields guarantee).
+    expect(Object.keys(previewA.preferences).sort()).toEqual(BASE_KEYS);
+    expect(previewA.preferences).not.toHaveProperty('dispatchModeOverrides');
+    expect(previewA.preferences).not.toHaveProperty('adapterLeaseDurationMs');
+    expect(previewA.preferences).not.toHaveProperty('lastRunAt');
+    // A first write "changes" every base key it is about to create.
+    expect(previewA.changedPreferenceKeys).toEqual(BASE_KEYS);
+
+    // Deterministic: an independent fresh project with identical inputs yields a
+    // byte-identical preferences payload — no cross-project state leakage.
+    const projectB = await createGitProject();
+    const localB = await temporaryDirectory('openplanr-operate-firsttime-b-');
+    const previewB = await prepareOperatingInitialization(baseInput(projectB, localB));
+    expect(canonicalize(previewB.preferences)).toBe(canonicalize(previewA.preferences));
   });
 });

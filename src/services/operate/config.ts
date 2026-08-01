@@ -644,6 +644,14 @@ export interface OperatingInitializationPreview {
   previewDigest: `sha256:${string}`;
   changedPaths: string[];
   preferencesChanged: boolean;
+  /**
+   * FR5 / T-005: the top-level `preferences.json` keys that differ between the
+   * existing file and the record about to be written — what the init preview names
+   * so an operator sees exactly which machine-local preferences will change before
+   * confirming. Purely informational: it never feeds `previewDigest`, so the
+   * unchanged-case confirmation binding stays byte-identical.
+   */
+  changedPreferenceKeys: string[];
   writes: JournalWrite[];
   componentRoots: string[];
   expectedEventHead: OperatingEventHead;
@@ -786,6 +794,12 @@ export async function prepareOperatingInitialization(input: {
   customProfile?: Partial<OperatingProfile>;
   componentRoots?: string[];
   dispatchModeOverrides?: OperatingDispatchModeOverrides;
+  // FR5 / T-005: these two carry no init flag today, so a re-init that omits them
+  // always inherits the value a prior cycle persisted. Accepted here (rather than
+  // being unconditionally rebuilt) so a same-invocation caller could still override
+  // them, keeping the merge symmetric with `dispatchModeOverrides`.
+  adapterLeaseDurationMs?: number;
+  lastRunAt?: string;
   localRoot?: string;
   now?: string;
 }): Promise<OperatingInitializationPreview> {
@@ -907,13 +921,50 @@ export async function prepareOperatingInitialization(input: {
     ]);
     resolvedImportPaths.push(resolved.absolutePath);
   }
+  const paths = resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot });
+  // FR5 / T-005: read the existing machine-local preferences before rebuilding the
+  // record so policy a prior cycle persisted survives a routine re-init instead of
+  // being silently wiped. The same raw read drives both the merge below and the
+  // `preferencesChanged` byte-diff further down. A corrupt file is treated as
+  // absent — there is nothing safe to carry forward — preserving the pre-fix
+  // "overwrite an unreadable preferences.json" behavior rather than hard-failing.
+  const currentPreferences = await readFile(
+    path.join(paths.localRoot, 'preferences.json'),
+    'utf8',
+  ).catch(() => null);
+  let existingPreferences: Partial<OperatingPreferencesRecord> | null = null;
+  if (currentPreferences !== null) {
+    try {
+      existingPreferences = JSON.parse(currentPreferences) as Partial<OperatingPreferencesRecord>;
+    } catch {
+      existingPreferences = null;
+    }
+  }
   // Dispatch-mode overrides are validated once here and carried in the
-  // machine-local preferences (the v1.2 config artifact surface is frozen).
-  // Omitted entirely when empty so a project with no overrides keeps a
-  // byte-identical preferences payload and preview digest.
+  // machine-local preferences (the v1.2 config artifact surface is frozen). An
+  // explicit `input.dispatchModeOverrides` — including an explicit empty-object
+  // reset — wins; otherwise the existing overrides carry forward. Omitted entirely
+  // when empty so a project with no overrides keeps a byte-identical preferences
+  // payload and preview digest.
   const dispatchModeOverrides = input.dispatchModeOverrides
     ? normalizeOperatingDispatchModeOverrides(input.dispatchModeOverrides)
-    : ({} as OperatingDispatchModeOverrides);
+    : existingPreferences?.dispatchModeOverrides
+      ? normalizeOperatingDispatchModeOverrides(existingPreferences.dispatchModeOverrides)
+      : ({} as OperatingDispatchModeOverrides);
+  // Adapter lease duration and the cadence `lastRunAt` marker have no init flag, so
+  // absent an explicit input they always carry forward from the existing file. A
+  // carried-forward lease is re-validated so a corrupt bound is rejected rather than
+  // silently trusted; a blank/absent `lastRunAt` is dropped exactly as the reader does.
+  const adapterLeaseDurationMs =
+    input.adapterLeaseDurationMs !== undefined
+      ? normalizeOperatingAdapterLeaseDurationMs(input.adapterLeaseDurationMs)
+      : existingPreferences?.adapterLeaseDurationMs !== undefined
+        ? normalizeOperatingAdapterLeaseDurationMs(existingPreferences.adapterLeaseDurationMs)
+        : undefined;
+  const carriedLastRunAt =
+    input.lastRunAt !== undefined ? input.lastRunAt : existingPreferences?.lastRunAt;
+  const lastRunAt =
+    typeof carriedLastRunAt === 'string' && carriedLastRunAt.trim() ? carriedLastRunAt : undefined;
   const preferences: OperatingPreferencesRecord = {
     runtime: input.runtime ?? 'auto',
     timezone,
@@ -924,8 +975,9 @@ export async function prepareOperatingInitialization(input: {
       ? { importPaths: [...new Set(resolvedImportPaths)].sort() }
       : {}),
     ...(Object.keys(dispatchModeOverrides).length > 0 ? { dispatchModeOverrides } : {}),
+    ...(adapterLeaseDurationMs !== undefined ? { adapterLeaseDurationMs } : {}),
+    ...(lastRunAt !== undefined ? { lastRunAt } : {}),
   };
-  const paths = resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot });
   const existingWorkspace = await readFile(paths.workspace, 'utf8')
     .then(async (raw) => {
       const parsed = JSON.parse(raw) as OperatingWorkspaceManifest;
@@ -945,11 +997,23 @@ export async function prepareOperatingInitialization(input: {
     workspace = existingWorkspace;
   }
   const expectedPreferences = `${canonicalize(preferences)}\n`;
-  const currentPreferences = await readFile(
-    path.join(paths.localRoot, 'preferences.json'),
-    'utf8',
-  ).catch(() => null);
   const preferencesChanged = currentPreferences !== expectedPreferences;
+  // FR5 / T-005: name exactly which top-level preference keys differ between the
+  // existing file and the record about to be written, so the init preview can tell
+  // the operator what will change before they confirm. Derived from the same two
+  // records the byte-diff above uses; it deliberately never feeds the preview or
+  // confirmation digest, so the unchanged-case digest binding stays byte-identical.
+  const existingRecord = (existingPreferences ?? {}) as Record<string, unknown>;
+  const nextRecord = preferences as unknown as Record<string, unknown>;
+  const changedPreferenceKeys = [
+    ...new Set([...Object.keys(existingRecord), ...Object.keys(nextRecord)]),
+  ]
+    .filter((key) =>
+      Object.hasOwn(existingRecord, key) !== Object.hasOwn(nextRecord, key)
+        ? true
+        : canonicalize(existingRecord[key]) !== canonicalize(nextRecord[key]),
+    )
+    .sort();
   const existingCharter = await readFile(paths.charter, 'utf8').catch(() => '');
   const charter = spliceManagedBlock(
     existingCharter,
@@ -1020,6 +1084,7 @@ export async function prepareOperatingInitialization(input: {
     previewDigest,
     changedPaths,
     preferencesChanged,
+    changedPreferenceKeys,
     writes,
     componentRoots,
     expectedEventHead,

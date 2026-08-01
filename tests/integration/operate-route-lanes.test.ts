@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { AdvisorAdapter } from '../../src/services/operate/advisors.js';
+import { canonicalize } from '../../src/services/operate/canonical.js';
 import {
   applyOperatingInitialization,
   prepareOperatingInitialization,
@@ -14,8 +15,17 @@ import { runOperatingCycle } from '../../src/services/operate/engine.js';
 import { OperatingEventStore } from '../../src/services/operate/event-store.js';
 import { governOperatingFinding } from '../../src/services/operate/lifecycle.js';
 import { recordOperatingOutcomeObservation } from '../../src/services/operate/outcomes.js';
-import { applyOperatingRoute, readOperatingRoute } from '../../src/services/operate/routes.js';
-import { resolveOperatingPaths } from '../../src/services/operate/workspace.js';
+import {
+  applyOperatingRoute,
+  createOperatingRoutePlan,
+  readOperatingRoute,
+  rollbackOperatingRoute,
+} from '../../src/services/operate/routes.js';
+import type { OperatingFinding, OperatingRoutePlan } from '../../src/services/operate/types.js';
+import {
+  refreshOperatingWorkspaceManifest,
+  resolveOperatingPaths,
+} from '../../src/services/operate/workspace.js';
 import { OPENPLANR_VERSION } from '../../src/utils/package-version.js';
 
 const execFileAsync = promisify(execFile);
@@ -415,5 +425,223 @@ describe('committed Operating Board route lanes', () => {
     await expect(
       access(join(projectRoot, acceptedRoute.actions[0]?.targetPath as string)),
     ).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+});
+
+/**
+ * Two distinct DEV findings that share the `finding` category (no token overlap,
+ * so consolidation keeps them separate) — the raw material for a 2+-member epic
+ * group. Every other role stays quiet.
+ */
+function twoRelatedDevFindingsAdapter(): AdvisorAdapter {
+  return {
+    id: 'epic-group-fixture',
+    mode: 'structured',
+    toolIsolation: 'not-applicable',
+    capability: 'analysis-high',
+    async invoke(input) {
+      const evidenceRef = input.evidence.items[0]?.id;
+      if (!evidenceRef || input.roleId === 'technology-risk' || input.roleId === 'chair') {
+        return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
+      }
+      return {
+        outcome: 'proposals',
+        proposals: [
+          {
+            proposalKey: 'pooling',
+            type: 'finding',
+            title: 'Improve database connection pooling under load',
+            problem: 'The connection pool exhausts during peak traffic bursts.',
+            proposal: 'Introduce a bounded reusable pool with backpressure signalling.',
+            impact: 3,
+            confidence: 3,
+            ease: 4,
+            severity: 'medium',
+            evidenceRefs: [evidenceRef],
+          },
+          {
+            proposalKey: 'fragments',
+            type: 'finding',
+            title: 'Cache rendered dashboard fragments',
+            problem: 'Dashboard fragments recompute on every request, wasting cycles.',
+            proposal: 'Add a short-lived fragment cache keyed by its render inputs.',
+            impact: 3,
+            confidence: 3,
+            ease: 4,
+            severity: 'medium',
+            evidenceRefs: [evidenceRef],
+          },
+        ],
+        gaps: [],
+        conflicts: [],
+      };
+    },
+  };
+}
+
+/**
+ * Commit a proposed→accepted route straight into the event log, exactly the way
+ * the engine (`route.proposed`) and governance (`route.accepted`) do, so an
+ * engine-independent `create-epic` route can be applied through the real
+ * `applyOperatingRoute` handler. The confirmation digest is the accepted preview
+ * digest, mirroring `governOperatingFinding`.
+ */
+async function commitAcceptedRoute(
+  projectRoot: string,
+  localRoot: string,
+  route: OperatingRoutePlan,
+): Promise<void> {
+  const store = new OperatingEventStore(projectRoot, { localRoot });
+  const paths = resolveOperatingPaths(projectRoot, { localRoot });
+  await mkdir(paths.routes, { recursive: true });
+  await writeFile(join(paths.routes, `${route.id}.json`), `${canonicalize(route)}\n`);
+  await store.putRecord('route', route as unknown as Record<string, unknown>, {
+    correlationId: route.cycleId,
+    createdAt: route.createdAt,
+  });
+  const evidenceRefs = route.actions.flatMap((action) => action.evidenceRefs);
+  const v13 = route.protocolVersion === '1.3.0';
+  let head = (await store.replay()).eventHead;
+  const proposed = await store.append({
+    type: 'route.proposed',
+    cycleId: route.cycleId,
+    entityId: route.id,
+    evidenceRefs,
+    payload: { record: route },
+    expectedHead: head.hash,
+    ...(v13 ? { protocolVersion: '1.3.0' } : {}),
+  });
+  head = { sequence: proposed.sequence, hash: proposed.eventHash };
+  await store.append({
+    type: 'route.accepted',
+    cycleId: route.cycleId,
+    entityId: route.id,
+    evidenceRefs,
+    payload: { routeDigest: route.routeDigest, confirmationDigest: route.previewDigest },
+    expectedHead: head.hash,
+  });
+}
+
+describe('committed Operating Board create-epic route (FR8 / US-006)', () => {
+  it('elects, applies, and byte-exact rolls back a grouped-finding epic without ever invoking PLAN or SHIP', async () => {
+    const { projectRoot, localRoot } = await initialize();
+    const config = await validateOperatingConfiguration(projectRoot);
+    const cycle = await runOperatingCycle({
+      projectRoot,
+      localRoot,
+      adapter: twoRelatedDevFindingsAdapter(),
+      confirmed: true,
+      now: new Date('2026-07-28T13:00:00.000Z'),
+    });
+
+    // Two DEV findings sharing the `finding` category surface from the cycle.
+    const surfaced = (cycle.state?.findings ?? []).filter(
+      (finding) => finding.lane === 'DEV' && finding.category === 'finding',
+    );
+    expect(
+      surfaced.length,
+      JSON.stringify({ warnings: cycle.warnings, readiness: cycle.readiness }, null, 2),
+    ).toBeGreaterThanOrEqual(2);
+
+    // Accept both findings (accept ≠ apply). Governance also accepts each
+    // finding's engine-proposed create-spec route, which we never apply.
+    for (const finding of surfaced) {
+      await governOperatingFinding({
+        projectRoot,
+        localRoot,
+        findingId: finding.id,
+        action: 'accept',
+        confirmed: true,
+        reason: 'Fixture acceptance of a related finding for epic grouping.',
+      });
+    }
+
+    const store = new OperatingEventStore(projectRoot, { localRoot });
+    const acceptedFindings = (await store.state()).findings
+      .filter((finding) => finding.status === 'accepted' && finding.category === 'finding')
+      .sort((left, right) => left.id.localeCompare(right.id));
+    expect(acceptedFindings.length).toBeGreaterThanOrEqual(2);
+    const anchor = acceptedFindings[0] as unknown as OperatingFinding;
+    const memberIds = acceptedFindings.map((finding) => finding.id);
+
+    // The anchor of a 2+-member accepted-finding group elects `create-epic`, and
+    // the returned plan validates against the published v1.3 route-plan schema.
+    const eventHead = (await store.replay()).eventHead;
+    const workspace = await refreshOperatingWorkspaceManifest(projectRoot, { localRoot });
+    const fixedDigest = `sha256:${'a'.repeat(64)}` as const;
+    const epicRoute = await createOperatingRoutePlan({
+      projectRoot,
+      cycleId: cycle.cycle.id,
+      finding: anchor,
+      config,
+      workspace,
+      eventHead,
+      evidenceDigest: fixedDigest,
+      providerDigest: fixedDigest,
+      sequence: 900,
+      epicId: 'EPIC-001',
+      localRoot,
+      now: '2026-07-28T13:00:00.000Z',
+    });
+    expect(epicRoute.actions[0]?.kind).toBe('create-epic');
+    expect(epicRoute.protocolVersion).toBe('1.3.0');
+    expect(epicRoute.actions[0]?.findingId).toBe(anchor.id);
+    expect(epicRoute.actions[0]?.targetPath).toMatch(/^\.planr\/epics\/EPIC-001-.+\.md$/);
+    // R1: the epic target is a planning artifact, never a ship/plan marker.
+    expect(epicRoute.actions[0]?.targetPath).not.toMatch(/\.pipeline-shipped|\bship\b|\bplan\b/);
+
+    // Commit + accept the epic route, then apply it against the exact preview.
+    await commitAcceptedRoute(projectRoot, localRoot, epicRoute);
+    const acceptedRoute = await readOperatingRoute(projectRoot, epicRoute.id);
+    const epicTarget = join(projectRoot, epicRoute.actions[0]?.targetPath as string);
+    expect(
+      await access(epicTarget).then(
+        () => true,
+        () => false,
+      ),
+    ).toBe(false);
+
+    const applied = await applyOperatingRoute({
+      projectRoot,
+      localRoot,
+      route: acceptedRoute,
+      config,
+      confirmationDigest: epicRoute.previewDigest,
+    });
+    expect(applied).toMatchObject({ state: 'applied', shipInvoked: false });
+    expect(applied.transactionId).toBeDefined();
+
+    // The epic markdown lists every member finding id and its evidence refs.
+    const epicBody = await readFile(epicTarget, 'utf8');
+    for (const memberId of memberIds) {
+      expect(epicBody).toContain(memberId);
+    }
+    expect(epicBody).toContain(anchor.evidenceRefs[0]);
+    expect(epicBody).toContain(`# EPIC-001:`);
+    // R1: the generated epic never emits a ship marker or PLAN/SHIP invocation.
+    expect(epicBody).not.toMatch(/\.pipeline-shipped/);
+    expect(epicBody).toContain('PLAN and SHIP are never invoked automatically');
+
+    // R1 (event log): applying the epic route never chains into PLAN or SHIP —
+    // no ship observation, no spec.linked/outcome/handoff, no awaiting-plan.
+    const afterApply = await store.replay();
+    expect(afterApply.events.some((event) => event.type === 'ship.observed')).toBe(false);
+    expect(afterApply.events.some((event) => event.type === 'spec.linked')).toBe(false);
+    expect(afterApply.events.some((event) => event.type === 'outcome.registered')).toBe(false);
+    expect(applied.state).not.toBe('awaiting-plan');
+    expect((applied as { invocation?: string }).invocation).toBeUndefined();
+
+    // Byte-exact rollback: the epic file is removed and the prior (absent) tree
+    // is restored exactly, and the route projection reflects the rollback.
+    await rollbackOperatingRoute({
+      projectRoot,
+      localRoot,
+      route: acceptedRoute,
+      transactionId: applied.transactionId as string,
+      recoveryId: 'RCV-epic-rollback',
+    });
+    await expect(access(epicTarget)).rejects.toMatchObject({ code: 'ENOENT' });
+    const rolledBack = await store.state();
+    expect(rolledBack.routes.find((route) => route.id === epicRoute.id)?.state).toBe('rolled_back');
   });
 });

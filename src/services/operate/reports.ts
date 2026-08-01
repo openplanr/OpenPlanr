@@ -9,6 +9,7 @@ import { readPersistedOperatingRoleResults } from './maintenance.js';
 import { renderOperatingBrief, selectCycleState } from './projection.js';
 import { loadOperatingProtocol } from './protocol.js';
 import { maximumSensitivity } from './redaction.js';
+import { groupRelatedAcceptedFindings } from './routes.js';
 import {
   OperateError,
   type OperatingRoleId,
@@ -61,7 +62,15 @@ function requestedLens(value?: string): OperatingRoleId | null {
   return role;
 }
 
-function markdownLens(report: OperatingLensReport): string {
+/**
+ * Render a single role's advisory lens report as the exact Markdown the
+ * `review`/`report` commands emit for that role. Exported so
+ * `projection-persistence.ts` can persist each `cycles/<id>/board/<role>.md`
+ * from the same assembly, guaranteeing the committed board file byte-matches
+ * `planr operate report <cycleId> --lens <role>` (FR1). A role with no
+ * advisor-result record renders honestly as `Status: not_evaluated`.
+ */
+export function markdownLens(report: OperatingLensReport): string {
   const lines = [
     `## ${report.label}`,
     '',
@@ -198,6 +207,18 @@ export async function readOperatingReport(input: {
         label: `Create a governed spec from ${route.id}`,
         command: `planr operate routes apply ${route.id} --preview`,
       })),
+    // FR7 — epic loop (rendering): group related ACCEPTED findings (shared
+    // category / fingerprint lineage / Chair merge source, per
+    // `groupRelatedAcceptedFindings`) and emit one ready-to-run `planr epic
+    // create` suggestion naming the group's members. This is the human-facing
+    // half of the same grouping the FR8 `create-epic` engine route encodes.
+    ...groupRelatedAcceptedFindings(
+      state.findings.filter((finding) => finding.status === 'accepted'),
+    ).map((group) => ({
+      kind: 'planning' as const,
+      label: `Create an epic grouping ${group.memberIds.join(', ')}`,
+      command: `planr epic create --title ${JSON.stringify(group.theme)}`,
+    })),
   ];
   const brief = renderOperatingBrief(state);
   const markdown = [

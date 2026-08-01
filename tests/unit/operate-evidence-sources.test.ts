@@ -9,9 +9,11 @@ import {
   prepareOperatingInitialization,
 } from '../../src/services/operate/config.js';
 import {
+  buildOperatingEvidenceIndex,
   collectGitHubEvidence,
   collectLinearEvidence,
   collectOperatingEvidence,
+  missionEvidenceIndexDrops,
 } from '../../src/services/operate/evidence.js';
 import { executeOperateAction } from '../../src/services/operate/index.js';
 import { probeAvailableEvidenceSources } from '../../src/services/operate/interaction/answer-service.js';
@@ -439,6 +441,55 @@ describe('Operating Board evidence sources', () => {
     expect(unsafe?.summary).toContain('[REDACTED_TOKEN]');
     expect(evidence.warnings).toEqual([]);
     expect(JSON.stringify(evidence)).not.toContain('npm_');
+  });
+
+  it('counts and warns about the mission-index path-pattern drop (FR2)', async () => {
+    const projectRoot = await createGitProject(); // commits README.md at the repo root
+    const localRoot = await temporaryDirectory('openplanr-operate-index-drop-local-');
+    // Dot-prefixed tracked files: their repository/planr evidence items are
+    // collected but the mission evidence index forbids dot-prefixed paths, so
+    // they vanish from any bounded mission packet unless reported.
+    await mkdir(join(projectRoot, '.planr', 'stories'), { recursive: true });
+    await writeFile(join(projectRoot, '.planr', 'stories', 'US-001.md'), '# Story\n');
+    await writeFile(join(projectRoot, '.planr', 'roadmap.md'), '# Roadmap\n');
+    await execFileAsync('git', ['add', '-A'], { cwd: projectRoot });
+    await execFileAsync('git', ['commit', '--quiet', '-m', 'dot-prefixed evidence'], {
+      cwd: projectRoot,
+    });
+    const workspace = await buildWorkspaceManifest(projectRoot, [], {
+      localRoot,
+      persistRoots: true,
+      capturedAt: '2026-07-28T10:00:00.000Z',
+    });
+
+    const evidence = await collectOperatingEvidence({
+      projectRoot,
+      localRoot,
+      cycleId: 'CYCLE-001',
+      workspace,
+      providers: ['repository', 'planr'],
+      sensitivityCeiling: 'internal',
+      budgets: budgets(),
+      now: new Date('2026-07-28T10:01:00.000Z'),
+    });
+
+    // The drop is counted from the exact predicates the index filters on.
+    const drops = missionEvidenceIndexDrops(evidence.items, { sensitivityCeiling: 'internal' });
+    expect(drops.pathPattern).toBeGreaterThanOrEqual(2);
+    // The count is surfaced in the evidence bundle's warnings channel (the frozen
+    // v1.2 `operating-evidence` schema's existing free-text field).
+    const warning = evidence.warnings.find((entry) =>
+      entry.includes('cannot be represented in the mission evidence index'),
+    );
+    expect(warning).toBeDefined();
+    expect(warning).toContain(`${drops.pathPattern} evidence item(s)`);
+    // A valid (non-dot) repository path is still indexed — only the dot-prefixed
+    // items are dropped and counted.
+    const index = buildOperatingEvidenceIndex(evidence, { sensitivityCeiling: 'internal' });
+    expect(index.some((item) => item.source === 'repository' && item.path === 'README.md')).toBe(
+      true,
+    );
+    expect(index.some((item) => item.path?.startsWith('.planr/'))).toBe(false);
   });
 
   it('rejects a persisted incremental baseline whose workspaceDigest drifted and recollects deep', async () => {

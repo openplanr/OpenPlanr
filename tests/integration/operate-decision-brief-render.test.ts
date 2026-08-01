@@ -14,7 +14,11 @@ import {
   writeOperatingDecisionBriefArtifact,
 } from '../../src/services/operate/decision-brief.js';
 import { runOperatingCycle } from '../../src/services/operate/engine.js';
-import { readOperatingDecisionBriefSource } from '../../src/services/operate/reports.js';
+import { governOperatingFinding } from '../../src/services/operate/lifecycle.js';
+import {
+  readOperatingDecisionBriefSource,
+  readOperatingReport,
+} from '../../src/services/operate/reports.js';
 
 const execFileAsync = promisify(execFile);
 const temporaryDirectories: string[] = [];
@@ -135,6 +139,146 @@ async function runFixtureCycle(): Promise<{
     decisionIds: (cycle.state?.decisions ?? []).map((decision) => decision.id),
   };
 }
+
+const twoRelatedFindingsAdvisor: AdvisorAdapter = {
+  id: 'epic-suggestion-fixture',
+  mode: 'structured',
+  toolIsolation: 'not-applicable',
+  capability: 'analysis-high',
+  async invoke(input) {
+    const evidenceRef = input.evidence.items[0]?.id;
+    if (!evidenceRef || input.roleId === 'technology-risk' || input.roleId === 'chair') {
+      return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
+    }
+    return {
+      outcome: 'proposals',
+      proposals: [
+        {
+          proposalKey: 'pooling',
+          type: 'finding',
+          title: 'Improve database connection pooling under load',
+          problem: 'The connection pool exhausts during peak traffic bursts.',
+          proposal: 'Introduce a bounded reusable pool with backpressure signalling.',
+          impact: 3,
+          confidence: 3,
+          ease: 4,
+          severity: 'medium',
+          evidenceRefs: [evidenceRef],
+        },
+        {
+          proposalKey: 'fragments',
+          type: 'finding',
+          title: 'Cache rendered dashboard fragments',
+          problem: 'Dashboard fragments recompute on every request, wasting cycles.',
+          proposal: 'Add a short-lived fragment cache keyed by its render inputs.',
+          impact: 3,
+          confidence: 3,
+          ease: 4,
+          severity: 'medium',
+          evidenceRefs: [evidenceRef],
+        },
+      ],
+      gaps: [],
+      conflicts: [],
+    };
+  },
+};
+
+async function runEpicGroupCycle(): Promise<{
+  projectRoot: string;
+  localRoot: string;
+  cycleId: string;
+  memberIds: string[];
+}> {
+  const projectRoot = await temporaryDirectory('openplanr-epic-suggestion-project-');
+  const localRoot = await temporaryDirectory('openplanr-epic-suggestion-local-');
+  await execFileAsync('git', ['init', '--quiet'], { cwd: projectRoot });
+  await execFileAsync('git', ['config', 'user.name', 'OpenPlanr Test'], { cwd: projectRoot });
+  await execFileAsync('git', ['config', 'user.email', 'test@openplanr.invalid'], {
+    cwd: projectRoot,
+  });
+  await writeFile(join(projectRoot, 'service.ts'), 'export const ready = true;\n');
+  await execFileAsync('git', ['add', 'service.ts'], { cwd: projectRoot });
+  await execFileAsync('git', ['commit', '--quiet', '-m', 'fixture'], { cwd: projectRoot });
+  const initialization = await prepareOperatingInitialization({
+    projectRoot,
+    localRoot,
+    profile: 'custom',
+    decisionOwner: 'Product owner',
+    planningEngine: 'openplanr',
+    runtime: 'codex',
+    timezone: 'UTC',
+    sensitivityCeiling: 'internal',
+    enabledProviders: ['repository', 'git'],
+    customProfile: {
+      enabledRoles: ['strategy-finance', 'technology-risk', 'chair'],
+      enabledProviders: ['repository', 'git'],
+      caps: { surfacedFindings: 10, newSpecs: 3, openDecisions: 3, agentArtifacts: 2 },
+      budgets: { maxFiles: 100, maxItems: 100, maxBytes: 1024 * 1024, maxDurationMs: 10_000 },
+    },
+    charter: {
+      purpose: 'Exercise the grouped-finding epic suggestion.',
+      goals: ['Surface two related DEV findings for one epic theme.'],
+    },
+    now: '2026-07-28T12:00:00.000Z',
+  });
+  await applyOperatingInitialization({
+    projectRoot,
+    localRoot,
+    preview: initialization,
+    confirmationDigest: initialization.previewDigest,
+  });
+  const cycle = await runOperatingCycle({
+    projectRoot,
+    localRoot,
+    adapter: twoRelatedFindingsAdvisor,
+    confirmed: true,
+    now: new Date('2026-07-28T13:00:00.000Z'),
+  });
+  const surfaced = (cycle.state?.findings ?? []).filter(
+    (finding) => finding.lane === 'DEV' && finding.category === 'finding',
+  );
+  for (const finding of surfaced) {
+    await governOperatingFinding({
+      projectRoot,
+      localRoot,
+      findingId: finding.id,
+      action: 'accept',
+      confirmed: true,
+      reason: 'Fixture acceptance of a related finding for epic grouping.',
+    });
+  }
+  return {
+    projectRoot,
+    localRoot,
+    cycleId: cycle.cycle.id,
+    memberIds: surfaced.map((finding) => finding.id).sort(),
+  };
+}
+
+describe('operate epic-loop grouped-finding suggestion (FR7/US-006)', () => {
+  it('renders one planr epic create suggestion naming both accepted findings', async () => {
+    const { projectRoot, localRoot, cycleId, memberIds } = await runEpicGroupCycle();
+    expect(memberIds.length).toBeGreaterThanOrEqual(2);
+
+    const report = await readOperatingReport({ projectRoot, localRoot, cycleId });
+    const epicSuggestions = report.actions.filter((action) =>
+      /^planr epic create --title /.test(action.command),
+    );
+    // Exactly one epic suggestion for the single shared-category group.
+    expect(epicSuggestions).toHaveLength(1);
+    // The suggestion names every member finding.
+    for (const memberId of memberIds) {
+      expect(epicSuggestions[0].label).toContain(memberId);
+    }
+    expect(epicSuggestions[0].kind).toBe('planning');
+    // The rendered markdown carries the same ready-to-run suggestion.
+    expect(report.markdown).toContain('planr epic create --title');
+    for (const memberId of memberIds) {
+      expect(report.markdown).toContain(memberId);
+    }
+  });
+});
 
 describe('operate self-contained decision-brief rendering on real cycle data (FR7/E-007)', () => {
   it('assembles and renders a cycle brief offline from readOperatingReport data', async () => {

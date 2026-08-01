@@ -175,7 +175,7 @@ describe('FR5 readable-tree board and evidence-index renderers', () => {
     ]);
   });
 
-  it('renders an enabled role as evaluated with its role-attributed evidence gaps', () => {
+  it('renders a role with a persisted advisor-result as evaluated, using the real report hint', () => {
     const report = renderOperatingBoardReport(
       state({
         cycles: [{ id: 'CYCLE-001', state: 'reviewable', enabledRoles: ['technology-risk'] }],
@@ -193,26 +193,34 @@ describe('FR5 readable-tree board and evidence-index renderers', () => {
       }),
       'CYCLE-001',
       { id: 'technology-risk', label: 'Technology & Risk (CTO)' },
+      // Evaluation status derives from the advisor-result set, not enabledRoles.
+      new Set(['technology-risk']),
     );
 
     expect(report).toContain('# Technology & Risk (CTO) — CYCLE-001');
     expect(report).toContain('Status: evaluated');
     expect(report).toContain('## Evidence gaps');
     expect(report).toContain('**GAP-001:** What is the incident response budget?');
-    expect(report).toContain('planr operate report --cycle CYCLE-001 --lens technology-risk');
+    // The hint must use the real `report [cycleId]` positional syntax matching
+    // the CLI's `operate report` command — never the non-existent `--cycle` flag.
+    expect(report).toContain('planr operate report CYCLE-001 --lens technology-risk');
+    expect(report).not.toContain('--cycle');
   });
 
-  it('renders a role the cycle did not enable explicitly as not_evaluated', () => {
+  it('renders an enabled-but-unevaluated role as not_evaluated (Status ignores enabledRoles)', () => {
     const report = renderOperatingBoardReport(
       state({
+        // The cycle enabled technology-risk, but no advisor-result record exists
+        // for it, so its board must read `not_evaluated`, not "evaluated".
         cycles: [{ id: 'CYCLE-001', state: 'reviewable', enabledRoles: ['technology-risk'] }],
       }),
       'CYCLE-001',
-      { id: 'strategy-finance', label: 'Strategy & Finance (CEO)' },
+      { id: 'technology-risk', label: 'Technology & Risk (CTO)' },
+      new Set(),
     );
 
     expect(report).toContain('Status: not_evaluated');
-    expect(report).toContain('This advisory lens was not enabled for CYCLE-001');
+    expect(report).toContain('produced no advisor-result record for CYCLE-001');
     expect(report).not.toContain('## Evidence gaps');
   });
 

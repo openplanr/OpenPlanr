@@ -10,6 +10,7 @@ import {
   createNativeOperatingRoleResult,
   createOperatingAdvisorPack,
   type OperatingAdvisorPack,
+  type OperatingMissionEvidenceTruncation,
 } from './advisors.js';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
 import {
@@ -23,6 +24,7 @@ import {
   gateRecordedProposalCitations,
 } from './engine.js';
 import { OperatingEventStore } from './event-store.js';
+import { buildOperatingEvidenceIndex, starvedRoleEvidenceGaps } from './evidence.js';
 import { OperatingEvidenceCache } from './evidence-cache.js';
 import { purgeStaleEvidenceClassifications } from './evidence-classifications.js';
 import { listEvidenceDiagnostics } from './evidence-diagnostics.js';
@@ -37,7 +39,7 @@ import {
   resolveOperatingDispatchMode,
 } from './mission-dispatch.js';
 import { assertOperatingArtifact, loadOperatingProtocol } from './protocol.js';
-import { containsSecret, redactSensitiveText } from './redaction.js';
+import { compareSensitivity, containsSecret, redactSensitiveText } from './redaction.js';
 import {
   OPERATE_PROTOCOL_VERSION,
   OPERATE_SCHEMA_VERSION,
@@ -988,22 +990,32 @@ async function readAdapterSensitivityCeiling(
  * the packet's `declaredRoots` (and thus its tool grant) from only the narrowed
  * roots. This is the belt to the bounded reader's read-time-ceiling suspenders.
  */
-function narrowEvidenceToMissionCeiling(
+export function narrowEvidenceToMissionCeiling(
   evidence: OperatingEvidence,
   ceiling: OperatingSensitivity,
 ): OperatingEvidence {
+  // FR2: scope the deny-list to the individual above-ceiling ITEMS, not every
+  // item under the same top-level root. A compliant sibling under a root that
+  // also holds one above-ceiling file stays reachable; only the offending item
+  // is removed. `narrowMissionRootsToCeiling` still runs over the already
+  // item-narrowed set (the pipeline-owned root guard, not reimplemented), so the
+  // derived read roots never widen past the surviving items — the read-time
+  // ceiling check on the bounded reader remains the suspenders to this belt.
+  const compliantItems = evidence.items.filter(
+    (item) => compareSensitivity(item.sensitivity, ceiling) <= 0,
+  );
   const topSegment = (location: string): string | null => {
     const [top] = location.split('/');
     return top && top.length > 0 ? top : null;
   };
   const declaredRoots = [
     ...new Set(
-      evidence.items
+      compliantItems
         .map((item) => topSegment(item.location))
         .filter((segment): segment is string => Boolean(segment)),
     ),
   ];
-  const evidenceIndex = evidence.items.map((item) => ({
+  const evidenceIndex = compliantItems.map((item) => ({
     path: item.location,
     sensitivity: item.sensitivity,
   })) as unknown as OperatingEvidenceIndexItem[];
@@ -1012,7 +1024,7 @@ function narrowEvidenceToMissionCeiling(
   );
   return {
     ...evidence,
-    items: evidence.items.filter((item) => {
+    items: compliantItems.filter((item) => {
       const top = topSegment(item.location);
       return top === null || allowedRoots.has(top);
     }),
@@ -1377,6 +1389,17 @@ export async function operateAdapterLifecycle(input: {
     // byte-compatible with the v1.2 path. The evidence is ceiling-narrowed by
     // `narrowMissionRootsToCeiling` first, so a declared read root can never reach
     // an above-ceiling file even before the bounded reader's read-time check.
+    // FR2: after narrowing, the same POST-index gate the readiness evaluator now
+    // understands runs here — a mission role whose repository items were all
+    // dropped by the dot-prefixed/pattern filter retains zero repository index
+    // items, is gated not-ready with a governed gap, and is dropped from
+    // `missionRoleIds` instead of dispatching on an empty evidence base. The
+    // other ready roles still dispatch.
+    let starvedMissionRoleIds: OperatingRoleId[] = [];
+    let evidenceGaps: OperatingDataGap[] = [];
+    // FR4: index truncations the published pipeline performed for over-cap roles,
+    // surfaced onto the prepare result so the drop reaches the cycle as a warning.
+    let missionEvidenceTruncations: OperatingMissionEvidenceTruncation[] = [];
     const roleMissionPackets: Record<string, OperatingMissionPacket> =
       recoverableSession?.roleMissionPackets ??
       (missionRoleIds.length > 0
@@ -1386,18 +1409,62 @@ export async function operateAdapterLifecycle(input: {
               refreshOperatingWorkspaceManifest(input.projectRoot, { localRoot: input.localRoot }),
               readAdapterSensitivityCeiling(input.projectRoot, input.localRoot),
             ]);
-            const packets = await buildOperatingMissionPackets({
+            const narrowedEvidence = narrowEvidenceToMissionCeiling(
+              roleEvidence,
+              sensitivityCeiling,
+            );
+            const missionEvidenceIndex = buildOperatingEvidenceIndex(narrowedEvidence, {
+              sensitivityCeiling,
+            });
+            const postIndexReadiness = await evaluateEvidenceReadiness({
+              cycleId: input.cycleId as string,
+              evidence: narrowedEvidence,
+              enabledRoles: missionRoleIds as OperatingRoleId[],
+              now: new Date(),
+              missionEvidenceIndex,
+            });
+            starvedMissionRoleIds = postIndexReadiness.roles
+              .filter((role) => !role.modelCallAllowed)
+              .map((role) => role.roleId);
+            const dispatchableMissionRoleIds = (missionRoleIds as OperatingRoleId[]).filter(
+              (roleId) => !starvedMissionRoleIds.includes(roleId),
+            );
+            if (starvedMissionRoleIds.length > 0) {
+              evidenceGaps = await starvedRoleEvidenceGaps({
+                cycleId: input.cycleId as string,
+                roleIds: starvedMissionRoleIds,
+                owner: config.decisionOwner,
+                now: new Date().toISOString(),
+              });
+            }
+            if (dispatchableMissionRoleIds.length === 0) return {};
+            // FR4: pass the configured item budget as the upper bound; each role's
+            // effective cap is the smaller of it and the role's registry-sized
+            // default. A monorepo-scale index is truncated (highest-priority items
+            // kept) so its packet fits the derived budget instead of failing
+            // closed; the truncation record is captured for the cycle warnings.
+            const { packets, truncations } = await buildOperatingMissionPackets({
               cycleId: input.cycleId as string,
               config,
               workspace,
               context,
-              evidence: narrowEvidenceToMissionCeiling(roleEvidence, sensitivityCeiling),
-              roleIds: missionRoleIds as OperatingRoleId[],
+              evidence: narrowedEvidence,
+              roleIds: dispatchableMissionRoleIds,
               sensitivityCeiling,
+              maxEvidenceItems: config.budgets.maxItems,
             });
+            missionEvidenceTruncations = truncations;
             return Object.fromEntries(packets.map((packet) => [packet.roleId, packet]));
           })()
         : {});
+    // FR2: the session's bound role set drops any starved mission role, so its
+    // handoff, briefs, and input digests never reference a role that will not
+    // dispatch. When nothing is starved this is exactly `roles`, keeping the
+    // pack-mode / healthy-mission prepare byte-identical.
+    const dispatchedRoles =
+      starvedMissionRoleIds.length > 0
+        ? roles.filter((role) => !starvedMissionRoleIds.includes(role))
+        : roles;
     // FR2: fail closed before a native adapter session is assembled. A freshly
     // built pack is already measured inside `createOperatingAdvisorPack`, but the
     // session may instead be RECOVERED from disk (`recoverableSession`) — possibly
@@ -1435,13 +1502,13 @@ export async function operateAdapterLifecycle(input: {
     // recorded result to exactly this value, and a recovered machine-local result
     // is re-adopted only when it still matches it.
     const roleInputDigests = Object.fromEntries(
-      roles.map((role) => {
+      dispatchedRoles.map((role) => {
         const digest = roleMissionPackets[role]?.packetDigest ?? rolePacks[role]?.inputDigest;
         return [role, digest] as const;
       }),
     ) as Record<string, `sha256:${string}`>;
     const validRecordedRoles: string[] = [];
-    for (const role of roles) {
+    for (const role of dispatchedRoles) {
       const prior: OperatingRoleResult | null = await readFile(
         path.join(path.dirname(target), `${input.cycleId}.${role}.json`),
         'utf8',
@@ -1475,7 +1542,7 @@ export async function operateAdapterLifecycle(input: {
       idempotencyKey: input.idempotencyKey,
       state: validRecordedRoles.length > 0 ? 'recording' : 'prepared',
       expiresAt: new Date(nowMs + leaseDurationMs).toISOString(),
-      roles,
+      roles: dispatchedRoles,
       recordedRoles: validRecordedRoles.sort(),
       roleBriefs,
       rolePacks,
@@ -1491,6 +1558,14 @@ export async function operateAdapterLifecycle(input: {
       // record action's `dispatch.missionPacketPointer` resolves against the
       // prepare result; pack roles keep resolving at `/data/rolePacks/<role>`.
       ...(Object.keys(roleMissionPackets).length > 0 ? { missionPackets: roleMissionPackets } : {}),
+      // FR2: surface the governed gaps for any starved mission role that was
+      // dropped from dispatch. Omitted when nothing was starved so a healthy
+      // prepare result stays byte-identical.
+      ...(evidenceGaps.length > 0 ? { evidenceGaps } : {}),
+      // FR4: surface the evidence-index truncation warnings for any over-cap
+      // mission role so the drop reaches the cycle, never a silent drop. Omitted
+      // when nothing was truncated so a healthy prepare result stays byte-identical.
+      ...(missionEvidenceTruncations.length > 0 ? { missionEvidenceTruncations } : {}),
       leaseStatus: adapterLeaseStatus(session, nowMs),
       handoff: await adapterHandoff(session),
     };

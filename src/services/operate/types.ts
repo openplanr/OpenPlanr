@@ -1073,7 +1073,8 @@ export interface OperatingRouteAction {
     | 'create-instrumentation-spec'
     | 'create-decision'
     | 'create-cycle-artifact'
-    | 'create-quick-task';
+    | 'create-quick-task'
+    | 'create-epic';
   dependsOn: string[];
   evidenceRefs: string[];
   reversible: true;
@@ -1085,10 +1086,11 @@ export interface OperatingRoutePlan
   extends Omit<ProtocolArtifact<'operating-route-plan'>, 'protocolVersion'> {
   /**
    * Frozen v1.2 for the spec/decision/agent/instrumentation kinds. A
-   * `create-quick-task` route is stamped v1.3 (`OPERATE_MISSION_PROTOCOL_VERSION`)
-   * so it validates against the additive v1.3 route-plan schema — the only
-   * route-plan schema whose action-kind enum includes `create-quick-task`. Every
-   * other operating artifact envelope stays frozen at v1.2.
+   * `create-quick-task` or `create-epic` route is stamped v1.3
+   * (`OPERATE_MISSION_PROTOCOL_VERSION`) so it validates against the additive
+   * v1.3 route-plan schema — the only route-plan schema whose action-kind enum
+   * includes `create-quick-task`/`create-epic`. Every other operating artifact
+   * envelope stays frozen at v1.2.
    */
   protocolVersion: typeof OPERATE_PROTOCOL_VERSION | typeof OPERATE_MISSION_PROTOCOL_VERSION;
   id: string;

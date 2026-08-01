@@ -6,6 +6,7 @@ import {
   OPERATE_PROTOCOL_VERSION,
   OPERATE_SCHEMA_VERSION,
   type OperatingEvidence,
+  type OperatingEvidenceIndexItem,
   type OperatingEvidenceReadiness,
   type OperatingRoleId,
 } from './types.js';
@@ -29,11 +30,24 @@ export async function evaluateEvidenceReadiness(input: {
   evidence: OperatingEvidence;
   enabledRoles: OperatingRoleId[];
   now?: Date;
+  /**
+   * FR2: the POST-index evidence view a mission-mode role's packet is actually
+   * built from. When provided, a `repository` requirement is additionally capped
+   * by the number of repository items that survived the mission index — so a role
+   * whose repository items were all dropped by the dot-prefixed/pattern filter is
+   * gated not-ready instead of dispatching "ready" against a pre-index item set
+   * that no bounded mission packet can reference. Omitting it preserves the
+   * pre-index behaviour for the standard (pack-mode) engine path.
+   */
+  missionEvidenceIndex?: readonly OperatingEvidenceIndexItem[];
 }): Promise<OperatingEvidenceReadiness> {
   const now = input.now ?? new Date();
   const registry = (
     await loadOperatingProtocol()
   ).listOperatingRoles() as unknown as RegistryRole[];
+  const postIndexRepositoryCount = input.missionEvidenceIndex
+    ? input.missionEvidenceIndex.filter((item) => item.source === 'repository').length
+    : null;
   const eligibleItems = input.evidence.items.filter(
     (item) =>
       !prepareAdvisorEvidenceText({
@@ -66,8 +80,16 @@ export async function evaluateEvidenceReadiness(input: {
         matching.length > 0
           ? Math.max(...matching.map((item) => ageHours(item.collectedAt, now)))
           : null;
+      // FR2: for a mission-mode evaluation, a `repository` requirement can be
+      // satisfied only by repository items the mission index actually retained —
+      // dot-prefixed/pattern-dropped repository items are unreachable by a bounded
+      // mission packet, so they cannot count toward readiness.
+      const observedItems =
+        postIndexRepositoryCount !== null && requirement.source === 'repository'
+          ? Math.min(matching.length, postIndexRepositoryCount)
+          : matching.length;
       const satisfied =
-        matching.length >= requirement.minimumItems &&
+        observedItems >= requirement.minimumItems &&
         oldestAgeHours !== null &&
         oldestAgeHours <= requirement.maxAgeHours &&
         (requirement.observationWindow === 'current-state' ||
@@ -75,7 +97,7 @@ export async function evaluateEvidenceReadiness(input: {
           matching.some((item) => item.observedFrom && item.observedTo));
       return {
         ...structuredClone(requirement),
-        observedItems: matching.length,
+        observedItems,
         oldestAgeHours,
         satisfied,
       };

@@ -1,5 +1,6 @@
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { renderTemplate } from '../template-service.js';
 import {
   createOperatingArtifactGenerationPlan,
   generatedArtifactWrites,
@@ -11,15 +12,16 @@ import {
   type StoredOperatingArtifactGeneration,
 } from './artifact-route-generation.js';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
-import { operatingProjectKey } from './config.js';
-import { OperatingEventStore } from './event-store.js';
+import { operatingProjectKey, validateOperatingConfiguration } from './config.js';
+import { semanticallyEquivalentFindings } from './consolidation.js';
+import { type AppendOperatingEventInput, OperatingEventStore } from './event-store.js';
 import {
   applyJournalTransaction,
   prepareJournalTransaction,
   readJournal,
   rollbackJournalTransaction,
 } from './journal.js';
-import { withOperatingLock } from './lock-service.js';
+import { type OperatingLock, withOperatingLock } from './lock-service.js';
 import {
   assertPlanningProducer,
   completePipelinePoHandoff,
@@ -39,11 +41,13 @@ import {
   OperateError,
   type OperatingArtifactSession,
   type OperatingConfig,
+  type OperatingEvent,
   type OperatingEventHead,
   type OperatingFinding,
   type OperatingOutcome,
   type OperatingRouteAction,
   type OperatingRoutePlan,
+  type OperatingState,
   type OperatingWorkspaceManifest,
 } from './types.js';
 import {
@@ -75,12 +79,243 @@ function isSmallBoundedImplementation(finding: OperatingFinding): boolean {
   );
 }
 
-function actionKind(finding: OperatingFinding): OperatingRouteAction['kind'] {
+function actionKind(finding: OperatingFinding, isEpicAnchor = false): OperatingRouteAction['kind'] {
+  // Consolidation-level grouping elects `create-epic` first: when this finding
+  // is the anchor of a 2+-member group of related accepted findings, the whole
+  // theme routes to one epic (the anchor is carried in `findingId`; the full
+  // member-finding list lives in the generated epic markdown, per clarifications
+  // Option A). Every single-finding lane classification below is unchanged.
+  if (isEpicAnchor) return 'create-epic';
   if (finding.lane === 'OWNER') return 'create-decision';
   if (finding.lane === 'AGENT') return 'create-cycle-artifact';
   if (finding.category.includes('instrument')) return 'create-instrumentation-spec';
   if (isSmallBoundedImplementation(finding)) return 'create-quick-task';
   return 'create-spec';
+}
+
+/**
+ * A single member of a grouped-finding epic. Only the fields needed to render
+ * the epic markdown are carried; the shared v1.3 route-plan schema stays
+ * single-`findingId` (the anchor) — this list is an OpenPlanr-local planning
+ * detail recorded in the epic document, never a protocol-schema field.
+ */
+export interface EpicFindingMember {
+  id: string;
+  title: string;
+  problem: string;
+  proposal: string;
+  evidenceRefs: string[];
+}
+
+/**
+ * A consolidation-level grouping of 2+ related accepted findings that routes to
+ * one `create-epic` action. `anchorId` is the lexicographically-first member id
+ * (carried as the route action's single `findingId`); `members` (sorted by id)
+ * is embedded verbatim in the generated epic markdown so finding → epic → spec
+ * provenance stays traceable without a new protocol sidecar.
+ */
+export interface EpicFindingGroup {
+  anchorId: string;
+  memberIds: string[];
+  members: EpicFindingMember[];
+  category: string;
+  theme: string;
+  evidenceRefs: string[];
+}
+
+interface GroupableFinding {
+  id: string;
+  status?: unknown;
+  category?: unknown;
+  title?: unknown;
+  problem?: unknown;
+  proposal?: unknown;
+  fingerprint?: unknown;
+  sensitivity?: unknown;
+  evidenceRefs?: unknown;
+}
+
+function text(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function evidenceRefList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? [...new Set(value.filter((entry): entry is string => typeof entry === 'string'))].sort()
+    : [];
+}
+
+function toEpicMember(finding: GroupableFinding): EpicFindingMember {
+  return {
+    id: finding.id,
+    title: text(finding.title) || finding.id,
+    problem: text(finding.problem),
+    proposal: text(finding.proposal),
+    evidenceRefs: evidenceRefList(finding.evidenceRefs),
+  };
+}
+
+const EPIC_THEME_STOP_WORDS = new Set([
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'to',
+  'of',
+  'for',
+  'in',
+  'on',
+  'with',
+  'is',
+  'are',
+  'be',
+  'from',
+  'by',
+  'that',
+  'this',
+  'it',
+  'its',
+]);
+
+function themeWords(title: string): string[] {
+  return title
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !EPIC_THEME_STOP_WORDS.has(word));
+}
+
+/** Deterministic, human-legible epic title derived from the members' shared words. */
+function deriveEpicTheme(members: EpicFindingMember[], category: string): string {
+  const counts = new Map<string, number>();
+  for (const member of members) {
+    for (const word of new Set(themeWords(member.title))) {
+      counts.set(word, (counts.get(word) ?? 0) + 1);
+    }
+  }
+  const anchorOrder = themeWords(members[0]?.title ?? '');
+  const shared = [...counts.entries()]
+    .filter(([, count]) => count >= 2)
+    .map(([word]) => word)
+    .sort((left, right) => {
+      const leftIndex = anchorOrder.indexOf(left);
+      const rightIndex = anchorOrder.indexOf(right);
+      return (
+        (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex) -
+          (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex) || left.localeCompare(right)
+      );
+    })
+    .slice(0, 5);
+  const focus = shared.length > 0 ? shared.join(' ') : `related ${category}`;
+  const capped = focus.charAt(0).toUpperCase() + focus.slice(1);
+  return `${capped} (${members.length} related findings)`;
+}
+
+/**
+ * Group related accepted findings into epic candidates. Two accepted findings
+ * are related when they share a non-empty normalized `category`, share the same
+ * evidence-derived `fingerprint` lineage, or are semantically equivalent per
+ * `consolidation.ts` (which subsumes the Chair merge-proposal source, since a
+ * merged finding keeps that shared category/fingerprint). Only components of 2+
+ * members become epic groups; every group is deterministic (union-find over
+ * id-sorted findings), so the FR7 report suggestion and the FR8 engine route
+ * elect exactly the same theme.
+ */
+export function groupRelatedAcceptedFindings(findings: GroupableFinding[]): EpicFindingGroup[] {
+  const accepted = findings
+    .filter((finding) => text(finding.category).trim().length > 0)
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const parent = accepted.map((_, index) => index);
+  const find = (index: number): number => {
+    let current = index;
+    while (parent[current] !== current) {
+      parent[current] = parent[parent[current]];
+      current = parent[current];
+    }
+    return current;
+  };
+  const union = (left: number, right: number): void => {
+    const [keep, drop] = [find(left), find(right)].sort((a, b) => a - b);
+    if (keep !== drop) parent[drop] = keep;
+  };
+  const related = (left: GroupableFinding, right: GroupableFinding): boolean => {
+    const leftCategory = text(left.category).trim().toLowerCase();
+    const rightCategory = text(right.category).trim().toLowerCase();
+    if (leftCategory && leftCategory === rightCategory) return true;
+    const leftPrint = text(left.fingerprint);
+    if (leftPrint && leftPrint === text(right.fingerprint)) return true;
+    return semanticallyEquivalentFindings(
+      {
+        category: text(left.category),
+        title: text(left.title),
+        problem: text(left.problem),
+        proposal: text(left.proposal),
+        sensitivity: (text(left.sensitivity) || 'internal') as OperatingFinding['sensitivity'],
+      },
+      {
+        category: text(right.category),
+        title: text(right.title),
+        problem: text(right.problem),
+        proposal: text(right.proposal),
+        sensitivity: (text(right.sensitivity) || 'internal') as OperatingFinding['sensitivity'],
+      },
+    );
+  };
+  for (let left = 0; left < accepted.length; left += 1) {
+    for (let right = left + 1; right < accepted.length; right += 1) {
+      if (related(accepted[left], accepted[right])) union(left, right);
+    }
+  }
+  const clusters = new Map<number, GroupableFinding[]>();
+  accepted.forEach((finding, index) => {
+    const root = find(index);
+    clusters.set(root, [...(clusters.get(root) ?? []), finding]);
+  });
+  return [...clusters.values()]
+    .filter((cluster) => cluster.length >= 2)
+    .map((cluster) => {
+      const members = cluster
+        .map(toEpicMember)
+        .sort((left, right) => left.id.localeCompare(right.id));
+      const category = text(cluster[0].category);
+      return {
+        anchorId: members[0].id,
+        memberIds: members.map((member) => member.id),
+        members,
+        category,
+        theme: deriveEpicTheme(members, category),
+        evidenceRefs: [...new Set(members.flatMap((member) => member.evidenceRefs))].sort(),
+      } satisfies EpicFindingGroup;
+    })
+    .sort((left, right) => left.anchorId.localeCompare(right.anchorId));
+}
+
+/**
+ * Resolve the epic group anchored by `anchorId` from the committed accepted
+ * findings of a cycle. Reading the projected event store (not caller-passed
+ * state) is what keeps preview (`createOperatingRoutePlan`) and apply
+ * (`applyOperatingRoute`) byte-identical: both rebuild the same member list from
+ * the same accepted-finding set. Returns `null` when the anchor no longer heads
+ * a 2+-member group, which correctly surfaces as route drift on apply.
+ */
+async function resolveEpicGroupForAnchor(input: {
+  projectRoot: string;
+  localRoot?: string;
+  cycleId: string;
+  anchorId: string;
+}): Promise<EpicFindingGroup | null> {
+  const store = new OperatingEventStore(input.projectRoot, { localRoot: input.localRoot });
+  const state = await store.state();
+  const acceptedFindings = state.findings.filter(
+    (finding) => finding.status === 'accepted' && finding.cycleId === input.cycleId,
+  ) as unknown as GroupableFinding[];
+  return (
+    groupRelatedAcceptedFindings(acceptedFindings).find(
+      (group) => group.anchorId === input.anchorId,
+    ) ?? null
+  );
 }
 
 function slugify(value: string): string {
@@ -99,6 +334,16 @@ export async function nextOperatingSpecOrdinal(projectRoot: string): Promise<num
   let maximum = 0;
   for (const name of await readdir(root).catch(() => [])) {
     const match = name.match(/^SPEC-(\d+)(?:-|$)/);
+    if (match) maximum = Math.max(maximum, Number(match[1]));
+  }
+  return maximum + 1;
+}
+
+export async function nextOperatingEpicOrdinal(projectRoot: string): Promise<number> {
+  const root = path.join(projectRoot, '.planr', 'epics');
+  let maximum = 0;
+  for (const name of await readdir(root).catch(() => [])) {
+    const match = name.match(/^EPIC-(\d+)(?:-|$)/);
     if (match) maximum = Math.max(maximum, Number(match[1]));
   }
   return maximum + 1;
@@ -125,6 +370,13 @@ function routeDestinationPaths(route: OperatingRoutePlan): string[] {
       `${path.posix.dirname(action.targetPath)}/${artifactId}.session.json`,
     ];
   }
+  if (action.kind === 'create-epic') {
+    // Provenance threads forward through the epic id encoded in `targetPath`
+    // (the same id-in-destination pattern the `create-spec` branch above uses),
+    // not a new protocol sidecar: the full member-finding list lives inside the
+    // generated epic markdown, so the single epic file is the only destination.
+    return [action.targetPath];
+  }
   return [action.targetPath];
 }
 
@@ -139,13 +391,32 @@ export async function createOperatingRoutePlan(input: {
   providerDigest: `sha256:${string}`;
   sequence: number;
   specId?: string;
+  epicId?: string;
   localRoot?: string;
   now?: string;
 }): Promise<OperatingRoutePlan> {
   const now = input.now ?? new Date().toISOString();
   const id = `ACT-${String(input.sequence).padStart(3, '0')}`;
-  const kind = actionKind(input.finding);
-  const slug = slugify(input.finding.title);
+  // Epic election only fires for an already-accepted anchor finding — the engine
+  // creates routes from freshly-proposed findings, so this is skipped there (no
+  // store read, unchanged behavior); a caller that has accepted a related group
+  // reaches it. The member list is rebuilt from the committed accepted findings.
+  const epicGroup =
+    input.finding.status === 'accepted'
+      ? await resolveEpicGroupForAnchor({
+          projectRoot: input.projectRoot,
+          localRoot: input.localRoot,
+          cycleId: input.cycleId,
+          anchorId: input.finding.id,
+        })
+      : null;
+  const kind = actionKind(input.finding, Boolean(epicGroup));
+  const epicId =
+    kind === 'create-epic'
+      ? (input.epicId ??
+        `EPIC-${String(await nextOperatingEpicOrdinal(input.projectRoot)).padStart(3, '0')}`)
+      : null;
+  const slug = slugify(kind === 'create-epic' && epicGroup ? epicGroup.theme : input.finding.title);
   const targetPath =
     kind === 'create-spec' || kind === 'create-instrumentation-spec'
       ? `.planr/specs/${input.specId ?? `SPEC-${String(input.sequence).padStart(3, '0')}`}-${slug}/${input.specId ?? `SPEC-${String(input.sequence).padStart(3, '0')}`}-${slug}.md`
@@ -153,12 +424,17 @@ export async function createOperatingRoutePlan(input: {
         ? `.planr/operate/cycles/${input.cycleId}/artifacts/ART-${id.slice('ACT-'.length)}-${slug}.md`
         : kind === 'create-quick-task'
           ? `.planr/quick/QUICK-${id.slice('ACT-'.length)}-${slug}.md`
-          : `.planr/operate/decisions/${id}.json`;
-  // A quick-task route validates against the additive v1.3 route-plan schema —
-  // the only route-plan schema whose kind enum includes `create-quick-task`.
-  // Every other kind keeps the frozen v1.2 envelope untouched.
+          : kind === 'create-epic'
+            ? `.planr/epics/${epicId}-${slug}.md`
+            : `.planr/operate/decisions/${id}.json`;
+  // A quick-task or epic route validates against the additive v1.3 route-plan
+  // schema — the only route-plan schema whose kind enum includes
+  // `create-quick-task`/`create-epic`. Every other kind keeps the frozen v1.2
+  // envelope untouched.
   const protocolVersion =
-    kind === 'create-quick-task' ? OPERATE_MISSION_PROTOCOL_VERSION : OPERATE_PROTOCOL_VERSION;
+    kind === 'create-quick-task' || kind === 'create-epic'
+      ? OPERATE_MISSION_PROTOCOL_VERSION
+      : OPERATE_PROTOCOL_VERSION;
   const action: OperatingRouteAction = {
     id,
     findingId: input.finding.id,
@@ -166,7 +442,13 @@ export async function createOperatingRoutePlan(input: {
     owner: input.finding.owner,
     kind,
     dependsOn: [],
-    evidenceRefs: [...input.finding.evidenceRefs].sort(),
+    // An epic route carries the anchor finding as `findingId` but cites the whole
+    // group's evidence (union), so the single reviewable route covers every
+    // member's citations; other kinds keep the finding's own refs.
+    evidenceRefs:
+      kind === 'create-epic' && epicGroup
+        ? epicGroup.evidenceRefs
+        : [...input.finding.evidenceRefs].sort(),
     reversible: true,
     requiresConfirmation: true,
     targetPath,
@@ -220,6 +502,7 @@ export async function createOperatingRoutePlan(input: {
     finding: input.finding as unknown as Record<string, unknown>,
     config: input.config,
     now,
+    localRoot: input.localRoot,
   });
   const previewDigest = routeWritesPreviewDigest(
     inputDigest,
@@ -257,6 +540,289 @@ export async function createOperatingRoutePlan(input: {
     createdAt: now,
   };
   return assertOperatingArtifact('operating-route-plan', route);
+}
+
+/**
+ * Every finding id a `create-epic` route was ever proposed against. Mirrors the
+ * engine's `existingRoutedFindingIds`, but scoped to epic routes only, so epic
+ * election is idempotent: a group whose anchor already heads a committed epic
+ * route is never re-elected, no matter how many of its members are later
+ * accepted.
+ */
+function existingEpicRouteFindingIds(events: OperatingEvent[]): Set<string> {
+  const ids = new Set<string>();
+  for (const event of events) {
+    if (event.type !== 'route.proposed') continue;
+    const record = event.payload.record as
+      | { actions?: Array<{ kind?: unknown; findingId?: unknown }> }
+      | undefined;
+    if (!record || typeof record !== 'object') continue;
+    for (const action of record.actions ?? []) {
+      if (action.kind === 'create-epic' && typeof action.findingId === 'string') {
+        ids.add(action.findingId);
+      }
+    }
+  }
+  return ids;
+}
+
+function maximumRouteOrdinal(routes: Array<{ id?: unknown }>): number {
+  let maximum = 0;
+  for (const route of routes) {
+    const match = typeof route.id === 'string' ? /^ACT-(\d+)$/.exec(route.id) : null;
+    if (match) maximum = Math.max(maximum, Number(match[1]));
+  }
+  return maximum;
+}
+
+/**
+ * Bind an elected epic route to the same evidence/provider state the cycle's
+ * other routes already carry, so its provenance is consistent with the DEV/OWNER
+ * routes the same accepted findings produced. A group's members were routed on
+ * proposal, so a reference route always exists; the offline fallback only guards
+ * the theoretical no-prior-route case (neither digest is re-derived at apply, so
+ * any self-consistent binding is valid).
+ */
+async function referenceCycleRouteDigests(
+  projectRoot: string,
+  state: OperatingState,
+  cycleId: string,
+): Promise<{ evidenceDigest: `sha256:${string}`; providerDigest: `sha256:${string}` }> {
+  for (const projected of state.routes) {
+    if (String(projected.cycleId) !== cycleId) continue;
+    const route = await readOperatingRoute(projectRoot, String(projected.id)).catch(() => null);
+    if (route?.evidenceDigest && route?.providerDigest) {
+      return { evidenceDigest: route.evidenceDigest, providerDigest: route.providerDigest };
+    }
+  }
+  const offline = canonicalDigest({ provider: 'offline' });
+  return { evidenceDigest: offline, providerDigest: offline };
+}
+
+async function appendRouteEvent(
+  store: OperatingEventStore,
+  lock: OperatingLock,
+  head: OperatingEventHead,
+  input: Omit<AppendOperatingEventInput, 'expectedHead'>,
+): Promise<OperatingEventHead> {
+  const event = await store.append({
+    ...input,
+    actor: input.actor ?? { kind: 'human', id: 'operate-cli' },
+    expectedHead: head.hash,
+  });
+  const next = { sequence: event.sequence, hash: event.eventHash };
+  await lock.advanceEventHead(head, next);
+  return next;
+}
+
+/**
+ * Write a proposed route file through the write-ahead journal and append its
+ * `route.proposed` event, exactly the way the engine proposes a freshly-elected
+ * route (recoverable orphaned-proposal handling included), so an epic route
+ * elected at acceptance time is indistinguishable from an engine-proposed one.
+ */
+async function commitProposedRoute(
+  store: OperatingEventStore,
+  lock: OperatingLock,
+  projectRoot: string,
+  localRoot: string | undefined,
+  route: OperatingRoutePlan,
+  head: OperatingEventHead,
+): Promise<OperatingEventHead> {
+  const relativePath = `.planr/operate/routes/${route.id}.json`;
+  const content = `${canonicalize(route)}\n`;
+  const transactionId = `TXN-${route.cycleId}-${route.id}-proposal`;
+  const transactionRoot = path.join(
+    resolveOperatingPaths(projectRoot, { localRoot }).transactions,
+    transactionId,
+  );
+  const manifestPath = path.join(transactionRoot, 'journal.json');
+  const existingBytes = await readFile(path.join(projectRoot, relativePath), 'utf8').catch(
+    (error) => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
+    },
+  );
+  const journal =
+    existingBytes === null
+      ? await prepareJournalTransaction(projectRoot, {
+          writes: [{ relativePath, operation: 'create' as const, content }],
+          eventHead: head,
+          previewDigest: route.previewDigest,
+          transactionId,
+          localRoot,
+        })
+      : { root: transactionRoot, manifestPath, record: await readJournal(manifestPath) };
+  if (existingBytes !== null) {
+    if (
+      existingBytes !== content ||
+      journal.record.state !== 'committed' ||
+      journal.record.previewDigest !== route.previewDigest
+    ) {
+      throw new OperateError(
+        'E_OPERATE_TRANSACTION_INVALID',
+        `Orphaned epic route proposal ${route.id} does not match its committed journal.`,
+      );
+    }
+  } else {
+    await applyJournalTransaction(projectRoot, journal, {
+      currentEventHead: head,
+      revalidateEventHead: async () => (await store.replay()).eventHead,
+    });
+  }
+  try {
+    await store.putRecord('route', structuredClone(route) as unknown as Record<string, unknown>, {
+      correlationId: route.cycleId,
+      createdAt: route.createdAt,
+    });
+    return await appendRouteEvent(store, lock, head, {
+      type: 'route.proposed',
+      cycleId: route.cycleId,
+      entityId: route.id,
+      evidenceRefs: route.actions.flatMap((action) => action.evidenceRefs),
+      payload: { record: route },
+      // A v1.3 (create-epic) route plan embedded in the event payload stamps the
+      // event v1.3, whose schema accepts either route-plan version.
+      ...(route.protocolVersion === OPERATE_MISSION_PROTOCOL_VERSION
+        ? { protocolVersion: OPERATE_MISSION_PROTOCOL_VERSION }
+        : {}),
+    });
+  } catch (error) {
+    await rollbackJournalTransaction(projectRoot, journal).catch(() => undefined);
+    throw error;
+  }
+}
+
+/**
+ * Re-evaluate a cycle's accepted findings for epic election and PROPOSE + accept
+ * one governed `create-epic` route per themed 2+-member group that does not yet
+ * have one. This is the operator-reachable producer of FR8 epic routes: it runs
+ * right after a finding transitions to `accepted` through `governOperatingFinding`,
+ * so accepting a related group yields a `create-epic` route through the same
+ * journal-backed proposal path the engine uses for freshly-proposed findings —
+ * reusing T-006's `groupRelatedAcceptedFindings`/`resolveEpicGroupForAnchor`/
+ * `actionKind` so FR7's rendered suggestion and FR8's route always name the same
+ * theme.
+ *
+ * Election never writes the epic markdown and never applies the route (accept ≠
+ * apply): it only proposes the route and accepts it — mirroring exactly how
+ * governance accepts a finding's individual route — leaving the digest-bound,
+ * human-gated `routes apply` as the separate acting step. It is idempotent: a
+ * group whose anchor already heads a committed `create-epic` route is skipped, so
+ * re-electing (accepting further members of the same theme) never duplicates the
+ * epic route. Membership growth before apply fails CLOSED rather than silently
+ * writing a different epic: `resolveEpicGroupForAnchor` re-derives the member
+ * list from the then-current accepted findings, so a route proposed for {A,B}
+ * whose group has grown to {A,B,C} no longer matches its digest-bound preview
+ * and `applyOperatingRoute` rejects it with `E_OPERATE_ROUTE_DRIFT` — the same
+ * guard every other route kind carries. An individually-routed finding is never
+ * re-routed individually — only the group-level epic route is added.
+ */
+export async function electAcceptedFindingEpicRoutes(input: {
+  projectRoot: string;
+  localRoot?: string;
+  cycleId: string;
+  now?: string;
+}): Promise<OperatingRoutePlan[]> {
+  const store = new OperatingEventStore(input.projectRoot, { localRoot: input.localRoot });
+  const initial = await store.replay();
+  const state = await store.state();
+  const acceptedFindings = state.findings.filter(
+    (finding) => finding.status === 'accepted' && String(finding.cycleId) === input.cycleId,
+  ) as unknown as GroupableFinding[];
+  const candidateGroups = groupRelatedAcceptedFindings(acceptedFindings);
+  if (candidateGroups.length === 0) return [];
+  const routedForEpic = existingEpicRouteFindingIds(initial.events);
+  const pending = candidateGroups.filter(
+    (group) => !group.memberIds.some((memberId) => routedForEpic.has(memberId)),
+  );
+  if (pending.length === 0) return [];
+
+  const config = await validateOperatingConfiguration(input.projectRoot);
+  const reference = await referenceCycleRouteDigests(input.projectRoot, state, input.cycleId);
+  const now = input.now ?? new Date().toISOString();
+
+  return withOperatingLock(
+    input.projectRoot,
+    {
+      projectKey: operatingProjectKey(input.projectRoot),
+      expectedEventHead: initial.eventHead,
+      currentEventHead: initial.eventHead,
+      localRoot: input.localRoot,
+    },
+    async (lock) => {
+      const lockedReplay = await store.replay();
+      lock.assertEventHead(lockedReplay.eventHead);
+      const lockedState = await store.state();
+      // Recompute idempotence + ordinals under the lock so two concurrent
+      // acceptances can never both elect the same group or collide on ids.
+      const alreadyRouted = existingEpicRouteFindingIds(lockedReplay.events);
+      const anchorFindings = new Map(
+        lockedState.findings.map((finding) => [finding.id, finding as unknown as OperatingFinding]),
+      );
+      const workspace = await refreshOperatingWorkspaceManifest(input.projectRoot, {
+        localRoot: input.localRoot,
+        ignoredControlPaths: [...ROUTE_MANAGED_WORKSPACE_PATHS],
+      });
+      let head = lockedReplay.eventHead;
+      let routeOrdinal = maximumRouteOrdinal(lockedState.routes);
+      let epicOrdinal = await nextOperatingEpicOrdinal(input.projectRoot);
+      const elected: OperatingRoutePlan[] = [];
+      for (const group of pending) {
+        if (group.memberIds.some((memberId) => alreadyRouted.has(memberId))) continue;
+        const anchor = anchorFindings.get(group.anchorId);
+        if (!anchor || anchor.status !== 'accepted') continue;
+        const route = await createOperatingRoutePlan({
+          projectRoot: input.projectRoot,
+          localRoot: input.localRoot,
+          cycleId: input.cycleId,
+          finding: anchor,
+          config,
+          workspace,
+          eventHead: head,
+          evidenceDigest: reference.evidenceDigest,
+          providerDigest: reference.providerDigest,
+          sequence: ++routeOrdinal,
+          epicId: `EPIC-${String(epicOrdinal).padStart(3, '0')}`,
+          now,
+        });
+        // Defensive: the pending filter already guarantees a 2+-member group, so
+        // the anchor elects `create-epic`. Skip rather than mis-propose otherwise.
+        if (route.actions[0]?.kind !== 'create-epic') continue;
+        epicOrdinal += 1;
+        head = await commitProposedRoute(
+          store,
+          lock,
+          input.projectRoot,
+          input.localRoot,
+          route,
+          head,
+        );
+        // Accept the elected route exactly the way governance accepts a finding's
+        // individual route (proposed → accepted, apply-ready) — never applied, so
+        // accept ≠ apply holds: no epic bytes and no route.applied are written here.
+        head = await appendRouteEvent(store, lock, head, {
+          type: 'route.accepted',
+          cycleId: input.cycleId,
+          entityId: route.id,
+          evidenceRefs: route.actions.flatMap((action) => action.evidenceRefs),
+          payload: { routeDigest: route.routeDigest, confirmationDigest: route.previewDigest },
+        });
+        for (const memberId of group.memberIds) alreadyRouted.add(memberId);
+        elected.push(route);
+      }
+      if (elected.length === 0) return [];
+      const finalState = await store.state();
+      await store.writeCheckpoint(finalState);
+      await persistOperatingProjections({
+        projectRoot: input.projectRoot,
+        localRoot: input.localRoot,
+        state: finalState,
+        revalidateEventHead: async () => (await store.replay()).eventHead,
+      });
+      return elected;
+    },
+  );
 }
 
 async function assertRouteWorkspaceCurrent(input: {
@@ -598,6 +1164,7 @@ async function buildRouteWrites(input: {
   finding: Record<string, unknown>;
   config: OperatingConfig;
   now: string;
+  localRoot?: string;
   artifactGeneration?: StoredOperatingArtifactGeneration;
 }): Promise<BuiltRouteWrites> {
   const action = input.route.actions[0];
@@ -654,6 +1221,79 @@ async function buildRouteWrites(input: {
             evidenceRefs: action.evidenceRefs,
             status: 'open',
           })}\n`,
+        },
+      ],
+    };
+  }
+
+  if (action.kind === 'create-epic') {
+    // Rebuild the member list from the committed accepted findings so preview and
+    // apply are byte-identical; the shared v1.3 route action stays single-anchor
+    // (`findingId`), and the full membership lives only here, in the epic doc.
+    const group = await resolveEpicGroupForAnchor({
+      projectRoot: input.projectRoot,
+      localRoot: input.localRoot,
+      cycleId: input.route.cycleId,
+      anchorId: action.findingId,
+    });
+    if (!group) {
+      throw new OperateError(
+        'E_OPERATE_TRANSACTION_INVALID',
+        `Route ${input.route.id} no longer anchors a 2+-member accepted-finding group.`,
+      );
+    }
+    const epicId = action.targetPath.match(/(?:^|\/)(EPIC-[0-9]+)(?:-|\.|\/)/)?.[1];
+    if (!epicId) {
+      throw new OperateError(
+        'E_OPERATE_TRANSACTION_INVALID',
+        'Epic route target does not encode a canonical EPIC id.',
+      );
+    }
+    const memberList = group.members.map(
+      (member) =>
+        `${member.id}: ${sanitizeGeneratedPlainText(member.title)}${
+          member.evidenceRefs.length > 0 ? ` (evidence: ${member.evidenceRefs.join(', ')})` : ''
+        }`,
+    );
+    // Reuse the CLI's epic authoring seam (cli/commands/epic.ts → createArtifact →
+    // renderTemplate on `epics/epic.md.hbs`). We render through the same template
+    // for byte-identical epic shape, but emit the content into the write-ahead
+    // journal instead of createArtifact's direct disk write, because a route must
+    // be transactional and byte-exact reversible. `now` is the frozen route
+    // timestamp so preview and apply agree.
+    const content = await renderTemplate('epics/epic.md.hbs', {
+      id: epicId,
+      title: group.theme,
+      owner: action.owner,
+      date: input.now.slice(0, 10),
+      projectName: path.basename(input.projectRoot),
+      businessValue: `Consolidates ${group.memberIds.length} related accepted findings from operating cycle ${input.route.cycleId} into one themed epic so they are planned together.`,
+      targetUsers: `Decision owner ${action.owner} and the planning team.`,
+      problemStatement: `Related accepted findings ${group.memberIds.join(', ')} share the "${group.category}" theme surfaced by the Operating Board and warrant one coordinated epic.`,
+      solutionOverview: sanitizeGeneratedPlainText(
+        group.members
+          .map((member) => member.proposal)
+          .filter(Boolean)
+          .join(' '),
+      ),
+      successCriteriaList: group.members.map(
+        (member) =>
+          `Address ${member.id} — ${sanitizeGeneratedPlainText(member.title)} — using its cited evidence${
+            member.evidenceRefs.length > 0 ? `: ${member.evidenceRefs.join(', ')}` : ''
+          }.`,
+      ),
+      keyFeatures: memberList,
+      dependencies: `Operating cycle ${input.route.cycleId}; anchor finding ${group.anchorId}; evidence: ${group.evidenceRefs.join(', ')}.`,
+      risks:
+        'No security, privacy, payment-integrity, or tenant-isolation regression. PLAN and SHIP are never invoked automatically by this operating route.',
+      featureIds: [],
+    });
+    return {
+      writes: [
+        {
+          relativePath: action.targetPath,
+          operation: 'create',
+          content,
         },
       ],
     };
@@ -1006,6 +1646,7 @@ export async function applyOperatingRoute(input: {
           finding,
           config: input.config,
           now: input.route.createdAt,
+          localRoot: input.localRoot,
           ...(artifactGeneration?.state === 'generated' ? { artifactGeneration } : {}),
         });
         const plannedDigest = routeWritesPreviewDigest(
@@ -1056,6 +1697,7 @@ export async function applyOperatingRoute(input: {
               finding,
               config: input.config,
               now: input.route.createdAt,
+              localRoot: input.localRoot,
               artifactGeneration,
             });
           }

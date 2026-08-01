@@ -600,14 +600,91 @@ export function assertOperatingAdvisorPackWithinBudget(
 /**
  * Derive a role's mission-mode input budget from the pipeline's published pack
  * budget. Mission packets carry only an evidence INDEX (no bodies), so their
- * budget is a single-digit-KiB fraction of the role's v1.2 pack budget, clamped
- * to `[1, 9]` KiB. This DERIVES a new value; it never mutates the frozen v1.2
- * `maxInputBytes`. Enforcing that pack-mode budget is a separate concern handled
- * by `assertOperatingAdvisorPackWithinBudget` at pack construction, not here.
+ * budget is a fraction of the role's v1.2 pack budget — `packMaxInputBytes / 32
+ * KiB`, rounded — clamped to the registry's real spread `[1, 32]` KiB.
+ *
+ * The prior `[1, 9]` KiB ceiling was arbitrary: it capped every repository-reading
+ * lens (512 KiB → 16 KiB) and `technology-risk` (640 KiB → 20 KiB) down to 9 KiB.
+ * At ~300 canonical bytes per index item that admitted only ~25 items, so a real
+ * monorepo's packet overflowed the derived budget and mission dispatch failed
+ * closed on a healthy repository. The ceiling now tracks the schema's own
+ * `maxInputBytes` maximum (1 MiB → 32 KiB), so a large registry budget maps to a
+ * proportional mission budget instead of an arbitrary cut. This DERIVES a new
+ * value; it never mutates the frozen v1.2 `maxInputBytes`. Enforcing that
+ * pack-mode budget is a separate concern handled by
+ * `assertOperatingAdvisorPackWithinBudget` at pack construction, not here.
  */
 export function deriveOperatingMissionBudget(packMaxInputBytes: number): number {
-  const kib = Math.min(9, Math.max(1, Math.round(packMaxInputBytes / (32 * 1024))));
+  const kib = Math.min(32, Math.max(1, Math.round(packMaxInputBytes / (32 * 1024))));
   return kib * 1024;
+}
+
+/**
+ * Conservative upper bound on one evidence index item's canonical JSON size. A
+ * v1.3 index item is a fixed-shape pointer (id, path/revision, contentHash,
+ * source, classification, freshness, sensitivity, signals[]); measured against
+ * real indexes it lands near ~300 bytes even with a long repository path. Using a
+ * value at the top of that range as the divisor guarantees the derived item cap
+ * keeps a truncated packet within budget rather than merely on average.
+ */
+const MISSION_EVIDENCE_INDEX_ITEM_BYTES = 320;
+
+/**
+ * The non-evidence portion of a mission packet (charter, prior-cycle summary,
+ * planning status, role brief, tool grant, envelope) reserved out of the derived
+ * byte budget before the remainder is divided into index slots. Sized to roughly
+ * twice the measured empty-packet overhead (~1.9 KiB) so a moderately large
+ * charter/summary still leaves the derived cap safely inside budget.
+ */
+const MISSION_PACKET_OVERHEAD_RESERVE_BYTES = 4096;
+
+/**
+ * Derive how many evidence index items a role's mission packet can carry before
+ * the published pipeline must truncate (the `maxEvidenceItems` the assembler
+ * enforces). The cap is the number of `MISSION_EVIDENCE_INDEX_ITEM_BYTES`-sized
+ * slots that fit in the role's derived byte budget after reserving
+ * `MISSION_PACKET_OVERHEAD_RESERVE_BYTES` for the non-evidence payload,
+ * intersected with any caller-supplied upper bound (`config.budgets.maxItems`).
+ *
+ * This is the "per-role registry-sized default": `technology-risk`'s 640-KiB
+ * pack budget yields a larger cap than a 512-KiB lens, and the chair's 192-KiB
+ * budget a smaller one — instead of one flat number that starves large-budget
+ * roles. Because `slots * itemBytes + reserve <= derivedBudget` holds by
+ * construction and the real per-item/overhead costs sit under those bounds, a
+ * packet truncated to this cap fits the derived budget with margin.
+ */
+export function deriveOperatingMissionEvidenceCap(
+  packMaxInputBytes: number,
+  upperBound?: number,
+): number {
+  const derivedBudget = deriveOperatingMissionBudget(packMaxInputBytes);
+  const indexBudget = Math.max(0, derivedBudget - MISSION_PACKET_OVERHEAD_RESERVE_BYTES);
+  const registrySizedDefault = Math.max(
+    1,
+    Math.floor(indexBudget / MISSION_EVIDENCE_INDEX_ITEM_BYTES),
+  );
+  return typeof upperBound === 'number' && upperBound > 0
+    ? Math.min(upperBound, registrySizedDefault)
+    : registrySizedDefault;
+}
+
+/**
+ * The per-role mission evidence-item cap registry, derived once from the
+ * pipeline's role registry. Mirrors `deriveOperatingMissionBudgets` for the
+ * `maxEvidenceItems` dimension so `buildOperatingMissionPackets` can pass each
+ * role its own byte-fitting cap instead of one flat value.
+ */
+export async function deriveOperatingMissionEvidenceCaps(
+  upperBound?: number,
+): Promise<Record<string, number>> {
+  const roles = (await loadOperatingProtocol()).listOperatingRoles();
+  return Object.fromEntries(
+    roles.map((role) => {
+      const budgets = (role as { budgets?: { maxInputBytes?: number } }).budgets;
+      const packMax = typeof budgets?.maxInputBytes === 'number' ? budgets.maxInputBytes : 262_144;
+      return [role.id, deriveOperatingMissionEvidenceCap(packMax, upperBound)];
+    }),
+  );
 }
 
 /**
@@ -638,6 +715,45 @@ export interface OperatingMissionPacketInput extends OperatingMissionPacketState
 }
 
 /**
+ * A loud record of an evidence-index truncation the published pipeline performed
+ * when a role's prioritized index exceeded its `maxEvidenceItems` cap. The
+ * highest-priority items (the caller's order) survive; this record names the
+ * role and the exact count that was dropped so the truncation reaches the cycle
+ * as a warning — never a silent drop.
+ */
+export interface OperatingMissionEvidenceTruncation {
+  roleId: OperatingRoleId;
+  evidenceItemsBeforeTruncation: number;
+  keptItems: number;
+  droppedItems: number;
+  maxEvidenceItems: number;
+}
+
+/**
+ * The result of building one mission packet: the digest-bound packet plus, when
+ * the pipeline truncated the evidence index to fit `maxEvidenceItems`, the
+ * provenance record describing what was dropped.
+ */
+export interface OperatingMissionPacketResult {
+  packet: OperatingMissionPacket;
+  truncation?: OperatingMissionEvidenceTruncation;
+}
+
+/**
+ * Human-readable one-line warning for a surfaced index truncation, suitable for
+ * a cycle's evidence-warnings channel.
+ */
+export function describeOperatingMissionTruncation(
+  truncation: OperatingMissionEvidenceTruncation,
+): string {
+  return (
+    `Mission evidence index for role ${truncation.roleId} was truncated to its ` +
+    `${truncation.maxEvidenceItems}-item budget: ${truncation.keptItems} highest-priority ` +
+    `item(s) kept, ${truncation.droppedItems} of ${truncation.evidenceItemsBeforeTruncation} dropped.`
+  );
+}
+
+/**
  * Build a digest-bound Protocol v1.3 mission packet (FR1) by calling the
  * pipeline's `createOperatingMissionPacket` with the live non-evidence payload
  * and the index-only (body-free) evidence. The packet is measured against the
@@ -650,7 +766,7 @@ export interface OperatingMissionPacketInput extends OperatingMissionPacketState
  */
 export async function buildOperatingMissionPacket(
   input: OperatingMissionPacketInput,
-): Promise<OperatingMissionPacket> {
+): Promise<OperatingMissionPacketResult> {
   const mission = await loadOperatingMissionApi();
   const protocol = await loadOperatingProtocol();
   const role = protocol.listOperatingRoles().find((candidate) => candidate.id === input.roleId);
@@ -702,7 +818,34 @@ export async function buildOperatingMissionPacket(
       { roleId: input.roleId, actualBytes, maxInputBytes: derivedBudget },
     );
   }
-  return packet;
+  // Read the published pipeline's (0.35.0+) enforced-truncation record off the
+  // signed packet's budgets. When the caller-prioritized index exceeded
+  // `maxEvidenceItems`, the assembler kept the highest-priority items and stamped
+  // `truncatedEvidenceItems`/`evidenceItemsBeforeTruncation` into the packet.
+  // Surface that as a structured record so the caller reports the drop instead of
+  // silently returning a smaller-than-requested index. (Narrowed locally: the
+  // frozen `OperatingMissionPacket.budgets` type does not carry these optional
+  // v1.3 provenance fields.)
+  const budgets = packet.budgets as {
+    maxEvidenceItems?: number;
+    truncatedEvidenceItems?: boolean;
+    evidenceItemsBeforeTruncation?: number;
+  };
+  if (budgets.truncatedEvidenceItems && typeof budgets.evidenceItemsBeforeTruncation === 'number') {
+    const evidenceItemsBeforeTruncation = budgets.evidenceItemsBeforeTruncation;
+    const keptItems = packet.evidenceIndex.length;
+    return {
+      packet,
+      truncation: {
+        roleId: input.roleId,
+        evidenceItemsBeforeTruncation,
+        keptItems,
+        droppedItems: evidenceItemsBeforeTruncation - keptItems,
+        maxEvidenceItems: budgets.maxEvidenceItems ?? input.maxEvidenceItems ?? keptItems,
+      },
+    };
+  }
+  return { packet };
 }
 
 export interface AdvisorAdapter {

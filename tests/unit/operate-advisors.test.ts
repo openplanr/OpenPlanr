@@ -42,11 +42,17 @@ import {
   configuredAdvisorProviderPolicy,
   createConfiguredStructuredAdapter,
   createOperatingAdvisorPack,
+  deriveOperatingMissionBudget,
+  deriveOperatingMissionBudgets,
+  deriveOperatingMissionEvidenceCap,
+  deriveOperatingMissionEvidenceCaps,
   dispatchOperatingAdvisors,
   operatingAdvisorMessages,
 } from '../../src/services/operate/advisors.js';
+import { buildOperatingEvidenceIndex } from '../../src/services/operate/evidence.js';
 import { evaluateEvidenceReadiness } from '../../src/services/operate/evidence-readiness.js';
 import { failure, usesNativeOperatingAdvisors } from '../../src/services/operate/index.js';
+import { narrowEvidenceToMissionCeiling } from '../../src/services/operate/maintenance.js';
 import {
   OperateError,
   type OperatingAdvisorBrief,
@@ -302,8 +308,9 @@ describe('advisor isolation', () => {
 
   it('fails a role pack closed when it exceeds the role v1.2 maxInputBytes, and admits a bounded pack', async () => {
     const context = advisorContext();
-    // technology-risk carries a real ~384 KiB (393,216-byte) v1.2 pack budget.
-    const oversized = budgetStressEvidence(30, 15_000);
+    // technology-risk carries a real ~640 KiB (655,360-byte) v1.2 pack budget
+    // after the reviewed registry raised it for real-repository economics.
+    const oversized = budgetStressEvidence(50, 15_000);
     await expect(
       createOperatingAdvisorPack({
         cycleId: 'CYCLE-001',
@@ -316,7 +323,7 @@ describe('advisor isolation', () => {
       }),
     ).rejects.toMatchObject({
       code: 'E_OPERATE_EVIDENCE_BUDGET',
-      details: { roleId: 'technology-risk', maxInputBytes: 393_216 },
+      details: { roleId: 'technology-risk', maxInputBytes: 655_360 },
     });
 
     // The same shape, well within budget, still builds exactly as before.
@@ -732,6 +739,63 @@ describe('advisor isolation', () => {
     ]);
   });
 
+  it('scopes sensitivity narrowing to the offending item, leaving compliant siblings reachable (FR2)', () => {
+    const inputEvidence = evidence();
+    inputEvidence.items = [
+      {
+        id: 'EVD-src-ok-1',
+        source: 'repository',
+        location: 'src/service.ts',
+        digest: digest('1'),
+        collectedAt: '2026-07-28T10:00:00.000Z',
+        observedFrom: null,
+        observedTo: null,
+        freshness: 'fresh',
+        sensitivity: 'internal',
+        claimTypes: ['code'],
+        summary: 'A compliant sibling under src.',
+      },
+      {
+        id: 'EVD-src-secret',
+        source: 'repository',
+        location: 'src/secrets.ts',
+        digest: digest('2'),
+        collectedAt: '2026-07-28T10:00:00.000Z',
+        observedFrom: null,
+        observedTo: null,
+        freshness: 'fresh',
+        sensitivity: 'restricted',
+        claimTypes: ['code'],
+        summary: 'An above-ceiling item under the same src root.',
+      },
+      {
+        id: 'EVD-src-ok-2',
+        source: 'repository',
+        location: 'src/architecture.ts',
+        digest: digest('3'),
+        collectedAt: '2026-07-28T10:00:00.000Z',
+        observedFrom: null,
+        observedTo: null,
+        freshness: 'fresh',
+        sensitivity: 'internal',
+        claimTypes: ['architecture'],
+        summary: 'Another compliant sibling under src.',
+      },
+    ];
+
+    const narrowed = narrowEvidenceToMissionCeiling(inputEvidence, 'internal');
+    const remaining = narrowed.items.map((item) => item.id).sort();
+    // Only the above-ceiling item is removed; both compliant siblings under the
+    // same top-level `src` root stay reachable (old behaviour denied the whole
+    // root).
+    expect(remaining).toEqual(['EVD-src-ok-1', 'EVD-src-ok-2']);
+    // The surviving siblings still index (the index strips the leading
+    // component-id segment of the location), so the mission read surface is not
+    // lost together with the offending file.
+    const index = buildOperatingEvidenceIndex(narrowed, { sensitivityCeiling: 'internal' });
+    expect(index.map((item) => item.path).sort()).toEqual(['architecture.ts', 'service.ts']);
+  });
+
   it('excludes quarantined excerpts during readiness while preserving eligible evidence', async () => {
     const inputEvidence = evidence();
     inputEvidence.items = [
@@ -1057,5 +1121,56 @@ describe('T-003 — dispatch is execution-effective, provenance never lies (FR1)
       dispatchMode: 'pack',
       isolation: 'enforced-empty-tools',
     });
+  });
+});
+
+describe('T-004 — mission budget derivation for real repositories (FR4/US-004)', () => {
+  it('no longer caps a large registry budget at the arbitrary 9 KiB ceiling', () => {
+    // The reviewed registry raised the repository-reading lenses to 512 KiB and
+    // technology-risk to 640 KiB. With the divisor unchanged, those derive above
+    // the old 9-KiB ceiling instead of being clamped down to it.
+    expect(deriveOperatingMissionBudget(655_360)).toBe(20 * 1024); // technology-risk
+    expect(deriveOperatingMissionBudget(524_288)).toBe(16 * 1024); // 512-KiB lens
+    expect(deriveOperatingMissionBudget(196_608)).toBe(6 * 1024); // chair
+    expect(deriveOperatingMissionBudget(655_360)).toBeGreaterThan(9 * 1024);
+    expect(deriveOperatingMissionBudget(524_288)).toBeGreaterThan(9 * 1024);
+  });
+
+  it('clamps to the schema maxInputBytes spread [1, 32] KiB', () => {
+    expect(deriveOperatingMissionBudget(1024)).toBe(1024); // floor
+    expect(deriveOperatingMissionBudget(1_048_576)).toBe(32 * 1024); // schema max → 32 KiB
+    expect(deriveOperatingMissionBudget(8_388_608)).toBe(32 * 1024); // above-max still clamped
+  });
+
+  it("proves the live registry's technology-risk budget clears the old 9-KiB cap", async () => {
+    const budgets = await deriveOperatingMissionBudgets();
+    // Read from the installed pipeline registry, not a hardcoded value.
+    expect(budgets['technology-risk']).toBeGreaterThan(9 * 1024);
+    expect(budgets['technology-risk']).toBeGreaterThanOrEqual(budgets['strategy-finance']);
+  });
+
+  it('derives a per-role evidence-item cap proportional to the registry budget', () => {
+    const techCap = deriveOperatingMissionEvidenceCap(655_360);
+    const lensCap = deriveOperatingMissionEvidenceCap(524_288);
+    const chairCap = deriveOperatingMissionEvidenceCap(196_608);
+    // A larger byte budget admits strictly more index items than a smaller one.
+    expect(techCap).toBeGreaterThan(lensCap);
+    expect(lensCap).toBeGreaterThan(chairCap);
+    // A caller upper bound (config.budgets.maxItems) intersects the default: the
+    // smaller wins, and a huge bound leaves the registry-sized default intact.
+    expect(deriveOperatingMissionEvidenceCap(655_360, 5)).toBe(5);
+    expect(deriveOperatingMissionEvidenceCap(655_360, 10_000)).toBe(techCap);
+  });
+
+  it('derives every role a cap that fits its derived byte budget', async () => {
+    const caps = await deriveOperatingMissionEvidenceCaps(2_000);
+    const budgets = await deriveOperatingMissionBudgets();
+    for (const [roleId, cap] of Object.entries(caps)) {
+      expect(cap).toBeGreaterThanOrEqual(1);
+      expect(cap).toBeLessThanOrEqual(2_000);
+      // The cap * per-item cost stays within the role's derived byte budget by
+      // construction, so a packet truncated to the cap never fails closed.
+      expect(cap * 320).toBeLessThanOrEqual(budgets[roleId]);
+    }
   });
 });

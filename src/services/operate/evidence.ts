@@ -25,6 +25,7 @@ import {
   type OperatingEvidence,
   type OperatingEvidenceIndexItem,
   type OperatingEvidenceItem,
+  type OperatingRoleId,
   type OperatingSensitivity,
   type OperatingWorkspaceComponent,
   type OperatingWorkspaceManifest,
@@ -140,6 +141,93 @@ function descriptorById(
   );
 }
 
+/**
+ * The first path segment of a repository-relative path (its top-level
+ * directory), or null for a root-level file. Drives per-directory round-robin
+ * fairness and the truncation diagnostics.
+ */
+function topLevelSegment(relativePath: string): string | null {
+  const slash = relativePath.indexOf('/');
+  if (slash < 0) return null;
+  const top = relativePath.slice(0, slash);
+  return top.length > 0 ? top : null;
+}
+
+/**
+ * Map each tracked path to the Unix-second timestamp of the most recent commit
+ * that touched it, from a single `git log --name-only` walk (newest-first, so a
+ * path's first occurrence is its latest change). A leading NUL marks the
+ * timestamp header line so a filename can never be mistaken for a timestamp.
+ * Missing or empty history yields an empty map; callers then fall back to a
+ * path-stable order, keeping the evidence digest reproducible.
+ */
+async function gitRecencyMap(root: string, deadline: number): Promise<Map<string, number>> {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) return new Map();
+  const output = await executeGitReadOnly(
+    root,
+    ['-c', 'core.quotePath=false', 'log', '--no-renames', '--pretty=format:%x00%ct', '--name-only'],
+    { timeoutMs: remaining },
+  ).catch(() => '');
+  const recency = new Map<string, number>();
+  let current = 0;
+  for (const line of output.split('\n')) {
+    if (line.startsWith('\0')) {
+      current = Number.parseInt(line.slice(1), 10) || 0;
+      continue;
+    }
+    if (line.length === 0) continue;
+    if (!recency.has(line)) recency.set(line, current);
+  }
+  return recency;
+}
+
+/**
+ * FR3: order candidate paths for a fair, prioritized capped walk. Files are
+ * grouped by top-level directory; within a group the most recently changed come
+ * first (git recency, stable path tiebreak); product (non-dot) directories are
+ * round-robined to exhaustion BEFORE any dot-prefixed/planning tree, so a capped
+ * walk samples every product directory and dot-config never consumes the cap
+ * before product code. Deterministic: identical inputs yield an identical order.
+ */
+function orderCandidatesFairly(names: readonly string[], recency: Map<string, number>): string[] {
+  const groups = new Map<string, string[]>();
+  for (const name of names) {
+    const key = topLevelSegment(name) ?? '';
+    const bucket = groups.get(key);
+    if (bucket) bucket.push(name);
+    else groups.set(key, [name]);
+  }
+  for (const bucket of groups.values()) {
+    bucket.sort(
+      (left, right) =>
+        (recency.get(right) ?? 0) - (recency.get(left) ?? 0) ||
+        (left < right ? -1 : left > right ? 1 : 0),
+    );
+  }
+  const isPlanningGroup = (key: string): boolean => key.startsWith('.');
+  const productGroups = [...groups.keys()].filter((key) => !isPlanningGroup(key)).sort();
+  const planningGroups = [...groups.keys()].filter(isPlanningGroup).sort();
+  const roundRobin = (keys: readonly string[]): string[] => {
+    const ordered: string[] = [];
+    const cursors = new Map(keys.map((key) => [key, 0]));
+    for (let active = keys.length; active > 0; ) {
+      active = 0;
+      for (const key of keys) {
+        const bucket = groups.get(key) ?? [];
+        const cursor = cursors.get(key) ?? 0;
+        if (cursor < bucket.length) {
+          ordered.push(bucket[cursor]);
+          cursors.set(key, cursor + 1);
+          active += 1;
+        }
+      }
+    }
+    return ordered;
+  };
+  return [...roundRobin(productGroups), ...roundRobin(planningGroups)];
+}
+
 async function repositoryItems(
   roots: OperatingWorkspaceRoots,
   workspace: OperatingWorkspaceManifest,
@@ -150,15 +238,33 @@ async function repositoryItems(
     includePlanr: boolean;
     deadline: number;
   },
-): Promise<{ items: CollectedEvidenceItem[]; truncated: boolean }> {
+): Promise<{
+  items: CollectedEvidenceItem[];
+  truncated: boolean;
+  lastPathReached: string | null;
+  unscannedTopLevel: string[];
+}> {
   const descriptors = descriptorById(workspace);
   const results: CollectedEvidenceItem[] = [];
-  let files = 0;
+  // FR3: the repository (product code) and planr (planning tree) providers no
+  // longer share one undifferentiated `maxFiles` counter. Product code draws the
+  // full file budget; the `.planr/` tree draws an independent, smaller allotment
+  // so a large planning tree can never consume the cap before product code.
+  const repositoryFileBudget = budgets.maxFiles;
+  const planrFileBudget = Math.max(1, Math.floor(budgets.maxFiles / 4));
+  let repositoryFiles = 0;
+  let planrFiles = 0;
   let bytes = 0;
   let truncated = false;
-  for (const [componentId, root] of Object.entries(roots.roots).sort()) {
+  let lastPathReached: string | null = null;
+  const unscannedTopLevel = new Set<string>();
+  const componentIds = Object.keys(roots.roots).sort();
+  for (let componentIndex = 0; componentIndex < componentIds.length; componentIndex += 1) {
+    const componentId = componentIds[componentIndex];
+    const root = roots.roots[componentId];
     if (Date.now() >= options.deadline) {
       truncated = true;
+      for (const remaining of componentIds.slice(componentIndex)) unscannedTopLevel.add(remaining);
       break;
     }
     const descriptor = descriptors.get(componentId);
@@ -167,22 +273,41 @@ async function repositoryItems(
     const names = (await executeGitReadOnly(canonicalRoot, ['ls-files', '-z']))
       .split('\0')
       .filter(Boolean)
-      .filter((name) => TEXT_EXTENSIONS.has(path.extname(name).toLowerCase()))
-      .sort();
-    for (const relativePath of names) {
-      if (
-        Date.now() >= options.deadline ||
-        files >= budgets.maxFiles ||
-        results.length >= budgets.maxItems
-      ) {
+      .filter((name) => TEXT_EXTENSIONS.has(path.extname(name).toLowerCase()));
+    const recency = await gitRecencyMap(canonicalRoot, options.deadline);
+    const ordered = orderCandidatesFairly(names, recency);
+    const pendingTop = new Set(
+      ordered.map((name) => topLevelSegment(name)).filter((top): top is string => top !== null),
+    );
+    let stopped = false;
+    for (const relativePath of ordered) {
+      if (Date.now() >= options.deadline || results.length >= budgets.maxItems) {
         truncated = true;
+        stopped = true;
+        for (const top of pendingTop) unscannedTopLevel.add(top);
         break;
       }
+      const reachedTop = topLevelSegment(relativePath);
+      if (reachedTop) pendingTop.delete(reachedTop);
       const isPlanr = relativePath.startsWith('.planr/');
       if (
         (!options.includeRepository && !isPlanr) ||
         (isPlanr && !options.includePlanr && !options.includeRepository)
       ) {
+        continue;
+      }
+      // FR3: enforce the split file allotments. A planr file over the planr
+      // allotment, or a product file over the repository allotment, is skipped
+      // (and the walk marked truncated) rather than consuming the other
+      // provider's budget. Product code is ordered first, so it claims its cap
+      // before any planning tree is reached.
+      if (isPlanr) {
+        if (planrFiles >= planrFileBudget) {
+          truncated = true;
+          continue;
+        }
+      } else if (repositoryFiles >= repositoryFileBudget) {
+        truncated = true;
         continue;
       }
       const target = path.join(canonicalRoot, relativePath);
@@ -201,12 +326,16 @@ async function repositoryItems(
       if (!info?.isFile() || info.size > budgets.maxItemBytes) continue;
       if (bytes + info.size > budgets.maxBytes) {
         truncated = true;
+        stopped = true;
+        for (const top of pendingTop) unscannedTopLevel.add(top);
         break;
       }
       const content = await readFile(resolvedTarget, 'utf8').catch(() => null);
       if (content === null || content.includes('\0')) continue;
-      files += 1;
+      if (isPlanr) planrFiles += 1;
+      else repositoryFiles += 1;
       bytes += Buffer.byteLength(content);
+      lastPathReached = relativePath;
       const collectedAt = now.toISOString();
       const repository: RepositoryEvidenceProvenance = {
         componentId,
@@ -265,8 +394,14 @@ async function repositoryItems(
         });
       }
     }
+    if (stopped) break;
   }
-  return { items: results, truncated };
+  return {
+    items: results,
+    truncated,
+    lastPathReached,
+    unscannedTopLevel: [...unscannedTopLevel].sort(),
+  };
 }
 
 async function gitItems(
@@ -1156,6 +1291,21 @@ export async function collectOperatingEvidence(
     });
     raw.push(...repository.items);
     truncated ||= repository.truncated;
+    // FR2: a `maxFiles`/duration/byte truncation is no longer a silent boolean.
+    // Name the last path reached and the top-level directories the capped walk
+    // never scanned so starvation is visible from the cycle warnings alone.
+    if (
+      repository.truncated &&
+      (repository.lastPathReached || repository.unscannedTopLevel.length > 0)
+    ) {
+      warnings.push(
+        `Repository evidence collection was truncated at the configured caps; last path reached: ${
+          repository.lastPathReached ?? 'none'
+        }; top-level directories left unscanned: ${
+          repository.unscannedTopLevel.length > 0 ? repository.unscannedTopLevel.join(', ') : 'none'
+        }.`,
+      );
+    }
   }
   if (input.providers.includes('git') && Date.now() < deadline) {
     const git = await gitItems(roots, input.workspace, now, deadline);
@@ -1280,6 +1430,20 @@ export async function collectOperatingEvidence(
     truncated = true;
     warnings.push('Evidence collection reached the configured duration budget.');
   }
+  // FR2: report the mission-index path-pattern loss up front. The mission
+  // evidence index forbids dot-prefixed/pattern-rejected paths, so those items —
+  // though retained in the full evidence set — can never be referenced by a
+  // bounded mission packet. Counting the loss here (rather than dropping it
+  // silently inside `buildOperatingEvidenceIndex`) is what makes a starved
+  // mission collection observable from the cycle warnings.
+  const missionIndexDrops = missionEvidenceIndexDrops(flattened, {
+    sensitivityCeiling: input.sensitivityCeiling,
+  });
+  if (missionIndexDrops.pathPattern > 0) {
+    warnings.push(
+      `${missionIndexDrops.pathPattern} evidence item(s) cannot be represented in the mission evidence index because their paths are dot-prefixed or pattern-rejected; they remain in the full evidence set but no bounded mission packet can reference them.`,
+    );
+  }
   const sourceIds = [...new Set(input.providers)].sort();
   const delta = buildEvidenceDelta({
     incremental: Boolean(input.incremental),
@@ -1383,6 +1547,44 @@ export async function unqualifiedCommercialEvidenceGaps(input: {
     status: 'open' as const,
     owner: input.owner,
     evidenceRefs: [item.id],
+    createdAt: input.now,
+    updatedAt: input.now,
+  }));
+  await Promise.all(gaps.map((gap) => assertOperatingArtifact('operating-data-gap', gap)));
+  return gaps;
+}
+
+/**
+ * FR2: open a governed evidence gap for every mission role whose POST-index
+ * evidence retained zero `source: 'repository'` items. A role that requires
+ * repository code must never dispatch "ready" on an empty evidence base — the
+ * pre-index readiness gate can pass while the mission index built moments later
+ * loses every repository item to the dot-prefixed/pattern filter. Each gap names
+ * the affected role and the reason so the loss is visible instead of silent.
+ */
+export async function starvedRoleEvidenceGaps(input: {
+  cycleId: string;
+  roleIds: readonly OperatingRoleId[];
+  owner: string;
+  now: string;
+  startingGapNumber?: number;
+}): Promise<OperatingDataGap[]> {
+  const roleIds = [...new Set(input.roleIds)].sort();
+  const start = input.startingGapNumber ?? 1;
+  const gaps = roleIds.map((roleId, offset) => ({
+    kind: 'operating-data-gap' as const,
+    schemaVersion: OPERATE_SCHEMA_VERSION,
+    protocolVersion: OPERATE_PROTOCOL_VERSION,
+    id: `GAP-${String(start + offset).padStart(3, '0')}`,
+    cycleId: input.cycleId,
+    question: `What repository evidence can ${roleId} read after mission-index filtering removed every repository item?`,
+    reason:
+      'The mission evidence index retained zero repository items after dot-prefixed/pattern and sensitivity filtering, so this repository-dependent role was gated not-ready instead of dispatching on an empty evidence base.',
+    unblocks: [] as string[],
+    affectedRoles: [roleId],
+    status: 'open' as const,
+    owner: input.owner,
+    evidenceRefs: [] as string[],
     createdAt: input.now,
     updatedAt: input.now,
   }));
@@ -1515,6 +1717,37 @@ export function buildOperatingEvidenceIndex(
     if (leftRef !== rightRef) return leftRef < rightRef ? -1 : 1;
     return left.id < right.id ? -1 : left.id > right.id ? 1 : 0;
   });
+}
+
+/**
+ * FR2: count — using the exact predicates `buildOperatingEvidenceIndex` filters
+ * on — the path-referenced evidence items a mission evidence index would drop:
+ * `pathPattern` for dot-prefixed / pattern-rejected paths, and `sensitivity` for
+ * items above a supplied ceiling. Integration records (github/linear) and
+ * git-by-revision items are never a "loss" (they are not path pointers), so they
+ * are not counted. The caller surfaces the counts as evidence-bundle warnings.
+ */
+export function missionEvidenceIndexDrops(
+  items: readonly OperatingEvidenceItem[],
+  options: { sensitivityCeiling?: OperatingSensitivity } = {},
+): { pathPattern: number; sensitivity: number } {
+  let pathPattern = 0;
+  let sensitivity = 0;
+  for (const item of items) {
+    if (
+      options.sensitivityCeiling &&
+      compareSensitivity(item.sensitivity, options.sensitivityCeiling) > 0
+    ) {
+      sensitivity += 1;
+      continue;
+    }
+    const source = item.source as OperatingEvidenceIndexItem['source'];
+    if (!INDEX_SOURCE_CLASSIFICATION[source]) continue;
+    if (source === 'repository' || source === 'planr' || source === 'file-import') {
+      if (evidenceIndexPath(item.location) === null) pathPattern += 1;
+    }
+  }
+  return { pathPattern, sensitivity };
 }
 
 /**

@@ -9,7 +9,12 @@ import { withOperatingLock } from './lock-service.js';
 import { renderOperatingBrief, selectCycleState } from './projection.js';
 import { persistOperatingProjections } from './projection-persistence.js';
 import { sanitizeGeneratedPlainText } from './redaction.js';
-import { applyOperatingRoute, readOperatingRoute, rollbackOperatingRoute } from './routes.js';
+import {
+  applyOperatingRoute,
+  electAcceptedFindingEpicRoutes,
+  readOperatingRoute,
+  rollbackOperatingRoute,
+} from './routes.js';
 import { overdueOperatingDecisionIds } from './stalled-item-service.js';
 import {
   OperateError,
@@ -493,11 +498,27 @@ export async function governOperatingFinding(input: {
       });
     }
   }
+  // FR8 loop closure: accepting a finding re-evaluates the accepted-finding set
+  // for epic election, so a themed group of 2+ accepted findings yields a
+  // governed `create-epic` route through the normal proposal path. Election only
+  // proposes/accepts the route (accept ≠ apply — no epic bytes are written and no
+  // PLAN/SHIP is invoked here) and is idempotent, so re-electing never duplicates
+  // it. This is the operator-reachable producer of the FR8 route that T-006 built.
+  const epicRoutes = await electAcceptedFindingEpicRoutes({
+    projectRoot: input.projectRoot,
+    localRoot: input.localRoot,
+    cycleId: String(finding.cycleId),
+  });
   return {
     finding: input.findingId,
     accepted: true,
     routeId: acceptedRoute?.id ?? null,
     routePreviewDigest: acceptedRoute?.previewDigest ?? null,
+    epicRoutes: epicRoutes.map((route) => ({
+      id: route.id,
+      previewDigest: route.previewDigest,
+      targetPath: route.actions[0]?.targetPath ?? null,
+    })),
   };
 }
 

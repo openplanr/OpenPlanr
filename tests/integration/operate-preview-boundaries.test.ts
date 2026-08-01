@@ -266,6 +266,38 @@ describe('Operating Board preview and dry-run boundaries', () => {
       expect(report.data).toEqual(expect.stringContaining('## CTO'));
       expect(report.data).toEqual(expect.stringContaining('# Exact next actions'));
 
+      // FR1: the persisted cycle report/board files carry the same rich lens
+      // analysis the transient review/report rendering produces for the cycle.
+      const { readOperatingReport, markdownLens } = await import(
+        '../../src/services/operate/reports.js'
+      );
+      const liveReport = await readOperatingReport({
+        projectRoot,
+        cycleId: 'CYCLE-001',
+        lens: 'all',
+        localRoot,
+      });
+      const persistedReport = await readFile(
+        join(projectRoot, '.planr/operate/cycles/CYCLE-001/report.md'),
+        'utf8',
+      );
+      expect(persistedReport).toContain(liveReport.markdown);
+      expect(persistedReport).toContain('# Advisory lens reports');
+      const ctoLens = liveReport.reports.find((entry) => entry.roleId === 'technology-risk');
+      if (!ctoLens) throw new Error('expected a technology-risk lens report in the live report');
+      const persistedCtoBoard = await readFile(
+        join(projectRoot, '.planr/operate/cycles/CYCLE-001/board/technology-risk.md'),
+        'utf8',
+      );
+      expect(persistedCtoBoard).toContain(markdownLens(ctoLens));
+      // FR6: the legacy projections/ tree is gone; backlog.md is at the top level.
+      await expect(
+        readFile(join(projectRoot, '.planr/operate/projections/state.json'), 'utf8'),
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(
+        readFile(join(projectRoot, '.planr/operate/backlog.md'), 'utf8'),
+      ).resolves.toContain('# Operating Backlog');
+
       const jsonReport = await executeOperateAction({
         action: 'report',
         projectRoot,
@@ -469,17 +501,22 @@ describe('Operating Board preview and dry-run boundaries', () => {
     expect(preview.changedPaths).toEqual(
       expect.arrayContaining([
         // Protocol v1.3 collapses the append-only internals under `.state/`:
-        // records become a single append-only records.jsonl.
+        // records become a single append-only records.jsonl, and the sole
+        // surviving `state.json` projection is relocated beside them (FR6).
         '.planr/operate/.state/records.jsonl',
         '.planr/operate/.state/checkpoint.json',
-        '.planr/operate/projections/state.json',
-        '.planr/operate/projections/register.md',
-        '.planr/operate/projections/decisions.md',
-        '.planr/operate/projections/data-gaps.md',
-        '.planr/operate/projections/backlog.md',
+        '.planr/operate/.state/state.json',
         '.planr/operate/.state/events.jsonl',
+        // Readable registers are emitted exactly once at the top level; the
+        // parked-findings backlog is promoted out of the retired projections dir.
+        '.planr/operate/findings.md',
+        '.planr/operate/backlog.md',
       ]),
     );
+    // The legacy projections/ directory is retired: init writes nothing under it.
+    expect(
+      preview.changedPaths.some((entry) => entry.startsWith('.planr/operate/projections/')),
+    ).toBe(false);
     expect(preview.previewDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(
       (await loadOperatingProtocol()).validateProtocolArtifact('operating-config', preview.config),
