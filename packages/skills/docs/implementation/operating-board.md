@@ -4,7 +4,7 @@
 - **Umbrella specification:** `openplanr/planr-pipeline` —
   `.planr/specs/SPEC-002-openplanr-operating-board/SPEC-002-openplanr-operating-board.md`
 - **Repository:** `openplanr/skills`
-- **Target:** `@openplanr/skills` 1.21.0
+- **Target:** `@openplanr/skills` 1.22.0
 
 ## Repository-only scope
 
@@ -15,17 +15,17 @@
   resumable sessions, and continue an explicitly
   requested cycle through its bounded native advisor lifecycle without manual
   command handoffs.
-- Route evidence quarantine through value-free diagnose/classify commands;
-  never trial-edit project configuration or infer scanner exclusions. Continue
-  unrelated evidence-ready lenses when an item is safely quarantined.
+- Route citation failures only through the current governed recovery handoff;
+  never trial-edit project configuration, infer scanner exclusions, or restore
+  retired collector/classification controls.
 - Route exclusively through the public `planr operate` CLI. Preserve separate
   provider, acceptance, apply, planning, PLAN review, SHIP, and external-effect
   boundaries.
 - Present the brief and CEO/CTO/CPO/CMO/COO/Chair Markdown or JSON reports with
   the CLI's exact governed conversion actions. The dashboard remains optional.
-- Return exactly the compact advisor response described by each immutable role
-  pack. Never synthesize canonical result-wrapper metadata or digests in a
-  runtime adapter.
+- Return exactly the Protocol v1.3 citation-bearing advisor response required by
+  each immutable mandate. Never synthesize canonical result-wrapper metadata or
+  digests in a runtime adapter.
 - Update unified guidance, README inventory, release metadata, and changelog.
 - Validate portable naming, command boundaries, runtime-neutral content, and
   byte parity with the pipeline-generated Codex skill when that read-only

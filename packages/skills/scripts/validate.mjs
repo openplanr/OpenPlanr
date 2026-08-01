@@ -106,11 +106,11 @@ if (existsSync(operateSkillPath)) {
     'preserving question IDs and declared',
     'explicit request to **run one Operating Board cycle**',
     'the user to paste or manually rerun',
-    '`planr operate evidence diagnose …`',
-    'Never trial-edit sources',
-    'rolePack.roleBrief.output.jsonSchema',
-    'operating-advisor-response@1.2.0',
-    'do not add `kind`, cycle, role, input-digest, producer, or result-digest metadata',
+    'citation validation',
+    'Never trial-edit `.planr/operate`',
+    '`dispatch.mandatePointer`',
+    'operating-advisor-response@1.3.0',
+    'Do not add `kind`, cycle, role, input-digest, producer, or result-digest metadata',
     'Never invoke SHIP',
     'Do not edit `.planr/operate`',
   ]) {
@@ -119,6 +119,22 @@ if (existsSync(operateSkillPath)) {
     const normalize = (text) => text.replace(/\s+/g, ' ');
     if (!normalize(operateSkill).includes(normalize(required))) {
       errors.push(`planr-operate is missing boundary guidance: ${required}`);
+    }
+  }
+
+  for (const retired of [
+    'rolePackPointer',
+    'missionPacketPointer',
+    'rolePack.roleBrief.output.jsonSchema',
+    'operating-advisor-response@1.2.0',
+    'planr operate evidence diagnose',
+    'planr operate evidence classify',
+    'planr operate sources test',
+    'JSON/CSV import paths',
+    'dispatch-mode-override',
+  ]) {
+    if (operateSkill.includes(retired)) {
+      errors.push(`planr-operate references retired Protocol v1.2 guidance: ${retired}`);
     }
   }
 

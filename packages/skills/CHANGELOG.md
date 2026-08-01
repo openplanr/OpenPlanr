@@ -2,6 +2,18 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.22.0] — 2026-08-01
+
+### Changed
+
+- Re-mirror the Protocol v1.3 mandate-only `planr-operate` workflow from
+  `planr-pipeline` 0.36.1. Runtime agents now investigate through bounded
+  read-only native tools and return citation-bearing responses; the skill no
+  longer advertises legacy role packs, mission packets, collector budgets,
+  source/file-import controls, evidence classification, or dispatch overrides.
+- Validate byte parity against `planr-pipeline` `v0.36.1` and fail when a
+  retired Operating Board surface returns to the generated workflow.
+
 ## [1.21.0] — 2026-08-01
 
 ### Changed

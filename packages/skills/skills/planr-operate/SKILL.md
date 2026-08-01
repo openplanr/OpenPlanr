@@ -7,9 +7,9 @@ license: MIT
 # Planr Operating Board
 
 Use only the public `planr operate` command surface. OpenPlanr owns operating
-state, evidence collection, advisor dispatch, deterministic consolidation,
-routing, recovery, and outcome reconciliation; this skill must not reimplement
-those behaviors.
+state, mandate construction, citation validation, deterministic consolidation,
+routing, recovery, and outcome reconciliation. The native runtime owns bounded
+read-only investigation; this skill must not replace it with a second collector.
 
 This skill owns the end-to-end interactive workflow: it orchestrates the adapter
 `prepare → record → finalize` lifecycle invisibly, so you are never required to
@@ -89,16 +89,18 @@ a prior action.
 
 Treat every top-level `handoff` as the only lifecycle command contract. Execute
 only its current `handoff.next[].argv` token arrays, never an action from a prior
-state. For `adapter.record`, read `dispatch` to choose the execution path. When it
-carries a `rolePackPointer` (v1.2 pack mode), resolve that pointer and
-`stdin.schemaPointer` against the retained `adapter.prepare` JSON result and submit
-exactly one bounded compact response. When it carries a `missionPacketPointer` and
-names `dispatch.agent` (v1.3 mission mode), dispatch that exact `operating-<role>`
-subagent through the runtime's subagent facility with only the referenced mission
-packet and the bounded read-only `dispatch.toolGrant`, then record the subagent's
-v1.3 citation-bearing `operating-advisor-response@1.3.0` against
-`stdin.schemaPointer`; never widen the grant, add tools, or read outside the
-mission packet's declared roots. Independent advisor inference may
+state. For `adapter.record`, read `dispatch` and dispatch that exact
+`dispatch.agent` (`operating-<role>`) subagent through the runtime's subagent
+facility with the role's operating mandate at `dispatch.mandatePointer` and only
+the bounded read-only `dispatch.toolGrant`. The mandate carries the lens question,
+the read boundaries, and the citation requirement — no evidence body and no
+evidence index — so the subagent investigates with its own read tools and returns
+a v1.3 `operating-advisor-response@1.3.0` with a citation for every claim,
+recorded against `stdin.schemaPointer`; the engine resolves and snapshots every
+citation into evidence. Never widen the grant, add tools, or read outside the
+mandate's declared boundaries. When `dispatch.isolation` is `unsupported` the
+runtime cannot carry the mandate: report it unsupported for operate rather than
+degrading to a hidden fallback. Independent advisor inference may
 run in parallel, but adapter lifecycle mutations are serial: execute only the
 single current `adapter.record`, wait for its returned handoff, then record the
 next role. Retain each role's exact serialized response until finalization and
@@ -118,49 +120,42 @@ prompt as an interaction handoff, not a failure. Present the returned
 questionnaire or consent request and continue the same flow; never report the
 cycle as failed on that exit code alone.
 
-When the CLI reports quarantined evidence, continue with the sanitized eligible
-evidence if the returned cycle action remains available. Use
-`planr operate evidence diagnose …` only when the CLI reports that required
-evidence is blocked. Present its value-free recovery choices and stop for the user's
-selection. Never trial-edit sources or `.planr/operate` state to isolate a
-candidate. Exact false-positive classification requires its own reason, preview
-digest, and confirmation; known credential signatures remain blocked.
+When citation validation rejects a result, use only the current handoff's
+recovery action. Never trial-edit `.planr/operate`, weaken secret checks, or
+invent a source/classification override. If no governed continuation exists,
+export redacted diagnostics and stop with the affected lens `not_evaluated` or
+the cycle `blocked`; never expose or paste the suspected value.
 
 Canonical advisory lenses: CEO (strategy-finance: Direction, business model, pricing and packaging, focus, economics, and what to stop.); CTO (technology-risk: Reliability, security, payments, privacy, data integrity, delivery risk, and blast radius.); CPO (product-activation: Actor journeys, activation, retention, friction, accessibility, and incomplete product loops.); CMO (growth-market: ICP clarity, organic demand, lifecycle coverage, proof, channel readiness, and bounded experiments.); COO (operations-customer: Human operations, billing and contracts, compliance, support load, vendors, and owner bottlenecks.); Chair (chair: Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals.). They are independent,
 read-only executive perspectives—not delivery agents and not permission to
 role-play without evidence. A native runtime must follow the exact handoff
-returned by `planr operate run` and dispatch every independent lens using the
-adapter's declared `operatingAdvisorDispatch` mode. In `native-read-only` mode,
-dispatch each mission-mode lens as its generated `operating-<role>` subagent
-(named by `dispatch.agent`) with only the referenced mission packet and the
-bounded read-only tool grant, and return the v1.3
-`operating-advisor-response@1.3.0` object with a citation for every proposal. In
-pack mode, obtain each immutable digest-bound `rolePack` from `planr operate
-adapter prepare`: in `native-bounded` mode, advisors may use only the supplied
-role pack and must not inspect the workspace, environment, network, or other
-tools; in `native-isolated` mode, retain the certified empty-tool isolation
-boundary. Return exactly the compact object described by
-`rolePack.roleBrief.output.jsonSchema`; do not add `kind`, cycle, role,
-input-digest, producer, or result-digest metadata. Record that
-`operating-advisor-response@1.2.0` object through the CLI so OpenPlanr creates
-and binds canonical metadata and digests. Finalize those results, rerun the same
-cycle, and execute the separately prepared Chair pack only after the independent
+returned by `planr operate run` and dispatch every independent lens as its
+generated `operating-<role>` subagent (named by `dispatch.agent`) with the role's
+operating mandate at `dispatch.mandatePointer` and only the bounded read-only tool
+grant, then return the v1.3 `operating-advisor-response@1.3.0` object with a
+citation for every proposal. The mandate declares the lens question, investigation
+focus, read boundaries, and citation requirement; it carries no evidence body and
+no evidence index, so the lens gathers what it needs with its own read tools and
+the engine mints evidence from the resolved citations. Do not add `kind`, cycle,
+role, input-digest, producer, or result-digest metadata; OpenPlanr creates and
+binds canonical metadata and digests when it records the response. A runtime that
+cannot enforce the bounded read-only boundary is declared `unsupported` for
+operate, never silently degraded. Finalize those results, rerun the same cycle,
+and execute the separately prepared Chair mandate only after the independent
 results are verified.
 
 1. Run the requested `planr operate` command with `--json` when machine-readable
    output is available. Before a new cycle, use the CLI preview so the user can
-   inspect evidence sources, enabled lenses, budgets, provider use, and writes.
-2. Treat `--preview` as provider-free and write-free. Treat `--dry-run` as
-   write-free but potentially provider-backed and billable. A provider-backed
-   run requires explicit consent to the disclosed endpoint, data classes,
-   retention, limits, and policy digest. Never translate a flag or consent into
-   approval for a later mutation.
+   inspect the selected runtime, enabled lenses, boundaries, and exact writes.
+2. Treat `--preview` as model-free and write-free. Treat `--dry-run` as
+   write-free. Native mandate inference uses the already active coding runtime;
+   it must never fall back to OpenPlanr-managed provider dispatch. Never
+   translate a flag into approval for a later mutation.
 3. Read only the paths and next actions returned by `planr operate`. Do not edit `.planr/operate`
    events, immutable records, journals, projections, routes, or outcome links
    directly.
-4. Configure component roots and JSON/CSV import paths through `planr operate
-   init`; use `planr operate sources test` only to validate an already configured
-   read-only source.
+4. Configure read-only component roots through `planr operate init`. Do not
+   recreate the retired source registry, file-import flow, or collector budgets.
 5. Keep proposal acceptance and route application separate. Apply a route only
    after the user has reviewed its exact confirmation digest and explicitly
    authorized that named route.

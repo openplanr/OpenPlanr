@@ -39,13 +39,13 @@ const fixtures = [
     expected: 'stop',
   },
   {
-    name: 'safe evidence failure',
+    name: 'citation validation failure',
     result: {
       ok: false,
-      code: 'E_OPERATE_SECRET_DETECTED',
-      nextActions: ['planr operate evidence diagnose EVC-safe --json'],
+      code: 'E_OPERATE_CITATION_INVALID',
+      handoff: { recovery: ['planr', 'operate', 'adapter', 'resume', '--json'] },
     },
-    expected: 'diagnose',
+    expected: 'recover-current-handoff',
   },
   {
     name: 'selected native cycle start',
@@ -115,9 +115,10 @@ test('guided conversation fixtures preserve every stop boundary', () => {
       assert.match(skill, /transport\.argv/);
       assert.match(skill, /Do\s+not guess envelope metadata/);
     }
-    if (fixture.result.code === 'E_OPERATE_SECRET_DETECTED') {
-      assert.match(skill, /planr operate evidence diagnose/);
-      assert.match(skill, /Never trial-edit sources/);
+    if (fixture.result.code === 'E_OPERATE_CITATION_INVALID') {
+      assert.match(skill, /citation validation rejects a result/);
+      assert.match(skill, /current handoff's\s+recovery action/);
+      assert.match(skill, /Never trial-edit `\.planr\/operate`/);
     }
     if (fixture.result.actions?.some((action) => action.requiresConfirmation)) {
       if (fixture.expected === 'continue-native-cycle') {
@@ -126,7 +127,7 @@ test('guided conversation fixtures preserve every stop boundary', () => {
         assert.match(skill, /top-level `handoff` as the only lifecycle command/);
         assert.match(skill, /`handoff\.next\[\]\.argv`/);
         assert.match(skill, /`handoff\.recovery` only after a\s+failed current action/);
-        assert.match(skill, /retained `adapter\.prepare` JSON result/);
+        assert.match(skill, /role's operating mandate at `dispatch\.mandatePointer`/);
         assert.match(skill, /never\s+probe\s+(?:these\s+)?machine\s+commands\s+with\s+`--help`/);
       } else {
         assert.match(skill, /Ask separately for external provider consent/);
@@ -155,11 +156,14 @@ test('the skill contains no copied question/default logic or unsafe command rout
   assert.match(skill, /structured chat one\s+question at a time/);
   assert.match(skill, /never dump the whole questionnaire as a form/);
   assert.doesNotMatch(skill, /planr operate init --guided/);
-  assert.match(skill, /rolePack\.roleBrief\.output\.jsonSchema/);
-  assert.match(skill, /operating-advisor-response@1\.2\.0/);
+  assert.match(skill, /`dispatch\.mandatePointer`/);
+  assert.match(skill, /operating-advisor-response@1\.3\.0/);
+  assert.doesNotMatch(skill, /rolePackPointer|missionPacketPointer/);
+  assert.doesNotMatch(skill, /planr operate evidence (?:diagnose|classify)/);
+  assert.doesNotMatch(skill, /planr operate sources test/);
   assert.match(
     skill,
-    /do not add\s+`kind`,\s+cycle,\s+role,\s+input-digest,\s+producer,\s+or\s+result-digest\s+metadata/,
+    /Do not add\s+`kind`,\s+cycle,\s+role,\s+input-digest,\s+producer,\s+or\s+result-digest\s+metadata/,
   );
   assert.doesNotMatch(skill, /Who owns final operating decisions\?/);
   assert.doesNotMatch(skill, /Operating profile:/);
