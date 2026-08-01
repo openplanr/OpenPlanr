@@ -4,6 +4,64 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.36.0] — 2026-08-01
+
+The Operating Board pivots from shipping curated evidence to a model toward
+shipping a **mandate** — the lens question, declared read boundaries, the required
+response schema, and the citation requirement. The agent investigates with its own
+read tools; evidence becomes an OUTPUT the engine resolves from the returned
+citations. This release publishes the contract half.
+
+### Added
+
+- `schemas/v1.3.0/operating-mandate.schema.json` — a new additive Protocol v1.3
+  artifact and the unit of dispatch, replacing role packs and mission packets. It
+  carries `roleId`, `lensQuestion`, `mandate` prose, an `investigationMandate`
+  (`examine` + `sufficientGrounding`), declared `boundaries`
+  (`roots`/`sensitivityCeiling`/`forbiddenPaths`), the `responseSchema` reference
+  (`operating-advisor-response@1.3.0`), and the `citationRequirement`. It carries
+  **no evidence body and no evidence index** — `additionalProperties: false` so no
+  evidence field can be added silently. Built by
+  `createOperatingMandate(roleId, options)` in `lib/operate/mandate.mjs`, whose
+  `boundaries.roots` come from the caller's declared workspace roots (a gitignored
+  `.planr/` tree is fully citable when declared), never an evidence-derived subset.
+- `conformance/verify-operating-mandate-vocabulary.mjs` — FR5's check: every
+  role's investigation mandate is expressible and every declared vocabulary term
+  names a producer a citation can satisfy (repository path, git revision, planr
+  artifact, or verified advisor result), and the three previously unsatisfiable
+  claim types (`user-surface`, `market-signal`, `operations-evidence`) no longer
+  exist to fail.
+
+### Changed
+
+- `registry/operating-roles.json` — each role's `minimumEvidence` claim-type
+  matching is replaced by an `investigationMandate` object in the vocabulary a
+  citation can satisfy, deleting the three unsatisfiable claim types by
+  construction. The `dispatchMode` (pack|mission) selector is retired: a single
+  mandate is now the only unit of dispatch. `operating-role-registry@1.3.0`
+  follows suit (`investigationMandate` required; `minimumEvidence`/`dispatchMode`
+  removed). The frozen v1.2 role registry is untouched.
+- `lib/operate/adapter-handoff.mjs` and
+  `schemas/v1.3.0/operating-adapter-handoff.schema.json` — the v1.3 record
+  dispatch points at the role's mandate (`dispatch.mandatePointer`,
+  `/data/mandates/<role>`) instead of a mission packet, names the generated
+  `operating-<role>` agent, and resolves `isolation` to exactly two values:
+  `enforced-read-only-bounded` when the runtime can carry the mandate and enforce
+  bounded read-only tools, or `unsupported` when it cannot. The
+  `fail-closed-structured-provider` fallback is retired — a runtime that cannot
+  carry a mandate is declared unsupported for operate, never silently degraded.
+  The frozen v1.2 pack dispatch (`rolePackPointer`, `enforced-empty-tools`) is
+  unchanged.
+- Regenerated `commands/operate.md`, the codex operate skill, and the cursor rule
+  from their templates to instruct the mandate dispatch flow (dispatch the named
+  `operating-<role>` agent with the mandate and the bounded read-only tool grant;
+  return a schema-valid cited `operating-advisor-response@1.3.0`). The v1.2
+  pack-mode / `rolePacks` instruction text is removed.
+- `lib/operate/advisor-brief.mjs` — the brief's `evidence` facet is replaced by a
+  mandate-sourced `boundaries` facet (permitted kinds, sensitivity ceiling, and
+  the investigation mandate), no longer a role-filtered evidence set.
+- Version ceremony to 0.36.0 across all seven surfaces + regenerated assets.
+
 ## [0.35.0] — 2026-08-01
 
 ### Added

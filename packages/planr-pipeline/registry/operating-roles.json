@@ -17,31 +17,16 @@
       "adapterResponseSchema": "operating-advisor-response@1.2.0",
       "readOnly": true,
       "writeBoundary": "none",
-      "dispatchMode": "mission",
       "allowedProposalTypes": ["finding", "decision", "data-gap"],
       "budgets": { "maxInputBytes": 524288, "maxOutputBytes": 32768, "maxProposals": 4 },
       "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
-      "minimumEvidence": {
-        "match": "any",
-        "requirements": [
-          {
-            "source": "planr",
-            "claimTypes": ["planning", "outcome"],
-            "minimumItems": 1,
-            "maxAgeHours": 168,
-            "observationWindow": "current-state",
-            "sensitivityCeiling": "confidential"
-          },
-          {
-            "source": "git",
-            "claimTypes": ["change-history"],
-            "minimumItems": 1,
-            "maxAgeHours": 720,
-            "observationWindow": "30d",
-            "sensitivityCeiling": "confidential"
-          }
+      "investigationMandate": {
+        "examine": [
+          "repository configuration, pricing, packaging, and business-model surfaces (config files, billing/plan code, READMEs)",
+          "planning artifacts describing direction, scope, and what to stop (epics, specs, features, backlog)",
+          "git history of recent strategic and pricing changes"
         ],
-        "onUnready": "skip-and-open-gap"
+        "sufficientGrounding": "At least one cited repository path or planning artifact evidencing the current business-model, pricing, or focus surface, plus git history establishing recent strategic change — all resolvable at the pinned revision."
       },
       "failureBehavior": "standard-partial-deep-blocked"
     },
@@ -59,31 +44,16 @@
       "adapterResponseSchema": "operating-advisor-response@1.2.0",
       "readOnly": true,
       "writeBoundary": "none",
-      "dispatchMode": "mission",
       "allowedProposalTypes": ["finding", "decision", "data-gap"],
       "budgets": { "maxInputBytes": 655360, "maxOutputBytes": 32768, "maxProposals": 5 },
       "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
-      "minimumEvidence": {
-        "match": "all",
-        "requirements": [
-          {
-            "source": "repository",
-            "claimTypes": ["code", "architecture"],
-            "minimumItems": 1,
-            "maxAgeHours": 168,
-            "observationWindow": "current-state",
-            "sensitivityCeiling": "restricted"
-          },
-          {
-            "source": "git",
-            "claimTypes": ["change-history"],
-            "minimumItems": 1,
-            "maxAgeHours": 720,
-            "observationWindow": "30d",
-            "sensitivityCeiling": "confidential"
-          }
+      "investigationMandate": {
+        "examine": [
+          "repository source implementing reliability, security, payments, privacy, and data-integrity paths",
+          "architecture, configuration, and delivery/release code that governs blast radius",
+          "git history of recent changes to those risk-bearing subsystems"
         ],
-        "onUnready": "skip-and-open-gap"
+        "sufficientGrounding": "At least one cited repository path in a risk-bearing subsystem (security, payments, data integrity, or delivery) plus git history of recent change to it — all resolvable at the pinned revision."
       },
       "failureBehavior": "critical-route-blocked"
     },
@@ -101,31 +71,16 @@
       "adapterResponseSchema": "operating-advisor-response@1.2.0",
       "readOnly": true,
       "writeBoundary": "none",
-      "dispatchMode": "mission",
       "allowedProposalTypes": ["finding", "decision", "data-gap"],
       "budgets": { "maxInputBytes": 524288, "maxOutputBytes": 32768, "maxProposals": 4 },
       "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
-      "minimumEvidence": {
-        "match": "any",
-        "requirements": [
-          {
-            "source": "planr",
-            "claimTypes": ["user-journey", "outcome"],
-            "minimumItems": 1,
-            "maxAgeHours": 168,
-            "observationWindow": "current-state",
-            "sensitivityCeiling": "confidential"
-          },
-          {
-            "source": "repository",
-            "claimTypes": ["user-surface"],
-            "minimumItems": 1,
-            "maxAgeHours": 168,
-            "observationWindow": "current-state",
-            "sensitivityCeiling": "restricted"
-          }
+      "investigationMandate": {
+        "examine": [
+          "repository source implementing actor-facing flows, activation, retention, and product loops (routes, views, handlers, accessibility markup)",
+          "planning artifacts describing user journeys and outcomes (stories, gherkin, specs)",
+          "git history of recent changes to those product surfaces"
         ],
-        "onUnready": "skip-and-open-gap"
+        "sufficientGrounding": "At least one cited repository path in an actor-facing flow or an incomplete product loop, or a planning artifact describing the journey — resolvable at the pinned revision."
       },
       "failureBehavior": "standard-partial-deep-blocked"
     },
@@ -143,31 +98,16 @@
       "adapterResponseSchema": "operating-advisor-response@1.2.0",
       "readOnly": true,
       "writeBoundary": "none",
-      "dispatchMode": "mission",
       "allowedProposalTypes": ["finding", "decision", "data-gap"],
       "budgets": { "maxInputBytes": 524288, "maxOutputBytes": 32768, "maxProposals": 4 },
       "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
-      "minimumEvidence": {
-        "match": "any",
-        "requirements": [
-          {
-            "source": "planr",
-            "claimTypes": ["outcome", "activation"],
-            "minimumItems": 1,
-            "maxAgeHours": 720,
-            "observationWindow": "30d",
-            "sensitivityCeiling": "confidential"
-          },
-          {
-            "source": "file-import",
-            "claimTypes": ["market-signal"],
-            "minimumItems": 1,
-            "maxAgeHours": 2160,
-            "observationWindow": "90d",
-            "sensitivityCeiling": "confidential"
-          }
+      "investigationMandate": {
+        "examine": [
+          "repository content covering positioning, onboarding, and lifecycle surfaces (landing/marketing code, docs, READMEs, onboarding flows)",
+          "planning artifacts describing target customers, outcomes, and bounded experiments",
+          "git history of recent lifecycle and positioning changes"
         ],
-        "onUnready": "skip-and-open-gap"
+        "sufficientGrounding": "At least one cited repository path or planning artifact evidencing the positioning, onboarding, or lifecycle surface — resolvable at the pinned revision."
       },
       "failureBehavior": "standard-partial-deep-blocked"
     },
@@ -185,31 +125,16 @@
       "adapterResponseSchema": "operating-advisor-response@1.2.0",
       "readOnly": true,
       "writeBoundary": "none",
-      "dispatchMode": "mission",
       "allowedProposalTypes": ["finding", "decision", "data-gap"],
       "budgets": { "maxInputBytes": 524288, "maxOutputBytes": 32768, "maxProposals": 4 },
       "requiredEvidenceFields": ["id", "source", "digest", "collectedAt", "freshness", "sensitivity", "claimTypes"],
-      "minimumEvidence": {
-        "match": "any",
-        "requirements": [
-          {
-            "source": "planr",
-            "claimTypes": ["operations", "support"],
-            "minimumItems": 1,
-            "maxAgeHours": 720,
-            "observationWindow": "30d",
-            "sensitivityCeiling": "confidential"
-          },
-          {
-            "source": "file-import",
-            "claimTypes": ["operations-evidence"],
-            "minimumItems": 1,
-            "maxAgeHours": 2160,
-            "observationWindow": "90d",
-            "sensitivityCeiling": "confidential"
-          }
+      "investigationMandate": {
+        "examine": [
+          "repository content covering operations, billing, contracts, compliance, and support surfaces (config, scripts, policy docs, vendor integration code)",
+          "planning artifacts describing operational decisions, owner bottlenecks, and support load",
+          "git history of recent operational and compliance changes"
         ],
-        "onUnready": "skip-and-open-gap"
+        "sufficientGrounding": "At least one cited repository path or planning artifact evidencing the operational, billing, compliance, or support surface — resolvable at the pinned revision."
       },
       "failureBehavior": "standard-partial-deep-blocked"
     },
@@ -227,23 +152,15 @@
       "adapterResponseSchema": "operating-advisor-response@1.2.0",
       "readOnly": true,
       "writeBoundary": "none",
-      "dispatchMode": "mission",
       "allowedProposalTypes": ["merge", "sequence"],
       "budgets": { "maxInputBytes": 196608, "maxOutputBytes": 32768, "maxProposals": 12 },
       "requiredEvidenceFields": ["id", "digest", "producer"],
-      "minimumEvidence": {
-        "match": "all",
-        "requirements": [
-          {
-            "source": "advisor-results",
-            "claimTypes": ["verified-advisor-result"],
-            "minimumItems": 2,
-            "maxAgeHours": 24,
-            "observationWindow": "current-cycle",
-            "sensitivityCeiling": "confidential"
-          }
+      "investigationMandate": {
+        "examine": [
+          "the verified advisor results produced earlier in this cycle",
+          "the planning and repository citations those advisor results already resolved"
         ],
-        "onUnready": "block-cycle"
+        "sufficientGrounding": "At least two verified advisor results from the current cycle, each already bound to resolved citations, before any merge or sequence proposal."
       },
       "failureBehavior": "cycle-blocked"
     }

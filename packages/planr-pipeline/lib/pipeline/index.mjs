@@ -79,6 +79,7 @@ export {
   validateOperatingArtifactOutput,
 } from '../operate/generator.mjs';
 export { createOperatingMissionPacket } from '../operate/mission-packet.mjs';
+export { createOperatingMandate, listOperatingMandates } from '../operate/mandate.mjs';
 export {
   resolveOperatingCitation,
   validateOperatingCitation,

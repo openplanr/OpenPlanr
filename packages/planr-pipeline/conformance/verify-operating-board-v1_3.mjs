@@ -10,6 +10,8 @@ import {
   validateProtocolArtifact,
 } from '../lib/protocol/contracts.mjs';
 import { createOperatingMissionPacket } from '../lib/operate/mission-packet.mjs';
+import { createOperatingMandate } from '../lib/operate/mandate.mjs';
+import { createOperatingAdapterHandoff } from '../lib/operate/adapter-handoff.mjs';
 import { createOperatingEvent } from '../lib/operate/reducer.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -25,6 +27,7 @@ const revision = '1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d';
 const EXPECTED_V13_KINDS = [
   'adapter-registry',
   'operating-mission-packet',
+  'operating-mandate',
   'operating-evidence-index-item',
   'operating-tool-grant',
   'operating-adapter-handoff',
@@ -227,6 +230,50 @@ for (const kind of [
   }
   if (schema.additionalProperties !== false) {
     throw new Error(`Schema ${kind} must set additionalProperties:false so no body field can be added silently.`);
+  }
+}
+
+// ── The operating mandate carries no evidence body and no evidence index ─────
+// FR1: the mandate is bounded instruction, not curated input. Its schema is
+// additionalProperties:false and declares no evidence/evidenceIndex property, a
+// generated mandate for every role validates, and a smuggled evidence body is
+// rejected fail-closed.
+{
+  const { schema: mandateSchema } = resolveProtocolSchema('operating-mandate', { protocolVersion: PROTOCOL });
+  if (mandateSchema.additionalProperties !== false) {
+    throw new Error('operating-mandate must set additionalProperties:false so no evidence field can be added silently.');
+  }
+  for (const name of collectPropertyNames(mandateSchema)) {
+    if (['evidence', 'evidenceindex'].includes(name.toLowerCase())) {
+      throw new Error(`operating-mandate declares a forbidden "${name}" property; the mandate carries no evidence.`);
+    }
+    if (BODY_PROPERTY_NAMES.has(name.toLowerCase())) {
+      throw new Error(`operating-mandate declares a body-bearing property "${name}"; the mandate carries no evidence body.`);
+    }
+  }
+  for (const role of listOperatingRoles()) {
+    const mandate = createOperatingMandate(role.id, {
+      roots: ['.planr', 'src', 'lib'],
+      forbiddenPaths: ['.env', 'secrets'],
+    });
+    assertProtocolArtifact('operating-mandate', mandate, { protocolVersion: PROTOCOL });
+    if ('evidence' in mandate || 'evidenceIndex' in mandate) {
+      throw new Error(`The generated mandate for ${role.id} leaked an evidence facet.`);
+    }
+    if (mandate.responseSchema !== 'operating-advisor-response@1.3.0'
+      || mandate.citationRequirement.everyClaimCited !== true) {
+      throw new Error(`The mandate for ${role.id} must require a cited v1.3 response.`);
+    }
+    if (!mandate.boundaries.roots.includes('.planr')) {
+      throw new Error(`The mandate for ${role.id} must carry the caller's declared roots (a gitignored .planr is citable).`);
+    }
+  }
+  const smuggled = {
+    ...createOperatingMandate('strategy-finance', { roots: ['src'] }),
+    evidence: [{ id: 'EVD-x' }],
+  };
+  if (validateProtocolArtifact('operating-mandate', smuggled, { protocolVersion: PROTOCOL }).length === 0) {
+    throw new Error('A mandate carrying an evidence body was accepted; additionalProperties:false must reject it.');
   }
 }
 
@@ -434,7 +481,8 @@ assertProtocolArtifact('operating-adapter-handoff', {
     argv: ['planr', 'operate', 'adapter', 'prepare'],
     dispatch: {
       source: 'adapter.prepare-result',
-      missionPacketPointer: '/data/missionPackets/technology-risk',
+      agent: 'operating-technology-risk',
+      mandatePointer: '/data/mandates/technology-risk',
       declaredRoots: ['src', 'lib'],
       toolGrant: { allowed: ['file-read', 'glob', 'content-search', 'git-log'], roots: ['src', 'lib'] },
       isolation: 'enforced-read-only-bounded',
@@ -446,17 +494,77 @@ assertProtocolArtifact('operating-adapter-handoff', {
       maxBytes: 32768,
       schema: 'https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json',
       schemaSource: 'adapter.prepare-result',
-      schemaPointer: '/data/missionPackets/technology-risk/role/output/schema',
+      schemaPointer: '/data/mandates/technology-risk/role/output/schema',
     },
   }],
   recovery: [],
 });
 
-// Role and adapter registries validate as v1.3 while their v1.2 sources are untouched.
+// ── The real adapter-handoff builder dispatches a mandate, never a mission ───
+// packet or a role pack, and resolves isolation to exactly two values (FR10):
+// enforced-read-only-bounded or unsupported — never a hidden structured-provider
+// fallback.
+{
+  const at1 = '2026-07-28T09:00:00Z';
+  const handoff = createOperatingAdapterHandoff({
+    phase: 'advisors',
+    state: 'record-required',
+    protocolVersion: PROTOCOL,
+    cycleId: 'CYCLE-011',
+    evidenceDigest: digest('e'),
+    runtime: 'claude-code',
+    idempotencyKey: 'native-CYCLE-011-advisors',
+    lease: 'a'.repeat(43),
+    expiresAt: at1,
+    roles: [{ roleId: 'technology-risk', status: 'pending', inputDigest: digest('a') }],
+  });
+  const serialized = JSON.stringify(handoff);
+  if (/missionPacketPointer|missionPackets|rolePackPointer|rolePacks/.test(serialized)) {
+    throw new Error('A v1.3 mandate handoff still emits a mission-packet or role-pack pointer.');
+  }
+  if (/fail-closed-structured-provider|enforced-empty-tools/.test(serialized)) {
+    throw new Error('A v1.3 mandate handoff still emits a retired isolation value.');
+  }
+  const { dispatch } = handoff.next[0];
+  if (dispatch.mandatePointer !== '/data/mandates/technology-risk'
+    || dispatch.agent !== 'operating-technology-risk') {
+    throw new Error('A v1.3 mandate handoff must point at /data/mandates/<role> and name its operating agent.');
+  }
+  if (!['enforced-read-only-bounded', 'unsupported'].includes(dispatch.isolation)) {
+    throw new Error(`A v1.3 mandate handoff isolation must be enforced-read-only-bounded or unsupported; got ${dispatch.isolation}.`);
+  }
+  // A runtime that cannot enforce bounded read-only tools is declared unsupported,
+  // never silently routed to a structured-provider fallback.
+  const unsupported = createOperatingAdapterHandoff({
+    phase: 'advisors',
+    state: 'record-required',
+    protocolVersion: PROTOCOL,
+    cycleId: 'CYCLE-011',
+    evidenceDigest: digest('e'),
+    runtime: 'cursor',
+    idempotencyKey: 'native-CYCLE-011-advisors',
+    lease: 'a'.repeat(43),
+    expiresAt: at1,
+    roles: [{ roleId: 'technology-risk', status: 'pending', inputDigest: digest('a') }],
+  });
+  if (unsupported.next[0].dispatch.isolation !== 'unsupported') {
+    throw new Error('A runtime that cannot enforce bounded read-only tools must be declared unsupported.');
+  }
+}
+
+// The role registry validates as a v1.3 mandate registry directly: investigation
+// mandates replaced claim-type matching, and the pack/mission dispatchMode is
+// retired (mandate dispatch is the only mode).
 const roleRegistry = readJson('registry/operating-roles.json');
-roleRegistry.protocolVersion = PROTOCOL;
-for (const role of roleRegistry.roles) role.dispatchMode = 'mission';
 assertProtocolArtifact('operating-role-registry', roleRegistry, { protocolVersion: PROTOCOL });
+for (const role of roleRegistry.roles) {
+  if ('minimumEvidence' in role || 'dispatchMode' in role) {
+    throw new Error(`Operating role ${role.id} still carries a retired minimumEvidence/dispatchMode field.`);
+  }
+  if (!role.investigationMandate?.examine?.length) {
+    throw new Error(`Operating role ${role.id} has no investigation mandate.`);
+  }
+}
 
 const adapterRegistry = readJson('registry/adapters.json');
 adapterRegistry.protocolVersion = PROTOCOL;
@@ -524,7 +632,8 @@ assertProtocolArtifact('adapter-registry', readJson('registry/adapters.json'));
 
 process.stdout.write(
   `Operating Board v1.3 conformance passed (${EXPECTED_V13_KINDS.length} additive schemas, `
-  + 'mission-packet body-free, size-enforced, and maxEvidenceItems-truncated loudly, '
-  + 'citation resolution fails closed, create-quick-task and create-epic route events '
-  + 'enter the log with the v1.2 surface frozen).\n',
+  + 'operating mandate carries no evidence body or index, mission-packet body-free and '
+  + 'size-enforced, adapter handoff dispatches a mandate with isolation in '
+  + '{enforced-read-only-bounded, unsupported}, citation resolution fails closed, '
+  + 'create-quick-task and create-epic route events enter the log with the v1.2 surface frozen).\n',
 );

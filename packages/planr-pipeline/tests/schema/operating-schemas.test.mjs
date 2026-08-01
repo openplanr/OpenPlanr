@@ -113,21 +113,29 @@ test('operating and adapter registries are schema-valid, unique, and read-only',
   )));
 });
 
-test('the operating role registry publishes at protocolVersion 1.3.0 with an explicit per-role dispatchMode', () => {
+test('the operating role registry publishes at protocolVersion 1.3.0 with a per-role investigation mandate', () => {
   const roles = readJson('registry/operating-roles.json');
   assert.equal(roles.protocolVersion, '1.3.0');
   assert.equal(roles.roles.length, 6);
   assert.ok(
-    roles.roles.every((role) => ['mission', 'pack'].includes(role.dispatchMode)),
-    'every role must carry an explicit dispatchMode',
+    roles.roles.every((role) => (
+      Array.isArray(role.investigationMandate?.examine)
+      && role.investigationMandate.examine.length > 0
+      && typeof role.investigationMandate.sufficientGrounding === 'string'
+    )),
+    'every role must carry an expressible investigation mandate',
+  );
+  assert.ok(
+    roles.roles.every((role) => !('dispatchMode' in role) && !('minimumEvidence' in role)),
+    'the retired dispatchMode and minimumEvidence fields must be gone',
   );
   // Resolves against operating-role-registry@1.3.0 via its own protocolVersion.
   assert.deepEqual(validateProtocolArtifact('operating-role-registry', roles), []);
-  const missingMode = structuredClone(roles);
-  delete missingMode.roles[0].dispatchMode;
+  const missingMandate = structuredClone(roles);
+  delete missingMandate.roles[0].investigationMandate;
   assert.ok(
-    validateProtocolArtifact('operating-role-registry', missingMode).length,
-    'dispatchMode is required per role at protocolVersion 1.3.0',
+    validateProtocolArtifact('operating-role-registry', missingMandate).length,
+    'investigationMandate is required per role at protocolVersion 1.3.0',
   );
 });
 

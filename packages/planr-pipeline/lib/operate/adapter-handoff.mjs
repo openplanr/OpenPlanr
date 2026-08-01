@@ -1,5 +1,5 @@
 import { PipelineError } from '../pipeline/errors.mjs';
-import { assertProtocolArtifact, listOperatingRoles } from '../protocol/contracts.mjs';
+import { assertProtocolArtifact } from '../protocol/contracts.mjs';
 import { listRuntimeAdapters, normalizeRuntime } from '../pipeline/runtime.mjs';
 import { createMissionToolGrant } from './mission-packet.mjs';
 
@@ -18,40 +18,37 @@ function fail(detail) {
 function adapterEnforcesBoundedReadOnly(runtime) {
   const id = normalizeRuntime(runtime);
   const adapter = listRuntimeAdapters().find((entry) => entry.id === id);
-  // Only a runtime that natively enforces tool isolation can guarantee the
-  // bounded read-only boundary (FR2). Every other runtime must fail closed to
-  // the structured provider path. The existing `enforced` capability already
-  // distinguishes the native-read-only adapter from the advisory ones, so the
-  // classification is derived from the published registry rather than a new
-  // field the v1.2/v1.3 registry schemas cannot carry.
+  // Only a runtime that natively enforces tool isolation can carry a mandate and
+  // guarantee the bounded read-only boundary (FR2/FR10). A runtime that cannot is
+  // declared `unsupported` for operate — never silently routed to a hidden
+  // structured-provider fallback. The classification is derived from the
+  // published registry's `enforced` isolation capability rather than a new field
+  // the registry schemas cannot carry.
   return adapter?.capabilities?.toolIsolation === 'enforced';
 }
 
-function roleDispatchMode(roleId) {
-  // dispatchMode is a v1.3 role-registry field (FR10). While the registry is
-  // still published at v1.2 it is absent, so a mission-model v1.3 handoff
-  // defaults to 'mission'; a role explicitly marked 'pack' fails closed.
-  const role = listOperatingRoles().find((entry) => entry.id === roleId);
-  return role?.dispatchMode ?? 'mission';
-}
-
-function missionDispatch(binding, roleId) {
-  const bounded = roleDispatchMode(roleId) === 'mission'
-    && adapterEnforcesBoundedReadOnly(binding.runtime);
+function mandateDispatch(binding, roleId) {
   return {
     source: 'adapter.prepare-result',
     // Name the generated lens agent (`agents/operating/<roleId>.md`) a runtime
-    // must dispatch for this mission-mode record action. Without it a mission
-    // handoff carries a packet pointer with no agent for a runtime to act on.
+    // must dispatch for this mandate record action, and point at the role's
+    // operating mandate. The mandate carries the lens question, the read
+    // boundaries, and the citation requirement — no evidence body, no evidence
+    // index. Evidence becomes an output resolved from the returned citations.
     agent: `operating-${roleId}`,
-    missionPacketPointer: `/data/missionPackets/${roleId}`,
-    // The concrete read roots are bound in the referenced mission packet; the
-    // dispatch declares the canonical read-only tool policy and defers roots to
-    // that packet, so an empty grant here confines to nothing rather than
-    // widening access.
+    mandatePointer: `/data/mandates/${roleId}`,
+    // The concrete read roots are declared in the referenced mandate's
+    // boundaries; the dispatch declares the canonical read-only tool policy and
+    // defers roots to that mandate, so an empty grant here confines to nothing
+    // rather than widening access.
     declaredRoots: [],
     toolGrant: createMissionToolGrant([]),
-    isolation: bounded ? 'enforced-read-only-bounded' : 'fail-closed-structured-provider',
+    // Exactly two isolation outcomes survive (FR10): a runtime that enforces
+    // bounded read-only tools carries the mandate; one that cannot is declared
+    // unsupported for operate.
+    isolation: adapterEnforcesBoundedReadOnly(binding.runtime)
+      ? 'enforced-read-only-bounded'
+      : 'unsupported',
   };
 }
 
@@ -105,7 +102,7 @@ function recordAction(binding, roleId, protocolVersion) {
       effect: 'machine-local-write',
       role: roleId,
       argv: lifecycleArgv(binding, 'record', roleId),
-      dispatch: missionDispatch(binding, roleId),
+      dispatch: mandateDispatch(binding, roleId),
       stdin: {
         kind: 'stdin-json',
         mediaType: 'application/json',
@@ -113,7 +110,7 @@ function recordAction(binding, roleId, protocolVersion) {
         maxBytes: 32768,
         schema: ADVISOR_RESPONSE_SCHEMA_V13,
         schemaSource: 'adapter.prepare-result',
-        schemaPointer: `/data/missionPackets/${roleId}/role/output/schema`,
+        schemaPointer: `/data/mandates/${roleId}/role/output/schema`,
       },
     };
   }

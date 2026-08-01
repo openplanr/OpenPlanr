@@ -57,11 +57,13 @@ export function createOperatingAdvisorBrief(roleId) {
       sharedBoundaries: [...SHARED_BOUNDARIES],
       forbiddenRecommendationCategories: [...role.forbiddenRecommendationCategories].sort(),
     },
-    evidence: {
+    boundaries: {
       permittedKinds: [...role.permittedEvidenceKinds].sort(),
-      requiredFields: [...role.requiredEvidenceFields].sort(),
       sensitivityCeiling: role.sensitivityCeiling,
-      minimum: structuredClone(role.minimumEvidence),
+      investigationMandate: {
+        examine: [...role.investigationMandate.examine],
+        sufficientGrounding: role.investigationMandate.sufficientGrounding,
+      },
     },
     output: {
       schema: role.adapterResponseSchema,

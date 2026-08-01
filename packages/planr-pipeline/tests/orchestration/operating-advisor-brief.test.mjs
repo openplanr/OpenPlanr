@@ -44,7 +44,8 @@ test('chair brief is consolidation-only and cannot assign deterministic state', 
   assert.deepEqual(chair.output.allowedProposalTypes, ['merge', 'sequence']);
   assert.equal(chair.output.scoring, null);
   assert.ok(chair.output.requiredBehavior.some((rule) => /Never assign persistent IDs/.test(rule)));
-  assert.ok(chair.evidence.permittedKinds.includes('verified-advisor-result'));
+  assert.ok(chair.boundaries.permittedKinds.includes('verified-advisor-result'));
+  assert.ok(chair.boundaries.investigationMandate.examine.length > 0);
 });
 
 test('all six launch lenses expose canonical role briefs', () => {

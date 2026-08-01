@@ -176,23 +176,30 @@ test('--check passes after generation and fails naming a hand-edited lens agent'
   }
 });
 
-test('a pack-mode lens is skipped and recorded as an explicit no-agent row', () => {
+test('every lens generates a native agent (mandate dispatch is the only mode)', () => {
   const roles = readRoles();
-  roles.roles[0].dispatchMode = 'pack'; // strategy-finance -> pack mode
-
   const assets = renderOperatingLensAgentAssets(roles);
-  assert.ok(
-    !Object.prototype.hasOwnProperty.call(assets, 'agents/operating/strategy-finance.md'),
-    'pack-mode lens generates no native agent',
-  );
-  assert.equal(Object.keys(assets).length, MISSION_ROLE_IDS.length - 1);
+  assert.equal(Object.keys(assets).length, MISSION_ROLE_IDS.length);
+  for (const id of MISSION_ROLE_IDS) {
+    assert.ok(
+      Object.prototype.hasOwnProperty.call(assets, `agents/operating/${id}.md`),
+      `${id} generates a native agent`,
+    );
+  }
 
   const docs = renderOperatingLensAgentDocs(roles);
-  assert.match(
-    docs,
-    /\| 10 \| strategy-finance \| CEO \| pack-mode, no native agent generated \| — \|/u,
-    'the skip is an explicit row, not a silent omission',
+  for (const id of MISSION_ROLE_IDS) {
+    assert.match(docs, new RegExp(`agents/operating/${id.replaceAll('-', '\\-')}\\.md`));
+  }
+  assert.doesNotMatch(docs, /pack-mode/u, 'no pack-mode row survives');
+
+  // A resurrected dispatchMode field is rejected by the v1.3 role-registry
+  // contract — mandate dispatch is the only mode, so the selector cannot return.
+  const withDispatchMode = readRoles();
+  withDispatchMode.roles[0].dispatchMode = 'mission';
+  assert.throws(
+    () => renderOperatingLensAgentAssets(withDispatchMode),
+    /operating-role-registry/u,
+    'a resurrected dispatchMode field is rejected',
   );
-  // The other five mission lenses still list their generated agent.
-  assert.match(docs, /agents\/operating\/technology-risk\.md/u);
 });

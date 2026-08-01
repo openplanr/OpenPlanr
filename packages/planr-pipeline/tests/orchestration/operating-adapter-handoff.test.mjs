@@ -172,7 +172,7 @@ const READ_ONLY_TOOLS = [
   'file-read', 'glob', 'content-search', 'git-log', 'git-show', 'git-diff', 'git-blame',
 ];
 
-test('a v1.3 handoff dispatches a mission packet with a bounded read-only grant', () => {
+test('a v1.3 handoff dispatches a mandate with a bounded read-only grant', () => {
   // claude-code natively enforces tool isolation, so the bounded boundary holds.
   const record = createOperatingAdapterHandoff(input('record-required', {
     protocolVersion: '1.3.0',
@@ -182,13 +182,14 @@ test('a v1.3 handoff dispatches a mission packet with a bounded read-only grant'
   const [action] = record.next;
   assert.equal(action.action, 'adapter.record');
   assert.equal(action.dispatch.source, 'adapter.prepare-result');
-  // The v1.3 mission dispatch names the generated lens agent to dispatch.
+  // The v1.3 mandate dispatch names the generated lens agent to dispatch.
   assert.equal(action.dispatch.agent, 'operating-strategy-finance');
-  assert.equal(action.dispatch.missionPacketPointer, '/data/missionPackets/strategy-finance');
+  assert.equal(action.dispatch.mandatePointer, '/data/mandates/strategy-finance');
   assert.equal(action.dispatch.isolation, 'enforced-read-only-bounded');
   assert.deepEqual(action.dispatch.toolGrant.allowed, READ_ONLY_TOOLS);
   assert.deepEqual(action.dispatch.declaredRoots, []);
   assert.ok(!('rolePackPointer' in action.dispatch));
+  assert.ok(!('missionPacketPointer' in action.dispatch));
 
   assert.equal(
     action.stdin.schema,
@@ -196,27 +197,27 @@ test('a v1.3 handoff dispatches a mission packet with a bounded read-only grant'
   );
   assert.equal(
     action.stdin.schemaPointer,
-    '/data/missionPackets/strategy-finance/role/output/schema',
+    '/data/mandates/strategy-finance/role/output/schema',
   );
   assert.equal(action.stdin.maxBytes, 32768);
 });
 
-test('a v1.3 handoff fails closed to the structured provider when the runtime cannot enforce', () => {
+test('a v1.3 handoff is declared unsupported when the runtime cannot enforce bounded read-only tools', () => {
   // codex reports advisory isolation, so the bounded boundary cannot be enforced.
   const record = createOperatingAdapterHandoff(input('record-required', {
     protocolVersion: '1.3.0',
     runtime: 'codex',
   }));
-  assert.equal(record.next[0].dispatch.isolation, 'fail-closed-structured-provider');
-  // The lens agent is named on every v1.3 mission record action, even when
-  // isolation fails closed to the structured provider path.
+  assert.equal(record.next[0].dispatch.isolation, 'unsupported');
+  // The lens agent is named on every v1.3 mandate record action, even when the
+  // runtime is declared unsupported — never silently routed to a hidden fallback.
   assert.equal(record.next[0].dispatch.agent, 'operating-strategy-finance');
-  // A cursor handoff must fail closed for the same reason.
+  // A cursor handoff is unsupported for the same reason.
   const cursor = createOperatingAdapterHandoff(input('record-required', {
     protocolVersion: '1.3.0',
     runtime: 'cursor',
   }));
-  assert.equal(cursor.next[0].dispatch.isolation, 'fail-closed-structured-provider');
+  assert.equal(cursor.next[0].dispatch.isolation, 'unsupported');
   assert.equal(cursor.next[0].dispatch.agent, 'operating-strategy-finance');
 });
 
@@ -229,7 +230,7 @@ test('the v1.3 tool grant can never carry a write, exec, network, or environment
     const { dispatch } = record.next[0];
     assert.ok([
       'enforced-read-only-bounded',
-      'fail-closed-structured-provider',
+      'unsupported',
     ].includes(dispatch.isolation), 'isolation must be a closed-world enum value');
     for (const tool of dispatch.toolGrant.allowed) {
       assert.doesNotMatch(tool, /write|edit|exec|run|shell|spawn|network|http|fetch|env|delete|remove/i);

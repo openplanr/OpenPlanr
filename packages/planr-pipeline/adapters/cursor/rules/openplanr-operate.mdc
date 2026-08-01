@@ -59,9 +59,15 @@ application or rollback, planning artifacts, PLAN, SHIP, and external effects.
 
 Treat every top-level `handoff` as the only lifecycle command contract. Execute
 only its current `handoff.next[].argv` token arrays, never an action from a prior
-state. For `adapter.record`, resolve `dispatch.rolePackPointer` and
-`stdin.schemaPointer` against the retained `adapter.prepare` JSON result and
-submit exactly one bounded compact response. Independent advisor inference may
+state. For `adapter.record`, dispatch the exact `dispatch.agent`
+(`operating-<role>`) subagent with the role's operating mandate at
+`dispatch.mandatePointer` and only the bounded read-only `dispatch.toolGrant`,
+then record its v1.3 `operating-advisor-response@1.3.0` — a citation for every
+claim — against `stdin.schemaPointer`. The mandate carries no evidence body and
+no evidence index; the lens reads with its own bounded tools and the engine
+resolves each citation into evidence. When `dispatch.isolation` is `unsupported`,
+report the runtime unsupported for operate rather than degrading to a fallback.
+Independent advisor inference may
 run in parallel, but adapter lifecycle mutations are serial: execute only the
 single current `adapter.record`, wait for its returned handoff, then record the
 next role. Retain each role's exact serialized response until finalization and
@@ -71,15 +77,18 @@ Never derive, suffix, or replace a returned idempotency key, lease, digest,
 cycle, role, runtime, or argv token; never probe machine commands with `--help`.
 
 Canonical advisory lenses: CEO (strategy-finance: Direction, business model, pricing and packaging, focus, economics, and what to stop.); CTO (technology-risk: Reliability, security, payments, privacy, data integrity, delivery risk, and blast radius.); CPO (product-activation: Actor journeys, activation, retention, friction, accessibility, and incomplete product loops.); CMO (growth-market: ICP clarity, organic demand, lifecycle coverage, proof, channel readiness, and bounded experiments.); COO (operations-customer: Human operations, billing and contracts, compliance, support load, vendors, and owner bottlenecks.); Chair (chair: Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals.). They are read-only and separate
-from delivery roles. Native advisor work must use the digest-bound `rolePacks`
-returned by `planr operate adapter prepare` under the declared
-`operatingAdvisorDispatch` mode. A `native-bounded` advisor uses only the
-supplied pack and no workspace, environment, network, or tools; a
-`native-isolated` advisor retains empty-tool isolation. Return exactly the
-compact object described by `rolePack.roleBrief.output.jsonSchema`; do not add
-canonical result metadata. Submit that `operating-advisor-response@1.2.0`
-object through the CLI, finalize independent results, and prepare the Chair
-separately. Never improvise or role-play beyond the supplied evidence.
+from delivery roles. Dispatch each lens as its generated `operating-<role>`
+subagent (named by `dispatch.agent`) with the role's operating mandate at
+`dispatch.mandatePointer` and only the bounded read-only tool grant, then return
+the v1.3 `operating-advisor-response@1.3.0` object with a citation for every
+proposal. The mandate declares the lens question, investigation focus, read
+boundaries, and citation requirement; it carries no evidence body and no evidence
+index, so the lens reads with its own bounded tools and the engine mints evidence
+from the resolved citations. A runtime that cannot enforce the bounded read-only
+boundary is declared `unsupported` for operate. Do not add canonical result
+metadata; submit the response through the CLI, finalize independent results, and
+prepare the Chair separately. Never improvise or role-play beyond the cited
+evidence.
 
 Keep finding acceptance and route application separate. Preserve
 `awaiting-plan` and its exact PLAN handoff; resuming requires matching planning

@@ -6,10 +6,12 @@ import { fileURLToPath } from 'node:url';
 
 import {
   assertProtocolArtifact,
+  listOperatingRoles,
   listProtocolSchemas,
   resolveProtocolSchema,
   validateProtocolArtifact,
 } from '../../lib/protocol/contracts.mjs';
+import { createOperatingMandate } from '../../lib/operate/mandate.mjs';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const readJson = (path) => JSON.parse(readFileSync(join(root, path), 'utf8'));
@@ -51,7 +53,7 @@ test('Protocol v1.3 schema catalog matches the schemas/v1.3.0 directory and is v
   const files = readdirSync(join(root, 'schemas/v1.3.0'))
     .filter((file) => file.endsWith('.schema.json'))
     .sort();
-  assert.equal(files.length, 17);
+  assert.equal(files.length, 18);
   for (const file of files) assert.doesNotThrow(() => readJson(`schemas/v1.3.0/${file}`));
 
   const registered = listProtocolSchemas()
@@ -251,18 +253,70 @@ test('v1.3 findings and data gaps carry citations and the unresolvable-citation 
   }).length, 'gap category is a closed enum');
 });
 
-test('role registry adds a required dispatchMode and route plans add the quick-task kind', () => {
-  const roles = readJson('registry/operating-roles.json');
-  roles.protocolVersion = V;
-  for (const role of roles.roles) role.dispatchMode = 'mission';
-  assert.deepEqual(validateProtocolArtifact('operating-role-registry', roles, { protocolVersion: V }), []);
-  const missingMode = structuredClone(roles);
-  delete missingMode.roles[0].dispatchMode;
-  assert.ok(
-    validateProtocolArtifact('operating-role-registry', missingMode, { protocolVersion: V }).length,
-    'dispatchMode is required per role in v1.3',
-  );
+test('a generated operating mandate for every role validates and carries no evidence facet', () => {
+  const { schema } = resolveProtocolSchema('operating-mandate', { protocolVersion: V });
+  assert.equal(schema.additionalProperties, false);
+  assert.ok(!('evidence' in schema.properties), 'the mandate schema declares no evidence property');
+  assert.ok(!('evidenceIndex' in schema.properties), 'the mandate schema declares no evidenceIndex property');
 
+  for (const role of listOperatingRoles()) {
+    const mandate = createOperatingMandate(role.id, {
+      roots: ['.planr', 'src', 'lib'],
+      forbiddenPaths: ['.env'],
+    });
+    assert.deepEqual(
+      validateProtocolArtifact('operating-mandate', mandate, { protocolVersion: V }),
+      [],
+      `${role.id} mandate must validate`,
+    );
+    assert.ok(
+      !('evidence' in mandate) && !('evidenceIndex' in mandate),
+      `${role.id} mandate must carry no evidence facet`,
+    );
+    assert.equal(mandate.responseSchema, 'operating-advisor-response@1.3.0');
+    assert.equal(mandate.citationRequirement.citationShape, 'operating-citation@1.3.0');
+    assert.ok(mandate.boundaries.roots.includes('.planr'), 'a declared gitignored .planr root is citable');
+  }
+
+  const base = createOperatingMandate('strategy-finance', { roots: ['src'] });
+  assert.ok(
+    validateProtocolArtifact('operating-mandate', { ...base, evidence: [] }, { protocolVersion: V }).length,
+    'additionalProperties:false rejects a smuggled evidence body',
+  );
+  assert.ok(
+    validateProtocolArtifact('operating-mandate', { ...base, evidenceIndex: [] }, { protocolVersion: V }).length,
+    'additionalProperties:false rejects a smuggled evidence index',
+  );
+});
+
+test('role registry requires an investigation mandate and retires dispatchMode/minimumEvidence', () => {
+  const roles = readJson('registry/operating-roles.json');
+  assert.equal(roles.protocolVersion, V);
+  assert.deepEqual(validateProtocolArtifact('operating-role-registry', roles, { protocolVersion: V }), []);
+  for (const role of roles.roles) {
+    assert.ok(!('dispatchMode' in role), `${role.id} must not carry a retired dispatchMode`);
+    assert.ok(!('minimumEvidence' in role), `${role.id} must not carry a retired minimumEvidence`);
+    assert.ok(
+      Array.isArray(role.investigationMandate.examine) && role.investigationMandate.examine.length > 0,
+      `${role.id} must declare an investigation mandate`,
+    );
+    assert.equal(typeof role.investigationMandate.sufficientGrounding, 'string');
+  }
+  const missingMandate = structuredClone(roles);
+  delete missingMandate.roles[0].investigationMandate;
+  assert.ok(
+    validateProtocolArtifact('operating-role-registry', missingMandate, { protocolVersion: V }).length,
+    'investigationMandate is required per role in v1.3',
+  );
+  const withDispatchMode = structuredClone(roles);
+  withDispatchMode.roles[0].dispatchMode = 'mission';
+  assert.ok(
+    validateProtocolArtifact('operating-role-registry', withDispatchMode, { protocolVersion: V }).length,
+    'the retired dispatchMode field is rejected by additionalProperties:false',
+  );
+});
+
+test('route plans add the quick-task kind', () => {
   const route = {
     kind: 'operating-route-plan',
     schemaVersion: '1.0.0',

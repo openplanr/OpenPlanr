@@ -89,16 +89,18 @@ a prior action.
 
 Treat every top-level `handoff` as the only lifecycle command contract. Execute
 only its current `handoff.next[].argv` token arrays, never an action from a prior
-state. For `adapter.record`, read `dispatch` to choose the execution path. When it
-carries a `rolePackPointer` (v1.2 pack mode), resolve that pointer and
-`stdin.schemaPointer` against the retained `adapter.prepare` JSON result and submit
-exactly one bounded compact response. When it carries a `missionPacketPointer` and
-names `dispatch.agent` (v1.3 mission mode), dispatch that exact `operating-<role>`
-subagent through the runtime's subagent facility with only the referenced mission
-packet and the bounded read-only `dispatch.toolGrant`, then record the subagent's
-v1.3 citation-bearing `operating-advisor-response@1.3.0` against
-`stdin.schemaPointer`; never widen the grant, add tools, or read outside the
-mission packet's declared roots. Independent advisor inference may
+state. For `adapter.record`, read `dispatch` and dispatch that exact
+`dispatch.agent` (`operating-<role>`) subagent through the runtime's subagent
+facility with the role's operating mandate at `dispatch.mandatePointer` and only
+the bounded read-only `dispatch.toolGrant`. The mandate carries the lens question,
+the read boundaries, and the citation requirement — no evidence body and no
+evidence index — so the subagent investigates with its own read tools and returns
+a v1.3 `operating-advisor-response@1.3.0` with a citation for every claim,
+recorded against `stdin.schemaPointer`; the engine resolves and snapshots every
+citation into evidence. Never widen the grant, add tools, or read outside the
+mandate's declared boundaries. When `dispatch.isolation` is `unsupported` the
+runtime cannot carry the mandate: report it unsupported for operate rather than
+degrading to a hidden fallback. Independent advisor inference may
 run in parallel, but adapter lifecycle mutations are serial: execute only the
 single current `adapter.record`, wait for its returned handoff, then record the
 next role. Retain each role's exact serialized response until finalization and
@@ -129,22 +131,19 @@ digest, and confirmation; known credential signatures remain blocked.
 Canonical advisory lenses: {{OPERATING_LENSES}}. They are independent,
 read-only executive perspectives—not delivery agents and not permission to
 role-play without evidence. A native runtime must follow the exact handoff
-returned by `planr operate run` and dispatch every independent lens using the
-adapter's declared `operatingAdvisorDispatch` mode. In `native-read-only` mode,
-dispatch each mission-mode lens as its generated `operating-<role>` subagent
-(named by `dispatch.agent`) with only the referenced mission packet and the
-bounded read-only tool grant, and return the v1.3
-`operating-advisor-response@1.3.0` object with a citation for every proposal. In
-pack mode, obtain each immutable digest-bound `rolePack` from `planr operate
-adapter prepare`: in `native-bounded` mode, advisors may use only the supplied
-role pack and must not inspect the workspace, environment, network, or other
-tools; in `native-isolated` mode, retain the certified empty-tool isolation
-boundary. Return exactly the compact object described by
-`rolePack.roleBrief.output.jsonSchema`; do not add `kind`, cycle, role,
-input-digest, producer, or result-digest metadata. Record that
-`operating-advisor-response@1.2.0` object through the CLI so OpenPlanr creates
-and binds canonical metadata and digests. Finalize those results, rerun the same
-cycle, and execute the separately prepared Chair pack only after the independent
+returned by `planr operate run` and dispatch every independent lens as its
+generated `operating-<role>` subagent (named by `dispatch.agent`) with the role's
+operating mandate at `dispatch.mandatePointer` and only the bounded read-only tool
+grant, then return the v1.3 `operating-advisor-response@1.3.0` object with a
+citation for every proposal. The mandate declares the lens question, investigation
+focus, read boundaries, and citation requirement; it carries no evidence body and
+no evidence index, so the lens gathers what it needs with its own read tools and
+the engine mints evidence from the resolved citations. Do not add `kind`, cycle,
+role, input-digest, producer, or result-digest metadata; OpenPlanr creates and
+binds canonical metadata and digests when it records the response. A runtime that
+cannot enforce the bounded read-only boundary is declared `unsupported` for
+operate, never silently degraded. Finalize those results, rerun the same cycle,
+and execute the separately prepared Chair mandate only after the independent
 results are verified.
 
 1. Run the requested `planr operate` command with `--json` when machine-readable

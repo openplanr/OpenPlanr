@@ -77,6 +77,7 @@ const paths = {
   },
   'operating-recovery-record': { '1.2.0': 'schemas/v1.2.0/operating-recovery-record.schema.json' },
   'operating-mission-packet': { '1.3.0': 'schemas/v1.3.0/operating-mission-packet.schema.json' },
+  'operating-mandate': { '1.3.0': 'schemas/v1.3.0/operating-mandate.schema.json' },
   'operating-evidence-index-item': { '1.3.0': 'schemas/v1.3.0/operating-evidence-index-item.schema.json' },
   'operating-tool-grant': { '1.3.0': 'schemas/v1.3.0/operating-tool-grant.schema.json' },
   'operating-citation': { '1.3.0': 'schemas/v1.3.0/operating-citation.schema.json' },

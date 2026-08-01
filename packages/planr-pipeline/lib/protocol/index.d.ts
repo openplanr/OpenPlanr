@@ -279,10 +279,11 @@ export interface OperatingAdapterMachineAction {
       }
     | {
         source: 'adapter.prepare-result';
-        missionPacketPointer: string;
+        agent?: string;
+        mandatePointer: string;
         declaredRoots: string[];
         toolGrant: { allowed: string[]; roots: string[] };
-        isolation: 'enforced-read-only-bounded' | 'fail-closed-structured-provider';
+        isolation: 'enforced-read-only-bounded' | 'unsupported';
       };
   stdin?: {
     kind: 'stdin-json';

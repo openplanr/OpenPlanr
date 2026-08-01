@@ -34,11 +34,11 @@ const proposalTypes = new Set(
   roleResultSchema.properties.proposals.items.properties.type.enum,
 );
 for (const role of listOperatingRoles()) {
-  if (!role.minimumEvidence?.requirements?.length) {
-    throw new Error(`Operating role ${role.id} has no machine-evaluable minimum evidence requirement.`);
+  if (!role.investigationMandate?.examine?.length || !role.investigationMandate?.sufficientGrounding) {
+    throw new Error(`Operating role ${role.id} has no expressible investigation mandate.`);
   }
-  if (role.id === 'chair' && role.minimumEvidence.requirements.some((entry) => entry.source !== 'advisor-results')) {
-    throw new Error('Chair readiness must be based only on verified advisor results.');
+  if (role.id === 'chair' && !role.investigationMandate.examine.some((entry) => /advisor result/i.test(entry))) {
+    throw new Error('Chair grounding must be based on verified advisor results.');
   }
   for (const proposalType of role.allowedProposalTypes) {
     if (!proposalTypes.has(proposalType)) {

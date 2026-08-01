@@ -67,8 +67,11 @@ test('generated operating adapter assets and docs match their registries byte-fo
     for (const label of ['CEO', 'CTO', 'CPO', 'CMO', 'COO', 'Chair']) {
       assert.match(asset, new RegExp(`\\b${label}\\b`), `${target} must name the ${label} lens`);
     }
-    assert.match(asset, /rolePacks?/);
-    assert.match(asset, /empty-tool\s+isolation/);
+    // The mandate dispatch flow: name the operating-<role> agent, point at the
+    // mandate, and forbid the retired pack-mode instructions.
+    assert.match(asset, /mandatePointer/, `${target} must instruct the mandate dispatch`);
+    assert.doesNotMatch(asset, /rolePacks?/, `${target} must not carry retired pack-mode text`);
+    assert.doesNotMatch(asset, /empty-tool\s+isolation/, `${target} must not carry empty-tool isolation text`);
     assert.match(asset, /(?:improvise|role-play)/i);
   }
 });

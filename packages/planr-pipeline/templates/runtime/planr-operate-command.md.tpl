@@ -70,16 +70,18 @@ or rollback, planning-artifact creation, PLAN, SHIP, and external effects.
 
 Treat every top-level `handoff` as the only lifecycle command contract. Execute
 only its current `handoff.next[].argv` token arrays, never an action from a prior
-state. For `adapter.record`, read `dispatch` to choose the execution path. When it
-carries a `rolePackPointer` (v1.2 pack mode), resolve that pointer and
-`stdin.schemaPointer` against the retained `adapter.prepare` JSON result and submit
-exactly one bounded compact response. When it carries a `missionPacketPointer` and
-names `dispatch.agent` (v1.3 mission mode), dispatch that exact `operating-<role>`
-subagent through the Task tool with only the referenced mission packet and the
-bounded read-only `dispatch.toolGrant`, then record the subagent's v1.3
-citation-bearing `operating-advisor-response@1.3.0` against `stdin.schemaPointer`;
-never widen the grant, add tools, or read outside the mission packet's declared
-roots. Independent advisor inference may
+state. For `adapter.record`, read `dispatch` and dispatch that exact
+`dispatch.agent` (`operating-<role>`) subagent through the Task tool with the
+role's operating mandate at `dispatch.mandatePointer` and only the bounded
+read-only `dispatch.toolGrant`. The mandate carries the lens question, the read
+boundaries, and the citation requirement — no evidence body and no evidence
+index — so the subagent investigates with its own read tools and returns a v1.3
+`operating-advisor-response@1.3.0` with a citation for every claim, recorded
+against `stdin.schemaPointer`; the engine resolves and snapshots every citation
+into evidence. Never widen the grant, add tools, or read outside the mandate's
+declared boundaries. When `dispatch.isolation` is `unsupported` the runtime
+cannot carry the mandate: report it unsupported for operate rather than degrading
+to a hidden fallback. Independent advisor inference may
 run in parallel, but adapter lifecycle mutations are serial: execute only the
 single current `adapter.record`, wait for its returned handoff, then record the
 next role. Retain each role's exact serialized response until finalization and
@@ -107,19 +109,17 @@ SHIP.
 
 Canonical advisory lenses: {{OPERATING_LENSES}}. They are independent, read-only
 executive perspectives—not delivery agents and not permission to role-play
-without evidence. Native advisor work runs under the adapter's declared
-`operatingAdvisorDispatch` mode. In `native-read-only` mode, dispatch each
-mission-mode lens as its generated `operating-<role>` subagent (named by
-`dispatch.agent`) with only the referenced mission packet and the bounded
-read-only tool grant, and return the v1.3 `operating-advisor-response@1.3.0`
-object with a citation for every proposal. In pack mode, consume the digest-bound
-`rolePacks` returned by `planr operate adapter prepare`: `native-bounded` advisors
-may use only that pack and no workspace, environment, network, or tool access;
-`native-isolated` advisors retain empty-tool isolation. Return exactly the compact
-object described by `rolePack.roleBrief.output.jsonSchema`; do not add canonical
-result metadata, and submit that `operating-advisor-response@1.2.0` object through
-the CLI. Finalize independent results, rerun the same cycle, and prepare the Chair
-separately. Never improvise or widen a role prompt.
+without evidence. Dispatch each lens as its generated `operating-<role>` subagent
+(named by `dispatch.agent`) with the role's operating mandate at
+`dispatch.mandatePointer` and only the bounded read-only tool grant, and return
+the v1.3 `operating-advisor-response@1.3.0` object with a citation for every
+proposal. The mandate declares the lens question, investigation focus, read
+boundaries, and citation requirement; it carries no evidence body and no evidence
+index, so the lens gathers what it needs with its own read tools and the engine
+mints evidence from the resolved citations. A runtime that cannot enforce the
+bounded read-only boundary is declared `unsupported` for operate, never silently
+degraded. Finalize independent results, rerun the same cycle, and prepare the
+Chair separately. Never improvise or widen a role prompt.
 
 Planning-only installations retain help, `inspect`, and `demo`; surface the
 CLI's exact `E_PIPELINE_NOT_INSTALLED` recovery for Protocol v1.2 commands. Stop
