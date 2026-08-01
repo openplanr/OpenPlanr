@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAt": "2026-08-01T02:30:26.946Z",
+  "generatedAt": "2026-08-01T02:42:09.919Z",
   "protocol": {
     "current": "1.3.0",
     "supported": [
@@ -121,7 +121,7 @@
       }
     },
     "agenticOperatingBoard": {
-      "status": "unavailable",
+      "status": "available",
       "command": "planr operate",
       "protocolRange": "^1.3.0",
       "components": {
@@ -130,20 +130,22 @@
         "skills": "1.21.0",
         "marketplace": "1.6.0"
       },
-      "certifiedRuntimes": [],
+      "certifiedRuntimes": [
+        "claude-code",
+        "codex",
+        "cursor"
+      ],
       "advisorDispatch": {
         "claude-code": "native-read-only",
         "codex": "structured-provider",
         "cursor": "structured-provider"
       },
-      "missing": [
-        "release"
-      ],
+      "missing": [],
       "releaseOperation": {
         "operationId": "OPERATE-SPEC-006",
         "operationDigest": "sha256:9a7bc2333ecf18b56d3f63c0076c46a86d1a4c9110f66d30ecf79283ab2c6661",
-        "state": "promoting",
-        "reconciliation": "incomplete"
+        "state": "verified",
+        "reconciliation": "matched"
       }
     }
   },
