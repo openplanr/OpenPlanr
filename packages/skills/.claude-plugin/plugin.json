@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "openplanr",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "description": "Evidence-backed operating decisions, planning, and complete delivery workflows for Claude Code",
   "author": {
     "name": "OpenPlanr",

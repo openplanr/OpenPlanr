@@ -2,6 +2,16 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.21.0] — 2026-08-01
+
+### Changed
+
+- Re-mirror the generated `planr-operate` skill from the pipeline's 0.35.0
+  runtime assets, so the public skill matches the release that enforces
+  mission-packet evidence caps and adds the `create-epic` route kind.
+- Validate against `planr-pipeline` `v0.35.0` in CI (was `v0.34.0`), keeping
+  the byte-for-byte mirror check aligned with the published contracts.
+
 ## [1.20.0] — 2026-07-31
 
 ### Changed

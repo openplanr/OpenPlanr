@@ -4,7 +4,7 @@
 - **Umbrella specification:** `openplanr/planr-pipeline` —
   `.planr/specs/SPEC-002-openplanr-operating-board/SPEC-002-openplanr-operating-board.md`
 - **Repository:** `openplanr/skills`
-- **Target:** `@openplanr/skills` 1.20.0
+- **Target:** `@openplanr/skills` 1.21.0
 
 ## Repository-only scope
 
