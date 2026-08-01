@@ -22,6 +22,7 @@ import {
   updateArtifactFields,
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { promptConfirm } from '../../services/prompt-service.js';
 import { VALID_STATUSES } from '../../utils/constants.js';
 import { display, logger } from '../../utils/logger.js';
@@ -211,6 +212,7 @@ export function registerBacklogCommand(program: Command) {
         }
 
         logger.success(`Updated ${updated} item${updated !== 1 ? 's' : ''}`);
+        printDeprecationNotice('ai-planning');
       } catch (err) {
         const { AIError } = await import('../../ai/errors.js');
         if (err instanceof AIError) {
@@ -298,6 +300,7 @@ export function registerBacklogCommand(program: Command) {
           }
 
           await markPromoted(projectDir, config, blId, result.id);
+          printDeprecationNotice('ai-planning');
           logger.success(`Promoted ${blId} → ${result.id}`);
           logger.dim(`  ${result.filePath}`);
           if (epicId) {

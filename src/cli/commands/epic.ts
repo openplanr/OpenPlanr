@@ -18,6 +18,7 @@ import {
 } from '../../services/artifact-service.js';
 import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import {
   promptEditor,
@@ -47,6 +48,7 @@ export function registerEpicCommand(program: Command) {
 
       if (useAI) {
         await createEpicWithAI(projectDir, config, opts);
+        printDeprecationNotice('ai-planning');
       } else {
         if (!opts.manual && !isAIConfigured(config)) {
           logger.warn(

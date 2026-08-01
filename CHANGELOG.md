@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Deprecations
+
+- CLI-managed Operating Board structured-provider dispatch and the legacy
+  `--ai` planning surfaces remain functional in this release, but now emit one
+  shared deprecation notice. Agentic investigation and advisory work belongs in
+  the native runtime harness through Protocol v1.3 mandates. Both legacy surfaces
+  are scheduled for removal in OpenPlanr 2.0.0; see
+  https://openplanr.dev/docs/operate/agent-harness.
+
 ## 1.19.0
 
 ### Minor Changes

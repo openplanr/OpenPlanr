@@ -51,7 +51,21 @@ export interface GuidedQuestion {
   suggestionReason?: string;
   defaultValue?: GuidedQuestionValue;
   defaultReason?: string;
-  choices?: Array<{ id: string; label: string; description?: string }>;
+  /**
+   * Renderability contract for `single-select`/`multi-select`: `choices` is the
+   * complete per-option layout a runtime presents (label, optional description,
+   * optional `preselected`), so a select never has to be improvised.
+   */
+  choices?: Array<{ id: string; label: string; description?: string; preselected?: boolean }>;
+  /**
+   * Renderability contract for `repeated-text`: the singular noun a runtime shows
+   * beside each entry row (e.g. "Goal") and the example placeholder for an empty
+   * row. Additive OpenPlanr presentation metadata attached to the emitted
+   * questionnaire after Protocol v1.2 validation — the frozen guided-question
+   * schema does not carry these, so they never reach schema validation.
+   */
+  itemLabel?: string;
+  itemPlaceholder?: string;
   validation?: {
     minLength?: number;
     maxLength?: number;
@@ -97,6 +111,22 @@ export interface GuidedQuestionnaire {
       encoding: 'utf-8';
       maxBytes: 65536;
       argv: ['planr', 'operate', 'init', '--resume', string, '--stdin', '--json'];
+      /**
+       * Stdin-parity alternates the CLI already accepts for the same bounded
+       * answer envelope. `--answers-file <path>` reads the identical 64 KiB UTF-8
+       * document `--stdin` would, so the downstream strict parser and digest
+       * binding are unchanged. Additive OpenPlanr transport metadata attached
+       * after Protocol v1.2 validation (the frozen transport schema advertises
+       * only the stdin entry), so a contract-conformant runtime can discover the
+       * file transport instead of assuming stdin is the only channel.
+       */
+      alternates?: Array<{
+        kind: 'answers-file';
+        mediaType: 'application/json';
+        encoding: 'utf-8';
+        maxBytes: 65536;
+        argv: ['planr', 'operate', 'init', '--resume', string, '--answers-file', string, '--json'];
+      }>;
     };
     envelope: {
       fixedFields: Omit<GuidedAnswerEnvelope, 'questionnaireDigest' | 'answers' | 'submittedAt'>;
@@ -154,6 +184,12 @@ export interface GuidedAnswerEnvelope {
 export type GuidedSessionState =
   | 'created'
   | 'awaiting-input'
+  // A previously persisted answer is being re-answered before confirm/apply. This
+  // is a transient, in-memory flow marker surfaced on the returned session so a
+  // runtime knows a rollback happened; the on-disk artifact records the
+  // schema-valid `awaiting-input` resting state (Protocol v1.2's guided-session
+  // schema does not carry `revising`), so a re-answer never has to restart init.
+  | 'revising'
   | 'preview-ready'
   | 'confirmed'
   | 'applied'
@@ -248,42 +284,6 @@ export interface GuidedConfirmation {
   terminalReason?: string;
 }
 
-export interface EvidenceDiagnosticClassification {
-  status: 'false-positive' | 'confirmed-secret';
-  ruleId: string;
-  contentDigest: `sha256:${string}`;
-  projectHead: `sha256:${string}`;
-  reason: string;
-  confirmationDigest: `sha256:${string}`;
-  classifiedAt: string;
-  classifiedBy: string;
-}
-
-export interface EvidenceDiagnostic {
-  kind: 'evidence-diagnostic';
-  schemaVersion: '1.0.0';
-  protocolVersion: '1.2.0';
-  candidateId: string;
-  source: 'repository' | 'planr' | 'git' | 'import-json' | 'import-csv' | 'github' | 'linear';
-  componentId: string;
-  location?: string;
-  line?: number;
-  ruleId: string;
-  category:
-    | 'assignment'
-    | 'known-token'
-    | 'authorization'
-    | 'private-key'
-    | 'jwt'
-    | 'credential-url'
-    | 'structured-secret';
-  contentDigest: `sha256:${string}`;
-  projectHead: `sha256:${string}`;
-  valueDisclosed: false;
-  classification?: EvidenceDiagnosticClassification;
-  actions: StructuredOperatingAction[];
-}
-
 export interface OperatingInitAnswers {
   profile?: 'saas' | 'product' | 'engineering' | 'custom';
   profileFile?: string;
@@ -293,8 +293,6 @@ export interface OperatingInitAnswers {
   cadence?: 'manual' | 'weekly' | 'monthly';
   timezone?: string;
   sensitivityCeiling?: OperatingSensitivity;
-  sources?: string[];
-  evidenceFiles?: string[];
   componentRoots?: string[];
   charter?: Partial<OperatingCharter>;
 }
@@ -374,15 +372,18 @@ export interface OperatingAdapterMachineAction {
   argv: string[];
   dispatch?: {
     source: 'adapter.prepare-result';
-    rolePackPointer: string;
-    isolation: 'enforced-empty-tools';
+    agent?: string;
+    mandatePointer: string;
+    declaredRoots: string[];
+    toolGrant: { allowed: string[]; roots: string[] };
+    isolation: 'enforced-read-only-bounded' | 'unsupported';
   };
   stdin?: {
     kind: 'stdin-json';
     mediaType: 'application/json';
     encoding: 'utf-8';
     maxBytes: 32768;
-    schema: 'https://openplanr.dev/schemas/v1.2.0/operating-advisor-response.schema.json';
+    schema: 'https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json';
     schemaSource: 'adapter.prepare-result';
     schemaPointer: string;
   };
@@ -459,6 +460,7 @@ export type OperateErrorCode =
   | 'E_OPERATE_ACTION_UNKNOWN'
   | 'E_OPERATE_MISSION_PACKET_BUDGET'
   | 'E_OPERATE_MISSION_UNAVAILABLE'
+  | 'E_OPERATE_PROVIDER_DEPRECATED'
   | 'E_PIPELINE_NOT_INSTALLED';
 
 export class OperateError extends Error {
@@ -504,9 +506,7 @@ export interface OperatingProfile {
   title: string;
   description: string;
   enabledRoles: OperatingRoleId[];
-  enabledProviders: string[];
   caps: OperatingConfig['caps'];
-  budgets: OperatingConfig['budgets'];
 }
 
 export interface OperatingCharter {
@@ -712,95 +712,6 @@ export interface OperatingEvidenceItem {
     observedTo: string;
   };
   summary?: string;
-  /**
-   * Index-only enrichment for Protocol v1.3 mission dispatch (additive). These
-   * are NEVER serialized into the frozen v1.2 operating-evidence artifact — its
-   * schema is closed. They are derived on demand when an evidence index item is
-   * built for a mission packet, alongside the existing `sensitivity`/`freshness`
-   * fields, and carry no file body.
-   */
-  classification?: string;
-  signals?: string[];
-}
-
-/**
- * A single Protocol v1.3 evidence index pointer (`operating-evidence-index-item@1.3.0`).
- * It references content by repository path OR git revision — never both — and
- * carries the content hash, source, classification, freshness, sensitivity, and
- * detected signals. It deliberately carries NO file body; a mission-mode agent
- * reads the referenced content on demand within its declared roots.
- */
-export interface OperatingEvidenceIndexItem {
-  id: `EVX-${string}`;
-  path?: string;
-  revision?: string;
-  contentHash: `sha256:${string}`;
-  source: 'repository' | 'planr' | 'git' | 'github' | 'linear' | 'file-import';
-  classification: string;
-  freshness: 'fresh' | 'stale' | 'unknown';
-  sensitivity: OperatingSensitivity;
-  signals: string[];
-}
-
-export interface OperatingMissionCharter {
-  productCharter: string;
-  currentGoals: string[];
-}
-
-export interface OperatingMissionPriorCycleSummary {
-  cycleId?: string;
-  summary: string;
-  openDecisions?: string[];
-  openGaps?: string[];
-  pendingOutcomes?: string[];
-}
-
-export interface OperatingMissionPlanningStatus {
-  planningEngine: string;
-  planning: string;
-  delivery: string;
-}
-
-/**
- * The non-evidence payload of a mission packet, sourced from live cycle and
- * workspace state by the engine and passed into the pipeline's
- * `createOperatingMissionPacket`.
- */
-export interface OperatingMissionPacketState {
-  cycleId: string;
-  pinnedRevision?: string;
-  charter: OperatingMissionCharter;
-  priorCycleSummary: OperatingMissionPriorCycleSummary;
-  planningStatus: OperatingMissionPlanningStatus;
-  declaredRoots: string[];
-}
-
-export interface OperatingMissionToolGrant {
-  allowed: string[];
-  roots: string[];
-}
-
-/**
- * A digest-bound Protocol v1.3 mission packet (`operating-mission-packet@1.3.0`).
- * NOT a `ProtocolArtifact<…>`: its envelope is pinned to the v1.3 protocol
- * version, independent of the frozen v1.2 `OPERATE_PROTOCOL_VERSION`.
- */
-export interface OperatingMissionPacket {
-  kind: 'operating-mission-packet';
-  schemaVersion: '1.0.0';
-  protocolVersion: typeof OPERATE_MISSION_PROTOCOL_VERSION;
-  cycleId: string;
-  roleId: OperatingRoleId;
-  packetDigest: `sha256:${string}`;
-  pinnedRevision?: string;
-  charter: OperatingMissionCharter;
-  priorCycleSummary: OperatingMissionPriorCycleSummary;
-  planningStatus: OperatingMissionPlanningStatus;
-  role: Record<string, unknown>;
-  declaredRoots: string[];
-  toolGrant: OperatingMissionToolGrant;
-  evidenceIndex: OperatingEvidenceIndexItem[];
-  budgets: { maxInputBytes: number; maxEvidenceItems?: number };
 }
 
 export interface CollectedEvidenceItem {
@@ -861,14 +772,6 @@ export interface RepositoryEvidenceProvenance {
   freshness: OperatingEvidenceItem['freshness'];
   sensitivity: OperatingSensitivity;
   collectedAt: string;
-}
-
-export interface EvidenceBudget {
-  maxFiles: number;
-  maxItems: number;
-  maxBytes: number;
-  maxItemBytes: number;
-  maxDurationMs: number;
 }
 
 export interface EvidenceRequirement {

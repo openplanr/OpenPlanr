@@ -58,17 +58,9 @@ async function initialize(): Promise<{ projectRoot: string; localRoot: string }>
     runtime: 'codex',
     timezone: 'UTC',
     sensitivityCeiling: 'internal',
-    enabledProviders: ['repository', 'git'],
     customProfile: {
       enabledRoles: ['strategy-finance', 'technology-risk', 'chair'],
-      enabledProviders: ['repository', 'git'],
       caps: { surfacedFindings: 10, newSpecs: 5, openDecisions: 3, agentArtifacts: 2 },
-      budgets: {
-        maxFiles: 1_000,
-        maxItems: 2_000,
-        maxBytes: 10 * 1024 * 1024,
-        maxDurationMs: 60_000,
-      },
     },
     charter: {
       purpose: 'Exercise operator-reachable epic-route election.',
@@ -117,8 +109,7 @@ function relatedDevFindingsAdapter(count: number): AdvisorAdapter {
     toolIsolation: 'not-applicable',
     capability: 'analysis-high',
     async invoke(input) {
-      const evidenceRef = input.evidence.items[0]?.id;
-      if (!evidenceRef || input.roleId === 'technology-risk' || input.roleId === 'chair') {
+      if (input.roleId === 'technology-risk' || input.roleId === 'chair') {
         return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
       }
       return {
@@ -133,7 +124,13 @@ function relatedDevFindingsAdapter(count: number): AdvisorAdapter {
           confidence: 3,
           ease: 4,
           severity: 'medium',
-          evidenceRefs: [evidenceRef],
+          citations: [
+            {
+              repositoryPath: 'service.ts',
+              lineRange: { start: 1, end: 1 },
+              pinnedRevision: input.pinnedRevision,
+            },
+          ],
         })),
         gaps: [],
         conflicts: [],

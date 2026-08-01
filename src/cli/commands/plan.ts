@@ -39,6 +39,7 @@ import {
 } from '../../services/artifact-service.js';
 import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { promptConfirm, promptText } from '../../services/prompt-service.js';
 import { renderTemplate } from '../../services/template-service.js';
 import { writeFile } from '../../utils/fs.js';
@@ -83,6 +84,7 @@ export function registerPlanCommand(program: Command) {
           // Full flow: create epic first
           await planFromScratch(projectDir, config, provider);
         }
+        printDeprecationNotice('ai-planning');
       } catch (err) {
         await handleAIError(err);
       }

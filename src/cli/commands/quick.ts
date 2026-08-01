@@ -28,6 +28,7 @@ import {
   updateArtifactFields,
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { getNextId } from '../../services/id-service.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
@@ -109,6 +110,7 @@ export function registerQuickCommand(program: Command) {
           fromFile: !!opts.file,
           epicId,
         });
+        printDeprecationNotice('ai-planning');
       } else {
         if (!opts.manual && !isAIConfigured(config)) {
           logger.warn('AI not configured. Using manual mode.');

@@ -199,10 +199,7 @@ describe('native operating advisor lifecycle', () => {
         }
       >;
       roleInputDigests: Record<string, `sha256:${string}`>;
-      rolePacks: Record<
-        string,
-        { inputDigest: `sha256:${string}`; evidence: { items: unknown[] } }
-      >;
+      roleMandates: Record<string, { mandateDigest: `sha256:${string}` }>;
       lease: string;
       idempotencyKey: string;
       handoff: {
@@ -248,8 +245,7 @@ describe('native operating advisor lifecycle', () => {
         gaps: [],
         conflicts: [],
       });
-      expect(session.roleInputDigests[role]).toBe(session.rolePacks[role].inputDigest);
-      expect(session.rolePacks[role].evidence.items.length).toBeGreaterThan(0);
+      expect(session.roleInputDigests[role]).toBe(session.roleMandates[role].mandateDigest);
     }
     expect(session.handoff.kind).toBe('operating-adapter-handoff');
     expect(session.handoff.state).toBe('record-required');
@@ -275,13 +271,13 @@ describe('native operating advisor lifecycle', () => {
         '--json',
       ]);
       expect(record.stdin).toEqual({
-        schemaPointer: `/data/rolePacks/${record.role}/roleBrief/output/jsonSchema`,
+        schemaPointer: `/data/mandates/${record.role}/role/output/schema`,
         schemaSource: 'adapter.prepare-result',
         maxBytes: 32768,
         kind: 'stdin-json',
         mediaType: 'application/json',
         encoding: 'utf-8',
-        schema: 'https://openplanr.dev/schemas/v1.2.0/operating-advisor-response.schema.json',
+        schema: 'https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json',
       });
     }
 
@@ -355,7 +351,6 @@ describe('native operating advisor lifecycle', () => {
             next: [{ action: 'adapter.record', role: 'technology-risk' }],
           },
         });
-        expect(recorded).not.toHaveProperty('session.rolePacks');
         expect(recorded).not.toHaveProperty('session.roleBriefs');
         continue;
       }
@@ -390,7 +385,6 @@ describe('native operating advisor lifecycle', () => {
       },
       results: [{ roleId: 'strategy-finance' }, { roleId: 'technology-risk' }],
     });
-    expect(finalized).not.toHaveProperty('session.rolePacks');
     expect(finalized).not.toHaveProperty('session.roleBriefs');
     expect(finalized).toMatchObject({
       handoff: {
@@ -454,19 +448,13 @@ describe('native operating advisor lifecycle', () => {
       role: 'chair',
     })) as {
       roles: string[];
-      rolePacks: Record<
-        string,
-        {
-          roleBrief: { role: { displayLabel: string } };
-          evidence: { items: Array<{ source: string }> };
-        }
-      >;
+      roleBriefs: Record<string, { role: { displayLabel: string } }>;
+      roleMandates: Record<string, { roleId: string; mandateDigest: `sha256:${string}` }>;
     };
     expect(chair.roles).toEqual(['chair']);
-    expect(chair.rolePacks.chair.roleBrief.role.displayLabel).toBe('Chair');
-    expect(
-      chair.rolePacks.chair.evidence.items.some((item) => item.source === 'advisor-results'),
-    ).toBe(true);
+    expect(chair.roleBriefs.chair.role.displayLabel).toBe('Chair');
+    expect(chair.roleMandates.chair).toMatchObject({ roleId: 'chair' });
+    expect(chair.roleMandates.chair.mandateDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
   });
 
   it('rejects a partial canonical wrapper with compact-schema recovery and persists nothing', async () => {
@@ -529,12 +517,10 @@ describe('native operating advisor lifecycle', () => {
     })) as {
       roles: string[];
       roleInputDigests: Record<string, `sha256:${string}`>;
-      rolePacks: Record<string, { evidence: { items: Array<{ id: string }> } }>;
       lease: string;
     };
 
     const role = session.roles[0] as OperatingRoleResult['roleId'];
-    const evidenceRef = session.rolePacks[role].evidence.items[0].id;
     const result = {
       outcome: 'proposals' as const,
       proposals: [
@@ -551,7 +537,13 @@ describe('native operating advisor lifecycle', () => {
           confidence: 3,
           ease: 3,
           severity: 'high' as const,
-          evidenceRefs: [evidenceRef],
+          citations: [
+            {
+              repositoryPath: 'src/index.ts',
+              lineRange: { start: 1, end: 1 },
+              pinnedRevision: 'a'.repeat(40),
+            },
+          ],
         },
       ],
       gaps: [],
@@ -965,7 +957,6 @@ describe('native operating advisor lifecycle', () => {
         recordedRoles: ['strategy-finance', 'technology-risk'],
         roleInputDigests: {},
         roleBriefs: {},
-        rolePacks: {},
       })}\n`,
       { mode: 0o600 },
     );
@@ -1014,7 +1005,6 @@ describe('native operating advisor lifecycle', () => {
         recordedRoles: [],
         roleInputDigests: {},
         roleBriefs: {},
-        rolePacks: {},
       })}\n`,
       { mode: 0o600 },
     );

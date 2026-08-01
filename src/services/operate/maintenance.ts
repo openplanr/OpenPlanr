@@ -4,42 +4,20 @@ import path from 'node:path';
 import {
   advisorResponseContractDetails,
   assertAdvisorOutputMatchesBrief,
-  assertOperatingAdvisorPackWithinBudget,
-  buildAdvisorOperatingContext,
+  buildOperatingMandate,
   createNativeMissionOperatingRoleResult,
-  createNativeOperatingRoleResult,
-  createOperatingAdvisorPack,
-  type OperatingAdvisorPack,
-  type OperatingMissionEvidenceTruncation,
+  type OperatingMandate,
 } from './advisors.js';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
-import {
-  operatingProjectKey,
-  readOperatingAdapterLeaseDurationMs,
-  readOperatingDispatchModeOverrides,
-} from './config.js';
-import {
-  buildChairEvidence,
-  buildOperatingMissionPackets,
-  gateRecordedProposalCitations,
-} from './engine.js';
+import { operatingProjectKey, readOperatingAdapterLeaseDurationMs } from './config.js';
+import { gateRecordedProposalCitations } from './engine.js';
 import { OperatingEventStore } from './event-store.js';
-import { buildOperatingEvidenceIndex, starvedRoleEvidenceGaps } from './evidence.js';
 import { OperatingEvidenceCache } from './evidence-cache.js';
-import { purgeStaleEvidenceClassifications } from './evidence-classifications.js';
-import { listEvidenceDiagnostics } from './evidence-diagnostics.js';
-import { evaluateEvidenceReadiness } from './evidence-readiness.js';
 import { guidedSessionStatus, purgeGuidedSessions } from './interaction/session-service.js';
 import { assertCommittedOperatingView, recoverOperatingTransactions } from './journal.js';
 import { withOperatingLock } from './lock-service.js';
-import {
-  narrowMissionRootsToCeiling,
-  operatingRegistryDispatchMode,
-  operatingRuntimeEnforcesBoundedReadOnly,
-  resolveOperatingDispatchMode,
-} from './mission-dispatch.js';
 import { assertOperatingArtifact, loadOperatingProtocol } from './protocol.js';
-import { compareSensitivity, containsSecret, redactSensitiveText } from './redaction.js';
+import { containsSecret, redactSensitiveText } from './redaction.js';
 import {
   OPERATE_PROTOCOL_VERSION,
   OPERATE_SCHEMA_VERSION,
@@ -48,8 +26,6 @@ import {
   type OperatingAdvisorBrief,
   type OperatingDataGap,
   type OperatingEvidence,
-  type OperatingEvidenceIndexItem,
-  type OperatingMissionPacket,
   type OperatingRecoveryRecord,
   type OperatingRoleId,
   type OperatingRoleResult,
@@ -82,35 +58,13 @@ interface PrivateAdvisorSession {
   recordedRoles: string[];
   roleInputDigests: Record<string, `sha256:${string}`>;
   roleBriefs: Record<string, OperatingAdvisorBrief>;
-  rolePacks: Record<string, OperatingAdvisorPack>;
-  // FR1: the Protocol v1.3 mission packets for roles that resolved to native
-  // bounded read-only dispatch (`resolveOperatingDispatchMode(...).native`). A
-  // role appears here XOR in `rolePacks`. Omitted entirely for a pure v1.2
-  // pack-mode session so its on-disk shape stays byte-compatible.
-  roleMissionPackets?: Record<string, OperatingMissionPacket>;
-}
-
-/**
- * Whether any bound role of this session resolved to native mission dispatch, so
- * both adapter-handoff call sites can pass `protocolVersion: '1.3.0'` and the
- * pipeline emits the v1.3 mission record action (`dispatch.agent` +
- * `dispatch.missionPacketPointer`) instead of the v1.2 `rolePackPointer`.
- */
-function sessionHasMissionRole(
-  session: Pick<PrivateAdvisorSession, 'roleMissionPackets'>,
-): boolean {
-  return Boolean(session.roleMissionPackets && Object.keys(session.roleMissionPackets).length > 0);
+  roleMandates: Record<string, OperatingMandate>;
 }
 
 function adapterSessionSummary(
   session: PrivateAdvisorSession,
-): Omit<PrivateAdvisorSession, 'roleBriefs' | 'rolePacks' | 'roleMissionPackets'> {
-  const {
-    roleBriefs: _roleBriefs,
-    rolePacks: _rolePacks,
-    roleMissionPackets: _roleMissionPackets,
-    ...summary
-  } = session;
+): Omit<PrivateAdvisorSession, 'roleBriefs' | 'roleMandates'> {
+  const { roleBriefs: _roleBriefs, roleMandates: _roleMandates, ...summary } = session;
   return summary;
 }
 
@@ -126,10 +80,7 @@ async function adapterHandoff(session: PrivateAdvisorSession): Promise<Operating
           : 'finalize-required';
   const protocol = await loadOperatingProtocol();
   const handoff = protocol.createOperatingAdapterHandoff({
-    // v1.3 when any bound role resolved mission, so the record action names the
-    // generated lens agent and points at its mission packet; v1.2 (pack) default
-    // otherwise, byte-compatible with the pack-mode handoff.
-    ...(sessionHasMissionRole(session) ? { protocolVersion: '1.3.0' } : {}),
+    protocolVersion: '1.3.0',
     phase: session.phase,
     state,
     cycleId: session.cycleId,
@@ -316,25 +267,12 @@ export async function operatingCacheAction(input: {
     preferences.sensitivityCeiling ?? 'internal',
   );
   if (input.action === 'status') {
-    const diagnostics = await listEvidenceDiagnostics({
-      projectRoot: input.projectRoot,
-      localRoot: input.localRoot,
-    });
-    const classifications = await purgeStaleEvidenceClassifications({
-      projectRoot: input.projectRoot,
-      localRoot: input.localRoot,
-    });
     return {
       evidence: await cache.status(),
       sessions: await guidedSessionStatus({
         projectRoot: input.projectRoot,
         localRoot: input.localRoot,
       }),
-      diagnostics: {
-        candidates: diagnostics.length,
-        classified: diagnostics.filter((entry) => entry.classification).length,
-        staleClassifications: classifications.stale,
-      },
     };
   }
   if (!input.confirmed) {
@@ -348,11 +286,6 @@ export async function operatingCacheAction(input: {
     projectRoot: input.projectRoot,
     localRoot: input.localRoot,
   });
-  const classifications = await purgeStaleEvidenceClassifications({
-    projectRoot: input.projectRoot,
-    localRoot: input.localRoot,
-    purge: true,
-  });
   // FR4/FR11: clearing machine-local caches also drops board-bound adapter
   // sessions and incremental evidence baselines, so this is the scoped fix the
   // doctor names for stale adapter sessions and stale incremental baselines.
@@ -364,12 +297,10 @@ export async function operatingCacheAction(input: {
     removed:
       removed.length +
       sessions.removed +
-      classifications.purged +
       board.removedAdvisorSessions +
       board.removedIncrementalBaselines,
     evidence: { removed: removed.length, entries: removed },
     sessions,
-    classifications,
     adapterSessions: { removed: board.removedAdvisorSessions },
     incrementalBaselines: { removed: board.removedIncrementalBaselines },
   };
@@ -981,98 +912,29 @@ async function readAdapterSensitivityCeiling(
     .catch(() => 'internal' as OperatingSensitivity);
 }
 
-/**
- * FR2: deny-list every declared read root that contains an above-ceiling evidence
- * item BEFORE the mission packet is built, so no above-ceiling file is reachable
- * even inside a granted root. Uses `mission-dispatch.ts`'s
- * `narrowMissionRootsToCeiling` over the FULL (pre-ceiling-filter) evidence, then
- * drops the items in the denied roots. `buildOperatingMissionPackets` then derives
- * the packet's `declaredRoots` (and thus its tool grant) from only the narrowed
- * roots. This is the belt to the bounded reader's read-time-ceiling suspenders.
- */
-export function narrowEvidenceToMissionCeiling(
-  evidence: OperatingEvidence,
-  ceiling: OperatingSensitivity,
-): OperatingEvidence {
-  // FR2: scope the deny-list to the individual above-ceiling ITEMS, not every
-  // item under the same top-level root. A compliant sibling under a root that
-  // also holds one above-ceiling file stays reachable; only the offending item
-  // is removed. `narrowMissionRootsToCeiling` still runs over the already
-  // item-narrowed set (the pipeline-owned root guard, not reimplemented), so the
-  // derived read roots never widen past the surviving items — the read-time
-  // ceiling check on the bounded reader remains the suspenders to this belt.
-  const compliantItems = evidence.items.filter(
-    (item) => compareSensitivity(item.sensitivity, ceiling) <= 0,
-  );
-  const topSegment = (location: string): string | null => {
-    const [top] = location.split('/');
-    return top && top.length > 0 ? top : null;
-  };
-  const declaredRoots = [
-    ...new Set(
-      compliantItems
-        .map((item) => topSegment(item.location))
-        .filter((segment): segment is string => Boolean(segment)),
-    ),
-  ];
-  const evidenceIndex = compliantItems.map((item) => ({
-    path: item.location,
-    sensitivity: item.sensitivity,
-  })) as unknown as OperatingEvidenceIndexItem[];
-  const allowedRoots = new Set(
-    narrowMissionRootsToCeiling({ declaredRoots, evidenceIndex, ceiling }),
-  );
-  return {
-    ...evidence,
-    items: compliantItems.filter((item) => {
-      const top = topSegment(item.location);
-      return top === null || allowedRoots.has(top);
-    }),
-  };
-}
+// The mandate `boundaries.roots` items must satisfy this pattern (leading dot
+// permitted, no `..` traversal), so `.planr` is a valid declared root.
+const MANDATE_ROOT_PATTERN = /^(?!.*\.\.)[A-Za-z0-9._][A-Za-z0-9._/-]*$/;
 
 /**
- * Resolve every requested role's effective dispatch mode for THIS runtime (FR1):
- * the v1.3 registry default, overridden by the machine-local
- * `dispatchModeOverrides`, reconciled against whether the runtime natively
- * enforces the bounded read-only boundary. The adapter lifecycle IS the native
- * runtime path, so the hosting adapter is native-capable by construction; the
- * runtime's own enforceability then decides whether a role receives a native
- * bounded mission lens (`resolution.native`) or falls closed to the v1.2 pack.
+ * FR1/FR2: derive a mandate's declared read roots directly from the project
+ * working tree — every top-level directory the agent may traverse — rather than
+ * from a collected evidence index. `.planr/` is ALWAYS declared, whether or not
+ * it exists yet and REGARDLESS of git tracking, because the mission tool surface
+ * (`mission-dispatch.ts`) walks the filesystem directly rather than `git
+ * ls-files`, so a gitignored `.planr/` tree is fully readable (finding 2's
+ * tracked-file gap cannot reproduce here). `.git`/`node_modules` are never
+ * declared, and every root is filtered to the mandate's schema pattern.
  */
-async function resolveBoundRoleDispatchModes(input: {
-  projectRoot: string;
-  localRoot?: string;
-  runtime: string;
-  roles: readonly string[];
-}): Promise<Map<string, ReturnType<typeof resolveOperatingDispatchMode>>> {
-  const protocol = await loadOperatingProtocol();
-  const registryDefaults = new Map(
-    (protocol.listOperatingRoles() as Array<{ id: string; dispatchMode?: unknown }>).map((role) => [
-      role.id,
-      operatingRegistryDispatchMode(role),
-    ]),
-  );
-  const overrides = await readOperatingDispatchModeOverrides(input.projectRoot, {
-    localRoot: input.localRoot,
-  });
-  const runtimeEnforcesBoundedReadOnly = await operatingRuntimeEnforcesBoundedReadOnly(
-    input.runtime,
-  );
-  const resolved = new Map<string, ReturnType<typeof resolveOperatingDispatchMode>>();
-  for (const roleId of input.roles) {
-    resolved.set(
-      roleId,
-      resolveOperatingDispatchMode({
-        roleId: roleId as OperatingRoleId,
-        registryDefault: registryDefaults.get(roleId) ?? 'mission',
-        override: overrides[roleId as OperatingRoleId],
-        runtimeEnforcesBoundedReadOnly,
-        adapterNativeCapable: true,
-      }),
-    );
+async function deriveOperatingMandateRoots(projectRoot: string): Promise<string[]> {
+  const entries = await readdir(projectRoot, { withFileTypes: true }).catch(() => []);
+  const roots = new Set<string>(['.planr']);
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name === '.git' || entry.name === 'node_modules') continue;
+    if (MANDATE_ROOT_PATTERN.test(entry.name)) roots.add(entry.name);
   }
-  return resolved;
+  return [...roots].sort();
 }
 
 export async function createOperatingAdapterStartHandoff(input: {
@@ -1115,19 +977,8 @@ export async function createOperatingAdapterStartHandoff(input: {
     }
   }
   const protocol = await loadOperatingProtocol();
-  // FR1 call site 2 (the start / prepare-required handoff): stamp v1.3 whenever
-  // any bound role would resolve to native mission dispatch on this runtime, so
-  // the whole lifecycle — including the record actions built after prepare —
-  // carries the mission protocol version rather than defaulting to pack.
-  const dispatchModes = await resolveBoundRoleDispatchModes({
-    projectRoot: input.projectRoot,
-    localRoot: input.localRoot,
-    runtime: input.runtime,
-    roles: input.roles,
-  });
-  const anyMission = [...dispatchModes.values()].some((resolution) => resolution.native);
   const handoff = protocol.createOperatingAdapterHandoff({
-    ...(anyMission ? { protocolVersion: '1.3.0' } : {}),
+    protocolVersion: '1.3.0',
     phase: input.phase,
     state: 'prepare-required',
     cycleId: input.cycleId,
@@ -1313,199 +1164,46 @@ export async function operateAdapterLifecycle(input: {
         // FR4: a finalized/expired/cancelled same-board session no longer forces
         // a whole-cycle-cancelling error on a new compatible prepare. The
         // advisors→chair continuation and a same-phase re-prepare both fall
-        // through and supersede the dead session; an exact dead session still
-        // recovers its already-built packs so recorded advisory work is reused
-        // rather than recomputed.
+        // through and supersede the dead session; an exact dead session reuses
+        // its already-built mandates so recorded advisory work is not recomputed.
         if (exact && (sessionExpired(normalized) || normalized.state === 'cancelled')) {
           recoverableSession = normalized;
         }
       }
     }
-    const roleEvidence =
-      roles[0] === 'chair'
-        ? buildChairEvidence(
-            baseEvidence,
-            await readPersistedOperatingRoleResults(store, input.cycleId),
-            new Date().toISOString(),
-          )
-        : baseEvidence;
-    const readiness = await evaluateEvidenceReadiness({
-      cycleId: input.cycleId,
-      evidence: roleEvidence,
-      enabledRoles: roles,
-      now: new Date(),
-    });
-    const unready = readiness.roles.filter((role) => !role.modelCallAllowed);
-    if (unready.length > 0) {
-      throw new OperateError(
-        'E_OPERATE_EVIDENCE_NOT_READY',
-        `Native advisor preparation is blocked for: ${unready
-          .map((role) => role.roleId)
-          .sort()
-          .join(', ')}.`,
-      );
-    }
-    const context = await buildAdvisorOperatingContext({
-      charterPath: resolveOperatingPaths(input.projectRoot, {
-        localRoot: input.localRoot,
-      }).charter,
-      state,
-      cycleId: input.cycleId,
-    });
-    // FR1: resolve each requested role's dispatch mode for THIS runtime. A role
-    // that resolves to a native bounded lens (`resolution.native`) gets a
-    // body-free v1.3 mission packet; every other role keeps the v1.2 role pack.
-    // A recovered dead-but-exact session reuses its stored packs/packets verbatim.
-    const dispatchModes = await resolveBoundRoleDispatchModes({
-      projectRoot: input.projectRoot,
-      localRoot: input.localRoot,
-      runtime,
-      roles,
-    });
-    const missionRoleIds = readiness.roles
-      .map((role) => role.roleId)
-      .filter((roleId) => dispatchModes.get(roleId)?.native);
-    const packReadinessRoles = readiness.roles.filter(
-      (role) => !dispatchModes.get(role.roleId)?.native,
-    );
-    const rolePacks: Record<string, OperatingAdvisorPack> =
-      recoverableSession?.rolePacks ??
-      (Object.fromEntries(
-        await Promise.all(
-          packReadinessRoles.map(async (role) => [
-            role.roleId,
-            await createOperatingAdvisorPack({
-              cycleId: input.cycleId as string,
-              role,
-              evidence: roleEvidence,
-              context,
-            }),
-          ]),
-        ),
-      ) as Record<string, OperatingAdvisorPack>);
-    // FR1: build the natively-dispatched roles' mission packets from live
-    // cycle/workspace state. Only reached when a role actually resolved mission,
-    // so a pure pack-mode prepare never loads config/workspace and stays
-    // byte-compatible with the v1.2 path. The evidence is ceiling-narrowed by
-    // `narrowMissionRootsToCeiling` first, so a declared read root can never reach
-    // an above-ceiling file even before the bounded reader's read-time check.
-    // FR2: after narrowing, the same POST-index gate the readiness evaluator now
-    // understands runs here — a mission role whose repository items were all
-    // dropped by the dot-prefixed/pattern filter retains zero repository index
-    // items, is gated not-ready with a governed gap, and is dropped from
-    // `missionRoleIds` instead of dispatching on an empty evidence base. The
-    // other ready roles still dispatch.
-    let starvedMissionRoleIds: OperatingRoleId[] = [];
-    let evidenceGaps: OperatingDataGap[] = [];
-    // FR4: index truncations the published pipeline performed for over-cap roles,
-    // surfaced onto the prepare result so the drop reaches the cycle as a warning.
-    let missionEvidenceTruncations: OperatingMissionEvidenceTruncation[] = [];
-    const roleMissionPackets: Record<string, OperatingMissionPacket> =
-      recoverableSession?.roleMissionPackets ??
-      (missionRoleIds.length > 0
-        ? await (async () => {
-            const [config, workspace, sensitivityCeiling] = await Promise.all([
-              readOperatingConfig(input.projectRoot, { localRoot: input.localRoot }),
-              refreshOperatingWorkspaceManifest(input.projectRoot, { localRoot: input.localRoot }),
-              readAdapterSensitivityCeiling(input.projectRoot, input.localRoot),
-            ]);
-            const narrowedEvidence = narrowEvidenceToMissionCeiling(
-              roleEvidence,
-              sensitivityCeiling,
+    // FR1/FR2: every requested role — the Chair included — dispatches an operating
+    // MANDATE. The role-dependent pack/mission split is retired, so there is no
+    // pre-dispatch readiness gate against collected evidence and no v1.2 role pack
+    // is built. A mandate carries the lens question, the investigation mandate, the
+    // declared read boundaries (the granted workspace roots — including a
+    // gitignored `.planr/` tree — the registry sensitivity ceiling, and any
+    // forbidden paths), the response schema, and the citation requirement. It
+    // carries NO evidence body and NO evidence index: nothing is collected,
+    // budgeted, packed, or pre-filtered. A response that grounds nothing is
+    // post-gated at record time by the universal citation gate
+    // (`gateRecordedProposalCitations`). A recovered dead-but-exact session reuses
+    // its stored mandates verbatim.
+    const roleMandates: Record<string, OperatingMandate> =
+      recoverableSession?.roleMandates && Object.keys(recoverableSession.roleMandates).length > 0
+        ? recoverableSession.roleMandates
+        : await (async () => {
+            const roots = await deriveOperatingMandateRoots(input.projectRoot);
+            const built = await Promise.all(
+              (roles as OperatingRoleId[]).map(
+                async (roleId) => [roleId, await buildOperatingMandate({ roleId, roots })] as const,
+              ),
             );
-            const missionEvidenceIndex = buildOperatingEvidenceIndex(narrowedEvidence, {
-              sensitivityCeiling,
-            });
-            const postIndexReadiness = await evaluateEvidenceReadiness({
-              cycleId: input.cycleId as string,
-              evidence: narrowedEvidence,
-              enabledRoles: missionRoleIds as OperatingRoleId[],
-              now: new Date(),
-              missionEvidenceIndex,
-            });
-            starvedMissionRoleIds = postIndexReadiness.roles
-              .filter((role) => !role.modelCallAllowed)
-              .map((role) => role.roleId);
-            const dispatchableMissionRoleIds = (missionRoleIds as OperatingRoleId[]).filter(
-              (roleId) => !starvedMissionRoleIds.includes(roleId),
-            );
-            if (starvedMissionRoleIds.length > 0) {
-              evidenceGaps = await starvedRoleEvidenceGaps({
-                cycleId: input.cycleId as string,
-                roleIds: starvedMissionRoleIds,
-                owner: config.decisionOwner,
-                now: new Date().toISOString(),
-              });
-            }
-            if (dispatchableMissionRoleIds.length === 0) return {};
-            // FR4: pass the configured item budget as the upper bound; each role's
-            // effective cap is the smaller of it and the role's registry-sized
-            // default. A monorepo-scale index is truncated (highest-priority items
-            // kept) so its packet fits the derived budget instead of failing
-            // closed; the truncation record is captured for the cycle warnings.
-            const { packets, truncations } = await buildOperatingMissionPackets({
-              cycleId: input.cycleId as string,
-              config,
-              workspace,
-              context,
-              evidence: narrowedEvidence,
-              roleIds: dispatchableMissionRoleIds,
-              sensitivityCeiling,
-              maxEvidenceItems: config.budgets.maxItems,
-            });
-            missionEvidenceTruncations = truncations;
-            return Object.fromEntries(packets.map((packet) => [packet.roleId, packet]));
-          })()
-        : {});
-    // FR2: the session's bound role set drops any starved mission role, so its
-    // handoff, briefs, and input digests never reference a role that will not
-    // dispatch. When nothing is starved this is exactly `roles`, keeping the
-    // pack-mode / healthy-mission prepare byte-identical.
-    const dispatchedRoles =
-      starvedMissionRoleIds.length > 0
-        ? roles.filter((role) => !starvedMissionRoleIds.includes(role))
-        : roles;
-    // FR2: fail closed before a native adapter session is assembled. A freshly
-    // built pack is already measured inside `createOperatingAdvisorPack`, but the
-    // session may instead be RECOVERED from disk (`recoverableSession`) — possibly
-    // written before pack-budget enforcement existed. Re-measure every pack that
-    // will back this session against its role's published v1.2 `maxInputBytes`, so
-    // an oversized pack can never reach the adapter from either source instead of
-    // silently constructing an oversized session. (Mission packets are measured
-    // against their derived mission budget inside `buildOperatingMissionPackets`.)
-    const packInputBudgets = new Map(
-      protocol.listOperatingRoles().map((role) => {
-        const maxInputBytes = (role as { budgets?: { maxInputBytes?: number } }).budgets
-          ?.maxInputBytes;
-        return [role.id, typeof maxInputBytes === 'number' ? maxInputBytes : 262_144] as const;
-      }),
+            return Object.fromEntries(built) as Record<string, OperatingMandate>;
+          })();
+    // Every requested role dispatches; the bound role set is exactly `roles`.
+    const dispatchedRoles = roles;
+    const roleBriefs: Record<string, OperatingAdvisorBrief> = Object.fromEntries(
+      Object.keys(roleMandates).map((role) => [role, protocol.createOperatingAdvisorBrief(role)]),
     );
-    for (const [roleId, pack] of Object.entries(rolePacks)) {
-      assertOperatingAdvisorPackWithinBudget(pack, packInputBudgets.get(roleId) ?? 262_144);
-    }
-    // A mission role's brief facet is the same registry-derived brief pack mode
-    // uses, so the record path's brief-bound machinery (output limits, contract
-    // details, output-vs-brief checks) applies uniformly across both modes.
-    const roleBriefs: Record<string, OperatingAdvisorBrief> = {
-      ...Object.fromEntries(
-        Object.entries(rolePacks).map(([role, pack]) => [role, pack.roleBrief]),
-      ),
-      ...Object.fromEntries(
-        Object.keys(roleMissionPackets).map((role) => [
-          role,
-          protocol.createOperatingAdvisorBrief(role),
-        ]),
-      ),
-    };
-    // A role's committed input digest is its pack's `inputDigest` (pack mode) or
-    // its mission packet's `packetDigest` (mission mode). The record path binds a
-    // recorded result to exactly this value, and a recovered machine-local result
-    // is re-adopted only when it still matches it.
+    // A role's committed input digest is its mandate digest. The record path
+    // binds a recorded result to exactly this value.
     const roleInputDigests = Object.fromEntries(
-      dispatchedRoles.map((role) => {
-        const digest = roleMissionPackets[role]?.packetDigest ?? rolePacks[role]?.inputDigest;
-        return [role, digest] as const;
-      }),
+      dispatchedRoles.map((role) => [role, roleMandates[role].mandateDigest] as const),
     ) as Record<string, `sha256:${string}`>;
     const validRecordedRoles: string[] = [];
     for (const role of dispatchedRoles) {
@@ -1545,27 +1243,13 @@ export async function operateAdapterLifecycle(input: {
       roles: dispatchedRoles,
       recordedRoles: validRecordedRoles.sort(),
       roleBriefs,
-      rolePacks,
-      // Omitted entirely for a pure pack-mode session so its on-disk shape stays
-      // byte-compatible with the v1.2 path.
-      ...(Object.keys(roleMissionPackets).length > 0 ? { roleMissionPackets } : {}),
+      roleMandates,
       roleInputDigests,
     };
     await atomicPrivateWrite(target, session);
     return {
       ...session,
-      // Expose the mission packets at `/data/missionPackets/<role>` so the v1.3
-      // record action's `dispatch.missionPacketPointer` resolves against the
-      // prepare result; pack roles keep resolving at `/data/rolePacks/<role>`.
-      ...(Object.keys(roleMissionPackets).length > 0 ? { missionPackets: roleMissionPackets } : {}),
-      // FR2: surface the governed gaps for any starved mission role that was
-      // dropped from dispatch. Omitted when nothing was starved so a healthy
-      // prepare result stays byte-identical.
-      ...(evidenceGaps.length > 0 ? { evidenceGaps } : {}),
-      // FR4: surface the evidence-index truncation warnings for any over-cap
-      // mission role so the drop reaches the cycle, never a silent drop. Omitted
-      // when nothing was truncated so a healthy prepare result stays byte-identical.
-      ...(missionEvidenceTruncations.length > 0 ? { missionEvidenceTruncations } : {}),
+      mandates: roleMandates,
       leaseStatus: adapterLeaseStatus(session, nowMs),
       handoff: await adapterHandoff(session),
     };
@@ -1688,9 +1372,12 @@ export async function operateAdapterLifecycle(input: {
     const submittedRecord =
       submitted && typeof submitted === 'object' ? (submitted as Record<string, unknown>) : {};
     let result: OperatingRoleResult;
-    // FR1: unresolvable-citation gaps opened while resolving a mission response's
-    // citations, surfaced in the record response for observability.
+    // FR1/FR2: unresolvable-citation and empty-grounding gaps opened while
+    // resolving a mandate response's citations, surfaced in the record response
+    // for observability. `recordNotEvaluated` marks a role whose citations
+    // grounded zero evidence (committed as a quiet result plus the governed gap).
     let recordGaps: OperatingDataGap[] = [];
+    let recordNotEvaluated = false;
     if (submittedRecord.kind === 'operating-role-result') {
       throw new OperateError(
         'E_OPERATE_ADVISOR_FAILED',
@@ -1729,54 +1416,43 @@ export async function operateAdapterLifecycle(input: {
           );
         }
       }
-      const missionPacket = session.roleMissionPackets?.[input.role];
+      const mandate = session.roleMandates[input.role];
       try {
-        if (missionPacket) {
-          // FR1: a mission-mode role submits the v1.3 citation-bearing response.
-          // Its citations flow into the engine's already-live citation gate,
-          // which resolves them against the cycle's pinned revision and mints the
-          // evidenceRefs that make the committed result v1.2-valid — the pack
-          // path is untouched.
-          const gated = await createNativeMissionOperatingRoleResult({
-            packet: missionPacket,
-            response: submitted,
-            runtime: session.runtime,
-            resolveCitations: async (roleResults) => {
-              const [workspace, sensitivityCeiling, config] = await Promise.all([
-                refreshOperatingWorkspaceManifest(input.projectRoot, {
-                  localRoot: input.localRoot,
-                }),
-                readAdapterSensitivityCeiling(input.projectRoot, input.localRoot),
-                readOperatingConfig(input.projectRoot, { localRoot: input.localRoot }).catch(
-                  () => null,
+        const gated = await createNativeMissionOperatingRoleResult({
+          mandate,
+          cycleId: input.cycleId as string,
+          response: submitted,
+          runtime: session.runtime,
+          resolveCitations: async (roleResults) => {
+            const [workspace, sensitivityCeiling, config] = await Promise.all([
+              refreshOperatingWorkspaceManifest(input.projectRoot, {
+                localRoot: input.localRoot,
+              }),
+              readAdapterSensitivityCeiling(input.projectRoot, input.localRoot),
+              readOperatingConfig(input.projectRoot, { localRoot: input.localRoot }).catch(
+                () => null,
+              ),
+            ]);
+            return gateRecordedProposalCitations({
+              roleResults,
+              context: {
+                projectRoot: input.projectRoot,
+                cycleId: input.cycleId as string,
+                descriptor: workspace.controlRepository,
+                cache: new OperatingEvidenceCache(
+                  resolveOperatingPaths(input.projectRoot, {
+                    localRoot: input.localRoot,
+                  }).evidence,
+                  sensitivityCeiling,
                 ),
-              ]);
-              return gateRecordedProposalCitations({
-                roleResults,
-                context: {
-                  projectRoot: input.projectRoot,
-                  cycleId: input.cycleId as string,
-                  descriptor: workspace.controlRepository,
-                  cache: new OperatingEvidenceCache(
-                    resolveOperatingPaths(input.projectRoot, {
-                      localRoot: input.localRoot,
-                    }).evidence,
-                    sensitivityCeiling,
-                  ),
-                  owner: config?.decisionOwner,
-                },
-              });
-            },
-          });
-          result = gated.result;
-          recordGaps = gated.gaps;
-        } else {
-          result = await createNativeOperatingRoleResult({
-            pack: session.rolePacks[input.role],
-            response: submitted,
-            runtime: session.runtime,
-          });
-        }
+                owner: config?.decisionOwner,
+              },
+            });
+          },
+        });
+        result = gated.result;
+        recordGaps = gated.gaps;
+        recordNotEvaluated = gated.notEvaluated;
       } catch (error) {
         if (error instanceof OperateError && error.code === 'E_OPERATE_ADVISOR_FAILED') {
           throw new OperateError(error.code, error.message, {
@@ -1875,6 +1551,7 @@ export async function operateAdapterLifecycle(input: {
       recorded: input.role,
       result,
       ...(recordGaps.length > 0 ? { citationGaps: recordGaps } : {}),
+      ...(recordNotEvaluated ? { notEvaluated: true } : {}),
       session: adapterSessionSummary(updated),
       leaseStatus: adapterLeaseStatus(updated, nowMs),
       handoff: await adapterHandoff(updated),

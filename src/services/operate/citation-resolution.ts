@@ -11,7 +11,7 @@ import {
   readGitCommitSummary,
   readGitPathAtRevision,
 } from './read-only-providers.js';
-import { redactSensitiveText } from './redaction.js';
+import { detectSecretMetadata, redactSensitiveText } from './redaction.js';
 import {
   OperateError,
   type OperatingSensitivity,
@@ -248,6 +248,45 @@ function dirtyWorkingTreeGap(
   return gap;
 }
 
+/**
+ * FR2 safety property (replaces the retired candidate-diagnose workflow): a
+ * resolved citation whose cited bytes carry a HARD-BLOCKED secret category
+ * (a known token, an authorization header, a private key, a JWT, or a
+ * credential URL) is rejected as an `unresolvable` citation gap rather than
+ * redacted-and-accepted into a snapshot. The soft categories (a bare
+ * secret-shaped assignment or structured value) stay redacted-and-accepted —
+ * only a definite, hard-blocked secret refuses the citation outright, so a
+ * hard secret never reaches even a redacted evidence-of-record.
+ */
+function hardBlockedSecretGap(
+  citation: OperatingCitation,
+  context: CitationResolutionContext,
+  now: Date,
+): OperatingCitationGap {
+  const location =
+    citation.repositoryPath ?? citation.gitRevision ?? citation.planrArtifactId ?? 'cited content';
+  const createdAt = now.toISOString();
+  return {
+    kind: 'operating-data-gap',
+    schemaVersion: '1.0.0',
+    protocolVersion: '1.3.0',
+    id: `GAP-${canonicalDigest({ citation, reason: 'hard-blocked-secret' }).slice('sha256:'.length)}`,
+    cycleId: context.cycleId,
+    category: 'unresolvable-citation',
+    question:
+      `The cited content at "${location}" carries a hard-blocked secret; it is rejected as ` +
+      'unresolvable rather than snapshotted, even redacted. Remove the secret from the cited ' +
+      'source or cite content that does not disclose it.',
+    reason: 'unresolvable',
+    unblocks: [],
+    status: 'open',
+    owner: context.owner && context.owner.length > 0 ? context.owner : 'chair',
+    evidenceRefs: [],
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
 interface CitationObservation {
   kind: 'repo-path' | 'git-revision' | 'planr-artifact';
   pathExistsAtRevision?: boolean;
@@ -412,6 +451,28 @@ export async function resolveOperatingCitationAtPin(
   // Resolved: snapshot the cited bytes through the standard redaction path and
   // persist them as machine-local evidence under the resolver-minted id.
   const rawContent = observation.content ?? '';
+  // Extend the redaction step (FR2): a hard-blocked secret in the cited content
+  // is rejected as an `unresolvable` citation gap rather than redacted-and-
+  // accepted, so a definite secret never lands in the evidence-of-record even
+  // redacted. `preRedacted` planr-artifact content already passed the redaction
+  // path (which fails closed on a surviving hard secret) at its source.
+  if (
+    !observation.preRedacted &&
+    detectSecretMetadata(rawContent).some((entry) => entry.hardBlock)
+  ) {
+    const gap = await assertOperatingArtifact(
+      'operating-data-gap',
+      hardBlockedSecretGap(keyed, context, now),
+    );
+    return {
+      citation: keyed,
+      citationKey,
+      outcome: 'rejected',
+      reason: 'unresolvable',
+      gap,
+      sensitivity,
+    };
+  }
   const content = observation.preRedacted ? rawContent : redactSensitiveText(rawContent).value;
   await context.cache.putCitationSnapshot(
     {

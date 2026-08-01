@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readBoundedInitAnswers } from '../../src/cli/commands/operate.js';
 import {
   applyOperatingInitialization,
-  parseOperatingDispatchModeOverrideFlags,
   prepareOperatingInitialization,
 } from '../../src/services/operate/config.js';
 import { executeOperateAction } from '../../src/services/operate/index.js';
@@ -285,7 +284,6 @@ describe('guided Operating Board initialization', () => {
         'planning-engine': 'openplanr',
         runtime: 'codex',
         'sensitivity-ceiling': 'internal',
-        sources: ['repository', 'git'],
       }),
     );
     // Write the answers document outside the project root so it never dirties the
@@ -320,6 +318,116 @@ describe('guided Operating Board initialization', () => {
     });
   });
 
+  it('re-answers a persisted answer before apply without restarting the session', async () => {
+    const projectRoot = await gitProject();
+    clearRuntimeMarkers();
+
+    const start = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { json: true },
+    });
+    const foundation = start.questionnaire as GuidedQuestionnaire;
+    const advanced = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { json: true, resume: foundation.sessionId },
+      stdin: JSON.stringify(
+        buildAnswerEnvelope(foundation, {
+          profile: 'saas',
+          'decision-owner': 'Asem',
+          'planning-engine': 'openplanr',
+          runtime: 'codex',
+          'sensitivity-ceiling': 'internal',
+        }),
+      ),
+    });
+    const charter = advanced.questionnaire as GuidedQuestionnaire;
+    expect(charter.stage).toBe('product-charter');
+
+    // Revise a previously accepted foundation answer (decision-owner) against the
+    // current questionnaire — a differing value for an already-persisted answer.
+    const revision = {
+      ...charter.submission.envelope.fixedFields,
+      questionnaireDigest: charter.digest,
+      answers: [
+        {
+          questionId: 'decision-owner',
+          questionVersion: '1.0.0' as const,
+          sensitivity: 'internal' as const,
+          value: 'Revised Owner',
+        },
+      ],
+      submittedAt: new Date(Date.parse(charter.createdAt) + 2).toISOString(),
+    };
+    const revised = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { json: true, resume: foundation.sessionId },
+      stdin: JSON.stringify(revision),
+    });
+    // Accepted (never a replay conflict) and surfaced as the transient revising
+    // state — no restart, no new session.
+    expect(revised).toMatchObject({
+      ok: true,
+      code: 'E_OPERATE_INPUT_REQUIRED',
+      state: 'revising',
+    });
+
+    // Completing the charter reaches the write-free preview with the REVISED value.
+    const complete = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { json: true, resume: foundation.sessionId },
+      stdin: JSON.stringify(
+        buildAnswerEnvelope(revised.questionnaire as GuidedQuestionnaire, {
+          purpose: 'Turn evidence into cited operating decisions.',
+          'product-stage': 'growth',
+          'business-model': 'Subscription SaaS',
+          'ideal-customer': 'Technical founders',
+          goals: ['Reach a cited brief quickly'],
+          'success-metrics': ['First useful brief within five minutes'],
+          guardrails: ['No external effects without explicit confirmation'],
+        }),
+      ),
+    });
+    expect(complete).toMatchObject({
+      ok: true,
+      state: 'preview-ready',
+      preview: { config: { decisionOwner: 'Revised Owner' } },
+    });
+  });
+
+  it('suggests the profile named by an existing .planr/operate-profile.json', async () => {
+    const projectRoot = await gitProject();
+    clearRuntimeMarkers();
+    await mkdir(join(projectRoot, '.planr'), { recursive: true });
+    await writeFile(
+      join(projectRoot, '.planr', 'operate-profile.json'),
+      `${JSON.stringify({ id: 'engineering', title: 'Engineering', description: 'Delivery focus.' })}\n`,
+    );
+
+    const result = await executeOperateAction({
+      action: 'init',
+      projectRoot,
+      interactive: false,
+      options: { json: true },
+    });
+
+    const profile = result.questionnaire?.questions.find(
+      (question) => question.questionId === 'profile',
+    );
+    expect(profile).toMatchObject({
+      valueSemantics: 'suggestion',
+      suggestedValue: 'engineering',
+    });
+    expect(profile?.suggestionReason).toContain('operate-profile.json');
+  });
+
   it('preserves fully specified flag automation and produces a write-free preview', async () => {
     const projectRoot = await gitProject();
     const result = await executeOperateAction({
@@ -336,7 +444,6 @@ describe('guided Operating Board initialization', () => {
         cadence: 'manual',
         timezone: 'UTC',
         sensitivityCeiling: 'internal',
-        sources: ['repository', 'git'],
         purpose: 'Help product teams make cited operating decisions.',
         productStage: 'growth',
         businessModel: 'Subscription SaaS',
@@ -364,10 +471,7 @@ describe('guided Operating Board initialization', () => {
     ).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  // FR5 / T-005 — the init preview names the machine-local preference keys a
-  // re-init will change, so an operator sees the field-level delta (not merely that
-  // preferences.json is in the affected-files list) before confirming.
-  it('names exactly which machine-local preferences a re-init will change in the preview', async () => {
+  it('preserves supported machine-local preferences across a re-init preview', async () => {
     const projectRoot = await gitProject();
     const localRoot = await mkdtemp(join(tmpdir(), 'openplanr-guided-init-preview-delta-'));
     clearRuntimeMarkers();
@@ -383,8 +487,7 @@ describe('guided Operating Board initialization', () => {
       knownUnknowns: ['Current activation baseline'],
     };
 
-    // Seed: a prior cycle committed machine-local policy (an override, a custom
-    // adapter lease, and a cadence marker) alongside the base preferences.
+    // Seed a custom adapter lease and cadence marker alongside base preferences.
     const seedPreview = await prepareOperatingInitialization({
       projectRoot,
       localRoot,
@@ -397,7 +500,6 @@ describe('guided Operating Board initialization', () => {
       sensitivityCeiling: 'internal',
       enabledProviders: ['repository', 'git'],
       charter,
-      dispatchModeOverrides: parseOperatingDispatchModeOverrideFlags(['chair=mission']),
       adapterLeaseDurationMs: 5 * 60 * 1000,
       lastRunAt: '2026-07-30T12:00:00.000Z',
     });
@@ -420,12 +522,10 @@ describe('guided Operating Board initialization', () => {
       cadence: 'manual',
       timezone: 'UTC',
       sensitivityCeiling: 'internal',
-      sources: ['repository', 'git'],
       charter,
     };
 
-    // A re-init preview with no override flag carries all three forward, so the
-    // preview reports no changed preference keys at all.
+    // A re-init preview carries both supported fields forward.
     const carryForward = await executeOperateAction({
       action: 'init',
       projectRoot,
@@ -436,17 +536,5 @@ describe('guided Operating Board initialization', () => {
       changedPreferenceKeys: [],
       localPreferencesChanged: false,
     });
-
-    // A re-init preview with an explicit override names exactly the one key it
-    // changes — the lease and cadence marker still carry forward silently.
-    const changed = await executeOperateAction({
-      action: 'init',
-      projectRoot,
-      interactive: false,
-      options: { ...initFlags, preview: true, dispatchModeOverride: ['chair=pack'] },
-    });
-    expect(
-      (changed.preview as { changedPreferenceKeys?: string[] } | undefined)?.changedPreferenceKeys,
-    ).toEqual(['dispatchModeOverrides']);
   });
 });

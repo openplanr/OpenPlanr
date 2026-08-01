@@ -161,7 +161,6 @@ describe('guided initialization resume lifecycle', () => {
       // cadence (defaulted) and the removed timezone question are no longer part
       // of the first-run batch, so they carry no answer descriptor to submit.
       'sensitivity-ceiling': 'internal',
-      sources: ['repository', 'git'],
     });
     expect(first.result).toMatchObject({
       ok: true,
@@ -221,7 +220,6 @@ describe('guided initialization resume lifecycle', () => {
       runtime: 'codex',
       // cadence and the removed timezone question are no longer batched.
       'sensitivity-ceiling': 'internal',
-      sources: ['repository'],
     });
     const conflicting = structuredClone(accepted.payload);
     const owner = conflicting.answers.find((answer) => answer.questionId === 'decision-owner');
@@ -288,7 +286,7 @@ describe('guided initialization resume lifecycle', () => {
     expect(purged).toMatchObject({ ok: true, data: { sessions: { removed: 1 } } });
   });
 
-  it('rejects resume after the Git revision or dirty fingerprint changes', async () => {
+  it('names the resumable session and its resume command when the working tree diverges', async () => {
     const input = await project();
     const questionnaire = await start(input);
     await writeFile(join(input.projectRoot, 'README.md'), '# changed after questionnaire\n');
@@ -302,10 +300,35 @@ describe('guided initialization resume lifecycle', () => {
         resume: questionnaire.sessionId,
       },
     });
+    // The rejection is genuinely terminal for the current (diverged) tree, but the
+    // recovery is not the dead-end `init --json` — it names this exact session and
+    // its resume command, and the message tells the operator to restore the tree.
     expect(stale).toMatchObject({
       ok: false,
       code: 'E_OPERATE_SESSION_STALE',
-      nextActions: ['planr operate init --json'],
+      nextActions: [`planr operate init --resume ${questionnaire.sessionId} --json`],
+      data: { sessionId: questionnaire.sessionId },
+    });
+    expect(stale.message).toContain(questionnaire.sessionId);
+    expect(stale.message).toContain('Restore the working tree');
+
+    // Restoring the tree to the exact bytes the session was created against
+    // un-latches it: the same session resumes cleanly, no restart required.
+    await writeFile(join(input.projectRoot, 'README.md'), '# original\n');
+    const resumed = await executeOperateAction({
+      action: 'init',
+      projectRoot: input.projectRoot,
+      interactive: false,
+      options: {
+        json: true,
+        localRoot: input.localRoot,
+        resume: questionnaire.sessionId,
+      },
+    });
+    expect(resumed).toMatchObject({
+      ok: true,
+      flow: 'handoff',
+      questionnaire: { sessionId: questionnaire.sessionId },
     });
   });
 });

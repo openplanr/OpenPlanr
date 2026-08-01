@@ -4,7 +4,7 @@ import path from 'node:path';
 import { spliceManagedBlock } from '../../utils/splice-managed-block.js';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
 import { OperatingEventStore, operatingRecordsLogLine } from './event-store.js';
-import { resolveEvidenceImportPath } from './evidence-import.js';
+import { detectGitignoredWorkspace, type OperatingWorkspaceVersioning } from './integrity.js';
 import {
   applyJournalTransaction,
   type JournalWrite,
@@ -12,7 +12,6 @@ import {
   rollbackJournalTransaction,
 } from './journal.js';
 import { withOperatingLock } from './lock-service.js';
-import type { OperatingDispatchMode } from './mission-dispatch.js';
 import {
   prepareOperatingProjectionPersistence,
   renderOperatingProjectionFiles,
@@ -32,7 +31,6 @@ import {
   type OperatingProfile,
   type OperatingRecordEnvelope,
   type OperatingRecoveryRecord,
-  type OperatingRoleId,
   type OperatingState,
   type OperatingWorkspaceManifest,
 } from './types.js';
@@ -41,7 +39,6 @@ import {
   ensureOperatingDirectories,
   projectMachineKey,
   resolveOperatingPaths,
-  resolveOperatingProject,
 } from './workspace.js';
 
 const ALL_ROLES: OperatingConfig['enabledRoles'] = [
@@ -52,6 +49,15 @@ const ALL_ROLES: OperatingConfig['enabledRoles'] = [
   'operations-customer',
   'chair',
 ];
+
+/** Protocol v1.2 requires these persisted fields; mandate execution no longer tunes them. */
+export const FROZEN_OPERATING_PROVIDERS = ['repository', 'planr', 'git'] as const;
+export const FROZEN_OPERATING_BUDGETS: Readonly<OperatingConfig['budgets']> = Object.freeze({
+  maxFiles: 1_000,
+  maxItems: 2_000,
+  maxBytes: 10 * 1024 * 1024,
+  maxDurationMs: 60_000,
+});
 
 function profile(
   id: OperatingProfile['id'],
@@ -64,18 +70,11 @@ function profile(
     title,
     description,
     enabledRoles: [...ALL_ROLES],
-    enabledProviders: ['repository', 'planr', 'git'],
     caps: {
       surfacedFindings: 12,
       newSpecs: 3,
       openDecisions: 5,
       agentArtifacts: 4,
-    },
-    budgets: {
-      maxFiles: 1_000,
-      maxItems: 2_000,
-      maxBytes: 10 * 1024 * 1024,
-      maxDurationMs: 60_000,
     },
     ...overrides,
   };
@@ -83,9 +82,7 @@ function profile(
 
 export const OPERATING_PROFILES: readonly OperatingProfile[] = [
   profile('saas', 'SaaS', 'Balanced product, growth, risk, and operating review.'),
-  profile('product', 'Product', 'Activation and customer-outcome focused review.', {
-    enabledProviders: ['repository', 'planr', 'git', 'github', 'linear'],
-  }),
+  profile('product', 'Product', 'Activation and customer-outcome focused review.'),
   profile('engineering', 'Engineering', 'Delivery, reliability, and risk focused review.', {
     enabledRoles: ['technology-risk', 'product-activation', 'operations-customer', 'chair'],
     caps: {
@@ -110,29 +107,12 @@ export function getOperatingProfile(id: OperatingProfile['id']): OperatingProfil
   return candidate;
 }
 
-const CUSTOM_PROFILE_FIELDS = new Set([
-  'id',
-  'title',
-  'description',
-  'enabledRoles',
-  'enabledProviders',
-  'caps',
-  'budgets',
-]);
+const CUSTOM_PROFILE_FIELDS = new Set(['id', 'title', 'description', 'enabledRoles', 'caps']);
 const CUSTOM_CAP_FIELDS = new Set([
   'surfacedFindings',
   'newSpecs',
   'openDecisions',
   'agentArtifacts',
-]);
-const CUSTOM_BUDGET_FIELDS = new Set(['maxFiles', 'maxItems', 'maxBytes', 'maxDurationMs']);
-const CUSTOM_PROVIDER_IDS = new Set([
-  'repository',
-  'planr',
-  'git',
-  'github',
-  'linear',
-  'file-import',
 ]);
 
 function plainRecord(value: unknown, label: string): Record<string, unknown> {
@@ -209,22 +189,6 @@ export function normalizeCustomOperatingProfile(value: unknown): Partial<Operati
     }
     normalized.enabledRoles = roles as OperatingProfile['enabledRoles'];
   }
-  if (record.enabledProviders !== undefined) {
-    const providers = boundedStringArray(
-      record.enabledProviders,
-      'Custom profile enabledProviders',
-    );
-    if (
-      providers.length === 0 ||
-      providers.some((provider) => !CUSTOM_PROVIDER_IDS.has(provider))
-    ) {
-      throw new OperateError(
-        'E_OPERATE_CONFIG_INVALID',
-        'Custom profile enabledProviders contains an unknown provider or is empty.',
-      );
-    }
-    normalized.enabledProviders = providers;
-  }
   if (record.caps !== undefined) {
     const caps = numericOverrides(record.caps, 'Custom profile caps', CUSTOM_CAP_FIELDS);
     const maxima: Record<string, number> = {
@@ -241,127 +205,27 @@ export function normalizeCustomOperatingProfile(value: unknown): Partial<Operati
     }
     normalized.caps = caps as OperatingProfile['caps'];
   }
-  if (record.budgets !== undefined) {
-    const budgets = numericOverrides(
-      record.budgets,
-      'Custom profile budgets',
-      CUSTOM_BUDGET_FIELDS,
-    );
-    const withinBounds =
-      (budgets.maxFiles === undefined || (budgets.maxFiles >= 1 && budgets.maxFiles <= 10_000)) &&
-      (budgets.maxItems === undefined || (budgets.maxItems >= 1 && budgets.maxItems <= 10_000)) &&
-      (budgets.maxBytes === undefined ||
-        (budgets.maxBytes >= 1_024 && budgets.maxBytes <= 50 * 1024 * 1024)) &&
-      (budgets.maxDurationMs === undefined ||
-        (budgets.maxDurationMs >= 100 && budgets.maxDurationMs <= 10 * 60_000));
-    if (!withinBounds) {
-      throw new OperateError(
-        'E_OPERATE_CONFIG_INVALID',
-        'Custom profile budgets exceed the supported safety bounds.',
-      );
-    }
-    normalized.budgets = budgets as OperatingProfile['budgets'];
-  }
   return normalized;
 }
 
-/**
- * Per-project dispatch-mode overrides (FR4 / E-004). A map of role IDs to a
- * `pack | mission` selection that overrides the derived v1.3 registry default.
- *
- * These live in the machine-local `preferences.json`, NOT the schema-frozen
- * `operating-config` artifact: the v1.2 on-disk config surface is frozen
- * (`additionalProperties: false`), so v1.3 dispatch policy is carried in the
- * local operating preferences alongside `sensitivityCeiling` and `runtime`.
- */
-export type OperatingDispatchModeOverrides = Record<OperatingRoleId, OperatingDispatchMode>;
-
 type OperatingPreferencesRecord = OperatingLocalPreferences & {
-  dispatchModeOverrides?: OperatingDispatchModeOverrides;
   /**
    * FR8 / E-008 cadence marker: the RFC 3339 UTC instant of the most recent cycle
    * that reached a terminal reviewable/blocked/closed state. Machine-local, next
-   * to `dispatchModeOverrides` — the schema-frozen `operating-config` artifact
+   * to the other machine-local preferences — the schema-frozen `operating-config` artifact
    * never carries it. Absent until the first cycle completes (weekly/monthly then
    * become due immediately per the pipeline calculator).
    */
   lastRunAt?: string;
   /**
    * FR10 / T-008 adapter session lease duration, in milliseconds. Machine-local,
-   * alongside `dispatchModeOverrides`/`evidenceTtlMs` — the v1.2 `operating-config`
+   * alongside `evidenceTtlMs` — the v1.2 `operating-config`
    * artifact surface is frozen (`additionalProperties: false`), so this policy knob
    * lives in `preferences.json`, not `config.json`. Absent means the 15-minute
    * default; a present value is bounded-validated before it is honored.
    */
   adapterLeaseDurationMs?: number;
 };
-
-const DISPATCH_MODES = new Set<OperatingDispatchMode>(['pack', 'mission']);
-
-/**
- * Strictly allowlist per-project dispatch-mode overrides before they are echoed,
- * persisted, or consumed by dispatch — mirroring the `normalizeCustomOperatingProfile`
- * pattern. Keys must be known registry role IDs; values must be exactly `pack`
- * or `mission`. Unknown roles or values fail closed with `E_OPERATE_CONFIG_INVALID`.
- */
-export function normalizeOperatingDispatchModeOverrides(
-  value: unknown,
-): OperatingDispatchModeOverrides {
-  const record = plainRecord(value, 'dispatchModeOverrides');
-  const entries = Object.entries(record);
-  if (entries.length > ALL_ROLES.length) {
-    throw new OperateError(
-      'E_OPERATE_CONFIG_INVALID',
-      'dispatchModeOverrides contains more entries than there are operating roles.',
-    );
-  }
-  const normalized = {} as OperatingDispatchModeOverrides;
-  for (const [roleId, mode] of entries) {
-    if (!ALL_ROLES.includes(roleId as OperatingRoleId)) {
-      throw new OperateError(
-        'E_OPERATE_CONFIG_INVALID',
-        `dispatchModeOverrides references an unknown role: ${roleId}.`,
-      );
-    }
-    if (typeof mode !== 'string' || !DISPATCH_MODES.has(mode as OperatingDispatchMode)) {
-      throw new OperateError(
-        'E_OPERATE_CONFIG_INVALID',
-        `dispatchModeOverrides value for ${roleId} must be "pack" or "mission".`,
-      );
-    }
-    normalized[roleId as OperatingRoleId] = mode as OperatingDispatchMode;
-  }
-  return normalized;
-}
-
-/**
- * Parse repeatable `--dispatch-mode-override <roleId>=<pack|mission>` CLI tokens
- * into a validated override map. Each token must be exactly `roleId=mode`.
- */
-export function parseOperatingDispatchModeOverrideFlags(
-  flags: readonly string[] = [],
-): OperatingDispatchModeOverrides {
-  const raw: Record<string, string> = {};
-  for (const flag of flags) {
-    const separator = flag.indexOf('=');
-    if (separator <= 0) {
-      throw new OperateError(
-        'E_OPERATE_CONFIG_INVALID',
-        `--dispatch-mode-override must be "<roleId>=<pack|mission>", received "${flag}".`,
-      );
-    }
-    const roleId = flag.slice(0, separator).trim();
-    const mode = flag.slice(separator + 1).trim();
-    if (raw[roleId] && raw[roleId] !== mode) {
-      throw new OperateError(
-        'E_OPERATE_CONFIG_INVALID',
-        `--dispatch-mode-override sets conflicting modes for role ${roleId}.`,
-      );
-    }
-    raw[roleId] = mode;
-  }
-  return normalizeOperatingDispatchModeOverrides(raw);
-}
 
 async function readOperatingPreferencesRecord(
   projectRoot: string,
@@ -382,62 +246,9 @@ async function readOperatingPreferencesRecord(
   }
 }
 
-/** Read the validated per-project dispatch-mode overrides, or `{}` when none set. */
-export async function readOperatingDispatchModeOverrides(
-  projectRoot: string,
-  options: { localRoot?: string } = {},
-): Promise<OperatingDispatchModeOverrides> {
-  const preferences = await readOperatingPreferencesRecord(projectRoot, options);
-  if (!preferences?.dispatchModeOverrides) return {} as OperatingDispatchModeOverrides;
-  return normalizeOperatingDispatchModeOverrides(preferences.dispatchModeOverrides);
-}
-
-/**
- * Merge validated dispatch-mode overrides into the machine-local preferences and
- * persist atomically (temp + rename, mode 0o600), matching how initialization
- * writes preferences.json. An override set to the registry default can be
- * cleared by omitting it. Requires the project to have been initialized.
- */
-export async function applyOperatingDispatchModeOverrides(input: {
-  projectRoot: string;
-  localRoot?: string;
-  overrides: OperatingDispatchModeOverrides;
-}): Promise<{ dispatchModeOverrides: OperatingDispatchModeOverrides; changed: boolean }> {
-  const preferences = await readOperatingPreferencesRecord(input.projectRoot, {
-    localRoot: input.localRoot,
-  });
-  if (!preferences) {
-    throw new OperateError(
-      'E_OPERATE_NOT_INITIALIZED',
-      'Operating Board is not initialized in this project; run `planr operate init` first.',
-    );
-  }
-  const validated = normalizeOperatingDispatchModeOverrides(input.overrides);
-  const merged: OperatingDispatchModeOverrides = {
-    ...(preferences.dispatchModeOverrides ?? ({} as OperatingDispatchModeOverrides)),
-    ...validated,
-  };
-  const next: OperatingPreferencesRecord = { ...preferences };
-  if (Object.keys(merged).length > 0) next.dispatchModeOverrides = merged;
-  else delete next.dispatchModeOverrides;
-  const paths = resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot });
-  const preferencePath = path.join(paths.localRoot, 'preferences.json');
-  const before = await readFile(preferencePath, 'utf8').catch(() => null);
-  const serialized = `${canonicalize(next)}\n`;
-  const changed = before !== serialized;
-  if (changed) {
-    await mkdir(paths.localRoot, { recursive: true, mode: 0o700 });
-    const temporary = `${preferencePath}.${process.pid}.${randomUUID()}.tmp`;
-    await writeFile(temporary, serialized, { mode: 0o600 });
-    await rename(temporary, preferencePath);
-  }
-  return { dispatchModeOverrides: merged, changed };
-}
-
 /**
  * Read the persisted per-project cadence `lastRunAt` marker (FR8 / E-008), or
- * `null` when no cycle has completed yet. Machine-local, alongside
- * `dispatchModeOverrides`.
+ * `null` when no cycle has completed yet.
  */
 export async function readOperatingLastRunAt(
   projectRoot: string,
@@ -450,8 +261,7 @@ export async function readOperatingLastRunAt(
 
 /**
  * Persist the per-project cadence `lastRunAt` marker into the machine-local
- * preferences atomically (temp + rename, mode 0o600), matching how dispatch-mode
- * overrides are written. FR8 / E-008: recorded whenever a cycle reaches
+ * preferences atomically (temp + rename, mode 0o600). FR8 / E-008: recorded whenever a cycle reaches
  * reviewable/blocked/closed so `operate status` can surface the pipeline's
  * `nextDueAt` under an injected clock. `lastRunAt` is the injected cycle instant,
  * never a wall-clock read here. Requires an initialized project.
@@ -501,7 +311,7 @@ const MAX_ADAPTER_LEASE_DURATION_MS = 60 * 60 * 1_000;
 /**
  * Strictly validate an optional adapter-lease duration (milliseconds) before it is
  * echoed, persisted, or honored by the adapter lifecycle — mirroring the strict
- * `normalizeOperatingDispatchModeOverrides` allowlisting pattern. The value must be
+ * operating-preference allowlisting pattern. The value must be
  * an integer within [1 minute, 60 minutes]. A non-integer or out-of-range value
  * fails closed with `E_OPERATE_CONFIG_INVALID` rather than silently clamping, so a
  * corrupt preference never quietly weakens or extends the lease.
@@ -523,8 +333,7 @@ export function normalizeOperatingAdapterLeaseDurationMs(value: unknown): number
 
 /**
  * Read the machine-local adapter-lease duration (milliseconds), or the 15-minute
- * default when unset. Machine-local, alongside `dispatchModeOverrides` and
- * `evidenceTtlMs`; a present value is bounded-validated so a corrupt preference is
+ * default when unset. Machine-local, alongside `evidenceTtlMs`; a present value is
  * rejected rather than trusted.
  */
 export async function readOperatingAdapterLeaseDurationMs(
@@ -574,10 +383,6 @@ export function normalizeOperatingInitializationAnswers(
     ...(input.sensitivityCeiling === undefined
       ? {}
       : { sensitivityCeiling: input.sensitivityCeiling }),
-    ...(input.sources === undefined ? {} : { sources: list(input.sources) ?? [] }),
-    ...(input.evidenceFiles === undefined
-      ? {}
-      : { evidenceFiles: list(input.evidenceFiles) ?? [] }),
     ...(input.componentRoots === undefined
       ? {}
       : { componentRoots: list(input.componentRoots) ?? [] }),
@@ -652,6 +457,15 @@ export interface OperatingInitializationPreview {
    * unchanged-case confirmation binding stays byte-identical.
    */
   changedPreferenceKeys: string[];
+  /**
+   * FR9 / T-005: whether this project's `.planr/` is gitignored, with the plain
+   * statement of what that means for versioning the board. Surfaced at init so
+   * the operator is told honestly whether the sanitized board will actually be
+   * tracked by git — never an unbacked "commit-safe" guarantee. Purely
+   * informational: like `changedPreferenceKeys`, it never feeds `previewDigest`,
+   * so the confirmation binding stays byte-identical.
+   */
+  workspaceVersioning: OperatingWorkspaceVersioning;
   writes: JournalWrite[];
   componentRoots: string[];
   expectedEventHead: OperatingEventHead;
@@ -788,16 +602,11 @@ export async function prepareOperatingInitialization(input: {
   timezone?: string;
   sensitivityCeiling?: OperatingLocalPreferences['sensitivityCeiling'];
   evidenceTtlMs?: number;
-  enabledProviders?: string[];
-  evidenceFiles?: string[];
   charter?: Partial<OperatingCharter>;
   customProfile?: Partial<OperatingProfile>;
   componentRoots?: string[];
-  dispatchModeOverrides?: OperatingDispatchModeOverrides;
-  // FR5 / T-005: these two carry no init flag today, so a re-init that omits them
-  // always inherits the value a prior cycle persisted. Accepted here (rather than
-  // being unconditionally rebuilt) so a same-invocation caller could still override
-  // them, keeping the merge symmetric with `dispatchModeOverrides`.
+  // These carry no init flag today, so a re-init that omits them always inherits
+  // the value a prior cycle persisted.
   adapterLeaseDurationMs?: number;
   lastRunAt?: string;
   localRoot?: string;
@@ -820,24 +629,8 @@ export async function prepareOperatingInitialization(input: {
           ...base,
           ...customProfile,
           caps: { ...base.caps, ...customProfile?.caps },
-          budgets: { ...base.budgets, ...customProfile?.budgets },
         }
       : base;
-  const requestedEvidenceFiles = [
-    ...new Set((input.evidenceFiles ?? []).map((value) => value.trim()).filter(Boolean)),
-  ];
-  const requestedProviders = [
-    ...new Set([
-      ...(input.enabledProviders ?? selected.enabledProviders),
-      ...(requestedEvidenceFiles.length > 0 ? ['file-import'] : []),
-    ]),
-  ].sort();
-  if (requestedProviders.includes('file-import') && requestedEvidenceFiles.length === 0) {
-    throw new OperateError(
-      'E_OPERATE_CONFIG_INVALID',
-      'The file-import source requires at least one --evidence-file JSON or CSV path.',
-    );
-  }
   const config: OperatingConfig = {
     kind: 'operating-config',
     schemaVersion: OPERATE_SCHEMA_VERSION,
@@ -847,9 +640,9 @@ export async function prepareOperatingInitialization(input: {
     cadence: input.cadence ?? 'manual',
     planningEngine: input.planningEngine,
     enabledRoles: [...selected.enabledRoles],
-    enabledProviders: requestedProviders,
+    enabledProviders: [...FROZEN_OPERATING_PROVIDERS],
     caps: { ...selected.caps },
-    budgets: { ...selected.budgets },
+    budgets: { ...FROZEN_OPERATING_BUDGETS },
   };
   const caps = config.caps;
   const capBounds: Array<[keyof typeof caps, number]> = [
@@ -865,25 +658,6 @@ export async function prepareOperatingInitialization(input: {
         `${name} must be an integer from 1 to ${maximum}.`,
       );
     }
-  }
-  if (
-    !Number.isInteger(config.budgets.maxFiles) ||
-    config.budgets.maxFiles < 1 ||
-    config.budgets.maxFiles > 10_000 ||
-    !Number.isInteger(config.budgets.maxItems) ||
-    config.budgets.maxItems < 1 ||
-    config.budgets.maxItems > 10_000 ||
-    !Number.isInteger(config.budgets.maxBytes) ||
-    config.budgets.maxBytes < 1_024 ||
-    config.budgets.maxBytes > 50 * 1024 * 1024 ||
-    !Number.isInteger(config.budgets.maxDurationMs) ||
-    config.budgets.maxDurationMs < 100 ||
-    config.budgets.maxDurationMs > 10 * 60_000
-  ) {
-    throw new OperateError(
-      'E_OPERATE_CONFIG_INVALID',
-      'Custom evidence budgets exceed the supported safety bounds.',
-    );
   }
   await assertOperatingArtifact('operating-config', config);
   const timezone = input.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -909,18 +683,6 @@ export async function prepareOperatingInitialization(input: {
     localRoot: input.localRoot,
     persistRoots: false,
   });
-  const controlRoot = await resolveOperatingProject(input.projectRoot);
-  const resolvedImportPaths: string[] = [];
-  for (const configuredPath of requestedEvidenceFiles) {
-    const resolved = await resolveEvidenceImportPath(input.projectRoot, configuredPath, [
-      { componentId: workspace.controlRepository.componentId, root: controlRoot },
-      ...componentRoots.map((root, index) => ({
-        componentId: workspace.components[index]?.componentId ?? `component-${index + 1}`,
-        root,
-      })),
-    ]);
-    resolvedImportPaths.push(resolved.absolutePath);
-  }
   const paths = resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot });
   // FR5 / T-005: read the existing machine-local preferences before rebuilding the
   // record so policy a prior cycle persisted survives a routine re-init instead of
@@ -940,17 +702,6 @@ export async function prepareOperatingInitialization(input: {
       existingPreferences = null;
     }
   }
-  // Dispatch-mode overrides are validated once here and carried in the
-  // machine-local preferences (the v1.2 config artifact surface is frozen). An
-  // explicit `input.dispatchModeOverrides` — including an explicit empty-object
-  // reset — wins; otherwise the existing overrides carry forward. Omitted entirely
-  // when empty so a project with no overrides keeps a byte-identical preferences
-  // payload and preview digest.
-  const dispatchModeOverrides = input.dispatchModeOverrides
-    ? normalizeOperatingDispatchModeOverrides(input.dispatchModeOverrides)
-    : existingPreferences?.dispatchModeOverrides
-      ? normalizeOperatingDispatchModeOverrides(existingPreferences.dispatchModeOverrides)
-      : ({} as OperatingDispatchModeOverrides);
   // Adapter lease duration and the cadence `lastRunAt` marker have no init flag, so
   // absent an explicit input they always carry forward from the existing file. A
   // carried-forward lease is re-validated so a corrupt bound is rejected rather than
@@ -971,10 +722,6 @@ export async function prepareOperatingInitialization(input: {
     sensitivityCeiling: input.sensitivityCeiling ?? 'internal',
     evidenceTtlMs,
     enabledSources: [...config.enabledProviders],
-    ...(resolvedImportPaths.length > 0
-      ? { importPaths: [...new Set(resolvedImportPaths)].sort() }
-      : {}),
-    ...(Object.keys(dispatchModeOverrides).length > 0 ? { dispatchModeOverrides } : {}),
     ...(adapterLeaseDurationMs !== undefined ? { adapterLeaseDurationMs } : {}),
     ...(lastRunAt !== undefined ? { lastRunAt } : {}),
   };
@@ -1076,6 +823,11 @@ export async function prepareOperatingInitialization(input: {
     changedPaths,
     preferencesChanged,
   });
+  // FR9 / T-005: name the project's actual git tracking status for `.planr/` so
+  // init tells the operator plainly whether the sanitized board will be
+  // versioned. Purely informational — it is deliberately not folded into
+  // `previewDigest`, so the confirmation binding stays byte-identical.
+  const workspaceVersioning = await detectGitignoredWorkspace(input.projectRoot);
   return {
     config,
     preferences,
@@ -1085,6 +837,7 @@ export async function prepareOperatingInitialization(input: {
     changedPaths,
     preferencesChanged,
     changedPreferenceKeys,
+    workspaceVersioning,
     writes,
     componentRoots,
     expectedEventHead,

@@ -34,7 +34,7 @@
     "test:operate:security": "vitest run tests/unit/operate-security.test.ts tests/unit/operate-advisors.test.ts tests/unit/operate-protocol-roundtrip.test.ts && vitest run --config vitest.heavy.config.ts tests/integration/operate-preview-boundaries.test.ts",
     "test:operate:outcomes": "vitest run tests/unit/operate-outcomes.test.ts",
     "test:operate:packed": "vitest run --config vitest.heavy.config.ts tests/e2e/operate-packed-install.test.ts",
-    "test:operate:guided": "vitest run tests/unit/operate-question-engine.test.ts tests/unit/operate-question-session.test.ts tests/unit/operate-actions.test.ts tests/unit/operate-evidence-diagnostics.test.ts tests/unit/operate-initialization-replay.test.ts && vitest run --config vitest.heavy.config.ts tests/integration/operate-guided-init.test.ts tests/integration/operate-question-resume.test.ts tests/integration/operate-authority-boundaries.test.ts tests/integration/operate-charter-assistance.test.ts tests/integration/operate-evidence-recovery.test.ts tests/integration/operate-guided-automation.test.ts tests/integration/doctor-guided-operate.test.ts tests/e2e/operate-guided-packed-install.test.ts",
+    "test:operate:guided": "vitest run tests/unit/operate-question-engine.test.ts tests/unit/operate-question-session.test.ts tests/unit/operate-actions.test.ts tests/unit/operate-initialization-replay.test.ts && vitest run --config vitest.heavy.config.ts tests/integration/operate-guided-init.test.ts tests/integration/operate-question-resume.test.ts tests/integration/operate-authority-boundaries.test.ts tests/integration/operate-charter-assistance.test.ts tests/integration/operate-guided-automation.test.ts tests/integration/doctor-guided-operate.test.ts tests/e2e/operate-guided-packed-install.test.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check src/ tests/",
@@ -93,7 +93,7 @@
     "zod": "^4.3.6"
   },
   "optionalDependencies": {
-    "planr-pipeline": "0.35.0"
+    "planr-pipeline": "0.36.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.9",

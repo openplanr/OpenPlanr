@@ -19,6 +19,7 @@ import { ENV_KEY_MAP } from '../ai/types.js';
 import type { OpenPlanrConfig } from '../models/types.js';
 import { createSpinner, formatUsage } from '../utils/logger.js';
 import { resolveApiKey } from './credentials-service.js';
+import { printDeprecationNotice } from './deprecation-notices.js';
 
 /**
  * Default AI temperature for structured JSON generation.
@@ -31,7 +32,16 @@ const DEFAULT_TEMPERATURE = 0.5;
  * Initialize an AI provider from project config.
  * Dynamically imports the factory to keep non-AI commands fast.
  */
-export async function getAIProvider(config: OpenPlanrConfig): Promise<AIProvider> {
+let operateProviderDeprecationPrinted = false;
+
+export async function getAIProvider(
+  config: OpenPlanrConfig,
+  options: { surface?: 'operate-structured-provider' } = {},
+): Promise<AIProvider> {
+  if (options.surface === 'operate-structured-provider' && !operateProviderDeprecationPrinted) {
+    printDeprecationNotice('operate-structured-provider');
+    operateProviderDeprecationPrinted = true;
+  }
   if (!config.ai) {
     throw new AIError(
       'AI is not configured. Run `planr init` or `planr config set-provider <name>`.',

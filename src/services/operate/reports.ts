@@ -5,6 +5,7 @@ import type {
 } from './decision-brief.js';
 import { OperatingEventStore } from './event-store.js';
 import { OperatingEvidenceCache } from './evidence-cache.js';
+import { buildOperatingIntegritySummary, renderOperatingIntegritySection } from './integrity.js';
 import { readPersistedOperatingRoleResults } from './maintenance.js';
 import { renderOperatingBrief, selectCycleState } from './projection.js';
 import { loadOperatingProtocol } from './protocol.js';
@@ -101,6 +102,88 @@ export function markdownLens(report: OperatingLensReport): string {
 }
 
 /**
+ * FR8: the complete, uncapped registers appended to the persisted
+ * `cycles/<id>/report.md` so the on-disk artifact is self-contained. The concise
+ * brief `renderOperatingBrief` produces keeps its top-5/top-4 cap for the CLI's
+ * `operate review`/`operate report` display; this renders every finding,
+ * decision, evidence gap, and route with no `.slice()` cap, for the persisted
+ * report path only. Callers pass the cycle-scoped state so the registers are
+ * exactly this cycle's records.
+ */
+export function markdownCompleteRegisters(state: OperatingState): string {
+  const evidence = (record: Record<string, unknown>): string => {
+    const refs = [...new Set(stringArray(record.evidenceRefs))].sort();
+    return refs.length > 0 ? refs.map((reference) => `\`${reference}\``).join(', ') : 'none';
+  };
+  const findings = [...state.findings].sort((left, right) => left.id.localeCompare(right.id));
+  const decisions = [...state.decisions].sort((left, right) => left.id.localeCompare(right.id));
+  const gaps = [...state.dataGaps].sort((left, right) => left.id.localeCompare(right.id));
+  const routes = [...state.routes].sort((left, right) => left.id.localeCompare(right.id));
+  return [
+    '# Complete registers',
+    '',
+    'Every finding, decision, evidence gap, and route recorded for this cycle — the',
+    'self-contained record the concise brief above deliberately caps.',
+    '',
+    `## All findings (${findings.length})`,
+    '',
+    ...(findings.length > 0
+      ? findings.map(
+          (finding) =>
+            `- **${finding.id}** [${fieldText(finding, 'status') ?? 'proposed'} · ${
+              fieldText(finding, 'lane') ?? 'OWNER'
+            } · ${fieldText(finding, 'owner') ?? 'unassigned'} · ${
+              fieldText(finding, 'severity') ?? 'low'
+            }] ${fieldText(finding, 'title') ?? 'Untitled finding'} — ${
+              fieldText(finding, 'proposal') ??
+              fieldText(finding, 'problem') ??
+              'Review the cited evidence.'
+            } Evidence: ${evidence(finding)}.`,
+        )
+      : ['- None recorded.']),
+    '',
+    `## All decisions (${decisions.length})`,
+    '',
+    ...(decisions.length > 0
+      ? decisions.map(
+          (decision) =>
+            `- **${decision.id}** [${fieldText(decision, 'status') ?? 'open'} · ${
+              fieldText(decision, 'owner') ?? 'unassigned'
+            }${fieldText(decision, 'deadline') ? ` · due ${fieldText(decision, 'deadline')}` : ''}] ${
+              fieldText(decision, 'question') ?? 'Decision required'
+            } Recommendation: ${
+              fieldText(decision, 'recommendation') ?? 'Review the available options.'
+            } Evidence: ${evidence(decision)}.`,
+        )
+      : ['- None recorded.']),
+    '',
+    `## All evidence gaps (${gaps.length})`,
+    '',
+    ...(gaps.length > 0
+      ? gaps.map(
+          (gap) =>
+            `- **${gap.id}** [${fieldText(gap, 'status') ?? 'open'} · ${
+              fieldText(gap, 'owner') ?? 'unassigned'
+            }] ${fieldText(gap, 'question') ?? 'Evidence required'} — ${
+              fieldText(gap, 'reason') ?? 'Evidence was not available.'
+            } Evidence: ${evidence(gap)}.`,
+        )
+      : ['- None recorded.']),
+    '',
+    `## All routes (${routes.length})`,
+    '',
+    ...(routes.length > 0
+      ? routes.map((route) => {
+          const findingIds = stringArray(route.findingIds).sort();
+          return `- **${route.id}** [${fieldText(route, 'state') ?? 'proposed'} · ${
+            fieldText(route, 'cycleId') ?? ''
+          }] findings: ${findingIds.length > 0 ? findingIds.join(', ') : 'none'}.`;
+        })
+      : ['- None recorded.']),
+  ].join('\n');
+}
+
+/**
  * Assemble the human report for a governed cycle: the concise brief, the
  * per-role advisory lens reports, and the exact next actions, plus a single
  * rendered `markdown` string. This is the shared review/report Markdown
@@ -144,17 +227,41 @@ export async function readOperatingReport(input: {
     ),
   ]);
   const byRole = new Map(roleResults.map((result) => [result.roleId, result]));
+  // FR7: the committed source of truth for a role's not_evaluated state is its
+  // governed `missing-evidence` gap (the v1.2 role-result schema admits only
+  // proposals|quiet|failed, so a citation-starved role commits a schema-legal
+  // `quiet` result). Promote such a role to `not_evaluated` here and carry its
+  // real gap reason, so neither the lens report nor the persisted board depends
+  // on any advisory prose to reveal it.
+  const integrity = buildOperatingIntegritySummary(fullState, cycleId);
+  const notEvaluatedReasonsByRole = new Map<string, string[]>();
+  for (const role of integrity.notEvaluatedRoles) {
+    const existing = notEvaluatedReasonsByRole.get(role.roleId) ?? [];
+    existing.push(role.reason);
+    notEvaluatedReasonsByRole.set(role.roleId, existing);
+  }
   const reports = roles
     .filter((role) => !selectedRole || role.id === selectedRole)
     .map((role) => {
       const result = byRole.get(role.id as OperatingRoleId);
+      const notEvaluatedReasons = notEvaluatedReasonsByRole.get(role.id);
+      const notEvaluated = notEvaluatedReasons !== undefined || result === undefined;
+      const outcome: OperatingLensReport['outcome'] = notEvaluated
+        ? 'not_evaluated'
+        : (result as OperatingRoleResult).outcome;
+      const gaps = [...(result?.gaps ?? [])];
+      // When a role reads `not_evaluated` with no result-carried gap text, state
+      // its real reason (from the governed gap) rather than defaulting to "- None."
+      if (notEvaluated && gaps.length === 0 && notEvaluatedReasons) {
+        gaps.push(...notEvaluatedReasons);
+      }
       return {
         roleId: role.id as OperatingRoleId,
         label: String(role.displayLabel),
         mandate: String(role.mandate),
-        outcome: result?.outcome ?? 'not_evaluated',
-        proposals: result?.proposals ?? [],
-        gaps: result?.gaps ?? [],
+        outcome,
+        proposals: notEvaluated ? [] : (result?.proposals ?? []),
+        gaps,
         conflicts: result?.conflicts ?? [],
         resultDigest: result?.resultDigest ?? null,
       } satisfies OperatingLensReport;
@@ -227,6 +334,12 @@ export async function readOperatingReport(input: {
     '# Advisory lens reports',
     '',
     ...reports.flatMap((report) => [markdownLens(report), '']),
+    // FR7: the readable tree carries cycle integrity as a first-class section,
+    // sourced from the governed gaps — never contingent on a lens restating it.
+    '# Integrity',
+    '',
+    renderOperatingIntegritySection(integrity),
+    '',
     '# Exact next actions',
     '',
     ...actions.map((action) => `- **${action.label}:** \`${action.command}\``),

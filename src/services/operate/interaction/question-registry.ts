@@ -14,12 +14,55 @@ export interface OperatingQuestionContext {
    */
   runtime?: string;
   timezone: string;
-  availableSources: string[];
   /**
    * Whether a compatible planr-pipeline is resolvable. When true the
    * `planning-engine` question detects `pipeline-po` as its suggested handoff.
    */
   pipelineInstalled?: boolean;
+  /**
+   * The `id` of an existing `.planr/operate-profile.json`, when one is already
+   * present in the project. When set, the profile question surfaces it as the
+   * suggested answer (detect-don't-ask) so the common "I already picked a
+   * profile" correction never has to be typed again on re-init.
+   */
+  existingProfileId?: OperatingInitAnswers['profile'];
+}
+
+/**
+ * Renderability contract for the `repeated-text` questions: the singular item
+ * noun and an example placeholder a runtime shows for an empty entry row. Kept
+ * off the registry's Protocol-validated question objects and attached to the
+ * emitted questionnaire (and consumed by the terminal renderer) so every
+ * `repeated-text` question can be presented without a runtime inventing a layout.
+ */
+const REPEATED_TEXT_RENDERABILITY: Readonly<
+  Record<string, { itemLabel: string; itemPlaceholder: string }>
+> = {
+  'component-roots': {
+    itemLabel: 'Component repository path',
+    itemPlaceholder: 'packages/service-api',
+  },
+  goals: { itemLabel: 'Goal', itemPlaceholder: 'Reach a trustworthy operating brief quickly' },
+  'success-metrics': {
+    itemLabel: 'Success metric',
+    itemPlaceholder: 'Time to first brief under five minutes',
+  },
+  guardrails: {
+    itemLabel: 'Guardrail',
+    itemPlaceholder: 'No external effect without explicit human authority',
+  },
+  'known-unknowns': { itemLabel: 'Known unknown', itemPlaceholder: 'Current activation baseline' },
+};
+
+/**
+ * The presentation metadata for a `repeated-text` question, or `undefined` when
+ * the question id has none. Single source of truth shared by the questionnaire
+ * decorator and the terminal renderer.
+ */
+export function repeatedTextRenderability(
+  questionId: string,
+): { itemLabel: string; itemPlaceholder: string } | undefined {
+  return REPEATED_TEXT_RENDERABILITY[questionId];
 }
 
 /** Coding runtimes that a detected/persisted `runtime` can name. */
@@ -36,21 +79,6 @@ const STANDING_GUARDRAILS: readonly string[] = [
   'No external or irreversible action without explicit human authority.',
   'Advisors never start a cycle, call a provider, invoke PLAN, or invoke SHIP automatically.',
   'Commercial and customer facts come from the decision owner, never inferred from source code.',
-];
-
-/**
- * Locally collectable evidence sources offered during onboarding. Remote
- * integrations (github/linear) are intentionally absent: they require
- * credentials that cannot be configured in this flow, so offering them would let
- * a chosen source hard-fail availability validation. They return once configurable
- * in-flow. Every offered choice is gated by `availableSources`, so an offered
- * source is always submittable.
- */
-const EVIDENCE_SOURCE_CATALOG: readonly { id: string; label: string }[] = [
-  { id: 'repository', label: 'Repository files and metadata' },
-  { id: 'planr', label: 'OpenPlanr planning and delivery records' },
-  { id: 'git', label: 'Git history and working-tree metadata' },
-  { id: 'file-import', label: 'Local JSON/CSV files' },
 ];
 
 const PRODUCT_STAGE_CHOICES: readonly { id: string; label: string; description: string }[] = [
@@ -120,7 +148,7 @@ function scalar<K extends keyof OperatingInitAnswers>(
   };
 }
 
-function list<K extends 'sources' | 'evidenceFiles' | 'componentRoots'>(
+function list<K extends 'componentRoots'>(
   stage: OperatingInitStage,
   key: K,
   definition: GuidedQuestion,
@@ -157,20 +185,6 @@ function charter(
 export function operatingInitQuestionRegistry(
   context: OperatingQuestionContext,
 ): readonly OperatingInitQuestionDefinition[] {
-  const sourceSuggestion = context.availableSources.filter((source) =>
-    ['repository', 'planr', 'git'].includes(source),
-  );
-  // Offer only sources the host actually probed as available, and carry per-choice
-  // `preselected` (additive guided-question schema field, planr-pipeline >= 0.34.0)
-  // so a native surface can pre-check the same sources named by `suggestedValue`.
-  const sourceChoices: { id: string; label: string; preselected?: boolean }[] =
-    EVIDENCE_SOURCE_CATALOG.filter((choice) => context.availableSources.includes(choice.id)).map(
-      (choice) => ({
-        id: choice.id,
-        label: choice.label,
-        ...(sourceSuggestion.includes(choice.id) ? { preselected: true } : {}),
-      }),
-    );
   const detectedRuntime = effectiveDetectedRuntime(context);
   return [
     scalar(
@@ -183,9 +197,21 @@ export function operatingInitQuestionRegistry(
         'The profile selects bounded advisory lenses, evidence budgets, and attention caps.',
         {
           required: true,
-          valueSemantics: 'default',
-          defaultValue: 'saas',
-          defaultReason: 'SaaS is the balanced first-use profile.',
+          // Detect-don't-ask: when a `.planr/operate-profile.json` already names a
+          // profile, surface it as the confirmable suggestion so the operator does
+          // not have to re-pick it; otherwise fall back to the SaaS default.
+          ...(context.existingProfileId
+            ? {
+                valueSemantics: 'suggestion' as const,
+                suggestedValue: context.existingProfileId,
+                suggestionReason:
+                  'Suggested from the existing .planr/operate-profile.json; confirm or choose another.',
+              }
+            : {
+                valueSemantics: 'default' as const,
+                defaultValue: 'saas',
+                defaultReason: 'SaaS is the balanced first-use profile.',
+              }),
           choices: [
             {
               id: 'saas',
@@ -359,39 +385,6 @@ export function operatingInitQuestionRegistry(
             { id: 'confidential', label: 'Confidential' },
             { id: 'restricted', label: 'Restricted' },
           ],
-        },
-      ),
-    ),
-    list(
-      'foundation',
-      'sources',
-      question(
-        'sources',
-        'multi-select',
-        'Evidence sources',
-        'Sources are collected read-only. Only sources this host verified as available are offered.',
-        {
-          required: true,
-          valueSemantics: 'suggestion',
-          suggestedValue: sourceSuggestion,
-          suggestionReason: 'Suggested from locally available provider capabilities.',
-          validation: { minItems: 1, maxItems: 6 },
-          choices: sourceChoices,
-        },
-      ),
-    ),
-    list(
-      'foundation',
-      'evidenceFiles',
-      question(
-        'evidence-files',
-        'repeated-text',
-        'Workspace-contained JSON/CSV evidence paths',
-        'Every import is resolved beneath a configured workspace component before collection.',
-        {
-          required: true,
-          validation: { minItems: 1, maxItems: 50 },
-          visibleWhen: [{ questionId: 'sources', operator: 'contains', value: 'file-import' }],
         },
       ),
     ),

@@ -174,18 +174,35 @@ export function renderOperatingBoardReport(
     `Status: ${evaluated ? 'evaluated' : 'not_evaluated'}`,
     '',
   ];
-  if (!evaluated) {
-    lines.push(
-      `This advisory lens produced no advisor-result record for ${cycleId}; it was not evaluated.`,
-    );
-    return lines.join('\n');
-  }
   const gaps = state.dataGaps.filter(
     (gap) =>
       gap.cycleId === cycleId &&
       Array.isArray(gap.affectedRoles) &&
       (gap.affectedRoles as unknown[]).some((entry) => entry === role.id),
   );
+  if (!evaluated) {
+    lines.push(
+      `This advisory lens produced no advisor-result record for ${cycleId}; it was not evaluated.`,
+    );
+    // FR8: when the not_evaluated state was driven by a governed gap naming this
+    // lens, state that gap's real question and reason — never a bare "- None." —
+    // so the board file is honest about WHY the lens was not evaluated. A lens
+    // with no gap naming it keeps the bare not-evaluated line (no empty section).
+    if (gaps.length > 0) {
+      lines.push(
+        '',
+        '## Evidence gaps',
+        '',
+        ...gaps.map(
+          (gap) =>
+            `- **${text(gap, 'id', 'GAP')}:** ${bounded(text(gap, 'question', 'Evidence required'), 28)}${
+              text(gap, 'reason', '') ? ` — ${bounded(text(gap, 'reason', ''), 40)}` : ''
+            }`,
+        ),
+      );
+    }
+    return lines.join('\n');
+  }
   lines.push(
     '## Evidence gaps',
     '',

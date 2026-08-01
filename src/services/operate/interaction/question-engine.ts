@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { resolveGuidedInteractionValidators } from '../../pipeline-package-service.js';
 import { canonicalDigest } from '../canonical.js';
@@ -14,7 +15,105 @@ import {
   type OperatingInitStage,
   type OperatingQuestionContext,
   operatingInitQuestionRegistry,
+  repeatedTextRenderability,
 } from './question-registry.js';
+
+const OPERATE_PROFILE_IDS: readonly NonNullable<OperatingInitAnswers['profile']>[] = [
+  'saas',
+  'product',
+  'engineering',
+  'custom',
+];
+const MAX_PROFILE_FILE_BYTES = 64 * 1024;
+
+/**
+ * Probe an existing `.planr/operate-profile.json` for its `id` so the profile
+ * question can surface it as the suggested answer (finding 9). Fails safe: a
+ * missing, oversized, malformed, or unrecognized profile file yields no
+ * suggestion instead of throwing, so onboarding never breaks on a bad file.
+ */
+async function existingOperatingProfileId(
+  projectRoot?: string,
+): Promise<OperatingInitAnswers['profile'] | undefined> {
+  if (!projectRoot) return undefined;
+  const target = path.join(projectRoot, '.planr', 'operate-profile.json');
+  const raw = await readFile(target, 'utf8').catch(() => undefined);
+  if (raw === undefined || Buffer.byteLength(raw, 'utf8') > MAX_PROFILE_FILE_BYTES) {
+    return undefined;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  const id = (parsed as { id?: unknown } | null)?.id;
+  return typeof id === 'string' && (OPERATE_PROFILE_IDS as readonly string[]).includes(id)
+    ? (id as OperatingInitAnswers['profile'])
+    : undefined;
+}
+
+/**
+ * Enrich the engine context with the existing-profile suggestion once, so the
+ * registry the create/resume/terminal paths all build carries the detect-don't-
+ * ask profile answer. An explicit `existingProfileId` already on the context is
+ * respected and not re-probed.
+ */
+async function withDetectedSuggestions(
+  context: OperatingQuestionEngineContext,
+): Promise<OperatingQuestionEngineContext> {
+  if (context.existingProfileId !== undefined) return context;
+  const existingProfileId = await existingOperatingProfileId(context.projectRoot);
+  return existingProfileId ? { ...context, existingProfileId } : context;
+}
+
+/**
+ * Attach OpenPlanr presentation metadata to a Protocol-valid questionnaire after
+ * validation: per-item renderability on `repeated-text` questions and the
+ * `--answers-file` stdin-parity transport alternate. Both ride alongside the
+ * frozen v1.2 artifact (whose schema forbids these fields) and are excluded from
+ * the digest, which stays bound to the schema-valid answer contract.
+ */
+function decorateGuidedPresentation(questionnaire: GuidedQuestionnaire): GuidedQuestionnaire {
+  return {
+    ...questionnaire,
+    questions: questionnaire.questions.map((question) => {
+      if (question.type !== 'repeated-text') return question;
+      const renderability = repeatedTextRenderability(question.questionId);
+      return renderability
+        ? {
+            ...question,
+            itemLabel: renderability.itemLabel,
+            itemPlaceholder: renderability.itemPlaceholder,
+          }
+        : question;
+    }),
+    submission: {
+      ...questionnaire.submission,
+      transport: {
+        ...questionnaire.submission.transport,
+        alternates: [
+          {
+            kind: 'answers-file',
+            mediaType: 'application/json',
+            encoding: 'utf-8',
+            maxBytes: 65536,
+            argv: [
+              'planr',
+              'operate',
+              'init',
+              '--resume',
+              questionnaire.sessionId,
+              '--answers-file',
+              '<path>',
+              '--json',
+            ],
+          },
+        ],
+      },
+    },
+  };
+}
 
 const STAGES: readonly OperatingInitStage[] = ['foundation', 'product-charter', 'review'];
 
@@ -60,8 +159,6 @@ export function operatingInitAnswersFromOptions(
   const successMetrics = nonEmptyList(options.successMetric);
   const guardrails = nonEmptyList(options.guardrail);
   const knownUnknowns = nonEmptyList(options.knownUnknown);
-  const sources = nonEmptyList(options.sources ?? options.source);
-  const evidenceFiles = nonEmptyList(options.evidenceFile);
   const componentRoots = nonEmptyList(options.components ?? options.component);
   const charter =
     options.charter && typeof options.charter === 'object' && !Array.isArray(options.charter)
@@ -102,8 +199,6 @@ export function operatingInitAnswersFromOptions(
             options.sensitivityCeiling as OperatingInitAnswers['sensitivityCeiling'],
         }
       : {}),
-    ...(sources ? { sources } : {}),
-    ...(evidenceFiles ? { evidenceFiles } : {}),
     ...(componentRoots ? { componentRoots } : {}),
     ...(Object.keys(charter ?? {}).length > 0 ? { charter } : {}),
   };
@@ -116,8 +211,6 @@ export function mergeOperatingInitAnswersIntoOptions(
   return {
     ...options,
     ...answers,
-    ...(answers.sources === undefined ? {} : { source: answers.sources, sources: answers.sources }),
-    ...(answers.evidenceFiles === undefined ? {} : { evidenceFile: answers.evidenceFiles }),
     ...(answers.componentRoots === undefined
       ? {}
       : { component: answers.componentRoots, components: answers.componentRoots }),
@@ -199,10 +292,7 @@ function normalizeValue(question: GuidedQuestion, value: GuidedQuestionValue): G
   return normalized;
 }
 
-function validateSemanticAnswers(
-  answers: OperatingInitAnswers,
-  context: OperatingQuestionEngineContext,
-): void {
+function validateSemanticAnswers(answers: OperatingInitAnswers): void {
   if (answers.timezone) {
     try {
       new Intl.DateTimeFormat('en', { timeZone: answers.timezone }).format(new Date(0));
@@ -213,23 +303,6 @@ function validateSemanticAnswers(
       );
     }
   }
-  const unavailable = (answers.sources ?? []).filter(
-    (source) => !context.availableSources.includes(source),
-  );
-  if (unavailable.length > 0) {
-    throw new OperateError(
-      'E_OPERATE_QUESTIONNAIRE_INVALID',
-      `Evidence source is unavailable: ${unavailable.join(', ')}. Configure it or leave it disabled.`,
-    );
-  }
-  for (const candidate of answers.evidenceFiles ?? []) {
-    if (path.isAbsolute(candidate) || candidate.split(/[\\/]+/).includes('..')) {
-      throw new OperateError(
-        'E_OPERATE_QUESTIONNAIRE_INVALID',
-        'Evidence import paths must remain relative to a configured workspace root.',
-      );
-    }
-  }
 }
 
 export async function evaluateOperatingInitQuestions(input: {
@@ -237,7 +310,8 @@ export async function evaluateOperatingInitQuestions(input: {
   context: OperatingQuestionEngineContext;
   requireCharter?: boolean;
 }): Promise<OperatingQuestionEngineResult> {
-  const definitions = operatingInitQuestionRegistry(input.context);
+  const context = await withDetectedSuggestions(input.context);
+  const definitions = operatingInitQuestionRegistry(context);
   let answers = structuredClone(input.answers ?? {});
   for (const definition of definitions) {
     const current = definition.read(answers);
@@ -245,7 +319,7 @@ export async function evaluateOperatingInitQuestions(input: {
       answers = definition.write(answers, normalizeValue(definition.question, current));
     }
   }
-  validateSemanticAnswers(answers, input.context);
+  validateSemanticAnswers(answers);
   for (const stage of STAGES.slice(0, input.requireCharter === false ? 1 : 2)) {
     const visible = definitions.filter(
       (definition) =>
@@ -260,7 +334,7 @@ export async function evaluateOperatingInitQuestions(input: {
     if (missing.length > 0) {
       const suggestions =
         stage === 'product-charter'
-          ? await buildOperatingCharterSuggestions({ projectRoot: input.context.projectRoot })
+          ? await buildOperatingCharterSuggestions({ projectRoot: context.projectRoot })
           : null;
       // Ship the required-missing questions plus the explicitly flagged ones — the
       // unanswered questions that carry a suggestion the human should confirm
@@ -411,5 +485,9 @@ export async function createOperatingInitQuestionnaire(input: {
       { validationErrors: errors },
     );
   }
-  return questionnaire;
+  // The digest above binds the schema-valid answer contract. Presentation
+  // metadata (repeated-text renderability, the --answers-file transport
+  // alternate) is attached only now, after validation, so it never reaches the
+  // frozen v1.2 schema and never perturbs the digest a resume recomputes.
+  return decorateGuidedPresentation(questionnaire);
 }

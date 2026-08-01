@@ -140,8 +140,6 @@ describe('operate command contract', () => {
         'operate diagnostics',
         'operate diagnostics export',
         'operate evidence',
-        'operate evidence classify',
-        'operate evidence diagnose',
         'operate evidence list',
         'operate evidence show',
         'operate findings',
@@ -181,10 +179,6 @@ describe('operate command contract', () => {
         'operate run',
         'operate security',
         'operate security repair',
-        'operate sources',
-        'operate sources list',
-        'operate sources show',
-        'operate sources test',
         'operate status',
       ].sort(),
     );
@@ -198,9 +192,6 @@ describe('operate command contract', () => {
     const routes = operate?.commands.find((command) => command.name() === 'routes');
     expect(routes?.helpInformation()).toContain('apply');
     expect(routes?.helpInformation()).toContain('rollback');
-    const sources = operate?.commands.find((command) => command.name() === 'sources');
-    expect(sources?.helpInformation()).toContain('test [options] [source]');
-    expect(sources?.helpInformation()).toContain('every configured source');
   });
 
   it('makes --json execution strictly non-interactive and emits one JSON result', async () => {
@@ -361,43 +352,6 @@ describe('operate command contract', () => {
     });
   });
 
-  it('forwards repeatable workspace-contained evidence files during initialization', async () => {
-    const program = createProgram();
-
-    await parse(program, [
-      'operate',
-      'init',
-      '--profile',
-      'engineering',
-      '--decision-owner',
-      'Product owner',
-      '--planning-engine',
-      'openplanr',
-      '--source',
-      'file-import',
-      '--evidence-file',
-      'evidence/metrics.json',
-      '--evidence-file',
-      'evidence/signals.csv',
-      '--preview',
-      '--json',
-    ]);
-
-    expect(mocks.executeOperateAction).toHaveBeenCalledWith({
-      action: 'init',
-      arguments: {},
-      interactive: false,
-      options: expect.objectContaining({
-        source: ['file-import'],
-        sources: ['file-import'],
-        evidenceFile: ['evidence/metrics.json', 'evidence/signals.csv'],
-        preview: true,
-        json: true,
-      }),
-      projectRoot: '/workspace',
-    });
-  });
-
   it('forwards bounded guided answer stdin and session lifecycle options', async () => {
     const program = createProgram();
     const input = '{"kind":"guided-answer-envelope"}';
@@ -503,8 +457,6 @@ describe('operate command contract', () => {
       'Europe/Istanbul',
       '--sensitivity-ceiling',
       'internal',
-      '--source',
-      'repository',
       '--purpose',
       'Help technical founders operate one SaaS with evidence.',
       '--product-stage',

@@ -217,7 +217,7 @@ describe('packed planning-only Operating Board', () => {
     const manifest = JSON.parse(readFileSync(join(minimalPackageRoot, 'package.json'), 'utf8')) as {
       optionalDependencies?: Record<string, string>;
     };
-    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe('0.35.0');
+    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe('0.36.1');
   });
 
   it('keeps help, inspect, and demo provider-free and functional', () => {
@@ -242,11 +242,11 @@ describe('packed planning-only Operating Board', () => {
   });
 
   it('fails a pipeline command before provider use with exact recovery', () => {
-    const result = run(minimalCli, minimalInstallRoot, ['operate', 'sources', 'list', '--json']);
+    const result = run(minimalCli, minimalInstallRoot, ['operate', 'init', '--json']);
     expect(result.status).toBe(3);
     expect(JSON.parse(result.stdout)).toMatchObject({
       ok: false,
-      action: 'sources.list',
+      action: 'init',
       code: 'E_PIPELINE_NOT_INSTALLED',
       data: {
         recovery:
@@ -288,10 +288,6 @@ describe('packed full Operating Board lifecycle', () => {
       'UTC',
       '--sensitivity-ceiling',
       'internal',
-      '--source',
-      'repository',
-      '--source',
-      'git',
       '--purpose',
       'Exercise the packed Operating Board lifecycle.',
       '--product-stage',
@@ -358,9 +354,8 @@ describe('packed full Operating Board lifecycle', () => {
           mode: 'structured',
           toolIsolation: 'not-applicable',
           capability: 'analysis-high',
-          async invoke(input: { roleId: string; evidence: { items: Array<{ id: string }> } }) {
-            const evidenceRef = input.evidence.items[0]?.id;
-            if (input.roleId !== 'technology-risk' || !evidenceRef) {
+          async invoke(input: { roleId: string; pinnedRevision: string }) {
+            if (input.roleId !== 'technology-risk') {
               return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
             }
             return {
@@ -376,7 +371,13 @@ describe('packed full Operating Board lifecycle', () => {
                   confidence: 3,
                   ease: 5,
                   severity: 'medium',
-                  evidenceRefs: [evidenceRef],
+                  citations: [
+                    {
+                      repositoryPath: 'README.md',
+                      lineRange: { start: 1, end: 1 },
+                      pinnedRevision: input.pinnedRevision,
+                    },
+                  ],
                 },
               ],
               gaps: [],

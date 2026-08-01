@@ -1,5 +1,13 @@
 # OpenPlanr Operating Board
 
+> **Protocol v1.3 harness migration:** native runtime mandate sessions are the
+> supported advisory execution path. CLI-managed structured-provider dispatch is
+> deprecated and fails closed when selected. The separate CLI-side `--ai` planning
+> commands remain functional in this release and print the same notice after
+> generating their artifacts. Both legacy surfaces are scheduled for removal in
+> OpenPlanr 2.0.0. See
+> [the agent-harness guide](https://openplanr.dev/docs/operate/agent-harness).
+
 `planr operate` turns verified product and engineering evidence into a concise
 operating brief and governed next actions. It helps a technical founder or
 product-engineering lead decide what should happen next; it does not deploy,
@@ -251,9 +259,14 @@ anything.
 
 ## Storage and privacy
 
-The project stores sanitized, commit-safe events, content-addressed record
-metadata, briefs, routes, outcome contracts, observations, and causality
-sidecars under `.planr/operate/`.
+The project stores sanitized events, content-addressed record metadata, briefs,
+routes, outcome contracts, observations, and causality sidecars under
+`.planr/operate/`. "Sanitized" means secrets are redacted so the content is
+*safe to commit* — it is not a guarantee that git tracks the directory. If
+`.planr/` is gitignored, the board stays a machine-local artifact and is not
+versioned; `planr operate init` and `planr operate doctor` (the
+`operate-workspace-git` check) report the project's actual git status so you can
+decide whether to commit the board alongside the code.
 
 Raw evidence, prompts and responses, credentials, temporary transaction data,
 locks, machine paths, and restricted material remain under user-local
@@ -265,14 +278,12 @@ planr operate cache status
 planr operate cache purge
 ```
 
-Evidence is untrusted data. It is role-filtered, bounded, scanned for secrets,
-and never inserted into system instructions. Values that can be safely redacted
-remain useful as redacted evidence. An unsafe item is quarantined individually
-and omitted from every advisor pack; unrelated evidence and ready lenses
-continue. A lens becomes `not_evaluated` only when the remaining evidence no
-longer meets its declared minimum. Provider consent is bound to the provider
-endpoint, retention policy, and permitted data classes, and is renewed when any
-of those change.
+Evidence is untrusted data. The selected native coding runtime investigates the
+workspace with its own read-only tools and returns only bounded, citation-bearing
+Protocol v1.3 advisor results. OpenPlanr validates those citations, scans the
+result for secrets, and never promotes repository content into system
+instructions. A lens becomes `not_evaluated` when the runtime cannot provide the
+required evidence; OpenPlanr never fills that gap with generic model advice.
 
 Every persisted finding inherits the highest sensitivity of all cited evidence.
 This classification is deterministic and may be raised when evidence changes;
@@ -292,44 +303,20 @@ provider configuration, permitted data classes, retention policy, credential
 policy, or scheduled review changes. `--yes` confirms that disclosed policy for
 the named run only.
 
-### Evidence sources
+### Native evidence investigation
 
-Repository, Planr, and Git evidence are local and read-only. Configured GitHub
-evidence includes bounded issues, pull requests, releases, and check runs.
-Configured Linear evidence includes bounded teams, issues, and projects. Remote
-collectors reject non-canonical hosts, redirects, oversized responses, and
-unbounded pagination; GitHub permits GET/HEAD only and Linear permits GraphQL
-queries only.
+OpenPlanr no longer maintains a second repository collector, file-import
+pipeline, source registry, or per-profile evidence budget. The Claude Code,
+Codex, or Cursor adapter receives one bounded role mandate and investigates the
+control and configured component repositories through the runtime's native
+read-only harness. The runtime returns concise claims with file, Planr-artifact,
+or Git citations; OpenPlanr validates the result and deterministically reduces
+it into findings, gaps, routes, and projections.
 
-Explicit JSON and CSV imports must remain inside the control or component
-repositories. Their absolute machine paths are stored only in user-local state:
-
-```bash
-planr operate init \
-  --source file-import \
-  --evidence-file evidence/product-metrics.json \
-  --evidence-file evidence/customer-signals.csv
-
-planr operate sources test file-import
-```
-
-`operate init` is the public configuration surface for source selection,
-component roots, and import paths. `operate config edit` points to the
-commit-safe operating configuration; import paths and absolute component roots
-remain machine-local and therefore are not written there. Use:
-
-```bash
-planr operate sources list
-planr operate sources show file-import
-planr operate sources test file-import
-```
-
-to inspect the registry contract and test the already configured source. Source
-tests are read-only and never add a source implicitly.
-
-Imports use strict UTF-8, JSON depth/key/scalar limits, CSV row/column/field
-limits, symlink containment, and spreadsheet-formula neutralization. Raw input
-is not written into commit-safe operating artifacts.
+The persisted Protocol v1.2 compatibility fields remain frozen for existing
+artifacts, but they are not user-tunable and do not cause OpenPlanr to copy the
+repository into an intermediate JSON evidence pack. Data that is not available
+to the active runtime is reported as a readiness gap, not silently omitted.
 
 ## Multi-repository products
 

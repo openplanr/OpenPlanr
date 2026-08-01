@@ -1,9 +1,10 @@
 import { execFile } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import type { OperatingMandate } from '../../src/services/operate/advisors.js';
 import { canonicalize } from '../../src/services/operate/canonical.js';
 import { gateRecordedProposalCitations } from '../../src/services/operate/engine.js';
 import { OperatingEventStore } from '../../src/services/operate/event-store.js';
@@ -14,7 +15,6 @@ import {
 } from '../../src/services/operate/maintenance.js';
 import type {
   OperatingConfig,
-  OperatingMissionPacket,
   OperatingRoleId,
   OperatingRoleResult,
 } from '../../src/services/operate/types.js';
@@ -28,8 +28,8 @@ const execFileAsync = promisify(execFile);
 const temporaryDirectories: string[] = [];
 const digest = (character: string): `sha256:${string}` => `sha256:${character.repeat(64)}`;
 
-// If the file body ever appears in a mission packet, a body has leaked into the
-// body-free evidence index the mission contract promises.
+// If the file body ever appears in a mandate, an evidence body has leaked into
+// the body-free, index-free mandate the contract promises.
 const BODY_MARKER = 'MISSION_ADAPTER_BODY_MARKER_c41f';
 
 async function temporaryDirectory(prefix: string): Promise<string> {
@@ -65,14 +65,11 @@ interface MissionCycleFixture {
  * A cycle in `advising` state on a runtime of the caller's choosing, backed by a
  * real git repository (so the workspace manifest pins a revision and mission
  * citations resolve), a committed operating-config, charter, preferences (with
- * optional dispatch-mode overrides), and a committed evidence snapshot that
- * satisfies role readiness. Modeled on the pack-mode adapter-lifecycle fixture
- * plus the mission-packet git/workspace fixture.
+ * and a committed evidence snapshot that satisfies role readiness.
  */
 async function advisingMissionCycle(options: {
   runtime: string;
   enabledRoles: OperatingRoleId[];
-  dispatchModeOverrides?: Record<string, 'pack' | 'mission'>;
 }): Promise<MissionCycleFixture> {
   const projectRoot = await temporaryDirectory('openplanr-operate-mission-adapter-project-');
   const localRoot = await temporaryDirectory('openplanr-operate-mission-adapter-local-');
@@ -129,9 +126,6 @@ async function advisingMissionCycle(options: {
     `${JSON.stringify({
       runtime: 'auto',
       sensitivityCeiling: 'internal',
-      ...(options.dispatchModeOverrides
-        ? { dispatchModeOverrides: options.dispatchModeOverrides }
-        : {}),
     })}\n`,
   );
 
@@ -241,8 +235,7 @@ async function advisingMissionCycle(options: {
 
 type PrepareResult = {
   roles: string[];
-  rolePacks: Record<string, unknown>;
-  missionPackets?: Record<string, OperatingMissionPacket>;
+  mandates: Record<string, OperatingMandate>;
   roleInputDigests: Record<string, `sha256:${string}`>;
   lease: string;
   idempotencyKey: string;
@@ -255,6 +248,7 @@ type PrepareResult = {
       role?: string;
       dispatch?: {
         agent?: string;
+        mandatePointer?: string;
         missionPacketPointer?: string;
         rolePackPointer?: string;
         isolation?: string;
@@ -284,7 +278,7 @@ afterEach(async () => {
 });
 
 describe('native mission dispatch reaches the record action (FR1 / US-003)', () => {
-  it('prepares a mission packet (not a pack) and hands back a v1.3 mission record action on a claude-code runtime', async () => {
+  it('prepares a mandate (not a pack) with declared boundaries and no evidence body, and hands back a v1.3 mandate record action on a claude-code runtime', async () => {
     const fixture = await advisingMissionCycle({
       runtime: 'claude',
       enabledRoles: ['strategy-finance', 'chair'],
@@ -297,33 +291,34 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
       idempotencyKey: 'mission-prepare',
     })) as PrepareResult;
 
-    // The role resolved to native mission dispatch, so its session data is a
-    // buildOperatingMissionPackets output exposed at /data/missionPackets/<role>,
-    // NOT a rolePack.
+    // The role resolved to native mandate dispatch, so its session data is an
+    // operating mandate exposed at /data/mandates/<role>, NOT a rolePack.
     expect(prepared.roles).toEqual(['strategy-finance']);
-    expect(prepared.rolePacks).toEqual({});
-    const packet = prepared.missionPackets?.['strategy-finance'];
-    expect(packet?.kind).toBe('operating-mission-packet');
-    expect(packet?.protocolVersion).toBe('1.3.0');
-    expect(packet?.packetDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
-    // A body-free evidence INDEX only — no file body ever, and no rolePack pointer.
-    expect(canonicalize(packet)).not.toContain(BODY_MARKER);
-    for (const item of packet?.evidenceIndex ?? []) {
-      expect((item as Record<string, unknown>).content).toBeUndefined();
-      expect((item as Record<string, unknown>).body).toBeUndefined();
-    }
-    expect(prepared.roleInputDigests['strategy-finance']).toBe(packet?.packetDigest);
+    const mandate = prepared.mandates['strategy-finance'];
+    expect(mandate?.kind).toBe('operating-mandate');
+    expect(mandate?.protocolVersion).toBe('1.3.0');
+    expect(mandate?.mandateDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    // Declared boundaries — the granted workspace roots (including `.planr/`
+    // regardless of git tracking), the sensitivity ceiling, and forbidden paths.
+    expect(mandate?.boundaries.roots).toContain('.planr');
+    expect(mandate?.boundaries.roots).toContain('src');
+    expect(mandate?.boundaries.sensitivityCeiling).toBeTruthy();
+    // NO evidence body and NO evidence index — the mandate is bounded instruction.
+    expect(canonicalize(mandate)).not.toContain(BODY_MARKER);
+    expect((mandate as unknown as Record<string, unknown>).evidenceIndex).toBeUndefined();
+    expect((mandate as unknown as Record<string, unknown>).evidence).toBeUndefined();
+    expect(mandate?.responseSchema).toBe('operating-advisor-response@1.3.0');
+    expect(prepared.roleInputDigests['strategy-finance']).toBe(mandate?.mandateDigest);
 
     // The handoff is v1.3 and its record action names the generated lens agent and
-    // points at the mission packet — never a rolePackPointer, never empty-tools.
+    // points at the mandate — never a rolePackPointer, never empty-tools.
     expect(prepared.handoff.protocolVersion).toBe('1.3.0');
     expect(prepared.handoff.state).toBe('record-required');
     const recordAction = prepared.handoff.next.find((entry) => entry.action === 'adapter.record');
     expect(recordAction?.role).toBe('strategy-finance');
     expect(recordAction?.dispatch?.agent).toBe('operating-strategy-finance');
-    expect(recordAction?.dispatch?.missionPacketPointer).toBe(
-      '/data/missionPackets/strategy-finance',
-    );
+    expect(recordAction?.dispatch?.mandatePointer).toBe('/data/mandates/strategy-finance');
+    expect(recordAction?.dispatch?.missionPacketPointer).toBeUndefined();
     expect(recordAction?.dispatch?.rolePackPointer).toBeUndefined();
     expect(recordAction?.dispatch?.isolation).toBe('enforced-read-only-bounded');
     expect(recordAction?.stdin?.schema).toBe(
@@ -348,7 +343,7 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
     expect(start.state).toBe('prepare-required');
     expect(start.protocolVersion).toBe('1.3.0');
 
-    // The same start handoff stays v1.2 for an advisory-isolation runtime.
+    // Every supported adapter starts from the same Protocol v1.3 mandate contract.
     const fallback = await advisingMissionCycle({
       runtime: 'codex',
       enabledRoles: ['strategy-finance', 'chair'],
@@ -362,7 +357,7 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
       roles: ['strategy-finance'],
       localRoot: fallback.localRoot,
     })) as { protocolVersion: string };
-    expect(codexStart.protocolVersion).toBe('1.2.0');
+    expect(codexStart.protocolVersion).toBe('1.3.0');
   });
 
   it('accepts a v1.3 citation-bearing response and threads its citations through gateRecordedProposalCitations', async () => {
@@ -447,11 +442,10 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
     expect(regated.roleResults[0].proposals).toHaveLength(1);
   });
 
-  it('runs a mixed-mode cycle: the default role prepares a mission packet, the pack-overridden role prepares a rolePack', async () => {
+  it('prepares every enabled advisor role as a Protocol v1.3 mandate', async () => {
     const fixture = await advisingMissionCycle({
       runtime: 'claude',
       enabledRoles: ['strategy-finance', 'technology-risk', 'chair'],
-      dispatchModeOverrides: { 'technology-risk': 'pack' },
     });
     const prepared = (await operateAdapterLifecycle({
       ...fixture,
@@ -462,23 +456,16 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
     })) as PrepareResult;
 
     expect(prepared.roles).toEqual(['strategy-finance', 'technology-risk']);
-    // Both dispatch paths coexist in ONE prepared session: the default role is a
-    // mission packet, the --dispatch-mode-override=pack role is a v1.2 rolePack.
-    expect(Object.keys(prepared.missionPackets ?? {})).toEqual(['strategy-finance']);
-    expect(Object.keys(prepared.rolePacks)).toEqual(['technology-risk']);
-    expect(prepared.missionPackets?.['strategy-finance'].kind).toBe('operating-mission-packet');
-    // Provenance never lies: the overridden role's committed input digest is a
-    // pack digest, never a mission packet digest.
+    expect(Object.keys(prepared.mandates)).toEqual(['strategy-finance', 'technology-risk']);
+    expect(prepared.mandates['strategy-finance'].kind).toBe('operating-mandate');
+    expect(prepared.mandates['technology-risk'].protocolVersion).toBe('1.3.0');
     expect(prepared.roleInputDigests['strategy-finance']).toBe(
-      prepared.missionPackets?.['strategy-finance'].packetDigest,
+      prepared.mandates['strategy-finance'].mandateDigest,
     );
-    expect(prepared.roleInputDigests['technology-risk']).not.toBe(
-      prepared.missionPackets?.['strategy-finance'].packetDigest,
+    expect(prepared.roleInputDigests['technology-risk']).toBe(
+      prepared.mandates['technology-risk'].mandateDigest,
     );
 
-    // The pack-overridden role records via the v1.2 pack path (a v1.2 evidenceRef
-    // response, not a v1.3 citation response), proving the override is
-    // execution-effective, not merely a label.
     const recorded = (await operateAdapterLifecycle({
       ...fixture,
       action: 'record',
@@ -489,21 +476,19 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
       stdin: JSON.stringify({ outcome: 'quiet', proposals: [], gaps: [], conflicts: [] }),
     })) as { recorded: string; result: OperatingRoleResult };
     expect(recorded.result.roleId).toBe('strategy-finance');
-    const packRecorded = (await operateAdapterLifecycle({
+    const technologyRecorded = (await operateAdapterLifecycle({
       ...fixture,
       action: 'record',
       cycleId: 'CYCLE-001',
       lease: prepared.lease,
       idempotencyKey: 'mission-mixed',
       role: 'technology-risk',
-      // A v1.2 pack response (evidenceRefs, no citations) — only valid on the pack
-      // path. Its acceptance proves technology-risk was prepared as a pack.
       stdin: JSON.stringify({ outcome: 'quiet', proposals: [], gaps: [], conflicts: [] }),
     })) as { recorded: string; result: OperatingRoleResult };
-    expect(packRecorded.result.roleId).toBe('technology-risk');
+    expect(technologyRecorded.result.roleId).toBe('technology-risk');
   });
 
-  it('fails codex/cursor closed to the pack path: no mission packet, v1.2 rolePack handoff', async () => {
+  it('requires the Protocol v1.3 mandate handoff for codex and cursor', async () => {
     for (const runtime of ['codex', 'cursor']) {
       const fixture = await advisingMissionCycle({
         runtime,
@@ -517,16 +502,11 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
         idempotencyKey: `fail-closed-${runtime}`,
       })) as PrepareResult;
 
-      // An advisory-isolation runtime never receives a native lens: the role is a
-      // v1.2 pack, the handoff defaults to 1.2.0, and its record action points at
-      // the rolePack with empty-tool isolation.
-      expect(prepared.missionPackets).toBeUndefined();
-      expect(Object.keys(prepared.rolePacks)).toEqual(['strategy-finance']);
-      expect(prepared.handoff.protocolVersion).toBe('1.2.0');
+      expect(Object.keys(prepared.mandates)).toEqual(['strategy-finance']);
+      expect(prepared.handoff.protocolVersion).toBe('1.3.0');
       const recordAction = prepared.handoff.next.find((entry) => entry.action === 'adapter.record');
-      expect(recordAction?.dispatch?.rolePackPointer).toBe('/data/rolePacks/strategy-finance');
-      expect(recordAction?.dispatch?.missionPacketPointer).toBeUndefined();
-      expect(recordAction?.dispatch?.isolation).toBe('enforced-empty-tools');
+      expect(recordAction?.dispatch?.mandatePointer).toBe('/data/mandates/strategy-finance');
+      expect(recordAction?.dispatch?.rolePackPointer).toBeUndefined();
     }
   });
 });

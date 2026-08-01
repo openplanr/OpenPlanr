@@ -218,6 +218,15 @@ export async function createGuidedSession(input: {
 }
 
 function terminalSessionError(session: GuidedSession): OperateError | null {
+  // A stale head is the one recoverable terminal condition: the session record
+  // still exists and its bindings are re-evaluated fresh on every read, so once
+  // the working tree is restored to the state it was created in, resuming THIS
+  // session succeeds. Point the operator at that resume, naming the real session,
+  // instead of `init --json`, which would mint a fresh session bound to the same
+  // still-diverged head and fail the same way. Genuinely dead conditions
+  // (cancelled / expired past its TTL / tampered-invalid) are not resumable, so
+  // starting a new session is the correct recovery for them.
+  const resumeCommand = `planr operate init --resume ${session.sessionId} --json`;
   switch (session.state) {
     case 'cancelled':
       return new OperateError(
@@ -234,8 +243,8 @@ function terminalSessionError(session: GuidedSession): OperateError | null {
     case 'stale':
       return new OperateError(
         'E_OPERATE_SESSION_STALE',
-        'Guided session no longer matches the project or configuration head.',
-        { state: session.state, recoveryCommand: 'planr operate init --json' },
+        `Guided session ${session.sessionId} no longer matches the project or configuration head. Restore the working tree to the state the session was created in, then resume it with \`${resumeCommand}\`.`,
+        { state: session.state, sessionId: session.sessionId, recoveryCommand: resumeCommand },
       );
     case 'invalid':
       return new OperateError(
@@ -327,16 +336,12 @@ export async function readGuidedSession(input: {
       parsed.projectHead !== bindings.projectHead ||
       parsed.configHead !== bindings.configHead
     ) {
-      await updateGuidedSession({
-        projectRoot: input.projectRoot,
-        session: {
-          ...parsed,
-          state: 'stale',
-          updatedAt: now.toISOString(),
-          terminalReason: 'Project identity, configuration, or event head changed.',
-        },
-        localRoot: input.localRoot,
-      });
+      // Staleness is re-evaluated fresh on every read and never latched to disk:
+      // the working-tree dirty fingerprint folded into `projectHead` flips the
+      // moment any unrelated file changes, so persisting `state: 'stale'` here
+      // would strand the session even after the tree is restored. Leaving the
+      // record untouched lets a later read (with the tree back to its original
+      // state) succeed — the un-latch that closes the guided-init livelock.
       throw terminalSessionError({ ...parsed, state: 'stale' }) as OperateError;
     }
     return parsed;

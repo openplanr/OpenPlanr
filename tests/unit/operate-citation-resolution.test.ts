@@ -10,9 +10,13 @@ import {
   enforceProposalCitations,
   resolveOperatingCitationAtPin,
 } from '../../src/services/operate/citation-resolution.js';
+import { gateRecordedProposalCitations } from '../../src/services/operate/engine.js';
 import { OperatingEvidenceCache } from '../../src/services/operate/evidence-cache.js';
 import { enforceRecordedProposalCitations } from '../../src/services/operate/interaction/action-service.js';
-import type { OperatingWorkspaceComponent } from '../../src/services/operate/types.js';
+import type {
+  OperatingRoleResult,
+  OperatingWorkspaceComponent,
+} from '../../src/services/operate/types.js';
 
 const execFileAsync = promisify(execFile);
 const temporaryDirectories: string[] = [];
@@ -24,8 +28,14 @@ async function temporaryDirectory(prefix: string): Promise<string> {
 }
 
 const SERVICE_CONTENT = 'export function add(a: number, b: number): number {\n  return a + b;\n}\n';
-const SECRET_TOKEN = 'ghp_0123456789012345678901234567890123';
-const SECRET_CONTENT = `export const githubToken = "${SECRET_TOKEN}";\n`;
+// A hard-blocked secret category (a known GitHub token): a citation into this
+// content is rejected as `unresolvable`, never redacted-and-accepted.
+const HARD_SECRET_TOKEN = 'ghp_0123456789012345678901234567890123';
+const HARD_SECRET_CONTENT = `export const githubToken = "${HARD_SECRET_TOKEN}";\n`;
+// A SOFT secret (a bare secret-shaped assignment): still redacted-and-accepted,
+// so the snapshot never carries the raw value.
+const SOFT_SECRET_VALUE = 'swordfish-not-a-real-token';
+const SOFT_SECRET_CONTENT = `API_PASSWORD=${SOFT_SECRET_VALUE}\n`;
 const STORY_CONTENT = '# US-001 — Resolve citations\n\nThe engine resolves citations at the pin.\n';
 
 interface Fixture {
@@ -52,7 +62,8 @@ async function buildFixture(): Promise<Fixture> {
   await mkdir(join(projectRoot, 'src'), { recursive: true });
   await mkdir(join(projectRoot, '.planr', 'stories'), { recursive: true });
   await writeFile(join(projectRoot, 'src', 'service.ts'), SERVICE_CONTENT);
-  await writeFile(join(projectRoot, 'src', 'secrets.ts'), SECRET_CONTENT);
+  await writeFile(join(projectRoot, 'src', 'secrets.ts'), HARD_SECRET_CONTENT);
+  await writeFile(join(projectRoot, 'src', 'soft-secret.txt'), SOFT_SECRET_CONTENT);
   await writeFile(join(projectRoot, '.planr', 'stories', 'US-001-foo.md'), STORY_CONTENT);
   await git(projectRoot, ['add', '-A']);
   await git(projectRoot, ['commit', '--quiet', '-m', 'first']);
@@ -219,7 +230,33 @@ describe('Operating Board citation resolution', () => {
     expect(fabricated.reason).toBe('fabricated-path');
   });
 
-  it('redacts a secret in cited content so it never appears raw in the persisted snapshot', async () => {
+  it('redacts a SOFT secret in cited content so it never appears raw in the persisted snapshot', async () => {
+    const fixture = await buildFixture();
+    const resolved = await resolveOperatingCitationAtPin(
+      {
+        repositoryPath: 'src/soft-secret.txt',
+        lineRange: { start: 1, end: 1 },
+        pinnedRevision: fixture.head,
+      },
+      fixture.context,
+    );
+    // A bare secret-shaped assignment is redacted-and-accepted (soft category).
+    expect(resolved.outcome).toBe('resolved');
+    const snapshot = await fixture.cache.getCitationSnapshot(
+      resolved.evidenceId as string,
+      fixture.context.now,
+    );
+    expect(snapshot?.content).not.toContain(SOFT_SECRET_VALUE);
+    expect(snapshot?.content).toContain('[REDACTED]');
+
+    // No cache file on disk contains the raw secret bytes.
+    for (const name of await readdir(fixture.cacheRoot)) {
+      const raw = await readFile(join(fixture.cacheRoot, name), 'utf8');
+      expect(raw).not.toContain(SOFT_SECRET_VALUE);
+    }
+  });
+
+  it('rejects a citation into HARD-blocked-secret content as unresolvable, never redacted-and-accepted', async () => {
     const fixture = await buildFixture();
     const resolved = await resolveOperatingCitationAtPin(
       {
@@ -229,19 +266,66 @@ describe('Operating Board citation resolution', () => {
       },
       fixture.context,
     );
-    expect(resolved.outcome).toBe('resolved');
-    const snapshot = await fixture.cache.getCitationSnapshot(
-      resolved.evidenceId as string,
-      fixture.context.now,
-    );
-    expect(snapshot?.content).not.toContain(SECRET_TOKEN);
-    expect(snapshot?.content).toContain('[REDACTED_TOKEN]');
+    // A hard-blocked secret (a known token) is refused outright — no snapshot,
+    // no evidence id, one governed unresolvable-citation gap.
+    expect(resolved.outcome).toBe('rejected');
+    expect(resolved.reason).toBe('unresolvable');
+    expect(resolved.evidenceId).toBeUndefined();
+    expect(resolved.gap?.category).toBe('unresolvable-citation');
 
-    // No cache file on disk contains the raw secret bytes.
+    // The rejected citation was never snapshotted, so no cache file exists at all,
+    // and certainly none carrying the raw token.
     for (const name of await readdir(fixture.cacheRoot)) {
       const raw = await readFile(join(fixture.cacheRoot, name), 'utf8');
-      expect(raw).not.toContain(SECRET_TOKEN);
+      expect(raw).not.toContain(HARD_SECRET_TOKEN);
     }
+  });
+
+  it('commits a role not_evaluated with a governed gap when its citations resolve zero evidence', async () => {
+    const fixture = await buildFixture();
+    const roleResult = {
+      kind: 'operating-role-result',
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.2.0',
+      cycleId: 'CYCLE-001',
+      roleId: 'strategy-finance',
+      inputDigest: `sha256:${'a'.repeat(64)}`,
+      resultDigest: `sha256:${'b'.repeat(64)}`,
+      outcome: 'proposals',
+      proposals: [
+        {
+          proposalKey: 'ungrounded',
+          type: 'finding',
+          title: 'A claim that grounds nothing',
+          problem: 'The cited path does not exist at the pin.',
+          proposal: 'Rework the finding against real evidence.',
+          impact: 3,
+          confidence: 3,
+          ease: 3,
+          severity: 'medium',
+          evidenceRefs: [],
+          citations: [{ repositoryPath: 'src/missing.ts', pinnedRevision: fixture.head }],
+        },
+      ],
+      gaps: [],
+      conflicts: [],
+      producer: { product: 'openplanr', version: '1.19.0', runtime: 'claude' },
+    } as unknown as OperatingRoleResult;
+
+    const gated = await gateRecordedProposalCitations({
+      roleResults: [roleResult],
+      context: fixture.context,
+    });
+
+    // The role grounded zero evidence, so it is not_evaluated: every proposal is
+    // dropped and a governed gap names the role and its empty grounding.
+    expect(gated.notEvaluatedRoleIds).toContain('strategy-finance');
+    expect(gated.roleResults[0].proposals).toHaveLength(0);
+    const roleGap = gated.gaps.find((gap) =>
+      (gap.affectedRoles ?? []).includes('strategy-finance' as never),
+    );
+    expect(roleGap).toBeDefined();
+    expect(roleGap?.category).toBe('missing-evidence');
   });
 
   it('inherits the cited file sensitivity into the persisted snapshot', async () => {

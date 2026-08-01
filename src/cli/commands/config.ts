@@ -13,6 +13,7 @@ import {
   resolveApiKeySource,
   saveCredential,
 } from '../../services/credentials-service.js';
+import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { promptSecret, promptSelect } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
 
@@ -105,6 +106,7 @@ export function registerConfigCommand(program: Command) {
       cfg.ai = { ...cfg.ai, provider: selected };
       await saveConfig(projectDir, cfg);
       logger.success(`AI provider set to: ${selected}`);
+      printDeprecationNotice('ai-planning');
     });
 
   config
@@ -133,6 +135,7 @@ export function registerConfigCommand(program: Command) {
       const where =
         storage === 'keychain' ? 'OS keychain' : 'encrypted file (~/.planr/credentials.enc)';
       logger.success(`API key for ${selected} saved to ${where}`);
+      printDeprecationNotice('ai-planning');
     });
 
   config

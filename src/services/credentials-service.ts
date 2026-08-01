@@ -87,6 +87,8 @@ export async function migrateCredentials(): Promise<boolean> {
  * 4. undefined
  */
 export async function resolveApiKey(provider: string): Promise<string | undefined> {
+  // Deprecated for Operating Board advisor dispatch; retained for CLI-side
+  // planning until the announced OpenPlanr 2.0.0 removal.
   // Run one-time migration from legacy plaintext file
   await migrateCredentials();
 

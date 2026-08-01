@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -9,7 +9,6 @@ import { assertOperatingCadenceCannotMutate } from '../../src/services/operate/c
 import type { CitationResolutionContext } from '../../src/services/operate/citation-resolution.js';
 import {
   applyOperatingInitialization,
-  type OperatingDispatchModeOverrides,
   prepareOperatingInitialization,
   readOperatingLastRunAt,
   recordOperatingLastRunAt,
@@ -25,7 +24,6 @@ import type {
   OperatingRoleResult,
   OperatingWorkspaceComponent,
 } from '../../src/services/operate/types.js';
-import { resolveOperatingPaths } from '../../src/services/operate/workspace.js';
 
 const execFileAsync = promisify(execFile);
 const temporaryDirectories: string[] = [];
@@ -54,7 +52,6 @@ async function gitProject(): Promise<string> {
 
 async function initialize(input: {
   cadence: 'manual' | 'weekly' | 'monthly';
-  dispatchModeOverrides?: OperatingDispatchModeOverrides;
 }): Promise<{ projectRoot: string; localRoot: string }> {
   const projectRoot = await gitProject();
   const localRoot = await temporaryDirectory('openplanr-operate-cadence-local-');
@@ -68,18 +65,9 @@ async function initialize(input: {
     cadence: input.cadence,
     timezone: 'UTC',
     sensitivityCeiling: 'internal',
-    enabledProviders: ['repository', 'git'],
-    ...(input.dispatchModeOverrides ? { dispatchModeOverrides: input.dispatchModeOverrides } : {}),
     customProfile: {
       enabledRoles: ['strategy-finance', 'technology-risk', 'chair'],
-      enabledProviders: ['repository', 'git'],
       caps: { surfacedFindings: 10, newSpecs: 3, openDecisions: 3, agentArtifacts: 2 },
-      budgets: {
-        maxFiles: 1_000,
-        maxItems: 2_000,
-        maxBytes: 10 * 1024 * 1024,
-        maxDurationMs: 60_000,
-      },
     },
     charter: {
       purpose: 'Exercise cadence state and the never-acts guarantee.',
@@ -103,8 +91,13 @@ function routeAdapter(): AdvisorAdapter {
     toolIsolation: 'not-applicable',
     capability: 'analysis-high',
     async invoke(input) {
-      const evidenceRef = input.evidence.items[0]?.id;
-      if (!evidenceRef) return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
+      const citations = [
+        {
+          repositoryPath: 'service.ts',
+          lineRange: { start: 1, end: 1 },
+          pinnedRevision: input.pinnedRevision,
+        },
+      ];
       if (input.roleId === 'technology-risk') {
         return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
       }
@@ -122,7 +115,7 @@ function routeAdapter(): AdvisorAdapter {
               confidence: 3,
               ease: 5,
               severity: 'low',
-              evidenceRefs: [evidenceRef],
+              citations,
             },
           ],
           gaps: [],
@@ -142,7 +135,7 @@ function routeAdapter(): AdvisorAdapter {
             confidence: 3,
             ease: 4,
             severity: 'medium',
-            evidenceRefs: [evidenceRef],
+            citations,
           },
           {
             proposalKey: 'owner-route',
@@ -154,7 +147,7 @@ function routeAdapter(): AdvisorAdapter {
             confidence: 3,
             ease: 5,
             severity: 'low',
-            evidenceRefs: [evidenceRef],
+            citations,
           },
         ],
         gaps: [],
@@ -301,99 +294,6 @@ describe('operate cadence state (FR8 / E-008)', () => {
     // The pipeline's structural never-acts guarantee anchors the assertion above.
     expect(await assertOperatingCadenceCannotMutate()).toBe(true);
   });
-
-  it('threads a persisted dispatch-mode override into the live dispatch provenance', async () => {
-    const { projectRoot, localRoot } = await initialize({
-      cadence: 'weekly',
-      dispatchModeOverrides: { 'strategy-finance': 'pack' },
-    });
-    // The override lands in the machine-local preferences, not the frozen config.
-    const preferences = JSON.parse(
-      await readFile(
-        join(resolveOperatingPaths(projectRoot, { localRoot }).localRoot, 'preferences.json'),
-        'utf8',
-      ),
-    ) as { dispatchModeOverrides?: Record<string, string> };
-    expect(preferences.dispatchModeOverrides).toEqual({ 'strategy-finance': 'pack' });
-
-    const result = await runOperatingCycle({
-      projectRoot,
-      localRoot,
-      adapter: routeAdapter(),
-      confirmed: true,
-      now: new Date('2026-07-31T08:00:00.000Z'),
-    });
-
-    const provenance = result.dispatchProvenance ?? [];
-    const strategy = provenance.find((entry) => entry.roleId === 'strategy-finance');
-    expect(strategy?.dispatchMode).toBe('pack');
-    // A role with no override keeps the derived registry default (`mission`).
-    expect(provenance.some((entry) => entry.dispatchMode === 'mission')).toBe(true);
-  });
-
-  it('forwards CLI-validated dispatch-mode overrides through the init action into preferences', async () => {
-    // The facade `init` apply writes into the isolated default state root
-    // (OPENPLANR_STATE_ROOT, set per test worker), so this exercise reads the
-    // persisted preferences from there rather than a custom localRoot.
-    const projectRoot = await gitProject();
-    const commonOptions = {
-      json: true,
-      profile: 'saas',
-      decisionOwner: 'Asem',
-      planningEngine: 'openplanr',
-      runtime: 'codex',
-      cadence: 'weekly',
-      timezone: 'UTC',
-      sensitivityCeiling: 'internal',
-      sources: ['repository', 'git'],
-      dispatchModeOverride: ['strategy-finance=pack'],
-      charter: {
-        purpose: 'Guide an evidence-backed product.',
-        stage: 'growth',
-        businessModel: 'subscription',
-        idealCustomer: 'technical product teams',
-        goals: ['Produce reviewable decisions.'],
-        successMetrics: ['Time to a cited brief'],
-        guardrails: ['Humans approve mutations'],
-        knownUnknowns: ['Current activation baseline'],
-      },
-    };
-    const previewResult = await executeOperateAction({
-      action: 'init',
-      projectRoot,
-      interactive: false,
-      options: { ...commonOptions, preview: true },
-    });
-    expect(previewResult).toMatchObject({ ok: true, state: 'preview-ready' });
-    const applyAction = previewResult.actions?.find((entry) => entry.id === 'operate.init.apply');
-    const token = applyAction?.command.match(/--answers-token ([A-Za-z0-9_-]+)/)?.[1];
-    const previewCreatedAt = (previewResult.preview as { previewCreatedAt?: string } | undefined)
-      ?.previewCreatedAt;
-    expect(token).toBeTruthy();
-    expect(previewCreatedAt).toBeTruthy();
-
-    const applied = await executeOperateAction({
-      action: 'init',
-      projectRoot,
-      interactive: false,
-      options: {
-        ...commonOptions,
-        answersToken: token,
-        previewCreatedAt,
-        confirm: applyAction?.confirmationDigest,
-        yes: true,
-      },
-    });
-    expect(applied.ok).toBe(true);
-
-    const preferences = JSON.parse(
-      await readFile(
-        join(resolveOperatingPaths(projectRoot).localRoot, 'preferences.json'),
-        'utf8',
-      ),
-    ) as { dispatchModeOverrides?: Record<string, string> };
-    expect(preferences.dispatchModeOverrides).toEqual({ 'strategy-finance': 'pack' });
-  });
 });
 
 function citationBearingRoleResults(head: string): OperatingRoleResult[] {
@@ -534,8 +434,13 @@ describe('operate recorded-proposal citation gate (FR3 / E-003)', () => {
       cycleId: 'CYCLE-001',
     } as CitationResolutionContext;
     const gated = await gateRecordedProposalCitations({ roleResults, context });
-    // Same reference returned, no gaps: the citation resolver is never touched.
-    expect(gated.roleResults).toBe(roleResults);
+    // A pack result carries no citations, so the now-unconditional universal gate
+    // is a SEMANTIC no-op: the same content is returned (a fresh array, since the
+    // `bearing.length === 0` bypass was removed so the citation resolver runs on
+    // every path), no gaps are opened, and the role is not demoted to
+    // not_evaluated (a citation-free v1.2 result is not a citation-bearing role).
+    expect(gated.roleResults).toStrictEqual(roleResults);
     expect(gated.gaps).toHaveLength(0);
+    expect(gated.notEvaluatedRoleIds).toEqual([]);
   });
 });

@@ -116,15 +116,14 @@ PLAN handoff, or SHIP invocation. Drift invalidates the digest before writes.
 | Command group | Purpose |
 |---|---|
 | `inspect` / `demo` | Credential-free readiness and deterministic first-use example; both remain available in planning-only installs |
-| `init` / `config` / `profiles` | Configure and validate the product charter, profile, workspace, runtime, privacy, and decision owner |
-| `sources list\|show\|test` | Inspect or read-only test configured sources; source and JSON/CSV import paths are selected by `operate init` |
+| `init` / `config` / `profiles` | Configure and validate the product charter, bounded advisory profile, workspace, runtime, privacy, and decision owner |
 | `run` / `review` / `brief` / `status` | Produce and inspect a cycle that ends at the human review gate |
 | `report [cycleId]` | Render the cycle brief plus separate CEO, CTO, CPO, CMO, COO, and Chair results as Markdown or strict JSON, including exact planning conversion commands |
 | `findings accept\|reject\|supersede` | Record governance; accepting never applies the route |
 | `routes apply\|rollback` | Preview and confirm exact local writes, or restore reversible prior bytes |
 | `decisions decide` | Record the named human owner’s decision |
 | `gaps answer` / `gaps verify` | Record an answer, then separately verify it against explicit evidence IDs |
-| `evidence diagnose\|classify` | Inspect a value-free quarantine candidate and confirm one exact eligible classification without weakening secret policy |
+| `evidence list\|show` | Inspect committed citation metadata and sanitized evidence projections from completed mandate work |
 | `run --review-only` | Observe verified pipeline shipment proof and reconcile due outcome observations without model calls |
 | `cycles` / `migrate` / `migrations` | Resume, recover, close, migrate, or roll back lifecycle state |
 | `cache` / `integrity` / `diagnostics` / `security` | Inspect local retention and integrity or perform explicit maintenance |
