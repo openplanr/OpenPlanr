@@ -46,6 +46,12 @@ const repoLocalWorkItems = {
     skills: 'docs/implementation/operating-board.md',
     marketplace: 'docs/implementation/OPERATE-SPEC-005.md',
   },
+  'SPEC-006': {
+    pipeline: 'docs/implementation/operating-board.md',
+    cli: 'docs/implementation/OPERATE-SPEC-006.md',
+    skills: 'docs/implementation/operating-board.md',
+    marketplace: 'docs/implementation/OPERATE-SPEC-006.md',
+  },
 };
 const states = new Set([
   'drafted',

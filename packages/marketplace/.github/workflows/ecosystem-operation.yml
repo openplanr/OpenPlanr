@@ -9,6 +9,7 @@ on:
       - 'examples/native-operate-operation.json'
       - 'examples/agentic-operate-operation.json'
       - 'examples/field-fix-operate-operation.json'
+      - 'examples/outputs-epic-loop-operation.json'
       - 'operations/**'
       - 'schemas/ecosystem-operation.schema.json'
       - 'scripts/generate-ecosystem.mjs'

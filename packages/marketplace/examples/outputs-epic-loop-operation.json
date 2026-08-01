@@ -1,0 +1,327 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "openplanr-ecosystem-operation",
+  "protocolVersion": "1.2.0",
+  "operationId": "OPERATE-SPEC-006",
+  "operationDigest": "sha256:9a7bc2333ecf18b56d3f63c0076c46a86d1a4c9110f66d30ecf79283ab2c6661",
+  "umbrellaSpecId": "SPEC-006",
+  "title": "Release Truthful Operating Board Outputs and the Epic Loop",
+  "capability": "agenticOperatingBoard",
+  "createdAt": "2026-08-01T00:15:00.000Z",
+  "updatedAt": "2026-08-01T02:10:00.000Z",
+  "state": "promoting",
+  "ledger": {
+    "kind": "marketplace-draft-pr",
+    "repository": "openplanr/marketplace",
+    "headRef": "ecosystem-release/operate-spec-006-outputs-epic-loop",
+    "pullRequest": {
+      "number": 95,
+      "url": "https://github.com/openplanr/marketplace/pull/95",
+      "state": "ready"
+    }
+  },
+  "participantOrder": [
+    "pipeline",
+    "cli",
+    "skills",
+    "marketplace"
+  ],
+  "participants": [
+    {
+      "component": "pipeline",
+      "repoLocalSpecId": "OPERATE-SPEC-006:pipeline",
+      "repoLocalWorkItem": "docs/implementation/operating-board.md",
+      "repository": "openplanr/planr-pipeline",
+      "currentVersion": "0.34.0",
+      "targetVersion": "0.35.0",
+      "phase": "verified",
+      "branch": "feat/operating-board-output-contracts",
+      "targetBranch": "main",
+      "commitSha": "115270da8f8f805aa062ed42650b885e8e881455",
+      "pullRequest": {
+        "number": 93,
+        "url": "https://github.com/openplanr/planr-pipeline/pull/93",
+        "state": "merged"
+      },
+      "package": {
+        "name": "planr-pipeline",
+        "version": "0.35.0",
+        "status": "verified",
+        "integrity": "sha512-0Iu8NwRuHzK6hNOB/YHYgSrTcMtMztuSqdI2E9uv/k3gwsJrFL4K0dP3FKxu5ohSwLPlZ0s/NiC2lIsMlKdvIA=="
+      },
+      "tag": "v0.35.0",
+      "tarballDigest": "sha256:86e1668bd5595eb0226092fb25d89be91833ace6ad5ac0d6d64c9f51b5ace3d5",
+      "checks": [
+        {
+          "name": "npm-publish",
+          "status": "passed",
+          "url": "https://github.com/openplanr/planr-pipeline/actions/runs/30674128055"
+        }
+      ],
+      "approvals": [
+        {
+          "gate": "release",
+          "actor": "Asem",
+          "status": "approved",
+          "timestamp": "2026-08-01T00:15:00.000Z",
+          "digest": "sha256:9a7bc2333ecf18b56d3f63c0076c46a86d1a4c9110f66d30ecf79283ab2c6661"
+        }
+      ],
+      "prerequisites": [],
+      "compensation": "forward-fix",
+      "nextSafeAction": "Verified at v0.35.0. One artifact browser/visual job flaked on the pull request before merge and passed clean on re-run; merge CI was green. Any correction must be a forward-fix release."
+    },
+    {
+      "component": "cli",
+      "repoLocalSpecId": "OPERATE-SPEC-006:cli",
+      "repoLocalWorkItem": "docs/implementation/OPERATE-SPEC-006.md",
+      "repository": "openplanr/OpenPlanr",
+      "currentVersion": "1.18.0",
+      "targetVersion": "1.19.0",
+      "phase": "verified",
+      "branch": "feat/operating-board-outputs-and-epic-loop",
+      "targetBranch": "main",
+      "commitSha": "d37075857a3584f87b13bd142e087e423a6d53ac",
+      "pullRequest": {
+        "number": 176,
+        "url": "https://github.com/openplanr/OpenPlanr/pull/176",
+        "state": "merged"
+      },
+      "package": {
+        "name": "openplanr",
+        "version": "1.19.0",
+        "status": "verified",
+        "integrity": "sha512-FGUMdW2NJ7T6Vme8A/ckBvLuHnSrK+7dMQ8TTG0g6i5VMmTXjqollW/Pm/p3PJKYmONAd4PkEk0rKo8a4AZL6w=="
+      },
+      "tag": "v1.19.0",
+      "tarballDigest": "sha256:8ab844ec5b287f4cf63a49cec1615f4a63ff87df13852665fe30375dee5a87da",
+      "checks": [
+        {
+          "name": "ci",
+          "status": "passed",
+          "url": "https://github.com/openplanr/OpenPlanr/actions/runs/30678629548"
+        },
+        {
+          "name": "npm-publish",
+          "status": "passed",
+          "url": "https://github.com/openplanr/OpenPlanr/actions/runs/30679723464"
+        }
+      ],
+      "approvals": [
+        {
+          "gate": "release",
+          "actor": "Asem",
+          "status": "approved",
+          "timestamp": "2026-08-01T01:35:00.000Z",
+          "digest": "sha256:9a7bc2333ecf18b56d3f63c0076c46a86d1a4c9110f66d30ecf79283ab2c6661"
+        }
+      ],
+      "prerequisites": [
+        "pipeline"
+      ],
+      "compensation": "forward-fix",
+      "nextSafeAction": "Verified at v1.19.0 on npm. The feature landed in pull request 175 with six-platform CI green; the recorded commit is the version pull request 176 that carries the tag, and the SPEC-006 work item is present in the tagged tree. Any correction must be a forward-fix release."
+    },
+    {
+      "component": "skills",
+      "repoLocalSpecId": "OPERATE-SPEC-006:skills",
+      "repoLocalWorkItem": "docs/implementation/operating-board.md",
+      "repository": "openplanr/skills",
+      "currentVersion": "1.20.0",
+      "targetVersion": "1.21.0",
+      "phase": "verified",
+      "branch": "release/v1.21.0",
+      "targetBranch": "main",
+      "commitSha": "d7e3f8d05f65ddfc783b9cd0769863e9c1e4bdd3",
+      "pullRequest": {
+        "number": 30,
+        "url": "https://github.com/openplanr/skills/pull/30",
+        "state": "merged"
+      },
+      "package": null,
+      "tag": "v1.21.0",
+      "tarballDigest": "sha256:b3fade0cb8d28acb05e3e3467fbc31b1f393e4d8e7d2c31f53a5ad8f6e66e762",
+      "checks": [
+        {
+          "name": "validate",
+          "status": "passed",
+          "url": "https://github.com/openplanr/skills/actions/runs/30679768446"
+        },
+        {
+          "name": "release-check",
+          "status": "passed",
+          "url": "https://github.com/openplanr/skills/actions/runs/30679770131"
+        }
+      ],
+      "approvals": [
+        {
+          "gate": "release",
+          "actor": "Asem",
+          "status": "approved",
+          "timestamp": "2026-08-01T01:55:00.000Z",
+          "digest": "sha256:9a7bc2333ecf18b56d3f63c0076c46a86d1a4c9110f66d30ecf79283ab2c6661"
+        }
+      ],
+      "prerequisites": [
+        "pipeline",
+        "cli"
+      ],
+      "compensation": "forward-fix",
+      "nextSafeAction": "Verified at v1.21.0. Repository release only; no npm artifact."
+    },
+    {
+      "component": "marketplace",
+      "repoLocalSpecId": "OPERATE-SPEC-006:marketplace",
+      "repoLocalWorkItem": "docs/implementation/OPERATE-SPEC-006.md",
+      "repository": "openplanr/marketplace",
+      "currentVersion": "1.5.0",
+      "targetVersion": "1.6.0",
+      "phase": "pending",
+      "branch": "ecosystem-release/operate-spec-006-outputs-epic-loop",
+      "targetBranch": "main",
+      "commitSha": null,
+      "pullRequest": {
+        "number": 95,
+        "url": "https://github.com/openplanr/marketplace/pull/95",
+        "state": "ready"
+      },
+      "package": null,
+      "tag": null,
+      "tarballDigest": null,
+      "checks": [],
+      "approvals": [
+        {
+          "gate": "release",
+          "actor": "Asem",
+          "status": "approved",
+          "timestamp": "2026-08-01T02:10:00.000Z",
+          "digest": "sha256:9a7bc2333ecf18b56d3f63c0076c46a86d1a4c9110f66d30ecf79283ab2c6661"
+        }
+      ],
+      "prerequisites": [
+        "pipeline",
+        "cli",
+        "skills"
+      ],
+      "compensation": "withhold-manifest",
+      "nextSafeAction": "Open and merge the withheld 1.6.0 ledger PR, then tag and run exact-commit canaries before finalization."
+    }
+  ],
+  "releaseEvidence": [
+    {
+      "id": "packed-cli",
+      "status": "pending",
+      "url": null,
+      "digest": null,
+      "checkedAt": null
+    },
+    {
+      "id": "protocol-v1.2",
+      "status": "pending",
+      "url": null,
+      "digest": null,
+      "checkedAt": null
+    },
+    {
+      "id": "event-replay",
+      "status": "pending",
+      "url": null,
+      "digest": null,
+      "checkedAt": null
+    },
+    {
+      "id": "security-boundaries",
+      "status": "pending",
+      "url": null,
+      "digest": null,
+      "checkedAt": null
+    },
+    {
+      "id": "outcome-reconciliation",
+      "status": "pending",
+      "url": null,
+      "digest": null,
+      "checkedAt": null
+    }
+  ],
+  "prepareDigest": "sha256:bf43617efd0feffbdd87f1977e958880c999fd6447d0b8bf931d7292a8af5c64",
+  "confirmationDigest": "sha256:c9ba24638c0b5984b8ad57090b727f5477a17b96c26dc638e87ff403c1d52336",
+  "blockedReason": null,
+  "nextSafeAction": "Merge and tag marketplace 1.6.0, run exact-commit canaries, then finalize the compatibility manifest.",
+  "recovery": {
+    "mode": "forward-fix",
+    "reason": "planr-pipeline@0.35.0 and openplanr@1.19.0 are already public.",
+    "nextSafeAction": "Use forward-fix releases for published components and keep marketplace availability withheld until exact-commit canaries pass."
+  },
+  "reconciliation": {
+    "status": "incomplete",
+    "checkedAt": "2026-08-01T02:10:00.000Z",
+    "sources": [
+      "github-pr",
+      "git-commit",
+      "git-tag",
+      "github-checks",
+      "npm-registry",
+      "marketplace-manifest",
+      "operating-canary"
+    ],
+    "drift": [],
+    "nextSafeAction": "Publish the withheld marketplace ledger and collect exact-commit canary evidence before exposing compatibility."
+  },
+  "history": [
+    {
+      "eventId": "c595d18d-bf8c-4a05-98d6-5679799aca6b",
+      "timestamp": "2026-08-01T00:15:00.000Z",
+      "type": "operation.created",
+      "actor": "Release coordinator",
+      "participant": null,
+      "digest": "sha256:9a7bc2333ecf18b56d3f63c0076c46a86d1a4c9110f66d30ecf79283ab2c6661",
+      "note": "Created the coordinated release transaction for the truthful-outputs and epic-loop revision of the agentic Operating Board execution capability."
+    },
+    {
+      "eventId": "82b7cb56-f47b-4704-b4c2-49f59e933e6d",
+      "timestamp": "2026-08-01T00:15:01.000Z",
+      "type": "prepare.started",
+      "actor": "Release coordinator",
+      "participant": null,
+      "digest": "sha256:bf43617efd0feffbdd87f1977e958880c999fd6447d0b8bf931d7292a8af5c64",
+      "note": "Prepared the pipeline, CLI, skills, and marketplace outputs and epic-loop release train in dependency order."
+    },
+    {
+      "eventId": "1c2f52e0-16eb-4c9a-9f5a-f272f5ffa205",
+      "timestamp": "2026-08-01T00:55:00.000Z",
+      "type": "participant.verified",
+      "actor": "Release coordinator",
+      "participant": "pipeline",
+      "digest": "sha256:86e1668bd5595eb0226092fb25d89be91833ace6ad5ac0d6d64c9f51b5ace3d5",
+      "note": "planr-pipeline 0.35.0 was merged, published to npm, tagged, and verified by the release workflow. One artifact browser/visual job flaked before merge and passed clean on re-run."
+    },
+    {
+      "eventId": "61b370d5-1436-4718-a626-2e50c6d8c3ce",
+      "timestamp": "2026-08-01T01:35:00.000Z",
+      "type": "participant.verified",
+      "actor": "Release coordinator",
+      "participant": "cli",
+      "digest": "sha256:8ab844ec5b287f4cf63a49cec1615f4a63ff87df13852665fe30375dee5a87da",
+      "note": "OpenPlanr 1.19.0 was merged, published to npm, tagged, and verified by CI and release workflows. The feature landed in pull request 175 and the recorded commit is the version pull request 176 that carries the tag and the SPEC-006 work item."
+    },
+    {
+      "eventId": "8a775ce9-b54e-4ad6-80a8-d326206314a2",
+      "timestamp": "2026-08-01T01:55:00.000Z",
+      "type": "participant.verified",
+      "actor": "Release coordinator",
+      "participant": "skills",
+      "digest": "sha256:b3fade0cb8d28acb05e3e3467fbc31b1f393e4d8e7d2c31f53a5ad8f6e66e762",
+      "note": "OpenPlanr Skills 1.21.0 was merged, tagged, and verified by validation and release-check workflows."
+    },
+    {
+      "eventId": "ca60a24b-8e46-4a36-9d3f-34657e2b68ec",
+      "timestamp": "2026-08-01T02:10:00.000Z",
+      "type": "participant.prepared",
+      "actor": "Release coordinator",
+      "participant": "marketplace",
+      "digest": "sha256:c9ba24638c0b5984b8ad57090b727f5477a17b96c26dc638e87ff403c1d52336",
+      "note": "Prepared marketplace 1.6.0 with compatibility withheld until exact-commit canaries pass."
+    }
+  ]
+}
