@@ -43,38 +43,48 @@ const advisor: AdvisorAdapter = {
   toolIsolation: 'not-applicable',
   capability: 'analysis-high',
   async invoke(input) {
-    const evidenceRef = input.evidence.items[0]?.id;
-    if (!evidenceRef || input.roleId !== 'chair') {
+    if (input.roleId !== 'chair' && input.roleId !== 'strategy-finance') {
       return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
     }
+    const citations = [
+      {
+        repositoryPath: 'service.ts',
+        lineRange: { start: 1, end: 1 },
+        pinnedRevision: input.pinnedRevision,
+      },
+    ];
     return {
       outcome: 'proposals',
-      proposals: [
-        {
-          proposalKey: 'instrument-activation',
-          type: 'merge',
-          title: 'Instrument activation before scope expansion',
-          problem: 'The activation funnel has no verified baseline.',
-          proposal: 'Create one bounded instrumentation specification.',
-          impact: 3,
-          confidence: 3,
-          ease: 4,
-          severity: 'high',
-          evidenceRefs: [evidenceRef],
-        },
-        {
-          proposalKey: 'activation-decision',
-          type: 'decision',
-          title: 'Owner decides on activation instrumentation',
-          problem: 'Should we instrument activation before expanding scope?',
-          proposal: 'Instrument activation first, then expand scope.',
-          impact: 3,
-          confidence: 3,
-          ease: 3,
-          severity: 'medium',
-          evidenceRefs: [evidenceRef],
-        },
-      ],
+      proposals:
+        input.roleId === 'chair'
+          ? [
+              {
+                proposalKey: 'instrument-activation',
+                type: 'merge',
+                title: 'Instrument activation before scope expansion',
+                problem: 'The activation funnel has no verified baseline.',
+                proposal: 'Create one bounded instrumentation specification.',
+                impact: 3,
+                confidence: 3,
+                ease: 4,
+                severity: 'high',
+                citations,
+              },
+            ]
+          : [
+              {
+                proposalKey: 'activation-decision',
+                type: 'decision',
+                title: 'Owner decides on activation instrumentation',
+                problem: 'Should we instrument activation before expanding scope?',
+                proposal: 'Instrument activation first, then expand scope.',
+                impact: 3,
+                confidence: 3,
+                ease: 3,
+                severity: 'medium',
+                citations,
+              },
+            ],
       gaps: [],
       conflicts: [],
     };
@@ -106,12 +116,9 @@ async function runFixtureCycle(): Promise<{
     runtime: 'codex',
     timezone: 'UTC',
     sensitivityCeiling: 'internal',
-    enabledProviders: ['repository', 'git'],
     customProfile: {
       enabledRoles: ['strategy-finance', 'technology-risk', 'chair'],
-      enabledProviders: ['repository', 'git'],
       caps: { surfacedFindings: 3, newSpecs: 1, openDecisions: 2, agentArtifacts: 1 },
-      budgets: { maxFiles: 100, maxItems: 100, maxBytes: 1024 * 1024, maxDurationMs: 10_000 },
     },
     charter: {
       purpose: 'Exercise self-contained decision-brief rendering.',
@@ -146,10 +153,16 @@ const twoRelatedFindingsAdvisor: AdvisorAdapter = {
   toolIsolation: 'not-applicable',
   capability: 'analysis-high',
   async invoke(input) {
-    const evidenceRef = input.evidence.items[0]?.id;
-    if (!evidenceRef || input.roleId === 'technology-risk' || input.roleId === 'chair') {
+    if (input.roleId === 'technology-risk' || input.roleId === 'chair') {
       return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
     }
+    const citations = [
+      {
+        repositoryPath: 'service.ts',
+        lineRange: { start: 1, end: 1 },
+        pinnedRevision: input.pinnedRevision,
+      },
+    ];
     return {
       outcome: 'proposals',
       proposals: [
@@ -163,7 +176,7 @@ const twoRelatedFindingsAdvisor: AdvisorAdapter = {
           confidence: 3,
           ease: 4,
           severity: 'medium',
-          evidenceRefs: [evidenceRef],
+          citations,
         },
         {
           proposalKey: 'fragments',
@@ -175,7 +188,7 @@ const twoRelatedFindingsAdvisor: AdvisorAdapter = {
           confidence: 3,
           ease: 4,
           severity: 'medium',
-          evidenceRefs: [evidenceRef],
+          citations,
         },
       ],
       gaps: [],
@@ -209,12 +222,9 @@ async function runEpicGroupCycle(): Promise<{
     runtime: 'codex',
     timezone: 'UTC',
     sensitivityCeiling: 'internal',
-    enabledProviders: ['repository', 'git'],
     customProfile: {
       enabledRoles: ['strategy-finance', 'technology-risk', 'chair'],
-      enabledProviders: ['repository', 'git'],
       caps: { surfacedFindings: 10, newSpecs: 3, openDecisions: 3, agentArtifacts: 2 },
-      budgets: { maxFiles: 100, maxItems: 100, maxBytes: 1024 * 1024, maxDurationMs: 10_000 },
     },
     charter: {
       purpose: 'Exercise the grouped-finding epic suggestion.',
@@ -277,6 +287,19 @@ describe('operate epic-loop grouped-finding suggestion (FR7/US-006)', () => {
     for (const memberId of memberIds) {
       expect(report.markdown).toContain(memberId);
     }
+    // FR7: the report always carries a first-class Integrity section between the
+    // advisory lens reports and the exact next actions — here a clean cycle, so
+    // it states plainly that no integrity concerns were recorded.
+    expect(report.markdown).toContain('# Integrity');
+    expect(report.markdown.indexOf('# Integrity')).toBeGreaterThan(
+      report.markdown.indexOf('# Advisory lens reports'),
+    );
+    expect(report.markdown.indexOf('# Integrity')).toBeLessThan(
+      report.markdown.indexOf('# Exact next actions'),
+    );
+    expect(report.markdown).toContain(
+      'No citation rejections, boundary refusals, or not_evaluated roles were recorded',
+    );
   });
 });
 

@@ -13,7 +13,6 @@ const context = {
   gitUserName: 'Asem',
   detectedRuntime: 'codex' as const,
   timezone: 'Europe/Istanbul',
-  availableSources: ['repository', 'planr', 'git', 'file-import'],
   runtime: 'codex',
   interaction: 'native' as const,
   now: '2026-07-29T12:00:00.000Z',
@@ -27,7 +26,6 @@ const foundation: OperatingInitAnswers = {
   cadence: 'manual',
   timezone: 'Europe/Istanbul',
   sensitivityCeiling: 'internal',
-  sources: ['repository', 'planr', 'git'],
   componentRoots: [],
 };
 
@@ -66,7 +64,6 @@ describe('Operating Board question engine', () => {
         'decision-owner',
         'planning-engine',
         'sensitivity-ceiling',
-        'sources',
         'runtime',
       ]),
     );
@@ -81,7 +78,6 @@ describe('Operating Board question engine', () => {
       decisionOwner: 'Asem',
       planningEngine: 'openplanr',
       sensitivityCeiling: 'internal',
-      sources: ['repository', 'planr', 'git'],
       // cadence, componentRoots, runtime (detected), and known-unknowns are
       // intentionally omitted — none of them block reaching the write-free preview.
       charter: {
@@ -125,7 +121,7 @@ describe('Operating Board question engine', () => {
     expect(review.questions[0]?.questionId).toBe('review-boundary');
   });
 
-  it('enforces conditional profile/import fields, source readiness, paths, and IANA timezones', async () => {
+  it('enforces conditional profile fields and IANA timezones', async () => {
     const custom = await evaluateOperatingInitQuestions({
       answers: { ...foundation, profile: 'custom', profileFile: undefined },
       context,
@@ -137,23 +133,7 @@ describe('Operating Board question engine', () => {
 
     await expect(
       evaluateOperatingInitQuestions({
-        answers: { ...foundation, sources: ['github'] },
-        context,
-      }),
-    ).rejects.toMatchObject({ code: 'E_OPERATE_QUESTIONNAIRE_INVALID' });
-    await expect(
-      evaluateOperatingInitQuestions({
         answers: { ...foundation, timezone: 'Not/A_Zone' },
-        context,
-      }),
-    ).rejects.toMatchObject({ code: 'E_OPERATE_QUESTIONNAIRE_INVALID' });
-    await expect(
-      evaluateOperatingInitQuestions({
-        answers: {
-          ...foundation,
-          sources: ['file-import'],
-          evidenceFiles: ['../outside.json'],
-        },
         context,
       }),
     ).rejects.toMatchObject({ code: 'E_OPERATE_QUESTIONNAIRE_INVALID' });
@@ -168,7 +148,6 @@ describe('Operating Board question engine', () => {
       ['runtime', 'codex'],
       ['cadence', 'manual'],
       ['sensitivity-ceiling', 'internal'],
-      ['sources', ['repository', 'planr', 'git']],
     ] as const) {
       terminal = applyOperatingInitAnswer(terminal, context, questionId, value);
     }
@@ -179,7 +158,6 @@ describe('Operating Board question engine', () => {
       runtime: 'codex',
       cadence: 'manual',
       sensitivityCeiling: 'internal',
-      sources: ['repository', 'planr', 'git'],
     });
     expect(mergeOperatingInitAnswersIntoOptions({}, terminal)).toEqual(
       mergeOperatingInitAnswersIntoOptions({}, machine),
@@ -189,9 +167,7 @@ describe('Operating Board question engine', () => {
   it('does not persist Commander empty repeatable defaults as guided answers', () => {
     expect(
       operatingInitAnswersFromOptions({
-        source: [],
         component: [],
-        evidenceFile: [],
         goal: [],
         successMetric: [],
         guardrail: [],
@@ -257,5 +233,70 @@ describe('Operating Board question engine', () => {
       'questionVersion',
       'sensitivity',
     ]);
+  });
+
+  it('advertises --answers-file as a stdin-parity transport alternate with its exact argv', async () => {
+    const state = await evaluateOperatingInitQuestions({ context });
+    if (state.status !== 'input-required') throw new Error('Expected foundation questions.');
+    const questionnaire = await createOperatingInitQuestionnaire({
+      context,
+      questions: state.questions,
+      stage: state.stage,
+    });
+    // The stdin transport is unchanged; the file transport rides alongside it so a
+    // contract-conformant runtime can discover it instead of assuming stdin only.
+    expect(questionnaire.submission.transport.kind).toBe('stdin-json');
+    const alternate = questionnaire.submission.transport.alternates?.find(
+      (entry) => entry.kind === 'answers-file',
+    );
+    expect(alternate).toMatchObject({
+      kind: 'answers-file',
+      mediaType: 'application/json',
+      encoding: 'utf-8',
+      maxBytes: 65536,
+      argv: [
+        'planr',
+        'operate',
+        'init',
+        '--resume',
+        questionnaire.sessionId,
+        '--answers-file',
+        '<path>',
+        '--json',
+      ],
+    });
+  });
+
+  it('carries repeated-text renderability metadata sufficient to present without improvisation', async () => {
+    // Reach the product-charter stage, where goals/success-metrics/guardrails are
+    // repeated-text questions that a runtime must be able to lay out.
+    const state = await evaluateOperatingInitQuestions({ answers: foundation, context });
+    if (state.status !== 'input-required' || state.stage !== 'product-charter') {
+      throw new Error('Expected product-charter questions.');
+    }
+    const questionnaire = await createOperatingInitQuestionnaire({
+      context,
+      questions: state.questions,
+      stage: state.stage,
+    });
+    const goals = questionnaire.questions.find((question) => question.questionId === 'goals');
+    expect(goals?.type).toBe('repeated-text');
+    expect(goals).toMatchObject({
+      itemLabel: expect.any(String),
+      itemPlaceholder: expect.any(String),
+    });
+    // Every repeated-text question the questionnaire ships carries the metadata.
+    for (const question of questionnaire.questions.filter((q) => q.type === 'repeated-text')) {
+      expect(typeof question.itemLabel).toBe('string');
+      expect(typeof question.itemPlaceholder).toBe('string');
+    }
+    // Select questions declare their renderability through `choices` (documented
+    // contract); no repeated-text renderability leaks onto them.
+    const productStage = questionnaire.questions.find(
+      (question) => question.questionId === 'product-stage',
+    );
+    expect(productStage?.type).toBe('single-select');
+    expect(Array.isArray(productStage?.choices)).toBe(true);
+    expect(productStage).not.toHaveProperty('itemLabel');
   });
 });

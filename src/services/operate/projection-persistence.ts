@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
+import { buildOperatingIntegritySummary, renderOperatingIntegrityDocument } from './integrity.js';
 import {
   applyJournalTransaction,
   type JournalWrite,
@@ -66,6 +67,7 @@ const READABLE_TREE_PROJECTIONS = [
 ] as const;
 const CYCLE_BRIEF_MARKER = 'operate-cycle-brief';
 const CYCLE_REPORT_MARKER = 'operate-cycle-report';
+const CYCLE_INTEGRITY_MARKER = 'operate-cycle-integrity';
 const BOARD_MARKER = 'operate-board';
 
 export type OperatingProjectionDriftStatus = 'absent' | 'current' | 'drift';
@@ -405,7 +407,9 @@ export async function readOperatingRichCycleArtifacts(input: {
     (cycle) => cycle.state === 'reviewable' || cycle.state === 'closed',
   );
   if (cycles.length === 0) return artifacts;
-  const { readOperatingReport, markdownLens } = await import('./reports.js');
+  const { readOperatingReport, markdownLens, markdownCompleteRegisters } = await import(
+    './reports.js'
+  );
   for (const cycle of cycles) {
     try {
       const report = await readOperatingReport({
@@ -415,7 +419,13 @@ export async function readOperatingRichCycleArtifacts(input: {
         localRoot: input.localRoot,
       });
       artifacts.set(cycle.id, {
-        reportMarkdown: report.markdown,
+        // FR8: the persisted `report.md` is self-contained — the concise brief +
+        // lens reports + integrity section, then the complete uncapped registers.
+        // The CLI's own `operate report` keeps rendering the capped brief; only
+        // the on-disk artifact appends every finding/decision/gap/route.
+        reportMarkdown: `${report.markdown}\n\n${markdownCompleteRegisters(
+          selectCycleState(input.state, cycle.id),
+        )}`,
         boardByRole: new Map(report.reports.map((entry) => [entry.roleId, markdownLens(entry)])),
         evaluatedRoleIds: new Set(
           report.reports
@@ -452,12 +462,26 @@ function markdownProjectionSpecs(
     .sort((left, right) => left.id.localeCompare(right.id))
     .flatMap((cycle) => {
       const rich = richArtifacts.get(cycle.id);
+      // FR7: cycle integrity is rendered to its OWN readable-tree file, derived
+      // from the cycle's governed gaps, so the signal survives independently of
+      // the report and of any lens's prose. A clean cycle writes no integrity
+      // file, keeping the tree free of empty artifacts.
+      const integrity = buildOperatingIntegritySummary(selectCycleState(state, cycle.id), cycle.id);
       return [
         {
           relativePath: `${OPERATE_ROOT}/cycles/${cycle.id}/brief.md`,
           markerName: CYCLE_BRIEF_MARKER,
           managedContent: renderCycleBrief(state, cycle.id),
         },
+        ...(integrity.hasConcerns
+          ? [
+              {
+                relativePath: `${OPERATE_ROOT}/cycles/${cycle.id}/integrity.md`,
+                markerName: CYCLE_INTEGRITY_MARKER,
+                managedContent: renderOperatingIntegrityDocument(integrity),
+              },
+            ]
+          : []),
         // The full, uncapped lens report — byte-identical to
         // `readOperatingReport({cycleId}).markdown`. Emitted only when the rich
         // assembly is available; the 900-word cap `renderCycleBrief` enforces on

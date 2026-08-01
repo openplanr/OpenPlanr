@@ -11,20 +11,16 @@ import {
   normalizeCustomOperatingProfile,
   normalizeOperatingInitializationAnswers,
   type OperatingInitializationPreview,
-  parseOperatingDispatchModeOverrideFlags,
   prepareOperatingInitialization,
   readOperatingLastRunAt,
   validateOperatingConfiguration,
 } from './config.js';
 import { runOperatingCycle } from './engine.js';
 import { OperatingEventStore } from './event-store.js';
-import { classifyEvidenceDiagnostic } from './evidence-classifications.js';
-import { listEvidenceDiagnostics, readEvidenceDiagnostic } from './evidence-diagnostics.js';
-import { parseStrictJson, readImportedEvidenceFile } from './evidence-import.js';
+import { parseStrictJson } from './evidence-import.js';
 import { createOperatingAction } from './interaction/action-service.js';
 import {
   persistableOperatingInitAnswers,
-  probeAvailableEvidenceSources,
   probeGitUserName,
   probePipelineInstalled,
   resumeGuidedSession,
@@ -75,7 +71,6 @@ import {
 import { migrateOperatingStorageLayoutOnOpen } from './migration.js';
 import { renderOperatingBrief } from './projection.js';
 import { loadOperatingProtocol, resolveOperatingPipelineRoot } from './protocol.js';
-import { executeGitHubReadOnly, executeGitReadOnly } from './read-only-providers.js';
 import { readOperatingReport } from './reports.js';
 import {
   type OperateActionRequest,
@@ -93,7 +88,6 @@ import {
   assertOperatingProject,
   resolveContainedPath,
   resolveOperatingPaths,
-  resolveOperatingProject,
 } from './workspace.js';
 
 export {
@@ -228,24 +222,6 @@ export async function usesNativeOperatingAdvisors(
     (adapterId === 'codex' &&
       adapter.capabilities.subagents === 'dynamic' &&
       adapter.capabilities.headlessBridge === true)
-  );
-}
-
-async function readOperatingLocalFile(
-  projectRoot: string,
-  selector: (paths: ReturnType<typeof resolveOperatingPaths>) => string,
-): Promise<string> {
-  const canonicalRoot = await resolveOperatingProject(projectRoot).catch(() => projectRoot);
-  for (const candidate of [...new Set([projectRoot, canonicalRoot])]) {
-    try {
-      return await readFile(selector(resolveOperatingPaths(candidate)), 'utf8');
-    } catch {
-      // Try the canonical invocation path before reporting the file as absent.
-    }
-  }
-  throw new OperateError(
-    'E_OPERATE_NOT_INITIALIZED',
-    'Machine-local operating source configuration is unavailable.',
   );
 }
 
@@ -405,6 +381,7 @@ const OPERATE_EXIT_CODES = {
   E_OPERATE_EVIDENCE_NOT_READY: 6,
   E_OPERATE_EVIDENCE_REJECTED: 6,
   E_OPERATE_PROVIDER_READ_ONLY: 6,
+  E_OPERATE_PROVIDER_DEPRECATED: 6,
   E_OPERATE_SECRET_DETECTED: 6,
   E_OPERATE_MISSION_PACKET_BUDGET: 6,
   E_OPERATE_MISSION_UNAVAILABLE: 3,
@@ -473,7 +450,7 @@ export function failure(action: string, error: unknown): OperateActionResult {
                       : code.startsWith('E_OPERATE_EVIDENCE') ||
                           code.startsWith('E_OPERATE_PROVIDER') ||
                           code.startsWith('E_OPERATE_ADVISOR')
-                        ? ['planr operate sources list', 'planr operate run --preview --json']
+                        ? ['planr operate run --preview --json', 'planr operate diagnostics export']
                         : ['planr operate diagnostics export']);
   return {
     schemaVersion: '1.0.0',
@@ -934,20 +911,15 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
   const detectedHostRuntime = detectOperatingHostRuntime();
   const requestedRuntimeOption = option<string>(request, 'runtime', 'auto');
   // Probe the same signals the terminal path does so the JSON/native init path is
-  // equally truthful: the decision-owner suggestion reaches this path (gitUserName),
-  // the "locally available" source claim is real (availableSources), and the
-  // planning-engine detects pipeline-po when a compatible pipeline is installed.
-  const [gitUserName, availableSources] = await Promise.all([
-    probeGitUserName(request.projectRoot),
-    probeAvailableEvidenceSources(request.projectRoot),
-  ]);
+  // equally truthful: Git can suggest the decision owner and the installed
+  // pipeline can suggest the planning-engine handoff.
+  const gitUserName = await probeGitUserName(request.projectRoot);
   const context = {
     projectRoot: request.projectRoot,
     ...bindings,
     ...(detectedHostRuntime ? { detectedRuntime: detectedHostRuntime } : {}),
     ...(gitUserName ? { gitUserName } : {}),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    availableSources,
     pipelineInstalled: probePipelineInstalled(),
     runtime:
       requestedRuntimeOption && requestedRuntimeOption !== 'auto'
@@ -992,14 +964,6 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
     supplied.planningEngine ??
     option<OperatingConfig['planningEngine']>(request, 'planningEngine', 'openplanr');
   const rawCharter = supplied.charter ?? option<Partial<OperatingCharter>>(request, 'charter', {});
-  // FR4 / E-004 fold-in: forward the CLI-validated per-project dispatch-mode
-  // overrides into initialization so they are part of the committed machine-local
-  // preferences (and thus the preview digest), rather than a separate post-apply
-  // patch. Omitted entirely when no override flag was supplied, keeping the
-  // no-override preview digest byte-identical.
-  const dispatchModeOverrides = parseOperatingDispatchModeOverrideFlags(
-    stringList(request.options.dispatchModeOverride),
-  );
   const preview = await prepareOperatingInitialization({
     projectRoot: request.projectRoot,
     profile,
@@ -1007,16 +971,11 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
     planningEngine,
     runtime: supplied.runtime ?? option(request, 'runtime', 'auto'),
     cadence: supplied.cadence ?? option(request, 'cadence', 'manual'),
-    ...(Object.keys(dispatchModeOverrides).length > 0 ? { dispatchModeOverrides } : {}),
     timezone:
       supplied.timezone ??
       option(request, 'timezone', Intl.DateTimeFormat().resolvedOptions().timeZone),
     sensitivityCeiling:
       supplied.sensitivityCeiling ?? option(request, 'sensitivityCeiling', 'internal'),
-    enabledProviders: (supplied.sources ?? stringList(request.options.sources)).length
-      ? (supplied.sources ?? stringList(request.options.sources))
-      : undefined,
-    evidenceFiles: supplied.evidenceFiles ?? stringList(request.options.evidenceFile),
     charter: rawCharter,
     customProfile,
     componentRoots: supplied.componentRoots ?? stringList(request.options.components),
@@ -1196,143 +1155,10 @@ async function profiles(request: OperateActionRequest): Promise<OperateActionRes
   if (!file) throw new OperateError('E_OPERATE_CONFIG_INVALID', 'Profile file is required.');
   const parsed = await readCustomOperatingProfile(request.projectRoot, file);
   const profile = { ...getOperatingProfile('custom'), ...parsed };
-  if (!profile.enabledRoles?.length || !profile.enabledProviders?.length) {
+  if (!profile.enabledRoles?.length) {
     throw new OperateError('E_OPERATE_CONFIG_INVALID', 'Custom profile is incomplete.');
   }
   return success(request.action, { data: profile, message: 'Custom profile is valid.' });
-}
-
-async function sources(request: OperateActionRequest): Promise<OperateActionResult> {
-  const protocol = await loadOperatingProtocol();
-  const providers = protocol.listOperatingProviders();
-  if (request.action === 'sources.list') return success(request.action, { data: providers });
-  const id = argument(request, 'source');
-  if (request.action === 'sources.test' && !id) {
-    const config = await validateOperatingConfiguration(request.projectRoot);
-    const configured = providers
-      .filter((entry) => config.enabledProviders.includes(entry.id))
-      .sort((left, right) => left.id.localeCompare(right.id));
-    const results: Array<Record<string, unknown>> = [];
-    for (const provider of configured) {
-      try {
-        const tested = await testOperatingSource(request, provider);
-        results.push(tested);
-      } catch (error) {
-        results.push({
-          provider,
-          healthy: false,
-          code: error instanceof OperateError ? error.code : 'E_OPERATE_INTERNAL',
-          message:
-            error instanceof OperateError
-              ? error.message
-              : 'The evidence source test failed unexpectedly.',
-          writeBoundary: 'none',
-        });
-      }
-    }
-    const failures = results.filter((entry) => entry.healthy === false);
-    if (failures.length > 0) {
-      const failedIds = failures
-        .map((entry) => (entry.provider as { id?: unknown } | undefined)?.id)
-        .filter((entry): entry is string => typeof entry === 'string')
-        .sort();
-      throw new OperateError(
-        'E_OPERATE_EVIDENCE_REJECTED',
-        `${failures.length} configured evidence source test(s) failed: ${failedIds.join(', ')}.`,
-        {
-          results,
-          recoveryCommand: `planr operate sources test ${failedIds[0]} --json`,
-        },
-      );
-    }
-    return success(request.action, {
-      data: {
-        healthy: true,
-        configuredSources: configured.map((provider) => provider.id),
-        results,
-      },
-      message: `${configured.length} configured evidence source test(s) passed.`,
-    });
-  }
-  const provider = providers.find((entry) => entry.id === id);
-  if (!provider) {
-    throw new OperateError('E_OPERATE_CONFIG_INVALID', `Unknown evidence source: ${id}.`);
-  }
-  if (request.action !== 'sources.test') return success(request.action, { data: provider });
-  return success(request.action, {
-    data: await testOperatingSource(request, provider),
-  });
-}
-
-async function testOperatingSource(
-  request: OperateActionRequest,
-  provider: Record<string, unknown> & { id: string },
-): Promise<Record<string, unknown>> {
-  const id = provider.id;
-  let observation: string;
-  if (id === 'repository' || id === 'planr') {
-    observation = (await executeGitReadOnly(request.projectRoot, ['ls-files'])).trim()
-      ? 'tracked-files-readable'
-      : 'repository-readable-empty';
-  } else if (id === 'git') {
-    observation = (await executeGitReadOnly(request.projectRoot, ['rev-parse', 'HEAD'])).trim();
-  } else if (id === 'github') {
-    observation =
-      (await executeGitHubReadOnly(request.projectRoot, ['auth', 'status'])).trim() ||
-      'authenticated';
-  } else if (id === 'linear') {
-    const [{ resolveApiKey }, { createLinearClient, validateToken }] = await Promise.all([
-      import('../credentials-service.js'),
-      import('../linear-service.js'),
-    ]);
-    const token = await resolveApiKey('linear');
-    if (!token) {
-      throw new OperateError('E_OPERATE_EVIDENCE_REJECTED', 'Linear credentials are unavailable.');
-    }
-    const viewer = await validateToken(createLinearClient(token));
-    observation = `viewer:${viewer.id}`;
-  } else if (id === 'file-import') {
-    const preferences = parseStrictJson(
-      await readOperatingLocalFile(
-        request.projectRoot,
-        (paths) => `${paths.localRoot}/preferences.json`,
-      ),
-    ) as {
-      importPaths?: unknown;
-    };
-    const workspaceRoots = parseStrictJson(
-      await readOperatingLocalFile(request.projectRoot, (paths) => paths.roots),
-    ) as { roots?: unknown };
-    const importPaths = Array.isArray(preferences.importPaths)
-      ? preferences.importPaths.filter((entry): entry is string => typeof entry === 'string')
-      : [];
-    if (
-      importPaths.length === 0 ||
-      !workspaceRoots.roots ||
-      typeof workspaceRoots.roots !== 'object' ||
-      Array.isArray(workspaceRoots.roots)
-    ) {
-      throw new OperateError(
-        'E_OPERATE_EVIDENCE_REJECTED',
-        'No workspace-contained JSON/CSV evidence files are configured.',
-      );
-    }
-    const roots = Object.entries(workspaceRoots.roots as Record<string, unknown>)
-      .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
-      .map(([componentId, root]) => ({ componentId, root }));
-    for (const configuredPath of importPaths) {
-      await readImportedEvidenceFile({
-        projectRoot: request.projectRoot,
-        configuredPath,
-        roots,
-        maxBytes: 1_000_000,
-      });
-    }
-    observation = `files:${importPaths.length}`;
-  } else {
-    observation = 'import-parser-available';
-  }
-  return { provider, healthy: true, observation, writeBoundary: 'none' };
 }
 
 async function status(request: OperateActionRequest): Promise<OperateActionResult> {
@@ -1547,78 +1373,6 @@ async function collections(request: OperateActionRequest): Promise<OperateAction
   return success(request.action, { data });
 }
 
-async function evidenceRecovery(request: OperateActionRequest): Promise<OperateActionResult> {
-  const candidateId = argument(request, 'candidateId');
-  if (request.action === 'evidence.diagnose') {
-    const data = candidateId
-      ? await readEvidenceDiagnostic({
-          projectRoot: request.projectRoot,
-          candidateId,
-          localRoot: option(request, 'localRoot', undefined),
-        })
-      : await listEvidenceDiagnostics({
-          projectRoot: request.projectRoot,
-          localRoot: option(request, 'localRoot', undefined),
-        });
-    const diagnostic = Array.isArray(data) ? null : data;
-    return success(request.action, {
-      data: {
-        diagnostic: data,
-        valueDisclosed: false,
-        recovery: diagnostic
-          ? {
-              repairOrRemove: diagnostic.location
-                ? `Repair or remove the candidate at ${diagnostic.location}${diagnostic.line ? `:${diagnostic.line}` : ''}, then rerun.`
-                : 'Repair or remove the candidate in the identified component, then rerun.',
-              rotateCredential:
-                'If this is a real credential, rotate it before removing it from source history.',
-              eligibleExclusion:
-                'Exclude only the exact eligible source path through operating source policy; broad scanner bypasses are not supported.',
-              falsePositive: `planr operate evidence classify ${diagnostic.candidateId} --status false-positive --reason "<reason>" --json`,
-              rerun: 'planr operate run --offline',
-            }
-          : null,
-      },
-      actions: diagnostic?.actions,
-      next: diagnostic
-        ? [
-            `planr operate evidence classify ${diagnostic.candidateId} --status false-positive --reason "<reason>" --json`,
-            'planr operate run --offline',
-          ]
-        : [],
-    });
-  }
-  if (!candidateId) {
-    throw new OperateError('E_OPERATE_CONFIG_INVALID', 'Evidence candidate ID is required.');
-  }
-  const status = option<string>(request, 'status', '');
-  if (status !== 'false-positive' && status !== 'confirmed-secret') {
-    throw new OperateError(
-      'E_OPERATE_CONFIG_INVALID',
-      'Evidence classification status must be false-positive or confirmed-secret.',
-    );
-  }
-  const config = await validateOperatingConfiguration(request.projectRoot);
-  const data = await classifyEvidenceDiagnostic({
-    projectRoot: request.projectRoot,
-    candidateId,
-    status,
-    reason: option(request, 'reason', ''),
-    classifiedBy: config.decisionOwner,
-    confirmationDigest: option(request, 'confirm', undefined),
-    confirmed: option(request, 'yes', false),
-    localRoot: option(request, 'localRoot', undefined),
-  });
-  return success(request.action, {
-    data,
-    actions: data.state === 'preview' && data.action ? [data.action] : undefined,
-    message:
-      data.state === 'classified'
-        ? `Evidence candidate ${candidateId} was classified without storing or exposing its value.`
-        : 'Review and confirm the exact evidence classification action.',
-  });
-}
-
 async function cycleMutation(request: OperateActionRequest): Promise<OperateActionResult> {
   const cycleId = argument(request, 'cycleId');
   if (!cycleId) throw new OperateError('E_OPERATE_STATE_INVALID', 'Cycle ID is required.');
@@ -1819,9 +1573,6 @@ const HANDLERS: Record<
   'profiles.list': profiles,
   'profiles.show': profiles,
   'profiles.validate': profiles,
-  'sources.list': sources,
-  'sources.show': sources,
-  'sources.test': sources,
   run,
   review: reviewOrBrief,
   brief: reviewOrBrief,
@@ -1851,8 +1602,6 @@ const HANDLERS: Record<
   'gaps.verify': answerMutation,
   'evidence.list': collections,
   'evidence.show': collections,
-  'evidence.diagnose': evidenceRecovery,
-  'evidence.classify': evidenceRecovery,
   'migrate.inspect': maintenance,
   'migrate.apply': maintenance,
   'migrations.list': collections,
@@ -1885,9 +1634,6 @@ const OPERATE_READ_ONLY_ACTIONS = new Set<string>([
   'profiles.list',
   'profiles.show',
   'profiles.validate',
-  'sources.list',
-  'sources.show',
-  'sources.test',
   'status',
   'review',
   'brief',
@@ -1904,7 +1650,6 @@ const OPERATE_READ_ONLY_ACTIONS = new Set<string>([
   'gaps.show',
   'evidence.list',
   'evidence.show',
-  'evidence.diagnose',
   'migrate.inspect',
   'migrations.list',
   'migrations.show',

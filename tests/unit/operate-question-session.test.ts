@@ -1,11 +1,16 @@
-import { mkdir, mkdtemp, readFile, stat, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import { describe, expect, it } from 'vitest';
 import {
   parseGuidedAnswerEnvelope,
   persistableOperatingInitAnswers,
+  probeGitUserName,
+  probePipelineInstalled,
   resumeGuidedSession,
+  submitGuidedAnswers,
 } from '../../src/services/operate/interaction/answer-service.js';
 import {
   createOperatingInitQuestionnaire,
@@ -25,6 +30,93 @@ import { resolveOperatingPaths } from '../../src/services/operate/workspace.js';
 
 const createdAt = '2026-07-29T10:00:00.000Z';
 
+/** Build a bound answer envelope for a questionnaire with an explicit submittedAt. */
+function buildEnvelope(
+  questionnaire: Awaited<ReturnType<typeof createOperatingInitQuestionnaire>>,
+  values: Record<string, string | string[]>,
+  submittedAt: string,
+) {
+  const descriptors = new Map(
+    questionnaire.submission.envelope.dynamicFields.answers.items.map((item) => [
+      item.questionId,
+      item,
+    ]),
+  );
+  const answers = Object.entries(values).map(([questionId, value]) => {
+    const descriptor = descriptors.get(questionId);
+    if (!descriptor) throw new Error(`Missing answer descriptor for ${questionId}.`);
+    return Object.assign(
+      Object.fromEntries(
+        questionnaire.submission.envelope.dynamicFields.answers.copyFields.map((field) => [
+          field,
+          descriptor[field],
+        ]),
+      ),
+      { value },
+    );
+  });
+  return {
+    ...questionnaire.submission.envelope.fixedFields,
+    questionnaireDigest: questionnaire.digest,
+    answers,
+    submittedAt,
+  };
+}
+
+const execFileAsync = promisify(execFile);
+
+/**
+ * A committed git project whose create-time context is built from the SAME
+ * probes `interactionContext` uses on resume, so the questionnaire digest is
+ * stable across create and resume (a plain fixed-context fixture diverges the
+ * moment the engine re-probes git user / pipeline on
+ * resume). Used by the livelock and un-latch regressions, which require a clean
+ * resume of the session they create.
+ */
+async function resumableFixture() {
+  const projectRoot = await mkdtemp(join(tmpdir(), 'operate-session-git-'));
+  const localRoot = await mkdtemp(join(tmpdir(), 'operate-session-local-'));
+  await execFileAsync('git', ['init', '--quiet'], { cwd: projectRoot });
+  await execFileAsync('git', ['config', 'user.name', 'OpenPlanr Test'], { cwd: projectRoot });
+  await execFileAsync('git', ['config', 'user.email', 'test@openplanr.invalid'], {
+    cwd: projectRoot,
+  });
+  await writeFile(join(projectRoot, 'README.md'), '# original\n');
+  await execFileAsync('git', ['add', 'README.md'], { cwd: projectRoot });
+  await execFileAsync('git', ['commit', '--quiet', '-m', 'fixture'], { cwd: projectRoot });
+  const bindings = await currentGuidedSessionBindings(projectRoot);
+  const gitUserName = await probeGitUserName(projectRoot);
+  const context = {
+    projectRoot,
+    ...bindings,
+    ...(gitUserName ? { gitUserName } : {}),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    pipelineInstalled: probePipelineInstalled(),
+    runtime: 'codex',
+    interaction: 'native' as const,
+    now: createdAt,
+  };
+  const state = await evaluateOperatingInitQuestions({
+    answers: { decisionOwner: 'Asem' },
+    context,
+  });
+  if (state.status !== 'input-required') throw new Error('Expected questions.');
+  const questionnaire = await createOperatingInitQuestionnaire({
+    context,
+    questions: state.questions,
+    stage: state.stage,
+    sessionId: createGuidedSessionId(),
+  });
+  const session = await createGuidedSession({
+    projectRoot,
+    localRoot,
+    questionnaire,
+    persistedAnswers: persistableOperatingInitAnswers(state.answers, context),
+    now: new Date(createdAt),
+  });
+  return { projectRoot, localRoot, bindings, context, questionnaire, session };
+}
+
 async function fixture() {
   const projectRoot = await mkdtemp(join(tmpdir(), 'operate-session-project-'));
   const localRoot = await mkdtemp(join(tmpdir(), 'operate-session-local-'));
@@ -34,7 +126,6 @@ async function fixture() {
     projectRoot,
     ...bindings,
     timezone: 'UTC',
-    availableSources: ['repository', 'planr', 'git', 'file-import'],
     runtime: 'codex',
     interaction: 'native' as const,
     now: createdAt,
@@ -130,6 +221,79 @@ describe('guided question sessions', () => {
     ).rejects.toMatchObject({ code: 'E_OPERATE_SESSION_INVALID' });
   });
 
+  it('accepts an answer envelope whose submittedAt predates the session (livelock regression)', async () => {
+    const value = await resumableFixture();
+    // A payload prepared before the (restart-minted) session legitimately predates
+    // its createdAt. The removed wall-clock gate used to reject this as "outside
+    // the active session lifetime" — the exact guided-init livelock.
+    const beforeCreated = new Date(Date.parse(createdAt) - 1).toISOString();
+    const envelope = buildEnvelope(
+      value.questionnaire,
+      {
+        profile: 'saas',
+        'planning-engine': 'openplanr',
+        'sensitivity-ceiling': 'internal',
+        runtime: 'codex',
+      },
+      beforeCreated,
+    );
+    const progress = await submitGuidedAnswers({
+      projectRoot: value.projectRoot,
+      localRoot: value.localRoot,
+      sessionId: value.session.sessionId,
+      raw: JSON.stringify(envelope),
+      bindings: value.bindings,
+      now: new Date(createdAt),
+    });
+    // Accepted purely on binding validity: the session advances to the next stage.
+    expect(progress.questionnaire.stage).toBe('product-charter');
+  });
+
+  it('un-latches a transiently stale session when the tree is restored', async () => {
+    const value = await resumableFixture();
+    const sessionFile = join(
+      resolveOperatingPaths(value.projectRoot, { localRoot: value.localRoot }).sessions,
+      `${value.session.sessionId}.json`,
+    );
+
+    // An unrelated untracked file flips the working-tree dirty fingerprint folded
+    // into projectHead, so resume is rejected as stale — but the rejection names
+    // THIS session's resume command, not the dead-end init.
+    const scratch = join(value.projectRoot, 'scratch.txt');
+    await writeFile(scratch, 'transient\n');
+    const dirtyBindings = await currentGuidedSessionBindings(value.projectRoot);
+    await expect(
+      resumeGuidedSession({
+        projectRoot: value.projectRoot,
+        localRoot: value.localRoot,
+        sessionId: value.session.sessionId,
+        bindings: dirtyBindings,
+        now: new Date(createdAt),
+      }),
+    ).rejects.toMatchObject({
+      code: 'E_OPERATE_SESSION_STALE',
+      details: {
+        sessionId: value.session.sessionId,
+        recoveryCommand: `planr operate init --resume ${value.session.sessionId} --json`,
+      },
+    });
+    // Staleness is never latched to disk: the record keeps its editable state.
+    expect(JSON.parse(await readFile(sessionFile, 'utf8')).state).toBe('awaiting-input');
+
+    // Restoring the tree to its prior state makes the same session usable again.
+    await rm(scratch);
+    const restoredBindings = await currentGuidedSessionBindings(value.projectRoot);
+    const resumed = await resumeGuidedSession({
+      projectRoot: value.projectRoot,
+      localRoot: value.localRoot,
+      sessionId: value.session.sessionId,
+      bindings: restoredBindings,
+      now: new Date(createdAt),
+    });
+    expect(resumed.session.sessionId).toBe(value.session.sessionId);
+    expect(resumed.session.state).not.toBe('stale');
+  });
+
   it('cancels and purges sessions without changing project bytes', async () => {
     const first = await fixture();
     const before = await readFile(join(first.projectRoot, 'README.md'), 'utf8');
@@ -164,7 +328,6 @@ describe('guided question sessions', () => {
     const baseContext = {
       projectRoot: process.cwd(),
       timezone: 'UTC',
-      availableSources: ['repository', 'planr', 'git', 'file-import'],
       runtime: 'codex',
       interaction: 'native' as const,
     };
@@ -192,7 +355,6 @@ describe('guided question sessions', () => {
     const baseContext = {
       projectRoot: process.cwd(),
       timezone: 'UTC',
-      availableSources: ['repository', 'planr', 'git', 'file-import'],
       runtime: 'codex',
       interaction: 'native' as const,
     };

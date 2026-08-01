@@ -39,6 +39,7 @@ import {
 import { type AuditLogWriter, createAuditLogWriter } from '../../services/audit-log-service.js';
 import { buildCascadeOrder, executeCascade } from '../../services/cascade-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { renderDiff } from '../../services/diff-service.js';
 import { verifyDecision } from '../../services/evidence-verifier.js';
 import { checkCleanTree, checkoutPaths } from '../../services/git-service.js';
@@ -313,6 +314,7 @@ export function registerReviseCommand(program: Command) {
             logger.dim('Post-flight graph integrity: ok.');
           }
         }
+        printDeprecationNotice('ai-planning');
       } catch (err) {
         writer.close();
         if (err instanceof ReviseArtifactNotFoundError) {

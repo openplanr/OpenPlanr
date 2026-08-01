@@ -4,15 +4,10 @@ import { pathToFileURL } from 'node:url';
 import { resolveOperatingPipelineRoot } from './protocol.js';
 import { executeGitReadOnly } from './read-only-providers.js';
 import { compareSensitivity } from './redaction.js';
-import {
-  OperateError,
-  type OperatingEvidenceIndexItem,
-  type OperatingRoleId,
-  type OperatingSensitivity,
-} from './types.js';
+import { OperateError, type OperatingRoleId, type OperatingSensitivity } from './types.js';
 
 /**
- * Bounded, read-only native mission dispatch (FR2 / E-002).
+ * Bounded, read-only native mandate dispatch (FR2 / E-002).
  *
  * This module owns the two enforcement guarantees the pack path never needed:
  *
@@ -26,36 +21,31 @@ import {
  *     root, a file above the role's ceiling is refused. This preserves the
  *     pack-era filter-before-handoff guarantee under agent-driven reads.
  *
- * It also owns the per-role dispatch-mode resolution (FR4 / E-004): the derived
- * registry default (`mission`), the per-project `dispatchModeOverrides`, and the
- * FR2-vs-FR4 reconciliation that routes non-enforcing runtimes to the structured
- * provider path. The new mission honeytoken suite exercises every refusal here;
- * the SPEC-002 empty-tool suite continues to govern the pack path unchanged.
+ * It also owns per-role runtime isolation classification. The mandate
+ * honeytoken suite exercises every refusal here.
  */
-
-export type OperatingDispatchMode = 'pack' | 'mission';
 
 /**
- * The effective isolation a role's dispatch resolves to. Mirrors the isolation
- * vocabulary the pipeline's v1.3 adapter handoff emits so OpenPlanr and the
- * published contract cannot drift:
- *  - `enforced-empty-tools`         — the v1.2 pack path (empty-tool brief);
- *  - `enforced-read-only-bounded`   — a native mission lens with the bounded
- *                                     read-only grant, on a runtime that
- *                                     natively enforces tool isolation;
- *  - `fail-closed-structured-provider` — mission requested but the runtime
- *                                     cannot enforce the boundary, so the role
- *                                     falls back to the structured provider.
+ * The effective isolation a role's dispatch resolves to. Mirrors the two-value
+ * classification the pipeline's v1.3 adapter handoff now publishes
+ * (`enforced-read-only-bounded | unsupported`) so OpenPlanr and the published
+ * contract cannot drift. Governance moved to OUTPUT verification (citations
+ * resolve fail-closed; the CLI owns every write), so a runtime is no longer
+ * gated on a native-vs-structured capability split before it may think — it is
+ * classified purely on whether it can carry a mandate:
+ *  - `enforced-read-only-bounded` — a runtime that natively enforces the bounded
+ *                                   read-only tool grant and can carry a mandate;
+ *                                   this is the only first-class operate dispatch;
+ *  - `unsupported`                — a runtime whose isolation is advisory or
+ *                                   unverifiable, or an adapter that cannot host a
+ *                                   bounded native lens; operate declares it
+ *                                   unsupported rather than silently degrading it
+ *                                   to a lesser path.
  */
-export type OperatingDispatchIsolation =
-  | 'enforced-empty-tools'
-  | 'enforced-read-only-bounded'
-  | 'fail-closed-structured-provider';
+export type OperatingDispatchIsolation = 'enforced-read-only-bounded' | 'unsupported';
 
-export interface OperatingDispatchModeResolution {
+export interface OperatingDispatchResolution {
   roleId: OperatingRoleId;
-  /** The configured mode: registry default, overridden by dispatchModeOverrides. */
-  mode: OperatingDispatchMode;
   /** The effective isolation after the FR2/FR4 reconciliation. */
   isolation: OperatingDispatchIsolation;
   /** True only when a native, bounded read-only lens is actually dispatched. */
@@ -87,20 +77,8 @@ function isReadOnlyTool(tool: string): tool is MissionReadOnlyTool {
 }
 
 // ---------------------------------------------------------------------------
-// Dispatch-mode resolution (FR4 / E-004) + runtime enforceability (FR2)
+// Runtime enforceability (FR2)
 // ---------------------------------------------------------------------------
-
-/**
- * The registry default dispatch mode for a role. The v1.3 role registry carries
- * a `dispatchMode` field; while it is still published without one every role
- * defaults to `mission`, and only a role explicitly marked `pack` opts out —
- * exactly the pipeline's own `role?.dispatchMode ?? 'mission'` convention.
- */
-export function operatingRegistryDispatchMode(role: {
-  dispatchMode?: unknown;
-}): OperatingDispatchMode {
-  return role?.dispatchMode === 'pack' ? 'pack' : 'mission';
-}
 
 let cachedRuntimeEnforcement: Promise<(runtime: string | undefined) => boolean> | null = null;
 
@@ -158,94 +136,150 @@ export async function operatingRuntimeEnforcesBoundedReadOnly(
 }
 
 /**
- * Resolve one role's effective dispatch isolation.
- *
- * FR4 states Codex SHOULD dispatch natively, but FR2's fail-closed rule
- * overrides it: a runtime whose tool isolation is only advisory (`codex`,
- * `cursor`) cannot guarantee the bounded read-only boundary, so it routes to the
- * structured provider path until its isolation is enforceable. Only a runtime
- * that natively enforces tool isolation (`toolIsolation === 'enforced'`, i.e.
- * `claude-code`) hosting a native-isolated adapter receives a native mission
- * lens; every other combination fails closed here. This is the exact FR2/FR4
- * reconciliation the spec calls out, recorded in the returned `reconciliation`
- * so it appears in the dispatch provenance.
+ * Classify one role's dispatch isolation (FR10). Governance moved to OUTPUT
+ * verification, so the runtime is no longer gated on a native-vs-structured
+ * split before it may think — it is classified purely on whether it can carry a
+ * mandate and return a schema-valid cited response. A runtime that natively
+ * enforces the bounded read-only tool grant, hosting an adapter that can host a
+ * native lens, is `enforced-read-only-bounded` and dispatches natively; every
+ * other runtime — advisory or unverifiable isolation, or an adapter that cannot
+ * host a bounded lens — is declared `unsupported` for operate, never silently
+ * routed to a deprecated structured-provider fallback. The specific reason is
+ * recorded in `reconciliation` so it appears in the dispatch provenance.
  */
-export function resolveOperatingDispatchMode(input: {
+export function resolveOperatingDispatchIsolation(input: {
   roleId: OperatingRoleId;
-  registryDefault: OperatingDispatchMode;
-  override?: OperatingDispatchMode;
   runtimeEnforcesBoundedReadOnly: boolean;
   adapterNativeCapable: boolean;
-}): OperatingDispatchModeResolution {
-  const mode = input.override ?? input.registryDefault;
-  if (mode === 'pack') {
-    return {
-      roleId: input.roleId,
-      mode,
-      isolation: 'enforced-empty-tools',
-      native: false,
-      reconciliation:
-        input.override === 'pack'
-          ? 'dispatchModeOverrides rolled this role back to the v1.2 empty-tool pack path'
-          : 'registry default selects the v1.2 empty-tool pack path',
-    };
-  }
+}): OperatingDispatchResolution {
   if (input.runtimeEnforcesBoundedReadOnly && input.adapterNativeCapable) {
     return {
       roleId: input.roleId,
-      mode,
       isolation: 'enforced-read-only-bounded',
       native: true,
       reconciliation:
-        'runtime natively enforces tool isolation; a bounded read-only mission lens is dispatched',
+        'runtime natively enforces tool isolation and can carry a mandate; a bounded read-only mission lens is dispatched',
     };
   }
   return {
     roleId: input.roleId,
-    mode,
-    isolation: 'fail-closed-structured-provider',
+    isolation: 'unsupported',
     native: false,
     reconciliation: input.runtimeEnforcesBoundedReadOnly
-      ? 'adapter cannot host a bounded native lens; falling back to the structured provider path'
-      : 'runtime tool isolation is advisory or unverifiable (FR2 fail-closed overrides FR4); routing to the structured provider path',
+      ? 'adapter cannot host a bounded read-only mission lens, so this runtime is unsupported for operate; no silent structured-provider fallback exists'
+      : 'runtime tool isolation is advisory or unverifiable, so it cannot carry a mandate and is unsupported for operate; no silent structured-provider fallback exists',
   };
 }
 
-// ---------------------------------------------------------------------------
-// Sensitivity-ceiling root narrowing (FR2)
-// ---------------------------------------------------------------------------
-
 /**
- * The top-level path segment a declared read root is derived from. Mission roots
- * are single top-level directory segments (see `deriveOperatingDeclaredRoots`).
+ * A runtime's operate classification (FR10): whether it can carry a mandate and
+ * therefore dispatch operate lenses first-class, or is declared `unsupported`.
+ * The `reason` is the exact remediation-grade explanation surfaced by
+ * `operate doctor` when a runtime cannot carry a mandate.
  */
-function topSegment(relativePath: string): string | null {
-  const [top] = relativePath.split('/');
-  return top && top.length > 0 ? top : null;
+export interface OperatingRuntimeClassification {
+  runtime: string;
+  isolation: OperatingDispatchIsolation;
+  mandateCapable: boolean;
+  reason: string;
 }
 
 /**
- * Narrow a role's declared read roots by DENY-LISTING any root that contains an
- * evidence item above the role's sensitivity ceiling, so no above-ceiling file
- * is readable even inside a granted root. Pass the FULL (pre-ceiling-filter)
- * evidence index: the narrowing needs to see the above-ceiling items the packet
- * index itself excludes. Combined with the read-time ceiling check on the
- * bounded reader, this is the belt-and-suspenders that preserves the pack-era
- * filter-before-handoff guarantee under agent-driven reads.
+ * Classify a runtime for operate dispatch (FR10). A runtime that natively
+ * enforces the bounded read-only boundary can carry a mandate and is
+ * `enforced-read-only-bounded` (first-class); every other runtime — advisory or
+ * unverifiable isolation, or none selected — is `unsupported`, with the specific
+ * reason. Fails closed: a runtime whose enforceability cannot be verified is
+ * unsupported, never silently downgraded.
+ */
+export async function classifyOperatingRuntime(
+  runtime: string | undefined,
+): Promise<OperatingRuntimeClassification> {
+  const label = runtime && runtime !== 'auto' ? runtime : 'auto';
+  const mandateCapable = await operatingRuntimeEnforcesBoundedReadOnly(runtime);
+  if (mandateCapable) {
+    return {
+      runtime: label,
+      isolation: 'enforced-read-only-bounded',
+      mandateCapable: true,
+      reason:
+        'natively enforces bounded read-only tool isolation, so it can carry a mandate and dispatch operate lenses first-class',
+    };
+  }
+  return {
+    runtime: label,
+    isolation: 'unsupported',
+    mandateCapable: false,
+    reason:
+      label === 'auto'
+        ? 'no runtime is selected, so mandate-capable tool isolation cannot be verified'
+        : 'tool isolation is advisory or unverifiable, so it cannot carry a mandate; operate declares it unsupported rather than silently degrading it',
+  };
+}
+
+let cachedRuntimeResolver: Promise<(projectRoot: string) => string | undefined> | null = null;
+
+/**
+ * Resolve the active runtime id for a project WITHOUT probing installed binaries
+ * (spawn-free) so `operate doctor` can classify it. Reads the runtime the
+ * project/user already selected from the pipeline's reclassified registry. Fails
+ * closed to `undefined` when no runtime is selected or the registry cannot be
+ * resolved, so an unresolved runtime is classified `unsupported`, never assumed
+ * mandate-capable.
+ */
+export async function resolveActiveOperatingRuntime(
+  projectRoot: string,
+): Promise<string | undefined> {
+  cachedRuntimeResolver ??= (async () => {
+    try {
+      const root = resolveOperatingPipelineRoot({ requireMission: true });
+      if (!root) return () => undefined;
+      const module = (await import(
+        pathToFileURL(path.join(root, 'lib', 'pipeline', 'runtime.mjs')).href
+      )) as unknown as {
+        resolveRuntimeAdapter?: (options: { projectRoot?: string; installed?: string[] }) => {
+          adapter?: { id?: string };
+        };
+      };
+      const resolve = module.resolveRuntimeAdapter;
+      if (typeof resolve !== 'function') return () => undefined;
+      return (target) => {
+        try {
+          return resolve({ projectRoot: target, installed: [] })?.adapter?.id;
+        } catch {
+          return undefined;
+        }
+      };
+    } catch {
+      return () => undefined;
+    }
+  })();
+  return (await cachedRuntimeResolver)(projectRoot);
+}
+
+// ---------------------------------------------------------------------------
+// Read-boundary declaration (FR2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Declare a role's mission read roots directly from the granted workspace roots
+ * minus the explicitly forbidden paths — the coarse boundary the mandate model
+ * dispatches against. There is no evidence index to narrow (the mandate carries
+ * none): every granted root is declared whole, and the sensitivity ceiling is
+ * enforced not by dropping a root here but by the bounded reader's read-time
+ * `assertBelowCeiling` and, at record time, by the citation resolver refusing an
+ * above-ceiling citation. A root that exactly matches, or is nested under, a
+ * forbidden path is dropped. The result is deduplicated and sorted so the
+ * declared boundary is deterministic.
  */
 export function narrowMissionRootsToCeiling(input: {
   declaredRoots: readonly string[];
-  evidenceIndex: readonly OperatingEvidenceIndexItem[];
-  ceiling: OperatingSensitivity;
+  forbiddenPaths?: readonly string[];
 }): string[] {
-  const denied = new Set<string>();
-  for (const item of input.evidenceIndex) {
-    if (!item.path) continue;
-    if (compareSensitivity(item.sensitivity, input.ceiling) <= 0) continue;
-    const top = topSegment(item.path);
-    if (top) denied.add(top);
-  }
-  return input.declaredRoots.filter((root) => !denied.has(root)).sort();
+  const forbidden = input.forbiddenPaths ?? [];
+  const isForbidden = (root: string): boolean =>
+    forbidden.some((path) => root === path || root.startsWith(`${path}/`));
+  return [...new Set(input.declaredRoots.filter((root) => !isForbidden(root)))].sort();
 }
 
 // ---------------------------------------------------------------------------

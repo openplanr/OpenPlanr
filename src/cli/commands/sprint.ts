@@ -21,6 +21,7 @@ import {
   updateArtifact,
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { promptConfirm, promptEditor, promptText } from '../../services/prompt-service.js';
 import { colorByPercent } from '../../utils/format.js';
 import { display, logger } from '../../utils/logger.js';
@@ -589,6 +590,7 @@ async function autoSelectTasks(
 
     await updateArtifact(projectDir, config, 'sprint', sprintId, updated);
     logger.success(`Added ${newIds.length} tasks to sprint`);
+    printDeprecationNotice('ai-planning');
   } catch (err) {
     const { AIError } = await import('../../ai/errors.js');
     if (err instanceof AIError) {

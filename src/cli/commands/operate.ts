@@ -1,10 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import type { Command, OptionValues } from 'commander';
 import { isNonInteractive } from '../../services/interactive-state.js';
-import {
-  applyOperatingDispatchModeOverrides,
-  parseOperatingDispatchModeOverrideFlags,
-} from '../../services/operate/config.js';
 import { writeOperatingDecisionBriefArtifact } from '../../services/operate/decision-brief.js';
 import {
   executeOperateAction,
@@ -67,8 +63,11 @@ async function readBoundedStdin(enabled: boolean): Promise<string | undefined> {
  * <path>` is a stdin-parity alias: it reads the same 64 KiB-bounded UTF-8 string
  * `--stdin` would, so the downstream strict parser and digest binding are
  * identical — it never introduces an inline-JSON code path. TTY-guard semantics
- * are preserved: only `--stdin` requires a connected non-TTY pipe. Exported for
- * direct parity testing.
+ * are preserved: only `--stdin` requires a connected non-TTY pipe. This transport
+ * is now discoverable: the questionnaire advertises it in
+ * `submission.transport.alternates` (kind `answers-file`) alongside the stdin
+ * entry, so a contract-conformant runtime never has to assume stdin is the only
+ * channel. Exported for direct parity testing.
  */
 export async function readBoundedInitAnswers(options: OptionValues): Promise<string | undefined> {
   const answersFile =
@@ -227,7 +226,6 @@ async function executeForResult(
     ),
     options: {
       ...options,
-      ...(Array.isArray(options.source) ? { sources: options.source } : {}),
       ...(Array.isArray(options.component) ? { components: options.component } : {}),
       json,
       yes: Boolean(options.yes || program.opts().yes),
@@ -250,57 +248,6 @@ async function execute(
   options: OptionValues,
 ): Promise<void> {
   await executeForResult(program, command, action, args, options);
-}
-
-function dispatchModeOverrideFlags(options: OptionValues): string[] {
-  return Array.isArray(options.dispatchModeOverride)
-    ? (options.dispatchModeOverride as string[])
-    : [];
-}
-
-/**
- * Persist repeatable `--dispatch-mode-override <roleId>=<pack|mission>` flags into
- * the machine-local operating preferences (FR4 / E-004) so an operator can roll a
- * single lens back to the v1.2 pack path without hand-editing config. Returns the
- * emitted result, or null when no override flag was supplied.
- */
-async function applyDispatchModeOverrideFlags(
-  program: Command,
-  command: Command,
-  action: string,
-  options: OptionValues,
-): Promise<OperateActionResult | null> {
-  const flags = dispatchModeOverrideFlags(options);
-  if (flags.length === 0) return null;
-  const overrides = parseOperatingDispatchModeOverrideFlags(flags);
-  const applied = await applyOperatingDispatchModeOverrides({
-    projectRoot: projectDir(program),
-    overrides,
-  });
-  const summary = Object.entries(applied.dispatchModeOverrides)
-    .map(([roleId, mode]) => `${roleId}=${mode}`)
-    .sort()
-    .join(', ');
-  const result: OperateActionResult = {
-    schemaVersion: '1.0.0',
-    protocolVersion: '1.2.0',
-    ok: true,
-    action,
-    message: summary
-      ? `Dispatch-mode overrides set: ${summary}.`
-      : 'Dispatch-mode overrides cleared.',
-    state: null,
-    paths: {},
-    counts: {},
-    warnings: [],
-    nextActions: ['planr operate config show'],
-    next: [],
-    data: { dispatchModeOverrides: applied.dispatchModeOverrides, changed: applied.changed },
-    exitCode: 0,
-  };
-  if (wantsJson(command, options)) display.line(JSON.stringify(result));
-  else renderHuman(result);
-  return result;
 }
 
 /**
@@ -557,19 +504,6 @@ export function registerOperateCommand(program: Command): void {
           .option('--cadence <cadence>', 'manual, weekly, or monthly')
           .option('--timezone <zone>', 'IANA display timezone')
           .option('--component <path>', 'read-only component repository (repeatable)', collect, [])
-          .option('--source <source>', 'evidence source (repeatable)', collect, [])
-          .option(
-            '--evidence-file <path>',
-            'workspace-contained JSON/CSV evidence file (repeatable)',
-            collect,
-            [],
-          )
-          .option(
-            '--dispatch-mode-override <roleId=mode>',
-            'force a role to pack or mission dispatch (repeatable)',
-            collect,
-            [],
-          )
           .option('--sensitivity-ceiling <class>', 'public, internal, confidential, or restricted')
           .option('--purpose <text>', 'product outcome for the operating charter')
           .option('--product-stage <stage>', 'current product stage')
@@ -608,9 +542,6 @@ export function registerOperateCommand(program: Command): void {
     ),
   ).action(function (this: Command, opts) {
     return (async () => {
-      // Validate any dispatch-mode overrides BEFORE init runs so an invalid flag
-      // aborts before touching state; they are persisted after a committed apply.
-      parseOperatingDispatchModeOverrideFlags(dispatchModeOverrideFlags(opts));
       const resolved = await guidedInitOptions(program, opts);
       const interactive =
         !wantsJson(this, resolved) && !isNonInteractive() && !resolved.yes && !program.opts().yes;
@@ -656,11 +587,6 @@ export function registerOperateCommand(program: Command): void {
         );
       } else {
         result = await executeForResult(program, this, 'init', {}, resolved);
-      }
-      // Persist dispatch-mode overrides only once the project is actually
-      // initialized (committed apply), never on a preview or dry run.
-      if (result.ok && !resolved.preview && !resolved.dryRun) {
-        await applyDispatchModeOverrideFlags(program, this, 'init.dispatch-mode', opts);
       }
       const legacyMigration = (
         result.data as
@@ -726,26 +652,8 @@ export function registerOperateCommand(program: Command): void {
   json(config.command('show')).action(function (this: Command, opts) {
     return execute(program, this, 'config.show', {}, opts);
   });
-  json(
-    config
-      .command('edit')
-      .option(
-        '--dispatch-mode-override <roleId=mode>',
-        'force a role to pack or mission dispatch (repeatable)',
-        collect,
-        [],
-      ),
-  ).action(function (this: Command, opts) {
-    return (async () => {
-      const applied = await applyDispatchModeOverrideFlags(
-        program,
-        this,
-        'config.set-dispatch-mode',
-        opts,
-      );
-      if (applied) return;
-      await execute(program, this, 'config.edit', {}, opts);
-    })();
+  json(config.command('edit')).action(function (this: Command, opts) {
+    return execute(program, this, 'config.edit', {}, opts);
   });
   json(config.command('validate')).action(function (this: Command, opts) {
     return execute(program, this, 'config.validate', {}, opts);
@@ -760,21 +668,6 @@ export function registerOperateCommand(program: Command): void {
   });
   json(profiles.command('validate <path>')).action(function (this: Command, file: string, opts) {
     return execute(program, this, 'profiles.validate', { file }, opts);
-  });
-
-  const sources = operate.command('sources').description('Inspect and test evidence sources');
-  json(sources.command('list')).action(function (this: Command, opts) {
-    return execute(program, this, 'sources.list', {}, opts);
-  });
-  json(sources.command('show <source>')).action(function (this: Command, source: string, opts) {
-    return execute(program, this, 'sources.show', { source }, opts);
-  });
-  json(
-    sources
-      .command('test [source]')
-      .description('Test one source, or every configured source when omitted'),
-  ).action(function (this: Command, source: string | undefined, opts) {
-    return execute(program, this, 'sources.test', { source }, opts);
   });
 
   json(
@@ -996,32 +889,12 @@ export function registerOperateCommand(program: Command): void {
     return execute(program, this, 'gaps.verify', { gapId }, opts);
   });
 
-  const evidence = readGroup(
+  readGroup(
     program,
     operate.command('evidence').description('Inspect sanitized evidence metadata'),
     'evidence',
     'evidenceId',
   );
-  json(
-    evidence
-      .command('diagnose [candidateId]')
-      .description('Inspect value-free evidence diagnostics and supported recovery actions'),
-  ).action(function (this: Command, candidateId: string | undefined, opts) {
-    return execute(program, this, 'evidence.diagnose', { candidateId }, opts);
-  });
-  json(
-    confirmed(
-      evidence
-        .command('classify <candidateId>')
-        .description('Classify one exact evidence candidate without weakening scanner policy')
-        .requiredOption('--status <status>', 'false-positive or confirmed-secret')
-        .requiredOption('--reason <text>', 'bounded audit reason')
-        .option('--confirm <digest>', 'confirm the exact classification preview digest'),
-    ),
-  ).action(function (this: Command, candidateId: string, opts) {
-    return execute(program, this, 'evidence.classify', { candidateId }, opts);
-  });
-
   const migrate = operate.command('migrate').description('Inspect or apply legacy board migration');
   json(migrate.command('inspect')).action(function (this: Command, opts) {
     return execute(program, this, 'migrate.inspect', {}, opts);
@@ -1121,9 +994,7 @@ export function registerOperateCommand(program: Command): void {
     .description('Machine-only, lease-bound runtime adapter lifecycle');
   json(
     machineBinding(
-      adapter
-        .command('prepare')
-        .description('Prepare immutable role packs and their compact response schema'),
+      adapter.command('prepare').description('Prepare immutable Protocol v1.3 advisor mandates'),
     ).option('--role <roles>', 'comma-separated advisor roles bound to this isolated dispatch'),
   ).action(function (this: Command, opts) {
     return execute(program, this, 'adapter.prepare', {}, { ...opts, json: true });
@@ -1134,7 +1005,7 @@ export function registerOperateCommand(program: Command): void {
         adapter
           .command('record')
           .description(
-            'Record JSON matching rolePack.roleBrief.output.jsonSchema from adapter prepare',
+            'Record one citation-bearing advisor result matching the prepared mandate schema',
           )
           .requiredOption('--role <role>', 'operating advisor role'),
       ),

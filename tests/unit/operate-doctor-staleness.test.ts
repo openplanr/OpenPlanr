@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -155,6 +155,17 @@ describe('Operating Board doctor staleness diagnostics (FR11)', () => {
     const diagnostics = await diagnoseOperatingBoard({ projectRoot, localRoot });
     expect(byCode(diagnostics, 'operate-adapter-sessions').status).toBe('pass');
     expect(byCode(diagnostics, 'operate-incremental-baseline').status).toBe('pass');
+  });
+
+  // FR8: a fresh init creates no empty `projections/` directory — the retired
+  // SPEC-003 tree is never recreated by `ensureOperatingDirectories`.
+  it('creates no empty projections/ directory on a fresh init', async () => {
+    const projectRoot = await createGitProject();
+    const localRoot = await temporaryDirectory('openplanr-operate-doctor-projections-local-');
+    await initBoard(projectRoot, localRoot);
+    const paths = resolveOperatingPaths(projectRoot, { localRoot });
+    expect(existsSync(paths.root)).toBe(true);
+    expect(existsSync(join(paths.root, 'projections'))).toBe(false);
   });
 });
 

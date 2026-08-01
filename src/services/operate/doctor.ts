@@ -2,12 +2,14 @@ import { existsSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { canonicalDigest } from './canonical.js';
-import { operatingProjectKey, readOperatingDispatchModeOverrides } from './config.js';
+import { operatingProjectKey } from './config.js';
 import { OperatingEventStore } from './event-store.js';
+import { buildOperatingIntegritySummary, detectGitignoredWorkspace } from './integrity.js';
 import { guidedSessionStatus } from './interaction/session-service.js';
 import { readJournal } from './journal.js';
 import { readOperatingLock } from './lock-service.js';
 import { detectOperatingStorageLayout } from './migration.js';
+import { classifyOperatingRuntime, resolveActiveOperatingRuntime } from './mission-dispatch.js';
 import { inspectOperatingProjectionDrift } from './projection-persistence.js';
 import { loadOperatingProtocol, operatingPipelineAvailable } from './protocol.js';
 import type { OperatingState } from './types.js';
@@ -465,40 +467,6 @@ async function diagnoseRecordsLog(
 }
 
 /**
- * Additive Protocol v1.3 (FR10 / E-010) check: the persisted per-project
- * dispatch-mode overrides (machine-local `preferences.json`) must reference only
- * known registry role IDs and `pack`/`mission` modes. Reuses the same strict
- * validation the write path enforces; an invalid map fails closed with the
- * repair rather than throwing out of the doctor run.
- */
-async function diagnoseDispatchModes(
-  projectRoot: string,
-  localRoot: string | undefined,
-): Promise<OperatingDoctorDiagnostic> {
-  try {
-    const overrides = await readOperatingDispatchModeOverrides(projectRoot, { localRoot });
-    const count = Object.keys(overrides).length;
-    return {
-      code: 'operate-dispatch-mode',
-      status: 'pass',
-      message:
-        count === 0
-          ? 'No per-project dispatch-mode overrides are configured'
-          : `${count} per-project dispatch-mode override(s) reference known roles and valid pack/mission modes`,
-    };
-  } catch (error) {
-    return {
-      code: 'operate-dispatch-mode',
-      status: 'fail',
-      message: `Operating dispatch-mode overrides are invalid: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-      fix: 'Run `planr operate config edit --dispatch-mode-override <roleId>=<pack|mission>` to restore valid overrides.',
-    };
-  }
-}
-
-/**
  * FR11: detect machine-local adapter sessions that are bound to a superseded
  * board generation (their `boardIdentity` no longer matches the committed
  * event-chain genesis) or to a cycle that is no longer present in committed
@@ -620,10 +588,151 @@ async function diagnoseIncrementalBaselines(
   };
 }
 
+/**
+ * FR10: classify the active runtime for operate. A runtime that natively
+ * enforces the bounded read-only boundary can carry a mandate and dispatches
+ * operate lenses first-class (`enforced-read-only-bounded` = pass); a runtime
+ * that cannot is reported `unsupported` explicitly — with its specific reason
+ * and a pointer to a supported runtime — rather than being silently downgraded
+ * to a deprecated structured-provider path. Fails closed: when no runtime is
+ * selected or resolvable, the classification is `unsupported`.
+ */
+async function diagnoseRuntimeClassification(input: {
+  projectRoot: string;
+  runtime?: string;
+}): Promise<OperatingDoctorDiagnostic> {
+  const runtime = input.runtime ?? (await resolveActiveOperatingRuntime(input.projectRoot));
+  const classification = await classifyOperatingRuntime(runtime);
+  if (classification.mandateCapable) {
+    return {
+      code: 'operate-runtime-classification',
+      status: 'pass',
+      message: `Active runtime \`${classification.runtime}\` is mandate-capable: operate dispatches it natively as \`enforced-read-only-bounded\``,
+    };
+  }
+  return {
+    code: 'operate-runtime-classification',
+    status: 'warn',
+    message: `Active runtime \`${classification.runtime}\` is \`unsupported\` for operate: ${classification.reason}`,
+    fix: 'Select a runtime whose adapter natively enforces bounded read-only tool isolation (for example claude-code) via `planr setup`, then rerun `planr doctor`.',
+  };
+}
+
+/**
+ * FR7: cycle integrity is a first-class readable-tree surface. This is the
+ * regression guard on that surface — a citation rejection or boundary refusal
+ * that is recorded in committed state but does NOT appear in the cycle's
+ * `integrity.md` means the readable tree stopped reflecting the governed signal,
+ * which is exactly the failure mode FR7 fixes (an integrity signal reaching the
+ * operator only when a lens happened to restate it). It also reports the three
+ * conditions — citation rejections, boundary refusals, not_evaluated roles — as
+ * an explicit check so the operator sees them without reading any lens prose.
+ * Pure over `(state, cycleId, integrityFileContent)` so the mapping is testable
+ * without a full board on disk.
+ */
+export function diagnoseOperatingCycleIntegrity(
+  state: OperatingState,
+  cycleId: string | null,
+  integrityFileContent: string | null,
+): OperatingDoctorDiagnostic {
+  if (!cycleId) {
+    return {
+      code: 'operate-cycle-integrity',
+      status: 'pass',
+      message: 'No governed cycle is available to evaluate for integrity yet',
+    };
+  }
+  const summary = buildOperatingIntegritySummary(state, cycleId);
+  if (!summary.hasConcerns) {
+    return {
+      code: 'operate-cycle-integrity',
+      status: 'pass',
+      message: `No cycle integrity concerns recorded for ${cycleId}`,
+    };
+  }
+  const rendered = integrityFileContent ?? '';
+  const unrendered = [...summary.citationRejections, ...summary.boundaryRefusals].filter(
+    (entry) => !rendered.includes(entry.gapId),
+  );
+  const counts = `${summary.citationRejections.length} citation rejection(s), ${summary.boundaryRefusals.length} boundary refusal(s), and ${summary.notEvaluatedRoles.length} not_evaluated role(s)`;
+  if (unrendered.length > 0) {
+    return {
+      code: 'operate-cycle-integrity',
+      status: 'fail',
+      message: `Cycle ${cycleId} records ${counts}, but ${unrendered.length} is missing from the readable integrity report`,
+      fix: `Run \`planr operate cycles recover ${cycleId} --yes\` to rebuild the readable tree from the verified event chain.`,
+    };
+  }
+  return {
+    code: 'operate-cycle-integrity',
+    status: 'warn',
+    message: `Cycle ${cycleId} records ${counts}, surfaced in the readable integrity report`,
+    fix: `Review \`.planr/operate/cycles/${cycleId}/integrity.md\`; resolve each cited rejection, refusal, or not_evaluated role.`,
+  };
+}
+
+async function diagnoseCycleIntegritySurface(
+  projectRoot: string,
+  localRoot: string | undefined,
+): Promise<OperatingDoctorDiagnostic> {
+  let state: OperatingState;
+  try {
+    state = await new OperatingEventStore(projectRoot, { localRoot }).state();
+  } catch {
+    // A broken event chain is diagnosed by the event-replay check; integrity is
+    // only meaningful against a readable board.
+    return {
+      code: 'operate-cycle-integrity',
+      status: 'pass',
+      message: 'No readable board state is available to evaluate for integrity yet',
+    };
+  }
+  const reviewable = state.cycles
+    .filter((cycle) => cycle.state === 'reviewable' || cycle.state === 'closed')
+    .map((cycle) => cycle.id)
+    .sort();
+  const cycleId =
+    reviewable.at(-1) ??
+    (state.summary.currentCycleId &&
+    state.cycles.some((cycle) => cycle.id === state.summary.currentCycleId)
+      ? state.summary.currentCycleId
+      : null);
+  const paths = resolveOperatingPaths(projectRoot, { localRoot });
+  const integrityFileContent = cycleId
+    ? await readFile(path.join(paths.cycles, cycleId, 'integrity.md'), 'utf8').catch((error) => {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+        throw error;
+      })
+    : null;
+  return diagnoseOperatingCycleIntegrity(state, cycleId, integrityFileContent);
+}
+
+/**
+ * FR9: honest workspace claims. Detect a gitignored `.planr/` and state plainly
+ * what it means for versioning the board, rather than implying the sanitized,
+ * safe-to-commit content is tracked when git is configured to ignore it.
+ */
+async function diagnoseWorkspaceVersioning(
+  projectRoot: string,
+): Promise<OperatingDoctorDiagnostic> {
+  const versioning = await detectGitignoredWorkspace(projectRoot);
+  return {
+    code: 'operate-workspace-git',
+    status: versioning.ignored ? 'warn' : 'pass',
+    message: versioning.message,
+    ...(versioning.ignored
+      ? {
+          fix: 'Commit `.planr/operate/` explicitly, or remove the `.planr/` ignore rule, to version the Operating Board alongside the code.',
+        }
+      : {}),
+  };
+}
+
 export async function diagnoseOperatingBoard(input: {
   projectRoot: string;
   localRoot?: string;
   pipelineVersion?: string;
+  runtime?: string;
 }): Promise<OperatingDoctorDiagnostic[]> {
   const diagnostics = [await diagnoseProtocol(input.pipelineVersion)];
   const paths = resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot });
@@ -658,14 +767,26 @@ export async function diagnoseOperatingBoard(input: {
     await diagnoseJournals(input.projectRoot, input.localRoot),
     // Additive Protocol v1.3 (FR10 / E-010) diagnostics layered on the
     // SPEC-003 surface: storage-layout version, records-log integrity, and
-    // persisted dispatch-mode override validity.
+    // runtime mandate capability.
     await diagnoseStorageLayout(input.projectRoot, input.localRoot),
     await diagnoseRecordsLog(input.projectRoot, input.localRoot),
-    await diagnoseDispatchModes(input.projectRoot, input.localRoot),
+    // FR10: classify the active runtime — a runtime that can carry a mandate is
+    // first-class; one that cannot is reported `unsupported` explicitly, never
+    // silently downgraded to a deprecated structured-provider path.
+    await diagnoseRuntimeClassification({
+      projectRoot: input.projectRoot,
+      runtime: input.runtime,
+    }),
     // FR11: the two staleness detectors for the machine-local caches FR4 binds
     // to board identity — stale adapter sessions and stale incremental baselines.
     await diagnoseAdapterSessions(input.projectRoot, input.localRoot),
     await diagnoseIncrementalBaselines(input.projectRoot, input.localRoot),
+    // FR7: cycle integrity is a first-class readable surface — this guards it
+    // against regression and reports its three conditions explicitly.
+    await diagnoseCycleIntegritySurface(input.projectRoot, input.localRoot),
+    // FR9: state plainly whether a gitignored `.planr/` leaves the board
+    // unversioned, rather than implying it is tracked.
+    await diagnoseWorkspaceVersioning(input.projectRoot),
   );
   return diagnostics;
 }

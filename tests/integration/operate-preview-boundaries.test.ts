@@ -228,7 +228,7 @@ describe('Operating Board preview and dry-run boundaries', () => {
           .filter((role) => role.readiness === 'not_evaluated')
           .map((role) => role.roleId)
           .sort(),
-      ).toEqual(['growth-market', 'operations-customer', 'product-activation']);
+      ).toEqual([]);
       await recordQuietNativeResults({
         projectRoot,
         localRoot,
@@ -248,6 +248,9 @@ describe('Operating Board preview and dry-run boundaries', () => {
       expect(completed.nativeHandoff).toBeUndefined();
       expect(completed.roleResults?.map(({ roleId }) => roleId).sort()).toEqual([
         'chair',
+        'growth-market',
+        'operations-customer',
+        'product-activation',
         'strategy-finance',
         'technology-risk',
       ]);

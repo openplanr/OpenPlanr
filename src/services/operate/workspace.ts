@@ -32,7 +32,6 @@ export interface OperatingPaths {
   checkpoint: string;
   records: string;
   cycles: string;
-  projections: string;
   routes: string;
   outcomes: string;
   artifacts: string;
@@ -90,7 +89,6 @@ export function resolveOperatingPaths(
     checkpoint: path.join(state, 'checkpoint.json'),
     records: path.join(state, 'records.jsonl'),
     cycles: path.join(root, 'cycles'),
-    projections: path.join(root, 'projections'),
     routes: path.join(root, 'routes'),
     outcomes: path.join(root, 'outcomes'),
     artifacts: path.join(root, 'artifacts'),
@@ -422,7 +420,6 @@ export async function ensureOperatingDirectories(
       // single directory create covers all three (they share this parent).
       paths.state,
       paths.cycles,
-      paths.projections,
       paths.routes,
       paths.outcomes,
       paths.artifacts,

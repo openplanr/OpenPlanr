@@ -64,21 +64,13 @@ async function initialize(): Promise<{ projectRoot: string; localRoot: string }>
     runtime: 'codex',
     timezone: 'UTC',
     sensitivityCeiling: 'internal',
-    enabledProviders: ['repository', 'git'],
     customProfile: {
       enabledRoles: ['strategy-finance', 'technology-risk', 'chair'],
-      enabledProviders: ['repository', 'git'],
       caps: {
         surfacedFindings: 10,
         newSpecs: 3,
         openDecisions: 3,
         agentArtifacts: 2,
-      },
-      budgets: {
-        maxFiles: 1_000,
-        maxItems: 2_000,
-        maxBytes: 10 * 1024 * 1024,
-        maxDurationMs: 60_000,
       },
     },
     charter: {
@@ -103,10 +95,13 @@ function routeAdapter(): AdvisorAdapter {
     toolIsolation: 'not-applicable',
     capability: 'analysis-high',
     async invoke(input) {
-      const evidenceRef = input.evidence.items[0]?.id;
-      if (!evidenceRef) {
-        return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
-      }
+      const citations = [
+        {
+          repositoryPath: 'service.ts',
+          lineRange: { start: 1, end: 1 },
+          pinnedRevision: input.pinnedRevision,
+        },
+      ];
       if (input.roleId === 'technology-risk') {
         return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
       }
@@ -124,7 +119,7 @@ function routeAdapter(): AdvisorAdapter {
               confidence: 3,
               ease: 5,
               severity: 'low',
-              evidenceRefs: [evidenceRef],
+              citations,
             },
           ],
           gaps: [],
@@ -144,7 +139,7 @@ function routeAdapter(): AdvisorAdapter {
             confidence: 3,
             ease: 4,
             severity: 'medium',
-            evidenceRefs: [evidenceRef],
+            citations,
           },
           {
             proposalKey: 'owner-route',
@@ -156,7 +151,7 @@ function routeAdapter(): AdvisorAdapter {
             confidence: 3,
             ease: 5,
             severity: 'low',
-            evidenceRefs: [evidenceRef],
+            citations,
           },
         ],
         gaps: [],
@@ -440,10 +435,16 @@ function twoRelatedDevFindingsAdapter(): AdvisorAdapter {
     toolIsolation: 'not-applicable',
     capability: 'analysis-high',
     async invoke(input) {
-      const evidenceRef = input.evidence.items[0]?.id;
-      if (!evidenceRef || input.roleId === 'technology-risk' || input.roleId === 'chair') {
+      if (input.roleId === 'technology-risk' || input.roleId === 'chair') {
         return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
       }
+      const citations = [
+        {
+          repositoryPath: 'service.ts',
+          lineRange: { start: 1, end: 1 },
+          pinnedRevision: input.pinnedRevision,
+        },
+      ];
       return {
         outcome: 'proposals',
         proposals: [
@@ -457,7 +458,7 @@ function twoRelatedDevFindingsAdapter(): AdvisorAdapter {
             confidence: 3,
             ease: 4,
             severity: 'medium',
-            evidenceRefs: [evidenceRef],
+            citations,
           },
           {
             proposalKey: 'fragments',
@@ -469,7 +470,7 @@ function twoRelatedDevFindingsAdapter(): AdvisorAdapter {
             confidence: 3,
             ease: 4,
             severity: 'medium',
-            evidenceRefs: [evidenceRef],
+            citations,
           },
         ],
         gaps: [],

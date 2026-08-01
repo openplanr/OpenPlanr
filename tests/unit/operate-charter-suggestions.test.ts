@@ -10,7 +10,6 @@ import {
 
 const charterContext: OperatingQuestionContext = {
   timezone: 'UTC',
-  availableSources: ['repository', 'planr', 'git', 'file-import'],
 };
 
 const charterQuestion = (questionId: string) =>

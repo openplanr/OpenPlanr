@@ -10,16 +10,13 @@ import {
   promptText,
 } from '../../prompt-service.js';
 import type { GuidedQuestion, GuidedQuestionValue, OperatingInitAnswers } from '../types.js';
-import {
-  probeAvailableEvidenceSources,
-  probeGitUserName,
-  probePipelineInstalled,
-} from './answer-service.js';
+import { probeGitUserName, probePipelineInstalled } from './answer-service.js';
 import {
   applyOperatingInitAnswer,
   evaluateOperatingInitQuestions,
   type OperatingQuestionEngineContext,
 } from './question-engine.js';
+import { repeatedTextRenderability } from './question-registry.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -33,9 +30,8 @@ async function commandAvailable(command: string): Promise<boolean> {
 export async function detectOperatingQuestionContext(
   projectRoot: string,
 ): Promise<OperatingQuestionEngineContext> {
-  const [gitUserName, availableSources, claude, codex, cursor] = await Promise.all([
+  const [gitUserName, claude, codex, cursor] = await Promise.all([
     probeGitUserName(projectRoot),
-    probeAvailableEvidenceSources(projectRoot),
     commandAvailable('claude'),
     commandAvailable('codex'),
     commandAvailable('cursor'),
@@ -45,7 +41,6 @@ export async function detectOperatingQuestionContext(
     ...(gitUserName ? { gitUserName } : {}),
     detectedRuntime: claude ? 'claude' : codex ? 'codex' : cursor ? 'cursor' : undefined,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    availableSources,
     pipelineInstalled: probePipelineInstalled(),
     runtime: 'terminal',
     interaction: 'terminal',
@@ -120,8 +115,22 @@ async function promptQuestion(question: GuidedQuestion): Promise<GuidedQuestionV
       return promptCheckbox(question.label, operatingCheckboxChoices(question, proposed));
     case 'confirmation':
       return promptConfirm(question.label, typeof proposed === 'boolean' ? proposed : false);
-    case 'repeated-text':
-      return promptMultiText(question.label, 'comma-separated');
+    case 'repeated-text': {
+      // Present each entry with the question's renderability contract (item noun
+      // and example) so the terminal prompt matches what a native runtime shows,
+      // instead of an unlabelled comma-separated field.
+      const renderability =
+        repeatedTextRenderability(question.questionId) ??
+        (question.itemLabel
+          ? { itemLabel: question.itemLabel, itemPlaceholder: question.itemPlaceholder ?? '' }
+          : undefined);
+      const hint = renderability
+        ? `comma-separated ${renderability.itemLabel.toLowerCase()}${
+            renderability.itemPlaceholder ? `; e.g. ${renderability.itemPlaceholder}` : ''
+          }`
+        : 'comma-separated';
+      return promptMultiText(question.label, hint);
+    }
     case 'secret':
       return promptSecret(question.label);
     case 'path':

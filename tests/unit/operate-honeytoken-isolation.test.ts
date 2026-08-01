@@ -7,7 +7,6 @@ import {
   type AdvisorOperatingContext,
   assertAdvisorIsolation,
   dispatchOperatingAdvisors,
-  operatingAdvisorMessages,
 } from '../../src/services/operate/advisors.js';
 import type {
   OperatingEvidence,
@@ -207,11 +206,17 @@ describe('Operating Board advisor honeytoken containment', () => {
 
     const result = await dispatchOperatingAdvisors({
       cycleId: 'CYCLE-001',
-      evidence: evidence(),
+      projectRoot,
+      pinnedRevision: 'a'.repeat(40),
       readiness: readiness([roleReadiness('technology-risk')]),
       context: advisorContext(),
       adapter,
       depth: 'standard',
+      resolveCitations: async (roleResults) => ({
+        roleResults,
+        gaps: [],
+        notEvaluatedRoleIds: [],
+      }),
     });
 
     expect(result.failed).toEqual([]);
@@ -220,26 +225,15 @@ describe('Operating Board advisor honeytoken containment', () => {
     expect(call).toBeDefined();
 
     // The complete payload crossing the boundary, exactly as an advisor sees it.
+    // FR1/FR2: the lens receives a body-free MANDATE — the lens question, declared
+    // read boundaries, and citation requirement — with no evidence body or index,
+    // so no ambient channel can ride along in a curated evidence excerpt.
     const payload = JSON.stringify(call);
-    const messages = JSON.stringify(
-      operatingAdvisorMessages({
-        roleBrief: call.roleBrief,
-        evidence: call.evidence.items.map((item: OperatingEvidence['items'][number]) => ({
-          id: item.id,
-          source: item.source,
-          location: item.location,
-          freshness: item.freshness,
-          claimTypes: item.claimTypes,
-          summary: item.summary,
-        })),
-        context: call.context,
-        inputDigest: call.inputDigest,
-      }),
-    );
+    expect(call.mandate.kind).toBe('operating-mandate');
+    expect(call.mandate).not.toHaveProperty('evidence');
 
     for (const token of ALL_TOKENS) {
       expect(payload).not.toContain(token);
-      expect(messages).not.toContain(token);
     }
 
     // No callable/tool surface reaches the lens.

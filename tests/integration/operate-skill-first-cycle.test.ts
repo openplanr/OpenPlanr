@@ -10,9 +10,8 @@ import {
   type OperateActionResult,
 } from '../../src/services/operate/index.js';
 import {
-  operatingRegistryDispatchMode,
   operatingRuntimeEnforcesBoundedReadOnly,
-  resolveOperatingDispatchMode,
+  resolveOperatingDispatchIsolation,
 } from '../../src/services/operate/mission-dispatch.js';
 import type { OperatingRoleId } from '../../src/services/operate/types.js';
 
@@ -154,7 +153,7 @@ afterEach(async () => {
 });
 
 describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => {
-  it('drives a bare project to a reviewable brief with every adapter lifecycle call issued from the skill/JSON surface', async () => {
+  it('drives a bare project through a complete quiet cycle using only skill-emitted lifecycle calls', async () => {
     const projectRoot = await gitProject();
 
     // Every `planr operate …` command the skill path emitted so far. Nothing may
@@ -246,7 +245,7 @@ describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => 
 
     // 5. Walk the lifecycle purely from emitted handoffs: prepare → record(s) →
     // finalize → run.continue, once for the advisor phase and once for the chair
-    // phase, until the cycle reaches `reviewable`. The loop NEVER authors an
+    // phase, until the quiet cycle closes. The loop NEVER authors an
     // `adapter …` command; it only replays `handoff.next[0].argv`.
     const adapterActions: string[] = [];
     const handoffStates: string[] = [];
@@ -307,7 +306,7 @@ describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => 
     expect(handoffStates).toContain('finalize-required');
     expect(handoffStates).toContain('continue-required');
     expect(runStates.filter((state) => state === 'advising')).toHaveLength(1);
-    expect(runStates.at(-1)).toBe('reviewable');
+    expect(runStates.at(-1)).toBe('closed');
 
     // Zero user-typed adapter commands: EVERY adapter lifecycle action executed
     // was replayed from the emitted-command ledger, never authored here.
@@ -342,7 +341,7 @@ describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => 
     expect(transcript.slice(-2)).toEqual(['review', 'brief']);
   });
 
-  it('selects the T-003 fallback path from capabilities: claude dispatches natively, codex and cursor fall closed to the structured provider', async () => {
+  it('classifies mandate-capable runtimes without a structured-provider fallback', async () => {
     // The runtime enforceability bit is read from the published adapter
     // capabilities (toolIsolation === 'enforced'), the single source of truth the
     // pipeline's own handoff uses. Only claude-code enforces; codex and cursor are
@@ -351,41 +350,32 @@ describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => 
     expect(await operatingRuntimeEnforcesBoundedReadOnly('codex')).toBe(false);
     expect(await operatingRuntimeEnforcesBoundedReadOnly('cursor')).toBe(false);
 
-    const registryDefault = operatingRegistryDispatchMode({});
-    expect(registryDefault).toBe('mission');
-
     const roleId = 'strategy-finance' as OperatingRoleId;
 
     // A runtime that natively enforces isolation, hosting a native-capable
     // adapter, receives a bounded read-only mission lens.
-    const claude = resolveOperatingDispatchMode({
+    const claude = resolveOperatingDispatchIsolation({
       roleId,
-      registryDefault,
       runtimeEnforcesBoundedReadOnly: true,
       adapterNativeCapable: true,
     });
     expect(claude).toMatchObject({
-      mode: 'mission',
       isolation: 'enforced-read-only-bounded',
       native: true,
     });
 
-    // Codex/Cursor: mission is requested, but advisory isolation cannot guarantee
-    // the boundary, so the role falls closed to the structured provider path —
-    // NOT a native lens — consistent with T-003's reconciliation.
+    // Advisory isolation cannot carry the mandate and is explicitly unsupported.
     for (const runtimeEnforcesBoundedReadOnly of [false]) {
-      const fallback = resolveOperatingDispatchMode({
+      const fallback = resolveOperatingDispatchIsolation({
         roleId,
-        registryDefault,
         runtimeEnforcesBoundedReadOnly,
         adapterNativeCapable: true,
       });
       expect(fallback).toMatchObject({
-        mode: 'mission',
-        isolation: 'fail-closed-structured-provider',
+        isolation: 'unsupported',
         native: false,
       });
-      expect(fallback.reconciliation).toMatch(/fail-closed|advisory|unverifiable/i);
+      expect(fallback.reconciliation).toMatch(/advisory|unverifiable|unsupported/i);
     }
   });
 });

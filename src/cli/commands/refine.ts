@@ -29,6 +29,7 @@ import {
 import { validateArtifactBytes } from '../../services/artifact-validation.js';
 import { loadConfig } from '../../services/config-service.js';
 import { applyRefineDeltas } from '../../services/delta-apply-service.js';
+import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { promptSelect } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
 import { toMarkdownWithFrontmatter } from '../../utils/markdown.js';
@@ -84,6 +85,7 @@ export function registerRefineCommand(program: Command) {
           await refineOne(projectDir, config, provider, type, artifactId);
           await suggestNextSteps(projectDir, config, type, artifactId);
         }
+        printDeprecationNotice('ai-planning');
       } catch (err) {
         const { AIError } = await import('../../ai/errors.js');
         if (err instanceof AIError) {

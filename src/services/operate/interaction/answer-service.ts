@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import {
@@ -49,33 +49,6 @@ export async function probeGitUserName(projectRoot: string): Promise<string | un
     .catch(() => undefined);
 }
 
-/** Locally probeable evidence sources that require no in-flow credentials. */
-const OPTIONAL_EVIDENCE_SOURCE_PROBES: readonly { id: string; marker: string }[] = [
-  { id: 'planr', marker: '.planr' },
-  { id: 'git', marker: '.git' },
-];
-
-/**
- * Honestly probe which evidence sources are locally available for this project
- * instead of asserting a static list. Repository files and local JSON/CSV import
- * are always available; `planr`/`git` are included only when their marker exists.
- * Remote integrations (github/linear) require credentials that cannot be
- * configured in this flow and are never claimed here — so an offered source can
- * never hard-fail availability validation. Shared by both the JSON/native init
- * path and the terminal path so the "locally available" claim is real in both.
- */
-export async function probeAvailableEvidenceSources(projectRoot: string): Promise<string[]> {
-  const optional = await Promise.all(
-    OPTIONAL_EVIDENCE_SOURCE_PROBES.map(({ id, marker }) =>
-      stat(path.join(projectRoot, marker)).then(
-        () => id,
-        () => undefined,
-      ),
-    ),
-  );
-  return ['repository', ...optional.filter((id): id is string => id !== undefined), 'file-import'];
-}
-
 /** Whether a compatible planr-pipeline is resolvable (drives planning-engine detection). */
 export function probePipelineInstalled(): boolean {
   return resolvePipelinePackage(false) !== null;
@@ -94,16 +67,12 @@ async function interactionContext(
   bindings: GuidedSessionBindings,
   now: Date,
 ): Promise<OperatingQuestionEngineContext> {
-  const [gitUserName, availableSources] = await Promise.all([
-    probeGitUserName(projectRoot),
-    probeAvailableEvidenceSources(projectRoot),
-  ]);
+  const gitUserName = await probeGitUserName(projectRoot);
   return {
     projectRoot,
     ...bindings,
     ...(gitUserName ? { gitUserName } : {}),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    availableSources,
     pipelineInstalled: probePipelineInstalled(),
     // The registry rehydrates the effective detected runtime from `runtime`, so
     // detect-don't-ask stays byte-identical between create and this resume path.
@@ -229,14 +198,32 @@ function assertEnvelopeBinding(
   }
 }
 
-function assertAnswer(
-  answer: GuidedAnswer,
-  questions: GuidedQuestion[],
-  persisted: Map<string, GuidedQuestionValue>,
-): 'new' | 'duplicate' {
-  const question = questions.find((candidate) => candidate.questionId === answer.questionId);
+/** A guided session accepts answer revisions until its preview is confirmed. */
+function sessionAcceptsRevisions(state: GuidedSession['state']): boolean {
+  return state !== 'confirmed' && state !== 'applied';
+}
+
+/**
+ * Classify one submitted answer against the active questionnaire and the answers
+ * already accepted. `'new'` is a first answer to a question in the current stage,
+ * `'duplicate'` is an idempotent re-submission of the same value, and `'revised'`
+ * is a differing value for a previously-accepted answer while the session is
+ * still editable — the per-question rollback that lets an operator correct one
+ * answer without restarting init. A differing re-answer after confirm/apply, or
+ * an answer that names no known question, stays a replay conflict.
+ */
+function classifyAnswer(input: {
+  answer: GuidedAnswer;
+  activeQuestions: GuidedQuestion[];
+  knownQuestions: GuidedQuestion[];
+  persisted: Map<string, GuidedQuestionValue>;
+  revisable: boolean;
+  sessionId: string;
+}): 'new' | 'duplicate' | 'revised' {
+  const { answer, activeQuestions, knownQuestions, persisted, revisable, sessionId } = input;
+  const known = knownQuestions.find((candidate) => candidate.questionId === answer.questionId);
   const prior = persisted.get(answer.questionId);
-  if (!question) {
+  if (!known) {
     if (prior !== undefined && canonicalDigest(prior) === canonicalDigest(answer.value)) {
       return 'duplicate';
     }
@@ -246,8 +233,8 @@ function assertAnswer(
     );
   }
   if (
-    answer.questionVersion !== question.questionVersion ||
-    answer.sensitivity !== question.sensitivity
+    answer.questionVersion !== known.questionVersion ||
+    answer.sensitivity !== known.sensitivity
   ) {
     throw new OperateError(
       'E_OPERATE_SESSION_INVALID',
@@ -256,20 +243,29 @@ function assertAnswer(
   }
   if (prior !== undefined) {
     if (canonicalDigest(prior) === canonicalDigest(answer.value)) return 'duplicate';
+    // A differing value for an already-accepted answer, submitted before the
+    // preview is confirmed, is a legitimate revision: accept the overwrite. After
+    // confirm/apply the answer set is locked, so it stays a replay conflict —
+    // which now names this exact session's resume command, not a dead-end init.
+    if (revisable) return 'revised';
     throw new OperateError(
       'E_OPERATE_SESSION_REPLAY_CONFLICT',
       `Answer replay conflicts with the accepted value for ${answer.questionId}.`,
       {
-        state: sessionStateForConflict(),
-        recoveryCommand: 'planr operate init --resume <session-id> --json',
+        state: 'awaiting-input',
+        sessionId,
+        recoveryCommand: `planr operate init --resume ${sessionId} --json`,
       },
     );
   }
+  // A brand-new answer must target a question the active questionnaire is asking.
+  if (!activeQuestions.some((candidate) => candidate.questionId === answer.questionId)) {
+    throw new OperateError(
+      'E_OPERATE_SESSION_REPLAY_CONFLICT',
+      `Answer does not belong to the active questionnaire: ${answer.questionId}.`,
+    );
+  }
   return 'new';
-}
-
-function sessionStateForConflict(): 'awaiting-input' {
-  return 'awaiting-input';
 }
 
 async function questionnaireFor(
@@ -365,18 +361,14 @@ export async function submitGuidedAnswers(input: {
     now,
   });
   assertEnvelopeBinding(envelope, current.session, input.bindings);
-  const submittedAt = Date.parse(envelope.submittedAt);
-  if (
-    !Number.isFinite(submittedAt) ||
-    submittedAt < Date.parse(current.session.createdAt) ||
-    submittedAt >= Date.parse(current.session.expiresAt)
-  ) {
-    throw new OperateError(
-      'E_OPERATE_SESSION_EXPIRED',
-      'Guided answer was submitted outside the active session lifetime.',
-      { state: 'expired', recoveryCommand: 'planr operate init --json' },
-    );
-  }
+  // No wall-clock ordering gate between the envelope's `submittedAt` and the
+  // session's `createdAt`/`expiresAt`. A payload prepared before a restart
+  // legitimately predates the newly minted session, and rejecting it as
+  // "outside the active session lifetime" was the guided-init livelock: the
+  // envelope is bound purely on validity — `assertEnvelopeBinding` (session id,
+  // command, questionnaire version, project/config head, adapter) plus the
+  // questionnaire-digest comparison below. Genuine expiry is still enforced,
+  // once, by `readGuidedSession` against the real processing clock.
   if (await hasReplayReceipt({ ...input, envelope })) {
     return current;
   }
@@ -394,9 +386,23 @@ export async function submitGuidedAnswers(input: {
   const persisted = new Map(
     current.session.persistedAnswers.map((answer) => [answer.questionId, answer.value]),
   );
+  const knownQuestions = operatingInitQuestionRegistry(context).map(
+    (definition) => definition.question,
+  );
+  const revisable = sessionAcceptsRevisions(current.session.state);
   let answers = current.answers;
+  let revised = false;
   for (const answer of envelope.answers) {
-    if (assertAnswer(answer, current.questionnaire.questions, persisted) === 'duplicate') continue;
+    const disposition = classifyAnswer({
+      answer,
+      activeQuestions: current.questionnaire.questions,
+      knownQuestions,
+      persisted,
+      revisable,
+      sessionId: current.session.sessionId,
+    });
+    if (disposition === 'duplicate') continue;
+    if (disposition === 'revised') revised = true;
     answers = applyOperatingInitAnswer(answers, context, answer.questionId, answer.value);
   }
   const next = await questionnaireFor(
@@ -417,7 +423,9 @@ export async function submitGuidedAnswers(input: {
     current.session,
     // The CLI prepares the canonical preview and sets preview-ready together
     // with its required digest. Until that write-free preparation completes,
-    // the persisted Protocol session remains awaiting-input.
+    // the persisted Protocol session remains awaiting-input — the schema-valid
+    // resting state, including after a revision (Protocol v1.2's guided-session
+    // schema does not carry `revising`, so it is never written to disk).
     'awaiting-input',
     now,
     {
@@ -431,7 +439,10 @@ export async function submitGuidedAnswers(input: {
     localRoot: input.localRoot,
   });
   await persistReplayReceipt({ ...input, envelope });
-  return { session: updated, ...next };
+  // Surface the transient `revising` state on the returned session (never
+  // persisted) when a previously-accepted answer was overwritten, so the caller
+  // can report the per-question rollback without a restart.
+  return { session: revised ? { ...updated, state: 'revising' } : updated, ...next };
 }
 
 async function replayReceiptPath(input: {

@@ -27,6 +27,7 @@
 import path from 'node:path';
 import type { Command } from 'commander';
 import { loadConfig, saveConfig } from '../../services/config-service.js';
+import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
 import {
@@ -349,6 +350,7 @@ export function registerSpecCommand(program: Command) {
               result.storiesCreated === 1 ? 'y' : 'ies'
             }, ${result.tasksCreated} tasks.`,
           );
+          printDeprecationNotice('ai-planning');
           if (result.decompositionNotes) {
             logger.dim('');
             logger.dim(`AI notes: ${result.decompositionNotes}`);

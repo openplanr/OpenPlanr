@@ -15,11 +15,10 @@ import {
   type MissionReadBoundary,
   narrowMissionRootsToCeiling,
   operatingRuntimeEnforcesBoundedReadOnly,
-  resolveOperatingDispatchMode,
+  resolveOperatingDispatchIsolation,
 } from '../../src/services/operate/mission-dispatch.js';
 import type {
   OperatingEvidence,
-  OperatingEvidenceIndexItem,
   OperatingEvidenceReadiness,
   OperatingRoleId,
 } from '../../src/services/operate/types.js';
@@ -168,46 +167,60 @@ describe('Operating Board mission bounded read-only isolation (FR2/E-002)', () =
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('deny-lists a declared root that contains an above-ceiling file', () => {
-    const index: OperatingEvidenceIndexItem[] = [
-      {
-        id: 'EVX-app',
-        path: 'src/app.ts',
-        contentHash: digest('a'),
-        source: 'repository',
-        classification: 'source-code',
-        freshness: 'fresh',
-        sensitivity: 'internal',
-        signals: ['code'],
-      },
-      {
-        id: 'EVX-secret',
-        path: 'src/secrets.ts',
-        contentHash: digest('b'),
-        source: 'repository',
-        classification: 'source-code',
-        freshness: 'fresh',
-        sensitivity: 'restricted',
-        signals: ['code'],
-      },
-      {
-        id: 'EVX-readme',
-        path: 'docs/readme.md',
-        contentHash: digest('c'),
-        source: 'repository',
-        classification: 'documentation',
-        freshness: 'fresh',
-        sensitivity: 'public',
-        signals: ['doc'],
-      },
-    ];
+  it('declares the granted roots whole, minus explicitly forbidden paths', () => {
+    // The mandate model declares whole granted roots; a root that matches or is
+    // nested under a forbidden path is dropped, and the result is deduplicated
+    // and sorted. There is no evidence index to narrow against — the sensitivity
+    // ceiling is enforced at read time by the bounded reader and at record time
+    // by the citation resolver, not by dropping a root here.
     expect(
       narrowMissionRootsToCeiling({
-        declaredRoots: ['src', 'docs'],
-        evidenceIndex: index,
-        ceiling: 'internal',
+        declaredRoots: ['src', 'docs', 'src'],
+        forbiddenPaths: ['docs'],
       }),
-    ).toEqual(['docs']);
+    ).toEqual(['src']);
+    // A nested forbidden path drops the whole matching root; an empty/absent
+    // forbidden list leaves every granted root declared.
+    expect(
+      narrowMissionRootsToCeiling({
+        declaredRoots: ['secrets', 'src'],
+        forbiddenPaths: ['secrets/keys'],
+      }),
+    ).toEqual(['secrets', 'src']);
+    expect(narrowMissionRootsToCeiling({ declaredRoots: ['src', 'docs'] })).toEqual([
+      'docs',
+      'src',
+    ]);
+  });
+
+  it('reads a gitignored .planr/ tree — the mission tool walks the filesystem, not git ls-files (finding 2)', async () => {
+    // A monorepo-shaped fixture whose `.planr/` control surface is gitignored:
+    // the old collector took candidates from `git ls-files`, so a gitignored
+    // `.planr/` was structurally unreadable. The mission tool surface walks the
+    // filesystem directly, so a mandate whose declared roots include `.planr/`
+    // can fully cite it regardless of git tracking.
+    const planrRoot = join(projectRoot, '.planr');
+    await mkdir(join(planrRoot, 'operate'), { recursive: true });
+    await writeFile(join(projectRoot, '.gitignore'), '.planr/\n', 'utf8');
+    const boardToken = 'planr-gitignored-board-6a2f';
+    await writeFile(join(planrRoot, 'operate', 'board.md'), `# Board\n${boardToken}\n`, 'utf8');
+
+    const planrBoundary: MissionReadBoundary = {
+      roots: [planrRoot],
+      ceiling: 'internal',
+      defaultSensitivity: 'internal',
+    };
+    const read = await invokeMissionTool(planrBoundary, {
+      tool: 'file-read',
+      path: 'operate/board.md',
+    });
+    if (read.tool !== 'file-read') throw new Error('unexpected tool result');
+    expect(read.content).toContain(boardToken);
+
+    // Glob and content-search reach the gitignored tree the same way.
+    const globbed = await invokeMissionTool(planrBoundary, { tool: 'glob', pattern: '**/*.md' });
+    if (globbed.tool !== 'glob') throw new Error('unexpected tool result');
+    expect(globbed.matches.some((match) => match.endsWith('board.md'))).toBe(true);
   });
 });
 
@@ -291,7 +304,7 @@ function structuredAdapter(parallelDispatch: boolean): AdvisorAdapter {
   };
 }
 
-describe('Operating Board mission dispatch-mode reconciliation (FR2/FR4/E-004)', () => {
+describe('Operating Board runtime classification collapse (FR10/E-010)', () => {
   it('classifies claude-code as enforcing and codex/cursor as not enforcing', async () => {
     expect(await operatingRuntimeEnforcesBoundedReadOnly('claude')).toBe(true);
     expect(await operatingRuntimeEnforcesBoundedReadOnly('claude-code')).toBe(true);
@@ -302,44 +315,48 @@ describe('Operating Board mission dispatch-mode reconciliation (FR2/FR4/E-004)',
     expect(await operatingRuntimeEnforcesBoundedReadOnly('auto')).toBe(false);
   });
 
-  it('fails codex/cursor closed to the structured provider path even when the default is mission', () => {
-    for (const runtimeEnforces of [false]) {
-      const resolution = resolveOperatingDispatchMode({
-        roleId: 'technology-risk',
-        registryDefault: 'mission',
-        runtimeEnforcesBoundedReadOnly: runtimeEnforces,
-        adapterNativeCapable: false,
-      });
-      expect(resolution.mode).toBe('mission');
-      expect(resolution.isolation).toBe('fail-closed-structured-provider');
-      expect(resolution.native).toBe(false);
-      expect(resolution.reconciliation).toMatch(/FR2 fail-closed overrides FR4|advisory/);
-    }
-  });
-
-  it('dispatches a native bounded lens only when the runtime enforces isolation', () => {
-    const native = resolveOperatingDispatchMode({
+  it('classifies a mandate-capable runtime as enforced-read-only-bounded, first-class with no downgrade', () => {
+    // A runtime that previously fell to the structured-provider path is now
+    // first-class the moment it can carry a mandate: no capability gate downgrades it.
+    const native = resolveOperatingDispatchIsolation({
       roleId: 'technology-risk',
-      registryDefault: 'mission',
       runtimeEnforcesBoundedReadOnly: true,
       adapterNativeCapable: true,
     });
     expect(native.isolation).toBe('enforced-read-only-bounded');
     expect(native.native).toBe(true);
-
-    const override = resolveOperatingDispatchMode({
-      roleId: 'technology-risk',
-      registryDefault: 'mission',
-      override: 'pack',
-      runtimeEnforcesBoundedReadOnly: true,
-      adapterNativeCapable: true,
-    });
-    expect(override.mode).toBe('pack');
-    expect(override.isolation).toBe('enforced-empty-tools');
-    expect(override.native).toBe(false);
+    expect(native.isolation).not.toBe('unsupported');
   });
 
-  it('records dispatch mode and isolation in provenance, codex fail-closed', async () => {
+  it('classifies a runtime that cannot carry a mandate as unsupported, with an explicit reason and no silent fallback', () => {
+    // Advisory/unverifiable runtime isolation: it cannot carry a mandate, so it
+    // is declared unsupported for operate — never routed to a hidden path.
+    const advisory = resolveOperatingDispatchIsolation({
+      roleId: 'technology-risk',
+      runtimeEnforcesBoundedReadOnly: false,
+      adapterNativeCapable: true,
+    });
+    expect(advisory.isolation).toBe('unsupported');
+    expect(advisory.native).toBe(false);
+    expect(advisory.reconciliation).toMatch(/advisory|unverifiable|cannot carry a mandate/i);
+    expect(advisory.reconciliation).toMatch(/no silent structured-provider fallback/i);
+
+    // An adapter that cannot host a bounded native lens is unsupported too.
+    const adapterIncapable = resolveOperatingDispatchIsolation({
+      roleId: 'technology-risk',
+      runtimeEnforcesBoundedReadOnly: true,
+      adapterNativeCapable: false,
+    });
+    expect(adapterIncapable.isolation).toBe('unsupported');
+    expect(adapterIncapable.reconciliation).toMatch(/adapter/i);
+
+    // The classification is exactly two values — there is no third, silent path.
+    for (const resolution of [advisory, adapterIncapable]) {
+      expect(['enforced-read-only-bounded', 'unsupported']).toContain(resolution.isolation);
+    }
+  });
+
+  it('records the unsupported classification with its reason in dispatch provenance, never a silent fallback', async () => {
     const result = await dispatchOperatingAdvisors({
       cycleId: 'CYCLE-001',
       evidence: evidence(),
@@ -352,9 +369,11 @@ describe('Operating Board mission dispatch-mode reconciliation (FR2/FR4/E-004)',
     expect(result.provenance).toHaveLength(1);
     expect(result.provenance[0]).toMatchObject({
       roleId: 'technology-risk',
-      dispatchMode: 'mission',
-      isolation: 'fail-closed-structured-provider',
+      isolation: 'unsupported',
     });
+    // Codex is declared unsupported explicitly — never silently downgraded.
+    expect(result.provenance[0].isolation).not.toBe('enforced-read-only-bounded');
+    expect(result.provenance[0].reconciliation).toMatch(/advisory|unverifiable|unsupported/i);
   });
 
   it('reduces to byte-identical results across parallel, sequential, and dispatch order', async () => {
@@ -395,33 +414,5 @@ describe('Operating Board mission dispatch-mode reconciliation (FR2/FR4/E-004)',
       'technology-risk',
       'growth-market',
     ]);
-  });
-
-  it('runs a mixed-mode cycle: one role forced to pack, the rest defaulting to mission', async () => {
-    const dispatch = (parallel: boolean) =>
-      dispatchOperatingAdvisors({
-        cycleId: 'CYCLE-001',
-        evidence: evidence(),
-        readiness: readiness([roleReadiness('technology-risk'), roleReadiness('growth-market')]),
-        context: advisorContext(),
-        adapter: structuredAdapter(parallel),
-        depth: 'standard',
-        runtime: 'codex',
-        dispatchModeOverrides: { 'technology-risk': 'pack' },
-      });
-
-    const parallel = await dispatch(true);
-    const sequential = await dispatch(false);
-    const byRole = new Map(parallel.provenance.map((entry) => [entry.roleId, entry]));
-    expect(byRole.get('technology-risk')).toMatchObject({
-      dispatchMode: 'pack',
-      isolation: 'enforced-empty-tools',
-    });
-    expect(byRole.get('growth-market')).toMatchObject({
-      dispatchMode: 'mission',
-      isolation: 'fail-closed-structured-provider',
-    });
-    // The mixed-mode cycle's reduced results are byte-identical regardless of fan-out.
-    expect(canonicalize(parallel.results)).toBe(canonicalize(sequential.results));
   });
 });

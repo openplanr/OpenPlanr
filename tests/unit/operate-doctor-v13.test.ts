@@ -11,10 +11,8 @@ import { OperatingEventStore } from '../../src/services/operate/event-store.js';
 import { resolveOperatingPaths } from '../../src/services/operate/workspace.js';
 
 /**
- * Detection coverage for the three additive Protocol v1.3 (FR10 / E-010) doctor
- * diagnostics introduced by T-009: `operate-layout` (diagnoseStorageLayout),
- * `operate-records` (diagnoseRecordsLog), and `operate-dispatch-mode`
- * (diagnoseDispatchModes). The pre-existing eight codes are covered by
+ * Detection coverage for the Protocol v1.3 storage diagnostics:
+ * `operate-layout` and `operate-records`. The pre-existing codes are covered by
  * `operate-doctor.test.ts`; this suite fires the new codes' pass AND failure
  * branches against real on-disk fixtures. Every asserted message/fix string is
  * the literal text `doctor.ts` emits (see the diagnostic implementations), never
@@ -92,14 +90,6 @@ function writeRecordsLog(contents: string): void {
   writeFileSync(paths().records, contents, { mode: 0o600 });
 }
 
-function writePreferences(record: Record<string, unknown>): void {
-  const localStateDir = paths().localRoot;
-  mkdirSync(localStateDir, { recursive: true });
-  writeFileSync(join(localStateDir, 'preferences.json'), `${JSON.stringify(record)}\n`, {
-    mode: 0o600,
-  });
-}
-
 /** Reconstruct the legacy SPEC-002 (v1.2) storage tree with no `.state/` view. */
 function writeLegacySpec002Layout(): void {
   const operateRoot = paths().root;
@@ -125,7 +115,7 @@ function writeLegacySpec002Layout(): void {
 
 describe('Operating Board doctor v1.3 diagnostics', () => {
   describe('fresh v1.3 project', () => {
-    it('reports operate-layout, operate-records, and operate-dispatch-mode all pass', async () => {
+    it('reports operate-layout and operate-records as passing', async () => {
       await initFreshV13Project();
 
       const diagnostics = await runDoctor();
@@ -140,24 +130,11 @@ describe('Operating Board doctor v1.3 diagnostics', () => {
         status: 'pass',
         message: 'No v1.3 `.state/records.jsonl` log is present yet',
       });
-      expect(byCode(diagnostics, 'operate-dispatch-mode')).toEqual({
-        code: 'operate-dispatch-mode',
-        status: 'pass',
-        message: 'No per-project dispatch-mode overrides are configured',
-      });
     });
 
-    it('reports the populated pass branches for a consistent records log and a valid override', async () => {
+    it('reports the populated pass branch for a consistent records log', async () => {
       await initFreshV13Project();
       writeRecordsLog(`${consistentRecordsLine()}\n`);
-      writePreferences({
-        runtime: 'auto',
-        timezone: 'UTC',
-        sensitivityCeiling: 'internal',
-        evidenceTtlMs: 604_800_000,
-        enabledSources: ['repository', 'planr', 'git'],
-        dispatchModeOverrides: { chair: 'mission' },
-      });
 
       const diagnostics = await runDoctor();
 
@@ -166,12 +143,6 @@ describe('Operating Board doctor v1.3 diagnostics', () => {
         status: 'pass',
         message:
           '1 operating records.jsonl entry is parseable with consistent content-address digests',
-      });
-      expect(byCode(diagnostics, 'operate-dispatch-mode')).toEqual({
-        code: 'operate-dispatch-mode',
-        status: 'pass',
-        message:
-          '1 per-project dispatch-mode override(s) reference known roles and valid pack/mission modes',
       });
     });
   });
@@ -267,38 +238,6 @@ describe('Operating Board doctor v1.3 diagnostics', () => {
         status: 'fail',
         message: 'Operating `.state/records.jsonl` line 1 is missing its content-address digests',
         fix: 'Run `planr operate integrity status`; do not edit .state/records.jsonl by hand.',
-      });
-    });
-  });
-
-  describe('operate-dispatch-mode', () => {
-    it('fails when dispatchModeOverrides references an unknown role', async () => {
-      await initFreshV13Project();
-      writePreferences({ dispatchModeOverrides: { 'totally-unknown-role': 'pack' } });
-
-      const diagnostics = await runDoctor();
-
-      expect(byCode(diagnostics, 'operate-dispatch-mode')).toEqual({
-        code: 'operate-dispatch-mode',
-        status: 'fail',
-        message:
-          'Operating dispatch-mode overrides are invalid: dispatchModeOverrides references an unknown role: totally-unknown-role.',
-        fix: 'Run `planr operate config edit --dispatch-mode-override <roleId>=<pack|mission>` to restore valid overrides.',
-      });
-    });
-
-    it('fails when a dispatchModeOverrides mode value is invalid', async () => {
-      await initFreshV13Project();
-      writePreferences({ dispatchModeOverrides: { chair: 'turbo' } });
-
-      const diagnostics = await runDoctor();
-
-      expect(byCode(diagnostics, 'operate-dispatch-mode')).toEqual({
-        code: 'operate-dispatch-mode',
-        status: 'fail',
-        message:
-          'Operating dispatch-mode overrides are invalid: dispatchModeOverrides value for chair must be "pack" or "mission".',
-        fix: 'Run `planr operate config edit --dispatch-mode-override <roleId>=<pack|mission>` to restore valid overrides.',
       });
     });
   });

@@ -273,51 +273,25 @@ Open an issue at [github.com/openplanr/OpenPlanr/issues](https://github.com/open
 - The full error output
 - Your Node.js version (`node --version`)
 - Your OS
-# Operating Board evidence quarantine
+# Operating Board evidence safety
 
-OpenPlanr first redacts a detected value and keeps the sanitized evidence when
-that result is safe. If one item cannot be made safe, it is quarantined instead
-of aborting the complete cycle. Unrelated evidence and ready executive lenses
-continue; an affected lens becomes `not_evaluated` only when its declared
-minimum evidence is no longer available.
+Protocol v1.3 advisors investigate through the selected coding runtime's native
+read-only harness; OpenPlanr does not copy the repository through a separate
+collector or expose source-classification overrides. The runtime must return
+bounded claims with citations, and OpenPlanr validates and redacts the returned
+result before it can enter operating state.
 
-`E_OPERATE_SECRET_DETECTED` is returned when required evidence remains blocked
-or when a directly supplied value cannot be made safe. OpenPlanr does not print
-the matched value or an excerpt. The warning or failure includes one opaque
-candidate ID and an exact recovery command:
+If a cycle stops at the safety boundary, inspect only the governed state and a
+redacted diagnostic export:
 
 ```bash
-planr operate evidence diagnose EVC-... --json
+planr operate status --json
+planr operate cycles show CYCLE-NNN --json
+planr operate diagnostics export --output .planr/operate/diagnostics.json
 ```
 
-The diagnostic reports only the source, component, policy-safe relative
-location/line, detector rule, content digest, and project head. It offers these
-bounded recovery choices:
-
-- repair or remove the source value and rerun;
-- rotate the credential first when the value is genuine;
-- exclude only an eligible exact source path through source policy;
-- classify one exact non-credential candidate as a false positive;
-- rerun the cycle after remediation.
-
-False-positive classification requires a reason and the confirmation digest
-returned by its preview:
-
-```bash
-planr operate evidence classify EVC-... \
-  --status false-positive \
-  --reason "UI selector name, not credential material" \
-  --json
-
-planr operate evidence classify EVC-... \
-  --status false-positive \
-  --reason "UI selector name, not credential material" \
-  --confirm sha256:... --yes --json
-```
-
-The classification applies only to the same rule, content digest, relative
-location, and project head. Drift invalidates it. Known provider tokens,
-authorization headers, private keys, JWTs, and credential-bearing URLs can
-never be classified as false positives; repair and rotation are required.
-Diagnostic and audit files are machine-local, mode `0600`, and contain no
-matched value or excerpt.
+Repair or rotate a genuine credential in its owning system before retrying. Do
+not weaken the scanner or add a false-positive/source override: those legacy
+surfaces were removed with the collector. If the cited content is harmless,
+report the redacted diagnostic and detector category as an OpenPlanr bug; never
+paste the suspected value into an issue.

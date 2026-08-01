@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { canonicalize } from '../../src/services/operate/canonical.js';
 import {
   applyOperatingInitialization,
-  parseOperatingDispatchModeOverrideFlags,
   prepareOperatingInitialization,
 } from '../../src/services/operate/config.js';
 import { executeOperateAction } from '../../src/services/operate/index.js';
@@ -62,7 +61,6 @@ const answers = {
   cadence: 'weekly' as const,
   timezone: 'Europe/Istanbul',
   sensitivityCeiling: 'internal' as const,
-  sources: ['repository', 'planr', 'git'],
   componentRoots: ['packages/product app'],
   charter: {
     purpose: 'Make cited operating decisions.',
@@ -122,7 +120,6 @@ describe('Operating Board initialization replay', () => {
       cadence: 'manual',
       timezone: 'UTC',
       sensitivityCeiling: 'internal',
-      sources: ['repository', 'git'],
       charter: {
         purpose: 'Prove the committed init purge.',
         stage: 'growth',
@@ -170,9 +167,8 @@ describe('Operating Board initialization replay', () => {
   });
 });
 
-// FR5 / T-005 — a routine re-init merges the existing machine-local preferences
-// forward instead of rebuilding from scratch, so policy a prior cycle depended on
-// (dispatch-mode overrides, the adapter lease, the cadence marker) is never wiped.
+// A routine re-init carries the supported machine-local cadence preferences
+// forward instead of rebuilding them from scratch.
 describe('Operating Board re-initialization preserves machine-local preferences', () => {
   type PrepareInput = Parameters<typeof prepareOperatingInitialization>[0];
 
@@ -220,7 +216,7 @@ describe('Operating Board re-initialization preserves machine-local preferences'
     return preview;
   }
 
-  it('carries dispatchModeOverrides, adapterLeaseDurationMs, and lastRunAt forward on a re-init with no flags (field repro)', async () => {
+  it('carries adapterLeaseDurationMs and lastRunAt forward on a re-init with no flags', async () => {
     const projectRoot = await createGitProject();
     const localRoot = await temporaryDirectory('openplanr-operate-reinit-preserve-local-');
     const preferencePath = join(
@@ -228,16 +224,13 @@ describe('Operating Board re-initialization preserves machine-local preferences'
       'preferences.json',
     );
 
-    // A prior cycle persisted machine-local policy: an override applied via
-    // --dispatch-mode-override, a custom adapter lease, and a cadence marker.
+    // A prior cycle persisted a custom adapter lease and cadence marker.
     await directInit(projectRoot, localRoot, {
-      dispatchModeOverrides: parseOperatingDispatchModeOverrideFlags(['chair=mission']),
       adapterLeaseDurationMs: 5 * 60 * 1000,
       lastRunAt: '2026-07-30T12:00:00.000Z',
     });
     const before = await readFile(preferencePath, 'utf8');
     expect(JSON.parse(before)).toMatchObject({
-      dispatchModeOverrides: { chair: 'mission' },
       adapterLeaseDurationMs: 5 * 60 * 1000,
       lastRunAt: '2026-07-30T12:00:00.000Z',
     });
@@ -249,34 +242,6 @@ describe('Operating Board re-initialization preserves machine-local preferences'
     expect(after).toBe(before); // byte-for-byte preservation
     expect(rePreview.preferencesChanged).toBe(false);
     expect(rePreview.changedPreferenceKeys).toEqual([]);
-  });
-
-  it('lets an explicit --dispatch-mode-override change only that field while the lease and lastRunAt are preserved', async () => {
-    const projectRoot = await createGitProject();
-    const localRoot = await temporaryDirectory('openplanr-operate-reinit-override-local-');
-    const preferencePath = join(
-      resolveOperatingPaths(projectRoot, { localRoot }).localRoot,
-      'preferences.json',
-    );
-
-    await directInit(projectRoot, localRoot, {
-      dispatchModeOverrides: parseOperatingDispatchModeOverrideFlags(['chair=mission']),
-      adapterLeaseDurationMs: 5 * 60 * 1000,
-      lastRunAt: '2026-07-30T12:00:00.000Z',
-    });
-
-    // Re-init passing a fresh override for the same role — the flag wins for its
-    // role; the two flag-less fields must carry forward untouched.
-    const rePreview = await directInit(projectRoot, localRoot, {
-      dispatchModeOverrides: parseOperatingDispatchModeOverrideFlags(['chair=pack']),
-    });
-    const after = JSON.parse(await readFile(preferencePath, 'utf8'));
-
-    expect(after.dispatchModeOverrides).toEqual({ chair: 'pack' });
-    expect(after.adapterLeaseDurationMs).toBe(5 * 60 * 1000);
-    expect(after.lastRunAt).toBe('2026-07-30T12:00:00.000Z');
-    // The preview names exactly the one preference key that changed.
-    expect(rePreview.changedPreferenceKeys).toEqual(['dispatchModeOverrides']);
   });
 
   it('leaves a first-time init byte-identical to prior behavior — no carried-forward keys, deterministic payload', async () => {
@@ -295,7 +260,6 @@ describe('Operating Board re-initialization preserves machine-local preferences'
     // No existing preferences.json → nothing to merge; the three machine-local
     // policy keys stay omitted (the SPEC-001 omit-empty-fields guarantee).
     expect(Object.keys(previewA.preferences).sort()).toEqual(BASE_KEYS);
-    expect(previewA.preferences).not.toHaveProperty('dispatchModeOverrides');
     expect(previewA.preferences).not.toHaveProperty('adapterLeaseDurationMs');
     expect(previewA.preferences).not.toHaveProperty('lastRunAt');
     // A first write "changes" every base key it is about to create.

@@ -298,7 +298,7 @@ export interface EmbeddedInstructionInspection {
 }
 
 /**
- * Classify instruction-shaped text before it is placed in an advisor pack.
+ * Classify instruction-shaped text before it is exposed through a bounded mandate read.
  *
  * Evidence is allowed to discuss prompts and tools, so ordinary control-like
  * prose is annotated and then inert-framed. Direct tool/credential
@@ -331,8 +331,8 @@ export interface AdvisorEvidenceText {
  * Redact, inspect, and deterministically frame one evidence excerpt.
  *
  * The digest-derived boundary prevents evidence from manufacturing a matching
- * closing marker. The framed value remains plain text inside the JSON advisor
- * pack and is never promoted to a system/developer instruction.
+ * closing marker. The framed value remains untrusted citation text inside the
+ * runtime mandate and is never promoted to a system/developer instruction.
  */
 export function prepareAdvisorEvidenceText(input: {
   evidenceId: string;
@@ -344,7 +344,7 @@ export function prepareAdvisorEvidenceText(input: {
       value: '',
       annotations: ['oversized-evidence'],
       quarantined: true,
-      reason: 'Evidence excerpt exceeds the bounded advisor-pack size.',
+      reason: 'Evidence excerpt exceeds the bounded mandate-citation size.',
     };
   }
   let redacted: RedactionResult;

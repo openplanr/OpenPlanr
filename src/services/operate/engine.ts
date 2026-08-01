@@ -6,17 +6,13 @@ import { loadConfig } from '../config-service.js';
 import {
   type AdvisorAdapter,
   type AdvisorDispatchResult,
-  type AdvisorOperatingContext,
   advisorFailureGaps,
   buildAdvisorOperatingContext,
-  buildOperatingMissionPacket,
   configuredAdvisorProviderPolicy,
   createConfiguredStructuredAdapter,
   createOfflineAdvisorAdapter,
-  deriveOperatingMissionEvidenceCaps,
   dispatchOperatingAdvisors,
   ensureOperatingProviderConsent,
-  type OperatingMissionEvidenceTruncation,
 } from './advisors.js';
 import { recordOperatingCadenceRun } from './cadence.js';
 import { canonicalDigest, canonicalize } from './canonical.js';
@@ -25,22 +21,11 @@ import type {
   CitationResolutionContext,
   OperatingCitation,
 } from './citation-resolution.js';
-import {
-  operatingProjectKey,
-  readOperatingDispatchModeOverrides,
-  validateOperatingConfiguration,
-} from './config.js';
+import { operatingProjectKey, validateOperatingConfiguration } from './config.js';
 import { consolidateOperatingResults } from './consolidation.js';
 import { type AppendOperatingEventInput, OperatingEventStore } from './event-store.js';
-import {
-  buildOperatingEvidenceIndex,
-  collectOperatingEvidence,
-  deriveOperatingDeclaredRoots,
-  evidenceProjectionSources,
-  unqualifiedCommercialEvidenceGaps,
-} from './evidence.js';
+import { evidenceProjectionSources } from './evidence.js';
 import { OperatingEvidenceCache } from './evidence-cache.js';
-import { evaluateEvidenceReadiness } from './evidence-readiness.js';
 import { nextCycleId } from './ids.js';
 import { enforceRecordedProposalCitations } from './interaction/action-service.js';
 import {
@@ -61,18 +46,15 @@ import {
   OPERATE_PROTOCOL_VERSION,
   OPERATE_SCHEMA_VERSION,
   OperateError,
-  type OperatingConfig,
   type OperatingCycleManifest,
   type OperatingDataGap,
   type OperatingDecision,
   type OperatingEvent,
   type OperatingEvidence,
-  type OperatingEvidenceIndexItem,
+  type OperatingEvidenceItem,
   type OperatingEvidenceReadiness,
   type OperatingFinding,
   type OperatingLocalPreferences,
-  type OperatingMissionPacket,
-  type OperatingMissionPacketState,
   type OperatingProviderManifest,
   type OperatingRoleId,
   type OperatingRoleResult,
@@ -102,10 +84,7 @@ export interface RunOperatingCycleInput {
   localRoot?: string;
   now?: Date;
   adapter?: AdvisorAdapter;
-  /**
-   * Stop after collecting and persisting immutable evidence when a certified
-   * runtime must execute advisor packs through the machine adapter lifecycle.
-   */
+  /** Stop after preparing a cycle when a certified runtime executes mandates. */
   deferAdvisors?: boolean;
 }
 
@@ -132,12 +111,7 @@ export interface RunOperatingCycleResult {
   modelCalls: number;
   warnings: string[];
   nativeHandoff?: NativeAdvisorHandoff;
-  /**
-   * Per-role dispatch provenance from this run's advisor dispatch (FR4 / E-004).
-   * Carries the configured `dispatchMode` (registry default overridden by the
-   * persisted per-project `dispatchModeOverrides`) so a persisted override is
-   * observable end-to-end. Empty for preview/dry-run/native-handoff returns.
-   */
+  /** Per-role isolation provenance from this run's mandate dispatch. */
   dispatchProvenance?: AdvisorDispatchResult['provenance'];
 }
 
@@ -153,164 +127,6 @@ function normalizeFocus(
 
 function loadJson<T>(target: string): Promise<T> {
   return readFile(target, 'utf8').then((raw) => JSON.parse(raw) as T);
-}
-
-const MISSION_REVISION_PATTERN = /^[a-f0-9]{7,64}$/;
-const MISSION_CYCLE_PATTERN = /^CYCLE-[0-9]{3,}$/;
-const MISSION_DECISION_PATTERN = /^DEC-[0-9]{3,}$/;
-const MISSION_GAP_PATTERN = /^GAP-[A-Za-z0-9._-]+$/;
-const MISSION_OUTCOME_PATTERN = /^OUT-[0-9]{3,}$/;
-
-function boundedMissionText(value: string, maximum: number, fallback: string): string {
-  const text = value.replace(/\s+/g, ' ').trim().slice(0, maximum);
-  return text || fallback;
-}
-
-function missionOpenItemIds(items: ReadonlyArray<{ id: string }>, pattern: RegExp): string[] {
-  return [...new Set(items.map((item) => item.id).filter((id) => pattern.test(id)))].sort();
-}
-
-/**
- * Source a mission packet's non-evidence payload (FR1/E-001) from live cycle
- * and workspace state at the point mission packets are constructed: the product
- * charter and current goals, a prior-cycle summary with its open
- * decisions/gaps/pending outcomes, planning and delivery status, the read roots
- * declared for the index, and the revision pinned once at cycle start (recorded
- * in the workspace manifest's control repository and threaded identically into
- * every mission packet). Nothing here is invented: every value is read from the
- * parsed charter context, the reduced state, the operating config, and the
- * captured workspace manifest.
- */
-export function sourceOperatingMissionPacketState(input: {
-  cycleId: string;
-  config: OperatingConfig;
-  workspace: OperatingWorkspaceManifest;
-  context: AdvisorOperatingContext;
-  evidenceIndex: readonly OperatingEvidenceIndexItem[];
-}): OperatingMissionPacketState {
-  const { context } = input;
-  const charter = context.charter;
-  const charterLine = [
-    charter.purpose && `Purpose: ${charter.purpose}`,
-    charter.stage && `Stage: ${charter.stage}`,
-    charter.businessModel && `Business model: ${charter.businessModel}`,
-    charter.idealCustomer && `Ideal customer: ${charter.idealCustomer}`,
-  ]
-    .filter(Boolean)
-    .join('. ');
-  const currentGoals = [...new Set(charter.goals.map((goal) => goal.trim()).filter(Boolean))]
-    .map((goal) => goal.slice(0, 512))
-    .sort();
-
-  const prior = context.priorCycle;
-  const priorSummaryText = prior
-    ? `Prior cycle ${prior.id} (${prior.state}, health ${prior.health ?? 'unknown'}) closed with ` +
-      `${prior.findings} finding(s), ${prior.decisions} decision(s), ${prior.gaps} gap(s), and ` +
-      `${prior.pendingOutcomes} pending outcome(s).`
-    : 'No prior operating cycle.';
-
-  const priorCycleSummary: OperatingMissionPacketState['priorCycleSummary'] = {
-    ...(prior && MISSION_CYCLE_PATTERN.test(prior.id) ? { cycleId: prior.id } : {}),
-    summary: boundedMissionText(priorSummaryText, 8192, 'No prior operating cycle.'),
-    openDecisions: missionOpenItemIds(context.openDecisions, MISSION_DECISION_PATTERN),
-    openGaps: missionOpenItemIds(context.openGaps, MISSION_GAP_PATTERN),
-    pendingOutcomes: missionOpenItemIds(context.pendingOutcomes, MISSION_OUTCOME_PATTERN),
-  };
-
-  const planning = boundedMissionText(
-    `${context.openDecisions.length} open decision(s); ${context.openGaps.length} open gap(s); ` +
-      `${context.pendingOutcomes.length} pending outcome(s).`,
-    2048,
-    'No open planning items.',
-  );
-  const delivery = boundedMissionText(
-    prior
-      ? `Most recent cycle ${prior.id} is ${prior.state}.`
-      : 'No delivery cycle has completed yet.',
-    2048,
-    'No delivery status recorded.',
-  );
-
-  const pinnedRevision = input.workspace.controlRepository.pinnedRevision;
-
-  return {
-    cycleId: input.cycleId,
-    ...(pinnedRevision && MISSION_REVISION_PATTERN.test(pinnedRevision) ? { pinnedRevision } : {}),
-    charter: {
-      productCharter: boundedMissionText(charterLine, 8192, 'No product charter recorded.'),
-      currentGoals,
-    },
-    priorCycleSummary,
-    planningStatus: {
-      planningEngine: input.config.planningEngine,
-      planning,
-      delivery,
-    },
-    declaredRoots: deriveOperatingDeclaredRoots(input.evidenceIndex),
-  };
-}
-
-export interface OperatingMissionPacketsResult {
-  packets: OperatingMissionPacket[];
-  /**
-   * One entry per role whose prioritized evidence index the published pipeline
-   * truncated to its `maxEvidenceItems` cap. Empty on a healthy repository under
-   * its cap; the caller appends these to the cycle's evidence warnings so a drop
-   * is always reported, never silent.
-   */
-  truncations: OperatingMissionEvidenceTruncation[];
-}
-
-/**
- * Build the Protocol v1.3 mission packets (FR1/E-001) for a cycle from live
- * state: derive the body-free evidence index from the collected snapshot,
- * source the non-evidence payload once, and construct one digest-bound packet
- * per requested role. Each packet is measured against its role's derived mission
- * budget and fails closed with `E_OPERATE_MISSION_PACKET_BUDGET` naming the role
- * before any dispatch. Pack mode (`createOperatingAdvisorPack`) is untouched.
- *
- * `maxEvidenceItems` is the caller's upper bound (`config.budgets.maxItems`); the
- * effective per-role cap is the smaller of it and the role's registry-sized
- * default (`deriveOperatingMissionEvidenceCap`), so a large-budget lens keeps
- * more items than a small-budget one and a healthy repository under the cap is
- * never truncated. When a role's index exceeds its cap the pipeline keeps the
- * highest-priority items and the drop is returned in `truncations`.
- */
-export async function buildOperatingMissionPackets(input: {
-  cycleId: string;
-  config: OperatingConfig;
-  workspace: OperatingWorkspaceManifest;
-  context: AdvisorOperatingContext;
-  evidence: OperatingEvidence;
-  roleIds?: OperatingRoleId[];
-  sensitivityCeiling?: OperatingSensitivity;
-  maxEvidenceItems?: number;
-}): Promise<OperatingMissionPacketsResult> {
-  const evidenceIndex = buildOperatingEvidenceIndex(input.evidence, {
-    sensitivityCeiling: input.sensitivityCeiling,
-  });
-  const state = sourceOperatingMissionPacketState({
-    cycleId: input.cycleId,
-    config: input.config,
-    workspace: input.workspace,
-    context: input.context,
-    evidenceIndex,
-  });
-  const roleIds = input.roleIds ?? input.config.enabledRoles;
-  const evidenceCaps = await deriveOperatingMissionEvidenceCaps(input.maxEvidenceItems);
-  const packets: OperatingMissionPacket[] = [];
-  const truncations: OperatingMissionEvidenceTruncation[] = [];
-  for (const roleId of roleIds) {
-    const { packet, truncation } = await buildOperatingMissionPacket({
-      roleId,
-      ...state,
-      evidenceIndex,
-      maxEvidenceItems: evidenceCaps[roleId],
-    });
-    packets.push(packet);
-    if (truncation) truncations.push(truncation);
-  }
-  return { packets, truncations };
 }
 
 async function snapshotWorkspace(
@@ -399,6 +215,10 @@ function readinessGaps(
     }));
 }
 
+// Retained callerless: this fed the collector's `requiredEvidenceRefs` input,
+// which the pinned-revision seed no longer takes. The collector and its dedicated
+// feeders are retired wholesale in T-009; nothing is deleted here.
+// biome-ignore lint/correctness/noUnusedVariables: retained pending collector retirement (T-009)
 function requiredOpenEvidenceRefs(state: OperatingState): string[] {
   const records = [
     ...state.findings.filter(
@@ -489,6 +309,144 @@ export function buildChairEvidence(
         .sort((left, right) => left.id.localeCompare(right.id)),
     }),
   };
+}
+
+/**
+ * FR1/FR2 (isolation rebind): the cycle's pinned-revision evidence seed. Evidence
+ * is an OUTPUT now, so a fresh cycle no longer collects a body-bearing snapshot
+ * before anyone has investigated; it seeds an empty evidence-of-record whose
+ * fingerprint binds the cycle to its control-repository pinned revision. This
+ * seed is what the adapter isolation binds to (`persistedAdapterEvidence`'s
+ * fingerprint === the prepared session's `evidenceDigest`), so a tampered or
+ * revision-mismatched session still fails closed with `E_OPERATE_ADVISOR_ISOLATION`
+ * — the guarantee is preserved, only its input is the pinned revision rather than
+ * a collected-evidence digest. Nothing is guessed, budgeted, or packed.
+ */
+async function buildPinnedRevisionEvidenceSeed(input: {
+  cycleId: string;
+  pinnedRevision: string;
+  collectedAt: string;
+}): Promise<OperatingEvidence> {
+  return assertOperatingArtifact('operating-evidence', {
+    kind: 'operating-evidence',
+    schemaVersion: OPERATE_SCHEMA_VERSION,
+    protocolVersion: OPERATE_PROTOCOL_VERSION,
+    cycleId: input.cycleId,
+    fingerprint: canonicalDigest({
+      cycleId: input.cycleId,
+      pinnedRevision: input.pinnedRevision,
+    }),
+    collectedAt: input.collectedAt,
+    truncated: false,
+    items: [],
+    sources: [],
+    warnings: [],
+  } satisfies OperatingEvidence);
+}
+
+/**
+ * FR2: dispatch is no longer pre-gated on collected evidence — every enabled role
+ * is dispatched with a mandate and post-gated on what its response actually cites.
+ * This builds the "all roles runnable" readiness the dispatch consumes, replacing
+ * the collector-era evidence-readiness evaluation.
+ */
+async function buildDispatchReadiness(input: {
+  cycleId: string;
+  roles: OperatingRoleId[];
+  pinnedRevision: string;
+  sensitivityCeiling: OperatingSensitivity;
+  now: Date;
+}): Promise<OperatingEvidenceReadiness> {
+  const hasPinnedRevision = !/^0+$/.test(input.pinnedRevision);
+  return assertOperatingArtifact('operating-evidence-readiness', {
+    kind: 'operating-evidence-readiness',
+    schemaVersion: OPERATE_SCHEMA_VERSION,
+    protocolVersion: OPERATE_PROTOCOL_VERSION,
+    cycleId: input.cycleId,
+    inputDigest: canonicalDigest({ cycleId: input.cycleId, roles: [...input.roles].sort() }),
+    evaluatedAt: input.now.toISOString(),
+    roles: input.roles.map((roleId, index) => ({
+      roleId,
+      readiness: 'ready' as const,
+      requirements: [
+        {
+          source: 'mandate',
+          claimTypes: ['resolvable-citation-required'],
+          minimumItems: 1,
+          observedItems: hasPinnedRevision ? 1 : 0,
+          maxAgeHours: 8760,
+          oldestAgeHours: hasPinnedRevision ? 0 : null,
+          observationWindow: 'current-cycle' as const,
+          sensitivityCeiling: input.sensitivityCeiling,
+          satisfied: hasPinnedRevision,
+        },
+      ],
+      missingEvidence: hasPinnedRevision
+        ? []
+        : ['mandate:resolvable-citation-required (0/1; no pinned revision)'],
+      evidenceRefs: [],
+      modelCallAllowed: hasPinnedRevision,
+      gapId: hasPinnedRevision ? null : `GAP-${String(index + 1).padStart(3, '0')}`,
+    })),
+  });
+}
+
+/**
+ * FR2 (evidence-as-output): assemble the cycle's evidence-of-record for
+ * consolidation from the resolved-citation snapshots the universal gate minted.
+ * Every evidenceRef a gated proposal carries was snapshotted to machine-local
+ * evidence (`putCitationSnapshot`); this reads each back (`getCitationSnapshot`)
+ * so downstream confidence/sensitivity/freshness scoring resolves against what
+ * was actually cited and verified rather than a pre-collected guess. A ref whose
+ * snapshot is unreadable still materializes a minimal item so consolidation never
+ * rejects a legitimately-minted reference.
+ */
+async function assembleCitationEvidence(input: {
+  cycleId: string;
+  roleResults: OperatingRoleResult[];
+  cache: OperatingEvidenceCache;
+  baseFingerprint: `sha256:${string}`;
+  now: string;
+}): Promise<OperatingEvidence> {
+  const refs = [
+    ...new Set(
+      input.roleResults.flatMap((result) =>
+        result.proposals.flatMap((proposal) => proposal.evidenceRefs),
+      ),
+    ),
+  ].sort();
+  const items: OperatingEvidenceItem[] = [];
+  for (const ref of refs) {
+    const snapshot = await input.cache.getCitationSnapshot(ref);
+    items.push({
+      id: ref,
+      source: 'citation',
+      location: snapshot?.sourceLocation ?? ref,
+      digest: canonicalDigest(snapshot?.content ?? ref),
+      collectedAt: input.now,
+      observedFrom: null,
+      observedTo: null,
+      freshness: 'fresh',
+      sensitivity: snapshot?.sensitivity ?? 'internal',
+      claimTypes: ['verified-citation'],
+      ...(snapshot ? { summary: snapshot.content.slice(0, 512) } : {}),
+    });
+  }
+  return assertOperatingArtifact('operating-evidence', {
+    kind: 'operating-evidence',
+    schemaVersion: OPERATE_SCHEMA_VERSION,
+    protocolVersion: OPERATE_PROTOCOL_VERSION,
+    cycleId: input.cycleId,
+    fingerprint: canonicalDigest({
+      source: input.baseFingerprint,
+      citations: items.map((item) => ({ id: item.id, digest: item.digest })),
+    }),
+    collectedAt: input.now,
+    truncated: false,
+    items,
+    sources: [],
+    warnings: [],
+  } satisfies OperatingEvidence);
 }
 
 const SENSITIVE_ROUTE_LANGUAGE =
@@ -742,55 +700,129 @@ async function persistedCycleRoleResults(
  * dry-run never enter the mutating branch.
  */
 /**
- * FR3 / E-003 citation gate, invoked immediately before consolidation.
+ * The single governed gap opened for a role whose citation-bearing response
+ * grounded zero evidence (FR2). It names the role and its empty grounding so the
+ * integrity surface can render the role `not_evaluated` with a real reason rather
+ * than a silent absence or a "quiet" that pretends the lens evaluated.
+ */
+function roleEmptyGroundingGap(
+  roleId: string,
+  context: CitationResolutionContext,
+  now: Date,
+): OperatingDataGap {
+  const createdAt = now.toISOString();
+  return {
+    kind: 'operating-data-gap',
+    schemaVersion: OPERATE_SCHEMA_VERSION,
+    protocolVersion: OPERATE_MISSION_PROTOCOL_VERSION,
+    id: `GAP-${canonicalDigest({
+      roleId,
+      cycleId: context.cycleId,
+      reason: 'empty-grounding',
+    }).slice('sha256:'.length)}`,
+    cycleId: context.cycleId,
+    category: 'missing-evidence',
+    question: `What evidence can ${roleId} cite? Its response resolved zero citations to evidence.`,
+    reason:
+      `Every citation ${roleId} returned failed to resolve at the pinned revision, so the role ` +
+      'grounded no evidence and is recorded not_evaluated instead of dispatching a proposal on an ' +
+      'empty base.',
+    unblocks: [],
+    affectedRoles: [roleId],
+    status: 'open',
+    owner: context.owner && context.owner.length > 0 ? context.owner : 'chair',
+    evidenceRefs: [],
+    createdAt,
+    updatedAt: createdAt,
+  } as unknown as OperatingDataGap;
+}
+
+/**
+ * FR2 universal citation gate — the PRIMARY, unconditional mechanism, run on
+ * every dispatch path and every evidence source (no `bearing.length === 0`
+ * bypass remains, so it is entered even for a citation-free result).
  *
  * Every recorded proposal that carries citations is resolved against the cycle's
- * pinned revision through T-004's `enforceRecordedProposalCitations`. A proposal
- * with ANY unresolvable citation is DROPPED — it never reaches
- * `consolidateOperatingResults` — and exactly one `unresolvable-citation` gap is
- * opened in its place. A proposal whose citations all resolve keeps its minted
- * evidence IDs. Proposals carrying no citations (the v1.2 evidence-ref path) pass
- * through untouched, so this is a byte-for-byte no-op for every non-citation
- * cycle: the same `roleResults` reference is returned and no gap is emitted.
+ * pinned revision through `enforceRecordedProposalCitations`. A proposal with ANY
+ * unresolvable citation is DROPPED — it never reaches `consolidateOperatingResults`
+ * — and exactly one `unresolvable-citation` gap is opened in its place. A proposal
+ * whose citations all resolve keeps its minted evidence IDs.
+ *
+ * On top of that per-proposal gate, the FR2 role-level rule: a role result whose
+ * proposals carried citations but whose accepted citations resolve to ZERO
+ * evidence IDs is `not_evaluated` — every one of its proposals is dropped, its id
+ * is returned in `notEvaluatedRoleIds`, and one governed `missing-evidence` gap
+ * naming the role and its empty grounding is opened. This replaces SPEC-003's
+ * mission-only, repository-only starvation gate with one rule that holds whatever
+ * the dispatch path or evidence source. A v1.2 pack result (evidenceRefs, no
+ * citations) carries no citation-bearing proposal, so it is never demoted — the
+ * pack path stays functional until T-003 removes it.
  */
 export async function gateRecordedProposalCitations(input: {
   roleResults: OperatingRoleResult[];
   context: CitationResolutionContext;
-}): Promise<{ roleResults: OperatingRoleResult[]; gaps: OperatingDataGap[] }> {
+}): Promise<{
+  roleResults: OperatingRoleResult[];
+  gaps: OperatingDataGap[];
+  notEvaluatedRoleIds: string[];
+}> {
   const bearing: CitationBearingProposal[] = [];
+  const citationBearingProposalKeys = new Set<string>();
   for (const result of input.roleResults) {
     for (const proposal of result.proposals) {
       const citations = (proposal as { citations?: OperatingCitation[] }).citations;
       if (Array.isArray(citations) && citations.length > 0) {
         bearing.push({ proposalKey: proposal.proposalKey, citations });
+        citationBearingProposalKeys.add(proposal.proposalKey);
       }
     }
   }
-  if (bearing.length === 0) return { roleResults: input.roleResults, gaps: [] };
 
   const enforcement = await enforceRecordedProposalCitations(bearing, input.context);
   const rejectedKeys = new Set(enforcement.rejected.map((entry) => entry.proposalKey));
   const evidenceByKey = new Map(
     enforcement.accepted.map((entry) => [entry.proposal.proposalKey, entry.evidenceRefs]),
   );
-  const roleResults = input.roleResults.map((result) => ({
-    ...result,
-    proposals: result.proposals
-      .filter((proposal) => !rejectedKeys.has(proposal.proposalKey))
-      .map((proposal) => {
-        const minted = evidenceByKey.get(proposal.proposalKey);
-        return minted && minted.length > 0
-          ? {
-              ...proposal,
-              evidenceRefs: [...new Set([...proposal.evidenceRefs, ...minted])].sort(),
-            }
-          : proposal;
-      }),
-  }));
-  // The unresolvable-citation gaps are Protocol v1.3 data gaps (they validate
-  // against the v1.3 operating-data-gap schema, which admits `category`). They
-  // are persisted alongside the cycle's other gaps by the committed path.
-  return { roleResults, gaps: enforcement.gaps as unknown as OperatingDataGap[] };
+  const gaps: OperatingDataGap[] = [...(enforcement.gaps as unknown as OperatingDataGap[])];
+  const notEvaluatedRoleIds: string[] = [];
+  const now = input.context.now ?? new Date();
+  const roleResults = await Promise.all(
+    input.roleResults.map(async (result) => {
+      const gated = {
+        ...result,
+        proposals: result.proposals
+          .filter((proposal) => !rejectedKeys.has(proposal.proposalKey))
+          .map((proposal) => {
+            const minted = evidenceByKey.get(proposal.proposalKey);
+            return minted && minted.length > 0
+              ? {
+                  ...proposal,
+                  evidenceRefs: [...new Set([...proposal.evidenceRefs, ...minted])].sort(),
+                }
+              : proposal;
+          }),
+      };
+      // FR2 role-level rule: a role whose proposals were citation-bearing but
+      // grounded ZERO evidence after resolution is not_evaluated. Drop its
+      // surviving (evidence-free) proposals and open one governed gap.
+      const wasCitationBearing = result.proposals.some((proposal) =>
+        citationBearingProposalKeys.has(proposal.proposalKey),
+      );
+      const mintedAny = gated.proposals.some((proposal) => proposal.evidenceRefs.length > 0);
+      if (wasCitationBearing && !mintedAny) {
+        notEvaluatedRoleIds.push(result.roleId);
+        gaps.push(
+          await assertOperatingArtifact(
+            'operating-data-gap',
+            roleEmptyGroundingGap(result.roleId, input.context, now),
+          ),
+        );
+        return { ...gated, proposals: [] };
+      }
+      return gated;
+    }),
+  );
+  return { roleResults, gaps, notEvaluatedRoleIds };
 }
 
 export async function runOperatingCycle(
@@ -802,12 +834,6 @@ export async function runOperatingCycle(
   const initializedWorkspace = await loadJson<OperatingWorkspaceManifest>(paths.workspace);
   await assertOperatingArtifact('operating-workspace-manifest', initializedWorkspace);
   const preferences = await readPreferences(projectRoot, input.localRoot);
-  // FR4 / E-004 fold-in: the live dispatch call site reads the persisted
-  // per-project dispatch-mode overrides once and threads them into every advisor
-  // dispatch below, so a persisted override reaches dispatch provenance.
-  const dispatchModeOverrides = await readOperatingDispatchModeOverrides(projectRoot, {
-    localRoot: input.localRoot,
-  });
   const store = new OperatingEventStore(projectRoot, { localRoot: input.localRoot });
   const now = input.now ?? new Date();
   const deadlineReconciliation =
@@ -994,37 +1020,43 @@ export async function runOperatingCycle(
     cycleId: cycle.id,
   });
 
+  const citationCache = new OperatingEvidenceCache(
+    resolveOperatingPaths(projectRoot, { localRoot: input.localRoot }).evidence,
+    preferences.sensitivityCeiling,
+  );
+  // FR2 universal gate, bound to the cycle's pinned revision. Injected into
+  // dispatch so advisors.ts never imports engine.ts, and reused by the
+  // consolidation-time gate below so both paths resolve citations identically.
+  const resolveCitations = (
+    roleResults: OperatingRoleResult[],
+  ): ReturnType<typeof gateRecordedProposalCitations> =>
+    gateRecordedProposalCitations({
+      roleResults,
+      context: {
+        projectRoot,
+        cycleId: cycle.id,
+        descriptor: workspace.controlRepository,
+        cache: citationCache,
+        owner: config.decisionOwner,
+        now,
+      },
+    });
   const evaluate = async (persist: boolean): Promise<Omit<RunOperatingCycleResult, 'state'>> => {
     await assertCycleWorkspace();
     const evidence =
       existingEvidence ??
-      (await collectOperatingEvidence({
-        projectRoot,
+      (await buildPinnedRevisionEvidenceSeed({
         cycleId: cycle.id,
-        workspace,
-        providers: config.enabledProviders,
-        sensitivityCeiling: preferences.sensitivityCeiling,
-        budgets: {
-          ...config.budgets,
-          maxItemBytes: Math.min(config.budgets.maxBytes, 256 * 1024),
-        },
-        localRoot: input.localRoot,
-        now,
-        incremental: depth === 'standard',
-        persistIncremental: persist && depth === 'standard',
-        requiredEvidenceRefs: requiredOpenEvidenceRefs(initialState),
+        pinnedRevision: workspace.controlRepository.pinnedRevision,
+        collectedAt: timestamp,
       }));
-    const evidenceGaps = await unqualifiedCommercialEvidenceGaps({
-      cycleId: cycle.id,
-      evidence,
-      owner: config.decisionOwner,
-      now: timestamp,
-    });
+    const evidenceGaps: OperatingDataGap[] = [];
     const nonChair = config.enabledRoles.filter((role) => role !== 'chair');
-    let readiness = await evaluateEvidenceReadiness({
+    let readiness = await buildDispatchReadiness({
       cycleId: cycle.id,
-      evidence,
-      enabledRoles: nonChair,
+      roles: nonChair,
+      pinnedRevision: workspace.controlRepository.pinnedRevision,
+      sensitivityCeiling: preferences.sensitivityCeiling,
       now,
     });
     readiness = await remapReadinessGaps(readiness, initialState);
@@ -1094,13 +1126,14 @@ export async function runOperatingCycle(
       runnableMissingNonChair.length > 0
         ? await dispatchOperatingAdvisors({
             cycleId: cycle.id,
-            evidence,
+            projectRoot,
+            pinnedRevision: workspace.controlRepository.pinnedRevision,
             readiness: { ...readiness, roles: missingNonChair },
             context: advisorContext,
             adapter: await resolveAdapter(),
             depth,
             runtime: resolvedRuntime,
-            dispatchModeOverrides,
+            resolveCitations,
           })
         : {
             results: [],
@@ -1109,6 +1142,7 @@ export async function runOperatingCycle(
             blocked: false,
             skipped: skippedMissingNonChair,
             failed: [],
+            gaps: [],
           };
     let roleResults = [
       ...existingRoleResults.filter((result) => result.roleId !== 'chair'),
@@ -1119,14 +1153,19 @@ export async function runOperatingCycle(
     const dispatchProvenance: AdvisorDispatchResult['provenance'] = [...first.provenance];
     const skipped = [...first.skipped];
     const failed = [...first.failed];
-    let consolidationEvidence = evidence;
+    // FR2: the governed gaps opened while resolving each dispatched role's
+    // citations (unresolvable-citation, empty-grounding) are recorded alongside
+    // the cycle's other gaps.
+    const dispatchGaps: OperatingDataGap[] = [...first.gaps];
     if (config.enabledRoles.includes('chair')) {
-      const chairEvidence = buildChairEvidence(evidence, roleResults, timestamp);
-      consolidationEvidence = chairEvidence;
-      let chairReadiness = await evaluateEvidenceReadiness({
+      // FR1: the Chair dispatches its own mandate and investigates independently —
+      // it no longer receives a synthesized advisor-results evidence body. Its
+      // proposals cite resolvable content the same way every other lens does.
+      let chairReadiness = await buildDispatchReadiness({
         cycleId: cycle.id,
-        evidence: chairEvidence,
-        enabledRoles: ['chair'],
+        roles: ['chair'],
+        pinnedRevision: workspace.controlRepository.pinnedRevision,
+        sensitivityCeiling: preferences.sensitivityCeiling,
         now,
       });
       chairReadiness = await remapReadinessGaps(chairReadiness, {
@@ -1179,22 +1218,25 @@ export async function runOperatingCycle(
             blocked: false,
             skipped: [],
             failed: [],
+            gaps: [],
           }
         : await dispatchOperatingAdvisors({
             cycleId: cycle.id,
-            evidence: chairEvidence,
+            projectRoot,
+            pinnedRevision: workspace.controlRepository.pinnedRevision,
             readiness: chairReadiness,
             context: advisorContext,
             adapter: await resolveAdapter(),
             depth,
             runtime: resolvedRuntime,
-            dispatchModeOverrides,
+            resolveCitations,
           });
       roleResults = [...roleResults, ...chair.results];
       modelCalls += chair.modelCalls;
       dispatchProvenance.push(...chair.provenance);
       skipped.push(...chair.skipped);
       failed.push(...chair.failed);
+      dispatchGaps.push(...chair.gaps);
       blocked ||= chair.blocked || chairReadiness.roles.some((role) => !role.modelCallAllowed);
     }
     const technologyRiskReady = readiness.roles.some(
@@ -1204,28 +1246,27 @@ export async function runOperatingCycle(
     const sensitiveRouteBlocked =
       containsSensitiveRouteProposal(roleResults) && (!technologyRiskReady || technologyRiskFailed);
     blocked ||= sensitiveRouteBlocked;
-    // FR3 / E-003: resolve every recorded proposal's citations against the cycle's
-    // pinned revision before consolidation. A proposal built on a fabricated,
-    // drifted, or uncommitted citation is dropped here and can never reach
-    // consolidation; its place is taken by a single unresolvable-citation gap.
-    const citationGate = await gateRecordedProposalCitations({
-      roleResults,
-      context: {
-        projectRoot,
-        cycleId: cycle.id,
-        descriptor: workspace.controlRepository,
-        cache: new OperatingEvidenceCache(
-          resolveOperatingPaths(projectRoot, { localRoot: input.localRoot }).evidence,
-          preferences.sensitivityCeiling,
-        ),
-        owner: config.decisionOwner,
-        now,
-      },
+    // FR2/FR3 / E-003: the universal citation gate. Every dispatched role already
+    // resolved its citations at dispatch time (the committed result is v1.2-valid
+    // with minted evidenceRefs, no raw citations), so re-running the gate over the
+    // full role set — including any natively-committed existing results — is a
+    // no-op that provides defence in depth and a single point where consolidation
+    // input is proven citation-clean.
+    const citationGate = await resolveCitations(roleResults);
+    // FR2 (evidence-as-output): the cycle's evidence-of-record is assembled from
+    // the resolved-citation snapshots, so confidence/sensitivity/freshness scoring
+    // resolves against what was actually cited and verified — never a pre-collected
+    // guess. This replaces the retired collected-evidence consolidation input.
+    const consolidationEvidence = await assembleCitationEvidence({
+      cycleId: cycle.id,
+      roleResults: citationGate.roleResults,
+      cache: citationCache,
+      baseFingerprint: evidence.fingerprint,
+      now: timestamp,
     });
     // Only the gated proposals feed consolidation, so a proposal with an
-    // unresolvable citation can never become a finding/route. The raw advisor
-    // result stays intact as the audit record; the rejection is recorded as the
-    // opened unresolvable-citation gap threaded into `gaps` below.
+    // unresolvable citation can never become a finding/route. The rejection is
+    // recorded as the opened unresolvable-citation gap threaded into `gaps` below.
     const consolidated = await consolidateOperatingResults({
       cycleId: cycle.id,
       results: citationGate.roleResults,
@@ -1306,9 +1347,13 @@ export async function runOperatingCycle(
       decisions: remapped.decisions,
       // Citation gaps bypass remapConsolidation (their IDs are digest-derived and
       // already canonical) and are persisted alongside the cycle's other gaps.
+      // `dispatchGaps` are the unresolvable-citation/empty-grounding gaps opened
+      // while resolving each role's citations at dispatch time; `citationGate.gaps`
+      // covers the no-op consolidation-time re-gate (empty in practice).
       gaps: [
         ...readinessGaps(readiness, config.decisionOwner, timestamp),
         ...remapped.gaps,
+        ...dispatchGaps,
         ...citationGate.gaps,
       ],
       routes: [],

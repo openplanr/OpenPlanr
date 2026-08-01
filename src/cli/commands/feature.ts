@@ -22,6 +22,7 @@ import {
 } from '../../services/artifact-service.js';
 import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
 import { VALID_STATUSES } from '../../utils/constants.js';
@@ -54,6 +55,7 @@ export function registerFeatureCommand(program: Command) {
 
       if (useAI) {
         await createFeaturesWithAI(projectDir, config, opts.epic, opts.count);
+        printDeprecationNotice('ai-planning');
       } else {
         if (!opts.manual && !isAIConfigured(config)) {
           logger.warn('AI not configured. Using manual mode.');

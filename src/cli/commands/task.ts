@@ -24,6 +24,7 @@ import {
 } from '../../services/artifact-service.js';
 import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
 import { VALID_STATUSES } from '../../utils/constants.js';
@@ -74,6 +75,7 @@ export function registerTaskCommand(program: Command) {
           process.exit(1);
         }
         await createTasksFromFeature(projectDir, config, opts.feature);
+        printDeprecationNotice('ai-planning');
         return;
       }
 
@@ -90,6 +92,7 @@ export function registerTaskCommand(program: Command) {
 
       if (useAI) {
         await createTasksWithAI(projectDir, config, opts.story);
+        printDeprecationNotice('ai-planning');
       } else {
         if (!opts.manual && !isAIConfigured(config)) {
           logger.warn('AI not configured. Using manual mode.');

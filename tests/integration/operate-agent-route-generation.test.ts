@@ -57,21 +57,13 @@ async function acceptedAgentRoute(): Promise<{
     runtime: 'codex',
     timezone: 'UTC',
     sensitivityCeiling: 'internal',
-    enabledProviders: ['repository', 'git'],
     customProfile: {
       enabledRoles: ['strategy-finance', 'technology-risk', 'chair'],
-      enabledProviders: ['repository', 'git'],
       caps: {
         surfacedFindings: 3,
         newSpecs: 1,
         openDecisions: 1,
         agentArtifacts: 1,
-      },
-      budgets: {
-        maxFiles: 100,
-        maxItems: 100,
-        maxBytes: 1024 * 1024,
-        maxDurationMs: 10_000,
       },
     },
     charter: {
@@ -92,10 +84,6 @@ async function acceptedAgentRoute(): Promise<{
     toolIsolation: 'not-applicable',
     capability: 'analysis-high',
     async invoke(input) {
-      const evidenceRef = input.evidence.items[0]?.id;
-      if (!evidenceRef) {
-        return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
-      }
       if (input.roleId !== 'chair') {
         return { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
       }
@@ -112,7 +100,13 @@ async function acceptedAgentRoute(): Promise<{
             confidence: 3,
             ease: 5,
             severity: 'low',
-            evidenceRefs: [evidenceRef],
+            citations: [
+              {
+                repositoryPath: 'service.ts',
+                lineRange: { start: 1, end: 1 },
+                pinnedRevision: input.pinnedRevision,
+              },
+            ],
           },
         ],
         gaps: [],

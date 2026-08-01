@@ -24,6 +24,7 @@ import {
 } from '../../services/artifact-service.js';
 import { CHECKLIST, checkItem } from '../../services/checklist-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
 import { promptConfirm, promptText } from '../../services/prompt-service.js';
 import { lintWithProjectConfig } from '../../services/report-linter-service.js';
@@ -131,6 +132,7 @@ export function registerStoryCommand(program: Command) {
         logger.dim('  1. planr story list                          — View all stories');
         logger.dim('  2. planr task create --story <ID>            — Generate tasks for a story');
         logger.dim('  3. planr task create --feature <ID>          — Generate tasks for a feature');
+        printDeprecationNotice('ai-planning');
         return;
       }
 
@@ -147,6 +149,7 @@ export function registerStoryCommand(program: Command) {
 
       if (useAI) {
         await createStoriesWithAI(projectDir, config, opts.feature);
+        printDeprecationNotice('ai-planning');
       } else {
         if (!opts.manual && !isAIConfigured(config)) {
           logger.warn('AI not configured. Using manual mode.');

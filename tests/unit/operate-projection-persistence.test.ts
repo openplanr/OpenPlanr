@@ -11,6 +11,7 @@ import {
   prepareOperatingProjectionPersistence,
   renderOperatingProjectionFiles,
 } from '../../src/services/operate/projection-persistence.js';
+import { markdownCompleteRegisters } from '../../src/services/operate/reports.js';
 import type { OperatingState } from '../../src/services/operate/types.js';
 
 const temporaryDirectories: string[] = [];
@@ -479,5 +480,154 @@ ${technologyBoard}
         reason: 'Managed projection markers are malformed or duplicated.',
       },
     );
+  });
+});
+
+// FR8: the persisted `report.md` must be self-contained — the complete,
+// uncapped registers, not the concise brief's capped top-5/top-4.
+describe('Operating Board self-contained report registers (FR8)', () => {
+  function largeCycleState(): OperatingState {
+    const base = state();
+    const findings = Array.from({ length: 7 }, (_, index) => ({
+      id: `FND-${String(index + 1).padStart(3, '0')}`,
+      cycleId: 'CYCLE-001',
+      title: `Finding ${index + 1}`,
+      status: 'proposed',
+      lane: 'DEV',
+      owner: 'Product engineering',
+      severity: 'medium',
+      score: 50 - index,
+      parked: false,
+      problem: `Problem ${index + 1}.`,
+      evidenceRefs: [`EVD-${index + 1}`],
+      updatedAt: '2026-07-28T10:02:00.000Z',
+    }));
+    const decisions = Array.from({ length: 6 }, (_, index) => ({
+      id: `DEC-${String(index + 1).padStart(3, '0')}`,
+      cycleId: 'CYCLE-001',
+      question: `Question ${index + 1}?`,
+      status: 'open',
+      owner: 'Founder',
+      recommendation: `Recommendation ${index + 1}.`,
+      updatedAt: '2026-07-28T10:02:00.000Z',
+    }));
+    const dataGaps = Array.from({ length: 6 }, (_, index) => ({
+      id: `GAP-${String(index + 1).padStart(3, '0')}`,
+      cycleId: 'CYCLE-001',
+      question: `Gap question ${index + 1}?`,
+      reason: `Reason ${index + 1}.`,
+      status: 'open',
+      owner: 'Product',
+      unblocks: [],
+      updatedAt: '2026-07-28T10:02:00.000Z',
+    }));
+    return {
+      ...base,
+      findings: findings as OperatingState['findings'],
+      decisions: decisions as OperatingState['decisions'],
+      dataGaps: dataGaps as OperatingState['dataGaps'],
+    };
+  }
+
+  it('renders every finding, decision, gap, and route with no top-N cap', () => {
+    const registers = markdownCompleteRegisters(largeCycleState());
+    expect(registers).toContain('# Complete registers');
+    expect(registers).toContain('## All findings (7)');
+    expect(registers).toContain('## All decisions (6)');
+    expect(registers).toContain('## All evidence gaps (6)');
+    // Every finding beyond the concise brief's top-5 cap is present.
+    for (let index = 1; index <= 7; index += 1) {
+      expect(registers).toContain(`FND-${String(index).padStart(3, '0')}`);
+    }
+    // Every decision and gap beyond the top-4 cap is present.
+    for (let index = 1; index <= 6; index += 1) {
+      expect(registers).toContain(`DEC-${String(index).padStart(3, '0')}`);
+      expect(registers).toContain(`GAP-${String(index).padStart(3, '0')}`);
+    }
+    // The route from the base fixture is carried too.
+    expect(registers).toContain('ACT-001');
+  });
+
+  it('appends the complete registers to the persisted report.md via the rich assembly', () => {
+    // The injected reportMarkdown mirrors what readOperatingReport produces; the
+    // rich assembly appends the complete registers before persistence, so a
+    // caller that threads the same base sees the self-contained on-disk report.
+    const current = largeCycleState();
+    const reportBase = '# OpenPlanr Operating Brief — CYCLE-001\n\n# Integrity\n\nNo concerns.';
+    const richArtifacts = new Map([
+      [
+        'CYCLE-001',
+        {
+          reportMarkdown: `${reportBase}\n\n${markdownCompleteRegisters(current)}`,
+          boardByRole: new Map<string, string>(),
+          evaluatedRoleIds: new Set<string>(),
+        },
+      ],
+    ]);
+    const files = renderOperatingProjectionFiles(current, richArtifacts);
+    const report = files.find(
+      (file) => file.relativePath === '.planr/operate/cycles/CYCLE-001/report.md',
+    );
+    expect(report?.managedContent).toContain('# Complete registers');
+    for (let index = 1; index <= 7; index += 1) {
+      expect(report?.managedContent).toContain(`FND-${String(index).padStart(3, '0')}`);
+    }
+  });
+});
+
+// FR7/FR8: a not_evaluated role's board file states its real gap reason, and the
+// cycle's integrity signals render to their own readable-tree file.
+describe('Operating Board not_evaluated honesty and integrity file (FR7/FR8)', () => {
+  function notEvaluatedState(): OperatingState {
+    const base = state();
+    return {
+      ...base,
+      findings: [] as OperatingState['findings'],
+      dataGaps: [
+        {
+          id: 'GAP-role',
+          cycleId: 'CYCLE-001',
+          category: 'missing-evidence',
+          question: 'What evidence can technology-risk cite?',
+          reason:
+            'Every citation technology-risk returned failed to resolve at the pinned revision.',
+          affectedRoles: ['technology-risk'],
+          status: 'open',
+          owner: 'Product',
+          unblocks: [],
+          updatedAt: '2026-07-28T10:02:00.000Z',
+        },
+      ] as OperatingState['dataGaps'],
+    };
+  }
+
+  it('states the real gap reason on the not_evaluated board, never a bare "- None."', () => {
+    const files = renderOperatingProjectionFiles(notEvaluatedState());
+    const byPath = new Map(files.map((file) => [file.relativePath, file]));
+    const board = byPath.get(
+      '.planr/operate/cycles/CYCLE-001/board/technology-risk.md',
+    )?.managedContent;
+    expect(board).toContain('Status: not_evaluated');
+    expect(board).toContain('## Evidence gaps');
+    expect(board).toContain('GAP-role');
+    expect(board).toContain('What evidence can technology-risk cite?');
+    // A role with a governed gap never falls through to the bare not-evaluated line.
+    expect(board).not.toMatch(/it was not evaluated\.$/);
+  });
+
+  it('writes a dedicated cycle integrity file naming the not_evaluated role', () => {
+    const files = renderOperatingProjectionFiles(notEvaluatedState());
+    const byPath = new Map(files.map((file) => [file.relativePath, file]));
+    const integrity = byPath.get('.planr/operate/cycles/CYCLE-001/integrity.md');
+    expect(integrity?.managedContent).toContain('# Cycle integrity — CYCLE-001');
+    expect(integrity?.managedContent).toContain('technology-risk');
+    expect(integrity?.markerName).toBe('operate-cycle-integrity');
+  });
+
+  it('creates no integrity file for a clean cycle with no integrity signals', () => {
+    // The base fixture's single gap carries no integrity category, so the cycle
+    // has no integrity signals and writes no integrity artifact.
+    const files = renderOperatingProjectionFiles(state());
+    expect(files.some((file) => file.relativePath.endsWith('/integrity.md'))).toBe(false);
   });
 });
