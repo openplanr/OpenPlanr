@@ -94,21 +94,16 @@ effect.
 
 ## Evidence recovery
 
-A safely redacted evidence item remains useful. An item that cannot be made
-safe is quarantined individually, while unrelated evidence and ready lenses
-continue. Only when required evidence is blocked should the runtime run the
-exact value-free diagnostic action:
+Protocol v1.3 advisors investigate through the active runtime's bounded
+read-only tools and return citations rather than receiving an intermediate
+evidence pack. OpenPlanr resolves and scans each cited snapshot before accepting
+the result. A rejected citation follows only the current handoff's governed
+recovery; source overrides and false-positive classification are not public
+surfaces.
 
-```bash
-planr operate evidence diagnose <candidate-id>
-```
-
-The report contains a safe relative path, detector category, line/column, and
-fingerprint—never the value. A confirmed credential must be removed or rotated.
-Only eligible soft-pattern findings can be classified as a false positive, and
-that classification is bound to the evidence digest and operating head. Private
-keys, high-confidence token formats, and other hard categories cannot be
-overridden.
+When no continuation exists, export redacted diagnostics and leave the affected
+lens `not_evaluated` or the cycle `blocked`. Rotate a genuine credential at its
+source before retrying. Never print or paste the suspected value.
 
 ## Privacy and retention
 
@@ -139,8 +134,8 @@ conversion commands for findings, routes, specs, tasks, and quick tasks.
   runtime with structured questions/chat.
 - `E_GUIDED_SESSION_EXPIRED`: restart the current guided command.
 - `E_GUIDED_SESSION_STALE`: inspect changed project/config state, then restart.
-- `E_OPERATE_SECRET_DETECTED`: use `operate evidence diagnose`; do not inspect or
-  weaken private state.
+- `E_OPERATE_SECRET_DETECTED`: follow only the returned recovery or export
+  redacted diagnostics; do not inspect or weaken private state.
 - `E_PIPELINE_NOT_INSTALLED`: run the exact full-install command in the result.
 
 The deterministic journey fixtures and canary are:

@@ -4,6 +4,20 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.36.1] — 2026-08-01
+
+### Fixed
+
+- Regenerated the canonical Claude, Codex, and Cursor Operating Board guidance
+  for the v1.3 mandate-only workflow. Runtime adapters no longer instruct users
+  or agents to call the retired source registry, JSON/CSV file-import,
+  collector-budget, evidence-diagnostic, false-positive-classification, or
+  dispatch-override surfaces.
+- Clarified the compatibility boundary: frozen v1.2 provider fields remain
+  readable for existing artifacts, while new v1.3 cycles delegate bounded
+  read-only investigation to the native runtime and mint evidence only from
+  validated citations.
+
 ## [0.36.0] — 2026-08-01
 
 The Operating Board pivots from shipping curated evidence to a model toward

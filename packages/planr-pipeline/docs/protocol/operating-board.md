@@ -86,20 +86,21 @@ Each role registry entry declares:
 - whether requirements are all-of or any-of;
 - unready behavior.
 
-The engine evaluates these rules into an
-`operating-evidence-readiness` matrix before any model call. An unready advisor
-is `not_evaluated`, `modelCallAllowed` is false, and a typed data gap records
-what is missing. The Chair has a distinct input contract: it consumes verified
-advisor results from the current cycle rather than raw provider evidence.
+These v1.2 readiness/provider fields remain readable for artifact compatibility,
+but Protocol v1.3 mandate cycles do not run OpenPlanr's former collector or hand
+an evidence body to an advisor. Each native advisor investigates within the
+mandate's bounded read-only roots and returns citations for every claim.
+OpenPlanr resolves those citations at the pinned revision, snapshots eligible
+content, and marks an ungrounded role `not_evaluated`. The Chair consumes only
+verified advisor results from the current cycle.
 
-Launch providers (`repository`, `planr`, `git`, `github`, `linear`, and
-`file-import`) are read-only. Runtime access may be narrower than the registry
-but never wider. Provider output must pass the shipped conformance kit:
-schema, attribution, determinism, frozen input, item budget, and byte budget.
-Repository evidence may add structured provenance containing the ecosystem
-component ID, canonical remote, exact revision, configured branch, and a
-dirty-worktree fingerprint. Evidence path, digest, freshness, and sensitivity
-remain properties of the individual evidence item.
+The frozen v1.2 provider registry (`repository`, `planr`, `git`, `github`,
+`linear`, and `file-import`) remains in the protocol so existing artifacts and
+digests validate. It is not a selectable v1.3 collection surface and does not
+authorize remote access. Repository citations may retain structured provenance
+containing the ecosystem component ID, canonical remote, exact revision,
+configured branch, and a dirty-worktree fingerprint. Evidence path, digest,
+freshness, and sensitivity remain properties of the resolved citation snapshot.
 Every derived finding declares the highest sensitivity of its cited evidence.
 Consolidation may raise that classification when cited evidence changes, but
 must never lower or omit it.
@@ -118,10 +119,10 @@ configuration, credential policy, or review window changes. A preview cannot
 call a provider. A dry-run may call the disclosed provider but commits no
 operating state, so first-use consent still applies.
 
-Component roots and JSON/CSV import paths are selected through
-`planr operate init` and stored machine-locally. `sources list|show|test`
-inspects or tests the configured read-only provider contract; it never adds a
-source implicitly.
+Read-only component roots are selected through `planr operate init` and stored
+machine-locally. The retired source registry, file-import flow, per-profile
+collector tuning, and evidence-classification commands are not part of the v1.3
+public contract.
 
 ## Advisor and consolidation contract
 

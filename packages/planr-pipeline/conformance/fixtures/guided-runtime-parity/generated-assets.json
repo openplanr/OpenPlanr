@@ -10,7 +10,7 @@
     },
     {
       "path": "adapters/codex/skills/planr-operate/SKILL.md",
-      "digest": "sha256:e2766ce3753002dfb23bff42f18ca99c2494c3eb84502333e9d13a03b3cf11c5"
+      "digest": "sha256:b2c948b749ab8823aa00c8a6243de4569d13984ff377909f2abf8e4b8c684165"
     },
     {
       "path": "adapters/codex/project-guidance.md",
@@ -22,7 +22,7 @@
     },
     {
       "path": "commands/operate.md",
-      "digest": "sha256:6699b0e458f0366028a48efb9aef958822626bcf472390b04bc3b9f7963f11d8"
+      "digest": "sha256:2eabbabeb41a5b7f895ab6f43d4dd0e668bd91731a20bbb925efd9aa125fa8b5"
     }
   ]
 }

@@ -7,9 +7,9 @@ license: MIT
 # Planr Operating Board
 
 Use only the public `planr operate` command surface. OpenPlanr owns operating
-state, evidence collection, advisor dispatch, deterministic consolidation,
-routing, recovery, and outcome reconciliation; this skill must not reimplement
-those behaviors.
+state, mandate construction, citation validation, deterministic consolidation,
+routing, recovery, and outcome reconciliation. The native runtime owns bounded
+read-only investigation; this skill must not replace it with a second collector.
 
 This skill owns the end-to-end interactive workflow: it orchestrates the adapter
 `prepare → record → finalize` lifecycle invisibly, so you are never required to
@@ -120,13 +120,11 @@ prompt as an interaction handoff, not a failure. Present the returned
 questionnaire or consent request and continue the same flow; never report the
 cycle as failed on that exit code alone.
 
-When the CLI reports quarantined evidence, continue with the sanitized eligible
-evidence if the returned cycle action remains available. Use
-`planr operate evidence diagnose …` only when the CLI reports that required
-evidence is blocked. Present its value-free recovery choices and stop for the user's
-selection. Never trial-edit sources or `.planr/operate` state to isolate a
-candidate. Exact false-positive classification requires its own reason, preview
-digest, and confirmation; known credential signatures remain blocked.
+When citation validation rejects a result, use only the current handoff's
+recovery action. Never trial-edit `.planr/operate`, weaken secret checks, or
+invent a source/classification override. If no governed continuation exists,
+export redacted diagnostics and stop with the affected lens `not_evaluated` or
+the cycle `blocked`; never expose or paste the suspected value.
 
 Canonical advisory lenses: {{OPERATING_LENSES}}. They are independent,
 read-only executive perspectives—not delivery agents and not permission to
@@ -148,18 +146,16 @@ results are verified.
 
 1. Run the requested `planr operate` command with `--json` when machine-readable
    output is available. Before a new cycle, use the CLI preview so the user can
-   inspect evidence sources, enabled lenses, budgets, provider use, and writes.
-2. Treat `--preview` as provider-free and write-free. Treat `--dry-run` as
-   write-free but potentially provider-backed and billable. A provider-backed
-   run requires explicit consent to the disclosed endpoint, data classes,
-   retention, limits, and policy digest. Never translate a flag or consent into
-   approval for a later mutation.
+   inspect the selected runtime, enabled lenses, boundaries, and exact writes.
+2. Treat `--preview` as model-free and write-free. Treat `--dry-run` as
+   write-free. Native mandate inference uses the already active coding runtime;
+   it must never fall back to OpenPlanr-managed provider dispatch. Never
+   translate a flag into approval for a later mutation.
 3. Read only the paths and next actions returned by `planr operate`. Do not edit `.planr/operate`
    events, immutable records, journals, projections, routes, or outcome links
    directly.
-4. Configure component roots and JSON/CSV import paths through `planr operate
-   init`; use `planr operate sources test` only to validate an already configured
-   read-only source.
+4. Configure read-only component roots through `planr operate init`. Do not
+   recreate the retired source registry, file-import flow, or collector budgets.
 5. Keep proposal acceptance and route application separate. Apply a route only
    after the user has reviewed its exact confirmation digest and explicitly
    authorized that named route.

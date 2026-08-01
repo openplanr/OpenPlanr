@@ -28,10 +28,11 @@ With explicit arguments, delegate only that public command:
 planr operate $ARGUMENTS
 ```
 
-The CLI owns evidence collection, provider consent, advisor dispatch,
-deterministic consolidation, state, route previews, recovery, and outcome
-reconciliation. Never edit `.planr/operate` directly and never invoke
-`planr-pipeline` as a nested executable.
+The CLI owns mandate construction, citation validation, deterministic
+consolidation, state, route previews, recovery, and outcome reconciliation. The
+native coding runtime owns bounded read-only investigation. Never edit
+`.planr/operate` directly and never invoke `planr-pipeline` as a nested
+executable.
 
 Start guided setup with exactly `planr operate init --json` only after inspect
 reports that initialization is absent, or when reconfiguration was explicitly
@@ -96,16 +97,16 @@ prompt as an interaction handoff, not a failure. Present the returned
 questionnaire or consent request and continue the same flow; never report the
 cycle as failed on that exit code alone.
 
-Treat `--preview` as provider-free and write-free; `--dry-run` may use a
-disclosed, consented provider but commits no state. Configure component roots
-and bounded JSON/CSV import paths through `planr operate init`; `sources test`
-only validates an already configured read-only source. Keep finding acceptance
-separate from route application. An answered gap closes only after `gaps verify`
-cites explicit evidence. If a DEV route returns `awaiting-plan`, present its
-exact native PLAN invocation and resume the same route only after human review
-and matching planning provenance; `shipInvoked` stays false. `run --review-only`
-observes existing shipment proof and due outcome observations but does not start
-SHIP.
+Treat `--preview` as model-free and write-free; `--dry-run` remains write-free.
+Native mandate inference uses the already active coding runtime and never falls
+back to OpenPlanr-managed provider dispatch. Configure read-only component roots
+through `planr operate init`; do not recreate the retired source registry,
+file-import flow, or collector budgets. Keep finding acceptance separate from
+route application. An answered gap closes only after `gaps verify` cites explicit
+evidence. If a DEV route returns `awaiting-plan`, present its exact native PLAN
+invocation and resume the same route only after human review and matching
+planning provenance; `shipInvoked` stays false. `run --review-only` observes
+existing shipment proof and due outcome observations but does not start SHIP.
 
 Canonical advisory lenses: CEO (strategy-finance: Direction, business model, pricing and packaging, focus, economics, and what to stop.); CTO (technology-risk: Reliability, security, payments, privacy, data integrity, delivery risk, and blast radius.); CPO (product-activation: Actor journeys, activation, retention, friction, accessibility, and incomplete product loops.); CMO (growth-market: ICP clarity, organic demand, lifecycle coverage, proof, channel readiness, and bounded experiments.); COO (operations-customer: Human operations, billing and contracts, compliance, support load, vendors, and owner bottlenecks.); Chair (chair: Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals.). They are independent, read-only
 executive perspectives—not delivery agents and not permission to role-play
