@@ -56,7 +56,13 @@ jobs:
           else
             CHANGED="$(git diff --name-only "$BASE" "${{ github.sha }}")"
           fi
-          matches() { echo "$CHANGED" | grep -Eq "$1"; }
+          # NOTE: a here-string, NOT `echo "$CHANGED" | grep -Eq`. `grep -q` exits on
+          # first match and closes the pipe while echo is still writing; under
+          # `set -o pipefail` that SIGPIPE makes the pipeline return FAILURE even
+          # though the pattern matched. It only bites once the file list is large
+          # enough that echo has not finished — i.e. exactly on big changesets,
+          # which would then silently skip every gated job.
+          matches() { grep -Eq "$1" <<< "$CHANGED"; }
           {
             matches '^packages/OpenPlanr/' && echo "cli=true" || echo "cli=false"
             matches '^packages/planr-pipeline/' && echo "pipeline=true" || echo "pipeline=false"
