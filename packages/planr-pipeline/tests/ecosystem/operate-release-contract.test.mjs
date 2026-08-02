@@ -109,14 +109,35 @@ test('verifies exact npm artifacts and final skills release', async () => {
 
 test('requires a one-line Protocol v1.2 inspection from the installed CLI', () => {
   const value = verifyInstalledOperateCli({
+    platform: 'linux',
     command: 'planr',
-    spawn(command, args) {
+    spawn(command, args, options) {
       assert.equal(command, 'planr');
       assert.deepEqual(args, ['operate', 'inspect', '--json']);
+      assert.equal(options.shell, false);
       return {
         status: 0,
         stdout:
           '{"schemaVersion":"1.0.0","protocolVersion":"1.2.0","ok":true,"action":"inspect"}\n',
+        stderr: '',
+      };
+    },
+  });
+  assert.equal(value.action, 'inspect');
+});
+
+test('launches the npm command shim through the Windows command shell', () => {
+  const value = verifyInstalledOperateCli({
+    platform: 'win32',
+    spawn(command, args, options) {
+      assert.equal(command, 'planr.cmd');
+      assert.deepEqual(args, ['operate', 'inspect', '--json']);
+      assert.equal(options.shell, true);
+      assert.equal(options.windowsHide, true);
+      return {
+        status: 0,
+        stdout:
+          '{"schemaVersion":"1.0.0","protocolVersion":"1.2.0","ok":true,"action":"inspect"}\r\n',
         stderr: '',
       };
     },

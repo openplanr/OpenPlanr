@@ -111,15 +111,20 @@ export async function verifyOperatingRelease({
 }
 
 export function verifyInstalledOperateCli({
-  command = process.platform === 'win32' ? 'planr.cmd' : 'planr',
+  platform = process.platform,
+  command = platform === 'win32' ? 'planr.cmd' : 'planr',
   spawn = spawnSync,
 } = {}) {
   const result = spawn(command, ['operate', 'inspect', '--json'], {
     encoding: 'utf8',
+    shell: platform === 'win32',
     windowsHide: true,
   });
   if (result.error || result.status !== 0) {
-    throw new Error('Installed planr failed the Operating Board inspection canary');
+    const detail = result.error?.code ?? `exit ${result.status ?? 'unknown'}`;
+    throw new Error(
+      `Installed planr failed the Operating Board inspection canary (${detail})`,
+    );
   }
   const lines = result.stdout.trim().split(/\r?\n/);
   if (lines.length !== 1) {
