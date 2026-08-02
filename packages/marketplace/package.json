@@ -1,0 +1,16 @@
+{
+  "name": "openplanr-marketplace",
+  "version": "1.8.2",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node scripts/generate-ecosystem.mjs",
+    "check": "node scripts/generate-ecosystem.mjs --check && node scripts/check-readme.mjs && node scripts/validate-operation.mjs",
+    "validate:operations": "node scripts/validate-operation.mjs",
+    "canary:report": "node scripts/operating-canary-evidence.mjs",
+    "canary:materialize": "node scripts/materialize-operating-canary.mjs",
+    "reconcile:operation": "node scripts/reconcile-operation.mjs",
+    "test": "node --test"
+  }
+}

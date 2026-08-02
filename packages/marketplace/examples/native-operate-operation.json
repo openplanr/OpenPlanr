@@ -1,0 +1,351 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "openplanr-ecosystem-operation",
+  "protocolVersion": "1.2.0",
+  "operationId": "OPERATE-SPEC-003-R3",
+  "operationDigest": "sha256:00837653537a0c49b596ea5f4d6b3055637a7c16598a3efc72e58abef3644933",
+  "umbrellaSpecId": "SPEC-003",
+  "title": "Release Default Native Operating Board Cycles",
+  "capability": "guidedOperatingBoard",
+  "createdAt": "2026-07-30T17:47:17.000Z",
+  "updatedAt": "2026-07-30T18:27:55.000Z",
+  "state": "verified",
+  "ledger": {
+    "kind": "marketplace-draft-pr",
+    "repository": "openplanr/marketplace",
+    "headRef": "ecosystem-release/operate-spec-003-r3-default-cycle",
+    "pullRequest": {
+      "number": 86,
+      "url": "https://github.com/openplanr/marketplace/pull/86",
+      "state": "merged"
+    }
+  },
+  "participantOrder": [
+    "pipeline",
+    "cli",
+    "skills",
+    "marketplace"
+  ],
+  "participants": [
+    {
+      "component": "pipeline",
+      "repoLocalSpecId": "OPERATE-SPEC-003-R3:pipeline",
+      "repoLocalWorkItem": "docs/implementation/guided-operating-board.md",
+      "repository": "openplanr/planr-pipeline",
+      "currentVersion": "0.32.0",
+      "targetVersion": "0.32.1",
+      "phase": "verified",
+      "branch": "fix/operate-default-native-cycle",
+      "targetBranch": "main",
+      "commitSha": "aec8cf7e4572dc840f52aafbc3c1d56f201a0db6",
+      "pullRequest": {
+        "number": 89,
+        "url": "https://github.com/openplanr/planr-pipeline/pull/89",
+        "state": "merged"
+      },
+      "package": {
+        "name": "planr-pipeline",
+        "version": "0.32.1",
+        "status": "verified",
+        "integrity": "sha512-vJEPTXcz0f5ZvhW+Wh7BMfdECUsICJkFOqfYHY5+N20cSrfE7Eenwmr4vi+Cdm1jIJ7+7JNzopoEx6pzD6sqqw=="
+      },
+      "tag": "v0.32.1",
+      "tarballDigest": "sha256:41792d273306e8107f5c8da81e6dc461b19a8ec3464bc06de211255ef0e9d945",
+      "checks": [
+        {
+          "name": "ci",
+          "status": "passed",
+          "url": "https://github.com/openplanr/planr-pipeline/actions/runs/30567334617"
+        }
+      ],
+      "approvals": [
+        {
+          "gate": "release",
+          "actor": "Asem",
+          "status": "approved",
+          "timestamp": "2026-07-30T17:47:17.000Z",
+          "digest": "sha256:00837653537a0c49b596ea5f4d6b3055637a7c16598a3efc72e58abef3644933"
+        }
+      ],
+      "prerequisites": [],
+      "compensation": "forward-fix",
+      "nextSafeAction": "Verified at v0.32.1. Any correction must be a forward-fix release."
+    },
+    {
+      "component": "cli",
+      "repoLocalSpecId": "OPERATE-SPEC-003-R3:cli",
+      "repoLocalWorkItem": "docs/implementation/OPERATE-SPEC-003.md",
+      "repository": "openplanr/OpenPlanr",
+      "currentVersion": "1.16.0",
+      "targetVersion": "1.16.1",
+      "phase": "verified",
+      "branch": "changeset-release/main",
+      "targetBranch": "main",
+      "commitSha": "9e2caf773efbb45b503cc2e5cc07a3f927bc84ab",
+      "pullRequest": {
+        "number": 167,
+        "url": "https://github.com/openplanr/OpenPlanr/pull/167",
+        "state": "merged"
+      },
+      "package": {
+        "name": "openplanr",
+        "version": "1.16.1",
+        "status": "verified",
+        "integrity": "sha512-IVS5FlgTG8Z+2PRpnqB4knk+t6LXyHoaZK+fZhrJ5sITIyNFJLIqwKDgGQ45+JB9nUqAsmQ8H1CBffWmzy0YQA=="
+      },
+      "tag": "v1.16.1",
+      "tarballDigest": "sha256:a9d4d15b50767044e4f1a9b5d4149c235081dea428879fd08e5ccdd693fd2947",
+      "checks": [
+        {
+          "name": "ci",
+          "status": "passed",
+          "url": "https://github.com/openplanr/OpenPlanr/actions/runs/30568770785"
+        },
+        {
+          "name": "npm-publish",
+          "status": "passed",
+          "url": "https://github.com/openplanr/OpenPlanr/actions/runs/30569693752"
+        }
+      ],
+      "approvals": [
+        {
+          "gate": "release",
+          "actor": "Asem",
+          "status": "approved",
+          "timestamp": "2026-07-30T18:16:35.000Z",
+          "digest": "sha256:00837653537a0c49b596ea5f4d6b3055637a7c16598a3efc72e58abef3644933"
+        }
+      ],
+      "prerequisites": [
+        "pipeline"
+      ],
+      "compensation": "forward-fix",
+      "nextSafeAction": "Verified at v1.16.1 on npm. Any correction must be a forward-fix release."
+    },
+    {
+      "component": "skills",
+      "repoLocalSpecId": "OPERATE-SPEC-003-R3:skills",
+      "repoLocalWorkItem": "docs/implementation/guided-operating-board.md",
+      "repository": "openplanr/skills",
+      "currentVersion": "1.18.0",
+      "targetVersion": "1.18.1",
+      "phase": "verified",
+      "branch": "fix/operate-default-native-cycle",
+      "targetBranch": "main",
+      "commitSha": "1699c9b0d21621dd9de10e5bb6f888e987bea0e0",
+      "pullRequest": {
+        "number": 26,
+        "url": "https://github.com/openplanr/skills/pull/26",
+        "state": "merged"
+      },
+      "package": null,
+      "tag": "v1.18.1",
+      "tarballDigest": "sha256:3f67274a0cd94695b7ddee6b26041170f432c0363e2e270d35c05493e47dd9a7",
+      "checks": [
+        {
+          "name": "ci",
+          "status": "passed",
+          "url": "https://github.com/openplanr/skills/actions/runs/30569737804"
+        }
+      ],
+      "approvals": [
+        {
+          "gate": "release",
+          "actor": "Asem",
+          "status": "approved",
+          "timestamp": "2026-07-30T18:17:13.000Z",
+          "digest": "sha256:00837653537a0c49b596ea5f4d6b3055637a7c16598a3efc72e58abef3644933"
+        }
+      ],
+      "prerequisites": [
+        "pipeline",
+        "cli"
+      ],
+      "compensation": "forward-fix",
+      "nextSafeAction": "Verified at v1.18.1. Repository release only; no npm artifact."
+    },
+    {
+      "component": "marketplace",
+      "repoLocalSpecId": "OPERATE-SPEC-003-R3:marketplace",
+      "repoLocalWorkItem": "docs/implementation/guided-operating-board.md",
+      "repository": "openplanr/marketplace",
+      "currentVersion": "1.3.0",
+      "targetVersion": "1.3.1",
+      "phase": "verified",
+      "branch": "ecosystem-release/operate-spec-003-r3-default-cycle",
+      "targetBranch": "main",
+      "commitSha": "37151c4953fefa84b61421ca78412bf2fed1be10",
+      "pullRequest": {
+        "number": 86,
+        "url": "https://github.com/openplanr/marketplace/pull/86",
+        "state": "merged"
+      },
+      "package": null,
+      "tag": "v1.3.1",
+      "tarballDigest": "sha256:78c76fdd5a5f69246faa744c289bafdde07590273ecc26a66bb919c653431301",
+      "checks": [
+        {
+          "name": "ci",
+          "status": "passed",
+          "url": "https://github.com/openplanr/marketplace/actions/runs/30570262804"
+        },
+        {
+          "name": "exact-commit-canary",
+          "status": "passed",
+          "url": "https://github.com/openplanr/marketplace/actions/runs/30570322691"
+        }
+      ],
+      "approvals": [
+        {
+          "gate": "release",
+          "actor": "Asem",
+          "status": "approved",
+          "timestamp": "2026-07-30T18:17:24.000Z",
+          "digest": "sha256:00837653537a0c49b596ea5f4d6b3055637a7c16598a3efc72e58abef3644933"
+        }
+      ],
+      "prerequisites": [
+        "pipeline",
+        "cli",
+        "skills"
+      ],
+      "compensation": "withhold-manifest",
+      "nextSafeAction": "Verified at v1.3.1 with exact-commit canary evidence; retain the immutable ledger for audit."
+    }
+  ],
+  "releaseEvidence": [
+    {
+      "id": "packed-cli",
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30570322691",
+      "digest": "sha256:22f94ece1fd9fbed0dd146596fbf6d6ba3213e822dd16c85fafe8a4b543b73b4",
+      "checkedAt": "2026-07-30T18:27:52.896Z"
+    },
+    {
+      "id": "protocol-v1.2",
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30570322691",
+      "digest": "sha256:72168360be5a7fbe1f88e68ef4191dd32a81c20fbe015b564892e89ca6ed69db",
+      "checkedAt": "2026-07-30T18:27:52.896Z"
+    },
+    {
+      "id": "event-replay",
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30570322691",
+      "digest": "sha256:0c4c34d10466a47c3da8302a5f11eddfd445f143c9f29a94679b3ccf0d4a8b25",
+      "checkedAt": "2026-07-30T18:27:52.896Z"
+    },
+    {
+      "id": "security-boundaries",
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30570322691",
+      "digest": "sha256:de11ba6aa56782597d27d2a6c65213725dbe0a46764b3da06c2d2a8f7e00c677",
+      "checkedAt": "2026-07-30T18:27:52.896Z"
+    },
+    {
+      "id": "outcome-reconciliation",
+      "status": "passed",
+      "url": "https://github.com/openplanr/marketplace/actions/runs/30570322691",
+      "digest": "sha256:c9347e6fe3e1b4f927d4fce094b291205ad87b12166633ee6660dec10f0890b6",
+      "checkedAt": "2026-07-30T18:27:52.896Z"
+    }
+  ],
+  "prepareDigest": "sha256:7cffc79ebe906c4ace15986823719d12a7932c311a7403fba8ebf6fb2893be54",
+  "confirmationDigest": "sha256:1f559b83a19f68ad9af4f46f411a903e212f3f6de7ec3071c4fd7914e7b65a9d",
+  "blockedReason": null,
+  "nextSafeAction": "Archive the verified operation and monitor production Operating Board journeys.",
+  "recovery": {
+    "mode": "forward-fix",
+    "reason": "planr-pipeline@0.32.1 and openplanr@1.16.1 are already public.",
+    "nextSafeAction": "Use forward-fix releases for published components and withhold marketplace availability on any future drift."
+  },
+  "reconciliation": {
+    "status": "matched",
+    "checkedAt": "2026-07-30T18:27:55.000Z",
+    "sources": [
+      "github-pr",
+      "git-commit",
+      "git-tag",
+      "github-checks",
+      "npm-registry",
+      "marketplace-manifest",
+      "operating-canary"
+    ],
+    "drift": [],
+    "nextSafeAction": "All authoritative release, manifest, and exact-commit canary evidence matches the reviewed operation."
+  },
+  "history": [
+    {
+      "eventId": "b7d0f583-7dbf-44d8-9e99-e7cbc262cc0c",
+      "timestamp": "2026-07-30T17:47:17.000Z",
+      "type": "operation.created",
+      "actor": "Codex release coordinator",
+      "participant": null,
+      "digest": "sha256:00837653537a0c49b596ea5f4d6b3055637a7c16598a3efc72e58abef3644933",
+      "note": "Created a revisioned forward-fix transaction for the default native Operating Board cycle."
+    },
+    {
+      "eventId": "783120d5-5e67-4530-b1f5-e3d2c3588295",
+      "timestamp": "2026-07-30T17:47:18.000Z",
+      "type": "prepare.started",
+      "actor": "Codex release coordinator",
+      "participant": null,
+      "digest": "sha256:7cffc79ebe906c4ace15986823719d12a7932c311a7403fba8ebf6fb2893be54",
+      "note": "Prepared the pipeline, CLI, skills, and marketplace default-cycle forward-fix train in dependency order."
+    },
+    {
+      "eventId": "d1cdaf0c-d2fc-4b24-862b-49230eb46855",
+      "timestamp": "2026-07-30T17:55:00.000Z",
+      "type": "participant.verified",
+      "actor": "Codex release coordinator",
+      "participant": "pipeline",
+      "digest": "sha256:41792d273306e8107f5c8da81e6dc461b19a8ec3464bc06de211255ef0e9d945",
+      "note": "planr-pipeline 0.32.1 was merged, published to npm, tagged, and verified by CI and release workflows."
+    },
+    {
+      "eventId": "6f119f84-4201-4726-9545-0953c407f829",
+      "timestamp": "2026-07-30T18:16:35.000Z",
+      "type": "participant.verified",
+      "actor": "Codex release coordinator",
+      "participant": "cli",
+      "digest": "sha256:a9d4d15b50767044e4f1a9b5d4149c235081dea428879fd08e5ccdd693fd2947",
+      "note": "OpenPlanr 1.16.1 was merged through Changesets, published to npm, tagged, and verified by CI and release workflows."
+    },
+    {
+      "eventId": "5174ed39-b85c-48cf-9677-82eb8a9a38e8",
+      "timestamp": "2026-07-30T18:17:13.000Z",
+      "type": "participant.verified",
+      "actor": "Codex release coordinator",
+      "participant": "skills",
+      "digest": "sha256:3f67274a0cd94695b7ddee6b26041170f432c0363e2e270d35c05493e47dd9a7",
+      "note": "OpenPlanr Skills 1.18.1 was merged, tagged, archived, and verified by validation and release-check workflows."
+    },
+    {
+      "eventId": "13efec0c-3335-410d-afa1-753c77ec70fe",
+      "timestamp": "2026-07-30T18:17:24.000Z",
+      "type": "participant.prepared",
+      "actor": "Codex release coordinator",
+      "participant": "marketplace",
+      "digest": "sha256:1f559b83a19f68ad9af4f46f411a903e212f3f6de7ec3071c4fd7914e7b65a9d",
+      "note": "Prepared marketplace 1.3.1 with compatibility withheld until exact-commit canaries pass."
+    },
+    {
+      "eventId": "77aa87d6-4a37-40e8-99e5-6a5ce7393153",
+      "timestamp": "2026-07-30T18:27:55.000Z",
+      "type": "reconciliation.recorded",
+      "actor": "Codex release coordinator",
+      "participant": "marketplace",
+      "digest": "sha256:1f559b83a19f68ad9af4f46f411a903e212f3f6de7ec3071c4fd7914e7b65a9d",
+      "note": "Pipeline 0.32.1, OpenPlanr 1.16.1, skills 1.18.1, marketplace 1.3.1, npm state, and exact-commit Node 20/22 canaries on Ubuntu, macOS, and Windows matched."
+    },
+    {
+      "eventId": "00c83549-45c4-49d8-ba64-a9f96f832406",
+      "timestamp": "2026-07-30T18:27:56.000Z",
+      "type": "operation.verified",
+      "actor": "Codex release coordinator",
+      "participant": "marketplace",
+      "digest": "sha256:00837653537a0c49b596ea5f4d6b3055637a7c16598a3efc72e58abef3644933",
+      "note": "The default native Operating Board cycle is verified for ecosystem availability."
+    }
+  ]
+}

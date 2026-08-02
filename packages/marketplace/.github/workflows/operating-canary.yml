@@ -1,0 +1,156 @@
+name: Operating Board release canary
+
+on:
+  workflow_dispatch:
+    inputs:
+      pipeline_commit:
+        description: Exact 40-character planr-pipeline commit SHA
+        required: true
+        type: string
+      cli_commit:
+        description: Exact 40-character OpenPlanr commit SHA
+        required: true
+        type: string
+      skills_commit:
+        description: Exact 40-character skills commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22]
+    steps:
+      - name: Validate immutable participant revisions
+        env:
+          PIPELINE_COMMIT: ${{ inputs.pipeline_commit }}
+          CLI_COMMIT: ${{ inputs.cli_commit }}
+          SKILLS_COMMIT: ${{ inputs.skills_commit }}
+        run: |
+          set -euo pipefail
+          for revision in "$PIPELINE_COMMIT" "$CLI_COMMIT" "$SKILLS_COMMIT"; do
+            [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || {
+              echo "Canaries require exact lowercase 40-character commit SHAs." >&2
+              exit 1
+            }
+          done
+
+      - uses: actions/checkout@v4
+        with:
+          path: marketplace
+
+      - uses: actions/checkout@v4
+        with:
+          repository: openplanr/planr-pipeline
+          ref: ${{ inputs.pipeline_commit }}
+          path: planr-pipeline
+
+      - uses: actions/checkout@v4
+        with:
+          repository: openplanr/OpenPlanr
+          ref: ${{ inputs.cli_commit }}
+          path: OpenPlanr
+
+      - uses: actions/checkout@v4
+        with:
+          repository: openplanr/skills
+          ref: ${{ inputs.skills_commit }}
+          path: skills
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: |
+            planr-pipeline/package-lock.json
+            OpenPlanr/package-lock.json
+
+      - name: Install exact participant dependencies
+        run: |
+          set -euo pipefail
+          npm --prefix planr-pipeline ci
+          npm --prefix OpenPlanr ci
+          mkdir -p evidence "$RUNNER_TEMP/packages" "$RUNNER_TEMP/openplanr-home"
+
+      - name: Verify Protocol v1.2 contracts and conformance
+        run: |
+          set -euo pipefail
+          (
+            cd planr-pipeline
+            npm run test:schema
+            npm run conformance:operate
+          ) 2>&1 | tee evidence/protocol-v1.2.log
+
+      - name: Verify deterministic replay and corruption rejection
+        run: |
+          set -euo pipefail
+          (
+            cd planr-pipeline
+            node --test tests/orchestration/operating-reducer.test.mjs
+          ) 2>&1 | tee evidence/event-replay.log
+
+      - name: Verify packed CLI with only planr on PATH
+        env:
+          OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/planr-pipeline
+        run: |
+          set -euo pipefail
+          npm --prefix OpenPlanr run test:operate:packed 2>&1 |
+            tee evidence/packed-cli.log
+
+      - name: Verify operating security boundaries
+        run: |
+          set -euo pipefail
+          node -e "
+            const scripts=require('./OpenPlanr/package.json').scripts ?? {};
+            if (!scripts['test:operate:security']) {
+              throw new Error('OpenPlanr must expose test:operate:security before release verification');
+            }
+          "
+          npm --prefix OpenPlanr run test:operate:security 2>&1 |
+            tee evidence/security-boundaries.log
+
+      - name: Verify outcome reconciliation
+        run: |
+          set -euo pipefail
+          node -e "
+            const scripts=require('./OpenPlanr/package.json').scripts ?? {};
+            if (!scripts['test:operate:outcomes']) {
+              throw new Error('OpenPlanr must expose test:operate:outcomes before release verification');
+            }
+          "
+          npm --prefix OpenPlanr run test:operate:outcomes 2>&1 |
+            tee evidence/outcome-reconciliation.log
+
+      - name: Validate generated runtime skill
+        run: npm --prefix skills test
+
+      - name: Build immutable canary evidence report
+        env:
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          node marketplace/scripts/operating-canary-evidence.mjs \
+            --directory evidence \
+            --output "operating-canary-${{ matrix.os }}-node-${{ matrix.node }}.json" \
+            --url "$RUN_URL"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: operating-canary-${{ matrix.os }}-node-${{ matrix.node }}
+          path: |
+            operating-canary-${{ matrix.os }}-node-${{ matrix.node }}.json
+            evidence/*.log
+          if-no-files-found: error
+          retention-days: 30

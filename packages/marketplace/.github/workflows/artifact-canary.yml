@@ -1,0 +1,36 @@
+name: Artifact release canary
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 5 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run check
+      - run: npm test
+      - name: Verify published packages and share host
+        run: |
+          node - <<'NODE'
+          const manifest = JSON.parse(await (await import('node:fs/promises')).readFile('./ecosystem.json', 'utf8'));
+          for (const [name, expected] of [['openplanr', manifest.components.cli.version], ['planr-pipeline', manifest.components.pipeline.version]]) {
+            const response = await fetch(`https://registry.npmjs.org/${name}/latest`);
+            if (!response.ok) throw new Error(`${name} registry lookup failed: ${response.status}`);
+            const { version } = await response.json();
+            if (version !== expected) throw new Error(`${name}: expected ${expected}, received ${version}`);
+          }
+          const share = await fetch('https://share.openplanr.dev/');
+          if (!share.ok) throw new Error(`share host failed: ${share.status}`);
+          const robots = await fetch('https://share.openplanr.dev/robots.txt');
+          if (!robots.ok || !(await robots.text()).includes('Disallow: /')) throw new Error('share host indexing policy is missing');
+          NODE
