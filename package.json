@@ -93,7 +93,7 @@
     "zod": "^4.3.6"
   },
   "optionalDependencies": {
-    "planr-pipeline": "0.37.1"
+    "planr-pipeline": "0.37.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.9",
