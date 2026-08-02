@@ -10,9 +10,11 @@ or marketplace metadata.
 3. `skills`
 4. `marketplace`
 
-Patch releases can skip repos that do not need a content change, but the final
-audit must still verify all four repos: `planr-pipeline`, `marketplace`,
-`skills`, and `OpenPlanr`.
+Since BL-010 all four ship from one repository via changesets with independent
+versions, so this ordering is enforced by the release train rather than performed
+by hand (see `docs/release-train.md`). Patch releases can skip packages that need
+no content change, but the final audit must still verify all four: `planr-pipeline`,
+`marketplace`, `skills`, and `OpenPlanr`.
 
 ## Before Opening PRs
 

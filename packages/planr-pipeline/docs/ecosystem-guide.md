@@ -1,6 +1,16 @@
 # OpenPlanr Ecosystem Guide
 
-OpenPlanr is intentionally split into focused repos:
+OpenPlanr is intentionally split into focused packages, all developed in one
+repository ([openplanr/OpenPlanr](https://github.com/openplanr/OpenPlanr)) under
+`packages/`, and versioned independently (see
+[ADR-013](./adrs/ADR-013-monorepo-independent-versions.md)).
+
+`planr-pipeline`, `skills` and `marketplace` also exist as permanent read-only
+**mirror** repositories, because `/plugin marketplace add` resolves
+`.claude-plugin/` at a repository root and only one root can hold that path.
+Develop in the monorepo; the mirrors are distribution targets, not sources.
+
+The separation of concerns is unchanged:
 
 - **OpenPlanr is the dedicated planning control plane.** The `planr` CLI owns
   project/portfolio planning, artifact lifecycle, setup, runtime routing, and doctor.

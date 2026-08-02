@@ -19,7 +19,10 @@ plugin-root references stay inside the Claude adapter.
 
 ## Consequences
 
-- The four repositories retain independent identities and version histories.
+- The four components retain independent identities and version histories. (As of
+  [ADR-013](./ADR-013-monorepo-independent-versions.md) they are packages in one
+  repository; independent versioning is unchanged, and the three plugin repos
+  survive as read-only mirrors.)
 - Pipeline package releases precede CLI and adapter releases.
 - The package must ship an explicit files allowlist and npm provenance.
 - Existing Claude commands remain supported during the migration window.
