@@ -1,0 +1,46 @@
+name: Release check
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: Existing release tag to certify (for example v1.17.0)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OPENPLANR_ECOSYSTEM_ROOT: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_ref || github.ref }}
+      - uses: actions/checkout@v4
+        with:
+          repository: openplanr/planr-pipeline
+          ref: v0.37.1
+          path: planr-pipeline
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - name: Verify tag and marketplace versions
+        if: startsWith(github.ref, 'refs/tags/v') || inputs.release_ref != ''
+        env:
+          RELEASE_REF: ${{ inputs.release_ref || github.ref_name }}
+        run: |
+          node - <<'NODE'
+          const pkg = require('./package.json');
+          const marketplace = require('./.claude-plugin/marketplace.json');
+          const tag = process.env.RELEASE_REF.replace(/^v/, '');
+          if (pkg.version !== tag) throw new Error(`tag ${tag} != package ${pkg.version}`);
+          if (marketplace.metadata.version !== tag) throw new Error(`tag ${tag} != marketplace ${marketplace.metadata.version}`);
+          NODE
