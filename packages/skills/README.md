@@ -1,3 +1,9 @@
+> **READ-ONLY MIRROR.** The source of truth for this package lives at
+> [openplanr/OpenPlanr](https://github.com/openplanr/OpenPlanr) under `packages/skills/`.
+> Open issues and pull requests there — changes pushed here are overwritten by the
+> release mirror. This repository still exists (and always will) because
+> `/plugin marketplace add` resolves `.claude-plugin/` at a repository ROOT.
+
 <div align="center">
 
 # OpenPlanr Runtime Skills
