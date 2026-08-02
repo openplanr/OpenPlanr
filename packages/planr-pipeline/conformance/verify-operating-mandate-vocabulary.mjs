@@ -102,7 +102,10 @@ for (const role of roles) {
 
   // The builder must produce a schema-valid mandate carrying the investigation
   // mandate and no evidence facet.
-  const built = createOperatingMandate(role.id, { roots: ['.planr', 'src', 'lib'] });
+  const built = createOperatingMandate(role.id, {
+    roots: ['.planr', 'src', 'lib'],
+    protocolVersion: PROTOCOL,
+  });
   assertProtocolArtifact('operating-mandate', built, { protocolVersion: PROTOCOL });
   if ('evidence' in built || 'evidenceIndex' in built) {
     throw new Error(`The generated mandate for ${role.id} leaked an evidence facet.`);

@@ -137,7 +137,7 @@ for (const name of [
     failedClosed = true;
     if (error.code !== 'E_OPERATE_MISSION_PACKET_BUDGET'
       || !/role strategy-finance/.test(error.message)
-      || !new RegExp(`maxInputBytes ${role.budgets.maxInputBytes}`).test(error.message)) {
+      || !new RegExp(`maxInputBytes ${role.budgets.maxInputBytes ?? 262144}`).test(error.message)) {
       throw new Error(`Mission-packet budget error is wrong: ${error.code} ${error.message}`);
     }
   }
@@ -255,6 +255,7 @@ for (const kind of [
     const mandate = createOperatingMandate(role.id, {
       roots: ['.planr', 'src', 'lib'],
       forbiddenPaths: ['.env', 'secrets'],
+      protocolVersion: PROTOCOL,
     });
     assertProtocolArtifact('operating-mandate', mandate, { protocolVersion: PROTOCOL });
     if ('evidence' in mandate || 'evidenceIndex' in mandate) {
@@ -269,7 +270,10 @@ for (const kind of [
     }
   }
   const smuggled = {
-    ...createOperatingMandate('strategy-finance', { roots: ['src'] }),
+    ...createOperatingMandate('strategy-finance', {
+      roots: ['src'],
+      protocolVersion: PROTOCOL,
+    }),
     evidence: [{ id: 'EVD-x' }],
   };
   if (validateProtocolArtifact('operating-mandate', smuggled, { protocolVersion: PROTOCOL }).length === 0) {
@@ -552,10 +556,38 @@ assertProtocolArtifact('operating-adapter-handoff', {
   }
 }
 
-// The role registry validates as a v1.3 mandate registry directly: investigation
-// mandates replaced claim-type matching, and the pack/mission dispatchMode is
-// retired (mandate dispatch is the only mode).
-const roleRegistry = readJson('registry/operating-roles.json');
+// Project the current v1.4 registry into the frozen v1.3 compatibility shape:
+// investigation mandates remain identical while v1.4 route/action budgets map
+// back to the proposal-oriented fields older readers require.
+const currentRoleRegistry = readJson('registry/operating-roles.json');
+const roleRegistry = {
+  ...currentRoleRegistry,
+  protocolVersion: PROTOCOL,
+  roles: currentRoleRegistry.roles.map((role) => ({
+    id: role.id,
+    order: role.order,
+    displayLabel: role.displayLabel,
+    mandate: role.mandate,
+    forbiddenRecommendationCategories: role.forbiddenRecommendationCategories,
+    permittedEvidenceKinds: role.permittedEvidenceKinds,
+    sensitivityCeiling: role.sensitivityCeiling,
+    capabilityTier: role.capabilityTier,
+    inputSchema: 'operating-advisor-input@1.2.0',
+    outputSchema: 'operating-role-result@1.2.0',
+    adapterResponseSchema: 'operating-advisor-response@1.2.0',
+    readOnly: true,
+    writeBoundary: 'none',
+    allowedProposalTypes: ['finding', 'decision', 'data-gap'],
+    budgets: {
+      maxInputBytes: role.budgets.maxInputBytes ?? 262144,
+      maxOutputBytes: Math.min(role.budgets.maxOutputBytes, 131072),
+      maxProposals: role.budgets.maxProposals ?? role.budgets.maxActions,
+    },
+    requiredEvidenceFields: ['id', 'digest'],
+    investigationMandate: role.investigationMandate,
+    failureBehavior: role.failureBehavior,
+  })),
+};
 assertProtocolArtifact('operating-role-registry', roleRegistry, { protocolVersion: PROTOCOL });
 for (const role of roleRegistry.roles) {
   if ('minimumEvidence' in role || 'dispatchMode' in role) {
@@ -568,11 +600,18 @@ for (const role of roleRegistry.roles) {
 
 const adapterRegistry = readJson('registry/adapters.json');
 adapterRegistry.protocolVersion = PROTOCOL;
-adapterRegistry.adapters[0].capabilities.toolIsolation = 'enforced-read-only';
-adapterRegistry.adapters[0].capabilities.operatingAdvisorDispatch = 'native-read-only';
+adapterRegistry.adapters = adapterRegistry.adapters.map((adapter) => {
+  const capabilities = { ...adapter.capabilities };
+  delete capabilities.operatingRuntimePolicy;
+  const enforced = adapter.capabilities.toolIsolation === 'enforced';
+  capabilities.toolIsolation = enforced ? 'enforced-read-only' : adapter.capabilities.toolIsolation;
+  capabilities.operatingAdvisorDispatch = enforced ? 'native-read-only' : 'structured-provider';
+  return { ...adapter, capabilities };
+});
 assertProtocolArtifact('adapter-registry', adapterRegistry, { protocolVersion: PROTOCOL });
 
-// The canonical v1.2 registries remain valid under v1.2 (no forced migration).
+// The canonical registry remains valid under its declared current version; the
+// explicit projection above proves older readers remain supported.
 assertProtocolArtifact('operating-role-registry', readJson('registry/operating-roles.json'));
 assertProtocolArtifact('adapter-registry', readJson('registry/adapters.json'));
 

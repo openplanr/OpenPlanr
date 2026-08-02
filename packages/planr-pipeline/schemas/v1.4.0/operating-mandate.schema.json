@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/operating-mandate.schema.json",
+  "title": "OpenPlanr Protocol v1.4 agent-native operating mandate",
+  "description": "A role procedure and workspace boundary for a native runtime agent. The mandate contains no preassembled repository body and grants no permissions beyond the active runtime session.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "roleId", "phase", "lensQuestion", "mandate", "investigationMandate", "runtimeBinding", "boundaries", "procedure", "responseSchema", "citationRequirement", "permissionPolicy", "mandateDigest"],
+  "properties": {
+    "kind": { "const": "operating-mandate" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.4.0" },
+    "roleId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+    "phase": { "type": "string", "enum": ["bootstrap", "advisor", "chair"] },
+    "lensQuestion": { "type": "string", "minLength": 1, "maxLength": 4096 },
+    "mandate": { "type": "string", "minLength": 20 },
+    "investigationMandate": { "type": "object", "additionalProperties": false, "required": ["examine", "sufficientGrounding"], "properties": { "examine": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 1024 } }, "sufficientGrounding": { "type": "string", "minLength": 1, "maxLength": 2048 } } },
+    "runtimeBinding": { "$ref": "operating-runtime-binding.schema.json" },
+    "boundaries": { "type": "object", "additionalProperties": false, "required": ["roots", "sensitivityCeiling", "forbiddenPaths"], "properties": { "roots": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 1024 } }, "sensitivityCeiling": { "type": "string", "enum": ["public", "internal", "confidential", "restricted"] }, "forbiddenPaths": { "type": "array", "uniqueItems": true, "items": { "type": "string", "maxLength": 1024 } } } },
+    "procedure": { "type": "string", "enum": ["procedures/operate/bootstrap.md", "procedures/operate/advisor.md", "procedures/operate/chair.md"] },
+    "responseSchema": { "const": "operating-advisor-response@1.4.0" },
+    "citationRequirement": { "type": "object", "additionalProperties": false, "required": ["materialClaimsCited", "materialActionsCited", "citationShape"], "properties": { "materialClaimsCited": { "const": true }, "materialActionsCited": { "const": true }, "citationShape": { "const": "operating-citation@1.4.0" } } },
+    "permissionPolicy": { "type": "object", "additionalProperties": false, "required": ["authority", "planrGrantsPermissions", "forbiddenEffects"], "properties": { "authority": { "const": "runtime-session" }, "planrGrantsPermissions": { "const": false }, "forbiddenEffects": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } } } },
+    "mandateDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}

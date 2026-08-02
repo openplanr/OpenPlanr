@@ -23,6 +23,9 @@ const adapters = readJson('registry/adapters.json');
 const roleRegistry = readJson('registry/operating-roles.json');
 const providerRegistry = readJson('registry/operating-providers.json');
 const roleResultSchema = readJson('schemas/v1.2.0/operating-role-result.schema.json');
+const agentNativeResponseSchema = readJson(
+  'schemas/v1.4.0/operating-advisor-response.schema.json',
+);
 assertProtocolArtifact('adapter-registry', adapters);
 assertProtocolArtifact('operating-role-registry', roleRegistry);
 assertProtocolArtifact('operating-provider-registry', providerRegistry);
@@ -33,6 +36,9 @@ const operatingIds = new Set(listOperatingRoles().map((role) => role.id));
 const proposalTypes = new Set(
   roleResultSchema.properties.proposals.items.properties.type.enum,
 );
+const routeKinds = new Set(
+  agentNativeResponseSchema.properties.actions.items.properties.routeKind.enum,
+);
 for (const role of listOperatingRoles()) {
   if (!role.investigationMandate?.examine?.length || !role.investigationMandate?.sufficientGrounding) {
     throw new Error(`Operating role ${role.id} has no expressible investigation mandate.`);
@@ -40,13 +46,21 @@ for (const role of listOperatingRoles()) {
   if (role.id === 'chair' && !role.investigationMandate.examine.some((entry) => /advisor result/i.test(entry))) {
     throw new Error('Chair grounding must be based on verified advisor results.');
   }
-  for (const proposalType of role.allowedProposalTypes) {
+  for (const proposalType of role.allowedProposalTypes ?? []) {
     if (!proposalTypes.has(proposalType)) {
       throw new Error(`Operating role ${role.id} advertises invalid proposal type ${proposalType}.`);
     }
   }
+  for (const routeKind of role.allowedRouteKinds ?? []) {
+    if (!routeKinds.has(routeKind)) {
+      throw new Error(`Operating role ${role.id} advertises invalid route kind ${routeKind}.`);
+    }
+  }
   const brief = createOperatingAdvisorBrief(role.id);
-  if (brief.role.mandate !== role.mandate || brief.output.maximumProposals !== role.budgets.maxProposals) {
+  if (
+    brief.role.mandate !== role.mandate
+    || brief.output.maximumProposals !== (role.budgets.maxProposals ?? role.budgets.maxActions)
+  ) {
     throw new Error(`Operating advisor brief ${role.id} drifted from the canonical role registry.`);
   }
 }

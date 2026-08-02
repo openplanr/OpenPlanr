@@ -1,12 +1,12 @@
 {
   "kind": "adapter-registry",
   "schemaVersion": "1.1.0",
-  "protocolVersion": "1.3.0",
-  "pipelineVersion": "0.36.1",
+  "protocolVersion": "1.4.0",
+  "pipelineVersion": "0.37.0",
   "adapters": [
     {
       "id": "claude-code",
-      "version": "0.36.1",
+      "version": "0.37.0",
       "capabilityLevel": "product",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -15,7 +15,7 @@
         "ship": "/planr-pipeline:ship",
         "dashboard": "/planr-pipeline:dashboard",
         "artifact": "planr artifact",
-        "operate": "planr operate",
+        "operate": "/planr-pipeline:operate",
         "sync": "/planr-pipeline:sync",
         "doctor": "planr pipeline doctor"
       },
@@ -28,10 +28,11 @@
         "headlessBridge": true,
         "artifactReview": true,
         "operatingBoard": true,
-        "operatingAdvisorDispatch": "native-read-only",
+        "operatingAdvisorDispatch": "native-agent",
+        "operatingRuntimePolicy": "runtime-governed",
         "interactiveQuestions": "native"
       },
-      "assets": ["commands", "agents", "procedures", "hooks", "templates", "schemas", "artifact-review", "guided-interaction"],
+      "assets": ["commands", "agents", "procedures", "hooks", "templates", "schemas", "artifact-review", "agent-native-operate"],
       "healthChecks": ["plugin-installed", "commands-present", "hook-readable", "artifact-command-valid", "guided-native-capability-reported"],
       "drivers": {
         "install": "openplanr://drivers/claude-code/install",
@@ -42,7 +43,7 @@
     },
     {
       "id": "codex",
-      "version": "0.36.1",
+      "version": "0.37.0",
       "capabilityLevel": "workflow",
       "installScopes": ["user", "project"],
       "entrypoints": {
@@ -64,10 +65,11 @@
         "headlessBridge": true,
         "artifactReview": true,
         "operatingBoard": true,
-        "operatingAdvisorDispatch": "structured-provider",
+        "operatingAdvisorDispatch": "native-agent",
+        "operatingRuntimePolicy": "runtime-governed",
         "interactiveQuestions": "native"
       },
-      "assets": ["skills", "project-guidance", "schemas", "templates", "artifact-review", "guided-interaction"],
+      "assets": ["skills", "project-guidance", "procedures", "role-instructions", "schemas", "templates", "artifact-review", "agent-native-operate"],
       "healthChecks": ["skills-present", "project-guidance-current", "runtime-authenticated", "artifact-command-valid", "guided-dynamic-capability-reported"],
       "drivers": {
         "install": "openplanr://drivers/codex/install",
@@ -78,7 +80,7 @@
     },
     {
       "id": "cursor",
-      "version": "0.36.1",
+      "version": "0.37.0",
       "capabilityLevel": "workflow",
       "installScopes": ["project"],
       "entrypoints": {
@@ -100,10 +102,11 @@
         "headlessBridge": false,
         "artifactReview": true,
         "operatingBoard": true,
-        "operatingAdvisorDispatch": "structured-provider",
+        "operatingAdvisorDispatch": "sequential-native",
+        "operatingRuntimePolicy": "runtime-governed",
         "interactiveQuestions": "chat"
       },
-      "assets": ["rules", "roles", "schemas", "templates", "artifact-review", "guided-interaction"],
+      "assets": ["rules", "roles", "procedures", "schemas", "templates", "artifact-review", "agent-native-operate"],
       "healthChecks": ["rules-present", "portable-assets-present", "no-foreign-runtime-paths", "artifact-command-valid", "guided-chat-capability-reported"],
       "drivers": {
         "install": "openplanr://drivers/cursor/install",

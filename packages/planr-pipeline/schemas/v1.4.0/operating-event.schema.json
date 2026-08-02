@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/operating-event.schema.json",
+  "title": "OpenPlanr Protocol v1.4 agent-native operating event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "eventId",
+    "sequence",
+    "timestamp",
+    "cycleId",
+    "type",
+    "entityId",
+    "previousEventHash",
+    "eventHash",
+    "actor",
+    "causationId",
+    "correlationId",
+    "evidenceRefs",
+    "payload"
+  ],
+  "properties": {
+    "kind": { "const": "operating-event" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.4.0" },
+    "eventId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+    "type": { "const": "advisory.recorded" },
+    "entityId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}-[A-Za-z0-9._-]+$" },
+    "previousEventHash": {
+      "type": ["string", "null"],
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "eventHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": { "type": "string", "enum": ["human", "engine", "runtime", "migration"] },
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "causationId": { "type": ["string", "null"], "maxLength": 128 },
+    "correlationId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "evidenceRefs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^EVD-[A-Za-z0-9._-]+$" }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recordDigest", "advisorReportDigest", "roleId", "runtimeBinding"],
+      "properties": {
+        "recordDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "advisorReportDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "roleId": {
+          "type": "string",
+          "enum": [
+            "strategy-finance",
+            "technology-risk",
+            "product-activation",
+            "growth-market",
+            "operations-customer",
+            "chair"
+          ]
+        },
+        "runtimeBinding": { "$ref": "operating-runtime-binding.schema.json" }
+      }
+    }
+  }
+}

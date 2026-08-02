@@ -263,6 +263,7 @@ test('a generated operating mandate for every role validates and carries no evid
     const mandate = createOperatingMandate(role.id, {
       roots: ['.planr', 'src', 'lib'],
       forbiddenPaths: ['.env'],
+      protocolVersion: V,
     });
     assert.deepEqual(
       validateProtocolArtifact('operating-mandate', mandate, { protocolVersion: V }),
@@ -278,7 +279,10 @@ test('a generated operating mandate for every role validates and carries no evid
     assert.ok(mandate.boundaries.roots.includes('.planr'), 'a declared gitignored .planr root is citable');
   }
 
-  const base = createOperatingMandate('strategy-finance', { roots: ['src'] });
+  const base = createOperatingMandate('strategy-finance', {
+    roots: ['src'],
+    protocolVersion: V,
+  });
   assert.ok(
     validateProtocolArtifact('operating-mandate', { ...base, evidence: [] }, { protocolVersion: V }).length,
     'additionalProperties:false rejects a smuggled evidence body',
@@ -290,8 +294,35 @@ test('a generated operating mandate for every role validates and carries no evid
 });
 
 test('role registry requires an investigation mandate and retires dispatchMode/minimumEvidence', () => {
-  const roles = readJson('registry/operating-roles.json');
-  assert.equal(roles.protocolVersion, V);
+  const current = readJson('registry/operating-roles.json');
+  const roles = {
+    ...current,
+    protocolVersion: V,
+    roles: current.roles.map((role) => ({
+      id: role.id,
+      order: role.order,
+      displayLabel: role.displayLabel,
+      mandate: role.mandate,
+      forbiddenRecommendationCategories: role.forbiddenRecommendationCategories,
+      permittedEvidenceKinds: role.permittedEvidenceKinds,
+      sensitivityCeiling: role.sensitivityCeiling,
+      capabilityTier: role.capabilityTier,
+      inputSchema: 'operating-advisor-input@1.2.0',
+      outputSchema: 'operating-role-result@1.2.0',
+      adapterResponseSchema: 'operating-advisor-response@1.2.0',
+      readOnly: true,
+      writeBoundary: 'none',
+      allowedProposalTypes: ['finding', 'decision', 'data-gap'],
+      budgets: {
+        maxInputBytes: 262144,
+        maxOutputBytes: Math.min(role.budgets.maxOutputBytes, 131072),
+        maxProposals: role.budgets.maxActions,
+      },
+      requiredEvidenceFields: ['id', 'digest'],
+      investigationMandate: role.investigationMandate,
+      failureBehavior: role.failureBehavior,
+    })),
+  };
   assert.deepEqual(validateProtocolArtifact('operating-role-registry', roles, { protocolVersion: V }), []);
   for (const role of roles.roles) {
     assert.ok(!('dispatchMode' in role), `${role.id} must not carry a retired dispatchMode`);
@@ -478,14 +509,27 @@ test('cadence contract computes due dates and keeps manual cadence undated', () 
 });
 
 test('adapter registry adds fail-closed capability values without dropping v1.2 values', () => {
-  const registry = readJson('registry/adapters.json');
-  registry.protocolVersion = V;
+  const current = readJson('registry/adapters.json');
+  const toV13 = (value) => ({
+    ...value,
+    protocolVersion: V,
+    adapters: value.adapters.map((adapter) => ({
+      ...adapter,
+      capabilities: {
+        ...adapter.capabilities,
+        operatingAdvisorDispatch: adapter.id === 'claude-code' ? 'native-read-only' : 'structured-provider',
+      },
+    })).map((adapter) => {
+      delete adapter.capabilities.operatingRuntimePolicy;
+      return adapter;
+    }),
+  });
+  const registry = toV13(current);
   registry.adapters[0].capabilities.toolIsolation = 'enforced-read-only';
   registry.adapters[0].capabilities.operatingAdvisorDispatch = 'native-read-only';
   assert.deepEqual(validateProtocolArtifact('adapter-registry', registry, { protocolVersion: V }), []);
 
-  const legacyValues = readJson('registry/adapters.json');
-  legacyValues.protocolVersion = V;
+  const legacyValues = toV13(current);
   assert.deepEqual(
     validateProtocolArtifact('adapter-registry', legacyValues, { protocolVersion: V }),
     [],

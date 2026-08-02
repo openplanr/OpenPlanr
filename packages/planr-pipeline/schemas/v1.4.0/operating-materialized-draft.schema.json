@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/operating-materialized-draft.schema.json",
+  "title": "OpenPlanr Protocol v1.4 materialized operating draft",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "draftId", "cycleId", "actionKey", "artifactKind", "path", "status", "artifactDigest", "causality", "reversible"],
+  "properties": {
+    "kind": { "const": "operating-materialized-draft" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.4.0" },
+    "draftId": { "type": "string", "pattern": "^DRAFT-[A-Za-z0-9._-]{1,120}$" },
+    "cycleId": { "type": "string", "pattern": "^CYCLE-[A-Za-z0-9._-]{1,120}$" },
+    "actionKey": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+    "artifactKind": { "type": "string", "enum": ["quick-task", "spec", "epic", "decision", "agent-artifact"] },
+    "path": { "type": "string", "minLength": 1, "maxLength": 1024, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+    "status": { "type": "string", "enum": ["proposed", "approved", "discarded"] },
+    "artifactDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "causality": { "type": "object", "additionalProperties": false, "required": ["findingIds", "citationDigests"], "properties": { "findingIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }, "citationDigests": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } } } },
+    "reversible": { "const": true },
+    "userEdited": { "type": "boolean" }
+  }
+}

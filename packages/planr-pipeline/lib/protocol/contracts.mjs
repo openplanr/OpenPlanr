@@ -16,6 +16,7 @@ const paths = {
     '1.1.0': 'schemas/v1.1.0/adapter-registry.schema.json',
     '1.2.0': 'schemas/v1.2.0/adapter-registry.schema.json',
     '1.3.0': 'schemas/v1.3.0/adapter-registry.schema.json',
+    '1.4.0': 'schemas/v1.4.0/adapter-registry.schema.json',
   },
   'ecosystem-manifest': { '1.1.0': 'schemas/v1.1.0/ecosystem-manifest.schema.json' },
   'artifact-envelope': { '1.1.0': 'schemas/v1.1.0/artifact-envelope.schema.json' },
@@ -25,6 +26,7 @@ const paths = {
   'operating-role-registry': {
     '1.2.0': 'schemas/v1.2.0/operating-role-registry.schema.json',
     '1.3.0': 'schemas/v1.3.0/operating-role-registry.schema.json',
+    '1.4.0': 'schemas/v1.4.0/operating-role-registry.schema.json',
   },
   'operating-provider-registry': { '1.2.0': 'schemas/v1.2.0/operating-provider-registry.schema.json' },
   'operating-config': { '1.2.0': 'schemas/v1.2.0/operating-config.schema.json' },
@@ -34,10 +36,12 @@ const paths = {
   'operating-advisor-response': {
     '1.2.0': 'schemas/v1.2.0/operating-advisor-response.schema.json',
     '1.3.0': 'schemas/v1.3.0/operating-advisor-response.schema.json',
+    '1.4.0': 'schemas/v1.4.0/operating-advisor-response.schema.json',
   },
   'operating-adapter-handoff': {
     '1.2.0': 'schemas/v1.2.0/operating-adapter-handoff.schema.json',
     '1.3.0': 'schemas/v1.3.0/operating-adapter-handoff.schema.json',
+    '1.4.0': 'schemas/v1.4.0/operating-adapter-handoff.schema.json',
   },
   'operating-role-result': { '1.2.0': 'schemas/v1.2.0/operating-role-result.schema.json' },
   'operating-finding': {
@@ -56,6 +60,7 @@ const paths = {
   'operating-event': {
     '1.2.0': 'schemas/v1.2.0/operating-event.schema.json',
     '1.3.0': 'schemas/v1.3.0/operating-event.schema.json',
+    '1.4.0': 'schemas/v1.4.0/operating-event.schema.json',
   },
   'operating-outcome': { '1.2.0': 'schemas/v1.2.0/operating-outcome.schema.json' },
   'operating-spec-link': { '1.2.0': 'schemas/v1.2.0/operating-spec-link.schema.json' },
@@ -64,8 +69,12 @@ const paths = {
   'operating-record': {
     '1.2.0': 'schemas/v1.2.0/operating-record.schema.json',
     '1.3.0': 'schemas/v1.3.0/operating-record.schema.json',
+    '1.4.0': 'schemas/v1.4.0/operating-record.schema.json',
   },
-  'operating-records-log-entry': { '1.3.0': 'schemas/v1.3.0/operating-records-log-entry.schema.json' },
+  'operating-records-log-entry': {
+    '1.3.0': 'schemas/v1.3.0/operating-records-log-entry.schema.json',
+    '1.4.0': 'schemas/v1.4.0/operating-records-log-entry.schema.json',
+  },
   'operating-transaction-journal': { '1.2.0': 'schemas/v1.2.0/operating-transaction-journal.schema.json' },
   'operating-artifact-session': { '1.2.0': 'schemas/v1.2.0/operating-artifact-session.schema.json' },
   'operating-provider-manifest': { '1.2.0': 'schemas/v1.2.0/operating-provider-manifest.schema.json' },
@@ -77,10 +86,16 @@ const paths = {
   },
   'operating-recovery-record': { '1.2.0': 'schemas/v1.2.0/operating-recovery-record.schema.json' },
   'operating-mission-packet': { '1.3.0': 'schemas/v1.3.0/operating-mission-packet.schema.json' },
-  'operating-mandate': { '1.3.0': 'schemas/v1.3.0/operating-mandate.schema.json' },
+  'operating-mandate': {
+    '1.3.0': 'schemas/v1.3.0/operating-mandate.schema.json',
+    '1.4.0': 'schemas/v1.4.0/operating-mandate.schema.json',
+  },
   'operating-evidence-index-item': { '1.3.0': 'schemas/v1.3.0/operating-evidence-index-item.schema.json' },
   'operating-tool-grant': { '1.3.0': 'schemas/v1.3.0/operating-tool-grant.schema.json' },
-  'operating-citation': { '1.3.0': 'schemas/v1.3.0/operating-citation.schema.json' },
+  'operating-citation': {
+    '1.3.0': 'schemas/v1.3.0/operating-citation.schema.json',
+    '1.4.0': 'schemas/v1.4.0/operating-citation.schema.json',
+  },
   'operating-citation-resolution': { '1.3.0': 'schemas/v1.3.0/operating-citation-resolution.schema.json' },
   'operating-cadence-status': { '1.3.0': 'schemas/v1.3.0/operating-cadence-status.schema.json' },
   'ecosystem-saga': { '1.2.0': 'schemas/v1.2.0/ecosystem-saga.schema.json' },
@@ -92,6 +107,11 @@ const paths = {
   'guided-confirmation': { '1.2.0': 'schemas/v1.2.0/guided-confirmation.schema.json' },
   'structured-action': { '1.2.0': 'schemas/v1.2.0/structured-action.schema.json' },
   'evidence-diagnostic': { '1.2.0': 'schemas/v1.2.0/evidence-diagnostic.schema.json' },
+  'operating-context-claim': { '1.4.0': 'schemas/v1.4.0/operating-context-claim.schema.json' },
+  'operating-runtime-binding': { '1.4.0': 'schemas/v1.4.0/operating-runtime-binding.schema.json' },
+  'operating-research-mandate': { '1.4.0': 'schemas/v1.4.0/operating-research-mandate.schema.json' },
+  'operating-materialized-draft': { '1.4.0': 'schemas/v1.4.0/operating-materialized-draft.schema.json' },
+  'operating-interaction-surface': { '1.4.0': 'schemas/v1.4.0/operating-interaction-surface.schema.json' },
 };
 
 export const PROTOCOL_SCHEMA_REGISTRY = Object.freeze(Object.fromEntries(

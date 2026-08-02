@@ -9,9 +9,9 @@ business questions or infer authority.
 
 | Runtime | Declared ceiling | Deterministic fallback | Advisor dispatch | Tool isolation |
 |---|---|---|---|---|
-| claude-code | native | native → chat → terminal → none | native-read-only | enforced |
-| codex | native | native → chat → terminal → none | structured-provider | advisory |
-| cursor | chat | chat → terminal → none | structured-provider | advisory |
+| claude-code | native | native → chat → terminal → none | native-agent | enforced |
+| codex | native | native → chat → terminal → none | native-agent | advisory |
+| cursor | chat | chat → terminal → none | sequential-native | advisory |
 
 The declared mode is a capability ceiling, not proof that a tool exists in the
 active session. Native presentation is selected only after a positive runtime

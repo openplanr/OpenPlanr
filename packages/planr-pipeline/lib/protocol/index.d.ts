@@ -267,6 +267,11 @@ export interface OperatingAdapterMachineAction {
     | 'adapter.finalize'
     | 'adapter.resume'
     | 'adapter.cancel'
+    | 'harness.prepare'
+    | 'harness.record'
+    | 'harness.finalize'
+    | 'harness.resume'
+    | 'harness.cancel'
     | 'run.continue';
   effect: 'read-only' | 'machine-local-write' | 'project-write';
   role?: string;
@@ -284,15 +289,27 @@ export interface OperatingAdapterMachineAction {
         declaredRoots: string[];
         toolGrant: { allowed: string[]; roots: string[] };
         isolation: 'enforced-read-only-bounded' | 'unsupported';
+      }
+    | {
+        source: 'harness.prepare-result';
+        agent: string;
+        mandatePointer: string;
+        procedurePointer: string;
+        runtime: 'claude-code' | 'codex' | 'cursor';
+        executionMode: 'native-agent' | 'sequential-native';
+        assurance: 'runtime-governed';
+        toolIsolation: 'enforced' | 'advisory' | 'none';
+        permissionAuthority: 'runtime-session';
       };
   stdin?: {
     kind: 'stdin-json';
     mediaType: 'application/json';
     encoding: 'utf-8';
-    maxBytes: 32768;
+    maxBytes: 32768 | 262144;
     schema:
       | 'https://openplanr.dev/schemas/v1.2.0/operating-advisor-response.schema.json'
-      | 'https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json';
+      | 'https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json'
+      | 'https://openplanr.dev/schemas/v1.4.0/operating-advisor-response.schema.json';
     schemaSource: 'adapter.prepare-result';
     schemaPointer: string;
   };
@@ -300,14 +317,19 @@ export interface OperatingAdapterMachineAction {
 
 export interface OperatingAdapterHandoff {
   kind: 'operating-adapter-handoff';
-  schemaVersion: '1.0.0';
-  protocolVersion: '1.2.0' | '1.3.0';
-  phase: 'advisors' | 'chair';
+  schemaVersion: '1.0.0' | '1.1.0';
+  protocolVersion: '1.2.0' | '1.3.0' | '1.4.0';
+  phase: 'bootstrap' | 'advisors' | 'chair';
   state: OperatingAdapterHandoffState;
   binding: {
     cycleId: string;
     evidenceDigest: string;
     runtime: string;
+    runtimeBinding?: 'required';
+    crossRuntimeFallback?: false;
+    executionMode?: 'native-agent' | 'sequential-native';
+    assurance?: 'runtime-governed';
+    toolIsolation?: 'enforced' | 'advisory' | 'none';
     idempotencyKey: string;
     lease: string | null;
     expiresAt: string | null;
@@ -319,6 +341,81 @@ export interface OperatingAdapterHandoff {
   }>;
   next: OperatingAdapterMachineAction[];
   recovery: OperatingAdapterMachineAction[];
+}
+
+export type OperatingEpistemicStatus =
+  | 'observed'
+  | 'inferred'
+  | 'hypothesis'
+  | 'owner-confirmed'
+  | 'unknown';
+
+export type OperatingCitation =
+  | { kind: 'repository'; componentId?: string; path: string; startLine: number; endLine: number; revision: string }
+  | { kind: 'git'; componentId?: string; revision: string; path?: string }
+  | { kind: 'planr'; artifactId: string; path: string; digest: string }
+  | { kind: 'external'; url: string; title: string; publisher?: string; retrievedAt: string; contentDigest: string };
+
+export interface OperatingRuntimeBinding {
+  runtime: 'claude-code' | 'codex' | 'cursor';
+  runtimeBinding: 'required';
+  crossRuntimeFallback: false;
+  executionMode: 'native-agent' | 'sequential-native';
+  assurance: 'runtime-governed';
+  toolIsolation: 'enforced' | 'advisory' | 'none';
+}
+
+export interface OperatingContextClaim {
+  id: string;
+  field: string;
+  value: string;
+  epistemicStatus: OperatingEpistemicStatus;
+  confidence: 1 | 2 | 3 | 4 | 5;
+  citations: OperatingCitation[];
+  ownerNote?: string;
+}
+
+export interface AgentNativeOperatingAdvisorResponse {
+  outcome: 'actions' | 'quiet' | 'partial';
+  analysisMarkdown: string;
+  claims: Array<{
+    id: string;
+    statement: string;
+    epistemicStatus: OperatingEpistemicStatus;
+    confidence: 1 | 2 | 3 | 4 | 5;
+    citations: OperatingCitation[];
+  }>;
+  actions: Array<{
+    actionKey: string;
+    title: string;
+    summary: string;
+    lane: 'DEV' | 'OWNER' | 'AGENT';
+    routeKind: 'quick-task' | 'spec' | 'epic' | 'decision' | 'agent-artifact' | 'experiment' | 'metric';
+    horizon: 'immediate' | 'next' | 'later';
+    confidence: 1 | 2 | 3 | 4 | 5;
+    impact?: 1 | 2 | 3 | 4 | 5;
+    ease?: 1 | 2 | 3 | 4 | 5;
+    critical?: boolean;
+    citations: OperatingCitation[];
+  }>;
+  gaps: Array<{ id: string; question: string; impact: string; ownerRequired?: boolean }>;
+  conflicts: Array<{ id: string; summary: string; actionKeys: string[] }>;
+}
+
+export interface OperatingMaterializedDraft {
+  kind: 'operating-materialized-draft';
+  schemaVersion: '1.0.0';
+  protocolVersion: '1.4.0';
+  draftId: string;
+  cycleId: string;
+  actionKey: string;
+  artifactKind: 'quick-task' | 'spec' | 'epic' | 'decision' | 'agent-artifact';
+  path: string;
+  status: 'proposed' | 'approved' | 'discarded';
+  artifactDigest: string;
+  causality: { findingIds: string[]; citationDigests: string[] };
+  reversible: true;
+  userEdited?: boolean;
 }
 
 export type OperatingArtifactType = 'markdown' | 'html' | 'json' | 'csv';
@@ -492,11 +589,11 @@ export function listOperatingProviders(): Array<Record<string, JsonValue>>;
 export function createOperatingAdvisorBrief(roleId: string): OperatingAdvisorBrief;
 export function listOperatingAdvisorBriefs(): OperatingAdvisorBrief[];
 export function createOperatingAdapterHandoff(input: {
-  phase: 'advisors' | 'chair';
+  phase: 'bootstrap' | 'advisors' | 'chair';
   state: OperatingAdapterHandoffState;
   cycleId: string;
   evidenceDigest: string;
-  protocolVersion?: '1.2.0' | '1.3.0';
+  protocolVersion?: '1.2.0' | '1.3.0' | '1.4.0';
   runtime: string;
   idempotencyKey: string;
   lease?: string | null;
@@ -507,6 +604,42 @@ export function createOperatingAdapterHandoff(input: {
     inputDigest?: string | null;
   }>;
 }): OperatingAdapterHandoff;
+export function createOperatingRuntimeBinding(
+  runtime: string,
+  options?: { executionMode?: 'native-agent' | 'sequential-native' },
+): OperatingRuntimeBinding;
+export function assertOperatingRuntimeMatch(
+  binding: OperatingRuntimeBinding,
+  runtime: string,
+): OperatingRuntimeBinding;
+export function createOperatingResearchMandate(input: {
+  cycleId: string;
+  runtime: string;
+  executionMode?: 'native-agent' | 'sequential-native';
+  researchMode?: 'local' | 'connected';
+  connectedResearchConsentDigest?: string | null;
+  focus?: string[];
+  roots?: string[];
+}): Record<string, JsonValue>;
+export function validateOperatingContextClaims(
+  claims: unknown,
+): OperatingContextClaim[];
+export function validateAgentNativeAdvisorResponse(
+  response: unknown,
+): AgentNativeOperatingAdvisorResponse;
+export function qualifyOperatingDraftCandidates(
+  actions: AgentNativeOperatingAdvisorResponse['actions'],
+  options?: { existingDigests?: string[]; conflictedActionKeys?: string[]; capacity?: number },
+): { eligible: Array<{ action: AgentNativeOperatingAdvisorResponse['actions'][number]; digest: string }>; rejected: Array<{ action: AgentNativeOperatingAdvisorResponse['actions'][number]; digest: string; reason: string }> };
+export function createOperatingMaterializedDraft(
+  input: Omit<OperatingMaterializedDraft, 'kind' | 'schemaVersion' | 'protocolVersion' | 'causality' | 'reversible'> & {
+    findingIds: string[];
+    citationDigests: string[];
+  },
+): OperatingMaterializedDraft;
+export function assertOperatingDraftApproved(
+  draft: OperatingMaterializedDraft,
+): OperatingMaterializedDraft;
 export function validateOperatingAdapterHandoffBindings(
   value: OperatingAdapterHandoff,
 ): OperatingAdapterHandoff;

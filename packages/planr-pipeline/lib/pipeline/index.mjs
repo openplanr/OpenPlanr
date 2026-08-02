@@ -81,6 +81,18 @@ export {
 export { createOperatingMissionPacket } from '../operate/mission-packet.mjs';
 export { createOperatingMandate, listOperatingMandates } from '../operate/mandate.mjs';
 export {
+  assertOperatingRuntimeMatch,
+  createOperatingResearchMandate,
+  createOperatingRuntimeBinding,
+  validateAgentNativeAdvisorResponse,
+  validateOperatingContextClaims,
+} from '../operate/research.mjs';
+export {
+  assertOperatingDraftApproved,
+  createOperatingMaterializedDraft,
+  qualifyOperatingDraftCandidates,
+} from '../operate/drafts.mjs';
+export {
   resolveOperatingCitation,
   validateOperatingCitation,
 } from '../operate/citation.mjs';

@@ -61,6 +61,11 @@ const SEED_FILES = [
   'templates/runtime/planr-operate-cursor.mdc.tpl',
   'templates/runtime/planr-operate-command.md.tpl',
   'templates/runtime/operating-lens-agent.md.tpl',
+  'templates/runtime/operating-role-instruction.md.tpl',
+  'procedures/operate/bootstrap.md',
+  'procedures/operate/advisor.md',
+  'procedures/operate/chair.md',
+  'procedures/operate/review.md',
 ];
 
 function seedProjectRoot() {
@@ -101,7 +106,7 @@ test('generator emits exactly one bounded read-only agent per mission-mode lens'
     assert.doesNotMatch(line, /\bWrite\b/u, `${target} tools grant has no Write`);
     assert.doesNotMatch(line, /Bash\(\*\)/u, `${target} tools grant has no unscoped Bash`);
     assert.match(text, /^model:\s*claude-sonnet-5$/mu, `${target} pins the analysis-tier model`);
-    assert.match(text, /read-only Operating Board advisory lens/u);
+    assert.match(text, /agent-native Operating Board advisory lens/u);
     assert.match(text, /never appears in\s*\n?`registry\/roles\.json`|registry\/roles\.json/u);
   }
 });

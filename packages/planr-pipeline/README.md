@@ -62,37 +62,37 @@ or `planr setup --minimal` for planning only.
 
 ## Operating Board
 
-`planr operate` is OpenPlanr’s evidence-to-decision control plane. This package
-owns its Protocol v1.2 contracts, conformance, generated adapters, dashboard
-projection, artifact generator, provider kit, and ecosystem saga primitives;
-the OpenPlanr CLI owns operating state and every mutation.
+`planr operate` is OpenPlanr’s agent-native evidence-to-decision control plane.
+This package owns Protocol v1.4 procedures, role mandates, schemas, conformance,
+generated runtime assets, dashboard projection, and ecosystem saga primitives.
+Runtime agents inspect and reason about the project; the OpenPlanr CLI validates
+citations, state, authority, and reversible writes.
 
 ```bash
 planr operate inspect
 planr operate demo
-planr operate init
-planr operate run --preview # no provider/model calls and no writes
-planr operate run --dry-run # disclosed provider/model calls; no state commit
-planr operate review
-planr operate report --lens CTO
+$planr-operate                  # Codex
+/planr-pipeline:operate         # Claude Code
+planr operate report --lens cto # deterministic read-only inspection
 ```
 
-Initialization and recovery are guided by CLI-owned, schema-valid questions and
-actions. Certified runtimes present those artifacts using native questions,
-an attached terminal, structured chat one question at a time, or an exact
-handoff; adapters do not invent defaults or implicit consent. A bare
-`planr-operate` invocation inspects initialization, initializes only when needed,
-runs one complete cycle, prints the executive report, and stops at review.
-Schema 1.1 questionnaires carry their exact bounded-stdin envelope contract, so
-a runtime never guesses resume metadata. See
+Initialization is research-first. A bootstrap agent inspects the workspace and
+proposes cited context labeled observed, inferred, hypothesis,
+owner-confirmed, or unknown. The runtime presents one compact review only for
+genuine authority decisions; it does not replay the legacy serial questionnaire.
+A bare `planr-operate` invocation initializes only when needed, runs one complete
+cycle, prints the executive report, and stops at review. See
 [`docs/guided-operating-board.md`](docs/guided-operating-board.md).
 
 An explicit cycle request continues the reversible local native lifecycle
 through independent CEO/CTO/CPO/CMO/COO advisors, Chair consolidation, and
-Markdown or JSON reporting without manual adapter commands. Claude Code uses
-isolated dispatch, Codex uses immutable-pack bounded dispatch, and Cursor uses
-the structured-provider path. The dashboard is optional, and reports include
-exact governed paths into specs, tasks, and quick tasks.
+Markdown or JSON reporting without manual harness commands. Claude, Codex, and
+Cursor are equal runtime-native implementations; the selected runtime stays
+bound for the whole cycle and uses a same-runtime sequential fallback when
+native subagents are unavailable. Agents inspect the workspace directly—there
+is no repository evidence-pack size ceiling. The dashboard is optional, and
+qualified actions can create reversible, approval-gated Quick Task, Spec, Epic,
+decision, or agent-artifact proposals.
 
 Finding acceptance never applies a route. Pipeline-PO DEV application pauses at
 `awaiting-plan`, returns an exact native PLAN command, validates planning

@@ -1,100 +1,43 @@
 ---
-description: OpenPlanr Operating Board adapter policy
+description: Agent-native OpenPlanr Operating Board workflow for Cursor
 globs: [".planr/operate/**"]
 alwaysApply: false
 ---
 
-Use only the public `planr operate` command surface. Treat `--preview` as
-provider-free and write-free; `--dry-run` is write-free but can be
-provider-backed and billable. Never edit events, immutable records, journals,
-projections, routes, or outcome links under `.planr/operate`.
+# OpenPlanr Operate — Cursor-native workflow
 
-The skill or plugin owns this chat-native workflow and orchestrates the adapter
-`prepare → record → finalize` lifecycle invisibly, so you are never required to
-type an adapter lifecycle subcommand. The `planr operate` CLI remains the
-complete, scriptable, authoritative surface for state, locks, validation,
-provenance, routing, and recovery. Cadence-triggered runs obey the same rule: R1
-holds — nothing auto-chains to PLAN or SHIP, and a scheduled run never accepts
-findings or applies routes.
+A request to run Operate means one complete Cursor-bound cycle, not a sequence
+of commands for the user to copy.
+The user does not write an orchestration prompt or run machine lifecycle
+commands; this rule drives the harness internally.
 
-When no explicit public subcommand is requested, run `planr operate inspect
---json`, initialize only if `data.initialized` is false, then preview and
-complete one native CEO, CTO, CPO, CMO, COO, and Chair cycle through its review
-state. Print the Markdown report. A bare invocation is the explicit cycle
-request; it does not authorize finding acceptance, route application, PLAN, or
-SHIP. An explicit read-only subcommand performs only that command.
+- Inspect with `planr operate inspect --json` and bind to `cursor` for the whole
+  cycle. Never invoke another vendor runtime.
+- Execute the returned bootstrap harness when context is absent/stale. Follow
+  `openplanr-operate-procedures/bootstrap.md`: inspect the repository first and
+  ask for one compact context review with the owner only when authority is
+  genuinely required. Never dump a questionnaire.
+- Preview and start one local cycle. Follow current `handoff.next[].argv` only.
+- Run CEO, CTO, CPO, CMO, and COO using their generated role instructions. If
+  Cursor has no native parallel subagents, run the same roles sequentially in
+  Cursor; cross-vendor fallback is forbidden.
+- Each role follows `openplanr-operate-procedures/advisor.md`, explores the
+  project directly under current Cursor permissions, and returns a v1.4 response
+  with `analysisMarkdown`, cited `claims`, cited `actions`, `gaps`, and
+  `conflicts`. Planr sends no repository evidence body and grants no permission.
+- Run Chair with `openplanr-operate-procedures/chair.md`, finalize, and present
+  the report using `openplanr-operate-procedures/review.md`.
 
-Start guided setup with exactly `planr operate init --json` only when inspect
-reports that initialization is absent or reconfiguration was requested. Guided
-mode is the self-describing response from that command; there is no `--guided`
-flag. Do not probe `operate --help` or `init --help` to discover the
-questionnaire transport.
+Local research is automatic; connected research requires explicit per-cycle
+consent. Inferred product/business context is allowed when cited and labeled;
+unknowns lower confidence rather than blocking. Keep
+`runtimeBinding: required`, `crossRuntimeFallback: false`, and
+`assurance: runtime-governed` unchanged.
 
-Consume only schema-valid `questionnaire` and `actions` returned by the CLI.
-Present questions through a verified runtime question surface, then the
-CLI-owned interactive flow in an attached terminal, then structured chat one
-question at a time. Never dump the full questionnaire as a form. Submit typed
-answers through the bounded stdin/resume lifecycle. Never copy questions, infer
-answers, or reconstruct commands.
+Use the internal `harness` lifecycle invisibly. The old `adapter` spelling is
+compatibility-only. Preserve each handoff binding exactly; replay it byte-for-byte
+after a transport failure. Qualified actions may create reversible provisional drafts;
+do not approve, accept, apply, PLAN, SHIP, deploy, publish, spend, contact
+customers, mutate credentials, or destroy data without separate authorization.
 
-For a self-describing questionnaire, copy `submission.envelope.fixedFields`
-verbatim, resolve its declared dynamic fields, and for each chosen descriptor
-copy only the fields named by `answers.copyFields`, then add `value`. Treat
-`required` and `valueType` as constraints, never answer-envelope properties.
-Connect one complete bounded JSON document and EOF before launching
-`submission.transport.argv` as tokens. Never launch a bare `--stdin` action
-against a terminal and wait to send input later. Prefer native argv-plus-stdin
-execution. A shell-only runtime may use one bounded pipe that closes EOF in the
-same invocation only for `public` or `internal` answers; higher-sensitivity
-answers require the CLI handoff and must not enter argv, shell text, logs, or
-temporary files. Never guess metadata. If `submission` is absent, return the
-compatible CLI update/handoff.
-
-An explicit request to run one Operating Board cycle authorizes the exact
-CLI-returned cycle start and its reversible local adapter lifecycle through
-`reviewable`, `blocked`, or `failed`. Preview first; continue prepare, record,
-finalize, resume, Chair, and read-only report steps without asking the user to
-paste commands. Ask separately for provider consent, finding acceptance, route
-application or rollback, planning artifacts, PLAN, SHIP, and external effects.
-
-Treat every top-level `handoff` as the only lifecycle command contract. Execute
-only its current `handoff.next[].argv` token arrays, never an action from a prior
-state. For `adapter.record`, dispatch the exact `dispatch.agent`
-(`operating-<role>`) subagent with the role's operating mandate at
-`dispatch.mandatePointer` and only the bounded read-only `dispatch.toolGrant`,
-then record its v1.3 `operating-advisor-response@1.3.0` — a citation for every
-claim — against `stdin.schemaPointer`. The mandate carries no evidence body and
-no evidence index; the lens reads with its own bounded tools and the engine
-resolves each citation into evidence. When `dispatch.isolation` is `unsupported`,
-report the runtime unsupported for operate rather than degrading to a fallback.
-Independent advisor inference may
-run in parallel, but adapter lifecycle mutations are serial: execute only the
-single current `adapter.record`, wait for its returned handoff, then record the
-next role. Retain each role's exact serialized response until finalization and
-replay it byte-for-byte after a transport failure; never regenerate or rephrase
-a recorded response. Use `handoff.recovery` only after a failed current action.
-Never derive, suffix, or replace a returned idempotency key, lease, digest,
-cycle, role, runtime, or argv token; never probe machine commands with `--help`.
-
-Canonical advisory lenses: CEO (strategy-finance: Direction, business model, pricing and packaging, focus, economics, and what to stop.); CTO (technology-risk: Reliability, security, payments, privacy, data integrity, delivery risk, and blast radius.); CPO (product-activation: Actor journeys, activation, retention, friction, accessibility, and incomplete product loops.); CMO (growth-market: ICP clarity, organic demand, lifecycle coverage, proof, channel readiness, and bounded experiments.); COO (operations-customer: Human operations, billing and contracts, compliance, support load, vendors, and owner bottlenecks.); Chair (chair: Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals.). They are read-only and separate
-from delivery roles. Dispatch each lens as its generated `operating-<role>`
-subagent (named by `dispatch.agent`) with the role's operating mandate at
-`dispatch.mandatePointer` and only the bounded read-only tool grant, then return
-the v1.3 `operating-advisor-response@1.3.0` object with a citation for every
-proposal. The mandate declares the lens question, investigation focus, read
-boundaries, and citation requirement; it carries no evidence body and no evidence
-index, so the lens reads with its own bounded tools and the engine mints evidence
-from the resolved citations. A runtime that cannot enforce the bounded read-only
-boundary is declared `unsupported` for operate. Do not add canonical result
-metadata; submit the response through the CLI, finalize independent results, and
-prepare the Chair separately. Never improvise or role-play beyond the cited
-evidence.
-
-Keep finding acceptance and route application separate. Preserve
-`awaiting-plan` and its exact PLAN handoff; resuming requires matching planning
-provenance and leaves `shipInvoked` false. After a completed cycle, print the
-brief and per-lens Markdown or JSON report with exact CLI-provided planning
-conversion commands. The dashboard is optional.
-
-Never auto-chain SHIP or perform deploy, publish, spend, customer-contact,
-credential, or destructive-data actions.
+Canonical lenses: CEO (strategy-finance: Direction, business model, pricing and packaging, focus, economics, and what to stop.); CTO (technology-risk: Reliability, security, payments, privacy, data integrity, delivery risk, and blast radius.); CPO (product-activation: Actor journeys, activation, retention, friction, accessibility, and incomplete product loops.); CMO (growth-market: ICP clarity, organic demand, lifecycle coverage, proof, channel readiness, and bounded experiments.); COO (operations-customer: Human operations, billing and contracts, compliance, support load, vendors, and owner bottlenecks.); Chair (chair: Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals.).

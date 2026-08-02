@@ -50,8 +50,8 @@ test('generated operating adapter assets and docs match their registries byte-fo
   for (const role of roles.roles) {
     assert.match(roleDocs, new RegExp(`\\| ${role.id} \\|`));
     assert.match(roleDocs, new RegExp(role.displayLabel));
-    assert.match(roleDocs, new RegExp(role.allowedProposalTypes.join(', ')));
-    assert.match(roleDocs, new RegExp(String(role.budgets.maxProposals)));
+    assert.match(roleDocs, new RegExp(role.allowedRouteKinds.join(', ')));
+    assert.match(roleDocs, new RegExp(String(role.budgets.maxActions)));
     assert.match(roleDocs, new RegExp(role.forbiddenRecommendationCategories[0]));
   }
   for (const provider of providers.providers) {
@@ -69,10 +69,14 @@ test('generated operating adapter assets and docs match their registries byte-fo
     }
     // The mandate dispatch flow: name the operating-<role> agent, point at the
     // mandate, and forbid the retired pack-mode instructions.
-    assert.match(asset, /mandatePointer/, `${target} must instruct the mandate dispatch`);
+    assert.match(
+      asset,
+      /(?:mandate|role instructions)/i,
+      `${target} must instruct the mandate dispatch`,
+    );
     assert.doesNotMatch(asset, /rolePacks?/, `${target} must not carry retired pack-mode text`);
     assert.doesNotMatch(asset, /empty-tool\s+isolation/, `${target} must not carry empty-tool isolation text`);
-    assert.match(asset, /(?:improvise|role-play)/i);
+    assert.match(asset, /(?:procedure|workflow)/i);
   }
 });
 
@@ -86,6 +90,11 @@ test('operating adapter generation normalizes CRLF templates to LF', () => {
     'templates/runtime/planr-operate-skill.md.tpl',
     'templates/runtime/planr-operate-cursor.mdc.tpl',
     'templates/runtime/planr-operate-command.md.tpl',
+    'templates/runtime/operating-role-instruction.md.tpl',
+    'procedures/operate/bootstrap.md',
+    'procedures/operate/advisor.md',
+    'procedures/operate/chair.md',
+    'procedures/operate/review.md',
   ];
   try {
     for (const path of paths) {

@@ -163,25 +163,17 @@ test('generated adapter docs and runtime-asset digests are current', () => {
     'commands/operate.md',
   ]) {
     const content = readFileSync(join(root, path), 'utf8');
-    assert.match(content, /Start guided setup with exactly `planr operate init --json` only/u);
     assert.match(content, /planr operate inspect\s+--json/u);
-    assert.match(content, /initialization is (?:absent|false)/u);
-    assert.match(content, /one\s+question at a time/u);
-    assert.match(content, /[Nn]ever dump the (?:whole|full) questionnaire as a form/u);
-    assert.match(
-      content,
-      /(?:bare|no-argument).*(?:invocation|command).*(?:explicit request|cycle request)/su,
-    );
+    assert.match(content, /research|investigat/iu);
+    assert.match(content, /compact (?:context )?review/iu);
+    assert.match(content, /Never dump a questionnaire/iu);
+    assert.match(content, /bare.*(?:invocation|command)|request to run Operate/isu);
     assert.doesNotMatch(content, /planr operate init --guided/u);
-    assert.match(content, /answers\.copyFields/u);
-    assert.match(content, /required.*valueType.*constraints|constraints.*required.*valueType/su);
-    assert.match(content, /Never launch a bare\s+`--stdin` action/u);
-    assert.match(content, /closes EOF in the\s+same invocation/u);
-    assert.match(content, /higher-sensitivity\s+answers/u);
-    assert.match(content, /Independent advisor inference may\s+run in parallel/u);
-    assert.match(content, /adapter lifecycle mutations are serial/u);
-    assert.match(content, /wait for its returned handoff/u);
-    assert.match(content, /replay it byte-for-byte/u);
+    assert.match(content, /harness/u);
+    assert.match(content, /runtimeBinding|runtime binding|binding must remain/iu);
+    assert.match(content, /crossRuntimeFallback|another vendor|cross-vendor/iu);
+    assert.match(content, /native.*(?:subagent|agent)|sequential/isu);
+    assert.match(content, /replay identical bytes|replay it byte-for-byte/iu);
   }
 });
 

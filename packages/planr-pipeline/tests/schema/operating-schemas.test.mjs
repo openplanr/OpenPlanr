@@ -87,19 +87,16 @@ test('operating and adapter registries are schema-valid, unique, and read-only',
   assert.ok(
     listOperatingRoles().every(
       (role) =>
-        role.outputSchema === 'operating-role-result@1.2.0' &&
-        role.adapterResponseSchema === 'operating-advisor-response@1.2.0',
+        role.responseSchema === 'operating-advisor-response@1.4.0' &&
+        role.writeBoundary === 'governed-output-only' &&
+        Array.isArray(role.allowedRouteKinds),
     ),
-  );
-  const legacyRoles = structuredClone(roles);
-  for (const role of legacyRoles.roles) delete role.adapterResponseSchema;
-  assert.doesNotThrow(
-    () => assertProtocolArtifact('operating-role-registry', legacyRoles),
-    'the additive adapter response declaration must not invalidate earlier v1.2 registries',
   );
   assert.equal(listOperatingProviders().length, 6);
   assert.equal(new Set(listOperatingProviders().map(({ id }) => id)).size, 6);
-  assert.ok(listOperatingRoles().every((role) => role.readOnly && role.writeBoundary === 'none'));
+  assert.ok(listOperatingRoles().every(
+    (role) => role.readOnly && role.writeBoundary === 'governed-output-only',
+  ));
   assert.ok(listOperatingProviders().every((provider) => provider.readOnly));
   assert.ok(adapters.adapters.every((adapter) => (
     adapter.capabilities.operatingBoard && adapter.entrypoints.operate
@@ -113,9 +110,9 @@ test('operating and adapter registries are schema-valid, unique, and read-only',
   )));
 });
 
-test('the operating role registry publishes at protocolVersion 1.3.0 with a per-role investigation mandate', () => {
+test('the operating role registry publishes at protocolVersion 1.4.0 with agent-native mandates', () => {
   const roles = readJson('registry/operating-roles.json');
-  assert.equal(roles.protocolVersion, '1.3.0');
+  assert.equal(roles.protocolVersion, '1.4.0');
   assert.equal(roles.roles.length, 6);
   assert.ok(
     roles.roles.every((role) => (
@@ -129,13 +126,17 @@ test('the operating role registry publishes at protocolVersion 1.3.0 with a per-
     roles.roles.every((role) => !('dispatchMode' in role) && !('minimumEvidence' in role)),
     'the retired dispatchMode and minimumEvidence fields must be gone',
   );
-  // Resolves against operating-role-registry@1.3.0 via its own protocolVersion.
+  assert.ok(roles.roles.every((role) => (
+    role.responseSchema === 'operating-advisor-response@1.4.0'
+    && role.writeBoundary === 'governed-output-only'
+  )));
+  // Resolves against operating-role-registry@1.4.0 via its own protocolVersion.
   assert.deepEqual(validateProtocolArtifact('operating-role-registry', roles), []);
   const missingMandate = structuredClone(roles);
   delete missingMandate.roles[0].investigationMandate;
   assert.ok(
     validateProtocolArtifact('operating-role-registry', missingMandate).length,
-    'investigationMandate is required per role at protocolVersion 1.3.0',
+    'investigationMandate is required per role at protocolVersion 1.4.0',
   );
 });
 

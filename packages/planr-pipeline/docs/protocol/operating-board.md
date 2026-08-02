@@ -431,3 +431,73 @@ can read it without a terminal. The rendered document references no remote CSS,
 JS, or font; a decision owner opens it fully offline, and the renderer fails
 closed if any `http(s)` reference is present. Rendering is local and
 share-on-request; nothing publishes automatically.
+
+## Protocol v1.4 agent-native execution
+
+Protocol v1.4.0 is additive. Existing v1.2 and v1.3 cycles, records, and
+projections remain readable; new agent-native cycles declare v1.4 contracts.
+ADR-011 supersedes only the prior CLI-reasoning and enforced-isolation
+eligibility clauses.
+
+### Runtime agents are the operating engine
+
+Operate now follows the same architecture as PLAN and SHIP. Canonical
+procedures and registry-derived role instructions tell the selected runtime how
+to investigate and produce results. Claude Code, Codex, and Cursor agents read
+the workspace using their current session permissions, perform repository and
+Git research, and author expressive Markdown plus typed claims, actions, gaps,
+and conflicts. OpenPlanr remains the governance kernel: it owns locks, state
+transitions, runtime binding, schema and citation validation, checkpoints,
+provenance, reversible writes, and authority gates.
+
+No repository body or evidence index is serialized into a v1.4 mandate, and no
+repository-size input ceiling applies. The mandate contains roots, boundaries,
+the role procedure, the response schema, and forbidden effects. Runtime agents
+choose and read relevant files on demand.
+
+### Sticky runtime and runtime-governed assurance
+
+Every cycle persists an `operating-runtime-binding` with
+`runtimeBinding: "required"` and `crossRuntimeFallback: false`. A Codex cycle
+uses Codex agents, a Claude Code cycle uses Claude Code agents, and a Cursor
+cycle uses Cursor agents. Missing native subagents fall back to sequential work
+inside the same runtime. Resume with another runtime fails with
+`E_OPERATE_RUNTIME_MISMATCH`.
+
+Runtime session permissions are authoritative. Planr grants no additional
+permissions. `toolIsolation` remains diagnostic metadata, but an honest
+`advisory` value is compatible with `assurance: "runtime-governed"`; verified
+citations and governed persistence—not vendor selection—form the safety gate.
+
+### Research-first context
+
+The bootstrap procedure researches product purpose, stage, likely business and
+customer context, goals, metrics, architecture, delivery state, Planr records,
+Git history, risks, and incomplete loops before asking questions. Claims are
+labeled `observed`, `inferred`, `hypothesis`, `owner-confirmed`, or `unknown`
+and carry citations when material. The owner receives one compact review for
+genuine authority decisions. Unknown context lowers confidence or creates a
+gap; it does not block a cycle. Connected research requires a separate,
+digest-bound consent preview.
+
+### Reports, roles, and canonical proposal drafts
+
+The six runtime-native roles are CEO, CTO, CPO, CMO, COO, and Chair. A complete
+cycle writes `report.md`, `report.json`, `actions.md`, and one readable board
+file per role under `.planr/operate/cycles/CYCLE-NNN/`. Material facts and work
+proposals require resolvable citations; invalid citations reject only the
+affected claim or action.
+
+Qualified, deduplicated actions may materialize reversible proposed Quick Task,
+Spec, Epic, decision, or agent artifacts in canonical Planr paths. These drafts
+carry cycle causality, remain unapproved, and cannot enter PLAN or SHIP.
+`planr operate drafts approve <draftId>` is always a separate human action;
+unapproved execution fails with `E_OPERATE_DRAFT_UNAPPROVED`.
+
+### Harness lifecycle
+
+Runtime skills use the machine-only
+`harness prepare|record|finalize|resume|cancel` lifecycle. The former `adapter`
+spelling remains a two-minor compatibility alias. Users invoke only
+`$planr-operate`, `/planr-pipeline:operate`, or the equivalent Cursor workflow;
+they never orchestrate lifecycle calls themselves.

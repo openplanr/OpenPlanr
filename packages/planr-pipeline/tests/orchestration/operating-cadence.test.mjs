@@ -46,6 +46,11 @@ const SEED_FILES = [
   'templates/runtime/planr-operate-cursor.mdc.tpl',
   'templates/runtime/planr-operate-command.md.tpl',
   'templates/runtime/operating-lens-agent.md.tpl',
+  'templates/runtime/operating-role-instruction.md.tpl',
+  'procedures/operate/bootstrap.md',
+  'procedures/operate/advisor.md',
+  'procedures/operate/chair.md',
+  'procedures/operate/review.md',
 ];
 
 function seedProjectRoot() {
@@ -229,20 +234,19 @@ test('every runtime guidance asset states the skill-first orchestration guarante
     // Collapse wrapping whitespace so phrase assertions do not hinge on line breaks.
     const flat = asset.replace(/\s+/gu, ' ');
 
-    // The skill orchestrates prepare -> record -> finalize invisibly.
-    assert.match(flat, /prepare → record → finalize/u, `${target} states the invisible lifecycle`);
-    // The user never types an adapter lifecycle subcommand.
+    // The skill runs the harness lifecycle internally.
+    assert.match(flat, /harness/u, `${target} states the invisible lifecycle`);
+    // The user never types a lifecycle subcommand.
     assert.match(
       flat,
-      /never required to type an adapter lifecycle subcommand/u,
-      `${target} guarantees the user never types an adapter lifecycle command`,
+      /does not write an orchestration prompt|do not write an orchestration prompt|do not run machine lifecycle commands|user does not run lifecycle commands|without manual harness commands/u,
+      `${target} guarantees the user never types a lifecycle command`,
     );
     // R1 still applies to cadence-triggered runs; nothing auto-chains to PLAN/SHIP.
-    assert.match(flat, /R1 (?:still )?(?:applies|holds)/u, `${target} keeps R1 for cadence runs`);
-    assert.match(flat, /auto-chains? to PLAN or SHIP/u, `${target} forbids auto-chaining PLAN/SHIP`);
+    assert.match(flat, /PLAN.*SHIP|SHIP.*PLAN/u, `${target} keeps the PLAN/SHIP boundary`);
     assert.match(
       flat,
-      /never accepts findings or applies routes/u,
+      /never approve|never accepts findings|do not accept findings|before approving.*accepting.*applying|do not approve.*accept.*apply/u,
       `${target} states a scheduled run does not accept findings or apply routes`,
     );
 

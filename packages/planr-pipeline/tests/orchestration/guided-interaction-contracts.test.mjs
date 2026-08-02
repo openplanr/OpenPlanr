@@ -34,18 +34,20 @@ test('all certified adapters declare truthful presentation modes only', () => {
       'native-bounded',
       'structured-provider',
       'native-read-only',
+      'native-agent',
+      'sequential-native',
     ].includes(adapter.capabilities.operatingAdvisorDispatch));
     assert.equal(typeof adapter.capabilities.toolIsolation, 'string');
   }
   const byId = (id) => adapters.adapters.find((adapter) => adapter.id === id);
   const codex = byId('codex');
   assert.equal(codex.capabilities.toolIsolation, 'advisory');
-  assert.equal(codex.capabilities.operatingAdvisorDispatch, 'structured-provider');
+  assert.equal(codex.capabilities.operatingAdvisorDispatch, 'native-agent');
   assert.equal(codex.capabilities.interactiveQuestions, 'native');
-  // The modernized v1.3 dispatch capabilities: claude-code natively enforces the
-  // bounded read-only boundary; codex and cursor fail closed to the provider.
-  assert.equal(byId('claude-code').capabilities.operatingAdvisorDispatch, 'native-read-only');
-  assert.equal(byId('cursor').capabilities.operatingAdvisorDispatch, 'structured-provider');
+  // Protocol v1.4 makes every certified runtime a native Operating executor;
+  // Cursor uses a same-runtime sequential fallback.
+  assert.equal(byId('claude-code').capabilities.operatingAdvisorDispatch, 'native-agent');
+  assert.equal(byId('cursor').capabilities.operatingAdvisorDispatch, 'sequential-native');
 });
 
 test('normalization cannot manufacture authority from adapter capabilities', () => {

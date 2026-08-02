@@ -7,6 +7,8 @@ const ADVISOR_RESPONSE_SCHEMA =
   'https://openplanr.dev/schemas/v1.2.0/operating-advisor-response.schema.json';
 const ADVISOR_RESPONSE_SCHEMA_V13 =
   'https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json';
+const ADVISOR_RESPONSE_SCHEMA_V14 =
+  'https://openplanr.dev/schemas/v1.4.0/operating-advisor-response.schema.json';
 
 function fail(detail) {
   throw new PipelineError(
@@ -18,16 +20,38 @@ function fail(detail) {
 function adapterEnforcesBoundedReadOnly(runtime) {
   const id = normalizeRuntime(runtime);
   const adapter = listRuntimeAdapters().find((entry) => entry.id === id);
-  // Only a runtime that natively enforces tool isolation can carry a mandate and
-  // guarantee the bounded read-only boundary (FR2/FR10). A runtime that cannot is
-  // declared `unsupported` for operate — never silently routed to a hidden
-  // structured-provider fallback. The classification is derived from the
-  // published registry's `enforced` isolation capability rather than a new field
-  // the registry schemas cannot carry.
+  // Protocol v1.3 compatibility only: that contract encoded enforced isolation
+  // as its dispatch gate. Protocol v1.4 uses runtime-governed native execution
+  // and records this value as assurance metadata rather than support policy.
   return adapter?.capabilities?.toolIsolation === 'enforced';
 }
 
-function mandateDispatch(binding, roleId) {
+function runtimeAdapter(runtime) {
+  const id = normalizeRuntime(runtime);
+  const adapter = listRuntimeAdapters().find((entry) => entry.id === id);
+  if (!adapter?.capabilities?.operatingBoard) {
+    throw new PipelineError(
+      'E_RUNTIME_UNSUPPORTED',
+      `Runtime ${String(runtime)} does not provide an Operating Board adapter.`,
+    );
+  }
+  return adapter;
+}
+
+function mandateDispatch(binding, roleId, protocolVersion) {
+  if (protocolVersion === '1.4.0') {
+    return {
+      source: 'harness.prepare-result',
+      agent: `operating-${roleId}`,
+      mandatePointer: `/data/mandates/${roleId}`,
+      procedurePointer: `/data/mandates/${roleId}/procedure`,
+      runtime: binding.runtime,
+      executionMode: binding.executionMode,
+      assurance: binding.assurance,
+      toolIsolation: binding.toolIsolation,
+      permissionAuthority: 'runtime-session',
+    };
+  }
   return {
     source: 'adapter.prepare-result',
     // Name the generated lens agent (`agents/operating/<roleId>.md`) a runtime
@@ -43,20 +67,20 @@ function mandateDispatch(binding, roleId) {
     // rather than widening access.
     declaredRoots: [],
     toolGrant: createMissionToolGrant([]),
-    // Exactly two isolation outcomes survive (FR10): a runtime that enforces
-    // bounded read-only tools carries the mandate; one that cannot is declared
-    // unsupported for operate.
+    // Frozen Protocol v1.3 behavior. New v1.4 handoffs use the branch above and
+    // support advisory runtimes through output verification.
     isolation: adapterEnforcesBoundedReadOnly(binding.runtime)
       ? 'enforced-read-only-bounded'
       : 'unsupported',
   };
 }
 
-function lifecycleArgv(binding, action, role) {
+function lifecycleArgv(binding, action, role, protocolVersion) {
+  const namespace = protocolVersion === '1.4.0' ? 'harness' : 'adapter';
   return [
     'planr',
     'operate',
-    'adapter',
+    namespace,
     action,
     ...(role ? ['--role', role] : []),
     '--cycle-id',
@@ -71,15 +95,16 @@ function lifecycleArgv(binding, action, role) {
   ];
 }
 
-function prepareAction(binding, roles) {
+function prepareAction(binding, roles, protocolVersion) {
+  const namespace = protocolVersion === '1.4.0' ? 'harness' : 'adapter';
   return {
-    id: 'adapter.prepare',
-    action: 'adapter.prepare',
+    id: `${namespace}.prepare`,
+    action: `${namespace}.prepare`,
     effect: 'machine-local-write',
     argv: [
       'planr',
       'operate',
-      'adapter',
+      namespace,
       'prepare',
       '--cycle-id',
       binding.cycleId,
@@ -95,14 +120,33 @@ function prepareAction(binding, roles) {
 }
 
 function recordAction(binding, roleId, protocolVersion) {
+  if (protocolVersion === '1.4.0') {
+    return {
+      id: `harness.record.${roleId}`,
+      action: 'harness.record',
+      effect: 'machine-local-write',
+      role: roleId,
+      argv: lifecycleArgv(binding, 'record', roleId, protocolVersion),
+      dispatch: mandateDispatch(binding, roleId, protocolVersion),
+      stdin: {
+        kind: 'stdin-json',
+        mediaType: 'application/json',
+        encoding: 'utf-8',
+        maxBytes: 262144,
+        schema: ADVISOR_RESPONSE_SCHEMA_V14,
+        schemaSource: 'harness.prepare-result',
+        schemaPointer: `/data/mandates/${roleId}/responseSchema`,
+      },
+    };
+  }
   if (protocolVersion === '1.3.0') {
     return {
       id: `adapter.record.${roleId}`,
       action: 'adapter.record',
       effect: 'machine-local-write',
       role: roleId,
-      argv: lifecycleArgv(binding, 'record', roleId),
-      dispatch: mandateDispatch(binding, roleId),
+      argv: lifecycleArgv(binding, 'record', roleId, protocolVersion),
+      dispatch: mandateDispatch(binding, roleId, protocolVersion),
       stdin: {
         kind: 'stdin-json',
         mediaType: 'application/json',
@@ -119,7 +163,7 @@ function recordAction(binding, roleId, protocolVersion) {
     action: 'adapter.record',
     effect: 'machine-local-write',
     role: roleId,
-    argv: lifecycleArgv(binding, 'record', roleId),
+    argv: lifecycleArgv(binding, 'record', roleId, protocolVersion),
     dispatch: {
       source: 'adapter.prepare-result',
       rolePackPointer: `/data/rolePacks/${roleId}`,
@@ -137,12 +181,13 @@ function recordAction(binding, roleId, protocolVersion) {
   };
 }
 
-function boundAction(binding, action, effect) {
+function boundAction(binding, action, effect, protocolVersion) {
+  const namespace = protocolVersion === '1.4.0' ? 'harness' : 'adapter';
   return {
-    id: `adapter.${action}`,
-    action: `adapter.${action}`,
+    id: `${namespace}.${action}`,
+    action: `${namespace}.${action}`,
     effect,
-    argv: lifecycleArgv(binding, action),
+    argv: lifecycleArgv(binding, action, undefined, protocolVersion),
   };
 }
 
@@ -169,7 +214,7 @@ function expectedActions(value) {
   switch (value.state) {
     case 'prepare-required':
       return {
-        next: [prepareAction(value.binding, value.roles)],
+        next: [prepareAction(value.binding, value.roles, value.protocolVersion)],
         recovery: [],
       };
     case 'record-required':
@@ -181,16 +226,16 @@ function expectedActions(value) {
           ? [recordAction(value.binding, pending[0].roleId, value.protocolVersion)]
           : [],
         recovery: [
-          boundAction(value.binding, 'resume', 'read-only'),
-          boundAction(value.binding, 'cancel', 'machine-local-write'),
+          boundAction(value.binding, 'resume', 'read-only', value.protocolVersion),
+          boundAction(value.binding, 'cancel', 'machine-local-write', value.protocolVersion),
         ],
       };
     case 'finalize-required':
       return {
-        next: [boundAction(value.binding, 'finalize', 'project-write')],
+        next: [boundAction(value.binding, 'finalize', 'project-write', value.protocolVersion)],
         recovery: [
-          boundAction(value.binding, 'resume', 'read-only'),
-          boundAction(value.binding, 'cancel', 'machine-local-write'),
+          boundAction(value.binding, 'resume', 'read-only', value.protocolVersion),
+          boundAction(value.binding, 'cancel', 'machine-local-write', value.protocolVersion),
         ],
       };
     case 'continue-required':
@@ -223,6 +268,9 @@ export function validateOperatingAdapterHandoffBindings(value) {
   }
   if (value.phase === 'advisors' && roleIds.includes('chair')) {
     fail('the advisors phase cannot contain the chair role');
+  }
+  if (value.phase === 'bootstrap' && (roleIds.length !== 1 || roleIds[0] !== 'bootstrap')) {
+    fail('the bootstrap phase must contain only the bootstrap role');
   }
 
   const statuses = value.roles.map(({ status }) => status);
@@ -269,16 +317,28 @@ export function validateOperatingAdapterHandoffBindings(value) {
  * The sole canonical producer for the runtime-neutral adapter lifecycle handoff.
  */
 export function createOperatingAdapterHandoff(input) {
+  const protocolVersion = input.protocolVersion ?? '1.2.0';
+  const adapter = protocolVersion === '1.4.0' ? runtimeAdapter(input.runtime) : null;
   const value = {
     kind: 'operating-adapter-handoff',
-    schemaVersion: '1.0.0',
-    protocolVersion: input.protocolVersion ?? '1.2.0',
+    schemaVersion: protocolVersion === '1.4.0' ? '1.1.0' : '1.0.0',
+    protocolVersion,
     phase: input.phase,
     state: input.state,
     binding: {
       cycleId: input.cycleId,
       evidenceDigest: input.evidenceDigest,
-      runtime: input.runtime,
+      runtime: protocolVersion === '1.4.0' ? adapter.id : input.runtime,
+      ...(protocolVersion === '1.4.0' ? {
+        runtimeBinding: 'required',
+        crossRuntimeFallback: false,
+        executionMode: input.executionMode
+          ?? (adapter.capabilities.operatingAdvisorDispatch === 'sequential-native'
+            ? 'sequential-native'
+            : 'native-agent'),
+        assurance: 'runtime-governed',
+        toolIsolation: adapter.capabilities.toolIsolation,
+      } : {}),
       idempotencyKey: input.idempotencyKey,
       lease: input.lease ?? null,
       expiresAt: input.expiresAt ?? null,

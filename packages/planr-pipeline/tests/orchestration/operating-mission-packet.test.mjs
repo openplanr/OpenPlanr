@@ -6,7 +6,7 @@ import {
   createOperatingMissionPacket,
   MISSION_READ_ONLY_TOOLS,
 } from '../../lib/operate/mission-packet.mjs';
-import { listOperatingRoles, validateProtocolArtifact } from '../../lib/protocol/contracts.mjs';
+import { validateProtocolArtifact } from '../../lib/protocol/contracts.mjs';
 import { canonicalizeJson, sha256Jcs } from '../../lib/protocol/jcs.mjs';
 
 const digest = (character) => `sha256:${character.repeat(64)}`;
@@ -86,9 +86,10 @@ test('an under-budget packet validates against the v1.3 schema and is digest-bou
   assert.deepEqual(packet.evidenceIndex.map(({ source }) => source), ['git', 'repository']);
 
   // The assembled packet stays within the role's declared input budget.
-  const role = listOperatingRoles().find(({ id }) => id === 'technology-risk');
-  assert.equal(packet.budgets.maxInputBytes, role.budgets.maxInputBytes);
-  assert.ok(Buffer.byteLength(canonicalizeJson(unsigned), 'utf8') <= role.budgets.maxInputBytes);
+  // Protocol v1.3 packets retain their historical bounded transport even
+  // though Protocol v1.4 native agents no longer receive repository bodies.
+  assert.equal(packet.budgets.maxInputBytes, 262144);
+  assert.ok(Buffer.byteLength(canonicalizeJson(unsigned), 'utf8') <= packet.budgets.maxInputBytes);
 });
 
 test('the tool grant is bounded read-only — no write, execute, network, or environment capability', () => {
@@ -156,7 +157,6 @@ const oversizedItem = (index) => ({
 });
 
 test('maxInputBytes fails closed with a named, role-scoped error on the post-truncation payload', () => {
-  const role = listOperatingRoles().find(({ id }) => id === 'strategy-finance');
   const oversized = Array.from({ length: 500 }, (_, index) => oversizedItem(index));
 
   // No maxEvidenceItems cap, so nothing is truncated: the full 500-item payload
@@ -169,7 +169,7 @@ test('maxInputBytes fails closed with a named, role-scoped error on the post-tru
     (error) => {
       assert.equal(error.code, 'E_OPERATE_MISSION_PACKET_BUDGET');
       assert.match(error.message, /role strategy-finance/);
-      assert.match(error.message, new RegExp(`exceeding maxInputBytes ${role.budgets.maxInputBytes}`));
+      assert.match(error.message, /exceeding maxInputBytes 262144/);
       return true;
     },
   );

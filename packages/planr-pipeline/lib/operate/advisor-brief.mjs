@@ -38,6 +38,11 @@ export function roleById(roleId) {
 export function createOperatingAdvisorBrief(roleId) {
   const role = structuredClone(roleById(roleId));
   const chair = role.id === 'chair';
+  // Protocol v1.2/v1.3 briefs are frozen compatibility projections of the
+  // current role registry. v1.4 permits a larger rich report, while the legacy
+  // schemas cap one response at 128 KiB.
+  const legacyMaximumOutputBytes = Math.min(role.budgets.maxOutputBytes, 131072);
+  const legacyMaximumProposals = role.budgets.maxProposals ?? role.budgets.maxActions;
   const responseContract = resolveProtocolSchema('operating-advisor-response', {
     protocolVersion: '1.2.0',
   });
@@ -66,11 +71,13 @@ export function createOperatingAdvisorBrief(roleId) {
       },
     },
     output: {
-      schema: role.adapterResponseSchema,
+      schema: 'operating-advisor-response@1.2.0',
       jsonSchema: responseContract.schema,
-      allowedProposalTypes: [...role.allowedProposalTypes].sort(),
-      maximumProposals: role.budgets.maxProposals,
-      maximumOutputBytes: role.budgets.maxOutputBytes,
+      allowedProposalTypes: chair
+        ? ['merge', 'sequence']
+        : ['data-gap', 'decision', 'finding'],
+      maximumProposals: legacyMaximumProposals,
+      maximumOutputBytes: legacyMaximumOutputBytes,
       requiredBehavior: chair
         ? [
             'Reconcile only the supplied verified advisor results.',
@@ -86,7 +93,14 @@ export function createOperatingAdvisorBrief(roleId) {
           ],
       scoring: chair ? null : structuredClone(SCORING_RUBRIC),
     },
-    budgets: structuredClone(role.budgets),
+    budgets: {
+      // Mission packets are a Protocol v1.3 compatibility transport. Keep the
+      // historical 256 KiB ceiling here even though v1.4 native agents read the
+      // workspace directly and therefore have no repository-payload ceiling.
+      maxInputBytes: role.budgets.maxInputBytes ?? 262144,
+      maxOutputBytes: legacyMaximumOutputBytes,
+      maxProposals: legacyMaximumProposals,
+    },
     failureBehavior: role.failureBehavior,
   };
   return {

@@ -1,12 +1,13 @@
 # OpenPlanr Protocol
 
 > Artifact version: **1.0.0**
-> Ecosystem contracts: **1.1.0 + additive Operating Board 1.2.0**
+> Ecosystem contracts: **1.1.0 + additive Operating Board 1.2.0–1.4.0**
 > Status: v1.0 artifact frontmatter remains stable. v1.1 adds optional adapter,
 > runtime-lock, compatibility, role-registry, provenance, and artifact-review
-> contracts. v1.2 adds operating evidence, advisory, governance, outcome, and
-> ecosystem-operation contracts.
-> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.36.1.
+> contracts. v1.2 adds operating governance, v1.3 adds citation-bound mandate
+> execution, and v1.4 adds agent-native research, sticky runtime binding,
+> expressive reports, and canonical proposal drafts.
+> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.37.0.
 
 The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI development. It defines:
 
@@ -18,9 +19,9 @@ The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI devel
 - **Artifact review** — portable HTML envelopes, encrypted live-room events,
   immutable snapshots, and ciphertext-only sharing boundaries without changing
   planning frontmatter.
-- **Operating Board** — attributed evidence, read-only advisor lenses,
-  deterministic consolidation, governed planning routes, and typed outcome
-  reconciliation.
+- **Operating Board** — runtime-native research and six advisory lenses,
+  attributed claims, deterministic governance, reversible proposal drafts,
+  governed planning routes, and typed outcome reconciliation.
 
 ## Why a protocol
 
@@ -84,6 +85,11 @@ Operating Board schemas live under [`../../schemas/v1.2.0/`](../../schemas/v1.2.
 Every persisted v1.2 object declares top-level `kind`,
 `schemaVersion: "1.0.0"`, and `protocolVersion: "1.2.0"`. They are additive and
 do not rewrite v1.0 planning artifacts or v1.1 runtime contracts.
+
+Agent-native Operating Board additions live under
+[`../../schemas/v1.4.0/`](../../schemas/v1.4.0/). They keep v1.2/v1.3 readable
+while making the selected runtime—not a serialized evidence pack—the reasoning
+engine. See [`operating-board.md`](operating-board.md) and ADR-011.
 
 ## Artifact review workflow
 

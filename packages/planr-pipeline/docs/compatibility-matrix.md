@@ -1,6 +1,6 @@
-# Compatibility Matrix - Protocol v1.0 artifacts + v1.1/v1.2 capabilities
+# Compatibility Matrix - Protocol v1.0 artifacts + v1.1–v1.4 capabilities
 
-> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.36.1.
+> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.37.0.
 
 ## TL;DR
 
@@ -43,7 +43,10 @@ Same `.planr/specs/` directories. Same SPEC, US, Task, stack, graph, and `.pipel
 | Operating Board | `/planr-pipeline:operate` → `planr operate` | Generated `planr operate` rule | Installed `$planr-operate` skill |
 | Guided Operating questions | Native when the active host verifies the question surface; chat/terminal/handoff fallback | Structured Composer chat; terminal/handoff fallback | Native when dynamically reported; structured chat, terminal, then handoff |
 | Operating state transitions | OpenPlanr engine | OpenPlanr engine | OpenPlanr engine |
-| Operating advisor isolation | Native tool isolation where available | Advisory host boundary | Dynamic isolation; sequential fallback |
+| Operating execution | Runtime-native agents, sticky Claude binding | Same-runtime sequential Composer fallback | Runtime-native agents, sticky Codex binding |
+| Operating assurance | Runtime-governed; enforced isolation reported | Runtime-governed; advisory isolation reported | Runtime-governed; advisory isolation supported |
+| Operating project research | Agents inspect workspace directly | Same contract | Same contract |
+| Operating reports/drafts | Markdown + JSON + canonical proposals | Same contract | Same contract |
 | Sync command | Available | Available through router | `$planr-sync` / router |
 | Status command | Native and router | Router | Router/skill |
 | Conformance | Canonical local conformance suite | Artifact conformance target | Artifact conformance target |
@@ -55,7 +58,10 @@ Compatibility is reported at three explicit levels:
 - **Artifact:** a SPEC authored by OpenPlanr CLI or one runtime can be consumed by the others.
 - **Workflow:** PLAN, Design, SHIP, dashboard, status, and sync are reachable through the adapter.
 - **Product:** native runtime enforcement and the full host-integrated experience.
-- Protocol v1.2 Operating Board events, immutable records, checkpoints, routes,
+- Protocol v1.2/v1.3 Operating Board events remain readable. Protocol v1.4 adds
+  runtime bindings, research mandates, epistemic context, agent-native reports,
+  external citations, interaction surfaces, and materialized proposal drafts.
+- Operating events, immutable records, checkpoints, routes,
   and outcomes are runtime-neutral. Runtime guidance delegates to `planr
   operate`; it does not reimplement state transitions.
 - All adapters preserve the same governance boundaries: `--preview` makes no
@@ -81,9 +87,12 @@ Compatibility is reported at three explicit levels:
 
 The runtime guarantee is not identical tool behavior:
 
-- Claude Code is the canonical executor because plugin manifests enforce command and agent tool boundaries.
+- Claude Code reports enforced isolation where its host provides it.
 - Cursor uses generated portable rules and host handoff; its restrictions remain advisory.
-- Codex uses durable skills, native subagents when exposed, and a sequential fallback. `AGENTS.md` contains policy rather than the whole workflow.
+- Codex is an equal first-class executor. It uses durable skills, native
+  subagents when exposed, and a same-runtime sequential fallback. Advisory
+  isolation is transparent metadata, not an unsupported classification.
+- No adapter silently switches vendors during an Operating cycle.
 
 ## Dispatch Modes
 
@@ -152,9 +161,12 @@ contract.
 
 ## Caveats
 
-### Cursor and Codex restrictions are advisory
+### Cursor and Codex restrictions are runtime-governed
 
-Claude Code enforces per-agent tools through plugin manifests. Cursor and Codex cannot currently mirror that exact tool-layer boundary for every role. The mitigation is conformance plus Preserve-list verification after execution.
+Claude Code may enforce per-agent tools through plugin manifests. Cursor and
+Codex govern workspace access through their active session permissions. Planr
+does not widen those permissions; it validates cited results before persistence
+and refuses governed writes when validation fails.
 
 ### Snapshot hooks differ by runtime
 
@@ -182,4 +194,4 @@ For runtime-operated fixtures, use `conformance/runner.mjs` with `--setup`, then
 
 ---
 
-*OpenPlanr Protocol v1.0 artifacts + v1.1/v1.2/v1.3 ecosystem contracts - compatibility matrix for planr-pipeline v0.36.1.*
+*OpenPlanr Protocol v1.0 artifacts + v1.1–v1.4 ecosystem contracts — compatibility matrix for planr-pipeline v0.37.0.*

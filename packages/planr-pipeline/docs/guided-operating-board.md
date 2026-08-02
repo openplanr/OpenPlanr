@@ -1,146 +1,139 @@
-# Guided Operating Board
+# Agent-native Operating Board
 
-`planr operate` owns the questions, validation, previews, actions, and safety
-boundaries. Claude Code, Codex, Cursor, and a terminal only present those
-artifacts and return answers by canonical question ID.
+`planr operate` uses the same division of responsibility as PLAN and SHIP:
+the installed skill/plugin orchestrates the selected coding runtime, runtime
+agents inspect and reason about the project, and OpenPlanr validates and records
+their cited output.
 
-## First use in a coding runtime
+## Primary workflow
 
-Invoke the installed `planr-operate` workflow with no arguments. That single
-invocation inspects the project, initializes only when needed, runs one complete
-native cycle, prints the CEO/CTO/CPO/CMO/COO/Chair report, and stops at review.
-No orchestration prompt or manual adapter commands are required. Explicit
-subcommands such as `inspect`, `status`, or `report` perform only that command.
+Invoke the runtime workflow once:
 
-## First use in a terminal
+```text
+$planr-operate                  # Codex
+/planr-pipeline:operate         # Claude Code
+```
+
+The workflow detects whether initialization is needed, researches the project,
+runs CEO, CTO, CPO, CMO, COO, and Chair, writes Markdown and JSON reports,
+materializes qualified proposal drafts, and stops at the review gate. Users do
+not write an orchestration prompt and do not run harness lifecycle commands.
+
+Cursor follows the generated `openplanr-operate` project rule. If native
+subagents are unavailable, the same selected runtime runs the roles
+sequentially. A cycle never changes vendors silently.
+
+## Research before questions
+
+The bootstrap role inspects repository files, Git history, Planr artifacts,
+product and pricing surfaces, architecture, delivery state, and incomplete
+loops before asking the owner anything. Context claims are labeled:
+
+```text
+observed | inferred | hypothesis | owner-confirmed | unknown
+```
+
+Business model, likely ICP, product stage, goals, and proposed metrics may be
+inferred with citations and confidence. They remain hypotheses until the owner
+confirms them. Only true authority decisions—such as the final decision owner
+and acceptance of a consequential business assumption—require a question.
+Unknown context reduces confidence or opens a gap; it does not block research.
+
+Local research is automatic. Connected or web research requires a per-cycle
+preview and explicit consent.
+
+## Runtime binding and permissions
+
+Runtime selection uses the ecosystem precedence: explicit runtime, active
+marker, project default, the only compatible installed runtime, then an
+interactive choice. The resulting cycle is sticky:
+
+```json
+{
+  "runtime": "codex",
+  "runtimeBinding": "required",
+  "crossRuntimeFallback": false,
+  "executionMode": "native-agent",
+  "assurance": "runtime-governed",
+  "toolIsolation": "advisory"
+}
+```
+
+Advisory isolation does not make Codex unsupported. Planr grants no new tool
+permissions: the runtime sandbox and user-approved session access govern reads.
+OpenPlanr validates schema, citations, runtime binding, and authority before it
+persists governed output. A mismatched continuation fails with
+`E_OPERATE_RUNTIME_MISMATCH`.
+
+## Advisor and report contract
+
+Each role returns flexible Markdown plus typed sidecars:
+
+```json
+{
+  "analysisMarkdown": "...",
+  "claims": [],
+  "actions": [],
+  "gaps": [],
+  "conflicts": []
+}
+```
+
+Agents inspect the workspace directly; no repository body or evidence pack is
+serialized through stdin. The 256 KiB bound applies only to one role's returned
+report. Material claims and actions require citations. Invalid citations reject
+the affected item instead of discarding unrelated narrative.
+
+Every reviewable cycle writes:
+
+```text
+.planr/operate/cycles/CYCLE-NNN/report.md
+.planr/operate/cycles/CYCLE-NNN/report.json
+.planr/operate/cycles/CYCLE-NNN/actions.md
+.planr/operate/cycles/CYCLE-NNN/board/{ceo,cto,cpo,cmo,coo,chair}.md
+```
+
+The visual dashboard is optional.
+
+## Proposal drafts and governance
+
+Qualified, cited recommendations can materialize reversible proposed Quick
+Tasks, Specs, Epics, decisions, or agent artifacts. Proposal notices and a
+causality sidecar tie every draft to its cycle and findings. Draft creation does
+not accept a finding, apply a route, invoke PLAN, or invoke SHIP.
+
+```bash
+planr operate drafts list
+planr operate drafts show DRAFT-001
+planr operate drafts approve DRAFT-001
+planr operate drafts discard DRAFT-001
+```
+
+An unapproved draft is blocked from PLAN and SHIP with
+`E_OPERATE_DRAFT_UNAPPROVED` and the exact approval command. Discard removes an
+unchanged draft byte-for-byte; an edited artifact is preserved and marked.
+
+## Machine lifecycle
+
+Skills execute the returned `planr operate harness
+prepare|record|finalize|resume|cancel` actions internally, preserving all
+cycle, runtime, digest, lease, and idempotency bindings. The older `adapter`
+namespace remains a compatibility alias for two minor releases and must not
+appear in new user guidance.
+
+## Terminal and automation
+
+The CLI remains useful as a deterministic kernel and for inspection:
 
 ```bash
 planr operate inspect
-planr operate init
-planr operate run --preview
-planr operate run
-planr operate review
-planr operate report
+planr operate context show
+planr operate status
+planr operate report --format markdown
+planr operate drafts list
 ```
 
-In an interactive terminal, the CLI asks the questions directly. In a coding
-runtime, the installed `planr-operate` workflow first calls `inspect --json` and
-skips initialization when it is already complete. When setup is required, it
-presents the returned questionnaire through a verified native question surface,
-then an attached CLI-owned interactive terminal, then structured chat one
-question at a time. It never dumps the questionnaire as a form. The runtime
-constructs the typed answer envelope from the questionnaire's self-describing
-`submission` contract and sends it on bounded stdin. If no interaction path is
-available, it returns the exact terminal handoff. Adapters never invent answers,
-defaults, questions, commands, envelope metadata, or consent.
-
-A bare workflow invocation or explicit request to run a cycle selects its exact
-cycle-start action and authorizes the reversible local adapter lifecycle through
-independent advisors, Chair consolidation, and a `reviewable`, `blocked`, or
-`failed` result. The runtime does not ask the user to paste `adapter prepare`,
-`record`, `finalize`, Chair, or report commands. Provider consent, finding
-disposition, route application, planning artifacts, PLAN, SHIP, and external
-effects remain separate named gates. `--preview` performs no writes and no
-provider calls. `--dry-run` may use a provider after disclosure but commits no
-operating state.
-
-Claude Code uses `native-isolated` advisor dispatch. Codex uses
-`native-bounded`: each native advisor receives only one immutable role pack and
-may not inspect the workspace, environment, network, or other tools. Cursor
-uses the structured-provider path. All adapters return
-`operating-advisor-response@1.2.0`; OpenPlanr owns canonical metadata and
-digests.
-
-### Native adapter handoff
-
-When a native cycle reaches an advisor boundary, the public `run` result returns
-a validated `operating-adapter-handoff` in `prepare-required` state. It is the
-complete machine contract for that boundary, not a hint that a runtime must
-turn into commands. Its `phase`, `state`, `binding`, and `roles` bind every
-current action to the exact cycle, evidence digest, runtime, lease,
-idempotency key, and expiry. Lease and expiry are null until prepare succeeds.
-
-The runtime must:
-
-1. execute only the current `handoff.next[].argv` token arrays exactly as
-   returned;
-2. for a record action, resolve its role pack and compact response schema from
-   the retained `adapter.prepare` result using the declared absolute pointers;
-3. use the same returned lease and idempotency key—never add a role suffix or
-   derive a replacement; and
-4. use `handoff.recovery` only after a failed current action.
-
-The state sequence is `prepare-required` → `record-required` →
-`finalize-required` → `continue-required`. Each successful record returns a
-fresh handoff containing only unfinished role actions. Recovery contains
-read-only resume and machine-local cancel only while recording/finalizing.
-Cancelled sessions expose no executable action.
-Runtimes must not reconstruct lifecycle commands from prose, probe them with
-`--help`, or guess the next phase. On an error, follow the exact returned
-handoff or named recovery action. A new Chair handoff is prepared only after
-independent advisor results have been finalized and committed.
-
-Lifecycle effects remain deliberately bounded:
-
-| Action | Effect |
-|---|---|
-| `prepare`, `record`, `cancel` | `machine-local-write` |
-| `resume` | `read-only` |
-| `finalize`, `continue` | `project-write` |
-
-These machine-only actions never authorize finding acceptance, route
-application, planning artifacts, PLAN, SHIP, provider consent, or an external
-effect.
-
-## Evidence recovery
-
-Protocol v1.3 advisors investigate through the active runtime's bounded
-read-only tools and return citations rather than receiving an intermediate
-evidence pack. OpenPlanr resolves and scans each cited snapshot before accepting
-the result. A rejected citation follows only the current handoff's governed
-recovery; source overrides and false-positive classification are not public
-surfaces.
-
-When no continuation exists, export redacted diagnostics and leave the affected
-lens `not_evaluated` or the cycle `blocked`. Rotate a genuine credential at its
-source before retrying. Never print or paste the suspected value.
-
-## Privacy and retention
-
-Raw evidence, prompts, responses, credentials, sessions, and diagnostics remain
-machine-local under `~/.planr/operate/<project-hash>`. Commit-safe state contains
-sanitized events and immutable metadata. Session and evidence cleanup is exposed
-through `planr operate cache status|purge`; `planr doctor` reports expired guided
-sessions and adapter interaction capability.
-
-## Automation
-
-`--json` is one versioned object on stdout and is non-interactive. Scripts must
-choose a returned action ID and echo its exact confirmation digest. A runtime
-may add `--yes` only to the exact cycle-start action selected by an explicit
-cycle request. Do not parse human labels or add a broad `--yes`. Missing
-pipeline/runtime capability fails before provider use with a named recovery
-command.
-
-The dashboard is optional. `planr operate report` prints the concise brief and
-separate CEO, CTO, CPO, CMO, COO, and Chair reports as Markdown, while
-`planr operate report --json` returns structured results and exact governed
-conversion commands for findings, routes, specs, tasks, and quick tasks.
-
-## Troubleshooting
-
-- `E_OPERATE_NOT_INITIALIZED`: run `planr operate init`.
-- `E_GUIDED_INTERACTION_UNAVAILABLE`: attach a terminal or use a certified
-  runtime with structured questions/chat.
-- `E_GUIDED_SESSION_EXPIRED`: restart the current guided command.
-- `E_GUIDED_SESSION_STALE`: inspect changed project/config state, then restart.
-- `E_OPERATE_SECRET_DETECTED`: follow only the returned recovery or export
-  redacted diagnostics; do not inspect or weaken private state.
-- `E_PIPELINE_NOT_INSTALLED`: run the exact full-install command in the result.
-
-The deterministic journey fixtures and canary are:
-
-```bash
-node --test tests/ecosystem/guided-operate-acceptance.test.mjs
-node scripts/guided-operate-canary.mjs --fixtures
-```
+`--json` emits one versioned result on stdout and never prompts. `--preview`
+performs no writes or provider calls. Operate never deploys, publishes, spends,
+contacts customers, changes credentials, performs destructive work, or invokes
+SHIP.

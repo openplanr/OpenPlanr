@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/operating-runtime-binding.schema.json",
+  "title": "OpenPlanr Protocol v1.4 operating runtime binding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["runtime", "runtimeBinding", "crossRuntimeFallback", "executionMode", "assurance", "toolIsolation"],
+  "properties": {
+    "runtime": { "type": "string", "enum": ["claude-code", "codex", "cursor"] },
+    "runtimeBinding": { "const": "required" },
+    "crossRuntimeFallback": { "const": false },
+    "executionMode": { "type": "string", "enum": ["native-agent", "sequential-native"] },
+    "assurance": { "const": "runtime-governed" },
+    "toolIsolation": { "type": "string", "enum": ["enforced", "advisory", "none", "enforced-read-only"] }
+  }
+}

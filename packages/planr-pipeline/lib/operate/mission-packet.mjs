@@ -112,6 +112,7 @@ export function createOperatingMissionPacket(roleId, evidenceItems = [], options
 
   const role = roleById(roleId);
   const brief = createOperatingAdvisorBrief(roleId);
+  const maxInputBytes = role.budgets.maxInputBytes ?? brief.budgets.maxInputBytes;
   const permitted = new Set(role.permittedEvidenceKinds);
   const roots = sortedDeclaredRoots(declaredRoots);
 
@@ -165,7 +166,7 @@ export function createOperatingMissionPacket(roleId, evidenceItems = [], options
     toolGrant: toolGrant ?? createMissionToolGrant(roots),
     evidenceIndex,
     budgets: withoutUndefined({
-      maxInputBytes: role.budgets.maxInputBytes,
+      maxInputBytes,
       maxEvidenceItems,
       truncatedEvidenceItems: truncated ? true : undefined,
       evidenceItemsBeforeTruncation: truncated ? evidenceItemsBeforeTruncation : undefined,
@@ -173,11 +174,11 @@ export function createOperatingMissionPacket(roleId, evidenceItems = [], options
   });
 
   const actualBytes = Buffer.byteLength(canonicalizeJson(unsigned), 'utf8');
-  if (actualBytes > role.budgets.maxInputBytes) {
+  if (actualBytes > maxInputBytes) {
     throw new PipelineError(
       'E_OPERATE_MISSION_PACKET_BUDGET',
       `Mission packet for role ${roleId} is ${actualBytes} bytes, `
-      + `exceeding maxInputBytes ${role.budgets.maxInputBytes}.`,
+      + `exceeding maxInputBytes ${maxInputBytes}.`,
     );
   }
 
