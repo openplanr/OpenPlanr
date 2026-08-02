@@ -1,3 +1,4 @@
 # Generated Operating Board assets are compared byte-for-byte with the
 # canonical pipeline bundle and must not be rewritten by Windows checkouts.
 skills/planr-operate/SKILL.md text eol=lf
+skills/planr-operate/references/**/*.md text eol=lf

@@ -57,33 +57,26 @@ review, PLAN, Design, SHIP, dashboard, sync, and doctor skills. Codex
 installation is handled by `planr setup`; Claude Code can consume this
 marketplace; Cursor uses generated project rules.
 
-Operating Board turns verified project evidence into a cited brief, decisions,
-data gaps, and reviewed routes:
+Operating Board is an agent-native research and decision workflow:
 
 ```bash
-planr operate init
-planr operate run --preview
-planr operate run --runtime codex
-planr operate brief
-planr operate report --lens all --format markdown
+$planr-operate                       # Codex
+/planr-pipeline:operate              # Claude Code
+planr operate report --lens all      # inspect a completed cycle
+planr operate drafts list            # review proposed work
 ```
 
-The runtime skill is deliberately thin: all evidence policy, advisor isolation,
-scoring, state transitions, route confirmation, and recovery remain inside the
-public `planr operate` command. `--preview` calls no providers and writes
-nothing; `--dry-run` may use a disclosed, consented provider but commits no
-state. Runtime-native prompts render CLI-owned questionnaires and return typed
-answers from their self-describing bounded-stdin submission contracts through
-resumable sessions. An explicit request to run one cycle
-authorizes its bounded native advisor lifecycle through a reviewable, blocked,
-or failed state, so users are not asked to paste internal prepare/record/finalize
-commands. Each native advisor returns the exact compact JSON schema embedded in
-its immutable role pack; OpenPlanr—not the runtime—binds canonical IDs, producer
-metadata, and digests. External provider consent, finding acceptance, route application,
-planning changes, PLAN, and SHIP remain separate decisions. Unsafe evidence is
-quarantined without exposing its value or blocking unrelated ready lenses.
-Per-lens CEO, CTO, CPO, CMO, COO, and Chair reports are available as Markdown or
-strict JSON; the visual dashboard is optional.
+The skill is the primary orchestration surface. It researches the workspace
+before asking questions, keeps the complete cycle bound to the selected runtime,
+dispatches CEO, CTO, CPO, CMO, COO, and Chair agents, and presents the final
+Markdown report plus proposed draft paths. OpenPlanr remains the deterministic
+governance kernel for locks, schemas, citation validation, provenance, state,
+and reversible draft writes. Codex advisory isolation is supported under the
+runtime's current permissions; no cross-vendor fallback is allowed.
+
+Local research is automatic. Connected research, draft approval, finding
+acceptance, route application, PLAN, SHIP, and external effects require separate
+authority. The visual dashboard is optional.
 
 Pipeline-PO DEV routes pause at `awaiting-plan` and return the exact native PLAN
 invocation. The skill resumes that same route only after human review and
