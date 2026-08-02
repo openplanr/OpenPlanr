@@ -1,6 +1,7 @@
 {
   "name": "openplanr-marketplace",
   "version": "1.8.2",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "scripts": {
