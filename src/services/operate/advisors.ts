@@ -135,6 +135,104 @@ const missionAdvisorOutputSchema = z
   .strict();
 export type MissionAdvisorOutput = z.infer<typeof missionAdvisorOutputSchema>;
 
+export interface AgentNativeAdvisorResponse {
+  outcome: 'actions' | 'quiet' | 'partial';
+  analysisMarkdown: string;
+  claims: Array<{
+    id: string;
+    statement: string;
+    epistemicStatus: 'observed' | 'inferred' | 'hypothesis' | 'owner-confirmed' | 'unknown';
+    confidence: number;
+    citations: Array<Record<string, unknown>>;
+  }>;
+  actions: Array<{
+    actionKey: string;
+    title: string;
+    summary: string;
+    lane: 'DEV' | 'OWNER' | 'AGENT';
+    routeKind:
+      | 'quick-task'
+      | 'spec'
+      | 'epic'
+      | 'decision'
+      | 'agent-artifact'
+      | 'experiment'
+      | 'metric';
+    horizon: 'immediate' | 'next' | 'later';
+    confidence: number;
+    impact?: number;
+    ease?: number;
+    critical?: boolean;
+    citations: Array<Record<string, unknown>>;
+  }>;
+  gaps: Array<{
+    id: string;
+    question: string;
+    impact: string;
+    ownerRequired?: boolean;
+  }>;
+  conflicts: Array<{ id: string; summary: string; actionKeys: string[] }>;
+}
+
+function v14CitationToMission(
+  value: Record<string, unknown>,
+  pinnedRevision: string,
+): z.infer<typeof missionCitationSchema> | null {
+  if (value.kind === 'repository') {
+    return {
+      repositoryPath: String(value.path),
+      lineRange: { start: Number(value.startLine), end: Number(value.endLine) },
+      pinnedRevision: String(value.revision),
+    };
+  }
+  if (value.kind === 'git') {
+    return {
+      gitRevision: String(value.revision),
+      pinnedRevision: String(value.revision),
+    };
+  }
+  if (value.kind === 'planr') {
+    return {
+      planrArtifactId: String(value.artifactId),
+      pinnedRevision,
+    };
+  }
+  // External citations require a consented connected-research snapshot. They
+  // cannot be silently converted into a local repository citation.
+  return null;
+}
+
+function normalizeAgentNativeResponse(
+  response: AgentNativeAdvisorResponse,
+  pinnedRevision: string,
+): MissionAdvisorOutput {
+  return {
+    outcome: response.actions.length > 0 ? 'proposals' : 'quiet',
+    proposals: response.actions.map((action) => ({
+      proposalKey: action.actionKey,
+      type: action.routeKind === 'decision' ? 'decision' : 'finding',
+      title: action.title,
+      problem: action.summary,
+      proposal: action.summary,
+      impact: action.impact ?? 3,
+      confidence: action.confidence,
+      ease: action.ease ?? 3,
+      severity: action.critical
+        ? 'critical'
+        : (action.impact ?? 3) >= 4
+          ? 'high'
+          : (action.impact ?? 3) >= 3
+            ? 'medium'
+            : 'low',
+      citations: action.citations
+        .map((citation) => v14CitationToMission(citation, pinnedRevision))
+        .filter((citation): citation is z.infer<typeof missionCitationSchema> => citation !== null),
+    })),
+    gaps: response.gaps.map((gap) => `${gap.question} Impact: ${gap.impact}`),
+    conflicts: response.conflicts.map((conflict) => conflict.summary),
+  };
+}
+
 export function advisorResponseContractDetails(brief: OperatingAdvisorBrief): {
   expectedSchema: 'operating-advisor-response@1.2.0';
   example: unknown;
@@ -167,7 +265,9 @@ export function assertAdvisorOutputMatchesBrief(
   if (disallowed.length > 0) {
     throw new OperateError(
       'E_OPERATE_ADVISOR_FAILED',
-      `Advisor ${brief.role.id} returned proposal types outside its canonical brief: ${disallowed.join(', ')}.`,
+      `Advisor ${
+        brief.role.id
+      } returned proposal types outside its canonical brief: ${disallowed.join(', ')}.`,
     );
   }
   if (output.outcome === 'quiet' && output.proposals.length > 0) {
@@ -403,7 +503,13 @@ export async function buildAdvisorOperatingContext(input: {
     .filter((outcome) => ['pending', 'observing', 'inconclusive'].includes(outcome.status))
     .map((outcome) => openItem(outcome, ['metric', 'queryIdentity']))
     .sort((left, right) => left.id.localeCompare(right.id));
-  const unsigned = { charter, priorCycle, openDecisions, openGaps, pendingOutcomes };
+  const unsigned = {
+    charter,
+    priorCycle,
+    openDecisions,
+    openGaps,
+    pendingOutcomes,
+  };
   return { ...unsigned, snapshotDigest: canonicalDigest(unsigned) };
 }
 
@@ -445,8 +551,9 @@ function roleContext(
 export interface OperatingMandate {
   kind: 'operating-mandate';
   schemaVersion: '1.0.0';
-  protocolVersion: '1.3.0';
+  protocolVersion: '1.3.0' | '1.4.0';
   roleId: OperatingRoleId;
+  phase?: 'bootstrap' | 'advisor' | 'chair';
   lensQuestion: string;
   mandate: string;
   investigationMandate: { examine: string[]; sufficientGrounding: string };
@@ -455,11 +562,31 @@ export interface OperatingMandate {
     sensitivityCeiling: OperatingSensitivity;
     forbiddenPaths: string[];
   };
-  responseSchema: 'operating-advisor-response@1.3.0';
-  citationRequirement: {
-    everyClaimCited: true;
-    citationShape: 'operating-citation@1.3.0';
-    description: string;
+  runtimeBinding?: {
+    runtime: string;
+    runtimeBinding: 'required';
+    crossRuntimeFallback: false;
+    executionMode: 'native-agent' | 'sequential-native';
+    assurance: 'runtime-governed';
+    toolIsolation: 'enforced' | 'advisory' | 'none' | 'enforced-read-only';
+  };
+  procedure?: string;
+  responseSchema: 'operating-advisor-response@1.3.0' | 'operating-advisor-response@1.4.0';
+  citationRequirement:
+    | {
+        everyClaimCited: true;
+        citationShape: 'operating-citation@1.3.0';
+        description: string;
+      }
+    | {
+        materialClaimsCited: true;
+        materialActionsCited: true;
+        citationShape: 'operating-citation@1.4.0';
+      };
+  permissionPolicy?: {
+    authority: 'runtime-session';
+    planrGrantsPermissions: false;
+    forbiddenEffects: string[];
   };
   mandateDigest: `sha256:${string}`;
 }
@@ -467,7 +594,12 @@ export interface OperatingMandate {
 interface PipelineMandateApi {
   createOperatingMandate: (
     roleId: string,
-    options: { roots?: string[]; forbiddenPaths?: string[] },
+    options: {
+      roots?: string[];
+      forbiddenPaths?: string[];
+      runtime?: string;
+      protocolVersion?: '1.3.0' | '1.4.0';
+    },
   ) => OperatingMandate;
 }
 
@@ -508,11 +640,15 @@ export async function buildOperatingMandate(input: {
   roleId: OperatingRoleId;
   roots: readonly string[];
   forbiddenPaths?: readonly string[];
+  runtime?: string;
+  protocolVersion?: '1.3.0' | '1.4.0';
 }): Promise<OperatingMandate> {
   const api = await loadOperatingMandateApi();
   return api.createOperatingMandate(input.roleId, {
     roots: [...input.roots],
     forbiddenPaths: [...(input.forbiddenPaths ?? [])],
+    runtime: input.runtime,
+    protocolVersion: input.protocolVersion,
   });
 }
 
@@ -557,7 +693,7 @@ export interface AdvisorAdapter {
    * FR1/FR2: a lens is dispatched with a body-free operating MANDATE (the lens
    * question, declared read boundaries, and the citation requirement) and the
    * cycle's pinned revision — never a curated evidence body. It investigates with
-   * the host's own read tools and returns the v1.3 citation-bearing response; the
+   * the host's own read tools and returns the mandate-versioned citation-bearing response; the
    * CLI resolves and snapshots every citation fail-closed after it returns.
    */
   invoke(input: {
@@ -567,7 +703,7 @@ export interface AdvisorAdapter {
     pinnedRevision: string;
     context: AdvisorRoleContext;
     inputDigest: `sha256:${string}`;
-  }): Promise<MissionAdvisorOutput>;
+  }): Promise<unknown>;
 }
 
 export interface AdvisorDispatchResult {
@@ -622,10 +758,14 @@ function sanitizeMissionOutput(output: MissionAdvisorOutput): MissionAdvisorOutp
         proposal: sanitizeGeneratedPlainText(proposal.proposal).replace(/\s+/g, ' ').trim(),
         citations: [...proposal.citations],
         ...(proposal.dependsOnProposalKeys
-          ? { dependsOnProposalKeys: [...new Set(proposal.dependsOnProposalKeys)].sort() }
+          ? {
+              dependsOnProposalKeys: [...new Set(proposal.dependsOnProposalKeys)].sort(),
+            }
           : {}),
         ...(proposal.conflictsWithProposalKeys
-          ? { conflictsWithProposalKeys: [...new Set(proposal.conflictsWithProposalKeys)].sort() }
+          ? {
+              conflictsWithProposalKeys: [...new Set(proposal.conflictsWithProposalKeys)].sort(),
+            }
           : {}),
         ...(proposal.sequenceProposalKeys
           ? { sequenceProposalKeys: [...proposal.sequenceProposalKeys] }
@@ -661,6 +801,7 @@ export async function createNativeMissionOperatingRoleResult(input: {
   cycleId: string;
   response: unknown;
   runtime: string;
+  pinnedRevision?: string;
   /**
    * Injected citation resolver so the mandate response's citations flow into the
    * engine's already-live `gateRecordedProposalCitations` WITHOUT advisors.ts
@@ -675,37 +816,49 @@ export async function createNativeMissionOperatingRoleResult(input: {
     gaps: OperatingDataGap[];
     notEvaluatedRoleIds: string[];
   }>;
-}): Promise<{ result: OperatingRoleResult; gaps: OperatingDataGap[]; notEvaluated: boolean }> {
+}): Promise<{
+  result: OperatingRoleResult;
+  gaps: OperatingDataGap[];
+  notEvaluated: boolean;
+}> {
   const protocol = await loadOperatingProtocol();
-  // Validate against the INSTALLED v1.3 schema explicitly — the compact response
-  // carries no protocol envelope, so the pipeline additively resolves to v1.2
-  // unless the version is passed.
+  const responseProtocol = input.mandate.protocolVersion === '1.4.0' ? '1.4.0' : '1.3.0';
+  // Compact responses carry no protocol envelope, so select the schema from the
+  // immutable mandate instead of allowing additive resolution to guess.
   const contractIssues = protocol.validateProtocolArtifact(
     'operating-advisor-response',
     input.response,
-    { protocolVersion: '1.3.0' },
+    { protocolVersion: responseProtocol },
   );
   if (contractIssues.length > 0) {
     throw new OperateError(
       'E_OPERATE_ADVISOR_FAILED',
-      `Native ${input.mandate.roleId} response does not match operating-advisor-response@1.3.0.`,
+      `Native ${input.mandate.roleId} response does not match operating-advisor-response@${responseProtocol}.`,
       { issues: contractIssues.slice(0, 8) },
     );
   }
-  const parsed = missionAdvisorOutputSchema.safeParse(input.response);
-  if (!parsed.success) {
-    throw new OperateError(
-      'E_OPERATE_INTERNAL',
-      'Protocol and OpenPlanr disagree on the v1.3 mission advisor response contract.',
-      {
-        issues: parsed.error.issues.slice(0, 8).map((issue) => ({
-          path: issue.path.join('.'),
-          code: issue.code,
-        })),
-      },
+  let output: MissionAdvisorOutput;
+  if (responseProtocol === '1.4.0') {
+    const response = input.response as AgentNativeAdvisorResponse;
+    output = sanitizeMissionOutput(
+      normalizeAgentNativeResponse(response, input.pinnedRevision ?? '0000000'),
     );
+  } else {
+    const parsed = missionAdvisorOutputSchema.safeParse(input.response);
+    if (!parsed.success) {
+      throw new OperateError(
+        'E_OPERATE_INTERNAL',
+        'Protocol and OpenPlanr disagree on the v1.3 mission advisor response contract.',
+        {
+          issues: parsed.error.issues.slice(0, 8).map((issue) => ({
+            path: issue.path.join('.'),
+            code: issue.code,
+          })),
+        },
+      );
+    }
+    output = sanitizeMissionOutput(parsed.data);
   }
-  const output = sanitizeMissionOutput(parsed.data);
   const brief = protocol.createOperatingAdvisorBrief(input.mandate.roleId);
   assertAdvisorOutputMatchesBrief(
     brief,
@@ -826,10 +979,13 @@ function safeFailureMessage(error: unknown): string {
 }
 
 export function assertAdvisorIsolation(adapter: AdvisorAdapter): void {
-  if (adapter.mode === 'native-isolated' && adapter.toolIsolation !== 'enforced') {
+  if (
+    adapter.mode === 'native-isolated' &&
+    !['enforced', 'advisory', 'none'].includes(adapter.toolIsolation)
+  ) {
     throw new OperateError(
       'E_OPERATE_ADVISOR_ISOLATION',
-      'Native runtime advisors require adapter toolIsolation=enforced.',
+      'Native runtime advisors must declare their runtime-governed tool isolation.',
     );
   }
   if (adapter.mode === 'structured' && adapter.toolIsolation !== 'not-applicable') {
@@ -841,7 +997,7 @@ export function assertAdvisorIsolation(adapter: AdvisorAdapter): void {
 }
 
 export function createOfflineAdvisorAdapter(
-  fixture?: Partial<Record<OperatingRoleId, MissionAdvisorOutput>>,
+  fixture?: Partial<Record<OperatingRoleId, unknown>>,
 ): AdvisorAdapter {
   return {
     id: 'offline-fixture',
@@ -850,14 +1006,17 @@ export function createOfflineAdvisorAdapter(
     capability: 'analysis-standard',
     parallelDispatch: false,
     async invoke(input) {
-      return (
-        fixture?.[input.roleId] ?? {
-          outcome: 'quiet',
-          proposals: [],
-          gaps: [],
-          conflicts: [],
-        }
-      );
+      if (fixture?.[input.roleId] !== undefined) return fixture[input.roleId];
+      return input.mandate.protocolVersion === '1.4.0'
+        ? {
+            outcome: 'quiet',
+            analysisMarkdown: `# ${input.roleBrief.role.displayLabel}\n\nOffline fixture mode produced no recommendations.`,
+            claims: [],
+            actions: [],
+            gaps: [],
+            conflicts: [],
+          }
+        : { outcome: 'quiet', proposals: [], gaps: [], conflicts: [] };
     },
   };
 }
@@ -880,7 +1039,7 @@ class OpenPlanrStructuredAdapter implements AdvisorAdapter {
     pinnedRevision: string;
     context: AdvisorRoleContext;
     inputDigest: `sha256:${string}`;
-  }): Promise<MissionAdvisorOutput> {
+  }): Promise<unknown> {
     void input;
     throw new OperateError(
       'E_OPERATE_PROVIDER_DEPRECATED',
@@ -948,7 +1107,9 @@ export async function createConfiguredStructuredAdapter(
   // (`planr config set-key …` / `--offline`) and records a redacted error class.
   let provider: AIProvider;
   try {
-    provider = await getAIProvider(config, { surface: 'operate-structured-provider' });
+    provider = await getAIProvider(config, {
+      surface: 'operate-structured-provider',
+    });
   } catch (error) {
     throw new OperateError(
       'E_OPERATE_ADVISOR_FAILED',
@@ -973,6 +1134,12 @@ export async function dispatchOperatingAdvisors(input: {
   depth: 'standard' | 'deep' | 'review-only';
   runtime?: string;
   /**
+   * Fresh agent-native harnesses request the Protocol v1.4 narrative response.
+   * Legacy direct/offline cycles retain v1.3 so already-prepared adapters and
+   * resumable cycles remain readable during the compatibility window.
+   */
+  protocolVersion?: '1.3.0' | '1.4.0';
+  /**
    * The engine's fail-closed citation gate, injected so advisors.ts never imports
    * engine.ts (which would create a cycle). Every dispatched role's mandate
    * response flows through it: it resolves each cited locator against the cycle's
@@ -988,20 +1155,22 @@ export async function dispatchOperatingAdvisors(input: {
 }): Promise<AdvisorDispatchResult> {
   assertAdvisorIsolation(input.adapter);
   const protocol = await loadOperatingProtocol();
-  const roleRegistry = protocol.listOperatingRoles() as Array<{ id: OperatingRoleId }>;
+  const roleRegistry = protocol.listOperatingRoles() as Array<{
+    id: OperatingRoleId;
+  }>;
   // Canonical registry order so results and provenance are byte-identical across
   // parallel/sequential dispatch and across the order roles arrive in (FR4).
   const roleOrder = new Map(roleRegistry.map((role, index) => [role.id, index]));
-  // The runtime's ability to enforce the bounded read-only boundary is resolved
-  // once per dispatch and fails closed: a runtime whose isolation cannot be
-  // verified never receives a native lens (FR2).
+  // The runtime's isolation level is recorded once per dispatch. Protocol v1.4
+  // permits compatible native-agent workflows under runtime-governed session
+  // permissions; citation and schema validation still gate persistence.
   const runtimeEnforcesBoundedReadOnly = await operatingRuntimeEnforcesBoundedReadOnly(
     input.runtime,
   );
-  // A structured adapter can never host a native lens; only a native-isolated
-  // adapter (whose isolation `assertAdvisorIsolation` has already proven to be
-  // enforced) is native-capable.
+  // A structured adapter cannot host a native lens. A native-isolated adapter
+  // can host either an enforced or runtime-governed native workflow.
   const adapterNativeCapable = input.adapter.mode === 'native-isolated';
+  const runtimeWorkflowCapable = adapterNativeCapable;
   const resolveIsolation = (
     roleId: OperatingRoleId,
   ): ReturnType<typeof resolveOperatingDispatchIsolation> =>
@@ -1009,6 +1178,7 @@ export async function dispatchOperatingAdvisors(input: {
       roleId,
       runtimeEnforcesBoundedReadOnly,
       adapterNativeCapable,
+      runtimeWorkflowCapable,
     });
   // FR1/FR2: the mandate's declared read roots are the whole granted workspace —
   // including a gitignored `.planr/` — never an evidence-index subset. Derived
@@ -1061,7 +1231,12 @@ export async function dispatchOperatingAdvisors(input: {
     try {
       // FR1: a body-free operating mandate — the lens question, declared read
       // boundaries, and citation requirement — replaces the curated evidence pack.
-      mandate = await buildOperatingMandate({ roleId: role.roleId, roots });
+      mandate = await buildOperatingMandate({
+        roleId: role.roleId,
+        roots,
+        runtime: input.runtime ?? input.adapter.id,
+        protocolVersion: input.protocolVersion ?? '1.3.0',
+      });
     } catch (error) {
       return {
         ok: false,
@@ -1095,7 +1270,11 @@ export async function dispatchOperatingAdvisors(input: {
       }
     }
     let built:
-      | { result: OperatingRoleResult; gaps: OperatingDataGap[]; notEvaluated: boolean }
+      | {
+          result: OperatingRoleResult;
+          gaps: OperatingDataGap[];
+          notEvaluated: boolean;
+        }
       | undefined;
     let lastError: unknown;
     let roleModelCalls = 0;
@@ -1119,6 +1298,7 @@ export async function dispatchOperatingAdvisors(input: {
           cycleId: input.cycleId,
           response,
           runtime: input.runtime ?? input.adapter.id,
+          pinnedRevision: input.pinnedRevision,
           resolveCitations: input.resolveCitations,
         });
         break;

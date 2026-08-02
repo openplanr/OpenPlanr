@@ -88,11 +88,19 @@ describe('Operating Board mission bounded read-only isolation (FR2/E-002)', () =
   afterEach(async () => {
     delete process.env.OPENPLANR_MISSION_HONEYTOKEN;
     fetchSpy.mockRestore();
-    await rm(projectRoot, { force: true, recursive: true, maxRetries: 10, retryDelay: 100 });
+    await rm(projectRoot, {
+      force: true,
+      recursive: true,
+      maxRetries: 10,
+      retryDelay: 100,
+    });
   });
 
   it('permits an in-root, at-or-below-ceiling read', async () => {
-    const result = await invokeMissionTool(boundary, { tool: 'file-read', path: 'app.ts' });
+    const result = await invokeMissionTool(boundary, {
+      tool: 'file-read',
+      path: 'app.ts',
+    });
     expect(result.tool).toBe('file-read');
     if (result.tool !== 'file-read') throw new Error('unexpected tool result');
     expect(result.content).toContain(FILE_TOKEN);
@@ -113,7 +121,10 @@ describe('Operating Board mission bounded read-only isolation (FR2/E-002)', () =
       invokeMissionTool(boundary, { tool: 'file-read', path: outsidePath }),
     ).rejects.toMatchObject({ code: 'E_OPERATE_PATH_ESCAPE' });
     await expect(
-      invokeMissionTool(boundary, { tool: 'file-read', path: '../outside/leak.txt' }),
+      invokeMissionTool(boundary, {
+        tool: 'file-read',
+        path: '../outside/leak.txt',
+      }),
     ).rejects.toMatchObject({ code: 'E_OPERATE_PATH_ESCAPE' });
   });
 
@@ -144,7 +155,10 @@ describe('Operating Board mission bounded read-only isolation (FR2/E-002)', () =
   });
 
   it('confines glob and content-search to in-root, at-or-below-ceiling files', async () => {
-    const globbed = await invokeMissionTool(boundary, { tool: 'glob', pattern: '**/*.ts' });
+    const globbed = await invokeMissionTool(boundary, {
+      tool: 'glob',
+      pattern: '**/*.ts',
+    });
     if (globbed.tool !== 'glob') throw new Error('unexpected tool result');
     expect(globbed.matches).toContain(appPath);
     // The above-ceiling file is never returned to the lens.
@@ -218,7 +232,10 @@ describe('Operating Board mission bounded read-only isolation (FR2/E-002)', () =
     expect(read.content).toContain(boardToken);
 
     // Glob and content-search reach the gitignored tree the same way.
-    const globbed = await invokeMissionTool(planrBoundary, { tool: 'glob', pattern: '**/*.md' });
+    const globbed = await invokeMissionTool(planrBoundary, {
+      tool: 'glob',
+      pattern: '**/*.md',
+    });
     if (globbed.tool !== 'glob') throw new Error('unexpected tool result');
     expect(globbed.matches.some((match) => match.endsWith('board.md'))).toBe(true);
   });
@@ -297,7 +314,9 @@ function structuredAdapter(parallelDispatch: boolean): AdvisorAdapter {
     parallelDispatch,
     invoke: vi.fn(async () => ({
       outcome: 'quiet' as const,
-      proposals: [],
+      analysisMarkdown: '# Fixture analysis\n\nNo citation-qualified action was identified.',
+      claims: [],
+      actions: [],
       gaps: [],
       conflicts: [],
     })),
@@ -328,18 +347,18 @@ describe('Operating Board runtime classification collapse (FR10/E-010)', () => {
     expect(native.isolation).not.toBe('unsupported');
   });
 
-  it('classifies a runtime that cannot carry a mandate as unsupported, with an explicit reason and no silent fallback', () => {
-    // Advisory/unverifiable runtime isolation: it cannot carry a mandate, so it
-    // is declared unsupported for operate — never routed to a hidden path.
+  it('classifies advisory native workflows as runtime-governed and incompatible adapters as unsupported', () => {
+    // Codex-style advisory isolation is compatible when the adapter exposes the
+    // generated native workflow; persistence remains citation/schema gated.
     const advisory = resolveOperatingDispatchIsolation({
       roleId: 'technology-risk',
       runtimeEnforcesBoundedReadOnly: false,
       adapterNativeCapable: true,
+      runtimeWorkflowCapable: true,
     });
-    expect(advisory.isolation).toBe('unsupported');
-    expect(advisory.native).toBe(false);
-    expect(advisory.reconciliation).toMatch(/advisory|unverifiable|cannot carry a mandate/i);
-    expect(advisory.reconciliation).toMatch(/no silent structured-provider fallback/i);
+    expect(advisory.isolation).toBe('runtime-governed');
+    expect(advisory.native).toBe(true);
+    expect(advisory.reconciliation).toMatch(/session permissions|citation/i);
 
     // An adapter that cannot host a bounded native lens is unsupported too.
     const adapterIncapable = resolveOperatingDispatchIsolation({
@@ -350,10 +369,7 @@ describe('Operating Board runtime classification collapse (FR10/E-010)', () => {
     expect(adapterIncapable.isolation).toBe('unsupported');
     expect(adapterIncapable.reconciliation).toMatch(/adapter/i);
 
-    // The classification is exactly two values — there is no third, silent path.
-    for (const resolution of [advisory, adapterIncapable]) {
-      expect(['enforced-read-only-bounded', 'unsupported']).toContain(resolution.isolation);
-    }
+    expect(adapterIncapable.native).toBe(false);
   });
 
   it('records the unsupported classification with its reason in dispatch provenance, never a silent fallback', async () => {
@@ -365,6 +381,7 @@ describe('Operating Board runtime classification collapse (FR10/E-010)', () => {
       adapter: structuredAdapter(false),
       depth: 'standard',
       runtime: 'codex',
+      protocolVersion: '1.4.0',
     });
     expect(result.provenance).toHaveLength(1);
     expect(result.provenance[0]).toMatchObject({
@@ -388,6 +405,7 @@ describe('Operating Board runtime classification collapse (FR10/E-010)', () => {
       adapter: structuredAdapter(true),
       depth: 'standard',
       runtime: 'codex',
+      protocolVersion: '1.4.0',
     });
     const sequential = await dispatchOperatingAdvisors({
       cycleId: 'CYCLE-001',
@@ -397,6 +415,7 @@ describe('Operating Board runtime classification collapse (FR10/E-010)', () => {
       adapter: structuredAdapter(false),
       depth: 'standard',
       runtime: 'codex',
+      protocolVersion: '1.4.0',
     });
     const reorderedSequential = await dispatchOperatingAdvisors({
       cycleId: 'CYCLE-001',
@@ -406,6 +425,7 @@ describe('Operating Board runtime classification collapse (FR10/E-010)', () => {
       adapter: structuredAdapter(false),
       depth: 'standard',
       runtime: 'codex',
+      protocolVersion: '1.4.0',
     });
 
     expect(canonicalize(parallel.results)).toBe(canonicalize(sequential.results));

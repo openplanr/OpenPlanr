@@ -42,7 +42,10 @@ import { OperateError, type OperatingRoleId, type OperatingSensitivity } from '.
  *                                   unsupported rather than silently degrading it
  *                                   to a lesser path.
  */
-export type OperatingDispatchIsolation = 'enforced-read-only-bounded' | 'unsupported';
+export type OperatingDispatchIsolation =
+  | 'enforced-read-only-bounded'
+  | 'runtime-governed'
+  | 'unsupported';
 
 export interface OperatingDispatchResolution {
   roleId: OperatingRoleId;
@@ -83,8 +86,65 @@ function isReadOnlyTool(tool: string): tool is MissionReadOnlyTool {
 let cachedRuntimeEnforcement: Promise<(runtime: string | undefined) => boolean> | null = null;
 
 interface PipelineRuntimeModule {
-  listRuntimeAdapters: () => Array<{ id: string; capabilities?: { toolIsolation?: string } }>;
+  listRuntimeAdapters: () => Array<{
+    id: string;
+    capabilities?: {
+      toolIsolation?: string;
+      operatingBoard?: boolean;
+      operatingAdvisorDispatch?: string;
+    };
+  }>;
   normalizeRuntime: (runtime: string) => string;
+}
+
+interface OperatingRuntimeCapabilities {
+  supported: boolean;
+  toolIsolation: string;
+  dispatch: string;
+}
+
+let cachedRuntimeCapabilities: Promise<
+  (runtime: string | undefined) => OperatingRuntimeCapabilities
+> | null = null;
+
+async function loadRuntimeCapabilities(): Promise<
+  (runtime: string | undefined) => OperatingRuntimeCapabilities
+> {
+  cachedRuntimeCapabilities ??= (async () => {
+    try {
+      const root = resolveOperatingPipelineRoot({ requireMission: true });
+      if (!root) {
+        return () => ({ supported: false, toolIsolation: 'none', dispatch: 'none' });
+      }
+      const module = (await import(
+        pathToFileURL(path.join(root, 'lib', 'pipeline', 'runtime.mjs')).href
+      )) as unknown as PipelineRuntimeModule;
+      const adapters = module.listRuntimeAdapters();
+      return (runtime) => {
+        if (!runtime || runtime === 'auto') {
+          return { supported: false, toolIsolation: 'none', dispatch: 'none' };
+        }
+        let id: string;
+        try {
+          id = module.normalizeRuntime(runtime);
+        } catch {
+          return { supported: false, toolIsolation: 'none', dispatch: 'none' };
+        }
+        const adapter = adapters.find((entry) => entry.id === id);
+        const dispatch = adapter?.capabilities?.operatingAdvisorDispatch ?? 'none';
+        return {
+          supported:
+            adapter?.capabilities?.operatingBoard === true &&
+            ['native-agent', 'sequential-native', 'native-read-only'].includes(dispatch),
+          toolIsolation: adapter?.capabilities?.toolIsolation ?? 'none',
+          dispatch,
+        };
+      };
+    } catch {
+      return () => ({ supported: false, toolIsolation: 'none', dispatch: 'none' });
+    }
+  })();
+  return cachedRuntimeCapabilities;
 }
 
 /**
@@ -135,22 +195,29 @@ export async function operatingRuntimeEnforcesBoundedReadOnly(
   return (await loadRuntimeEnforcement())(runtime);
 }
 
+/** Whether the selected runtime has a generated, runtime-native Operate workflow. */
+export async function operatingRuntimeSupportsNativeOperate(
+  runtime: string | undefined,
+): Promise<boolean> {
+  return (await loadRuntimeCapabilities())(runtime).supported;
+}
+
 /**
  * Classify one role's dispatch isolation (FR10). Governance moved to OUTPUT
  * verification, so the runtime is no longer gated on a native-vs-structured
  * split before it may think — it is classified purely on whether it can carry a
  * mandate and return a schema-valid cited response. A runtime that natively
- * enforces the bounded read-only tool grant, hosting an adapter that can host a
- * native lens, is `enforced-read-only-bounded` and dispatches natively; every
- * other runtime — advisory or unverifiable isolation, or an adapter that cannot
- * host a bounded lens — is declared `unsupported` for operate, never silently
- * routed to a deprecated structured-provider fallback. The specific reason is
- * recorded in `reconciliation` so it appears in the dispatch provenance.
+ * enforces the bounded read-only tool grant is `enforced-read-only-bounded`.
+ * A compatible native-agent workflow running under the selected runtime's own
+ * session permissions is `runtime-governed`. Only an adapter that cannot run
+ * either workflow is unsupported. The specific reason is recorded in
+ * `reconciliation` so it appears in dispatch provenance.
  */
 export function resolveOperatingDispatchIsolation(input: {
   roleId: OperatingRoleId;
   runtimeEnforcesBoundedReadOnly: boolean;
   adapterNativeCapable: boolean;
+  runtimeWorkflowCapable?: boolean;
 }): OperatingDispatchResolution {
   if (input.runtimeEnforcesBoundedReadOnly && input.adapterNativeCapable) {
     return {
@@ -159,6 +226,15 @@ export function resolveOperatingDispatchIsolation(input: {
       native: true,
       reconciliation:
         'runtime natively enforces tool isolation and can carry a mandate; a bounded read-only mission lens is dispatched',
+    };
+  }
+  if (input.runtimeWorkflowCapable && input.adapterNativeCapable) {
+    return {
+      roleId: input.roleId,
+      isolation: 'runtime-governed',
+      native: true,
+      reconciliation:
+        'the selected runtime executes the generated native-agent workflow under its current session permissions; citation and schema validation govern persistence',
     };
   }
   return {
@@ -187,23 +263,23 @@ export interface OperatingRuntimeClassification {
 /**
  * Classify a runtime for operate dispatch (FR10). A runtime that natively
  * enforces the bounded read-only boundary can carry a mandate and is
- * `enforced-read-only-bounded` (first-class); every other runtime — advisory or
- * unverifiable isolation, or none selected — is `unsupported`, with the specific
- * reason. Fails closed: a runtime whose enforceability cannot be verified is
- * unsupported, never silently downgraded.
+ * `enforced-read-only-bounded` (first-class). Compatible advisory runtimes are
+ * `runtime-governed`; only missing/incompatible workflows are unsupported.
  */
 export async function classifyOperatingRuntime(
   runtime: string | undefined,
 ): Promise<OperatingRuntimeClassification> {
   const label = runtime && runtime !== 'auto' ? runtime : 'auto';
-  const mandateCapable = await operatingRuntimeEnforcesBoundedReadOnly(runtime);
-  if (mandateCapable) {
+  const capabilities = (await loadRuntimeCapabilities())(runtime);
+  if (capabilities.supported) {
+    const enforced = capabilities.toolIsolation === 'enforced';
     return {
       runtime: label,
-      isolation: 'enforced-read-only-bounded',
+      isolation: enforced ? 'enforced-read-only-bounded' : 'runtime-governed',
       mandateCapable: true,
-      reason:
-        'natively enforces bounded read-only tool isolation, so it can carry a mandate and dispatch operate lenses first-class',
+      reason: enforced
+        ? 'runs the generated native-agent workflow with enforced tool isolation'
+        : `runs the generated native-agent workflow under the runtime session's permissions; tool isolation is ${capabilities.toolIsolation} and governed writes still require verified cited output`,
     };
   }
   return {
@@ -213,7 +289,7 @@ export async function classifyOperatingRuntime(
     reason:
       label === 'auto'
         ? 'no runtime is selected, so mandate-capable tool isolation cannot be verified'
-        : 'tool isolation is advisory or unverifiable, so it cannot carry a mandate; operate declares it unsupported rather than silently degrading it',
+        : 'the installed adapter does not expose a compatible native-agent or same-runtime sequential Operate workflow',
   };
 }
 

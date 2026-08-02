@@ -278,7 +278,7 @@ afterEach(async () => {
 });
 
 describe('native mission dispatch reaches the record action (FR1 / US-003)', () => {
-  it('prepares a mandate (not a pack) with declared boundaries and no evidence body, and hands back a v1.3 mandate record action on a claude-code runtime', async () => {
+  it('prepares a mandate (not a pack) with declared boundaries and no evidence body, and hands back a v1.4 harness record action on a claude-code runtime', async () => {
     const fixture = await advisingMissionCycle({
       runtime: 'claude',
       enabledRoles: ['strategy-finance', 'chair'],
@@ -296,7 +296,7 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
     expect(prepared.roles).toEqual(['strategy-finance']);
     const mandate = prepared.mandates['strategy-finance'];
     expect(mandate?.kind).toBe('operating-mandate');
-    expect(mandate?.protocolVersion).toBe('1.3.0');
+    expect(mandate?.protocolVersion).toBe('1.4.0');
     expect(mandate?.mandateDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
     // Declared boundaries — the granted workspace roots (including `.planr/`
     // regardless of git tracking), the sensitivity ceiling, and forbidden paths.
@@ -307,26 +307,30 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
     expect(canonicalize(mandate)).not.toContain(BODY_MARKER);
     expect((mandate as unknown as Record<string, unknown>).evidenceIndex).toBeUndefined();
     expect((mandate as unknown as Record<string, unknown>).evidence).toBeUndefined();
-    expect(mandate?.responseSchema).toBe('operating-advisor-response@1.3.0');
+    expect(mandate?.responseSchema).toBe('operating-advisor-response@1.4.0');
     expect(prepared.roleInputDigests['strategy-finance']).toBe(mandate?.mandateDigest);
 
-    // The handoff is v1.3 and its record action names the generated lens agent and
+    // The handoff is v1.4 and its record action names the generated lens agent and
     // points at the mandate — never a rolePackPointer, never empty-tools.
-    expect(prepared.handoff.protocolVersion).toBe('1.3.0');
+    expect(prepared.handoff.protocolVersion).toBe('1.4.0');
     expect(prepared.handoff.state).toBe('record-required');
-    const recordAction = prepared.handoff.next.find((entry) => entry.action === 'adapter.record');
+    const recordAction = prepared.handoff.next.find((entry) => entry.action === 'harness.record');
     expect(recordAction?.role).toBe('strategy-finance');
     expect(recordAction?.dispatch?.agent).toBe('operating-strategy-finance');
     expect(recordAction?.dispatch?.mandatePointer).toBe('/data/mandates/strategy-finance');
     expect(recordAction?.dispatch?.missionPacketPointer).toBeUndefined();
     expect(recordAction?.dispatch?.rolePackPointer).toBeUndefined();
-    expect(recordAction?.dispatch?.isolation).toBe('enforced-read-only-bounded');
+    expect(recordAction?.dispatch).toMatchObject({
+      assurance: 'runtime-governed',
+      toolIsolation: 'enforced',
+      permissionAuthority: 'runtime-session',
+    });
     expect(recordAction?.stdin?.schema).toBe(
-      'https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json',
+      'https://openplanr.dev/schemas/v1.4.0/operating-advisor-response.schema.json',
     );
   });
 
-  it('stamps protocolVersion 1.3.0 on the start (prepare-required) handoff — the second call site — when a bound role resolves mission', async () => {
+  it('stamps protocolVersion 1.4.0 on the start handoff for every certified runtime', async () => {
     const mission = await advisingMissionCycle({
       runtime: 'claude',
       enabledRoles: ['strategy-finance', 'chair'],
@@ -341,9 +345,9 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
       localRoot: mission.localRoot,
     })) as { state: string; protocolVersion: string };
     expect(start.state).toBe('prepare-required');
-    expect(start.protocolVersion).toBe('1.3.0');
+    expect(start.protocolVersion).toBe('1.4.0');
 
-    // Every supported adapter starts from the same Protocol v1.3 mandate contract.
+    // Every supported runtime starts from the same Protocol v1.4 harness contract.
     const fallback = await advisingMissionCycle({
       runtime: 'codex',
       enabledRoles: ['strategy-finance', 'chair'],
@@ -357,10 +361,10 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
       roles: ['strategy-finance'],
       localRoot: fallback.localRoot,
     })) as { protocolVersion: string };
-    expect(codexStart.protocolVersion).toBe('1.3.0');
+    expect(codexStart.protocolVersion).toBe('1.4.0');
   });
 
-  it('accepts a v1.3 citation-bearing response and threads its citations through gateRecordedProposalCitations', async () => {
+  it('accepts a v1.4 citation-bearing response and threads its actions through citation validation', async () => {
     const fixture = await advisingMissionCycle({
       runtime: 'claude',
       enabledRoles: ['strategy-finance', 'chair'],
@@ -381,23 +385,27 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
       idempotencyKey: 'mission-record',
       role: 'strategy-finance',
       stdin: JSON.stringify({
-        outcome: 'proposals',
-        proposals: [
+        outcome: 'actions',
+        analysisMarkdown: '# CEO analysis\n\nThe runtime boundary is intact.',
+        claims: [],
+        actions: [
           {
-            proposalKey: 'invest-in-service',
-            type: 'finding',
+            actionKey: 'invest-in-service',
             title: 'Read-only advisory boundary is intact',
-            problem: 'The runtime adapter must never widen its grant.',
-            proposal: 'Keep the bounded read-only surface as the only tool grant.',
+            summary: 'Keep the runtime session boundary and validate every material citation.',
+            lane: 'DEV',
+            routeKind: 'quick-task',
+            horizon: 'immediate',
             impact: 4,
             confidence: 4,
             ease: 3,
-            severity: 'medium',
             citations: [
               {
-                repositoryPath: 'src/service.ts',
-                lineRange: { start: 1, end: 2 },
-                pinnedRevision: fixture.pin,
+                kind: 'repository',
+                path: 'src/service.ts',
+                startLine: 1,
+                endLine: 2,
+                revision: fixture.pin,
               },
             ],
           },
@@ -407,7 +415,7 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
       }),
     })) as { recorded: string; result: OperatingRoleResult };
 
-    // The record action accepted the compact v1.3 response, and its citation flowed
+    // The record action accepted the rich v1.4 response, and its citation flowed
     // through the citation gate into a minted, snapshot-bound evidenceRef — the
     // committed result is v1.2-valid (evidenceRefs, no raw citations).
     expect(recorded.recorded).toBe('strategy-finance');
@@ -442,7 +450,7 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
     expect(regated.roleResults[0].proposals).toHaveLength(1);
   });
 
-  it('prepares every enabled advisor role as a Protocol v1.3 mandate', async () => {
+  it('prepares every enabled advisor role as a Protocol v1.4 mandate', async () => {
     const fixture = await advisingMissionCycle({
       runtime: 'claude',
       enabledRoles: ['strategy-finance', 'technology-risk', 'chair'],
@@ -458,7 +466,7 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
     expect(prepared.roles).toEqual(['strategy-finance', 'technology-risk']);
     expect(Object.keys(prepared.mandates)).toEqual(['strategy-finance', 'technology-risk']);
     expect(prepared.mandates['strategy-finance'].kind).toBe('operating-mandate');
-    expect(prepared.mandates['technology-risk'].protocolVersion).toBe('1.3.0');
+    expect(prepared.mandates['technology-risk'].protocolVersion).toBe('1.4.0');
     expect(prepared.roleInputDigests['strategy-finance']).toBe(
       prepared.mandates['strategy-finance'].mandateDigest,
     );
@@ -473,7 +481,14 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
       lease: prepared.lease,
       idempotencyKey: 'mission-mixed',
       role: 'strategy-finance',
-      stdin: JSON.stringify({ outcome: 'quiet', proposals: [], gaps: [], conflicts: [] }),
+      stdin: JSON.stringify({
+        outcome: 'quiet',
+        analysisMarkdown: '# CEO analysis\n\nNo qualified action.',
+        claims: [],
+        actions: [],
+        gaps: [],
+        conflicts: [],
+      }),
     })) as { recorded: string; result: OperatingRoleResult };
     expect(recorded.result.roleId).toBe('strategy-finance');
     const technologyRecorded = (await operateAdapterLifecycle({
@@ -483,12 +498,19 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
       lease: prepared.lease,
       idempotencyKey: 'mission-mixed',
       role: 'technology-risk',
-      stdin: JSON.stringify({ outcome: 'quiet', proposals: [], gaps: [], conflicts: [] }),
+      stdin: JSON.stringify({
+        outcome: 'quiet',
+        analysisMarkdown: '# CTO analysis\n\nNo qualified action.',
+        claims: [],
+        actions: [],
+        gaps: [],
+        conflicts: [],
+      }),
     })) as { recorded: string; result: OperatingRoleResult };
     expect(technologyRecorded.result.roleId).toBe('technology-risk');
   });
 
-  it('requires the Protocol v1.3 mandate handoff for codex and cursor', async () => {
+  it('requires the Protocol v1.4 same-runtime harness handoff for codex and cursor', async () => {
     for (const runtime of ['codex', 'cursor']) {
       const fixture = await advisingMissionCycle({
         runtime,
@@ -503,8 +525,8 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
       })) as PrepareResult;
 
       expect(Object.keys(prepared.mandates)).toEqual(['strategy-finance']);
-      expect(prepared.handoff.protocolVersion).toBe('1.3.0');
-      const recordAction = prepared.handoff.next.find((entry) => entry.action === 'adapter.record');
+      expect(prepared.handoff.protocolVersion).toBe('1.4.0');
+      const recordAction = prepared.handoff.next.find((entry) => entry.action === 'harness.record');
       expect(recordAction?.dispatch?.mandatePointer).toBe('/data/mandates/strategy-finance');
       expect(recordAction?.dispatch?.rolePackPointer).toBeUndefined();
     }

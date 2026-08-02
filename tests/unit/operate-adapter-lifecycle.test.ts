@@ -13,6 +13,17 @@ import { resolveOperatingPaths } from '../../src/services/operate/workspace.js';
 const temporaryDirectories: string[] = [];
 const digest = (character: string): `sha256:${string}` => `sha256:${character.repeat(64)}`;
 
+function quietAdvisorResponse(title = 'Advisor analysis'): Record<string, unknown> {
+  return {
+    outcome: 'quiet',
+    analysisMarkdown: `# ${title}\n\nNo citation-qualified action was identified.`,
+    claims: [],
+    actions: [],
+    gaps: [],
+    conflicts: [],
+  };
+}
+
 async function temporaryDirectory(prefix: string): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), prefix));
   temporaryDirectories.push(directory);
@@ -72,7 +83,7 @@ async function advisingCycle(): Promise<{
       producer: {
         product: 'openplanr',
         version: '1.14.0',
-        runtime: 'fixture',
+        runtime: 'codex',
       },
     },
   });
@@ -249,13 +260,13 @@ describe('native operating advisor lifecycle', () => {
     }
     expect(session.handoff.kind).toBe('operating-adapter-handoff');
     expect(session.handoff.state).toBe('record-required');
-    const recordActions = session.handoff.next.filter(({ action }) => action === 'adapter.record');
+    const recordActions = session.handoff.next.filter(({ action }) => action === 'harness.record');
     expect(recordActions.map(({ role }) => role)).toEqual(['strategy-finance']);
     for (const record of recordActions) {
       expect(record.argv).toEqual([
         'planr',
         'operate',
-        'adapter',
+        'harness',
         'record',
         '--role',
         record.role,
@@ -271,13 +282,13 @@ describe('native operating advisor lifecycle', () => {
         '--json',
       ]);
       expect(record.stdin).toEqual({
-        schemaPointer: `/data/mandates/${record.role}/role/output/schema`,
-        schemaSource: 'adapter.prepare-result',
-        maxBytes: 32768,
+        schemaPointer: `/data/mandates/${record.role}/responseSchema`,
+        schemaSource: 'harness.prepare-result',
+        maxBytes: 262144,
         kind: 'stdin-json',
         mediaType: 'application/json',
         encoding: 'utf-8',
-        schema: 'https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json',
+        schema: 'https://openplanr.dev/schemas/v1.4.0/operating-advisor-response.schema.json',
       });
     }
 
@@ -313,7 +324,7 @@ describe('native operating advisor lifecycle', () => {
       code: 'E_OPERATE_ADVISOR_ISOLATION',
       details: {
         expectedRole: 'strategy-finance',
-        recoveryCommand: expect.stringContaining('operate adapter resume'),
+        recoveryCommand: expect.stringContaining('operate harness resume'),
       },
     });
 
@@ -326,12 +337,7 @@ describe('native operating advisor lifecycle', () => {
           lease: session.lease,
           idempotencyKey: 'prepare-role-briefs',
           role,
-          stdin: JSON.stringify({
-            outcome: 'quiet',
-            proposals: [],
-            gaps: [],
-            conflicts: [],
-          }),
+          stdin: JSON.stringify(quietAdvisorResponse()),
         });
         expect(recorded).toMatchObject({
           recorded: role,
@@ -348,18 +354,13 @@ describe('native operating advisor lifecycle', () => {
           },
           handoff: {
             state: 'record-required',
-            next: [{ action: 'adapter.record', role: 'technology-risk' }],
+            next: [{ action: 'harness.record', role: 'technology-risk' }],
           },
         });
         expect(recorded).not.toHaveProperty('session.roleBriefs');
         continue;
       }
-      const result = {
-        outcome: 'quiet' as const,
-        proposals: [],
-        gaps: [],
-        conflicts: [],
-      };
+      const result = quietAdvisorResponse();
       await operateAdapterLifecycle({
         ...fixture,
         action: 'record',
@@ -399,7 +400,7 @@ describe('native operating advisor lifecycle', () => {
               '--cycle-id',
               'CYCLE-001',
               '--runtime',
-              'fixture',
+              'codex',
               '--json',
             ],
           },
@@ -605,7 +606,7 @@ describe('native operating advisor lifecycle', () => {
     const handoff = await createOperatingAdapterStartHandoff({
       ...fixture,
       cycleId: 'CYCLE-001',
-      runtime: 'fixture',
+      runtime: 'codex',
       phase: 'advisors',
       roles: ['strategy-finance', 'technology-risk'],
     });
@@ -615,11 +616,11 @@ describe('native operating advisor lifecycle', () => {
       binding: {
         cycleId: 'CYCLE-001',
         evidenceDigest: fixture.evidenceDigest,
-        runtime: 'fixture',
+        runtime: 'codex',
         lease: null,
         expiresAt: null,
       },
-      next: [{ action: 'adapter.prepare', effect: 'machine-local-write' }],
+      next: [{ action: 'harness.prepare', effect: 'machine-local-write' }],
       recovery: [],
     });
     expect(handoff.next[0].argv.at(-1)).toBe('--json');
@@ -666,7 +667,7 @@ describe('native operating advisor lifecycle', () => {
     const initial = await createOperatingAdapterStartHandoff({
       ...fixture,
       cycleId: 'CYCLE-001',
-      runtime: 'fixture',
+      runtime: 'codex',
       phase: 'advisors',
       roles: ['strategy-finance', 'technology-risk'],
     });
@@ -712,7 +713,7 @@ describe('native operating advisor lifecycle', () => {
     const retry = await createOperatingAdapterStartHandoff({
       ...fixture,
       cycleId: 'CYCLE-001',
-      runtime: 'fixture',
+      runtime: 'codex',
       phase: 'advisors',
       roles: ['strategy-finance', 'technology-risk'],
     });
@@ -735,7 +736,7 @@ describe('native operating advisor lifecycle', () => {
     const initial = await createOperatingAdapterStartHandoff({
       ...fixture,
       cycleId: 'CYCLE-001',
-      runtime: 'fixture',
+      runtime: 'codex',
       phase: 'advisors',
       roles: ['strategy-finance', 'technology-risk'],
     });
@@ -752,12 +753,7 @@ describe('native operating advisor lifecycle', () => {
       idempotencyKey: initial.binding.idempotencyKey,
       lease: session.lease,
       role: session.roles[0],
-      stdin: JSON.stringify({
-        outcome: 'quiet',
-        proposals: [],
-        gaps: [],
-        conflicts: [],
-      }),
+      stdin: JSON.stringify(quietAdvisorResponse()),
     });
     const sessionPath = join(
       resolveOperatingPaths(fixture.projectRoot, { localRoot: fixture.localRoot }).advisors,
@@ -773,7 +769,7 @@ describe('native operating advisor lifecycle', () => {
     const retry = await createOperatingAdapterStartHandoff({
       ...fixture,
       cycleId: 'CYCLE-001',
-      runtime: 'fixture',
+      runtime: 'codex',
       phase: 'advisors',
       roles: ['strategy-finance', 'technology-risk'],
     });
@@ -856,7 +852,7 @@ describe('native operating advisor lifecycle', () => {
       lease: prepared.lease,
       idempotencyKey: 'lease-refresh',
       role: prepared.roles[0],
-      stdin: JSON.stringify({ outcome: 'quiet', proposals: [], gaps: [], conflicts: [] }),
+      stdin: JSON.stringify(quietAdvisorResponse()),
       now,
     })) as {
       session: { expiresAt: string };
@@ -889,7 +885,7 @@ describe('native operating advisor lifecycle', () => {
         lease: prepared.lease,
         idempotencyKey: 'lease-refresh',
         role: prepared.roles[1],
-        stdin: JSON.stringify({ outcome: 'quiet', proposals: [], gaps: [], conflicts: [] }),
+        stdin: JSON.stringify(quietAdvisorResponse()),
         now,
       }),
     ).rejects.toMatchObject({
@@ -948,7 +944,7 @@ describe('native operating advisor lifecycle', () => {
         cycleId: 'CYCLE-001',
         evidenceDigest: fixture.evidenceDigest,
         phase: 'advisors',
-        runtime: 'fixture',
+        runtime: 'codex',
         lease: 'prior-generation-lease',
         idempotencyKey: 'prior-generation-key',
         state: 'finalized',
@@ -996,7 +992,7 @@ describe('native operating advisor lifecycle', () => {
         cycleId: 'CYCLE-001',
         evidenceDigest: fixture.evidenceDigest,
         phase: 'advisors',
-        runtime: 'fixture',
+        runtime: 'codex',
         lease: 'prior-generation-lease',
         idempotencyKey: 'prior-generation-key',
         state: 'prepared',

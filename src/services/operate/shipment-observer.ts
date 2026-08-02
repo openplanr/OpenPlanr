@@ -282,8 +282,7 @@ async function inspectShipmentProof(input: {
 
   const marker = await parseMarker(markerRaw);
   if (
-    !marker ||
-    marker.mode !== 'spec-driven' ||
+    marker?.mode !== 'spec-driven' ||
     marker.feature !== slug ||
     marker.tasks_executed < 1 ||
     marker.tasks_failed !== 0 ||

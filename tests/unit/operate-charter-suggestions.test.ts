@@ -137,6 +137,8 @@ describe('Operating Board charter question defaults', () => {
       ]),
     );
     expect(Array.isArray(guardrails?.suggestedValue)).toBe(true);
-    expect((guardrails?.suggestedValue as string[]).length).toBeGreaterThanOrEqual(2);
+    expect(
+      (guardrails?.suggestedValue as string[] | undefined)?.length ?? 0,
+    ).toBeGreaterThanOrEqual(2);
   });
 });

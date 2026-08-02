@@ -4,7 +4,7 @@ import path from 'node:path';
 
 export const OPENPLANR_CLAUDE_MARKETPLACE = 'openplanr';
 export const OPENPLANR_CLAUDE_MARKETPLACE_SOURCE = 'openplanr/marketplace';
-export const OPENPLANR_SKILLS_VERSION = '1.18.2';
+export const OPENPLANR_SKILLS_VERSION = '1.23.0';
 
 export type ClaudePluginOperationKind =
   | 'add-marketplace'

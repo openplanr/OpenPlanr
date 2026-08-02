@@ -65,8 +65,11 @@ async function diagnoseProtocol(pipelineVersion?: string): Promise<OperatingDoct
     const roleIds = roles.map((entry) => entry.id);
     const providerIds = providers.map((entry) => entry.id);
     const boundariesValid =
-      roles.every((entry) => entry.readOnly === true && entry.writeBoundary === 'none') &&
-      providers.every((entry) => entry.readOnly === true);
+      roles.every(
+        (entry) =>
+          entry.readOnly === true &&
+          ['none', 'governed-output-only'].includes(String(entry.writeBoundary)),
+      ) && providers.every((entry) => entry.readOnly === true);
     if (
       !sameIds(roleIds, EXPECTED_ROLES) ||
       !sameIds(providerIds, EXPECTED_PROVIDERS) ||
@@ -76,14 +79,14 @@ async function diagnoseProtocol(pipelineVersion?: string): Promise<OperatingDoct
         code: 'operate-protocol',
         status: 'fail',
         message:
-          'Operating Board Protocol v1.2 registries do not match the certified role/provider contract',
+          'Operating Board Protocol v1.4 registries do not match the certified role/provider contract',
         fix: 'Install the exact OpenPlanr release dependencies, then rerun `planr doctor`.',
       };
     }
     return {
       code: 'operate-protocol',
       status: 'pass',
-      message: `Operating Board Protocol v1.2 registries are compatible${pipelineVersion ? ` with planr-pipeline ${pipelineVersion}` : ''}`,
+      message: `Operating Board Protocol v1.4 registries are compatible${pipelineVersion ? ` with planr-pipeline ${pipelineVersion}` : ''}`,
     };
   } catch (error) {
     return {
@@ -589,13 +592,9 @@ async function diagnoseIncrementalBaselines(
 }
 
 /**
- * FR10: classify the active runtime for operate. A runtime that natively
- * enforces the bounded read-only boundary can carry a mandate and dispatches
- * operate lenses first-class (`enforced-read-only-bounded` = pass); a runtime
- * that cannot is reported `unsupported` explicitly — with its specific reason
- * and a pointer to a supported runtime — rather than being silently downgraded
- * to a deprecated structured-provider path. Fails closed: when no runtime is
- * selected or resolvable, the classification is `unsupported`.
+ * Classify the active runtime for agent-native Operate. Enforced isolation and
+ * runtime-governed native workflows are both first-class; only a missing or
+ * incompatible workflow is unsupported.
  */
 async function diagnoseRuntimeClassification(input: {
   projectRoot: string;
@@ -607,14 +606,14 @@ async function diagnoseRuntimeClassification(input: {
     return {
       code: 'operate-runtime-classification',
       status: 'pass',
-      message: `Active runtime \`${classification.runtime}\` is mandate-capable: operate dispatches it natively as \`enforced-read-only-bounded\``,
+      message: `Active runtime \`${classification.runtime}\` is Operate-capable: native dispatch assurance is \`${classification.isolation}\``,
     };
   }
   return {
     code: 'operate-runtime-classification',
     status: 'warn',
     message: `Active runtime \`${classification.runtime}\` is \`unsupported\` for operate: ${classification.reason}`,
-    fix: 'Select a runtime whose adapter natively enforces bounded read-only tool isolation (for example claude-code) via `planr setup`, then rerun `planr doctor`.',
+    fix: 'Run `planr setup --scope user`, restart the selected runtime, and rerun `planr doctor` so its generated Operate workflow can be detected.',
   };
 }
 

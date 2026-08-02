@@ -102,7 +102,7 @@ describe('Operating Board doctor', () => {
     const diagnostics = await diagnoseOperatingBoard({
       projectRoot,
       localRoot,
-      pipelineVersion: '0.30.0',
+      pipelineVersion: '0.37.0',
     });
 
     expect(diagnostics).toEqual(
@@ -189,7 +189,7 @@ describe('Operating Board doctor', () => {
     });
   });
 
-  it('reports a runtime that cannot carry a mandate as unsupported, with an explicit reason and remediation', async () => {
+  it('reports Codex as runtime-governed and Operate-capable', async () => {
     const store = new OperatingEventStore(projectRoot, { localRoot });
     await store.initialize();
 
@@ -197,10 +197,9 @@ describe('Operating Board doctor', () => {
     const classification = diagnostics.find(
       (item) => item.code === 'operate-runtime-classification',
     );
-    expect(classification).toMatchObject({ status: 'warn' });
-    expect(classification?.message).toContain('unsupported');
-    expect(classification?.message).toMatch(/advisory|unverifiable|cannot carry a mandate/i);
-    expect(classification?.fix).toMatch(/claude-code|planr setup/i);
+    expect(classification).toMatchObject({ status: 'pass' });
+    expect(classification?.message).toContain('runtime-governed');
+    expect(classification?.message).toContain('Operate-capable');
   });
 
   // FR7: the cycle-integrity check reports the three conditions — citation

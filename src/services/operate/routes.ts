@@ -771,7 +771,7 @@ export async function electAcceptedFindingEpicRoutes(input: {
       for (const group of pending) {
         if (group.memberIds.some((memberId) => alreadyRouted.has(memberId))) continue;
         const anchor = anchorFindings.get(group.anchorId);
-        if (!anchor || anchor.status !== 'accepted') continue;
+        if (anchor?.status !== 'accepted') continue;
         const route = await createOperatingRoutePlan({
           projectRoot: input.projectRoot,
           localRoot: input.localRoot,
@@ -954,8 +954,7 @@ function validateStoredPlanningHandoff(
 ): StoredPlanningHandoff {
   const handoff = value as Partial<StoredPlanningHandoff>;
   if (
-    !handoff ||
-    handoff.kind !== 'operating-planning-handoff' ||
+    handoff?.kind !== 'operating-planning-handoff' ||
     handoff.routeId !== expected.route.id ||
     handoff.transactionId !== expected.transactionId ||
     handoff.cycleId !== expected.route.cycleId ||
@@ -977,8 +976,7 @@ function validateStoredPlanningHandoff(
   }
   if (
     expected.planningEngine === 'pipeline-po' &&
-    (!handoff.prepared ||
-      handoff.prepared.planningEngine !== 'pipeline-po' ||
+    (handoff.prepared?.planningEngine !== 'pipeline-po' ||
       canonicalDigest(handoff.prepared.prepared) !== handoff.prepared.preparedDigest ||
       handoff.prepared.shipInvoked !== false)
   ) {

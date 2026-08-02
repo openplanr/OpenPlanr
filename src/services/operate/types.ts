@@ -14,6 +14,7 @@ export const OPERATE_SCHEMA_VERSION = '1.0.0' as const;
  * protocol version through this constant.
  */
 export const OPERATE_MISSION_PROTOCOL_VERSION = '1.3.0' as const;
+export const OPERATE_AGENT_PROTOCOL_VERSION = '1.4.0' as const;
 
 export interface ProtocolArtifact<K extends string> {
   kind: K;
@@ -366,31 +367,42 @@ export interface OperatingAdapterMachineAction {
     | 'adapter.finalize'
     | 'adapter.resume'
     | 'adapter.cancel'
+    | 'harness.prepare'
+    | 'harness.record'
+    | 'harness.finalize'
+    | 'harness.resume'
+    | 'harness.cancel'
     | 'run.continue';
   effect: OperatingActionEffect;
   role?: string;
   argv: string[];
   dispatch?: {
-    source: 'adapter.prepare-result';
+    source: 'adapter.prepare-result' | 'harness.prepare-result';
     agent?: string;
     mandatePointer: string;
-    declaredRoots: string[];
-    toolGrant: { allowed: string[]; roots: string[] };
-    isolation: 'enforced-read-only-bounded' | 'unsupported';
+    procedurePointer?: string;
+    runtime?: string;
+    executionMode?: 'native-agent' | 'sequential-native';
+    assurance?: 'runtime-governed';
+    toolIsolation?: 'enforced' | 'advisory' | 'none' | 'enforced-read-only';
+    permissionAuthority?: 'runtime-session';
+    declaredRoots?: string[];
+    toolGrant?: { allowed: string[]; roots: string[] };
+    isolation?: 'enforced-read-only-bounded' | 'runtime-governed' | 'unsupported';
   };
   stdin?: {
     kind: 'stdin-json';
     mediaType: 'application/json';
     encoding: 'utf-8';
-    maxBytes: 32768;
-    schema: 'https://openplanr.dev/schemas/v1.3.0/operating-advisor-response.schema.json';
-    schemaSource: 'adapter.prepare-result';
+    maxBytes: number;
+    schema: string;
+    schemaSource: 'adapter.prepare-result' | 'harness.prepare-result';
     schemaPointer: string;
   };
 }
 
 export interface OperatingAdapterHandoff extends ProtocolArtifact<'operating-adapter-handoff'> {
-  phase: 'advisors' | 'chair';
+  phase: 'bootstrap' | 'advisors' | 'chair';
   state:
     | 'prepare-required'
     | 'record-required'
@@ -401,6 +413,11 @@ export interface OperatingAdapterHandoff extends ProtocolArtifact<'operating-ada
     cycleId: string;
     evidenceDigest: `sha256:${string}`;
     runtime: string;
+    runtimeBinding?: 'required';
+    crossRuntimeFallback?: false;
+    executionMode?: 'native-agent' | 'sequential-native';
+    assurance?: 'runtime-governed';
+    toolIsolation?: 'enforced' | 'advisory' | 'none' | 'enforced-read-only';
     idempotencyKey: string;
     lease: string | null;
     expiresAt: string | null;
@@ -436,6 +453,9 @@ export type OperateErrorCode =
   | 'E_OPERATE_PROVIDER_READ_ONLY'
   | 'E_OPERATE_ADVISOR_ISOLATION'
   | 'E_OPERATE_ADVISOR_FAILED'
+  | 'E_OPERATE_RUNTIME_MISMATCH'
+  | 'E_OPERATE_DRAFT_UNAPPROVED'
+  | 'E_RUNTIME_UNSUPPORTED'
   | 'E_OPERATE_EVIDENCE_NOT_READY'
   | 'E_OPERATE_CAP_EXCEEDED'
   | 'E_OPERATE_CRITICAL_CAP'
@@ -573,11 +593,15 @@ export interface OperatingRecordEnvelope
    * route record, stays frozen at v1.2. The stamp is a pure function of the
    * record content, so the write path and the `records.jsonl` read-back agree.
    */
-  protocolVersion: typeof OPERATE_PROTOCOL_VERSION | typeof OPERATE_MISSION_PROTOCOL_VERSION;
+  protocolVersion:
+    | typeof OPERATE_PROTOCOL_VERSION
+    | typeof OPERATE_MISSION_PROTOCOL_VERSION
+    | typeof OPERATE_AGENT_PROTOCOL_VERSION;
   digest: `sha256:${string}`;
   recordType:
     | 'evidence-metadata'
     | 'advisor-result'
+    | 'advisor-report'
     | 'finding'
     | 'decision'
     | 'data-gap'

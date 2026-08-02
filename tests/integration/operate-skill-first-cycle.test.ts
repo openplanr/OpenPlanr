@@ -72,7 +72,9 @@ const INIT_OPTIONS = {
 // command — the command that carries it is always taken from a prior handoff.
 const QUIET_NATIVE_RESPONSE = JSON.stringify({
   outcome: 'quiet',
-  proposals: [],
+  analysisMarkdown: '## Advisor analysis\n\nNo material action is recommended for this fixture.',
+  claims: [],
+  actions: [],
   gaps: [],
   conflicts: [],
 });
@@ -111,7 +113,9 @@ function requestFromEmittedArgv(
     }
   }
   const request: OperateActionRequest = { action, projectRoot, interactive: false, options };
-  if (action === 'adapter.record') request.stdin = QUIET_NATIVE_RESPONSE;
+  if (action === 'harness.record' || action === 'adapter.record') {
+    request.stdin = QUIET_NATIVE_RESPONSE;
+  }
   return request;
 }
 
@@ -259,7 +263,7 @@ describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => 
       const next = result.handoff.next[0];
       const command = next.argv.join(' ');
 
-      if (next.action.startsWith('adapter.')) {
+      if (next.action.startsWith('harness.') || next.action.startsWith('adapter.')) {
         // The command MUST have been emitted by a prior skill-path step. It is
         // never constructed in this test — it is looked up, then replayed.
         expect(emittedCommands.has(command)).toBe(true);
@@ -297,10 +301,10 @@ describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => 
 
     // The two native phases each ran prepare → (record…) → finalize, and each
     // finalize handed back exactly one `run.continue` the skill replayed.
-    expect(adapterActions.filter((entry) => entry === 'adapter.prepare')).toHaveLength(2);
-    expect(adapterActions.filter((entry) => entry === 'adapter.finalize')).toHaveLength(2);
+    expect(adapterActions.filter((entry) => entry === 'harness.prepare')).toHaveLength(2);
+    expect(adapterActions.filter((entry) => entry === 'harness.finalize')).toHaveLength(2);
     expect(
-      adapterActions.filter((entry) => entry === 'adapter.record').length,
+      adapterActions.filter((entry) => entry === 'harness.record').length,
     ).toBeGreaterThanOrEqual(1);
     expect(handoffStates).toContain('record-required');
     expect(handoffStates).toContain('finalize-required');
@@ -310,7 +314,7 @@ describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => 
 
     // Zero user-typed adapter commands: EVERY adapter lifecycle action executed
     // was replayed from the emitted-command ledger, never authored here.
-    const executedAdapterCommands = transcript.filter((action) => action.startsWith('adapter.'));
+    const executedAdapterCommands = transcript.filter((action) => action.startsWith('harness.'));
     expect(executedAdapterCommands.length).toBeGreaterThanOrEqual(4);
 
     // 6. review — the mandatory human gate; no route was applied by the run.

@@ -6,7 +6,10 @@ import type {
 import { OperatingEventStore } from './event-store.js';
 import { OperatingEvidenceCache } from './evidence-cache.js';
 import { buildOperatingIntegritySummary, renderOperatingIntegritySection } from './integrity.js';
-import { readPersistedOperatingRoleResults } from './maintenance.js';
+import {
+  readPersistedOperatingAdvisorReports,
+  readPersistedOperatingRoleResults,
+} from './maintenance.js';
 import { renderOperatingBrief, selectCycleState } from './projection.js';
 import { loadOperatingProtocol } from './protocol.js';
 import { maximumSensitivity } from './redaction.js';
@@ -49,6 +52,9 @@ export interface OperatingLensReport {
   gaps: string[];
   conflicts: string[];
   resultDigest: `sha256:${string}` | null;
+  analysisMarkdown?: string;
+  claims?: Array<Record<string, unknown>>;
+  actions?: Array<Record<string, unknown>>;
 }
 
 function requestedLens(value?: string): OperatingRoleId | null {
@@ -79,6 +85,18 @@ export function markdownLens(report: OperatingLensReport): string {
     '',
     `Status: ${report.outcome}`,
     '',
+    ...(report.analysisMarkdown ? ['### Analysis', '', report.analysisMarkdown, ''] : []),
+    ...(report.claims && report.claims.length > 0
+      ? [
+          '### Material claims',
+          '',
+          ...report.claims.map(
+            (claim) =>
+              `- **${String(claim.epistemicStatus ?? 'unknown')} · ${String(claim.confidence ?? '?')}/5** ${String(claim.statement ?? '')}`,
+          ),
+          '',
+        ]
+      : []),
     '### Recommendations',
     '',
     ...(report.proposals.length > 0
@@ -220,8 +238,9 @@ export async function readOperatingReport(input: {
     );
   }
   const selectedRole = requestedLens(input.lens);
-  const [roleResults, roles] = await Promise.all([
+  const [roleResults, richReports, roles] = await Promise.all([
     readPersistedOperatingRoleResults(store, cycleId),
+    readPersistedOperatingAdvisorReports(store, cycleId),
     loadOperatingProtocol().then(
       (protocol) => protocol.listOperatingRoles() as unknown as ReportRole[],
     ),
@@ -244,6 +263,7 @@ export async function readOperatingReport(input: {
     .filter((role) => !selectedRole || role.id === selectedRole)
     .map((role) => {
       const result = byRole.get(role.id as OperatingRoleId);
+      const rich = richReports.get(role.id);
       const notEvaluatedReasons = notEvaluatedReasonsByRole.get(role.id);
       const notEvaluated = notEvaluatedReasons !== undefined || result === undefined;
       const outcome: OperatingLensReport['outcome'] = notEvaluated
@@ -264,6 +284,13 @@ export async function readOperatingReport(input: {
         gaps,
         conflicts: result?.conflicts ?? [],
         resultDigest: result?.resultDigest ?? null,
+        ...(rich
+          ? {
+              analysisMarkdown: rich.analysisMarkdown,
+              claims: rich.claims as unknown as Array<Record<string, unknown>>,
+              actions: rich.actions as unknown as Array<Record<string, unknown>>,
+            }
+          : {}),
       } satisfies OperatingLensReport;
     });
   const state = selectCycleState(fullState, cycleId);

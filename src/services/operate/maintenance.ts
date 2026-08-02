@@ -2,6 +2,7 @@ import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypt
 import { mkdir, readdir, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
+  type AgentNativeAdvisorResponse,
   advisorResponseContractDetails,
   assertAdvisorOutputMatchesBrief,
   buildOperatingMandate,
@@ -39,7 +40,7 @@ import {
 } from './workspace.js';
 
 interface PrivateAdvisorSession {
-  implementation: 'openplanr-operate-adapter';
+  implementation: 'openplanr-operate-adapter' | 'openplanr-operate-harness';
   // FR4: the committed event-chain genesis hash of the board that owns this
   // machine-local session. Two successive board generations at the same project
   // path re-genesis the event chain, so a session from a superseded generation
@@ -50,6 +51,8 @@ interface PrivateAdvisorSession {
   evidenceDigest: string;
   phase: 'advisors' | 'chair';
   runtime: string;
+  protocolVersion?: '1.3.0' | '1.4.0';
+  pinnedRevision?: string;
   lease: string;
   idempotencyKey: string;
   state: 'prepared' | 'recording' | 'finalized' | 'cancelled';
@@ -80,7 +83,7 @@ async function adapterHandoff(session: PrivateAdvisorSession): Promise<Operating
           : 'finalize-required';
   const protocol = await loadOperatingProtocol();
   const handoff = protocol.createOperatingAdapterHandoff({
-    protocolVersion: '1.3.0',
+    protocolVersion: session.protocolVersion ?? '1.3.0',
     phase: session.phase,
     state,
     cycleId: session.cycleId,
@@ -811,6 +814,39 @@ export async function readPersistedOperatingRoleResults(
   return [...byRole.values()].sort((left, right) => left.roleId.localeCompare(right.roleId));
 }
 
+/** Read the rich Protocol v1.4 analysis sidecars associated with advisor events. */
+export async function readPersistedOperatingAdvisorReports(
+  store: OperatingEventStore,
+  cycleId: string,
+): Promise<Map<string, AgentNativeAdvisorResponse>> {
+  const protocol = await loadOperatingProtocol();
+  const reports = new Map<string, AgentNativeAdvisorResponse>();
+  for (const event of (await store.replay()).events) {
+    if (
+      event.cycleId !== cycleId ||
+      event.type !== 'advisory.recorded' ||
+      typeof event.payload.advisorReportDigest !== 'string' ||
+      typeof event.payload.roleId !== 'string'
+    ) {
+      continue;
+    }
+    const record = await store.readRecord(event.payload.advisorReportDigest as `sha256:${string}`);
+    if (record.recordType !== 'advisor-report') continue;
+    const issues = protocol.validateProtocolArtifact('operating-advisor-response', record.content, {
+      protocolVersion: '1.4.0',
+    });
+    if (issues.length > 0) {
+      throw new OperateError(
+        'E_OPERATE_STATE_INVALID',
+        `Cycle ${cycleId} contains an invalid agent-native advisor report.`,
+        { roleId: event.payload.roleId, issues: issues.slice(0, 8) },
+      );
+    }
+    reports.set(event.payload.roleId, record.content as unknown as AgentNativeAdvisorResponse);
+  }
+  return reports;
+}
+
 async function readAdapterSession(
   projectRoot: string,
   cycleId: string,
@@ -825,8 +861,10 @@ async function readAdapterSession(
     phase: parsed.phase ?? adapterPhase(parsed.roles ?? []),
     runtime: parsed.runtime ?? 'auto',
   };
-  if (session.implementation !== 'openplanr-operate-adapter') {
-    throw new OperateError('E_OPERATE_ADVISOR_FAILED', 'Adapter session is invalid.');
+  if (
+    !['openplanr-operate-adapter', 'openplanr-operate-harness'].includes(session.implementation)
+  ) {
+    throw new OperateError('E_OPERATE_ADVISOR_FAILED', 'Operate harness session is invalid.');
   }
   // Expiry is evaluated against the resolved clock (an injected clock in tests,
   // wall-clock in production) so a lease that lapsed after its refresh window is
@@ -978,7 +1016,7 @@ export async function createOperatingAdapterStartHandoff(input: {
   }
   const protocol = await loadOperatingProtocol();
   const handoff = protocol.createOperatingAdapterHandoff({
-    protocolVersion: '1.3.0',
+    protocolVersion: '1.4.0',
     phase: input.phase,
     state: 'prepare-required',
     cycleId: input.cycleId,
@@ -1190,7 +1228,8 @@ export async function operateAdapterLifecycle(input: {
             const roots = await deriveOperatingMandateRoots(input.projectRoot);
             const built = await Promise.all(
               (roles as OperatingRoleId[]).map(
-                async (roleId) => [roleId, await buildOperatingMandate({ roleId, roots })] as const,
+                async (roleId) =>
+                  [roleId, await buildOperatingMandate({ roleId, roots, runtime })] as const,
               ),
             );
             return Object.fromEntries(built) as Record<string, OperatingMandate>;
@@ -1229,13 +1268,17 @@ export async function operateAdapterLifecycle(input: {
         }
       }
     }
+    const pinnedRevision = baseEvidence.items.find((item) => item.repository?.revision)?.repository
+      ?.revision;
     const session: PrivateAdvisorSession = {
-      implementation: 'openplanr-operate-adapter',
+      implementation: 'openplanr-operate-harness',
       boardIdentity,
       cycleId: input.cycleId,
       evidenceDigest: input.evidenceDigest,
       phase,
       runtime,
+      protocolVersion: '1.4.0',
+      ...(pinnedRevision ? { pinnedRevision } : {}),
       lease: randomBytes(32).toString('base64url'),
       idempotencyKey: input.idempotencyKey,
       state: validRecordedRoles.length > 0 ? 'recording' : 'prepared',
@@ -1330,8 +1373,8 @@ export async function operateAdapterLifecycle(input: {
       );
     }
     const currentHandoff = await adapterHandoff(session);
-    const authorizedRecord = currentHandoff.next.find(
-      (action) => action.action === 'adapter.record',
+    const authorizedRecord = currentHandoff.next.find((action) =>
+      ['adapter.record', 'harness.record'].includes(action.action),
     );
     if (!authorizedRecord || authorizedRecord.role !== input.role) {
       throw new OperateError(
@@ -1340,12 +1383,15 @@ export async function operateAdapterLifecycle(input: {
         {
           expectedRole: authorizedRecord?.role ?? null,
           recoveryCommand: currentHandoff.recovery
-            .find((action) => action.action === 'adapter.resume')
+            .find((action) => ['adapter.resume', 'harness.resume'].includes(action.action))
             ?.argv.join(' '),
         },
       );
     }
-    const outputLimit = Math.min(32_768, session.roleBriefs[input.role].output.maximumOutputBytes);
+    const outputLimit = Math.min(
+      session.protocolVersion === '1.4.0' ? 262_144 : 32_768,
+      session.roleBriefs[input.role].output.maximumOutputBytes,
+    );
     if (Buffer.byteLength(input.stdin, 'utf8') > outputLimit) {
       throw new OperateError(
         'E_OPERATE_ADVISOR_FAILED',
@@ -1392,6 +1438,29 @@ export async function operateAdapterLifecycle(input: {
         ? submittedRecord.proposals
         : [];
       const submittedText = [
+        ...(typeof submittedRecord.analysisMarkdown === 'string'
+          ? [{ location: 'analysisMarkdown', value: submittedRecord.analysisMarkdown }]
+          : []),
+        ...(Array.isArray(submittedRecord.claims) ? submittedRecord.claims : []).flatMap(
+          (claim, index) =>
+            claim && typeof claim === 'object' && !Array.isArray(claim)
+              ? [
+                  {
+                    location: `claims.${index}.statement`,
+                    value: (claim as Record<string, unknown>).statement,
+                  },
+                ]
+              : [],
+        ),
+        ...(Array.isArray(submittedRecord.actions) ? submittedRecord.actions : []).flatMap(
+          (action, index) =>
+            action && typeof action === 'object' && !Array.isArray(action)
+              ? ['title', 'summary'].map((field) => ({
+                  location: `actions.${index}.${field}`,
+                  value: (action as Record<string, unknown>)[field],
+                }))
+              : [],
+        ),
         ...submittedProposals.flatMap((proposal, index) => {
           if (!proposal || typeof proposal !== 'object' || Array.isArray(proposal)) return [];
           const record = proposal as Record<string, unknown>;
@@ -1423,6 +1492,7 @@ export async function operateAdapterLifecycle(input: {
           cycleId: input.cycleId as string,
           response: submitted,
           runtime: session.runtime,
+          pinnedRevision: session.pinnedRevision,
           resolveCitations: async (roleResults) => {
             const [workspace, sensitivityCeiling, config] = await Promise.all([
               refreshOperatingWorkspaceManifest(input.projectRoot, {
@@ -1536,6 +1606,12 @@ export async function operateAdapterLifecycle(input: {
       path.join(path.dirname(target), `${input.cycleId}.${input.role}.json`),
       result,
     );
+    if (session.protocolVersion === '1.4.0') {
+      await atomicPrivateWrite(
+        path.join(path.dirname(target), `${input.cycleId}.${input.role}.response.json`),
+        submitted,
+      );
+    }
     // A successful record refreshes the lease forward from now (FR10 / T-008):
     // an advisor making steady progress across a multi-role dispatch keeps its
     // session alive without a separate keep-alive call, while a session that goes
@@ -1654,13 +1730,41 @@ export async function operateAdapterLifecycle(input: {
             correlationId: session.idempotencyKey,
           },
         );
+        const advisorReport =
+          session.protocolVersion === '1.4.0'
+            ? await readFile(
+                path.join(path.dirname(target), `${input.cycleId}.${result.roleId}.response.json`),
+                'utf8',
+              )
+                .then((raw) => JSON.parse(raw) as Record<string, unknown>)
+                .catch(() => null)
+            : null;
+        const advisorReportRecord = advisorReport
+          ? await store.putRecord('advisor-report', advisorReport, {
+              correlationId: session.idempotencyKey,
+            })
+          : null;
+        const runtimeBinding = (await adapterHandoff(session)).binding;
         const event = await store.append({
           type: 'advisory.recorded',
           cycleId: input.cycleId as string,
           entityId: `${input.cycleId}-${result.roleId}`,
           correlationId: session.idempotencyKey,
           evidenceRefs: result.proposals.flatMap((proposal) => proposal.evidenceRefs),
-          payload: { recordDigest: record.digest },
+          payload: {
+            recordDigest: record.digest,
+            ...(advisorReportRecord ? { advisorReportDigest: advisorReportRecord.digest } : {}),
+            roleId: result.roleId,
+            runtimeBinding: {
+              runtime: runtimeBinding.runtime,
+              runtimeBinding: runtimeBinding.runtimeBinding,
+              crossRuntimeFallback: runtimeBinding.crossRuntimeFallback,
+              executionMode: runtimeBinding.executionMode,
+              assurance: runtimeBinding.assurance,
+              toolIsolation: runtimeBinding.toolIsolation,
+            },
+          },
+          ...(session.protocolVersion === '1.4.0' ? { protocolVersion: '1.4.0' as const } : {}),
           expectedHead: head.hash,
           actor: { kind: 'runtime', id: 'operate-adapter' },
         });

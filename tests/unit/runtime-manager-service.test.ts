@@ -197,7 +197,7 @@ describe('runtime setup', () => {
     expect(lock.components).toEqual({
       cli: cliVersion,
       pipeline: pipelineVersion,
-      skills: '1.18.2',
+      skills: '1.23.0',
     });
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-artifact', 'SKILL.md'))).toBe(true);
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-operate', 'SKILL.md'))).toBe(true);
@@ -237,8 +237,8 @@ describe('runtime setup', () => {
     });
     const skillPath = join(userHome, '.codex', 'skills', 'planr-operate', 'SKILL.md');
     const content = readFileSync(skillPath, 'utf8').replace(
-      /## Default workflow[\s\S]*?## Guided interaction/u,
-      '## Guided interaction',
+      /## Default invocation[\s\S]*?## Research and runtime rules/u,
+      '## Research and runtime rules',
     );
     writeFileSync(skillPath, content);
 

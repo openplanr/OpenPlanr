@@ -5,6 +5,7 @@ import { canonicalDigest, canonicalize } from './canonical.js';
 import { assertOperatingArtifact, loadOperatingProtocol } from './protocol.js';
 import { projectOperatingStalledItems } from './stalled-item-service.js';
 import {
+  OPERATE_AGENT_PROTOCOL_VERSION,
   OPERATE_MISSION_PROTOCOL_VERSION,
   OPERATE_PROTOCOL_VERSION,
   OPERATE_SCHEMA_VERSION,
@@ -28,7 +29,7 @@ import { ensureOperatingDirectories, resolveOperatingPaths } from './workspace.j
 export interface OperatingRecordsLogEntry {
   kind: 'operating-records-log-entry';
   schemaVersion: typeof OPERATE_SCHEMA_VERSION;
-  protocolVersion: '1.3.0';
+  protocolVersion: '1.3.0' | '1.4.0';
   digest: `sha256:${string}`;
   recordType: OperatingRecordEnvelope['recordType'];
   createdAt: string;
@@ -51,6 +52,7 @@ function recordEnvelopeProtocolVersion(
   recordType: OperatingRecordEnvelope['recordType'],
   content: Record<string, unknown>,
 ): OperatingRecordEnvelope['protocolVersion'] {
+  if (recordType === 'advisor-report') return OPERATE_AGENT_PROTOCOL_VERSION;
   return recordType === 'route' && content.protocolVersion === OPERATE_MISSION_PROTOCOL_VERSION
     ? OPERATE_MISSION_PROTOCOL_VERSION
     : OPERATE_PROTOCOL_VERSION;
@@ -63,7 +65,10 @@ export function operatingRecordToLogEntry(
   return {
     kind: 'operating-records-log-entry',
     schemaVersion: record.schemaVersion,
-    protocolVersion: '1.3.0',
+    protocolVersion:
+      record.recordType === 'advisor-report'
+        ? OPERATE_AGENT_PROTOCOL_VERSION
+        : OPERATE_MISSION_PROTOCOL_VERSION,
     digest: record.digest,
     recordType: record.recordType,
     createdAt: record.createdAt,
