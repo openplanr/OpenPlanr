@@ -1,4 +1,9 @@
-name: Artifact release canary
+# BL-010 Phase 4: moved from packages/planr-pipeline/.github/workflows/artifact-release-canary.yml.
+# Schedule/workflow_dispatch triggered only — not gated behind the `changes`
+# job pattern used by push/PR workflows, since a canary against the
+# *released* ecosystem has no meaningful "changed files in this diff" concept
+# and must always run when triggered.
+name: "Pipeline — Artifact Release Canary"
 
 on:
   schedule:
@@ -17,6 +22,9 @@ jobs:
   production:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: packages/planr-pipeline
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

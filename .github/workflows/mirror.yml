@@ -1,0 +1,182 @@
+# BL-010 Phase 4.8 / plan §6 — content-hash-gated push of each
+# publishable/plugin package subtree to its permanent read-only mirror
+# (openplanr/planr-pipeline, openplanr/skills, openplanr/marketplace), so
+# `/plugin marketplace add ...` and `/plugin install ...` keep resolving
+# `.claude-plugin/` at each mirror's REPO ROOT even though the source now
+# lives at packages/<pkg>/ in this monorepo.
+#
+# IMPORTANT — THIS WORKFLOW IS DELIBERATELY workflow_dispatch-ONLY. DO NOT
+# ADD AN AUTOMATIC TRIGGER (push / release / tags) YET.
+#
+# Plan Phase 6.1 requires the three real mirrors to be stood up and PROVEN
+# manually, with pre-merge content, BEFORE the merge PR lands and before any
+# automatic trigger is wired in ("If the skills mirror does not reproduce
+# that [.claude-plugin/ layout], stop — that is the one-way-door failure
+# mode."). Mirrors are never archived, renamed, or deleted (plan §6/§8) —
+# there is no way to recover from a bad automatic push before that manual
+# proof has happened. Once Phase 6.1 has run this workflow manually against
+# the real mirrors and confirmed the `.claude-plugin/` layout survives, add
+# the real trigger (e.g. `push: tags: ['*@*']` matching the changesets tag
+# format `openplanr@1.22.0` / `planr-pipeline@0.39.0`) in the SAME commit
+# that provisions the `MIRROR_TOKEN` secret. Until then: workflow_dispatch
+# only, and every push job below double-checks `github.event_name` as a
+# second independent guard against an accidental future trigger addition
+# that forgets to update these conditionals.
+name: Mirror packages to read-only satellite repos
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Which package to mirror
+        required: true
+        default: all
+        type: choice
+        options: [all, planr-pipeline, skills, marketplace]
+      dry_run:
+        description: Compute the content-hash gate and log the decision, but never push
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  # Plan §6, "Release ordering matters": mirrors must never advertise a
+  # version npm does not yet serve — release.yml publishes npm first,
+  # verifies on the registry, and only then this workflow pushes mirrors.
+  # Manual workflow_dispatch runs are exempt from that ordering (the operator
+  # is expected to have already verified the npm state); this job exists so
+  # the constraint is documented in the same place it will need to be
+  # automated when the real trigger is added in Phase 6.1.
+  verify-npm-published:
+    name: Verify npm publish preceded this run (manual runs are exempt)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: No-op for manual dry/live runs
+        run: |
+          echo "Manual workflow_dispatch run."
+          echo "npm-publish-first ordering is the operator's responsibility until this trigger is automated in Phase 6.1."
+
+  mirror:
+    name: Mirror ${{ matrix.package }}
+    needs: verify-npm-published
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [planr-pipeline, skills, marketplace]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve mirror repo slug and selection
+        id: mirror
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.package }}" = "all" ] || [ "${{ inputs.package }}" = "${{ matrix.package }}" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+          case "${{ matrix.package }}" in
+            planr-pipeline) echo "repo=openplanr/planr-pipeline" >> "$GITHUB_OUTPUT" ;;
+            skills)         echo "repo=openplanr/skills" >> "$GITHUB_OUTPUT" ;;
+            marketplace)    echo "repo=openplanr/marketplace" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      # Content-hash gate + push. Correct `find ... ! -name .git -exec rm -rf`
+      # form per plan §6 (the surveyed `rm -rf * .[!.]* --exclude=.git` is not
+      # a valid `rm` invocation on macOS or GNU and its glob matches `.git`).
+      - name: Content-hash gate + mirror push
+        if: steps.mirror.outputs.run == 'true'
+        shell: bash
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+          PKG: ${{ matrix.package }}
+          MIRROR_REPO: ${{ steps.mirror.outputs.repo }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+
+          SUBTREE_TREE=$(git rev-parse "HEAD:packages/$PKG")
+          echo "packages/$PKG tree hash: $SUBTREE_TREE"
+
+          if [ -z "${MIRROR_TOKEN:-}" ]; then
+            echo "::warning::MIRROR_TOKEN is not set — the real mirrors have not been stood up yet (plan Phase 6.1). Stopping after the content-hash computation."
+            exit 0
+          fi
+
+          rm -rf /tmp/mirror
+          git clone --depth 1 "https://x-access-token:${MIRROR_TOKEN}@github.com/${MIRROR_REPO}.git" /tmp/mirror
+          MIRROR_TREE=$(git -C /tmp/mirror rev-parse 'HEAD^{tree}')
+          echo "$MIRROR_REPO tree hash: $MIRROR_TREE"
+
+          if [ "$SUBTREE_TREE" = "$MIRROR_TREE" ]; then
+            echo "Mirror already current — no push needed."
+            exit 0
+          fi
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "dry_run=true — would push packages/$PKG ($SUBTREE_TREE) to $MIRROR_REPO (currently $MIRROR_TREE). Not pushing."
+            exit 0
+          fi
+
+          find /tmp/mirror -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          git archive "HEAD:packages/$PKG" | tar -x -C /tmp/mirror
+          git -C /tmp/mirror add -A
+          git -C /tmp/mirror -c user.name="planr-mirror-bot" -c user.email="mirror@openplanr.dev" \
+            commit -m "release: mirrored from openplanr/OpenPlanr@${GITHUB_SHA} (packages/$PKG)"
+          PKG_VERSION=$(node -p "require('./packages/$PKG/package.json').version")
+          git -C /tmp/mirror tag "v${PKG_VERSION}" || true
+          git -C /tmp/mirror push origin main --follow-tags
+
+  # Compares each mirror's root tree-hash to `packages/<pkg>` on `main` and
+  # fails if they diverge, per plan §6: "Without it, a broken mirror serves
+  # stale plugin content indefinitely with no signal."
+  mirror-freshness:
+    name: Mirror freshness check
+    needs: mirror
+    if: always() && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare each mirror's tree hash to packages/<pkg>
+        shell: bash
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${MIRROR_TOKEN:-}" ]; then
+            echo "::warning::MIRROR_TOKEN not set — mirror-freshness cannot run yet (plan Phase 6.1 has not stood up the mirrors). Skipping."
+            exit 0
+          fi
+
+          fail=0
+          for pkg in planr-pipeline skills marketplace; do
+            case "$pkg" in
+              planr-pipeline) repo=openplanr/planr-pipeline ;;
+              skills)         repo=openplanr/skills ;;
+              marketplace)    repo=openplanr/marketplace ;;
+            esac
+
+            SUBTREE_TREE=$(git rev-parse "HEAD:packages/$pkg")
+            rm -rf /tmp/freshness-check
+            git clone --depth 1 "https://x-access-token:${MIRROR_TOKEN}@github.com/${repo}.git" /tmp/freshness-check
+            MIRROR_TREE=$(git -C /tmp/freshness-check rev-parse 'HEAD^{tree}')
+
+            if [ "$SUBTREE_TREE" != "$MIRROR_TREE" ]; then
+              echo "::error::$repo has diverged from packages/$pkg ($MIRROR_TREE != $SUBTREE_TREE)"
+              fail=1
+            else
+              echo "$repo matches packages/$pkg ($SUBTREE_TREE)"
+            fi
+          done
+          exit $fail

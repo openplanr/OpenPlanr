@@ -1,4 +1,7 @@
-name: Release check
+# BL-010 Phase 4: moved from packages/skills/.github/workflows/release-check.yml.
+# See skills-validate.yml's header comment for the OPENPLANR_ECOSYSTEM_ROOT
+# rationale (BL-010 Phase 3.5 / 4.3).
+name: "Skills — Release Check"
 
 on:
   push:
@@ -17,8 +20,11 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: packages/skills
     env:
-      OPENPLANR_ECOSYSTEM_ROOT: ${{ github.workspace }}
+      OPENPLANR_ECOSYSTEM_ROOT: ${{ github.workspace }}/packages
     steps:
       - uses: actions/checkout@v4
         with:

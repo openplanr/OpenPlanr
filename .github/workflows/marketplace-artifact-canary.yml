@@ -1,4 +1,8 @@
-name: Artifact release canary
+# BL-010 Phase 4: moved from packages/marketplace/.github/workflows/artifact-canary.yml.
+# Schedule/workflow_dispatch triggered only — no `changes` gate for the same
+# reason as the pipeline release canaries: it verifies the *released*
+# ecosystem (registry lookups + share host), not this diff.
+name: "Marketplace — Artifact Release Canary"
 
 on:
   workflow_dispatch:
@@ -12,11 +16,17 @@ jobs:
   compatibility:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: packages/marketplace
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install workspace dependencies
+        working-directory: .
+        run: npm ci
       - run: npm run check
       - run: npm test
       - name: Verify published packages and share host

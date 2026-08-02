@@ -1,4 +1,8 @@
-name: Operating Board release canary
+# BL-010 Phase 4: moved from packages/planr-pipeline/.github/workflows/operate-release-canary.yml.
+# Schedule/workflow_dispatch triggered only — no `changes` gate for the same
+# reason as pipeline-artifact-canary.yml (it verifies the *released*
+# ecosystem, not this diff).
+name: "Pipeline — Operating Board Release Canary"
 
 on:
   schedule:
@@ -30,6 +34,9 @@ jobs:
     name: Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: packages/planr-pipeline
     strategy:
       fail-fast: false
       matrix:

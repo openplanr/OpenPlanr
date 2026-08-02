@@ -1,3 +1,16 @@
+# BL-010 Phase 4.7 — rewritten for the monorepo. This REPLACES the previous
+# content of this file (root-`package.json`-version + `awk`-CHANGELOG +
+# `gh release create` fallback logic), which is deleted entirely, not ported
+# — see plan §2.4: changesets is the sole writer of `packages/*/package.json`,
+# and a second "root version" writer would deadlock the first release PR.
+#
+# The two former whole-repo publishers — the old root `.github/workflows/publish.yml`
+# (triggered on `release: published`, job id `publish`) and
+# `packages/planr-pipeline/.github/workflows/publish.yml` (same trigger, same
+# job id) — are both deleted. Their filename/job-id collision disappears
+# because both are gone: this single workflow now publishes every changed
+# publishable package (openplanr, planr-pipeline) atomically via
+# `changesets/action@v1` + `npx changeset publish`.
 name: Release
 
 on:
@@ -7,81 +20,46 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
-
-    # The release gate runs the same suite as CI, so it needs the same sibling
-    # pipeline fixture. Without it the packed-install e2e test packs a
-    # directory that does not exist, which surfaces as `spawnSync npm ENOENT`
-    # and blocks the version PR.
-    env:
-      OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/.ci/planr-pipeline
-
-    permissions:
-      contents: write
-      id-token: write
-      pull-requests: write
-
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Checkout released pipeline fixture
-        uses: actions/checkout@v6
-        with:
-          repository: openplanr/planr-pipeline
-          ref: v0.37.0
-          path: .ci/planr-pipeline
-
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
           registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - run: npm ci
-      - run: npm run build
-      - run: npm test
 
-      # When changesets exist: creates a "Version Packages" PR
-      # When no changesets: checks if current version has a release, creates one if not
-      - name: Create Release PR
+      # When changesets exist: creates/updates a "Version Packages" PR that
+      # runs `version-packages` (`changeset version && node
+      # scripts/sync-ecosystem.mjs && npm install --package-lock-only`), so
+      # every generated pin and the lockfile land in the same PR as the
+      # version bumps.
+      # When no changesets remain (this PR was just merged): publishes via
+      # `changeset publish`, which publishes every public package whose
+      # version changed and, per `.changeset/config.json`'s
+      # `privatePackages: { tag: true }`, tags (but does not publish to npm)
+      # the private `@openplanr/skills-plugin` / `openplanr-marketplace`
+      # packages too.
+      - name: Version or publish
         id: changesets
         uses: changesets/action@v1
         with:
-          title: "chore: version packages"
-          commit: "chore: version packages"
-          publish: npm run release
+          version: npm run version-packages
+          publish: npx changeset publish
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create GitHub Release
-        if: steps.changesets.outputs.hasChangesets == 'false'
-        env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          TAG="v${VERSION}"
-
-          # Check if release already exists
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            echo "Release $TAG already exists, skipping"
-            exit 0
-          fi
-
-          # Extract latest changelog section (escape dots for regex safety)
-          ESCAPED=$(echo "$VERSION" | sed 's/\./\\./g')
-          NOTES=$(awk "/^## ${ESCAPED}/{found=1; next} /^## [0-9]/{if(found) exit} found" CHANGELOG.md)
-
-          if [ -z "$NOTES" ]; then
-            NOTES="Release ${VERSION}"
-          fi
-
-          gh release create "$TAG" \
-            --title "$TAG" \
-            --notes "$NOTES" \
-            --target main

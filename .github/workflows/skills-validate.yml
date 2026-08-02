@@ -1,0 +1,36 @@
+# BL-010 Phase 4: moved from packages/skills/.github/workflows/validate.yml.
+#
+# BL-010 Phase 3.5 / 4.3: `OPENPLANR_ECOSYSTEM_ROOT` used to point at
+# `${{ github.workspace }}` because the skills repo's own root WAS the
+# ecosystem root pre-merge. Now that the self-checkout below brings in the
+# whole monorepo (packages/OpenPlanr, packages/planr-pipeline, packages/skills,
+# packages/marketplace), the actual sibling-package root is one level deeper —
+# `workspace-discovery.mjs`'s `resolveWorkspaceRoot()` expects a directory
+# containing `OpenPlanr` / `planr-pipeline` / `skills` / `marketplace`
+# directly, which is `packages/`, not the repo root. Fixed per the plan's
+# Phase 3.5 belt-and-braces instruction.
+name: "Skills — Validate"
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/skills
+    env:
+      OPENPLANR_ECOSYSTEM_ROOT: ${{ github.workspace }}/packages
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: openplanr/planr-pipeline
+          ref: v0.37.1
+          path: planr-pipeline
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm test

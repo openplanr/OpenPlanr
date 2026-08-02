@@ -1,0 +1,73 @@
+# BL-010 Phase 4: moved from packages/marketplace/.github/workflows/ecosystem-operation.yml.
+#
+# The original workflow used a top-level `pull_request: paths: [...]` filter
+# scoped to marketplace's ecosystem-operation files. Per the same reasoning
+# as plan Phase 4.4 (a path-filtered workflow that is also a required check
+# never reports on unrelated PRs and blocks merges forever — now a real risk
+# since this file lives in a shared monorepo instead of a marketplace-only
+# repo), the top-level `paths:` filter has been replaced with the standard
+# always-running `changes` job used across this consolidated workflow set,
+# gating on the whole `packages/marketplace/` tree rather than the narrower
+# original file list. This is deliberately broader than the original filter
+# (a superset, never a narrower gate) so nothing that used to trigger this
+# check stops triggering it.
+name: "Marketplace — Ecosystem Operation Ledger"
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Detect changed packages
+    runs-on: ubuntu-latest
+    outputs:
+      marketplace: ${{ steps.filter.outputs.marketplace }}
+      root: ${{ steps.filter.outputs.root }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compute per-package change booleans
+        id: filter
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          elif [ -n "${{ github.event.before }}" ] && git cat-file -e "${{ github.event.before }}^{commit}" 2>/dev/null; then
+            BASE="${{ github.event.before }}"
+          else
+            BASE=""
+          fi
+          if [ -z "$BASE" ]; then
+            CHANGED="$(git ls-files)"
+          else
+            CHANGED="$(git diff --name-only "$BASE" "${{ github.sha }}")"
+          fi
+          matches() { echo "$CHANGED" | grep -Eq "$1"; }
+          {
+            matches '^packages/marketplace/' && echo "marketplace=true" || echo "marketplace=false"
+            matches '^(package\.json|package-lock\.json|scripts/|\.github/workflows/|\.changeset/)' && echo "root=true" || echo "root=false"
+          } >> "$GITHUB_OUTPUT"
+
+  validate:
+    needs: changes
+    if: needs.changes.outputs.marketplace == 'true' || needs.changes.outputs.root == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/marketplace
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install workspace dependencies
+        working-directory: .
+        run: npm ci
+      - run: npm run validate:operations
+      - run: npm test
