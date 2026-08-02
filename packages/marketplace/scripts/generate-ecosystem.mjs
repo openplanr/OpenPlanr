@@ -159,16 +159,22 @@ const releasedProtocolVersion = agenticReleaseStaged
 // being validated on the release branch.
 const cliVersion = agenticReleaseStaged
   ? current.components.cli.version
+  : agenticReleaseVerified
+    ? agenticCliVersion
   : guidedReleaseVerified
     ? observedCliVersion
     : current.components.cli.version;
 const pipelineVersion = agenticReleaseStaged
   ? current.components.pipeline.version
+  : agenticReleaseVerified
+    ? agenticPipelineVersion
   : guidedReleaseVerified
     ? observedPipelineVersion
     : current.components.pipeline.version;
 const skillsVersion = agenticReleaseStaged
   ? current.components.skills.version
+  : agenticReleaseVerified
+    ? agenticSkillsVersion
   : guidedReleaseVerified
     ? observedSkillsVersion
     : current.components.skills.version;

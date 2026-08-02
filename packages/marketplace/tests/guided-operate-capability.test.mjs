@@ -176,18 +176,18 @@ test('verified compatibility promotes the default native cycle after reconciliat
     marketplace: '1.3.1',
   });
   assert.deepEqual(ecosystem.components, {
-    cli: { version: '1.21.1', pipelineRange: '^0.37.2' },
-    pipeline: { version: '0.37.2', cliRange: '^1.21.1' },
-    skills: { version: '1.23.0', cliRange: '^1.21.1' },
+    cli: { version: '1.21.2', pipelineRange: '^0.38.0' },
+    pipeline: { version: '0.38.0', cliRange: '^1.21.2' },
+    skills: { version: '1.23.0', cliRange: '^1.21.2' },
     marketplace: { version: '1.8.2' },
   });
 });
 
-test('the Protocol v1.4 pipeline reconciliation remains withheld until its ledger verifies', async () => {
+test('the Protocol v1.4 pipeline reconciliation is available after its ledger verifies', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const agentic = ecosystem.capabilities.agenticOperatingBoard;
-  assert.equal(agentic.status, 'unavailable');
-  assert.deepEqual(agentic.missing, ['release']);
+  assert.equal(agentic.status, 'available');
+  assert.deepEqual(agentic.missing, []);
   assert.equal(agentic.protocolRange, '^1.4.0');
   assert.deepEqual(agentic.components, {
     pipeline: '0.38.0',
@@ -200,10 +200,14 @@ test('the Protocol v1.4 pipeline reconciliation remains withheld until its ledge
     codex: 'native-agent',
     cursor: 'sequential-native',
   });
-  assert.deepEqual(agentic.certifiedRuntimes, []);
+  assert.deepEqual(agentic.certifiedRuntimes, [
+    'claude-code',
+    'codex',
+    'cursor',
+  ]);
   assert.equal(agentic.releaseOperation.operationId, 'OPERATE-SPEC-008-R2');
-  assert.equal(agentic.releaseOperation.state, 'promoting');
-  assert.equal(agentic.releaseOperation.reconciliation, 'pending');
+  assert.equal(agentic.releaseOperation.state, 'verified');
+  assert.equal(agentic.releaseOperation.reconciliation, 'matched');
 });
 
 test('the SPEC-008 ledger links umbrella SPEC-005 without conflating operation identity', async () => {
@@ -242,7 +246,7 @@ test('the SPEC-008-R2 reconciliation ledger preserves both prior audit records',
   assert.equal(forwardFix.state, 'verified');
   assert.equal(reconciliation.operationId, 'OPERATE-SPEC-008-R2');
   assert.equal(reconciliation.umbrellaSpecId, 'SPEC-005');
-  assert.equal(reconciliation.state, 'promoting');
+  assert.equal(reconciliation.state, 'verified');
   assert.equal(reconciliation.operationDigest, calculateOperationDigest(reconciliation));
   assert.deepEqual(validateOperation(reconciliation), []);
 });
