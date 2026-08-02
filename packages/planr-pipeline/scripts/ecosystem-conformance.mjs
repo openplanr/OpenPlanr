@@ -34,13 +34,31 @@ function normalize(graph) {
   };
 }
 
+/**
+ * Locate the tsx binary for an OpenPlanr checkout.
+ *
+ * In a sibling-checkout layout tsx installs into `<openPlanrRoot>/node_modules`.
+ * Under npm workspaces (BL-010) it is hoisted to the monorepo root instead, so
+ * the package-local path does not exist. Check locally first, then walk up.
+ */
+function findTsxBin(openPlanrRoot) {
+  let dir = openPlanrRoot;
+  for (;;) {
+    const candidate = join(dir, 'node_modules/.bin/tsx');
+    if (existsSync(candidate)) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
 function runOpenPlanrGraph(openPlanrRoot, fixtureRoot) {
   const cli = join(openPlanrRoot, 'src/cli/index.ts');
-  const tsx = join(openPlanrRoot, 'node_modules/.bin/tsx');
+  const tsx = findTsxBin(openPlanrRoot);
   if (!existsSync(cli)) {
     return { skipped: true, reason: 'OpenPlanr source CLI is missing' };
   }
-  if (!existsSync(tsx)) {
+  if (!tsx) {
     return { skipped: true, reason: 'OpenPlanr local tsx binary is missing; run npm install in OpenPlanr' };
   }
 

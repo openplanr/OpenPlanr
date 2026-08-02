@@ -83,6 +83,19 @@ export function renderArtifactShellAssetManifest(assets) {
   }, null, 2)}\n`;
 }
 
+/**
+ * esbuild annotates each bundled module with its path RELATIVE to absWorkingDir.
+ * That makes the emitted bytes depend on where the dependency physically sits:
+ * a package-local install yields `// node_modules/pako/...` while an npm-workspaces
+ * hoist to the monorepo root yields `// ../../node_modules/pako/...`. The bytes are
+ * digest-gated, so without normalization the same source produces a different
+ * artifact depending on install layout (BL-010). Canonicalize the dependency
+ * prefix so the asset is layout-independent, which is what "deterministic" meant.
+ */
+function normalizeBundlePaths(code) {
+  return code.replace(/^(\s*\/\/ )(?:\.\.\/)+node_modules\//gm, '$1node_modules/');
+}
+
 /** Bundle the browser-neutral stage controller into one deterministic asset. */
 export function renderArtifactStageRuntimeAsset({ projectRoot = root } = {}) {
   const result = buildSync({
@@ -108,7 +121,8 @@ export function renderArtifactStageRuntimeAsset({ projectRoot = root } = {}) {
       'Artifact stage controller did not produce browser output.',
     );
   }
-  return output.endsWith('\n') ? output : `${output}\n`;
+  const normalized = normalizeBundlePaths(output);
+  return normalized.endsWith('\n') ? normalized : `${normalized}\n`;
 }
 
 export function renderDesignBoardAdapterAsset({ projectRoot = root } = {}) {
@@ -135,7 +149,8 @@ export function renderDesignBoardAdapterAsset({ projectRoot = root } = {}) {
       'Design-board adapter did not produce browser output.',
     );
   }
-  return output.endsWith('\n') ? output : `${output}\n`;
+  const normalized = normalizeBundlePaths(output);
+  return normalized.endsWith('\n') ? normalized : `${normalized}\n`;
 }
 
 /** Render every byte that local and hosted shell consumers synchronize. */
