@@ -21,12 +21,16 @@ permissions:
 
 jobs:
   canary:
-    name: Node ${{ matrix.node }}
-    runs-on: ubuntu-latest
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
         node: [20, 22]
     steps:
       - name: Validate immutable participant revisions
@@ -139,14 +143,14 @@ jobs:
           set -euo pipefail
           node marketplace/scripts/operating-canary-evidence.mjs \
             --directory evidence \
-            --output "operating-canary-node-${{ matrix.node }}.json" \
+            --output "operating-canary-${{ matrix.os }}-node-${{ matrix.node }}.json" \
             --url "$RUN_URL"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: operating-canary-node-${{ matrix.node }}
+          name: operating-canary-${{ matrix.os }}-node-${{ matrix.node }}
           path: |
-            operating-canary-node-${{ matrix.node }}.json
+            operating-canary-${{ matrix.os }}-node-${{ matrix.node }}.json
             evidence/*.log
           if-no-files-found: error
           retention-days: 30

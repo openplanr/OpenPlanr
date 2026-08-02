@@ -179,35 +179,31 @@ test('verified compatibility promotes the default native cycle after reconciliat
     cli: { version: '1.21.0', pipelineRange: '^0.37.1' },
     pipeline: { version: '0.37.1', cliRange: '^1.21.0' },
     skills: { version: '1.23.0', cliRange: '^1.21.0' },
-    marketplace: { version: '1.8.0' },
+    marketplace: { version: '1.8.1' },
   });
 });
 
-test('the Protocol v1.4 agent-native capability is available after its ledger verifies', async () => {
+test('the Protocol v1.4 agent-native forward fix remains withheld until its ledger verifies', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const agentic = ecosystem.capabilities.agenticOperatingBoard;
-  assert.equal(agentic.status, 'available');
-  assert.deepEqual(agentic.missing, []);
+  assert.equal(agentic.status, 'unavailable');
+  assert.deepEqual(agentic.missing, ['release']);
   assert.equal(agentic.protocolRange, '^1.4.0');
   assert.deepEqual(agentic.components, {
-    pipeline: '0.37.1',
-    cli: '1.21.0',
+    pipeline: '0.37.2',
+    cli: '1.21.1',
     skills: '1.23.0',
-    marketplace: '1.8.0',
+    marketplace: '1.8.1',
   });
   assert.deepEqual(agentic.advisorDispatch, {
     'claude-code': 'native-agent',
     codex: 'native-agent',
     cursor: 'sequential-native',
   });
-  assert.deepEqual(agentic.certifiedRuntimes, [
-    'claude-code',
-    'codex',
-    'cursor',
-  ]);
-  assert.equal(agentic.releaseOperation.operationId, 'OPERATE-SPEC-008');
-  assert.equal(agentic.releaseOperation.state, 'verified');
-  assert.equal(agentic.releaseOperation.reconciliation, 'matched');
+  assert.deepEqual(agentic.certifiedRuntimes, []);
+  assert.equal(agentic.releaseOperation.operationId, 'OPERATE-SPEC-008-R1');
+  assert.equal(agentic.releaseOperation.state, 'promoting');
+  assert.equal(agentic.releaseOperation.reconciliation, 'pending');
 });
 
 test('the SPEC-008 ledger links umbrella SPEC-005 without conflating operation identity', async () => {
@@ -216,6 +212,20 @@ test('the SPEC-008 ledger links umbrella SPEC-005 without conflating operation i
   assert.equal(operation.umbrellaSpecId, 'SPEC-005');
   assert.equal(operation.operationDigest, calculateOperationDigest(operation));
   assert.deepEqual(validateOperation(operation), []);
+});
+
+test('the SPEC-008-R1 forward-fix ledger preserves the original audit record', async () => {
+  const original = await readJson('../examples/agent-native-operate-operation.json');
+  const revision = await readJson(
+    '../examples/agent-native-operate-forward-fix-operation.json',
+  );
+  assert.equal(original.operationId, 'OPERATE-SPEC-008');
+  assert.equal(original.state, 'verified');
+  assert.equal(revision.operationId, 'OPERATE-SPEC-008-R1');
+  assert.equal(revision.umbrellaSpecId, 'SPEC-005');
+  assert.equal(revision.state, 'promoting');
+  assert.equal(revision.operationDigest, calculateOperationDigest(revision));
+  assert.deepEqual(validateOperation(revision), []);
 });
 
 test('operation schema supports audited lifecycle and forward-fix state', async () => {

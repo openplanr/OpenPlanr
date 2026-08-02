@@ -12,6 +12,7 @@ on:
       - 'examples/outputs-epic-loop-operation.json'
       - 'examples/operate-agent-harness-operation.json'
       - 'examples/agent-native-operate-operation.json'
+      - 'examples/agent-native-operate-forward-fix-operation.json'
       - 'operations/**'
       - 'schemas/ecosystem-operation.schema.json'
       - 'scripts/generate-ecosystem.mjs'

@@ -1,0 +1,228 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "openplanr-ecosystem-operation",
+  "protocolVersion": "1.2.0",
+  "operationId": "OPERATE-SPEC-008-R1",
+  "operationDigest": "sha256:b6a61ba68ff64e4d17877afb9b8f57197d9dd66c160cbb22318146b3855b0798",
+  "umbrellaSpecId": "SPEC-005",
+  "title": "Forward-fix the Agent-Native Operating Board Windows release canary",
+  "capability": "agenticOperatingBoard",
+  "createdAt": "2026-08-02T12:30:00.000Z",
+  "updatedAt": "2026-08-02T12:30:00.000Z",
+  "state": "promoting",
+  "ledger": {
+    "kind": "marketplace-draft-pr",
+    "repository": "openplanr/marketplace",
+    "headRef": "ecosystem-release/operate-spec-008-r1",
+    "pullRequest": null
+  },
+  "participantOrder": ["pipeline", "cli", "skills", "marketplace"],
+  "participants": [
+    {
+      "component": "pipeline",
+      "repoLocalSpecId": "OPERATE-SPEC-008-R1:pipeline",
+      "repoLocalWorkItem": "docs/implementation/OPERATE-SPEC-008.md",
+      "repository": "openplanr/planr-pipeline",
+      "currentVersion": "0.37.1",
+      "targetVersion": "0.37.2",
+      "phase": "verified",
+      "branch": "release/0.37.2",
+      "targetBranch": "main",
+      "commitSha": "a96517e5c801d327f317ead7992408fea98516b2",
+      "pullRequest": {
+        "number": 99,
+        "url": "https://github.com/openplanr/planr-pipeline/pull/99",
+        "state": "merged"
+      },
+      "package": {
+        "name": "planr-pipeline",
+        "version": "0.37.2",
+        "status": "verified",
+        "integrity": "sha512-KA9Srgsrg5ty/OTGtCT16wKcxzB2jdgGYkkGGZ86rYQPjCCfSeK70ZJFmYJ74W036XaI+/WbyuhRHbVjOadD9g=="
+      },
+      "tag": "v0.37.2",
+      "tarballDigest": "sha256:a36adf87370007d3c2fc149e4a7561330a29295896c7ec50412f837289f6c11b",
+      "checks": [
+        {
+          "name": "ci",
+          "status": "passed",
+          "url": "https://github.com/openplanr/planr-pipeline/actions/runs/30746567735"
+        },
+        {
+          "name": "npm-publish",
+          "status": "passed",
+          "url": "https://github.com/openplanr/planr-pipeline/actions/runs/30746680227"
+        }
+      ],
+      "approvals": [],
+      "prerequisites": [],
+      "compensation": "forward-fix",
+      "nextSafeAction": "Verified at v0.37.2 on npm after the Windows shim correction passed the full platform matrix."
+    },
+    {
+      "component": "cli",
+      "repoLocalSpecId": "OPERATE-SPEC-008-R1:cli",
+      "repoLocalWorkItem": "docs/implementation/OPERATE-SPEC-008.md",
+      "repository": "openplanr/OpenPlanr",
+      "currentVersion": "1.21.0",
+      "targetVersion": "1.21.1",
+      "phase": "verified",
+      "branch": "changeset-release/main",
+      "targetBranch": "main",
+      "commitSha": "3f5d7fda3a6f963ce2a333b83b011e961c969ccb",
+      "pullRequest": {
+        "number": 183,
+        "url": "https://github.com/openplanr/OpenPlanr/pull/183",
+        "state": "merged"
+      },
+      "package": {
+        "name": "openplanr",
+        "version": "1.21.1",
+        "status": "verified",
+        "integrity": "sha512-X2JmtaGCgtNwWmN5bTadf7ntHrg90l0X9F9OmhPiogjTKBHZUIHf6YxqF78suqI8uiBwIjLOE16G+Cwh9n0OKQ=="
+      },
+      "tag": "v1.21.1",
+      "tarballDigest": "sha256:f81c8792ae91c35cc9f8ffe29eff5a6d203d530a14bd0ff578b232aee92cf55d",
+      "checks": [
+        {
+          "name": "ci",
+          "status": "passed",
+          "url": "https://github.com/openplanr/OpenPlanr/actions/runs/30747367263"
+        },
+        {
+          "name": "npm-publish",
+          "status": "passed",
+          "url": "https://github.com/openplanr/OpenPlanr/actions/runs/30747870328"
+        }
+      ],
+      "approvals": [],
+      "prerequisites": ["pipeline"],
+      "compensation": "forward-fix",
+      "nextSafeAction": "Verified at v1.21.1 on npm with the exact planr-pipeline 0.37.2 optional dependency."
+    },
+    {
+      "component": "skills",
+      "repoLocalSpecId": "OPERATE-SPEC-008-R1:skills",
+      "repoLocalWorkItem": "docs/implementation/OPERATE-SPEC-008.md",
+      "repository": "openplanr/skills",
+      "currentVersion": "1.23.0",
+      "targetVersion": "1.23.0",
+      "phase": "verified",
+      "branch": "feat/agent-native-operate-v14",
+      "targetBranch": "main",
+      "commitSha": "61c3e65cdd989c7dcbeccb7e73582110f41967dd",
+      "pullRequest": {
+        "number": 32,
+        "url": "https://github.com/openplanr/skills/pull/32",
+        "state": "merged"
+      },
+      "package": null,
+      "tag": "v1.23.0",
+      "tarballDigest": "sha256:213a85d6109bfa83dcb2fe3cdfcb1edc914771879cf1d7eb8f5b25e361c8e870",
+      "checks": [
+        {
+          "name": "validate",
+          "status": "passed",
+          "url": "https://github.com/openplanr/skills/actions/runs/30744508191"
+        },
+        {
+          "name": "release-check",
+          "status": "passed",
+          "url": "https://github.com/openplanr/skills/actions/runs/30744508153"
+        }
+      ],
+      "approvals": [],
+      "prerequisites": ["pipeline", "cli"],
+      "compensation": "forward-fix",
+      "nextSafeAction": "Reuse the verified v1.23.0 skills tag; its generated agent-native guidance remains compatible with the patch tuple."
+    },
+    {
+      "component": "marketplace",
+      "repoLocalSpecId": "OPERATE-SPEC-008-R1:marketplace",
+      "repoLocalWorkItem": "docs/implementation/OPERATE-SPEC-008.md",
+      "repository": "openplanr/marketplace",
+      "currentVersion": "1.8.0",
+      "targetVersion": "1.8.1",
+      "phase": "preparing",
+      "branch": "ecosystem-release/operate-spec-008-r1",
+      "targetBranch": "main",
+      "commitSha": null,
+      "pullRequest": null,
+      "package": null,
+      "tag": null,
+      "tarballDigest": null,
+      "checks": [
+        {
+          "name": "check",
+          "status": "expected",
+          "url": null
+        },
+        {
+          "name": "operation-ledger",
+          "status": "expected",
+          "url": null
+        },
+        {
+          "name": "exact-version-canary",
+          "status": "expected",
+          "url": null
+        }
+      ],
+      "approvals": [],
+      "prerequisites": ["pipeline", "cli", "skills"],
+      "compensation": "withhold-manifest",
+      "nextSafeAction": "Merge the unavailable marketplace ledger, tag v1.8.1, then run exact-version Node 20/22 canaries on Ubuntu, macOS, and Windows."
+    }
+  ],
+  "releaseEvidence": [
+    { "id": "packed-cli", "status": "pending", "url": null, "digest": null, "checkedAt": null },
+    { "id": "protocol-v1.2", "status": "pending", "url": null, "digest": null, "checkedAt": null },
+    { "id": "event-replay", "status": "pending", "url": null, "digest": null, "checkedAt": null },
+    { "id": "security-boundaries", "status": "pending", "url": null, "digest": null, "checkedAt": null },
+    { "id": "outcome-reconciliation", "status": "pending", "url": null, "digest": null, "checkedAt": null }
+  ],
+  "prepareDigest": "sha256:fe89ba4fd42631d095bdd73dd179944659d50158afa4b73a5ed4d15302c98981",
+  "confirmationDigest": "sha256:33b251bbc4cdbd8aee6efda5d7a34421acad2163e4ab988246d78fd51d8a08f8",
+  "blockedReason": null,
+  "nextSafeAction": "Merge and tag marketplace 1.8.1 with compatibility withheld, then collect exact-version cross-platform canary evidence.",
+  "recovery": {
+    "mode": "forward-fix",
+    "reason": "planr-pipeline 0.37.2 and openplanr 1.21.1 are already public packages.",
+    "nextSafeAction": "Do not rewrite or roll back published artifacts; withhold marketplace availability until canaries and live-state reconciliation match."
+  },
+  "reconciliation": {
+    "status": "pending",
+    "checkedAt": "2026-08-02T12:30:00.000Z",
+    "sources": [
+      "github-pr",
+      "git-commit",
+      "git-tag",
+      "github-checks",
+      "npm-registry",
+      "marketplace-manifest",
+      "operating-canary"
+    ],
+    "drift": [],
+    "nextSafeAction": "Collect marketplace PR, tag, checks, and cross-platform canary evidence before final reconciliation."
+  },
+  "history": [
+    {
+      "eventId": "bd83033f-1099-4aa9-90e7-b801e609df10",
+      "timestamp": "2026-08-02T12:30:00.000Z",
+      "type": "operation.created",
+      "actor": "Release coordinator",
+      "participant": null,
+      "digest": "sha256:b6a61ba68ff64e4d17877afb9b8f57197d9dd66c160cbb22318146b3855b0798",
+      "note": "Created an independent forward-fix transaction after the Windows canary exposed an executable-shim defect in the original release tuple."
+    },
+    {
+      "eventId": "b1696595-6c7d-4a50-aa8a-49c76f815d10",
+      "timestamp": "2026-08-02T12:30:01.000Z",
+      "type": "prepare.started",
+      "actor": "Release coordinator",
+      "participant": null,
+      "digest": "sha256:fe89ba4fd42631d095bdd73dd179944659d50158afa4b73a5ed4d15302c98981",
+      "note": "Prepared the dependency-ordered patch tuple and withheld marketplace availability pending exact-version cross-platform canaries."
+    }
+  ]
+}
