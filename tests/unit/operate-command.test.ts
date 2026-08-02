@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   isNonInteractive: vi.fn(() => false),
   displayLine: vi.fn(),
   promptConfirm: vi.fn(),
+  detectOperatingQuestionContext: vi.fn(),
+  renderOperatingInitQuestions: vi.fn(),
 }));
 
 vi.mock('../../src/services/operate/index.js', () => ({
@@ -24,6 +26,11 @@ vi.mock('../../src/services/prompt-service.js', () => ({
   promptSecret: vi.fn(),
   promptSelect: vi.fn(),
   promptText: vi.fn(),
+}));
+
+vi.mock('../../src/services/operate/interaction/terminal-renderer.js', () => ({
+  detectOperatingQuestionContext: mocks.detectOperatingQuestionContext,
+  renderOperatingInitQuestions: mocks.renderOperatingInitQuestions,
 }));
 
 vi.mock('../../src/utils/logger.js', () => ({
@@ -97,6 +104,18 @@ beforeEach(() => {
   mocks.displayLine.mockReset();
   mocks.promptConfirm.mockReset();
   mocks.promptConfirm.mockResolvedValue(false);
+  mocks.detectOperatingQuestionContext.mockReset();
+  mocks.detectOperatingQuestionContext.mockImplementation(async (projectRoot: string) => ({
+    projectRoot,
+    timezone: 'Europe/Istanbul',
+    pipelineInstalled: true,
+    runtime: 'terminal',
+    interaction: 'terminal',
+  }));
+  mocks.renderOperatingInitQuestions.mockReset();
+  mocks.renderOperatingInitQuestions.mockImplementation(
+    async ({ initialAnswers }: { initialAnswers: Record<string, unknown> }) => initialAnswers,
+  );
   process.exitCode = undefined;
 });
 
