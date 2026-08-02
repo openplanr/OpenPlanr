@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.21.0
+
+### Minor Changes
+
+- [`fd81cd9`](https://github.com/openplanr/OpenPlanr/commit/fd81cd94ca4a13c3b590544b242cf7fe21078824) Rebuild `planr operate` around agent-native, runtime-bound research, six advisory roles, expressive cited reports, and approval-gated canonical proposal drafts across Claude Code, Codex, and Cursor.
+
 ## 1.20.0
 
 ### Minor Changes
