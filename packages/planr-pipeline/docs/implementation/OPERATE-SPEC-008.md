@@ -1,7 +1,7 @@
 # OPERATE-SPEC-008 — Protocol v1.4 and generated runtime assets
 
 Umbrella specification: SPEC-005, Agent-Native Cross-Runtime Operating Board.
-Target release: `planr-pipeline@0.37.0`.
+Target release: `planr-pipeline@0.37.1` (0.37.0 plus the Protocol v1.4 release-canary correction).
 
 This repository owns Protocol v1.4 schemas, runtime binding, research mandates,
 rich advisor response contracts, canonical proposal-draft contracts, the six

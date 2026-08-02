@@ -7,7 +7,7 @@
 > contracts. v1.2 adds operating governance, v1.3 adds citation-bound mandate
 > execution, and v1.4 adds agent-native research, sticky runtime binding,
 > expressive reports, and canonical proposal drafts.
-> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.37.0.
+> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.37.1.
 
 The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI development. It defines:
 

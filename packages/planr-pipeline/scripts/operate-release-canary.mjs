@@ -21,8 +21,8 @@ function requiredString(value, label) {
 }
 
 export function assertOperatingReleaseManifest(manifest, expected = {}) {
-  if (manifest?.protocol?.current !== '1.2.0') {
-    throw new Error('Marketplace must resolve Protocol 1.2.0');
+  if (manifest?.protocol?.current !== '1.4.0') {
+    throw new Error('Marketplace must resolve Protocol 1.4.0');
   }
   const order = manifest?.releaseTransaction?.participantOrder;
   if (JSON.stringify(order) !== JSON.stringify(OPERATING_RELEASE_ORDER)) {

@@ -1,6 +1,6 @@
 # Compatibility Matrix - Protocol v1.0 artifacts + v1.1–v1.4 capabilities
 
-> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.37.0.
+> Per-capability parity across the three first-class runtime adapters. Updated for planr-pipeline v0.37.1.
 
 ## TL;DR
 
@@ -194,4 +194,4 @@ For runtime-operated fixtures, use `conformance/runner.mjs` with `--setup`, then
 
 ---
 
-*OpenPlanr Protocol v1.0 artifacts + v1.1–v1.4 ecosystem contracts — compatibility matrix for planr-pipeline v0.37.0.*
+*OpenPlanr Protocol v1.0 artifacts + v1.1–v1.4 ecosystem contracts — compatibility matrix for planr-pipeline v0.37.1.*

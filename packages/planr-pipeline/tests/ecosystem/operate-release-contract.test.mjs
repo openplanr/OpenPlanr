@@ -9,7 +9,7 @@ import {
 
 function manifest() {
   return {
-    protocol: { current: '1.2.0' },
+    protocol: { current: '1.4.0' },
     components: {
       pipeline: { version: '0.30.0' },
       cli: { version: '1.14.0' },
