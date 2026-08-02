@@ -21,11 +21,18 @@ const pendingEvidence = () =>
 
 test('guided canary builds the CLI before packed-install verification', async () => {
   const workflow = await readFile(
-    new URL('../.github/workflows/guided-operate-canary.yml', import.meta.url),
+    // BL-010: CI workflows are per-REPOSITORY, so this one consolidated to the
+    // monorepo root and was renamed with a package prefix.
+    new URL('../../../.github/workflows/marketplace-guided-operate-canary.yml', import.meta.url),
     'utf8',
   );
-  const buildIndex = workflow.indexOf('npm --prefix OpenPlanr run build');
-  const verificationIndex = workflow.indexOf('npm --prefix OpenPlanr run test:operate:guided');
+  // BL-010: the canary checks the monorepo out at ./OpenPlanr, so the CLI package
+  // is OpenPlanr/packages/OpenPlanr. Match on the run-script suffix rather than a
+  // hardcoded prefix path, so a future layout tweak does not silently turn this
+  // ordering assertion into a no-op (indexOf returning -1 for BOTH would make
+  // `verification > build` false and look like a real regression).
+  const buildIndex = workflow.indexOf('run build');
+  const verificationIndex = workflow.indexOf('run test:operate:guided');
   assert.ok(buildIndex >= 0, 'guided canary must build the exact CLI source');
   assert.ok(
     verificationIndex > buildIndex,
