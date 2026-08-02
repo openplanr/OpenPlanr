@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.21.2
+
+### Patch Changes
+
+- [`2bc31c4`](https://github.com/openplanr/OpenPlanr/commit/2bc31c48c46912f542c1a52a143492d81e013e48) Align the bundled pipeline dependency with planr-pipeline 0.38.0.
+
 ## 1.21.1
 
 ### Patch Changes
