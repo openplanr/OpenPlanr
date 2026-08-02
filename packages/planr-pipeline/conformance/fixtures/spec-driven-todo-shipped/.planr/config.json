@@ -1,0 +1,5 @@
+{
+  "projectName": "spec-driven-todo-fixture",
+  "outputPaths": { "agile": ".planr" },
+  "idPrefix": { "spec": "SPEC" }
+}

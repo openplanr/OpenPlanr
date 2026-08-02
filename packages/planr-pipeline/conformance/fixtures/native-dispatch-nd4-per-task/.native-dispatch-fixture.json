@@ -1,0 +1,7 @@
+{
+  "fixture": "native-dispatch-nd4-per-task",
+  "gate": "ND4",
+  "mode": "per-task",
+  "description": "The only sequential paths: Codex/Cursor per-task mode and an explicit --task T-NNN selector each dispatch exactly ONE Agent call per invocation, regardless of how many ready tasks exist. (FR11)",
+  "invocations": "invocations.json"
+}

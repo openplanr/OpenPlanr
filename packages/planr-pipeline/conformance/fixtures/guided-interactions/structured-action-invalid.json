@@ -1,0 +1,14 @@
+{
+  "kind": "structured-action",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "id": "apply-operating-initialization",
+  "label": "Apply this Operating Board configuration",
+  "command": "planr operate init --yes --json",
+  "effect": "project-write",
+  "providerUse": false,
+  "requiresConfirmation": false,
+  "confirmationScope": null,
+  "confirmationDigest": null,
+  "recommended": true
+}

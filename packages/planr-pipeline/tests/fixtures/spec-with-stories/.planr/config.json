@@ -1,0 +1,5 @@
+{
+  "projectName": "fixture-with-stories",
+  "outputPaths": { "agile": ".planr" },
+  "idPrefix": { "spec": "SPEC" }
+}

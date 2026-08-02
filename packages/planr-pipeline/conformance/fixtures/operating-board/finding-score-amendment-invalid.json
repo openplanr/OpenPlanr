@@ -1,0 +1,44 @@
+{
+  "kind": "operating-event",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "eventId": "evt-finding-accepted",
+  "sequence": 1,
+  "timestamp": "2026-07-28T09:06:30Z",
+  "cycleId": "CYCLE-001",
+  "type": "finding.accepted",
+  "entityId": "FND-001",
+  "previousEventHash": null,
+  "actor": {
+    "kind": "human",
+    "id": "founder"
+  },
+  "causationId": null,
+  "correlationId": "finding-amendment-001",
+  "evidenceRefs": [
+    "EVD-repo-payment"
+  ],
+  "payload": {
+    "patch": {
+      "owner": "founder"
+    },
+    "scoreAmendment": {
+      "prior": {
+        "impact": 5,
+        "confidence": 3,
+        "ease": 3
+      },
+      "next": {
+        "impact": 4,
+        "confidence": 2,
+        "ease": 4
+      },
+      "actor": {
+        "kind": "human",
+        "id": "founder"
+      },
+      "timestamp": "2026-07-28T09:06:30Z"
+    }
+  },
+  "eventHash": "sha256:b000df7acb051c3de872bcd1c2a34539d7c021b3a308515b230691dce376118d"
+}

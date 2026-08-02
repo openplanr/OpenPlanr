@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "OpenPlanr Artifact Review Shell",
+  "shellVersion": "1.2.1",
+  "entrypoint": "templates/artifact-review-shell.html",
+  "sync": "byte-for-byte",
+  "browserApi": {
+    "stage": "__openPlanrArtifactStage",
+    "share": "__openPlanrArtifactShare",
+    "hostedViewer": "__openPlanrHostedArtifactViewer",
+    "injectedHandlers": [
+      "share.prepareShare",
+      "share.createShare",
+      "share.copyText",
+      "hosted.decodeFragment",
+      "hosted.loadShort",
+      "hosted.loadRoom",
+      "hosted.onEnvelope"
+    ]
+  },
+  "assets": [
+    {
+      "path": "lib/artifact/ui/generated/artifact-theme.css",
+      "bytes": 2734,
+      "sha256": "4e53d421dcb37532eeb6373b1d86babb9afe7e43bd988c7c930e5b7fdb794514"
+    },
+    {
+      "path": "lib/artifact/ui/generated/artifact-theme.json",
+      "bytes": 1446,
+      "sha256": "c3c79c71d5e594bd1c18647f85a1482b3fa805fc7cb76c8b86da6fc28fa45693"
+    },
+    {
+      "path": "templates/artifact-review-shell.html",
+      "bytes": 53294,
+      "sha256": "cb4d3a62922b56d7957e1fc86736f0a389041ab2ab4ce115b0d8dd1faed88a6b"
+    },
+    {
+      "path": "templates/artifact-review-stage.js",
+      "bytes": 128363,
+      "sha256": "f0626b557a5371d33f3ede6e439df366871558c6a2422c01820062b33aa4293f"
+    },
+    {
+      "path": "templates/design/design-board-adapter.js",
+      "bytes": 188572,
+      "sha256": "f4a3360d61b8a67e46593561ab821e03f6606c630428454917862068a29dd34f"
+    }
+  ]
+}

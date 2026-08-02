@@ -1,0 +1,1487 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.3.0/operating-event.schema.json",
+  "title": "OpenPlanr append-only operating event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "eventId",
+    "sequence",
+    "timestamp",
+    "cycleId",
+    "type",
+    "entityId",
+    "previousEventHash",
+    "eventHash",
+    "actor",
+    "causationId",
+    "correlationId",
+    "evidenceRefs",
+    "payload"
+  ],
+  "properties": {
+    "kind": {
+      "const": "operating-event"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.3.0"
+    },
+    "eventId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "cycleId": {
+      "type": "string",
+      "pattern": "^CYCLE-[0-9]{3,}$"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "cycle.preparing",
+        "cycle.collecting",
+        "cycle.advising",
+        "cycle.consolidating",
+        "cycle.reviewable",
+        "cycle.closed",
+        "cycle.blocked",
+        "cycle.failed",
+        "cycle.cancelled",
+        "evidence.collected",
+        "advisory.recorded",
+        "finding.proposed",
+        "finding.accepted",
+        "finding.queued",
+        "finding.in-progress",
+        "finding.done",
+        "finding.rejected",
+        "finding.superseded",
+        "decision.open",
+        "decision.answered",
+        "decision.closed",
+        "decision.default-due",
+        "decision.superseded",
+        "gap.open",
+        "gap.answered",
+        "gap.verified",
+        "gap.closed",
+        "gap.superseded",
+        "route.proposed",
+        "route.accepted",
+        "route.prepared",
+        "route.applied",
+        "route.failed",
+        "route.rolled_back",
+        "spec.linked",
+        "artifact.created",
+        "ship.observed",
+        "outcome.registered",
+        "outcome.observed",
+        "outcome.evaluated",
+        "learning.recorded",
+        "projection.rebuilt",
+        "recovery.performed",
+        "migration.legacy-imported",
+        "security.discontinuity"
+      ]
+    },
+    "entityId": {
+      "type": "string",
+      "pattern": "^(?:CYCLE|FND|DEC|GAP|ACT|SPEC|ART|OUT|LRN|RCV|MIG)-[A-Za-z0-9._-]+$"
+    },
+    "previousEventHash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "eventHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "human",
+            "engine",
+            "runtime",
+            "migration"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "causationId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 128
+    },
+    "correlationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "evidenceRefs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^EVD-[A-Za-z0-9._-]+$"
+      }
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "eventHead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "hash"
+      ],
+      "properties": {
+        "sequence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      }
+    },
+    "scoreComponents": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "impact",
+        "confidence",
+        "ease"
+      ],
+      "properties": {
+        "impact": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "confidence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "ease": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        }
+      }
+    },
+    "scoreAmendment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prior",
+        "next",
+        "reason",
+        "actor",
+        "timestamp"
+      ],
+      "properties": {
+        "prior": {
+          "$ref": "#/$defs/scoreComponents"
+        },
+        "next": {
+          "$ref": "#/$defs/scoreComponents"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "id"
+          ],
+          "properties": {
+            "kind": {
+              "const": "human"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "cyclePatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "health": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "quiet",
+            "partial",
+            "blocked"
+          ]
+        },
+        "inputDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "depth": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "deep",
+            "review-only"
+          ]
+        },
+        "completedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "findingPatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "lane": {
+          "type": "string",
+          "enum": [
+            "DEV",
+            "OWNER",
+            "AGENT"
+          ]
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "impact": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "confidence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "confidenceCeiling": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "ease": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 125
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "sensitivity": {
+          "type": "string",
+          "enum": [
+            "public",
+            "internal",
+            "confidential",
+            "restricted"
+          ]
+        },
+        "criticalOverride": {
+          "type": "boolean"
+        },
+        "linkedSpec": {
+          "type": "string",
+          "pattern": "^SPEC-[0-9]{3,}$"
+        },
+        "parked": {
+          "type": "boolean"
+        },
+        "stalledCycles": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rejectionReason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "supersededBy": {
+          "type": "string",
+          "pattern": "^FND-[0-9]{3,}$"
+        }
+      }
+    },
+    "decisionPatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "question": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "deadline": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reversibility": {
+          "type": "string",
+          "enum": [
+            "reversible",
+            "costly",
+            "one-way"
+          ]
+        },
+        "recommendation": {
+          "type": "string"
+        },
+        "selectedOption": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2048
+        }
+      }
+    },
+    "gapPatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "question": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "answer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "unblocks": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(?:FND|DEC|GAP|SPEC)-[0-9]{3,}$"
+          }
+        }
+      }
+    },
+    "outcomePatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verifyAfter": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    },
+    "learningRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "outcomeId",
+        "evaluation",
+        "summary",
+        "createdAt"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^LRN-[A-Za-z0-9._-]+$"
+        },
+        "outcomeId": {
+          "type": "string",
+          "pattern": "^OUT-[0-9]{3,}$"
+        },
+        "evaluation": {
+          "type": "string",
+          "enum": [
+            "positive",
+            "neutral",
+            "negative",
+            "inconclusive"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "title": "Cycle creation event",
+      "properties": {
+        "type": {
+          "const": "cycle.preparing"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "record": {
+              "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-cycle-manifest.schema.json"
+            },
+            "patch": {
+              "$ref": "#/$defs/cyclePatch"
+            },
+            "recoveredTransactions": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^TXN-[A-Za-z0-9._-]+$"
+              }
+            }
+          },
+          "oneOf": [
+            {
+              "required": [
+                "record"
+              ]
+            },
+            {
+              "required": [
+                "patch",
+                "recoveredTransactions"
+              ],
+              "not": {
+                "required": [
+                  "record"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Finding creation event",
+      "properties": {
+        "type": {
+          "const": "finding.proposed"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "record"
+          ],
+          "properties": {
+            "record": {
+              "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-finding.schema.json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Decision creation event",
+      "properties": {
+        "type": {
+          "const": "decision.open"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "record"
+          ],
+          "properties": {
+            "record": {
+              "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-decision.schema.json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Data gap creation event",
+      "properties": {
+        "type": {
+          "const": "gap.open"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "record"
+          ],
+          "properties": {
+            "record": {
+              "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-data-gap.schema.json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Route creation event",
+      "properties": {
+        "type": {
+          "const": "route.proposed"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "record"
+          ],
+          "properties": {
+            "record": {
+              "anyOf": [
+                {
+                  "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-route-plan.schema.json"
+                },
+                {
+                  "$ref": "https://openplanr.dev/schemas/v1.3.0/operating-route-plan.schema.json"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Specification link event",
+      "properties": {
+        "type": {
+          "const": "spec.linked"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "record"
+          ],
+          "properties": {
+            "record": {
+              "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-spec-link.schema.json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Outcome contract registration event",
+      "properties": {
+        "type": {
+          "const": "outcome.registered"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "record"
+          ],
+          "properties": {
+            "record": {
+              "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-outcome.schema.json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Outcome observation event",
+      "properties": {
+        "type": {
+          "const": "outcome.observed"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "record"
+          ],
+          "properties": {
+            "record": {
+              "$ref": "https://openplanr.dev/schemas/v1.2.0/operating-outcome-observation.schema.json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Learning creation event",
+      "properties": {
+        "type": {
+          "const": "learning.recorded"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "record"
+          ],
+          "properties": {
+            "record": {
+              "$ref": "#/$defs/learningRecord"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Evidence collection event",
+      "properties": {
+        "type": {
+          "const": "evidence.collected"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "recordDigest",
+            "sources"
+          ],
+          "properties": {
+            "recordDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "sources": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "freshness",
+                  "status",
+                  "itemCount"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9-]*$"
+                  },
+                  "freshness": {
+                    "type": "string",
+                    "enum": [
+                      "fresh",
+                      "stale",
+                      "unknown"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "collected",
+                      "unchanged",
+                      "partial",
+                      "unavailable",
+                      "failed"
+                    ]
+                  },
+                  "itemCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Advisor result event",
+      "properties": {
+        "type": {
+          "const": "advisory.recorded"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "recordDigest"
+          ],
+          "properties": {
+            "recordDigest": {
+              "$ref": "#/$defs/digest"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Ship observation event",
+      "properties": {
+        "type": {
+          "const": "ship.observed"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "specId"
+          ],
+          "properties": {
+            "specId": {
+              "type": "string",
+              "pattern": "^SPEC-[0-9]{3,}$"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Outcome evaluation event",
+      "properties": {
+        "type": {
+          "const": "outcome.evaluated"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "evaluation"
+          ],
+          "properties": {
+            "evaluation": {
+              "type": "string",
+              "enum": [
+                "positive",
+                "neutral",
+                "negative",
+                "inconclusive"
+              ]
+            },
+            "patch": {
+              "$ref": "#/$defs/outcomePatch"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Route acceptance event",
+      "properties": {
+        "type": {
+          "const": "route.accepted"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "routeDigest",
+            "confirmationDigest"
+          ],
+          "properties": {
+            "routeDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "confirmationDigest": {
+              "$ref": "#/$defs/digest"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Route preparation event",
+      "properties": {
+        "type": {
+          "const": "route.prepared"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "routeDigest",
+            "previewDigest"
+          ],
+          "properties": {
+            "routeDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "previewDigest": {
+              "$ref": "#/$defs/digest"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Route application event",
+      "properties": {
+        "type": {
+          "const": "route.applied"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "routeDigest",
+            "confirmationDigest",
+            "transactionId"
+          ],
+          "properties": {
+            "routeDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "confirmationDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "transactionId": {
+              "type": "string",
+              "pattern": "^TXN-[A-Za-z0-9._-]+$"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Route failure event",
+      "properties": {
+        "type": {
+          "const": "route.failed"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "routeDigest",
+            "errorCode"
+          ],
+          "properties": {
+            "routeDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "errorCode": {
+              "type": "string",
+              "pattern": "^E_[A-Z0-9_]+$"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Route rollback event",
+      "properties": {
+        "type": {
+          "const": "route.rolled_back"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "routeDigest",
+            "recoveryId"
+          ],
+          "properties": {
+            "routeDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "recoveryId": {
+              "type": "string",
+              "pattern": "^RCV-[A-Za-z0-9._-]+$"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Digest-backed artifact event",
+      "properties": {
+        "type": {
+          "enum": [
+            "artifact.created",
+            "projection.rebuilt",
+            "recovery.performed"
+          ]
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "recordDigest"
+          ],
+          "properties": {
+            "recordDigest": {
+              "$ref": "#/$defs/digest"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Legacy operating-board import event",
+      "properties": {
+        "cycleId": {
+          "const": "CYCLE-000"
+        },
+        "type": {
+          "const": "migration.legacy-imported"
+        },
+        "entityId": {
+          "type": "string",
+          "pattern": "^MIG-[A-Za-z0-9._-]+$"
+        },
+        "actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "id"
+          ],
+          "properties": {
+            "kind": {
+              "const": "migration"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "migrationId",
+            "sourcePath",
+            "sourceDigest",
+            "recordDigest",
+            "backupManifestDigest",
+            "legacyKind"
+          ],
+          "properties": {
+            "migrationId": {
+              "type": "string",
+              "pattern": "^MIG-[A-Za-z0-9._-]+$"
+            },
+            "sourcePath": {
+              "type": "string",
+              "pattern": "^\\.planr/board(?:/[A-Za-z0-9._-]+)*$",
+              "maxLength": 1024
+            },
+            "sourceDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "recordDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "backupManifestDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "legacyKind": {
+              "type": "string",
+              "enum": [
+                "finding",
+                "decision",
+                "gap",
+                "route",
+                "outcome",
+                "unknown"
+              ]
+            },
+            "legacyId": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Sensitive-state security discontinuity",
+      "properties": {
+        "sequence": {
+          "const": 1
+        },
+        "cycleId": {
+          "const": "CYCLE-000"
+        },
+        "type": {
+          "const": "security.discontinuity"
+        },
+        "entityId": {
+          "type": "string",
+          "pattern": "^RCV-[A-Za-z0-9._-]+$"
+        },
+        "previousEventHash": {
+          "const": null
+        },
+        "actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "id"
+          ],
+          "properties": {
+            "kind": {
+              "const": "human"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          }
+        },
+        "causationId": {
+          "const": null
+        },
+        "evidenceRefs": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "oldHead",
+            "oldCheckpoint",
+            "authority",
+            "remediation",
+            "recoveryRecordDigest",
+            "requiresSignedCheckpoint"
+          ],
+          "properties": {
+            "oldHead": {
+              "$ref": "#/$defs/eventHead"
+            },
+            "oldCheckpoint": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "stateHash",
+                    "integrityStatus",
+                    "keyId"
+                  ],
+                  "properties": {
+                    "stateHash": {
+                      "$ref": "#/$defs/digest"
+                    },
+                    "integrityStatus": {
+                      "type": "string",
+                      "enum": [
+                        "hash",
+                        "signed"
+                      ]
+                    },
+                    "keyId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "minLength": 1,
+                      "maxLength": 128
+                    }
+                  },
+                  "oneOf": [
+                    {
+                      "properties": {
+                        "integrityStatus": {
+                          "const": "hash"
+                        },
+                        "keyId": {
+                          "const": null
+                        }
+                      }
+                    },
+                    {
+                      "properties": {
+                        "integrityStatus": {
+                          "const": "signed"
+                        },
+                        "keyId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "authority": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "id",
+                "confirmedAt"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "human"
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "confirmedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            "remediation": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "reasonDigest",
+                "guidanceDigest",
+                "affectedPathsDigest",
+                "quarantineManifestDigest"
+              ],
+              "properties": {
+                "reasonDigest": {
+                  "$ref": "#/$defs/digest"
+                },
+                "guidanceDigest": {
+                  "$ref": "#/$defs/digest"
+                },
+                "affectedPathsDigest": {
+                  "$ref": "#/$defs/digest"
+                },
+                "quarantineManifestDigest": {
+                  "$ref": "#/$defs/digest"
+                }
+              }
+            },
+            "recoveryRecordDigest": {
+              "$ref": "#/$defs/digest"
+            },
+            "requiresSignedCheckpoint": {
+              "const": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Cycle lifecycle transition event",
+      "properties": {
+        "type": {
+          "enum": [
+            "cycle.collecting",
+            "cycle.advising",
+            "cycle.consolidating",
+            "cycle.reviewable",
+            "cycle.closed",
+            "cycle.blocked",
+            "cycle.failed",
+            "cycle.cancelled"
+          ]
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "patch": {
+              "$ref": "#/$defs/cyclePatch"
+            },
+            "warnings": {
+              "type": "array",
+              "maxItems": 128,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2048
+              }
+            },
+            "errorCode": {
+              "type": "string",
+              "pattern": "^E_[A-Z0-9_]+$"
+            },
+            "recoveredTransactions": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^TXN-[A-Za-z0-9._-]+$"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Finding acceptance with auditable score amendment",
+      "properties": {
+        "type": {
+          "const": "finding.accepted"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "patch",
+            "scoreAmendment"
+          ],
+          "properties": {
+            "patch": {
+              "$ref": "#/$defs/findingPatch"
+            },
+            "scoreAmendment": {
+              "$ref": "#/$defs/scoreAmendment"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Finding lifecycle transition event",
+      "properties": {
+        "type": {
+          "enum": [
+            "finding.queued",
+            "finding.in-progress",
+            "finding.done"
+          ]
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "patch": {
+              "$ref": "#/$defs/findingPatch"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Finding rejection or supersession event",
+      "properties": {
+        "type": {
+          "enum": [
+            "finding.rejected",
+            "finding.superseded"
+          ]
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "patch": {
+              "$ref": "#/$defs/findingPatch"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2048
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Decision answer event",
+      "properties": {
+        "type": {
+          "const": "decision.answered"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "patch",
+            "reason"
+          ],
+          "properties": {
+            "patch": {
+              "$ref": "#/$defs/decisionPatch"
+            },
+            "reason": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2048
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Decision closure event",
+      "properties": {
+        "type": {
+          "const": "decision.closed"
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "patch",
+            "answeredHead"
+          ],
+          "properties": {
+            "patch": {
+              "$ref": "#/$defs/decisionPatch"
+            },
+            "answeredHead": {
+              "$ref": "#/$defs/eventHead"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Decision lifecycle transition event",
+      "properties": {
+        "type": {
+          "enum": [
+            "decision.default-due",
+            "decision.superseded"
+          ]
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "patch": {
+              "$ref": "#/$defs/decisionPatch"
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "Data-gap lifecycle transition event",
+      "properties": {
+        "type": {
+          "enum": [
+            "gap.answered",
+            "gap.verified",
+            "gap.closed",
+            "gap.superseded"
+          ]
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "patch": {
+              "$ref": "#/$defs/gapPatch"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

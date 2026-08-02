@@ -1,0 +1,93 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  node:
+    name: ${{ matrix.os }} / Node ${{ matrix.node-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: ["20.x", "22.x"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: node --check conformance/runner.mjs
+      - run: node --check conformance/json-schema-validate.mjs
+      - run: npm test
+      - run: npm run check:artifact-shell
+      - run: npm run test:artifact:exports
+      - run: npm run conformance:artifact
+      - run: npm pack --dry-run
+      - name: Conformance fixtures (default + spec-driven)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # default-mode (pre-SHIP): schema validation + verify-po only; no npm needed
+          node conformance/runner.mjs --runtime cursor --validate-schema conformance/fixtures/default-mode
+          node conformance/runner.mjs --runtime cursor --verify-po --dir conformance/fixtures/default-mode
+
+          # default-mode-shipped (post-SHIP): npm ci, then schema validation + verify-ship
+          npm ci --prefix conformance/fixtures/default-mode-shipped
+          node conformance/runner.mjs --runtime cursor --validate-schema conformance/fixtures/default-mode-shipped
+          node conformance/runner.mjs --runtime cursor --verify-ship --dir conformance/fixtures/default-mode-shipped
+
+          # spec-driven-todo (pre-SHIP): schema validation + verify-po only
+          node conformance/runner.mjs --runtime cursor --validate-schema conformance/fixtures/spec-driven-todo
+          node conformance/runner.mjs --runtime cursor --verify-po --dir conformance/fixtures/spec-driven-todo
+
+          # spec-driven-todo-shipped (post-SHIP): npm ci, then schema validation + verify-ship
+          npm ci --prefix conformance/fixtures/spec-driven-todo-shipped
+          node conformance/runner.mjs --runtime cursor --validate-schema conformance/fixtures/spec-driven-todo-shipped
+          node conformance/runner.mjs --runtime cursor --verify-ship --dir conformance/fixtures/spec-driven-todo-shipped
+
+  # PNG baselines are intentionally held to one pinned OS/browser lane because
+  # the approved typography contract permits platform-native safe fallbacks.
+  artifact-browser:
+    name: Artifact browser + visual (macOS 14, Chromium)
+    runs-on: macos-14
+    timeout-minutes: 15
+    env:
+      PLANR_BROWSER_TESTS: "1"
+      PLANR_REQUIRE_BROWSER: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+      - run: npm ci
+      - run: npx playwright install chromium
+      - run: npm run check:artifact-shell
+      - run: npm run test:artifact:browser
+
+  # Security behavior is certified across Playwright's three browser engines.
+  # Pixel baselines stay in the pinned Chromium lane above to avoid
+  # platform-font rendering noise.
+  artifact-sandbox:
+    name: Artifact sandbox (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    env:
+      PLANR_BROWSER_TESTS: "1"
+      PLANR_REQUIRE_BROWSER: "1"
+      PLANR_BROWSER_ENGINE: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: node --test tests/artifact/sandbox-hostile.test.mjs

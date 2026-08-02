@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "planr-pipeline",
+  "version": "0.38.0",
+  "description": "Portable OpenPlanr PO, Design, Review, DEV, and QA pipeline with secure local artifact annotation and private sharing contracts.",
+  "author": {
+    "name": "OpenPlanr",
+    "url": "https://github.com/openplanr"
+  },
+  "homepage": "https://github.com/openplanr/planr-pipeline",
+  "repository": "https://github.com/openplanr/planr-pipeline",
+  "license": "MIT",
+  "keywords": [
+    "spec-driven",
+    "code-generation",
+    "subagents",
+    "pipeline",
+    "po-dev",
+    "openplanr",
+    "artifact-review"
+  ]
+}

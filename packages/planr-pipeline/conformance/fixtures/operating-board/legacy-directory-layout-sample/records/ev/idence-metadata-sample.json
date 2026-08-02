@@ -1,0 +1,45 @@
+{
+  "kind": "operating-record",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "digest": "sha256:94600809c9e7ee0122a1fcbc52de9172935047733bd02fc592536af9bae1506c",
+  "recordType": "evidence-metadata",
+  "createdAt": "2026-07-28T09:00:00.000Z",
+  "correlationId": "operate-cycle-011",
+  "contentDigest": "sha256:a950e246dbe9be9276581d80f392119070f6057e9bb213a8e0ceab6614aa8ee2",
+  "content": {
+    "kind": "operating-evidence",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.2.0",
+    "cycleId": "CYCLE-011",
+    "fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "collectedAt": "2026-07-28T09:00:00.000Z",
+    "truncated": false,
+    "items": [
+      {
+        "id": "EVD-payments-charge",
+        "source": "repository",
+        "location": "src/payments/charge.mjs",
+        "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "collectedAt": "2026-07-28T09:00:00.000Z",
+        "observedFrom": null,
+        "observedTo": null,
+        "freshness": "fresh",
+        "sensitivity": "internal",
+        "claimTypes": [
+          "code-structure"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "repository",
+        "fingerprint": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "status": "collected",
+        "itemCount": 1,
+        "byteCount": 2048
+      }
+    ],
+    "warnings": []
+  }
+}

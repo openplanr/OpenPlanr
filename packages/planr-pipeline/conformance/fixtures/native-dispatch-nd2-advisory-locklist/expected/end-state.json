@@ -1,0 +1,15 @@
+{
+  "fixture": "native-dispatch-nd2-advisory-locklist",
+  "gate": "ND2",
+  "task_count": 2,
+  "shared_lock_listed_path": "package.json",
+  "ready_first_turn": ["T-001", "T-002"],
+  "agent_calls_first_turn": 2,
+  "turns": 1,
+  "dispatch_order": ["T-001", "T-002"],
+  "serialized": false,
+  "advisory_note_present": true,
+  "advisory_note_enforcing": false,
+  "any_isolation_field": false,
+  "max_parallel_referenced": false
+}

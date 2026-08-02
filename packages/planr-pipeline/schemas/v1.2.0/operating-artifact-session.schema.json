@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-artifact-session.schema.json",
+  "title": "OpenPlanr bounded operating artifact generation session",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "id", "cycleId", "state", "artifactType", "inputDigest", "destination", "evidenceRefs", "producer", "createdAt", "updatedAt"],
+  "properties": {
+    "kind": { "const": "operating-artifact-session" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "id": { "type": "string", "pattern": "^ART-[A-Za-z0-9._-]+$" },
+    "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+    "state": { "type": "string", "enum": ["prepared", "generating", "validated", "committed", "failed", "cancelled"] },
+    "artifactType": { "type": "string", "enum": ["markdown", "html", "json", "csv"] },
+    "inputDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "outputDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "destination": { "type": "string", "pattern": "^\\.planr/operate/cycles/CYCLE-[0-9]{3,}/artifacts/[A-Za-z0-9._/-]+$" },
+    "evidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^EVD-[A-Za-z0-9._-]+$" } },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product", "version", "runtime", "capability"],
+      "properties": {
+        "product": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "runtime": { "type": "string", "minLength": 1 },
+        "capability": { "type": "string", "enum": ["analysis-standard", "analysis-high"] }
+      }
+    },
+    "generation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template", "attempt", "maxAttempts", "budget", "sandbox"],
+      "properties": {
+        "template": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "version", "digest"],
+          "properties": {
+            "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,63}$" },
+            "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+            "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+          }
+        },
+        "attempt": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxBytes", "maxDurationMs", "maxTokens", "maxCostUsd"],
+          "properties": {
+            "maxBytes": { "type": "integer", "minimum": 1, "maximum": 1048576 },
+            "maxDurationMs": { "type": "integer", "minimum": 100, "maximum": 600000 },
+            "maxTokens": { "type": ["integer", "null"], "minimum": 1, "maximum": 1000000 },
+            "maxCostUsd": { "type": ["number", "null"], "minimum": 0, "maximum": 1000 }
+          }
+        },
+        "sandbox": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["network", "filesystem", "tools", "allowedUrlSchemes"],
+          "properties": {
+            "network": { "const": "none" },
+            "filesystem": { "type": "string", "enum": ["none", "project-read-only"] },
+            "tools": { "type": "array", "maxItems": 0 },
+            "allowedUrlSchemes": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "type": "string", "enum": ["https", "mailto"] }
+            }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["templateDigest", "inputDigest", "outputDigest", "generatedAt"],
+      "properties": {
+        "templateDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "inputDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "outputDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "generatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "failureCode": { "type": "string", "pattern": "^E_[A-Z0-9_]+$" }
+  }
+}

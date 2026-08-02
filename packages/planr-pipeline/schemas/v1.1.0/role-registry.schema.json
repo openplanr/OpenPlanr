@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/role-registry.schema.json",
+  "title": "OpenPlanr canonical role registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "roles"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "roles": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "phase", "activation", "capability", "writeBoundary", "source"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*-agent$" },
+          "phase": { "type": "string", "enum": ["po-preflight", "po", "dev", "qa", "post-build"] },
+          "activation": { "type": "string", "enum": ["always", "conditional", "manual"] },
+          "capability": { "type": "string", "enum": ["analysis-high", "implementation-high", "read-only-qa"] },
+          "writeBoundary": { "type": "string", "minLength": 1 },
+          "source": { "type": "string", "pattern": "^agents/[a-z0-9-]+\\.md$" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "kind": "operating-record",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "digest": "sha256:77e2bb3c60a1a69fc2a85ffc2d5dad358e8e3ac0e15c8d544351d9807a061979",
+  "recordType": "decision",
+  "createdAt": "2026-07-28T09:00:00.000Z",
+  "correlationId": "operate-cycle-011",
+  "contentDigest": "sha256:a9a81769b7fca7cb4aa3598568cee6647cecb463face6944cb61b3359a675079",
+  "content": {
+    "kind": "operating-decision",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.2.0",
+    "id": "DEC-001",
+    "cycleId": "CYCLE-011",
+    "question": "Do we build the idempotency ledger in-house or adopt a managed queue?",
+    "options": [
+      {
+        "id": "in-house",
+        "label": "Build the ledger in-house"
+      },
+      {
+        "id": "managed",
+        "label": "Adopt a managed queue"
+      }
+    ],
+    "recommendation": "Build the ledger in-house to keep replay guarantees under our control.",
+    "consequences": "In-house adds one release cycle but avoids vendor lock-in.",
+    "reversibility": "reversible",
+    "deadline": "2026-08-15T09:00:00.000Z",
+    "proposedDefault": "in-house",
+    "unblocks": [
+      "FND-001"
+    ],
+    "status": "open",
+    "owner": "founder",
+    "evidenceRefs": [
+      "EVD-payments-charge"
+    ],
+    "createdAt": "2026-07-28T09:00:00.000Z",
+    "updatedAt": "2026-07-28T09:00:00.000Z"
+  }
+}

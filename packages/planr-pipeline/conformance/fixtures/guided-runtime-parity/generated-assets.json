@@ -1,0 +1,28 @@
+{
+  "kind": "guided-runtime-assets",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "generator": "scripts/generate-guided-adapters.mjs",
+  "assets": [
+    {
+      "path": "adapters/claude-code/README.md",
+      "digest": "sha256:203e3d19826bf24dad1f62d8ed87d402b085f1900ef56a5e3c8434b7066850fd"
+    },
+    {
+      "path": "adapters/codex/skills/planr-operate/SKILL.md",
+      "digest": "sha256:0af2ccc6ceac19c21fe5f4e17d4a4db277f58f8199975e65f5c60558abfdf326"
+    },
+    {
+      "path": "adapters/codex/project-guidance.md",
+      "digest": "sha256:44bd3588b425c72763cb542a3cf2a3b0987a421799a22ff34ddc7e1f38810525"
+    },
+    {
+      "path": "adapters/cursor/rules/openplanr-operate.mdc",
+      "digest": "sha256:cfbb86eaad5f8afb3bc6c4753fd93a16175ed7bdb235eb9f70e1247b85a3018a"
+    },
+    {
+      "path": "commands/operate.md",
+      "digest": "sha256:bc0a37a4a245251e99f0547753b796d85dbdb9de23c2f424780c9e3f0ee104ab"
+    }
+  ]
+}

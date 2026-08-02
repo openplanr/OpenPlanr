@@ -1,0 +1,14 @@
+{
+  "tokens": [
+    { "name": "--background", "value": "oklch(1 0 0)", "kind": "color" },
+    { "name": "--foreground", "value": "oklch(0.21 0.015 268)", "kind": "color" },
+    { "name": "--primary", "value": "oklch(0.50 0.18 272)", "kind": "color" },
+    { "name": "--space-2", "value": "8px", "kind": "spacing" },
+    { "name": "--radius", "value": "10px", "kind": "radius" },
+    { "name": "--font-sans", "value": "Inter, system-ui, sans-serif", "kind": "font" }
+  ],
+  "themes": [{ "selector": ".dark", "label": "Dark" }],
+  "fonts": [{ "family": "Inter" }],
+  "frames": { "desktop": { "w": 1440, "h": 1024 } },
+  "breakpoints": { "desktop": 1280, "tablet": 768 }
+}

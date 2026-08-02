@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-outcome.schema.json",
+  "title": "OpenPlanr typed operating outcome contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "id", "sourceCycle", "sourceFinding", "specId", "outcomeKind", "metric", "unit", "queryIdentity", "direction", "operator", "aggregation", "baselineWindow", "targetWindow", "threshold", "minimumCoverage", "minimumSample", "stalePolicy", "missingPolicy", "guardrailPrecedence", "guardrails", "source", "observationWindow", "verifyAfter", "rollout", "rollback", "status", "evidenceRefs", "createdAt", "updatedAt"],
+  "properties": {
+    "kind": { "const": "operating-outcome" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "id": { "type": "string", "pattern": "^OUT-[0-9]{3,}$" },
+    "sourceCycle": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+    "sourceFinding": { "type": "string", "pattern": "^FND-[0-9]{3,}$" },
+    "specId": { "type": "string", "pattern": "^SPEC-[0-9]{3,}$" },
+    "outcomeKind": { "type": "string", "enum": ["metric", "guardrail", "operational"] },
+    "metric": { "type": "string", "minLength": 1 },
+    "unit": { "type": "string", "minLength": 1 },
+    "queryIdentity": { "type": "string", "minLength": 1 },
+    "direction": { "type": "string", "enum": ["increase", "decrease", "maintain", "range"] },
+    "operator": { "type": "string", "enum": ["gt", "gte", "lt", "lte", "eq", "between"] },
+    "aggregation": { "type": "string", "enum": ["sum", "average", "median", "minimum", "maximum", "count", "rate", "percentile", "latest"] },
+    "baselineWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "type": "string", "format": "date-time" },
+        "to": { "type": "string", "format": "date-time" }
+      }
+    },
+    "targetWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "type": "string", "format": "date-time" },
+        "to": { "type": "string", "format": "date-time" }
+      }
+    },
+    "threshold": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value"],
+      "properties": {
+        "value": { "type": "number" },
+        "upperValue": { "type": "number" }
+      }
+    },
+    "minimumCoverage": { "type": "number", "minimum": 0, "maximum": 1 },
+    "minimumSample": { "type": "integer", "minimum": 1 },
+    "stalePolicy": { "type": "string", "enum": ["inconclusive", "create-gap"] },
+    "missingPolicy": { "type": "string", "enum": ["inconclusive", "create-gap"] },
+    "guardrailPrecedence": { "type": "string", "enum": ["block-on-breach", "outcome-first"] },
+    "guardrails": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metric", "unit", "operator", "threshold"],
+        "properties": {
+          "metric": { "type": "string", "minLength": 1 },
+          "unit": { "type": "string", "minLength": 1 },
+          "operator": { "type": "string", "enum": ["gt", "gte", "lt", "lte", "eq", "between"] },
+          "threshold": { "type": "number" },
+          "upperThreshold": { "type": "number" }
+        }
+      }
+    },
+    "source": { "type": "string", "minLength": 1 },
+    "observationWindow": { "type": "string", "pattern": "^[1-9][0-9]*(?:h|d|w|m)$" },
+    "verifyAfter": { "type": "string", "format": "date" },
+    "rollout": { "type": "string", "minLength": 1 },
+    "rollback": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["pending", "observing", "positive", "neutral", "negative", "inconclusive"] },
+    "evidenceRefs": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^EVD-[A-Za-z0-9._-]+$" } },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  }
+}

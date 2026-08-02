@@ -1,0 +1,34 @@
+{
+  "kind": "operating-route-plan",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.3.0",
+  "id": "ACT-014",
+  "cycleId": "CYCLE-011",
+  "inputDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "routeDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "previewDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+  "workspaceDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "evidenceDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+  "providerDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+  "destinationDigest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+  "eventHead": {
+    "sequence": 14,
+    "hash": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+  },
+  "state": "proposed",
+  "actions": [
+    {
+      "id": "ACT-014",
+      "findingId": "FND-014",
+      "lane": "AGENT",
+      "owner": "founder",
+      "kind": "create-quick-task",
+      "dependsOn": [],
+      "evidenceRefs": ["EVD-onboarding-retry-log"],
+      "reversible": true,
+      "requiresConfirmation": true,
+      "targetPath": ".planr/quick/QUICK-onboarding-retry-copy.md"
+    }
+  ],
+  "createdAt": "2026-07-28T09:00:00Z"
+}

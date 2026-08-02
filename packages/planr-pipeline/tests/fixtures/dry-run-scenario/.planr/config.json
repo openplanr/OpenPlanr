@@ -1,0 +1,5 @@
+{
+  "projectName": "dry-run-fixture",
+  "outputPaths": { "agile": ".planr" },
+  "idPrefix": { "spec": "SPEC" }
+}

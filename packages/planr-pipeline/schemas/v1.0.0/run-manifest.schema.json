@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.0.0/run-manifest.schema.json",
+  "title": "OpenPlanr .run-manifest.jsonl line object (v1.0.0)",
+  "description": "Single JSON Lines record appended to SPEC_DIR/.run-manifest.jsonl (spec-driven) or output/feats/feat-{slug}/.run-manifest.jsonl (default). Append-only lifecycle — never truncate the manifest file wholesale.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stage",
+    "agent",
+    "started_at",
+    "ended_at",
+    "files_written",
+    "files_modified",
+    "exit_status",
+    "error_summary"
+  ],
+  "properties": {
+    "stage": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Orchestration boundary label (e.g. ship.bootstrap, ship.inputs-done, ship.task:T-003, qa-gate)."
+    },
+    "agent": {
+      "description": "Subagent slug or null when no agent (orchestration-only milestone).",
+      "type": ["string", "null"]
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "files_written": {
+      "type": "array",
+      "description": "Repo-relative POSIX paths newly created.",
+      "items": { "type": "string", "minLength": 1 },
+      "default": []
+    },
+    "files_modified": {
+      "type": "array",
+      "description": "Repo-relative POSIX paths of files edited in place.",
+      "items": { "type": "string", "minLength": 1 },
+      "default": []
+    },
+    "exit_status": {
+      "type": "string",
+      "enum": ["success", "failure", "skipped"],
+      "description": "Outcome of this stage boundary."
+    },
+    "error_summary": {
+      "description": "null when exit_status !== failure; otherwise one concise line.",
+      "type": ["string", "null"]
+    },
+    "cost_hint": {
+      "description": "Optional non-binding cue surfaced in status when present.",
+      "type": ["string", "null"],
+      "default": null
+    }
+  }
+}

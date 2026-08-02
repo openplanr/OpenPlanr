@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/operating-adapter-handoff.schema.json",
+  "title": "OpenPlanr Protocol v1.4 runtime-native operating harness handoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "phase", "state", "binding", "roles", "next", "recovery"],
+  "properties": {
+    "kind": { "const": "operating-adapter-handoff" },
+    "schemaVersion": { "const": "1.1.0" },
+    "protocolVersion": { "const": "1.4.0" },
+    "phase": { "type": "string", "enum": ["bootstrap", "advisors", "chair"] },
+    "state": { "type": "string", "enum": ["prepare-required", "record-required", "finalize-required", "continue-required", "cancelled"] },
+    "binding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cycleId", "evidenceDigest", "runtime", "runtimeBinding", "crossRuntimeFallback", "executionMode", "assurance", "toolIsolation", "idempotencyKey", "lease", "expiresAt"],
+      "properties": {
+        "cycleId": { "type": "string", "pattern": "^CYCLE-[A-Za-z0-9._-]{1,120}$" },
+        "evidenceDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "runtime": { "type": "string", "enum": ["claude-code", "codex", "cursor"] },
+        "runtimeBinding": { "const": "required" },
+        "crossRuntimeFallback": { "const": false },
+        "executionMode": { "type": "string", "enum": ["native-agent", "sequential-native"] },
+        "assurance": { "const": "runtime-governed" },
+        "toolIsolation": { "type": "string", "enum": ["enforced", "advisory", "none", "enforced-read-only"] },
+        "idempotencyKey": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9._:-]+$" },
+        "lease": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9_-]{32,128}$" },
+        "expiresAt": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "roles": {
+      "type": "array", "minItems": 1, "maxItems": 6,
+      "items": { "type": "object", "additionalProperties": false, "required": ["roleId", "status", "inputDigest"], "properties": { "roleId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" }, "status": { "type": "string", "enum": ["awaiting-prepare", "pending", "recorded"] }, "inputDigest": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" } } }
+    },
+    "next": { "type": "array", "maxItems": 6, "items": { "$ref": "#/$defs/machineAction" } },
+    "recovery": { "type": "array", "maxItems": 2, "items": { "$ref": "#/$defs/machineAction" } }
+  },
+  "$defs": {
+    "argv": { "type": "array", "minItems": 3, "maxItems": 32, "items": { "type": "string", "minLength": 1, "maxLength": 1024, "pattern": "^[A-Za-z0-9_./:@%+=,-]+$" } },
+    "machineAction": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "action", "effect", "argv"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,127}$" },
+        "action": { "type": "string", "enum": ["harness.prepare", "harness.record", "harness.finalize", "harness.resume", "harness.cancel", "run.continue"] },
+        "effect": { "type": "string", "enum": ["read-only", "machine-local-write", "project-write"] },
+        "role": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
+        "argv": { "$ref": "#/$defs/argv" },
+        "dispatch": {
+          "type": "object", "additionalProperties": false,
+          "required": ["source", "agent", "mandatePointer", "procedurePointer", "runtime", "executionMode", "assurance", "toolIsolation", "permissionAuthority"],
+          "properties": {
+            "source": { "const": "harness.prepare-result" },
+            "agent": { "type": "string", "pattern": "^operating-[a-z][a-z0-9-]{0,63}$" },
+            "mandatePointer": { "type": "string", "pattern": "^/data/mandates/[a-z][a-z0-9-]{0,63}$" },
+            "procedurePointer": { "type": "string", "pattern": "^/data/mandates/[a-z][a-z0-9-]{0,63}/procedure$" },
+            "runtime": { "type": "string", "enum": ["claude-code", "codex", "cursor"] },
+            "executionMode": { "type": "string", "enum": ["native-agent", "sequential-native"] },
+            "assurance": { "const": "runtime-governed" },
+            "toolIsolation": { "type": "string", "enum": ["enforced", "advisory", "none", "enforced-read-only"] },
+            "permissionAuthority": { "const": "runtime-session" }
+          }
+        },
+        "stdin": {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "mediaType", "encoding", "maxBytes", "schema", "schemaSource", "schemaPointer"],
+          "properties": {
+            "kind": { "const": "stdin-json" }, "mediaType": { "const": "application/json" }, "encoding": { "const": "utf-8" },
+            "maxBytes": { "const": 262144 },
+            "schema": { "const": "https://openplanr.dev/schemas/v1.4.0/operating-advisor-response.schema.json" },
+            "schemaSource": { "const": "harness.prepare-result" },
+            "schemaPointer": { "type": "string", "pattern": "^/data/mandates/[a-z][a-z0-9-]{0,63}/responseSchema$" }
+          }
+        }
+      }
+    }
+  }
+}

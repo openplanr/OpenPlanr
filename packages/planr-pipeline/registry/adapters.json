@@ -1,0 +1,119 @@
+{
+  "kind": "adapter-registry",
+  "schemaVersion": "1.1.0",
+  "protocolVersion": "1.4.0",
+  "pipelineVersion": "0.38.0",
+  "adapters": [
+    {
+      "id": "claude-code",
+      "version": "0.38.0",
+      "capabilityLevel": "product",
+      "installScopes": ["user", "project"],
+      "entrypoints": {
+        "plan": "/planr-pipeline:plan",
+        "design": "/planr-pipeline:design",
+        "ship": "/planr-pipeline:ship",
+        "dashboard": "/planr-pipeline:dashboard",
+        "artifact": "planr artifact",
+        "operate": "/planr-pipeline:operate",
+        "sync": "/planr-pipeline:sync",
+        "doctor": "planr pipeline doctor"
+      },
+      "capabilities": {
+        "subagents": "native",
+        "hooks": true,
+        "toolIsolation": "enforced",
+        "parallelDispatch": true,
+        "parallelDispatchMode": "native",
+        "headlessBridge": true,
+        "artifactReview": true,
+        "operatingBoard": true,
+        "operatingAdvisorDispatch": "native-agent",
+        "operatingRuntimePolicy": "runtime-governed",
+        "interactiveQuestions": "native"
+      },
+      "assets": ["commands", "agents", "procedures", "hooks", "templates", "schemas", "artifact-review", "agent-native-operate"],
+      "healthChecks": ["plugin-installed", "commands-present", "hook-readable", "artifact-command-valid", "guided-native-capability-reported"],
+      "drivers": {
+        "install": "openplanr://drivers/claude-code/install",
+        "migrate": "openplanr://drivers/claude-code/migrate",
+        "rollback": "openplanr://drivers/claude-code/rollback",
+        "uninstall": "openplanr://drivers/claude-code/uninstall"
+      }
+    },
+    {
+      "id": "codex",
+      "version": "0.38.0",
+      "capabilityLevel": "workflow",
+      "installScopes": ["user", "project"],
+      "entrypoints": {
+        "plan": "$planr-plan",
+        "design": "$planr-design",
+        "ship": "$planr-ship",
+        "dashboard": "$planr-dashboard",
+        "artifact": "$planr-artifact",
+        "operate": "$planr-operate",
+        "sync": "$planr-sync",
+        "doctor": "$planr-doctor"
+      },
+      "capabilities": {
+        "subagents": "dynamic",
+        "hooks": true,
+        "toolIsolation": "advisory",
+        "parallelDispatch": true,
+        "parallelDispatchMode": "dynamic",
+        "headlessBridge": true,
+        "artifactReview": true,
+        "operatingBoard": true,
+        "operatingAdvisorDispatch": "native-agent",
+        "operatingRuntimePolicy": "runtime-governed",
+        "interactiveQuestions": "native"
+      },
+      "assets": ["skills", "project-guidance", "procedures", "role-instructions", "schemas", "templates", "artifact-review", "agent-native-operate"],
+      "healthChecks": ["skills-present", "project-guidance-current", "runtime-authenticated", "artifact-command-valid", "guided-dynamic-capability-reported"],
+      "drivers": {
+        "install": "openplanr://drivers/codex/install",
+        "migrate": "openplanr://drivers/codex/migrate",
+        "rollback": "openplanr://drivers/codex/rollback",
+        "uninstall": "openplanr://drivers/codex/uninstall"
+      }
+    },
+    {
+      "id": "cursor",
+      "version": "0.38.0",
+      "capabilityLevel": "workflow",
+      "installScopes": ["project"],
+      "entrypoints": {
+        "plan": "plan {feature}",
+        "design": "design {feature}",
+        "ship": "ship {feature}",
+        "dashboard": "open planr dashboard",
+        "artifact": "planr artifact",
+        "operate": "planr operate",
+        "sync": "sync planr",
+        "doctor": "planr pipeline doctor"
+      },
+      "capabilities": {
+        "subagents": "advisory",
+        "hooks": false,
+        "toolIsolation": "advisory",
+        "parallelDispatch": false,
+        "parallelDispatchMode": "host",
+        "headlessBridge": false,
+        "artifactReview": true,
+        "operatingBoard": true,
+        "operatingAdvisorDispatch": "sequential-native",
+        "operatingRuntimePolicy": "runtime-governed",
+        "interactiveQuestions": "chat"
+      },
+      "assets": ["rules", "roles", "procedures", "schemas", "templates", "artifact-review", "agent-native-operate"],
+      "healthChecks": ["rules-present", "portable-assets-present", "no-foreign-runtime-paths", "artifact-command-valid", "guided-chat-capability-reported"],
+      "drivers": {
+        "install": "openplanr://drivers/cursor/install",
+        "migrate": "openplanr://drivers/cursor/migrate",
+        "rollback": "openplanr://drivers/cursor/rollback",
+        "uninstall": "openplanr://drivers/cursor/uninstall"
+      }
+    }
+  ]
+}

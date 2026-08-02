@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/artifact-room-event.schema.json",
+  "title": "OpenPlanr encrypted artifact-room event plaintext",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "eventId", "roomId", "reviewOf", "kind", "createdAt", "payload"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "eventId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "roomId": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" },
+    "reviewOf": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "kind": { "enum": ["pin", "reply", "pin_status", "recommendation", "owner_decision", "review_snapshot"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "payload": { "type": "object" }
+  }
+}

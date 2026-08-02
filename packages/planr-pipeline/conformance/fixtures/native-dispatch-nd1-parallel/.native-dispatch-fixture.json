@@ -1,0 +1,6 @@
+{
+  "fixture": "native-dispatch-nd1-parallel",
+  "gate": "ND1",
+  "mode": "multi-task",
+  "description": "Six independent tasks (no dependsOn) dispatch as six Agent calls in a single turn; no call carries an isolation field. (FR6, FR7, FR8)"
+}

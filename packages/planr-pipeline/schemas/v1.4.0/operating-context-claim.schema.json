@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/operating-context-claim.schema.json",
+  "title": "OpenPlanr Protocol v1.4 operating context claim",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "field", "value", "epistemicStatus", "confidence", "citations"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^CTX-[A-Za-z0-9._-]{1,120}$" },
+    "field": { "type": "string", "enum": ["purpose", "stage", "business-model", "pricing", "ideal-customer", "goal", "metric", "architecture", "delivery-state", "risk", "constraint", "other"] },
+    "value": { "type": "string", "minLength": 1, "maxLength": 8192 },
+    "epistemicStatus": { "type": "string", "enum": ["observed", "inferred", "hypothesis", "owner-confirmed", "unknown"] },
+    "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "citations": { "type": "array", "maxItems": 20, "items": { "$ref": "operating-citation.schema.json" } },
+    "ownerNote": { "type": "string", "maxLength": 4096 }
+  }
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "codex-per-task",
+    "runtime": "codex",
+    "mode": "per-task",
+    "selected_task": null,
+    "expected_agent_calls": 1,
+    "note": "Codex per-task mode: one ready task processed per invocation, even though two ready tasks exist."
+  },
+  {
+    "name": "cursor-per-task",
+    "runtime": "cursor",
+    "mode": "per-task",
+    "selected_task": null,
+    "expected_agent_calls": 1,
+    "note": "Cursor per-task mode: one ready task processed per invocation."
+  },
+  {
+    "name": "claude-single-task-selector",
+    "runtime": "claude-code",
+    "mode": "single-task",
+    "selected_task": "T-002",
+    "expected_agent_calls": 1,
+    "note": "--task T-002 selects exactly one task; one Agent call, no parallel emission."
+  }
+]

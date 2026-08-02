@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.3.0/operating-citation.schema.json",
+  "title": "OpenPlanr Protocol v1.3 operating citation",
+  "description": "Exactly one of a repository path (with optional line range), a git revision, or a planr artifact ID, each bound to the cycle's frozen revision via pinnedRevision. The engine resolves and snapshots every citation against that revision after the agent returns.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["pinnedRevision"],
+  "properties": {
+    "citationKey": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "maxLength": 128 },
+    "repositoryPath": {
+      "type": "string",
+      "maxLength": 1024,
+      "pattern": "^(?!.*\\.\\.)[A-Za-z0-9][A-Za-z0-9._/-]*$"
+    },
+    "lineRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "type": "integer", "minimum": 1 },
+        "end": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "gitRevision": { "type": "string", "pattern": "^[a-f0-9]{7,64}$" },
+    "planrArtifactId": {
+      "type": "string",
+      "pattern": "^(?:EPIC|FEAT|US|SPEC|TASK|ADR|DEC|FND|GAP|OUT)-[A-Za-z0-9._-]+$"
+    },
+    "pinnedRevision": { "type": "string", "pattern": "^[a-f0-9]{7,64}$" }
+  },
+  "oneOf": [
+    {
+      "title": "repository-path citation",
+      "allOf": [
+        { "required": ["repositoryPath"] },
+        { "not": { "required": ["gitRevision"] } },
+        { "not": { "required": ["planrArtifactId"] } }
+      ]
+    },
+    {
+      "title": "git-revision citation",
+      "allOf": [
+        { "required": ["gitRevision"] },
+        { "not": { "required": ["repositoryPath"] } },
+        { "not": { "required": ["lineRange"] } },
+        { "not": { "required": ["planrArtifactId"] } }
+      ]
+    },
+    {
+      "title": "planr-artifact citation",
+      "allOf": [
+        { "required": ["planrArtifactId"] },
+        { "not": { "required": ["repositoryPath"] } },
+        { "not": { "required": ["lineRange"] } },
+        { "not": { "required": ["gitRevision"] } }
+      ]
+    }
+  ]
+}

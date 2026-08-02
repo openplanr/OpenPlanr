@@ -1,0 +1,10 @@
+{
+  "id": "US-002",
+  "title": "Bad status",
+  "specId": "SPEC-007",
+  "slug": "bad-enum-story",
+  "schemaVersion": "1.0.0",
+  "status": "hibernating",
+  "created": "2026-05-03",
+  "updated": "2026-05-03"
+}

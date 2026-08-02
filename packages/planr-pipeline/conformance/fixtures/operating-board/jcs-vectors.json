@@ -1,0 +1,47 @@
+{
+  "kind": "jcs-golden-vectors",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "vectors": [
+    {
+      "name": "object-order",
+      "value": {
+        "z": 0,
+        "a": "first",
+        "nested": {
+          "b": true,
+          "a": null
+        }
+      },
+      "canonical": "{\"a\":\"first\",\"nested\":{\"a\":null,\"b\":true},\"z\":0}",
+      "sha256": "sha256:c3a0e233d74e32fe3bc6688545436b6a74146a7ed7faa58477538c0e52786dfc"
+    },
+    {
+      "name": "unicode-and-numbers",
+      "value": {
+        "text": "€$\u000f\nA",
+        "numbers": [
+          333333333.3333333,
+          1e+30,
+          4.5,
+          0.002,
+          1e-27
+        ]
+      },
+      "canonical": "{\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"text\":\"€$\\u000f\\nA\"}",
+      "sha256": "sha256:611b1cd3bd653fb2959166a39f969e97d3adfe9d36ee8649925c90eee2c53c5c"
+    },
+    {
+      "name": "utf16-key-order",
+      "value": {
+        "1": "One",
+        "€": "Euro",
+        "\r": "CR",
+        "😀": "Emoji",
+        "ö": "Latin"
+      },
+      "canonical": "{\"\\r\":\"CR\",\"1\":\"One\",\"ö\":\"Latin\",\"€\":\"Euro\",\"😀\":\"Emoji\"}",
+      "sha256": "sha256:4f8e96863f162d37a883985a88b8d3f68bd697c97677b8d9fb42d3d9f511963b"
+    }
+  ]
+}
