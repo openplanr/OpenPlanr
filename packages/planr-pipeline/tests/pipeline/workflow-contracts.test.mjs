@@ -15,13 +15,23 @@ const readWorkflow = (name) => readFileSync(join(repoRoot, '.github/workflows', 
 
 test('package metadata identifies the provenance repository and license', () => {
   const packageJson = JSON.parse(read('package.json'));
+  // BL-010: npm provenance attestation requires repository.url to match the
+  // repository the publishing workflow actually runs in. Post-merge that is the
+  // monorepo (openplanr/OpenPlanr), NOT the old standalone repo — leaving the
+  // old URL here would fail the first provenance publish, and `npm publish
+  // --dry-run` is client-side and cannot detect it. `directory` locates the
+  // package within the monorepo for npm's source links.
   assert.deepEqual(packageJson.repository, {
     type: 'git',
-    url: 'https://github.com/openplanr/planr-pipeline',
+    url: 'git+https://github.com/openplanr/OpenPlanr.git',
+    directory: 'packages/planr-pipeline',
   });
   assert.equal(packageJson.license, 'MIT');
-  assert.equal(packageJson.bugs?.url, 'https://github.com/openplanr/planr-pipeline/issues');
-  assert.equal(packageJson.homepage, 'https://github.com/openplanr/planr-pipeline#readme');
+  assert.equal(packageJson.bugs?.url, 'https://github.com/openplanr/OpenPlanr/issues');
+  assert.equal(
+    packageJson.homepage,
+    'https://github.com/openplanr/OpenPlanr/tree/main/packages/planr-pipeline#readme'
+  );
 });
 
 test('release workflow publishes through changesets with provenance', () => {

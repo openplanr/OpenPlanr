@@ -7,12 +7,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openplanr/planr-pipeline"
+    "url": "git+https://github.com/openplanr/OpenPlanr.git",
+    "directory": "packages/planr-pipeline"
   },
   "bugs": {
-    "url": "https://github.com/openplanr/planr-pipeline/issues"
+    "url": "https://github.com/openplanr/OpenPlanr/issues"
   },
-  "homepage": "https://github.com/openplanr/planr-pipeline#readme",
+  "homepage": "https://github.com/openplanr/OpenPlanr/tree/main/packages/planr-pipeline#readme",
   "main": "./lib/pipeline/index.mjs",
   "exports": {
     ".": "./lib/pipeline/index.mjs",

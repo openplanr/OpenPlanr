@@ -73,7 +73,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openplanr/OpenPlanr.git"
+    "url": "git+https://github.com/openplanr/OpenPlanr.git",
+    "directory": "packages/OpenPlanr"
   },
   "homepage": "https://openplanr.dev",
   "bugs": {
