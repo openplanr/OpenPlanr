@@ -7,7 +7,7 @@
 > contracts. v1.2 adds operating governance, v1.3 adds citation-bound mandate
 > execution, and v1.4 adds agent-native research, sticky runtime binding,
 > expressive reports, and canonical proposal drafts.
-> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.37.2.
+> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.38.0.
 
 The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI development. It defines:
 
@@ -58,6 +58,15 @@ The protocol is the contract. Runtimes are adapters.
 ## Pinning rule
 
 `schemaVersion: "1.0.0"` is required on every spec, story, and task. Future breaking changes will bump this version in lockstep across all three runtimes; readers MUST refuse mismatched versions.
+
+The v1.0 artifact schemas additionally accept two OPTIONAL, sync-tool-written
+board-sync identity fields — `kanbanosId` and `contentHash` — written back by
+the kanbanos hosted-board sync after a successful push (the `linearId`
+precedent from the OpenPlanr CLI Linear integration). The amendment is
+backward-compatible: artifacts without the fields stay valid, unknown fields
+(including any rank/ordering field, which is deliberately excluded) are still
+rejected, and `schemaVersion` stays `"1.0.0"`. See
+[`spec-artifacts.md`](spec-artifacts.md) and ADR-012.
 
 Canonical schema source for this cleanup cycle: [`../../schemas/v1.0.0/`](../../schemas/v1.0.0/). The OpenPlanr CLI schema reference is a downstream mirror for CLI users.
 

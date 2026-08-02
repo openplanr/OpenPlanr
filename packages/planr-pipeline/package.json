@@ -1,6 +1,6 @@
 {
   "name": "planr-pipeline",
-  "version": "0.37.2",
+  "version": "0.38.0",
   "private": false,
   "type": "module",
   "description": "OpenPlanr complete PO, Design, DEV, QA, and delivery pipeline",
@@ -39,6 +39,7 @@
     "docs/adrs/ADR-009-intent-scoped-native-operating-cycles.md",
     "docs/adrs/ADR-010-operating-board-agentic-execution.md",
     "docs/adrs/ADR-011-agent-native-operating-board.md",
+    "docs/adrs/ADR-012-board-sync-identity-fields.md",
     "docs/artifact-review.md",
     "docs/guided-operating-board.md",
     "docs/generated/",

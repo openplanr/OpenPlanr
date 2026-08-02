@@ -91,6 +91,17 @@
       "uniqueItems": true,
       "default": [],
       "description": "Task IDs (within the same parent) that must reach status done before this task is dispatched. Optional; absent/empty means no declared dependency."
+    },
+    "kanbanosId": {
+      "type": "string",
+      "minLength": 8,
+      "pattern": "^[A-Za-z0-9_-]{8,128}$",
+      "description": "Optional opaque entity id on the kanbanos hosted board, written back by the sync tool after a successful push (the linearId precedent from the OpenPlanr CLI Linear integration). Sync-tool-owned: humans and planning agents never author or edit it by hand. Absent until the artifact is first pushed. See ADR-012."
+    },
+    "contentHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "Optional digest of the artifact content at the last successful board sync, written back by the sync tool alongside kanbanosId so drift between file and board is detectable. Same sha256:<hex> shape as operating-evidence-index-item@1.3.0. Sync-tool-owned: humans and planning agents never author or edit it by hand. See ADR-012."
     }
   },
   "allOf": [

@@ -134,6 +134,29 @@ Required:
 
 Full anatomy: `../task-anatomy.md`.
 
+## Board-sync identity fields (optional, sync-tool-written)
+
+SPEC, User Story, and Task frontmatter each accept two OPTIONAL fields that a
+board sync tool writes back after a successful push to the kanbanos hosted
+board — the same write-back pattern the OpenPlanr CLI Linear integration uses
+for `linearId`:
+
+| Field | Shape | Meaning |
+|---|---|---|
+| `kanbanosId` | `^[A-Za-z0-9_-]{8,128}$` | Opaque entity id on the hosted board. |
+| `contentHash` | `^sha256:[a-f0-9]{64}$` | Digest of the artifact content at the last successful sync (same shape as `operating-evidence-index-item@1.3.0`). |
+
+Rules (normative, see [ADR-012](../adrs/ADR-012-board-sync-identity-fields.md)):
+
+- Both fields are optional; artifacts without them remain valid `1.0.0`
+  artifacts. No `schemaVersion` bump — the amendment is backward-compatible.
+- Only sync tooling writes them, and only after a successful push. Humans and
+  planning agents never author or edit them by hand; the specification-agent
+  never emits them.
+- There is deliberately **no rank / ordering field**, and the schemas'
+  `additionalProperties: false` rejects any. Board ordering is board-sovereign
+  presentation state; rank churn never enters files.
+
 ## `stack.md` (project technical configuration)
 
 The Tech-Lead-owned single source of truth for technology choices, build/test commands,

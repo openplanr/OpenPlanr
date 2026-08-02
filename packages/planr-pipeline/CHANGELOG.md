@@ -4,6 +4,44 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.38.0] — 2026-08-02
+
+Protocol v1.0 artifact frontmatter learns board-sync identity: the kanbanos
+hosted board (a planr sync target, like Linear) can now write its entity id and
+a content digest back into SPEC, User Story, and Task files after a successful
+push — the same write-back pattern the OpenPlanr CLI Linear integration uses
+for `linearId`.
+
+### Added
+
+- `schemas/v1.0.0/{spec,story,task}.schema.json` — two OPTIONAL, sync-tool-owned
+  frontmatter fields on all three sync-target artifact types: `kanbanosId`
+  (opaque hosted-board entity id, `^[A-Za-z0-9_-]{8,128}$`) and `contentHash`
+  (digest at last successful sync, reusing the exact
+  `^sha256:[a-f0-9]{64}$` shape from `operating-evidence-index-item@1.3.0`).
+  The amendment is additive and backward-compatible: existing artifacts stay
+  valid byte-for-byte, `schemaVersion` stays `"1.0.0"`, and
+  `additionalProperties: false` still rejects unknown fields. There is
+  deliberately **no rank/ordering field** — board ordering is board-sovereign
+  presentation state and rank churn never enters files (governance rule,
+  ADR-012).
+- `docs/adrs/ADR-012-board-sync-identity-fields.md` — mechanism choice
+  (v1.0.0 amendment over a dual-version schema dir, which the single-directory
+  conformance resolver does not support), the writer contract (only sync tools
+  write the fields; humans and planning agents never author them by hand), and
+  the no-rank governance rule.
+- `tests/schema/board-sync-identity.test.mjs` + `tests/fixtures/valid-{spec,story,task}-board-sync.json`
+  — artifacts with and without the fields both validate; malformed
+  `contentHash` values (wrong algorithm, uppercase hex, truncated digest),
+  non-opaque `kanbanosId` values, and unknown sync fields (`rank`,
+  `kanbanosRank`, …) are rejected.
+
+### Changed
+
+- `docs/protocol/spec-artifacts.md` and `docs/protocol/README.md` document the
+  board-sync identity fields, the writer contract, and the no-rank rule.
+- Version ceremony to 0.38.0 across all seven surfaces + regenerated assets.
+
 ## [0.36.1] — 2026-08-01
 
 ### Fixed
