@@ -2,7 +2,7 @@
 
 Release participant: `openplanr@1.21.0`
 
-Contract dependency: `planr-pipeline@0.37.0` / Protocol v1.4.0.
+Contract dependency: `planr-pipeline@0.37.1` / Protocol v1.4.0.
 
 ## Scope
 
@@ -32,7 +32,7 @@ CTO, CPO, CMO, COO, and Chair.
 
 ## Release transaction
 
-Release order is `planr-pipeline@0.37.0` → draft marketplace ledger →
+Release order is `planr-pipeline@0.37.1` → draft marketplace ledger →
 `openplanr@1.21.0` → `@openplanr/skills@1.23.0` → marketplace `1.8.0`.
 Every repository retains its own branch, CI, PR, tag, package, and rollback
 boundary. The marketplace ledger remains unmerged until clean-machine and real

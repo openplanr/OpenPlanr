@@ -102,7 +102,7 @@ describe('Operating Board doctor', () => {
     const diagnostics = await diagnoseOperatingBoard({
       projectRoot,
       localRoot,
-      pipelineVersion: '0.37.0',
+      pipelineVersion: '0.37.1',
     });
 
     expect(diagnostics).toEqual(
