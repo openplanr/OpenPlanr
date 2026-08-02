@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAt": "2026-08-02T12:45:57.030Z",
+  "generatedAt": "2026-08-02T13:43:37.821Z",
   "protocol": {
     "current": "1.4.0",
     "supported": [
@@ -25,7 +25,7 @@
       "cliRange": "^1.21.1"
     },
     "marketplace": {
-      "version": "1.8.1"
+      "version": "1.8.2"
     }
   },
   "adapters": [
@@ -78,7 +78,7 @@
         "pipeline": "0.37.2",
         "cli": "1.21.1",
         "skills": "1.23.0",
-        "marketplace": "1.8.1"
+        "marketplace": "1.8.2"
       },
       "certifiedRuntimes": [
         "claude-code",
@@ -122,31 +122,29 @@
       }
     },
     "agenticOperatingBoard": {
-      "status": "available",
+      "status": "unavailable",
       "command": "planr operate",
       "protocolRange": "^1.4.0",
       "components": {
-        "pipeline": "0.37.2",
-        "cli": "1.21.1",
+        "pipeline": "0.38.0",
+        "cli": "1.21.2",
         "skills": "1.23.0",
-        "marketplace": "1.8.1"
+        "marketplace": "1.8.2"
       },
-      "certifiedRuntimes": [
-        "claude-code",
-        "codex",
-        "cursor"
-      ],
+      "certifiedRuntimes": [],
       "advisorDispatch": {
         "claude-code": "native-agent",
         "codex": "native-agent",
         "cursor": "sequential-native"
       },
-      "missing": [],
+      "missing": [
+        "release"
+      ],
       "releaseOperation": {
-        "operationId": "OPERATE-SPEC-008-R1",
-        "operationDigest": "sha256:b6a61ba68ff64e4d17877afb9b8f57197d9dd66c160cbb22318146b3855b0798",
-        "state": "verified",
-        "reconciliation": "matched"
+        "operationId": "OPERATE-SPEC-008-R2",
+        "operationDigest": "sha256:9a50164714818cb078e55428bf90f3e0f75e957b0caa4455781ec03e9d58605b",
+        "state": "promoting",
+        "reconciliation": "pending"
       }
     }
   },

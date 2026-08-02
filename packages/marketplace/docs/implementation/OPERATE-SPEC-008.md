@@ -24,6 +24,19 @@ tuple:
 The original ledger remains immutable. The revision has its own digest,
 release evidence, marketplace PR, and final reconciliation record.
 
+Reconciliation revision `OPERATE-SPEC-008-R2` incorporates the independently
+released optional board-sync identity contract without rewriting either prior
+ledger. It resolves this exact tuple:
+
+- Protocol `1.4.0`
+- `planr-pipeline@0.38.0`
+- `openplanr@1.21.2`
+- `@openplanr/skills@1.23.0` (unchanged; its generated workflow remains compatible)
+- marketplace `1.8.2`
+
+R2 remains unavailable until its exact package tuple passes the full Ubuntu,
+macOS, and Windows Node 20/22 canary matrix and live registry reconciliation.
+
 The resolved capability certifies Claude Code, Codex, and Cursor. Codex and
 Cursor may honestly report advisory tool isolation; both remain supported under
 runtime-governed assurance. Every cycle is sticky to its selected runtime and
