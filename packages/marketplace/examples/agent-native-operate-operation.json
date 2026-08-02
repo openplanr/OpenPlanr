@@ -8,8 +8,8 @@
   "title": "Release the Protocol v1.4 Agent-Native Cross-Runtime Operating Board",
   "capability": "agenticOperatingBoard",
   "createdAt": "2026-08-02T00:00:00.000Z",
-  "updatedAt": "2026-08-02T11:10:00.000Z",
-  "state": "promoting",
+  "updatedAt": "2026-08-02T11:22:00.000Z",
+  "state": "verified",
   "ledger": {
     "kind": "marketplace-draft-pr",
     "repository": "openplanr/marketplace",
@@ -17,7 +17,7 @@
     "pullRequest": {
       "number": 100,
       "url": "https://github.com/openplanr/marketplace/pull/100",
-      "state": "draft"
+      "state": "merged"
     }
   },
   "participantOrder": ["pipeline", "cli", "skills", "marketplace"],
@@ -176,19 +176,29 @@
       "repository": "openplanr/marketplace",
       "currentVersion": "1.7.0",
       "targetVersion": "1.8.0",
-      "phase": "pending",
+      "phase": "verified",
       "branch": "ecosystem-release/operate-spec-008-agent-native",
       "targetBranch": "main",
-      "commitSha": null,
+      "commitSha": "4056f835edb35c5565e00bfb84a3a5a02ad7ecc2",
       "pullRequest": {
         "number": 100,
         "url": "https://github.com/openplanr/marketplace/pull/100",
-        "state": "draft"
+        "state": "merged"
       },
       "package": null,
-      "tag": null,
-      "tarballDigest": null,
+      "tag": "v1.8.0",
+      "tarballDigest": "sha256:c89877f181205f22f5fc84712a3681ea69b87bbb6a4037deda43d51e07fbeba0",
       "checks": [
+        {
+          "name": "check",
+          "status": "passed",
+          "url": "https://github.com/openplanr/marketplace/actions/runs/30745514981"
+        },
+        {
+          "name": "operation-ledger",
+          "status": "passed",
+          "url": "https://github.com/openplanr/marketplace/actions/runs/30745493099"
+        },
         {
           "name": "exact-commit-canary",
           "status": "passed",
@@ -206,7 +216,7 @@
       ],
       "prerequisites": ["pipeline", "cli", "skills"],
       "compensation": "withhold-manifest",
-      "nextSafeAction": "Mark pull request 100 ready, merge and tag the withheld 1.8.0 ledger, then finalize the compatibility manifest."
+      "nextSafeAction": "Verified at v1.8.0 with exact-commit Node 20/22 canary evidence; retain the immutable ledger for audit."
     }
   ],
   "releaseEvidence": [
@@ -249,21 +259,21 @@
   "prepareDigest": "sha256:26619f31fb0c3b122d1c228209dd310b3acb8fef1012410ee8aaf9a43354cc84",
   "confirmationDigest": "sha256:abe71c20b8db8a0066fbaf045f29357a4c5deea41c23499c4a00dcfae7ad307c",
   "blockedReason": null,
-  "nextSafeAction": "Merge and tag marketplace 1.8.0 with compatibility withheld, then finalize the verified manifest.",
+  "nextSafeAction": "Archive the verified operation and monitor production agent-native Operating Board journeys.",
   "recovery": {
     "mode": "forward-fix",
     "reason": "planr-pipeline@0.37.1 and openplanr@1.21.0 are already public.",
     "nextSafeAction": "Use forward-fix releases for published components and keep marketplace availability withheld until final reconciliation."
   },
   "reconciliation": {
-    "status": "incomplete",
-    "checkedAt": "2026-08-02T11:10:00.000Z",
+    "status": "matched",
+    "checkedAt": "2026-08-02T11:22:00.000Z",
     "sources": [
       "github-pr", "git-commit", "git-tag", "github-checks", "npm-registry",
       "marketplace-manifest", "operating-canary"
     ],
     "drift": [],
-    "nextSafeAction": "Merge and tag the withheld marketplace ledger, then reconcile its final commit, tag, checks, and manifest."
+    "nextSafeAction": "All authoritative releases, tags, manifests, and exact-commit canary evidence match the reviewed operation."
   },
   "history": [
     {
@@ -319,6 +329,24 @@
       "participant": "marketplace",
       "digest": "sha256:abe71c20b8db8a0066fbaf045f29357a4c5deea41c23499c4a00dcfae7ad307c",
       "note": "Prepared marketplace 1.8.0 with compatibility withheld after exact-commit Node 20/22 canaries passed on macOS, Ubuntu, and Windows."
+    },
+    {
+      "eventId": "c7229f1f-38a0-4d4b-bcb8-24918f7460dc",
+      "timestamp": "2026-08-02T11:22:00.000Z",
+      "type": "reconciliation.recorded",
+      "actor": "Release coordinator",
+      "participant": "marketplace",
+      "digest": "sha256:abe71c20b8db8a0066fbaf045f29357a4c5deea41c23499c4a00dcfae7ad307c",
+      "note": "Pipeline 0.37.1, OpenPlanr 1.21.0, skills 1.23.0, marketplace 1.8.0, npm state, and exact-commit Node 20/22 canaries on Ubuntu, macOS, and Windows matched."
+    },
+    {
+      "eventId": "650b3e49-b604-4e22-8b86-3807ce8bce6d",
+      "timestamp": "2026-08-02T11:22:01.000Z",
+      "type": "operation.verified",
+      "actor": "Release coordinator",
+      "participant": "marketplace",
+      "digest": "sha256:6c3156d0292a6fc1b0fee04fe7b8c945fb8d374c9c0f6f357469a0fb8c1fca95",
+      "note": "The Protocol v1.4 agent-native, cross-runtime Operating Board is verified for ecosystem availability."
     }
   ]
 }

@@ -176,18 +176,18 @@ test('verified compatibility promotes the default native cycle after reconciliat
     marketplace: '1.3.1',
   });
   assert.deepEqual(ecosystem.components, {
-    cli: { version: '1.20.0', pipelineRange: '^0.36.1' },
-    pipeline: { version: '0.36.1', cliRange: '^1.20.0' },
-    skills: { version: '1.22.0', cliRange: '^1.20.0' },
+    cli: { version: '1.21.0', pipelineRange: '^0.37.1' },
+    pipeline: { version: '0.37.1', cliRange: '^1.21.0' },
+    skills: { version: '1.23.0', cliRange: '^1.21.0' },
     marketplace: { version: '1.8.0' },
   });
 });
 
-test('the Protocol v1.4 agent-native capability remains withheld until its ledger verifies', async () => {
+test('the Protocol v1.4 agent-native capability is available after its ledger verifies', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const agentic = ecosystem.capabilities.agenticOperatingBoard;
-  assert.equal(agentic.status, 'unavailable');
-  assert.deepEqual(agentic.missing, ['release']);
+  assert.equal(agentic.status, 'available');
+  assert.deepEqual(agentic.missing, []);
   assert.equal(agentic.protocolRange, '^1.4.0');
   assert.deepEqual(agentic.components, {
     pipeline: '0.37.1',
@@ -200,10 +200,14 @@ test('the Protocol v1.4 agent-native capability remains withheld until its ledge
     codex: 'native-agent',
     cursor: 'sequential-native',
   });
-  assert.deepEqual(agentic.certifiedRuntimes, []);
+  assert.deepEqual(agentic.certifiedRuntimes, [
+    'claude-code',
+    'codex',
+    'cursor',
+  ]);
   assert.equal(agentic.releaseOperation.operationId, 'OPERATE-SPEC-008');
-  assert.equal(agentic.releaseOperation.state, 'promoting');
-  assert.equal(agentic.releaseOperation.reconciliation, 'incomplete');
+  assert.equal(agentic.releaseOperation.state, 'verified');
+  assert.equal(agentic.releaseOperation.reconciliation, 'matched');
 });
 
 test('the SPEC-008 ledger links umbrella SPEC-005 without conflating operation identity', async () => {
