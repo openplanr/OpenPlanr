@@ -1,0 +1,13 @@
+Feature: {{title}}
+  {{id}} - As a {{role}}, I want to {{goal}} so that {{benefit}}
+
+  Background:
+    Given the system is initialized
+
+{{#each scenarios}}
+  Scenario: {{this.name}}
+    Given {{this.given}}
+    When {{this.when}}
+    Then {{this.then}}
+
+{{/each}}

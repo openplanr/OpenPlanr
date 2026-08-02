@@ -1,0 +1,37 @@
+# Release notes — {{projectName}}
+
+> {{generatedAt}} · draft from planning artifacts + GitHub
+
+## Highlights
+
+- _User-facing bullets — edit before publishing._
+
+## Completed work (planning)
+
+{{#each artifacts.stories}}
+{{#if (eq this.status 'done')}}
+- `{{this.id}}` — {{this.title}}
+{{/if}}
+{{/each}}
+
+{{#unless artifacts.stories}}
+_No story data._
+{{/unless}}
+
+## Merged / shipped (GitHub)
+
+{{#if github.pullRequests.length}}
+{{#each github.pullRequests}}
+{{#if this.mergedAt}}
+- [PR #{{this.number}}]({{this.url}}) — {{this.title}}
+{{/if}}
+{{/each}}
+{{else}}
+_No PR metadata — add manually._
+{{/if}}
+
+## Evidence
+
+{{#each evidence}}
+- **{{this.kind}}** — {{this.label}}{{#if this.url}} — {{this.url}}{{/if}}
+{{/each}}

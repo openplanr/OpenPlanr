@@ -1,0 +1,53 @@
+{
+  "name": "rest-endpoint",
+  "description": "CRUD REST endpoint with validation, auth, tests, and docs",
+  "variables": ["entityName", "basePath"],
+  "tasks": [
+    {
+      "id": "1.0",
+      "title": "Define data model and types",
+      "subtasks": [
+        { "id": "1.1", "title": "Create {{entityName}} interface/type definition" },
+        { "id": "1.2", "title": "Add Zod validation schema for {{entityName}}" },
+        { "id": "1.3", "title": "Define request/response DTOs" }
+      ]
+    },
+    {
+      "id": "2.0",
+      "title": "Implement API routes",
+      "subtasks": [
+        { "id": "2.1", "title": "Create GET {{basePath}} — list all {{entityName}}s" },
+        { "id": "2.2", "title": "Create GET {{basePath}}/:id — get single {{entityName}}" },
+        { "id": "2.3", "title": "Create POST {{basePath}} — create {{entityName}}" },
+        { "id": "2.4", "title": "Create PUT {{basePath}}/:id — update {{entityName}}" },
+        { "id": "2.5", "title": "Create DELETE {{basePath}}/:id — delete {{entityName}}" }
+      ]
+    },
+    {
+      "id": "3.0",
+      "title": "Add middleware and validation",
+      "subtasks": [
+        { "id": "3.1", "title": "Add request body validation middleware" },
+        { "id": "3.2", "title": "Add authentication/authorization checks" },
+        { "id": "3.3", "title": "Add error handling and proper HTTP status codes" }
+      ]
+    },
+    {
+      "id": "4.0",
+      "title": "Write tests",
+      "subtasks": [
+        { "id": "4.1", "title": "Unit tests for {{entityName}} validation logic" },
+        { "id": "4.2", "title": "Integration tests for all CRUD endpoints" },
+        { "id": "4.3", "title": "Test error cases (404, 400, 401, 403)" }
+      ]
+    },
+    {
+      "id": "5.0",
+      "title": "Documentation",
+      "subtasks": [
+        { "id": "5.1", "title": "Add API documentation for {{basePath}} endpoints" },
+        { "id": "5.2", "title": "Update README with new endpoint details" }
+      ]
+    }
+  ]
+}

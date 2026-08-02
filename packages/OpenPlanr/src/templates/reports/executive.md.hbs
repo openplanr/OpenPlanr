@@ -1,0 +1,28 @@
+# Executive summary — {{projectName}}
+
+> {{generatedAt}}
+
+## Outcome
+
+- **Active epics:** {{length artifacts.epics}}
+- **Stories:** {{length artifacts.stories}} total in planning tree
+
+## Momentum
+
+{{#if github.pullRequests.length}}
+- **Recent PR activity:** {{length github.pullRequests}} PRs touched in the last {{daysLookback}} days.
+{{else}}
+- **Recent PR activity:** _none in window or GitHub unavailable._
+{{/if}}
+
+## Risks & dependencies
+
+- _Summarize top 2 risks with mitigation._
+
+## Timeline confidence
+
+- _On track / at risk — cite evidence IDs below._
+
+## Evidence{{#each evidence}}
+- {{this.label}}{{#if this.url}} — {{this.url}}{{/if}}
+{{/each}}

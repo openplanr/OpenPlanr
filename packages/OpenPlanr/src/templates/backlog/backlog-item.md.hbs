@@ -1,0 +1,44 @@
+---
+id: "{{id}}"
+title: "{{title}}"
+priority: "{{priority}}"
+tags: [{{#each tags}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
+status: "open"
+created: "{{date}}"
+updated: "{{date}}"
+{{#if epicId}}
+epicId: "{{epicId}}"
+{{/if}}
+---
+
+# {{id}}: {{title}}
+
+## Priority
+{{uppercase priority}}
+
+{{#if tags}}
+## Tags
+
+{{#each tags}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{#unless (eq title description)}}
+## Description
+{{description}}
+{{/unless}}
+
+{{#if acceptanceCriteria}}
+## Acceptance Criteria
+{{acceptanceCriteria}}
+{{/if}}
+
+{{#if notes}}
+## Notes
+{{notes}}
+{{/if}}
+
+---
+_Promote to agile hierarchy: `planr backlog promote {{id}} --story` or `planr backlog promote {{id}} --quick`_
+_Close when done: `planr backlog close {{id}}`_

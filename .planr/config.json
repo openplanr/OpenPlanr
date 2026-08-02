@@ -1,0 +1,29 @@
+{
+  "projectName": "OpenPlanr",
+  "targets": [
+    "cursor",
+    "claude",
+    "codex"
+  ],
+  "outputPaths": {
+    "agile": ".planr",
+    "cursorRules": ".cursor/rules",
+    "claudeConfig": ".",
+    "codexConfig": "."
+  },
+  "idPrefix": {
+    "epic": "EPIC",
+    "feature": "FEAT",
+    "story": "US",
+    "task": "TASK",
+    "quick": "QT",
+    "backlog": "BL",
+    "sprint": "SPRINT"
+  },
+  "ai": {
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-6"
+  },
+  "defaultAgent": "claude",
+  "createdAt": "2026-04-09"
+}

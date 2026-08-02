@@ -1,0 +1,78 @@
+---
+id: "{{id}}"
+title: "{{title}}"
+slug: "{{slug}}"
+schemaVersion: "{{schemaVersion}}"
+status: "{{status}}"
+priority: "{{priority}}"
+{{#if milestone}}milestone: "{{milestone}}"{{/if}}
+{{#if po}}po: "{{po}}"{{/if}}
+created: "{{date}}"
+updated: "{{date}}"
+ui_files: []
+tech_dependencies: []
+---
+
+# {{id}}: {{title}}
+
+## Context & Goal
+
+_Describe the problem this feature solves and the expected outcome. 2-5 sentences. Focus on the user need; avoid implementation details._
+
+## Functional Requirements
+
+_Use action verbs. One bullet = one observable behavior._
+
+- The user must be able to ...
+- The system must ...
+
+## Business Rules
+
+_Constraints, validations, and logic that govern the feature._
+
+- ...
+
+## User Flows
+
+**Flow 1 — [Flow Name]:**
+1. User lands on ...
+2. User performs ...
+3. System responds with ...
+
+## Out of Scope
+
+_Explicitly list what this feature does NOT include._
+
+- ...
+
+## Acceptance Criteria
+
+_Observable, testable outcomes._
+
+- [ ] Given ..., when ..., then ...
+- [ ] Given ..., when ..., then ...
+
+## Notes for Decomposition
+
+_Optional hints to guide `planr spec decompose`. Not business requirements._
+
+- Suggested US split: ...
+- Special attention: ...
+- Preserve: ...
+
+---
+
+> **Next steps:**
+>
+> In Claude Code with the `planr-pipeline` plugin:
+> ```
+> /planr-pipeline:plan {{slug}}     # decompose + human review
+> /planr-pipeline:ship {{slug}}     # full DEV phase
+> ```
+>
+> Bare CLI:
+> ```
+> planr spec decompose {{id}}           # AI-driven
+> ```
+>
+> Schema: `https://openplanr.dev/docs/reference/spec-schema`

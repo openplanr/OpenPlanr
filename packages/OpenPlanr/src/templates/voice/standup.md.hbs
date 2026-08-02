@@ -1,0 +1,20 @@
+# Voice standup workflow — {{projectName}}
+
+**Date:** {{date}}
+
+## Suggested commands
+
+```bash
+# Transcript file → markdown on stdout
+planr voice standup --file ./transcript.txt
+
+# Save, lint, and attach to a story
+planr voice standup --file ./transcript.txt --write .planr/last-standup.md --lint --append-story US-028
+
+# Same as above via story command
+planr story standup --story US-028 --file ./transcript.txt --lint
+```
+
+## Microphone capture
+
+Live mic capture is not bundled yet. Use OS dictation, Whisper, or another STT tool, then pass the text file with `--file` or pipe stdin.

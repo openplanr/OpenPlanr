@@ -1,0 +1,28 @@
+---
+id: "{{id}}"
+title: "{{title}}"
+featureId: "{{featureId}}"
+created: "{{date}}"
+updated: "{{date}}"
+status: "planning"
+---
+
+# {{id}}: {{title}}
+
+**Feature:** [{{featureId}}](../features/{{featureFilename}}.md)
+
+## User Story
+**As a** {{role}}
+**I want to** {{goal}}
+**So that** {{benefit}}
+
+## Acceptance Criteria
+See [{{id}}-gherkin.feature](./{{id}}-gherkin.feature) for detailed Gherkin scenarios.
+
+{{#if additionalNotes}}
+## Additional Notes
+{{additionalNotes}}
+{{/if}}
+
+## Tasks
+_Run `planr task create --story {{id}}` to generate tasks._
