@@ -58,6 +58,12 @@ const repoLocalWorkItems = {
     skills: 'docs/implementation/operating-board.md',
     marketplace: 'docs/implementation/OPERATE-SPEC-007.md',
   },
+  'OPERATE-SPEC-008': {
+    pipeline: 'docs/implementation/OPERATE-SPEC-008.md',
+    cli: 'docs/implementation/OPERATE-SPEC-008.md',
+    skills: 'docs/implementation/OPERATE-SPEC-008.md',
+    marketplace: 'docs/implementation/OPERATE-SPEC-008.md',
+  },
 };
 const states = new Set([
   'drafted',
@@ -146,12 +152,8 @@ export function validateOperation(operation) {
   } else if (operation.operationDigest !== calculateOperationDigest(operation)) {
     errors.push('operationDigest does not match the canonical operation intent');
   }
-  const operationSpecId = operationIdMatch?.[1];
-  if (
-    !/^SPEC-[0-9]{3,}$/.test(operation?.umbrellaSpecId ?? '')
-    || operation.umbrellaSpecId !== operationSpecId
-  ) {
-    errors.push('umbrellaSpecId must match the operation SPEC ID');
+  if (!/^SPEC-[0-9]{3,}$/.test(operation?.umbrellaSpecId ?? '')) {
+    errors.push('umbrellaSpecId must be a canonical SPEC ID');
   }
   if (!states.has(operation?.state)) errors.push(`unsupported operation state: ${operation?.state}`);
   if (!isDateTime(operation?.createdAt) || !isDateTime(operation?.updatedAt)) {
@@ -183,9 +185,12 @@ export function validateOperation(operation) {
       if (participant?.repoLocalSpecId !== `${operation.operationId}:${expected}`) {
         errors.push(`${expected} repoLocalSpecId must link the operation and participant`);
       }
-      const expectedWorkItem = repoLocalWorkItems[operation.umbrellaSpecId]?.[expected];
+      const expectedWorkItem = (
+        repoLocalWorkItems[operation.operationId]
+        ?? repoLocalWorkItems[operation.umbrellaSpecId]
+      )?.[expected];
       if (!expectedWorkItem) {
-        errors.push(`unsupported repo-local work-item map: ${operation.umbrellaSpecId}`);
+        errors.push(`unsupported repo-local work-item map: ${operation.operationId}`);
       } else if (participant?.repoLocalWorkItem !== expectedWorkItem) {
         errors.push(
           `${expected} repoLocalWorkItem must be ${expectedWorkItem}`,

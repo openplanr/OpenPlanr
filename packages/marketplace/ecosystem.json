@@ -1,13 +1,14 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAt": "2026-08-01T22:33:13.309Z",
+  "generatedAt": "2026-08-02T11:18:07.824Z",
   "protocol": {
-    "current": "1.3.0",
+    "current": "1.4.0",
     "supported": [
       "1.0.x",
       "1.1.x",
       "1.2.x",
-      "1.3.x"
+      "1.3.x",
+      "1.4.x"
     ]
   },
   "components": {
@@ -24,7 +25,7 @@
       "cliRange": "^1.20.0"
     },
     "marketplace": {
-      "version": "1.7.0"
+      "version": "1.8.0"
     }
   },
   "adapters": [
@@ -77,7 +78,7 @@
         "pipeline": "0.36.1",
         "cli": "1.20.0",
         "skills": "1.22.0",
-        "marketplace": "1.7.0"
+        "marketplace": "1.8.0"
       },
       "certifiedRuntimes": [
         "claude-code",
@@ -121,29 +122,29 @@
       }
     },
     "agenticOperatingBoard": {
-      "status": "available",
+      "status": "unavailable",
       "command": "planr operate",
-      "protocolRange": "^1.3.0",
+      "protocolRange": "^1.4.0",
       "components": {
-        "pipeline": "0.36.1",
-        "cli": "1.20.0",
-        "skills": "1.22.0",
-        "marketplace": "1.7.0"
+        "pipeline": "0.37.1",
+        "cli": "1.21.0",
+        "skills": "1.23.0",
+        "marketplace": "1.8.0"
       },
-      "certifiedRuntimes": [
-        "claude-code"
-      ],
+      "certifiedRuntimes": [],
       "advisorDispatch": {
-        "claude-code": "mandate-capable",
-        "codex": "unsupported",
-        "cursor": "unsupported"
+        "claude-code": "native-agent",
+        "codex": "native-agent",
+        "cursor": "sequential-native"
       },
-      "missing": [],
+      "missing": [
+        "release"
+      ],
       "releaseOperation": {
-        "operationId": "OPERATE-SPEC-007",
-        "operationDigest": "sha256:bb45a15af7f7ea332b208fc66fa7088b85555046b7315df338d7f2fbf02fd0f7",
-        "state": "verified",
-        "reconciliation": "matched"
+        "operationId": "OPERATE-SPEC-008",
+        "operationDigest": "sha256:6c3156d0292a6fc1b0fee04fe7b8c945fb8d374c9c0f6f357469a0fb8c1fca95",
+        "state": "promoting",
+        "reconciliation": "incomplete"
       }
     }
   },

@@ -59,7 +59,7 @@ const guidedOperationPath = existsSync(nativeOperationPath)
 const guidedReleaseOperation = existsSync(guidedOperationPath)
   ? readJson(guidedOperationPath)
   : null;
-const agenticOperationPath = join(repo, 'examples', 'operate-agent-harness-operation.json');
+const agenticOperationPath = join(repo, 'examples', 'agent-native-operate-operation.json');
 const agenticReleaseOperation = existsSync(agenticOperationPath)
   ? readJson(agenticOperationPath)
   : null;
@@ -134,9 +134,15 @@ const agenticMarketplaceVersion = participantTarget(
 );
 const agenticReleaseVerified = isVerifiedOperation(agenticReleaseOperation);
 const agenticReleaseStaged = Boolean(agenticReleaseOperation) && !agenticReleaseVerified;
-// A staged operation exposes its candidate component tuple only inside the
-// withheld capability. Top-level versions and plugin pins remain the last
-// verified ecosystem until npm, tags, CI, and canaries reconcile.
+const releasedProtocolVersion = agenticReleaseStaged
+  ? current.protocol.current
+  : protocolVersion;
+// A staged operation exposes candidate downstream component versions only
+// inside the withheld capability. Top-level downstream versions and plugin
+// pins remain at the last verified ecosystem until npm, tags, CI, and canaries
+// reconcile. The marketplace component itself follows this repository's
+// package version so its generated metadata always describes the artifact
+// being validated on the release branch.
 const cliVersion = agenticReleaseStaged
   ? current.components.cli.version
   : guidedReleaseVerified
@@ -152,9 +158,7 @@ const skillsVersion = agenticReleaseStaged
   : guidedReleaseVerified
     ? observedSkillsVersion
     : current.components.skills.version;
-const marketplaceVersion = agenticReleaseStaged
-  ? current.components.marketplace.version
-  : marketplacePackage.version;
+const marketplaceVersion = marketplacePackage.version;
 const candidateAdapters = adapterRegistry
   ? adapterRegistry.adapters.map((adapter) =>
       normalizeOperatingAdapter(adapter, candidatePipelineVersion))
@@ -269,7 +273,7 @@ const agenticAdapters = adapterRegistry
 const agenticOperatingBoard = {
   status: agenticReleaseVerified ? 'available' : 'unavailable',
   command: 'planr operate',
-  protocolRange: '^1.3.0',
+  protocolRange: '^1.4.0',
   components: {
     pipeline: agenticPipelineVersion,
     cli: agenticCliVersion,
@@ -278,7 +282,8 @@ const agenticOperatingBoard = {
   },
   certifiedRuntimes: agenticReleaseVerified
     ? agenticAdapters
-        .filter(({ operatingAdvisorDispatch }) => operatingAdvisorDispatch === 'mandate-capable')
+        .filter(({ operatingAdvisorDispatch }) =>
+          ['native-agent', 'sequential-native'].includes(operatingAdvisorDispatch))
         .map(({ runtime }) => runtime)
     : [],
   advisorDispatch: Object.fromEntries(
@@ -324,8 +329,8 @@ const ecosystem = {
   schemaVersion: '1.1.0',
   generatedAt,
   protocol: {
-    current: protocolVersion,
-    supported: supportedProtocolRanges(protocolVersion),
+    current: releasedProtocolVersion,
+    supported: supportedProtocolRanges(releasedProtocolVersion),
   },
   components: {
     cli: { version: cliVersion, pipelineRange: `^${pipelineVersion}` },

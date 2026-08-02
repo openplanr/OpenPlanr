@@ -22,7 +22,7 @@ Then install any of the plugins below:
 | OpenPlanr CLI | 1.20.0 | pipeline ^0.36.1 |
 | Pipeline package/plugin | 0.36.1 | CLI ^1.20.0 |
 | Runtime skills | 1.22.0 | CLI ^1.20.0 |
-| Protocol | 1.3.0 | reads v1.0 artifacts; additive capabilities through v1.3.0 |
+| Protocol | 1.4.0 | reads v1.0 artifacts; additive capabilities through v1.4.0 |
 <!-- ecosystem-table:end -->
 
 <!-- plugin-table:start -->
@@ -41,7 +41,7 @@ Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in t
 
 OpenPlanr Operating Board is certified for claude-code, codex, cursor through `planr operate`.
 
-Resolved component versions: pipeline 0.36.1, CLI 1.20.0, skills 1.22.0, marketplace 1.7.0.
+Resolved component versions: pipeline 0.36.1, CLI 1.20.0, skills 1.22.0, marketplace 1.8.0.
 <!-- operating-capability:end -->
 
 `planr operate` is the recurring evidence-to-decision control plane. It creates

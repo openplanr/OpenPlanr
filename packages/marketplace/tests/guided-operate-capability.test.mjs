@@ -140,6 +140,26 @@ test('adapter normalization fails closed when native dispatch is undeclared', ()
   );
 });
 
+test('agent-native adapter normalization preserves runtime-governed dispatch', () => {
+  const normalized = normalizeOperatingAdapter(
+    {
+      id: 'codex',
+      version: '0.37.1',
+      capabilityLevel: 'workflow',
+      capabilities: {
+        operatingBoard: true,
+        interactiveQuestions: 'native',
+        toolIsolation: 'advisory',
+        operatingAdvisorDispatch: 'native-agent',
+      },
+      entrypoints: { operate: '$planr-operate' },
+    },
+    '0.37.1',
+  );
+  assert.equal(normalized.operatingAdvisorDispatch, 'native-agent');
+  assert.equal(normalized.operatingBoard.entrypoint, '$planr-operate');
+});
+
 test('verified compatibility promotes the default native cycle after reconciliation', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const guided = ecosystem.capabilities.guidedOperatingBoard;
@@ -159,30 +179,39 @@ test('verified compatibility promotes the default native cycle after reconciliat
     cli: { version: '1.20.0', pipelineRange: '^0.36.1' },
     pipeline: { version: '0.36.1', cliRange: '^1.20.0' },
     skills: { version: '1.22.0', cliRange: '^1.20.0' },
-    marketplace: { version: '1.7.0' },
+    marketplace: { version: '1.8.0' },
   });
 });
 
-test('the Protocol v1.3 harness opens only after its release ledger is verified', async () => {
+test('the Protocol v1.4 agent-native capability remains withheld until its ledger verifies', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const agentic = ecosystem.capabilities.agenticOperatingBoard;
-  assert.equal(agentic.status, 'available');
-  assert.deepEqual(agentic.missing, []);
+  assert.equal(agentic.status, 'unavailable');
+  assert.deepEqual(agentic.missing, ['release']);
+  assert.equal(agentic.protocolRange, '^1.4.0');
   assert.deepEqual(agentic.components, {
-    pipeline: '0.36.1',
-    cli: '1.20.0',
-    skills: '1.22.0',
-    marketplace: '1.7.0',
+    pipeline: '0.37.1',
+    cli: '1.21.0',
+    skills: '1.23.0',
+    marketplace: '1.8.0',
   });
   assert.deepEqual(agentic.advisorDispatch, {
-    'claude-code': 'mandate-capable',
-    codex: 'unsupported',
-    cursor: 'unsupported',
+    'claude-code': 'native-agent',
+    codex: 'native-agent',
+    cursor: 'sequential-native',
   });
-  assert.deepEqual(agentic.certifiedRuntimes, ['claude-code']);
-  assert.equal(agentic.releaseOperation.operationId, 'OPERATE-SPEC-007');
-  assert.equal(agentic.releaseOperation.state, 'verified');
-  assert.equal(agentic.releaseOperation.reconciliation, 'matched');
+  assert.deepEqual(agentic.certifiedRuntimes, []);
+  assert.equal(agentic.releaseOperation.operationId, 'OPERATE-SPEC-008');
+  assert.equal(agentic.releaseOperation.state, 'promoting');
+  assert.equal(agentic.releaseOperation.reconciliation, 'incomplete');
+});
+
+test('the SPEC-008 ledger links umbrella SPEC-005 without conflating operation identity', async () => {
+  const operation = await readJson('../examples/agent-native-operate-operation.json');
+  assert.equal(operation.operationId, 'OPERATE-SPEC-008');
+  assert.equal(operation.umbrellaSpecId, 'SPEC-005');
+  assert.equal(operation.operationDigest, calculateOperationDigest(operation));
+  assert.deepEqual(validateOperation(operation), []);
 });
 
 test('operation schema supports audited lifecycle and forward-fix state', async () => {

@@ -23,9 +23,8 @@ export function atLeast(actual, minimum) {
 }
 
 export function normalizeOperatingAdapter(adapter, pipelineVersion) {
-  const mandateDispatch = adapter.capabilities?.toolIsolation === 'enforced'
-    ? 'mandate-capable'
-    : 'unsupported';
+  const operatingAdvisorDispatch = adapter.capabilities?.operatingAdvisorDispatch
+    ?? 'unsupported';
   return {
     runtime: adapter.id,
     version: adapter.version,
@@ -39,7 +38,7 @@ export function normalizeOperatingAdapter(adapter, pipelineVersion) {
       entrypoint: adapter.entrypoints?.operate ?? null,
     },
     interactiveQuestions: adapter.capabilities?.interactiveQuestions ?? 'none',
-    operatingAdvisorDispatch: mandateDispatch,
+    operatingAdvisorDispatch,
   };
 }
 
