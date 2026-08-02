@@ -8,6 +8,11 @@ import { test } from 'node:test';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const read = (path) => readFileSync(join(root, path), 'utf8');
 
+// BL-010: CI workflows are per-REPOSITORY, so they consolidated to the monorepo
+// root and were renamed with package prefixes. Read them from there.
+const repoRoot = resolve(root, '../..');
+const readWorkflow = (name) => readFileSync(join(repoRoot, '.github/workflows', name), 'utf8');
+
 test('package metadata identifies the provenance repository and license', () => {
   const packageJson = JSON.parse(read('package.json'));
   assert.deepEqual(packageJson.repository, {
@@ -19,19 +24,28 @@ test('package metadata identifies the provenance repository and license', () => 
   assert.equal(packageJson.homepage, 'https://github.com/openplanr/planr-pipeline#readme');
 });
 
-test('publish workflow installs the exact lock before every release gate', () => {
-  const workflow = read('.github/workflows/publish.yml');
-  const install = workflow.indexOf('- run: npm ci');
-  const tests = workflow.indexOf('- run: npm test');
-  const publish = workflow.indexOf('- run: npm publish --access public --provenance');
-  assert.ok(install > 0, 'publish workflow must run npm ci');
-  assert.ok(install < tests, 'npm ci must precede package tests');
-  assert.ok(tests < publish, 'tests must precede provenance publication');
+test('release workflow publishes through changesets with provenance', () => {
+  // BL-010 replaced the per-package publish.yml (release-published -> npm publish)
+  // with a single monorepo release.yml driven by changesets. The invariant that
+  // matters is unchanged: a clean install from the single lockfile, then
+  // provenance-attested publication, with id-token permission present.
+  // Strip comment lines before any ORDERING assertion: release.yml documents its
+  // own design in a header comment that names these same commands, so a raw
+  // indexOf would match the prose and compare the wrong positions.
+  const workflow = readWorkflow('release.yml')
+    .split('\n')
+    .filter((line) => !/^\s*#/.test(line))
+    .join('\n');
+  const install = workflow.indexOf('npm ci');
+  const publish = workflow.indexOf('changeset publish');
+  assert.ok(install > 0, 'release workflow must run npm ci');
+  assert.ok(publish > install, 'npm ci must precede publication');
   assert.match(workflow, /id-token:\s*write/);
+  assert.match(workflow, /registry-url/);
 });
 
 test('hostile sandbox certification covers Chromium Firefox and WebKit', () => {
-  const workflow = read('.github/workflows/test.yml');
+  const workflow = readWorkflow('pipeline-tests.yml');
   assert.match(workflow, /browser:\s*\[chromium, firefox, webkit\]/);
   assert.match(workflow, /PLANR_BROWSER_ENGINE:\s*\$\{\{ matrix\.browser \}\}/);
   assert.match(workflow, /playwright install --with-deps \$\{\{ matrix\.browser \}\}/);

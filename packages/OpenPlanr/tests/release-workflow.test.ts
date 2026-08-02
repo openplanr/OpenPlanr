@@ -11,7 +11,6 @@ const workflow = (name: string) =>
   readFileSync(resolve(repoRoot, '.github/workflows', name), 'utf8');
 
 const releaseWorkflow = workflow('release.yml');
-const publishWorkflow = workflow('publish.yml');
 const packageScripts = (
   JSON.parse(readFileSync('package.json', 'utf8')) as {
     scripts: Record<string, string>;
@@ -23,9 +22,18 @@ describe('npm release workflows', () => {
     expect(releaseWorkflow).toContain('NODE_AUTH_TOKEN: $' + '{{ secrets.NPM_TOKEN }}');
   });
 
-  it('keeps release-triggered publishing idempotent', () => {
-    expect(publishWorkflow).toContain('run: npm run release');
-    expect(publishWorkflow).not.toContain('run: npm publish --provenance --access public');
+  it('publishes through changesets rather than a bare npm publish', () => {
+    // BL-010 deleted the separate publish.yml (release-published -> npm run
+    // release). The monorepo has ONE release workflow: changesets decides what
+    // to version and what to publish, so a hand-rolled `npm publish` here would
+    // republish packages changesets deliberately skipped.
+    expect(releaseWorkflow).toContain('changesets/action');
+    expect(releaseWorkflow).toContain('changeset publish');
+    expect(releaseWorkflow).not.toContain('run: npm publish');
+  });
+
+  it('grants the id-token permission provenance attestation requires', () => {
+    expect(releaseWorkflow).toMatch(/id-token:\s*write/);
   });
 
   it('runs excluded Operating Board integration gates through the heavy config', () => {
