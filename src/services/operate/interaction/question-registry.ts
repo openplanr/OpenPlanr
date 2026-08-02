@@ -425,14 +425,14 @@ export function operatingInitQuestionRegistry(
         'business-model',
         'text',
         'Business model',
-        'Commercial facts must come from the decision owner and are never inferred from source code.',
+        'Research may propose a cited business-model hypothesis; the owner can confirm, revise, or leave it provisional.',
         {
           required: true,
           // Deferral default: the owner can accept "Not yet specified" to record the
           // charter without stating commercials yet, instead of guessing them.
           valueSemantics: 'default',
           defaultValue: 'Not yet specified',
-          defaultReason: 'Commercial facts can be deferred; advisors never invent them.',
+          defaultReason: 'Commercial facts can be deferred instead of invented.',
           validation: { minLength: 1, maxLength: 512 },
         },
       ),
@@ -443,14 +443,14 @@ export function operatingInitQuestionRegistry(
         'ideal-customer',
         'text',
         'Ideal customer profile',
-        'Customer claims are governance context and are never guessed by advisors.',
+        'Research may propose a cited customer hypothesis; the owner can confirm, revise, or leave it provisional.',
         {
           required: true,
           // Deferral default: an owner without a stated ICP can accept "Not yet
           // specified" rather than have one inferred.
           valueSemantics: 'default',
           defaultValue: 'Not yet specified',
-          defaultReason: 'The ideal customer can be deferred; advisors never guess it.',
+          defaultReason: 'The ideal customer can be deferred instead of invented.',
           validation: { minLength: 1, maxLength: 1000 },
         },
       ),

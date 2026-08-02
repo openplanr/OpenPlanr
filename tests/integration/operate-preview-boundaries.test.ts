@@ -137,7 +137,9 @@ async function recordQuietNativeResults(input: {
   for (const role of input.roles) {
     const response = {
       outcome: 'quiet' as const,
-      proposals: [],
+      analysisMarkdown: `## ${role}\n\nNo material action is recommended for this fixture.`,
+      claims: [],
+      actions: [],
       gaps: [],
       conflicts: [],
     };
@@ -361,7 +363,7 @@ describe('Operating Board preview and dry-run boundaries', () => {
       state: 'advising',
       message: 'Operating cycle is awaiting isolated native advisors execution.',
       nextActions: [
-        expect.stringMatching(/^planr operate adapter prepare .* --role .*technology-risk/),
+        expect.stringMatching(/^planr operate harness prepare .* --role .*technology-risk/),
       ],
       handoff: {
         state: 'prepare-required',
@@ -372,7 +374,7 @@ describe('Operating Board preview and dry-run boundaries', () => {
         },
         next: [
           {
-            action: 'adapter.prepare',
+            action: 'harness.prepare',
             argv: expect.arrayContaining(['--json']),
           },
         ],

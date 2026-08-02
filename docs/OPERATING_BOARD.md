@@ -1,12 +1,10 @@
 # OpenPlanr Operating Board
 
-> **Protocol v1.3 harness migration:** native runtime mandate sessions are the
-> supported advisory execution path. CLI-managed structured-provider dispatch is
-> deprecated and fails closed when selected. The separate CLI-side `--ai` planning
-> commands remain functional in this release and print the same notice after
-> generating their artifacts. Both legacy surfaces are scheduled for removal in
-> OpenPlanr 2.0.0. See
-> [the agent-harness guide](https://openplanr.dev/docs/operate/agent-harness).
+> **Protocol v1.4 agent-native workflow:** the selected Claude Code, Codex, or
+> Cursor runtime researches the workspace and runs all six advisory roles. The
+> CLI validates, records, and materializes reversible proposal drafts; it is not
+> the reasoning engine. Runtime binding is sticky and cross-vendor fallback is
+> forbidden.
 
 `planr operate` turns verified product and engineering evidence into a concise
 operating brief and governed next actions. It helps a technical founder or
@@ -14,15 +12,15 @@ product-engineering lead decide what should happen next; it does not deploy,
 publish, spend, contact customers, or invoke SHIP.
 
 ```text
-product workspace + charter + verified evidence
+skill/plugin supplies the procedure and role instructions
                          ↓
-              independent advisory lenses
+selected runtime researches the product workspace
                          ↓
-          deterministic consolidation and scoring
+      CEO | CTO | CPO | CMO | COO → Chair
                          ↓
-              DEV | OWNER | AGENT routes
+ cited report + proposed Quick Task/Spec/Epic/decision drafts
                          ↓
-             accept → apply → PLAN review
+          review → approve draft → PLAN review
                          │
                          │ separate, user-invoked delivery workflow
                          ▼
@@ -34,7 +32,7 @@ product workspace + charter + verified evidence
 
 ## First five minutes
 
-Inspecting and trying the deterministic demo require neither initialization nor
+Inspection and the deterministic demo require neither initialization nor
 provider credentials:
 
 ```bash
@@ -42,59 +40,38 @@ planr operate inspect
 planr operate demo
 ```
 
-Initialize from a Git worktree or an existing OpenPlanr project, then run the
-first cycle:
+In an installed runtime, invoke the workflow once:
 
 ```bash
-planr operate init
-planr operate run
-planr operate review
+$planr-operate                    # Codex
+/planr-pipeline:operate           # Claude Code
 ```
 
-When the configured runtime exposes a certified native advisor bridge, one
-explicit request to run a cycle continues through independent CEO, CTO, CPO,
-CMO, and COO analysis, Chair consolidation, and report rendering without asking
-you to copy internal adapter commands. That intent authorizes reversible local
-cycle work only. Provider consent, finding disposition, route application,
-planning artifacts, PLAN, SHIP, and external effects remain separate gates.
-
-Initialization guides you through a profile, product charter, control
-repository, read-only component repositories, decision owner, planning engine,
-runtime, privacy policy, evidence sources, cadence, and IANA display timezone.
-The default cadence is manual.
+The skill initializes when needed, researches the project before asking
+questions, runs independent CEO, CTO, CPO, CMO, and COO advisors, synthesizes
+them through the Chair, writes Markdown and JSON reports, and materializes
+qualified proposed drafts. Existing initialized projects skip onboarding. The
+cycle stops at `reviewable`; draft approval, PLAN, SHIP, provider consent,
+connected research, and external effects remain separate gates.
 
 ### Guided initialization
 
-One canonical question registry drives both the terminal flow and
-machine-readable runtimes. It progresses through:
+The bootstrap agent first inspects repository documentation and code, pricing
+and billing surfaces, product journeys, Planr artifacts, Git history, delivery
+state, risks, and incomplete loops. It proposes purpose, stage, business model,
+likely customers, goals, and metrics as cited claims labeled `observed`,
+`inferred`, `hypothesis`, or `unknown`. A single compact review asks only for
+genuine human authority, such as the final decision owner, and lets the owner
+confirm or amend inferred context. “Find it from the project” is a request to
+continue research, not a dead end.
 
-1. **Foundation** — profile, explicit decision owner, planning engine, runtime,
-   cadence, timezone, evidence sensitivity, sources, imports, and component
-   roots.
-2. **Product charter** — purpose, stage, business model, ideal customer, goals,
-   success metrics, human guardrails, and known unknowns.
-3. **Review** — exact writes, warnings, evidence readiness, and a write-free
-   preview.
+Local research uses the runtime's existing workspace permissions and requires
+no additional provider consent. Connected or web research is opt-in per cycle
+and receives a digest-bound preview before use.
 
-Suggestions such as the Git user name, detected runtime, and local timezone are
-visibly suggestions: accepting one is an explicit answer. OpenPlanr never
-infers the decision owner, planning authority, goals, business facts, metrics,
-guardrails, or known unknowns.
-
-For the charter purpose only, OpenPlanr may offer a deterministic local draft
-from a sanitized `package.json#description` or, when that is absent, the Planr
-project name. The question includes its source, evidence digest, confidence
-category, and rule-engine version. The user must explicitly accept, replace,
-or skip the draft. Instruction-shaped or secret-bearing metadata is ignored;
-unsupported charter fields stay blank. This assistance performs no
-provider/model call and writes no project state.
-
-In `--json` mode, omitted input returns `E_OPERATE_INPUT_REQUIRED` and a
-Protocol v1.2 `guided-questionnaire` instead of prompting or returning a generic
-configuration error. New questionnaires use additive schema 1.1 and include a
-self-describing, digest-safe bounded-stdin `submission` contract. Original
-schema 1.0 questionnaires remain readable. Fully specified flag-based
-automation remains supported:
+The legacy guided-questionnaire transport remains readable for existing v1.2
+automation. New v1.4 runtime workflows use native questions and a compact
+context review. Fully specified flag-based automation remains supported:
 
 ```bash
 planr operate init \
@@ -125,7 +102,7 @@ route application, PLAN, or SHIP.
 
 ## Advisory lenses
 
-Operating Board uses six canonical, read-only lenses:
+Operating Board uses six canonical runtime-native lenses:
 
 | Lens | Canonical role | Scope |
 |---|---|---|
@@ -137,23 +114,21 @@ Operating Board uses six canonical, read-only lenses:
 | Chair | `chair` | Reconcile verified proposals, merge duplicates, and sequence conflicts |
 
 These are advisory roles, not the pipeline's nine delivery agents and not
-autonomous executives. Their canonical mandates, evidence permissions,
-forbidden actions, budgets, output schemas, and minimum-readiness rules live in
-the Protocol-owned operating-role registry. OpenPlanr derives an immutable,
-digest-bound role pack for each invocation: trusted brief, role-filtered
-untrusted evidence, bounded operating context, and input digest. Structured
-providers consume that pack directly. A certified native runtime may execute
-the same pack in either `native-isolated` or `native-bounded` mode. An isolated
-adapter enforces an empty tool set. A bounded adapter such as Codex receives
-only the immutable role pack and must not inspect the workspace, environment,
-network, or other tools while acting as that advisor. It returns the compact
-`operating-advisor-response@1.2.0`; OpenPlanr validates evidence references and
-budgets, then adds canonical IDs, producer metadata, and digests. Independent
-lenses are finalized before OpenPlanr prepares the Chair pack from their
-verified results. This avoids divergent hand-written CEO or CTO prompt files
-while preserving explicit, testable prompt contracts.
+autonomous executives. Canonical procedures and role instructions live in
+`planr-pipeline` and are generated for all three runtimes. Each agent receives
+a mandate, workspace roots, labeled context, forbidden effects, and an output
+schema—not a serialized repository body. The agent investigates with its
+current runtime permissions and returns flexible `analysisMarkdown` plus typed
+claims, actions, gaps, and conflicts. Material facts and actions require
+resolvable citations. OpenPlanr rejects only invalid claims/actions, records
+valid results, and then prepares the Chair synthesis.
 
-### Native adapter lifecycle
+Codex with advisory tool-isolation remains Operate-capable under
+`assurance: runtime-governed`; Planr grants it no extra permission. Claude Code
+and Cursor use the same policy. Native subagents run in parallel when available,
+with a sequential fallback inside the same selected runtime.
+
+### Native harness lifecycle
 
 When native execution is required, the public run result returns a
 Protocol-validated `operating-adapter-handoff` before prepare. That object is
@@ -165,7 +140,7 @@ the complete state-aware execution contract for the current boundary:
 - `next[]` contains only exact argv arrays legal in the current state;
 - `recovery[]` contains only valid interrupted-session actions.
 
-The runtime executes those arrays verbatim. It must not add a role suffix to
+The skill executes those arrays internally. It must not add a role suffix to
 the idempotency key, replace any binding field, derive a command from prose, or
 call an internal command with `--help` to discover what comes next. Each
 successful record returns a new handoff containing only the roles still
@@ -174,8 +149,8 @@ finalize, a cycle-bound continuation is the sole next action.
 
 ```text
 independent advisors or Chair:
-prepare-required → record-required → finalize-required → continue-required
-                            └───────────────→ cancelled
+harness prepare → harness record → harness finalize → governed continuation
+                                  └──────────────→ harness cancel
 ```
 
 `resume` returns the current state of the same unexpired, digest-bound session.
@@ -198,7 +173,7 @@ artifacts, PLAN, SHIP, or external actions.
 
 ### Human-readable and machine-readable results
 
-The dashboard is optional. Every reviewable cycle can be rendered directly in
+The dashboard is optional. Every reviewable cycle is persisted and can be rendered directly in
 the terminal or returned as strict JSON:
 
 ```bash
@@ -208,12 +183,11 @@ planr operate report --format json      # structured terminal output
 planr operate report --json             # one versioned automation result
 ```
 
-The report includes the cycle brief, separate CEO/CTO/CPO/CMO/COO/Chair
-recommendations, cited evidence gaps and conflicts, and exact next commands.
-Governed DEV routes remain the preferred path to a substantive spec and PLAN
-decomposition. A user may also create an OpenPlanr quick task or task from a
-specific finding using the report's explicit conversion command; nothing is
-converted or applied automatically.
+The report includes executive synthesis, separate CEO/CTO/CPO/CMO/COO/Chair
+analysis, agreements, conflicts, priorities, decisions, experiments, proposed
+metrics, cited gaps, and exact next actions. Qualified recommendations also
+create canonical proposed Quick Task, Spec, Epic, decision, or agent-artifact
+drafts. They are idempotent and reversible, but never approved automatically.
 
 ### Planning-only installations
 

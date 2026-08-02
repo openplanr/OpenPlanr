@@ -251,7 +251,7 @@ export async function renderOperatingDecisionBriefArtifact(
   const { brief, decision, redactedEvidenceRefs } = buildDecisionBriefInput(source, ceiling);
   const envelope = build(brief, decision);
   const artifact = envelope.artifacts[0];
-  if (!artifact || artifact.kind !== 'html' || typeof artifact.html !== 'string') {
+  if (artifact?.kind !== 'html' || typeof artifact.html !== 'string') {
     throw new OperateError(
       'E_OPERATE_ARTIFACT_REJECTED',
       'The decision-brief renderer did not return a single HTML artifact.',

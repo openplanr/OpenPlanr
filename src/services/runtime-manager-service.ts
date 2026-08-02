@@ -1472,21 +1472,21 @@ export async function runtimeDoctor(
       const valid =
         /^name:\s*planr-operate$/mu.test(content) &&
         /`planr operate(?:\s|`)/u.test(content) &&
-        /## Default workflow/u.test(content) &&
+        /# Planr Operate — Codex-native workflow/u.test(content) &&
         /planr operate inspect --json/u.test(content) &&
-        /When `data\.initialized` is `true`, do not reopen initialization/u.test(content) &&
-        /bare skill invocation as the explicit request for one cycle/u.test(content) &&
-        /structured chat one\s+question at a time/u.test(content) &&
-        /never dump the whole questionnaire as a form/u.test(content) &&
-        /planr operate report/u.test(content) &&
-        /schema-valid `questionnaire` and `actions`/u.test(content) &&
-        /explicit request to \*\*run one Operating Board cycle\*\*/u.test(content) &&
-        /Do not ask\s+the user to paste or manually rerun/u.test(content) &&
-        /operating-advisor-response@1\.3\.0/u.test(content) &&
-        /CEO, CTO, CPO, CMO, COO, and Chair reports/u.test(content) &&
-        /digest-bound adapter prepare/u.test(content) &&
+        /bare `\$planr-operate`/u.test(content) &&
+        /Never dump a questionnaire/u.test(content) &&
+        /compact context review/u.test(content) &&
+        /If the user says “find it from the project,” continue investigating/u.test(content) &&
+        /`status`, `report`, `context show`/u.test(content) &&
+        /operating-advisor-response@1\.4/u.test(content) &&
+        /CEO, CTO, CPO, CMO, COO, then \[Chair\]/u.test(content) &&
+        /runtimeBinding: required/u.test(content) &&
+        /crossRuntimeFallback: false/u.test(content) &&
+        /harness prepare\|record\|finalize\|resume\|cancel/u.test(content) &&
+        /Never invoke another vendor runtime/u.test(content) &&
         !/`planr-pipeline\s+[^`]+`/u.test(content) &&
-        /Never invoke SHIP/u.test(content);
+        /Never deploy, publish, spend, contact customers/u.test(content);
       diagnostics.push({
         code: 'operate-skill',
         status: valid ? 'pass' : 'fail',
@@ -1512,14 +1512,17 @@ export async function runtimeDoctor(
     } else if (cursorOperateRule && existsSync(cursorOperateRule.target)) {
       const content = readFileSync(cursorOperateRule.target, 'utf8');
       const valid =
-        /OpenPlanr Operating Board adapter policy/u.test(content) &&
-        /`planr operate`/u.test(content) &&
+        /# OpenPlanr Operate — Cursor-native workflow/u.test(content) &&
         /planr operate inspect\s+--json/u.test(content) &&
-        /bare invocation is the explicit cycle\s+request/u.test(content) &&
-        /one\s+question at a time/u.test(content) &&
-        /Never dump the full questionnaire as a form/u.test(content) &&
+        /one complete Cursor-bound cycle/u.test(content) &&
+        /Never dump a questionnaire/u.test(content) &&
+        /v1\.4 response/u.test(content) &&
+        /runtimeBinding: required/u.test(content) &&
+        /crossRuntimeFallback: false/u.test(content) &&
+        /internal `harness` lifecycle invisibly/u.test(content) &&
+        /Never invoke another vendor runtime/u.test(content) &&
         !/`planr-pipeline\s+[^`]+`/u.test(content) &&
-        /Never auto-chain SHIP/u.test(content);
+        /do not approve, accept, apply, PLAN, SHIP/u.test(content);
       diagnostics.push({
         code: 'operate-cursor-rule',
         status: valid ? 'pass' : 'fail',

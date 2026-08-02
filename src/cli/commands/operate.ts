@@ -20,7 +20,11 @@ import { readOperatingDecisionBriefSource } from '../../services/operate/reports
 import { promptConfirm } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
 
-const MAX_STDIN_BYTES = 64 * 1024;
+// Runtime-authored Protocol v1.4 reports can carry rich Markdown and typed
+// sidecars. This bounds only the returned report document; agents inspect the
+// workspace directly, so repository size is never serialized through stdin.
+const MAX_GUIDED_ANSWER_BYTES = 64 * 1024;
+const MAX_AGENT_REPORT_BYTES = 256 * 1024;
 
 function collect(value: string, previous: string[]): string[] {
   return [...previous, value];
@@ -34,7 +38,10 @@ function wantsJson(command: Command, options: OptionValues): boolean {
   return Boolean(options.json || command.optsWithGlobals().json);
 }
 
-async function readBoundedStdin(enabled: boolean): Promise<string | undefined> {
+async function readBoundedStdin(
+  enabled: boolean,
+  maxBytes = MAX_GUIDED_ANSWER_BYTES,
+): Promise<string | undefined> {
   if (!enabled) return undefined;
   if (process.stdin.isTTY) {
     const error = new Error(
@@ -48,8 +55,8 @@ async function readBoundedStdin(enabled: boolean): Promise<string | undefined> {
   for await (const value of process.stdin) {
     const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
     bytes += chunk.byteLength;
-    if (bytes > MAX_STDIN_BYTES) {
-      const error = new Error(`Standard input exceeds the ${MAX_STDIN_BYTES}-byte limit.`);
+    if (bytes > maxBytes) {
+      const error = new Error(`Standard input exceeds the ${maxBytes}-byte limit.`);
       error.name = 'E_OPERATE_INPUT_TOO_LARGE';
       throw error;
     }
@@ -69,12 +76,15 @@ async function readBoundedStdin(enabled: boolean): Promise<string | undefined> {
  * entry, so a contract-conformant runtime never has to assume stdin is the only
  * channel. Exported for direct parity testing.
  */
-export async function readBoundedInitAnswers(options: OptionValues): Promise<string | undefined> {
+export async function readBoundedInitAnswers(
+  options: OptionValues,
+  maxBytes = MAX_GUIDED_ANSWER_BYTES,
+): Promise<string | undefined> {
   const answersFile =
     typeof options.answersFile === 'string' && options.answersFile.trim()
       ? options.answersFile
       : undefined;
-  if (answersFile === undefined) return readBoundedStdin(Boolean(options.stdin));
+  if (answersFile === undefined) return readBoundedStdin(Boolean(options.stdin), maxBytes);
   const buffer = await readFile(answersFile).catch(() => {
     const error = new Error(
       `Unable to read the answers file at ${answersFile}. Provide a readable bounded JSON document.`,
@@ -82,8 +92,8 @@ export async function readBoundedInitAnswers(options: OptionValues): Promise<str
     error.name = 'E_OPERATE_STDIN_REQUIRED';
     throw error;
   });
-  if (buffer.byteLength > MAX_STDIN_BYTES) {
-    const error = new Error(`The answers file exceeds the ${MAX_STDIN_BYTES}-byte limit.`);
+  if (buffer.byteLength > maxBytes) {
+    const error = new Error(`The answers file exceeds the ${maxBytes}-byte limit.`);
     error.name = 'E_OPERATE_INPUT_TOO_LARGE';
     throw error;
   }
@@ -146,7 +156,7 @@ function renderHuman(result: OperateActionResult): void {
   // reading raw JSON, how long the prepared session is still valid.
   if (
     typeof result.action === 'string' &&
-    result.action.startsWith('adapter.') &&
+    (result.action.startsWith('adapter.') || result.action.startsWith('harness.')) &&
     result.data &&
     typeof result.data === 'object' &&
     !Array.isArray(result.data)
@@ -185,10 +195,21 @@ async function executeForResult(
   args: Record<string, string | undefined>,
   options: OptionValues,
 ): Promise<OperateActionResult> {
-  const json = wantsJson(command, options);
+  // Commander keeps options declared on `planr operate` (focus/depth/research/
+  // runtime) on the parent command. Merge the complete command chain here so a
+  // subcommand never silently loses an explicitly selected runtime and falls
+  // back to `auto`/`unknown`. Leaf options retain precedence.
+  const resolvedOptions: OptionValues = { ...command.optsWithGlobals(), ...options };
+  const json = wantsJson(command, resolvedOptions);
   let stdin: string | undefined;
   try {
-    stdin = await readBoundedInitAnswers(options);
+    const richAgentDocument = ['context.review', 'harness.record', 'adapter.record'].includes(
+      action,
+    );
+    stdin = await readBoundedInitAnswers(
+      resolvedOptions,
+      richAgentDocument ? MAX_AGENT_REPORT_BYTES : MAX_GUIDED_ANSWER_BYTES,
+    );
   } catch (error) {
     const code =
       error instanceof Error && error.name.startsWith('E_')
@@ -197,7 +218,11 @@ async function executeForResult(
     const recovery =
       code === 'E_OPERATE_STDIN_REQUIRED'
         ? 'Attach one bounded JSON document to stdin before launching this exact command.'
-        : 'Reduce the stdin payload to 65536 bytes or fewer and retry.';
+        : `Reduce the stdin payload to ${
+            ['context.review', 'harness.record', 'adapter.record'].includes(action)
+              ? MAX_AGENT_REPORT_BYTES
+              : MAX_GUIDED_ANSWER_BYTES
+          } bytes or fewer and retry.`;
     const result: OperateActionResult = {
       schemaVersion: '1.0.0',
       protocolVersion: '1.2.0',
@@ -225,10 +250,12 @@ async function executeForResult(
       Object.entries(args).filter((entry): entry is [string, string] => entry[1] !== undefined),
     ),
     options: {
-      ...options,
-      ...(Array.isArray(options.component) ? { components: options.component } : {}),
+      ...resolvedOptions,
+      ...(Array.isArray(resolvedOptions.component)
+        ? { components: resolvedOptions.component }
+        : {}),
       json,
-      yes: Boolean(options.yes || program.opts().yes),
+      yes: Boolean(resolvedOptions.yes || program.opts().yes),
     },
     interactive: !json && !isNonInteractive(),
     ...(stdin === undefined ? {} : { stdin }),
@@ -408,7 +435,7 @@ function confirmed(command: Command): Command {
 function stdin(command: Command): Command {
   return command.option(
     '--stdin',
-    `read the sensitive answer from standard input (maximum ${MAX_STDIN_BYTES} bytes)`,
+    `read one runtime-authored document from standard input (maximum ${MAX_AGENT_REPORT_BYTES} bytes)`,
     false,
   );
 }
@@ -458,9 +485,48 @@ function readGroup(
 }
 
 export function registerOperateCommand(program: Command): void {
-  const operate = program
-    .command('operate')
-    .description('Turn verified product evidence into governed DEV, OWNER, and AGENT routes');
+  const operate = json(
+    program
+      .command('operate')
+      .description(
+        'Turn verified product evidence into governed DEV, OWNER, and AGENT routes through the agent-native Operating Board',
+      )
+      .option('--focus <lens>', 'evaluate one lens (repeatable)', collect, [])
+      .option('--depth <depth>', 'standard or deep', 'standard')
+      .option('--research <mode>', 'local or connected', 'local')
+      .option('--runtime <runtime>', 'auto, claude, codex, or cursor', 'auto'),
+  );
+
+  operate.action(function (this: Command, opts) {
+    return (async () => {
+      const inspected = await executeOperateAction({
+        action: 'inspect',
+        projectRoot: projectDir(program),
+        options: {},
+        interactive: false,
+      });
+      const initialized = Boolean(
+        inspected.data &&
+          typeof inspected.data === 'object' &&
+          (inspected.data as { initialized?: unknown }).initialized,
+      );
+      if (initialized) {
+        await executeRunWithProviderConsent(program, this, opts);
+        return;
+      }
+      await execute(
+        program,
+        this,
+        'context.refresh',
+        {},
+        {
+          ...opts,
+          preview: false,
+          yes: opts.research === 'connected' ? Boolean(opts.yes) : true,
+        },
+      );
+    })();
+  });
 
   json(
     operate
@@ -521,12 +587,12 @@ export function registerOperateCommand(program: Command): void {
           .option('--resume <session-id>', 'resume a machine-local guided initialization session')
           .option(
             '--stdin',
-            `read one guided answer envelope (maximum ${MAX_STDIN_BYTES} bytes)`,
+            `read one guided answer envelope (maximum ${MAX_GUIDED_ANSWER_BYTES} bytes)`,
             false,
           )
           .option(
             '--answers-file <path>',
-            `read one guided answer envelope from a file (stdin parity, maximum ${MAX_STDIN_BYTES} bytes)`,
+            `read one guided answer envelope from a file (stdin parity, maximum ${MAX_GUIDED_ANSWER_BYTES} bytes)`,
           )
           .option('--cancel-session', 'cancel and remove the resumed guided session', false)
           .option(
@@ -670,6 +736,52 @@ export function registerOperateCommand(program: Command): void {
     return execute(program, this, 'profiles.validate', { file }, opts);
   });
 
+  const context = operate
+    .command('context')
+    .description('Research, validate, and review runtime-authored product context');
+  json(context.command('show')).action(function (this: Command, opts) {
+    return execute(program, this, 'context.show', {}, opts);
+  });
+  json(
+    preview(
+      confirmed(
+        context
+          .command('refresh')
+          .option('--research <mode>', 'local or connected', 'local')
+          .option('--runtime <runtime>', 'auto, claude, codex, or cursor', 'auto')
+          .option('--confirm <digest>', 'confirm the exact connected-research preview'),
+      ),
+    ),
+  ).action(function (this: Command, opts) {
+    return execute(program, this, 'context.refresh', {}, opts);
+  });
+  json(
+    stdin(
+      context
+        .command('review')
+        .description('Validate runtime-authored context claims against the prepared workspace'),
+    ),
+  ).action(function (this: Command, opts) {
+    return execute(program, this, 'context.review', {}, opts);
+  });
+
+  const drafts = readGroup(
+    program,
+    operate.command('drafts').description('Inspect and govern provisional Operate drafts'),
+    'drafts',
+    'draftId',
+  );
+  json(
+    confirmed(drafts.command('approve <draftId>').description('Approve one proposed draft')),
+  ).action(function (this: Command, draftId: string, opts) {
+    return execute(program, this, 'drafts.approve', { draftId }, opts);
+  });
+  json(
+    confirmed(drafts.command('discard <draftId>').description('Discard one proposed draft')),
+  ).action(function (this: Command, draftId: string, opts) {
+    return execute(program, this, 'drafts.discard', { draftId }, opts);
+  });
+
   json(
     confirmed(
       preview(
@@ -677,15 +789,18 @@ export function registerOperateCommand(program: Command): void {
           .command('run')
           .description('Collect evidence and produce a reviewable operating cycle')
           .option('--cycle-id <cycleId>', 'resume exactly this operating cycle')
-          .option('--focus <lens>', 'evaluate one lens (repeatable)', collect, [])
-          .option('--depth <depth>', 'standard or deep', 'standard')
-          .option('--runtime <runtime>', 'auto, claude, codex, or cursor', 'auto')
           .option('--offline', 'use local evidence and deterministic providers only', false)
           .option('--review-only', 'reconcile existing routes and outcomes only', false),
       ),
     ),
-  ).action(function (this: Command, opts) {
-    return executeRunWithProviderConsent(program, this, opts).then(() => undefined);
+  ).action(function (this: Command, _opts) {
+    // Commander passes parent option values when a subcommand repeats option
+    // names declared on `operate`. Read the concrete `run` command directly so
+    // explicit focus/depth/runtime flags are never replaced by parent defaults.
+    return executeRunWithProviderConsent(program, this, {
+      ...operate.opts(),
+      ...this.opts(),
+    }).then(() => undefined);
   });
 
   json(operate.command('review [cycleId]').description('Review a cycle at the human gate')).action(
@@ -989,33 +1104,35 @@ export function registerOperateCommand(program: Command): void {
     return execute(program, this, 'security.repair', {}, opts);
   });
 
-  const adapter = operate
-    .command('adapter')
-    .description('Machine-only, lease-bound runtime adapter lifecycle');
-  json(
-    machineBinding(
-      adapter.command('prepare').description('Prepare immutable Protocol v1.3 advisor mandates'),
-    ).option('--role <roles>', 'comma-separated advisor roles bound to this isolated dispatch'),
-  ).action(function (this: Command, opts) {
-    return execute(program, this, 'adapter.prepare', {}, { ...opts, json: true });
-  });
-  json(
-    stdin(
+  const lifecycle = (namespace: 'harness' | 'adapter', description: string): void => {
+    const group = operate.command(namespace).description(description);
+    json(
       machineBinding(
-        adapter
-          .command('record')
-          .description(
-            'Record one citation-bearing advisor result matching the prepared mandate schema',
-          )
-          .requiredOption('--role <role>', 'operating advisor role'),
-      ),
-    ),
-  ).action(function (this: Command, opts) {
-    return execute(program, this, 'adapter.record', {}, { ...opts, json: true });
-  });
-  for (const action of ['finalize', 'resume', 'cancel']) {
-    json(machineBinding(adapter.command(action))).action(function (this: Command, opts) {
-      return execute(program, this, `adapter.${action}`, {}, { ...opts, json: true });
+        group
+          .command('prepare')
+          .description('Prepare immutable Protocol v1.4 runtime-native role mandates'),
+      ).option('--role <roles>', 'comma-separated operating roles bound to this dispatch'),
+    ).action(function (this: Command, opts) {
+      return execute(program, this, `${namespace}.prepare`, {}, { ...opts, json: true });
     });
-  }
+    json(
+      stdin(
+        machineBinding(
+          group
+            .command('record')
+            .description('Record one cited runtime-authored result for its prepared mandate')
+            .requiredOption('--role <role>', 'operating advisor role'),
+        ),
+      ),
+    ).action(function (this: Command, opts) {
+      return execute(program, this, `${namespace}.record`, {}, { ...opts, json: true });
+    });
+    for (const action of ['finalize', 'resume', 'cancel']) {
+      json(machineBinding(group.command(action))).action(function (this: Command, opts) {
+        return execute(program, this, `${namespace}.${action}`, {}, { ...opts, json: true });
+      });
+    }
+  };
+  lifecycle('harness', 'Machine-only, runtime-bound agent harness lifecycle');
+  lifecycle('adapter', 'Deprecated Protocol v1.3 lifecycle alias; use harness');
 }

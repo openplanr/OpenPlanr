@@ -15,6 +15,19 @@ import {
   readOperatingLastRunAt,
   validateOperatingConfiguration,
 } from './config.js';
+import {
+  operatingInitializationAnswersFromResearch,
+  prepareOperatingContextResearch,
+  readOperatingContextResearch,
+  recordOperatingContextResearch,
+} from './context-research.js';
+import {
+  approveOperatingDraft,
+  discardOperatingDraft,
+  listOperatingDrafts,
+  materializeOperatingDrafts,
+  showOperatingDraft,
+} from './drafts.js';
 import { runOperatingCycle } from './engine.js';
 import { OperatingEventStore } from './event-store.js';
 import { parseStrictJson } from './evidence-import.js';
@@ -70,6 +83,7 @@ import {
 } from './maintenance.js';
 import { migrateOperatingStorageLayoutOnOpen } from './migration.js';
 import { renderOperatingBrief } from './projection.js';
+import { persistOperatingProjections } from './projection-persistence.js';
 import { loadOperatingProtocol, resolveOperatingPipelineRoot } from './protocol.js';
 import { readOperatingReport } from './reports.js';
 import {
@@ -160,7 +174,7 @@ function detectOperatingHostRuntime(): 'claude' | 'codex' | 'cursor' | undefined
 }
 
 async function resolvedOperatingRuntime(projectRoot: string, requested: string): Promise<string> {
-  if (requested !== 'auto') return requested;
+  if (requested !== 'auto') return requested === 'claude' ? 'claude-code' : requested;
   const persisted = await readFile(
     path.join(resolveOperatingPaths(projectRoot).localRoot, 'preferences.json'),
     'utf8',
@@ -170,12 +184,13 @@ async function resolvedOperatingRuntime(projectRoot: string, requested: string):
       return typeof runtime === 'string' && runtime ? runtime : 'auto';
     })
     .catch(() => 'auto');
-  if (persisted !== 'auto') return persisted;
+  if (persisted !== 'auto') return persisted === 'claude' ? 'claude-code' : persisted;
   // A persisted (or absent) `auto` preference must never silently disable native
   // dispatch inside a capable host: resolve it to the detected runtime identity
   // so `usesNativeOperatingAdvisors` evaluates the real host, not the `auto`
   // placeholder that always returns false.
-  return detectOperatingHostRuntime() ?? 'auto';
+  const detected = detectOperatingHostRuntime();
+  return detected === 'claude' ? 'claude-code' : (detected ?? 'auto');
 }
 
 export async function usesNativeOperatingAdvisors(
@@ -209,9 +224,13 @@ export async function usesNativeOperatingAdvisors(
   if (
     // `native-read-only` is the US-001/T-001 adapters-registry capability name that
     // supersedes the earlier isolation labels; recognize it alongside them.
-    ['native-isolated', 'native-bounded', 'native-read-only'].includes(
-      adapter.capabilities.operatingAdvisorDispatch ?? '',
-    )
+    [
+      'native-agent',
+      'sequential-native',
+      'native-isolated',
+      'native-bounded',
+      'native-read-only',
+    ].includes(adapter.capabilities.operatingAdvisorDispatch ?? '')
   ) {
     return true;
   }
@@ -386,6 +405,9 @@ const OPERATE_EXIT_CODES = {
   E_OPERATE_MISSION_PACKET_BUDGET: 6,
   E_OPERATE_MISSION_UNAVAILABLE: 3,
   E_OPERATE_SESSION_INVALID: 2,
+  E_OPERATE_RUNTIME_MISMATCH: 5,
+  E_OPERATE_DRAFT_UNAPPROVED: 4,
+  E_RUNTIME_UNSUPPORTED: 3,
 } as const satisfies Readonly<Record<OperateErrorCode, number>>;
 
 function operateExitCode(code: OperateErrorCode): number {
@@ -914,6 +936,24 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
   // equally truthful: Git can suggest the decision owner and the installed
   // pipeline can suggest the planning-engine handoff.
   const gitUserName = await probeGitUserName(request.projectRoot);
+  // Agent-native bootstrap researches first and stores epistemically labelled
+  // context. Use it as provisional initialization input so the old serial
+  // questionnaire does not ask the owner to retype discoverable project facts.
+  // Explicit user/runtime answers always win; decisionOwner is intentionally
+  // never inferred here because it is an authority assignment.
+  if (!resumeId) {
+    const researched = await operatingInitializationAnswersFromResearch(request.projectRoot);
+    if (researched) {
+      supplied = normalizeOperatingInitializationAnswers({
+        ...researched,
+        ...supplied,
+        charter: {
+          ...researched.charter,
+          ...supplied.charter,
+        },
+      });
+    }
+  }
   const context = {
     projectRoot: request.projectRoot,
     ...bindings,
@@ -1197,6 +1237,22 @@ async function run(request: OperateActionRequest): Promise<OperateActionResult> 
   const requestedRuntime = option(request, 'runtime', 'auto');
   const resolvedRuntime = await resolvedOperatingRuntime(request.projectRoot, requestedRuntime);
   const nativeAdvisors = await usesNativeOperatingAdvisors(request.projectRoot, requestedRuntime);
+  if (
+    resolvedRuntime !== 'auto' &&
+    !nativeAdvisors &&
+    !option(request, 'offline', false) &&
+    !option(request, 'reviewOnly', false)
+  ) {
+    throw new OperateError(
+      'E_RUNTIME_UNSUPPORTED',
+      `Runtime ${resolvedRuntime} does not expose a compatible agent-native Operate workflow.`,
+      {
+        runtime: resolvedRuntime,
+        recovery:
+          'Run `planr setup --scope user`, then restart the runtime so its generated Operate workflow is available.',
+      },
+    );
+  }
   const deferAdvisors =
     !option(request, 'offline', false) &&
     !option(request, 'dryRun', false) &&
@@ -1241,6 +1297,24 @@ async function run(request: OperateActionRequest): Promise<OperateActionResult> 
     deferAdvisors,
   });
   const projected = result.state?.cycles.find((cycle) => cycle.id === result.cycle.id);
+  const drafts =
+    !result.preview &&
+    !result.dryRun &&
+    !result.nativeHandoff &&
+    ['reviewable', 'closed'].includes(projected?.state ?? '')
+      ? await materializeOperatingDrafts({
+          projectRoot: request.projectRoot,
+          cycleId: result.cycle.id,
+        })
+      : { created: [], existing: [], rejected: [] };
+  if (drafts.created.length > 0 && result.state) {
+    await persistOperatingProjections({
+      projectRoot: request.projectRoot,
+      state: result.state,
+      revalidateEventHead: async () =>
+        (await new OperatingEventStore(request.projectRoot).replay()).eventHead,
+    });
+  }
   const counts = {
     findings:
       result.state?.findings.filter((entry) => entry.cycleId === result.cycle.id).length ?? 0,
@@ -1248,7 +1322,7 @@ async function run(request: OperateActionRequest): Promise<OperateActionResult> 
       result.state?.decisions.filter((entry) => entry.cycleId === result.cycle.id).length ?? 0,
     gaps: result.state?.dataGaps.filter((entry) => entry.cycleId === result.cycle.id).length ?? 0,
     specs: result.state?.specLinks.filter((entry) => entry.cycleId === result.cycle.id).length ?? 0,
-    artifacts: 0,
+    artifacts: drafts.created.length + drafts.existing.length,
   };
   const handoff = result.nativeHandoff
     ? await createOperatingAdapterStartHandoff({
@@ -1286,6 +1360,9 @@ async function run(request: OperateActionRequest): Promise<OperateActionResult> 
     paths: {
       cycle: `.planr/operate/cycles/${result.cycle.id}`,
       brief: `.planr/operate/cycles/${result.cycle.id}/brief.md`,
+      report: `.planr/operate/cycles/${result.cycle.id}/report.md`,
+      reportJson: `.planr/operate/cycles/${result.cycle.id}/report.json`,
+      actions: `.planr/operate/cycles/${result.cycle.id}/actions.md`,
     },
     counts,
     handoff,
@@ -1297,8 +1374,119 @@ async function run(request: OperateActionRequest): Promise<OperateActionResult> 
       ]),
     ],
     nextActions,
-    data: result,
+    data: { ...result, drafts },
     next: nextActions,
+  });
+}
+
+async function drafts(request: OperateActionRequest): Promise<OperateActionResult> {
+  if (request.action === 'drafts.list') {
+    const records = await listOperatingDrafts(request.projectRoot);
+    return success(request.action, {
+      data: records.map((record) => record.draft),
+      counts: { artifacts: records.length },
+    });
+  }
+  const draftId = argument(request, 'draftId') ?? argument(request, 'id');
+  if (!draftId) {
+    throw new OperateError('E_OPERATE_CONFIG_INVALID', 'Draft ID is required.');
+  }
+  if (request.action === 'drafts.show') {
+    return success(request.action, {
+      data: await showOperatingDraft(request.projectRoot, draftId),
+    });
+  }
+  if (!option(request, 'yes', false)) {
+    throw new OperateError(
+      'E_OPERATE_AUTHORITY_REQUIRED',
+      `${request.action} requires explicit confirmation with --yes.`,
+    );
+  }
+  if (request.action === 'drafts.approve') {
+    return success(request.action, {
+      data: await approveOperatingDraft(request.projectRoot, draftId),
+      message: `Operating draft ${draftId} approved. PLAN and SHIP remain separate actions.`,
+    });
+  }
+  return success(request.action, {
+    data: await discardOperatingDraft(request.projectRoot, draftId),
+    message: `Operating draft ${draftId} discarded.`,
+  });
+}
+
+async function contextResearch(request: OperateActionRequest): Promise<OperateActionResult> {
+  if (request.action === 'context.show') {
+    return success(request.action, {
+      data: await readOperatingContextResearch(request.projectRoot),
+    });
+  }
+  if (request.action === 'context.review') {
+    return success(request.action, {
+      data: await recordOperatingContextResearch({
+        projectRoot: request.projectRoot,
+        stdin: request.stdin,
+      }),
+      message:
+        'Runtime-authored context was validated against the workspace and is ready for one compact owner review.',
+      next: ['planr operate init'],
+    });
+  }
+  const runtime = await resolvedOperatingRuntime(
+    request.projectRoot,
+    option(request, 'runtime', 'auto'),
+  );
+  if (runtime === 'auto') {
+    throw new OperateError(
+      'E_RUNTIME_UNSUPPORTED',
+      'Context research requires a selected Claude Code, Codex, or Cursor runtime.',
+    );
+  }
+  const researchMode = option<'local' | 'connected'>(request, 'research', 'local');
+  const consentDigest =
+    researchMode === 'connected'
+      ? canonicalDigest({
+          action: 'operate.context.connected-research',
+          runtime,
+          project: canonicalDigest(request.projectRoot),
+        })
+      : null;
+  const preview = option(request, 'preview', false);
+  if (researchMode === 'connected' && !preview && !option(request, 'yes', false)) {
+    throw new OperateError(
+      'E_OPERATE_AUTHORITY_REQUIRED',
+      'Connected research requires the exact preview and explicit confirmation.',
+      {
+        confirmationDigest: consentDigest,
+        recovery: `planr operate context refresh --research connected --runtime ${runtime} --yes --confirm ${consentDigest}`,
+      },
+    );
+  }
+  const confirmed = option<string | undefined>(request, 'confirm', undefined);
+  if (researchMode === 'connected' && !preview && confirmed !== consentDigest) {
+    throw new OperateError(
+      'E_OPERATE_AUTHORITY_REQUIRED',
+      'Connected research confirmation does not match the current project and runtime.',
+      { confirmationDigest: consentDigest },
+    );
+  }
+  const prepared = await prepareOperatingContextResearch({
+    projectRoot: request.projectRoot,
+    runtime,
+    researchMode,
+    connectedResearchConsentDigest: consentDigest,
+    preview,
+  });
+  return success(request.action, {
+    data: { ...prepared, confirmationDigest: consentDigest },
+    preview: preview ? { researchMode, runtime, confirmationDigest: consentDigest } : undefined,
+    message: preview
+      ? 'Context research preview is ready; no workspace or provider action occurred.'
+      : 'Agent-native context research is prepared for the selected runtime.',
+    next: preview
+      ? [
+          `planr operate context refresh --research ${researchMode} --runtime ${runtime}${researchMode === 'connected' ? ` --yes --confirm ${consentDigest}` : ''}`,
+        ]
+      : ['planr operate context review --stdin --json'],
   });
 }
 
@@ -1532,9 +1720,10 @@ async function maintenance(request: OperateActionRequest): Promise<OperateAction
       }),
     });
   }
+  const lifecycleNamespace = request.action.startsWith('harness.') ? 'harness.' : 'adapter.';
   const data = await operateAdapterLifecycle({
     projectRoot: request.projectRoot,
-    action: request.action.slice('adapter.'.length) as
+    action: request.action.slice(lifecycleNamespace.length) as
       | 'prepare'
       | 'record'
       | 'resume'
@@ -1573,6 +1762,13 @@ const HANDLERS: Record<
   'profiles.list': profiles,
   'profiles.show': profiles,
   'profiles.validate': profiles,
+  'context.show': contextResearch,
+  'context.refresh': contextResearch,
+  'context.review': contextResearch,
+  'drafts.list': drafts,
+  'drafts.show': drafts,
+  'drafts.approve': drafts,
+  'drafts.discard': drafts,
   run,
   review: reviewOrBrief,
   brief: reviewOrBrief,
@@ -1618,6 +1814,11 @@ const HANDLERS: Record<
   'adapter.resume': maintenance,
   'adapter.finalize': maintenance,
   'adapter.cancel': maintenance,
+  'harness.prepare': maintenance,
+  'harness.record': maintenance,
+  'harness.resume': maintenance,
+  'harness.finalize': maintenance,
+  'harness.cancel': maintenance,
 };
 
 /**
@@ -1634,6 +1835,7 @@ const OPERATE_READ_ONLY_ACTIONS = new Set<string>([
   'profiles.list',
   'profiles.show',
   'profiles.validate',
+  'context.show',
   'status',
   'review',
   'brief',
@@ -1656,6 +1858,7 @@ const OPERATE_READ_ONLY_ACTIONS = new Set<string>([
   'cache.status',
   'integrity.status',
   'adapter.resume',
+  'harness.resume',
 ]);
 
 /**

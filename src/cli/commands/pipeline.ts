@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import type { Command } from 'commander';
+import { assertOperatingDraftTargetApproved } from '../../services/operate/drafts.js';
 import { resolvePipelinePackage } from '../../services/pipeline-package-service.js';
 
 const ACTIONS = [
@@ -29,8 +30,14 @@ export function registerPipelineCommand(program: Command) {
     .option('--port <port>', 'dashboard port')
     .option('--no-watch', 'disable dashboard file watching')
     .allowUnknownOption(true)
-    .action((action: string, passthrough: string[], opts) => {
+    .action(async (action: string, passthrough: string[], opts) => {
       if (!ACTIONS.includes(action)) throw new Error(`Unknown pipeline action: ${action}`);
+      if (['plan', 'ship', 'prepare-plan', 'prepare-ship'].includes(action) && passthrough[0]) {
+        await assertOperatingDraftTargetApproved(
+          program.opts().projectDir as string,
+          passthrough[0],
+        );
+      }
       const pipeline = resolvePipelinePackage();
       if (!pipeline) throw new Error('E_PIPELINE_NOT_INSTALLED');
       const args = [pipeline.binPath, action, ...passthrough];

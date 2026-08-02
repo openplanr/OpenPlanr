@@ -42,7 +42,7 @@ describe('Claude plugin integration', () => {
       join(marketplaceRoot, '.claude-plugin', 'marketplace.json'),
       `${JSON.stringify({
         plugins: [
-          { name: 'openplanr', version: '1.18.3' },
+          { name: 'openplanr', version: '1.23.1' },
           { name: 'planr-pipeline', version: '0.32.2' },
         ],
       })}\n`,
@@ -83,7 +83,7 @@ describe('Claude plugin integration', () => {
     const inspection = inspectClaudePluginIntegration(pipelineVersion, runner);
 
     expect(inspection.plugins.map((plugin) => plugin.expectedVersion)).toEqual([
-      '1.18.3',
+      '1.23.1',
       '0.32.2',
     ]);
     expect(inspection.operations.map((operation) => operation.kind)).toEqual([

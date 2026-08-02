@@ -918,8 +918,15 @@ export async function runOperatingCycle(
     input.runtime && input.runtime !== 'auto' ? input.runtime : preferences.runtime;
   if (current && requestedRuntime !== 'auto' && requestedRuntime !== currentProducer?.runtime) {
     throw new OperateError(
-      'E_OPERATE_CYCLE_INPUT_CONFLICT',
+      'E_OPERATE_RUNTIME_MISMATCH',
       `Operating cycle ${current.id} is bound to runtime ${currentProducer?.runtime}, not ${requestedRuntime}.`,
+      {
+        cycleId: current.id,
+        expectedRuntime: currentProducer?.runtime,
+        actualRuntime: requestedRuntime,
+        recovery:
+          'Resume with the bound runtime, or cancel this cycle and create a new one with the desired runtime.',
+      },
     );
   }
   const resolvedRuntime = currentProducer?.runtime ?? requestedRuntime;

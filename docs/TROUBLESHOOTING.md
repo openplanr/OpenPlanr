@@ -275,11 +275,16 @@ Open an issue at [github.com/openplanr/OpenPlanr/issues](https://github.com/open
 - Your OS
 # Operating Board evidence safety
 
-Protocol v1.3 advisors investigate through the selected coding runtime's native
-read-only harness; OpenPlanr does not copy the repository through a separate
-collector or expose source-classification overrides. The runtime must return
-bounded claims with citations, and OpenPlanr validates and redacts the returned
-result before it can enter operating state.
+Protocol v1.4 advisors investigate through the selected coding runtime's native
+agent workflow; OpenPlanr does not copy the repository through a separate
+collector or impose an evidence-pack size ceiling. The runtime may return rich
+analysis, but every material claim or action needs a resolvable citation before
+it can enter operating state. Codex `toolIsolation: advisory` is supported as
+`assurance: runtime-governed` and must not trigger a recommendation to switch to
+Claude Code.
+
+If resume reports `E_OPERATE_RUNTIME_MISMATCH`, use the runtime recorded on the
+cycle or create a new cycle. Operate never falls back to another vendor.
 
 If a cycle stops at the safety boundary, inspect only the governed state and a
 redacted diagnostic export:

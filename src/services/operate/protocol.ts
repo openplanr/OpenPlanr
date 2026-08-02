@@ -77,7 +77,7 @@ interface PipelineProtocolApi {
     // dispatch shape — `dispatch.agent` + `dispatch.missionPacketPointer` — when
     // '1.3.0'. Passthrough only; the pipeline owns validation.
     protocolVersion?: string;
-    phase: 'advisors' | 'chair';
+    phase: 'bootstrap' | 'advisors' | 'chair';
     state: OperatingAdapterHandoff['state'];
     cycleId: string;
     evidenceDigest: string;
@@ -99,7 +99,7 @@ interface PipelineProtocolApi {
 const require = createRequire(import.meta.url);
 let cached: Promise<PipelineProtocolApi> | undefined;
 
-const OPERATING_MANDATE_SCHEMA = ['schemas', 'v1.3.0', 'operating-mandate.schema.json'];
+const OPERATING_MANDATE_SCHEMA = ['schemas', 'v1.4.0', 'operating-mandate.schema.json'];
 const OPERATING_MANDATE_MODULE = ['lib', 'operate', 'mandate.mjs'];
 
 function candidateRoots(): string[] {
@@ -130,8 +130,8 @@ export function resolveOperatingPipelineRoot(
       existsSync(path.join(root, 'lib', 'protocol', 'loader.mjs')) &&
       existsSync(path.join(root, 'schemas', 'v1.2.0', 'operating-event.schema.json'));
     if (!hasBaseContract) continue;
-    // The base v1.2 reader remains available for existing artifacts. Mandate
-    // execution additionally requires the Protocol v1.3 mandate contract.
+    // The base v1.2 reader remains available for existing artifacts. Agent-native
+    // execution additionally requires the Protocol v1.4 mandate contract.
     if (
       options.requireMission &&
       !(
@@ -150,7 +150,7 @@ export function operatingPipelineAvailable(): boolean {
   return resolveOperatingPipelineRoot() !== null;
 }
 
-/** Whether a Protocol v1.3 mission-capable pipeline install is resolvable. */
+/** Whether a Protocol v1.4 agent-native pipeline install is resolvable. */
 export function operatingMissionProtocolAvailable(): boolean {
   return resolveOperatingPipelineRoot({ requireMission: true }) !== null;
 }

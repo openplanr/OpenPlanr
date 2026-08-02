@@ -29,6 +29,7 @@ import type { Command } from 'commander';
 import { loadConfig, saveConfig } from '../../services/config-service.js';
 import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { requireInteractiveForManual } from '../../services/interactive-state.js';
+import { assertOperatingDraftTargetApproved } from '../../services/operate/drafts.js';
 import { promptConfirm, promptMultiText, promptText } from '../../services/prompt-service.js';
 import {
   attachSpecDesigns,
@@ -311,6 +312,7 @@ export function registerSpecCommand(program: Command) {
         opts: { force?: boolean; codeContext?: boolean; maxStories?: number },
       ) => {
         const projectDir = program.opts().projectDir as string;
+        await assertOperatingDraftTargetApproved(projectDir, specId);
         const config = await loadConfig(projectDir);
 
         const spec = await readSpec(projectDir, config, specId);

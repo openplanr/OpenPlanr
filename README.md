@@ -6,12 +6,12 @@
 
 **Plan continuously. Operate from evidence. Route feature delivery anywhere.**
 Certified first for **Claude Code**, **Cursor**, and **Codex** through Protocol
-v1.0 artifacts plus additive v1.1/v1.2 runtime and operating contracts.
+v1.0 artifacts plus additive v1.1–v1.4 runtime and operating contracts.
 
 [![npm version](https://img.shields.io/npm/v/openplanr.svg?style=flat-square&color=cb3837&logo=npm)](https://www.npmjs.com/package/openplanr)
 [![node](https://img.shields.io/node/v/openplanr.svg?style=flat-square&color=339933&logo=node.js&logoColor=white)](https://nodejs.org)
 [![license](https://img.shields.io/npm/l/openplanr.svg?style=flat-square&color=blue)](https://github.com/openplanr/OpenPlanr/blob/main/LICENSE)
-[![protocol](https://img.shields.io/badge/protocol-v1.2.0-7c3aed?style=flat-square)](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol)
+[![protocol](https://img.shields.io/badge/protocol-v1.4.0-7c3aed?style=flat-square)](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol)
 [![runtimes](https://img.shields.io/badge/runtimes-Claude%20Code%20%7C%20Cursor%20%7C%20Codex-f97316?style=flat-square)](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md)
 
 **[Website](https://openplanr.dev)** · **[Setup guide](docs/CROSS_RUNTIME_SETUP.md)** · **[Operating Board](docs/OPERATING_BOARD.md)** · **[Artifact review](docs/ARTIFACT_REVIEW.md)** · **[Compatibility matrix](https://github.com/openplanr/planr-pipeline/blob/main/docs/compatibility-matrix.md)** · **[Protocol spec](https://github.com/openplanr/planr-pipeline/tree/main/docs/protocol)** · **[CLI reference](docs/CLI.md)**
@@ -47,7 +47,7 @@ installations use `--minimal`; the full pipeline is the default.
 AI coding agents are powerful but lack structured planning context. Without a clear plan, they generate code that drifts from requirements, churn on the same problem across sessions, and can't be audited. OpenPlanr fixes this with four properties:
 
 1. **Markdown artifacts in your repo** — plans live next to your code, version-controlled, gittable, gradable. No external SaaS, no DB.
-2. **One contract, every runtime** — Claude Code, Cursor, and Codex consume the same v1.0 planning artifacts while locks, adapter capabilities, and provenance use additive v1.1 contracts and Operating Board uses Protocol v1.2.
+2. **One contract, every runtime** — Claude Code, Cursor, and Codex consume the same v1.0 planning artifacts while locks and provenance use additive v1.1 contracts and the agent-native Operating Board uses Protocol v1.4.
 3. **Three planning postures** — agile, quick task, or spec-driven planning, independent from the pipeline's feature-local PO phase.
 4. **Safe runtime migration** — setup previews exact changes, preserves hand-written content, records ownership, backs up exact bytes, and supports rollback.
 5. **Evidence-to-decision operations** — `planr operate` produces cited,
@@ -176,19 +176,19 @@ See the [artifact review and privacy guide](docs/ARTIFACT_REVIEW.md).
 ```bash
 planr operate inspect     # no initialization or credentials required
 planr operate demo        # deterministic, credential-free, no project writes
-planr operate init
-planr operate run --preview # no writes and no provider/model calls
-planr operate run           # native runtimes complete the local cycle in one flow
-planr operate review
-planr operate report --lens CTO
+$planr-operate            # Codex: initialize if needed, research, advise, synthesize
+# /planr-pipeline:operate # Claude Code equivalent
+planr operate report --lens cto
+planr operate drafts list
 ```
 
 Operating Board governs direction; it never deploys, publishes, spends,
-contacts customers, or invokes SHIP. Missing evidence marks a lens
-`not_evaluated`. Accepting a finding records governance only; the exact route is
-previewed and applied separately. Planning-only installations retain
-`operate --help`, `inspect`, and `demo`; commands that require Protocol v1.2
-return `E_PIPELINE_NOT_INSTALLED` with the full-install recovery command. See the
+contacts customers, or invokes SHIP. The selected runtime researches the
+workspace and runs CEO, CTO, CPO, CMO, COO, and Chair agents; OpenPlanr validates
+their citations and creates only reversible, unapproved proposal drafts.
+Planning-only installations retain `operate --help`, `inspect`, and `demo`;
+commands that require Protocol v1.4 return `E_PIPELINE_NOT_INSTALLED` with the
+full-install recovery command. See the
 [Operating Board guide](docs/OPERATING_BOARD.md).
 
 ---
@@ -201,10 +201,12 @@ return `E_PIPELINE_NOT_INSTALLED` with the full-install recovery command. See th
 |---|---|
 | `planr operate inspect` | Inspect workspace, runtime, evidence, and package readiness without initialization |
 | `planr operate demo` | Produce a real cited brief from sanitized deterministic fixtures |
-| `planr operate init` | Guide charter, workspace, runtime, privacy, and source setup |
-| `planr operate run` | Collect evidence and stop at a reviewable operating cycle |
+| `planr operate` | Expose the agent-native initialize/research/advisor/Chair/report workflow |
+| `planr operate context show\|refresh\|review` | Inspect or refresh cited research-first context |
+| `planr operate run` | Start or resume one runtime-bound cycle and stop at reviewable |
 | `planr operate review` / `brief` / `status` | Review the concise brief and canonical lifecycle state |
 | `planr operate report [cycle]` | Print CEO, CTO, CPO, CMO, COO, and Chair output as Markdown or strict JSON with exact planning conversion commands |
+| `planr operate drafts list\|show\|approve\|discard` | Govern canonical Quick Task, Spec, Epic, decision, and agent proposal drafts |
 | `planr operate findings accept <id>` | Record governance without applying a route |
 | `planr operate routes apply <id>` | Apply one confirmed, digest-bound local route; Pipeline-PO DEV routes may return `awaiting-plan` and an exact native PLAN command |
 | `planr operate decisions decide <id>` | Record an owner decision |

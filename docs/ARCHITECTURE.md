@@ -65,16 +65,18 @@ src/
 
 ### Operating Board
 
-`planr operate` owns the behavioral engine and CLI. Protocol v1.2 schemas,
-canonical reducers, provider manifests, projections, and cross-repository saga
-contracts are owned by `planr-pipeline`.
+`planr operate` is the deterministic governance kernel. Protocol v1.4 schemas,
+canonical procedures and roles, reducers, projections, and cross-repository
+contracts are owned by `planr-pipeline`; the selected Claude Code, Codex, or
+Cursor runtime owns research, reasoning, and report authoring.
 
 Operating state is append-only and content-addressed. Commit-safe records live
-under `.planr/operate/`; raw evidence and other machine-specific or sensitive
-material live under `~/.planr/operate/`. Independent advisors see a bounded,
-role-filtered immutable evidence snapshot. Deterministic consolidation produces
-one lane and owner per finding, and route acceptance remains separate from
-digest-bound application.
+under `.planr/operate/`; machine-specific state lives under
+`~/.planr/operate/`. Runtime-native CEO, CTO, CPO, CMO, COO, and Chair agents
+inspect the workspace under the current session permissions. Their expressive
+reports carry typed, cited sidecars. OpenPlanr validates citations, binds the
+cycle to one runtime, materializes reversible proposal drafts, and keeps draft
+approval, PLAN, and SHIP separate.
 
 The dashboard is a disposable read-only projection. PLAN and SHIP remain
 separate user invocations.

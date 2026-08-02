@@ -183,6 +183,17 @@ function readiness(roles: OperatingEvidenceReadiness['roles']): OperatingEvidenc
   };
 }
 
+function quietAgentNativeResponse(title = 'Operating analysis') {
+  return {
+    outcome: 'quiet' as const,
+    analysisMarkdown: `# ${title}\n\nNo citation-qualified action was identified.`,
+    claims: [],
+    actions: [],
+    gaps: [],
+    conflicts: [],
+  };
+}
+
 describe('advisor isolation', () => {
   it('rejects role output that widens the canonical brief', () => {
     const brief = {
@@ -273,7 +284,7 @@ describe('advisor isolation', () => {
     });
   });
 
-  it('requires tool-enforced native isolation and no structured tool surface', () => {
+  it('accepts runtime-governed native isolation and rejects dishonest structured tool grants', () => {
     expect(() =>
       assertAdvisorIsolation({
         id: 'native-safe',
@@ -285,13 +296,13 @@ describe('advisor isolation', () => {
     ).not.toThrow();
     expect(() =>
       assertAdvisorIsolation({
-        id: 'native-unsafe',
+        id: 'native-runtime-governed',
         mode: 'native-isolated',
         toolIsolation: 'advisory',
         capability: 'analysis-high',
         invoke: vi.fn(),
       }),
-    ).toThrowError(expect.objectContaining({ code: 'E_OPERATE_ADVISOR_ISOLATION' }));
+    ).not.toThrow();
     expect(() =>
       assertAdvisorIsolation({
         id: 'structured-with-tools',
@@ -342,16 +353,11 @@ describe('advisor isolation', () => {
   });
 
   it('invokes only ready lenses and preserves the unready gap', async () => {
-    const invoke = vi.fn(async () => ({
-      outcome: 'quiet' as const,
-      proposals: [],
-      gaps: [],
-      conflicts: [],
-    }));
+    const invoke = vi.fn(async () => quietAgentNativeResponse('CTO analysis'));
     const adapter: AdvisorAdapter = {
       id: 'bounded-fixture',
-      mode: 'structured',
-      toolIsolation: 'not-applicable',
+      mode: 'native-isolated',
+      toolIsolation: 'advisory',
       capability: 'analysis-high',
       invoke,
     };
@@ -366,7 +372,8 @@ describe('advisor isolation', () => {
       context: advisorContext(),
       adapter,
       depth: 'standard',
-      runtime: 'fixture',
+      runtime: 'codex',
+      protocolVersion: '1.4.0',
       resolveCitations: async (roleResults) => ({
         roleResults,
         gaps: [],
@@ -397,7 +404,7 @@ describe('advisor isolation', () => {
     expect(result.results[0]).toMatchObject({
       roleId: 'technology-risk',
       outcome: 'quiet',
-      producer: { runtime: 'fixture', version: OPENPLANR_VERSION },
+      producer: { runtime: 'codex', version: OPENPLANR_VERSION },
     });
     expect(result.skipped).toEqual([
       {
@@ -539,12 +546,12 @@ describe('advisor isolation', () => {
       forbiddenPaths: ['secrets'],
     });
     expect(mandate.kind).toBe('operating-mandate');
-    expect(mandate.protocolVersion).toBe('1.3.0');
+    expect(mandate.protocolVersion).toBe('1.4.0');
     expect(mandate.boundaries.roots).toEqual(['.planr', 'docs', 'src']);
     expect(mandate.boundaries.forbiddenPaths).toEqual(['secrets']);
     expect(mandate.boundaries.sensitivityCeiling).toBeTruthy();
-    expect(mandate.responseSchema).toBe('operating-advisor-response@1.3.0');
-    expect(mandate.citationRequirement.everyClaimCited).toBe(true);
+    expect(mandate.responseSchema).toBe('operating-advisor-response@1.4.0');
+    expect('materialActionsCited' in mandate.citationRequirement).toBe(true);
     // No evidence body, no evidence index — the mandate is bounded instruction.
     expect((mandate as unknown as Record<string, unknown>).evidence).toBeUndefined();
     expect((mandate as unknown as Record<string, unknown>).evidenceIndex).toBeUndefined();
@@ -627,7 +634,10 @@ describe('T-006 — typed provider bootstrap and runtime detection (FR5/FR6)', (
   // but no key resolves in this (sandboxed) subprocess env.
   it('surfaces a provider bootstrap failure as a typed E_OPERATE_ADVISOR_FAILED with remedy', async () => {
     const projectRoot = await tempDir('openplanr-advisor-bootstrap-');
-    await writeProjectConfig(projectRoot, { provider: 'anthropic', model: 'claude-x' });
+    await writeProjectConfig(projectRoot, {
+      provider: 'anthropic',
+      model: 'claude-x',
+    });
 
     const error = await createConfiguredStructuredAdapter(projectRoot).catch((err) => err);
 
@@ -637,15 +647,22 @@ describe('T-006 — typed provider bootstrap and runtime detection (FR5/FR6)', (
     expect((error as OperateError).message).toContain('planr config set-key anthropic');
     expect((error as OperateError).message).toContain('--offline');
     // A redacted error class is recorded for diagnostics — no message/stack leakage.
-    expect((error as OperateError).details).toMatchObject({ errorClass: 'AIError:missing_key' });
+    expect((error as OperateError).details).toMatchObject({
+      errorClass: 'AIError:missing_key',
+    });
   });
 
   it('fails a configured structured-provider role through the Protocol v1.3 deprecation boundary', async () => {
     const projectRoot = await tempDir('openplanr-advisor-deprecated-');
-    await writeProjectConfig(projectRoot, { provider: 'anthropic', model: 'claude-x' });
+    await writeProjectConfig(projectRoot, {
+      provider: 'anthropic',
+      model: 'claude-x',
+    });
     vi.stubEnv('ANTHROPIC_API_KEY', 'test-key-for-constructor-only');
 
-    const adapter = await createConfiguredStructuredAdapter(projectRoot, { quiet: true });
+    const adapter = await createConfiguredStructuredAdapter(projectRoot, {
+      quiet: true,
+    });
     const error = await adapter.invoke({} as never).catch((caught) => caught);
 
     expect(error).toBeInstanceOf(OperateError);
@@ -677,13 +694,20 @@ describe('T-006 — typed provider bootstrap and runtime detection (FR5/FR6)', (
         ollamaBaseUrl: 'http://localhost:11434',
       }),
     );
-    expect(ollama).toMatchObject({ configured: true, keyResolvable: true, provider: 'ollama' });
+    expect(ollama).toMatchObject({
+      configured: true,
+      keyResolvable: true,
+      provider: 'ollama',
+    });
 
     const unconfigured = await resolveAIProviderReadiness({
       ...projectConfig({ provider: 'anthropic', model: 'claude-x' }),
       ai: undefined,
     });
-    expect(unconfigured).toMatchObject({ configured: false, keyResolvable: false });
+    expect(unconfigured).toMatchObject({
+      configured: false,
+      keyResolvable: false,
+    });
     expect(unconfigured.remedy).toContain('--offline');
   });
 
@@ -704,7 +728,10 @@ describe('T-006 — typed provider bootstrap and runtime detection (FR5/FR6)', (
   it('keeps typed OperateError details untouched instead of stamping an error class', () => {
     const result = failure('run', new OperateError('E_OPERATE_ADVISOR_FAILED', 'typed remedy'));
 
-    expect(result).toMatchObject({ code: 'E_OPERATE_ADVISOR_FAILED', message: 'typed remedy' });
+    expect(result).toMatchObject({
+      code: 'E_OPERATE_ADVISOR_FAILED',
+      message: 'typed remedy',
+    });
     expect((result.data as { errorClass?: unknown } | undefined)?.errorClass).toBeUndefined();
   });
 
@@ -723,7 +750,10 @@ describe('T-006 — typed provider bootstrap and runtime detection (FR5/FR6)', (
         adapters: [
           {
             id: 'claude-code',
-            capabilities: { operatingBoard: true, operatingAdvisorDispatch: dispatch },
+            capabilities: {
+              operatingBoard: true,
+              operatingAdvisorDispatch: dispatch,
+            },
           },
         ],
       }),
@@ -771,12 +801,7 @@ describe('T-003 — dispatch is execution-effective, provenance never lies (FR1)
       toolIsolation: 'enforced',
       capability: 'analysis-high',
       parallelDispatch: false,
-      invoke: vi.fn(async () => ({
-        outcome: 'quiet' as const,
-        proposals: [],
-        gaps: [],
-        conflicts: [],
-      })),
+      invoke: vi.fn(async () => quietAgentNativeResponse('CTO analysis')),
     };
   }
 
@@ -789,6 +814,7 @@ describe('T-003 — dispatch is execution-effective, provenance never lies (FR1)
       adapter: nativeAdapter(),
       depth: 'standard',
       runtime: 'claude',
+      protocolVersion: '1.4.0',
     });
     expect(result.provenance).toHaveLength(1);
     expect(result.provenance[0]).toMatchObject({
@@ -801,23 +827,27 @@ describe('T-003 — dispatch is execution-effective, provenance never lies (FR1)
 describe('T-002 — mandate response grounding is post-gated (FR2)', () => {
   function mandateResponse(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     return {
-      outcome: 'proposals',
-      proposals: [
+      outcome: 'actions',
+      analysisMarkdown: '# CEO analysis\n\nA grounded action is available.',
+      claims: [],
+      actions: [
         {
-          proposalKey: 'ground-in-service',
-          type: 'finding',
+          actionKey: 'ground-in-service',
           title: 'A finding the lens claims it observed',
-          problem: 'A concrete problem the finding names in the codebase.',
-          proposal: 'Take the corrective action the finding recommends next.',
+          summary: 'Take the corrective action the finding recommends next.',
+          lane: 'DEV',
+          routeKind: 'quick-task',
+          horizon: 'immediate',
           impact: 4,
           confidence: 4,
           ease: 3,
-          severity: 'medium',
           citations: [
             {
-              repositoryPath: 'src/service.ts',
-              lineRange: { start: 1, end: 2 },
-              pinnedRevision: 'a'.repeat(40),
+              kind: 'repository',
+              path: 'src/service.ts',
+              startLine: 1,
+              endLine: 2,
+              revision: 'a'.repeat(40),
             },
           ],
         },
@@ -829,7 +859,10 @@ describe('T-002 — mandate response grounding is post-gated (FR2)', () => {
   }
 
   it('commits a role not_evaluated with a governed gap when its citation-bearing proposals ground zero evidence', async () => {
-    const mandate = await buildOperatingMandate({ roleId: 'strategy-finance', roots: ['src'] });
+    const mandate = await buildOperatingMandate({
+      roleId: 'strategy-finance',
+      roots: ['src'],
+    });
     const gated = await createNativeMissionOperatingRoleResult({
       mandate,
       cycleId: 'CYCLE-001',
@@ -839,7 +872,10 @@ describe('T-002 — mandate response grounding is post-gated (FR2)', () => {
       // proposal is dropped and the role is returned in `notEvaluatedRoleIds`
       // with a governed empty-grounding gap.
       resolveCitations: async (roleResults) => ({
-        roleResults: roleResults.map((result) => ({ ...result, proposals: [] })),
+        roleResults: roleResults.map((result) => ({
+          ...result,
+          proposals: [],
+        })),
         gaps: [
           {
             kind: 'operating-data-gap',
@@ -863,7 +899,10 @@ describe('T-002 — mandate response grounding is post-gated (FR2)', () => {
   });
 
   it('commits proposals with minted evidenceRefs when the citations resolve', async () => {
-    const mandate = await buildOperatingMandate({ roleId: 'strategy-finance', roots: ['src'] });
+    const mandate = await buildOperatingMandate({
+      roleId: 'strategy-finance',
+      roots: ['src'],
+    });
     const gated = await createNativeMissionOperatingRoleResult({
       mandate,
       cycleId: 'CYCLE-001',

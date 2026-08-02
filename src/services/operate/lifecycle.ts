@@ -665,7 +665,7 @@ export async function verifyOperatingGap(input: {
     localRoot: input.localRoot,
   }).state();
   const gap = state.dataGaps.find((record) => record.id === input.gapId);
-  if (!gap || gap.status !== 'answered') {
+  if (gap?.status !== 'answered') {
     throw new OperateError(
       'E_OPERATE_STATE_INVALID',
       `Gap ${input.gapId} must be answered before it can be verified.`,

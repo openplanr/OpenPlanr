@@ -42,6 +42,17 @@ const ALL_TOKENS = [FILE_TOKEN, ENV_TOKEN, TOOL_TOKEN, NETWORK_TOKEN];
 
 const digest = (character: string): `sha256:${string}` => `sha256:${character.repeat(64)}`;
 
+function quietAgentResponse(title = 'Advisor analysis'): Record<string, unknown> {
+  return {
+    outcome: 'quiet',
+    analysisMarkdown: `# ${title}\n\nNo citation-qualified action was identified.`,
+    claims: [],
+    actions: [],
+    gaps: [],
+    conflicts: [],
+  };
+}
+
 function evidence(): OperatingEvidence {
   return {
     kind: 'operating-evidence',
@@ -185,16 +196,16 @@ describe('Operating Board advisor honeytoken containment', () => {
   afterEach(async () => {
     delete process.env.OPENPLANR_HONEYTOKEN;
     fetchSpy.mockRestore();
-    await rm(projectRoot, { force: true, recursive: true, maxRetries: 10, retryDelay: 100 });
+    await rm(projectRoot, {
+      force: true,
+      recursive: true,
+      maxRetries: 10,
+      retryDelay: 100,
+    });
   });
 
   it('leaks no filesystem, environment, tool, or network honeytoken into the advisor payload', async () => {
-    const invoke = vi.fn().mockResolvedValue({
-      outcome: 'quiet',
-      proposals: [],
-      gaps: [],
-      conflicts: [],
-    });
+    const invoke = vi.fn().mockResolvedValue(quietAgentResponse('CTO analysis'));
 
     const adapter: AdvisorAdapter = {
       id: 'honeytoken-fixture',
@@ -212,6 +223,8 @@ describe('Operating Board advisor honeytoken containment', () => {
       context: advisorContext(),
       adapter,
       depth: 'standard',
+      runtime: 'codex',
+      protocolVersion: '1.4.0',
       resolveCitations: async (roleResults) => ({
         roleResults,
         gaps: [],
@@ -247,12 +260,7 @@ describe('Operating Board advisor honeytoken containment', () => {
 
   it('role-filters charter guardrails to the risk lens and withholds them from the growth lens', async () => {
     async function payloadFor(roleId: OperatingRoleId): Promise<string> {
-      const invoke = vi.fn().mockResolvedValue({
-        outcome: 'quiet',
-        proposals: [],
-        gaps: [],
-        conflicts: [],
-      });
+      const invoke = vi.fn().mockResolvedValue(quietAgentResponse());
       const result = await dispatchOperatingAdvisors({
         cycleId: 'CYCLE-001',
         evidence: evidence(),
@@ -266,6 +274,8 @@ describe('Operating Board advisor honeytoken containment', () => {
           invoke,
         },
         depth: 'standard',
+        runtime: 'codex',
+        protocolVersion: '1.4.0',
       });
       expect(result.failed).toEqual([]);
       expect(result.modelCalls).toBe(1);
@@ -278,13 +288,8 @@ describe('Operating Board advisor honeytoken containment', () => {
     expect(await payloadFor('growth-market')).not.toContain(CHARTER_TOKEN);
   });
 
-  it('refuses an unenforced native lens before any honeytoken-bearing invocation', async () => {
-    const invoke = vi.fn().mockResolvedValue({
-      outcome: 'quiet',
-      proposals: [],
-      gaps: [],
-      conflicts: [],
-    });
+  it('accepts a runtime-governed Codex lens without granting extra permissions', async () => {
+    const invoke = vi.fn().mockResolvedValue(quietAgentResponse('CTO analysis'));
 
     const unenforced: AdvisorAdapter = {
       id: 'native-unenforced',
@@ -294,23 +299,31 @@ describe('Operating Board advisor honeytoken containment', () => {
       invoke,
     };
 
-    expect(() => assertAdvisorIsolation(unenforced)).toThrowError(
-      expect.objectContaining({ code: 'E_OPERATE_ADVISOR_ISOLATION' }),
-    );
+    expect(() => assertAdvisorIsolation(unenforced)).not.toThrow();
 
-    await expect(
-      dispatchOperatingAdvisors({
-        cycleId: 'CYCLE-001',
-        evidence: evidence(),
-        readiness: readiness([roleReadiness('technology-risk')]),
-        context: advisorContext(),
-        adapter: unenforced,
-        depth: 'standard',
+    const result = await dispatchOperatingAdvisors({
+      cycleId: 'CYCLE-001',
+      projectRoot,
+      pinnedRevision: 'a'.repeat(40),
+      readiness: readiness([roleReadiness('technology-risk')]),
+      context: advisorContext(),
+      adapter: unenforced,
+      depth: 'standard',
+      runtime: 'codex',
+      protocolVersion: '1.4.0',
+      resolveCitations: async (roleResults) => ({
+        roleResults,
+        gaps: [],
+        notEvaluatedRoleIds: [],
       }),
-    ).rejects.toThrowError(expect.objectContaining({ code: 'E_OPERATE_ADVISOR_ISOLATION' }));
+    });
 
-    // Fail-closed: the lens never ran, so no channel could have been read.
-    expect(invoke).not.toHaveBeenCalled();
+    expect(result.failed).toEqual([]);
+    expect(result.provenance[0]).toMatchObject({
+      roleId: 'technology-risk',
+      isolation: 'runtime-governed',
+    });
+    expect(invoke).toHaveBeenCalledOnce();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
