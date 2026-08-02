@@ -11,7 +11,12 @@
   "scripts": {
     "prepare": "husky",
     "version-packages": "changeset version && node scripts/sync-ecosystem.mjs && npm install --package-lock-only",
-    "release": "changeset publish"
+    "release": "changeset publish",
+    "sync-ecosystem": "node scripts/sync-ecosystem.mjs",
+    "check:ecosystem": "node scripts/sync-ecosystem.mjs --check",
+    "check:cross-refs": "node scripts/check-cross-refs.mjs",
+    "check:drift": "npm run check:ecosystem && npm run check:cross-refs && npm run check:agent-divergence",
+    "check:agent-divergence": "node scripts/check-agent-divergence.mjs"
   },
   "devDependencies": {
     "husky": "^9.1.7",

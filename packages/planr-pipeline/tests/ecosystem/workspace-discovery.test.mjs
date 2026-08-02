@@ -110,3 +110,44 @@ test('rejects a missing --workspace-root value', () => {
     /requires a directory path/,
   );
 });
+
+test('discovers all four packages in the BL-010 monorepo layout', () => {
+  // The monorepo places every package under packages/<name> with the SAME
+  // directory names the sibling-checkout layout uses, which is precisely why
+  // those names are frozen: discovery, doctor.mjs and ecosystem-conformance.mjs
+  // resolve them by name. This case is ADDITIVE — the sibling-checkout cases
+  // above must keep passing, because a plain clone of a mirror still uses them.
+  const monorepo = makeWorkspace();
+  const workspace = join(monorepo, 'packages');
+  const pipeline = addRepo(workspace, 'planr-pipeline', '.claude-plugin/plugin.json');
+  const marketplace = addRepo(workspace, 'marketplace', '.claude-plugin/marketplace.json');
+  const skills = addRepo(workspace, 'skills', 'skills/openplanr/SKILL.md');
+  const cli = addRepo(workspace, 'OpenPlanr', 'package.json');
+
+  const result = discoverEcosystemRepositories({ pipelineRoot: pipeline, workspaceRoot: workspace });
+
+  assert.equal(result.repositories.pipeline.path, pipeline);
+  assert.equal(result.repositories.marketplace.path, marketplace);
+  assert.equal(result.repositories.skills.path, skills);
+  assert.equal(result.repositories.cli.path, cli);
+});
+
+test('monorepo layout resolves without an explicit workspaceRoot', () => {
+  // packages/planr-pipeline's parent IS packages/, so the documented
+  // "pipeline parent" precedence rule discovers the whole ecosystem with no
+  // OPENPLANR_ECOSYSTEM_ROOT and no --workspace-root flag.
+  const monorepo = makeWorkspace();
+  const workspace = join(monorepo, 'packages');
+  const pipeline = addRepo(workspace, 'planr-pipeline', '.claude-plugin/plugin.json');
+  addRepo(workspace, 'marketplace', '.claude-plugin/marketplace.json');
+  addRepo(workspace, 'skills', 'skills/openplanr/SKILL.md');
+  const cli = addRepo(workspace, 'OpenPlanr', 'package.json');
+
+  const result = discoverEcosystemRepositories({ pipelineRoot: pipeline });
+
+  assert.equal(result.repositories.cli.path, cli);
+  assert.deepEqual(resolveWorkspaceRoot({ pipelineRoot: pipeline }), {
+    path: workspace,
+    source: 'default',
+  });
+});
