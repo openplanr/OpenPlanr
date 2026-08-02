@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.21.1
+
+### Patch Changes
+
+- [`3c1101b`](https://github.com/openplanr/OpenPlanr/commit/3c1101b6699d1b7f0bdaedce3a41f37941228811) Align the bundled pipeline with planr-pipeline 0.37.2 so released Operate canaries execute correctly through the Windows command shim.
+
 ## 1.21.0
 
 ### Minor Changes
