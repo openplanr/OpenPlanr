@@ -7,7 +7,7 @@
   "required": ["kind", "schemaVersion", "protocolVersion", "phase", "state", "binding", "roles", "next", "recovery"],
   "properties": {
     "kind": { "const": "operating-adapter-handoff" },
-    "schemaVersion": { "const": "1.1.0" },
+    "schemaVersion": { "const": "1.2.0" },
     "protocolVersion": { "const": "1.4.0" },
     "phase": { "type": "string", "enum": ["bootstrap", "advisors", "chair"] },
     "state": { "type": "string", "enum": ["prepare-required", "record-required", "finalize-required", "continue-required", "cancelled"] },
@@ -30,10 +30,10 @@
     },
     "roles": {
       "type": "array", "minItems": 1, "maxItems": 6,
-      "items": { "type": "object", "additionalProperties": false, "required": ["roleId", "status", "inputDigest"], "properties": { "roleId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" }, "status": { "type": "string", "enum": ["awaiting-prepare", "pending", "recorded"] }, "inputDigest": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" } } }
+      "items": { "type": "object", "additionalProperties": false, "required": ["roleId", "status", "inputDigest"], "properties": { "roleId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" }, "status": { "type": "string", "enum": ["awaiting-prepare", "pending", "recorded", "not-evaluated", "failed"] }, "statusReason": { "type": "string", "minLength": 1, "maxLength": 512 }, "inputDigest": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" } } }
     },
     "next": { "type": "array", "maxItems": 6, "items": { "$ref": "#/$defs/machineAction" } },
-    "recovery": { "type": "array", "maxItems": 2, "items": { "$ref": "#/$defs/machineAction" } }
+    "recovery": { "type": "array", "maxItems": 3, "items": { "$ref": "#/$defs/machineAction" } }
   },
   "$defs": {
     "argv": { "type": "array", "minItems": 3, "maxItems": 32, "items": { "type": "string", "minLength": 1, "maxLength": 1024, "pattern": "^[A-Za-z0-9_./:@%+=,-]+$" } },
@@ -42,7 +42,7 @@
       "required": ["id", "action", "effect", "argv"],
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,127}$" },
-        "action": { "type": "string", "enum": ["harness.prepare", "harness.record", "harness.finalize", "harness.resume", "harness.cancel", "run.continue"] },
+        "action": { "type": "string", "enum": ["harness.prepare", "harness.record", "harness.finalize", "harness.resume", "harness.cancel", "harness.heartbeat", "run.continue"] },
         "effect": { "type": "string", "enum": ["read-only", "machine-local-write", "project-write"] },
         "role": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$" },
         "argv": { "$ref": "#/$defs/argv" },

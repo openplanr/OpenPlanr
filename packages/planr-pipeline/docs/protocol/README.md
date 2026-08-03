@@ -7,7 +7,7 @@
 > contracts. v1.2 adds operating governance, v1.3 adds citation-bound mandate
 > execution, and v1.4 adds agent-native research, sticky runtime binding,
 > expressive reports, and canonical proposal drafts.
-> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.38.0.
+> Ownership: `planr-pipeline/schemas/` is canonical; downstream CLI, skill, and marketplace docs mirror it. Current engine: planr-pipeline v0.39.0.
 
 The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI development. It defines:
 
@@ -99,6 +99,35 @@ Agent-native Operating Board additions live under
 [`../../schemas/v1.4.0/`](../../schemas/v1.4.0/). They keep v1.2/v1.3 readable
 while making the selected runtime—not a serialized evidence pack—the reasoning
 engine. See [`operating-board.md`](operating-board.md) and ADR-011.
+
+## Legacy compatibility versus the current contract
+
+Agent-native workflows receive **exactly one** current contract. To keep that
+unambiguous, the protocol distinguishes two facts that are often confused —
+state this split once here and point other docs at this section rather than
+re-explaining it:
+
+- **Current (agent contract).** The Protocol v1.4 registry, role **mandates**,
+  procedures, and runtime binding a mandate-capable session dispatches. This is
+  the only contract a new handoff offers. The dispatch unit is the role mandate
+  (`createOperatingMandate`), not a pack-style brief.
+- **Legacy / compatibility-only.** The Protocol v1.2/v1.3 pack-style role
+  **briefs** (`createOperatingAdvisorBrief`) and the `adapter` lifecycle command
+  namespace. These remain **readable** so existing sessions and older persisted
+  boards keep working, but they are marked compatibility-only (`legacy: true`)
+  and are **excluded from new handoffs**. Requesting a pack-style brief for a
+  v1.4 session is refused, not silently downgraded, and conformance
+  (`conformance/verify-operating-board-v1_4.mjs`) proves no v1.4 handoff path can
+  reach one.
+
+**Board-state version is not the agent-contract version.** A persisted board is
+stamped at its own frozen envelope (v1.2) and stays readable under a newer agent
+contract (v1.4) — the additive-envelope guarantee. `planr operate doctor`
+therefore reports these as **two separate diagnostics**: the installed
+agent-contract check and the persisted board-state version. An older persisted
+board is reported informationally and is **never** described as an
+incompatibility; only a genuine role/provider/boundary divergence in the
+installed contract fails.
 
 ## Artifact review workflow
 

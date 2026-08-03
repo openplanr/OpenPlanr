@@ -208,3 +208,30 @@ test('every lens generates a native agent (mandate dispatch is the only mode)', 
     'a resurrected dispatchMode field is rejected',
   );
 });
+
+// SPEC-005 T-004/T-013: the Chair partial-board guarantee is enforced structurally
+// (an absent role contributes zero proposal items). Its prose must agree — the
+// chair mandate must instruct Chair to name an absent lens as a gap and never
+// synthesize a missing lens's conclusions — and that prose must reach the
+// dispatched chair agent. If the guarantee is dropped from the mandate, these
+// assertions go red.
+test('chair mandate names an absent lens as a gap and forbids synthesizing it', () => {
+  const roles = readRoles();
+  const chair = roles.roles.find((role) => role.id === 'chair');
+  assert.ok(chair, 'the registry declares a chair role');
+  assert.match(chair.mandate, /absent|not-evaluated/iu, 'chair mandate names an absent lens');
+  assert.match(chair.mandate, /\bgap\b/iu, 'chair mandate treats a missing lens as a gap');
+  assert.match(
+    chair.mandate,
+    /never synthesize a missing lens/iu,
+    'chair mandate forbids synthesizing a missing lens',
+  );
+
+  // The guarantee must reach the dispatched agent, not just the registry.
+  const chairAgent = renderOperatingLensAgentAssets(roles)['agents/operating/chair.md'];
+  assert.match(
+    chairAgent,
+    /never synthesize a missing lens/iu,
+    'the generated chair agent carries the never-synthesize guarantee',
+  );
+});

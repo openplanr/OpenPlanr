@@ -4,6 +4,64 @@ All notable changes to this plugin are documented here. The format follows [Keep
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
 
+## [0.39.0] — 2026-08-02
+
+The Protocol v1.4 operating handoff learns to fan out per-role recording, renew a
+session without a result, and finalize a partial board. A real credentialed run
+recorded strong analysis from four of five advisory lenses and then lost all of
+it: the old handoff authorized recording exactly one pending role at a time, so
+four completed analyses sat behind one stalled lens until the shared lease
+expired and took the finished work with it. This release fixes the contract that
+allowed it.
+
+### Changed
+
+- `schemas/v1.4.0/operating-adapter-handoff.schema.json` — `schemaVersion`
+  bumped `"1.1.0"` → `"1.2.0"` (additive contract change). The `record-required`
+  handoff now authorizes a `harness.record` action for **every** pending role
+  instead of only the first, so any lens can commit the instant it returns and a
+  stalled sibling can no longer strand a completed one. The record write is still
+  serialized against the one shared, lease-bound session — that serialization is
+  the recording engine's responsibility (it records each role atomically and
+  replays identical bytes idempotently); the handoff only authorizes the fan-out
+  and never schedules concurrent session writes.
+- `lib/operate/adapter-handoff.mjs` — `record-required` returns one record action
+  per pending role; `finalize-required`/`continue-required` now accept a board
+  whose roles are all **terminal** (`recorded`, `not-evaluated`, or `failed`)
+  rather than requiring every role to be `recorded`, while still rejecting any
+  in-flight (`pending`/`awaiting-prepare`) role so a cycle can never finalize
+  mid-flight.
+- `commands/operate.md`, `adapters/codex/skills/planr-operate/SKILL.md`, and
+  `procedures/operate/advisor.md` (regenerated from their templates) — the record
+  step now states that each result is recorded the instant its lens returns,
+  independent of sibling state, replacing the ambiguous "record their results
+  serially" prose that permitted a whole-board batch barrier.
+
+### Added
+
+- `harness.heartbeat` — an additive machine-local recovery action in the
+  `record-required` and `finalize-required` states that renews the cycle
+  session's lease/`expiresAt` without recording a role result, so a slow lens can
+  hold the session open instead of letting the lease expire and drop finished
+  work. Older protocol handoffs keep their frozen two-action `resume`/`cancel`
+  recovery.
+- Terminal non-recorded role statuses `not-evaluated` and `failed`, added to the
+  role-status vocabulary alongside the three existing values (unchanged in
+  meaning). A non-recorded terminal role carries a `statusReason` string through
+  the handoff so the Chair mandate and integrity surface can state **why** a lens
+  is missing rather than rendering a bare `not_evaluated`. This makes a Chair
+  synthesis over a partial-but-valid board representable on the wire.
+
+### Compatibility
+
+- The `schemaVersion` bump is the version gate for the additive enum values: a
+  writer on the new contract stamps `"1.2.0"`, so a reader pinned to the prior
+  `"1.1.0"` contract fails closed on the `schemaVersion` const mismatch rather
+  than silently mis-parsing a terminal status it does not recognize. Every
+  Protocol v1.2 and v1.3 handoff is untouched — the frozen v1.2.0/v1.3.0 schemas
+  keep their two-action recovery, three-status role vocabulary, and byte-for-byte
+  golden digests.
+
 ## [0.38.0] — 2026-08-02
 
 Protocol v1.0 artifact frontmatter learns board-sync identity: the kanbanos

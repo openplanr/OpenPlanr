@@ -19,6 +19,16 @@ const SCORING_RUBRIC = Object.freeze({
     'Scores are advisory inputs. The deterministic engine assigns canonical IDs, confidence ceilings, final scores, lanes, owners, and attention caps.',
 });
 
+/**
+ * The pack-style advisor brief is a frozen Protocol v1.2/v1.3 compatibility
+ * projection of the current role registry. Protocol v1.4 agent-native sessions
+ * dispatch role MANDATES (see `createOperatingMandate`), never a pack-style
+ * brief, so the only protocol versions permitted to select a brief are the
+ * legacy compatibility versions below. A v1.4-mandate-capable handoff that asks
+ * for a brief is a defect, not a fallback, and is refused at construction.
+ */
+const LEGACY_BRIEF_PROTOCOL_VERSIONS = Object.freeze(['1.2.0', '1.3.0']);
+
 export function roleById(roleId) {
   const role = listOperatingRoles().find(({ id }) => id === roleId);
   if (!role) {
@@ -34,8 +44,22 @@ export function roleById(roleId) {
  * Build the canonical, runtime-neutral role brief consumed by structured
  * providers and native isolated runtime adapters. The registry remains the
  * source of truth; runtime assets must not copy these instructions by hand.
+ *
+ * The returned brief is explicitly marked `legacy: true` — it is a
+ * compatibility-only artifact for Protocol v1.2/v1.3 sessions. The optional
+ * `protocolVersion` names the REQUESTING session's protocol; a v1.4 session may
+ * never select a pack-style brief, so any value outside
+ * `LEGACY_BRIEF_PROTOCOL_VERSIONS` is refused rather than silently downgraded.
  */
-export function createOperatingAdvisorBrief(roleId) {
+export function createOperatingAdvisorBrief(roleId, { protocolVersion = '1.2.0' } = {}) {
+  if (!LEGACY_BRIEF_PROTOCOL_VERSIONS.includes(protocolVersion)) {
+    throw new PipelineError(
+      'E_OPERATE_LEGACY_BRIEF_UNREACHABLE',
+      `Pack-style operating advisor briefs are compatibility-only for Protocol `
+        + `${LEGACY_BRIEF_PROTOCOL_VERSIONS.join('/')}; Protocol ${protocolVersion} sessions `
+        + `dispatch role mandates (createOperatingMandate) instead of a legacy brief.`,
+    );
+  }
   const role = structuredClone(roleById(roleId));
   const chair = role.id === 'chair';
   // Protocol v1.2/v1.3 briefs are frozen compatibility projections of the
@@ -50,6 +74,11 @@ export function createOperatingAdvisorBrief(roleId) {
     kind: 'operating-advisor-brief',
     schemaVersion: '1.0.0',
     protocolVersion: '1.2.0',
+    // Explicit compatibility-only marker. A brief is a legacy pack-style
+    // projection; the current Protocol v1.4 dispatch unit is the role mandate.
+    // Conformance asserts this flag is present here and that no v1.4 handoff
+    // path can reach a `legacy: true` brief.
+    legacy: true,
     role: {
       id: role.id,
       displayLabel: role.displayLabel,
