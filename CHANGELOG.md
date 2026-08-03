@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.24.0
+
+### Minor Changes
+
+- Make `planr setup` a front door that reports honestly, recovers cleanly, and remembers what you named things (SPEC-007 FR3, FR4, FR5).
+
+**Every skip is reported.** The non-guided setup preview now prints a `Skipped:` block
+naming each runtime the run dropped and why — one that requires project scope while the
+run defaulted to user scope ("requires project scope"), and one that is not installed
+("not detected on PATH"). Previously this existed only in the guided wizard, so a
+flag-driven install could skip a runtime silently. Detecting nothing was already a clear
+error; now a partial skip is reported too.
+
+**A partial apply is never reported as success.** At setup's one remaining partial-apply
+seam, a failing Claude plugin step now restores the owned files from the backup taken
+before mutating, and the error states plainly what was restored, naming every path. If
+the restore itself fails, both failures surface with the backup location — the failure
+during a failure is never swallowed. Proven by a forced-failure test that lets
+inspection succeed so owned files are genuinely written, then fails the first mutating
+command, and asserts the file is returned to its pre-setup state and the project record
+cleared.
+
+**Command names are your choice, and they persist.** `planr setup --no-prefix` installs
+the workflows under bare verbs (`plan`, `ship`, `operate`, …); `--prefix` keeps the
+namespaced names (`planr-plan`, …). For Codex the choice controls both the installed
+skill directory and the skill's frontmatter `name:`; for Cursor it flows through the
+installed rule filenames. The choice is recorded on the per-project runtime-state record
+and read back on every later run, so an upgrade or a plain re-run never silently changes
+what you type. The default stays namespaced and the transform is identity in that mode,
+so an install that never opts in is byte-identical to before and existing installs keep
+their current names — nothing is force-renamed. `planr doctor` honours the same persisted
+choice: it now diagnoses the installed operate skill under the name the installer actually
+wrote, so a bare install is validated on its content instead of being falsely reported
+missing — which previously also caused the skill's content contract to be silently skipped.
+
 ## 1.23.0
 
 ### Minor Changes
