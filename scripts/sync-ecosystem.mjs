@@ -71,10 +71,20 @@ for (const [relative, pattern, label] of prosePins) {
 }
 
 // Delegate the marketplace manifest / ecosystem.json / README table.
+// OPENPLANR_ECOSYSTEM_ROOT must be set explicitly. In --check mode the delegate
+// only reads live versions from packages/*/package.json when that variable is
+// present; without it, it falls back to the versions already recorded in
+// ecosystem.json and compares the file against ITSELF — passing by construction
+// no matter how stale it is. CI sets the variable, so an unset local run
+// disagreed with CI and reported a false pass.
 const delegate = spawnSync(
   process.execPath,
   [join(packages, 'marketplace', 'scripts', 'generate-ecosystem.mjs'), ...(check ? ['--check'] : [])],
-  { cwd: join(packages, 'marketplace'), encoding: 'utf8' }
+  {
+    cwd: join(packages, 'marketplace'),
+    encoding: 'utf8',
+    env: { ...process.env, OPENPLANR_ECOSYSTEM_ROOT: packages },
+  }
 );
 if (delegate.status !== 0) {
   drift.push(`marketplace generator: ${(delegate.stdout || delegate.stderr || '').trim()}`);

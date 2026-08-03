@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAt": "2026-08-02T18:56:38.809Z",
+  "generatedAt": "2026-08-03T13:53:13.811Z",
   "protocol": {
     "current": "1.4.0",
     "supported": [
@@ -31,7 +31,7 @@
   "adapters": [
     {
       "runtime": "claude-code",
-      "version": "0.38.0",
+      "version": "0.39.0",
       "capabilityLevel": "product",
       "pipelineRange": "^0.38.0",
       "operatingBoard": {
@@ -44,7 +44,7 @@
     },
     {
       "runtime": "codex",
-      "version": "0.38.0",
+      "version": "0.39.0",
       "capabilityLevel": "workflow",
       "pipelineRange": "^0.38.0",
       "operatingBoard": {
@@ -57,7 +57,7 @@
     },
     {
       "runtime": "cursor",
-      "version": "0.38.0",
+      "version": "0.39.0",
       "capabilityLevel": "workflow",
       "pipelineRange": "^0.38.0",
       "operatingBoard": {
