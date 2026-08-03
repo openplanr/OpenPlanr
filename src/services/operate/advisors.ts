@@ -11,6 +11,7 @@ import { OPENPLANR_VERSION } from '../../utils/package-version.js';
 import { getAIProvider, isAIConfigured } from '../ai-service.js';
 import { loadConfig } from '../config-service.js';
 import { canonicalDigest, canonicalize } from './canonical.js';
+import { buildOperatingBootstrapMap, type OperatingBootstrapMap } from './context-research.js';
 import {
   createMissionToolset,
   MISSION_READ_ONLY_TOOLS,
@@ -589,6 +590,83 @@ export interface OperatingMandate {
     forbiddenEffects: string[];
   };
   mandateDigest: `sha256:${string}`;
+  /**
+   * FR12 research targeting. Attached by OpenPlanr AFTER the pipeline signs the
+   * mandate digest, so it never alters `mandateDigest` or the pinned mandate
+   * artifact — it is pure guidance layered over the immutable mandate. Present
+   * only when the dispatcher threads a shared bootstrap map or a per-role budget;
+   * the compatibility/harness path leaves it undefined and the mandate unchanged.
+   */
+  researchGuidance?: OperatingMandateResearchGuidance;
+}
+
+/**
+ * Per-role research targeting (FR12): the one shared bootstrap map, role-specific
+ * focus areas, search/read deduplication hints, a graceful per-role time budget,
+ * and explicit stop-researching-and-synthesize criteria. This REPLACES the retired
+ * evidence-pack input: it points a lens at the project's own indexes to reduce
+ * duplicated discovery, and never caps what the lens may examine or truncates what
+ * it returns — each role stays free to investigate further.
+ */
+export interface OperatingMandateResearchGuidance {
+  /** The one shared bootstrap map, built once per cycle and referenced by every role. */
+  bootstrapMap: OperatingBootstrapMap | null;
+  bootstrapMapDigest: `sha256:${string}` | null;
+  /** Role-specific focus areas (what this lens examines first). */
+  focusAreas: string[];
+  /** Search/read deduplication hints so lenses stop rediscovering the same files. */
+  deduplicationHints: string[];
+  /** Per-role research time budget (ms). Graceful: reaching it means synthesize, never cut off. */
+  perRoleResearchBudgetMs: number | null;
+  /** Explicit stop-researching-and-synthesize criteria in mandate prose. */
+  stopResearchingAndSynthesize: string[];
+}
+
+/**
+ * Bounded fan-out concurrency for advisor dispatch (FR12): a fixed pool caps how
+ * many lenses research at once without limiting any single lens's depth.
+ */
+export const DEFAULT_OPERATING_DISPATCH_CONCURRENCY = 3;
+
+/**
+ * Default per-role research time budget (FR12). Generous by design: it is a signal
+ * to STOP researching and synthesize, never a cut-off, so a role that reaches it
+ * still returns its full analysis. Raising or removing it never truncates output.
+ */
+export const DEFAULT_OPERATING_ROLE_RESEARCH_BUDGET_MS = 8 * 60_000;
+
+/**
+ * Compose a role's FR12 research guidance from the shared bootstrap map and its
+ * registry-derived investigation mandate. The stop criteria are explicit prose so
+ * the lens knows WHEN to stop reading and synthesize; the budget line always states
+ * that reaching the budget means concluding from what was gathered, never dropping
+ * or truncating a conclusion to fit it.
+ */
+function buildMandateResearchGuidance(
+  mandate: OperatingMandate,
+  bootstrapMap: OperatingBootstrapMap | null,
+  researchBudgetMs: number | null,
+): OperatingMandateResearchGuidance {
+  const budgetMs = researchBudgetMs && researchBudgetMs > 0 ? researchBudgetMs : null;
+  const deduplicationHints = [
+    'A shared bootstrap map already indexes this project’s planning families and recent git history; use its citations as entry points instead of re-walking the workspace to rediscover them.',
+    ...(bootstrapMap?.searchHints ?? []),
+  ];
+  const stopResearchingAndSynthesize = [
+    'Stop once every material claim and action is grounded in a resolvable citation and further reading no longer changes your ranked conclusions.',
+    'Stop once you have reconciled the shared bootstrap map’s cited planning and git indexes for your focus areas against a direct reading of the relevant sources.',
+    budgetMs
+      ? `When your per-role research budget of ~${Math.round(budgetMs / 1000)}s elapses, synthesize from what you have gathered — the budget is a signal to conclude, never a cut-off. Return your full analysis and every citation-qualified action, and never drop or truncate a conclusion to fit it.`
+      : 'When you reach your research time budget, synthesize from what you have gathered rather than continuing to read — never drop or truncate a conclusion to fit it.',
+  ];
+  return {
+    bootstrapMap,
+    bootstrapMapDigest: bootstrapMap?.mapDigest ?? null,
+    focusAreas: [...(mandate.investigationMandate?.examine ?? [])],
+    deduplicationHints,
+    perRoleResearchBudgetMs: budgetMs,
+    stopResearchingAndSynthesize,
+  };
 }
 
 interface PipelineMandateApi {
@@ -642,14 +720,36 @@ export async function buildOperatingMandate(input: {
   forbiddenPaths?: readonly string[];
   runtime?: string;
   protocolVersion?: '1.3.0' | '1.4.0';
+  /**
+   * FR12: the ONE shared bootstrap map built once per cycle, threaded to every
+   * role's mandate so the five lenses reference the same targeting summary instead
+   * of each re-walking the repository. Not an evidence-pack input — a body-free,
+   * citation-bearing pointer set. Omitted on the compatibility/harness path.
+   */
+  bootstrapMap?: OperatingBootstrapMap;
+  /** FR12: the graceful per-role research time budget stated in the mandate prose. */
+  researchBudgetMs?: number;
 }): Promise<OperatingMandate> {
   const api = await loadOperatingMandateApi();
-  return api.createOperatingMandate(input.roleId, {
+  const mandate = api.createOperatingMandate(input.roleId, {
     roots: [...input.roots],
     forbiddenPaths: [...(input.forbiddenPaths ?? [])],
     runtime: input.runtime,
     protocolVersion: input.protocolVersion,
   });
+  // Leave the harness/compatibility path byte-identical: research guidance is
+  // attached only when a bootstrap map or a per-role budget is threaded in.
+  if (input.bootstrapMap === undefined && input.researchBudgetMs === undefined) {
+    return mandate;
+  }
+  return {
+    ...mandate,
+    researchGuidance: buildMandateResearchGuidance(
+      mandate,
+      input.bootstrapMap ?? null,
+      input.researchBudgetMs ?? null,
+    ),
+  };
 }
 
 // A mandate's `boundaries.roots` items must satisfy this pattern (leading dot
@@ -1140,6 +1240,19 @@ export async function dispatchOperatingAdvisors(input: {
    */
   protocolVersion?: '1.3.0' | '1.4.0';
   /**
+   * FR12: the graceful per-role research time budget (ms) stated in each mandate's
+   * prose and available to the bounded fan-out. Defaults to
+   * `DEFAULT_OPERATING_ROLE_RESEARCH_BUDGET_MS`. A signal to synthesize, never a
+   * cut-off — it never truncates a role's output.
+   */
+  researchBudgetMs?: number;
+  /**
+   * FR12: bounded fan-out concurrency. Defaults to
+   * `DEFAULT_OPERATING_DISPATCH_CONCURRENCY`. Caps how many lenses research at once
+   * without limiting any single lens's depth; results stay registry-ordered.
+   */
+  concurrency?: number;
+  /**
    * The engine's fail-closed citation gate, injected so advisors.ts never imports
    * engine.ts (which would create a cycle). Every dispatched role's mandate
    * response flows through it: it resolves each cited locator against the cycle's
@@ -1198,6 +1311,15 @@ export async function dispatchOperatingAdvisors(input: {
     runnable.push(role);
   }
 
+  // FR12: build the ONE shared, citation-bearing bootstrap map for this cycle —
+  // only when there is work to dispatch — and thread it, with the graceful per-role
+  // research budget, into every role's mandate below. Built once here and referenced
+  // by all runnable roles, never rebuilt per role, so five lenses stop
+  // independently re-walking the same planning and git indexes.
+  const researchBudgetMs = input.researchBudgetMs ?? DEFAULT_OPERATING_ROLE_RESEARCH_BUDGET_MS;
+  const bootstrapMap =
+    runnable.length > 0 ? await buildOperatingBootstrapMap(input.projectRoot) : null;
+
   type RoleDispatchOutcome =
     | {
         ok: true;
@@ -1231,11 +1353,15 @@ export async function dispatchOperatingAdvisors(input: {
     try {
       // FR1: a body-free operating mandate — the lens question, declared read
       // boundaries, and citation requirement — replaces the curated evidence pack.
+      // FR12: the shared bootstrap map and graceful per-role research budget are
+      // threaded in as targeting guidance layered over the immutable mandate.
       mandate = await buildOperatingMandate({
         roleId: role.roleId,
         roots,
         runtime: input.runtime ?? input.adapter.id,
         protocolVersion: input.protocolVersion ?? '1.3.0',
+        ...(bootstrapMap ? { bootstrapMap } : {}),
+        researchBudgetMs,
       });
     } catch (error) {
       return {
@@ -1325,12 +1451,15 @@ export async function dispatchOperatingAdvisors(input: {
   }
 
   // Fan the per-role dispatch out in parallel where the adapter reports it,
-  // sequentially otherwise. Results are sorted into canonical registry order
-  // below so the reduced events are byte-identical across parallel and sequential
-  // dispatch and across dispatch order (FR4/E-004).
+  // sequentially otherwise. FR12: the parallel path is bounded-concurrency so five
+  // lenses do not all research at once, without limiting any single lens's depth.
+  // Results are sorted into canonical registry order below so the reduced events
+  // are byte-identical across parallel and sequential dispatch and across dispatch
+  // order (FR4/E-004).
   const dispatched = await runMissionDispatchFanOut({
     items: runnable,
     parallel: Boolean(input.adapter.parallelDispatch),
+    concurrency: input.concurrency ?? DEFAULT_OPERATING_DISPATCH_CONCURRENCY,
     run: (role) => dispatchRole(role),
   });
   const dispatchByRole = new Map<OperatingRoleId, RoleDispatchProvenance>();

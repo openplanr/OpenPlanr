@@ -1,7 +1,9 @@
+import { execFile } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { promisify } from 'node:util';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the credential backends so provider-bootstrap and readiness preflights are
 // deterministic regardless of the developer's real keychain / encrypted file.
@@ -44,7 +46,12 @@ import {
   createConfiguredStructuredAdapter,
   createNativeMissionOperatingRoleResult,
   dispatchOperatingAdvisors,
+  type OperatingMandate,
 } from '../../src/services/operate/advisors.js';
+import {
+  _resetOperatingBootstrapMapCache,
+  buildOperatingBootstrapMap,
+} from '../../src/services/operate/context-research.js';
 import { failure, usesNativeOperatingAdvisors } from '../../src/services/operate/index.js';
 import {
   OperateError,
@@ -926,5 +933,208 @@ describe('T-002 — mandate response grounding is post-gated (FR2)', () => {
     expect(gated.result.proposals[0].evidenceRefs).toContain('EVD-service-1');
     // Raw citations are stripped from the committed, v1.2-valid result.
     expect((gated.result.proposals[0] as Record<string, unknown>).citations).toBeUndefined();
+  });
+});
+
+describe('T-011 — shared citation-bearing bootstrap map + per-role research budget (FR12)', () => {
+  const execFileAsync = promisify(execFile);
+  const bootstrapRepos: string[] = [];
+  const ADVISORY_ROLES: OperatingRoleId[] = [
+    'strategy-finance',
+    'technology-risk',
+    'product-activation',
+    'growth-market',
+    'operations-customer',
+  ];
+
+  /** A minimal git repo with a small committed `.planr/` planning tree and one src file. */
+  async function bootstrapFixtureRepo(): Promise<string> {
+    const root = await mkdtemp(join(tmpdir(), 'openplanr-bootstrap-map-'));
+    bootstrapRepos.push(root);
+    await execFileAsync('git', ['init', '--quiet'], { cwd: root });
+    await execFileAsync('git', ['config', 'user.name', 'OpenPlanr Test'], { cwd: root });
+    await execFileAsync('git', ['config', 'user.email', 'test@openplanr.invalid'], { cwd: root });
+    await mkdir(join(root, 'src'), { recursive: true });
+    await writeFile(join(root, 'src', 'service.ts'), 'export const ok = true;\n');
+    await mkdir(join(root, '.planr', 'specs', 'SPEC-001-foo'), { recursive: true });
+    await writeFile(
+      join(root, '.planr', 'specs', 'SPEC-001-foo', 'SPEC-001-foo.md'),
+      '# SPEC-001\n',
+    );
+    await mkdir(join(root, '.planr', 'stories'), { recursive: true });
+    await writeFile(join(root, '.planr', 'stories', 'US-001-bar.md'), '# US-001\n');
+    await execFileAsync('git', ['add', '-A'], { cwd: root });
+    await execFileAsync('git', ['commit', '--quiet', '-m', 'fixture'], { cwd: root });
+    return root;
+  }
+
+  function captureMandateAdapter(captured: OperatingMandate[]): AdvisorAdapter {
+    return {
+      id: 'bootstrap-map-fixture',
+      mode: 'native-isolated',
+      toolIsolation: 'advisory',
+      capability: 'analysis-high',
+      parallelDispatch: false,
+      invoke: vi.fn(async (input: { mandate: OperatingMandate }) => {
+        captured.push(input.mandate);
+        return quietAgentNativeResponse();
+      }),
+    };
+  }
+
+  beforeEach(() => {
+    _resetOperatingBootstrapMapCache();
+  });
+
+  afterAll(async () => {
+    await Promise.all(
+      bootstrapRepos.splice(0).map((directory) => rm(directory, { recursive: true, force: true })),
+    );
+  });
+
+  // DoD #1 — one shared bootstrap map built per cycle, referenced by all five roles.
+  it('builds ONE bootstrap map per cycle and references it in all five role mandates, never rebuilt per role', async () => {
+    const projectRoot = await bootstrapFixtureRepo();
+    const captured: OperatingMandate[] = [];
+    const result = await dispatchOperatingAdvisors({
+      cycleId: 'CYCLE-001',
+      projectRoot,
+      pinnedRevision: 'a'.repeat(40),
+      readiness: readiness(ADVISORY_ROLES.map((role) => roleReadiness(role, true, null))),
+      context: advisorContext(),
+      adapter: captureMandateAdapter(captured),
+      depth: 'standard',
+      runtime: 'codex',
+      protocolVersion: '1.4.0',
+      resolveCitations: async (roleResults) => ({
+        roleResults,
+        gaps: [],
+        notEvaluatedRoleIds: [],
+      }),
+    });
+
+    expect(result.results).toHaveLength(5);
+    expect(captured).toHaveLength(5);
+    const guidances = captured.map((mandate) => mandate.researchGuidance);
+    for (const guidance of guidances) expect(guidance?.bootstrapMap).toBeDefined();
+    // Built once, shared: a single map object reference and one digest across all five.
+    const maps = guidances.map((guidance) => guidance?.bootstrapMap);
+    expect(new Set(maps).size).toBe(1);
+    expect(new Set(guidances.map((guidance) => guidance?.bootstrapMapDigest)).size).toBe(1);
+    const map = maps[0];
+    expect(map?.kind).toBe('operating-bootstrap-map');
+    expect(map?.mapDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    // Citation-bearing: every index entry carries a resolvable-shaped citation and
+    // NO file body — the map is a pointer set, never an evidence pack.
+    expect(map?.entries.length ?? 0).toBeGreaterThan(0);
+    for (const entry of map?.entries ?? []) {
+      expect(entry.citation).toBeDefined();
+      expect(['git', 'planr']).toContain(entry.citation.kind);
+      expect(entry as unknown as Record<string, unknown>).not.toHaveProperty('content');
+      expect(entry as unknown as Record<string, unknown>).not.toHaveProperty('body');
+    }
+    // The map summarizes the project's OWN planning and git indexes.
+    expect(map?.entries.some((entry) => entry.index === 'planning-artifacts')).toBe(true);
+    expect(map?.entries.some((entry) => entry.index === 'git-history')).toBe(true);
+    // Each mandate states an explicit graceful per-role budget + stop-and-synthesize criteria.
+    for (const guidance of guidances) {
+      expect(guidance?.perRoleResearchBudgetMs ?? 0).toBeGreaterThan(0);
+      const stop = (guidance?.stopResearchingAndSynthesize ?? []).join(' ');
+      expect(stop).toMatch(/synthesize/i);
+      expect(stop).toMatch(/never (drop|truncate)|not a cut-off|signal to conclude/i);
+      expect((guidance?.deduplicationHints ?? []).join(' ')).toMatch(/bootstrap map/i);
+    }
+  });
+
+  // DoD #1 (cache) — the map is not rebuilt per role: it is memoized per (project, HEAD).
+  it('caches the bootstrap map per (project, HEAD) and stays value-stable on refresh', async () => {
+    const projectRoot = await bootstrapFixtureRepo();
+    const first = await buildOperatingBootstrapMap(projectRoot);
+    const second = await buildOperatingBootstrapMap(projectRoot);
+    // Same cached instance — proof it is built once per (project, HEAD), not per role.
+    expect(second).toBe(first);
+    expect(first.projectHead).toMatch(/^[a-f0-9]{7,64}$/);
+    expect(first.entries.length).toBeGreaterThan(0);
+    // A planning citation carries a verifiable content digest; git citations carry a revision.
+    const planning = first.entries.find((entry) => entry.index === 'planning-artifacts');
+    expect(planning?.citation.kind).toBe('planr');
+    expect(planning?.citation.digest).toMatch(/^sha256:[a-f0-9]{64}$/);
+    const history = first.entries.find((entry) => entry.index === 'git-history');
+    expect(history?.citation.revision).toMatch(/^[a-f0-9]{7,64}$/);
+    // A refresh rebuilds a fresh object but stays byte-stable at an unchanged HEAD.
+    const refreshed = await buildOperatingBootstrapMap(projectRoot, { refresh: true });
+    expect(refreshed).not.toBe(first);
+    expect(refreshed.mapDigest).toBe(first.mapDigest);
+  });
+
+  // DoD #1 (fail-soft) — an unavailable git/`.planr` yields a valid empty map, never a throw.
+  it('returns a valid empty bootstrap map when no project root is available', async () => {
+    const map = await buildOperatingBootstrapMap(undefined);
+    expect(map.kind).toBe('operating-bootstrap-map');
+    expect(map.projectHead).toBeNull();
+    expect(map.entries).toEqual([]);
+    expect(map.mapDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
+  });
+
+  // DoD #4 — advisor analysisMarkdown is uncapped; the output-byte budget governs
+  // ONLY the structured brief (proposals/gaps/conflicts), never the narrative.
+  it('accepts a very large analysisMarkdown uncapped — only the structured brief carries the byte budget', async () => {
+    const mandate = await buildOperatingMandate({ roleId: 'strategy-finance', roots: ['src'] });
+    // ~120000 chars: far larger than any role's structured-output byte budget, yet
+    // under the schema's 131072 safety bound. If the narrative were budgeted, this
+    // would be rejected; it is not, because only the brief view is bounded.
+    const hugeNarrative = 'Narrative sentence with substance. '.repeat(3400);
+    expect(hugeNarrative.length).toBeGreaterThan(100_000);
+    const gated = await createNativeMissionOperatingRoleResult({
+      mandate,
+      cycleId: 'CYCLE-001',
+      runtime: 'claude',
+      pinnedRevision: 'a'.repeat(40),
+      response: {
+        outcome: 'actions',
+        analysisMarkdown: hugeNarrative,
+        claims: [],
+        actions: [
+          {
+            actionKey: 'one-small-grounded-action',
+            title: 'A single small grounded action',
+            summary: 'Take a bounded corrective step next.',
+            lane: 'DEV',
+            routeKind: 'quick-task',
+            horizon: 'immediate',
+            impact: 3,
+            confidence: 3,
+            ease: 3,
+            citations: [
+              {
+                kind: 'repository',
+                path: 'src/service.ts',
+                startLine: 1,
+                endLine: 2,
+                revision: 'a'.repeat(40),
+              },
+            ],
+          },
+        ],
+        gaps: [],
+        conflicts: [],
+      },
+      resolveCitations: async (roleResults) => ({
+        roleResults: roleResults.map((result) => ({
+          ...result,
+          proposals: result.proposals.map((proposal) => ({
+            ...proposal,
+            evidenceRefs: ['EVD-service-1'],
+          })),
+        })),
+        gaps: [],
+        notEvaluatedRoleIds: [],
+      }),
+    });
+
+    // The oversized narrative flowed through uncapped: the role committed normally,
+    // proving truncation applies only to the bounded structured brief, not the analysis.
+    expect(gated.result.outcome).toBe('proposals');
+    expect(gated.result.proposals).toHaveLength(1);
   });
 });

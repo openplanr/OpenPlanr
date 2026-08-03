@@ -79,9 +79,14 @@ import {
   operatingCacheAction,
   operatingIntegrityAction,
   purgeBoardMachineLocalCaches,
+  reapStalledOperatingRoles,
   repairOperatingSecurity,
 } from './maintenance.js';
 import { migrateOperatingStorageLayoutOnOpen } from './migration.js';
+import {
+  applyOperatingProfileMigration,
+  inspectOperatingProfileMigration,
+} from './profile-migration.js';
 import { renderOperatingBrief } from './projection.js';
 import { persistOperatingProjections } from './projection-persistence.js';
 import { loadOperatingProtocol, resolveOperatingPipelineRoot } from './protocol.js';
@@ -1201,6 +1206,70 @@ async function profiles(request: OperateActionRequest): Promise<OperateActionRes
   return success(request.action, { data: profile, message: 'Custom profile is valid.' });
 }
 
+/**
+ * FR10 / T-009 + T-018 — the legacy `.planr/operate-profile.json` field migration
+ * (`profiles migrate inspect|apply`), routed through the action map. T-009 wired
+ * these directly to `profile-migration.ts`, which meant they bypassed the
+ * cross-cutting handling every other action receives here — notably the
+ * storage-layout auto-migration guard in `executeOperateAction`. Dispatching them
+ * through the map restores that guard for the mutating `apply` (so a
+ * SPEC-002-layout project is reconciled on open before the profile is rewritten),
+ * plus the standard `--json` shaping and structured provenance. `inspect` stays a
+ * read-only preview (`OPERATE_READ_ONLY_ACTIONS`): per FR10 it previews without
+ * mutating, so it must not migrate the on-disk layout as a side effect. The
+ * migration's own semantics are unchanged: still idempotent, still an exact
+ * digest-verified backup before mutation, still a journalled transaction with
+ * rollback — all owned by `profile-migration.ts`, which this handler only calls.
+ */
+async function profileMigration(request: OperateActionRequest): Promise<OperateActionResult> {
+  const localRoot = option<string | undefined>(request, 'localRoot', undefined);
+  const scoped = localRoot ? { localRoot } : {};
+  if (request.action === 'profiles.migrate.inspect') {
+    const inspection = await inspectOperatingProfileMigration({
+      projectRoot: request.projectRoot,
+      ...scoped,
+    });
+    return success(request.action, {
+      message: !inspection.present
+        ? 'No legacy .planr/operate-profile.json is present; nothing to migrate.'
+        : inspection.changed
+          ? `Legacy profile migration previewed: ${inspection.converted.length} field(s) converted, ${inspection.unsupported.length} unsupported. No change was made.`
+          : 'Legacy profile already matches the current schema; nothing to migrate.',
+      counts: {
+        preserved: inspection.preserved.length,
+        converted: inspection.converted.length,
+        unsupported: inspection.unsupported.length,
+      },
+      warnings: inspection.unsupported.map((entry) => `${entry.field}: ${entry.reason}`),
+      data: inspection,
+      next:
+        inspection.present && inspection.changed
+          ? ['planr operate profiles migrate apply --yes']
+          : [],
+    });
+  }
+  const applied = await applyOperatingProfileMigration({
+    projectRoot: request.projectRoot,
+    confirmed: option(request, 'yes', false),
+    ...scoped,
+  });
+  return success(request.action, {
+    message: !applied.present
+      ? 'No legacy .planr/operate-profile.json is present; nothing to migrate.'
+      : applied.applied
+        ? `Migrated the legacy operating profile; exact pre-migration backup written. Converted ${applied.converted.length} field(s); dropped ${applied.unsupported.length} unsupported field(s).`
+        : 'Legacy operating profile already matches the current schema; no change was made.',
+    paths: applied.backupPath ? { backup: applied.backupPath } : {},
+    counts: {
+      preserved: applied.preserved.length,
+      converted: applied.converted.length,
+      unsupported: applied.unsupported.length,
+    },
+    warnings: applied.unsupported.map((entry) => `${entry.field}: ${entry.reason}`),
+    data: applied,
+  });
+}
+
 async function status(request: OperateActionRequest): Promise<OperateActionResult> {
   const config = await validateOperatingConfiguration(request.projectRoot);
   const localRoot = option<string | undefined>(request, 'localRoot', undefined);
@@ -1579,6 +1648,25 @@ async function cycleMutation(request: OperateActionRequest): Promise<OperateActi
   });
 }
 
+async function abandonStalledRole(request: OperateActionRequest): Promise<OperateActionResult> {
+  // SPEC-005 T-020 — the operator escape for a cycle stranded at `phase: advisors`
+  // because a runtime dispatched a lens and reported nothing. Gated on a lapsed
+  // adapter lease + `--yes`, it terminally governs the still-unrecorded lenses
+  // `not_evaluated` so a following `planr operate run` (offline when no runtime is
+  // available) reaches a reviewable cycle without discarding the recorded work. It
+  // never invokes the runtime lifecycle, so it works when the runtime is gone.
+  const cycleId = argument(request, 'cycleId');
+  if (!cycleId) throw new OperateError('E_OPERATE_STATE_INVALID', 'Cycle ID is required.');
+  const data = await reapStalledOperatingRoles({
+    projectRoot: request.projectRoot,
+    cycleId,
+    role: option(request, 'role', undefined),
+    reason: option(request, 'reason', undefined),
+    confirmed: option(request, 'yes', false),
+  });
+  return success(request.action, { data, nextActions: data.next, next: data.next });
+}
+
 async function findingMutation(request: OperateActionRequest): Promise<OperateActionResult> {
   const findingId = argument(request, 'findingId');
   if (!findingId) throw new OperateError('E_OPERATE_STATE_INVALID', 'Finding ID is required.');
@@ -1728,12 +1816,15 @@ async function maintenance(request: OperateActionRequest): Promise<OperateAction
       | 'record'
       | 'resume'
       | 'finalize'
-      | 'cancel',
+      | 'cancel'
+      | 'heartbeat'
+      | 'abandon',
     cycleId: option(request, 'cycleId', undefined),
     evidenceDigest: option(request, 'evidenceDigest', undefined),
     lease: option(request, 'lease', undefined),
     idempotencyKey: option(request, 'idempotencyKey', undefined),
     role: option(request, 'role', undefined),
+    reason: option(request, 'reason', undefined),
     stdin: request.stdin,
   });
   const handoff =
@@ -1762,6 +1853,8 @@ const HANDLERS: Record<
   'profiles.list': profiles,
   'profiles.show': profiles,
   'profiles.validate': profiles,
+  'profiles.migrate.inspect': profileMigration,
+  'profiles.migrate.apply': profileMigration,
   'context.show': contextResearch,
   'context.refresh': contextResearch,
   'context.review': contextResearch,
@@ -1814,17 +1907,28 @@ const HANDLERS: Record<
   'adapter.resume': maintenance,
   'adapter.finalize': maintenance,
   'adapter.cancel': maintenance,
+  'adapter.heartbeat': maintenance,
+  'adapter.abandon': maintenance,
   'harness.prepare': maintenance,
   'harness.record': maintenance,
   'harness.resume': maintenance,
   'harness.finalize': maintenance,
   'harness.cancel': maintenance,
+  'harness.heartbeat': maintenance,
+  'harness.abandon': maintenance,
+  'cycles.abandon-role': abandonStalledRole,
 };
 
 /**
  * Actions that only read committed state. A SPEC-002-layout project stays
  * readable through these without being migrated; only a mutating action opening
  * such a project triggers the automatic, journal-safe v1.3 migration (FR5/E-005).
+ *
+ * T-018: `profiles.migrate.inspect` is listed here — it previews the profile
+ * migration without writing (FR10), so it must not reconcile the storage layout
+ * as a side effect. Only the mutating `profiles.migrate.apply` is absent, so it
+ * receives the guard the T-009 direct wiring skipped before it rewrites the
+ * profile on a SPEC-002-layout project.
  */
 const OPERATE_READ_ONLY_ACTIONS = new Set<string>([
   'inspect',
@@ -1835,6 +1939,7 @@ const OPERATE_READ_ONLY_ACTIONS = new Set<string>([
   'profiles.list',
   'profiles.show',
   'profiles.validate',
+  'profiles.migrate.inspect',
   'context.show',
   'status',
   'review',

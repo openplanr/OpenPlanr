@@ -14,6 +14,12 @@ import {
   OPENPLANR_SKILLS_VERSION,
 } from './claude-plugin-service.js';
 import { diagnoseOperatingBoard } from './operate/doctor.js';
+import { purgeAbandonedOperatingScratch } from './operate/maintenance.js';
+import {
+  type AbandonedOperatingScratch,
+  listAbandonedOperatingScratch,
+} from './operate/scratch.js';
+import { resolveOperatingPaths } from './operate/workspace.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 import { readOpenPlanrVersion } from './provenance-service.js';
 
@@ -1094,6 +1100,39 @@ export async function managedRuntimesForProject(projectDir: string): Promise<Run
 
 export function isOpenPlanrHome(projectDir: string): boolean {
   return path.resolve(projectDir) === path.resolve(userHome());
+}
+
+/**
+ * FR7 (SPEC-005): the `doctor --fix` view of OpenPlanr-owned scratch that a
+ * session left behind without finalizing. Reuses the machine-local operate root
+ * that `runtimeDoctor` already diagnoses (`<home>/.planr`) so the preview and the
+ * warning name the same abandoned cycles. This is a read: it lists ONLY scratch a
+ * valid `openplanr-operate-scratch` ownership manifest confirms this project wrote
+ * and whose lease window has lapsed — never an unrelated file that merely landed
+ * under the scratch root.
+ */
+export async function previewAbandonedOperateScratch(
+  projectDir: string,
+): Promise<AbandonedOperatingScratch[]> {
+  const paths = resolveOperatingPaths(projectDir, { localRoot: path.join(userHome(), '.planr') });
+  return listAbandonedOperatingScratch(paths);
+}
+
+/**
+ * FR7 (SPEC-005): the `doctor --fix` repair for abandoned OpenPlanr-owned scratch.
+ * Delegates to the single owned-only cleanup (`purgeAbandonedOperatingScratch`)
+ * that `planr operate cache purge` also calls — there is no second cleanup path.
+ * It removes ONLY scratch a valid ownership manifest confirms this project wrote
+ * whose lease has lapsed, and never broadens to anything else found under the
+ * scratch tree, so a false positive can never delete a user's unrelated data.
+ */
+export async function purgeAbandonedOperateScratch(
+  projectDir: string,
+): Promise<{ removed: number; cycles: string[] }> {
+  return purgeAbandonedOperatingScratch({
+    projectRoot: projectDir,
+    localRoot: path.join(userHome(), '.planr'),
+  });
 }
 
 export async function cleanupHomeProjectInstall(): Promise<{ ok: true; removed: string[] }> {

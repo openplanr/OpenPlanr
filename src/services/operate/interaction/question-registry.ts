@@ -26,6 +26,14 @@ export interface OperatingQuestionContext {
    * profile" correction never has to be typed again on re-init.
    */
   existingProfileId?: OperatingInitAnswers['profile'];
+  /**
+   * FR10 / T-009: field names on the existing `.planr/operate-profile.json` whose
+   * values the current CLI would reject (for example an `enabledProviders` set
+   * with an unrecognized provider, or `budgets` that differ from the fixed
+   * shape). The `id` stays a valid suggestion, but these fields are named
+   * explicitly so guided init never silently suggests a profile the tool refuses.
+   */
+  existingProfileUnsupportedFields?: string[];
 }
 
 /**
@@ -104,6 +112,24 @@ function effectiveDetectedRuntime(
   return (
     KNOWN_CODING_RUNTIMES.find((runtime) => runtime === context.runtime) ?? context.detectedRuntime
   );
+}
+
+/**
+ * FR10 / T-009: the profile suggestion reason. When the detected profile file
+ * carries fields the current CLI would reject, the reason names them and points
+ * to the migration command so the operator can reconcile the profile instead of
+ * being handed a suggestion the tool will refuse to reuse as-is.
+ */
+function existingProfileSuggestionReason(unsupportedFields?: readonly string[]): string {
+  const base =
+    'Suggested from the existing .planr/operate-profile.json; confirm or choose another.';
+  if (!unsupportedFields || unsupportedFields.length === 0) return base;
+  const names = [...unsupportedFields]
+    .sort()
+    .map((field) => `\`${field}\``)
+    .join(', ');
+  const noun = unsupportedFields.length === 1 ? 'field is' : 'fields are';
+  return `${base} Note: this profile's ${names} ${noun} not recognized by the current operating configuration and will not be reused as-is — run \`planr operate profiles migrate inspect\` to review.`;
 }
 
 export interface OperatingInitQuestionDefinition {
@@ -199,13 +225,16 @@ export function operatingInitQuestionRegistry(
           required: true,
           // Detect-don't-ask: when a `.planr/operate-profile.json` already names a
           // profile, surface it as the confirmable suggestion so the operator does
-          // not have to re-pick it; otherwise fall back to the SaaS default.
+          // not have to re-pick it; otherwise fall back to the SaaS default. When
+          // that file carries values the CLI would reject, the suggestion names
+          // the unsupported fields (FR10 / T-009) instead of hiding them.
           ...(context.existingProfileId
             ? {
                 valueSemantics: 'suggestion' as const,
                 suggestedValue: context.existingProfileId,
-                suggestionReason:
-                  'Suggested from the existing .planr/operate-profile.json; confirm or choose another.',
+                suggestionReason: existingProfileSuggestionReason(
+                  context.existingProfileUnsupportedFields,
+                ),
               }
             : {
                 valueSemantics: 'default' as const,

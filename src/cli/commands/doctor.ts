@@ -6,7 +6,9 @@ import {
   cleanupHomeProjectInstall,
   isOpenPlanrHome,
   managedRuntimesForProject,
+  previewAbandonedOperateScratch,
   previewHomeProjectCleanup,
+  purgeAbandonedOperateScratch,
   runtimeDoctor,
 } from '../../services/runtime-manager-service.js';
 import { display, logger } from '../../utils/logger.js';
@@ -31,6 +33,11 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
       );
       if (opts.fix) {
         const homeCleanup = await previewHomeProjectCleanup();
+        // FR7: the owned-only abandoned-scratch cleanup is now reachable through
+        // the FR7-named `doctor --fix` surface, delegating to the single cleanup
+        // path in maintenance.ts. It only ever lists scratch a valid ownership
+        // manifest confirms this project wrote.
+        const abandonedScratch = await previewAbandonedOperateScratch(projectDir);
         const managedRuntimes = isOpenPlanrHome(projectDir)
           ? []
           : await managedRuntimesForProject(projectDir);
@@ -48,6 +55,10 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
         if (!opts.json) {
           logger.heading('Repair preview');
           for (const target of homeCleanup) display.bullet(`remove ${target}`);
+          for (const entry of abandonedScratch)
+            display.bullet(
+              `remove abandoned OpenPlanr-owned operate scratch for cycle ${entry.cycleId}`,
+            );
           for (const repair of result.repairs)
             display.bullet(`${repair.operation} ${repair.target}`);
           for (const action of (preview?.actions ?? []).filter(
@@ -58,6 +69,7 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
         }
         const hasRepairs =
           homeCleanup.length > 0 ||
+          abandonedScratch.length > 0 ||
           result.repairs.length > 0 ||
           (preview?.actions ?? []).some((item) => item.operation !== 'unchanged');
         if (!hasRepairs) {
@@ -76,6 +88,7 @@ export function registerDoctorCommand(program: Command, cliVersion: string) {
           if (result.repairs.length) {
             await runtimeDoctor(projectDir, { pipelineRepair: 'apply' });
           }
+          if (abandonedScratch.length) await purgeAbandonedOperateScratch(projectDir);
           if (homeCleanup.length) await cleanupHomeProjectInstall();
           if (managedRuntimes.length) {
             await applySetup({

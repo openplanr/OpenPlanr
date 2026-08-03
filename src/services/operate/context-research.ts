@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
@@ -242,6 +242,273 @@ export async function recordOperatingContextResearch(input: {
 export async function readOperatingContextResearch(projectRoot: string): Promise<unknown> {
   const root = await assertOperatingProject(projectRoot);
   return JSON.parse(await readFile(contextPath(root), 'utf8')) as unknown;
+}
+
+// ---------------------------------------------------------------------------
+// Shared citation-bearing bootstrap map (FR12)
+// ---------------------------------------------------------------------------
+//
+// FR12 forbids the two mechanisms this project deliberately retired — pre-collected
+// evidence-pack INPUTS handed to agents, and repository-size ceilings — and demands
+// that efficiency come instead from better targeting. The bootstrap map is that
+// targeting layer: ONE summary of the project's own planning and git indexes, built
+// once per cycle and referenced by every role's mandate so five advisory lenses stop
+// independently re-walking the same tree to rediscover what already exists.
+//
+// It is emphatically NOT an evidence pack. Every entry is a body-free POINTER: a
+// short label, a locator, and a resolvable citation (a git revision, or a `.planr`
+// path bound to a content digest the role can verify itself). No file body, no
+// collected snapshot, and no size gate is ever attached — each role remains free to
+// inspect the project directly and investigate further. The map only tells a lens
+// WHERE to look first, never substitutes for its own reading.
+
+const BOOTSTRAP_MAP_MAX_GIT_COMMITS = 8;
+const BOOTSTRAP_MAP_MAX_READ_BYTES = 256 * 1024;
+const BOOTSTRAP_MAP_MAX_FAMILY_WALK = 4_000;
+// A well-formed representative-file citation path: repository-relative, no `..`,
+// each segment starting alphanumeric (so dot-prefixed internals like `.state` are
+// skipped rather than emitted as a malformed planr citation).
+const BOOTSTRAP_MAP_CITABLE_PATH = /^\.planr(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)*$/;
+
+export interface OperatingBootstrapMapCitation {
+  kind: 'git' | 'planr';
+  revision?: string;
+  path?: string;
+  digest?: `sha256:${string}`;
+}
+
+export interface OperatingBootstrapMapEntry {
+  /** Which existing index this pointer summarizes. */
+  index: 'git-history' | 'planning-artifacts';
+  /** A body-free human summary — never file content. */
+  label: string;
+  /** A locator (a `.planr/` path or an ISO commit date) for the role to open directly. */
+  location: string;
+  /** A resolvable citation the role can verify without trusting this summary. */
+  citation: OperatingBootstrapMapCitation;
+}
+
+export interface OperatingBootstrapMap {
+  kind: 'operating-bootstrap-map';
+  schemaVersion: '1.0.0';
+  /** The project HEAD the map was summarized at, or null when git was unavailable. */
+  projectHead: string | null;
+  /** Citation-bearing pointers into the planning and git indexes. */
+  entries: OperatingBootstrapMapEntry[];
+  /** Dedup hint: top-level workspace roots, so a lens scopes rather than re-globbing the tree. */
+  workspaceRoots: string[];
+  /** Search/read deduplication hints referencing the indexes above. */
+  searchHints: string[];
+  mapDigest: `sha256:${string}`;
+}
+
+const bootstrapMapCache = new Map<string, OperatingBootstrapMap>();
+
+/** Test-only: clear the per-(root, head) bootstrap-map cache between fixtures. */
+export function _resetOperatingBootstrapMapCache(): void {
+  bootstrapMapCache.clear();
+}
+
+async function bootstrapMapGitHead(projectRoot: string): Promise<string | null> {
+  try {
+    const head = (await executeGitReadOnly(projectRoot, ['rev-parse', 'HEAD'])).trim();
+    return /^[a-f0-9]{7,64}$/.test(head) ? head : null;
+  } catch {
+    return null;
+  }
+}
+
+async function bootstrapGitHistoryEntries(
+  projectRoot: string,
+  head: string | null,
+): Promise<OperatingBootstrapMapEntry[]> {
+  if (!head) return [];
+  try {
+    const stdout = await executeGitReadOnly(projectRoot, [
+      'log',
+      '-n',
+      String(BOOTSTRAP_MAP_MAX_GIT_COMMITS),
+      '--no-color',
+      '--format=%H%x1f%cI%x1f%s',
+    ]);
+    return stdout
+      .split('\n')
+      .filter(Boolean)
+      .slice(0, BOOTSTRAP_MAP_MAX_GIT_COMMITS)
+      .flatMap((line) => {
+        const [revision, when = '', subject = ''] = line.split('\x1f');
+        if (!/^[a-f0-9]{7,64}$/.test(revision ?? '')) return [];
+        return [
+          {
+            index: 'git-history' as const,
+            label: subject.slice(0, 200) || '(no subject)',
+            location: when,
+            citation: { kind: 'git' as const, revision },
+          },
+        ];
+      });
+  } catch {
+    return [];
+  }
+}
+
+/** A body-free citation for one representative planning file: its path plus a content digest. */
+async function bootstrapPlanrCitation(
+  projectRoot: string,
+  absoluteFile: string,
+): Promise<OperatingBootstrapMapCitation | null> {
+  const relative = path.relative(projectRoot, absoluteFile).split(path.sep).join('/');
+  if (!BOOTSTRAP_MAP_CITABLE_PATH.test(relative)) return null;
+  try {
+    const info = await stat(absoluteFile);
+    if (!info.isFile() || info.size > BOOTSTRAP_MAP_MAX_READ_BYTES) {
+      return { kind: 'planr', path: relative };
+    }
+    const content = await readFile(absoluteFile, 'utf8');
+    return { kind: 'planr', path: relative, digest: sha256Digest(content) };
+  } catch {
+    return { kind: 'planr', path: relative };
+  }
+}
+
+/** Count planning artifacts under a `.planr/` family and pick the lowest-sorted representative file. */
+async function summarizePlanningFamily(
+  familyRoot: string,
+): Promise<{ count: number; representative: string | null }> {
+  let count = 0;
+  let representative: string | null = null;
+  const stack: string[] = [familyRoot];
+  while (stack.length > 0 && count <= BOOTSTRAP_MAP_MAX_FAMILY_WALK) {
+    const current = stack.pop() as string;
+    const entries = await readdir(current, { withFileTypes: true }).catch(() => []);
+    for (const entry of [...entries].sort((left, right) => left.name.localeCompare(right.name))) {
+      if (entry.name.startsWith('.')) continue;
+      const child = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(child);
+      } else if (entry.isFile()) {
+        count += 1;
+        if (!representative || child.localeCompare(representative) < 0) representative = child;
+      }
+    }
+  }
+  return { count, representative };
+}
+
+async function bootstrapPlanningEntries(
+  projectRoot: string,
+): Promise<OperatingBootstrapMapEntry[]> {
+  const planrRoot = path.join(projectRoot, '.planr');
+  const children = await readdir(planrRoot, { withFileTypes: true }).catch(() => []);
+  const entries: OperatingBootstrapMapEntry[] = [];
+  for (const child of [...children].sort((left, right) => left.name.localeCompare(right.name))) {
+    if (child.name.startsWith('.')) continue;
+    const location = `.planr/${child.name}`;
+    if (child.isDirectory()) {
+      const { count, representative } = await summarizePlanningFamily(
+        path.join(planrRoot, child.name),
+      );
+      if (count === 0) continue;
+      const citation =
+        (representative ? await bootstrapPlanrCitation(projectRoot, representative) : null) ??
+        ({ kind: 'planr', path: location } as OperatingBootstrapMapCitation);
+      entries.push({
+        index: 'planning-artifacts',
+        label: `${count} planning artifact${count === 1 ? '' : 's'} under ${location}`,
+        location,
+        citation,
+      });
+    } else if (child.isFile()) {
+      const citation =
+        (await bootstrapPlanrCitation(projectRoot, path.join(planrRoot, child.name))) ??
+        ({ kind: 'planr', path: location } as OperatingBootstrapMapCitation);
+      entries.push({
+        index: 'planning-artifacts',
+        label: location,
+        location,
+        citation,
+      });
+    }
+  }
+  return entries;
+}
+
+async function bootstrapWorkspaceRoots(projectRoot: string): Promise<string[]> {
+  const found = new Set<string>(['.planr']);
+  const entries = await readdir(projectRoot, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (entry.name === '.git' || entry.name === 'node_modules') continue;
+    found.add(entry.name);
+  }
+  return [...found].sort();
+}
+
+/**
+ * Build the ONE shared, citation-bearing bootstrap map for a cycle (FR12). It is a
+ * body-free summary of the project's OWN planning and git indexes, cached per
+ * (project, HEAD) so five role mandates reference the same map instead of each
+ * re-walking the repository. Every read is bounded and fail-soft: a missing git
+ * history, a gitignored `.planr/`, or an unreadable family simply yields fewer
+ * pointers — never a failure and never a repository-size ceiling. The map narrows
+ * where a lens looks first; it never caps what a lens may examine.
+ */
+export async function buildOperatingBootstrapMap(
+  projectRoot: string | undefined,
+  options: { refresh?: boolean } = {},
+): Promise<OperatingBootstrapMap> {
+  const emptyMap = (head: string | null): OperatingBootstrapMap => {
+    const unsigned = {
+      kind: 'operating-bootstrap-map' as const,
+      schemaVersion: '1.0.0' as const,
+      projectHead: head,
+      entries: [] as OperatingBootstrapMapEntry[],
+      workspaceRoots: [] as string[],
+      searchHints: [] as string[],
+    };
+    return { ...unsigned, mapDigest: canonicalDigest(unsigned) };
+  };
+  if (!projectRoot) return emptyMap(null);
+  const resolvedRoot = path.resolve(projectRoot);
+  const head = await bootstrapMapGitHead(resolvedRoot);
+  const cacheKey = head ? `${resolvedRoot}::${head}` : null;
+  if (cacheKey && !options.refresh) {
+    const cached = bootstrapMapCache.get(cacheKey);
+    if (cached) return cached;
+  }
+  const [gitEntries, planningEntries, workspaceRoots] = await Promise.all([
+    bootstrapGitHistoryEntries(resolvedRoot, head),
+    bootstrapPlanningEntries(resolvedRoot),
+    bootstrapWorkspaceRoots(resolvedRoot),
+  ]);
+  const entries = [...planningEntries, ...gitEntries];
+  const searchHints: string[] = [];
+  if (planningEntries.length > 0) {
+    searchHints.push(
+      'Planning artifacts are already indexed above; open the cited `.planr/` families directly instead of re-walking the workspace to rediscover product intent.',
+    );
+  }
+  if (gitEntries.length > 0) {
+    searchHints.push(
+      'Recent history is summarized above; target the cited revisions rather than re-running a broad, unbounded git log.',
+    );
+  }
+  if (workspaceRoots.length > 0) {
+    searchHints.push(
+      'Top-level workspace roots are enumerated above; scope searches to the roots relevant to your lens rather than re-globbing the entire tree.',
+    );
+  }
+  const unsigned = {
+    kind: 'operating-bootstrap-map' as const,
+    schemaVersion: '1.0.0' as const,
+    projectHead: head,
+    entries,
+    workspaceRoots,
+    searchHints,
+  };
+  const map: OperatingBootstrapMap = { ...unsigned, mapDigest: canonicalDigest(unsigned) };
+  if (cacheKey) bootstrapMapCache.set(cacheKey, map);
+  return map;
 }
 
 function bestClaims(

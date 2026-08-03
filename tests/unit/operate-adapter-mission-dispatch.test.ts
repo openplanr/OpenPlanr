@@ -1,11 +1,15 @@
 import { execFile } from 'node:child_process';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import type { OperatingMandate } from '../../src/services/operate/advisors.js';
+import {
+  buildOperatingMandate,
+  type OperatingMandate,
+} from '../../src/services/operate/advisors.js';
 import { canonicalize } from '../../src/services/operate/canonical.js';
+import { buildOperatingBootstrapMap } from '../../src/services/operate/context-research.js';
 import { gateRecordedProposalCitations } from '../../src/services/operate/engine.js';
 import { OperatingEventStore } from '../../src/services/operate/event-store.js';
 import { OperatingEvidenceCache } from '../../src/services/operate/evidence-cache.js';
@@ -13,6 +17,7 @@ import {
   createOperatingAdapterStartHandoff,
   operateAdapterLifecycle,
 } from '../../src/services/operate/maintenance.js';
+import { runMissionDispatchFanOut } from '../../src/services/operate/mission-dispatch.js';
 import type {
   OperatingConfig,
   OperatingRoleId,
@@ -530,5 +535,152 @@ describe('native mission dispatch reaches the record action (FR1 / US-003)', () 
       expect(recordAction?.dispatch?.mandatePointer).toBe('/data/mandates/strategy-finance');
       expect(recordAction?.dispatch?.rolePackPointer).toBeUndefined();
     }
+  });
+});
+
+// DoD #2 — the two mechanisms this project deliberately reversed must never return.
+describe('FR12 anti-regression: no evidence-pack input, no repository-size ceiling in dispatch preparation (T-011)', () => {
+  const DISPATCH_PREP_SOURCES = [
+    'src/services/operate/context-research.ts',
+    'src/services/operate/advisors.ts',
+    'src/services/operate/mission-dispatch.ts',
+  ];
+  // The retired mechanisms, matched as concrete code identifiers (camelCase). The
+  // surrounding prose that neutrally describes the retired pack — "evidence body",
+  // "evidence index", "evidence pack" — is spaced/hyphenated and never a false hit.
+  const FORBIDDEN_IDENTIFIERS = [
+    'evidencePack',
+    'evidenceBundle',
+    'evidenceBody',
+    'curatedEvidence',
+    'preCollectedEvidence',
+    'repositorySizeCeiling',
+    'repositoryByteCeiling',
+    'maxRepositoryBytes',
+    'maxRepoSize',
+    'repoSizeLimit',
+    'repositorySizeLimit',
+    'maxRepositorySize',
+  ];
+
+  it('declares no evidence-pack input parameter and no repository-size ceiling anywhere in the dispatch-preparation sources', async () => {
+    for (const relativePath of DISPATCH_PREP_SOURCES) {
+      const source = await readFile(resolve(process.cwd(), relativePath), 'utf8');
+      for (const token of FORBIDDEN_IDENTIFIERS) {
+        expect(source.includes(token), `${relativePath} must not reintroduce ${token}`).toBe(false);
+      }
+    }
+  });
+
+  it('produces a body-free, ceiling-free shared bootstrap map and mandate (pointers, not a pack)', async () => {
+    const fixture = await advisingMissionCycle({
+      runtime: 'claude',
+      enabledRoles: ['strategy-finance', 'chair'],
+    });
+    const map = await buildOperatingBootstrapMap(fixture.projectRoot);
+    const mapRecord = map as unknown as Record<string, unknown>;
+    // The map is a pointer set: no collected body, no evidence bundle, no size gate.
+    for (const key of [
+      'content',
+      'body',
+      'evidence',
+      'evidencePack',
+      'evidenceBundle',
+      'maxBytes',
+      'repositorySizeCeiling',
+      'sizeCeiling',
+    ]) {
+      expect(mapRecord[key]).toBeUndefined();
+    }
+    for (const entry of map.entries) {
+      const entryRecord = entry as unknown as Record<string, unknown>;
+      expect(entryRecord.citation).toBeDefined();
+      expect(entryRecord.content).toBeUndefined();
+      expect(entryRecord.body).toBeUndefined();
+    }
+
+    const mandate = await buildOperatingMandate({
+      roleId: 'strategy-finance',
+      roots: ['src', '.planr'],
+      bootstrapMap: map,
+      researchBudgetMs: 60_000,
+    });
+    const mandateRecord = mandate as unknown as Record<string, unknown>;
+    expect(mandateRecord.evidence).toBeUndefined();
+    expect(mandateRecord.evidenceIndex).toBeUndefined();
+    expect(mandateRecord.evidencePack).toBeUndefined();
+    // The guidance references the shared map (never a pack); the per-role budget is a
+    // graceful millisecond signal, never a size/enumeration cap on what may be read.
+    expect(mandate.researchGuidance?.bootstrapMapDigest).toBe(map.mapDigest);
+    expect(typeof mandate.researchGuidance?.perRoleResearchBudgetMs).toBe('number');
+  });
+});
+
+// DoD #3 — a role past its per-role research budget synthesizes rather than being cut off.
+describe('per-role research budget synthesizes rather than truncating (FR12 / T-011)', () => {
+  it('a role past its injected budget synthesizes from what it has and is never cut off', async () => {
+    let clock = 1_000;
+    const now = (): number => clock;
+    const overBudget: string[] = [];
+    const FULL_OUTPUT = 'x'.repeat(5_000);
+    const results = await runMissionDispatchFanOut<
+      { role: string; overruns: boolean },
+      { role: string; synthesized: boolean; output: string }
+    >({
+      items: [
+        { role: 'a', overruns: false },
+        { role: 'b', overruns: true },
+      ],
+      parallel: false,
+      perRoleBudgetMs: 100,
+      now,
+      onBudgetExceeded: (item) => overBudget.push(item.role),
+      run: async (item, signal) => {
+        if (item.overruns) clock += 500; // the role spends past its research budget
+        // The role consults its budget; if blown it wraps up and synthesizes from
+        // what it has — returning its FULL gathered output, never a cut-off stub.
+        const synthesized = signal.budgetExceeded();
+        return { role: item.role, synthesized, output: FULL_OUTPUT };
+      },
+    });
+
+    // Order preserved; the in-budget role did not synthesize early, the overrunning one did.
+    expect(results.map((result) => result.role)).toEqual(['a', 'b']);
+    expect(results[0].synthesized).toBe(false);
+    expect(results[1].synthesized).toBe(true);
+    // The overrunning role's output is intact and uncut — graceful synthesis, not truncation.
+    expect(results[1].output).toBe(FULL_OUTPUT);
+    expect(results[1].output).toHaveLength(5_000);
+    expect(overBudget).toEqual(['b']);
+  });
+
+  it('bounds fan-out concurrency without reordering results', async () => {
+    let active = 0;
+    let peak = 0;
+    const results = await runMissionDispatchFanOut<number, number>({
+      items: [0, 1, 2, 3, 4],
+      parallel: true,
+      concurrency: 2,
+      run: async (item) => {
+        active += 1;
+        peak = Math.max(peak, active);
+        await new Promise((resolveTimer) => setTimeout(resolveTimer, 5));
+        active -= 1;
+        return item * 10;
+      },
+    });
+    // Results stay in input order regardless of completion order.
+    expect(results).toEqual([0, 10, 20, 30, 40]);
+    // No more than `concurrency` roles researched at once.
+    expect(peak).toBeLessThanOrEqual(2);
+  });
+
+  it('keeps the legacy single-argument run signature working (backward compatible)', async () => {
+    const results = await runMissionDispatchFanOut<number, number>({
+      items: [1, 2, 3],
+      parallel: false,
+      run: (item) => Promise.resolve(item + 1),
+    });
+    expect(results).toEqual([2, 3, 4]);
   });
 });

@@ -278,6 +278,42 @@ async function execute(
 }
 
 /**
+ * FR14 (T-005): before the human review gate presents a cycle as reviewable, the
+ * CLI — not the orchestrating model — verifies from on-disk artifacts which
+ * completion phase the cycle actually reached. When phase F is not met it prints
+ * the real current phase, the next required phase, and the exact missing
+ * artifacts first, so a cycle is never presented as review-ready on the strength
+ * of a successful `run`, a successful `harness prepare`, or launched advisors
+ * alone. `--json` is untouched: it keeps returning the exact raw state object.
+ */
+async function reviewWithCompletionGate(
+  program: Command,
+  command: Command,
+  cycleId: string | undefined,
+  options: OptionValues,
+): Promise<void> {
+  if (!wantsJson(command, options)) {
+    try {
+      const { inspectOperatingCompletion, renderOperatingReviewGateNotice } = await import(
+        '../../services/operate/completion.js'
+      );
+      const completion = await inspectOperatingCompletion({
+        projectRoot: projectDir(program),
+        cycleId,
+        localRoot: typeof options.localRoot === 'string' ? options.localRoot : undefined,
+      });
+      if (completion) {
+        for (const line of renderOperatingReviewGateNotice(completion)) display.line(line);
+      }
+    } catch {
+      // If committed state cannot be read here, the review execution below
+      // surfaces the real, actionable error rather than a phase banner.
+    }
+  }
+  return execute(program, command, 'review', { cycleId }, options);
+}
+
+/**
  * FR7 / E-007 — render `operate brief` / `operate decisions show` into a
  * self-contained, offline artifact via the pipeline builder, then write it to
  * the operator-supplied `--render <path>`. This is a share-on-request boundary:
@@ -735,6 +771,52 @@ export function registerOperateCommand(program: Command): void {
   json(profiles.command('validate <path>')).action(function (this: Command, file: string, opts) {
     return execute(program, this, 'profiles.validate', { file }, opts);
   });
+  // FR10 / T-009: a distinct legacy operating-profile field migration under the
+  // `profiles` namespace. This is NOT the unrelated `operate migrate` command
+  // (legacy PLAN-era board-data import); it reconciles a stale
+  // `.planr/operate-profile.json` whose `enabledProviders`/`budgets` the current
+  // CLI would otherwise reject.
+  const profilesMigrate = profiles
+    .command('migrate')
+    .description('Inspect or apply legacy operating-profile field migration');
+  json(profilesMigrate.command('inspect')).action(function (this: Command, opts) {
+    return execute(program, this, 'profiles.migrate.inspect', {}, opts);
+  });
+  // T-018: route apply through the action map so it receives the storage-layout
+  // auto-migration guard. The interactive preview/confirm flow mirrors the sibling
+  // `operate migrate apply` command; the migration's idempotent backup/rollback
+  // semantics are unchanged (still enforced in profile-migration.ts).
+  json(confirmed(profilesMigrate.command('apply'))).action(function (this: Command, opts) {
+    return (async () => {
+      const interactive =
+        !wantsJson(this, opts) && !isNonInteractive() && !opts.yes && !program.opts().yes;
+      if (!interactive) {
+        await execute(program, this, 'profiles.migrate.apply', {}, opts);
+        return;
+      }
+      const inspection = await executeForResult(
+        program,
+        this,
+        'profiles.migrate.inspect',
+        {},
+        opts,
+      );
+      if (!inspection.ok) return;
+      const data = inspection.data as
+        | { present?: boolean; changed?: boolean; sourcePath?: string }
+        | undefined;
+      if (!data?.present || !data.changed) return;
+      if (
+        !(await promptConfirm(
+          `Migrate ${data.sourcePath ?? '.planr/operate-profile.json'}? The exact pre-migration bytes are backed up first.`,
+          false,
+        ))
+      ) {
+        return;
+      }
+      await execute(program, this, 'profiles.migrate.apply', {}, { ...opts, yes: true });
+    })();
+  });
 
   const context = operate
     .command('context')
@@ -805,7 +887,7 @@ export function registerOperateCommand(program: Command): void {
 
   json(operate.command('review [cycleId]').description('Review a cycle at the human gate')).action(
     function (this: Command, cycleId: string | undefined, opts) {
-      return execute(program, this, 'review', { cycleId }, opts);
+      return reviewWithCompletionGate(program, this, cycleId, opts);
     },
   );
   json(operate.command('status').description('Show current operating status')).action(function (
@@ -847,6 +929,22 @@ export function registerOperateCommand(program: Command): void {
       return execute(program, this, `cycles.${action}`, { cycleId }, opts);
     });
   }
+  // SPEC-005 T-020: the operator escape for a cycle stranded at the advisors phase
+  // because a runtime dispatched a lens and reported nothing. Valid once the
+  // adapter lease has lapsed; terminally governs the still-unrecorded lenses
+  // `not_evaluated` so consolidation can reach a reviewable cycle without discarding
+  // the recorded siblings. Omit `--role` to reap every stalled lens at once.
+  json(
+    confirmed(
+      cycles
+        .command('abandon-role <cycleId>')
+        .description('Terminally mark stalled lenses not_evaluated after the adapter lease lapsed')
+        .option('--role <role>', 'a single stalled lens to abandon (default: every stalled lens)')
+        .option('--reason <text>', 'why the lens is recorded not_evaluated'),
+    ),
+  ).action(function (this: Command, cycleId: string, opts) {
+    return execute(program, this, 'cycles.abandon-role', { cycleId }, opts);
+  });
 
   const findings = readGroup(
     program,
@@ -1127,7 +1225,24 @@ export function registerOperateCommand(program: Command): void {
     ).action(function (this: Command, opts) {
       return execute(program, this, `${namespace}.record`, {}, { ...opts, json: true });
     });
-    for (const action of ['finalize', 'resume', 'cancel']) {
+    // `abandon` (FR13/SPEC-005 T-020) governs one dispatched-but-unrecorded lens
+    // terminal `not_evaluated` with a reason, so a genuinely stalled lens no longer
+    // strands the cycle. Same lease-bound machine binding as record; the runtime
+    // invokes it when a lens exceeds its budget and never returns.
+    json(
+      machineBinding(
+        group
+          .command('abandon')
+          .description('Govern one stalled runtime-dispatched lens terminal not_evaluated')
+          .requiredOption('--role <role>', 'the stalled operating advisor role')
+          .requiredOption('--reason <text>', 'why the lens is recorded not_evaluated'),
+      ),
+    ).action(function (this: Command, opts) {
+      return execute(program, this, `${namespace}.abandon`, {}, { ...opts, json: true });
+    });
+    // `heartbeat` (FR2/SPEC-005) renews the lease with no role result and no
+    // stdin — same lease-bound machine binding as resume/cancel/finalize.
+    for (const action of ['finalize', 'resume', 'cancel', 'heartbeat']) {
       json(machineBinding(group.command(action))).action(function (this: Command, opts) {
         return execute(program, this, `${namespace}.${action}`, {}, { ...opts, json: true });
       });

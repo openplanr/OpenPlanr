@@ -34,6 +34,6 @@ describe('guided Operating Board package surface', () => {
     const manifest = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as {
       optionalDependencies?: Record<string, string>;
     };
-    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe('0.38.0');
+    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe('0.39.0');
   });
 });

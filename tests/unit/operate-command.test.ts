@@ -48,6 +48,7 @@ vi.mock('../../src/utils/logger.js', () => ({
 }));
 
 import { registerOperateCommand } from '../../src/cli/commands/operate.js';
+import { scanOperatingTransportLeakage } from '../../src/services/operate/doctor.js';
 
 const originalStdin = Object.getOwnPropertyDescriptor(process, 'stdin');
 const originalExitCode = process.exitCode;
@@ -131,8 +132,10 @@ describe('operate command contract', () => {
       [
         'operate',
         'operate adapter',
+        'operate adapter abandon',
         'operate adapter cancel',
         'operate adapter finalize',
+        'operate adapter heartbeat',
         'operate adapter prepare',
         'operate adapter record',
         'operate adapter resume',
@@ -149,6 +152,7 @@ describe('operate command contract', () => {
         'operate context review',
         'operate context show',
         'operate cycles',
+        'operate cycles abandon-role',
         'operate cycles cancel',
         'operate cycles close',
         'operate cycles list',
@@ -182,8 +186,10 @@ describe('operate command contract', () => {
         'operate gaps show',
         'operate gaps verify',
         'operate harness',
+        'operate harness abandon',
         'operate harness cancel',
         'operate harness finalize',
+        'operate harness heartbeat',
         'operate harness prepare',
         'operate harness record',
         'operate harness resume',
@@ -201,6 +207,9 @@ describe('operate command contract', () => {
         'operate migrations show',
         'operate profiles',
         'operate profiles list',
+        'operate profiles migrate',
+        'operate profiles migrate apply',
+        'operate profiles migrate inspect',
         'operate profiles show',
         'operate profiles validate',
         'operate report',
@@ -728,5 +737,108 @@ describe('operate command contract', () => {
       exitCode: 2,
     });
     expect(process.exitCode).toBe(2);
+  });
+
+  // FR6 (T-005): the internal transport contract stays internal. The user sees
+  // validated Markdown, concise progress, and a final synthesis — never a lease
+  // token, an idempotency key, an evidence digest, or a harness/adapter lifecycle
+  // command — in the non-`--json` output of status, report, or review.
+  describe('FR6 — internal transport stays out of human status/report/review output', () => {
+    const cleanReportMarkdown = [
+      '# OpenPlanr Operating Brief',
+      '',
+      'Cycle: CYCLE-001',
+      'Evidence: fresh',
+      '',
+      '# Advisory lens reports',
+      '',
+      '## Technology & Risk (CTO)',
+      '',
+      'Status: proposals',
+      '',
+      '### Recommendations',
+      '',
+      '- Please release the new instrumentation spec. Evidence: `.planr/specs/SPEC-001`.',
+      '',
+      '# Exact next actions',
+      '',
+      '- **Review the governed cycle:** `planr operate review CYCLE-001`',
+    ].join('\n');
+
+    it('renders no lease, idempotency key, evidence digest, or harness/adapter command', async () => {
+      mocks.executeOperateAction.mockImplementation(async (request: { action: string }) => {
+        if (request.action === 'review') {
+          return {
+            ok: true,
+            action: 'review',
+            schemaVersion: '1.0.0',
+            message: 'This is the mandatory human review gate. No route has been applied.',
+            data: cleanReportMarkdown,
+          };
+        }
+        if (request.action === 'report') {
+          return {
+            ok: true,
+            action: 'report',
+            schemaVersion: '1.0.0',
+            message: 'Operating report is ready for CYCLE-001.',
+            data: cleanReportMarkdown,
+          };
+        }
+        return {
+          ok: true,
+          action: 'status',
+          schemaVersion: '1.0.0',
+          message: 'Operating Board is quiet.',
+          data: { kind: 'operating-state', cycles: [{ id: 'CYCLE-001', state: 'reviewable' }] },
+        };
+      });
+
+      await parse(createProgram(), ['operate', 'review', 'CYCLE-001']);
+      await parse(createProgram(), ['operate', 'report', 'CYCLE-001']);
+      await parse(createProgram(), ['operate', 'status']);
+
+      const rendered = mocks.displayLine.mock.calls.map(([line]) => String(line)).join('\n');
+      // The human surfaces carry real Markdown but none of the forbidden tokens,
+      // and "release"/"please"/"lease agreement" prose is never mistaken for one.
+      expect(scanOperatingTransportLeakage(rendered)).toEqual([]);
+    });
+
+    it('is a non-vacuous guard — it flags any reintroduced transport leak', () => {
+      // The exact tokens FR6 forbids are each detected on their own.
+      expect(scanOperatingTransportLeakage('leaseToken=9f3a')).toContain('lease');
+      expect(scanOperatingTransportLeakage('"lease": "9f3a", "expiresAt": 0')).toContain('lease');
+      expect(scanOperatingTransportLeakage('idempotencyKey: k-1')).toContain('idempotencyKey');
+      expect(scanOperatingTransportLeakage('evidenceDigest: sha256:ff')).toContain(
+        'evidenceDigest',
+      );
+      expect(
+        scanOperatingTransportLeakage('run `planr operate harness record --role chair`'),
+      ).toContain('harness/adapter command');
+      expect(scanOperatingTransportLeakage('adapter.finalize completed')).toContain(
+        'harness/adapter command',
+      );
+      // Ordinary advisory prose is never a false positive.
+      expect(
+        scanOperatingTransportLeakage('Please release the lease agreement to unblock the team.'),
+      ).toEqual([]);
+    });
+
+    it('catches a leak that reaches the rendered review output', async () => {
+      // If the internal transport ever bled into the human review surface, the
+      // exact same scan the guard uses would flag the rendered output red.
+      mocks.executeOperateAction.mockResolvedValueOnce({
+        ok: true,
+        action: 'review',
+        schemaVersion: '1.0.0',
+        message: 'This is the mandatory human review gate. No route has been applied.',
+        data: `${cleanReportMarkdown}\n\nDEBUG leaseToken=9f3a harness.record --role chair`,
+      });
+
+      await parse(createProgram(), ['operate', 'review', 'CYCLE-001']);
+
+      const rendered = mocks.displayLine.mock.calls.map(([line]) => String(line)).join('\n');
+      expect(scanOperatingTransportLeakage(rendered)).not.toEqual([]);
+    });
   });
 });

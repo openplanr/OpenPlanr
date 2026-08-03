@@ -49,6 +49,29 @@ describe('concise cited Operating Board brief', () => {
     ]);
   });
 
+  it('never reports an advising cycle quiet, even before any finding surfaces (SPEC-005 FR5)', () => {
+    // Mid-advising: lenses are recording or still running, so no finding has been
+    // consolidated yet and the findings-derived `quiet` flag reads true. The honest
+    // "no material action is recommended" verdict is reserved for a finalized,
+    // genuinely empty cycle — an active advising cycle must never be called quiet,
+    // which is exactly the false negative the production run surfaced (`status`
+    // said the board was quiet while a cycle was mid-advising).
+    const advising = renderOperatingBrief(
+      state({ cycles: [{ id: 'CYCLE-001', state: 'advising' }] }),
+    );
+    expect(advising).not.toContain('is quiet.');
+    expect(advising).not.toContain('No material action is recommended');
+    expect(advising).toContain('# OpenPlanr Operating Brief');
+    expect(advising).toContain('Cycle: CYCLE-001');
+
+    // The identical quiet summary on a reviewable (finalized) cycle still renders
+    // the honest three-line quiet verdict — the guard is scoped to active cycles.
+    const reviewable = renderOperatingBrief(
+      state({ cycles: [{ id: 'CYCLE-001', state: 'reviewable' }] }),
+    );
+    expect(reviewable).toContain('Cycle CYCLE-001 is quiet.');
+  });
+
   it('surfaces bounded actions, decisions, gaps, outcomes, citations, and register handoffs', () => {
     const brief = renderOperatingBrief(
       state({
