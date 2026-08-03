@@ -372,6 +372,9 @@ export interface OperatingAdapterMachineAction {
     | 'harness.finalize'
     | 'harness.resume'
     | 'harness.cancel'
+    // FR2 (SPEC-005): renew the cycle session's lease without a role result.
+    // Additive Protocol v1.4 recovery action; older handoffs never emit it.
+    | 'harness.heartbeat'
     | 'run.continue';
   effect: OperatingActionEffect;
   role?: string;
@@ -424,7 +427,11 @@ export interface OperatingAdapterHandoff extends ProtocolArtifact<'operating-ada
   };
   roles: Array<{
     roleId: string;
-    status: 'awaiting-prepare' | 'pending' | 'recorded';
+    // T-001 widened the wire contract with two non-recorded terminal statuses.
+    // `not-evaluated`/`failed` roles carry a required `statusReason` (the governed
+    // reason the lens is missing); recorded/in-flight roles omit it entirely.
+    status: 'awaiting-prepare' | 'pending' | 'recorded' | 'not-evaluated' | 'failed';
+    statusReason?: string;
     inputDigest: `sha256:${string}` | null;
   }>;
   next: OperatingAdapterMachineAction[];

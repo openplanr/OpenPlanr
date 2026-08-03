@@ -1,5 +1,15 @@
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
-import { mkdir, readdir, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  open,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  unlink,
+  writeFile,
+} from 'node:fs/promises';
 import path from 'node:path';
 import {
   type AgentNativeAdvisorResponse,
@@ -7,19 +17,23 @@ import {
   assertAdvisorOutputMatchesBrief,
   buildOperatingMandate,
   createNativeMissionOperatingRoleResult,
+  DEFAULT_OPERATING_ROLE_RESEARCH_BUDGET_MS,
   type OperatingMandate,
 } from './advisors.js';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
 import { operatingProjectKey, readOperatingAdapterLeaseDurationMs } from './config.js';
+import { buildOperatingBootstrapMap } from './context-research.js';
 import { gateRecordedProposalCitations } from './engine.js';
-import { OperatingEventStore } from './event-store.js';
+import { OperatingEventStore, toPersistedDataGap } from './event-store.js';
 import { OperatingEvidenceCache } from './evidence-cache.js';
 import { guidedSessionStatus, purgeGuidedSessions } from './interaction/session-service.js';
 import { assertCommittedOperatingView, recoverOperatingTransactions } from './journal.js';
 import { withOperatingLock } from './lock-service.js';
 import { assertOperatingArtifact, loadOperatingProtocol } from './protocol.js';
 import { containsSecret, redactSensitiveText } from './redaction.js';
+import { cleanOperatingScratch, listAbandonedOperatingScratch } from './scratch.js';
 import {
+  OPERATE_MISSION_PROTOCOL_VERSION,
   OPERATE_PROTOCOL_VERSION,
   OPERATE_SCHEMA_VERSION,
   OperateError,
@@ -59,6 +73,13 @@ interface PrivateAdvisorSession {
   expiresAt: string;
   roles: string[];
   recordedRoles: string[];
+  // SPEC-005 T-020 (FR13): roles governed terminal `not_evaluated` because a
+  // dispatched lens never returned — a runtime `harness abandon` (lease-bound) or
+  // an operator escape after the lease lapsed. Keyed roleId → governed reason. A
+  // not-evaluated role is terminal (like recorded): it no longer blocks finalize
+  // and never carries a pending record action. Absent on healthy sessions, so an
+  // existing session file stays byte-identical.
+  notEvaluatedRoles?: Record<string, string>;
   roleInputDigests: Record<string, `sha256:${string}`>;
   roleBriefs: Record<string, OperatingAdvisorBrief>;
   roleMandates: Record<string, OperatingMandate>;
@@ -73,12 +94,18 @@ function adapterSessionSummary(
 
 async function adapterHandoff(session: PrivateAdvisorSession): Promise<OperatingAdapterHandoff> {
   const recorded = new Set(session.recordedRoles);
+  const notEvaluated = session.notEvaluatedRoles ?? {};
+  // T-020: a role is terminal once it has recorded a result OR was governed
+  // terminal `not-evaluated`. Only in-flight (pending) roles keep the board in
+  // `record-required`; an all-terminal board is `finalize-required`, exactly the
+  // T-001 wire contract the pipeline handoff validator enforces.
+  const isTerminal = (role: string): boolean => recorded.has(role) || role in notEvaluated;
   const state: OperatingAdapterHandoff['state'] =
     session.state === 'cancelled'
       ? 'cancelled'
       : session.state === 'finalized'
         ? 'continue-required'
-        : session.roles.some((role) => !recorded.has(role))
+        : session.roles.some((role) => !isTerminal(role))
           ? 'record-required'
           : 'finalize-required';
   const protocol = await loadOperatingProtocol();
@@ -94,7 +121,10 @@ async function adapterHandoff(session: PrivateAdvisorSession): Promise<Operating
     expiresAt: session.expiresAt,
     roles: session.roles.map((role) => ({
       roleId: role,
-      status: recorded.has(role) ? 'recorded' : 'pending',
+      status: recorded.has(role) ? 'recorded' : role in notEvaluated ? 'not-evaluated' : 'pending',
+      // A governed not-evaluated role carries its reason through the handoff;
+      // recorded/pending roles omit the field so existing roles stay byte-identical.
+      ...(role in notEvaluated ? { statusReason: notEvaluated[role] } : {}),
       inputDigest: session.roleInputDigests[role],
     })),
   });
@@ -165,6 +195,33 @@ export async function purgeBoardMachineLocalCaches(input: {
 }
 
 /**
+ * FR7 (T-006): sibling machine-local cleanup for OpenPlanr-owned scratch left
+ * behind by a session that never finalized. Deliberately NOT folded into
+ * `purgeBoardMachineLocalCaches` — scratch has its own narrower per-cycle
+ * lifecycle. Removes ONLY scratch a valid `openplanr-operate-scratch` manifest
+ * confirms this project wrote and whose lease window has lapsed; it never touches
+ * an unowned file found under the scratch root, nor any other machine-local
+ * cache. This is the owned-only removal the doctor's abandoned-scratch diagnostic
+ * points at, and the sibling `operate cache purge` invokes.
+ */
+export async function purgeAbandonedOperatingScratch(input: {
+  projectRoot: string;
+  localRoot?: string;
+  now?: () => Date;
+}): Promise<{ removed: number; cycles: string[] }> {
+  const paths = resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot });
+  const abandoned = await listAbandonedOperatingScratch(paths, input.now ? { now: input.now } : {});
+  let removed = 0;
+  const cycles: string[] = [];
+  for (const entry of abandoned) {
+    const result = await cleanOperatingScratch(paths, entry.cycleId);
+    removed += result.removed;
+    cycles.push(entry.cycleId);
+  }
+  return { removed, cycles: cycles.sort() };
+}
+
+/**
  * Surface the adapter session lease ergonomically (FR10 / T-008): the absolute
  * `expiresAt` plus the remaining time relative to the resolved clock. Included in
  * every adapter lifecycle response so a native runtime can see, at a glance, how
@@ -206,6 +263,453 @@ async function atomicBytesWrite(target: string, value: Buffer | string): Promise
   const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
   await writeFile(temporary, value, { mode: 0o600 });
   await rename(temporary, target);
+}
+
+// FR1 (SPEC-005 T-002): `harness record` and `harness heartbeat` both mutate ONE
+// shared, lease-bound session file. T-001 widened the handoff so every pending
+// role is authorized to record the instant it returns; that removed the batch
+// barrier but, on the write side, two records returning together would each read
+// the same `recordedRoles` snapshot and — last writer wins — silently drop the
+// other already-recorded role. That trades lost-work-from-a-barrier for a
+// nondeterministic lost-work-from-a-race, which is worse. T-001 states plainly
+// that this handoff "never schedules concurrent session writes", so preventing
+// the race is a write-side property owned here: serialize the session write per
+// cycle and re-read the freshest snapshot inside the critical section before
+// merging. The in-process chain serializes async writers in this process; the
+// O_EXCL lockfile serializes concurrently spawned `planr operate harness record`
+// processes. The per-role result file (`<cycle>.<role>.json`) is the durable
+// cross-process record — re-adopted on prepare/resume — so a stolen stale lock
+// never loses committed work.
+const sessionCommitTails = new Map<string, Promise<void>>();
+
+async function withInProcessSessionLock<T>(key: string, operation: () => Promise<T>): Promise<T> {
+  const previous = sessionCommitTails.get(key) ?? Promise.resolve();
+  let openGate!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    openGate = resolve;
+  });
+  // `tail` resolves (never rejects) only once our gate opens, so the next writer
+  // in the chain waits for us regardless of whether our operation threw.
+  const tail = previous.then(() => gate);
+  sessionCommitTails.set(key, tail);
+  await previous;
+  try {
+    return await operation();
+  } finally {
+    openGate();
+    if (sessionCommitTails.get(key) === tail) sessionCommitTails.delete(key);
+  }
+}
+
+async function withCrossProcessSessionLock<T>(
+  sessionPath: string,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const lockPath = `${sessionPath}.commit.lock`;
+  await mkdir(path.dirname(lockPath), { recursive: true, mode: 0o700 });
+  const deadline = Date.now() + 10_000;
+  let handle: Awaited<ReturnType<typeof open>> | undefined;
+  for (;;) {
+    try {
+      handle = await open(lockPath, 'wx', 0o600);
+      break;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      // Steal only a demonstrably abandoned lock (a crashed record process must
+      // never deadlock the session). The per-role result files own committed
+      // work, so stealing this mutex risks nothing durable.
+      const age = await stat(lockPath)
+        .then((info) => Date.now() - info.mtimeMs)
+        .catch(() => 0);
+      if (age > 30_000) {
+        await unlink(lockPath).catch(() => undefined);
+        continue;
+      }
+      if (Date.now() > deadline) {
+        throw new OperateError(
+          'E_OPERATE_STATE_INVALID',
+          'Timed out serializing the adapter session write.',
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }
+  try {
+    return await operation();
+  } finally {
+    await handle.close().catch(() => undefined);
+    await unlink(lockPath).catch(() => undefined);
+  }
+}
+
+/**
+ * Apply a mutation to the shared adapter session under the cross-process lock,
+ * re-reading the freshest on-disk snapshot first so a sibling record committed
+ * between the caller's snapshot and now is merged forward rather than clobbered
+ * (FR1). The lease/idempotency binding and a recordable (`prepared`/`recording`)
+ * state are re-asserted inside the critical section, so a concurrent cancel or
+ * expiry cannot be silently overwritten. Callers must already hold the
+ * in-process session lock for the same `target`.
+ */
+async function commitSessionWrite(
+  target: string,
+  input: {
+    projectRoot: string;
+    cycleId: string;
+    localRoot?: string;
+    lease: string;
+    idempotencyKey: string;
+    evidenceDigest?: string;
+    nowMs: number;
+    apply: (current: PrivateAdvisorSession) => PrivateAdvisorSession;
+  },
+): Promise<PrivateAdvisorSession> {
+  return withCrossProcessSessionLock(target, async () => {
+    const current = await readAdapterSession(
+      input.projectRoot,
+      input.cycleId,
+      input.localRoot,
+      input.nowMs,
+    );
+    assertAdapterBinding(current, input.lease, input.idempotencyKey, input.evidenceDigest);
+    if (!['prepared', 'recording'].includes(current.state)) {
+      throw new OperateError(
+        'E_OPERATE_STATE_INVALID',
+        `Adapter session is ${current.state}; its lease-bound write is no longer valid.`,
+        { recoveryCommand: retryRunCommand(current) },
+      );
+    }
+    const next = input.apply(current);
+    await atomicPrivateWrite(target, next);
+    return next;
+  });
+}
+
+/**
+ * FR4/FR5: commit a just-recorded role's canonical `advisory.recorded` event and
+ * materialize the readable partial projection immediately, so `planr operate
+ * report`/`status` and `.planr/operate/cycles/<id>/` reflect every validated
+ * lens BEFORE Chair runs — not only at finalize. The commit is idempotent (a
+ * role already committed by a prior record or a finalize reconciliation is
+ * skipped; a different digest for the same role is the same isolation error
+ * finalize raises) and best-effort under concurrency: if another writer holds the
+ * project lock or advanced the event head between replay and append, the role's
+ * validated result is already durable in its machine-local file and session
+ * entry, and finalize reconciles the canonical event, so the record defers rather
+ * than fails.
+ */
+async function materializeRecordedRole(input: {
+  projectRoot: string;
+  localRoot?: string;
+  cycleId: string;
+  session: PrivateAdvisorSession;
+  result: OperatingRoleResult;
+  advisorReport: Record<string, unknown> | null;
+}): Promise<void> {
+  const store = new OperatingEventStore(input.projectRoot, { localRoot: input.localRoot });
+  try {
+    const alreadyCommitted = new Map(
+      (await readPersistedOperatingRoleResults(store, input.cycleId)).map((result) => [
+        result.roleId,
+        result,
+      ]),
+    );
+    const prior = alreadyCommitted.get(input.result.roleId);
+    if (prior) {
+      if (prior.resultDigest !== input.result.resultDigest) {
+        throw new OperateError(
+          'E_OPERATE_ADVISOR_ISOLATION',
+          `Cycle ${input.cycleId} already committed a different ${input.result.roleId} result.`,
+        );
+      }
+    } else {
+      const initial = await store.replay();
+      await withOperatingLock(
+        input.projectRoot,
+        {
+          projectKey: operatingProjectKey(input.projectRoot),
+          expectedEventHead: initial.eventHead,
+          currentEventHead: initial.eventHead,
+          localRoot: input.localRoot,
+        },
+        async (lock) => {
+          // Re-check under the lock: a concurrent writer may have committed this
+          // role between our replay and lock acquisition.
+          const committed = new Map(
+            (await readPersistedOperatingRoleResults(store, input.cycleId)).map((result) => [
+              result.roleId,
+              result,
+            ]),
+          );
+          if (committed.has(input.result.roleId)) return;
+          const record = await store.putRecord(
+            'advisor-result',
+            input.result as unknown as Record<string, unknown>,
+            { correlationId: input.session.idempotencyKey },
+          );
+          const advisorReportRecord =
+            input.session.protocolVersion === '1.4.0' && input.advisorReport
+              ? await store.putRecord('advisor-report', input.advisorReport, {
+                  correlationId: input.session.idempotencyKey,
+                })
+              : null;
+          const runtimeBinding = (await adapterHandoff(input.session)).binding;
+          const event = await store.append({
+            type: 'advisory.recorded',
+            cycleId: input.cycleId,
+            entityId: `${input.cycleId}-${input.result.roleId}`,
+            correlationId: input.session.idempotencyKey,
+            evidenceRefs: input.result.proposals.flatMap((proposal) => proposal.evidenceRefs),
+            payload: {
+              recordDigest: record.digest,
+              ...(advisorReportRecord ? { advisorReportDigest: advisorReportRecord.digest } : {}),
+              roleId: input.result.roleId,
+              runtimeBinding: {
+                runtime: runtimeBinding.runtime,
+                runtimeBinding: runtimeBinding.runtimeBinding,
+                crossRuntimeFallback: runtimeBinding.crossRuntimeFallback,
+                executionMode: runtimeBinding.executionMode,
+                assurance: runtimeBinding.assurance,
+                toolIsolation: runtimeBinding.toolIsolation,
+              },
+            },
+            ...(input.session.protocolVersion === '1.4.0'
+              ? { protocolVersion: '1.4.0' as const }
+              : {}),
+            expectedHead: initial.eventHead.hash,
+            actor: { kind: 'runtime', id: 'operate-adapter' },
+          });
+          await lock.advanceEventHead(initial.eventHead, {
+            sequence: event.sequence,
+            hash: event.eventHash,
+          });
+          await store.writeCheckpoint(await store.state());
+        },
+      );
+    }
+    // Refresh the readable projection from the freshest committed state so the
+    // recorded lens' Markdown lands under `.planr/operate/cycles/<id>/` at once.
+    const { persistOperatingProjections } = await import('./projection-persistence.js');
+    await persistOperatingProjections({
+      projectRoot: input.projectRoot,
+      localRoot: input.localRoot,
+      state: await store.state(),
+      revalidateEventHead: async () => (await store.replay()).eventHead,
+    });
+  } catch (error) {
+    if (
+      error instanceof OperateError &&
+      ['E_OPERATE_CYCLE_ACTIVE', 'E_OPERATE_ROUTE_DRIFT'].includes(error.code)
+    ) {
+      // A concurrent writer holds the project lock or advanced the head between
+      // our replay and commit. The validated result is already durable in its
+      // machine-local file and session entry; finalize reconciles the canonical
+      // event idempotently. Defer rather than fail the record.
+      return;
+    }
+    throw error;
+  }
+}
+
+function maximumOperatingOrdinal(
+  records: ReadonlyArray<Record<string, unknown>>,
+  prefix: string,
+): number {
+  return records.reduce((maximum, record) => {
+    const match = String(record.id ?? '').match(new RegExp(`^${prefix}-(\\d+)$`));
+    return Math.max(maximum, match ? Number(match[1]) : 0);
+  }, 0);
+}
+
+/**
+ * SPEC-005 T-019 — persist the citation gate's governed gaps on the agent-native
+ * adapter-lifecycle `record` path, exactly as the inline consolidation loop
+ * (`engine.ts`) persists its dispatch gaps.
+ *
+ * A lens whose every proposal is citation-rejected records a schema-legal `quiet`
+ * result; the `unresolvable-citation` / `missing-evidence` gaps that record WHY it
+ * grounded nothing were previously only echoed transiently in the record response
+ * (`citationGaps`) and never reached the event store. So the Chair board —
+ * assembled by a later `run` continuation, after this role is already recorded and
+ * is never re-dispatched — saw no citation signal in committed state and rendered
+ * the lens a false-clean `recorded-quiet` (reason `null`, gapId `null`): the exact
+ * dishonest surface SPEC-005 exists to eliminate, on the path real runtimes use.
+ * Persisting the governed gap here makes it durable, readable back from the event
+ * store, and reconstructible into the `citation-rejected` classification at
+ * consolidation (see `engine.ts`).
+ *
+ * This reuses T-017's landed `toPersistedDataGap` v1.2 projection verbatim — the
+ * SAME projection the inline path relies on (category/citations dropped, canonical
+ * `GAP-NNN` id) — so the gap validates against the append log / `operating-record`
+ * schemas instead of throwing `E_OPERATE_STATE_INVALID` (`$ matched 0/11
+ * branches`). It is NOT a second, forked persistence path; it carries T-017's
+ * signal across the record→consolidation boundary the inline path never crosses.
+ *
+ * Idempotent: the citation gate names every gap it opens for a role in that gap's
+ * `affectedRoles`, so a role already gap-named in committed state is a no-op —
+ * a resume, retry, or idempotent re-record never mints a duplicate under a fresh
+ * `GAP-NNN` id.
+ */
+async function persistRecordedRoleGaps(input: {
+  projectRoot: string;
+  localRoot?: string;
+  cycleId: string;
+  roleId: string;
+  gaps: OperatingDataGap[];
+  correlationId: string;
+}): Promise<void> {
+  if (input.gaps.length === 0) return;
+  const store = new OperatingEventStore(input.projectRoot, { localRoot: input.localRoot });
+  const namesRole = (gap: Record<string, unknown>): boolean =>
+    (gap.cycleId === undefined || gap.cycleId === input.cycleId) &&
+    Array.isArray(gap.affectedRoles) &&
+    (gap.affectedRoles as unknown[]).includes(input.roleId);
+  if ((await store.state()).dataGaps.some(namesRole)) return;
+  try {
+    const initial = await store.replay();
+    await withOperatingLock(
+      input.projectRoot,
+      {
+        projectKey: operatingProjectKey(input.projectRoot),
+        expectedEventHead: initial.eventHead,
+        currentEventHead: initial.eventHead,
+        localRoot: input.localRoot,
+      },
+      async (lock) => {
+        // Re-check under the lock: a concurrent writer may have persisted this
+        // role's gaps between our replay and lock acquisition.
+        const current = await store.state();
+        if (current.dataGaps.some(namesRole)) return;
+        let head = initial.eventHead;
+        let gapOrdinal = maximumOperatingOrdinal(current.dataGaps, 'GAP');
+        for (const rawGap of input.gaps) {
+          const gap = toPersistedDataGap(
+            rawGap as unknown as Record<string, unknown>,
+            () => `GAP-${String(++gapOrdinal).padStart(3, '0')}`,
+          ) as unknown as OperatingDataGap;
+          await assertOperatingArtifact('operating-data-gap', gap);
+          await store.putRecord(
+            'data-gap',
+            structuredClone(gap) as unknown as Record<string, unknown>,
+            { correlationId: input.correlationId },
+          );
+          const event = await store.append({
+            type: 'gap.open',
+            cycleId: input.cycleId,
+            entityId: gap.id,
+            correlationId: input.correlationId,
+            evidenceRefs: gap.evidenceRefs,
+            payload: { record: gap },
+            expectedHead: head.hash,
+            actor: { kind: 'runtime', id: 'operate-adapter' },
+          });
+          const next = { sequence: event.sequence, hash: event.eventHash };
+          await lock.advanceEventHead(head, next);
+          head = next;
+        }
+        await store.writeCheckpoint(await store.state());
+      },
+    );
+  } catch (error) {
+    if (
+      error instanceof OperateError &&
+      ['E_OPERATE_CYCLE_ACTIVE', 'E_OPERATE_ROUTE_DRIFT'].includes(error.code)
+    ) {
+      // A concurrent writer holds the project lock or advanced the head between our
+      // replay and commit. The governed gap is idempotent and content-addressed;
+      // the next record/finalize reconciles it. Defer rather than fail the record.
+      return;
+    }
+    throw error;
+  }
+  const { persistOperatingProjections } = await import('./projection-persistence.js');
+  await persistOperatingProjections({
+    projectRoot: input.projectRoot,
+    localRoot: input.localRoot,
+    state: await store.state(),
+    revalidateEventHead: async () => (await store.replay()).eventHead,
+  });
+}
+
+/**
+ * SPEC-005 T-020 (FR13): the governed gap recording a lens terminal
+ * `not_evaluated` because it was dispatched but never returned a result — a true
+ * stall on the agent-native adapter-lifecycle path, distinct from T-019's
+ * citation-rejected case (a lens that DID return a result grounding zero
+ * evidence). Shaped `missing-evidence` in memory so `toPersistedDataGap` mints its
+ * canonical `GAP-NNN` id and strips `category` for the v1.2 committed projection —
+ * the same projection T-017/T-019 rely on. This gap, in committed state, IS the
+ * durable terminal signal: a role with NO committed result but named by such a
+ * cycle gap is reconstructed `not_evaluated` at consolidation (`engine.ts`), keyed
+ * on that committed-state fact, never the gap prose.
+ */
+function buildTerminalNotEvaluatedGap(input: {
+  cycleId: string;
+  roleId: string;
+  reason: string;
+  owner: string;
+  now: string;
+}): OperatingDataGap {
+  return {
+    kind: 'operating-data-gap',
+    schemaVersion: OPERATE_SCHEMA_VERSION,
+    protocolVersion: OPERATE_MISSION_PROTOCOL_VERSION,
+    id: `GAP-${canonicalDigest({
+      roleId: input.roleId,
+      cycleId: input.cycleId,
+      reason: 'stalled-not-evaluated',
+    }).slice('sha256:'.length)}`,
+    cycleId: input.cycleId,
+    category: 'missing-evidence',
+    question: `Why did ${input.roleId} not evaluate this cycle? It was dispatched but never recorded a result.`,
+    reason: input.reason,
+    unblocks: [],
+    affectedRoles: [input.roleId],
+    status: 'open',
+    owner: input.owner && input.owner.length > 0 ? input.owner : 'chair',
+    evidenceRefs: [],
+    createdAt: input.now,
+    updatedAt: input.now,
+  } as unknown as OperatingDataGap;
+}
+
+/**
+ * SPEC-005 T-020 — terminally govern one dispatched-but-unrecorded lens
+ * `not_evaluated` with a reason, in committed state. Shared by the runtime
+ * `harness abandon` action (lease-bound) and the operator escape
+ * (`reapStalledOperatingRoles`, keyed on a lapsed lease). It persists the governed
+ * gap through the SAME durable path T-019's citation gaps use
+ * (`persistRecordedRoleGaps` → `gap.open` event), so a terminal transition is
+ * always a governed event carrying its reason. Idempotent per role: a role already
+ * named by a committed gap is a no-op. Never fabricates a result — the lens
+ * contributes zero grounded proposals by construction (it recorded none).
+ */
+async function governTerminalNotEvaluated(input: {
+  projectRoot: string;
+  localRoot?: string;
+  cycleId: string;
+  roleId: string;
+  reason: string;
+  correlationId: string;
+}): Promise<void> {
+  const config = await readOperatingConfig(input.projectRoot, {
+    localRoot: input.localRoot,
+  }).catch(() => null);
+  const gap = buildTerminalNotEvaluatedGap({
+    cycleId: input.cycleId,
+    roleId: input.roleId,
+    reason: input.reason,
+    owner: config?.decisionOwner ?? 'chair',
+    now: new Date().toISOString(),
+  });
+  await persistRecordedRoleGaps({
+    projectRoot: input.projectRoot,
+    localRoot: input.localRoot,
+    cycleId: input.cycleId,
+    roleId: input.roleId,
+    gaps: [gap],
+    correlationId: input.correlationId,
+  });
 }
 
 async function regularFiles(root: string): Promise<string[]> {
@@ -296,16 +800,24 @@ export async function operatingCacheAction(input: {
     projectRoot: input.projectRoot,
     localRoot: input.localRoot,
   });
+  // FR7: sibling to the board purge — clear only confirmed OpenPlanr-owned stale
+  // scratch (its own per-cycle lifecycle, kept out of purgeBoardMachineLocalCaches).
+  const scratch = await purgeAbandonedOperatingScratch({
+    projectRoot: input.projectRoot,
+    localRoot: input.localRoot,
+  });
   return {
     removed:
       removed.length +
       sessions.removed +
       board.removedAdvisorSessions +
-      board.removedIncrementalBaselines,
+      board.removedIncrementalBaselines +
+      scratch.removed,
     evidence: { removed: removed.length, entries: removed },
     sessions,
     adapterSessions: { removed: board.removedAdvisorSessions },
     incrementalBaselines: { removed: board.removedIncrementalBaselines },
+    scratch: { removed: scratch.removed, cycles: scratch.cycles },
   };
 }
 
@@ -1036,13 +1548,18 @@ export async function createOperatingAdapterStartHandoff(input: {
 
 export async function operateAdapterLifecycle(input: {
   projectRoot: string;
-  action: 'prepare' | 'record' | 'resume' | 'finalize' | 'cancel';
+  action: 'prepare' | 'record' | 'resume' | 'finalize' | 'cancel' | 'heartbeat' | 'abandon';
   cycleId?: string;
   evidenceDigest?: string;
   lease?: string;
   idempotencyKey?: string;
   role?: string;
   stdin?: string;
+  /**
+   * SPEC-005 T-020: the governed reason a lens is abandoned terminal
+   * `not_evaluated`. Required for `action: 'abandon'`; unused otherwise.
+   */
+  reason?: string;
   localRoot?: string;
   /**
    * Injectable clock (FR10 / T-008). Defaults to wall-clock. Tests supply a
@@ -1226,10 +1743,37 @@ export async function operateAdapterLifecycle(input: {
         ? recoverableSession.roleMandates
         : await (async () => {
             const roots = await deriveOperatingMandateRoots(input.projectRoot);
+            // FR12 (SPEC-005 T-003): the native harness prepare path is the one real
+            // runs use, so it must thread the SAME shared research guidance the inline
+            // dispatch path does — otherwise native-runtime agents receive no FR12
+            // targeting at all. Build the ONE shared, citation-bearing bootstrap map
+            // once per cycle here (cached per project+head) and reference it from every
+            // advisor role's mandate below, alongside the graceful per-role research
+            // budget. The Chair is prepared alone (`['chair']`), never mixed with
+            // advisors, so it derives an empty advisor set, builds no map, and its
+            // mandate stays byte-identical. The map is body-free targeting layered over
+            // the immutable mandate — never an evidence-pack input, never a size ceiling,
+            // never a cap on what a lens may examine.
+            const advisorRoles = (roles as OperatingRoleId[]).filter(
+              (roleId) => roleId !== 'chair',
+            );
+            const bootstrapMap =
+              advisorRoles.length > 0 ? await buildOperatingBootstrapMap(input.projectRoot) : null;
             const built = await Promise.all(
               (roles as OperatingRoleId[]).map(
                 async (roleId) =>
-                  [roleId, await buildOperatingMandate({ roleId, roots, runtime })] as const,
+                  [
+                    roleId,
+                    await buildOperatingMandate({
+                      roleId,
+                      roots,
+                      runtime,
+                      ...(roleId !== 'chair' && bootstrapMap ? { bootstrapMap } : {}),
+                      ...(roleId !== 'chair'
+                        ? { researchBudgetMs: DEFAULT_OPERATING_ROLE_RESEARCH_BUDGET_MS }
+                        : {}),
+                    }),
+                  ] as const,
               ),
             );
             return Object.fromEntries(built) as Record<string, OperatingMandate>;
@@ -1315,6 +1859,129 @@ export async function operateAdapterLifecycle(input: {
     },
     session,
   );
+  if (input.action === 'heartbeat') {
+    // FR2: renew the cycle session's lease WITHOUT recording a role result. A
+    // slow lens can hold the session open — extending `expiresAt` by the same
+    // configured lease duration — while siblings keep their already-recorded work
+    // instead of the shared lease lapsing and stranding it. This is the sanctioned
+    // renewal path; raising `adapterLeaseDurationMs` is explicitly not (SPEC-005).
+    // It carries no `--role`/stdin, changes no role's recorded/pending status, and
+    // is safe to call concurrently by any coordinator holding the current lease:
+    // it goes through the same per-cycle session serialization as `record`, so it
+    // can never clobber a concurrent record's `recordedRoles`.
+    if (!['prepared', 'recording'].includes(session.state)) {
+      throw new OperateError(
+        'E_OPERATE_STATE_INVALID',
+        `Adapter heartbeat is not valid after the session is ${session.state}.`,
+        { recoveryCommand: retryRunCommand(session) },
+      );
+    }
+    const renewed = await withInProcessSessionLock(target, () =>
+      commitSessionWrite(target, {
+        projectRoot: input.projectRoot,
+        cycleId: input.cycleId as string,
+        localRoot: input.localRoot,
+        lease: input.lease as string,
+        idempotencyKey: input.idempotencyKey as string,
+        evidenceDigest: input.evidenceDigest,
+        nowMs,
+        apply: (current) => ({
+          ...current,
+          expiresAt: new Date(nowMs + leaseDurationMs).toISOString(),
+        }),
+      }),
+    );
+    return {
+      session: adapterSessionSummary(renewed),
+      leaseStatus: adapterLeaseStatus(renewed, nowMs),
+      handoff: await adapterHandoff(renewed),
+    };
+  }
+  if (input.action === 'abandon') {
+    // SPEC-005 T-020 (FR13) — the runtime-side governed terminal path. The
+    // orchestrating runtime, which dispatched this lens and holds the session
+    // lease, invokes this when a dispatched lens exceeded its budget and never
+    // returned (see the skill/command runtime workflow). The engine never spawned
+    // the agent, so it cannot time it out unilaterally; this explicit governed
+    // action, with a required reason, is the smallest honest substitute. It marks
+    // ONE still-pending lens terminal `not_evaluated`, persists the governed gap
+    // (a `gap.open` event carrying the reason), and lets the board consolidate
+    // without it — its recorded siblings are untouched and the Chair names it as a
+    // gap it must not synthesize around.
+    if (!['prepared', 'recording'].includes(session.state)) {
+      throw new OperateError(
+        'E_OPERATE_STATE_INVALID',
+        `Adapter abandon is not valid after the session is ${session.state}.`,
+        { recoveryCommand: retryRunCommand(session) },
+      );
+    }
+    if (!input.role) {
+      throw new OperateError(
+        'E_OPERATE_CONFIG_INVALID',
+        'Adapter abandon requires --role naming the stalled lens.',
+      );
+    }
+    const reason = input.reason?.trim();
+    if (!reason) {
+      throw new OperateError(
+        'E_OPERATE_CONFIG_INVALID',
+        'Adapter abandon requires --reason recording why the lens is not_evaluated.',
+      );
+    }
+    if (!session.roles.includes(input.role)) {
+      throw new OperateError(
+        'E_OPERATE_ADVISOR_ISOLATION',
+        `Role ${input.role} was not bound by adapter prepare.`,
+      );
+    }
+    if (session.recordedRoles.includes(input.role)) {
+      throw new OperateError(
+        'E_OPERATE_STATE_INVALID',
+        `Role ${input.role} already recorded a result and cannot be abandoned.`,
+        { recoveryCommand: retryRunCommand(session) },
+      );
+    }
+    // Persist the governed terminal gap first (committed state is the source of
+    // truth the later `run` continuation reconstructs from), then mark the role
+    // terminal in the lease-bound session so finalize no longer waits on it and
+    // the handoff renders it `not-evaluated`. Idempotent: re-abandoning a role
+    // already governed is a no-op that returns the same terminal handoff.
+    await governTerminalNotEvaluated({
+      projectRoot: input.projectRoot,
+      localRoot: input.localRoot,
+      cycleId: input.cycleId as string,
+      roleId: input.role,
+      reason,
+      correlationId: input.idempotencyKey as string,
+    });
+    const updated = await withInProcessSessionLock(target, () =>
+      commitSessionWrite(target, {
+        projectRoot: input.projectRoot,
+        cycleId: input.cycleId as string,
+        localRoot: input.localRoot,
+        lease: input.lease as string,
+        idempotencyKey: input.idempotencyKey as string,
+        evidenceDigest: input.evidenceDigest,
+        nowMs,
+        apply: (current) => ({
+          ...current,
+          state: 'recording',
+          notEvaluatedRoles: {
+            ...(current.notEvaluatedRoles ?? {}),
+            [input.role as string]: reason,
+          },
+        }),
+      }),
+    );
+    return {
+      abandoned: input.role,
+      notEvaluated: true,
+      reason,
+      session: adapterSessionSummary(updated),
+      leaseStatus: adapterLeaseStatus(updated, nowMs),
+      handoff: await adapterHandoff(updated),
+    };
+  }
   if (input.action === 'resume') {
     if (!['prepared', 'recording'].includes(session.state)) {
       throw new OperateError(
@@ -1372,16 +2039,29 @@ export async function operateAdapterLifecycle(input: {
         `Role ${input.role} was not bound by adapter prepare.`,
       );
     }
+    // T-001 widened `record-required.next` to one record action per PENDING role,
+    // so authorization is keyed by role, not by position: any pending role may
+    // record the instant it returns, regardless of sibling order or completion
+    // state (FR1). A role that is already recorded is not pending (so it has no
+    // record action in `next`) but is still a legal idempotent replay target —
+    // its identical-bytes no-op is enforced downstream by the resultDigest guard.
+    // Only a role that is neither pending nor already recorded (e.g. a session
+    // with no pending roles left) is rejected here, pointed at recovery.
     const currentHandoff = await adapterHandoff(session);
-    const authorizedRecord = currentHandoff.next.find((action) =>
-      ['adapter.record', 'harness.record'].includes(action.action),
+    const authorizedRecord = currentHandoff.next.find(
+      (action) =>
+        ['adapter.record', 'harness.record'].includes(action.action) && action.role === input.role,
     );
-    if (!authorizedRecord || authorizedRecord.role !== input.role) {
+    const alreadyRecorded = session.recordedRoles.includes(input.role);
+    if (!authorizedRecord && !alreadyRecorded) {
       throw new OperateError(
         'E_OPERATE_ADVISOR_ISOLATION',
-        `Role ${input.role} is not the current serialized adapter record action.`,
+        `Role ${input.role} has no pending adapter record action.`,
         {
-          expectedRole: authorizedRecord?.role ?? null,
+          expectedRole:
+            currentHandoff.next.find((action) =>
+              ['adapter.record', 'harness.record'].includes(action.action),
+            )?.role ?? null,
           recoveryCommand: currentHandoff.recovery
             .find((action) => ['adapter.resume', 'harness.resume'].includes(action.action))
             ?.argv.join(' '),
@@ -1606,23 +2286,82 @@ export async function operateAdapterLifecycle(input: {
       path.join(path.dirname(target), `${input.cycleId}.${input.role}.json`),
       result,
     );
+    const advisorReport =
+      session.protocolVersion === '1.4.0' &&
+      submitted &&
+      typeof submitted === 'object' &&
+      !Array.isArray(submitted)
+        ? (submitted as Record<string, unknown>)
+        : null;
     if (session.protocolVersion === '1.4.0') {
       await atomicPrivateWrite(
         path.join(path.dirname(target), `${input.cycleId}.${input.role}.response.json`),
         submitted,
       );
     }
-    // A successful record refreshes the lease forward from now (FR10 / T-008):
-    // an advisor making steady progress across a multi-role dispatch keeps its
-    // session alive without a separate keep-alive call, while a session that goes
-    // idle past the refreshed window still lapses and is rejected on the next call.
-    const updated: PrivateAdvisorSession = {
-      ...session,
-      state: 'recording',
-      recordedRoles: [...new Set([...session.recordedRoles, input.role])].sort(),
-      expiresAt: new Date(nowMs + leaseDurationMs).toISOString(),
-    };
-    await atomicPrivateWrite(target, updated);
+    // The role's validated result is now durable in its own machine-local file
+    // (survives a sibling stalling, restart, lease expiry, and resume). Merging it
+    // into the shared session's `recordedRoles`, committing its canonical event,
+    // and materializing its projection all mutate cycle-shared state, so they run
+    // inside the per-cycle in-process serialization — a concurrent record of a
+    // DIFFERENT role can never lose this one (FR1). A successful record also
+    // refreshes the lease forward from now (T-008): steady progress across a
+    // multi-role dispatch keeps the session alive without a separate keep-alive
+    // call, while an idle session past the refreshed window still lapses.
+    const target2 = target;
+    const updated = await withInProcessSessionLock(target2, async () => {
+      const merged = await commitSessionWrite(target2, {
+        projectRoot: input.projectRoot,
+        cycleId: input.cycleId as string,
+        localRoot: input.localRoot,
+        lease: input.lease as string,
+        idempotencyKey: input.idempotencyKey as string,
+        evidenceDigest: input.evidenceDigest,
+        nowMs,
+        apply: (current) => ({
+          ...current,
+          state: 'recording',
+          recordedRoles: [...new Set([...current.recordedRoles, input.role as string])].sort(),
+          expiresAt: new Date(nowMs + leaseDurationMs).toISOString(),
+        }),
+      });
+      // FR4/FR5: commit the canonical `advisory.recorded` event and refresh the
+      // readable projection now, so `planr operate report`/`status` and
+      // `.planr/operate/cycles/<id>/` reflect this lens' real analysis before
+      // Chair runs — not only at finalize.
+      await materializeRecordedRole({
+        projectRoot: input.projectRoot,
+        localRoot: input.localRoot,
+        cycleId: input.cycleId as string,
+        session: merged,
+        result,
+        advisorReport,
+      });
+      return merged;
+    });
+    // SPEC-005 T-019 (FR5/FR13): a citation-rejected lens commits a quiet result;
+    // persist the governed gaps the citation gate opened so the Chair board — built
+    // by a later `run` continuation, after this role is recorded and never
+    // re-dispatched — can reconstruct the `citation-rejected` outcome from committed
+    // state instead of rendering a false-clean `recorded-quiet`. Runs after the role
+    // is materialized (its `advisory.recorded` event committed), acquiring the
+    // event-store lock itself and idempotent per role, so a resume/retry never
+    // duplicates. Empty on the normal healthy path (no citation rejection → no gaps).
+    await persistRecordedRoleGaps({
+      projectRoot: input.projectRoot,
+      localRoot: input.localRoot,
+      cycleId: input.cycleId as string,
+      roleId: input.role as string,
+      gaps: recordGaps,
+      correlationId: input.idempotencyKey as string,
+    });
+    // FR7: the per-role result is now durably committed, so any OpenPlanr-owned
+    // scratch this cycle used as a handoff is redundant. Clean only confirmed
+    // owned scratch (a no-op on the normal stdin path, which writes none).
+    await cleanOperatingScratch(
+      resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot }),
+      input.cycleId as string,
+    );
     return {
       recorded: input.role,
       result,
@@ -1663,7 +2402,14 @@ export async function operateAdapterLifecycle(input: {
       handoff: await adapterHandoff(session),
     };
   }
-  const missingRoles = session.roles.filter((role) => !session.recordedRoles.includes(role));
+  // T-020: a role is terminal for finalize once it recorded a result OR was
+  // governed terminal `not_evaluated` (a lens abandoned after a genuine stall).
+  // Only an in-flight lens — never dispatched to a terminal outcome — blocks
+  // finalize, matching the T-001 wire contract that accepts an all-terminal board.
+  const notEvaluatedRoles = session.notEvaluatedRoles ?? {};
+  const missingRoles = session.roles.filter(
+    (role) => !session.recordedRoles.includes(role) && !(role in notEvaluatedRoles),
+  );
   if (missingRoles.length > 0) {
     throw new OperateError(
       'E_OPERATE_ADVISOR_FAILED',
@@ -1777,6 +2523,12 @@ export async function operateAdapterLifecycle(input: {
   );
   const finalized: PrivateAdvisorSession = { ...session, state: 'finalized' };
   await atomicPrivateWrite(target, finalized);
+  // FR7: the cycle's advisory work is fully committed; clear any confirmed
+  // OpenPlanr-owned scratch this cycle used as a handoff.
+  await cleanOperatingScratch(
+    resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot }),
+    input.cycleId as string,
+  );
   return {
     session: adapterSessionSummary(finalized),
     results: results.map((result) => ({
@@ -1787,5 +2539,147 @@ export async function operateAdapterLifecycle(input: {
     })),
     leaseStatus: adapterLeaseStatus(finalized, nowMs),
     handoff: await adapterHandoff(finalized),
+  };
+}
+
+/**
+ * SPEC-005 T-020 (FR13) — the OPERATOR escape, independent of a well-behaved
+ * runtime. When a runtime dispatched a lens and then reported nothing at all — it
+ * crashed, or does not implement `harness abandon` — the cycle is stranded at
+ * `phase: advisors` on every continuation: the stalled lens is never recorded, so
+ * it stays runnable-and-required and Chair is never assembled. The only prior
+ * recourse was `cycles cancel`, which discards the whole cycle including the
+ * siblings that DID record.
+ *
+ * This governed escape reaches a reviewable cycle without discarding it. It is
+ * gated on a LAPSED lease — the legitimate signal that no runtime is actively
+ * working the session — and an explicit operator confirmation. It never touches
+ * the runtime lifecycle (`harness abandon`/`record`/`finalize`), so it works when
+ * the runtime is gone. For each still-unrecorded advisor lens it commits the SAME
+ * governed terminal `not_evaluated` gap the runtime path commits
+ * (`governTerminalNotEvaluated`), so the next `run` continuation reconstructs the
+ * lens `not_evaluated` from committed state and consolidation proceeds. Recorded
+ * siblings are never read, re-dispatched, or altered. It fabricates nothing.
+ *
+ * It does not itself run consolidation — the operator reaches `reviewable` with a
+ * following `planr operate run` (offline when no runtime is available), so the
+ * choice of a real or offline Chair stays the operator's.
+ */
+export async function reapStalledOperatingRoles(input: {
+  projectRoot: string;
+  cycleId: string;
+  role?: string;
+  reason?: string;
+  confirmed?: boolean;
+  localRoot?: string;
+  now?: () => Date;
+}): Promise<{
+  cycleId: string;
+  reaped: Array<{ roleId: string; reason: string; gapId: string }>;
+  alreadyRecorded: string[];
+  next: string[];
+}> {
+  if (!input.confirmed) {
+    throw new OperateError(
+      'E_OPERATE_AUTHORITY_REQUIRED',
+      'Abandoning a stalled lens is a governed action; re-run with --yes to confirm.',
+    );
+  }
+  const nowMs = (input.now?.() ?? new Date()).getTime();
+  const store = new OperatingEventStore(input.projectRoot, { localRoot: input.localRoot });
+  const state = await store.state();
+  const cycle = state.cycles.find((record) => record.id === input.cycleId);
+  if (!cycle || !['advising', 'blocked'].includes(cycle.state)) {
+    throw new OperateError(
+      'E_OPERATE_STATE_INVALID',
+      `Cycle ${input.cycleId} must be advising or blocked to abandon a stalled lens.`,
+    );
+  }
+  // Read the machine-local session RAW (never `readAdapterSession`, which throws on
+  // a lapsed lease — the exact condition this escape keys on).
+  const target = adapterSessionPath(input.projectRoot, input.cycleId, input.localRoot);
+  const session = await readFile(target, 'utf8')
+    .then((raw) => JSON.parse(raw) as PrivateAdvisorSession)
+    .catch(() => null);
+  if (!session) {
+    throw new OperateError(
+      'E_OPERATE_STATE_INVALID',
+      `No adapter session exists for cycle ${input.cycleId}; nothing was dispatched to abandon.`,
+    );
+  }
+  if (session.phase !== 'advisors') {
+    throw new OperateError(
+      'E_OPERATE_STATE_INVALID',
+      'Only an advisors-phase session can have stalled lenses abandoned.',
+    );
+  }
+  // The lapsed-lease gate: a still-live lease means the runtime may yet record or
+  // heartbeat, so the operator must not race it. Once the lease has lapsed, the
+  // runtime is not governing the session and the operator may terminate the
+  // lenses it left unrecorded.
+  if (!sessionExpired(session, nowMs)) {
+    throw new OperateError(
+      'E_OPERATE_ADVISOR_ISOLATION',
+      'The adapter lease has not lapsed; the runtime may still be working. Wait for the lease to ' +
+        'expire, or use `planr operate harness abandon` with the active lease.',
+      { recoveryCommand: retryRunCommand(session) },
+    );
+  }
+  const recorded = new Set(session.recordedRoles);
+  const alreadyNotEvaluated = new Set(Object.keys(session.notEvaluatedRoles ?? {}));
+  const candidates = session.roles.filter(
+    (role) => role !== 'chair' && !recorded.has(role) && !alreadyNotEvaluated.has(role),
+  );
+  const targets = input.role ? candidates.filter((role) => role === input.role) : candidates;
+  if (input.role && !session.roles.includes(input.role)) {
+    throw new OperateError(
+      'E_OPERATE_CONFIG_INVALID',
+      `Role ${input.role} was not part of the stalled session.`,
+    );
+  }
+  if (input.role && recorded.has(input.role)) {
+    throw new OperateError(
+      'E_OPERATE_STATE_INVALID',
+      `Role ${input.role} already recorded a result and cannot be abandoned.`,
+    );
+  }
+  const reason =
+    input.reason?.trim() ||
+    `Operator terminated this lens not_evaluated after its adapter lease lapsed on ` +
+      `${new Date(nowMs).toISOString()} with no recorded result.`;
+  const reaped: Array<{ roleId: string; reason: string; gapId: string }> = [];
+  const notEvaluated: Record<string, string> = { ...(session.notEvaluatedRoles ?? {}) };
+  for (const roleId of targets) {
+    await governTerminalNotEvaluated({
+      projectRoot: input.projectRoot,
+      localRoot: input.localRoot,
+      cycleId: input.cycleId,
+      roleId,
+      reason,
+      correlationId: session.idempotencyKey,
+    });
+    // The committed gap is the source of truth; look it back up so the caller can
+    // reference the durable governed gap id.
+    const gap = (await store.state()).dataGaps.find(
+      (entry) =>
+        Array.isArray(entry.affectedRoles) && (entry.affectedRoles as string[]).includes(roleId),
+    );
+    reaped.push({ roleId, reason, gapId: String(gap?.id ?? '') });
+    notEvaluated[roleId] = reason;
+  }
+  // Best-effort: reflect the terminal status in the (already lapsed) machine-local
+  // session so an inspecting `harness resume`/handoff reads honestly. The committed
+  // gap above — not this file — is what unblocks consolidation, so a failure here
+  // is non-fatal.
+  if (reaped.length > 0) {
+    await atomicPrivateWrite(target, { ...session, notEvaluatedRoles: notEvaluated }).catch(
+      () => undefined,
+    );
+  }
+  return {
+    cycleId: input.cycleId,
+    reaped,
+    alreadyRecorded: [...recorded].sort(),
+    next: [`planr operate run --cycle-id ${input.cycleId} --offline --yes`],
   };
 }

@@ -223,6 +223,10 @@ type OperatingPreferencesRecord = OperatingLocalPreferences & {
    * artifact surface is frozen (`additionalProperties: false`), so this policy knob
    * lives in `preferences.json`, not `config.json`. Absent means the 15-minute
    * default; a present value is bounded-validated before it is honored.
+   *
+   * SPEC-005 FR2: this is the length of one lease window, not a stall remedy. A
+   * session held open past its window is renewed with `planr operate harness
+   * heartbeat` (no result required), never by inflating this value.
    */
   adapterLeaseDurationMs?: number;
 };
@@ -335,6 +339,13 @@ export function normalizeOperatingAdapterLeaseDurationMs(value: unknown): number
  * Read the machine-local adapter-lease duration (milliseconds), or the 15-minute
  * default when unset. Machine-local, alongside `evidenceTtlMs`; a present value is
  * rejected rather than trusted.
+ *
+ * SPEC-005 FR2: this duration is the size of ONE lease window, not the fix for a
+ * slow lens. The sanctioned way to hold a session open while a role is still
+ * thinking is `planr operate harness heartbeat`, which renews `expiresAt` by this
+ * same duration without recording a result. Raising this knob to survive a stall
+ * is explicitly NOT an acceptable substitute — it would extend the window for
+ * every cycle rather than renew the one in flight.
  */
 export async function readOperatingAdapterLeaseDurationMs(
   projectRoot: string,

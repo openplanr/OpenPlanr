@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { resolveGuidedInteractionValidators } from '../../pipeline-package-service.js';
 import { canonicalDigest } from '../canonical.js';
+import { classifyLegacyOperatingProfile } from '../profile-migration.js';
 import {
   type GuidedQuestion,
   type GuidedQuestionnaire,
@@ -31,10 +32,18 @@ const MAX_PROFILE_FILE_BYTES = 64 * 1024;
  * question can surface it as the suggested answer (finding 9). Fails safe: a
  * missing, oversized, malformed, or unrecognized profile file yields no
  * suggestion instead of throwing, so onboarding never breaks on a bad file.
+ *
+ * FR10 / T-009: the `id` is compatible and is still suggested, but the same file
+ * may carry `enabledProviders`/`budgets` (or other) values the CLI would reject.
+ * Those unsupported field names are returned alongside the id so the profile
+ * question can name them explicitly instead of silently suggesting a profile the
+ * tool will refuse.
  */
-async function existingOperatingProfileId(
+async function existingOperatingProfile(
   projectRoot?: string,
-): Promise<OperatingInitAnswers['profile'] | undefined> {
+): Promise<
+  { id: NonNullable<OperatingInitAnswers['profile']>; unsupportedFields: string[] } | undefined
+> {
   if (!projectRoot) return undefined;
   const target = path.join(projectRoot, '.planr', 'operate-profile.json');
   const raw = await readFile(target, 'utf8').catch(() => undefined);
@@ -47,24 +56,42 @@ async function existingOperatingProfileId(
   } catch {
     return undefined;
   }
-  const id = (parsed as { id?: unknown } | null)?.id;
-  return typeof id === 'string' && (OPERATE_PROFILE_IDS as readonly string[]).includes(id)
-    ? (id as OperatingInitAnswers['profile'])
-    : undefined;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
+  const id = (parsed as { id?: unknown }).id;
+  if (typeof id !== 'string' || !(OPERATE_PROFILE_IDS as readonly string[]).includes(id)) {
+    return undefined;
+  }
+  let unsupportedFields: string[] = [];
+  try {
+    unsupportedFields = classifyLegacyOperatingProfile(parsed as Record<string, unknown>)
+      .unsupported.map((entry) => entry.field)
+      .filter((field) => field !== 'id');
+  } catch {
+    unsupportedFields = [];
+  }
+  return { id: id as NonNullable<OperatingInitAnswers['profile']>, unsupportedFields };
 }
 
 /**
  * Enrich the engine context with the existing-profile suggestion once, so the
  * registry the create/resume/terminal paths all build carries the detect-don't-
  * ask profile answer. An explicit `existingProfileId` already on the context is
- * respected and not re-probed.
+ * respected and not re-probed. When the detected profile carries unsupported
+ * field values, those field names ride along so the suggestion can disclose them.
  */
 async function withDetectedSuggestions(
   context: OperatingQuestionEngineContext,
 ): Promise<OperatingQuestionEngineContext> {
   if (context.existingProfileId !== undefined) return context;
-  const existingProfileId = await existingOperatingProfileId(context.projectRoot);
-  return existingProfileId ? { ...context, existingProfileId } : context;
+  const detected = await existingOperatingProfile(context.projectRoot);
+  if (!detected) return context;
+  return {
+    ...context,
+    existingProfileId: detected.id,
+    ...(detected.unsupportedFields.length > 0
+      ? { existingProfileUnsupportedFields: detected.unsupportedFields }
+      : {}),
+  };
 }
 
 /**

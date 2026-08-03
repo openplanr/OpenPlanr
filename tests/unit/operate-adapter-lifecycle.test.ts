@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { join, resolve } from 'node:path';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { DEFAULT_OPERATING_ROLE_RESEARCH_BUDGET_MS } from '../../src/services/operate/advisors.js';
 import { OperatingEventStore } from '../../src/services/operate/event-store.js';
 import {
   createOperatingAdapterStartHandoff,
@@ -9,6 +10,19 @@ import {
 } from '../../src/services/operate/maintenance.js';
 import type { OperatingRoleResult } from '../../src/services/operate/types.js';
 import { resolveOperatingPaths } from '../../src/services/operate/workspace.js';
+
+// SPEC-005 T-002 exercises the Protocol v1.4 fan-out contract T-001 published
+// (one record action per pending role, plus the `harness.heartbeat` recovery
+// action), which lives in the local pipeline checkout. Bind the loader to it for
+// this suite exactly as the mission-dispatch suite does.
+beforeAll(() => {
+  process.env.OPENPLANR_PIPELINE_ROOT =
+    process.env.OPENPLANR_PIPELINE_ROOT ?? resolve('../planr-pipeline');
+});
+
+afterAll(() => {
+  delete process.env.OPENPLANR_PIPELINE_ROOT;
+});
 
 const temporaryDirectories: string[] = [];
 const digest = (character: string): `sha256:${string}` => `sha256:${character.repeat(64)}`;
@@ -40,7 +54,9 @@ afterEach(async () => {
   );
 });
 
-async function advisingCycle(): Promise<{
+async function advisingCycle(
+  enabledRoles: string[] = ['strategy-finance', 'technology-risk', 'chair'],
+): Promise<{
   projectRoot: string;
   localRoot: string;
   evidenceDigest: `sha256:${string}`;
@@ -76,7 +92,7 @@ async function advisingCycle(): Promise<{
       depth: 'standard',
       focus: ['all'],
       inputDigest: digest('a'),
-      enabledRoles: ['strategy-finance', 'technology-risk', 'chair'],
+      enabledRoles,
       enabledProviders: ['repository'],
       createdAt: '2026-07-28T09:00:00.000Z',
       updatedAt: '2026-07-28T09:00:00.000Z',
@@ -260,8 +276,11 @@ describe('native operating advisor lifecycle', () => {
     }
     expect(session.handoff.kind).toBe('operating-adapter-handoff');
     expect(session.handoff.state).toBe('record-required');
+    // T-001 widened `record-required.next` to one record action per PENDING role,
+    // so both bound advisors are authorized to record immediately — the batch
+    // barrier is gone at the contract level.
     const recordActions = session.handoff.next.filter(({ action }) => action === 'harness.record');
-    expect(recordActions.map(({ role }) => role)).toEqual(['strategy-finance']);
+    expect(recordActions.map(({ role }) => role)).toEqual(['strategy-finance', 'technology-risk']);
     for (const record of recordActions) {
       expect(record.argv).toEqual([
         'planr',
@@ -304,29 +323,6 @@ describe('native operating advisor lifecycle', () => {
       ),
     ) as typeof session;
     expect(persisted.roleBriefs).toEqual(session.roleBriefs);
-
-    await expect(
-      operateAdapterLifecycle({
-        ...fixture,
-        action: 'record',
-        cycleId: 'CYCLE-001',
-        lease: session.lease,
-        idempotencyKey: 'prepare-role-briefs',
-        role: 'technology-risk',
-        stdin: JSON.stringify({
-          outcome: 'quiet',
-          proposals: [],
-          gaps: [],
-          conflicts: [],
-        }),
-      }),
-    ).rejects.toMatchObject({
-      code: 'E_OPERATE_ADVISOR_ISOLATION',
-      details: {
-        expectedRole: 'strategy-finance',
-        recoveryCommand: expect.stringContaining('operate harness resume'),
-      },
-    });
 
     for (const [index, role] of session.roles.entries()) {
       if (index === 0) {
@@ -1019,5 +1015,397 @@ describe('native operating advisor lifecycle', () => {
     expect(prepared.boardIdentity).not.toBe(priorGeneration);
     const persisted = JSON.parse(await readFile(sessionPath, 'utf8')) as { boardIdentity: string };
     expect(persisted.boardIdentity).toBe(genesis);
+  });
+});
+
+// SPEC-005 T-002: immediate per-role commit (FR1), heartbeat lease (FR2), and the
+// honesty half of FR5, all over the widened Protocol v1.4 fan-out contract T-001
+// published. Every assertion uses an injected clock — never a wall-clock sleep.
+describe('durable per-role recording over the fan-out contract (SPEC-005 T-002)', () => {
+  const fiveAdvisorRoles = [
+    'strategy-finance',
+    'technology-risk',
+    'product-activation',
+    'growth-market',
+    'operations-customer',
+  ];
+  const boardRoles = [...fiveAdvisorRoles, 'chair'];
+  const advisorsDir = (fixture: { projectRoot: string; localRoot: string }): string =>
+    resolveOperatingPaths(fixture.projectRoot, { localRoot: fixture.localRoot }).advisors;
+
+  it('records any pending role regardless of its position in the widened next array', async () => {
+    const fixture = await advisingCycle(boardRoles);
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'reverse-order',
+    })) as { roles: string[]; lease: string };
+
+    // Prepare returns roles alphabetically; T-001's `next` carries one record
+    // action per pending role. Record them in strict REVERSE-alphabetical order,
+    // so every record after the first targets a role that is NOT the head of
+    // `next` — the old position-keyed authorization would have rejected them.
+    const sorted = [...prepared.roles].sort();
+    const reversed = [...sorted].reverse();
+    expect(reversed).not.toEqual(sorted);
+    for (const role of reversed) {
+      const recorded = (await operateAdapterLifecycle({
+        ...fixture,
+        action: 'record',
+        cycleId: 'CYCLE-001',
+        lease: prepared.lease,
+        idempotencyKey: 'reverse-order',
+        role,
+        stdin: JSON.stringify(quietAdvisorResponse(`analysis for ${role}`)),
+      })) as { recorded: string };
+      expect(recorded.recorded).toBe(role);
+    }
+
+    const session = JSON.parse(
+      await readFile(join(advisorsDir(fixture), 'CYCLE-001.json'), 'utf8'),
+    ) as { recordedRoles: string[] };
+    expect(session.recordedRoles).toEqual(sorted);
+  });
+
+  it('never loses an already-recorded role when pending roles record concurrently', async () => {
+    const fixture = await advisingCycle(boardRoles);
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'concurrent',
+    })) as { roles: string[]; lease: string };
+
+    // Fire every pending role's record at once. The widened handoff authorizes
+    // them all immediately; `harness record` still mutates ONE shared, lease-bound
+    // session, so the write must serialize per role. If it did not, two records
+    // that both read `recordedRoles: []` would each persist their single role and
+    // last-writer-wins would silently drop the others — the nondeterministic loss
+    // T-001 handed this task to prevent.
+    await Promise.all(
+      prepared.roles.map((role) =>
+        operateAdapterLifecycle({
+          ...fixture,
+          action: 'record',
+          cycleId: 'CYCLE-001',
+          lease: prepared.lease,
+          idempotencyKey: 'concurrent',
+          role,
+          stdin: JSON.stringify(quietAdvisorResponse(`analysis for ${role}`)),
+        }),
+      ),
+    );
+
+    const sorted = [...prepared.roles].sort();
+    const session = JSON.parse(
+      await readFile(join(advisorsDir(fixture), 'CYCLE-001.json'), 'utf8'),
+    ) as { recordedRoles: string[] };
+    // No role was dropped from the shared session by the concurrent writes.
+    expect(session.recordedRoles).toEqual(sorted);
+
+    // Each role's own result file survived, and finalize sees every one of them
+    // (no "missing roles") — the concurrent records lost nothing.
+    for (const role of prepared.roles) {
+      const result = JSON.parse(
+        await readFile(join(advisorsDir(fixture), `CYCLE-001.${role}.json`), 'utf8'),
+      ) as OperatingRoleResult;
+      expect(result).toMatchObject({ kind: 'operating-role-result', roleId: role });
+    }
+    const finalized = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'finalize',
+      cycleId: 'CYCLE-001',
+      lease: prepared.lease,
+      idempotencyKey: 'concurrent',
+    })) as { results: Array<{ roleId: string }> };
+    expect(finalized.results.map((entry) => entry.roleId).sort()).toEqual(sorted);
+  });
+
+  it('keeps four recorded results durable when a fifth stalls past the original lease window', async () => {
+    let clockMs = Date.parse('2026-07-28T10:00:00.000Z');
+    const now = () => new Date(clockMs);
+    const fixture = await advisingCycle(boardRoles);
+    const initial = await createOperatingAdapterStartHandoff({
+      ...fixture,
+      cycleId: 'CYCLE-001',
+      runtime: 'codex',
+      phase: 'advisors',
+      roles: fiveAdvisorRoles,
+    });
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      idempotencyKey: initial.binding.idempotencyKey,
+      now,
+    })) as { roles: string[]; lease: string; expiresAt: string };
+
+    const recordedFour = [...prepared.roles].sort().slice(0, 4);
+    const stalledRole = [...prepared.roles].sort()[4];
+    // Four lenses return and record within the lease window, a couple of minutes
+    // apart; the fifth never returns.
+    for (const role of recordedFour) {
+      clockMs += 2 * 60 * 1_000;
+      await operateAdapterLifecycle({
+        ...fixture,
+        action: 'record',
+        cycleId: 'CYCLE-001',
+        lease: prepared.lease,
+        idempotencyKey: initial.binding.idempotencyKey,
+        role,
+        stdin: JSON.stringify(quietAdvisorResponse(`analysis for ${role}`)),
+        now,
+      });
+    }
+
+    // The stalled role holds the lease for well over its window; advance the clock
+    // far past the last refreshed expiry. Resume now fails closed (expired) — this
+    // is exactly the moment the old batch barrier lost the four completed analyses.
+    clockMs = Date.parse(prepared.expiresAt) + 60 * 60 * 1_000;
+    await expect(
+      operateAdapterLifecycle({
+        ...fixture,
+        action: 'resume',
+        cycleId: 'CYCLE-001',
+        lease: prepared.lease,
+        idempotencyKey: initial.binding.idempotencyKey,
+        now,
+      }),
+    ).rejects.toMatchObject({ code: 'E_OPERATE_ADVISOR_FAILED' });
+
+    // The four validated results survived the lease expiry on disk, intact.
+    for (const role of recordedFour) {
+      const result = JSON.parse(
+        await readFile(join(advisorsDir(fixture), `CYCLE-001.${role}.json`), 'utf8'),
+      ) as OperatingRoleResult;
+      expect(result).toMatchObject({
+        kind: 'operating-role-result',
+        cycleId: 'CYCLE-001',
+        roleId: role,
+      });
+    }
+
+    // A fresh prepare recovers exactly the four recorded roles without re-running
+    // them and hands back the stalled fifth as the only remaining record action.
+    const retry = await createOperatingAdapterStartHandoff({
+      ...fixture,
+      cycleId: 'CYCLE-001',
+      runtime: 'codex',
+      phase: 'advisors',
+      roles: fiveAdvisorRoles,
+    });
+    const recovered = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      idempotencyKey: retry.binding.idempotencyKey,
+      now,
+    })) as {
+      recordedRoles: string[];
+      state: string;
+      handoff: { state: string; next: Array<{ role: string }> };
+    };
+    expect(recovered.state).toBe('recording');
+    expect(recovered.recordedRoles).toEqual(recordedFour);
+    expect(recovered.handoff.state).toBe('record-required');
+    expect(recovered.handoff.next.map((action) => action.role)).toEqual([stalledRole]);
+  });
+
+  it('renews the lease via heartbeat with no role result and no status change', async () => {
+    let clockMs = Date.parse('2026-07-28T10:00:00.000Z');
+    const now = () => new Date(clockMs);
+    const fifteenMinutes = 15 * 60 * 1_000;
+    const fixture = await advisingCycle();
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'heartbeat',
+      now,
+    })) as { roles: string[]; lease: string; expiresAt: string };
+    const [firstRole, secondRole] = [...prepared.roles].sort();
+
+    // One lens records; the other is still thinking.
+    await operateAdapterLifecycle({
+      ...fixture,
+      action: 'record',
+      cycleId: 'CYCLE-001',
+      lease: prepared.lease,
+      idempotencyKey: 'heartbeat',
+      role: firstRole,
+      stdin: JSON.stringify(quietAdvisorResponse()),
+      now,
+    });
+
+    // Near the record's refreshed window, heartbeat with no --role and no stdin.
+    clockMs += 14 * 60 * 1_000;
+    const beat = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'heartbeat',
+      cycleId: 'CYCLE-001',
+      lease: prepared.lease,
+      idempotencyKey: 'heartbeat',
+      now,
+    })) as {
+      session: { expiresAt: string; recordedRoles: string[]; state: string };
+      leaseStatus: { expiresAt: string; remainingMs: number; expired: boolean };
+      handoff: { state: string; next: Array<{ role: string }> };
+    };
+    // The lease moves forward a full window from now; no role result was required.
+    expect(beat.session.expiresAt).toBe(new Date(clockMs + fifteenMinutes).toISOString());
+    expect(beat.leaseStatus.remainingMs).toBe(fifteenMinutes);
+    expect(beat.leaseStatus.expired).toBe(false);
+    // Recorded stays recorded, pending stays pending — heartbeat changed neither.
+    expect(beat.session.recordedRoles).toEqual([firstRole]);
+    expect(beat.handoff.state).toBe('record-required');
+    expect(beat.handoff.next.map((action) => action.role)).toEqual([secondRole]);
+    const persisted = JSON.parse(
+      await readFile(join(advisorsDir(fixture), 'CYCLE-001.json'), 'utf8'),
+    ) as { expiresAt: string };
+    expect(persisted.expiresAt).toBe(beat.session.expiresAt);
+
+    // Advance PAST where the session would have lapsed without the heartbeat
+    // (the record's window ended one minute ago). The second record still
+    // succeeds only because the heartbeat carried the session forward (FR2).
+    clockMs += 2 * 60 * 1_000;
+    const late = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'record',
+      cycleId: 'CYCLE-001',
+      lease: prepared.lease,
+      idempotencyKey: 'heartbeat',
+      role: secondRole,
+      stdin: JSON.stringify(quietAdvisorResponse()),
+      now,
+    })) as { recorded: string };
+    expect(late.recorded).toBe(secondRole);
+  });
+
+  it('treats a replay of identical bytes for the same role as a safe no-op', async () => {
+    const fixture = await advisingCycle();
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'replay',
+    })) as { roles: string[]; lease: string };
+    const role = [...prepared.roles].sort()[0];
+    const stdin = JSON.stringify(quietAdvisorResponse('idempotent analysis'));
+
+    const first = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'record',
+      cycleId: 'CYCLE-001',
+      lease: prepared.lease,
+      idempotencyKey: 'replay',
+      role,
+      stdin,
+    })) as {
+      recorded: string;
+      result: { resultDigest: string };
+      session: { recordedRoles: string[] };
+    };
+    expect(first.session.recordedRoles).toEqual([role]);
+
+    // Replaying the exact same bytes for the same (role, idempotency key) is a
+    // success, not an error: the resultDigest guard recognises identical content,
+    // the recorded set is unchanged, and only one canonical event exists.
+    const replay = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'record',
+      cycleId: 'CYCLE-001',
+      lease: prepared.lease,
+      idempotencyKey: 'replay',
+      role,
+      stdin,
+    })) as {
+      recorded: string;
+      result: { resultDigest: string };
+      session: { recordedRoles: string[] };
+    };
+    expect(replay.recorded).toBe(role);
+    expect(replay.result.resultDigest).toBe(first.result.resultDigest);
+    expect(replay.session.recordedRoles).toEqual([role]);
+
+    const events = (
+      await new OperatingEventStore(fixture.projectRoot, { localRoot: fixture.localRoot }).replay()
+    ).events.filter(
+      (event) => event.type === 'advisory.recorded' && event.entityId === `CYCLE-001-${role}`,
+    );
+    expect(events).toHaveLength(1);
+  });
+});
+
+// FR12 (SPEC-005 T-003): the native harness prepare path is the one real runs use.
+// It must thread the SAME shared, citation-bearing bootstrap map and graceful
+// per-role research budget into every advisor mandate that the inline dispatch path
+// does — otherwise native-runtime agents receive no research targeting at all.
+describe('native prepare threads FR12 research guidance into advisor mandates', () => {
+  it('attaches the shared bootstrap map and per-role budget to every advisor mandate', async () => {
+    const fixture = await advisingCycle();
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'fr12-native-prepare',
+    })) as {
+      roles: string[];
+      mandates: Record<
+        string,
+        {
+          mandateDigest: `sha256:${string}`;
+          researchGuidance?: {
+            bootstrapMap: { kind: string; mapDigest: `sha256:${string}` } | null;
+            bootstrapMapDigest: `sha256:${string}` | null;
+            focusAreas: string[];
+            deduplicationHints: string[];
+            perRoleResearchBudgetMs: number | null;
+            stopResearchingAndSynthesize: string[];
+          };
+        }
+      >;
+    };
+
+    expect(prepared.roles).toEqual(['strategy-finance', 'technology-risk']);
+    // The one shared map is referenced by BOTH advisor mandates (same digest),
+    // proving it is built once per cycle and threaded, not rebuilt per role.
+    const digests = prepared.roles.map(
+      (role) => prepared.mandates[role].researchGuidance?.bootstrapMapDigest,
+    );
+    for (const role of prepared.roles) {
+      const guidance = prepared.mandates[role].researchGuidance;
+      expect(guidance, `role ${role} must carry FR12 research guidance`).toBeDefined();
+      expect(guidance?.bootstrapMap?.kind).toBe('operating-bootstrap-map');
+      expect(guidance?.bootstrapMapDigest).toMatch(/^sha256:/);
+      expect(guidance?.perRoleResearchBudgetMs).toBe(DEFAULT_OPERATING_ROLE_RESEARCH_BUDGET_MS);
+      expect(guidance?.stopResearchingAndSynthesize.length).toBeGreaterThan(0);
+      expect(guidance?.focusAreas.length).toBeGreaterThan(0);
+    }
+    expect(new Set(digests).size).toBe(1);
+  });
+
+  it('leaves a standalone Chair mandate byte-identical (no research guidance)', async () => {
+    const fixture = await advisingCycle();
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'fr12-chair-prepare',
+      role: 'chair',
+    })) as {
+      roles: string[];
+      mandates: Record<string, { researchGuidance?: unknown }>;
+    };
+    expect(prepared.roles).toEqual(['chair']);
+    // The Chair is prepared alone, derives an empty advisor set, and its mandate
+    // stays byte-identical — no research guidance is attached.
+    expect(prepared.mandates.chair.researchGuidance).toBeUndefined();
   });
 });

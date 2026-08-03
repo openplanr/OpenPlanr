@@ -88,6 +88,9 @@ interface PipelineProtocolApi {
     roles: Array<{
       roleId: string;
       status: OperatingAdapterHandoff['roles'][number]['status'];
+      // A non-recorded terminal role (`not-evaluated`/`failed`) carries the reason
+      // it is missing; the pipeline builder omits the field for every other status.
+      statusReason?: string | null;
       inputDigest?: string | null;
     }>;
   }): OperatingAdapterHandoff;

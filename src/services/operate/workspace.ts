@@ -54,6 +54,11 @@ export interface OperatingPaths {
   advisors: string;
   quarantine: string;
   sessions: string;
+  // FR7 (T-006): the OpenPlanr-owned scratch root. Keyed under the machine-local
+  // `localRoot` (already project-and-machine-keyed) so a runtime never chooses its
+  // own transport location; per-cycle scratch and its ownership manifest live under
+  // `<localRoot>/scratch/<cycleId>/`.
+  scratch: string;
 }
 
 export function projectMachineKey(projectRoot: string): string {
@@ -109,6 +114,7 @@ export function resolveOperatingPaths(
     advisors: path.join(localRoot, 'advisors'),
     quarantine: path.join(localRoot, 'quarantine'),
     sessions: path.join(localRoot, 'sessions'),
+    scratch: path.join(localRoot, 'scratch'),
   };
 }
 
@@ -433,6 +439,7 @@ export async function ensureOperatingDirectories(
       paths.advisors,
       paths.quarantine,
       paths.sessions,
+      paths.scratch,
     ].map((directory) => mkdir(directory, { recursive: true, mode: 0o700 })),
   );
   return paths;

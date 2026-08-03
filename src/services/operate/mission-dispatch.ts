@@ -738,22 +738,148 @@ export function createMissionToolset(
 // ---------------------------------------------------------------------------
 
 /**
+ * The graceful per-role research-budget signal handed to a fan-out `run` (FR12).
+ *
+ * The budget NEVER aborts or races a role's promise: crossing it flips
+ * `budgetExceeded()` so the role can voluntarily stop reading and synthesize from
+ * what it already gathered, returning its FULL output. Nothing here truncates,
+ * drops, or cuts off a role's result — efficiency comes from the role concluding,
+ * not from the orchestrator severing it.
+ */
+export interface MissionDispatchBudgetSignal {
+  /** Wall-clock deadline (ms epoch) after which the role should synthesize; `Infinity` when unbounded. */
+  deadline: number;
+  /** True once the per-role research budget has elapsed — the cue to synthesize, not a cut-off. */
+  budgetExceeded: () => boolean;
+  /** Remaining budget in ms (never negative); `Infinity` when unbounded. */
+  remainingMs: () => number;
+}
+
+/**
+ * A per-item lifecycle reporter (FR3, SPEC-005 T-003). The fan-out is the bounded
+ * bookkeeping primitive the `AdvisorLifecycleDriver` orchestrates over: rather than
+ * only resolving/rejecting a bare promise, each item now reports its dispatch,
+ * return, and error boundaries through this reporter, so the driver can observe the
+ * per-role lifecycle without the fan-out taking on any state-machine, recording, or
+ * runtime-classification responsibility. Entirely optional and additive — a caller
+ * that omits it (every pre-T-003 caller) sees byte-identical behaviour.
+ *
+ * The reporter is observability only: it never alters ordering, concurrency, the
+ * budget signal, or a result. `onReturn` fires after `run` resolves (before the
+ * result is stored at its input index); `onError` fires if `run` rejects, and the
+ * rejection still propagates unchanged.
+ */
+export interface MissionDispatchLifecycleReporter<Item, Result> {
+  onDispatch?: (item: Item) => void;
+  onReturn?: (item: Item, result: Result) => void;
+  onError?: (item: Item, error: unknown) => void;
+}
+
+/**
  * Fan a per-item dispatch out in parallel where the adapter reports
  * `parallelDispatch: true`, sequentially otherwise. Results are always returned
  * in the SAME order as `items`, so the caller can restore registry order and the
  * reduced events are byte-identical across parallel and sequential dispatch.
+ *
+ * FR12 additions (all optional, all backward-compatible — the existing
+ * `{ items, parallel, run }` call still type-checks and behaves identically):
+ *  - `concurrency` bounds how many items run at once on the parallel path;
+ *  - `perRoleBudgetMs` gives each `run` a graceful budget signal it MAY consult to
+ *    stop researching and synthesize — the fan-out never aborts a role's promise,
+ *    so a role's output is never cut off mid-stream;
+ *  - `now` injects a clock for deterministic budget tests.
+ *
+ * FR3 addition (T-003): `lifecycle` reports each item's dispatch/return/error
+ * boundary so the `AdvisorLifecycleDriver` can observe the per-role lifecycle
+ * instead of only seeing a resolved/rejected promise. It is observability only and
+ * never alters ordering, concurrency, the budget signal, or a result — a caller
+ * that omits it behaves exactly as before.
  */
 export async function runMissionDispatchFanOut<Item, Result>(input: {
   items: readonly Item[];
   parallel: boolean;
-  run: (item: Item) => Promise<Result>;
+  run: (item: Item, signal: MissionDispatchBudgetSignal) => Promise<Result>;
+  /** Bounded fan-out concurrency for the parallel path. Absent/`<= 0` = unbounded. */
+  concurrency?: number;
+  /** Per-role research time budget (ms). Graceful: a signal to synthesize, never a cut-off. Absent/`<= 0` = unbounded. */
+  perRoleBudgetMs?: number;
+  /** Injected clock (ms epoch). Defaults to `Date.now`. */
+  now?: () => number;
+  /** Fired once, the first time a role crosses its budget (observability only). */
+  onBudgetExceeded?: (item: Item, elapsedMs: number) => void;
+  /** Per-item lifecycle reporter (FR3). Additive, observability only. */
+  lifecycle?: MissionDispatchLifecycleReporter<Item, Result>;
 }): Promise<Result[]> {
+  const now = input.now ?? Date.now;
+  const budgetMs =
+    input.perRoleBudgetMs && input.perRoleBudgetMs > 0
+      ? input.perRoleBudgetMs
+      : Number.POSITIVE_INFINITY;
+  const makeSignal = (item: Item): MissionDispatchBudgetSignal => {
+    const startedAt = now();
+    const deadline =
+      budgetMs === Number.POSITIVE_INFINITY ? Number.POSITIVE_INFINITY : startedAt + budgetMs;
+    let notified = false;
+    return {
+      deadline,
+      remainingMs: () =>
+        budgetMs === Number.POSITIVE_INFINITY
+          ? Number.POSITIVE_INFINITY
+          : Math.max(0, deadline - now()),
+      budgetExceeded: () => {
+        const elapsed = now() - startedAt;
+        const over = elapsed >= budgetMs;
+        if (over && !notified) {
+          notified = true;
+          input.onBudgetExceeded?.(item, elapsed);
+        }
+        return over;
+      },
+    };
+  };
+  // Report the dispatch/return/error boundary around a single `run` without
+  // changing its result, ordering, or rejection: `onDispatch` fires as the item
+  // begins (right where `makeSignal` captures its start), `onReturn` on resolve,
+  // `onError` on reject (and the rejection still propagates unchanged).
+  const runItem = async (item: Item): Promise<Result> => {
+    input.lifecycle?.onDispatch?.(item);
+    try {
+      const result = await input.run(item, makeSignal(item));
+      input.lifecycle?.onReturn?.(item, result);
+      return result;
+    } catch (error) {
+      input.lifecycle?.onError?.(item, error);
+      throw error;
+    }
+  };
   if (input.parallel) {
-    return Promise.all(input.items.map((item) => input.run(item)));
+    const limit =
+      input.concurrency && input.concurrency > 0
+        ? Math.min(input.concurrency, input.items.length)
+        : input.items.length;
+    if (limit >= input.items.length) {
+      return Promise.all(input.items.map((item) => runItem(item)));
+    }
+    // Bounded concurrency: a fixed worker pool drains a shared cursor. Each result
+    // is written back at its input index, so the returned order matches `items`
+    // exactly regardless of completion order.
+    const results = new Array<Result>(input.items.length);
+    let cursor = 0;
+    const worker = async (): Promise<void> => {
+      while (true) {
+        const index = cursor;
+        cursor += 1;
+        if (index >= input.items.length) return;
+        const item = input.items[index];
+        results[index] = await runItem(item);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.max(1, limit) }, () => worker()));
+    return results;
   }
   const results: Result[] = [];
   for (const item of input.items) {
-    results.push(await input.run(item));
+    results.push(await runItem(item));
   }
   return results;
 }
