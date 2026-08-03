@@ -1,6 +1,0 @@
-{
-  "AppName": "planr-pipeline",
-  "Version": "0.24.9",
-  "Language": "JavaScript (Node ESM)",
-  "TestCommand": "npm test"
-}

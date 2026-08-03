@@ -1,1 +1,0 @@
-{"version":3,"file":"status.d.ts","sourceRoot":"","sources":["../../../src/cli/commands/status.ts"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,WAAW,CAAC;AAEzC,OAAO,EAGL,KAAK,cAAc,EACpB,MAAM,2CAA2C,CAAC;AAInD,wBAAgB,qBAAqB,CAAC,OAAO,EAAE,OAAO,QAsCrD;AA0CD,wBAAgB,cAAc,CAAC,CAAC,EAAE,cAAc,GAAG,MAAM,CAoCxD"}

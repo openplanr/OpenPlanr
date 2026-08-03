@@ -1,0 +1,44 @@
+name: Publish to npm
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    # Publishing re-runs the full suite, which includes the packed-install e2e
+    # test. That test packs the sibling pipeline, so the fixture has to be
+    # present here exactly as it is in CI and release.
+    env:
+      OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/.ci/planr-pipeline
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Checkout released pipeline fixture
+        uses: actions/checkout@v6
+        with:
+          repository: openplanr/planr-pipeline
+          ref: v0.39.0
+          path: .ci/planr-pipeline
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+      - name: Publish to npm
+        run: npm run release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

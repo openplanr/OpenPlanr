@@ -1,1 +1,0 @@
-{"version":3,"file":"claude-generator.d.ts","sourceRoot":"","sources":["../../src/generators/claude-generator.ts"],"names":[],"mappings":"AACA,OAAO,KAAK,EAAE,kBAAkB,EAAE,aAAa,EAAE,MAAM,oBAAoB,CAAC;AAI5E,OAAO,EAAE,aAAa,EAAE,MAAM,qBAAqB,CAAC;AAEpD,qBAAa,eAAgB,SAAQ,aAAa;IAChD,aAAa,IAAI,MAAM;IAIjB,QAAQ,CAAC,UAAU,EAAE,kBAAkB,GAAG,OAAO,CAAC,aAAa,EAAE,CAAC;CA8CzE"}

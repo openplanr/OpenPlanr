@@ -1,1 +1,0 @@
-{"version":3,"file":"deprecation-notices.js","sourceRoot":"","sources":["../../src/services/deprecation-notices.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,IAAI,aAAa,EAAE,MAAM,oBAAoB,CAAC;AAI7D,MAAM,CAAC,MAAM,+BAA+B,GAC1C,2SAA2S,CAAC;AAE9S,MAAM,UAAU,sBAAsB,CACpC,QAA2B,EAC3B,OAA2C,aAAa;IAExD,IAAI,CAAC,IAAI,CAAC,+BAA+B,CAAC,CAAC;AAC7C,CAAC"}

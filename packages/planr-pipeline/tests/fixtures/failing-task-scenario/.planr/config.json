@@ -1,5 +1,0 @@
-{
-  "projectName": "failing-fixture",
-  "outputPaths": { "agile": ".planr" },
-  "idPrefix": { "spec": "SPEC" }
-}

@@ -1,6 +1,3 @@
 {
-  "packages/OpenPlanr/**/*.ts": [
-    "bash -c 'cd packages/OpenPlanr && biome check --write --no-errors-on-unmatched'",
-    "bash -c 'cd packages/OpenPlanr && vitest related --run'"
-  ]
+  "*.ts": ["biome check --write --no-errors-on-unmatched", "vitest related --run"]
 }
