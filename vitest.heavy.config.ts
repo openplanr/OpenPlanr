@@ -23,6 +23,10 @@ export default defineConfig({
     include: [
       'tests/e2e/operate-packed-install.test.ts',
       'tests/e2e/operate-guided-packed-install.test.ts',
+      // Packs and installs a real tarball, then runs the real `bin/planr.js`
+      // against it — the SPEC-006 Trap-A proof that `planr upgrade status`
+      // reads the actual installed CLI version, not an in-memory fixture.
+      'tests/e2e/upgrade-packed-install.test.ts',
       'tests/unit/operate-checkpoint-scale.test.ts',
       'tests/integration/doctor-guided-operate.test.ts',
       // Every operate integration suite builds real git projects and drives the

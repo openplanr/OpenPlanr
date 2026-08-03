@@ -190,6 +190,14 @@ export interface OpenPlanrConfig {
   reportLinter?: ReportLinterConfig;
   /** Set after `planr linear init`; token is not saved in JSON. */
   linear?: LinearConfig;
+  /**
+   * FR6 upgrade-offer policy. Team-shared and additive; neither field is
+   * inferred from a bare invocation — an absent block means "prompt as usual".
+   */
+  upgrade?: {
+    autoUpgrade?: boolean;
+    updateCheck?: boolean;
+  };
 }
 
 export interface BaseArtifact {

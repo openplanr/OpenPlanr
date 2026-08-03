@@ -202,7 +202,7 @@ function projectKey(projectDir: string): string {
   return hash(path.resolve(projectDir)).slice(0, 16);
 }
 
-function runtimeRoot(): string {
+export function runtimeRoot(): string {
   return path.join(userHome(), '.planr', 'runtime');
 }
 
@@ -1188,6 +1188,44 @@ export async function cleanupHomeProjectInstall(): Promise<{ ok: true; removed: 
   return { ok: true, removed };
 }
 
+/**
+ * The single warn-vs-fail classification for a drifted component tuple.
+ *
+ * `doctor`'s runtime-lock diagnostic and `planr upgrade status`
+ * (`reconcileInstalledTuple`) both call this, so the
+ * `upgradeOnlyDrift`-versus-`genuineDrift` distinction (SPEC-006 FR3) is
+ * defined once rather than re-derived. A CLI that merely trails an upgrade
+ * (`upgradeOnlyDrift`) is a `warn`; a genuinely incompatible tuple
+ * (`incompatibleDrift`, doctor's digest/adapter drift) is a `fail`; any other
+ * drift with no explaining CLI advance is also a `fail`.
+ *
+ * The math is a literal extraction of the former inline block, so every
+ * pre-existing `runtime-manager-service.test.ts` assertion is the proof the
+ * behaviour was preserved.
+ */
+export function classifyComponentDrift(input: {
+  cliDrift: boolean;
+  componentDrift: boolean;
+  incompatibleDrift: boolean;
+}): {
+  drift: boolean;
+  genuineDrift: boolean;
+  upgradeOnlyDrift: boolean;
+  status: 'pass' | 'warn' | 'fail';
+} {
+  const drift = input.componentDrift || input.incompatibleDrift;
+  const genuineDrift = input.incompatibleDrift;
+  const upgradeOnlyDrift = drift && !genuineDrift && input.cliDrift;
+  const status: 'pass' | 'warn' | 'fail' = genuineDrift
+    ? 'fail'
+    : upgradeOnlyDrift
+      ? 'warn'
+      : drift
+        ? 'fail'
+        : 'pass';
+  return { drift, genuineDrift, upgradeOnlyDrift, status };
+}
+
 export async function runtimeDoctor(
   projectDir: string,
   options: {
@@ -1386,7 +1424,6 @@ export async function runtimeDoctor(
           current.capabilityLevel !== locked.capabilityLevel
         );
       });
-      const drift = componentDrift || digestDrift || adapterDrift;
       // FR11: an OpenPlanr upgrade advances the CLI version the lock recorded.
       // When the CLI component trails the installed build and nothing that
       // governs Operating Board dispatch (runtime adapters, manifest digest)
@@ -1394,11 +1431,18 @@ export async function runtimeDoctor(
       // an informational `warn`, not a `fail` implying the board is broken. A
       // digest/adapter drift, or a component drift that does not include the CLI
       // (for example a pinned obsolete skill bundle), remains a genuine `fail`.
-      const genuineDrift = digestDrift || adapterDrift;
-      const upgradeOnlyDrift = drift && !genuineDrift && cliDrift;
+      // The warn/fail derivation lives in the single `classifyComponentDrift`
+      // helper so `planr upgrade status` reuses this exact distinction (SPEC-006
+      // FR3) rather than re-deriving it; a digest/adapter drift is doctor's
+      // flavour of an incompatible tuple.
+      const { drift, genuineDrift, upgradeOnlyDrift, status } = classifyComponentDrift({
+        cliDrift,
+        componentDrift: Boolean(componentDrift),
+        incompatibleDrift: digestDrift || adapterDrift,
+      });
       diagnostics.push({
         code: drift ? 'lock-drift' : 'runtime-lock',
-        status: genuineDrift ? 'fail' : upgradeOnlyDrift ? 'warn' : drift ? 'fail' : 'pass',
+        status,
         message: genuineDrift
           ? `Runtime lock drift detected (components: ${componentDrift}, digest: ${digestDrift}, adapters: ${adapterDrift})`
           : upgradeOnlyDrift

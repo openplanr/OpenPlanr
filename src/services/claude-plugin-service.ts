@@ -326,6 +326,29 @@ function runOrThrow(
   }
 }
 
+/**
+ * Render the exact `claude` shell command a plugin operation maps to — the same
+ * argv `applyClaudePluginIntegration`'s `runOrThrow` calls above already use,
+ * only as a printable string. `planr upgrade apply` prescribes (never executes)
+ * the plugin half from these, so the printed commands can never drift from what
+ * an apply would actually run. A pure formatter: it derives a command, it never
+ * touches the host — plugin installation is a host command the CLI cannot own.
+ */
+export function formatClaudePluginOperationCommand(operation: ClaudePluginOperation): string {
+  switch (operation.kind) {
+    case 'add-marketplace':
+      return `claude plugin marketplace add ${OPENPLANR_CLAUDE_MARKETPLACE_SOURCE} --scope user`;
+    case 'refresh-marketplace':
+      return `claude plugin marketplace update ${OPENPLANR_CLAUDE_MARKETPLACE}`;
+    case 'install':
+      return `claude plugin install ${operation.id} --scope user`;
+    case 'update':
+      return `claude plugin update ${operation.id} --scope user`;
+    case 'enable':
+      return `claude plugin enable ${operation.id} --scope user`;
+  }
+}
+
 export function applyClaudePluginIntegration(
   pipelineVersion: string,
   inspection: ClaudePluginInspection,

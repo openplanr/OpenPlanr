@@ -1,7 +1,9 @@
 import { Command, CommanderError } from 'commander';
-import { ConfigNotFoundError, findProjectRoot } from '../services/config-service.js';
+import type { OpenPlanrConfig } from '../models/types.js';
+import { ConfigNotFoundError, findProjectRoot, loadConfig } from '../services/config-service.js';
 import { setNonInteractive } from '../services/interactive-state.js';
 import { RuntimeManagerError } from '../services/runtime-manager-service.js';
+import { maybeOfferUpgrade, upgradeOfferReachable } from '../services/upgrade-offer-service.js';
 import { display, logger, setVerbose } from '../utils/logger.js';
 import { OPENPLANR_VERSION } from '../utils/package-version.js';
 import { registerArtifactCommand } from './commands/artifact.js';
@@ -38,6 +40,7 @@ import { registerSyncCommand } from './commands/sync.js';
 import { registerTaskCommand } from './commands/task.js';
 import { registerTemplateCommand } from './commands/template.js';
 import { registerUpdateCommand } from './commands/update.js';
+import { registerUpgradeCommand } from './commands/upgrade.js';
 import { registerVoiceCommand } from './commands/voice.js';
 
 const version = OPENPLANR_VERSION;
@@ -65,12 +68,35 @@ program.configureOutput({
   },
 });
 
-program.hook('preAction', () => {
+/** Best-effort config load: outside a project (or with an invalid config) the
+ * offer still runs on defaults, so a missing config never breaks a command. */
+async function loadUpgradeConfig(projectDir: string): Promise<OpenPlanrConfig | null> {
+  try {
+    return await loadConfig(projectDir);
+  } catch {
+    return null;
+  }
+}
+
+program.hook('preAction', async () => {
   if (program.opts().verbose) {
     setVerbose(true);
   }
   if (!program.opts().interactive || program.opts().yes || process.argv.includes('--json')) {
     setNonInteractive(true);
+  }
+  // FR5/FR6 — offer an available upgrade where the user already is. This is the
+  // one seam every invocation already passes through. It is deliberately skipped
+  // for the `upgrade` command (which owns its own flow), for operate --json, and
+  // for any non-interactive invocation (`upgradeOfferReachable()` reduces to
+  // `!isNonInteractive()` in production) so machine-readable output is never
+  // corrupted. A durable snooze/never-ask inside `maybeOfferUpgrade`
+  // short-circuits before any reconcile, so a command that already declined pays
+  // no network cost; `maybeOfferUpgrade` fails open and never throws.
+  if (!isOperateJsonInvocation() && !process.argv.includes('upgrade') && upgradeOfferReachable()) {
+    const projectDir = program.opts().projectDir as string;
+    const config = await loadUpgradeConfig(projectDir);
+    await maybeOfferUpgrade(projectDir, config);
   }
 });
 
@@ -109,6 +135,7 @@ registerSprintCommand(program);
 registerSyncCommand(program);
 registerTemplateCommand(program);
 registerUpdateCommand(program);
+registerUpgradeCommand(program, version);
 
 program.parseAsync(process.argv).catch((err) => {
   if (err instanceof CommanderError) {
