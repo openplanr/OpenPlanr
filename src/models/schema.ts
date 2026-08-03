@@ -44,6 +44,15 @@ export const distributionConfigSchema = z.object({
 });
 
 /**
+ * FR6 upgrade-offer policy. Both fields are optional and additive: neither may
+ * be inferred from a bare invocation — an absent block means "prompt as usual".
+ */
+export const upgradeConfigSchema = z.object({
+  autoUpgrade: z.boolean().optional(),
+  updateCheck: z.boolean().optional(),
+});
+
+/**
  * UUIDv4 regex — Linear workflow state ids follow this form. `/i` is defensive
  * against case-normalizing tools (Linear's API emits lowercase canonically).
  */
@@ -135,6 +144,7 @@ export const configSchema = z.object({
   distribution: distributionConfigSchema.optional(),
   reportLinter: reportLinterConfigSchema.optional(),
   linear: linearConfigSchema.optional(),
+  upgrade: upgradeConfigSchema.optional(),
 });
 
 export type ValidatedConfig = z.infer<typeof configSchema>;

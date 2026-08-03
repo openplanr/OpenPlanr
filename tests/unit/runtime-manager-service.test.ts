@@ -18,6 +18,7 @@ import {
 } from '../../src/services/claude-plugin-service.js';
 import {
   applySetup,
+  classifyComponentDrift,
   cleanupHomeProjectInstall,
   inspectProjectContext,
   previewHomeProjectCleanup,
@@ -563,5 +564,35 @@ describe('runtime setup', () => {
         scope: 'project',
       }),
     ).rejects.toMatchObject({ code: 'E_SETUP_BUSY' });
+  });
+});
+
+// The single warn/fail distinction doctor's lock-drift diagnostic and
+// `planr upgrade status` both rely on (SPEC-006 FR3). These four outcomes are
+// the extracted behaviour; the existing `lock-drift` assertions above are the
+// proof the extraction preserved doctor's own output.
+describe('classifyComponentDrift', () => {
+  it('passes when nothing drifted', () => {
+    expect(
+      classifyComponentDrift({ cliDrift: false, componentDrift: false, incompatibleDrift: false }),
+    ).toEqual({ drift: false, genuineDrift: false, upgradeOnlyDrift: false, status: 'pass' });
+  });
+
+  it('warns when the CLI merely trails an upgrade and the tuple stays compatible', () => {
+    expect(
+      classifyComponentDrift({ cliDrift: true, componentDrift: true, incompatibleDrift: false }),
+    ).toEqual({ drift: true, genuineDrift: false, upgradeOnlyDrift: true, status: 'warn' });
+  });
+
+  it('fails on a genuine incompatibility regardless of the CLI', () => {
+    expect(
+      classifyComponentDrift({ cliDrift: true, componentDrift: true, incompatibleDrift: true }),
+    ).toEqual({ drift: true, genuineDrift: true, upgradeOnlyDrift: false, status: 'fail' });
+  });
+
+  it('fails on component drift the CLI does not explain (a pinned obsolete bundle)', () => {
+    expect(
+      classifyComponentDrift({ cliDrift: false, componentDrift: true, incompatibleDrift: false }),
+    ).toEqual({ drift: true, genuineDrift: false, upgradeOnlyDrift: false, status: 'fail' });
   });
 });

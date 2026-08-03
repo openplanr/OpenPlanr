@@ -15,6 +15,11 @@ import {
 } from '../../services/credentials-service.js';
 import { printDeprecationNotice } from '../../services/deprecation-notices.js';
 import { promptSecret, promptSelect } from '../../services/prompt-service.js';
+import {
+  readSnoozeState,
+  UPGRADE_REENABLE_COMMAND,
+  writeSnoozeState,
+} from '../../services/upgrade-offer-service.js';
 import { display, logger } from '../../utils/logger.js';
 
 export function registerConfigCommand(program: Command) {
@@ -220,4 +225,70 @@ export function registerConfigCommand(program: Command) {
       await saveConfig(projectDir, cfg);
       logger.success(`Default coding agent set to: ${selected}`);
     });
+
+  config
+    .command('set-upgrade-policy')
+    .description('Configure how OpenPlanr offers upgrades (FR6: auto_upgrade / update_check)')
+    .option('--auto-upgrade <true|false>', 'upgrade automatically, without prompting (team-shared)')
+    .option(
+      '--update-check <true|false>',
+      'enable or disable the upgrade check entirely (team-shared)',
+    )
+    .option('--never-ask', 'never prompt about upgrades again on this machine')
+    .option('--ask-again', 're-enable upgrade prompts on this machine after --never-ask')
+    .action(
+      async (opts: {
+        autoUpgrade?: string;
+        updateCheck?: string;
+        neverAsk?: boolean;
+        askAgain?: boolean;
+      }) => {
+        const projectDir = program.opts().projectDir as string;
+        let didSomething = false;
+
+        // `neverAsk` is a personal preference, so it lives in the machine-local
+        // upgrade-state.json — never the team-shared config.json.
+        if (opts.askAgain) {
+          await writeSnoozeState({ neverAsk: false, snoozeUntil: null, snoozeStage: 0 });
+          logger.success('Upgrade prompts re-enabled on this machine.');
+          didSomething = true;
+        }
+        if (opts.neverAsk) {
+          await writeSnoozeState({ ...readSnoozeState(), neverAsk: true, snoozeUntil: null });
+          logger.success('Upgrade prompts disabled on this machine.');
+          // FR6: a permanent opt-out must state the exact command that reverses it.
+          logger.info(`To re-enable them, run: ${UPGRADE_REENABLE_COMMAND}`);
+          didSomething = true;
+        }
+
+        // `autoUpgrade` / `updateCheck` are team-shared settings in config.json.
+        if (opts.autoUpgrade !== undefined || opts.updateCheck !== undefined) {
+          const cfg = await loadConfig(projectDir);
+          const upgrade = { ...cfg.upgrade };
+          if (opts.autoUpgrade !== undefined) {
+            upgrade.autoUpgrade = parseUpgradeBool(opts.autoUpgrade, '--auto-upgrade');
+          }
+          if (opts.updateCheck !== undefined) {
+            upgrade.updateCheck = parseUpgradeBool(opts.updateCheck, '--update-check');
+          }
+          cfg.upgrade = upgrade;
+          await saveConfig(projectDir, cfg);
+          logger.success('Upgrade policy updated.');
+          didSomething = true;
+        }
+
+        if (!didSomething) {
+          logger.warn(
+            'Nothing to set. Use --auto-upgrade, --update-check, --never-ask, or --ask-again.',
+          );
+        }
+      },
+    );
+}
+
+/** Parse a `<true|false>` policy flag, rejecting anything else with a clear error. */
+function parseUpgradeBool(value: string, flag: string): boolean {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new Error(`${flag} expects "true" or "false", received "${value}".`);
 }

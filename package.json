@@ -25,6 +25,7 @@
     "install.sh",
     "install.ps1",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {
