@@ -30,6 +30,48 @@ if (packageJson.version !== marketplace.metadata?.version) {
   );
 }
 
+const workspace = resolve(process.env.OPENPLANR_ECOSYSTEM_ROOT ?? join(root, '..'));
+
+// The package must name exactly one planr-pipeline version it mirrors. That
+// declaration is a version pin only — the byte-parity mirror below carries the
+// behaviour; no engine lifecycle is reimplemented here. It must agree with the
+// checkout the mirror is generated from, the CI pins, and the implementation
+// note, so the compatibility claim can never silently drift from reality.
+const pipelineCompatibility = packageJson.pipelineCompatibility;
+const compatMatch = /^planr-pipeline@(\d+\.\d+\.\d+)$/.exec(pipelineCompatibility ?? '');
+if (!compatMatch) {
+  errors.push(
+    `package.json must declare "pipelineCompatibility": "planr-pipeline@<version>" (got ${JSON.stringify(pipelineCompatibility)})`,
+  );
+} else {
+  const declaredPipelineVersion = compatMatch[1];
+  const siblingPackagePath = join(workspace, 'planr-pipeline', 'package.json');
+  if (existsSync(siblingPackagePath)) {
+    const siblingVersion = JSON.parse(readFileSync(siblingPackagePath, 'utf8')).version;
+    if (siblingVersion !== declaredPipelineVersion) {
+      errors.push(
+        `pipelineCompatibility names planr-pipeline@${declaredPipelineVersion} but the mirrored checkout is ${siblingVersion}`,
+      );
+    }
+  }
+  for (const workflow of ['validate.yml', 'release-check.yml']) {
+    const workflowPath = join(root, '.github', 'workflows', workflow);
+    if (
+      existsSync(workflowPath) &&
+      !readFileSync(workflowPath, 'utf8').includes(`ref: v${declaredPipelineVersion}`)
+    ) {
+      errors.push(`${workflow} does not pin planr-pipeline ref v${declaredPipelineVersion}`);
+    }
+  }
+  const specNotePath = join(root, 'docs', 'implementation', 'OPERATE-SPEC-008.md');
+  if (
+    existsSync(specNotePath) &&
+    !readFileSync(specNotePath, 'utf8').includes(`planr-pipeline@${declaredPipelineVersion}`)
+  ) {
+    errors.push(`OPERATE-SPEC-008.md does not name planr-pipeline@${declaredPipelineVersion}`);
+  }
+}
+
 if (!pluginManifest) {
   errors.push('Missing stable Claude plugin manifest: .claude-plugin/plugin.json');
 } else {
@@ -93,6 +135,9 @@ if (existsSync(operateSkillPath)) {
       errors.push(`planr-operate references a non-operate command: ${command}`);
     }
   }
+  // Wrap-insensitive: the skill is a generated mirror and its paragraph
+  // wrapping may change between pipeline releases without changing meaning.
+  const normalize = (text) => text.replace(/\s+/g, ' ');
   for (const required of [
     '# Planr Operate — Codex-native workflow',
     '## Default invocation',
@@ -112,13 +157,34 @@ if (existsSync(operateSkillPath)) {
     'operating-advisor-response@1.4',
     'E_OPERATE_DRAFT_UNAPPROVED',
     'Never deploy, publish, spend',
+    // FR1 / FR6 — each advisor result is recorded the instant its role returns,
+    // and a still-running role renews its session with the heartbeat action.
+    'record each result the instant that role returns',
+    'a slow lens cannot strand a finished one',
+    'issue `harness heartbeat` to renew the session',
   ]) {
-    // Wrap-insensitive: the skill is a generated mirror and its paragraph
-    // wrapping may change between pipeline releases without changing meaning.
-    const normalize = (text) => text.replace(/\s+/g, ' ');
     if (!normalize(operateSkill).includes(normalize(required))) {
       errors.push(`planr-operate is missing boundary guidance: ${required}`);
     }
+  }
+
+  // FR1 — the recording contract must never reintroduce a batch/serial barrier
+  // that waits for the whole board before recording any completed role.
+  for (const barrier of [
+    'record results serially',
+    'record their exact results serially',
+    'results serially against',
+    'wait for all',
+  ]) {
+    if (normalize(operateSkill).includes(normalize(barrier))) {
+      errors.push(`planr-operate reintroduces a batch recording barrier: ${barrier}`);
+    }
+  }
+
+  // No engine lifecycle (lease/heartbeat/retry timing) may be reimplemented in
+  // the skill prose — it names harness actions, it does not compute their math.
+  if (/\b\d+\s*(?:ms|milliseconds?|seconds?|minutes?|hours?)\b/i.test(operateSkill)) {
+    errors.push('planr-operate embeds a concrete lease/heartbeat duration; timing belongs in the engine');
   }
 
   for (const retired of [
@@ -139,7 +205,6 @@ if (existsSync(operateSkillPath)) {
     }
   }
 
-  const workspace = resolve(process.env.OPENPLANR_ECOSYSTEM_ROOT ?? join(root, '..'));
   const canonicalPath = join(
     workspace,
     'planr-pipeline',

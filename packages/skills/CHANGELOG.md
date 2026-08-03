@@ -2,6 +2,26 @@
 
 All notable changes to `openplanr-skills` are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.24.0] — 2026-08-02
+
+### Changed
+
+- Re-mirror the generated `planr-operate` skill from `planr-pipeline` 0.39.0.
+  The regenerated instructions now record each advisor result the instant that
+  role returns — one role at a time against the shared session, never batched
+  behind the whole board — so a slow lens can no longer strand a finished one.
+  A still-running role renews its session with the `harness heartbeat` action
+  instead of letting the lease expire. The advisor procedure states that a
+  result is recorded the instant the role returns, independent of any sibling,
+  and that a retry replays identical bytes for the same role and idempotency
+  key.
+- The workflow gains no engine logic: lease, retry, and heartbeat bookkeeping
+  stay in the engine; the skill only dispatches native agents and invokes the
+  CLI-returned harness actions.
+- Declare `planr-pipeline@0.39.0` compatibility in `package.json`, validate it
+  in `npm test`, and validate byte parity against `planr-pipeline` `v0.39.0`
+  in CI (was `v0.37.1`).
+
 ## [1.22.0] — 2026-08-01
 
 ### Changed
