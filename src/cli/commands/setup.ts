@@ -66,6 +66,29 @@ function printPreview(preview: Awaited<ReturnType<typeof previewSetup>>): void {
     display.line(`  ${diagnostic.status.toUpperCase()} ${diagnostic.message}`);
     if (diagnostic.fix) display.line(`       Fix: ${diagnostic.fix}`);
   }
+  // FR3: setup must report what it detected, what it wired, AND what it skipped and
+  // why — in the non-guided (flag-driven) path too, not only in the guided wizard's
+  // `printRuntimeDetection`. A runtime dropped because the run defaulted to user
+  // scope (`scopeIncompatibleRuntimes`) or because it is not installed
+  // (`unavailableRuntimes`) is surfaced here with its reason, so a skip is never
+  // silent.
+  const skipped: Array<{ runtime: RuntimeId; reason: string }> = [
+    ...preview.scopeIncompatibleRuntimes.map((runtime) => ({
+      runtime,
+      reason: 'requires project scope',
+    })),
+    ...preview.unavailableRuntimes.map((runtime) => ({
+      runtime,
+      reason: 'not detected on PATH',
+    })),
+  ];
+  if (skipped.length > 0) {
+    display.blank();
+    display.line('  Skipped:');
+    for (const item of skipped) {
+      display.bullet(`${runtimeLabels[item.runtime]} — ${item.reason}`);
+    }
+  }
 }
 
 export function registerSetupCommand(program: Command, cliVersion: string) {
@@ -75,6 +98,8 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
     .option('--runtime <runtime>', 'auto, claude, codex, cursor, or all')
     .option('--scope <scope>', 'user, project, or both')
     .option('--minimal', 'planning-only setup; do not install the pipeline', false)
+    .option('--prefix', 'use namespaced command names (default)')
+    .option('--no-prefix', 'use bare command verbs')
     .option('--version <version>', 'pin the pipeline and adapter version')
     .option('--dry-run', 'preview exact changes without writing', false)
     .option('--yes', 'apply without an interactive confirmation', false)
@@ -184,6 +209,11 @@ export function registerSetupCommand(program: Command, cliVersion: string) {
         minimal,
         version: opts.version as string | undefined,
         dryRun: Boolean(opts.dryRun),
+        // Omitted flag → `undefined` (commander 14, both `--prefix`/`--no-prefix`
+        // declared) so the service reads the project's persisted choice; an explicit
+        // flag is `true`/`false` and is what gets persisted. FR5: an upgrade or rerun
+        // never silently changes what the user types.
+        prefix: opts.prefix as boolean | undefined,
       };
       const preview = await previewSetup(options);
       if (opts.json) {

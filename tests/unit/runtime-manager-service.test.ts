@@ -2,6 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   appendFileSync,
+  chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -10,7 +12,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   type ClaudeCommandRunner,
@@ -565,6 +567,295 @@ describe('runtime setup', () => {
       }),
     ).rejects.toMatchObject({ code: 'E_SETUP_BUSY' });
   });
+});
+
+// FR5: the persisted `--prefix` / `--no-prefix` toggle. The choice is stored on the
+// per-project runtime-state record and honoured on later runs and upgrades, so an
+// upgrade never silently changes what a user types. The default stays namespaced, so
+// an install that never opts in is byte-identical to before this toggle existed.
+describe('command prefix toggle', () => {
+  const codexSkill = (name: string) => join(userHome, '.codex', 'skills', name, 'SKILL.md');
+  const codexVerbs = [
+    'plan',
+    'design',
+    'ship',
+    'dashboard',
+    'sync',
+    'doctor',
+    'artifact',
+    'operate',
+  ];
+  const readState = () =>
+    JSON.parse(readFileSync(join(userHome, '.planr', 'runtime', 'state.json'), 'utf8')) as {
+      projects: Record<string, { commandPrefix?: string }>;
+    };
+
+  // DoD 1: `--no-prefix` installs bare Codex skills with a rewritten frontmatter name.
+  it('installs bare Codex skills with a rewritten frontmatter name when prefix is disabled', async () => {
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user', prefix: false });
+
+    for (const verb of codexVerbs) {
+      expect(existsSync(codexSkill(verb))).toBe(true);
+      expect(readFileSync(codexSkill(verb), 'utf8')).toMatch(new RegExp(`^name: ${verb}$`, 'm'));
+    }
+    // No namespaced directory is created alongside the bare one.
+    expect(existsSync(codexSkill('planr-plan'))).toBe(false);
+
+    // Only the frontmatter `name:` line changed; the rest of the skill is preserved
+    // byte-for-byte from the canonical pipeline source.
+    const source = readFileSync(
+      join(pipelineRoot, 'adapters', 'codex', 'skills', 'planr-plan', 'SKILL.md'),
+      'utf8',
+    );
+    expect(readFileSync(codexSkill('plan'), 'utf8')).toBe(
+      source.replace(/^name: planr-plan$/m, 'name: plan'),
+    );
+  });
+
+  // DoD 2 (regression): with no flag the install is namespaced and byte-identical to
+  // the source, exactly as before this task — nothing is force-renamed.
+  it('keeps namespaced Codex skills byte-identical to the source when no flag is passed', async () => {
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user' });
+
+    expect(existsSync(codexSkill('planr-plan'))).toBe(true);
+    expect(existsSync(codexSkill('plan'))).toBe(false);
+    const source = readFileSync(
+      join(pipelineRoot, 'adapters', 'codex', 'skills', 'planr-plan', 'SKILL.md'),
+    );
+    expect(readFileSync(codexSkill('planr-plan'))).toEqual(source);
+    expect(readState().projects[Object.keys(readState().projects)[0]].commandPrefix).toBe(
+      'namespaced',
+    );
+  });
+
+  it('installs namespaced Codex skills when prefix is explicitly enabled', async () => {
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user', prefix: true });
+    expect(existsSync(codexSkill('planr-plan'))).toBe(true);
+    expect(existsSync(codexSkill('plan'))).toBe(false);
+  });
+
+  // DoD 3: the choice persists across separate invocations. A first run stores `bare`
+  // on disk; a fresh preview with no flag reads it back and targets bare paths; a
+  // second apply with no flag re-applies bare rather than reverting to the default.
+  it('persists the bare choice and honours it on later invocations with no flag', async () => {
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user', prefix: false });
+
+    // Durable on disk between invocations, not merely within one process.
+    const projectRecord = readState().projects[Object.keys(readState().projects)[0]];
+    expect(projectRecord.commandPrefix).toBe('bare');
+
+    // A fresh preview with no prefix flag reads the persisted choice back and targets
+    // bare skill paths — no namespaced path appears.
+    const preview = await previewSetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user' });
+    const skillTargets = preview.actions
+      .filter((action) => action.target.endsWith('SKILL.md'))
+      .map((action) => action.target);
+    expect(skillTargets).toContain(codexSkill('plan'));
+    expect(skillTargets.some((target) => target.includes(`${sep}planr-plan${sep}`))).toBe(false);
+
+    // A second apply with no flag re-applies bare, never force-renaming to namespaced.
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user' });
+    expect(existsSync(codexSkill('plan'))).toBe(true);
+    expect(existsSync(codexSkill('planr-plan'))).toBe(false);
+  });
+
+  // FR5 upgrade guarantee: an install that predates the toggle (no `commandPrefix`
+  // field on its state record) stays namespaced when an upgraded CLI reruns setup with
+  // no flag. Existing installs keep their current names by default.
+  it('leaves a pre-toggle install namespaced by default after an upgrade', async () => {
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user' });
+
+    // Simulate a record written by a CLI from before the field existed.
+    const statePath = join(userHome, '.planr', 'runtime', 'state.json');
+    const state = readState();
+    for (const key of Object.keys(state.projects)) delete state.projects[key].commandPrefix;
+    writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`);
+
+    // The upgraded CLI reruns setup with no flag; nothing is force-renamed.
+    await applySetup({
+      projectDir,
+      cliVersion: `${cliVersion}-next`,
+      runtime: 'codex',
+      scope: 'user',
+    });
+    expect(existsSync(codexSkill('planr-plan'))).toBe(true);
+    expect(existsSync(codexSkill('plan'))).toBe(false);
+  });
+
+  // T-007 / FR5: `runtimeDoctor` must diagnose the operate skill under the name the
+  // installer actually wrote. A bare install lives at `.codex/skills/operate/SKILL.md`;
+  // the doctor previously matched only the namespaced literal, so it warned "missing"
+  // and — the real defect — never ran the sixteen-assertion content contract while
+  // still reporting ok. These two cases pin both halves: the false warning is gone AND
+  // the content contract genuinely executes (it can still fail) on the bare-named file.
+  it('diagnoses a bare-named operate skill on its content, not as missing', async () => {
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user', prefix: false });
+    expect(existsSync(codexSkill('operate'))).toBe(true);
+    expect(existsSync(codexSkill('planr-operate'))).toBe(false);
+
+    const doctor = await runtimeDoctor(projectDir);
+    const operate = doctor.diagnostics.filter((item) => item.code === 'operate-skill');
+    // Exactly one operate-skill diagnostic, and it evaluated the content contract.
+    expect(operate).toHaveLength(1);
+    expect(operate[0]).toMatchObject({ status: 'pass' });
+    // The false "missing" warning must not be emitted for a present bare install.
+    expect(
+      doctor.diagnostics.some(
+        (item) =>
+          item.code === 'operate-skill' &&
+          item.message === 'The installed Codex adapter is missing the planr-operate skill',
+      ),
+    ).toBe(false);
+  });
+
+  it('fails the operate-skill contract on a corrupted bare-named skill', async () => {
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user', prefix: false });
+    // The same corruption the namespaced fail test uses, applied to the bare-named
+    // file: this can only surface as `fail` if the sixteen-assertion content contract
+    // is actually evaluated against the bare install — proving the contract runs, not
+    // just that the warning disappeared.
+    const skillPath = codexSkill('operate');
+    const content = readFileSync(skillPath, 'utf8').replace(
+      /## Default invocation[\s\S]*?## Research and runtime rules/u,
+      '## Research and runtime rules',
+    );
+    writeFileSync(skillPath, content);
+
+    const doctor = await runtimeDoctor(projectDir);
+    expect(doctor.diagnostics.find((item) => item.code === 'operate-skill')).toMatchObject({
+      status: 'fail',
+      message: 'Installed planr-operate skill does not satisfy the functional command contract',
+      fix: 'Run `planr setup --runtime codex --scope user` to refresh the managed skill.',
+    });
+  });
+});
+
+// FR4: `setup` is the install path for every runtime, so a mid-apply failure must
+// never leave a partially-wired install reporting success — and, per Trap E, must not
+// silently leave partial state behind either. When the Claude plugin apply fails after
+// owned files were already written, applySetup restores them from the backup it took
+// before mutating and names every restored path in the error it surfaces.
+describe('applySetup rollback on plugin failure', () => {
+  // Inspection (`--version`, marketplace/plugin `list`) succeeds so setup writes its
+  // owned files and reaches the apply step; the first mutating plugin command then
+  // fails, injecting the mid-apply failure the rollback must recover from. Mirrors the
+  // injected-runner pattern used by the managed-plugin test above.
+  const failingRunner: ClaudeCommandRunner = (args) => {
+    if (args[0] === '--version') return { status: 0, stdout: '2.1.0\n', stderr: '' };
+    if (args[1] === 'marketplace' && args[2] === 'list')
+      return { status: 0, stdout: '[]', stderr: '' };
+    if (args[1] === 'list') return { status: 0, stdout: '[]', stderr: '' };
+    return { status: 1, stdout: '', stderr: 'simulated marketplace outage' };
+  };
+
+  it('restores every owned file to its pre-setup state and names them in the error', async () => {
+    const marker = join(userHome, '.planr', 'runtime', 'adapters', 'claude-code.json');
+    const statePath = join(userHome, '.planr', 'runtime', 'state.json');
+    // Nothing owned exists before the run, so the restore's job is to undo exactly
+    // what this apply writes.
+    expect(existsSync(marker)).toBe(false);
+
+    let error: { code?: string; recovery?: string } | undefined;
+    try {
+      await applySetup({
+        projectDir,
+        cliVersion,
+        runtime: 'claude-code',
+        scope: 'user',
+        claudeCommandRunner: failingRunner,
+      });
+    } catch (caught) {
+      error = caught as { code?: string; recovery?: string };
+    }
+
+    // The failure is surfaced, never swallowed into a false success...
+    expect(error).toBeDefined();
+    expect(error?.code).toBe('E_CLAUDE_PLUGIN_UPDATE_FAILED');
+    // ...and it states plainly what was restored, naming the exact path.
+    expect(error?.recovery).toContain('Restored 1 file(s) to their pre-setup state');
+    expect(error?.recovery).toContain(marker);
+
+    // The one owned file written before the failure was created fresh, so the restore
+    // removes it — the install is back to its exact pre-setup state on disk...
+    expect(existsSync(marker)).toBe(false);
+    // ...and no half-migrated project record is left for a rerun to mistake for a
+    // completed install.
+    expect(
+      Object.keys((JSON.parse(readFileSync(statePath, 'utf8')) as { projects: object }).projects),
+    ).toHaveLength(0);
+  });
+});
+
+// FR3: the non-guided `setup` preview must report what it skipped and why, not only in
+// the guided wizard. This runs the real CLI as a subprocess (through the repo's tsx
+// loader, so it exercises the current wiring without a stale build) against a
+// fabricated real tuple: `codex` and `cursor` faked onto an isolated PATH with `claude`
+// deliberately absent. `--runtime auto --scope user` then drops the project-only
+// `cursor` as scope-incompatible and reports the undetected `claude-code`, both under
+// one Skipped block.
+describe('setup preview reports skipped runtimes', () => {
+  const cliEntry = resolve('src/cli/index.ts');
+
+  const fakeRuntime = (binDir: string, name: string) => {
+    if (process.platform === 'win32') {
+      // `.exe` is the one extension a bare `spawnSync(name)` resolves on Windows; a
+      // copy of the Node binary answers `--version` with exit 0, so detection sees the
+      // runtime as installed. A shell-script stub is not directly spawnable there.
+      copyFileSync(process.execPath, join(binDir, `${name}.exe`));
+    } else {
+      writeFileSync(join(binDir, name), '#!/bin/sh\nexit 0\n');
+      chmodSync(join(binDir, name), 0o755);
+    }
+  };
+
+  it('prints a Skipped block naming a scope-incompatible and an undetected runtime', () => {
+    const binDir = join(root, 'fake-bin');
+    mkdirSync(binDir, { recursive: true });
+    fakeRuntime(binDir, 'codex');
+    fakeRuntime(binDir, 'cursor');
+
+    // An isolated PATH holds only the two faked runtimes (so `claude` is genuinely
+    // undetected and no real runtime installed on the host leaks in); System32 is kept
+    // on Windows so the copied Node binary and CreateProcess still resolve.
+    const pathSep = process.platform === 'win32' ? ';' : ':';
+    const systemDirs =
+      process.platform === 'win32' && process.env.SystemRoot
+        ? [join(process.env.SystemRoot, 'System32')]
+        : [];
+    const isolatedPath = [binDir, ...systemDirs].join(pathSep);
+
+    const output = execFileSync(
+      process.execPath,
+      [
+        '--import',
+        'tsx',
+        cliEntry,
+        '--project-dir',
+        projectDir,
+        'setup',
+        '--runtime',
+        'auto',
+        '--scope',
+        'user',
+        '--dry-run',
+      ],
+      {
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: isolatedPath,
+          OPENPLANR_HOME: userHome,
+          OPENPLANR_STATE_ROOT: join(root, 'cli-state'),
+          OPENPLANR_PIPELINE_ROOT: pipelineRoot,
+          NO_COLOR: '1',
+        },
+      },
+    );
+
+    expect(output).toContain('Skipped:');
+    expect(output).toContain('Cursor — requires project scope');
+    expect(output).toContain('Claude Code — not detected on PATH');
+  }, 30_000);
 });
 
 // The single warn/fail distinction doctor's lock-drift diagnostic and

@@ -71,6 +71,12 @@ interface RuntimeState {
       backupDir?: string;
       runtimes: RuntimeId[];
       runtimeScopes?: Partial<Record<RuntimeId, InstallScope>>;
+      /**
+       * FR5: the persisted command-naming choice for this project. Absent means a
+       * project with no prior record, which resolves to `namespaced` — existing
+       * installs keep their current names by default; nothing is force-renamed.
+       */
+      commandPrefix?: CommandPrefix;
       activeRuntime?: RuntimeId;
       ownedFiles: OwnedFile[];
     }
@@ -108,6 +114,12 @@ export interface SetupOptions {
   preserveExistingScopes?: boolean;
   /** Disable external runtime package changes for owned-file-only repair flows. */
   manageExternalRuntimes?: boolean;
+  /**
+   * FR5: `true` (default) keeps namespaced command names (`planr-plan`); `false`
+   * yields bare verbs (`plan`). Omitted (`undefined`) reads the project's persisted
+   * choice, so a rerun or upgrade never silently changes what the user types.
+   */
+  prefix?: boolean;
   /** Injectable Claude command boundary for deterministic runtime integration tests. */
   claudeCommandRunner?: ClaudeCommandRunner;
 }
@@ -175,6 +187,30 @@ const skillNames = [
   'planr-artifact',
   'planr-operate',
 ];
+
+/** FR5: the two command-naming schemes a project may persist. */
+type CommandPrefix = 'namespaced' | 'bare';
+
+/**
+ * FR5: derive an installed command/skill name from the persisted prefix choice.
+ * `bare` strips the leading `planr-` namespace (`planr-plan` → `plan`); `namespaced`
+ * keeps today's names verbatim, so an install that never opts in is byte-identical
+ * to before this toggle existed.
+ */
+function applyCommandPrefix(name: string, commandPrefix: CommandPrefix): string {
+  return commandPrefix === 'bare' && name.startsWith('planr-') ? name.slice('planr-'.length) : name;
+}
+
+/**
+ * Rewrite only the frontmatter `name:` line of a copied Codex skill so its embedded
+ * identifier matches the bare install directory. The match is anchored to the line
+ * start and consumes the whole `planr-…` name, so a `planr-` mention elsewhere in the
+ * body is never touched; a non-global replace only rewrites the first (frontmatter)
+ * line.
+ */
+function rewriteSkillFrontmatterName(content: string, installName: string): string {
+  return content.replace(/^name:[ \t]*planr-[\w-]+[ \t]*$/mu, `name: ${installName}`);
+}
 
 function hash(value: string | Buffer): string {
   return createHash('sha256').update(value).digest('hex');
@@ -440,6 +476,7 @@ function buildActions(
   options: SetupOptions,
   runtimes: RuntimeId[],
   runtimeScopes: Partial<Record<RuntimeId, InstallScope>>,
+  commandPrefix: CommandPrefix,
 ): FileAction[] {
   if (options.minimal) return [];
   const { root, version, registry } = readRegistry();
@@ -464,13 +501,21 @@ function buildActions(
     if (installUser) {
       if (runtime === 'codex') {
         for (const name of skillNames) {
+          const installName = applyCommandPrefix(name, commandPrefix);
+          const source = readFileSync(
+            path.join(root, 'adapters', 'codex', 'skills', name, 'SKILL.md'),
+          );
+          const content =
+            installName === name
+              ? source
+              : Buffer.from(rewriteSkillFrontmatterName(source.toString('utf8'), installName));
           actions.push({
             runtime,
             scope: 'user',
-            target: path.join(userHome(), '.codex', 'skills', name, 'SKILL.md'),
-            content: readFileSync(path.join(root, 'adapters', 'codex', 'skills', name, 'SKILL.md')),
+            target: path.join(userHome(), '.codex', 'skills', installName, 'SKILL.md'),
+            content,
             kind: 'file',
-            description: `Install Codex skill ${name}`,
+            description: `Install Codex skill ${installName}`,
           });
         }
       }
@@ -500,10 +545,20 @@ function buildActions(
           description: 'Update concise Codex project policy',
         });
       } else if (runtime === 'cursor') {
+        // Cursor rules carry the equivalent prefix adjustment: the installed target
+        // basename is derived through `applyCommandPrefix` while the read path stays
+        // the canonical pipeline source. The current rule set uses the product name
+        // (`openplanr…`), not per-verb `planr-` command names, so this is a no-op for
+        // today's files and only takes effect for any future `planr-`-prefixed rule.
         actions.push({
           runtime,
           scope: 'project',
-          target: path.join(options.projectDir, '.cursor', 'rules', 'openplanr.mdc'),
+          target: path.join(
+            options.projectDir,
+            '.cursor',
+            'rules',
+            `${applyCommandPrefix('openplanr', commandPrefix)}.mdc`,
+          ),
           content: readFileSync(path.join(root, 'adapters', 'cursor', 'rules', 'openplanr.mdc')),
           kind: 'file',
           description: 'Install portable Cursor project rule',
@@ -511,7 +566,12 @@ function buildActions(
         actions.push({
           runtime,
           scope: 'project',
-          target: path.join(options.projectDir, '.cursor', 'rules', 'openplanr-operate.mdc'),
+          target: path.join(
+            options.projectDir,
+            '.cursor',
+            'rules',
+            `${applyCommandPrefix('openplanr-operate', commandPrefix)}.mdc`,
+          ),
           content: readFileSync(
             path.join(root, 'adapters', 'cursor', 'rules', 'openplanr-operate.mdc'),
           ),
@@ -538,7 +598,7 @@ function buildActions(
               '.cursor',
               'rules',
               'openplanr-roles',
-              `${role.id}.md`,
+              `${applyCommandPrefix(role.id, commandPrefix)}.md`,
             ),
             content: Buffer.from(
               `# ${role.id}\n\nCapability tier: \`${role.capability}\`\nPhase: \`${role.phase}\`\nActivation: \`${role.activation}\`\n\n- ${role.writeBoundary}\n`,
@@ -592,6 +652,20 @@ async function loadState(): Promise<RuntimeState> {
   } catch {
     return { schemaVersion: '1.0.0', projects: {} };
   }
+}
+
+/**
+ * FR5: resolve the effective command-naming choice for a setup run. An explicit
+ * `--prefix`/`--no-prefix` (`options.prefix` is a boolean) wins and is what gets
+ * persisted; when the flag is omitted (`undefined`) the previously persisted choice
+ * is read back from on-disk state, defaulting to `namespaced` for a project with no
+ * prior record. This is what makes the choice survive across separate invocations
+ * and upgrades without ever silently renaming what the user types.
+ */
+async function resolveCommandPrefix(options: SetupOptions): Promise<CommandPrefix> {
+  if (options.prefix !== undefined) return options.prefix ? 'namespaced' : 'bare';
+  const state = await loadState();
+  return state.projects[projectKey(options.projectDir)]?.commandPrefix ?? 'namespaced';
 }
 
 async function atomicWrite(target: string, content: Buffer): Promise<void> {
@@ -705,7 +779,8 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
       );
     }
   }
-  const actions = buildActions(options, runtimes, runtimeScopes);
+  const commandPrefix = await resolveCommandPrefix(options);
+  const actions = buildActions(options, runtimes, runtimeScopes, commandPrefix);
   const manageClaudePlugins =
     options.manageExternalRuntimes !== false &&
     !options.minimal &&
@@ -798,7 +873,8 @@ export async function applySetup(options: SetupOptions): Promise<
     );
   }
   try {
-    const actions = buildActions(options, preview.runtimes, preview.runtimeScopes);
+    const commandPrefix = await resolveCommandPrefix(options);
+    const actions = buildActions(options, preview.runtimes, preview.runtimeScopes, commandPrefix);
     const changed = actions.filter((action) => operationFor(action) !== 'unchanged');
     let backup: { dir: string; manifest: BackupManifest } | undefined;
     if (changed.length > 0) {
@@ -839,6 +915,7 @@ export async function applySetup(options: SetupOptions): Promise<
         backupDir: backup.dir,
         runtimes: preview.runtimes,
         runtimeScopes: preview.runtimeScopes,
+        commandPrefix,
         ...(preview.runtimes.length === 1 ? { activeRuntime: preview.runtimes[0] } : {}),
         ownedFiles: owned,
       };
@@ -868,9 +945,36 @@ export async function applySetup(options: SetupOptions): Promise<
         appliedRuntimeOperations = result.operations;
         restartRequired = result.restartRequired;
       } catch (cause) {
+        const detail = cause instanceof Error ? cause.message : String(cause);
+        // `setup` is the install path for every runtime, so a mid-apply plugin
+        // failure must never leave the owned files written earlier in this same
+        // call in a half-migrated state a rerun cannot tell apart from a fresh
+        // install. Those writes happened under `backup`; restore them from it
+        // before surfacing the failure, and name every restored path so the
+        // report states plainly what was undone. When nothing was written yet
+        // (`backup` undefined) there is nothing to restore — throw unchanged.
+        if (backup) {
+          let restored: string[];
+          try {
+            ({ restored } = await rollbackRuntime(options.projectDir, backup.dir));
+          } catch (rollbackCause) {
+            const rollbackDetail =
+              rollbackCause instanceof Error ? rollbackCause.message : String(rollbackCause);
+            throw new RuntimeManagerError(
+              'E_CLAUDE_PLUGIN_UPDATE_FAILED',
+              `Claude plugin update failed: ${detail}`,
+              `Automatic restore from ${backup.dir} also failed (${rollbackDetail}); the OpenPlanr files written this run may be partially applied. Restore them from that backup, then run \`planr runtime update claude --scope user\`.`,
+            );
+          }
+          throw new RuntimeManagerError(
+            'E_CLAUDE_PLUGIN_UPDATE_FAILED',
+            `Claude plugin update failed: ${detail}`,
+            `Restored ${restored.length} file(s) to their pre-setup state: ${restored.join(', ')}. Run \`planr runtime update claude --scope user\` after checking Claude Code marketplace access, then rerun setup.`,
+          );
+        }
         throw new RuntimeManagerError(
           'E_CLAUDE_PLUGIN_UPDATE_FAILED',
-          `Claude plugin update failed: ${cause instanceof Error ? cause.message : String(cause)}`,
+          `Claude plugin update failed: ${detail}`,
           'Run `planr runtime update claude --scope user` after checking Claude Code marketplace access.',
         );
       }
@@ -1540,8 +1644,17 @@ export async function runtimeDoctor(
       });
     }
 
+    // FR5: locate the operate skill by the name the installer actually wrote, derived
+    // from the same persisted prefix through the same helper. A `--no-prefix` install
+    // lives at `.codex/skills/operate/SKILL.md`, not the namespaced literal; without
+    // this the find misses the bare install, so the content contract below never runs
+    // while doctor still reports ok. The default keeps namespaced installs unchanged.
+    const operateSkillName = applyCommandPrefix(
+      'planr-operate',
+      installed.commandPrefix ?? 'namespaced',
+    );
     const operateSkill = installedSkills.find(
-      (skill) => path.basename(path.dirname(skill.target)) === 'planr-operate',
+      (skill) => path.basename(path.dirname(skill.target)) === operateSkillName,
     );
     if (installed.runtimes.includes('codex') && !operateSkill) {
       diagnostics.push({
@@ -1553,7 +1666,7 @@ export async function runtimeDoctor(
     } else if (operateSkill && existsSync(operateSkill.target)) {
       const content = readFileSync(operateSkill.target, 'utf8');
       const valid =
-        /^name:\s*planr-operate$/mu.test(content) &&
+        new RegExp(String.raw`^name:\s*${operateSkillName}$`, 'mu').test(content) &&
         /`planr operate(?:\s|`)/u.test(content) &&
         /# Planr Operate — Codex-native workflow/u.test(content) &&
         /planr operate inspect --json/u.test(content) &&
