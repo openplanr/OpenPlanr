@@ -59,6 +59,11 @@ const guidedOperationPath = existsSync(nativeOperationPath)
 const guidedReleaseOperation = existsSync(guidedOperationPath)
   ? readJson(guidedOperationPath)
   : null;
+const agenticDurableOrchestrationOperationPath = join(
+  repo,
+  'examples',
+  'agent-native-operate-durable-orchestration-operation.json',
+);
 const agenticReconciliationOperationPath = join(
   repo,
   'examples',
@@ -69,11 +74,13 @@ const agenticForwardFixOperationPath = join(
   'examples',
   'agent-native-operate-forward-fix-operation.json',
 );
-const agenticOperationPath = existsSync(agenticReconciliationOperationPath)
-  ? agenticReconciliationOperationPath
-  : existsSync(agenticForwardFixOperationPath)
-    ? agenticForwardFixOperationPath
-    : join(repo, 'examples', 'agent-native-operate-operation.json');
+const agenticOperationPath = existsSync(agenticDurableOrchestrationOperationPath)
+  ? agenticDurableOrchestrationOperationPath
+  : existsSync(agenticReconciliationOperationPath)
+    ? agenticReconciliationOperationPath
+    : existsSync(agenticForwardFixOperationPath)
+      ? agenticForwardFixOperationPath
+      : join(repo, 'examples', 'agent-native-operate-operation.json');
 const agenticReleaseOperation = existsSync(agenticOperationPath)
   ? readJson(agenticOperationPath)
   : null;

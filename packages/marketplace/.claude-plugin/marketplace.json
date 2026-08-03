@@ -14,7 +14,7 @@
         "source": "github",
         "repo": "openplanr/planr-pipeline"
       },
-      "version": "0.38.0"
+      "version": "0.39.0"
     },
     {
       "name": "openplanr",
@@ -23,7 +23,7 @@
         "source": "github",
         "repo": "openplanr/skills"
       },
-      "version": "1.23.0"
+      "version": "1.24.0"
     }
   ]
 }

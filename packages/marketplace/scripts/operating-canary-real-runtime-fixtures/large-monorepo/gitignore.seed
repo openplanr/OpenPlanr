@@ -1,0 +1,8 @@
+# A large monorepo keeps its OpenPlanr planning tree out of version control.
+# FR15 requires the canary to run a real cycle where .planr/ is gitignored and
+# never staged. `git check-ignore .planr` must succeed inside the materialized
+# project.
+node_modules/
+dist/
+.planr/
+*.log

@@ -176,24 +176,26 @@ test('verified compatibility promotes the default native cycle after reconciliat
     marketplace: '1.3.1',
   });
   assert.deepEqual(ecosystem.components, {
-    cli: { version: '1.21.2', pipelineRange: '^0.38.0' },
-    pipeline: { version: '0.38.0', cliRange: '^1.21.2' },
-    skills: { version: '1.23.0', cliRange: '^1.21.2' },
-    marketplace: { version: '1.8.2' },
+    cli: { version: '1.22.0', pipelineRange: '^0.39.0' },
+    pipeline: { version: '0.39.0', cliRange: '^1.22.0' },
+    skills: { version: '1.24.0', cliRange: '^1.22.0' },
+    marketplace: { version: '1.9.0' },
   });
 });
 
-test('the Protocol v1.4 pipeline reconciliation is available after its ledger verifies', async () => {
+test('the SPEC-005 durable-orchestration tuple is available after its ledger verifies', async () => {
   const ecosystem = await readJson('../ecosystem.json');
   const agentic = ecosystem.capabilities.agenticOperatingBoard;
+  // Verified: the real-runtime canary certified the published artifacts, so the
+  // durable-orchestration tuple is now advertised as available.
   assert.equal(agentic.status, 'available');
   assert.deepEqual(agentic.missing, []);
   assert.equal(agentic.protocolRange, '^1.4.0');
   assert.deepEqual(agentic.components, {
-    pipeline: '0.38.0',
-    cli: '1.21.2',
-    skills: '1.23.0',
-    marketplace: '1.8.2',
+    pipeline: '0.39.0',
+    cli: '1.22.0',
+    skills: '1.24.0',
+    marketplace: '1.9.0',
   });
   assert.deepEqual(agentic.advisorDispatch, {
     'claude-code': 'native-agent',
@@ -205,9 +207,41 @@ test('the Protocol v1.4 pipeline reconciliation is available after its ledger ve
     'codex',
     'cursor',
   ]);
-  assert.equal(agentic.releaseOperation.operationId, 'OPERATE-SPEC-008-R2');
+  assert.equal(agentic.releaseOperation.operationId, 'OPERATE-SPEC-009');
   assert.equal(agentic.releaseOperation.state, 'verified');
   assert.equal(agentic.releaseOperation.reconciliation, 'matched');
+});
+
+test('the SPEC-009 durable-orchestration ledger verifies and preserves the R2 audit record', async () => {
+  const reconciliation = await readJson(
+    '../examples/agent-native-operate-pipeline-reconciliation-operation.json',
+  );
+  const durableOrchestration = await readJson(
+    '../examples/agent-native-operate-durable-orchestration-operation.json',
+  );
+  // The prior verified reconciliation ledger stays immutable and verified.
+  assert.equal(reconciliation.operationId, 'OPERATE-SPEC-008-R2');
+  assert.equal(reconciliation.state, 'verified');
+  assert.equal(isVerifiedOperation(reconciliation), true);
+  // The durable-orchestration ledger is finalized: verified against the
+  // published tuple and reconciled with the real-runtime canary evidence.
+  assert.equal(durableOrchestration.operationId, 'OPERATE-SPEC-009');
+  assert.equal(durableOrchestration.umbrellaSpecId, 'SPEC-005');
+  assert.equal(durableOrchestration.state, 'verified');
+  assert.equal(isVerifiedOperation(durableOrchestration), true);
+  assert.equal(
+    durableOrchestration.operationDigest,
+    calculateOperationDigest(durableOrchestration),
+  );
+  assert.deepEqual(validateOperation(durableOrchestration), []);
+  assert.deepEqual(
+    durableOrchestration.participants.map(({ targetVersion }) => targetVersion),
+    ['0.39.0', '1.22.0', '1.24.0', '1.9.0'],
+  );
+  assert.equal(durableOrchestration.recovery.mode, 'forward-fix');
+  assert.ok(
+    durableOrchestration.releaseEvidence.every(({ status }) => status === 'passed'),
+  );
 });
 
 test('the SPEC-008 ledger links umbrella SPEC-005 without conflating operation identity', async () => {

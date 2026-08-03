@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.1.0",
-  "generatedAt": "2026-08-03T13:53:13.811Z",
+  "generatedAt": "2026-08-03T14:06:57.549Z",
   "protocol": {
     "current": "1.4.0",
     "supported": [
@@ -13,19 +13,19 @@
   },
   "components": {
     "cli": {
-      "version": "1.21.2",
-      "pipelineRange": "^0.38.0"
+      "version": "1.22.0",
+      "pipelineRange": "^0.39.0"
     },
     "pipeline": {
-      "version": "0.38.0",
-      "cliRange": "^1.21.2"
+      "version": "0.39.0",
+      "cliRange": "^1.22.0"
     },
     "skills": {
-      "version": "1.23.0",
-      "cliRange": "^1.21.2"
+      "version": "1.24.0",
+      "cliRange": "^1.22.0"
     },
     "marketplace": {
-      "version": "1.8.2"
+      "version": "1.9.0"
     }
   },
   "adapters": [
@@ -33,7 +33,7 @@
       "runtime": "claude-code",
       "version": "0.39.0",
       "capabilityLevel": "product",
-      "pipelineRange": "^0.38.0",
+      "pipelineRange": "^0.39.0",
       "operatingBoard": {
         "declared": true,
         "available": true,
@@ -46,7 +46,7 @@
       "runtime": "codex",
       "version": "0.39.0",
       "capabilityLevel": "workflow",
-      "pipelineRange": "^0.38.0",
+      "pipelineRange": "^0.39.0",
       "operatingBoard": {
         "declared": true,
         "available": true,
@@ -59,7 +59,7 @@
       "runtime": "cursor",
       "version": "0.39.0",
       "capabilityLevel": "workflow",
-      "pipelineRange": "^0.38.0",
+      "pipelineRange": "^0.39.0",
       "operatingBoard": {
         "declared": true,
         "available": true,
@@ -75,10 +75,10 @@
       "command": "planr operate",
       "protocolRange": "^1.2.0",
       "components": {
-        "pipeline": "0.38.0",
-        "cli": "1.21.2",
-        "skills": "1.23.0",
-        "marketplace": "1.8.2"
+        "pipeline": "0.39.0",
+        "cli": "1.22.0",
+        "skills": "1.24.0",
+        "marketplace": "1.9.0"
       },
       "certifiedRuntimes": [
         "claude-code",
@@ -126,10 +126,10 @@
       "command": "planr operate",
       "protocolRange": "^1.4.0",
       "components": {
-        "pipeline": "0.38.0",
-        "cli": "1.21.2",
-        "skills": "1.23.0",
-        "marketplace": "1.8.2"
+        "pipeline": "0.39.0",
+        "cli": "1.22.0",
+        "skills": "1.24.0",
+        "marketplace": "1.9.0"
       },
       "certifiedRuntimes": [
         "claude-code",
@@ -143,8 +143,8 @@
       },
       "missing": [],
       "releaseOperation": {
-        "operationId": "OPERATE-SPEC-008-R2",
-        "operationDigest": "sha256:9a50164714818cb078e55428bf90f3e0f75e957b0caa4455781ec03e9d58605b",
+        "operationId": "OPERATE-SPEC-009",
+        "operationDigest": "sha256:80d85c0117c45b9625102d202517d539e328f94bdead8ab7c20927221db1a671",
         "state": "verified",
         "reconciliation": "matched"
       }

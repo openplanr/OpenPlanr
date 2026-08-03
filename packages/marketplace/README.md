@@ -25,17 +25,17 @@ Then install any of the plugins below:
 <!-- ecosystem-table:start -->
 | Component | Version | Compatibility |
 |---|---:|---|
-| OpenPlanr CLI | 1.21.2 | pipeline ^0.38.0 |
-| Pipeline package/plugin | 0.38.0 | CLI ^1.21.2 |
-| Runtime skills | 1.23.0 | CLI ^1.21.2 |
+| OpenPlanr CLI | 1.22.0 | pipeline ^0.39.0 |
+| Pipeline package/plugin | 0.39.0 | CLI ^1.22.0 |
+| Runtime skills | 1.24.0 | CLI ^1.22.0 |
 | Protocol | 1.4.0 | reads v1.0 artifacts; additive capabilities through v1.4.0 |
 <!-- ecosystem-table:end -->
 
 <!-- plugin-table:start -->
 | Plugin | Version | Description |
 |---|---|---|
-| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.38.0 | Complete PO, Design, Review, DEV, and QA workflow with universal HTML artifact review and private sharing. |
-| [`openplanr`](https://github.com/openplanr/skills) | 1.23.0 | Unified operating, planning, artifact review, and delivery workflow skills for the certified runtimes. |
+| [`planr-pipeline`](https://github.com/openplanr/planr-pipeline) | 0.39.0 | Complete PO, Design, Review, DEV, and QA workflow with universal HTML artifact review and private sharing. |
+| [`openplanr`](https://github.com/openplanr/skills) | 1.24.0 | Unified operating, planning, artifact review, and delivery workflow skills for the certified runtimes. |
 <!-- plugin-table:end -->
 
 Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in the same release-train change.
@@ -47,7 +47,7 @@ Versions in this README mirror `.claude-plugin/marketplace.json`; keep both in t
 
 OpenPlanr Operating Board is certified for claude-code, codex, cursor through `planr operate`.
 
-Resolved component versions: pipeline 0.38.0, CLI 1.21.2, skills 1.23.0, marketplace 1.8.2.
+Resolved component versions: pipeline 0.39.0, CLI 1.22.0, skills 1.24.0, marketplace 1.9.0.
 <!-- operating-capability:end -->
 
 `planr operate` is the recurring evidence-to-decision control plane. It creates
