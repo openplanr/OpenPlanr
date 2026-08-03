@@ -4,9 +4,11 @@ import {
   assertOperatingDraftApproved,
   assertOperatingRuntimeMatch,
   createOperatingAdapterHandoff,
+  createOperatingAdvisorBrief,
   createOperatingMandate,
   createOperatingResearchMandate,
   createOperatingRuntimeBinding,
+  listOperatingAdvisorBriefs,
   listProtocolSchemas,
   qualifyOperatingDraftCandidates,
   resolveProtocolSchema,
@@ -83,6 +85,41 @@ const handoff = createOperatingAdapterHandoff({
 assert.equal(handoff.next[0].action, 'harness.record');
 assert.equal(handoff.next[0].dispatch.runtime, 'codex');
 assert.ok(!JSON.stringify(handoff).toLowerCase().includes('claude'));
+
+// FR9 / T-008: a v1.4-mandate-capable handoff never offers a legacy pack-style
+// role brief. The v1.4 record dispatch resolves a role MANDATE and its
+// procedure — never a `rolePack`/`roleBrief` pointer, which is the frozen
+// v1.2 pack transport. Prove the exclusion structurally on the generated
+// handoff and on the mandate the runtime actually dispatches.
+const handoffJson = JSON.stringify(handoff);
+assert.ok(!/rolepack/i.test(handoffJson), 'a v1.4 handoff must not reference a legacy role pack.');
+assert.ok(!/rolebrief/i.test(handoffJson), 'a v1.4 handoff must not reference a legacy role brief.');
+assert.equal(handoff.next[0].dispatch.mandatePointer, '/data/mandates/strategy-finance');
+assert.equal(handoff.next[0].dispatch.procedurePointer, '/data/mandates/strategy-finance/procedure');
+
+const v14Mandate = createOperatingMandate('strategy-finance', { runtime: 'codex', roots: ['.'] });
+const mandateJson = JSON.stringify(v14Mandate);
+assert.equal(v14Mandate.procedure, 'procedures/operate/advisor.md');
+assert.ok(!/rolebrief|rolepack|jsonschema|maximumproposals/i.test(mandateJson),
+  'a v1.4 mandate must carry no pack-style role-brief field.');
+
+// The pack-style brief is compatibility-only: it is explicitly marked
+// `legacy: true`, is stamped at the frozen v1.2 envelope, and is refused
+// outright when a v1.4 session tries to select one. A new (non-compatibility)
+// workflow therefore cannot accidentally pick up a legacy brief.
+for (const brief of listOperatingAdvisorBriefs()) {
+  assert.equal(brief.legacy, true, `advisor brief ${brief.role.id} must be marked compatibility-only.`);
+  assert.equal(brief.protocolVersion, '1.2.0', `advisor brief ${brief.role.id} must stay on the legacy envelope.`);
+}
+const legacyBrief = createOperatingAdvisorBrief('strategy-finance', { protocolVersion: '1.3.0' });
+assert.equal(legacyBrief.legacy, true);
+for (const rejectedVersion of [PROTOCOL, '2.0.0']) {
+  assert.throws(
+    () => createOperatingAdvisorBrief('strategy-finance', { protocolVersion: rejectedVersion }),
+    (error) => error?.code === 'E_OPERATE_LEGACY_BRIEF_UNREACHABLE',
+    `Protocol ${rejectedVersion} must not be able to select a legacy pack-style brief.`,
+  );
+}
 
 const qualified = qualifyOperatingDraftCandidates(response.actions);
 assert.equal(qualified.eligible.length, 1);

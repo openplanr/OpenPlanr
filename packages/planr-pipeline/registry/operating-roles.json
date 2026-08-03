@@ -127,7 +127,7 @@
       "id": "chair",
       "order": 60,
       "displayLabel": "Chair",
-      "mandate": "Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals.",
+      "mandate": "Evidence reconciliation, conflict sequencing, duplicate merging, and bounded route proposals. Name any absent or not-evaluated lens as an explicit gap and never synthesize a missing lens's conclusions; consolidate only the recorded, verified board.",
       "forbiddenRecommendationCategories": ["persist-id", "final-score", "mutate-state", "apply-route", "ship", "deploy", "publish"],
       "permittedEvidenceKinds": ["verified-advisor-result", "charter", "prior-state", "outcome"],
       "sensitivityCeiling": "confidential",

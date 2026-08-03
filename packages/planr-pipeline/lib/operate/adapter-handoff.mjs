@@ -209,6 +209,38 @@ function continueAction(binding) {
   };
 }
 
+/**
+ * Renew the cycle session's lease/`expiresAt` without recording a role result
+ * (FR2). It carries no `--role` and no `--stdin` body — a machine-local session
+ * write, never a result commit — so a slow lens can hold the session open while
+ * siblings keep their already-recorded work instead of letting the lease expire
+ * and strand it. Additive to Protocol v1.4 only; older handoffs never emit it.
+ */
+function heartbeatAction(binding, protocolVersion) {
+  return {
+    id: 'harness.heartbeat',
+    action: 'harness.heartbeat',
+    effect: 'machine-local-write',
+    argv: lifecycleArgv(binding, 'heartbeat', undefined, protocolVersion),
+  };
+}
+
+/**
+ * The recovery actions legal in the lease-bound `record-required` and
+ * `finalize-required` states. Protocol v1.4 adds `harness.heartbeat`; older
+ * protocol handoffs keep their frozen two-action `resume`/`cancel` recovery.
+ */
+function recoveryActions(binding, protocolVersion) {
+  const actions = [
+    boundAction(binding, 'resume', 'read-only', protocolVersion),
+    boundAction(binding, 'cancel', 'machine-local-write', protocolVersion),
+  ];
+  if (protocolVersion === '1.4.0') {
+    actions.push(heartbeatAction(binding, protocolVersion));
+  }
+  return actions;
+}
+
 function expectedActions(value) {
   const pending = value.roles.filter(({ status }) => status === 'pending');
   switch (value.state) {
@@ -219,24 +251,22 @@ function expectedActions(value) {
       };
     case 'record-required':
       return {
-        // Role inference may be parallel, but adapter.record mutates one shared,
-        // lease-bound session. Authorize one pending role at a time so runtimes
-        // cannot race session snapshots or lose an already recorded role.
-        next: pending.length > 0
-          ? [recordAction(value.binding, pending[0].roleId, value.protocolVersion)]
-          : [],
-        recovery: [
-          boundAction(value.binding, 'resume', 'read-only', value.protocolVersion),
-          boundAction(value.binding, 'cancel', 'machine-local-write', value.protocolVersion),
-        ],
+        // Every pending role is authorized to record the instant it returns —
+        // one `harness.record` action per pending role, independent of sibling
+        // order or state (FR1). Each action is bound to its own role, argv, and
+        // idempotency key. `harness.record` still mutates one shared, lease-bound
+        // session, so the write must be serialized *by the consumer* (the engine
+        // `record` command, SPEC-005 T-002): record each role atomically against
+        // the session snapshot and replay identical bytes idempotently. This
+        // handoff authorizes the fan-out; it never schedules concurrent session
+        // writes, so widening `next` cannot reintroduce the snapshot race.
+        next: pending.map((role) => recordAction(value.binding, role.roleId, value.protocolVersion)),
+        recovery: recoveryActions(value.binding, value.protocolVersion),
       };
     case 'finalize-required':
       return {
         next: [boundAction(value.binding, 'finalize', 'project-write', value.protocolVersion)],
-        recovery: [
-          boundAction(value.binding, 'resume', 'read-only', value.protocolVersion),
-          boundAction(value.binding, 'cancel', 'machine-local-write', value.protocolVersion),
-        ],
+        recovery: recoveryActions(value.binding, value.protocolVersion),
       };
     case 'continue-required':
       return {
@@ -254,10 +284,25 @@ function same(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+// A role is terminal once it can no longer change within the cycle: it recorded
+// a result, was governed as `not-evaluated`, or `failed`. `pending` and
+// `awaiting-prepare` are in-flight and never terminal.
+const TERMINAL_ROLE_STATUSES = ['recorded', 'not-evaluated', 'failed'];
+// The terminal outcomes that are *not* a recorded result. Each must carry a
+// human-readable reason so the Chair mandate and the integrity surface can state
+// why a lens is missing rather than rendering a bare `not_evaluated` (FR13).
+const NON_RECORDED_TERMINAL_STATUSES = ['not-evaluated', 'failed'];
+
 /**
  * Enforce the state/action and exact-binding semantics that JSON Schema cannot
  * express. The artifact is transient, but every command is capability-bearing
  * and must remain byte-for-byte bound to its root lifecycle fields.
+ *
+ * `record-required` authorizes recording every pending role (fan-out), not one
+ * pending role at a time; `finalize-required`/`continue-required` accept any
+ * board whose roles are all terminal (`recorded`, `not-evaluated`, or `failed`)
+ * while still rejecting any in-flight (`pending`/`awaiting-prepare`) role. A
+ * non-recorded terminal role must carry a `statusReason`.
  */
 export function validateOperatingAdapterHandoffBindings(value) {
   assertProtocolArtifact('operating-adapter-handoff', value);
@@ -294,9 +339,19 @@ export function validateOperatingAdapterHandoffBindings(value) {
   }
   if (
     ['finalize-required', 'continue-required'].includes(value.state) &&
-    statuses.some((status) => status !== 'recorded')
+    statuses.some((status) => !TERMINAL_ROLE_STATUSES.includes(status))
   ) {
-    fail(`${value.state} requires every role to be recorded`);
+    fail(`${value.state} requires every role to have reached a terminal status`);
+  }
+  for (const role of value.roles) {
+    const nonRecordedTerminal = NON_RECORDED_TERMINAL_STATUSES.includes(role.status);
+    const hasReason = typeof role.statusReason === 'string' && role.statusReason.length > 0;
+    if (nonRecordedTerminal && !hasReason) {
+      fail(`role ${role.roleId} is ${role.status} but carries no statusReason`);
+    }
+    if (!nonRecordedTerminal && 'statusReason' in role) {
+      fail(`role ${role.roleId} is ${role.status} and cannot carry a statusReason`);
+    }
   }
   if (
     value.state !== 'prepare-required' &&
@@ -321,7 +376,7 @@ export function createOperatingAdapterHandoff(input) {
   const adapter = protocolVersion === '1.4.0' ? runtimeAdapter(input.runtime) : null;
   const value = {
     kind: 'operating-adapter-handoff',
-    schemaVersion: protocolVersion === '1.4.0' ? '1.1.0' : '1.0.0',
+    schemaVersion: protocolVersion === '1.4.0' ? '1.2.0' : '1.0.0',
     protocolVersion,
     phase: input.phase,
     state: input.state,
@@ -347,6 +402,12 @@ export function createOperatingAdapterHandoff(input) {
       roleId: role.roleId,
       status: role.status,
       inputDigest: role.inputDigest ?? null,
+      // A non-recorded terminal role (`not-evaluated`/`failed`) carries the
+      // reason it is missing through the handoff; recorded/in-flight roles omit
+      // the field entirely, so existing three-field roles stay byte-identical.
+      ...(role.statusReason !== undefined && role.statusReason !== null
+        ? { statusReason: role.statusReason }
+        : {}),
     })),
     next: [],
     recovery: [],

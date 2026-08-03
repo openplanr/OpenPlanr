@@ -59,6 +59,25 @@ test('active docs do not carry stale release-version claims', () => {
   assert.deepEqual(hits, []);
 });
 
+test('operate record step states per-role immediate recording, not a serial batch barrier', () => {
+  for (const file of ['commands/operate.md', 'procedures/operate/advisor.md']) {
+    const text = read(file);
+    // The batch-barrier phrasing that let a whole board wait before any role
+    // recorded must be gone (SPEC-005 FR1).
+    assert.doesNotMatch(
+      text,
+      /record[\s\S]{0,80}serial/i,
+      `${file} must not describe recording results serially`,
+    );
+    // And the corrected per-role, return-time recording contract must be present.
+    assert.match(
+      text,
+      /the instant/i,
+      `${file} states each result is recorded the instant its lens returns`,
+    );
+  }
+});
+
 test('plan command and protocol command docs preserve the R1 stop gate', () => {
   const plan = read('commands/plan.md');
   const protocolCommands = read('docs/protocol/commands.md');

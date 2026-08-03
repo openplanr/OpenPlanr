@@ -30,8 +30,17 @@ A bare `$planr-operate` means:
    dispatch the named Codex role with its mandate and [advisor
    procedure](references/advisor.md). Use native Codex subagents when exposed;
    otherwise run the same role sequentially in this Codex session. Parallelize
-   independent advisors when safe, but record results serially against the
-   current lease-bound handoff.
+   independent advisors when safe, and record each result the instant that role
+   returns — one role at a time against the shared session, but never waiting on
+   a sibling first. The handoff exposes a record action for every pending role,
+   so a slow lens cannot strand a finished one. If a role is still running as the
+   lease window approaches, issue `harness heartbeat` to renew the session rather
+   than let it expire. If a dispatched lens genuinely never returns — it exceeded
+   its budget even after a heartbeat, or crashed — record it terminal with
+   `harness abandon --role <role> --reason "<why>"`. That lens becomes
+   `not_evaluated` with your reason, its recorded siblings are untouched, and the
+   Chair names it as an explicit gap it must not synthesize around. Never fabricate
+   a result for a lens that did not return.
 6. Run CEO, CTO, CPO, CMO, COO, then [Chair](references/chair.md). Each role
    explores the project with Codex tools and current session permissions. Planr
    grants no extra permissions and supplies no repository JSON evidence body.
@@ -68,11 +77,18 @@ If the user names a public subcommand (`status`, `report`, `context show`,
 
 ## Machine lifecycle
 
-The public skill hides `planr operate harness prepare|record|finalize|resume|cancel`.
+The public skill hides `planr operate harness prepare|record|finalize|resume|cancel|heartbeat|abandon`.
 Execute only argv arrays in the current handoff, preserve cycle/runtime/digest/
 lease/idempotency fields byte-for-byte, submit the complete JSON response over
-stdin, and replay identical bytes after transport failure. The older `adapter`
-aliases are compatibility-only and must not appear in new guidance.
+stdin, and replay identical bytes after transport failure. `harness abandon --role
+<role> --reason "<why>"` is the one action taken for a lens that never returns: it
+governs that lens terminal `not_evaluated` with a recorded reason so finalize and
+the Chair can proceed without it. If this Codex session itself stops before it can
+abandon a stalled lens, the operator's escape is `planr operate cycles abandon-role
+<cycleId> --reason "<why>" --yes`, valid once the session lease has lapsed — it
+reaches a reviewable cycle without discarding the recorded work. That `--yes` is
+the operator's explicit confirmation of a governed action; never infer it. The
+older `adapter` aliases are compatibility-only and must not appear in new guidance.
 
 Qualified recommendations may create reversible canonical proposal drafts
 automatically. Do not edit them directly. Use `planr operate drafts

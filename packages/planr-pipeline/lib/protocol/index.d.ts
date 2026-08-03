@@ -272,6 +272,7 @@ export interface OperatingAdapterMachineAction {
     | 'harness.finalize'
     | 'harness.resume'
     | 'harness.cancel'
+    | 'harness.heartbeat'
     | 'run.continue';
   effect: 'read-only' | 'machine-local-write' | 'project-write';
   role?: string;
@@ -317,7 +318,7 @@ export interface OperatingAdapterMachineAction {
 
 export interface OperatingAdapterHandoff {
   kind: 'operating-adapter-handoff';
-  schemaVersion: '1.0.0' | '1.1.0';
+  schemaVersion: '1.0.0' | '1.1.0' | '1.2.0';
   protocolVersion: '1.2.0' | '1.3.0' | '1.4.0';
   phase: 'bootstrap' | 'advisors' | 'chair';
   state: OperatingAdapterHandoffState;
@@ -336,7 +337,13 @@ export interface OperatingAdapterHandoff {
   };
   roles: Array<{
     roleId: string;
-    status: 'awaiting-prepare' | 'pending' | 'recorded';
+    status: 'awaiting-prepare' | 'pending' | 'recorded' | 'not-evaluated' | 'failed';
+    /**
+     * Required when `status` is `not-evaluated` or `failed`, forbidden otherwise:
+     * the reason a non-recorded terminal lens is missing, carried through so the
+     * Chair mandate and integrity surface can state it. Protocol v1.4 only.
+     */
+    statusReason?: string;
     inputDigest: string | null;
   }>;
   next: OperatingAdapterMachineAction[];
