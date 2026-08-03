@@ -1,0 +1,232 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "openplanr-ecosystem-operation",
+  "protocolVersion": "1.2.0",
+  "operationId": "OPERATE-SPEC-009",
+  "operationDigest": "sha256:80d85c0117c45b9625102d202517d539e328f94bdead8ab7c20927221db1a671",
+  "umbrellaSpecId": "SPEC-005",
+  "title": "Stage the SPEC-005 durable-orchestration release tuple",
+  "capability": "agenticOperatingBoard",
+  "createdAt": "2026-08-02T18:00:00.000Z",
+  "updatedAt": "2026-08-02T18:00:00.000Z",
+  "state": "drafted",
+  "ledger": {
+    "kind": "marketplace-draft-pr",
+    "repository": "openplanr/marketplace",
+    "headRef": "ecosystem-release/operate-spec-009",
+    "pullRequest": null
+  },
+  "participantOrder": [
+    "pipeline",
+    "cli",
+    "skills",
+    "marketplace"
+  ],
+  "participants": [
+    {
+      "component": "pipeline",
+      "repoLocalSpecId": "OPERATE-SPEC-009:pipeline",
+      "repoLocalWorkItem": "docs/implementation/operating-board.md",
+      "repository": "openplanr/planr-pipeline",
+      "currentVersion": "0.38.0",
+      "targetVersion": "0.39.0",
+      "phase": "pending",
+      "branch": "feat/operate-durable-orchestration",
+      "targetBranch": "main",
+      "commitSha": null,
+      "pullRequest": null,
+      "package": null,
+      "tag": null,
+      "tarballDigest": null,
+      "checks": [
+        {
+          "name": "ci",
+          "status": "expected"
+        },
+        {
+          "name": "npm-publish",
+          "status": "expected"
+        }
+      ],
+      "approvals": [],
+      "prerequisites": [],
+      "compensation": "close-pr",
+      "nextSafeAction": "Owner publishes planr-pipeline@0.39.0 with the deterministic lifecycle driver, then tags v0.39.0."
+    },
+    {
+      "component": "cli",
+      "repoLocalSpecId": "OPERATE-SPEC-009:cli",
+      "repoLocalWorkItem": "docs/implementation/OPERATE-SPEC-009.md",
+      "repository": "openplanr/OpenPlanr",
+      "currentVersion": "1.21.2",
+      "targetVersion": "1.22.0",
+      "phase": "pending",
+      "branch": "feat/operate-durable-orchestration",
+      "targetBranch": "main",
+      "commitSha": null,
+      "pullRequest": null,
+      "package": null,
+      "tag": null,
+      "tarballDigest": null,
+      "checks": [
+        {
+          "name": "ci",
+          "status": "expected"
+        },
+        {
+          "name": "npm-publish",
+          "status": "expected"
+        }
+      ],
+      "approvals": [],
+      "prerequisites": [
+        "pipeline"
+      ],
+      "compensation": "close-pr",
+      "nextSafeAction": "Owner consumes the openplanr@1.22.0 changeset pinned to planr-pipeline@0.39.0, then tags v1.22.0."
+    },
+    {
+      "component": "skills",
+      "repoLocalSpecId": "OPERATE-SPEC-009:skills",
+      "repoLocalWorkItem": "docs/implementation/operating-board.md",
+      "repository": "openplanr/skills",
+      "currentVersion": "1.23.0",
+      "targetVersion": "1.24.0",
+      "phase": "pending",
+      "branch": "feat/operate-durable-orchestration",
+      "targetBranch": "main",
+      "commitSha": null,
+      "pullRequest": null,
+      "package": null,
+      "tag": null,
+      "tarballDigest": null,
+      "checks": [
+        {
+          "name": "validate",
+          "status": "expected"
+        },
+        {
+          "name": "release-check",
+          "status": "expected"
+        }
+      ],
+      "approvals": [],
+      "prerequisites": [
+        "pipeline",
+        "cli"
+      ],
+      "compensation": "close-pr",
+      "nextSafeAction": "Owner tags @openplanr/skills v1.24.0 once its regenerated agent-native workflow matches openplanr@1.22.0."
+    },
+    {
+      "component": "marketplace",
+      "repoLocalSpecId": "OPERATE-SPEC-009:marketplace",
+      "repoLocalWorkItem": "docs/implementation/OPERATE-SPEC-009.md",
+      "repository": "openplanr/marketplace",
+      "currentVersion": "1.8.2",
+      "targetVersion": "1.9.0",
+      "phase": "pending",
+      "branch": "ecosystem-release/operate-spec-009",
+      "targetBranch": "main",
+      "commitSha": null,
+      "pullRequest": null,
+      "package": null,
+      "tag": null,
+      "tarballDigest": null,
+      "checks": [
+        {
+          "name": "check",
+          "status": "expected"
+        },
+        {
+          "name": "operation-ledger",
+          "status": "expected"
+        },
+        {
+          "name": "real-runtime-canary",
+          "status": "expected"
+        }
+      ],
+      "approvals": [],
+      "prerequisites": [
+        "pipeline",
+        "cli",
+        "skills"
+      ],
+      "compensation": "withhold-manifest",
+      "nextSafeAction": "Keep the marketplace manifest withholding agenticOperatingBoard until the real-runtime canary passes against the published tuple."
+    }
+  ],
+  "releaseEvidence": [
+    {
+      "id": "packed-cli",
+      "status": "pending",
+      "url": null,
+      "digest": null,
+      "checkedAt": null
+    },
+    {
+      "id": "protocol-v1.2",
+      "status": "pending",
+      "url": null,
+      "digest": null,
+      "checkedAt": null
+    },
+    {
+      "id": "event-replay",
+      "status": "pending",
+      "url": null,
+      "digest": null,
+      "checkedAt": null
+    },
+    {
+      "id": "security-boundaries",
+      "status": "pending",
+      "url": null,
+      "digest": null,
+      "checkedAt": null
+    },
+    {
+      "id": "outcome-reconciliation",
+      "status": "pending",
+      "url": null,
+      "digest": null,
+      "checkedAt": null
+    }
+  ],
+  "prepareDigest": null,
+  "confirmationDigest": null,
+  "blockedReason": null,
+  "nextSafeAction": "Publish planr-pipeline@0.39.0, then openplanr@1.22.0, then tag @openplanr/skills v1.24.0, then run the real-runtime canary before finalizing this ledger.",
+  "recovery": {
+    "mode": "compensate-before-publish",
+    "reason": "No participant is published yet; the coordinated release is still fully reversible.",
+    "nextSafeAction": "Close the unmerged release PRs and withhold the marketplace manifest; no forward-fix obligation exists before publication."
+  },
+  "reconciliation": {
+    "status": "pending",
+    "checkedAt": "2026-08-02T18:00:00.000Z",
+    "sources": [
+      "github-pr",
+      "git-commit",
+      "git-tag",
+      "github-checks",
+      "npm-registry",
+      "marketplace-manifest",
+      "operating-canary"
+    ],
+    "drift": [],
+    "nextSafeAction": "Reconcile PRs, commits, tags, CI, npm, manifest, and the real-runtime canary once the owner publishes the tuple."
+  },
+  "history": [
+    {
+      "eventId": "b1f0e2c4-7a9d-4c1e-9f3a-2b6d8e0c1a55",
+      "timestamp": "2026-08-02T18:00:00.000Z",
+      "type": "operation.created",
+      "actor": "Release coordinator",
+      "participant": null,
+      "digest": "sha256:80d85c0117c45b9625102d202517d539e328f94bdead8ab7c20927221db1a671",
+      "note": "Staged the SPEC-005 durable-orchestration release tuple; the marketplace ledger stays unmerged until the real-runtime canary passes against the published artifacts."
+    }
+  ]
+}
