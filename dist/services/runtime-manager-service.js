@@ -1,0 +1,1192 @@
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import { copyFile, mkdir, open, readFile, rename, rm, unlink, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { spliceManagedBlock } from '../utils/splice-managed-block.js';
+import { applyClaudePluginIntegration, inspectClaudePluginIntegration, OPENPLANR_SKILLS_VERSION, } from './claude-plugin-service.js';
+import { diagnoseOperatingBoard } from './operate/doctor.js';
+import { resolvePipelinePackage } from './pipeline-package-service.js';
+import { readOpenPlanrVersion } from './provenance-service.js';
+export class RuntimeManagerError extends Error {
+    code;
+    recovery;
+    constructor(code, message, recovery) {
+        super(message);
+        this.code = code;
+        this.recovery = recovery;
+        this.name = 'RuntimeManagerError';
+    }
+    toJSON() {
+        return { ok: false, code: this.code, problem: this.message, recovery: this.recovery };
+    }
+}
+const executable = {
+    'claude-code': 'claude',
+    codex: 'codex',
+    cursor: 'cursor',
+};
+const skillNames = [
+    'planr-plan',
+    'planr-design',
+    'planr-ship',
+    'planr-dashboard',
+    'planr-sync',
+    'planr-doctor',
+    'planr-artifact',
+    'planr-operate',
+];
+function hash(value) {
+    return createHash('sha256').update(value).digest('hex');
+}
+function managedBlockBytes(content, marker = 'runtime') {
+    const text = Buffer.isBuffer(content) ? content.toString('utf8') : content;
+    const begin = `<!-- ##planr-${marker}:begin##`;
+    const end = `<!-- ##planr-${marker}:end## -->`;
+    const start = text.indexOf(begin);
+    const finish = text.indexOf(end, start);
+    if (start === -1 || finish === -1)
+        return Buffer.alloc(0);
+    return Buffer.from(text.slice(start, finish + end.length));
+}
+function ownershipHash(content, kind, marker) {
+    return hash(kind === 'managed-block' ? managedBlockBytes(content, marker) : content);
+}
+function projectKey(projectDir) {
+    return hash(path.resolve(projectDir)).slice(0, 16);
+}
+function runtimeRoot() {
+    return path.join(userHome(), '.planr', 'runtime');
+}
+function userHome() {
+    return process.env.OPENPLANR_HOME ?? os.homedir();
+}
+function statePath() {
+    return path.join(runtimeRoot(), 'state.json');
+}
+function detectCommand(command) {
+    const result = spawnSync(command, ['--version'], { encoding: 'utf8', windowsHide: true });
+    return !result.error && result.status === 0;
+}
+export function inspectProjectContext(projectDir) {
+    const resolved = path.resolve(projectDir);
+    if (existsSync(path.join(resolved, '.planr', 'config.json'))) {
+        return { valid: true, path: resolved, reason: 'planr' };
+    }
+    const git = spawnSync('git', ['rev-parse', '--is-inside-work-tree'], {
+        cwd: resolved,
+        encoding: 'utf8',
+        windowsHide: true,
+    });
+    if (!git.error && git.status === 0 && git.stdout.trim() === 'true') {
+        return { valid: true, path: resolved, reason: 'git' };
+    }
+    return { valid: false, path: resolved, reason: 'none' };
+}
+export function detectRuntimes() {
+    return Object.keys(executable).map((runtime) => ({
+        runtime,
+        installed: detectCommand(executable[runtime]),
+        command: executable[runtime],
+    }));
+}
+export function listRuntimeAdapters() {
+    const pipeline = resolvePipelinePackage(false);
+    if (!pipeline)
+        return [];
+    const registry = JSON.parse(readFileSync(pipeline.adapterRegistryPath, 'utf8'));
+    return registry.adapters.map((adapter) => structuredClone(adapter));
+}
+function assertNodeVersion() {
+    const major = Number(process.versions.node.split('.')[0]);
+    if (major < 20) {
+        throw new RuntimeManagerError('E_NODE_VERSION', `Node.js 20 or newer is required; found ${process.versions.node}.`, 'Install Node.js 20+ and rerun `planr setup`. OpenPlanr will not modify Node.js for you.');
+    }
+}
+function normalizeRuntime(value = 'auto') {
+    return value === 'claude' ? 'claude-code' : value;
+}
+function chooseRuntimes(choice) {
+    const normalized = normalizeRuntime(choice);
+    if (normalized === 'all')
+        return ['claude-code', 'codex', 'cursor'];
+    if (normalized !== 'auto') {
+        if (!['claude-code', 'codex', 'cursor'].includes(normalized)) {
+            throw new RuntimeManagerError('E_RUNTIME_UNSUPPORTED', `Runtime "${normalized}" is not supported.`, 'Choose auto, claude, codex, cursor, or all.');
+        }
+        return [normalized];
+    }
+    const detected = detectRuntimes()
+        .filter((item) => item.installed)
+        .map((item) => item.runtime);
+    if (detected.length === 0) {
+        throw new RuntimeManagerError('E_RUNTIME_NOT_FOUND', 'No supported coding runtime was detected.', 'Install Claude Code, Codex, or Cursor, or pass `--runtime all` to prepare adapter assets.');
+    }
+    return detected;
+}
+function readRegistry() {
+    const pipeline = resolvePipelinePackage();
+    if (!pipeline)
+        throw new RuntimeManagerError('E_PIPELINE_NOT_INSTALLED', 'Pipeline missing.');
+    return {
+        root: pipeline.root,
+        version: pipeline.version,
+        registry: JSON.parse(readFileSync(pipeline.adapterRegistryPath, 'utf8')),
+    };
+}
+function managedContent(text) {
+    return text
+        .replace(/^<!-- openplanr:runtime:start -->\s*/m, '')
+        .replace(/\s*<!-- openplanr:runtime:end -->\s*$/m, '')
+        .trim();
+}
+function actionBytes(action) {
+    if (action.kind === 'file')
+        return action.content;
+    const existing = existsSync(action.target) ? readFileSync(action.target, 'utf8') : '';
+    const spliced = spliceManagedBlock(existing, action.marker ?? 'runtime', action.content.toString('utf8'));
+    return Buffer.from(spliced.endsWith('\n') ? spliced : `${spliced}\n`);
+}
+function runtimeMarker(runtime, pipelineVersion) {
+    return Buffer.from(`${JSON.stringify({ schemaVersion: '1.0.0', runtime, pipelineVersion, managedBy: 'openplanr' }, null, 2)}\n`);
+}
+function normalizeInstallScope(adapter, requested) {
+    const supportsUser = adapter.installScopes.includes('user');
+    const supportsProject = adapter.installScopes.includes('project');
+    if (requested === 'user' && !supportsUser) {
+        throw new RuntimeManagerError('E_SCOPE_UNSUPPORTED', `${adapter.id} does not support user-scope installation.`, `Run \`planr runtime install ${adapter.id} --scope project\`.`);
+    }
+    if (requested === 'project' && !supportsProject) {
+        throw new RuntimeManagerError('E_SCOPE_UNSUPPORTED', `${adapter.id} does not support project-scope installation.`);
+    }
+    if (requested !== 'both')
+        return requested;
+    if (supportsUser && supportsProject)
+        return 'both';
+    return supportsProject ? 'project' : 'user';
+}
+function inferRuntimeScope(files, runtime) {
+    const owned = files.filter((file) => file.runtime === runtime);
+    const hasUser = owned.some((file) => file.scope === 'user' || (!file.scope && file.target.startsWith(runtimeRoot())));
+    const hasProject = owned.some((file) => file.scope === 'project' || (!file.scope && !file.target.startsWith(runtimeRoot())));
+    return hasUser && hasProject ? 'both' : hasUser ? 'user' : 'project';
+}
+function buildRuntimeLock(options, runtimes, runtimeScopes, registry, pipelineVersion) {
+    const adapters = runtimes.map((runtime) => {
+        const adapter = registry.adapters.find((entry) => entry.id === runtime);
+        if (!adapter)
+            throw new RuntimeManagerError('E_ADAPTER_MISSING', `Adapter ${runtime} is absent.`);
+        const installScope = normalizeInstallScope(adapter, runtimeScopes[runtime] ?? options.scope ?? 'user');
+        return {
+            runtime,
+            version: adapter.version,
+            capabilityLevel: adapter.capabilityLevel,
+            installScope,
+        };
+    });
+    const digestInput = JSON.stringify({
+        protocol: registry.protocolVersion,
+        pipelineVersion,
+        adapters,
+    });
+    const components = {
+        cli: options.cliVersion,
+        pipeline: pipelineVersion,
+        skills: OPENPLANR_SKILLS_VERSION,
+    };
+    const manifestDigest = `sha256:${hash(digestInput)}`;
+    const lockPath = path.join(options.projectDir, '.planr', 'runtime-lock.json');
+    if (existsSync(lockPath)) {
+        try {
+            const existing = JSON.parse(readFileSync(lockPath, 'utf8'));
+            if (existing.manifestDigest === manifestDigest &&
+                existing.protocolVersion === registry.protocolVersion &&
+                JSON.stringify(existing.components) === JSON.stringify(components) &&
+                JSON.stringify(existing.adapters) === JSON.stringify(adapters)) {
+                return readFileSync(lockPath);
+            }
+        }
+        catch {
+            // Invalid locks are replaced after backup during setup.
+        }
+    }
+    return Buffer.from(`${JSON.stringify({
+        schemaVersion: '1.0.0',
+        generatedAt: new Date().toISOString(),
+        manifestDigest,
+        protocolVersion: registry.protocolVersion,
+        components,
+        adapters,
+    }, null, 2)}\n`);
+}
+function buildActions(options, runtimes, runtimeScopes) {
+    if (options.minimal)
+        return [];
+    const { root, version, registry } = readRegistry();
+    if (options.version && options.version !== version) {
+        throw new RuntimeManagerError('E_VERSION_UNAVAILABLE', `Installed pipeline ${version} does not match requested ${options.version}.`, `Install planr-pipeline@${options.version} and rerun setup.`);
+    }
+    const actions = [];
+    for (const runtime of runtimes) {
+        const adapter = registry.adapters.find((entry) => entry.id === runtime);
+        if (!adapter)
+            throw new RuntimeManagerError('E_ADAPTER_MISSING', `Adapter ${runtime} is absent.`);
+        const scope = normalizeInstallScope(adapter, runtimeScopes[runtime] ?? options.scope ?? 'user');
+        const installUser = (scope === 'user' || scope === 'both') && adapter.installScopes.includes('user');
+        const installProject = (scope === 'project' || scope === 'both') && adapter.installScopes.includes('project');
+        if (installUser) {
+            if (runtime === 'codex') {
+                for (const name of skillNames) {
+                    actions.push({
+                        runtime,
+                        scope: 'user',
+                        target: path.join(userHome(), '.codex', 'skills', name, 'SKILL.md'),
+                        content: readFileSync(path.join(root, 'adapters', 'codex', 'skills', name, 'SKILL.md')),
+                        kind: 'file',
+                        description: `Install Codex skill ${name}`,
+                    });
+                }
+            }
+            actions.push({
+                runtime,
+                scope: 'user',
+                target: path.join(runtimeRoot(), 'adapters', `${runtime}.json`),
+                content: runtimeMarker(runtime, version),
+                kind: 'file',
+                description: `Record ${runtime} adapter installation`,
+            });
+        }
+        if (installProject) {
+            if (runtime === 'codex') {
+                actions.push({
+                    runtime,
+                    scope: 'project',
+                    target: path.join(options.projectDir, 'AGENTS.md'),
+                    content: Buffer.from(managedContent(readFileSync(path.join(root, 'adapters', 'codex', 'project-guidance.md'), 'utf8'))),
+                    kind: 'managed-block',
+                    marker: 'pipeline',
+                    description: 'Update concise Codex project policy',
+                });
+            }
+            else if (runtime === 'cursor') {
+                actions.push({
+                    runtime,
+                    scope: 'project',
+                    target: path.join(options.projectDir, '.cursor', 'rules', 'openplanr.mdc'),
+                    content: readFileSync(path.join(root, 'adapters', 'cursor', 'rules', 'openplanr.mdc')),
+                    kind: 'file',
+                    description: 'Install portable Cursor project rule',
+                });
+                actions.push({
+                    runtime,
+                    scope: 'project',
+                    target: path.join(options.projectDir, '.cursor', 'rules', 'openplanr-operate.mdc'),
+                    content: readFileSync(path.join(root, 'adapters', 'cursor', 'rules', 'openplanr-operate.mdc')),
+                    kind: 'file',
+                    description: 'Install Cursor Operating Board rule',
+                });
+                const roleRegistry = JSON.parse(readFileSync(path.join(root, 'registry', 'roles.json'), 'utf8'));
+                for (const role of roleRegistry.roles) {
+                    actions.push({
+                        runtime,
+                        scope: 'project',
+                        target: path.join(options.projectDir, '.cursor', 'rules', 'openplanr-roles', `${role.id}.md`),
+                        content: Buffer.from(`# ${role.id}\n\nCapability tier: \`${role.capability}\`\nPhase: \`${role.phase}\`\nActivation: \`${role.activation}\`\n\n- ${role.writeBoundary}\n`),
+                        kind: 'file',
+                        description: `Install Cursor role ${role.id}`,
+                    });
+                }
+            }
+            else {
+                actions.push({
+                    runtime,
+                    scope: 'project',
+                    target: path.join(options.projectDir, 'CLAUDE.md'),
+                    content: Buffer.from('Use the native planr-pipeline plugin for PLAN, Design, SHIP, dashboard, sync, and doctor. Portable procedures and deterministic state are supplied by planr-pipeline. PLAN and SHIP remain separate user actions.'),
+                    kind: 'managed-block',
+                    marker: 'pipeline',
+                    description: 'Update Claude Code project policy',
+                });
+            }
+        }
+    }
+    if (runtimes.some((runtime) => {
+        const scope = runtimeScopes[runtime] ?? options.scope ?? 'user';
+        return scope === 'project' || scope === 'both';
+    })) {
+        actions.push({
+            runtime: 'core',
+            scope: 'project',
+            target: path.join(options.projectDir, '.planr', 'runtime-lock.json'),
+            content: buildRuntimeLock(options, runtimes, runtimeScopes, registry, version),
+            kind: 'file',
+            description: 'Write exact runtime compatibility lock',
+        });
+    }
+    return actions;
+}
+function operationFor(action) {
+    if (!existsSync(action.target))
+        return 'create';
+    return hash(readFileSync(action.target)) === hash(actionBytes(action)) ? 'unchanged' : 'update';
+}
+async function loadState() {
+    try {
+        return JSON.parse(await readFile(statePath(), 'utf8'));
+    }
+    catch {
+        return { schemaVersion: '1.0.0', projects: {} };
+    }
+}
+async function atomicWrite(target, content) {
+    await mkdir(path.dirname(target), { recursive: true });
+    const temp = `${target}.${process.pid}.tmp`;
+    await writeFile(temp, content, { mode: 0o600 });
+    await rename(temp, target);
+}
+async function createBackup(projectDir, actions) {
+    const stamp = new Date().toISOString().replaceAll(':', '-');
+    const dir = path.join(userHome(), '.planr', 'backups', projectKey(projectDir), stamp);
+    const manifest = {
+        schemaVersion: '1.0.0',
+        projectDir: path.resolve(projectDir),
+        createdAt: new Date().toISOString(),
+        files: [],
+    };
+    await mkdir(dir, { recursive: true });
+    for (const [index, action] of actions.entries()) {
+        const entry = { target: action.target, existed: existsSync(action.target) };
+        if (entry.existed) {
+            const backup = path.join(dir, 'files', `${String(index).padStart(3, '0')}-${path.basename(action.target)}`);
+            await mkdir(path.dirname(backup), { recursive: true });
+            await copyFile(action.target, backup);
+            entry.backup = backup;
+            entry.beforeHash = hash(await readFile(action.target));
+        }
+        manifest.files.push(entry);
+    }
+    await atomicWrite(path.join(dir, 'migration-manifest.json'), Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`));
+    return { dir, manifest };
+}
+export async function previewSetup(options) {
+    assertNodeVersion();
+    const scope = options.scope ?? 'user';
+    if (!['user', 'project', 'both'].includes(scope)) {
+        throw new RuntimeManagerError('E_SCOPE_INVALID', `Install scope "${options.scope}" is invalid.`, 'Choose user, project, or both.');
+    }
+    const projectContext = inspectProjectContext(options.projectDir);
+    if ((scope === 'project' || scope === 'both') && !projectContext.valid) {
+        throw new RuntimeManagerError('E_PROJECT_CONTEXT_REQUIRED', `Project-scoped setup requires a Git worktree or initialized OpenPlanr project; ${projectContext.path} is neither.`, 'Change into a project, run `planr init`, or use `planr setup --scope user`.');
+    }
+    let selectedRuntimes = options.minimal
+        ? []
+        : options.runtimes
+            ? [...new Set(options.runtimes)]
+            : chooseRuntimes(options.runtime ?? 'auto');
+    let scopeIncompatibleRuntimes = [];
+    if (!options.minimal && (options.runtime ?? 'auto') === 'auto' && !options.runtimes) {
+        const adapters = listRuntimeAdapters();
+        scopeIncompatibleRuntimes = selectedRuntimes.filter((runtime) => {
+            const adapter = adapters.find((entry) => entry.id === runtime);
+            return scope === 'user' && !adapter?.installScopes.includes('user');
+        });
+        selectedRuntimes = selectedRuntimes.filter((runtime) => !scopeIncompatibleRuntimes.includes(runtime));
+        if (selectedRuntimes.length === 0) {
+            throw new RuntimeManagerError('E_SCOPE_UNSUPPORTED', 'Detected coding agents require project scope, but setup defaulted to user scope.', 'Change into a Git or initialized OpenPlanr project and run `planr setup --scope project`.');
+        }
+    }
+    let runtimes = selectedRuntimes;
+    const runtimeScopes = {};
+    if ((options.merge || options.preserveExistingScopes) && !options.minimal) {
+        const state = await loadState();
+        const project = state.projects[projectKey(options.projectDir)];
+        const existing = project?.runtimes ?? [];
+        for (const runtime of existing) {
+            runtimeScopes[runtime] =
+                project?.runtimeScopes?.[runtime] ?? inferRuntimeScope(project?.ownedFiles ?? [], runtime);
+        }
+        runtimes = [...new Set([...existing, ...runtimes])];
+    }
+    if (!options.preserveExistingScopes) {
+        for (const runtime of selectedRuntimes)
+            runtimeScopes[runtime] = scope;
+    }
+    const pipeline = options.minimal ? null : resolvePipelinePackage();
+    if (!options.minimal) {
+        const { registry } = readRegistry();
+        for (const runtime of runtimes) {
+            const adapter = registry.adapters.find((entry) => entry.id === runtime);
+            if (!adapter)
+                throw new RuntimeManagerError('E_ADAPTER_MISSING', `Adapter ${runtime} is absent.`);
+            runtimeScopes[runtime] = normalizeInstallScope(adapter, runtimeScopes[runtime] ?? options.scope ?? 'user');
+        }
+    }
+    const actions = buildActions(options, runtimes, runtimeScopes);
+    const manageClaudePlugins = options.manageExternalRuntimes !== false &&
+        !options.minimal &&
+        runtimes.includes('claude-code') &&
+        ['user', 'both'].includes(runtimeScopes['claude-code'] ?? scope) &&
+        (Boolean(options.claudeCommandRunner) ||
+            detectRuntimes().some((runtime) => runtime.runtime === 'claude-code' && runtime.installed));
+    const claudeInspection = manageClaudePlugins && pipeline
+        ? inspectClaudePluginIntegration(pipeline.version, options.claudeCommandRunner)
+        : undefined;
+    const runtimeDiagnostics = [];
+    if (claudeInspection) {
+        if (claudeInspection.error) {
+            runtimeDiagnostics.push({
+                runtime: 'claude-code',
+                status: 'fail',
+                message: `Claude plugin state could not be inspected: ${claudeInspection.error}`,
+                fix: 'Update Claude Code, then rerun `planr setup --runtime claude --scope user`.',
+            });
+        }
+        else if (claudeInspection.ready) {
+            runtimeDiagnostics.push({
+                runtime: 'claude-code',
+                status: 'pass',
+                message: 'Claude plugins match the OpenPlanr compatibility versions',
+            });
+        }
+        else {
+            runtimeDiagnostics.push({
+                runtime: 'claude-code',
+                status: 'warn',
+                message: 'Claude plugins will be installed or updated after confirmation',
+            });
+        }
+        if (claudeInspection.legacyPluginIds.length > 0) {
+            runtimeDiagnostics.push({
+                runtime: 'claude-code',
+                status: 'warn',
+                message: `Legacy Claude plugin installation detected: ${claudeInspection.legacyPluginIds.join(', ')}`,
+                fix: 'After verifying the official plugin, remove the legacy plugin from Claude Code.',
+            });
+        }
+    }
+    return {
+        ok: true,
+        dryRun: Boolean(options.dryRun),
+        minimal: Boolean(options.minimal),
+        runtimes,
+        runtimeScopes,
+        scope,
+        pipelineVersion: pipeline?.version ?? null,
+        detectedRuntimes: detectRuntimes()
+            .filter((item) => item.installed)
+            .map((item) => item.runtime),
+        unavailableRuntimes: detectRuntimes()
+            .filter((item) => !item.installed)
+            .map((item) => item.runtime),
+        scopeIncompatibleRuntimes,
+        projectContext,
+        actions: actions.map((action) => ({
+            runtime: action.runtime,
+            scope: action.scope,
+            target: action.target,
+            operation: operationFor(action),
+            description: action.description,
+        })),
+        runtimeOperations: claudeInspection?.operations ?? [],
+        runtimeDiagnostics,
+    };
+}
+export async function applySetup(options) {
+    const preview = await previewSetup(options);
+    if (options.dryRun || options.minimal)
+        return preview;
+    await mkdir(runtimeRoot(), { recursive: true });
+    const lockPath = path.join(runtimeRoot(), 'setup.lock');
+    let lockHandle;
+    try {
+        lockHandle = await open(lockPath, 'wx', 0o600);
+    }
+    catch {
+        throw new RuntimeManagerError('E_SETUP_BUSY', 'Another OpenPlanr setup or migration is already running.', 'Wait for it to finish. If no process is running, remove the verified stale setup lock.');
+    }
+    try {
+        const actions = buildActions(options, preview.runtimes, preview.runtimeScopes);
+        const changed = actions.filter((action) => operationFor(action) !== 'unchanged');
+        let backup;
+        if (changed.length > 0) {
+            try {
+                backup = await createBackup(options.projectDir, changed);
+            }
+            catch (cause) {
+                throw new RuntimeManagerError('E_BACKUP_FAILED', `Could not create byte-for-byte migration backup: ${cause instanceof Error ? cause.message : String(cause)}`, 'No setup files were changed. Fix backup permissions and rerun setup.');
+            }
+            const owned = [];
+            for (const action of actions) {
+                const content = actionBytes(action);
+                await atomicWrite(action.target, content);
+                owned.push({
+                    runtime: action.runtime,
+                    scope: action.scope,
+                    target: action.target,
+                    kind: action.kind,
+                    marker: action.marker,
+                    hash: ownershipHash(content, action.kind, action.marker),
+                });
+                const backupEntry = backup.manifest.files.find((entry) => entry.target === action.target);
+                if (backupEntry)
+                    backupEntry.afterHash = hash(content);
+            }
+            await atomicWrite(path.join(backup.dir, 'migration-manifest.json'), Buffer.from(`${JSON.stringify(backup.manifest, null, 2)}\n`));
+            const state = await loadState();
+            state.projects[projectKey(options.projectDir)] = {
+                projectDir: path.resolve(options.projectDir),
+                updatedAt: new Date().toISOString(),
+                backupDir: backup.dir,
+                runtimes: preview.runtimes,
+                runtimeScopes: preview.runtimeScopes,
+                ...(preview.runtimes.length === 1 ? { activeRuntime: preview.runtimes[0] } : {}),
+                ownedFiles: owned,
+            };
+            await atomicWrite(statePath(), Buffer.from(`${JSON.stringify(state, null, 2)}\n`));
+        }
+        let appliedRuntimeOperations;
+        let restartRequired = false;
+        if (preview.runtimeOperations.length > 0 && preview.pipelineVersion) {
+            const inspection = inspectClaudePluginIntegration(preview.pipelineVersion, options.claudeCommandRunner);
+            if (inspection.error) {
+                throw new RuntimeManagerError('E_CLAUDE_PLUGIN_INSPECTION_FAILED', `Could not inspect Claude plugins: ${inspection.error}`, 'Update Claude Code, then rerun `planr setup --runtime claude --scope user`.');
+            }
+            try {
+                const result = applyClaudePluginIntegration(preview.pipelineVersion, inspection, options.claudeCommandRunner);
+                appliedRuntimeOperations = result.operations;
+                restartRequired = result.restartRequired;
+            }
+            catch (cause) {
+                throw new RuntimeManagerError('E_CLAUDE_PLUGIN_UPDATE_FAILED', `Claude plugin update failed: ${cause instanceof Error ? cause.message : String(cause)}`, 'Run `planr runtime update claude --scope user` after checking Claude Code marketplace access.');
+            }
+        }
+        return {
+            ...preview,
+            ...(backup ? { backupDir: backup.dir } : {}),
+            ...(appliedRuntimeOperations ? { appliedRuntimeOperations } : {}),
+            restartRequired,
+        };
+    }
+    finally {
+        await lockHandle.close();
+        await unlink(lockPath).catch(() => undefined);
+    }
+}
+function removeManagedBlock(existing, marker) {
+    const begin = `<!-- ##planr-${marker}:begin##`;
+    const end = `<!-- ##planr-${marker}:end## -->`;
+    const start = existing.indexOf(begin);
+    const finish = existing.indexOf(end, start);
+    if (start === -1 || finish === -1)
+        return existing;
+    return `${existing.slice(0, start).trimEnd()}${existing.slice(finish + end.length)}`.trimStart();
+}
+export async function rollbackRuntime(projectDir, backupDir) {
+    const state = await loadState();
+    const project = state.projects[projectKey(projectDir)];
+    const selected = backupDir ?? project?.backupDir;
+    if (!selected)
+        throw new RuntimeManagerError('E_ROLLBACK_NOT_FOUND', 'No runtime backup is recorded for this project.');
+    const manifest = JSON.parse(await readFile(path.join(selected, 'migration-manifest.json'), 'utf8'));
+    const restored = [];
+    const retainedShared = [];
+    const key = projectKey(projectDir);
+    const sharedTargets = new Set(manifest.files
+        .filter((entry) => Object.entries(state.projects).some(([otherKey, otherProject]) => otherKey !== key &&
+        otherProject.ownedFiles.some((owned) => owned.target === entry.target)))
+        .map((entry) => entry.target));
+    for (const entry of manifest.files) {
+        if (!sharedTargets.has(entry.target) &&
+            !entry.existed &&
+            existsSync(entry.target) &&
+            entry.afterHash &&
+            hash(await readFile(entry.target)) !== entry.afterHash) {
+            throw new RuntimeManagerError('E_MIGRATION_CONFLICT', `Refusing to remove modified file ${entry.target}.`, 'Restore it manually or choose a different backup.');
+        }
+    }
+    for (const entry of manifest.files) {
+        if (sharedTargets.has(entry.target)) {
+            retainedShared.push(entry.target);
+            continue;
+        }
+        if (entry.existed && entry.backup) {
+            await mkdir(path.dirname(entry.target), { recursive: true });
+            await copyFile(entry.backup, entry.target);
+        }
+        else if (existsSync(entry.target)) {
+            await unlink(entry.target);
+        }
+        restored.push(entry.target);
+    }
+    delete state.projects[key];
+    await atomicWrite(statePath(), Buffer.from(`${JSON.stringify(state, null, 2)}\n`));
+    return { ok: true, restored, retainedShared };
+}
+export async function removeRuntime(runtime, projectDir) {
+    const state = await loadState();
+    const key = projectKey(projectDir);
+    const project = state.projects[key];
+    if (!project)
+        throw new RuntimeManagerError('E_RUNTIME_STATE_MISSING', 'No managed runtime installation is recorded for this project.');
+    const removed = [];
+    const retainedShared = [];
+    const runtimeFiles = project.ownedFiles.filter((file) => file.runtime === runtime);
+    const sharedTargets = new Set(runtimeFiles
+        .filter((file) => Object.entries(state.projects).some(([otherKey, otherProject]) => otherKey !== key &&
+        otherProject.ownedFiles.some((owned) => owned.runtime === runtime && owned.target === file.target)))
+        .map((file) => file.target));
+    const lockFile = project.ownedFiles.find((file) => file.runtime === 'core' && file.target.endsWith('runtime-lock.json'));
+    // Validate every owned byte before mutating anything so a late conflict cannot
+    // leave the installation half-removed.
+    for (const file of runtimeFiles) {
+        if (!existsSync(file.target) || sharedTargets.has(file.target))
+            continue;
+        const current = await readFile(file.target);
+        if (ownershipHash(current, file.kind, file.marker) !== file.hash) {
+            throw new RuntimeManagerError('E_MIGRATION_CONFLICT', `Refusing to remove modified OpenPlanr file ${file.target}.`, 'Run rollback or preserve the hand edits before removing the adapter.');
+        }
+    }
+    let lock;
+    if (lockFile && existsSync(lockFile.target)) {
+        const current = await readFile(lockFile.target);
+        if (hash(current) !== lockFile.hash) {
+            throw new RuntimeManagerError('E_MIGRATION_CONFLICT', `Refusing to update modified OpenPlanr file ${lockFile.target}.`, 'Run rollback or preserve the hand edits before removing the adapter.');
+        }
+        try {
+            lock = JSON.parse(current.toString('utf8'));
+        }
+        catch {
+            throw new RuntimeManagerError('E_MIGRATION_CONFLICT', `Refusing to update invalid runtime lock ${lockFile.target}.`, 'Repair or roll back the runtime lock before removing the adapter.');
+        }
+    }
+    for (const file of runtimeFiles) {
+        if (!existsSync(file.target))
+            continue;
+        if (sharedTargets.has(file.target)) {
+            retainedShared.push(file.target);
+            continue;
+        }
+        const current = await readFile(file.target);
+        if (file.kind === 'managed-block') {
+            await atomicWrite(file.target, Buffer.from(removeManagedBlock(current.toString('utf8'), file.marker ?? 'runtime')));
+        }
+        else {
+            await unlink(file.target);
+        }
+        removed.push(file.target);
+    }
+    project.ownedFiles = project.ownedFiles.filter((file) => file.runtime !== runtime);
+    project.runtimes = project.runtimes.filter((item) => item !== runtime);
+    if (project.runtimeScopes)
+        delete project.runtimeScopes[runtime];
+    project.activeRuntime = project.runtimes.length === 1 ? project.runtimes[0] : undefined;
+    project.updatedAt = new Date().toISOString();
+    if (lockFile && lock) {
+        lock.adapters = lock.adapters.filter((adapter) => adapter.runtime !== runtime);
+        if (lock.adapters.length === 0) {
+            await unlink(lockFile.target);
+            project.ownedFiles = project.ownedFiles.filter((file) => file !== lockFile);
+            removed.push(lockFile.target);
+        }
+        else {
+            lock.generatedAt = new Date().toISOString();
+            lock.manifestDigest = `sha256:${hash(JSON.stringify({
+                protocol: lock.protocolVersion,
+                pipelineVersion: lock.components.pipeline,
+                adapters: lock.adapters,
+            }))}`;
+            const content = Buffer.from(`${JSON.stringify(lock, null, 2)}\n`);
+            await atomicWrite(lockFile.target, content);
+            lockFile.hash = hash(content);
+        }
+    }
+    else if (lockFile && project.runtimes.length === 0 && !existsSync(lockFile.target)) {
+        project.ownedFiles = project.ownedFiles.filter((file) => file !== lockFile);
+    }
+    if (project.runtimes.length === 0 && project.ownedFiles.length === 0)
+        delete state.projects[key];
+    await atomicWrite(statePath(), Buffer.from(`${JSON.stringify(state, null, 2)}\n`));
+    return { ok: true, removed, retainedShared };
+}
+function homeProjectRecord(state) {
+    return state.projects[projectKey(userHome())];
+}
+export async function previewHomeProjectCleanup() {
+    const state = await loadState();
+    const project = homeProjectRecord(state);
+    if (!project || path.resolve(project.projectDir) !== path.resolve(userHome()))
+        return [];
+    return project.ownedFiles.filter((file) => file.scope === 'project').map((file) => file.target);
+}
+export async function managedRuntimesForProject(projectDir) {
+    const state = await loadState();
+    return [...(state.projects[projectKey(projectDir)]?.runtimes ?? [])];
+}
+export function isOpenPlanrHome(projectDir) {
+    return path.resolve(projectDir) === path.resolve(userHome());
+}
+export async function cleanupHomeProjectInstall() {
+    const state = await loadState();
+    const key = projectKey(userHome());
+    const project = state.projects[key];
+    if (!project || path.resolve(project.projectDir) !== path.resolve(userHome())) {
+        return { ok: true, removed: [] };
+    }
+    const projectFiles = project.ownedFiles.filter((file) => file.scope === 'project');
+    for (const file of projectFiles) {
+        if (!existsSync(file.target))
+            continue;
+        const current = await readFile(file.target);
+        if (ownershipHash(current, file.kind, file.marker) !== file.hash) {
+            throw new RuntimeManagerError('E_MIGRATION_CONFLICT', `Refusing to clean modified OpenPlanr content from ${file.target}.`, 'Preserve the hand edits or use the recorded runtime backup before cleaning the home installation.');
+        }
+    }
+    const removed = [];
+    for (const file of projectFiles) {
+        if (!existsSync(file.target))
+            continue;
+        if (file.kind === 'managed-block') {
+            const remaining = removeManagedBlock((await readFile(file.target, 'utf8')).toString(), file.marker ?? 'runtime');
+            if (remaining.trim())
+                await atomicWrite(file.target, Buffer.from(remaining));
+            else
+                await unlink(file.target);
+        }
+        else {
+            await unlink(file.target);
+        }
+        removed.push(file.target);
+    }
+    project.ownedFiles = project.ownedFiles.filter((file) => file.scope !== 'project');
+    for (const runtime of [...project.runtimes]) {
+        const runtimeFiles = project.ownedFiles.filter((file) => file.runtime === runtime);
+        if (runtimeFiles.length === 0) {
+            project.runtimes = project.runtimes.filter((item) => item !== runtime);
+            if (project.runtimeScopes)
+                delete project.runtimeScopes[runtime];
+        }
+        else if (project.runtimeScopes) {
+            project.runtimeScopes[runtime] = inferRuntimeScope(project.ownedFiles, runtime);
+        }
+    }
+    project.updatedAt = new Date().toISOString();
+    project.activeRuntime = project.runtimes.length === 1 ? project.runtimes[0] : undefined;
+    if (project.runtimes.length === 0 && project.ownedFiles.length === 0)
+        delete state.projects[key];
+    await atomicWrite(statePath(), Buffer.from(`${JSON.stringify(state, null, 2)}\n`));
+    return { ok: true, removed };
+}
+export async function runtimeDoctor(projectDir, options = {}) {
+    const diagnostics = [];
+    const repairs = [];
+    let lockedAdapters;
+    const nodeMajor = Number(process.versions.node.split('.')[0]);
+    diagnostics.push({
+        code: 'node-version',
+        status: nodeMajor >= 20 ? 'pass' : 'fail',
+        message: `Node.js ${process.versions.node}`,
+        ...(nodeMajor < 20 ? { fix: 'Install Node.js 20 or newer.' } : {}),
+    });
+    const state = await loadState();
+    const installed = state.projects[projectKey(projectDir)];
+    const detectedRuntimes = detectRuntimes();
+    for (const result of detectedRuntimes) {
+        const configured = installed?.runtimes.includes(result.runtime) ?? false;
+        diagnostics.push({
+            code: `runtime-${result.runtime}`,
+            status: result.installed || !configured ? 'pass' : 'warn',
+            message: result.installed
+                ? `${result.runtime} detected`
+                : configured
+                    ? `${result.runtime} is configured but not detected`
+                    : `${result.runtime} is not installed or configured`,
+            ...(!result.installed && configured
+                ? { fix: `Install ${result.command} only if you intend to use this adapter.` }
+                : {}),
+        });
+    }
+    const pipeline = resolvePipelinePackage(false);
+    diagnostics.push({
+        code: 'pipeline-package',
+        status: pipeline ? 'pass' : 'warn',
+        message: pipeline ? `planr-pipeline ${pipeline.version}` : 'Planning-only installation',
+        ...(!pipeline ? { fix: 'Install openplanr without omitting optional dependencies.' } : {}),
+    });
+    if (pipeline) {
+        const registry = listRuntimeAdapters();
+        for (const adapter of registry) {
+            const detected = detectedRuntimes.find((entry) => entry.runtime === adapter.id)?.installed;
+            const configured = installed?.runtimes.includes(adapter.id) ?? false;
+            if (!detected && !configured)
+                continue;
+            const mode = adapter.capabilities?.interactiveQuestions;
+            diagnostics.push({
+                code: `runtime-interaction-${adapter.id}`,
+                status: mode ? 'pass' : 'fail',
+                message: mode
+                    ? `${adapter.id} declares ${mode} guided questions with native → chat → terminal → handoff fallback`
+                    : `${adapter.id} does not declare a guided interaction capability`,
+                ...(!mode
+                    ? { fix: 'Install the exact compatible planr-pipeline release and rerun setup.' }
+                    : {}),
+            });
+        }
+    }
+    const claudeManagedAtUserScope = Object.values(state.projects).some((project) => project.runtimes.includes('claude-code') &&
+        ['user', 'both'].includes(project.runtimeScopes?.['claude-code'] ??
+            inferRuntimeScope(project.ownedFiles, 'claude-code')));
+    const claudeDetected = Boolean(options.claudeCommandRunner) ||
+        (detectedRuntimes.find((runtime) => runtime.runtime === 'claude-code')?.installed ?? false);
+    if (pipeline && claudeDetected && claudeManagedAtUserScope) {
+        const inspection = inspectClaudePluginIntegration(pipeline.version, options.claudeCommandRunner);
+        if (inspection.error) {
+            diagnostics.push({
+                code: 'runtime-claude-plugins',
+                status: 'fail',
+                message: `Claude plugin state could not be inspected: ${inspection.error}`,
+                fix: 'Update Claude Code, then run `planr runtime update claude --scope user`.',
+            });
+        }
+        else {
+            const drift = inspection.plugins.filter((plugin) => !plugin.installed ||
+                !plugin.enabled ||
+                !plugin.identityValid ||
+                plugin.installedVersion !== plugin.expectedVersion);
+            diagnostics.push({
+                code: 'runtime-claude-plugins',
+                status: inspection.ready ? 'pass' : 'fail',
+                message: inspection.ready
+                    ? `Claude plugins match compatibility versions (${inspection.plugins
+                        .map((plugin) => `${plugin.name} ${plugin.expectedVersion}`)
+                        .join(', ')})`
+                    : `Claude plugin drift detected: ${drift
+                        .map((plugin) => `${plugin.id} ${plugin.installedVersion ?? 'missing'} → ${plugin.expectedVersion}${!plugin.identityValid ? ' (invalid identity)' : ''}`)
+                        .join(', ')}`,
+                ...(!inspection.ready
+                    ? { fix: 'Run `planr runtime update claude --scope user` and restart Claude Code.' }
+                    : {}),
+            });
+            if (inspection.legacyPluginIds.length > 0) {
+                diagnostics.push({
+                    code: 'runtime-claude-legacy-plugin',
+                    status: 'warn',
+                    message: `Legacy Claude plugin installation detected: ${inspection.legacyPluginIds.join(', ')}`,
+                    fix: 'Verify `openplanr@openplanr`, then remove the legacy plugin from Claude Code.',
+                });
+            }
+        }
+    }
+    const expectsProjectLock = installed?.ownedFiles.some((file) => file.scope === 'project') ?? false;
+    const lock = path.join(projectDir, '.planr', 'runtime-lock.json');
+    if (!existsSync(lock)) {
+        const lockStatus = expectsProjectLock ? 'warn' : installed ? 'pass' : 'warn';
+        diagnostics.push({
+            code: 'runtime-lock',
+            status: lockStatus,
+            message: expectsProjectLock
+                ? 'Project runtime lock missing'
+                : installed
+                    ? 'User-scope setup does not require a project runtime lock'
+                    : 'No managed runtime setup found for this directory',
+            ...(expectsProjectLock
+                ? { fix: 'Run `planr setup --scope project`.' }
+                : !installed
+                    ? { fix: 'Run `planr setup`.' }
+                    : {}),
+        });
+    }
+    else {
+        try {
+            const value = JSON.parse(readFileSync(lock, 'utf8'));
+            lockedAdapters = value.adapters;
+            const cliVersion = readOpenPlanrVersion();
+            const cliDrift = value.components?.cli !== cliVersion;
+            const componentDrift = cliDrift ||
+                (pipeline && value.components?.pipeline !== pipeline.version) ||
+                value.components?.skills !== OPENPLANR_SKILLS_VERSION;
+            const expectedDigest = `sha256:${hash(JSON.stringify({
+                protocol: value.protocolVersion,
+                pipelineVersion: value.components?.pipeline,
+                adapters: value.adapters,
+            }))}`;
+            const digestDrift = value.manifestDigest !== expectedDigest;
+            const registry = listRuntimeAdapters();
+            const adapterDrift = (value.adapters ?? []).some((locked) => {
+                const current = registry.find((adapter) => adapter.id === locked.runtime);
+                return (!current ||
+                    current.version !== locked.version ||
+                    current.capabilityLevel !== locked.capabilityLevel);
+            });
+            const drift = componentDrift || digestDrift || adapterDrift;
+            // FR11: an OpenPlanr upgrade advances the CLI version the lock recorded.
+            // When the CLI component trails the installed build and nothing that
+            // governs Operating Board dispatch (runtime adapters, manifest digest)
+            // diverged, the lock is simply behind an expected upgrade — surface it as
+            // an informational `warn`, not a `fail` implying the board is broken. A
+            // digest/adapter drift, or a component drift that does not include the CLI
+            // (for example a pinned obsolete skill bundle), remains a genuine `fail`.
+            const genuineDrift = digestDrift || adapterDrift;
+            const upgradeOnlyDrift = drift && !genuineDrift && cliDrift;
+            diagnostics.push({
+                code: drift ? 'lock-drift' : 'runtime-lock',
+                status: genuineDrift ? 'fail' : upgradeOnlyDrift ? 'warn' : drift ? 'fail' : 'pass',
+                message: genuineDrift
+                    ? `Runtime lock drift detected (components: ${componentDrift}, digest: ${digestDrift}, adapters: ${adapterDrift})`
+                    : upgradeOnlyDrift
+                        ? `Runtime lock component versions trail an OpenPlanr upgrade (components: ${componentDrift}); this is expected after upgrading and does not affect Operating Board execution`
+                        : drift
+                            ? `Runtime lock drift detected (components: ${componentDrift}, digest: ${digestDrift}, adapters: ${adapterDrift})`
+                            : 'Project runtime lock matches installed component versions',
+                ...(drift
+                    ? {
+                        fix: upgradeOnlyDrift
+                            ? 'Run `planr runtime update all --scope project` to refresh the lock to the upgraded component versions.'
+                            : 'Run `planr runtime update all --scope project`.',
+                    }
+                    : {}),
+            });
+        }
+        catch {
+            diagnostics.push({
+                code: 'runtime-lock-invalid',
+                status: 'fail',
+                message: 'Project runtime lock is not valid JSON',
+                fix: 'Run `planr setup --scope project` after reviewing the existing lock.',
+            });
+        }
+    }
+    if (installed) {
+        if (lockedAdapters) {
+            const lockedState = lockedAdapters
+                .map((adapter) => `${adapter.runtime}:${adapter.installScope}`)
+                .sort();
+            const installedState = installed.runtimes
+                .map((runtime) => `${runtime}:${installed.runtimeScopes?.[runtime] ?? inferRuntimeScope(installed.ownedFiles, runtime)}`)
+                .sort();
+            const stateDrift = JSON.stringify(lockedState) !== JSON.stringify(installedState);
+            diagnostics.push({
+                code: stateDrift ? 'lock-state-drift' : 'lock-state',
+                status: stateDrift ? 'fail' : 'pass',
+                message: stateDrift
+                    ? 'Runtime lock adapters do not match the managed installation state'
+                    : 'Runtime lock adapters match the managed installation state',
+                ...(stateDrift ? { fix: 'Run `planr setup --dry-run`, then approve the repair.' } : {}),
+            });
+        }
+        const conflicts = [];
+        const missing = [];
+        for (const file of installed.ownedFiles) {
+            if (!existsSync(file.target))
+                missing.push(file.target);
+            else if (ownershipHash(readFileSync(file.target), file.kind, file.marker) !== file.hash)
+                conflicts.push(file.target);
+        }
+        diagnostics.push({
+            code: conflicts.length ? 'migration-conflict' : 'managed-files',
+            status: conflicts.length ? 'fail' : missing.length ? 'warn' : 'pass',
+            message: conflicts.length
+                ? `${conflicts.length} managed file(s) changed outside setup`
+                : missing.length
+                    ? `${missing.length} managed file(s) are missing`
+                    : 'Managed runtime files match recorded ownership hashes',
+            ...(conflicts.length || missing.length
+                ? { fix: 'Run `planr setup --dry-run`, then explicitly approve repair or rollback.' }
+                : {}),
+        });
+        const installedSkills = installed.ownedFiles.filter((file) => file.runtime === 'codex' && file.target.endsWith(`${path.sep}SKILL.md`));
+        if (installedSkills.length > 0) {
+            const supported = new Set(['artifact', 'doctor', 'operate', 'pipeline']);
+            const violations = [];
+            for (const skill of installedSkills) {
+                if (!existsSync(skill.target))
+                    continue;
+                const content = readFileSync(skill.target, 'utf8');
+                if (/`planr-pipeline\s+[^`]+`/u.test(content)) {
+                    violations.push(`${skill.target}: invokes planr-pipeline directly`);
+                }
+                for (const match of content.matchAll(/`planr\s+([a-z][\w-]*)(?:\s|`)/gu)) {
+                    if (!supported.has(match[1])) {
+                        violations.push(`${skill.target}: unknown planr command ${match[1]}`);
+                    }
+                }
+            }
+            diagnostics.push({
+                code: 'skill-commands',
+                status: violations.length > 0 ? 'fail' : 'pass',
+                message: violations.length > 0
+                    ? `${violations.length} installed skill command reference(s) are invalid`
+                    : 'Installed Codex skills reference public planr commands only',
+                ...(violations.length > 0
+                    ? { fix: 'Run `planr setup --runtime codex --scope user` to refresh managed skills.' }
+                    : {}),
+            });
+        }
+        const operateSkill = installedSkills.find((skill) => path.basename(path.dirname(skill.target)) === 'planr-operate');
+        if (installed.runtimes.includes('codex') && !operateSkill) {
+            diagnostics.push({
+                code: 'operate-skill',
+                status: 'warn',
+                message: 'The installed Codex adapter is missing the planr-operate skill',
+                fix: 'Run `planr setup --runtime codex --scope user` to install the managed skill.',
+            });
+        }
+        else if (operateSkill && existsSync(operateSkill.target)) {
+            const content = readFileSync(operateSkill.target, 'utf8');
+            const valid = /^name:\s*planr-operate$/mu.test(content) &&
+                /`planr operate(?:\s|`)/u.test(content) &&
+                /# Planr Operate — Codex-native workflow/u.test(content) &&
+                /planr operate inspect --json/u.test(content) &&
+                /bare `\$planr-operate`/u.test(content) &&
+                /Never dump a questionnaire/u.test(content) &&
+                /compact context review/u.test(content) &&
+                /If the user says “find it from the project,” continue investigating/u.test(content) &&
+                /`status`, `report`, `context show`/u.test(content) &&
+                /operating-advisor-response@1\.4/u.test(content) &&
+                /CEO, CTO, CPO, CMO, COO, then \[Chair\]/u.test(content) &&
+                /runtimeBinding: required/u.test(content) &&
+                /crossRuntimeFallback: false/u.test(content) &&
+                /harness prepare\|record\|finalize\|resume\|cancel/u.test(content) &&
+                /Never invoke another vendor runtime/u.test(content) &&
+                !/`planr-pipeline\s+[^`]+`/u.test(content) &&
+                /Never deploy, publish, spend, contact customers/u.test(content);
+            diagnostics.push({
+                code: 'operate-skill',
+                status: valid ? 'pass' : 'fail',
+                message: valid
+                    ? 'Installed planr-operate skill references the public CLI and preserves the SHIP boundary'
+                    : 'Installed planr-operate skill does not satisfy the functional command contract',
+                ...(!valid
+                    ? { fix: 'Run `planr setup --runtime codex --scope user` to refresh the managed skill.' }
+                    : {}),
+            });
+        }
+        const cursorOperateRule = installed.ownedFiles.find((file) => file.runtime === 'cursor' && path.basename(file.target) === 'openplanr-operate.mdc');
+        if (installed.runtimes.includes('cursor') && !cursorOperateRule) {
+            diagnostics.push({
+                code: 'operate-cursor-rule',
+                status: 'warn',
+                message: 'The installed Cursor adapter is missing the Operating Board rule',
+                fix: 'Run `planr setup --runtime cursor --scope project` to install the managed rule.',
+            });
+        }
+        else if (cursorOperateRule && existsSync(cursorOperateRule.target)) {
+            const content = readFileSync(cursorOperateRule.target, 'utf8');
+            const valid = /# OpenPlanr Operate — Cursor-native workflow/u.test(content) &&
+                /planr operate inspect\s+--json/u.test(content) &&
+                /one complete Cursor-bound cycle/u.test(content) &&
+                /Never dump a questionnaire/u.test(content) &&
+                /v1\.4 response/u.test(content) &&
+                /runtimeBinding: required/u.test(content) &&
+                /crossRuntimeFallback: false/u.test(content) &&
+                /internal `harness` lifecycle invisibly/u.test(content) &&
+                /Never invoke another vendor runtime/u.test(content) &&
+                !/`planr-pipeline\s+[^`]+`/u.test(content) &&
+                /do not approve, accept, apply, PLAN, SHIP/u.test(content);
+            diagnostics.push({
+                code: 'operate-cursor-rule',
+                status: valid ? 'pass' : 'fail',
+                message: valid
+                    ? 'Installed Cursor Operating Board rule references the public CLI and preserves the SHIP boundary'
+                    : 'Installed Cursor Operating Board rule does not satisfy the functional command contract',
+                ...(!valid
+                    ? {
+                        fix: 'Run `planr setup --runtime cursor --scope project` to refresh the managed rule.',
+                    }
+                    : {}),
+            });
+        }
+    }
+    else if (lockedAdapters?.length) {
+        diagnostics.push({
+            code: 'runtime-state-missing',
+            status: 'warn',
+            message: 'The project has a runtime lock but this machine has no managed adapter state',
+            fix: 'Run `planr setup` to install the locked runtime adapters on this machine.',
+        });
+    }
+    const accidentalHomeFiles = await previewHomeProjectCleanup();
+    if (accidentalHomeFiles.length > 0) {
+        diagnostics.push({
+            code: 'home-project-install',
+            status: 'warn',
+            message: `${accidentalHomeFiles.length} project-scoped managed file(s) were installed in the home directory`,
+            fix: 'Run `planr doctor --fix` to preview and remove only recorded OpenPlanr-owned project content.',
+        });
+    }
+    const provenancePath = path.join(projectDir, '.planr', 'provenance.jsonl');
+    if (existsSync(provenancePath)) {
+        const invalidLines = [];
+        const lines = readFileSync(provenancePath, 'utf8').split(/\r?\n/);
+        for (const [index, line] of lines.entries()) {
+            if (!line.trim())
+                continue;
+            try {
+                const event = JSON.parse(line);
+                if (!event.event_id || !event.producer?.product)
+                    invalidLines.push(index + 1);
+            }
+            catch {
+                invalidLines.push(index + 1);
+            }
+        }
+        diagnostics.push({
+            code: invalidLines.length ? 'provenance-invalid' : 'provenance',
+            status: invalidLines.length ? 'fail' : 'pass',
+            message: invalidLines.length
+                ? `Provenance contains invalid event lines: ${invalidLines.join(', ')}`
+                : 'Provenance is append-only JSONL with identifiable producers',
+            ...(invalidLines.length
+                ? {
+                    fix: 'Repair the invalid bytes, then explicitly append a recovery event. Doctor will not invent history.',
+                }
+                : {}),
+        });
+    }
+    diagnostics.push(...(await diagnoseOperatingBoard({
+        projectRoot: projectDir,
+        localRoot: path.join(userHome(), '.planr'),
+        pipelineVersion: pipeline?.version,
+    })));
+    if (pipeline) {
+        const result = spawnSync(process.execPath, [
+            path.join(pipeline.root, 'scripts', 'doctor.mjs'),
+            '--json',
+            ...(options.pipelineRepair === 'preview' ? ['--repair-preview'] : []),
+            ...(options.pipelineRepair === 'apply' ? ['--fix'] : []),
+        ], {
+            cwd: projectDir,
+            encoding: 'utf8',
+            windowsHide: true,
+            env: { ...process.env, PLANR_HOME: path.join(userHome(), '.planr') },
+        });
+        try {
+            const report = JSON.parse(result.stdout);
+            repairs.push(...(report.repairs ?? []));
+            for (const check of report.checks ?? []) {
+                if (check.status === 'ok')
+                    continue;
+                diagnostics.push({
+                    code: `pipeline-${check.id}`,
+                    status: check.status,
+                    message: check.message,
+                    ...(check.fix ? { fix: check.fix } : {}),
+                });
+            }
+        }
+        catch {
+            diagnostics.push({
+                code: 'pipeline-doctor-unavailable',
+                status: 'warn',
+                message: 'The pipeline doctor did not return valid JSON',
+                fix: 'Run `planr pipeline doctor` for direct diagnostics.',
+            });
+        }
+    }
+    const fail = diagnostics.some((item) => item.status === 'fail');
+    return { ok: !fail, diagnostics, repairs };
+}
+export async function clearRuntimeStateForTests(root) {
+    await rm(root, { recursive: true, force: true });
+}
+//# sourceMappingURL=runtime-manager-service.js.map

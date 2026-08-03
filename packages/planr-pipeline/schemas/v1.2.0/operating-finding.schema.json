@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-finding.schema.json",
+  "title": "OpenPlanr operating finding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "id", "cycleId", "title", "category", "problem", "cost", "proposal", "impact", "confidence", "ease", "score", "severity", "sensitivity", "criticalOverride", "lane", "owner", "evidenceRefs", "status", "dependsOn", "createdAt", "updatedAt"],
+  "properties": {
+    "kind": { "const": "operating-finding" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "id": { "type": "string", "pattern": "^FND-[0-9]{3,}$" },
+    "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+    "title": { "type": "string", "minLength": 1 },
+    "fingerprint": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "category": { "type": "string", "minLength": 1 },
+    "problem": { "type": "string", "minLength": 1 },
+    "cost": { "type": "string", "minLength": 1 },
+    "proposal": { "type": "string", "minLength": 1 },
+    "impact": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "confidenceCeiling": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "ease": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "score": { "type": "integer", "minimum": 1, "maximum": 125 },
+    "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+    "sensitivity": { "type": "string", "enum": ["public", "internal", "confidential", "restricted"] },
+    "criticalOverride": { "type": "boolean" },
+    "lane": { "type": "string", "enum": ["DEV", "OWNER", "AGENT"] },
+    "owner": { "type": "string", "minLength": 1 },
+    "evidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^EVD-[A-Za-z0-9._-]+$" } },
+    "status": { "type": "string", "enum": ["proposed", "accepted", "queued", "in-progress", "done", "rejected", "superseded"] },
+    "dependsOn": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^(?:FND|DEC|GAP)-[0-9]{3,}$" } },
+    "parked": { "type": "boolean" },
+    "stalledCycles": { "type": "integer", "minimum": 0 },
+    "supersededBy": { "type": "string", "pattern": "^FND-[0-9]{3,}$" },
+    "rejectionReason": { "type": "string", "minLength": 1 },
+    "scoreAmendment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prior", "next", "reason", "actor", "timestamp"],
+      "properties": {
+        "prior": { "$ref": "#/$defs/scoreComponents" },
+        "next": { "$ref": "#/$defs/scoreComponents" },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "id"],
+          "properties": {
+            "kind": { "const": "human" },
+            "id": { "type": "string", "minLength": 1, "maxLength": 128 }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "scoreComponents": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["impact", "confidence", "ease"],
+      "properties": {
+        "impact": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "ease": { "type": "integer", "minimum": 1, "maximum": 5 }
+      }
+    }
+  }
+}

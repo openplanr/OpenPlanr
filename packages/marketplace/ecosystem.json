@@ -1,0 +1,179 @@
+{
+  "schemaVersion": "1.1.0",
+  "generatedAt": "2026-08-03T14:06:57.549Z",
+  "protocol": {
+    "current": "1.4.0",
+    "supported": [
+      "1.0.x",
+      "1.1.x",
+      "1.2.x",
+      "1.3.x",
+      "1.4.x"
+    ]
+  },
+  "components": {
+    "cli": {
+      "version": "1.22.0",
+      "pipelineRange": "^0.39.0"
+    },
+    "pipeline": {
+      "version": "0.39.0",
+      "cliRange": "^1.22.0"
+    },
+    "skills": {
+      "version": "1.24.0",
+      "cliRange": "^1.22.0"
+    },
+    "marketplace": {
+      "version": "1.9.0"
+    }
+  },
+  "adapters": [
+    {
+      "runtime": "claude-code",
+      "version": "0.39.0",
+      "capabilityLevel": "product",
+      "pipelineRange": "^0.39.0",
+      "operatingBoard": {
+        "declared": true,
+        "available": true,
+        "entrypoint": "/planr-pipeline:operate"
+      },
+      "interactiveQuestions": "native",
+      "operatingAdvisorDispatch": "native-agent"
+    },
+    {
+      "runtime": "codex",
+      "version": "0.39.0",
+      "capabilityLevel": "workflow",
+      "pipelineRange": "^0.39.0",
+      "operatingBoard": {
+        "declared": true,
+        "available": true,
+        "entrypoint": "$planr-operate"
+      },
+      "interactiveQuestions": "native",
+      "operatingAdvisorDispatch": "native-agent"
+    },
+    {
+      "runtime": "cursor",
+      "version": "0.39.0",
+      "capabilityLevel": "workflow",
+      "pipelineRange": "^0.39.0",
+      "operatingBoard": {
+        "declared": true,
+        "available": true,
+        "entrypoint": "planr operate"
+      },
+      "interactiveQuestions": "chat",
+      "operatingAdvisorDispatch": "sequential-native"
+    }
+  ],
+  "capabilities": {
+    "operatingBoard": {
+      "status": "available",
+      "command": "planr operate",
+      "protocolRange": "^1.2.0",
+      "components": {
+        "pipeline": "0.39.0",
+        "cli": "1.22.0",
+        "skills": "1.24.0",
+        "marketplace": "1.9.0"
+      },
+      "certifiedRuntimes": [
+        "claude-code",
+        "codex",
+        "cursor"
+      ],
+      "missing": [],
+      "releaseOperation": {
+        "operationId": "OPERATE-SPEC-002",
+        "operationDigest": "sha256:76a2653b0f3a32e1b92bc6ef7f8c23839df263ea3bf2bcdfdd25ab5d988cf8cc",
+        "state": "verified",
+        "reconciliation": "matched"
+      }
+    },
+    "guidedOperatingBoard": {
+      "status": "available",
+      "command": "planr operate",
+      "protocolRange": "^1.2.0",
+      "components": {
+        "pipeline": "0.32.1",
+        "cli": "1.16.1",
+        "skills": "1.18.1",
+        "marketplace": "1.3.1"
+      },
+      "certifiedRuntimes": [
+        "claude-code",
+        "codex",
+        "cursor"
+      ],
+      "advisorDispatch": {
+        "claude-code": "native-isolated",
+        "codex": "native-bounded",
+        "cursor": "structured-provider"
+      },
+      "missing": [],
+      "releaseOperation": {
+        "operationId": "OPERATE-SPEC-003-R3",
+        "operationDigest": "sha256:00837653537a0c49b596ea5f4d6b3055637a7c16598a3efc72e58abef3644933",
+        "state": "verified",
+        "reconciliation": "matched"
+      }
+    },
+    "agenticOperatingBoard": {
+      "status": "available",
+      "command": "planr operate",
+      "protocolRange": "^1.4.0",
+      "components": {
+        "pipeline": "0.39.0",
+        "cli": "1.22.0",
+        "skills": "1.24.0",
+        "marketplace": "1.9.0"
+      },
+      "certifiedRuntimes": [
+        "claude-code",
+        "codex",
+        "cursor"
+      ],
+      "advisorDispatch": {
+        "claude-code": "native-agent",
+        "codex": "native-agent",
+        "cursor": "sequential-native"
+      },
+      "missing": [],
+      "releaseOperation": {
+        "operationId": "OPERATE-SPEC-009",
+        "operationDigest": "sha256:80d85c0117c45b9625102d202517d539e328f94bdead8ab7c20927221db1a671",
+        "state": "verified",
+        "reconciliation": "matched"
+      }
+    }
+  },
+  "releaseTransaction": {
+    "model": "coordinated-saga",
+    "atomicity": "participant-local",
+    "ledger": {
+      "kind": "marketplace-draft-pr",
+      "repository": "openplanr/marketplace",
+      "schema": "schemas/ecosystem-operation.schema.json"
+    },
+    "participantOrder": [
+      "pipeline",
+      "cli",
+      "skills",
+      "marketplace"
+    ],
+    "closeout": {
+      "model": "two-step-marketplace-finalization",
+      "sequence": [
+        "merge-unavailable-ledger",
+        "tag-and-verify-marketplace",
+        "record-finalization-and-expose"
+      ],
+      "availabilityGate": "verified-operation-after-ledger-merge-and-marketplace-tag"
+    },
+    "recovery": "reconcile-and-resume",
+    "publishedCompensation": "forward-fix"
+  }
+}

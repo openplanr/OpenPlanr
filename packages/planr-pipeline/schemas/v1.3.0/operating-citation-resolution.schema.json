@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.3.0/operating-citation-resolution.schema.json",
+  "title": "OpenPlanr Protocol v1.3 operating citation resolution",
+  "description": "The engine's post-hoc verdict on a single cited reference. A resolved citation records the snapshotted evidence ID and snapshot digest. A rejected citation records the rejection reason and the opened gap; the proposal is release-blocking until the gap is closed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "citationKey", "outcome"],
+  "properties": {
+    "kind": { "const": "operating-citation-resolution" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.3.0" },
+    "citationKey": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$", "maxLength": 128 },
+    "outcome": { "type": "string", "enum": ["resolved", "rejected"] },
+    "evidenceId": { "type": "string", "pattern": "^EVD-[A-Za-z0-9._-]+$" },
+    "snapshotDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "reason": {
+      "type": "string",
+      "enum": ["fabricated-path", "wrong-line-range", "stale-revision", "unresolvable"]
+    },
+    "gapId": { "type": "string", "pattern": "^GAP-[A-Za-z0-9._-]+$" }
+  },
+  "oneOf": [
+    {
+      "title": "resolved citation",
+      "allOf": [
+        { "properties": { "outcome": { "const": "resolved" } } },
+        { "required": ["evidenceId", "snapshotDigest"] },
+        { "not": { "required": ["reason"] } },
+        { "not": { "required": ["gapId"] } }
+      ]
+    },
+    {
+      "title": "rejected citation",
+      "allOf": [
+        { "properties": { "outcome": { "const": "rejected" } } },
+        { "required": ["reason", "gapId"] },
+        { "not": { "required": ["evidenceId"] } },
+        { "not": { "required": ["snapshotDigest"] } }
+      ]
+    }
+  ]
+}

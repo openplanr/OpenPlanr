@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/operating-research-mandate.schema.json",
+  "title": "OpenPlanr Protocol v1.4 operating research mandate",
+  "description": "A research-first instruction for the selected runtime. It names workspace boundaries and expected context outputs without embedding a repository evidence pack.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "cycleId", "runtimeBinding", "researchMode", "focus", "roots", "forbiddenEffects", "outputSchema", "mandateDigest"],
+  "properties": {
+    "kind": { "const": "operating-research-mandate" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.4.0" },
+    "cycleId": { "type": "string", "pattern": "^CYCLE-[A-Za-z0-9._-]{1,120}$" },
+    "runtimeBinding": { "$ref": "operating-runtime-binding.schema.json" },
+    "researchMode": { "type": "string", "enum": ["local", "connected"] },
+    "connectedResearchConsentDigest": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+    "focus": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "maxLength": 128 } },
+    "roots": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 1024 } },
+    "forbiddenEffects": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "enum": ["write-workspace", "network-without-consent", "deploy", "publish", "spend", "customer-contact", "credential-change", "destructive-data", "plan", "ship"] } },
+    "outputSchema": { "const": "operating-context-claim@1.4.0" },
+    "mandateDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}

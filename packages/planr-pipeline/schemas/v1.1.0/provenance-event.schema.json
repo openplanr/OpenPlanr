@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/provenance-event.schema.json",
+  "title": "OpenPlanr provenance JSONL event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_id", "timestamp", "artifact_id", "artifact_path", "operation", "producer", "run_id"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "event_id": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "artifact_id": { "type": "string", "minLength": 1 },
+    "artifact_path": { "type": "string", "minLength": 1 },
+    "operation": { "type": "string", "enum": ["created", "shaped", "decomposed", "updated", "promoted", "designed", "implemented", "verified", "shipped", "recovered"] },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product", "version", "runtime", "phase"],
+      "properties": {
+        "product": { "type": "string", "enum": ["openplanr", "planr-pipeline"] },
+        "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+" },
+        "runtime": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "phase": { "type": "string", "enum": ["planning", "po", "design", "dev", "qa", "delivery"] }
+      }
+    },
+    "run_id": { "type": "string", "minLength": 1 }
+  }
+}

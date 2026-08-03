@@ -1,0 +1,6 @@
+{
+  "citationKey": "cto-stale-revision-1",
+  "repositoryPath": "src/payments/charge.mjs",
+  "lineRange": { "start": 42, "end": 68 },
+  "pinnedRevision": "HEAD"
+}

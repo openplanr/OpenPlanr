@@ -1,0 +1,35 @@
+{
+  "kind": "operating-mandate",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.3.0",
+  "roleId": "strategy-finance",
+  "lensQuestion": "As CEO, investigate repository configuration, pricing, packaging, and business-model surfaces (config files, billing/plan code, READMEs); planning artifacts describing direction, scope, and what to stop (epics, specs, features, backlog); git history of recent strategic and pricing changes and determine the highest-leverage findings, decisions, and gaps within this mandate: Direction, business model, pricing and packaging, focus, economics, and what to stop.",
+  "mandate": "Direction, business model, pricing and packaging, focus, economics, and what to stop.",
+  "investigationMandate": {
+    "examine": [
+      "repository configuration, pricing, packaging, and business-model surfaces (config files, billing/plan code, READMEs)",
+      "planning artifacts describing direction, scope, and what to stop (epics, specs, features, backlog)",
+      "git history of recent strategic and pricing changes"
+    ],
+    "sufficientGrounding": "At least one cited repository path or planning artifact evidencing the current business-model, pricing, or focus surface, plus git history establishing recent strategic change — all resolvable at the pinned revision."
+  },
+  "boundaries": {
+    "roots": [
+      ".planr",
+      "lib",
+      "src"
+    ],
+    "sensitivityCeiling": "confidential",
+    "forbiddenPaths": [
+      ".env",
+      "secrets"
+    ]
+  },
+  "responseSchema": "operating-advisor-response@1.3.0",
+  "citationRequirement": {
+    "everyClaimCited": true,
+    "citationShape": "operating-citation@1.3.0",
+    "description": "Every claim carries a repository path with a line range and revision, a git revision, or a planr artifact id. The engine resolves and snapshots each citation fail-closed at the pinned revision and mints the evidence-of-record from what actually resolved; a fabricated, moved, unresolvable, or above-ceiling citation becomes a governed gap."
+  },
+  "mandateDigest": "sha256:22d46c10e07472e0d75a71f44dedf5c8d54b5f00f3829b81468bb4eaeece3fab"
+}

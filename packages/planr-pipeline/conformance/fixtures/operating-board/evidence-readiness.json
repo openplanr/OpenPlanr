@@ -1,0 +1,158 @@
+{
+  "kind": "operating-evidence-readiness",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "cycleId": "CYCLE-001",
+  "inputDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "evaluatedAt": "2026-07-28T09:02:30Z",
+  "roles": [
+    {
+      "roleId": "strategy-finance",
+      "readiness": "ready",
+      "requirements": [
+        {
+          "source": "planr",
+          "claimTypes": ["planning", "outcome"],
+          "minimumItems": 1,
+          "observedItems": 18,
+          "maxAgeHours": 168,
+          "oldestAgeHours": 12,
+          "observationWindow": "current-state",
+          "sensitivityCeiling": "confidential",
+          "satisfied": true
+        }
+      ],
+      "missingEvidence": [],
+      "evidenceRefs": ["EVD-planr-current"],
+      "modelCallAllowed": true,
+      "gapId": null
+    },
+    {
+      "roleId": "technology-risk",
+      "readiness": "ready",
+      "requirements": [
+        {
+          "source": "repository",
+          "claimTypes": ["code", "architecture"],
+          "minimumItems": 1,
+          "observedItems": 42,
+          "maxAgeHours": 168,
+          "oldestAgeHours": 1,
+          "observationWindow": "current-state",
+          "sensitivityCeiling": "restricted",
+          "satisfied": true
+        },
+        {
+          "source": "git",
+          "claimTypes": ["change-history"],
+          "minimumItems": 1,
+          "observedItems": 7,
+          "maxAgeHours": 720,
+          "oldestAgeHours": 48,
+          "observationWindow": "30d",
+          "sensitivityCeiling": "confidential",
+          "satisfied": true
+        }
+      ],
+      "missingEvidence": [],
+      "evidenceRefs": ["EVD-repo-payment"],
+      "modelCallAllowed": true,
+      "gapId": null
+    },
+    {
+      "roleId": "product-activation",
+      "readiness": "ready",
+      "requirements": [
+        {
+          "source": "repository",
+          "claimTypes": ["user-surface"],
+          "minimumItems": 1,
+          "observedItems": 4,
+          "maxAgeHours": 168,
+          "oldestAgeHours": 1,
+          "observationWindow": "current-state",
+          "sensitivityCeiling": "restricted",
+          "satisfied": true
+        }
+      ],
+      "missingEvidence": [],
+      "evidenceRefs": ["EVD-repo-ui"],
+      "modelCallAllowed": true,
+      "gapId": null
+    },
+    {
+      "roleId": "growth-market",
+      "readiness": "not_evaluated",
+      "requirements": [
+        {
+          "source": "planr",
+          "claimTypes": ["outcome", "activation"],
+          "minimumItems": 1,
+          "observedItems": 0,
+          "maxAgeHours": 720,
+          "oldestAgeHours": null,
+          "observationWindow": "30d",
+          "sensitivityCeiling": "confidential",
+          "satisfied": false
+        },
+        {
+          "source": "file-import",
+          "claimTypes": ["market-signal"],
+          "minimumItems": 1,
+          "observedItems": 0,
+          "maxAgeHours": 2160,
+          "oldestAgeHours": null,
+          "observationWindow": "90d",
+          "sensitivityCeiling": "confidential",
+          "satisfied": false
+        }
+      ],
+      "missingEvidence": ["activation outcome or market signal"],
+      "evidenceRefs": [],
+      "modelCallAllowed": false,
+      "gapId": "GAP-001"
+    },
+    {
+      "roleId": "operations-customer",
+      "readiness": "not_evaluated",
+      "requirements": [
+        {
+          "source": "planr",
+          "claimTypes": ["operations", "support"],
+          "minimumItems": 1,
+          "observedItems": 0,
+          "maxAgeHours": 720,
+          "oldestAgeHours": null,
+          "observationWindow": "30d",
+          "sensitivityCeiling": "confidential",
+          "satisfied": false
+        }
+      ],
+      "missingEvidence": ["recent operations or support evidence"],
+      "evidenceRefs": [],
+      "modelCallAllowed": false,
+      "gapId": "GAP-002"
+    },
+    {
+      "roleId": "chair",
+      "readiness": "ready",
+      "requirements": [
+        {
+          "source": "advisor-results",
+          "claimTypes": ["verified-advisor-result"],
+          "minimumItems": 2,
+          "observedItems": 3,
+          "maxAgeHours": 24,
+          "oldestAgeHours": 1,
+          "observationWindow": "current-cycle",
+          "sensitivityCeiling": "confidential",
+          "satisfied": true
+        }
+      ],
+      "missingEvidence": [],
+      "evidenceRefs": ["EVD-advisor-results"],
+      "modelCallAllowed": true,
+      "gapId": null
+    }
+  ]
+}

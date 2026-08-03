@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-evidence-readiness.schema.json",
+  "title": "OpenPlanr operating lens evidence-readiness matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "cycleId", "inputDigest", "evaluatedAt", "roles"],
+  "properties": {
+    "kind": { "const": "operating-evidence-readiness" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+    "inputDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "evaluatedAt": { "type": "string", "format": "date-time" },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["roleId", "readiness", "requirements", "missingEvidence", "evidenceRefs", "modelCallAllowed", "gapId"],
+        "properties": {
+          "roleId": { "type": "string", "enum": ["strategy-finance", "technology-risk", "product-activation", "growth-market", "operations-customer", "chair"] },
+          "readiness": { "type": "string", "enum": ["ready", "not_evaluated"] },
+          "requirements": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "claimTypes", "minimumItems", "observedItems", "maxAgeHours", "oldestAgeHours", "observationWindow", "sensitivityCeiling", "satisfied"],
+              "properties": {
+                "source": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+                "claimTypes": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "type": "string", "minLength": 1 }
+                },
+                "minimumItems": { "type": "integer", "minimum": 1, "maximum": 10000 },
+                "observedItems": { "type": "integer", "minimum": 0, "maximum": 10000 },
+                "maxAgeHours": { "type": "integer", "minimum": 1, "maximum": 8760 },
+                "oldestAgeHours": { "type": ["number", "null"], "minimum": 0, "maximum": 8760 },
+                "observationWindow": {
+                  "type": "string",
+                  "enum": ["current-state", "current-cycle", "7d", "30d", "90d", "365d"]
+                },
+                "sensitivityCeiling": {
+                  "type": "string",
+                  "enum": ["public", "internal", "confidential", "restricted"]
+                },
+                "satisfied": { "type": "boolean" }
+              }
+            }
+          },
+          "missingEvidence": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+          "evidenceRefs": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^EVD-[A-Za-z0-9._-]+$" } },
+          "modelCallAllowed": { "type": "boolean" },
+          "gapId": { "type": ["string", "null"], "pattern": "^GAP-[0-9]{3,}$" }
+        }
+      }
+    }
+  }
+}

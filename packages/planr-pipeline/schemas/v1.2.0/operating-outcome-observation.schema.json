@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-outcome-observation.schema.json",
+  "title": "OpenPlanr typed operating outcome observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "id", "outcomeId", "observedAt", "window", "value", "unit", "queryIdentity", "aggregation", "sampleSize", "coverage", "freshness", "guardrails", "evaluation", "evidenceRefs"],
+  "properties": {
+    "kind": { "const": "operating-outcome-observation" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "id": { "type": "string", "pattern": "^OBS-[A-Za-z0-9._-]+$" },
+    "outcomeId": { "type": "string", "pattern": "^OUT-[0-9]{3,}$" },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "type": "string", "format": "date-time" },
+        "to": { "type": "string", "format": "date-time" }
+      }
+    },
+    "value": { "type": ["number", "null"] },
+    "unit": { "type": "string", "minLength": 1 },
+    "queryIdentity": { "type": "string", "minLength": 1 },
+    "aggregation": { "type": "string", "enum": ["sum", "average", "median", "minimum", "maximum", "count", "rate", "percentile", "latest"] },
+    "sampleSize": { "type": "integer", "minimum": 0 },
+    "coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+    "freshness": { "type": "string", "enum": ["fresh", "stale", "unknown"] },
+    "guardrails": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metric", "breached"],
+        "properties": {
+          "metric": { "type": "string", "minLength": 1 },
+          "breached": { "type": "boolean" },
+          "observedValue": { "type": ["number", "null"] }
+        }
+      }
+    },
+    "evaluation": { "type": "string", "enum": ["positive", "neutral", "negative", "inconclusive"] },
+    "evidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^EVD-[A-Za-z0-9._-]+$" } }
+  }
+}

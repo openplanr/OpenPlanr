@@ -1,0 +1,41 @@
+{
+  "kind": "operating-evidence",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "cycleId": "CYCLE-001",
+  "fingerprint": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "collectedAt": "2026-07-28T09:00:00Z",
+  "truncated": false,
+  "items": [
+    {
+      "id": "EVD-repo-pipeline",
+      "source": "repository",
+      "location": "lib/operate/reducer.mjs",
+      "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "collectedAt": "2026-07-28T09:00:00Z",
+      "observedFrom": "2026-07-28T08:00:00Z",
+      "observedTo": "2026-07-28T09:00:00Z",
+      "freshness": "fresh",
+      "sensitivity": "internal",
+      "claimTypes": ["code", "architecture"],
+      "repository": {
+        "componentId": "planr-pipeline",
+        "canonicalRemote": "https://github.com/openplanr/planr-pipeline.git",
+        "revision": "1234567890abcdef1234567890abcdef12345678",
+        "configuredBranch": "main",
+        "dirtyFingerprint": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "summary": "Deterministic Operating Board reducer implementation."
+    }
+  ],
+  "sources": [
+    {
+      "id": "repository",
+      "fingerprint": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "status": "collected",
+      "itemCount": 1,
+      "byteCount": 2048
+    }
+  ],
+  "warnings": []
+}

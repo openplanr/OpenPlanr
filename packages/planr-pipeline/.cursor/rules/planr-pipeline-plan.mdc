@@ -1,0 +1,196 @@
+---
+description: "Planr Pipeline — PO Phase orchestration (plan {feature}). Decomposes a spec into User Stories + Tasks. STOPS at the human-review gate."
+globs: []
+alwaysApply: false
+---
+
+# /plan {feature} — PO Phase orchestration (Cursor)
+
+When the user says **"plan {feature}"** (or "decompose {feature}", or
+similar), follow this rule end-to-end. The argument `{feature}` is the
+feature slug (no `feat-` or `spec-` prefix).
+
+**Hard rule R1: this command STOPS after writing US/Task files.** The user
+must review and explicitly say "ship {feature}" before any DEV-Phase work.
+
+**`--dry-run`:** same contract as Claude plugin `commands/plan.md` / `commands/procedures/plan-step0-preflight.md § 0.5b` (strategy + hypothetical agent list — **NO** writes / dispatch).
+
+---
+
+## Step 1 — Mode detection + input validation
+
+### 1a — Detect planr spec mode
+
+Before any other checks, look for `.planr/config.json` at the project root:
+
+1. If `.planr/config.json` exists AND its `idPrefix.spec` field is set,
+   assume **spec-driven mode**.
+2. In spec-driven mode, scan `.planr/specs/` for a directory matching
+   `^[A-Z]+-\d{3}-{feature}$`. The first match resolves to
+   `SPEC_DIR = .planr/specs/<that-dir>` (e.g.,
+   `.planr/specs/SPEC-001-auth-flow/` for `feature=auth-flow`).
+3. Otherwise, fall through to **default mode**
+   (`output/feats/feat-{feature}/`).
+
+For the rest of this rule, internally maintain `MODE = "spec-driven"` or
+`"default"`.
+
+### 1b — Validate required inputs
+
+Required (default mode):
+- `input/specs/spec-{feature}.md` — fail with: "spec-{feature}.md not found.
+  Create it (or use spec-driven mode by adding `idPrefix.spec` to
+  `.planr/config.json` and re-running)."
+- `input/tech/stack.md` — fail with: "input/tech/stack.md not found. Create
+  it from `.cursor/rules/templates/stack.md.tpl`."
+
+Required (spec-driven mode):
+- `<SPEC_DIR>/SPEC-NNN-{feature}.md` — if missing, **auto-scaffold** (see below).
+- `input/tech/stack.md` — see **Self-healing** below.
+
+### Auto-scaffolding the spec shell
+
+When `<SPEC_DIR>/SPEC-NNN-{feature}.md` is missing, scaffold instead of aborting:
+
+1. Ensure `.planr/config.json` exists. If absent, write:
+   ```json
+   {
+     "projectName": "<derive from package.json name or repo dir>",
+     "outputPaths": { "agile": ".planr" },
+     "idPrefix": { "spec": "SPEC" }
+   }
+   ```
+2. Ensure `.planr/specs/` exists.
+3. Determine the next SPEC ID. Scan `.planr/specs/` for `SPEC-NNN-*/` dirs,
+   take the highest NNN, increment. Three-digit format (`SPEC-001`).
+4. Create `.planr/specs/SPEC-NNN-{feature}/{stories,tasks,design}/`.
+5. Read `.cursor/rules/templates/spec-driven.md.tpl` (if present;
+   otherwise inline a minimal v1.0.0 spec template). Substitute ``,
+   ``, ``, ``. Write to
+   `<SPEC_DIR>/SPEC-NNN-{feature}.md`.
+6. Print and abort:
+   ```
+   ✓ Scaffolded SPEC-NNN-{feature} at .planr/specs/SPEC-NNN-{feature}/
+     Edit the spec body, then re-run: plan {feature}
+   ```
+7. **Do not invoke any role.** Decomposition runs only on the second
+   invocation, after the user has filled in the body.
+
+If the spec body exists but contains only placeholder text (detect via
+`_Describe the problem this feature solves` or any `_…_` template hint),
+apply the same abort.
+
+### Self-healing in spec mode
+
+In spec-driven mode, when `input/tech/stack.md` is missing:
+
+1. Read `.cursor/rules/templates/stack.md.tpl` (or inline the template
+   if absent) and write it verbatim to `input/tech/stack.md`. Create
+   `input/tech/` if absent.
+2. Print:
+   ```
+   ✓ Created input/tech/stack.md from template (Cursor pipeline self-heal)
+     Next: edit input/tech/stack.md to declare your real stack:
+           - AppName, Language, Framework, ORM (or DatabaseType if no ORM)
+           - BuildCommand, TestCommand (used by the 3-iteration correction loop)
+     Then re-run: plan {feature}
+   ```
+3. Abort gracefully — exit Step 1 here.
+
+In default mode, missing `stack.md` aborts with the same template guidance
+(no auto-create — default mode missing stack typically means missing the
+entire scaffolding).
+
+### Conditional inputs
+
+- **Default mode:** `input/ui/feat-{feature}/*.png` OR PNGs listed in spec's
+  `UIFiles:` block → triggers designer role.
+- **Spec mode:** PNGs in `<SPEC_DIR>/design/*.png` → triggers designer role.
+- `input/tech/stack.md` has non-empty `DatabaseType` AND DB env vars present →
+  triggers db role.
+- `output/db/schema.json` already up to date → skip db role.
+
+---
+
+## Step 2 — Dispatch roles in dependency order
+
+Run roles **sequentially as Composer subagents**. Each role's output feeds
+the next.
+
+### 2.1 — db role (conditional)
+
+- **Skip** if `output/db/schema.json` exists AND was generated within the
+  last 24h.
+- **Skip** if no `DatabaseType` in `stack.md`.
+- Otherwise: dispatch the **db** subagent with system prompt
+  `.cursor/rules/agents/db-agent.md`. Pass MODE, feature, stack.md.
+- Output: `output/db/schema.json`.
+
+### 2.2 — designer role (conditional)
+
+- PNG resolution depends on MODE:
+  - **Default mode:** PNGs from `UIFiles:` in spec → `input/ui/feat-{feature}/*.png` → `input/ui/*.png`.
+  - **Spec-driven mode:** PNGs from `<SPEC_DIR>/design/*.png`.
+- **Skip silently** if zero PNGs resolve.
+- Otherwise: dispatch the **designer** subagent with system prompt
+  `.cursor/rules/agents/designer-agent.md`. Pass MODE, feature, SPEC_DIR.
+- Output:
+  - **Default:** `output/feats/feat-{feature}/design-spec.md`
+  - **Spec-driven:** `<SPEC_DIR>/design/design-spec.md`
+
+### 2.3 — specification role (always, with skip optimization)
+
+- **Spec-driven mode optimization:** if `<SPEC_DIR>/stories/` is non-empty
+  (the user already ran `planr spec decompose`), skip role invocation. Print:
+  "Decomposition already exists; skipping specification-agent."
+- Otherwise: dispatch the **specification** subagent with system prompt
+  `.cursor/rules/agents/specification-agent.md`. Pass MODE, feature,
+  SPEC_DIR, plus reads of:
+  - **Default:** `input/specs/spec-{feature}.md`, `input/tech/stack.md`,
+    optional `output/feats/feat-{feature}/design-spec.md`, optional
+    `output/db/schema.json`
+  - **Spec-driven:** `<SPEC_DIR>/SPEC-NNN-{feature}.md`,
+    `input/tech/stack.md`, optional `<SPEC_DIR>/design/design-spec.md`,
+    optional `output/db/schema.json`
+- Output:
+  - **Default:** `output/feats/feat-{feature}/us-{N}/us-{N}.md` and
+    `tasks/task-{M}.md`
+  - **Spec-driven:** `<SPEC_DIR>/stories/US-NNN-{slug}.md` and
+    `<SPEC_DIR>/tasks/T-NNN-{slug}.md`
+
+---
+
+## Step 3 — STOP
+
+After the specification role completes, **STOP**. Do NOT invoke any DEV role.
+
+Print a summary:
+
+```
+✓ PO Phase complete for {feature}
+  Mode:        <default | spec-driven>
+  Output dir:  <output/feats/feat-{feature}/ | .planr/specs/SPEC-NNN-{feature}/>
+  Design spec: <created | skipped (no PNGs) | reused>
+  DB schema:   <created | reused | skipped>
+  US created:  N
+  Tasks:       M
+  Next step:   review the generated US/task files, then say "ship {feature}".
+```
+
+The user must explicitly say "ship {feature}" to proceed. Do not auto-chain.
+
+---
+
+## Failure modes
+
+| Condition | Action |
+|---|---|
+| Spec missing (default) | Abort, suggest creating `input/specs/spec-{feature}.md` or switching to spec-driven mode |
+| stack.md missing (default) | Abort, suggest copying from `.cursor/rules/templates/stack.md.tpl` |
+| db role fails (connection) | Continue without schema, flag in summary |
+| designer role fails (corrupt PNG) | Continue without design-spec, flag in summary |
+| specification role fails | Abort, surface the role's error verbatim |
+
+---
+
+*Generated by `planr rules generate --target cursor --scope pipeline`. Pairs with `planr-pipeline-ship.mdc` for the DEV phase.*

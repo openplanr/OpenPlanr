@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0.0",
+  "roles": [
+    { "id": "db-agent", "phase": "po-preflight", "activation": "conditional", "capability": "analysis-high", "writeBoundary": "output/db/schema.json only; database is read-only", "source": "agents/db-agent.md" },
+    { "id": "designer-agent", "phase": "po", "activation": "conditional", "capability": "analysis-high", "writeBoundary": "design-spec.md only", "source": "agents/designer-agent.md" },
+    { "id": "specification-agent", "phase": "po", "activation": "always", "capability": "analysis-high", "writeBoundary": "stories and task specifications only", "source": "agents/specification-agent.md" },
+    { "id": "entity-scaffold-agent", "phase": "po-preflight", "activation": "manual", "capability": "analysis-high", "writeBoundary": "output/src persistence scaffolding only", "source": "agents/entity-scaffold-agent.md" },
+    { "id": "frontend-agent", "phase": "dev", "activation": "conditional", "capability": "implementation-high", "writeBoundary": "task Create/Modify UI paths only", "source": "agents/frontend-agent.md" },
+    { "id": "backend-agent", "phase": "dev", "activation": "conditional", "capability": "implementation-high", "writeBoundary": "task Create/Modify tech paths only", "source": "agents/backend-agent.md" },
+    { "id": "qa-agent", "phase": "qa", "activation": "always", "capability": "read-only-qa", "writeBoundary": "qa-report.md only; source is read-only", "source": "agents/qa-agent.md" },
+    { "id": "devops-agent", "phase": "post-build", "activation": "conditional", "capability": "analysis-high", "writeBoundary": "declared infrastructure configuration only; never deploy", "source": "agents/devops-agent.md" },
+    { "id": "doc-gen-agent", "phase": "post-build", "activation": "conditional", "capability": "analysis-high", "writeBoundary": "Docs feature output only", "source": "agents/doc-gen-agent.md" }
+  ]
+}

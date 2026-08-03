@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/operating-interaction-surface.schema.json",
+  "title": "OpenPlanr Protocol v1.4 observed interaction surface",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "runtime", "surface", "observedAt"],
+  "properties": {
+    "kind": { "const": "operating-interaction-surface" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.4.0" },
+    "runtime": { "type": "string", "enum": ["claude-code", "codex", "cursor"] },
+    "surface": { "type": "string", "enum": ["native-question", "chat", "terminal", "handoff"] },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "capabilities": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+  }
+}

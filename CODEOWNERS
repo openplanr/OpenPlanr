@@ -1,1 +1,26 @@
-* @AsemDevs
+# BL-010 Phase 4.9 — path-scoped ownership, replacing the catch-all
+# `* @AsemDevs`. CODEOWNERS patterns are evaluated last-match-wins, so the
+# root-infra fallback is listed first and each packages/<name>/ entry below
+# it narrows ownership for that subtree. All owners are currently the same
+# person; the point of this change is the STRUCTURE (so per-package owners
+# can be added independently later), not a change in who reviews what today.
+
+# Root infra fallback: anything not matched by a more specific pattern below
+# (workspace config, root scripts, docs, changesets, CI, etc.)
+*                               @AsemDevs
+
+# Root-level infra, explicit for clarity even though the fallback above
+# already covers these.
+/.github/                      @AsemDevs
+/.changeset/                   @AsemDevs
+/scripts/                      @AsemDevs
+/docs/                         @AsemDevs
+/package.json                  @AsemDevs
+/package-lock.json             @AsemDevs
+/CODEOWNERS                    @AsemDevs
+
+# Packages
+/packages/OpenPlanr/            @AsemDevs
+/packages/planr-pipeline/       @AsemDevs
+/packages/skills/               @AsemDevs
+/packages/marketplace/          @AsemDevs

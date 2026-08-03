@@ -1,0 +1,262 @@
+# BL-010 Phase 4: moved from packages/marketplace/.github/workflows/operating-canary.yml.
+# See marketplace-guided-operate-canary.yml's header comment for the full
+# rationale on this file's post-merge checkout semantics (self-checkout and
+# the `openplanr/OpenPlanr` checkout now both yield the whole monorepo,
+# nested one level deeper than this file used to assume; the
+# planr-pipeline mirror carries no lockfile of its own). The same two
+# fixes apply here: `npm --prefix <dir>` invocations against `marketplace`
+# and `OpenPlanr` get `/packages/<pkg>` appended, and the pipeline install
+# uses `npm install` instead of `npm ci`.
+#
+# KNOWN OPEN GAP: same as marketplace-guided-operate-canary.yml — this job's
+# whole design (pin four independently-versioned repos to four independent
+# commit SHAs) predates the merge, when all four really were independent.
+# Whether that remains a meaningful thing to test once three of the four are
+# generated mirrors of the fourth is a maintainer question for Phase 6, not
+# something resolved here.
+name: "Marketplace — Operating Board Release Canary"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pipeline_commit:
+        description: Exact 40-character planr-pipeline commit SHA
+        required: true
+        type: string
+      cli_commit:
+        description: Exact 40-character OpenPlanr commit SHA
+        required: true
+        type: string
+      skills_commit:
+        description: Exact 40-character skills commit SHA
+        required: true
+        type: string
+      live_advisor_dispatch:
+        description: >-
+          Run the owner-gated real native-agent per-runtime cycle (requires a
+          runtime host + credentials and the published packed artifact)
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22]
+    steps:
+      - name: Validate immutable participant revisions
+        env:
+          PIPELINE_COMMIT: ${{ inputs.pipeline_commit }}
+          CLI_COMMIT: ${{ inputs.cli_commit }}
+          SKILLS_COMMIT: ${{ inputs.skills_commit }}
+        run: |
+          set -euo pipefail
+          for revision in "$PIPELINE_COMMIT" "$CLI_COMMIT" "$SKILLS_COMMIT"; do
+            [[ "$revision" =~ ^[0-9a-f]{40}$ ]] || {
+              echo "Canaries require exact lowercase 40-character commit SHAs." >&2
+              exit 1
+            }
+          done
+
+      - uses: actions/checkout@v4
+        with:
+          path: marketplace
+
+      - uses: actions/checkout@v4
+        with:
+          repository: openplanr/planr-pipeline
+          ref: ${{ inputs.pipeline_commit }}
+          path: planr-pipeline
+
+      - uses: actions/checkout@v4
+        with:
+          repository: openplanr/OpenPlanr
+          ref: ${{ inputs.cli_commit }}
+          path: OpenPlanr
+
+      - uses: actions/checkout@v4
+        with:
+          repository: openplanr/skills
+          ref: ${{ inputs.skills_commit }}
+          path: skills
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: |
+            OpenPlanr/package-lock.json
+
+      - name: Install exact participant dependencies
+        run: |
+          set -euo pipefail
+          npm --prefix planr-pipeline install
+          npm --prefix OpenPlanr/packages/OpenPlanr ci
+          mkdir -p evidence "$RUNNER_TEMP/packages" "$RUNNER_TEMP/openplanr-home"
+
+      - name: Verify Protocol v1.2 contracts and conformance
+        run: |
+          set -euo pipefail
+          (
+            cd planr-pipeline
+            npm run test:schema
+            npm run conformance:operate
+          ) 2>&1 | tee evidence/protocol-v1.2.log
+
+      - name: Verify deterministic replay and corruption rejection
+        run: |
+          set -euo pipefail
+          (
+            cd planr-pipeline
+            node --test tests/orchestration/operating-reducer.test.mjs
+          ) 2>&1 | tee evidence/event-replay.log
+
+      - name: Verify packed CLI with only planr on PATH
+        env:
+          OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/planr-pipeline
+        run: |
+          set -euo pipefail
+          npm --prefix OpenPlanr/packages/OpenPlanr run test:operate:packed 2>&1 |
+            tee evidence/packed-cli.log
+
+      - name: Verify operating security boundaries
+        run: |
+          set -euo pipefail
+          node -e "
+            const scripts=require('./OpenPlanr/packages/OpenPlanr/package.json').scripts ?? {};
+            if (!scripts['test:operate:security']) {
+              throw new Error('OpenPlanr must expose test:operate:security before release verification');
+            }
+          "
+          npm --prefix OpenPlanr/packages/OpenPlanr run test:operate:security 2>&1 |
+            tee evidence/security-boundaries.log
+
+      - name: Verify outcome reconciliation
+        run: |
+          set -euo pipefail
+          node -e "
+            const scripts=require('./OpenPlanr/packages/OpenPlanr/package.json').scripts ?? {};
+            if (!scripts['test:operate:outcomes']) {
+              throw new Error('OpenPlanr must expose test:operate:outcomes before release verification');
+            }
+          "
+          npm --prefix OpenPlanr/packages/OpenPlanr run test:operate:outcomes 2>&1 |
+            tee evidence/outcome-reconciliation.log
+
+      - name: Validate generated runtime skill
+        run: npm --prefix skills test
+
+      # FR15 real-runtime acceptance. The version/inspect canary never ran a
+      # cycle, so it could not have caught the orchestration deadlock that
+      # shipped. These steps run REAL Operate cycles against the exact release
+      # commits — the real fan-out lifecycle driver, real lease/heartbeat, real
+      # filesystem projection, real Chair consolidation, and real persisted
+      # report — including the intentionally-stalled-role scenario that lost four
+      # completed analyses in production. Only advisor CONTENT is scripted; the
+      # shipped defect was an orchestration hang on a stalled lens, not an
+      # advisor's output. The full real-native-agent cycle is owner-gated below.
+      - name: Real-runtime — advisor lifecycle driver and durability units
+        env:
+          OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/planr-pipeline
+        run: |
+          set -euo pipefail
+          (
+            cd OpenPlanr
+            npx vitest run \
+              tests/unit/operate-lifecycle-driver.test.ts \
+              tests/unit/operate-projection-persistence.test.ts \
+              tests/unit/operate-journal-crash.test.ts \
+              tests/unit/operate-integrity.test.ts \
+              tests/unit/operate-completion.test.ts
+          ) 2>&1 | tee evidence/real-runtime-units.log
+
+      - name: Real-runtime — full cycle, stalled role, and terminate-and-resume
+        env:
+          OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/planr-pipeline
+        run: |
+          set -euo pipefail
+          (
+            cd OpenPlanr
+            npx vitest run --config vitest.heavy.config.ts \
+              tests/integration/operate-lifecycle-chair-wiring.test.ts \
+              tests/integration/operate-partial-report.test.ts \
+              tests/integration/operate-question-resume.test.ts
+          ) 2>&1 | tee evidence/real-runtime-cycle.log
+
+      - name: Real-runtime — transport hiding (no lease/stdin/harness in transcript)
+        env:
+          OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/planr-pipeline
+        run: |
+          set -euo pipefail
+          (
+            cd OpenPlanr
+            npx vitest run tests/unit/operate-doctor.test.ts
+          ) 2>&1 | tee evidence/real-runtime-transport.log
+
+      - name: Build OpenPlanr for the real-runtime driver
+        run: npm --prefix OpenPlanr run build
+
+      - name: Real-runtime — large monorepo, gitignored .planr, stalled-role cycle
+        env:
+          OPENPLANR_CLI_ROOT: ${{ github.workspace }}/OpenPlanr
+          OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/planr-pipeline
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          node marketplace/scripts/operating-canary-real-runtime-fixtures/run-real-runtime-canary.mjs \
+            --openplanr "$OPENPLANR_CLI_ROOT" \
+            --pipeline "$OPENPLANR_PIPELINE_ROOT" \
+            --evidence evidence \
+            --run-url "$RUN_URL" \
+            2>&1 | tee evidence/real-runtime-driver.log
+
+      - name: Real-runtime — native-agent per-runtime cycle (owner-gated)
+        env:
+          LIVE: ${{ inputs.live_advisor_dispatch }}
+        run: |
+          set -euo pipefail
+          {
+            echo "OWNER-GATED SCENARIO: a full Operate cycle through the review gate driven by a REAL native subagent on each supported runtime (Claude Code, Codex, Cursor), plus parallel-native dispatch and same-runtime sequential fallback with no cross-runtime fallback."
+            echo "Prerequisites: the published packed planr artifact, a runtime host installed and authenticated on the machine, and runtime credentials available to the job."
+            echo "Fixtures: marketplace/scripts/operating-canary-real-runtime-fixtures/ (scripted board + large-monorepo)."
+            echo "Run it by dispatching this workflow with live_advisor_dispatch=true on a host that has the runtime installed and authenticated:"
+            echo "  gh workflow run operating-canary.yml -f pipeline_commit=<sha> -f cli_commit=<sha> -f skills_commit=<sha> -f live_advisor_dispatch=true"
+          } | tee evidence/real-runtime-native-owner-gated.log
+          if [[ "${LIVE:-false}" == "true" ]]; then
+            # Refuse to substitute a synthetic pass: a real native-agent cycle
+            # requires an authenticated runtime host. Fail loudly if it is absent.
+            : "${OPERATE_LIVE_RUNTIME:?live_advisor_dispatch=true requires OPERATE_LIVE_RUNTIME plus an authenticated runtime host}"
+            echo "Driving the real native-agent cycle on ${OPERATE_LIVE_RUNTIME}." | tee -a evidence/real-runtime-native-owner-gated.log
+            planr operate run --runtime "${OPERATE_LIVE_RUNTIME}" --json 2>&1 | tee -a evidence/real-runtime-native-owner-gated.log
+          fi
+
+      - name: Build immutable canary evidence report
+        env:
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          node marketplace/packages/marketplace/scripts/operating-canary-evidence.mjs \
+            --directory evidence \
+            --output "operating-canary-${{ matrix.os }}-node-${{ matrix.node }}.json" \
+            --url "$RUN_URL"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: operating-canary-${{ matrix.os }}-node-${{ matrix.node }}
+          path: |
+            operating-canary-${{ matrix.os }}-node-${{ matrix.node }}.json
+            evidence/*.log
+          if-no-files-found: error
+          retention-days: 30

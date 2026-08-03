@@ -1,0 +1,13 @@
+{
+  "name": "@openplanr/skills",
+  "version": "1.24.0",
+  "private": true,
+  "type": "module",
+  "pipelineCompatibility": "planr-pipeline@0.39.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node scripts/validate.mjs && node --test tests/planr-operate-guided.test.mjs"
+  }
+}

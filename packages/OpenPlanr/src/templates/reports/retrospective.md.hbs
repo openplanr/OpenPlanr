@@ -1,0 +1,36 @@
+# Sprint retrospective — {{projectName}}
+
+> {{generatedAt}}
+
+{{#if sprint}}
+_Sprint: {{sprint.sprintId}} — {{sprint.name}} ({{sprint.status}})_
+{{/if}}
+
+## What went well
+
+- 
+
+## What did not go well
+
+- 
+
+## Action items
+
+| Action | Owner | Due |
+|--------|-------|-----|
+|  |  |  |
+
+## Signals (automated)
+
+{{#if github.commits.length}}
+- Commits in window: {{length github.commits}}
+{{/if}}
+{{#if github.pullRequests.length}}
+- PRs in window: {{length github.pullRequests}}
+{{/if}}
+
+## Evidence
+
+{{#each evidence}}
+- {{this.label}}{{#if this.url}} — {{this.url}}{{/if}}
+{{/each}}

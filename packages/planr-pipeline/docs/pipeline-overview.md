@@ -1,0 +1,225 @@
+# Pipeline Overview
+
+> Full description of the PO → DEV 2-Phase Pipeline with all stages, agents, and data flows.
+
+---
+
+## Core Principle
+
+The pipeline enforces a **hard separation** between two activities:
+
+| Activity | Phase | Who | Agents |
+|----------|-------|-----|--------|
+| Understand & Decompose | PO Phase (Step 1) | PO + Tech Lead review | Sonnet 5 |
+| Build & Generate | DEV Phase (Step 3) | Tech Lead review | Opus 4.8 |
+
+A **mandatory human checkpoint** exists between them.
+The framework refuses to auto-chain PO Phase → DEV Phase.
+
+---
+
+## Optional Design Sub-Phase (`/planr-pipeline:design`, before PO)
+
+A feature can carry **design intent** into the PO Phase so it decomposes real UI tasks
+instead of degrading to a Tech-only ship. Two ways intent arrives:
+
+- **Mockups** — drop `*.png` and `designer-agent` extracts a `design-spec.md` during `/plan`
+  (the original path; unchanged).
+- **Generation** — run `/planr-pipeline:design {slug}` **before** `/plan`. It generates a
+  visual artifact in one of three formats and authors `design-spec.md` directly:
+
+  | Format | Output | Substrate |
+  |--------|--------|-----------|
+  | prototype | one interactive screen (`finalized.html`) | vanilla + Pretext |
+  | walkthrough | multi-screen gallery, grouped sidebar (anchor ≤8 / lazy >8 screens) | vanilla + Pretext |
+  | canvas | Figma-like board of artboards (`canvas.html`, export + view-only) | vendored React |
+
+```
+  spec (no PNG)  ──/design──▶  design/{finalized.html|canvas.html} + design-spec.md
+                                            │
+                                            ▼  (R2: design-spec.md OR PNG ⇒ UI task)
+                               /plan ──▶ US + UI task + Tech task  ──▶  human review  ──▶  /ship
+```
+
+The format is chosen by a clarification prompt with a **recommended default** computed from
+the screen count (`lib/design/recommendFormat.mjs`); supplying `--format … --from …` skips
+the prompt for CI. `design-spec.md` has **one writer per run** (PNGs → `designer-agent`,
+otherwise the generator). `/design` is its own gate — it **never** auto-chains to `/plan`
+(R1 design corollary); `/plan` only prints a one-line nudge when UI intent is detected but
+no design exists. Tested core lives in `lib/design/` (escaping, screen resolver, format
+rule, manifest); conformance in `conformance/verify-design-assets.mjs` + `tests/design/`.
+
+---
+
+## Full Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  HUMAN INPUTS                                                               │
+│                                                                             │
+│  Tech Lead          PO                  UX Designer                        │
+│  input/tech/        input/specs/         input/ui/                         │
+│  stack.md           spec-{name}.md       *.png                             │
+└──────────────┬──────────────┬────────────────┬────────────────────────────┘
+               │              │                │
+               ▼              ▼                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  STEP 0 — DB PREPARATION (once per project, optional)                       │
+│                                                                             │
+│  0.1  DB Agent (Sonnet 5, READ-ONLY)                                     │
+│       SQL: SELECT on INFORMATION_SCHEMA                                     │
+│       Mongo: driver-based collection introspection                          │
+│       → output/db/schema.json                                               │
+│                                                                             │
+│  0.2  Entity Scaffold Agent (Sonnet 5) — optional manual dispatch          │
+│       ORM entity / DbContext skeleton from schema.json → output/src/      │
+│       → output/src/Entities/ + output/src/DbContext/                        │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  STEP 1 — PO PHASE (Functional → Technical Decomposition)                   │
+│                                                                             │
+│  Trigger: /planr-pipeline:plan {name}                                │
+│                                                                             │
+│  Chain (in order):                                                          │
+│  ① DB Agent (Sonnet 5) — conditional: DatabaseType set, no fresh schema  │
+│    stack.md + DB env vars                                                   │
+│    → output/db/schema.json                                                  │
+│                         │                                                   │
+│                         ▼                                                   │
+│  ② Designer Agent (Sonnet 5) — conditional on ≥1 PNG for this feature    │
+│    input/ui/feat-{name}/*.png OR PNGs listed in spec UIFiles                │
+│    → output/feats/feat-{name}/design-spec.md                                │
+│                         │                                                   │
+│                         ▼                                                   │
+│  ③ Specification Agent (Sonnet 5)                                         │
+│    spec + design-spec + stack + schema                                      │
+│    → output/feats/feat-{name}/                                              │
+│       ├── design-spec.md                                                    │
+│       ├── us-1/                                                             │
+│       │   ├── us-1.md                                                       │
+│       │   └── tasks/                                                        │
+│       │       ├── task-1.md  (UI if PNG present, else Tech)                 │
+│       │       └── task-2.md  (Tech — only if PNG present)                   │
+│       └── us-N/ ...                                                         │
+│                                                                             │
+│  🛑 PIPELINE STOPS HERE INTENTIONALLY                                       │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  STEP 2 — MANUAL REVIEW (Human Checkpoint) ⚠️                               │
+│                                                                             │
+│  Human reviews output/feats/feat-{name}/:                                  │
+│                                                                             │
+│  ✓ design-spec.md     — colors, fonts, components correct?                 │
+│  ✓ us-{N}/us-{N}.md  — business scope coherent?                            │
+│  ✓ tasks/task-{M}.md — files, stacks, preserves/adds valid?                │
+│  ✓ stack.md           — still accurate?                                    │
+│                                                                             │
+│  Manual edits are allowed.                                                  │
+│  Tech Lead never edits task-{M}.md directly.                               │
+│  Open the generated US/task files and walk them before approving /ship.                │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  STEP 3 — DEV PHASE (Code Generation)                                       │
+│                                                                             │
+│  Trigger: /planr-pipeline:ship {name}                               │
+│                                                                             │
+│  Wide dispatch — ALL ready tasks across ALL stories, in parallel.          │
+│  (FE ‖ BE within one US is the SMALLEST case shown, never the cap:)         │
+│                                                                             │
+│  Frontend Agent (Opus 4.8)      Backend Agent (Opus 4.8)                   │
+│  ← task-1.md (Type=UI)           ← task-2.md (Type=Tech)                    │
+│  ← OR task-1.md (Type=Tech)      OR task-1.md if no PNG (Type=Tech)         │
+│  UI layer only                  Services, DTOs, Entities, APIs             │
+│  Components, pages, routes      DB queries, middleware                      │
+│  Each DEV agent: **`docs/rules.md` § R6** correction passes + stack       │
+│  commands (`BuildCommand`, `TestCommand`, …); on exhaustion of R6 writes   │
+│  handoff **`T-<TASK_ID>-error-report.md`** per `templates/error-report.md`. │
+│                                                                             │
+│                         ▼                                                   │
+│  STEP 3.5 — POST-BUILD AGENTS (after all DEV tasks settle)                 │
+│                                                                             │
+│  ④ QA Agent (Sonnet 5) — gates DEV output against task DoD               │
+│  ⑤ DevOps Agent (Sonnet 5, optional) — generates docker-compose / CI    │
+│  ⑥ Doc-Gen Agent (Sonnet 5, optional) — writes Docs/ from US + tasks    │
+│                                                                             │
+│                         ▼                                                   │
+│            /snapshot → CLAUDE.md updated                                    │
+│            (also wired as Stop hook in .claude/settings.json)               │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  FINAL OUTPUTS                                                              │
+│                                                                             │
+│  src/          ← Application source code                                   │
+│  Tests/        ← Unit + integration tests                                  │
+│  Docs/         ← Generated docs                                            │
+│  CLAUDE.md     ← Project snapshot                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Data Flow Map
+
+| From | To | Data | Condition |
+|------|----|------|-----------|
+| `input/tech/stack.md` | DB Agent | Connection config | Step 0.1 |
+| `output/db/schema.json` | Entity Scaffold Agent | Entity/DbContext scaffold inputs | Step 0.2 (optional) |
+| `input/specs/spec-{name}.md` | Designer Agent | Feature name | Step 1 (if PNG) |
+| `input/ui/*.png` | Designer Agent | Visual mockups | Step 1 (if PNG) |
+| `output/feats/../design-spec.md` | Specification Agent | Design constraints | Step 1 |
+| `input/specs/spec-{name}.md` | Specification Agent | Functional requirements | Step 1 |
+| `input/tech/stack.md` | Specification Agent | File path conventions | Step 1 |
+| `output/db/schema.json` | Specification Agent | DB table/column references | Step 1 |
+| `output/feats/../task-1.md` | Frontend Agent | UI implementation spec | Step 3 |
+| `output/feats/../design-spec.md` | Frontend Agent | Design tokens | Step 3 |
+| `output/feats/../task-2.md` | Backend Agent | Tech implementation spec | Step 3 |
+| `output/db/schema.json` | Backend Agent | DB schema validation | Step 3 |
+| `output/feats/../tasks/*.md` + generated code | QA Agent | DoD verification | Step 3.5 |
+| `input/tech/stack.md` + `.claude/stacks/devops/*.md` | DevOps Agent | Container/CI config templates | Step 3.5 |
+| US + tasks + generated code | Doc-Gen Agent | Source for `Docs/` markdown | Step 3.5 |
+
+---
+
+## Project Memory (Step 1.9)
+
+`.planr/memory.md` is an append-only project memory file with three sections:
+
+- **Decisions** — architectural choices made during `/ship` not captured in ADRs
+- **Traps** — failure patterns auto-appended when R6 hits iteration 2+
+- **Corrections** — human overrides recorded at the R1 review gate
+
+**Lifecycle:** `/ship` Step 1.9 reads memory and keyword-matches relevant entries into each agent's dispatch context. R6 iteration 2+ auto-appends traps. R1 overrides auto-append corrections. Humans prune stale entries. Format: `- [YYYY-MM-DD, <source>] <description>`.
+
+---
+
+## Correction Protocol (Step 3)
+
+Normative definition: **`docs/rules.md`** → **`### R6 — Max 3 Correction Iterations`**. This file does not duplicate R6 prose — read R6 before changing pipeline agent prompts.
+
+---
+
+## Native Parallel Dispatch (SPEC-014)
+
+> Applies to the DEV Phase (Step 3) **only when `DISPATCH_MODE: multi-task`** — the Claude Code default. In `per-task` and `single-task` modes the pipeline dispatches exactly one task per invocation (see `docs/compatibility-matrix.md` §Dispatch mode). Feature docs: `docs/feat-parallel-dispatch/`.
+
+When more than one DEV task is ready, the orchestrator dispatches them as **native parallel `Agent` calls** — one tool-call per ready task in a single assistant turn, all operating in the shared main working tree, exactly like native Claude Code parallel sub-agents. The dispatch queue is **feature-flat**: ready tasks are collected across ALL stories, not one US at a time. **Dispatch every ready task; do not self-limit to one or two** — the host's native concurrency cap is the only throttle. (On Claude Code, `DISPATCH_STYLE` further chooses *how* the fan-out runs: `native` — the orchestrator emits the `Agent` calls itself; `workflow` — it drives the Workflow tool to schedule the `dependsOn` DAG deterministically. Same agents, same single-writer bookkeeping.)
+
+**Dispatch shape.** A "batch" is simply the orchestrator emitting one `Agent` call per *ready* task (those with no unmet `dependsOn:`) in one turn. There is no worktree isolation and no merge-back: sub-agents write directly to the repo. It is prompt-driven — no daemon, no new process, no new dependency. The host's native concurrency cap is the only throttle; there is no `--max-parallel` knob.
+
+**Ordering — `dependsOn` only.** planr does no write-set inference and no cycle detection. The only ordering it honors is an explicit `dependsOn:` field in a task's frontmatter: a dependent task is held back until every declared dependency is `done`, then dispatched in a later turn. Absent `dependsOn`, all ready tasks dispatch together. Within a turn, ready tasks are dispatched id-sorted (determinism).
+
+**Advisory lock-list.** The lock-list (`package.json`, lockfiles, `**/index.ts`, `prisma/schema.prisma`, `**/migrations/**`) survives **only as an advisory note** in the dispatch prompt — "these tasks both touch `package.json`, consider ordering." It triggers no serialization and no enforcement; the host may act on it or ignore it.
+
+**Single-writer bookkeeping (retained).** Task `status` transitions and `.run-manifest.jsonl` lines are written only by the orchestrator in the main tree, before and after each task — orthogonal good hygiene, independent of the removed worktree machinery.
+
+**Why wide is safe (not a tradeoff to fear).** The specification-agent decomposes a feature so that ready tasks are write-disjoint — `dependsOn` is declared for genuine output dependencies, and independent siblings stay independent. So dispatching ALL eligible tasks at once is the **expected, safe** default: there is no isolation layer because eligible tasks don't overlap, and the advisory lock-list is hygiene for the rare shared file, never a reason to go narrow. planr deliberately does not re-add worktrees or wave-splitting (SPEC-014 supersedes the SPEC-013 worktree + wave scheduler; see `docs/feat-parallel-dispatch/`).
+
+*See: `docs/rules.md` · `docs/agent-model-map.md` · `docs/task-anatomy.md` · `docs/feat-parallel-dispatch/`*

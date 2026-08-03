@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "openplanr-operating-real-runtime-advisor-script",
+  "note": "Reproduces the production incident: five lenses enabled, one stalls (never returns), four complete and must be durably recorded. The Chair consolidates the partial board. Advisor CONTENT is scripted; the fan-out, lease/heartbeat, projection, and report are the real release artifacts.",
+  "runtime": "codex",
+  "stalledRole": "strategy-finance",
+  "citationPath": "packages/core/src/index.ts",
+  "roles": [
+    {
+      "roleId": "strategy-finance",
+      "behavior": "stall",
+      "comment": "The hung lens: its dispatch never returns; the driver's per-attempt timeout + bounded retry budget must resolve it to not_evaluated without blocking siblings."
+    },
+    {
+      "roleId": "technology-risk",
+      "behavior": "proposals",
+      "title": "Harden the health surface (technology-risk)",
+      "problem": "Health behaviour lacks a reviewed specification.",
+      "proposal": "Create a bounded specification with a measurable completion outcome.",
+      "type": "finding",
+      "severity": "medium"
+    },
+    {
+      "roleId": "product-activation",
+      "behavior": "proposals",
+      "title": "Instrument the activation surface (product-activation)",
+      "problem": "The activation path lacks a measured baseline.",
+      "proposal": "Record an activation baseline before proposing changes.",
+      "type": "finding",
+      "severity": "medium"
+    },
+    {
+      "roleId": "growth-market",
+      "behavior": "proposals",
+      "title": "Name the growth motion (growth-market)",
+      "problem": "The growth motion is not stated in the repository.",
+      "proposal": "Document the primary growth motion with a measurable outcome.",
+      "type": "finding",
+      "severity": "low"
+    },
+    {
+      "roleId": "operations-customer",
+      "behavior": "proposals",
+      "title": "Close the support loop (operations-customer)",
+      "problem": "Customer operations lack a recorded feedback loop.",
+      "proposal": "Add a bounded feedback loop with a measurable completion outcome.",
+      "type": "finding",
+      "severity": "low"
+    },
+    {
+      "roleId": "chair",
+      "behavior": "chair",
+      "title": "Consolidate the board into a reviewable brief",
+      "problem": "The owner needs one synthesis of the recorded lenses.",
+      "proposal": "Prepare a local, reviewable synthesis without external publication.",
+      "type": "merge",
+      "severity": "low"
+    }
+  ]
+}

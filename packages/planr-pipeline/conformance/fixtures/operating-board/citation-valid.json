@@ -1,0 +1,6 @@
+{
+  "citationKey": "cto-payment-idempotency-1",
+  "repositoryPath": "src/payments/charge.mjs",
+  "lineRange": { "start": 42, "end": 68 },
+  "pinnedRevision": "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d"
+}

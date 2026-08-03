@@ -1,0 +1,42 @@
+# Weekly stakeholder update — {{projectName}}
+
+> {{generatedAt}} · lookback {{daysLookback}}d
+
+{{#if branding.logoUrl}}
+![Logo]({{branding.logoUrl}})
+{{/if}}
+
+## Wins
+
+_Edit bullets — each should link to a PR, issue, or artifact._
+
+{{#if github.commits.length}}
+- Shipped commits: {{length github.commits}} in the last {{daysLookback}} days (see Evidence).
+{{else}}
+- _No commit data — add links manually._
+{{/if}}
+
+## Risks
+
+{{#if placeholders.noStoriesCompleted}}
+- **Planning:** No stories marked done — confirm whether delivery is blocked or statuses need updating.
+{{/if}}
+- _Add concrete risks with owners and dates._
+
+## Ask
+
+- _One clear request to leadership (resource, decision, or scope)._
+
+## Evidence
+
+{{#each evidence}}
+- **{{this.kind}}** — {{this.label}}{{#if this.url}} — [link]({{this.url}}){{/if}}
+{{/each}}
+
+{{#if branding.customSections}}
+{{#each branding.customSections}}
+## {{@key}}
+
+{{{this}}}
+{{/each}}
+{{/if}}

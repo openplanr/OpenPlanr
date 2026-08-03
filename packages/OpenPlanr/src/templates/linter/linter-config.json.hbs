@@ -1,0 +1,13 @@
+{
+  "rules": [
+    { "id": "evidence-density", "enabled": true, "minEvidenceLinks": 1 },
+    { "id": "weekly-structure", "enabled": true, "requireSections": ["Wins", "Risks", "Ask"] }
+  ],
+  "vaguePhrases": [
+    {
+      "pattern": "\\\\b(fixed bugs|almost done|making progress)\\\\b",
+      "alternatives": ["Closed #12 and #15 (see PR 44)", "Completed 3 of 5 stories"],
+      "hint": "Use countable outcomes and links."
+    }
+  ]
+}

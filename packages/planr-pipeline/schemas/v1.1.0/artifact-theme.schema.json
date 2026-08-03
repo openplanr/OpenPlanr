@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/artifact-theme.schema.json",
+  "title": "OpenPlanr artifact review theme registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "name", "typography", "layout", "themes"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "name": { "const": "OpenPlanr Artifact Review" },
+    "typography": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["display", "body", "mono"],
+      "properties": {
+        "display": { "const": "Outfit" },
+        "body": { "const": "DM Sans" },
+        "mono": { "const": "Source Code Pro" }
+      }
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "toolbarHeight",
+        "reviewRailWidth",
+        "radiusSmall",
+        "radiusMedium",
+        "radiusLarge",
+        "motionFastMs",
+        "motionBaseMs"
+      ],
+      "properties": {
+        "toolbarHeight": { "const": 48 },
+        "reviewRailWidth": { "const": 344 },
+        "radiusSmall": { "type": "integer", "minimum": 0, "maximum": 32 },
+        "radiusMedium": { "type": "integer", "minimum": 0, "maximum": 32 },
+        "radiusLarge": { "type": "integer", "minimum": 0, "maximum": 32 },
+        "motionFastMs": { "type": "integer", "minimum": 120, "maximum": 200 },
+        "motionBaseMs": { "type": "integer", "minimum": 120, "maximum": 200 }
+      }
+    },
+    "themes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dark", "light"],
+      "properties": {
+        "dark": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "background",
+            "chrome",
+            "panel",
+            "raised",
+            "stage",
+            "rule",
+            "text",
+            "textMuted",
+            "primary",
+            "primaryStrong",
+            "warning",
+            "danger",
+            "onDanger",
+            "question",
+            "onQuestion",
+            "resolved",
+            "onResolved",
+            "onImprove"
+          ],
+          "properties": {
+            "background": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "chrome": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "panel": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "raised": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "stage": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "rule": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "text": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "textMuted": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "primary": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "primaryStrong": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "warning": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "danger": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "onDanger": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "question": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "onQuestion": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "resolved": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "onResolved": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "onImprove": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+          }
+        },
+        "light": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "background",
+            "chrome",
+            "panel",
+            "raised",
+            "stage",
+            "rule",
+            "text",
+            "textMuted",
+            "primary",
+            "primaryStrong",
+            "warning",
+            "danger",
+            "onDanger",
+            "question",
+            "onQuestion",
+            "resolved",
+            "onResolved",
+            "onImprove"
+          ],
+          "properties": {
+            "background": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "chrome": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "panel": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "raised": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "stage": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "rule": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "text": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "textMuted": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "primary": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "primaryStrong": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "warning": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "danger": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "onDanger": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "question": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "onQuestion": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "resolved": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "onResolved": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "onImprove": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
+          }
+        }
+      }
+    }
+  }
+}

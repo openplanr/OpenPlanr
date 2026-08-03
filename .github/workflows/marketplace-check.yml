@@ -1,0 +1,84 @@
+# BL-010 Phase 4: moved from packages/marketplace/.github/workflows/check.yml.
+#
+# BL-010 Phase 4.6: this job used to run `npm run check` with no install step
+# at all (it worked pre-merge only because marketplace's own scripts are
+# dependency-free). Gets a `working-directory` plus a real `npm ci` now that
+# it lives in an npm-workspaces monorepo, per the plan's explicit instruction.
+# `check-readme.mjs` itself is unchanged — its
+# `new URL('../.claude-plugin/marketplace.json', import.meta.url)` is
+# module-relative and survives the package's move under packages/marketplace/.
+name: "Marketplace — Check"
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  changes:
+    name: Detect changed packages
+    runs-on: ubuntu-latest
+    outputs:
+      cli: ${{ steps.filter.outputs.cli }}
+      pipeline: ${{ steps.filter.outputs.pipeline }}
+      skills: ${{ steps.filter.outputs.skills }}
+      marketplace: ${{ steps.filter.outputs.marketplace }}
+      root: ${{ steps.filter.outputs.root }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compute per-package change booleans
+        id: filter
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          elif [ -n "${{ github.event.before }}" ] && git cat-file -e "${{ github.event.before }}^{commit}" 2>/dev/null; then
+            BASE="${{ github.event.before }}"
+          else
+            BASE=""
+          fi
+          if [ -z "$BASE" ]; then
+            CHANGED="$(git ls-files)"
+          else
+            CHANGED="$(git diff --name-only "$BASE" "${{ github.sha }}")"
+          fi
+          # NOTE: a here-string, NOT `echo "$CHANGED" | grep -Eq`. `grep -q` exits on
+          # first match and closes the pipe while echo is still writing; under
+          # `set -o pipefail` that SIGPIPE makes the pipeline return FAILURE even
+          # though the pattern matched. It only bites once the file list is large
+          # enough that echo has not finished — i.e. exactly on big changesets,
+          # which would then silently skip every gated job.
+          matches() { grep -Eq "$1" <<< "$CHANGED"; }
+          {
+            matches '^packages/OpenPlanr/' && echo "cli=true" || echo "cli=false"
+            matches '^packages/planr-pipeline/' && echo "pipeline=true" || echo "pipeline=false"
+            matches '^packages/skills/' && echo "skills=true" || echo "skills=false"
+            matches '^packages/marketplace/' && echo "marketplace=true" || echo "marketplace=false"
+            matches '^(package\.json|package-lock\.json|scripts/|\.github/workflows/|\.changeset/)' && echo "root=true" || echo "root=false"
+          } >> "$GITHUB_OUTPUT"
+
+  check:
+    needs: changes
+    if: needs.changes.outputs.marketplace == 'true' || needs.changes.outputs.root == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/marketplace
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      # BL-010 Phase 4.6: real install, not assumed.
+      - name: Install workspace dependencies
+        working-directory: .
+        run: npm ci
+      - run: npm run check
+      - run: npm test

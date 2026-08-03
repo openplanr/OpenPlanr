@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "openplanr",
+  "owner": {
+    "name": "OpenPlanr",
+    "url": "https://github.com/openplanr"
+  },
+  "description": "OpenPlanr's official Claude Code metadata plus the resolved cross-runtime ecosystem compatibility manifest.",
+  "plugins": [
+    {
+      "name": "planr-pipeline",
+      "description": "Complete PO → Design → Review → DEV → QA workflow with feature-local planning, Protocol operating contracts, universal HTML artifact review, private sharing, boards, sync, dashboard, and native Claude Code enforcement.",
+      "source": {
+        "source": "github",
+        "repo": "openplanr/planr-pipeline"
+      },
+      "version": "0.39.0"
+    },
+    {
+      "name": "openplanr",
+      "description": "Reusable operating, planning, artifact review, PLAN, Design, SHIP, dashboard, sync, and doctor skills with truthful product and runtime routing.",
+      "source": {
+        "source": "github",
+        "repo": "openplanr/skills"
+      },
+      "version": "1.24.0"
+    }
+  ]
+}

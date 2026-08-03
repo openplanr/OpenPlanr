@@ -1,0 +1,91 @@
+# Sprint report — {{projectName}}
+
+> Generated {{generatedAt}} · Type: **{{reportType}}** · Lookback: **{{daysLookback}}** days
+
+{{#if branding.orgName}}
+_Organization: {{branding.orgName}}_
+{{/if}}
+
+{{#if placeholders.noSprint}}
+> **Note:** No sprint was selected (`--sprint`). Add `--sprint SPRINT-001` for sprint-scoped sections.
+{{/if}}
+
+## Sprint snapshot
+
+{{#if sprint}}
+| Field | Value |
+|-------|-------|
+| Sprint | {{sprint.sprintId}} |
+| Name | {{sprint.name}} |
+| Status | {{sprint.status}} |
+| Window | {{sprint.startDate}} → {{sprint.endDate}} |
+
+{{#if sprint.goals.length}}
+**Goals**
+{{#each sprint.goals}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+**Tasks in sprint:** {{#if sprint.taskIds.length}}{{join sprint.taskIds ", "}}{{else}}_none linked in frontmatter_{{/if}}
+
+{{else}}
+_No sprint context._
+{{/if}}
+
+## Planning artifacts (summary)
+
+- **Epics:** {{length artifacts.epics}}
+- **Features:** {{length artifacts.features}}
+- **Stories:** {{length artifacts.stories}}
+- **Task lists:** {{length artifacts.tasks}}
+
+**Stories**
+
+{{#each artifacts.stories}}
+- `{{this.id}}` — {{this.title}} — _{{this.status}}_
+{{/each}}
+
+## GitHub activity
+
+{{#if placeholders.noGitHub}}
+_No GitHub data (disabled or unavailable)._
+{{else}}
+{{#if github.warning}}
+> **Warning:** {{github.warning}}
+{{/if}}
+
+### Recent commits
+
+{{#if github.commits.length}}
+{{#each github.commits}}
+- [{{this.shortSha}}]({{this.url}}) — {{this.message}} — _{{this.authorLogin}}_
+{{/each}}
+{{else}}
+_No commits in window._
+{{/if}}
+
+### Pull requests
+
+{{#if github.pullRequests.length}}
+{{#each github.pullRequests}}
+- [PR #{{this.number}}]({{this.url}}) — {{this.title}} — _{{this.state}} · {{this.authorLogin}}_
+{{/each}}
+{{else}}
+_No pull requests in window._
+{{/if}}
+{{/if}}
+
+## Evidence appendix
+
+{{#each evidence}}
+- **{{this.kind}}** — {{this.label}}{{#if this.url}} — {{this.url}}{{/if}}{{#if this.detail}} — _{{this.detail}}_{{/if}}
+{{/each}}
+
+{{#if branding.customSections}}
+{{#each branding.customSections}}
+## {{@key}}
+
+{{{this}}}
+{{/each}}
+{{/if}}

@@ -1,0 +1,30 @@
+{
+  "name": "openplanr-skills",
+  "owner": {
+    "name": "OpenPlanr",
+    "email": "asem@techarc.io"
+  },
+  "metadata": {
+    "description": "Agent skills for OpenPlanr — operating decisions, planning, and complete delivery workflows for AI coding agents",
+    "version": "1.24.0"
+  },
+  "plugins": [
+    {
+      "name": "openplanr",
+      "description": "Evidence-backed operating decisions, dedicated planning, and portable PO, Design, DEV, and QA workflow routing for Claude Code, Codex, and Cursor",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/openplanr-unified",
+        "./skills/planr-artifact",
+        "./skills/planr-plan",
+        "./skills/planr-design",
+        "./skills/planr-ship",
+        "./skills/planr-dashboard",
+        "./skills/planr-sync",
+        "./skills/planr-doctor",
+        "./skills/planr-operate"
+      ]
+    }
+  ]
+}

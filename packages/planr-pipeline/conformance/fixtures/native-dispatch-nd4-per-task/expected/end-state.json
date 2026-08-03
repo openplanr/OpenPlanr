@@ -1,0 +1,9 @@
+{
+  "fixture": "native-dispatch-nd4-per-task",
+  "gate": "ND4",
+  "task_count": 2,
+  "ready_tasks": ["T-001", "T-002"],
+  "expected_agent_calls_per_invocation": 1,
+  "any_isolation_field": false,
+  "max_parallel_referenced": false
+}

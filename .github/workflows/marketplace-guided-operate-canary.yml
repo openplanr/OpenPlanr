@@ -1,0 +1,152 @@
+# BL-010 Phase 4: moved from packages/marketplace/.github/workflows/guided-operate-canary.yml.
+#
+# This workflow is structurally different from every other file in this
+# consolidated set: instead of a single self-checkout, it checks out FOUR
+# repos at four independently pinned commits (marketplace = self, plus
+# planr-pipeline / OpenPlanr / skills fetched from their own `repository:`).
+# Pre-merge, `openplanr/OpenPlanr` and `openplanr/planr-pipeline` etc. were
+# each a single-package repo root. Post-merge:
+#   - `repository: openplanr/planr-pipeline` and `repository: openplanr/skills`
+#     resolve to their read-only MIRROR repos (plan §6), which stay flat
+#     single-package trees — those two checkouts are still structurally
+#     correct as-is.
+#   - `repository: openplanr/OpenPlanr` (the `cli_commit` input) now resolves
+#     to THIS SAME MONOREPO, and the unqualified self-checkout below (path:
+#     marketplace) does too — both now bring in packages/OpenPlanr/,
+#     packages/marketplace/, etc. nested one level deeper than this file used
+#     to assume. Every `npm --prefix marketplace` / `npm --prefix OpenPlanr`
+#     invocation is fixed below to point at the nested package directory.
+#
+# KNOWN OPEN GAP (flagged, not silently resolved — see BL-010 Phase 4 return
+# notes): `OPENPLANR_ECOSYSTEM_ROOT: ${{ github.workspace }}` below assumes a
+# directory containing sibling `OpenPlanr` / `planr-pipeline` / `skills` /
+# `marketplace` folders (see `workspace-discovery.mjs`'s alias resolution).
+# That still holds structurally (this job checks all four out as top-level
+# siblings), but `OpenPlanr`'s signature check is a bare `package.json`
+# existence test, so it will resolve to the monorepo's root package.json
+# (name `openplanr-monorepo`) rather than the CLI's, which may or may not
+# matter to whatever consumes that resolution. This is a genuine post-merge
+# semantics question for whoever owns this canary, not a mechanical path fix
+# — resolve it empirically during the Phase 6.1 mirror rehearsal, which is
+# the first time this workflow will actually run against real mirror content.
+#
+# KNOWN OPEN GAP #2: `packages/planr-pipeline` carries no package-lock.json
+# of its own (this monorepo has a single root lockfile — plan §2.4/§1.6), so
+# the planr-pipeline MIRROR this job fetches will not ship one either. `npm
+# ci` requires a lockfile and would fail here, so the pipeline install below
+# uses `npm install` instead (and the pipeline lockfile is dropped from the
+# setup-node cache path). This is a pragmatic compatibility fix, not a
+# decision about mirror-generation policy — whether the mirror push step
+# should generate a per-package lockfile is a Phase 6 mirror-design question.
+name: "Marketplace — Guided Operating Board Canary"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pipeline_commit:
+        description: Exact 40-character planr-pipeline commit SHA
+        required: true
+        type: string
+      cli_commit:
+        description: Exact 40-character OpenPlanr commit SHA
+        required: true
+        type: string
+      skills_commit:
+        description: Exact 40-character skills commit SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  guided-operate:
+    name: Guided operate (Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: marketplace
+      - uses: actions/checkout@v4
+        with:
+          repository: openplanr/planr-pipeline
+          ref: ${{ inputs.pipeline_commit }}
+          path: planr-pipeline
+      - uses: actions/checkout@v4
+        with:
+          repository: openplanr/OpenPlanr
+          ref: ${{ inputs.cli_commit }}
+          path: OpenPlanr
+      - uses: actions/checkout@v4
+        with:
+          repository: openplanr/skills
+          ref: ${{ inputs.skills_commit }}
+          path: skills
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: |
+            OpenPlanr/package-lock.json
+      - run: npm --prefix planr-pipeline install
+      - run: npm --prefix OpenPlanr/packages/OpenPlanr ci
+      - name: Build the exact CLI release source before packed-install checks
+        run: npm --prefix OpenPlanr/packages/OpenPlanr run build
+      - name: Verify guided contracts, parity, and first-preview budget
+        run: |
+          npm --prefix planr-pipeline run test:guided-acceptance
+          npm --prefix planr-pipeline run canary:guided-operate
+          npm --prefix planr-pipeline run check:guided-adapters
+      - name: Verify CLI guided lifecycle, authority, evidence recovery, and packed install
+        env:
+          OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/planr-pipeline
+        run: |
+          npm --prefix OpenPlanr/packages/OpenPlanr run test:operate:guided
+          npm --prefix OpenPlanr/packages/OpenPlanr run test:operate:security
+      - name: Verify generated public skill
+        run: npm --prefix skills test
+      - name: Verify marketplace remains withheld until final reconciliation
+        env:
+          OPENPLANR_ECOSYSTEM_ROOT: ${{ github.workspace }}
+        run: |
+          npm --prefix marketplace/packages/marketplace run check
+          npm --prefix marketplace/packages/marketplace test
+
+  evidence:
+    name: Immutable release evidence
+    needs: guided-operate
+    if: ${{ always() && needs.guided-operate.result == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: marketplace
+      - name: Materialize digest-bound evidence
+        run: >-
+          node marketplace/packages/marketplace/scripts/materialize-operating-canary.mjs
+          --directory evidence
+          --pipeline-commit "${{ inputs.pipeline_commit }}"
+          --cli-commit "${{ inputs.cli_commit }}"
+          --skills-commit "${{ inputs.skills_commit }}"
+          --run-id "${{ github.run_id }}"
+          --repository "${{ github.repository }}"
+      - name: Create validated canary report
+        run: >-
+          node marketplace/packages/marketplace/scripts/operating-canary-evidence.mjs
+          --directory evidence
+          --output guided-operating-canary-report.json
+          --url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guided-operating-canary-report
+          path: guided-operating-canary-report.json
+          if-no-files-found: error
+          retention-days: 90

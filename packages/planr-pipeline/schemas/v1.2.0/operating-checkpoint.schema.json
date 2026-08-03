@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-checkpoint.schema.json",
+  "title": "OpenPlanr operating replay checkpoint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "createdAt", "eventHead", "recordDigests", "stateHash", "integrity", "state"],
+  "properties": {
+    "kind": { "const": "operating-checkpoint" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "eventHead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "hash"],
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 0 },
+        "hash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "stateHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "recordDigests": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["hash", "signed"] },
+        "signature": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "keyId", "value"],
+          "properties": {
+            "algorithm": { "type": "string", "enum": ["ed25519", "hmac-sha256"] },
+            "keyId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$" },
+            "value": { "type": "string", "pattern": "^[A-Za-z0-9_-]{32,1024}$" }
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "title": "Hash integrity",
+          "properties": { "status": { "const": "hash" } },
+          "not": { "required": ["signature"] }
+        },
+        {
+          "title": "Externally signed integrity",
+          "required": ["signature"],
+          "properties": { "status": { "const": "signed" } }
+        }
+      ]
+    },
+    "state": { "$ref": "operating-state.schema.json" }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "1.0.0",
+  "questionnaire": "../guided-runtime-parity/questionnaire.json",
+  "answers": "../guided-runtime-parity/answers.json",
+  "maximumFirstPreviewMs": 300000,
+  "journeys": [
+    {
+      "id": "terminal",
+      "runtime": "claude-code",
+      "runtimeVersion": "fixture",
+      "runtimeReport": {
+        "nativeQuestions": false,
+        "structuredChat": false,
+        "attachedTerminal": true
+      },
+      "expectedMode": "terminal",
+      "expectedFallback": true
+    },
+    {
+      "id": "claude-native",
+      "runtime": "claude-code",
+      "runtimeVersion": "fixture",
+      "runtimeReport": {
+        "nativeQuestions": true,
+        "structuredChat": true,
+        "attachedTerminal": true
+      },
+      "expectedMode": "native",
+      "expectedFallback": false
+    },
+    {
+      "id": "codex-native",
+      "runtime": "codex",
+      "runtimeVersion": "fixture",
+      "runtimeReport": {
+        "nativeQuestions": true,
+        "structuredChat": true,
+        "attachedTerminal": true
+      },
+      "expectedMode": "native",
+      "expectedFallback": false
+    },
+    {
+      "id": "codex-chat",
+      "runtime": "codex",
+      "runtimeVersion": "fixture",
+      "runtimeReport": {
+        "nativeQuestions": false,
+        "structuredChat": true,
+        "attachedTerminal": true
+      },
+      "expectedMode": "chat",
+      "expectedFallback": true
+    },
+    {
+      "id": "cursor-chat",
+      "runtime": "cursor",
+      "runtimeVersion": "fixture",
+      "runtimeReport": {
+        "nativeQuestions": false,
+        "structuredChat": true,
+        "attachedTerminal": true
+      },
+      "expectedMode": "chat",
+      "expectedFallback": false
+    },
+    {
+      "id": "attached-terminal",
+      "runtime": "cursor",
+      "runtimeVersion": "fixture",
+      "runtimeReport": {
+        "nativeQuestions": false,
+        "structuredChat": false,
+        "attachedTerminal": true
+      },
+      "expectedMode": "terminal",
+      "expectedFallback": true
+    },
+    {
+      "id": "handoff",
+      "runtime": "cursor",
+      "runtimeVersion": "fixture",
+      "runtimeReport": {
+        "nativeQuestions": false,
+        "structuredChat": false,
+        "attachedTerminal": false
+      },
+      "expectedMode": "none",
+      "expectedFallback": true
+    }
+  ]
+}

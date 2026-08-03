@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.0.0/design-session.schema.json",
+  "title": "OpenPlanr design-loop session (v1.0.0)",
+  "description": "One variant's generation lineage, persisted as session-<variant>.json in the session dir (user space, ~/.planr/designs/<project>/<target>-<date>/) — NOT /tmp, so a session can be revisited. For provider=openai, lastResponseId chains the Responses API so `iterate` refines instead of regenerating. For provider=claude-svg the chain is the file itself (the agent edits the artifact); lastResponseId stays null.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "provider",
+    "target",
+    "originalBrief",
+    "briefVersions",
+    "feedbackHistory",
+    "outputPaths",
+    "regionEdits",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0", "description": "Schema version pin." },
+    "id": { "type": "string", "minLength": 1, "description": "Session id (e.g. \"logo-2026-06-10-A\")." },
+    "provider": {
+      "type": "string",
+      "enum": ["openai", "claude-svg"],
+      "description": "Which provider owns this session's generation chain."
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What is being designed: logo, brand-sheet, screen, og-image, …"
+    },
+    "project": { "type": "string", "description": "Project slug the exploration belongs to." },
+    "originalBrief": { "type": "string", "minLength": 1, "description": "The first brief, verbatim." },
+    "briefVersions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Every brief revision, oldest→newest (the original is index 0)."
+    },
+    "feedbackHistory": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "The feedback text applied at each iterate round, oldest→newest."
+    },
+    "outputPaths": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Absolute artifact path per round, oldest→newest (last = current)."
+    },
+    "regionEdits": {
+      "type": "array",
+      "description": "Pin-driven edits applied to this session (design-review rounds).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["at", "pins", "summary"],
+        "properties": {
+          "at": { "type": "string", "minLength": 1, "description": "ISO timestamp of the edit round." },
+          "screen": { "type": "string", "description": "Screen/section id the round targeted, when scoped." },
+          "pins": { "type": "array", "items": { "type": "object" }, "description": "The pins (design-feedback shape) that drove the edit." },
+          "summary": { "type": "string", "minLength": 1, "description": "One line: what was changed." }
+        }
+      }
+    },
+    "lastResponseId": {
+      "type": ["string", "null"],
+      "description": "openai provider: the Responses API id to chain via previous_response_id. null for claude-svg."
+    },
+    "createdAt": { "type": "string", "minLength": 1, "description": "ISO timestamp." },
+    "updatedAt": { "type": "string", "minLength": 1, "description": "ISO timestamp of the last round." }
+  }
+}

@@ -1,0 +1,256 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/operating-state.schema.json",
+  "title": "OpenPlanr reduced operating state projection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "generatedAt", "eventHead", "cycles", "findings", "decisions", "dataGaps", "routes", "specLinks", "outcomes", "learnings", "evidenceSources", "summary"],
+  "properties": {
+    "kind": { "const": "operating-state" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "eventHead": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "hash"],
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 0 },
+        "hash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "cycles": {
+      "type": "array",
+      "items": { "$ref": "operating-cycle-manifest.schema.json" }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "cycleId", "title", "status", "lane", "owner", "score", "severity", "sensitivity", "criticalOverride", "evidenceRefs", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^FND-[0-9]{3,}$" },
+          "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+          "title": { "type": "string", "minLength": 1 },
+          "fingerprint": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "category": { "type": "string", "minLength": 1 },
+          "problem": { "type": "string", "minLength": 1 },
+          "cost": { "type": "string", "minLength": 1 },
+          "proposal": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["proposed", "accepted", "queued", "in-progress", "done", "rejected", "superseded"] },
+          "lane": { "type": "string", "enum": ["DEV", "OWNER", "AGENT"] },
+          "owner": { "type": "string", "minLength": 1 },
+          "impact": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "confidenceCeiling": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "ease": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "score": { "type": "integer", "minimum": 1, "maximum": 125 },
+          "scoreAmendment": {
+            "$ref": "#/$defs/scoreAmendment"
+          },
+          "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+          "sensitivity": { "type": "string", "enum": ["public", "internal", "confidential", "restricted"] },
+          "criticalOverride": { "type": "boolean" },
+          "evidenceRefs": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^EVD-[A-Za-z0-9._-]+$" } },
+          "linkedSpec": { "type": "string", "pattern": "^SPEC-[0-9]{3,}$" },
+          "parked": { "type": "boolean" },
+          "stalledCycles": { "type": "integer", "minimum": 0 },
+          "rejectionReason": { "type": "string", "minLength": 1, "maxLength": 2048 },
+          "supersededBy": { "type": "string", "pattern": "^FND-[0-9]{3,}$" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "cycleId", "question", "status", "owner", "deadline", "reversibility", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^DEC-[0-9]{3,}$" },
+          "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+          "question": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["open", "answered", "closed", "default-due", "superseded"] },
+          "owner": { "type": "string", "minLength": 1 },
+          "deadline": { "type": "string", "format": "date-time" },
+          "reversibility": { "type": "string", "enum": ["reversible", "costly", "one-way"] },
+          "recommendation": { "type": "string" },
+          "selectedOption": { "type": "string" },
+          "note": { "type": "string", "maxLength": 2048 },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "dataGaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "cycleId", "question", "status", "owner", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^GAP-[0-9]{3,}$" },
+          "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+          "question": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["open", "answered", "verified", "closed", "superseded"] },
+          "owner": { "type": "string", "minLength": 1 },
+          "answer": { "type": "string", "minLength": 1, "maxLength": 8192 },
+          "unblocks": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "affectedRoles": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": ["strategy-finance", "technology-risk", "product-activation", "growth-market", "operations-customer", "chair"]
+            }
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "routes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "cycleId", "state", "routeDigest", "previewDigest", "findingIds", "actionCount", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^ACT-[0-9]{3,}$" },
+          "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+          "state": { "type": "string", "enum": ["proposed", "accepted", "prepared", "applied", "failed", "rolled_back"] },
+          "routeDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "previewDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "confirmationDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "transactionId": { "type": "string", "pattern": "^TXN-[A-Za-z0-9._-]+$" },
+          "findingIds": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^FND-[0-9]{3,}$" }
+          },
+          "actionCount": { "type": "integer", "minimum": 0, "maximum": 12 },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "specLinks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["specId", "cycleId", "findingId", "planningEngine", "state", "updatedAt"],
+        "properties": {
+          "specId": { "type": "string", "pattern": "^SPEC-[0-9]{3,}$" },
+          "cycleId": { "type": "string", "pattern": "^CYCLE-[0-9]{3,}$" },
+          "findingId": { "type": "string", "pattern": "^FND-[0-9]{3,}$" },
+          "planningEngine": { "type": "string", "enum": ["openplanr", "pipeline-po"] },
+          "state": { "type": "string", "enum": ["planned", "decomposed", "shipped", "observing", "evaluated"] },
+          "path": { "type": "string", "minLength": 1 },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "outcomes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "specId", "status", "verifyAfter", "updatedAt"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^OUT-[0-9]{3,}$" },
+          "specId": { "type": "string", "pattern": "^SPEC-[0-9]{3,}$" },
+          "status": { "type": "string", "enum": ["pending", "observing", "positive", "neutral", "negative", "inconclusive"] },
+          "metric": { "type": "string" },
+          "lastObservationId": { "type": "string", "pattern": "^OBS-[A-Za-z0-9._-]+$" },
+          "lastObservationEvaluation": { "type": "string", "enum": ["positive", "neutral", "negative", "inconclusive"] },
+          "verifyAfter": { "type": "string", "format": "date" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "learnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "outcomeId", "evaluation", "summary", "createdAt"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^LRN-[A-Za-z0-9._-]+$" },
+          "outcomeId": { "type": "string", "pattern": "^OUT-[0-9]{3,}$" },
+          "evaluation": { "type": "string", "enum": ["positive", "neutral", "negative", "inconclusive"] },
+          "summary": { "type": "string", "minLength": 1 },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "evidenceSources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "freshness", "status", "itemCount", "collectedAt"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "freshness": { "type": "string", "enum": ["fresh", "stale", "unknown"] },
+          "status": { "type": "string", "enum": ["collected", "unchanged", "partial", "unavailable", "failed"] },
+          "itemCount": { "type": "integer", "minimum": 0 },
+          "collectedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currentCycleId", "currentConstraint", "quiet", "evidenceFreshness", "surfacedFindings", "parkedFindings", "openDecisions", "openGaps", "stalledItems"],
+      "properties": {
+        "currentCycleId": { "type": ["string", "null"], "pattern": "^CYCLE-[0-9]{3,}$" },
+        "currentConstraint": { "type": ["string", "null"] },
+        "quiet": { "type": "boolean" },
+        "evidenceFreshness": { "type": "string", "enum": ["fresh", "mixed", "stale", "unknown"] },
+        "surfacedFindings": { "type": "integer", "minimum": 0 },
+        "parkedFindings": { "type": "integer", "minimum": 0 },
+        "openDecisions": { "type": "integer", "minimum": 0 },
+        "openGaps": { "type": "integer", "minimum": 0 },
+        "stalledItems": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "scoreComponents": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["impact", "confidence", "ease"],
+      "properties": {
+        "impact": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "ease": { "type": "integer", "minimum": 1, "maximum": 5 }
+      }
+    },
+    "scoreAmendment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prior", "next", "reason", "actor", "timestamp"],
+      "properties": {
+        "prior": { "$ref": "#/$defs/scoreComponents" },
+        "next": { "$ref": "#/$defs/scoreComponents" },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "actor": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "id"],
+          "properties": {
+            "kind": { "const": "human" },
+            "id": { "type": "string", "minLength": 1, "maxLength": 128 }
+          }
+        },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

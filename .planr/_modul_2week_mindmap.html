@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1800, initial-scale=1">
+<title>Modul Engineering — Last 2 Weeks</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a1628;
+    --bg-card: #142036;
+    --bg-card-2: #18253d;
+    --border: #1f2d4a;
+    --border-strong: #2a3b5e;
+    --text: #ffffff;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --modul: #14B8A6;
+    --events: #F59E0B;
+    --website: #EF4444;
+  }
+  html, body {
+    background: var(--bg);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 0;
+  }
+  .stage {
+    width: 1800px;
+    min-height: 1280px;
+    padding: 80px 80px 64px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle dot grid background for depth */
+  .stage::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .stage > * { position: relative; z-index: 1; }
+
+  /* Header / Hub */
+  .hub {
+    text-align: center;
+    margin-bottom: 64px;
+  }
+  .hub__eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 18px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    margin-bottom: 24px;
+  }
+  .hub__eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--modul); }
+  .hub__title {
+    font-size: 72px; font-weight: 700; letter-spacing: -2px;
+    line-height: 1; margin-bottom: 18px;
+  }
+  .hub__title .accent { color: var(--modul); }
+  .hub__subtitle {
+    font-size: 22px; color: var(--text-muted);
+    font-weight: 400;
+    margin-bottom: 32px;
+  }
+  .hub__stats {
+    display: flex; justify-content: center; gap: 56px;
+    margin-top: 8px;
+  }
+  .stat { text-align: center; }
+  .stat__value {
+    font-size: 36px; font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .stat__label {
+    font-size: 12px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 2px;
+    margin-top: 4px;
+  }
+  .stat__value.c-modul { color: var(--modul); }
+  .stat__value.c-events { color: var(--events); }
+  .stat__value.c-website { color: var(--website); }
+
+  /* Connector SVG */
+  .connectors {
+    position: absolute;
+    top: 320px; left: 0; right: 0;
+    height: 140px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Project grid */
+  .projects {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    margin-top: 80px;
+  }
+  .project {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-top: 4px solid;
+    border-radius: 18px;
+    padding: 36px 36px 32px;
+    display: flex; flex-direction: column;
+    min-height: 800px;
+    position: relative;
+  }
+  .project.is-modul { border-top-color: var(--modul); }
+  .project.is-events { border-top-color: var(--events); }
+  .project.is-website { border-top-color: var(--website); }
+
+  .project__header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+  .project__title-block { display: flex; flex-direction: column; gap: 4px; }
+  .project__kicker {
+    font-size: 11px; font-weight: 700; letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .project.is-modul .project__kicker { color: var(--modul); }
+  .project.is-events .project__kicker { color: var(--events); }
+  .project.is-website .project__kicker { color: var(--website); }
+
+  .project__title {
+    font-size: 32px; font-weight: 700; letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .project__count {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; color: var(--text-muted);
+    font-weight: 500;
+  }
+  .project__count strong {
+    font-size: 28px; color: var(--text);
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* Themes inside each project */
+  .themes { display: flex; flex-direction: column; gap: 22px; }
+  .theme { display: flex; flex-direction: column; gap: 10px; }
+  .theme__header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+  }
+  .theme__title {
+    font-size: 16px; font-weight: 600;
+    color: var(--text);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .theme__title::before {
+    content: ""; width: 3px; height: 16px; border-radius: 2px;
+    background: currentColor; opacity: 0.7;
+  }
+  .project.is-modul .theme__title { color: var(--modul); }
+  .project.is-events .theme__title { color: var(--events); }
+  .project.is-website .theme__title { color: var(--website); }
+  .theme__date {
+    font-size: 11px; color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+  .theme__items {
+    list-style: none;
+    display: flex; flex-direction: column; gap: 6px;
+    margin-left: 13px;
+  }
+  .theme__items li {
+    font-size: 14.5px; line-height: 1.5;
+    color: #cbd5e1;
+    padding-left: 14px;
+    position: relative;
+  }
+  .theme__items li::before {
+    content: "";
+    position: absolute; left: 0; top: 9px;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--text-dim);
+  }
+  .theme__items li strong { color: var(--text); font-weight: 600; }
+
+  /* Footer */
+  .footer {
+    margin-top: 56px;
+    padding-top: 28px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--text-muted);
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+  .footer__legend { display: flex; gap: 24px; }
+  .footer__legend-item { display: flex; align-items: center; gap: 8px; }
+  .footer__legend-item .swatch {
+    width: 12px; height: 12px; border-radius: 3px;
+  }
+  .footer__legend-item.is-modul .swatch { background: var(--modul); }
+  .footer__legend-item.is-events .swatch { background: var(--events); }
+  .footer__legend-item.is-website .swatch { background: var(--website); }
+  .footer__brand {
+    font-weight: 600; color: var(--text);
+    letter-spacing: 0;
+  }
+  .footer__brand .accent { color: var(--modul); }
+</style>
+</head>
+<body>
+  <div class="stage">
+
+    <!-- HUB / TITLE -->
+    <div class="hub">
+      <div class="hub__eyebrow"><span class="dot"></span>Engineering Demo · Sprint Window</div>
+      <div class="hub__title">Modul Engineering <span class="accent">·</span> Last 2 Weeks</div>
+      <div class="hub__subtitle">May 6 – May 20, 2026  ·  three production systems  ·  shipped end-to-end</div>
+      <div class="hub__stats">
+        <div class="stat">
+          <div class="stat__value c-modul">12+</div>
+          <div class="stat__label">MUVi / AI deliverables</div>
+        </div>
+        <div class="stat">
+          <div class="stat__value c-events">20+</div>
+          <div class="stat__label">Events deliverables</div>
+        </div>
+        <div class="stat">
+          <div class="stat__value c-website">7</div>
+          <div class="stat__label">muv-website deliverables</div>
+        </div>
+        <div class="stat">
+          <div class="stat__value">3</div>
+          <div class="stat__label">Production systems</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONNECTOR LINES from hub to each project (decorative mind-map feel) -->
+    <svg class="connectors" viewBox="0 0 1640 140" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="g-modul" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#14B8A6" stop-opacity="0"/>
+          <stop offset="100%" stop-color="#14B8A6" stop-opacity="0.45"/>
+        </linearGradient>
+        <linearGradient id="g-events" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#F59E0B" stop-opacity="0"/>
+          <stop offset="100%" stop-color="#F59E0B" stop-opacity="0.45"/>
+        </linearGradient>
+        <linearGradient id="g-website" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="#EF4444" stop-opacity="0"/>
+          <stop offset="100%" stop-color="#EF4444" stop-opacity="0.45"/>
+        </linearGradient>
+      </defs>
+      <!-- Curve to Modul (left) -->
+      <path d="M 820 0 C 820 70, 280 60, 280 140" stroke="url(#g-modul)" stroke-width="2" fill="none" stroke-dasharray="2 6" />
+      <circle cx="280" cy="140" r="5" fill="#14B8A6"/>
+      <!-- Curve to Events (center) -->
+      <path d="M 820 0 L 820 140" stroke="url(#g-events)" stroke-width="2" fill="none" stroke-dasharray="2 6" />
+      <circle cx="820" cy="140" r="5" fill="#F59E0B"/>
+      <!-- Curve to muv-website (right) -->
+      <path d="M 820 0 C 820 70, 1360 60, 1360 140" stroke="url(#g-website)" stroke-width="2" fill="none" stroke-dasharray="2 6" />
+      <circle cx="1360" cy="140" r="5" fill="#EF4444"/>
+    </svg>
+
+    <!-- 3 PROJECT BRANCHES -->
+    <div class="projects">
+
+      <!-- MODUL / MUVi AI -->
+      <section class="project is-modul">
+        <div class="project__header">
+          <div class="project__title-block">
+            <div class="project__kicker">MUVi · AI Platform</div>
+            <div class="project__title">Modul</div>
+          </div>
+          <div class="project__count"><strong>12+</strong> shipped</div>
+        </div>
+        <div class="themes">
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Streaming Architecture v2</div>
+              <span class="theme__date">May 13</span>
+            </div>
+            <ul class="theme__items">
+              <li>Unified streaming and blocking pipelines into one path — <strong>instant token delivery</strong> with incremental sanitization</li>
+              <li>Closed all parity gaps: sanitization, i18n, conversation persistence, escalation, payload, RTL regex</li>
+              <li>Sanitization flush tuned to <strong>30ms / 20 chars</strong> for smoother rendering without policy gaps</li>
+            </ul>
+          </div>
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Multilingual Fidelity</div>
+              <span class="theme__date">May 9 · 14</span>
+            </div>
+            <ul class="theme__items">
+              <li>Native-language response directives — answers stay in the user's actual language</li>
+              <li>Same-script sibling disambiguation (Croatian vs. Serbian, Hindi vs. Marathi, etc.)</li>
+            </ul>
+          </div>
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Security &amp; Auth Hardening</div>
+              <span class="theme__date">May 5 · 13</span>
+            </div>
+            <ul class="theme__items">
+              <li><strong>7 high-severity CVEs</strong> patched via Next.js 16.2.6 upgrade</li>
+              <li>RAG proxy auth via session + API key, constant-time key verification</li>
+              <li>Cache-invalidation now requires trusted origin in production</li>
+            </ul>
+          </div>
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Widget &amp; Production Polish</div>
+              <span class="theme__date">May 9 · 13</span>
+            </div>
+            <ul class="theme__items">
+              <li>ChatGPT-style streaming scroll UX — sticky indicator, scroll room held open mid-stream</li>
+              <li>Separate open/close button sizes, scaled ring icon, feedback-modal close, Opik URL corrected</li>
+            </ul>
+          </div>
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">DevOps &amp; Observability</div>
+              <span class="theme__date">May 13</span>
+            </div>
+            <ul class="theme__items">
+              <li>Qdrant admin dashboard exposed via Traefik with tight IP allowlist</li>
+              <li>Docker build order fixed — widget extracted before image build</li>
+            </ul>
+          </div>
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Reliability &amp; MUVi Apply</div>
+              <span class="theme__date">May 8 · 19</span>
+            </div>
+            <ul class="theme__items">
+              <li>Unit coverage added for retry, scoped re-retrieval, and short-circuit safety net</li>
+              <li>MUVi Apply hardened: secured APIs, resilient master data, QA coverage</li>
+            </ul>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- MODUL EVENTS -->
+      <section class="project is-events">
+        <div class="project__header">
+          <div class="project__title-block">
+            <div class="project__kicker">EventBrite Replacement</div>
+            <div class="project__title">Modul Events</div>
+          </div>
+          <div class="project__count"><strong>20+</strong> shipped</div>
+        </div>
+        <div class="themes">
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Operational Authority (RBAC)</div>
+              <span class="theme__date">May 19</span>
+            </div>
+            <ul class="theme__items">
+              <li><strong>Per-user admin accounts</strong> with role matrix and full audit log</li>
+              <li>Every admin action attributable — closes compliance gap from shared service account</li>
+            </ul>
+          </div>
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Event Lifecycle Resilience</div>
+              <span class="theme__date">May 11 · 19</span>
+            </div>
+            <ul class="theme__items">
+              <li>Dynamics CRM sync hardening with draft support — recovers cleanly from partial data</li>
+              <li><strong>Soft-delete archival</strong> — past events archived without losing data or audit trail</li>
+              <li>404 process crash prevented (global filter no longer re-throws on legitimate 404s)</li>
+            </ul>
+          </div>
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Discount Engine</div>
+              <span class="theme__date">May 4 · 18 · 19</span>
+            </div>
+            <ul class="theme__items">
+              <li><strong>Per-code maxAppliedUnits</strong> — "one free ticket per code" primitive unlocks new campaign mechanics</li>
+              <li>Stripe stale promo-code (404 resource_missing) gracefully handled</li>
+              <li>Duplicate-coupon loophole closed in checkout pricing-preview</li>
+              <li>DB-sourced redemption counts and slot-2 inclusion in dashboard usage panel</li>
+              <li>Live discount preview — server-validated cart pricing for any typed code</li>
+            </ul>
+          </div>
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Admin UX &amp; Insights</div>
+              <span class="theme__date">May 11 · 14</span>
+            </div>
+            <ul class="theme__items">
+              <li>Dashboard revamp with per-event drill-down and restructured navigation</li>
+              <li>Form-submit feedback (loading spinners + success/error toasts) across every admin form</li>
+              <li>Discount codes table with pagination, multi-select, and CSV export</li>
+              <li>Registrations page filters — portal scope, event select, enhanced filter bar</li>
+            </ul>
+          </div>
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Hoodie Merchandise Experience</div>
+              <span class="theme__date">May 4</span>
+            </div>
+            <ul class="theme__items">
+              <li>Event-page hoodie marketing card with premium 4-view image lightbox</li>
+              <li>Multi-size cart support (XS–XXL) with live size-range derivation from active passes</li>
+            </ul>
+          </div>
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Observability</div>
+              <span class="theme__date">May 14</span>
+            </div>
+            <ul class="theme__items">
+              <li>Sentry error tracking integrated for the Next.js frontend — real-time client-side visibility</li>
+            </ul>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- MUV-WEBSITE -->
+      <section class="project is-website">
+        <div class="project__header">
+          <div class="project__title-block">
+            <div class="project__kicker">Sitefinity Public Site</div>
+            <div class="project__title">muv-website</div>
+          </div>
+          <div class="project__count"><strong>7</strong> shipped</div>
+        </div>
+        <div class="themes">
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Academic Calendar Widget</div>
+              <span class="theme__date">May 13 · 18</span>
+            </div>
+            <ul class="theme__items">
+              <li><strong>Live API-backed widget</strong> — semester groups, date entries, past/current/future visual states</li>
+              <li>Refactored to Bootstrap utilities with scoped CSS that slots into existing design system</li>
+              <li>Red accent bar applied to every semester heading per stakeholder design review</li>
+            </ul>
+          </div>
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Partners Widget</div>
+              <span class="theme__date">May 13 · 18</span>
+            </div>
+            <ul class="theme__items">
+              <li>Backed by a Sitefinity dynamic module — admin-managed partner logos and links</li>
+              <li>No developer involvement required to add or update partners</li>
+            </ul>
+          </div>
+
+          <div class="theme">
+            <div class="theme__header">
+              <div class="theme__title">Brand Polish</div>
+              <span class="theme__date">May 5</span>
+            </div>
+            <ul class="theme__items">
+              <li>White CTA widget restored to stakeholder-approved flat style after review</li>
+              <li>Rich-text link rendering stabilized inside Sitefinity RTE blocks</li>
+            </ul>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <div class="footer__legend">
+        <div class="footer__legend-item is-modul"><span class="swatch"></span>Modul · MUVi AI Platform</div>
+        <div class="footer__legend-item is-events"><span class="swatch"></span>Modul Events</div>
+        <div class="footer__legend-item is-website"><span class="swatch"></span>muv-website</div>
+      </div>
+      <div class="footer__brand">Modul University Vienna <span class="accent">·</span> Engineering · May 2026</div>
+    </div>
+
+  </div>
+</body>
+</html>

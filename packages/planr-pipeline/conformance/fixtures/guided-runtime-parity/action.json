@@ -1,0 +1,14 @@
+{
+  "kind": "structured-action",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "id": "apply-operating-initialization",
+  "label": "Apply this Operating Board configuration",
+  "command": "planr operate init --resume GIS-runtime-parity-0001 --confirm sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee --yes --json",
+  "effect": "project-write",
+  "providerUse": false,
+  "requiresConfirmation": true,
+  "confirmationScope": "apply exactly this initialization preview",
+  "confirmationDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "recommended": true
+}

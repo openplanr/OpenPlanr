@@ -1,0 +1,55 @@
+---
+id: "{{id}}"
+title: "{{title}}"
+owner: "{{owner}}"
+created: "{{date}}"
+updated: "{{date}}"
+status: "planning"
+project: "{{projectName}}"
+---
+
+# {{id}}: {{title}}
+
+## Business Value
+{{businessValue}}
+
+## Target Users
+{{targetUsers}}
+
+## Problem Statement
+{{problemStatement}}
+
+## Solution Overview
+{{solutionOverview}}
+
+## Success Criteria
+
+{{#if successCriteriaList}}
+{{#each successCriteriaList}}
+- {{this}}
+{{/each}}
+{{else}}
+{{successCriteria}}
+{{/if}}
+
+## Key Features
+
+{{#each keyFeatures}}
+- {{this}}
+{{/each}}
+
+## Dependencies
+{{dependencies}}
+
+## Risks
+{{risks}}
+
+## Features
+
+{{#if featureIds}}
+{{#each featureIds}}
+- [{{this.id}}](../features/{{this.filename}}.md)
+{{/each}}
+{{else}}
+_No features created yet. Run `planr feature create --epic {{id}}` to break this epic into features._
+{{/if}}

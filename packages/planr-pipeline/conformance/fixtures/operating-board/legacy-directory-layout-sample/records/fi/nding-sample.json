@@ -1,0 +1,38 @@
+{
+  "kind": "operating-record",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "digest": "sha256:4b2e0787d42e9eebc4484b3ab4a6cea4da2e848e50a8047085d82df2f2afd24c",
+  "recordType": "finding",
+  "createdAt": "2026-07-28T09:00:00.000Z",
+  "correlationId": "operate-cycle-011",
+  "contentDigest": "sha256:1cef0c9daa4992b396b2d1c4167fbfd1423a14aebb3ec24885201ff95a0339d6",
+  "content": {
+    "kind": "operating-finding",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.2.0",
+    "id": "FND-001",
+    "cycleId": "CYCLE-011",
+    "title": "Protect payment webhook idempotency",
+    "category": "reliability",
+    "problem": "The payment handler has no durable replay guard.",
+    "cost": "One release cycle.",
+    "proposal": "Create a reviewed idempotency-ledger specification.",
+    "impact": 4,
+    "confidence": 4,
+    "ease": 3,
+    "score": 48,
+    "severity": "high",
+    "sensitivity": "internal",
+    "criticalOverride": false,
+    "lane": "DEV",
+    "owner": "founder",
+    "evidenceRefs": [
+      "EVD-payments-charge"
+    ],
+    "status": "proposed",
+    "dependsOn": [],
+    "createdAt": "2026-07-28T09:00:00.000Z",
+    "updatedAt": "2026-07-28T09:00:00.000Z"
+  }
+}

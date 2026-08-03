@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.3.0/operating-tool-grant.schema.json",
+  "title": "OpenPlanr Protocol v1.3 operating tool grant",
+  "description": "The bounded, read-only tool set and path-confined roots granted to a native advisory agent. No write, execute, network, or environment capability can be expressed by this contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["allowed", "roots"],
+  "properties": {
+    "allowed": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "file-read",
+          "glob",
+          "content-search",
+          "git-log",
+          "git-show",
+          "git-diff",
+          "git-blame"
+        ]
+      }
+    },
+    "roots": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "maxLength": 512,
+        "pattern": "^(?!.*\\.\\.)[A-Za-z0-9][A-Za-z0-9._/-]*$"
+      }
+    }
+  }
+}

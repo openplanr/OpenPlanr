@@ -1,117 +1,29 @@
 {
-  "name": "openplanr",
-  "version": "1.22.0",
-  "description": "AI-powered planning CLI — backlog, sprints, task templates, estimation, GitHub and Linear sync, and AI agent rules for Cursor, Claude Code, and Codex",
+  "name": "openplanr-monorepo",
+  "private": true,
   "type": "module",
-  "main": "./dist/cli/index.js",
-  "types": "./dist/cli/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/cli/index.js",
-      "types": "./dist/cli/index.d.ts"
-    }
-  },
-  "bin": {
-    "planr": "./bin/planr.js",
-    "opr": "./bin/planr.js"
-  },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
-  "files": [
-    "dist/",
-    "bin/",
-    "install.sh",
-    "install.ps1",
-    "README.md",
-    "LICENSE"
+  "workspaces": [
+    "packages/OpenPlanr",
+    "packages/planr-pipeline",
+    "packages/skills",
+    "packages/marketplace"
   ],
   "scripts": {
-    "build": "tsc && node scripts/copy-templates.mjs",
-    "dev": "tsx src/cli/index.ts",
-    "test": "vitest run && vitest run --config vitest.heavy.config.ts",
-    "test:operate:security": "vitest run tests/unit/operate-security.test.ts tests/unit/operate-advisors.test.ts tests/unit/operate-protocol-roundtrip.test.ts && vitest run --config vitest.heavy.config.ts tests/integration/operate-preview-boundaries.test.ts",
-    "test:operate:outcomes": "vitest run tests/unit/operate-outcomes.test.ts",
-    "test:operate:packed": "vitest run --config vitest.heavy.config.ts tests/e2e/operate-packed-install.test.ts",
-    "test:operate:guided": "vitest run tests/unit/operate-question-engine.test.ts tests/unit/operate-question-session.test.ts tests/unit/operate-actions.test.ts tests/unit/operate-initialization-replay.test.ts && vitest run --config vitest.heavy.config.ts tests/integration/operate-guided-init.test.ts tests/integration/operate-question-resume.test.ts tests/integration/operate-authority-boundaries.test.ts tests/integration/operate-charter-assistance.test.ts tests/integration/operate-guided-automation.test.ts tests/integration/doctor-guided-operate.test.ts tests/e2e/operate-guided-packed-install.test.ts",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "lint": "biome check src/ tests/",
-    "lint:fix": "biome check --write src/ tests/",
-    "format": "biome format --write src/ tests/",
-    "format:check": "biome format src/ tests/",
     "prepare": "husky",
-    "prepublishOnly": "npm run build",
-    "release": "node scripts/publish-if-needed.mjs",
-    "changeset": "changeset",
-    "version-packages": "changeset version",
-    "test:heavy": "vitest run --config vitest.heavy.config.ts"
+    "version-packages": "changeset version && node scripts/sync-ecosystem.mjs && npm install --package-lock-only",
+    "release": "changeset publish",
+    "sync-ecosystem": "node scripts/sync-ecosystem.mjs",
+    "check:ecosystem": "node scripts/sync-ecosystem.mjs --check",
+    "check:cross-refs": "node scripts/check-cross-refs.mjs",
+    "check:drift": "npm run check:ecosystem && npm run check:cross-refs && npm run check:agent-divergence",
+    "check:agent-divergence": "node scripts/check-agent-divergence.mjs"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "@changesets/cli": "^2.30.0"
   },
   "engines": {
     "node": ">=20.0.0"
-  },
-  "keywords": [
-    "agile",
-    "planning",
-    "cli",
-    "cursor",
-    "claude",
-    "codex",
-    "ai",
-    "backlog",
-    "sprint",
-    "operating-board",
-    "product-operations",
-    "templates",
-    "estimation",
-    "github",
-    "epic",
-    "user-story",
-    "scrum"
-  ],
-  "author": "OpenPlanr Contributors",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/openplanr/OpenPlanr.git"
-  },
-  "homepage": "https://openplanr.dev",
-  "bugs": {
-    "url": "https://github.com/openplanr/OpenPlanr/issues"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.91.1",
-    "@inquirer/prompts": "^8.3.2",
-    "@linear/sdk": "^65.2.0",
-    "@napi-rs/keyring": "^1.2.0",
-    "chalk": "^5.3.0",
-    "commander": "^14.0.3",
-    "handlebars": "^4.7.9",
-    "openai": "^6.33.0",
-    "yaml": "^2.8.3",
-    "zod": "^4.3.6"
-  },
-  "optionalDependencies": {
-    "planr-pipeline": "0.39.0"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "^2.4.9",
-    "@changesets/cli": "^2.30.0",
-    "@types/node": "^25.5.0",
-    "@vitest/coverage-v8": "^4.1.2",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.4.0",
-    "tsx": "^4.19.0",
-    "typescript": "^6.0.2",
-    "vitest": "^4.1.2"
-  },
-  "overrides": {
-    "@changesets/parse": {
-      "js-yaml": "^4.3.0"
-    },
-    "read-yaml-file": {
-      "js-yaml": "^3.15.0"
-    }
   }
 }

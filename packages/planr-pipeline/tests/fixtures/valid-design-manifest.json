@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "design_format": "walkthrough",
+  "source": "spec",
+  "content_provenance": "spec",
+  "framework": "vanilla",
+  "screens": ["Login", "Dashboard", "Settings"],
+  "screen_count": 3,
+  "iterations": 0,
+  "generated_at": "2026-06-07T12:00:00Z",
+  "nav_mode": "anchor",
+  "screen_name": "auth-flow",
+  "branch": "main",
+  "spec_id": "SPEC-015",
+  "html_file": "finalized.html",
+  "pretext_tier": "Simple + Card/grid"
+}

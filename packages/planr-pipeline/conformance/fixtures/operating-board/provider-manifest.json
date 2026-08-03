@@ -1,0 +1,46 @@
+{
+  "kind": "operating-provider-manifest",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "id": "PRV-github",
+  "providerId": "github",
+  "providerVersion": "1.0.0",
+  "mode": "structured",
+  "readOnly": true,
+  "endpoint": {
+    "kind": "remote",
+    "display": "https://api.github.com",
+    "authentication": "machine-local",
+    "redacted": true
+  },
+  "permittedDataClasses": ["issue-metadata", "project-metadata"],
+  "retention": {
+    "providerStoresRequestContent": false,
+    "maxProviderRetentionDays": 0,
+    "localEvidenceRetention": "cycle"
+  },
+  "capabilities": {
+    "incremental": true,
+    "deep": true,
+    "toolIsolation": "enforced"
+  },
+  "limits": {
+    "maxItems": 500,
+    "maxBytes": 5242880,
+    "maxDurationMs": 60000,
+    "maxRequests": 100,
+    "maxTokens": null,
+    "maxCostUsd": null
+  },
+  "consent": {
+    "policyVersion": "1.0.0",
+    "status": "first-use",
+    "acceptedAt": "2026-07-28T09:00:00Z",
+    "renewedAt": null,
+    "nextReviewAt": "2026-10-28T09:00:00Z",
+    "renewalTriggers": ["policy-change", "scope-expansion", "credential-renewal"]
+  },
+  "policyDigest": "sha256:105c0dad0a5ac3fd5f5ddef27ccdc0fb057085e2d9e8d9bc4dbe58fb53db9d23",
+  "configurationDigest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+  "capturedAt": "2026-07-28T09:00:00Z"
+}

@@ -2,7 +2,9 @@
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
   "changelog": [
     "./changelog-config.cjs",
-    { "repo": "openplanr/OpenPlanr" }
+    {
+      "repo": "openplanr/OpenPlanr"
+    }
   ],
   "commit": false,
   "fixed": [],
@@ -10,5 +12,9 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": [],
+  "privatePackages": {
+    "version": true,
+    "tag": true
+  }
 }
