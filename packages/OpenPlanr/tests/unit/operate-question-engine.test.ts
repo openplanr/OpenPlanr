@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   applyOperatingInitAnswer,
   createOperatingInitQuestionnaire,
@@ -298,5 +301,65 @@ describe('Operating Board question engine', () => {
     expect(productStage?.type).toBe('single-select');
     expect(Array.isArray(productStage?.choices)).toBe(true);
     expect(productStage).not.toHaveProperty('itemLabel');
+  });
+});
+
+// FR10 / T-009: guided init must never silently suggest a legacy profile whose
+// concrete field values the same CLI will reject. It still suggests the
+// compatible `id`, but it names the unsupported fields when it does.
+describe("Operating Board question engine — legacy profile detect-don't-ask (FR10)", () => {
+  let workspace: string;
+
+  beforeEach(async () => {
+    workspace = await mkdtemp(join(tmpdir(), 'openplanr-profile-suggest-'));
+    await mkdir(join(workspace, '.planr'), { recursive: true });
+  });
+
+  afterEach(async () => {
+    await rm(workspace, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  });
+
+  async function profileContext(profile: unknown) {
+    await writeFile(
+      join(workspace, '.planr', 'operate-profile.json'),
+      `${JSON.stringify(profile)}\n`,
+    );
+    return { ...context, projectRoot: workspace };
+  }
+
+  it('suggests the compatible profile id while naming the fields the CLI would reject', async () => {
+    const ctx = await profileContext({
+      id: 'engineering',
+      enabledProviders: ['repository', 'planr', 'git', 'linear'],
+      budgets: { maxFiles: 5, maxItems: 5, maxBytes: 5, maxDurationMs: 5 },
+    });
+    const result = await evaluateOperatingInitQuestions({ context: ctx, requireCharter: false });
+    expect(result.status).toBe('input-required');
+    const profile = result.questions.find((question) => question.questionId === 'profile');
+    expect(profile).toMatchObject({
+      valueSemantics: 'suggestion',
+      suggestedValue: 'engineering',
+    });
+    // The unsupported field VALUES are never suggested; the fields are named instead.
+    expect(profile?.suggestionReason).toContain('enabledProviders');
+    expect(profile?.suggestionReason).toContain('budgets');
+    expect(profile?.suggestionReason).toContain('planr operate profiles migrate inspect');
+  });
+
+  it('suggests a fully compatible legacy profile without any unsupported-field note', async () => {
+    const ctx = await profileContext({
+      id: 'engineering',
+      title: 'Engineering',
+      description: 'Delivery focus.',
+    });
+    const result = await evaluateOperatingInitQuestions({ context: ctx, requireCharter: false });
+    expect(result.status).toBe('input-required');
+    const profile = result.questions.find((question) => question.questionId === 'profile');
+    expect(profile).toMatchObject({
+      valueSemantics: 'suggestion',
+      suggestedValue: 'engineering',
+    });
+    expect(profile?.suggestionReason).toContain('operate-profile.json');
+    expect(profile?.suggestionReason).not.toContain('migrate inspect');
   });
 });

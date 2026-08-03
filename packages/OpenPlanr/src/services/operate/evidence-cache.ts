@@ -1,4 +1,5 @@
-import { mkdir, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { mkdir, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { canonicalDigest, canonicalize } from './canonical.js';
 import { assertSensitivityAllowed, containsSecret, maximumSensitivity } from './redaction.js';
@@ -43,6 +44,29 @@ export interface CitationSnapshotInput {
   content: string;
 }
 
+/**
+ * Publish a temp file over its content-addressed target, tolerating a lost race.
+ *
+ * Advisor lenses record concurrently, so two lenses citing the same file derive
+ * the same target path and publish at the same moment. POSIX `rename` overwrites
+ * atomically, but Windows refuses a contended overwrite with `EPERM`. Losing the
+ * race is harmless here precisely because these paths are content-addressed —
+ * the winner already wrote equivalent bytes — so a failed rename whose target
+ * now exists is a success, and only the orphaned temp file needs clearing.
+ * Anything else still throws.
+ */
+async function publishAtomically(temporary: string, target: string): Promise<void> {
+  try {
+    await rename(temporary, target);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== 'EPERM' && code !== 'EEXIST' && code !== 'EACCES' && code !== 'EBUSY') throw error;
+    const published = await stat(target).catch(() => undefined);
+    if (!published) throw error;
+    await unlink(temporary).catch(() => undefined);
+  }
+}
+
 export class OperatingEvidenceCache {
   constructor(
     private readonly cacheRoot: string,
@@ -69,9 +93,14 @@ export class OperatingEvidenceCache {
     const digest = canonicalDigest(record).slice('sha256:'.length);
     await mkdir(this.cacheRoot, { recursive: true, mode: 0o700 });
     const target = path.join(this.cacheRoot, `${digest}.json`);
-    const temporary = `${target}.${process.pid}.tmp`;
+    // The temp name must be unique per WRITE, not per process. Since advisor
+    // lenses record concurrently, two lenses citing the same file derive the
+    // same evidence id and therefore the same target; a pid-only suffix gave
+    // them one shared temp path, so the first rename consumed it and the second
+    // failed ENOENT — surfacing as "<lens> failed before recording an analysis".
+    const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
     await writeFile(temporary, `${canonicalize(record)}\n`, { mode: 0o600 });
-    await rename(temporary, target);
+    await publishAtomically(temporary, target);
     return digest;
   }
 
@@ -114,9 +143,14 @@ export class OperatingEvidenceCache {
     };
     await mkdir(this.cacheRoot, { recursive: true, mode: 0o700 });
     const target = this.citationSnapshotTarget(input.evidenceId);
-    const temporary = `${target}.${process.pid}.tmp`;
+    // The temp name must be unique per WRITE, not per process. Since advisor
+    // lenses record concurrently, two lenses citing the same file derive the
+    // same evidence id and therefore the same target; a pid-only suffix gave
+    // them one shared temp path, so the first rename consumed it and the second
+    // failed ENOENT — surfacing as "<lens> failed before recording an analysis".
+    const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
     await writeFile(temporary, `${canonicalize(record)}\n`, { mode: 0o600 });
-    await rename(temporary, target);
+    await publishAtomically(temporary, target);
     return input.evidenceId;
   }
 

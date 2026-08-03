@@ -6,11 +6,13 @@ import { loadConfig } from '../config-service.js';
 import {
   type AdvisorAdapter,
   type AdvisorDispatchResult,
+  type AdvisorOperatingContext,
   advisorFailureGaps,
   buildAdvisorOperatingContext,
   configuredAdvisorProviderPolicy,
   createConfiguredStructuredAdapter,
   createOfflineAdvisorAdapter,
+  DEFAULT_OPERATING_DISPATCH_CONCURRENCY,
   dispatchOperatingAdvisors,
   ensureOperatingProviderConsent,
 } from './advisors.js';
@@ -23,10 +25,26 @@ import type {
 } from './citation-resolution.js';
 import { operatingProjectKey, validateOperatingConfiguration } from './config.js';
 import { consolidateOperatingResults } from './consolidation.js';
-import { type AppendOperatingEventInput, OperatingEventStore } from './event-store.js';
+import {
+  type ChairBoardContext,
+  type ChairRoleContribution,
+  chairBoardGapLines,
+  classifyChairRoleContributions,
+} from './decision-brief.js';
+import {
+  type AppendOperatingEventInput,
+  OperatingEventStore,
+  toPersistedDataGap,
+} from './event-store.js';
 import { evidenceProjectionSources } from './evidence.js';
 import { OperatingEvidenceCache } from './evidence-cache.js';
 import { nextCycleId } from './ids.js';
+import {
+  buildOperatingIntegritySummary,
+  type OperatingIntegrityCitationEntry,
+  type OperatingIntegrityNotEvaluatedRole,
+  type OperatingIntegritySummary,
+} from './integrity.js';
 import { enforceRecordedProposalCitations } from './interaction/action-service.js';
 import {
   applyJournalTransaction,
@@ -35,6 +53,12 @@ import {
   rollbackJournalTransaction,
 } from './journal.js';
 import { reconcileOperatingDecisionDeadlines } from './lifecycle.js';
+import {
+  type AdvisorGovernedGap,
+  AdvisorLifecycleDriver,
+  type AdvisorRolePlan,
+  type AdvisorRoleSnapshot,
+} from './lifecycle-driver.js';
 import { type OperatingLock, withOperatingLock } from './lock-service.js';
 import { reconcileOperatingOutcomeFiles } from './outcomes.js';
 import { persistOperatingProjections } from './projection-persistence.js';
@@ -86,6 +110,26 @@ export interface RunOperatingCycleInput {
   adapter?: AdvisorAdapter;
   /** Stop after preparing a cycle when a certified runtime executes mandates. */
   deferAdvisors?: boolean;
+  /**
+   * FR2/FR3 (SPEC-005 T-015): deterministic test hooks for the advisor lifecycle
+   * driver that drives the non-chair fan-out. Injecting `now`/`setTimer`/
+   * `clearTimer` makes the automatic lease heartbeat provable under a virtual
+   * clock, and `roleTimeoutMs`/`retryBudget` size the driver's per-attempt timeout
+   * and bounded retry budget. Absent in production, where the driver uses real
+   * timers, no per-attempt timeout, and no extra retry beyond the dispatch path's
+   * own attempt loop — so the live path is byte-identical to the pre-driver
+   * fan-out for a healthy board.
+   */
+  advisorLifecycle?: {
+    now?: () => number;
+    setTimer?: (fn: () => void, ms: number) => unknown;
+    clearTimer?: (handle: unknown) => void;
+    roleTimeoutMs?: number;
+    retryBudget?: number;
+    heartbeatIntervalMs?: number;
+    heartbeatLeadMs?: number;
+    leaseWindowMs?: number;
+  };
 }
 
 export interface NativeAdvisorHandoff {
@@ -113,6 +157,30 @@ export interface RunOperatingCycleResult {
   nativeHandoff?: NativeAdvisorHandoff;
   /** Per-role isolation provenance from this run's mandate dispatch. */
   dispatchProvenance?: AdvisorDispatchResult['provenance'];
+  /**
+   * FR3 (SPEC-005 T-015): the advisor lifecycle driver's observable summary over
+   * the non-chair fan-out — the per-role snapshot, governed gaps for lenses that
+   * terminated without a recorded analysis, Chair-readiness, and the count of
+   * automatic lease heartbeats the driver issued. Present whenever the driver
+   * drove a live inline fan-out (absent on preview/dry-run/native-handoff returns).
+   */
+  advisorLifecycle?: {
+    snapshot: AdvisorRoleSnapshot[];
+    gaps: AdvisorGovernedGap[];
+    chairReady: boolean;
+    heartbeats: number;
+    recorded: OperatingRoleId[];
+    notEvaluated: OperatingRoleId[];
+  };
+  /**
+   * FR13 (SPEC-005 T-015): the Chair's grounded input as assembled from the
+   * partial, honestly-labelled non-chair board by `assembleChairBoardInput` —
+   * the grounded evidence (recorded proposals only, absent lenses contributing
+   * zero proposal items), the six-way per-role ledger, and the named-gap lines
+   * fed into the Chair mandate so a missing perspective is surfaced as a gap the
+   * Chair must not synthesize around.
+   */
+  chairBoard?: ChairBoardInput;
 }
 
 function normalizeFocus(
@@ -244,15 +312,37 @@ function requiredOpenEvidenceRefs(state: OperatingState): string[] {
   ].sort();
 }
 
+/**
+ * The Chair's grounded input assembled from the board (FR13). Each recorded role
+ * contributes its real analysis as synthetic advisor-result evidence, labelled
+ * with its six-way outcome. Citation-rejected proposals are EXCLUDED from the
+ * grounded input (never silently dropped — they are named in the gap list), so a
+ * proposal Chair could not have grounded can never reach its synthesis. Roles
+ * with no valid analysis (not-evaluated, failed, still-running, all-rejected)
+ * contribute no proposal item: their absence is surfaced as a gap, never as a
+ * fabricated conclusion.
+ */
 export function buildChairEvidence(
   evidence: OperatingEvidence,
   results: OperatingRoleResult[],
   now: string,
+  context: ChairBoardContext = {},
 ): OperatingEvidence {
+  const contributions = classifyChairRoleContributions(results, context);
+  const outcomeByRole = new Map(contributions.map((entry) => [entry.roleId, entry.outcome]));
+  const excludedByRole = new Map(
+    contributions.map((entry) => [entry.roleId, new Set(entry.excludedProposalKeys)]),
+  );
   const evidenceById = new Map(evidence.items.map((item) => [item.id, item]));
   const synthetic = results.flatMap((result) => {
+    const excluded = excludedByRole.get(result.roleId) ?? new Set<string>();
+    // Grounded proposals only: a citation-rejected proposal is excluded here so it
+    // never becomes Chair-citable evidence, while `chairBoardGapLines` names it.
+    const groundedProposals = result.proposals.filter(
+      (proposal) => !excluded.has(proposal.proposalKey),
+    );
     const evidenceRefs = [
-      ...new Set(result.proposals.flatMap((proposal) => proposal.evidenceRefs)),
+      ...new Set(groundedProposals.flatMap((proposal) => proposal.evidenceRefs)),
     ].sort();
     const missingRefs = evidenceRefs.filter((reference) => !evidenceById.has(reference));
     if (missingRefs.length > 0) {
@@ -271,12 +361,13 @@ export function buildChairEvidence(
         location: `${result.roleId}/context`,
         body: {
           roleId: result.roleId,
-          outcome: result.outcome,
+          outcome: outcomeByRole.get(result.roleId) ?? result.outcome,
           gaps: [...new Set(result.gaps)].sort(),
           conflicts: [...new Set(result.conflicts)].sort(),
+          ...(excluded.size > 0 ? { citationRejectedProposals: [...excluded].sort() } : {}),
         },
       },
-      ...result.proposals.map((proposal) => ({
+      ...groundedProposals.map((proposal) => ({
         id: `EVD-advisor-results-${result.roleId}-${proposal.proposalKey}`,
         location: `${result.roleId}/proposals/${proposal.proposalKey}`,
         body: {
@@ -308,6 +399,37 @@ export function buildChairEvidence(
         .map(({ id, digest, sensitivity }) => ({ id, digest, sensitivity }))
         .sort((left, right) => left.id.localeCompare(right.id)),
     }),
+  };
+}
+
+/** The Chair's complete input over a partial, honestly-labelled board (FR13). */
+export interface ChairBoardInput {
+  /** Grounded evidence Chair may cite — recorded proposals only, citation-rejected ones excluded. */
+  evidence: OperatingEvidence;
+  /** The six-way per-role ledger, distinguishing recorded/quiet/not-evaluated/failed/running/rejected. */
+  contributions: ChairRoleContribution[];
+  /** Named-gap lines for every absent, failed, still-running, or rejected perspective — never a conclusion. */
+  gaps: string[];
+}
+
+/**
+ * Assemble the Chair's input from a possibly-partial board (FR13). This is the
+ * single entry point that ties the grounded evidence to the honest per-role
+ * ledger and the named-gap list: one missing perspective can never destroy an
+ * otherwise-useful board, and the Chair is handed a structural record of what did
+ * NOT evaluate rather than a silent absence it might synthesize around.
+ */
+export function assembleChairBoardInput(
+  evidence: OperatingEvidence,
+  results: OperatingRoleResult[],
+  now: string,
+  context: ChairBoardContext = {},
+): ChairBoardInput {
+  const contributions = classifyChairRoleContributions(results, context);
+  return {
+    evidence: buildChairEvidence(evidence, results, now, context),
+    contributions,
+    gaps: chairBoardGapLines(contributions),
   };
 }
 
@@ -783,7 +905,39 @@ export async function gateRecordedProposalCitations(input: {
   const evidenceByKey = new Map(
     enforcement.accepted.map((entry) => [entry.proposal.proposalKey, entry.evidenceRefs]),
   );
-  const gaps: OperatingDataGap[] = [...(enforcement.gaps as unknown as OperatingDataGap[])];
+  // FR13 (T-017): name the role whose proposal each unresolvable-citation gap
+  // rejected, so the integrity summary links the citation rejection to that role.
+  // Without it the gap carries no `affectedRoles`, the Chair board cannot tell a
+  // fully-rejected role's `citation-rejected` outcome apart from a plain
+  // not-evaluated absence, and the integrity report's "Affected:" line is blank.
+  const roleByProposalKey = new Map<string, string>();
+  for (const result of input.roleResults) {
+    for (const proposal of result.proposals) {
+      roleByProposalKey.set(proposal.proposalKey, result.roleId);
+    }
+  }
+  const rolesByGapId = new Map<string, Set<string>>();
+  for (const entry of enforcement.rejected) {
+    const roleId = roleByProposalKey.get(entry.proposalKey);
+    if (!roleId) continue;
+    const roles = rolesByGapId.get(entry.gapId) ?? new Set<string>();
+    roles.add(roleId);
+    rolesByGapId.set(entry.gapId, roles);
+  }
+  const gaps: OperatingDataGap[] = (enforcement.gaps as unknown as OperatingDataGap[]).map(
+    (gap) => {
+      const roles = rolesByGapId.get(String((gap as { id?: unknown }).id));
+      if (!roles || roles.size === 0) return gap;
+      const record = gap as unknown as Record<string, unknown>;
+      const existing = Array.isArray(record.affectedRoles)
+        ? (record.affectedRoles as string[])
+        : [];
+      return {
+        ...record,
+        affectedRoles: [...new Set([...existing, ...roles])].sort(),
+      } as unknown as OperatingDataGap;
+    },
+  );
   const notEvaluatedRoleIds: string[] = [];
   const now = input.context.now ?? new Date();
   const roleResults = await Promise.all(
@@ -823,6 +977,45 @@ export async function gateRecordedProposalCitations(input: {
     }),
   );
   return { roleResults, gaps, notEvaluatedRoleIds };
+}
+
+/**
+ * FR3/FR13 (SPEC-005 T-015): mint the governed data gap persisted for a lens the
+ * lifecycle driver terminated `not_evaluated` — a stalled lens that exhausted its
+ * bounded retry budget. It carries the driver's REAL governed reason and links
+ * the role so `status`/`report` render a governed gap rather than a silent
+ * absence. It is shaped as a v1.2.0 `operating-data-gap` (no `category`) so it
+ * validates as a `data-gap` record, exactly as `readinessGaps` gaps do; the
+ * Chair board's `not-evaluated` CLASSIFICATION is sourced separately, directly
+ * from the driver's in-memory governed gaps, so it needs no v1.3 category here.
+ * The digest-derived id keeps it canonical and idempotent across resume.
+ */
+function driverNotEvaluatedGap(
+  gap: AdvisorGovernedGap,
+  cycleId: string,
+  owner: string,
+  now: string,
+): OperatingDataGap {
+  return {
+    kind: 'operating-data-gap',
+    schemaVersion: OPERATE_SCHEMA_VERSION,
+    protocolVersion: OPERATE_PROTOCOL_VERSION,
+    id: `GAP-${canonicalDigest({
+      roleId: gap.roleId,
+      cycleId,
+      reason: 'lifecycle-not-evaluated',
+    }).slice('sha256:'.length)}`,
+    cycleId,
+    question: `Why did ${gap.roleId} not evaluate this cycle?`,
+    reason: gap.reason,
+    unblocks: [],
+    affectedRoles: [gap.roleId],
+    status: 'open',
+    owner: owner && owner.length > 0 ? owner : 'chair',
+    evidenceRefs: [],
+    createdAt: now,
+    updatedAt: now,
+  } as unknown as OperatingDataGap;
 }
 
 export async function runOperatingCycle(
@@ -1097,7 +1290,32 @@ export async function runOperatingCycle(
     const missingNonChair = readiness.roles.filter(
       (role) => role.roleId !== 'chair' && !existingByRole.has(role.roleId),
     );
-    const runnableMissingNonChair = missingNonChair.filter((role) => role.modelCallAllowed);
+    // SPEC-005 T-020 (FR13): a non-chair lens with NO committed result that is
+    // nonetheless named by an open governed cycle gap was terminated
+    // `not_evaluated` — a runtime `harness abandon`, or the operator escape after a
+    // stall. It is terminal, not runnable: exclude it so a genuinely stalled lens
+    // no longer strands the cycle at `phase: advisors` forever, exactly as a
+    // recorded lens does not block it. On the adapter-lifecycle path the only
+    // committed cycle gaps that name a lens with no result are these terminal ones
+    // (the citation gate's gaps always co-occur with a recorded result, handled by
+    // `existingByRole`; readiness gaps are never persisted on this path), so this
+    // never suppresses a still-pending lens — a pending lens has no naming gap yet.
+    const terminatedNonChair = new Set(
+      missingNonChair
+        .filter((role) =>
+          initialState.dataGaps.some(
+            (gap) =>
+              (gap.cycleId === undefined || gap.cycleId === cycle.id) &&
+              !['closed', 'superseded'].includes(String(gap.status)) &&
+              Array.isArray(gap.affectedRoles) &&
+              (gap.affectedRoles as string[]).includes(role.roleId),
+          ),
+        )
+        .map((role) => role.roleId),
+    );
+    const runnableMissingNonChair = missingNonChair.filter(
+      (role) => role.modelCallAllowed && !terminatedNonChair.has(role.roleId),
+    );
     const skippedMissingNonChair = missingNonChair
       .filter((role) => !role.modelCallAllowed || role.readiness === 'not_evaluated')
       .map((role) => ({
@@ -1129,20 +1347,28 @@ export async function runOperatingCycle(
       };
     }
     await assertCycleWorkspace();
-    const first =
-      runnableMissingNonChair.length > 0
-        ? await dispatchOperatingAdvisors({
-            cycleId: cycle.id,
-            projectRoot,
-            pinnedRevision: workspace.controlRepository.pinnedRevision,
-            readiness: { ...readiness, roles: missingNonChair },
-            context: advisorContext,
-            adapter: await resolveAdapter(),
-            depth,
-            runtime: resolvedRuntime,
-            resolveCitations,
-          })
-        : {
+    // FR3 (SPEC-005 T-015): drive the non-chair advisor fan-out through the
+    // AdvisorLifecycleDriver (T-003) rather than a single blocking dispatch. The
+    // driver owns the per-role lifecycle around the runtime dispatch — bounded
+    // retry, per-attempt timeout, and automatic lease heartbeat — and never
+    // dispatches an agent itself: its `dispatch` callback IS the runtime dispatch
+    // (a single-role `dispatchOperatingAdvisors`) and `recordRole` commits the
+    // role's built result. A stalled lens is retried within its budget then
+    // terminated `not_evaluated` with a governed gap while its siblings keep
+    // recording and the lease keeps renewing — none of which the pre-driver
+    // single-call fan-out could survive, because one hung role deadlocked the
+    // whole `Promise.all`. A healthy board records identically to before.
+    const lifecycleTuning = input.advisorLifecycle ?? {};
+    const driveNonChairFanOut = async (): Promise<{
+      dispatch: Pick<
+        AdvisorDispatchResult,
+        'results' | 'provenance' | 'modelCalls' | 'blocked' | 'skipped' | 'failed' | 'gaps'
+      >;
+      lifecycle?: RunOperatingCycleResult['advisorLifecycle'];
+    }> => {
+      if (runnableMissingNonChair.length === 0) {
+        return {
+          dispatch: {
             results: [],
             provenance: [],
             modelCalls: 0,
@@ -1150,7 +1376,181 @@ export async function runOperatingCycle(
             skipped: skippedMissingNonChair,
             failed: [],
             gaps: [],
-          };
+          },
+        };
+      }
+      const adapter = await resolveAdapter();
+      const protocol = await loadOperatingProtocol();
+      // Registry order so the aggregated per-role results are byte-identical to
+      // the single-call dispatch's canonically-ordered result set (FR4).
+      const registryOrder = new Map(
+        (protocol.listOperatingRoles() as Array<{ id: OperatingRoleId }>).map((role, index) => [
+          role.id,
+          index,
+        ]),
+      );
+      const readinessByRole = new Map(readiness.roles.map((role) => [role.roleId, role]));
+      const recordedResults = new Map<OperatingRoleId, OperatingRoleResult>();
+      const provenanceByRole = new Map<
+        OperatingRoleId,
+        AdvisorDispatchResult['provenance'][number]
+      >();
+      const aggregatedGaps: OperatingDataGap[] = [];
+      // Roles whose single-role dispatch produced a genuine FAILURE (an adapter
+      // error), as distinct from a STALL (a per-attempt timeout with no dispatch
+      // error). A genuine failure is preserved as `failed` — the pre-driver
+      // semantics: an `X failed` warning plus an `advisorFailureGaps` gap — while
+      // only a true stall becomes a governed not_evaluated gap (FR3).
+      const failedEntries: AdvisorDispatchResult['failed'] = [];
+      let aggregatedModelCalls = 0;
+      let aggregatedBlocked = false;
+
+      const clock = lifecycleTuning.now ?? ((): number => Date.now());
+      // The engine-managed cycle lease window (FR2). Defaults to the documented
+      // 15-minute session lease; the driver's heartbeat renews it independent of
+      // any role completing, so a slow lens cannot expire recorded work.
+      const leaseWindowMs = lifecycleTuning.leaseWindowMs ?? 900_000;
+      let leaseExpiresAtMs = clock() + leaseWindowMs;
+
+      const plans: AdvisorRolePlan[] = runnableMissingNonChair.map((role) => ({
+        roleId: role.roleId,
+        // Every advisory lens is structurally OPTIONAL here: a stalled lens
+        // terminates not_evaluated with a governed gap and the cycle continues to
+        // Chair (FR3/FR13); nothing in the board is structurally required.
+        retryBudget: lifecycleTuning.retryBudget ?? 0,
+      }));
+
+      const driver = new AdvisorLifecycleDriver({
+        roles: plans,
+        now: clock,
+        ...(lifecycleTuning.setTimer ? { setTimer: lifecycleTuning.setTimer } : {}),
+        ...(lifecycleTuning.clearTimer ? { clearTimer: lifecycleTuning.clearTimer } : {}),
+        ...(lifecycleTuning.roleTimeoutMs !== undefined
+          ? { roleTimeoutMs: lifecycleTuning.roleTimeoutMs }
+          : {}),
+        ...(lifecycleTuning.heartbeatLeadMs !== undefined
+          ? { heartbeatLeadMs: lifecycleTuning.heartbeatLeadMs }
+          : {}),
+        leaseExpiresAtMs,
+        concurrency: DEFAULT_OPERATING_DISPATCH_CONCURRENCY,
+        heartbeat: async () => {
+          leaseExpiresAtMs = clock() + leaseWindowMs;
+          return { leaseExpiresAtMs };
+        },
+        recordRole: async ({ roleId, output }) => {
+          recordedResults.set(roleId, output as OperatingRoleResult);
+          leaseExpiresAtMs = clock() + leaseWindowMs;
+          return { recorded: true, leaseExpiresAtMs };
+        },
+      });
+
+      const dispatchOne = async (roleId: OperatingRoleId): Promise<OperatingRoleResult> => {
+        const roleReadiness = readinessByRole.get(roleId);
+        if (!roleReadiness) {
+          throw new OperateError(
+            'E_OPERATE_STATE_INVALID',
+            `No dispatch readiness for advisor role ${roleId}.`,
+          );
+        }
+        const single = await dispatchOperatingAdvisors({
+          cycleId: cycle.id,
+          projectRoot,
+          pinnedRevision: workspace.controlRepository.pinnedRevision,
+          readiness: { ...readiness, roles: [roleReadiness] },
+          context: advisorContext,
+          adapter,
+          depth,
+          runtime: resolvedRuntime,
+          resolveCitations,
+        });
+        aggregatedModelCalls += single.modelCalls;
+        for (const entry of single.provenance) provenanceByRole.set(entry.roleId, entry);
+        aggregatedGaps.push(...single.gaps);
+        if (single.blocked) aggregatedBlocked = true;
+        const built = single.results.find((result) => result.roleId === roleId);
+        if (built) return built;
+        // The lens dispatch errored. Record it as a genuine failure (preserved as
+        // `failed` below) and surface it to the driver, which terminates the role.
+        // A HANG instead never reaches here: the driver's per-attempt timeout
+        // rejects `dispatchOne` from outside, so a timeout is classified a stall
+        // (not a failure) and becomes a governed not_evaluated gap. The driver
+        // dispatches nothing itself — this callback IS the dispatch.
+        const failure = single.failed.find((entry) => entry.roleId === roleId);
+        failedEntries.push({
+          roleId,
+          message: failure?.message ?? `Advisor role ${roleId} produced no committed result.`,
+        });
+        throw new OperateError(
+          'E_OPERATE_ADVISOR_FAILED',
+          failure?.message ?? `Advisor role ${roleId} produced no committed result.`,
+        );
+      };
+
+      const heartbeatIntervalMs = lifecycleTuning.heartbeatIntervalMs ?? 60_000;
+      const stopHeartbeat = driver.scheduleHeartbeat(heartbeatIntervalMs);
+      try {
+        await driver.run({
+          parallel: Boolean(adapter.parallelDispatch),
+          dispatch: (roleId) => dispatchOne(roleId),
+        });
+      } finally {
+        stopHeartbeat();
+      }
+
+      const governedGaps = driver.governedGaps();
+      const failedRoleIds = new Set(failedEntries.map((entry) => entry.roleId));
+      // Only a TRUE stall (a timeout, never a dispatch failure) becomes a governed
+      // not_evaluated gap; a role the driver terminated after a genuine dispatch
+      // error is preserved as `failed` and drops out of the stall set.
+      const stallGaps = governedGaps.filter(
+        (gap) => gap.outcome === 'not_evaluated' && !failedRoleIds.has(gap.roleId),
+      );
+      const results = [...recordedResults.values()].sort(
+        (left, right) =>
+          (registryOrder.get(left.roleId) ?? Number.MAX_SAFE_INTEGER) -
+          (registryOrder.get(right.roleId) ?? Number.MAX_SAFE_INTEGER),
+      );
+      const provenance = results
+        .map((result) => provenanceByRole.get(result.roleId))
+        .filter(
+          (entry): entry is AdvisorDispatchResult['provenance'][number] => entry !== undefined,
+        );
+      // Genuine dispatch failures preserved with the pre-driver semantics, plus any
+      // structurally-required lens the driver terminated `failed` (none on this
+      // path, where every lens is optional).
+      const failed = [
+        ...failedEntries,
+        ...governedGaps
+          .filter((gap) => gap.outcome === 'failed')
+          .map((gap) => ({ roleId: gap.roleId, message: gap.reason })),
+      ];
+
+      return {
+        dispatch: {
+          results,
+          provenance,
+          modelCalls: aggregatedModelCalls,
+          blocked: aggregatedBlocked,
+          skipped: skippedMissingNonChair,
+          failed,
+          gaps: [...aggregatedGaps],
+        },
+        lifecycle: {
+          snapshot: driver.snapshot(),
+          // Only the genuine stalls — a failed lens is surfaced through `failed`,
+          // not as a not_evaluated governed gap.
+          gaps: stallGaps,
+          chairReady: driver.chairReady(),
+          heartbeats: driver.heartbeatsIssued(),
+          recorded: results.map((result) => result.roleId),
+          notEvaluated: stallGaps.map((gap) => gap.roleId),
+        },
+      };
+    };
+
+    const fanOut = await driveNonChairFanOut();
+    const first = fanOut.dispatch;
+    const advisorLifecycleSummary = fanOut.lifecycle;
     let roleResults = [
       ...existingRoleResults.filter((result) => result.roleId !== 'chair'),
       ...first.results,
@@ -1164,6 +1564,7 @@ export async function runOperatingCycle(
     // citations (unresolvable-citation, empty-grounding) are recorded alongside
     // the cycle's other gaps.
     const dispatchGaps: OperatingDataGap[] = [...first.gaps];
+    let chairBoard: ChairBoardInput | undefined;
     if (config.enabledRoles.includes('chair')) {
       // FR1: the Chair dispatches its own mandate and investigates independently —
       // it no longer receives a synthesized advisor-results evidence body. Its
@@ -1217,6 +1618,182 @@ export async function runOperatingCycle(
           },
         };
       }
+      // FR13 (SPEC-005 T-015): assemble the Chair's grounded input from the
+      // partial, honestly-labelled non-chair board with T-004's assembler, then
+      // feed its contributions and named-gap lines into the Chair mandate. The
+      // integrity summary (built from the cycle's committed + dispatch gaps), the
+      // dispatch `failed` list, and the citation gate's rejected proposal keys are
+      // threaded in so every not-evaluated / failed / still-running /
+      // citation-rejected lens is surfaced to the Chair as a gap it must NOT
+      // synthesize around. Absent lenses contribute ZERO proposal items to the
+      // grounded evidence by construction — the assembler only synthesizes from
+      // roles that recorded a result.
+      const nonChairResults = roleResults.filter((result) => result.roleId !== 'chair');
+      // Citation rejections / boundary refusals come from the cycle's committed +
+      // dispatch gaps (category-bearing v1.3 gaps read in-memory). The stalled
+      // lenses' not_evaluated classification is sourced directly from the driver's
+      // in-memory governed gaps — its authoritative record of what did NOT
+      // evaluate and WHY — rather than from a persisted category, so the Chair
+      // sees every absent perspective with its real reason.
+      const baseIntegrity = buildOperatingIntegritySummary(
+        {
+          ...initialState,
+          dataGaps: [...initialState.dataGaps, ...dispatchGaps],
+        } as OperatingState,
+        cycle.id,
+      );
+      const stallNotEvaluatedRoles = (advisorLifecycleSummary?.gaps ?? []).map((gap) => ({
+        roleId: gap.roleId,
+        gapId: `GAP-lifecycle-${gap.roleId}`,
+        reason: gap.reason,
+        detail: gap.reason,
+      }));
+      // SPEC-005 T-019 (FR5/FR13): reconstruct the citation-rejection signal for the
+      // agent-native adapter-lifecycle path. On that path a fully citation-rejected
+      // lens commits a quiet result in a PRIOR `run` (via `operateAdapterLifecycle`'s
+      // record step), which persists the citation gate's governed gaps
+      // (`maintenance.ts`). On THIS consolidation continuation the role is already
+      // recorded, so it is never re-dispatched and its category-bearing v1.3 gaps are
+      // never rebuilt in memory — `dispatchGaps` is empty. The persisted gaps carry
+      // no `category` (the v1.2 append-log projection T-017 uses drops it, and the
+      // reducer projects it away regardless), so `buildOperatingIntegritySummary`
+      // cannot re-derive the signal from committed state, and the lens would fall
+      // through to a false-clean `recorded-quiet`.
+      //
+      // Carry T-017's signal across that boundary using the SAME co-occurring
+      // structural fact its classifier keys on — never the gap's prose: a lens that
+      // recorded a result grounding ZERO proposals AND is named by a governed cycle
+      // gap was citation-rejected (the citation gate is the only producer of a
+      // role-affecting gap at record time on this path). Layer those as
+      // `citationRejections` onto the Chair integrity exactly as the stall
+      // not_evaluated roles are layered above, skipping any role `baseIntegrity`
+      // already classified (so the inline path — whose in-memory `dispatchGaps` still
+      // carry `category` — is untouched and T-017's inline proof stays green).
+      const recordedZeroGroundedRoles = new Set(
+        nonChairResults
+          .filter((result) => result.proposals.length === 0)
+          .map((result) => result.roleId),
+      );
+      const alreadyClassifiedRoles = new Set<string>([
+        ...baseIntegrity.citationRejections.flatMap((entry) => entry.affectedRoles),
+        ...baseIntegrity.boundaryRefusals.flatMap((entry) => entry.affectedRoles),
+        ...baseIntegrity.notEvaluatedRoles.map((role) => role.roleId),
+        ...stallNotEvaluatedRoles.map((role) => role.roleId),
+      ]);
+      const nativeCitationRejections: OperatingIntegrityCitationEntry[] = [];
+      for (const roleId of [...recordedZeroGroundedRoles].sort()) {
+        if (alreadyClassifiedRoles.has(roleId)) continue;
+        const namingGap = initialState.dataGaps
+          .filter(
+            (gap) =>
+              (gap.cycleId === undefined || gap.cycleId === cycle.id) &&
+              Array.isArray(gap.affectedRoles) &&
+              (gap.affectedRoles as string[]).includes(roleId),
+          )
+          .sort((left, right) => String(left.id).localeCompare(String(right.id)))[0];
+        if (!namingGap) continue;
+        const reason = String((namingGap as { reason?: unknown }).reason ?? '').trim();
+        const detail = String((namingGap as { question?: unknown }).question ?? '').trim();
+        nativeCitationRejections.push({
+          gapId: String(namingGap.id),
+          reason: reason || 'A cited location could not be resolved to evidence.',
+          detail: detail || 'Every citation this role returned failed to resolve to evidence.',
+          affectedRoles: [roleId],
+        });
+      }
+      // SPEC-005 T-020 (FR13): a lens dispatched but that never returned — a true
+      // stall, terminated via `harness abandon` (runtime) or the operator escape —
+      // commits NO result at all, only a governed terminal gap (`maintenance.ts`
+      // `governTerminalNotEvaluated`). It is the inverse of T-019's citation-rejected
+      // case (which DID record a zero-grounded result), so it is reconstructed the
+      // same structural way, keyed on the same committed-state fact and never gap
+      // prose: a non-chair enabled lens with NO committed result that is named by an
+      // open governed cycle gap is `not_evaluated`, carrying that gap's reason and
+      // id. This keeps it a distinct `not-evaluated` outcome — never citation-rejected
+      // (which requires a recorded result), never a fabricated conclusion — so the
+      // Chair names it as an explicit gap it must not synthesize around, and it
+      // contributes zero grounded proposal items by construction (it recorded none).
+      const recordedNonChairRoles = new Set(nonChairResults.map((result) => result.roleId));
+      const nativeNotEvaluatedRoles: OperatingIntegrityNotEvaluatedRole[] = [];
+      for (const roleId of [...nonChair].sort()) {
+        if (recordedNonChairRoles.has(roleId)) continue;
+        if (alreadyClassifiedRoles.has(roleId)) continue;
+        const namingGap = initialState.dataGaps
+          .filter(
+            (gap) =>
+              (gap.cycleId === undefined || gap.cycleId === cycle.id) &&
+              !['closed', 'superseded'].includes(String(gap.status)) &&
+              Array.isArray(gap.affectedRoles) &&
+              (gap.affectedRoles as string[]).includes(roleId),
+          )
+          .sort((left, right) => String(left.id).localeCompare(String(right.id)))[0];
+        if (!namingGap) continue;
+        const reason = String((namingGap as { reason?: unknown }).reason ?? '').trim();
+        const detail = String((namingGap as { question?: unknown }).question ?? '').trim();
+        nativeNotEvaluatedRoles.push({
+          roleId,
+          gapId: String(namingGap.id),
+          reason: reason || 'The lens was dispatched but never recorded a result.',
+          detail:
+            detail ||
+            'The lens was dispatched but never recorded a result; it is recorded not_evaluated.',
+        });
+      }
+      const chairIntegrity: OperatingIntegritySummary = {
+        ...baseIntegrity,
+        citationRejections: [...baseIntegrity.citationRejections, ...nativeCitationRejections],
+        notEvaluatedRoles: [
+          ...baseIntegrity.notEvaluatedRoles,
+          ...stallNotEvaluatedRoles,
+          ...nativeNotEvaluatedRoles,
+        ],
+        hasConcerns:
+          baseIntegrity.hasConcerns ||
+          stallNotEvaluatedRoles.length > 0 ||
+          nativeCitationRejections.length > 0 ||
+          nativeNotEvaluatedRoles.length > 0,
+      };
+      // The grounded evidence-of-record the recorded proposals cite: read back
+      // from the citation snapshots the dispatch-time gate minted, so
+      // `buildChairEvidence` resolves every recorded proposal's evidenceRefs
+      // instead of the body-free pinned-revision seed (whose `items` are empty).
+      const chairGroundedEvidence = await assembleCitationEvidence({
+        cycleId: cycle.id,
+        roleResults: nonChairResults,
+        cache: citationCache,
+        baseFingerprint: evidence.fingerprint,
+        now: timestamp,
+      });
+      chairBoard = assembleChairBoardInput(chairGroundedEvidence, nonChairResults, timestamp, {
+        expectedRoles: nonChair,
+        integrity: chairIntegrity,
+        failedReasons: Object.fromEntries(failed.map((entry) => [entry.roleId, entry.message])),
+        // Recorded results are already citation-gated at dispatch time, so no
+        // recorded proposal is outstanding-rejected here; a role whose proposals
+        // were all rejected committed not_evaluated and is classified via the
+        // integrity summary's missing-evidence gaps above.
+        rejectedProposalKeys: {},
+      });
+      // Layer the named-gap lines onto the Chair's context so a real runtime agent
+      // sees each absent perspective explicitly. The offline/test adapter ignores
+      // context, so the machine-checked proof of the wiring is the exposed
+      // `chairBoard`; the Chair still investigates independently and receives no
+      // synthesized advisor conclusions — only the honest record of what did NOT
+      // evaluate, which it must surface as a gap rather than fabricate around.
+      const chairAdvisorContext: AdvisorOperatingContext = {
+        ...advisorContext,
+        openGaps: [
+          ...advisorContext.openGaps,
+          ...chairBoard.gaps.map((line, index) => ({
+            id: `BOARD-GAP-${String(index + 1).padStart(3, '0')}`,
+            status: 'open',
+            summary: line,
+            owner: null,
+            evidenceRefs: [],
+            affectedRoles: ['chair'],
+          })),
+        ],
+      };
       const chair = persistedChair
         ? {
             results: [persistedChair],
@@ -1232,7 +1809,7 @@ export async function runOperatingCycle(
             projectRoot,
             pinnedRevision: workspace.controlRepository.pinnedRevision,
             readiness: chairReadiness,
-            context: advisorContext,
+            context: chairAdvisorContext,
             adapter: await resolveAdapter(),
             depth,
             runtime: resolvedRuntime,
@@ -1289,6 +1866,14 @@ export async function runOperatingCycle(
       owner: config.decisionOwner,
       now: timestamp,
     });
+    // FR3 (SPEC-005 T-015): the governed data gaps for lenses the lifecycle driver
+    // terminated not_evaluated (a stall past the retry budget). They join the
+    // consolidation gap set so `remapConsolidation` mints their canonical `GAP-NNN`
+    // ids alongside every other cycle gap, then persist and render like any other
+    // governed gap — so `status`/`report` show a stalled lens honestly.
+    const lifecycleNotEvaluatedGaps = (advisorLifecycleSummary?.gaps ?? []).map((gap) =>
+      driverNotEvaluatedGap(gap, cycle.id, config.decisionOwner, timestamp),
+    );
     const surfacedDedup = suppressRepeatedFindings(initialState, consolidated.findings, cycle.id);
     const overflowDedup = suppressRepeatedFindings(
       initialState,
@@ -1313,7 +1898,7 @@ export async function runOperatingCycle(
       [...surfacedDedup.findings, ...overflowDedup.findings],
       parkedDedup.findings,
       consolidated.decisions,
-      [...evidenceGaps, ...consolidated.gaps, ...failureGaps],
+      [...evidenceGaps, ...consolidated.gaps, ...failureGaps, ...lifecycleNotEvaluatedGaps],
     );
     const warnings = [
       ...evidence.warnings,
@@ -1368,6 +1953,8 @@ export async function runOperatingCycle(
       modelCalls,
       warnings,
       dispatchProvenance,
+      ...(advisorLifecycleSummary ? { advisorLifecycle: advisorLifecycleSummary } : {}),
+      ...(chairBoard ? { chairBoard } : {}),
     };
   };
 
@@ -1474,7 +2061,23 @@ export async function runOperatingCycle(
             state,
             revalidateEventHead: async () => (await store.replay()).eventHead,
           });
-          return { ...evaluated, state };
+          // FR5 (SPEC-005 T-002): the status-facing summary this native handoff
+          // returns reflects LIVE persisted role results — every lens the harness
+          // has already committed to the canonical event log, re-read here from the
+          // freshest replay rather than the call-entry snapshot. Combined with the
+          // harness recording each role's event the moment it validates (not only
+          // at finalize), a `run` re-entered mid fan-out reports exactly the roles
+          // that are durably recorded, never a stale "nothing recorded yet" view.
+          const livePersistedRoleResults = await persistedCycleRoleResults(
+            store,
+            (await store.replay()).events,
+            cycle.id,
+          );
+          return {
+            ...evaluated,
+            roleResults: livePersistedRoleResults.filter((result) => result.roleId !== 'chair'),
+            state,
+          };
         }
 
         if (phase === 'advising') {
@@ -1498,8 +2101,26 @@ export async function runOperatingCycle(
           const existingGapIds = new Set(
             initialState.dataGaps.filter((gap) => gap.cycleId === cycle.id).map((gap) => gap.id),
           );
-          for (const gap of evaluated.gaps ?? []) {
-            if (existingGapIds.has(gap.id)) continue;
+          // FR2/FR13 (T-017): a citation-rejection / empty-grounding gap is a
+          // Protocol v1.3 gap in memory (category + digest id), where the Chair
+          // board reads its category to classify the role. The append log and the
+          // gap.open/operating-record schemas only admit a v1.2 data gap, so
+          // persist each gap in its v1.2 projection (canonical `GAP-NNN` id, no
+          // v1.3-only fields) — lossless for replayed state, which drops category
+          // regardless. Seed the ordinal past every canonical id already present in
+          // committed state and this batch so a minted id never collides.
+          let gapOrdinal = maximumOrdinal(
+            [...initialState.dataGaps, ...(evaluated.gaps ?? [])] as unknown as Array<
+              Record<string, unknown>
+            >,
+            'GAP',
+          );
+          for (const rawGap of evaluated.gaps ?? []) {
+            const gap = toPersistedDataGap(
+              rawGap as unknown as Record<string, unknown>,
+              () => `GAP-${String(++gapOrdinal).padStart(3, '0')}`,
+            ) as unknown as OperatingDataGap;
+            if (existingGapIds.has(rawGap.id) || existingGapIds.has(gap.id)) continue;
             await assertOperatingArtifact('operating-data-gap', gap);
             await store.putRecord('data-gap', recordContent(gap), {
               correlationId,

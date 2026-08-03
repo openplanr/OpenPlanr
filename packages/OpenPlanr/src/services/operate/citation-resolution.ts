@@ -169,20 +169,27 @@ export interface CitationResolutionContext {
   sensitivityFor?(citation: OperatingCitation): OperatingSensitivity | undefined;
 }
 
+export type CitationKind = 'repo-path' | 'git-revision' | 'planr-artifact';
+
 export interface ResolvedCitation {
   citation: OperatingCitation;
   citationKey: string;
   outcome: 'resolved' | 'rejected';
   reason?: CitationRejectionReason;
+  /**
+   * The citation kind the classifier resolved the citation as (FR8): `.planr/`
+   * planning artifacts are `planr-artifact`, git-tracked source is `repo-path`,
+   * and a bare commit reference is `git-revision`. Surfaced so a validation
+   * error names the expected kind without exposing the cited content.
+   */
+  expectedCitationKind: CitationKind;
   evidenceId?: string;
   snapshotDigest?: `sha256:${string}`;
   gap?: OperatingCitationGap;
   sensitivity: OperatingSensitivity;
 }
 
-function citationKind(
-  citation: OperatingCitation,
-): 'repo-path' | 'git-revision' | 'planr-artifact' | null {
+function citationKind(citation: OperatingCitation): CitationKind | null {
   if (typeof citation.repositoryPath === 'string') return 'repo-path';
   if (typeof citation.gitRevision === 'string') return 'git-revision';
   if (typeof citation.planrArtifactId === 'string') return 'planr-artifact';
@@ -402,6 +409,10 @@ export async function resolveOperatingCitationAtPin(
   const keyed: OperatingCitation = { ...citation, citationKey };
   const sensitivity =
     context.sensitivityFor?.(citation) ?? context.defaultSensitivity ?? 'internal';
+  // A citation that passed `validateOperatingCitation` always carries exactly one
+  // locator, so the kind is total here (the `?? 'planr-artifact'` is unreachable
+  // and only keeps the type non-nullable).
+  const expectedCitationKind: CitationKind = citationKind(keyed) ?? 'planr-artifact';
 
   const observation = await observeCitation(keyed, context, sensitivity);
 
@@ -423,6 +434,7 @@ export async function resolveOperatingCitationAtPin(
       citationKey,
       outcome: 'rejected',
       reason: 'dirty-working-tree',
+      expectedCitationKind,
       gap,
       sensitivity,
     };
@@ -443,6 +455,7 @@ export async function resolveOperatingCitationAtPin(
       citationKey,
       outcome: 'rejected',
       reason: resolution.reason,
+      expectedCitationKind,
       gap,
       sensitivity,
     };
@@ -469,6 +482,7 @@ export async function resolveOperatingCitationAtPin(
       citationKey,
       outcome: 'rejected',
       reason: 'unresolvable',
+      expectedCitationKind,
       gap,
       sensitivity,
     };
@@ -491,6 +505,7 @@ export async function resolveOperatingCitationAtPin(
     citation: keyed,
     citationKey,
     outcome: 'resolved',
+    expectedCitationKind,
     evidenceId: resolution.evidenceId,
     snapshotDigest: resolution.snapshotDigest,
     sensitivity,
@@ -507,6 +522,12 @@ export interface RejectedProposalCitation {
   proposalKey: string;
   /** The primary rejection reason (the single gap opened for this proposal). */
   reason: CitationRejectionReason;
+  /**
+   * The expected citation kind of the primary rejected citation (FR8), so a
+   * validation error names the affected claim/action (`proposalKey`) and the
+   * kind of citation that was expected without exposing the cited content.
+   */
+  expectedCitationKind: CitationKind;
   /** Every distinct rejection reason across the proposal's citations. */
   reasons: CitationRejectionReason[];
   gapId: string;
@@ -559,6 +580,7 @@ export async function enforceProposalCitations<P extends CitationBearingProposal
       rejected.push({
         proposalKey: proposal.proposalKey,
         reason: primary.reason as CitationRejectionReason,
+        expectedCitationKind: primary.expectedCitationKind,
         reasons: [
           ...new Set(
             rejectedCitations

@@ -444,8 +444,17 @@ export async function readOperatingRichCycleArtifacts(input: {
   localRoot?: string;
 }): Promise<Map<string, OperatingRichCycleArtifact>> {
   const artifacts = new Map<string, OperatingRichCycleArtifact>();
+  // FR4 (SPEC-005): a still-advising (or consolidating/blocked) cycle materializes
+  // its readable artifacts too, so every validated lens is inspectable BEFORE
+  // Chair finalizes — not only once the cycle reaches `reviewable`. An in-flight
+  // cycle is only included once it actually has committed advisor results (guarded
+  // below on `evaluatedRoleIds`), so the pre-record advising handoff still writes
+  // no empty cycle directory.
+  const TERMINAL_CYCLE_STATES = new Set(['reviewable', 'closed']);
   const cycles = input.state.cycles.filter(
-    (cycle) => cycle.state === 'reviewable' || cycle.state === 'closed',
+    (cycle) =>
+      TERMINAL_CYCLE_STATES.has(cycle.state) ||
+      ['advising', 'consolidating', 'blocked'].includes(cycle.state),
   );
   if (cycles.length === 0) return artifacts;
   const { readOperatingReport, markdownLens, markdownCompleteRegisters } = await import(
@@ -475,6 +484,18 @@ export async function readOperatingRichCycleArtifacts(input: {
             )
           : ['- No citation-qualified provisional drafts were materialized.']),
       ].join('\n');
+      const evaluatedRoleIds = new Set(
+        report.reports
+          .filter((entry) => entry.outcome !== 'not_evaluated')
+          .map((entry) => entry.roleId),
+      );
+      // An in-flight cycle earns a persisted artifact only once at least one lens
+      // has actually recorded (FR4); before that, its report is entirely
+      // not-evaluated and would write an empty cycle directory. A reviewable/closed
+      // cycle always materializes, exactly as before.
+      if (!TERMINAL_CYCLE_STATES.has(cycle.state) && evaluatedRoleIds.size === 0) {
+        continue;
+      }
       artifacts.set(cycle.id, {
         // FR8: the persisted `report.md` is self-contained — the concise brief +
         // lens reports + integrity section, then the complete uncapped registers.
@@ -495,11 +516,7 @@ export async function readOperatingRichCycleArtifacts(input: {
         })}\n`,
         actionsMarkdown: `${renderAgenticActionsMarkdown(cycle.id, report.reports)}\n\n${draftSection}`,
         boardByRole: new Map(report.reports.map((entry) => [entry.roleId, markdownLens(entry)])),
-        evaluatedRoleIds: new Set(
-          report.reports
-            .filter((entry) => entry.outcome !== 'not_evaluated')
-            .map((entry) => entry.roleId),
-        ),
+        evaluatedRoleIds,
       });
     } catch {
       // The rich assembly re-reads the committed event log. If a cycle's records
@@ -526,7 +543,13 @@ function markdownProjectionSpecs(
     managedContent: projection.render(state),
   }));
   const cycleArtifacts = [...state.cycles]
-    .filter((cycle) => cycle.state === 'reviewable' || cycle.state === 'closed')
+    // FR4 (SPEC-005): a reviewable/closed cycle always materializes; an in-flight
+    // cycle materializes once it has a rich artifact (i.e. at least one lens has
+    // recorded), so partial validated progress is on disk before Chair runs.
+    .filter(
+      (cycle) =>
+        cycle.state === 'reviewable' || cycle.state === 'closed' || richArtifacts.has(cycle.id),
+    )
     .sort((left, right) => left.id.localeCompare(right.id))
     .flatMap((cycle) => {
       const rich = richArtifacts.get(cycle.id);

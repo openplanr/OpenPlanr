@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { OPENPLANR_VERSION } from '../../utils/package-version.js';
 import { canonicalDigest, sha256Digest } from './canonical.js';
@@ -14,6 +14,7 @@ import {
   type OperatingEventHead,
   type OperatingSensitivity,
 } from './types.js';
+import { isPathInside } from './workspace.js';
 
 const EXTENSIONS: Record<OperatingArtifactSession['artifactType'], string> = {
   markdown: '.md',
@@ -167,13 +168,139 @@ function entryMatchesArtifact(entry: string, artifactId: string): boolean {
   );
 }
 
+const PLANR_WORKING_TREE_MAX_BYTES = 1024 * 1024;
+
+/**
+ * Read one working-tree `.planr/` file for the gitignored fallback, bounded and
+ * fail-closed. Returns null when the path is absent, is not a plain file, or
+ * exceeds the byte bound — a citation into it then fails closed rather than
+ * snapshotting a partial or oversized body.
+ */
+async function readWorkingTreePlanrFile(
+  absolutePath: string,
+  maxBytes: number,
+): Promise<string | null> {
+  try {
+    const info = await stat(absolutePath);
+    if (!info.isFile() || info.size > maxBytes) return null;
+    return await readFile(absolutePath, 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Working-tree fallback for a planr-artifact citation whose ID is absent from the
+ * committed tree at the pinned revision — the FR8 gitignored `.planr/` case. The
+ * committed revision stays authoritative: this reads from disk ONLY when the pin
+ * has no matching artifact, because a gitignored planning directory is never in
+ * any commit yet remains a legitimate, citable local planning surface. The scan
+ * is bounded to the fixed `.planr/` directory allowlist (never a caller path),
+ * stays inside the project root, and passes the same redaction path committed
+ * planr artifacts use, so a gitignored artifact resolves with a verified,
+ * redacted snapshot rather than being misclassified as unresolvable.
+ */
+async function resolveWorkingTreePlanrArtifact(input: {
+  projectRoot: string;
+  directories: readonly string[];
+  artifactId: string;
+  sensitivity: OperatingSensitivity;
+  maxBytes?: number;
+}): Promise<PlanrArtifactCitationResolution | null> {
+  const maxBytes = Math.max(
+    1,
+    Math.min(input.maxBytes ?? PLANR_WORKING_TREE_MAX_BYTES, PLANR_WORKING_TREE_MAX_BYTES),
+  );
+  const root = path.resolve(input.projectRoot);
+  const snapshotBody = async (
+    absolutePath: string,
+    location: string,
+  ): Promise<PlanrArtifactCitationResolution> => {
+    const body = await readWorkingTreePlanrFile(absolutePath, maxBytes);
+    if (body === null) {
+      return {
+        artifactExists: true,
+        location,
+        content: null,
+        sensitivity: input.sensitivity,
+        redactions: [],
+      };
+    }
+    const redacted = redactSensitiveText(body);
+    return {
+      artifactExists: true,
+      location,
+      content: redacted.value,
+      sensitivity: input.sensitivity,
+      redactions: redacted.redactions,
+    };
+  };
+
+  for (const directory of input.directories) {
+    const directoryAbs = path.resolve(root, ...directory.split('/'));
+    if (!isPathInside(root, directoryAbs)) continue;
+    let entries: string[];
+    try {
+      entries = await readdir(directoryAbs);
+    } catch {
+      continue;
+    }
+    const match = entries.find((entry) => entryMatchesArtifact(entry, input.artifactId));
+    if (!match) continue;
+    const matchAbs = path.resolve(directoryAbs, match);
+    if (!isPathInside(root, matchAbs)) continue;
+    const location = `${directory}/${match}`;
+    if (path.extname(match)) {
+      return snapshotBody(matchAbs, location);
+    }
+    // Directory-shaped artifact (e.g. a SPEC bundle): look one level in for a
+    // same-ID markdown body, mirroring the committed-tree resolution.
+    let nested: string[];
+    try {
+      nested = await readdir(matchAbs);
+    } catch {
+      return {
+        artifactExists: true,
+        location,
+        content: null,
+        sensitivity: input.sensitivity,
+        redactions: [],
+      };
+    }
+    const nestedMarkdown =
+      nested.find(
+        (entry) => entryMatchesArtifact(entry, input.artifactId) && entry.endsWith('.md'),
+      ) ?? nested.find((entry) => entry.endsWith('.md'));
+    if (nestedMarkdown) {
+      const nestedAbs = path.resolve(matchAbs, nestedMarkdown);
+      if (isPathInside(root, nestedAbs)) {
+        return snapshotBody(nestedAbs, `${location}/${nestedMarkdown}`);
+      }
+    }
+    return {
+      artifactExists: true,
+      location,
+      content: null,
+      sensitivity: input.sensitivity,
+      redactions: [],
+    };
+  }
+  return null;
+}
+
 /**
  * Resolve a planr-artifact citation against `.planr/` at the cycle's pinned
  * revision (FR3/E-003). Computes the `artifactExists` fact the citation resolver
  * consumes and, when the artifact is a readable markdown/text file, snapshots its
- * content through the same redaction path repository citations use. Existence is
- * checked at the pinned revision, so an in-flight artifact that is not yet
- * committed does not resolve.
+ * content through the same redaction path repository citations use.
+ *
+ * The committed tree at the pinned revision is authoritative: a tracked artifact
+ * resolves against its pinned content, and an in-flight EDIT to a tracked
+ * artifact still reads the pinned (committed) version, not the working copy. When
+ * the ID is absent from the committed tree entirely — the FR8 gitignored `.planr/`
+ * case, where the planning directory is never committed — resolution falls back
+ * to the working-tree copy so a gitignored planning artifact resolves with a
+ * verified, redacted content snapshot instead of failing closed as unresolvable.
  */
 export async function resolvePlanrArtifactCitation(input: {
   projectRoot: string;
@@ -265,7 +392,16 @@ export async function resolvePlanrArtifactCitation(input: {
       redactions: [],
     };
   }
-  return empty;
+  // The ID resolves against no committed tree at the pin. Fall back to the
+  // working tree for the gitignored `.planr/` case (FR8) before failing closed.
+  const workingTree = await resolveWorkingTreePlanrArtifact({
+    projectRoot: input.projectRoot,
+    directories,
+    artifactId: input.artifactId,
+    sensitivity,
+    maxBytes: input.maxBytes,
+  });
+  return workingTree ?? empty;
 }
 
 export function artifactInputDigest(input: {

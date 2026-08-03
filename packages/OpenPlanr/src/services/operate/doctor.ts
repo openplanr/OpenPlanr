@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { canonicalDigest } from './canonical.js';
+import { type OperatingCompletionResult, verifyOperatingCompletionPhases } from './completion.js';
 import { operatingProjectKey } from './config.js';
 import { OperatingEventStore } from './event-store.js';
 import { buildOperatingIntegritySummary, detectGitignoredWorkspace } from './integrity.js';
@@ -10,9 +11,13 @@ import { readJournal } from './journal.js';
 import { readOperatingLock } from './lock-service.js';
 import { detectOperatingStorageLayout } from './migration.js';
 import { classifyOperatingRuntime, resolveActiveOperatingRuntime } from './mission-dispatch.js';
+import { compareLegacyProfileToOperatingConfig } from './profile-migration.js';
+import { renderOperatingBrief } from './projection.js';
 import { inspectOperatingProjectionDrift } from './projection-persistence.js';
 import { loadOperatingProtocol, operatingPipelineAvailable } from './protocol.js';
+import { listAbandonedOperatingScratch } from './scratch.js';
 import type { OperatingState } from './types.js';
+import { OPERATE_AGENT_PROTOCOL_VERSION } from './types.js';
 import { resolveOperatingPaths } from './workspace.js';
 
 export interface OperatingDoctorDiagnostic {
@@ -49,7 +54,51 @@ function sameIds(actual: string[], expected: readonly string[]): boolean {
   );
 }
 
-async function diagnoseProtocol(pipelineVersion?: string): Promise<OperatingDoctorDiagnostic> {
+/**
+ * FR9 (T-008): the AGENT-CONTRACT decision, isolated as a pure function so a
+ * genuine role/provider/boundary divergence in the installed contract can be
+ * exercised directly. This owns the ONLY fail path for the installed contract;
+ * a board persisted at an older protocol envelope is explicitly not its concern
+ * (that is `diagnoseBoardStateVersion`). The fail message names which facet —
+ * roles, providers, or read-only boundaries — actually diverged.
+ */
+export function evaluateAgentContract(input: {
+  roleIds: string[];
+  providerIds: string[];
+  boundariesValid: boolean;
+  pipelineVersion?: string;
+}): OperatingDoctorDiagnostic {
+  const diverged: string[] = [];
+  if (!sameIds(input.roleIds, EXPECTED_ROLES)) diverged.push('roles');
+  if (!sameIds(input.providerIds, EXPECTED_PROVIDERS)) diverged.push('providers');
+  if (!input.boundariesValid) diverged.push('read-only boundaries');
+  if (diverged.length > 0) {
+    return {
+      code: 'operate-protocol',
+      status: 'fail',
+      message: `Operating Board agent contract (Protocol v${OPERATE_AGENT_PROTOCOL_VERSION}) does not match the certified role/provider contract: ${diverged.join(', ')} diverge`,
+      fix: 'Install the exact OpenPlanr release dependencies, then rerun `planr doctor`.',
+    };
+  }
+  return {
+    code: 'operate-protocol',
+    status: 'pass',
+    message: `Operating Board agent contract (Protocol v${OPERATE_AGENT_PROTOCOL_VERSION}) registries are compatible${
+      input.pipelineVersion ? ` with planr-pipeline ${input.pipelineVersion}` : ''
+    }`,
+  };
+}
+
+/**
+ * FR9 (T-008): report the currently installed agent contract (registry/role/
+ * provider check) as ONE fact. Split out of the former conflated
+ * `diagnoseProtocol`; the persisted board-state protocol version is reported
+ * separately by `diagnoseBoardStateVersion` so an older persisted board never
+ * reads as an incompatibility here.
+ */
+async function diagnoseAgentContractVersion(
+  pipelineVersion?: string,
+): Promise<OperatingDoctorDiagnostic> {
   if (!operatingPipelineAvailable()) {
     return {
       code: 'operate-protocol',
@@ -62,42 +111,107 @@ async function diagnoseProtocol(pipelineVersion?: string): Promise<OperatingDoct
     const protocol = await loadOperatingProtocol();
     const roles = protocol.listOperatingRoles();
     const providers = protocol.listOperatingProviders();
-    const roleIds = roles.map((entry) => entry.id);
-    const providerIds = providers.map((entry) => entry.id);
     const boundariesValid =
       roles.every(
         (entry) =>
           entry.readOnly === true &&
           ['none', 'governed-output-only'].includes(String(entry.writeBoundary)),
       ) && providers.every((entry) => entry.readOnly === true);
-    if (
-      !sameIds(roleIds, EXPECTED_ROLES) ||
-      !sameIds(providerIds, EXPECTED_PROVIDERS) ||
-      !boundariesValid
-    ) {
-      return {
-        code: 'operate-protocol',
-        status: 'fail',
-        message:
-          'Operating Board Protocol v1.4 registries do not match the certified role/provider contract',
-        fix: 'Install the exact OpenPlanr release dependencies, then rerun `planr doctor`.',
-      };
-    }
-    return {
-      code: 'operate-protocol',
-      status: 'pass',
-      message: `Operating Board Protocol v1.4 registries are compatible${pipelineVersion ? ` with planr-pipeline ${pipelineVersion}` : ''}`,
-    };
+    return evaluateAgentContract({
+      roleIds: roles.map((entry) => entry.id),
+      providerIds: providers.map((entry) => entry.id),
+      boundariesValid,
+      pipelineVersion,
+    });
   } catch (error) {
     return {
       code: 'operate-protocol',
       status: 'fail',
-      message: `Operating Board Protocol v1.2 compatibility check failed: ${
+      message: `Operating Board agent contract (Protocol v${OPERATE_AGENT_PROTOCOL_VERSION}) compatibility check failed: ${
         error instanceof Error ? error.message : String(error)
       }`,
       fix: 'Install the exact OpenPlanr release dependencies, then rerun `planr doctor`.',
     };
   }
+}
+
+function compareProtocolVersions(left: string, right: string): number {
+  const parse = (value: string): number[] =>
+    value.split('.').map((part) => {
+      const parsed = Number.parseInt(part, 10);
+      return Number.isFinite(parsed) ? parsed : 0;
+    });
+  const a = parse(left);
+  const b = parse(right);
+  for (let index = 0; index < 3; index += 1) {
+    const da = a[index] ?? 0;
+    const db = b[index] ?? 0;
+    if (da !== db) return da < db ? -1 : 1;
+  }
+  return 0;
+}
+
+/**
+ * FR9 (T-008): report the persisted board-state protocol version as a SEPARATE
+ * fact from the installed agent contract. A board written at an older protocol
+ * envelope than the current agent contract stays fully readable — the frozen
+ * additive-envelope guarantee — so an older board is reported informationally
+ * (`pass`), NEVER `warn`/`fail` "incompatible". The genuine-mismatch failure
+ * path belongs exclusively to `evaluateAgentContract` and the boundary/id
+ * checks. A board written at a NEWER contract than is installed is the only
+ * version drift that warns (this install may not implement its newer surface),
+ * and even then the message never frames the older/newer relationship itself as
+ * an incompatibility. Pure over `(boardStateVersion, agentContractVersion)` so
+ * the mapping is testable without a board on disk.
+ */
+export function diagnoseBoardStateVersion(
+  boardStateVersion: string | null,
+  agentContractVersion: string = OPERATE_AGENT_PROTOCOL_VERSION,
+): OperatingDoctorDiagnostic {
+  if (!boardStateVersion) {
+    return {
+      code: 'operate-board-state-version',
+      status: 'pass',
+      message: 'No persisted Operating Board state is present yet to report a protocol version for',
+    };
+  }
+  const ordering = compareProtocolVersions(boardStateVersion, agentContractVersion);
+  if (ordering > 0) {
+    return {
+      code: 'operate-board-state-version',
+      status: 'warn',
+      message: `Persisted Operating Board state is at Protocol v${boardStateVersion}, newer than the installed agent contract (Protocol v${agentContractVersion}); this installation may not implement its newer surface`,
+      fix: 'Run `npm install -g openplanr@latest`, then `planr setup --scope user`, to match the agent contract to the persisted board state.',
+    };
+  }
+  if (ordering < 0) {
+    return {
+      code: 'operate-board-state-version',
+      status: 'pass',
+      message: `Persisted Operating Board state is at Protocol v${boardStateVersion}, readable under the current agent contract (Protocol v${agentContractVersion}); an older persisted board is expected and is not an incompatibility`,
+    };
+  }
+  return {
+    code: 'operate-board-state-version',
+    status: 'pass',
+    message: `Persisted Operating Board state is at Protocol v${boardStateVersion}, matching the installed agent contract (Protocol v${agentContractVersion})`,
+  };
+}
+
+async function diagnoseBoardStateVersionSurface(
+  projectRoot: string,
+  localRoot: string | undefined,
+): Promise<OperatingDoctorDiagnostic> {
+  let boardStateVersion: string | null = null;
+  try {
+    const state = await new OperatingEventStore(projectRoot, { localRoot }).state();
+    boardStateVersion = typeof state.protocolVersion === 'string' ? state.protocolVersion : null;
+  } catch {
+    // A broken/absent event chain is reported by the event-replay check; the
+    // board-state protocol version is only meaningful against a readable board.
+    boardStateVersion = null;
+  }
+  return diagnoseBoardStateVersion(boardStateVersion, OPERATE_AGENT_PROTOCOL_VERSION);
 }
 
 async function diagnoseEventState(
@@ -592,6 +706,41 @@ async function diagnoseIncrementalBaselines(
 }
 
 /**
+ * FR7 (T-006): detect OpenPlanr-owned scratch left behind by a session that never
+ * finalized. The reproduction lost completed analyses because the runtime chose
+ * its own temp-file transport with nothing owning it; scratch now lives under the
+ * project-and-machine-keyed operate root, is recorded in an owned manifest, and is
+ * cleaned automatically after a successful record/finalize. Any scratch still
+ * carrying an owned manifest past its lease window is abandoned. This reads only
+ * machine-local scratch, names abandoned sets by their cycle key (never a raw
+ * project or home path), and points at the FR7-named `planr doctor --fix`, which
+ * delegates to the single owned-only cleanup that removes ONLY confirmed
+ * OpenPlanr-owned stale scratch — never an arbitrary file found under the
+ * directory.
+ */
+async function diagnoseAbandonedScratch(
+  projectRoot: string,
+  localRoot: string | undefined,
+): Promise<OperatingDoctorDiagnostic> {
+  const paths = resolveOperatingPaths(projectRoot, { localRoot });
+  const abandoned = await listAbandonedOperatingScratch(paths);
+  if (abandoned.length > 0) {
+    const cycles = abandoned.map((entry) => entry.cycleId).join(', ');
+    return {
+      code: 'operate-scratch',
+      status: 'warn',
+      message: `${abandoned.length} OpenPlanr-owned scratch set(s) were left behind by a session that never finalized: ${cycles}`,
+      fix: 'Run `planr doctor --fix` to remove only the confirmed OpenPlanr-owned stale scratch.',
+    };
+  }
+  return {
+    code: 'operate-scratch',
+    status: 'pass',
+    message: 'No abandoned OpenPlanr-owned operate scratch is present',
+  };
+}
+
+/**
  * Classify the active runtime for agent-native Operate. Enforced isolation and
  * runtime-governed native workflows are both first-class; only a missing or
  * incompatible workflow is unsupported.
@@ -727,13 +876,264 @@ async function diagnoseWorkspaceVersioning(
   };
 }
 
+/**
+ * FR10 / T-009: report drift between a legacy `.planr/operate-profile.json` and
+ * the live operating configuration. A stale profile that still names fields the
+ * current config no longer carries (its `id`, role selection, caps, providers, or
+ * budgets) is exactly what made guided init suggest a profile the CLI then
+ * rejected; naming the differing fields points the operator at
+ * `planr operate profiles migrate inspect`. Reads only; a missing profile or a
+ * missing/unreadable config is a clean pass because there is nothing to reconcile.
+ */
+async function diagnoseProfileDrift(
+  projectRoot: string,
+  localRoot: string | undefined,
+): Promise<OperatingDoctorDiagnostic> {
+  const profileRaw = await readFile(
+    path.join(projectRoot, '.planr', 'operate-profile.json'),
+    'utf8',
+  ).catch((error) => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  });
+  if (profileRaw === null) {
+    return {
+      code: 'operate-profile-drift',
+      status: 'pass',
+      message: 'No legacy .planr/operate-profile.json is present to reconcile',
+    };
+  }
+  let profile: unknown;
+  try {
+    profile = JSON.parse(profileRaw);
+  } catch {
+    return {
+      code: 'operate-profile-drift',
+      status: 'warn',
+      message:
+        'Legacy .planr/operate-profile.json is not valid JSON and cannot be reconciled with the operating configuration',
+      fix: 'Run `planr operate profiles migrate inspect` to review the legacy profile before migrating it.',
+    };
+  }
+  if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+    return {
+      code: 'operate-profile-drift',
+      status: 'warn',
+      message: 'Legacy .planr/operate-profile.json is not a JSON object and cannot be reconciled',
+      fix: 'Run `planr operate profiles migrate inspect` to review the legacy profile before migrating it.',
+    };
+  }
+  const configRaw = await readFile(
+    resolveOperatingPaths(projectRoot, { localRoot }).config,
+    'utf8',
+  ).catch((error) => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  });
+  if (configRaw === null) {
+    return {
+      code: 'operate-profile-drift',
+      status: 'pass',
+      message: 'No operating configuration is present to compare the legacy profile against',
+    };
+  }
+  let config: unknown;
+  try {
+    config = JSON.parse(configRaw);
+  } catch {
+    return {
+      code: 'operate-profile-drift',
+      status: 'pass',
+      message: 'Operating configuration is unreadable; the legacy profile cannot be compared to it',
+    };
+  }
+  const drift = compareLegacyProfileToOperatingConfig(
+    profile as Record<string, unknown>,
+    (config ?? {}) as Record<string, unknown>,
+  );
+  if (drift.length > 0) {
+    return {
+      code: 'operate-profile-drift',
+      status: 'warn',
+      message: `Legacy .planr/operate-profile.json drifts from the operating configuration in ${drift.length} field(s): ${drift.join(', ')}`,
+      fix: 'Run `planr operate profiles migrate inspect`, then `planr operate profiles migrate apply --yes` to reconcile the legacy profile.',
+    };
+  }
+  return {
+    code: 'operate-profile-drift',
+    status: 'pass',
+    message: 'Legacy .planr/operate-profile.json matches the operating configuration',
+  };
+}
+
+/**
+ * FR6 (T-005): the internal transport contract is exactly that — internal. The
+ * user sees validated Markdown, concise progress, and a final synthesis, never a
+ * lease token, an idempotency key, an evidence digest, or a harness/adapter
+ * lifecycle command; JSON is available only under an explicit `--json`. These
+ * patterns are the forbidden field/command tokens as they appear when raw
+ * transport leaks into a human surface. They deliberately do NOT match the plain
+ * English words ("release"/"please" have no word boundary before "lease"; a
+ * finding that merely mentions "the runtime adapter" carries no lifecycle verb),
+ * so the check flags a genuine leak rather than ordinary advisory prose.
+ */
+export const OPERATING_TRANSPORT_LEAK_PATTERNS: ReadonlyArray<{ field: string; pattern: RegExp }> =
+  [
+    {
+      field: 'lease',
+      pattern:
+        /\blease\s*(?:token|id|status|expires?|expiry|remaining|duration|nonce)\b|\blease(?:Token|Id|Status|Expires\w*|Remaining\w*|Duration\w*|Nonce)\b|"lease"\s*:/i,
+    },
+    { field: 'idempotencyKey', pattern: /\bidempotency[\s._-]?key\b|\bidempotencyKey\b/i },
+    { field: 'evidenceDigest', pattern: /\bevidence[\s._-]?digest\b|\bevidenceDigest\b/i },
+    {
+      field: 'harness/adapter command',
+      pattern:
+        /\b(?:harness|adapter)(?:\.[a-z]+|\s+(?:prepare|record|finalize|resume|cancel|heartbeat))\b/i,
+    },
+  ];
+
+/**
+ * Return the internal-transport field/command tokens that leaked into one block
+ * of human-facing text. Empty when the text is clean. Shared with the CLI
+ * regression test so both guards agree on exactly what counts as a leak.
+ */
+export function scanOperatingTransportLeakage(text: string): string[] {
+  const found = new Set<string>();
+  for (const { field, pattern } of OPERATING_TRANSPORT_LEAK_PATTERNS) {
+    if (pattern.test(text)) found.add(field);
+  }
+  return [...found];
+}
+
+/**
+ * FR6: fail when any of the forbidden transport tokens appears in the non-`--json`
+ * output of `status`/`report`/`review`. Pure over the assembled surfaces so a
+ * deliberate leak can be exercised directly (and a clean board proven clean).
+ */
+export function evaluateOperatingTransportLeakage(
+  surfaces: ReadonlyArray<{ surface: string; text: string }>,
+): OperatingDoctorDiagnostic {
+  const leaks: string[] = [];
+  for (const { surface, text } of surfaces) {
+    for (const field of scanOperatingTransportLeakage(text)) {
+      leaks.push(`${surface}: ${field}`);
+    }
+  }
+  if (leaks.length > 0) {
+    return {
+      code: 'operate-transport-hiding',
+      status: 'fail',
+      message: `Internal transport leaked into non-JSON operate output — ${[...new Set(leaks)]
+        .sort()
+        .join(', ')}`,
+      fix: 'Keep lease tokens, idempotency keys, evidence digests, and harness/adapter lifecycle commands inside the `--json` surface only.',
+    };
+  }
+  return {
+    code: 'operate-transport-hiding',
+    status: 'pass',
+    message:
+      'No internal transport (lease, idempotency key, evidence digest, or harness/adapter command) appears in status/report/review human output',
+  };
+}
+
+async function diagnoseTransportHiding(
+  projectRoot: string,
+  localRoot: string | undefined,
+): Promise<OperatingDoctorDiagnostic> {
+  const surfaces: Array<{ surface: string; text: string }> = [];
+  try {
+    const state = await new OperatingEventStore(projectRoot, { localRoot }).state();
+    // `status` renders the concise brief as its human summary.
+    surfaces.push({ surface: 'status', text: renderOperatingBrief(state) });
+  } catch {
+    // No readable state yet; the event-replay check owns a broken chain.
+  }
+  try {
+    const { readOperatingReport } = await import('./reports.js');
+    const report = await readOperatingReport({ projectRoot, localRoot });
+    // `report` renders this Markdown directly; `review`'s human gate reuses the
+    // same assembly, so scanning it once covers both surfaces.
+    surfaces.push({ surface: 'report/review', text: report.markdown });
+  } catch {
+    // No governed cycle to report yet.
+  }
+  if (surfaces.length === 0) {
+    return {
+      code: 'operate-transport-hiding',
+      status: 'pass',
+      message: 'No operate human output is available to scan for transport leakage yet',
+    };
+  }
+  return evaluateOperatingTransportLeakage(surfaces);
+}
+
+/**
+ * FR14 (T-005): a cycle is `reviewable` in committed state ONLY if its phase-F
+ * review-gate artifacts genuinely exist on disk. A projection that claims
+ * `reviewable` without the recorded roles, Chair result, final report, actions
+ * file, and draft/provenance results is exactly the dishonest completion the spec
+ * forbids, and it fails here with the actual phase each cycle reached.
+ */
+async function diagnoseCompletionDiscipline(
+  projectRoot: string,
+  localRoot: string | undefined,
+): Promise<OperatingDoctorDiagnostic> {
+  let state: OperatingState;
+  try {
+    state = await new OperatingEventStore(projectRoot, { localRoot }).state();
+  } catch {
+    return {
+      code: 'operate-completion',
+      status: 'pass',
+      message: 'No readable board state is available to verify completion discipline yet',
+    };
+  }
+  const paths = resolveOperatingPaths(projectRoot, { localRoot });
+  const reviewable = state.cycles.filter((cycle) => cycle.state === 'reviewable');
+  if (reviewable.length === 0) {
+    return {
+      code: 'operate-completion',
+      status: 'pass',
+      message: 'No cycle is marked reviewable; nothing to verify against the phase-F review gate',
+    };
+  }
+  const incomplete: Array<{ cycleId: string; result: OperatingCompletionResult }> = [];
+  for (const cycle of reviewable) {
+    const result = await verifyOperatingCompletionPhases(state, cycle.id, paths);
+    if (!result.complete) incomplete.push({ cycleId: cycle.id, result });
+  }
+  if (incomplete.length > 0) {
+    const detail = incomplete
+      .map(
+        ({ cycleId, result }) =>
+          `${cycleId} (reached phase ${result.reachedPhase ?? 'none'}; missing ${
+            result.missing.join('; ') || 'phase-F artifacts'
+          })`,
+      )
+      .join(', ');
+    return {
+      code: 'operate-completion',
+      status: 'fail',
+      message: `${incomplete.length} cycle(s) are marked reviewable without their phase-F review-gate artifacts on disk: ${detail}`,
+      fix: 'Run `planr operate cycles recover <cycleId> --yes` to re-materialize the review-gate artifacts from the verified event chain.',
+    };
+  }
+  return {
+    code: 'operate-completion',
+    status: 'pass',
+    message: `${reviewable.length} reviewable cycle(s) carry every phase-F review-gate artifact on disk`,
+  };
+}
+
 export async function diagnoseOperatingBoard(input: {
   projectRoot: string;
   localRoot?: string;
   pipelineVersion?: string;
   runtime?: string;
 }): Promise<OperatingDoctorDiagnostic[]> {
-  const diagnostics = [await diagnoseProtocol(input.pipelineVersion)];
+  const diagnostics = [await diagnoseAgentContractVersion(input.pipelineVersion)];
   const paths = resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot });
   if (!existsSync(paths.root)) return diagnostics;
   if (!operatingPipelineAvailable()) {
@@ -780,12 +1180,29 @@ export async function diagnoseOperatingBoard(input: {
     // to board identity — stale adapter sessions and stale incremental baselines.
     await diagnoseAdapterSessions(input.projectRoot, input.localRoot),
     await diagnoseIncrementalBaselines(input.projectRoot, input.localRoot),
+    // FR7 (T-006): detect OpenPlanr-owned scratch abandoned by a session that
+    // never finalized; the scoped purge removes only confirmed owned stale scratch.
+    await diagnoseAbandonedScratch(input.projectRoot, input.localRoot),
     // FR7: cycle integrity is a first-class readable surface — this guards it
     // against regression and reports its three conditions explicitly.
     await diagnoseCycleIntegritySurface(input.projectRoot, input.localRoot),
+    // FR9 (T-008): report the persisted board-state protocol version as its own
+    // fact, separate from the agent-contract check above, so an older persisted
+    // board is never rendered as an incompatibility.
+    await diagnoseBoardStateVersionSurface(input.projectRoot, input.localRoot),
     // FR9: state plainly whether a gitignored `.planr/` leaves the board
     // unversioned, rather than implying it is tracked.
     await diagnoseWorkspaceVersioning(input.projectRoot),
+    // FR10 (T-009): report drift between a legacy operate-profile.json and the
+    // live operating configuration, naming the differing fields.
+    await diagnoseProfileDrift(input.projectRoot, input.localRoot),
+    // FR6 (T-005): fail if internal transport (lease, idempotency key, evidence
+    // digest, or a harness/adapter command) leaked into status/report/review
+    // human output — those belong to the `--json` surface only.
+    await diagnoseTransportHiding(input.projectRoot, input.localRoot),
+    // FR14 (T-005): fail if a cycle is marked reviewable in committed state
+    // without its phase-F review-gate artifacts genuinely present on disk.
+    await diagnoseCompletionDiscipline(input.projectRoot, input.localRoot),
   );
   return diagnostics;
 }

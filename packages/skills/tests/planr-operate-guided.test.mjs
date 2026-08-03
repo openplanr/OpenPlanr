@@ -65,7 +65,14 @@ test('research-first behavior infers cited context without blocking on unknowns'
 });
 
 test('the machine lifecycle is hidden and draft authority remains separate', () => {
-  assert.match(skill, /hides `planr operate harness prepare\|record\|finalize\|resume\|cancel`/);
+  // planr-pipeline 0.39.0 (#101) added `heartbeat` and `abandon` to the hidden
+  // harness surface. Assert the stable prefix plus the two new verbs rather than
+  // the exact pipe-list, so adding a verb upstream does not fail this test while
+  // REMOVING one (which would expose machine lifecycle in the public skill, the
+  // thing this test guards) still does.
+  assert.match(skill, /hides `planr operate harness prepare\|record\|finalize\|resume\|cancel/);
+  assert.match(skill, /heartbeat/);
+  assert.match(skill, /abandon/);
   assert.match(skill, /Execute only argv arrays in the current handoff/);
   assert.match(skill, /E_OPERATE_DRAFT_UNAPPROVED/);
   assert.match(skill, /cannot enter PLAN or SHIP/);

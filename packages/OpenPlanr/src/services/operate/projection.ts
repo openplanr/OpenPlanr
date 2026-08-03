@@ -48,8 +48,20 @@ export function renderOperatingBrief(state: OperatingState): string {
     ['open', 'default-due'].includes(String(decision.status)),
   );
   const activeGaps = state.dataGaps.filter((gap) => gap.status === 'open');
+  // FR5 (SPEC-005): an active advising cycle is NEVER described as quiet. A cycle
+  // still in `advising` is mid-dispatch — its lenses are running or recording, and
+  // the honest quiet verdict ("no material action is recommended") is only ever
+  // legitimate for a finalized, genuinely empty cycle. Guarding the early return
+  // on this stops `status`/`brief` from reporting a busy board as silent while
+  // recorded analyses and pending roles still exist (the exact false-negative the
+  // production run surfaced).
+  const advisingCycleActive = state.cycles.some(
+    (record) =>
+      record.state === 'advising' && record.id === (state.summary.currentCycleId ?? undefined),
+  );
   if (
     state.summary.quiet &&
+    !advisingCycleActive &&
     activeDecisions.length === 0 &&
     activeGaps.length === 0 &&
     !stalls.some((item) => item.stalled)

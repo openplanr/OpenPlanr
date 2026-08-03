@@ -13,6 +13,8 @@ import {
   diagnoseOperatingBoard,
   type OperatingDoctorDiagnostic,
 } from '../../src/services/operate/doctor.js';
+import { purgeAbandonedOperatingScratch } from '../../src/services/operate/maintenance.js';
+import { writeOperatingScratch } from '../../src/services/operate/scratch.js';
 import { resolveOperatingPaths } from '../../src/services/operate/workspace.js';
 import { applySetup, runtimeDoctor } from '../../src/services/runtime-manager-service.js';
 
@@ -166,6 +168,90 @@ describe('Operating Board doctor staleness diagnostics (FR11)', () => {
     const paths = resolveOperatingPaths(projectRoot, { localRoot });
     expect(existsSync(paths.root)).toBe(true);
     expect(existsSync(join(paths.root, 'projections'))).toBe(false);
+  });
+
+  // FR7 (T-006): abandoned OpenPlanr-owned scratch is a named warning, and the
+  // scoped purge removes ONLY confirmed owned stale scratch — never another
+  // machine-local cache, and never an unrelated file under the scratch root.
+  it('warns on abandoned owned scratch and removes only it, leaving other machine-local caches', async () => {
+    const projectRoot = await createGitProject();
+    const localRoot = await temporaryDirectory('openplanr-operate-doctor-scratch-local-');
+    await initBoard(projectRoot, localRoot);
+    const paths = resolveOperatingPaths(projectRoot, { localRoot });
+
+    // Owned scratch whose lease window already lapsed — a session that never
+    // finalized (its handoff was never cleaned by a successful record/finalize).
+    await writeOperatingScratch({
+      paths,
+      cycleId: 'CYCLE-001',
+      key: 'strategy-finance',
+      payload: { outcome: 'quiet', analysisMarkdown: '# left behind' },
+      now: () => new Date('2000-01-01T00:00:00.000Z'),
+    });
+
+    // Other machine-local caches scratch cleanup must never touch.
+    await mkdir(paths.advisors, { recursive: true });
+    const sessionFile = join(paths.advisors, 'CYCLE-001.json');
+    await writeFile(
+      sessionFile,
+      `${JSON.stringify({ implementation: 'openplanr-operate-adapter', cycleId: 'CYCLE-001' })}\n`,
+      { mode: 0o600 },
+    );
+    const incrementalDir = join(paths.evidence, 'incremental');
+    await mkdir(incrementalDir, { recursive: true });
+    const baselineFile = join(incrementalDir, 'baseline.json');
+    await writeFile(
+      baselineFile,
+      `${JSON.stringify({ implementation: 'openplanr-operate-incremental-evidence' })}\n`,
+      { mode: 0o600 },
+    );
+    // An unrelated file that merely landed under the scratch root: no owned
+    // manifest, so it is never reported and never removed.
+    await mkdir(join(paths.scratch, 'FOREIGN'), { recursive: true });
+    const foreignFile = join(paths.scratch, 'FOREIGN', 'not-ours.json');
+    await writeFile(foreignFile, '{"user":"data"}\n');
+
+    const diagnostics = await diagnoseOperatingBoard({ projectRoot, localRoot });
+    const diagnostic = byCode(diagnostics, 'operate-scratch');
+    expect(diagnostic.status).toBe('warn');
+    expect(diagnostic.message).toContain('CYCLE-001');
+    expect(diagnostic.message).toMatch(/never finalized/);
+    // FR7 (SPEC-005 T-013): the abandoned-scratch diagnostic now points at the
+    // FR7-named `planr doctor --fix` surface, which delegates to the same
+    // owned-only cleanup this test then exercises directly.
+    expect(diagnostic.fix).toBe(
+      'Run `planr doctor --fix` to remove only the confirmed OpenPlanr-owned stale scratch.',
+    );
+
+    const purged = await purgeAbandonedOperatingScratch({ projectRoot, localRoot });
+    expect(purged).toMatchObject({ removed: 1, cycles: ['CYCLE-001'] });
+
+    // Only the owned stale scratch is gone; every other cache and the unrelated
+    // file under the scratch root are untouched.
+    expect(existsSync(join(paths.scratch, 'CYCLE-001', 'strategy-finance.json'))).toBe(false);
+    expect(existsSync(sessionFile)).toBe(true);
+    expect(existsSync(baselineFile)).toBe(true);
+    expect(existsSync(foreignFile)).toBe(true);
+
+    // After the purge the doctor no longer warns about abandoned scratch.
+    const after = await diagnoseOperatingBoard({ projectRoot, localRoot });
+    expect(byCode(after, 'operate-scratch').status).toBe('pass');
+  });
+
+  it('does not warn while scratch is still inside its live lease window', async () => {
+    const projectRoot = await createGitProject();
+    const localRoot = await temporaryDirectory('openplanr-operate-doctor-scratch-live-local-');
+    await initBoard(projectRoot, localRoot);
+    const paths = resolveOperatingPaths(projectRoot, { localRoot });
+    // Fresh scratch (default 15-minute window from wall-clock) is an active dispatch.
+    await writeOperatingScratch({
+      paths,
+      cycleId: 'CYCLE-002',
+      key: 'technology-risk',
+      payload: { outcome: 'quiet' },
+    });
+    const diagnostics = await diagnoseOperatingBoard({ projectRoot, localRoot });
+    expect(byCode(diagnostics, 'operate-scratch').status).toBe('pass');
   });
 });
 

@@ -58,6 +58,46 @@ function recordEnvelopeProtocolVersion(
     : OPERATE_PROTOCOL_VERSION;
 }
 
+const V12_DATA_GAP_ID = /^GAP-[0-9]{3,}$/;
+
+/**
+ * Project a governed data gap to the v1.2 shape the append-only records log, the
+ * `gap.open` event, and the `operating-record` schemas all admit (FR2/FR13,
+ * SPEC-005 T-017).
+ *
+ * A citation-rejection or empty-grounding gap is a Protocol v1.3 gap IN MEMORY:
+ * it carries a `category` (and a digest-derived id) the Chair board reads to
+ * classify the role's outcome. The committed contract, however, only stores a
+ * v1.2 data gap — every `data-gap` operating-record branch and every `gap.open`
+ * event branch references `operating-data-gap@1.2.0`, which admits neither
+ * `category`/`citations` nor a non-numeric id — and the reducer projects
+ * `category` away from `state.dataGaps` in any case. Persisting the v1.2
+ * projection is therefore lossless for replayed state and keeps the governed gap
+ * durable and readable back, instead of throwing `E_OPERATE_STATE_INVALID`
+ * (`operating-record: $ matched 0/11 branches`). This mirrors the pattern T-015
+ * used for the lifecycle driver's not_evaluated gap (shaped v1.2 from the start).
+ *
+ * A gap already in v1.2 form is returned unchanged (byte-identical write path).
+ * `mintCanonicalId` supplies the next `GAP-NNN` id ONLY when the gap's own id is
+ * not v1.2-valid, so a gap that already carries a canonical id keeps it.
+ */
+export function toPersistedDataGap(
+  gap: Record<string, unknown>,
+  mintCanonicalId: () => string,
+): Record<string, unknown> {
+  const carriesV13Fields =
+    gap.protocolVersion === OPERATE_MISSION_PROTOCOL_VERSION ||
+    'category' in gap ||
+    'citations' in gap;
+  if (!carriesV13Fields) return gap;
+  const { category: _category, citations: _citations, ...rest } = gap;
+  return {
+    ...rest,
+    protocolVersion: OPERATE_PROTOCOL_VERSION,
+    id: V12_DATA_GAP_ID.test(String(gap.id ?? '')) ? gap.id : mintCanonicalId(),
+  };
+}
+
 /** Map a v1.2 `operating-record` envelope to its v1.3 records-log entry. */
 export function operatingRecordToLogEntry(
   record: OperatingRecordEnvelope,
