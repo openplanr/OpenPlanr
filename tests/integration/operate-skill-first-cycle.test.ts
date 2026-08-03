@@ -258,8 +258,24 @@ describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => 
     while (result.handoff && (result.handoff.next?.length ?? 0) > 0) {
       expect(guard++).toBeLessThan(40);
       handoffStates.push(result.handoff.state);
-      // A driving lifecycle state serializes to exactly one next step.
-      expect(result.handoff.next).toHaveLength(1);
+      // A driving lifecycle state serializes to at least one next step. Since
+      // the 0.39.0 contract, `record-required` authorizes one record action per
+      // *pending* role rather than only the first, so a slow lens cannot strand
+      // a finished one; every other driving state still yields exactly one.
+      // Replaying next[0] each pass still converges: each record clears one
+      // pending role, so the authorized set shrinks by one per iteration.
+      expect((result.handoff.next ?? []).length).toBeGreaterThanOrEqual(1);
+      if (result.handoff.state === 'record-required') {
+        const pending = result.handoff.roles.filter((role) => role.status === 'pending');
+        expect(result.handoff.next).toHaveLength(pending.length);
+        // Every authorized action must target a distinct pending role. The
+        // action *type* is `harness.record` for all of them, so distinctness
+        // lives in the argv (each carries its own `--role`).
+        const targeted = new Set(result.handoff.next.map((action) => action.argv.join(' ')));
+        expect(targeted.size).toBe(result.handoff.next.length);
+      } else {
+        expect(result.handoff.next).toHaveLength(1);
+      }
       const next = result.handoff.next[0];
       const command = next.argv.join(' ');
 
