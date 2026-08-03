@@ -178,13 +178,20 @@ describe('OpenPlanr-owned operate scratch (FR7)', () => {
     expect(write.path).toBe(scratchPath);
 
     // The sensitive scratch file and its ownership manifest are both mode 0600.
-    expect((await stat(scratchPath)).mode & 0o777).toBe(0o600);
+    // NTFS has no POSIX mode bits, so Node reports 0o666 there regardless of the
+    // requested mode. Assert the restrictive-write contract only where the
+    // platform can enforce it, rather than accommodate a value it cannot produce.
+    if (process.platform !== 'win32') {
+      expect((await stat(scratchPath)).mode & 0o777).toBe(0o600);
+    }
     const manifest = JSON.parse(
       await readFile(join(paths.scratch, 'CYCLE-001', 'manifest.json'), 'utf8'),
     ) as { implementation: string; cycleId: string; entries: Array<{ key: string; file: string }> };
-    expect((await stat(join(paths.scratch, 'CYCLE-001', 'manifest.json'))).mode & 0o777).toBe(
-      0o600,
-    );
+    if (process.platform !== 'win32') {
+      expect((await stat(join(paths.scratch, 'CYCLE-001', 'manifest.json'))).mode & 0o777).toBe(
+        0o600,
+      );
+    }
     expect(manifest.implementation).toBe('openplanr-operate-scratch');
     expect(manifest.cycleId).toBe('CYCLE-001');
     expect(manifest.entries).toEqual([
@@ -277,7 +284,10 @@ describe('OpenPlanr-owned operate scratch (FR7)', () => {
     // file itself. The redaction concern is the log surface, not the store.
     const stored = await readFile(write.path, 'utf8');
     expect(stored).toContain(secret);
-    expect((await stat(write.path)).mode & 0o777).toBe(0o600);
+    // See above: NTFS cannot report POSIX mode bits.
+    if (process.platform !== 'win32') {
+      expect((await stat(write.path)).mode & 0o777).toBe(0o600);
+    }
   });
 
   it('cleanOperatingScratch never removes an unowned file left under a cycle scratch directory', async () => {
