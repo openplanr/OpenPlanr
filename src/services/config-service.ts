@@ -14,6 +14,29 @@ export class ConfigNotFoundError extends Error {
   }
 }
 
+/**
+ * A config file that exists but does not satisfy the schema. Previously
+ * `configSchema.parse` threw a raw `ZodError` straight through the CLI's top-level
+ * handler, which rethrows anything without an `E_` code — so a single missing field
+ * (`targets` and `createdAt` are required while every other field defaults) crashed
+ * *every* config-reading command with an unhandled stack trace instead of naming the
+ * field. Carrying a `code` and a `fix` plugs into the handler's existing contract.
+ */
+export class ConfigInvalidError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public fix?: string,
+  ) {
+    super(message);
+    this.name = 'ConfigInvalidError';
+  }
+
+  toJSON() {
+    return { ok: false, code: this.code, problem: this.message, fix: this.fix };
+  }
+}
+
 /** Load and validate the OpenPlanr config file from the given project directory. */
 export async function loadConfig(projectDir: string): Promise<OpenPlanrConfig> {
   const configPath = path.join(projectDir, CONFIG_FILENAME);
@@ -23,7 +46,20 @@ export async function loadConfig(projectDir: string): Promise<OpenPlanrConfig> {
   }
   const raw = await readFile(configPath);
   const parsed = JSON.parse(raw);
-  return configSchema.parse(parsed);
+  const result = configSchema.safeParse(parsed);
+  if (!result.success) {
+    // Name every failing field with its path, so the message says what failed and
+    // where — not just that validation happened.
+    const problems = result.error.issues
+      .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+      .join('; ');
+    throw new ConfigInvalidError(
+      'E_CONFIG_INVALID',
+      `${configPath} does not satisfy the OpenPlanr config schema — ${problems}`,
+      'Add the field(s) named above, or re-create the file with `planr init`.',
+    );
+  }
+  return result.data;
 }
 
 /** Write the OpenPlanr config to disk as formatted JSON. */

@@ -217,7 +217,16 @@ describe('packed planning-only Operating Board', () => {
     const manifest = JSON.parse(readFileSync(join(minimalPackageRoot, 'package.json'), 'utf8')) as {
       optionalDependencies?: Record<string, string>;
     };
-    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe('0.40.0');
+    // Exactness is the contract — one resolved version, never a floating range — and the
+    // packed manifest must carry the same pin the source declares. A hardcoded literal
+    // asserted neither and broke on every pipeline bump.
+    const declared = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as {
+      optionalDependencies?: Record<string, string>;
+    };
+    expect(manifest.optionalDependencies?.['planr-pipeline']).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe(
+      declared.optionalDependencies?.['planr-pipeline'],
+    );
   });
 
   it('keeps help, inspect, and demo provider-free and functional', () => {

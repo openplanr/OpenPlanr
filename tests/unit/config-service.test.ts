@@ -57,10 +57,24 @@ describe('loadConfig', () => {
     await expect(loadConfig('/project')).rejects.toThrow();
   });
 
-  it('throws on schema-invalid config (missing required field)', async () => {
+  it('names the missing fields and how to repair them, rather than throwing raw', async () => {
     mockFileExists.mockResolvedValue(true);
+    // `targets` and `createdAt` are the two required fields with no default, so a
+    // hand-edited or minimal config trips both.
     mockReadFile.mockResolvedValue(JSON.stringify({ projectName: 'test' }));
-    await expect(loadConfig('/project')).rejects.toThrow();
+
+    // `.rejects.toThrow()` alone is what let a raw ZodError stack trace ship: it passes
+    // for *any* throw. These assert the error is actionable, not merely present.
+    await expect(loadConfig('/project')).rejects.toMatchObject({
+      code: 'E_CONFIG_INVALID',
+    });
+    const error = await loadConfig('/project').catch((caught) => caught);
+    // What failed, with what input, and why.
+    expect(error.message).toContain('targets');
+    expect(error.message).toContain('createdAt');
+    expect(error.message).toContain('config.json');
+    // And how to fix it — surfaced by the CLI's top-level handler for `E_` codes.
+    expect(error.fix).toContain('planr init');
   });
 
   it('throws on invalid target value', async () => {
