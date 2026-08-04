@@ -38,6 +38,14 @@ function printPreview(preview: Awaited<ReturnType<typeof previewSetup>>): void {
   display.keyValue('Runtimes', preview.runtimes.join(', ') || 'planning only');
   display.keyValue('Scope', preview.scope);
   display.keyValue('Pipeline', preview.pipelineVersion ?? 'omitted');
+  // The naming scheme is a persisted per-project choice, so a plain re-run can install
+  // bare verbs without the invocation saying so anywhere. Reported unconditionally: the
+  // only other place it surfaced was the verbose action listing, which meant the summary
+  // never stated which names the user was about to get.
+  display.keyValue(
+    'Command names',
+    preview.commandPrefix === 'bare' ? 'bare (--no-prefix)' : 'namespaced',
+  );
   for (const scope of ['user', 'project'] as const) {
     const actions = preview.actions.filter(
       (action) => action.scope === scope && action.operation !== 'unchanged',

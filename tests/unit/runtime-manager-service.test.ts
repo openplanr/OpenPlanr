@@ -661,6 +661,53 @@ describe('command prefix toggle', () => {
     expect(existsSync(codexSkill('planr-plan'))).toBe(false);
   });
 
+  // BL-003 — the naming scheme is a persisted per-project choice, so a plain re-run can
+  // install bare verbs with nothing in the invocation saying so. The preview must carry
+  // the resolved value for the CLI to report it.
+  it('reports the resolved command-naming scheme on the preview', async () => {
+    const namespaced = await previewSetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'user',
+    });
+    expect(namespaced.commandPrefix).toBe('namespaced');
+
+    await applySetup({ projectDir, cliVersion, runtime: 'codex', scope: 'user', prefix: false });
+    // The decisive case: no flag passed, so the value can only come from the persisted
+    // choice — which is exactly the run where a user cannot otherwise tell.
+    const persisted = await previewSetup({
+      projectDir,
+      cliVersion,
+      runtime: 'codex',
+      scope: 'user',
+    });
+    expect(persisted.commandPrefix).toBe('bare');
+  });
+
+  // BL-002 — `applyCommandPrefix` is threaded through the Cursor branch, but no Cursor
+  // rule filename starts with `planr-`, so it computes identity on every current target.
+  // That "intentional symmetry, not dead code" claim rested entirely on a source comment
+  // with nothing pinning it: broadening the prefix match later would silently start
+  // renaming Cursor rules, and no test would notice.
+  it('leaves Cursor rule filenames untouched under a bare prefix', async () => {
+    await applySetup({
+      projectDir,
+      cliVersion,
+      runtime: 'cursor',
+      scope: 'project',
+      prefix: false,
+    });
+
+    const rules = join(projectDir, '.cursor', 'rules');
+    // The product-named rules are unchanged by the bare mode...
+    expect(existsSync(join(rules, 'openplanr.mdc'))).toBe(true);
+    expect(existsSync(join(rules, 'openplanr-operate.mdc'))).toBe(true);
+    // ...and no stripped variant is produced alongside them.
+    expect(existsSync(join(rules, 'operate.mdc'))).toBe(false);
+    expect(existsSync(join(rules, 'planr.mdc'))).toBe(false);
+  });
+
   // FR5 upgrade guarantee: an install that predates the toggle (no `commandPrefix`
   // field on its state record) stays namespaced when an upgraded CLI reruns setup with
   // no flag. Existing installs keep their current names by default.
@@ -701,12 +748,11 @@ describe('command prefix toggle', () => {
     expect(operate).toHaveLength(1);
     expect(operate[0]).toMatchObject({ status: 'pass' });
     // The false "missing" warning must not be emitted for a present bare install.
+    // Asserted on status, not wording: now that the message interpolates the installed
+    // name, matching the namespaced literal would pass for the wrong reason — that
+    // string cannot appear under a bare install whether the bug is present or not.
     expect(
-      doctor.diagnostics.some(
-        (item) =>
-          item.code === 'operate-skill' &&
-          item.message === 'The installed Codex adapter is missing the planr-operate skill',
-      ),
+      doctor.diagnostics.some((item) => item.code === 'operate-skill' && item.status === 'warn'),
     ).toBe(false);
   });
 
@@ -726,7 +772,10 @@ describe('command prefix toggle', () => {
     const doctor = await runtimeDoctor(projectDir);
     expect(doctor.diagnostics.find((item) => item.code === 'operate-skill')).toMatchObject({
       status: 'fail',
-      message: 'Installed planr-operate skill does not satisfy the functional command contract',
+      // Names `operate` — the file that actually exists under this install. A
+      // diagnostic with the right status about a filename the user does not have is
+      // still misdirecting them.
+      message: 'Installed operate skill does not satisfy the functional command contract',
       fix: 'Run `planr setup --runtime codex --scope user` to refresh the managed skill.',
     });
   });

@@ -132,6 +132,13 @@ export interface SetupPreview {
   runtimeScopes: Partial<Record<RuntimeId, InstallScope>>;
   scope: InstallScope;
   pipelineVersion: string | null;
+  /**
+   * The command-naming scheme this run will use, resolved from the flag or the
+   * persisted per-project choice. Surfaced so the preview can state it: a user
+   * re-running plain `planr setup` on a project that persisted `bare` otherwise had no
+   * way to see which names they were about to get.
+   */
+  commandPrefix: CommandPrefix;
   detectedRuntimes: RuntimeId[];
   unavailableRuntimes: RuntimeId[];
   scopeIncompatibleRuntimes: RuntimeId[];
@@ -827,6 +834,7 @@ export async function previewSetup(options: SetupOptions): Promise<SetupPreview>
     ok: true,
     dryRun: Boolean(options.dryRun),
     minimal: Boolean(options.minimal),
+    commandPrefix,
     runtimes,
     runtimeScopes,
     scope,
@@ -1660,7 +1668,7 @@ export async function runtimeDoctor(
       diagnostics.push({
         code: 'operate-skill',
         status: 'warn',
-        message: 'The installed Codex adapter is missing the planr-operate skill',
+        message: `The installed Codex adapter is missing the ${operateSkillName} skill`,
         fix: 'Run `planr setup --runtime codex --scope user` to install the managed skill.',
       });
     } else if (operateSkill && existsSync(operateSkill.target)) {
@@ -1687,8 +1695,8 @@ export async function runtimeDoctor(
         code: 'operate-skill',
         status: valid ? 'pass' : 'fail',
         message: valid
-          ? 'Installed planr-operate skill references the public CLI and preserves the SHIP boundary'
-          : 'Installed planr-operate skill does not satisfy the functional command contract',
+          ? `Installed ${operateSkillName} skill references the public CLI and preserves the SHIP boundary`
+          : `Installed ${operateSkillName} skill does not satisfy the functional command contract`,
         ...(!valid
           ? { fix: 'Run `planr setup --runtime codex --scope user` to refresh the managed skill.' }
           : {}),
