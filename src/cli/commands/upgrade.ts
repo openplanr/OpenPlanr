@@ -5,6 +5,7 @@ import { promptConfirm } from '../../services/prompt-service.js';
 import {
   executeCliHalfUpgrade,
   planCliUpgrade,
+  pluginHalfPrescription,
   reconcileInstalledTuple,
 } from '../../services/upgrade-service.js';
 import { display, logger } from '../../utils/logger.js';
@@ -69,14 +70,35 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
       const reconciliation = await reconcileInstalledTuple(projectDir);
       const plan = planCliUpgrade(reconciliation);
 
-      // Nothing to execute: aligned, unknown, or an incompatibility the CLI half
-      // cannot resolve. Report the reason; there is no upgrade to prescribe.
+      // Nothing for the CLI half to execute: aligned, unknown, or an incompatibility the
+      // CLI cannot resolve. The last case is not "nothing to do" — it is the plugin half
+      // trailing, and the reason string promises the commands, so they must actually be
+      // printed here. FR4 is unmet if this branch reports a promise and no prescription.
       if (!plan.proceed || !plan.targetCliVersion) {
+        const pluginHalfCommands =
+          reconciliation.status === 'incompatible' ? pluginHalfPrescription() : [];
         if (opts.json) {
-          display.line(JSON.stringify({ applied: false, reason: plan.reason, reconciliation }));
+          display.line(
+            JSON.stringify({
+              applied: false,
+              reason: plan.reason,
+              pluginHalfCommands,
+              reconciliation,
+            }),
+          );
         } else {
           logger.heading('OpenPlanr upgrade');
           logger.info(plan.reason);
+          if (pluginHalfCommands.length > 0) {
+            display.blank();
+            display.heading('Plugin half — the CLI cannot install host plugins');
+            logger.info(
+              'Run these yourself, in order (the first refreshes the marketplace so the installer does not reinstall the stale version), or ask the agent to run planr-doctor’s upgrade skill:',
+            );
+            pluginHalfCommands.forEach((command, index) => {
+              display.numbered(index + 1, command);
+            });
+          }
         }
         if (reconciliation.status === 'incompatible') process.exitCode = 1;
         return;
