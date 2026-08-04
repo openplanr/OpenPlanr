@@ -1,15 +1,12 @@
-# OPERATE-SPEC-003 OpenPlanr work item
+# OPERATE-SPEC-003
 
-Umbrella specification: `SPEC-003`
-Release participant: `openplanr@1.16.0`
+Release record binding for `openplanr@1.16.0`.
 
-OpenPlanr owns the canonical progressive questionnaire, resumable local
-sessions, digest-bound actions, deterministic charter suggestions, value-free
-evidence diagnosis/classification, strict JSON automation, setup, and doctor.
-It consumes `planr-pipeline@0.32.1` after that package is verified. Schema 1.1
-questionnaires carry the exact answer submission contract needed by a fresh
-runtime to complete initialization without guessing or manual command rescue.
+What changed in this release is in [CHANGELOG.md](../../CHANGELOG.md) under `1.16.0`.
+The coordinated release record — participants, versions, published artifacts, and
+canary evidence — is operation `OPERATE-SPEC-003` in
+[openplanr/marketplace](https://github.com/openplanr/marketplace).
 
-The redaction idempotence correction is an independent patch lane and must be
-released and verified before this feature minor. Neither lane authorizes PLAN,
-SHIP, publication, or deployment.
+This file exists because that operation binds this path, and the binding is part of
+the operation's digest so it cannot be retargeted after the fact. Releases recorded
+under the current convention bind `CHANGELOG.md` directly and add no file here.
