@@ -1,4 +1,5 @@
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 /**
@@ -23,6 +24,21 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
  */
 
 const BRANCH_ROOT = process.env.OPENPLANR_PIPELINE_ROOT ?? resolve('../planr-pipeline');
+
+// Published-precondition gate: proofs 1–2 need the pipeline revision that carries the
+// commitment-conflict branch. Locally BRANCH_ROOT is the sibling working tree (has it);
+// in CI the sibling is pinned to the last published tag, which predates it until the
+// next pipeline release advances the pin. Feature-detect rather than fail — a red CI
+// on an honest version-ordering constraint teaches nothing, and silently pointing the
+// seam elsewhere would test the wrong artifact.
+const branchSchemaPath = join(
+  BRANCH_ROOT,
+  'schemas',
+  'v1.4.0',
+  'operating-advisor-response.schema.json',
+);
+const branchHasCommitmentConflicts =
+  existsSync(branchSchemaPath) && readFileSync(branchSchemaPath, 'utf8').includes('commitmentRef');
 const INSTALLED_ROOT = resolve('node_modules/planr-pipeline');
 
 interface ContractIssue {
@@ -110,31 +126,37 @@ describe('T8 action-versus-commitment conflict — consumer proofs', () => {
     vi.resetModules();
   });
 
-  it('proof 1 — one actionKey + commitmentRef validates on the branch schema', async () => {
-    const issues = await validateVia(BRANCH_ROOT, oneKeyWithCommitment);
-    // Verbatim: the branch schema accepts a commitment conflict with one action.
-    expect(issues).toEqual([]);
-  });
+  it.skipIf(!branchHasCommitmentConflicts)(
+    'proof 1 — one actionKey + commitmentRef validates on the branch schema',
+    async () => {
+      const issues = await validateVia(BRANCH_ROOT, oneKeyWithCommitment);
+      // Verbatim: the branch schema accepts a commitment conflict with one action.
+      expect(issues).toEqual([]);
+    },
+  );
 
-  it('proof 2 — the same conflict WITHOUT commitmentRef still rejects (floor intact)', async () => {
-    const issues = await validateVia(BRANCH_ROOT, oneKeyNoCommitment);
-    // Verbatim: the conflict item matched neither the two-action branch
-    // (minItems: 2) nor the commitment branch (requires commitmentRef), so the
-    // floor did not silently vanish. The minimal validator collapses the two
-    // sub-branch failures into one `oneOf` issue at $.conflicts[0].
-    expect(issues).toEqual([
-      {
-        path: '$.conflicts[0]',
-        rule: 'oneOf',
-        detail:
-          'matched 0/2 branches (expected exactly 1). Branches: action-vs-action conflict | action-vs-commitment conflict',
-      },
-    ]);
+  it.skipIf(!branchHasCommitmentConflicts)(
+    'proof 2 — the same conflict WITHOUT commitmentRef still rejects (floor intact)',
+    async () => {
+      const issues = await validateVia(BRANCH_ROOT, oneKeyNoCommitment);
+      // Verbatim: the conflict item matched neither the two-action branch
+      // (minItems: 2) nor the commitment branch (requires commitmentRef), so the
+      // floor did not silently vanish. The minimal validator collapses the two
+      // sub-branch failures into one `oneOf` issue at $.conflicts[0].
+      expect(issues).toEqual([
+        {
+          path: '$.conflicts[0]',
+          rule: 'oneOf',
+          detail:
+            'matched 0/2 branches (expected exactly 1). Branches: action-vs-action conflict | action-vs-commitment conflict',
+        },
+      ]);
 
-    // And a well-formed two-action conflict with no commitmentRef is unchanged.
-    const twoKey = await validateVia(BRANCH_ROOT, twoKeyNoCommitment);
-    expect(twoKey).toEqual([]);
-  });
+      // And a well-formed two-action conflict with no commitmentRef is unchanged.
+      const twoKey = await validateVia(BRANCH_ROOT, twoKeyNoCommitment);
+      expect(twoKey).toEqual([]);
+    },
+  );
 
   it('proof 3 — the installed 0.40.0 pipeline rejects the new shape (schema is the gate)', async () => {
     const issues = await validateVia(null, oneKeyWithCommitment);

@@ -1,6 +1,8 @@
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { OperatingEventStore } from '../../src/services/operate/event-store.js';
 import { applyStorageLayoutMigration } from '../../src/services/operate/migration.js';
@@ -14,8 +16,21 @@ import type { OperatingState } from '../../src/services/operate/types.js';
 // (never a hand-rolled reimplementation) and asserts it can read a directory this
 // repo's code wrote. That reader is the one that returned `available:false,
 // status:"absent"` tonight against a fully reviewable cycle.
-const INSTALLED_READER_PATH =
-  '/Users/asemabdou/.claude/plugins/cache/openplanr/planr-pipeline/0.40.0/lib/dashboard/operate-reader.mjs';
+// Resolved portably: the sibling checkout (CI pins it via OPENPLANR_PIPELINE_ROOT;
+// locally it is ../planr-pipeline), falling back to the installed package. A
+// machine-absolute plugin-cache path here failed CI on its first run — the exact
+// works-on-my-machine coupling this batch exists to remove.
+const READER_CANDIDATES = [
+  process.env.OPENPLANR_PIPELINE_ROOT?.trim(),
+  resolve('../planr-pipeline'),
+  resolve('node_modules/planr-pipeline'),
+]
+  .filter((root): root is string => Boolean(root))
+  .map((root) => join(root, 'lib', 'dashboard', 'operate-reader.mjs'));
+const INSTALLED_READER_PATH = READER_CANDIDATES.find((candidate) => existsSync(candidate));
+if (!INSTALLED_READER_PATH) {
+  throw new Error(`No pipeline dashboard reader found; looked in: ${READER_CANDIDATES.join(', ')}`);
+}
 
 interface ReaderResult {
   available: boolean;
@@ -46,7 +61,7 @@ let reader: Reader;
 beforeAll(async () => {
   process.env.OPENPLANR_PIPELINE_ROOT =
     process.env.OPENPLANR_PIPELINE_ROOT ?? resolve('../planr-pipeline');
-  reader = (await import(INSTALLED_READER_PATH)) as unknown as Reader;
+  reader = (await import(pathToFileURL(INSTALLED_READER_PATH).href)) as unknown as Reader;
 });
 
 afterAll(() => {

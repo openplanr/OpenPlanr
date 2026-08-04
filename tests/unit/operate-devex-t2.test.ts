@@ -197,44 +197,53 @@ describe('operate report --html renders a self-contained shareable board', () =>
   let projectDir = '';
   let stateRoot = '';
 
+  // The CLI arm needs a genuinely recorded operate cycle to render. That exists on a
+  // dev machine after any real board run, but the repo's .planr/ is gitignored, so CI
+  // has none — the original unconditional cpSync of repo state failed CI on first run
+  // (works-on-my-machine, this batch's own defect class). The arm self-gates; the
+  // rendering itself is covered unconditionally by the unit arm below it.
+  const hasLocalCycle = existsSync(repoOperateDir);
+
   beforeAll(async () => {
-    // Fixture the real, committed cycle state into a temp project so the render is
-    // driven end-to-end through the CLI against a genuine report (which carries a
-    // Markdown table). No machine-local data is needed: the report Markdown is
-    // assembled from the committed event store.
     projectDir = await temporaryDirectory('openplanr-t2-html-');
     stateRoot = await temporaryDirectory('openplanr-t2-html-state-');
-    await mkdir(join(projectDir, '.planr'), { recursive: true });
-    cpSync(repoOperateDir, join(projectDir, '.planr', 'operate'), { recursive: true });
+    if (hasLocalCycle) {
+      await mkdir(join(projectDir, '.planr'), { recursive: true });
+      cpSync(repoOperateDir, join(projectDir, '.planr', 'operate'), { recursive: true });
+    }
   });
 
-  it('drives through the CLI to real table markup, zero remote attributes, and the open suggestion', async () => {
-    const outPath = join(await temporaryDirectory('openplanr-t2-html-out-'), 'board.html');
+  it.skipIf(!existsSync(repoOperateDir))(
+    'drives through the CLI to real table markup, zero remote attributes, and the open suggestion',
+    async () => {
+      const outPath = join(await temporaryDirectory('openplanr-t2-html-out-'), 'board.html');
 
-    const run = runCli(
-      projectDir,
-      ['operate', 'report', 'CYCLE-001', '--html', '--out', outPath],
-      stateRoot,
-    );
+      const run = runCli(
+        projectDir,
+        ['operate', 'report', 'CYCLE-001', '--html', '--out', outPath],
+        stateRoot,
+      );
 
-    expect(run.status).toBe(0);
-    // Human mode prints the path and the exact artifact-open follow-up.
-    expect(run.stdout).toContain('planr artifact open');
-    expect(run.stdout).toContain(outPath);
-    expect(existsSync(outPath)).toBe(true);
+      expect(run.status).toBe(0);
+      // Human mode prints the path and the exact artifact-open follow-up.
+      expect(run.stdout).toContain('planr artifact open');
+      expect(run.stdout).toContain(outPath);
+      expect(existsSync(outPath)).toBe(true);
 
-    const html = readFileSync(outPath, 'utf8');
-    // Real table markup, not a fenced pipe dump.
-    expect(html).toMatch(/<table>/);
-    expect(html).toMatch(/<th>/);
-    expect(html).toMatch(/<td>/);
-    // Self-contained shell.
-    expect(html.startsWith('<!DOCTYPE html>')).toBe(true);
-    // The artifact validator blocks remote hrefs in attributes: there must be zero
-    // `src=`/`href=` pointing at a remote URL, and no anchor tags at all.
-    expect(html).not.toMatch(/(?:src|href)\s*=\s*["']?https?:/i);
-    expect(html).not.toMatch(/<a\s[^>]*href/i);
-  }, 30_000);
+      const html = readFileSync(outPath, 'utf8');
+      // Real table markup, not a fenced pipe dump.
+      expect(html).toMatch(/<table>/);
+      expect(html).toMatch(/<th>/);
+      expect(html).toMatch(/<td>/);
+      // Self-contained shell.
+      expect(html.startsWith('<!DOCTYPE html>')).toBe(true);
+      // The artifact validator blocks remote hrefs in attributes: there must be zero
+      // `src=`/`href=` pointing at a remote URL, and no anchor tags at all.
+      expect(html).not.toMatch(/(?:src|href)\s*=\s*["']?https?:/i);
+      expect(html).not.toMatch(/<a\s[^>]*href/i);
+    },
+    30_000,
+  );
 
   it('returns { path, suggestedNext } on the --json surface', async () => {
     const outPath = join(await temporaryDirectory('openplanr-t2-html-json-'), 'board.html');
@@ -257,6 +266,37 @@ describe('operate report --html renders a self-contained shareable board', () =>
 });
 
 // ── Docs — first-command guidance matches the shipped behaviour ──────────────
+describe('report --html rendering (unit arm — runs everywhere, no cycle needed)', () => {
+  // The CLI arm above self-gates on a locally recorded cycle; this arm keeps the
+  // renderer itself covered unconditionally in CI with the same assertions the CLI
+  // arm makes about the produced document.
+  it('renders real table markup, keeps URLs as prose, and carries no remote attributes', async () => {
+    const { renderOperatingReportHtml } = await import('../../src/services/operate/report-html.js');
+    const html = renderOperatingReportHtml({
+      title: 'CYCLE-FIXTURE',
+      markdown: [
+        '# Operating Brief',
+        '',
+        '| Lens | Outcome |',
+        '| --- | --- |',
+        '| CTO | actions |',
+        '',
+        'See https://example.com and run `open file://tmp/report.html` for details.',
+        '',
+        '```',
+        'planr operate report CYCLE-001 --html',
+        '```',
+      ].join('\n'),
+    });
+    expect(html).toContain('<table');
+    expect(html).toContain('<td>CTO</td>');
+    // URLs survive as visible prose…
+    expect(html).toContain('https://example.com');
+    // …but never as fetchable attributes: the output must stay artifact-open-safe.
+    expect(html).not.toMatch(/(?:src|href|srcset)\s*=\s*["'](?:https?:|file:|\/\/)/i);
+  });
+});
+
 describe('docs steer the first command at the research-first path', () => {
   it('CLI.md and OPERATING_BOARD.md name research-first and the --html report', () => {
     const cli = readFileSync(resolve('docs/CLI.md'), 'utf8');
