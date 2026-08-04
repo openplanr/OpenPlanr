@@ -12,7 +12,7 @@ export const OPENPLANR_CLAUDE_MARKETPLACE_SOURCE = 'openplanr/marketplace';
  * were current. Bumping it with each skills release is the interim contract; deriving it
  * from the published manifest instead is tracked separately.
  */
-export const OPENPLANR_SKILLS_VERSION = '1.26.0';
+export const OPENPLANR_SKILLS_VERSION = '1.26.1';
 
 export type ClaudePluginOperationKind =
   | 'add-marketplace'
