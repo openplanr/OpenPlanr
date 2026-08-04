@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { OPENPLANR_SKILLS_VERSION } from '../../src/services/claude-plugin-service.js';
@@ -55,6 +55,32 @@ describe('the CLI pipeline pin tracks the pipeline it is released against', () =
       ).toBe(sibling);
     },
   );
+
+  it('pins every workflow sibling checkout at the same released pipeline', () => {
+    // The package pin above governs what the CLI resolves at runtime; these refs
+    // govern what CI tests against. They drifted independently: #204 advanced
+    // ci.yml and release.yml to v0.41.0 and left publish.yml at v0.39.0, so the
+    // job that runs at publish time was validating against a pipeline two
+    // releases old. Nothing compared them, so nothing caught it.
+    const workflowDirectory = resolve('.github/workflows');
+    const stale = readdirSync(workflowDirectory)
+      .filter((entry) => entry.endsWith('.yml') || entry.endsWith('.yaml'))
+      .flatMap((entry) => {
+        const body = readFileSync(join(workflowDirectory, entry), 'utf8');
+        // Only refs that belong to a planr-pipeline checkout step.
+        return [
+          ...body.matchAll(/repository:\s*openplanr\/planr-pipeline[\s\S]{0,200}?ref:\s*(\S+)/g),
+        ]
+          .map((match) => ({ file: entry, ref: match[1] }))
+          .filter((pin) => pin.ref !== `v${declaredPin}`);
+      });
+    expect(
+      stale,
+      `Workflow pipeline pins disagree with package.json (v${declaredPin}): ` +
+        `${stale.map((pin) => `${pin.file}=${pin.ref}`).join(', ')}. ` +
+        'CI would validate against a pipeline the CLI does not ship with.',
+    ).toEqual([]);
+  });
 
   it.skipIf(!existsSync(resolve('../skills/package.json')))(
     'targets the skills version the sibling bundle publishes',
