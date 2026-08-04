@@ -54,7 +54,10 @@ const INSTALLED_ROOT = resolve('node_modules/planr-pipeline');
  * The old schema is a committed fixture, not a `git show` of the v0.40.0 tag: CI
  * checks the sibling out shallow at the current release, so that tag exists only
  * on a full local clone. Frozen history is safe to vendor — v0.40.0's bytes can
- * never change — and vendoring is what makes the proof run everywhere.
+ * never change — and vendoring is what makes the proof run everywhere. Its bytes
+ * must stay identical to the release, so `tests/fixtures/**` is excluded from
+ * biome in `biome.json`; reformatting it would make it a paraphrase of the old
+ * reader rather than the old reader.
  *
  * Originally this proof read whatever sat in node_modules, which held only while
  * the CLI's pin happened to be 0.40.0; bumping that pin (the 1.25.1 setup fix)
