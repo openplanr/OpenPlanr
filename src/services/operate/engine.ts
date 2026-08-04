@@ -18,10 +18,12 @@ import {
 } from './advisors.js';
 import { recordOperatingCadenceRun } from './cadence.js';
 import { canonicalDigest, canonicalize } from './canonical.js';
-import type {
-  CitationBearingProposal,
-  CitationResolutionContext,
-  OperatingCitation,
+import {
+  type CitationBearingProposal,
+  type CitationResolutionContext,
+  citationComponentsFromWorkspace,
+  type OperatingCitation,
+  type OperatingCitationComponent,
 } from './citation-resolution.js';
 import { operatingProjectKey, validateOperatingConfiguration } from './config.js';
 import { consolidateOperatingResults } from './consolidation.js';
@@ -89,6 +91,7 @@ import {
 } from './types.js';
 import {
   assertOperatingProject,
+  readOperatingWorkspaceRoots,
   refreshOperatingWorkspaceManifest,
   resolveOperatingPaths,
 } from './workspace.js';
@@ -1224,6 +1227,14 @@ export async function runOperatingCycle(
     resolveOperatingPaths(projectRoot, { localRoot: input.localRoot }).evidence,
     preferences.sensitivityCeiling,
   );
+  // Sibling workspace components a cross-repo citation may resolve against, joined
+  // from the committed manifest and the machine-local root map. A citation naming
+  // a component absent here classifies external-component-unresolved, never
+  // fabricated-path. Empty on a single-repository project.
+  const citationComponents: OperatingCitationComponent[] = citationComponentsFromWorkspace(
+    workspace,
+    await readOperatingWorkspaceRoots(projectRoot, { localRoot: input.localRoot }),
+  );
   // FR2 universal gate, bound to the cycle's pinned revision. Injected into
   // dispatch so advisors.ts never imports engine.ts, and reused by the
   // consolidation-time gate below so both paths resolve citations identically.
@@ -1238,6 +1249,7 @@ export async function runOperatingCycle(
         descriptor: workspace.controlRepository,
         cache: citationCache,
         owner: config.decisionOwner,
+        components: citationComponents,
         now,
       },
     });

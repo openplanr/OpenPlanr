@@ -63,13 +63,29 @@ then govern DEV, OWNER, and AGENT routes without deploying or invoking SHIP.
 ```bash
 planr operate inspect
 planr operate demo
+planr operate                 # research-first first run: pre-fills the charter, then guides init
 planr operate init --preview
 planr operate run --preview
 planr operate run --dry-run
 planr operate review
 planr operate report --lens CTO
 planr operate report --json
+planr operate report --html --out report.html
+planr operate harness validate --role <role> --cycle-id <id> --stdin --json   # free dry-run: full contract check, no lease consumed
 ```
+
+The recommended first command is bare `planr operate`. On an uninitialized
+project it runs the research-first bootstrap (`context refresh`), pre-filling
+most charter fields from the repository before initialization — rather than
+starting cold in the guided questionnaire. `planr operate context refresh` runs
+that research step on its own.
+
+`planr operate report [cycleId] --html` renders a finished cycle into a single,
+self-contained, offline HTML file (inline CSS, real tables, no remote
+references) that opens cleanly in `planr artifact open`. Pass `--out <path>` to
+choose the destination; the default is alongside the cycle directory, else a
+temp file. The command prints the written path and the exact
+`planr artifact open <path> --title "..."` follow-up.
 
 `--preview` performs no writes, evidence-provider calls, or model calls.
 `--dry-run` may perform the disclosed evidence/model work but commits no

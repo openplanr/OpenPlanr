@@ -155,10 +155,18 @@ export async function applyStorageLayoutMigration(input: {
   });
   if (layout === 'v1.3') {
     const paths = resolveOperatingPaths(input.projectRoot, { localRoot: input.localRoot });
+    // A migrated v1.3 project now legitimately writes
+    // `.planr/operate/checkpoints/current.json` as the PUBLIC dashboard projection
+    // (un-retired as a read-only derived surface; see projection-persistence.ts).
+    // That file shares the v1.2 legacy checkpoint's path, so it must NOT count as
+    // interrupted-migration residue — only the v1.2 append log and records dir do. A
+    // genuine interrupted migration always leaves at least those two behind (their
+    // removal is the LAST cleanup step, after the checkpoint), so this stays a
+    // faithful interrupted-migration signal while sparing the public projection from
+    // a spurious per-mutation recovery-and-delete.
     const legacyPresent =
       (await fileExists(legacyEventsPath(paths.root))) ||
-      (await fileExists(legacyRecordsDir(paths.root))) ||
-      (await fileExists(legacyCheckpointPath(paths.root)));
+      (await fileExists(legacyRecordsDir(paths.root)));
     if (!legacyPresent) {
       // Fully migrated (or a prior interrupted migration already reconciled):
       // there is no SPEC-002 backup left to reconcile against.

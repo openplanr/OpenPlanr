@@ -24,6 +24,10 @@ interface PipelineProtocolApi {
     options?: { protocolVersion?: string },
   ): Array<{
     path: string;
+    // The specific schema rule that failed (e.g. `enum`, `oneOf`, `type`). The
+    // pipeline always populates it; callers that batch issues surface it so a
+    // runtime sees exactly which constraint each path violated.
+    rule: string;
     detail: string;
   }>;
   createOperatingEvent(
@@ -193,6 +197,6 @@ export async function assertOperatingArtifact<T>(kind: string, value: T): Promis
 export async function validateOperatingArtifact(
   kind: string,
   value: unknown,
-): Promise<Array<{ path: string; detail: string }>> {
+): Promise<Array<{ path: string; rule: string; detail: string }>> {
   return (await loadOperatingProtocol()).validateProtocolArtifact(kind, value);
 }

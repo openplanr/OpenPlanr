@@ -714,7 +714,15 @@ async function inspect(request: OperateActionRequest): Promise<OperateActionResu
       commitSafeRoot: project ? '.planr/operate' : null,
       machineLocalState: customStateRoot ? paths.localRoot : '~/.planr/operate/<project-hash>',
     },
-    next: initialized ? ['planr operate status'] : ['planr operate init'],
+    // FND-001: an uninitialized project is pointed at the research-first entry, not
+    // cold into the guided questionnaire. Bare `planr operate` auto-runs
+    // `context.refresh` (which pre-fills most charter fields from the repo) before
+    // init; `planr operate context refresh` is the explicit standalone step. Both
+    // verified to run uninitialized. The structured `actions[]` are derived from
+    // these same commands, so the text hint and the actions can never disagree.
+    next: initialized
+      ? ['planr operate status']
+      : ['planr operate', 'planr operate context refresh'],
   });
 }
 
@@ -998,7 +1006,25 @@ async function initialize(request: OperateActionRequest): Promise<OperateActionR
     // FR7/E-007: the first guided-stage prompt is a healthy continuation — an
     // `ok: true` handoff (`flow: 'handoff'`) carrying the questionnaire, not an
     // exit-4 failure.
+    //
+    // FND-002 (level 1): when a terminal is present, the handoff carries a
+    // human-legible message and a next step describing the interactive
+    // continuation, so no renderer is left with a shapeless payload. When there is
+    // no interactive continuation (a non-TTY human, or the machine `--json`
+    // channel) the handoff stays lean: the CLI renderer (`renderHuman`) owns the
+    // transport-correct guidance there — an interactive "answer the questions"
+    // instruction would be a lie in a non-TTY shell, and a machine reads the
+    // questionnaire/`flow` directly. This keeps the no-silent-success fallback in
+    // `renderHuman` the single, load-bearing source for the non-interactive case.
+    const interactiveGuidance = request.interactive
+      ? {
+          message:
+            'Operating Board initialization needs a few governance answers before it can continue.',
+          next: ['Answer the guided initialization questions to continue.'],
+        }
+      : {};
     return handoffContinuation('input_required', 'E_OPERATE_INPUT_REQUIRED', {
+      ...interactiveGuidance,
       questionnaire,
     });
   }
@@ -1814,6 +1840,7 @@ async function maintenance(request: OperateActionRequest): Promise<OperateAction
     action: request.action.slice(lifecycleNamespace.length) as
       | 'prepare'
       | 'record'
+      | 'validate'
       | 'resume'
       | 'finalize'
       | 'cancel'
@@ -1904,6 +1931,7 @@ const HANDLERS: Record<
   'security.repair': maintenance,
   'adapter.prepare': maintenance,
   'adapter.record': maintenance,
+  'adapter.validate': maintenance,
   'adapter.resume': maintenance,
   'adapter.finalize': maintenance,
   'adapter.cancel': maintenance,
@@ -1911,6 +1939,7 @@ const HANDLERS: Record<
   'adapter.abandon': maintenance,
   'harness.prepare': maintenance,
   'harness.record': maintenance,
+  'harness.validate': maintenance,
   'harness.resume': maintenance,
   'harness.finalize': maintenance,
   'harness.cancel': maintenance,
@@ -1964,6 +1993,11 @@ const OPERATE_READ_ONLY_ACTIONS = new Set<string>([
   'integrity.status',
   'adapter.resume',
   'harness.resume',
+  // US-T1: the harness/adapter response dry-run reads the prepared session, takes
+  // no lease, and mutates nothing — so it must not trigger the mutating-action
+  // storage-layout migration on open.
+  'adapter.validate',
+  'harness.validate',
 ]);
 
 /**

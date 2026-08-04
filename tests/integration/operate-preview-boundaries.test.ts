@@ -295,10 +295,15 @@ describe('Operating Board preview and dry-run boundaries', () => {
         'utf8',
       );
       expect(persistedCtoBoard).toContain(markdownLens(ctoLens));
-      // FR6: the legacy projections/ tree is gone; backlog.md is at the top level.
-      await expect(
-        readFile(join(projectRoot, '.planr/operate/projections/state.json'), 'utf8'),
-      ).rejects.toMatchObject({ code: 'ENOENT' });
+      // FR6: the legacy DUPLICATED projections/ register tree is gone — backlog.md
+      // is at the top level. `projections/state.json` now returns solely as the
+      // PUBLIC, read-only dashboard projection (a single derived operating-state the
+      // pipeline reader consumes), NOT the retired duplicated register tree.
+      const publicProjection = JSON.parse(
+        await readFile(join(projectRoot, '.planr/operate/projections/state.json'), 'utf8'),
+      ) as { kind: string; eventHead: { sequence: number } };
+      expect(publicProjection.kind).toBe('operating-state');
+      expect(publicProjection.eventHead.sequence).toBeGreaterThan(0);
       await expect(
         readFile(join(projectRoot, '.planr/operate/backlog.md'), 'utf8'),
       ).resolves.toContain('# Operating Backlog');

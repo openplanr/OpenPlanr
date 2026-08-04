@@ -1,4 +1,5 @@
-import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
 import { buildOperatingIntegritySummary, renderOperatingIntegrityDocument } from './integrity.js';
@@ -14,7 +15,7 @@ import {
   renderOperatingEvidenceIndex,
   selectCycleState,
 } from './projection.js';
-import { assertOperatingArtifact } from './protocol.js';
+import { assertOperatingArtifact, loadOperatingProtocol } from './protocol.js';
 import { operatingStalledItems } from './stalled-item-service.js';
 import { OperateError, type OperatingEventHead, type OperatingState } from './types.js';
 
@@ -28,6 +29,23 @@ const OPERATE_ROOT = '.planr/operate';
 const STATE_INTERNAL_ROOT = `${OPERATE_ROOT}/.state`;
 const STATE_PATH = `${STATE_INTERNAL_ROOT}/state.json`;
 const EVIDENCE_INDEX_PATH = `${OPERATE_ROOT}/evidence-index.json`;
+// The ecosystem dashboard's read-only reader (planr-pipeline
+// `lib/dashboard/operate-reader.mjs`) consumes the PUBLIC operating projection at
+// exactly these two paths: an `operating-state` at `projections/state.json` and an
+// `operating-checkpoint` at `checkpoints/current.json` (the latter validated by the
+// pipeline's `validateOperatingCheckpoint`, both capped at 1 MiB).
+//
+// Protocol v1.3 RETIRED `projections/` as a *persistence* location and moved the
+// canonical projection under the private `.state/` internals (see STATE_PATH above).
+// Re-emitting here is NOT a revival of that persistence design: the path returns
+// solely as a PUBLIC, derived, regenerable, read-only surface. `.state/` remains the
+// only store the CLI reads back; this projection is a write-through the CLI never
+// reads. `checkpoints/current.json` also happens to be the v1.2 legacy checkpoint
+// path — `migration.ts` is kept from mistaking this public file for interrupted-
+// migration residue.
+const PUBLIC_PROJECTION_STATE_PATH = `${OPERATE_ROOT}/projections/state.json`;
+const PUBLIC_CHECKPOINT_PATH = `${OPERATE_ROOT}/checkpoints/current.json`;
+const PUBLIC_PROJECTION_MAX_BYTES = 1024 * 1024;
 // FR5/FR6 readable tree: one consolidated Markdown file per register rendered at
 // the top level (the workspace path getters T-001 added), above the `.state/`
 // internals. `backlog.md` (parked findings with their full parked reasons) is
@@ -824,6 +842,77 @@ export async function prepareOperatingProjectionPersistence(input: {
   };
 }
 
+/**
+ * Publish one derived public-projection file atomically (temp + rename), tolerating
+ * a lost cross-writer overwrite race the same way `evidence-cache.ts`'s
+ * `publishAtomically` does — a reader therefore never observes a partial write. The
+ * target is a fixed path (not content-addressed), but operate mutations are
+ * serialized by the project writer lock, so the "loser" of a rare Windows overwrite
+ * race is simply an equally-current sibling transition; the next transition
+ * regenerates the file regardless.
+ */
+async function publishPublicProjectionFile(target: string, body: string): Promise<void> {
+  await mkdir(path.dirname(target), { recursive: true, mode: 0o700 });
+  const temporary = `${target}.${process.pid}.${randomUUID()}.tmp`;
+  await writeFile(temporary, body, { mode: 0o600 });
+  try {
+    await rename(temporary, target);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code !== 'EPERM' && code !== 'EEXIST' && code !== 'EACCES' && code !== 'EBUSY') throw error;
+    await unlink(temporary).catch(() => undefined);
+  }
+}
+
+/**
+ * Write the PUBLIC, read-only operating projection the ecosystem dashboard reader
+ * consumes (see the PUBLIC_PROJECTION_* rationale above): `projections/state.json`
+ * (the same `operating-state` the transition persisted to the private `.state/`
+ * store) and `checkpoints/current.json` (an `operating-checkpoint` derived fresh
+ * from that same state, so its `eventHead` always matches the state's — the reader's
+ * freshness cross-check reads `ready`, never a spurious `stale`).
+ *
+ * Idempotent and regenerable: it is a pure function of the committed state, so
+ * re-running it on an unchanged state rewrites identical bytes. It is a side-output,
+ * never journaled and never drift-checked (the retired-v1.2 `projections/` tree stays
+ * out of the journaled register set). Both files are guarded against the reader's
+ * 1 MiB cap so the CLI never publishes a projection the dashboard would reject as
+ * oversized.
+ */
+export async function emitOperatingPublicProjection(input: {
+  projectRoot: string;
+  state: OperatingState;
+}): Promise<{ statePath: string; checkpointPath: string }> {
+  await assertOperatingArtifact('operating-state', input.state);
+  const protocol = await loadOperatingProtocol();
+  const checkpoint = protocol.createOperatingCheckpoint(input.state);
+  const files: Array<{ label: string; relativePath: string; body: string }> = [
+    {
+      label: 'state',
+      relativePath: PUBLIC_PROJECTION_STATE_PATH,
+      body: `${canonicalize(input.state)}\n`,
+    },
+    {
+      label: 'checkpoint',
+      relativePath: PUBLIC_CHECKPOINT_PATH,
+      body: `${canonicalize(checkpoint)}\n`,
+    },
+  ];
+  for (const file of files) {
+    if (Buffer.byteLength(file.body) > PUBLIC_PROJECTION_MAX_BYTES) {
+      throw new OperateError(
+        'E_OPERATE_PROJECTION_DRIFT',
+        `Public operating ${file.label} projection exceeds the ${PUBLIC_PROJECTION_MAX_BYTES}-byte dashboard reader cap.`,
+        { path: file.relativePath, bytes: Buffer.byteLength(file.body) },
+      );
+    }
+  }
+  for (const file of files) {
+    await publishPublicProjectionFile(path.join(input.projectRoot, file.relativePath), file.body);
+  }
+  return { statePath: PUBLIC_PROJECTION_STATE_PATH, checkpointPath: PUBLIC_CHECKPOINT_PATH };
+}
+
 export async function persistOperatingProjections(input: {
   projectRoot: string;
   state: OperatingState;
@@ -833,6 +922,10 @@ export async function persistOperatingProjections(input: {
   revalidateEventHead?: () => Promise<OperatingEventHead>;
 }): Promise<PersistOperatingProjectionResult> {
   const preview = await prepareOperatingProjectionPersistence(input);
+  // Refresh the PUBLIC dashboard projection on every transition, derived from the
+  // same state — before the no-change early-return so the public surface is created
+  // on the very first persist and can never lag the private `.state/` store.
+  await emitOperatingPublicProjection({ projectRoot: input.projectRoot, state: input.state });
   if (preview.changedPaths.length === 0) {
     return { ...preview, transactionId: null };
   }
@@ -874,4 +967,16 @@ export const OPERATING_PROJECTION_PATHS = {
   gaps: `${OPERATE_ROOT}/gaps.md`,
   routes: `${OPERATE_ROOT}/routes.md`,
   backlog: `${OPERATE_ROOT}/backlog.md`,
+} as const;
+
+/**
+ * The PUBLIC dashboard-projection relative paths this emitter WRITES (see the
+ * PUBLIC_PROJECTION_* rationale above). Exported so the cross-component
+ * conformance suite can assert — by constant, never by string literal — that the
+ * CLI writer path equals exactly the path the installed pipeline dashboard reader
+ * reads back. A rename on either side then turns the suite red.
+ */
+export const PUBLIC_OPERATING_PROJECTION_PATHS = {
+  state: PUBLIC_PROJECTION_STATE_PATH,
+  checkpoint: PUBLIC_CHECKPOINT_PATH,
 } as const;

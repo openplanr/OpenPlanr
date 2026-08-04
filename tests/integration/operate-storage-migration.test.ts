@@ -403,10 +403,27 @@ async function assertV13Present(paths: OperatingPaths): Promise<void> {
   }
 }
 
-async function assertLegacyGone(paths: OperatingPaths): Promise<void> {
+async function assertLegacyGone(
+  paths: OperatingPaths,
+  options: { publicCheckpoint?: boolean } = {},
+): Promise<void> {
+  // The definitive, never-reused v1.2 markers: the top-level append log and the
+  // directory-per-digest record store. Their removal proves the SPEC-002 layout is
+  // gone regardless of what lives at `checkpoints/current.json`.
   expect(await pathExists(join(paths.root, 'events.jsonl'))).toBe(false);
   expect(await pathExists(join(paths.root, 'records', 'sha256'))).toBe(false);
-  expect(await pathExists(join(paths.root, 'checkpoints', 'current.json'))).toBe(false);
+  const checkpointPath = join(paths.root, 'checkpoints', 'current.json');
+  if (options.publicCheckpoint) {
+    // `checkpoints/current.json` is now the UN-RETIRED public dashboard projection.
+    // A mutating command that persists a projection legitimately (re)creates it
+    // after the migration removes the v1.2 residue, so assert it is that fresh
+    // public checkpoint rather than leftover SPEC-002 residue.
+    const checkpoint = JSON.parse(await readFile(checkpointPath, 'utf8')) as { kind?: string };
+    expect(checkpoint.kind).toBe('operating-checkpoint');
+  } else {
+    // A pure migration with no following transition leaves the path absent.
+    expect(await pathExists(checkpointPath)).toBe(false);
+  }
 }
 
 describe('operate SPEC-002 -> v1.3 storage-layout migration (FR5 / E-005)', () => {
@@ -429,7 +446,9 @@ describe('operate SPEC-002 -> v1.3 storage-layout migration (FR5 / E-005)', () =
       'v1.3',
     );
     await assertV13Present(fx.paths);
-    await assertLegacyGone(fx.paths);
+    // `cycles.recover` persists a projection after the migration, so it (re)writes
+    // the public `checkpoints/current.json`; the v1.2 residue is still gone.
+    await assertLegacyGone(fx.paths, { publicCheckpoint: true });
 
     // The migration committed through the journal: no partial transaction remains.
     await expect(

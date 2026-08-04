@@ -16,6 +16,7 @@ import {
   detectOperatingQuestionContext,
   renderOperatingInitQuestions,
 } from '../../services/operate/interaction/terminal-renderer.js';
+import { writeOperatingReportHtml } from '../../services/operate/report-html.js';
 import { readOperatingDecisionBriefSource } from '../../services/operate/reports.js';
 import { promptConfirm } from '../../services/prompt-service.js';
 import { display, logger } from '../../utils/logger.js';
@@ -25,6 +26,15 @@ import { display, logger } from '../../utils/logger.js';
 // workspace directly, so repository size is never serialized through stdin.
 const MAX_GUIDED_ANSWER_BYTES = 64 * 1024;
 const MAX_AGENT_REPORT_BYTES = 256 * 1024;
+
+// FND-002: a non-TTY human running `operate init` cannot answer the guided
+// questionnaire and has no `--json` machine channel to continue on, so an
+// input-required handoff is a genuine dead-end there — never a silent success.
+// This mirrors the service's own `E_OPERATE_INPUT_REQUIRED` class in
+// `OPERATE_EXIT_CODES` (services/operate/index.ts), where input-required maps to
+// exit 4; a machine reading `--json` still receives the `ok: true` handoff at
+// exit 0 and continues via the questionnaire.
+const OPERATE_INPUT_REQUIRED_EXIT_CODE = 4;
 
 function collect(value: string, previous: string[]): string[] {
   return [...previous, value];
@@ -100,13 +110,35 @@ export async function readBoundedInitAnswers(
   return buffer.toString('utf8').trimEnd();
 }
 
-function renderHuman(result: OperateActionResult): void {
+export function renderHuman(result: OperateActionResult): void {
+  // FND-002 (level 2): track whether any recognized field produced output. A
+  // last-resort branch below prints something actionable for any payload whose
+  // shape this renderer does not otherwise surface, so an `ok: true` result — a
+  // handoff, or a future shape — can never render as silent success. Wrap the
+  // real sinks so every emission is counted exactly once.
+  let emitted = false;
+  const line = (text: string): void => {
+    display.line(text);
+    emitted = true;
+  };
+  const heading = (text: string): void => {
+    display.heading(text);
+    emitted = true;
+  };
+  const success = (text: string): void => {
+    logger.success(text);
+    emitted = true;
+  };
+  const warn = (text: string): void => {
+    logger.warn(text);
+    emitted = true;
+  };
   if (result.message) {
-    if (result.ok) logger.success(result.message);
-    else logger.warn(result.message);
+    if (result.ok) success(result.message);
+    else warn(result.message);
   }
   if (result.lines) {
-    for (const line of result.lines) display.line(line);
+    for (const value of result.lines) line(value);
   }
   if (result.data !== undefined) {
     if (
@@ -120,20 +152,18 @@ function renderHuman(result: OperateActionResult): void {
         typeof data.pipeline === 'object' && data.pipeline !== null
           ? (data.pipeline as Record<string, unknown>)
           : {};
-      display.line(`Project context: ${data.project === true ? 'detected' : 'not detected'}`);
-      display.line(
-        `Initialization: ${data.initialized === true ? 'configured' : 'not configured'}`,
-      );
-      display.line(
+      line(`Project context: ${data.project === true ? 'detected' : 'not detected'}`);
+      line(`Initialization: ${data.initialized === true ? 'configured' : 'not configured'}`);
+      line(
         pipeline.available === true
           ? `Pipeline: Protocol ${String(pipeline.protocolVersion ?? 'compatible')} ready`
           : 'Pipeline: not installed (read-only inspection remains available)',
       );
       if (typeof data.commitSafeRoot === 'string') {
-        display.line(`Commit-safe state: ${data.commitSafeRoot}`);
+        line(`Commit-safe state: ${data.commitSafeRoot}`);
       }
       if (typeof data.machineLocalState === 'string') {
-        display.line(`Machine-local data: ${data.machineLocalState}`);
+        line(`Machine-local data: ${data.machineLocalState}`);
       }
     } else if (
       result.action === 'demo' &&
@@ -142,14 +172,14 @@ function renderHuman(result: OperateActionResult): void {
       !Array.isArray(result.data)
     ) {
       const data = result.data as Record<string, unknown>;
-      if (typeof data.brief === 'string') display.line(data.brief);
+      if (typeof data.brief === 'string') line(data.brief);
       const evidenceCount = Array.isArray(data.evidence) ? data.evidence.length : 0;
-      display.line(
+      line(
         `Evidence: ${evidenceCount} sanitized deterministic record${evidenceCount === 1 ? '' : 's'}`,
       );
-      if (typeof data.note === 'string') display.line(data.note);
-    } else if (typeof result.data === 'string') display.line(result.data);
-    else display.line(JSON.stringify(result.data, null, 2));
+      if (typeof data.note === 'string') line(data.note);
+    } else if (typeof result.data === 'string') line(result.data);
+    else line(JSON.stringify(result.data, null, 2));
   }
   // FR10 / T-008: surface the adapter session lease (expiry + remaining) as a
   // plain human line so an operator inspecting a lifecycle result sees, without
@@ -170,7 +200,7 @@ function renderHuman(result: OperateActionResult): void {
       };
       const remaining =
         typeof status.remainingSeconds === 'number' ? `${status.remainingSeconds}s` : 'unknown';
-      display.line(
+      line(
         status.expired === true
           ? `Adapter lease: expired at ${String(status.expiresAt)}`
           : `Adapter lease: expires ${String(status.expiresAt)} (${remaining} remaining)`,
@@ -178,13 +208,37 @@ function renderHuman(result: OperateActionResult): void {
     }
   }
   if (result.preview !== undefined) {
-    display.heading('Preview:');
-    display.line(JSON.stringify(result.preview, null, 2));
+    heading('Preview:');
+    line(JSON.stringify(result.preview, null, 2));
   }
   if (result.next?.length) {
     display.blank();
-    display.heading('Next:');
-    for (const command of result.next) display.line(`  ${command}`);
+    heading('Next:');
+    for (const command of result.next) line(`  ${command}`);
+  }
+  // FND-002 (level 2): the generic last-resort branch. If nothing above produced
+  // any output, this result carried a shape the renderer does not recognize — most
+  // often an `input_required`/authority handoff in a non-interactive shell, whose
+  // legible guidance the service deliberately leaves to the transport (see
+  // `initialize`). Printing here makes silent success on an unrecognized `ok: true`
+  // shape impossible, which is the "no silent success" rule this batch enforces.
+  if (!emitted) {
+    if (result.flow === 'handoff' && result.code === 'E_OPERATE_INPUT_REQUIRED') {
+      const subject =
+        result.action === 'input_required' ? 'Operating Board initialization' : result.action;
+      warn(`${subject} needs more input than this non-interactive session can provide.`);
+      line(
+        'Re-run with --json to receive the guided questionnaire, or run this command in an interactive terminal.',
+      );
+    } else if (result.ok) {
+      line(
+        `${result.action}: completed with no printable summary. Re-run with --json for the full machine-readable result.`,
+      );
+    } else {
+      warn(
+        `${result.action} did not complete. Re-run with --json for the machine-readable error detail.`,
+      );
+    }
   }
 }
 
@@ -203,9 +257,13 @@ async function executeForResult(
   const json = wantsJson(command, resolvedOptions);
   let stdin: string | undefined;
   try {
-    const richAgentDocument = ['context.review', 'harness.record', 'adapter.record'].includes(
-      action,
-    );
+    const richAgentDocument = [
+      'context.review',
+      'harness.record',
+      'adapter.record',
+      'harness.validate',
+      'adapter.validate',
+    ].includes(action);
     stdin = await readBoundedInitAnswers(
       resolvedOptions,
       richAgentDocument ? MAX_AGENT_REPORT_BYTES : MAX_GUIDED_ANSWER_BYTES,
@@ -219,7 +277,13 @@ async function executeForResult(
       code === 'E_OPERATE_STDIN_REQUIRED'
         ? 'Attach one bounded JSON document to stdin before launching this exact command.'
         : `Reduce the stdin payload to ${
-            ['context.review', 'harness.record', 'adapter.record'].includes(action)
+            [
+              'context.review',
+              'harness.record',
+              'adapter.record',
+              'harness.validate',
+              'adapter.validate',
+            ].includes(action)
               ? MAX_AGENT_REPORT_BYTES
               : MAX_GUIDED_ANSWER_BYTES
           } bytes or fewer and retry.`;
@@ -369,6 +433,80 @@ async function renderDecisionBriefArtifact(
         sensitivityCeiling: written.sensitivityCeiling,
         redactedEvidenceRefs: written.redactedEvidenceRefs,
       },
+      exitCode: 0,
+    };
+    if (json) display.line(JSON.stringify(result));
+    else renderHuman(result);
+    return result;
+  } catch (error) {
+    const code =
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      typeof (error as { code: unknown }).code === 'string' &&
+      /^E_[A-Z0-9_]+$/.test((error as { code: string }).code)
+        ? (error as { code: string }).code
+        : 'E_OPERATE_INTERNAL';
+    const result: OperateActionResult = {
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.2.0',
+      ok: false,
+      action,
+      code,
+      message: error instanceof Error ? error.message : String(error),
+      state: null,
+      paths: {},
+      counts: {},
+      warnings: [],
+      nextActions: [],
+      next: [],
+      exitCode: 1,
+    };
+    if (json) display.line(JSON.stringify(result));
+    else renderHuman(result);
+    process.exitCode = result.exitCode;
+    return result;
+  }
+}
+
+/**
+ * `operate report [cycleId] --html` — render a finished cycle report into a
+ * single, self-contained, offline HTML file (inline CSS, real tables, no remote
+ * hrefs) that opens cleanly in `planr artifact open`. On success it prints the
+ * written path and the exact `planr artifact open` command; `--json` returns
+ * `{ path, suggestedNext }`. This is a share-on-request boundary — it writes only
+ * the one HTML file, to `--out` or a default alongside the cycle dir / tmp.
+ */
+async function renderReportHtmlArtifact(
+  program: Command,
+  command: Command,
+  cycleId: string | undefined,
+  options: OptionValues,
+): Promise<OperateActionResult> {
+  const action = 'report.html';
+  const json = wantsJson(command, options);
+  try {
+    const written = await writeOperatingReportHtml({
+      projectRoot: projectDir(program),
+      ...(cycleId ? { cycleId } : {}),
+      ...(typeof options.lens === 'string' ? { lens: options.lens } : {}),
+      ...(typeof options.out === 'string' ? { out: options.out } : {}),
+      ...(typeof options.localRoot === 'string' ? { localRoot: options.localRoot } : {}),
+    });
+    const result: OperateActionResult = {
+      schemaVersion: '1.0.0',
+      protocolVersion: '1.2.0',
+      ok: true,
+      action,
+      message: `Rendered the operating report for ${written.cycleId} to ${written.path}.`,
+      cycleId: written.cycleId,
+      state: null,
+      paths: { artifact: written.path },
+      counts: {},
+      warnings: [],
+      nextActions: [written.suggestedNext],
+      next: [written.suggestedNext],
+      data: { path: written.path, suggestedNext: written.suggestedNext },
       exitCode: 0,
     };
     if (json) display.line(JSON.stringify(result));
@@ -587,8 +725,13 @@ export function registerOperateCommand(program: Command): void {
       .command('report [cycleId]')
       .description('Print the cycle brief and CEO/CTO/CPO/CMO/COO/Chair reports')
       .option('--lens <lens>', 'CEO, CTO, CPO, CMO, COO, Chair, or all', 'all')
-      .option('--format <format>', 'markdown or json'),
+      .option('--format <format>', 'markdown or json')
+      .option('--html', 'render the cycle report to a self-contained, offline HTML file', false)
+      .option('--out <path>', 'HTML output path (default: alongside the cycle dir, else tmp)'),
   ).action(function (this: Command, cycleId: string | undefined, opts) {
+    if (opts.html) {
+      return renderReportHtmlArtifact(program, this, cycleId, opts).then(() => undefined);
+    }
     return execute(program, this, 'report', { cycleId }, opts);
   });
 
@@ -689,6 +832,20 @@ export function registerOperateCommand(program: Command): void {
         );
       } else {
         result = await executeForResult(program, this, 'init', {}, resolved);
+      }
+      // FND-002: a non-TTY human hit the input-required handoff. `renderHuman`
+      // (invoked inside executeForResult) has already printed the actionable
+      // `--json` guidance; set the exit code so automation sees the dead-end rather
+      // than a spurious success, and stop before the interactive follow-up prompts.
+      // A `--json` caller keeps the `ok: true` handoff at exit 0 and continues.
+      if (
+        result.flow === 'handoff' &&
+        result.code === 'E_OPERATE_INPUT_REQUIRED' &&
+        !wantsJson(this, resolved) &&
+        isNonInteractive()
+      ) {
+        process.exitCode = OPERATE_INPUT_REQUIRED_EXIT_CODE;
+        return;
       }
       const legacyMigration = (
         result.data as
@@ -1224,6 +1381,23 @@ export function registerOperateCommand(program: Command): void {
       ),
     ).action(function (this: Command, opts) {
       return execute(program, this, `${namespace}.record`, {}, { ...opts, json: true });
+    });
+    // `validate` (US-T1) is the read-only twin of `record`: it checks the SAME
+    // stdin payload against the SAME disclosed advisor contract and returns the
+    // SAME complete-issues shape, but consumes no lease, needs no idempotency key,
+    // and mutates nothing — so a runtime can iterate on its draft response at zero
+    // state cost. It needs only `--cycle-id` to locate the prepared session and
+    // `--role`; the full lease/idempotency machine binding is deliberately absent.
+    json(
+      stdin(
+        group
+          .command('validate')
+          .description('Dry-run one advisor response against its contract; no lease, no writes')
+          .requiredOption('--role <role>', 'operating advisor role')
+          .option('--cycle-id <cycleId>', 'prepared operating cycle'),
+      ),
+    ).action(function (this: Command, opts) {
+      return execute(program, this, `${namespace}.validate`, {}, { ...opts, json: true });
     });
     // `abandon` (FR13/SPEC-005 T-020) governs one dispatched-but-unrecorded lens
     // terminal `not_evaluated` with a reason, so a genuinely stalled lens no longer

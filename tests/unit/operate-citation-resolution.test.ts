@@ -830,3 +830,188 @@ describe('FR8 citation-classification fixture matrix', () => {
     expect(resolved.snapshotDigest).not.toBe(canonicalDigest(SERVICE_CONTENT));
   });
 });
+
+// T3 — record-time anchoring aligned to operating-citation@1.4.0 (the shape the
+// advisor RESPONSE is validated against). Each test drives the REAL resolver
+// (`resolveOperatingCitationAtPin`), never a re-implementation.
+describe('T3 operating-citation@1.4.0 anchor alignment', () => {
+  it('anchors a repository citation into a dot-prefixed .github/ path the mandate authorizes', async () => {
+    const projectRoot = await initGitProject('openplanr-operate-citation-dotpath-github-');
+    await mkdir(join(projectRoot, '.github', 'workflows'), { recursive: true });
+    await writeFile(
+      join(projectRoot, '.github', 'workflows', 'release.yml'),
+      'name: release\non:\n  push:\n    branches: [main]\n',
+    );
+    await git(projectRoot, ['add', '-A']);
+    await git(projectRoot, ['commit', '--quiet', '-m', 'ci']);
+    const head = await git(projectRoot, ['rev-parse', 'HEAD']);
+    const cache = await newCache();
+    const context = contextFor(projectRoot, controlDescriptor(head), cache);
+
+    const resolved = await resolveOperatingCitationAtPin(
+      {
+        repositoryPath: '.github/workflows/release.yml',
+        lineRange: { start: 1, end: 3 },
+        pinnedRevision: head,
+      },
+      context,
+    );
+    // The v1.3.0 anchor rejected this dot-prefixed path outright; the v1.4.0
+    // anchor the mandate authorizes resolves it as a line-precise repo citation.
+    expect(resolved.outcome).toBe('resolved');
+    expect(resolved.expectedCitationKind).toBe('repo-path');
+    expect(resolved.evidenceId).toMatch(/^EVD-[a-f0-9]+$/);
+    const snapshot = await cache.getCitationSnapshot(resolved.evidenceId as string, context.now);
+    expect(snapshot?.sourceLocation).toBe('.github/workflows/release.yml');
+    expect(snapshot?.content).toContain('name: release');
+  });
+
+  it('anchors a repository citation into a committed .planr/ path at the pin', async () => {
+    const fixture = await buildFixture();
+    const resolved = await resolveOperatingCitationAtPin(
+      {
+        repositoryPath: '.planr/stories/US-001-foo.md',
+        lineRange: { start: 1, end: 1 },
+        pinnedRevision: fixture.head,
+      },
+      fixture.context,
+    );
+    expect(resolved.outcome).toBe('resolved');
+    expect(resolved.expectedCitationKind).toBe('repo-path');
+  });
+
+  it('resolves the product real planr artifact classes BL / QT / SPEC / TASK that v1.4.0 permits', async () => {
+    const projectRoot = await initGitProject('openplanr-operate-citation-classes-');
+    const artifacts: Array<[string, string]> = [
+      ['.planr/backlog', 'BL-008-skills-version-drift.md'],
+      ['.planr/quick', 'QT-1-fix.md'],
+      ['.planr/specs', 'SPEC-007-thing.md'],
+      ['.planr/tasks', 'TASK-001-work.md'],
+    ];
+    for (const [dir, file] of artifacts) {
+      await mkdir(join(projectRoot, ...dir.split('/')), { recursive: true });
+      await writeFile(join(projectRoot, ...dir.split('/'), file), `# ${file}\n\nPlanning body.\n`);
+    }
+    await git(projectRoot, ['add', '-A']);
+    await git(projectRoot, ['commit', '--quiet', '-m', 'planning']);
+    const head = await git(projectRoot, ['rev-parse', 'HEAD']);
+    const cache = await newCache();
+    const context = contextFor(projectRoot, controlDescriptor(head), cache);
+
+    // The acceptance table: BL-008 (backlog) and QT-1 (quick task) — pointed at as
+    // primary evidence by the bootstrap map — resolve alongside SPEC-007/TASK-001.
+    const table: Record<string, string> = {};
+    for (const id of ['BL-008', 'QT-1', 'SPEC-007', 'TASK-001']) {
+      const resolved = await resolveOperatingCitationAtPin(
+        { planrArtifactId: id, pinnedRevision: head },
+        context,
+      );
+      table[id] = resolved.outcome;
+    }
+    expect(table).toEqual({
+      'BL-008': 'resolved',
+      'QT-1': 'resolved',
+      'SPEC-007': 'resolved',
+      'TASK-001': 'resolved',
+    });
+  });
+
+  it('rejects an artifactId whose prefix is not a real planr artifact class at the anchor', async () => {
+    const fixture = await buildFixture();
+    await expect(
+      resolveOperatingCitationAtPin(
+        { planrArtifactId: 'ZZ-1', pinnedRevision: fixture.head },
+        fixture.context,
+      ),
+    ).rejects.toThrow(/not a valid operating-citation@1\.4\.0 anchor/);
+  });
+
+  it("resolves a componentId citation against that component's checkout, fails a fabricated in-repo path, and classifies an unknown componentId distinctly", async () => {
+    const controlRoot = await initGitProject('openplanr-operate-citation-control-');
+    await writeFile(join(controlRoot, 'root.txt'), 'control repository\n');
+    await git(controlRoot, ['add', '-A']);
+    await git(controlRoot, ['commit', '--quiet', '-m', 'control']);
+    const controlHead = await git(controlRoot, ['rev-parse', 'HEAD']);
+
+    // A sibling "marketplace" repo with its own history — the exact GAP-001..004
+    // topology: ecosystem.json lives here at the marketplace's own sha, absent
+    // from the control repo entirely.
+    const marketplaceRoot = await initGitProject('openplanr-operate-citation-marketplace-');
+    await writeFile(
+      join(marketplaceRoot, 'ecosystem.json'),
+      '{\n  "components": {\n    "cli": {\n      "version": "1.24.0"\n    }\n  }\n}\n',
+    );
+    await git(marketplaceRoot, ['add', '-A']);
+    await git(marketplaceRoot, ['commit', '--quiet', '-m', 'ledger']);
+    const marketplaceHead = await git(marketplaceRoot, ['rev-parse', 'HEAD']);
+    expect(marketplaceHead).not.toBe(controlHead);
+
+    const cache = await newCache();
+    const marketplaceDescriptor: OperatingWorkspaceComponent = {
+      componentId: 'marketplace',
+      canonicalRemote: 'github.com/openplanr/marketplace',
+      configuredBranch: 'main',
+      pinnedRevision: marketplaceHead,
+      dirtyFingerprint: null,
+      readOnly: true,
+    };
+    const context: CitationResolutionContext = {
+      ...contextFor(controlRoot, controlDescriptor(controlHead), cache),
+      components: [
+        { componentId: 'marketplace', root: marketplaceRoot, descriptor: marketplaceDescriptor },
+      ],
+    };
+
+    // GAP-001/004 fixed: ecosystem.json resolves against the marketplace's OWN
+    // revision, not the control pin where it was called "fabricated".
+    const resolved = await resolveOperatingCitationAtPin(
+      {
+        componentId: 'marketplace',
+        repositoryPath: 'ecosystem.json',
+        lineRange: { start: 1, end: 5 },
+        pinnedRevision: marketplaceHead,
+      },
+      context,
+    );
+    expect(resolved.outcome).toBe('resolved');
+    expect(resolved.expectedCitationKind).toBe('repo-path');
+    const snapshot = await cache.getCitationSnapshot(resolved.evidenceId as string, context.now);
+    expect(snapshot?.content).toContain('1.24.0');
+
+    // GAP-002/003 fixed: a git-revision citation into the marketplace resolves at
+    // the marketplace's own sha instead of failing stale against the control pin.
+    const gitCitation = await resolveOperatingCitationAtPin(
+      { componentId: 'marketplace', gitRevision: marketplaceHead, pinnedRevision: marketplaceHead },
+      context,
+    );
+    expect(gitCitation.outcome).toBe('resolved');
+    expect(gitCitation.expectedCitationKind).toBe('git-revision');
+
+    // A genuinely fabricated path IN the named component is still a fabrication.
+    const fabricated = await resolveOperatingCitationAtPin(
+      {
+        componentId: 'marketplace',
+        repositoryPath: 'does-not-exist.json',
+        pinnedRevision: marketplaceHead,
+      },
+      context,
+    );
+    expect(fabricated.outcome).toBe('rejected');
+    expect(fabricated.reason).toBe('fabricated-path');
+
+    // An unknown component is an honest "cannot verify" — never a fabrication.
+    const unknown = await resolveOperatingCitationAtPin(
+      {
+        componentId: 'skills',
+        repositoryPath: 'ecosystem.json',
+        pinnedRevision: marketplaceHead,
+      },
+      context,
+    );
+    expect(unknown.outcome).toBe('rejected');
+    expect(unknown.reason).toBe('external-component-unresolved');
+    expect(unknown.reason).not.toBe('fabricated-path');
+    expect(unknown.gap?.category).toBe('unresolvable-citation');
+    expect(unknown.gap?.question).toContain('skills');
+  });
+});

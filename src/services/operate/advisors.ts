@@ -10,6 +10,7 @@ import type { OpenPlanrConfig } from '../../models/types.js';
 import { OPENPLANR_VERSION } from '../../utils/package-version.js';
 import { getAIProvider, isAIConfigured } from '../ai-service.js';
 import { loadConfig } from '../config-service.js';
+import { isPlanrArtifactId } from './artifacts.js';
 import { canonicalDigest, canonicalize } from './canonical.js';
 import { buildOperatingBootstrapMap, type OperatingBootstrapMap } from './context-research.js';
 import {
@@ -72,13 +73,13 @@ const advisorOutputSchema = z
   .strict();
 export type OperatingAdvisorResponse = z.infer<typeof advisorOutputSchema>;
 
-// The Protocol v1.3 mission (`operating-advisor-response@1.3.0`) proposal shape:
-// each proposal carries `citations` (repository path / git revision / planr
-// artifact, each bound to the cycle's frozen `pinnedRevision`) INSTEAD of the
-// v1.2 `evidenceRefs`. The pipeline snapshots each citation after the lens
-// returns; OpenPlanr never widens the set. Kept in lockstep with the installed
-// `schemas/v1.3.0/operating-citation.schema.json` so a locally parsed response
-// and the pipeline-validated one cannot drift.
+// The mission proposal's citation shape, kept in lockstep with the anchor the
+// record-time resolver validates (`operating-citation@1.4.0`): a repository path
+// (relative, dot-prefixed roots allowed, no `..` traversal) / git revision /
+// planr artifact (any real artifact class), optionally scoped to a workspace
+// `componentId`, and bound to the cycle's frozen `pinnedRevision`. Each proposal
+// carries `citations` INSTEAD of the v1.2 `evidenceRefs`; the resolver snapshots
+// each citation after the lens returns and OpenPlanr never widens the set.
 const missionCitationSchema = z
   .object({
     citationKey: z
@@ -86,10 +87,15 @@ const missionCitationSchema = z
       .regex(/^[A-Za-z0-9._-]+$/)
       .max(128)
       .optional(),
+    componentId: z
+      .string()
+      .regex(/^[a-z][a-z0-9-]{0,63}$/)
+      .optional(),
     repositoryPath: z
       .string()
+      .min(1)
       .max(1024)
-      .regex(/^(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9._/-]*$/)
+      .regex(/^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$)).+$/)
       .optional(),
     lineRange: z
       .object({ start: z.number().int().min(1), end: z.number().int().min(1) })
@@ -97,13 +103,13 @@ const missionCitationSchema = z
       .optional(),
     gitRevision: z
       .string()
-      .regex(/^[a-f0-9]{7,64}$/)
+      .regex(/^[A-Fa-f0-9]{7,64}$/)
       .optional(),
     planrArtifactId: z
       .string()
-      .regex(/^(?:EPIC|FEAT|US|SPEC|TASK|ADR|DEC|FND|GAP|OUT)-[A-Za-z0-9._-]+$/)
+      .refine(isPlanrArtifactId, 'must name a known planr artifact class')
       .optional(),
-    pinnedRevision: z.string().regex(/^[a-f0-9]{7,64}$/),
+    pinnedRevision: z.string().regex(/^[A-Fa-f0-9]{7,64}$/),
   })
   .strict();
 const missionProposalSchema = z
@@ -172,15 +178,33 @@ export interface AgentNativeAdvisorResponse {
     impact: string;
     ownerRequired?: boolean;
   }>;
-  conflicts: Array<{ id: string; summary: string; actionKeys: string[] }>;
+  conflicts: Array<{
+    id: string;
+    summary: string;
+    actionKeys: string[];
+    /**
+     * Present when the conflict is action-versus-commitment rather than
+     * action-versus-action (operating-advisor-response v1.4, additive): the
+     * published commitment the action collides with. Threaded into the rendered
+     * conflict line — a commitment conflict that records but renders without its
+     * commitment is recorded-but-not-surfaced, the failure class this batch removes.
+     */
+    commitmentRef?: { path: string; statement: string };
+  }>;
 }
 
 function v14CitationToMission(
   value: Record<string, unknown>,
   pinnedRevision: string,
 ): z.infer<typeof missionCitationSchema> | null {
+  // A `componentId` scopes a repository/git locator to a sibling workspace
+  // component so it is resolved against that component's checkout, not the
+  // control repository. Preserve it through the conversion.
+  const componentId =
+    typeof value.componentId === 'string' ? { componentId: value.componentId } : {};
   if (value.kind === 'repository') {
     return {
+      ...componentId,
       repositoryPath: String(value.path),
       lineRange: { start: Number(value.startLine), end: Number(value.endLine) },
       pinnedRevision: String(value.revision),
@@ -188,6 +212,7 @@ function v14CitationToMission(
   }
   if (value.kind === 'git') {
     return {
+      ...componentId,
       gitRevision: String(value.revision),
       pinnedRevision: String(value.revision),
     };
@@ -203,7 +228,124 @@ function v14CitationToMission(
   return null;
 }
 
-function normalizeAgentNativeResponse(
+/**
+ * SINGLE source of truth for the action `routeKind` → committed proposal `type`
+ * mapping. A Protocol v1.4 native ACTION carries a `routeKind`; the committed
+ * proposal it becomes carries a `type` from the frozen proposal-type vocabulary.
+ * Only a `decision` routeKind becomes a `decision` proposal; every other route
+ * kind (`quick-task`, `spec`, `epic`, `agent-artifact`, `experiment`, `metric`)
+ * becomes a `finding`. The registry-derived brief bounds
+ * (`deriveRegistryProposalImage`), the native-response normalizer, and the
+ * raw-response type projection all route through here so the three can never
+ * disagree on what an action becomes — the exact divergence that let the Chair's
+ * brief exclude `finding`/`decision` while every one of its actions mapped to
+ * them, so the Chair could record ZERO actions and failed on any action at all.
+ */
+export function routeKindToProposalType(routeKind: string): 'finding' | 'decision' {
+  return routeKind === 'decision' ? 'decision' : 'finding';
+}
+
+/** The two registry facets that drive a role's proposal bounds. */
+const registryProposalBoundsSchema = z
+  .object({
+    allowedRouteKinds: z.array(z.string().min(1)).min(1),
+    budgets: z.object({ maxActions: z.number().int().positive() }),
+  })
+  .passthrough();
+
+interface AdvisorBriefRegistrySource {
+  createOperatingAdvisorBrief(roleId: string): OperatingAdvisorBrief;
+  listOperatingRoles(): Array<Record<string, unknown> & { id: string }>;
+}
+
+/**
+ * The IMAGE of a role's registry `allowedRouteKinds` under `routeKindToProposalType`
+ * — exactly the proposal types an action of one of those route kinds becomes, i.e.
+ * the set an advisor's actions can ACTUALLY produce — plus the registry's action
+ * cap (`budgets.maxActions`). `merge`/`sequence`/`data-gap` have no routeKind
+ * pre-image and are intentionally absent here (no action can reach them; making
+ * them action-expressible is a protocol question, not this derivation's job).
+ */
+function deriveRegistryProposalImage(role: Record<string, unknown> & { id: string }): {
+  allowedProposalTypes: Array<'finding' | 'decision'>;
+  maximumProposals: number;
+} {
+  const parsed = registryProposalBoundsSchema.safeParse(role);
+  if (!parsed.success) {
+    throw new OperateError(
+      'E_OPERATE_STATE_INVALID',
+      `Operating role registry entry ${role.id} is missing the allowedRouteKinds / budgets.maxActions needed to derive its proposal bounds.`,
+    );
+  }
+  return {
+    allowedProposalTypes: [
+      ...new Set(parsed.data.allowedRouteKinds.map(routeKindToProposalType)),
+    ].sort(),
+    maximumProposals: parsed.data.budgets.maxActions,
+  };
+}
+
+/**
+ * Build a role's advisor brief with its proposal BOUNDS reconciled against the
+ * live role registry — the single source of truth — so the registry and the
+ * enforced runtime contract can never disagree again. The pipeline's pack-style
+ * brief is a frozen Protocol v1.2 compatibility projection whose
+ * `output.allowedProposalTypes` predate the v1.4 action model: for the Chair it is
+ * `['merge','sequence']`, DISJOINT from the set every one of the Chair's actions
+ * maps to (`finding`/`decision`). So the Chair could commit a quiet result but was
+ * rejected the instant it proposed a single bounded route — the exact defect this
+ * closes.
+ *
+ * Reconciliation:
+ *  - `maximumProposals` is taken from the registry's `budgets.maxActions` (today
+ *    already identical to the pipeline value for every role, but now set
+ *    explicitly so a future registry cap edit cannot silently disagree with the
+ *    runtime).
+ *  - `allowedProposalTypes` is the UNION of the registry image and the frozen
+ *    brief's existing types. The union ADDS the registry-reachable action types
+ *    (`finding`/`decision`) — which is what unblocks the Chair — while LEAVING the
+ *    frozen structural consolidation vocabulary (`merge`/`sequence` for the Chair;
+ *    `data-gap` for the lenses) untouched: those have no action pre-image, so they
+ *    are neither invented as action-reachable nor removed as capabilities. For
+ *    every non-Chair role the image is already a subset of the frozen set, so the
+ *    reconciliation is a byte-identical no-op there.
+ *
+ * The brief digest is recomputed over the reconciled content so the artifact stays
+ * internally consistent; `canonicalize` here is the same RFC 8785 JCS the pipeline
+ * signs briefs with, so a no-op reconciliation reproduces the pipeline digest
+ * exactly.
+ */
+export function createRegistryReconciledAdvisorBrief(
+  protocol: AdvisorBriefRegistrySource,
+  roleId: string,
+): OperatingAdvisorBrief {
+  const brief = protocol.createOperatingAdvisorBrief(roleId);
+  const role = protocol.listOperatingRoles().find((entry) => entry.id === roleId);
+  if (!role) {
+    throw new OperateError(
+      'E_OPERATE_STATE_INVALID',
+      `Operating role ${roleId} is absent from the registry; its proposal bounds cannot be reconciled.`,
+    );
+  }
+  const image = deriveRegistryProposalImage(role);
+  const allowedProposalTypes = [
+    ...new Set<OperatingAdvisorBrief['output']['allowedProposalTypes'][number]>([
+      ...brief.output.allowedProposalTypes,
+      ...image.allowedProposalTypes,
+    ]),
+  ].sort();
+  const { briefDigest: _priorDigest, ...unsigned } = {
+    ...brief,
+    output: {
+      ...brief.output,
+      allowedProposalTypes,
+      maximumProposals: image.maximumProposals,
+    },
+  };
+  return { ...unsigned, briefDigest: canonicalDigest(unsigned) };
+}
+
+export function normalizeAgentNativeResponse(
   response: AgentNativeAdvisorResponse,
   pinnedRevision: string,
 ): MissionAdvisorOutput {
@@ -211,7 +353,7 @@ function normalizeAgentNativeResponse(
     outcome: response.actions.length > 0 ? 'proposals' : 'quiet',
     proposals: response.actions.map((action) => ({
       proposalKey: action.actionKey,
-      type: action.routeKind === 'decision' ? 'decision' : 'finding',
+      type: routeKindToProposalType(action.routeKind),
       title: action.title,
       problem: action.summary,
       proposal: action.summary,
@@ -230,7 +372,11 @@ function normalizeAgentNativeResponse(
         .filter((citation): citation is z.infer<typeof missionCitationSchema> => citation !== null),
     })),
     gaps: response.gaps.map((gap) => `${gap.question} Impact: ${gap.impact}`),
-    conflicts: response.conflicts.map((conflict) => conflict.summary),
+    conflicts: response.conflicts.map((conflict) =>
+      conflict.commitmentRef
+        ? `${conflict.summary} — conflicts with the published commitment "${conflict.commitmentRef.statement}" (${conflict.commitmentRef.path})`
+        : conflict.summary,
+    ),
   };
 }
 
@@ -247,49 +393,189 @@ export function advisorResponseContractDetails(brief: OperatingAdvisorBrief): {
   };
 }
 
+/**
+ * One advisor-response contract violation, in the canonical `{path, rule, detail}`
+ * shape shared across every validation category so a runtime receives a single
+ * uniform list to act on.
+ */
+export interface AdvisorContractIssue {
+  path: string;
+  rule: string;
+  detail: string;
+}
+
+/**
+ * SINGLE source of truth for the per-role proposal bounds — the proposal cap and
+ * the allowed proposal types — over an already-projected `{type}` list. Both the
+ * committed-output guard (`collectBriefContractViolations`) and the raw-response
+ * batch validator (`collectAdvisorResponseContractIssues`) route through here so
+ * the record path and the `harness validate` dry-run can never disagree on them.
+ */
+function collectProposalBoundViolations(
+  brief: OperatingAdvisorBrief,
+  proposals: ReadonlyArray<{ type?: string }>,
+): AdvisorContractIssue[] {
+  const issues: AdvisorContractIssue[] = [];
+  if (proposals.length > brief.output.maximumProposals) {
+    issues.push({
+      path: 'proposals',
+      rule: 'maximumProposals',
+      detail: `Advisor ${brief.role.id} returned ${proposals.length} proposals; its canonical limit is ${brief.output.maximumProposals}.`,
+    });
+  }
+  const allowed = new Set<string>(brief.output.allowedProposalTypes);
+  const disallowed = [
+    ...new Set(
+      proposals
+        .map((proposal) => proposal.type)
+        .filter((type): type is string => typeof type === 'string' && !allowed.has(type)),
+    ),
+  ].sort();
+  if (disallowed.length > 0) {
+    issues.push({
+      path: 'proposals',
+      rule: 'allowedProposalTypes',
+      detail: `Advisor ${
+        brief.role.id
+      } returned proposal types outside its canonical brief: ${disallowed.join(', ')}.`,
+    });
+  }
+  return issues;
+}
+
+/**
+ * Collect EVERY brief-level violation of a NORMALIZED advisor output — the
+ * proposal cap, disallowed proposal types, outcome/proposal consistency, and the
+ * output-byte ceiling — as `{path, rule, detail}` issues instead of throwing on
+ * the first. `assertAdvisorOutputMatchesBrief` wraps this to keep its throwing
+ * contract at the committed-output guards.
+ */
+export function collectBriefContractViolations(
+  brief: OperatingAdvisorBrief,
+  output: Pick<OperatingRoleResult, 'outcome' | 'proposals'>,
+): AdvisorContractIssue[] {
+  const issues = collectProposalBoundViolations(brief, output.proposals);
+  if (output.outcome === 'quiet' && output.proposals.length > 0) {
+    issues.push({
+      path: 'outcome',
+      rule: 'outcome-consistency',
+      detail: `Advisor ${brief.role.id} declared a quiet result with proposals.`,
+    });
+  }
+  if (output.outcome === 'proposals' && output.proposals.length === 0) {
+    issues.push({
+      path: 'outcome',
+      rule: 'outcome-consistency',
+      detail: `Advisor ${brief.role.id} declared proposals without a proposal.`,
+    });
+  }
+  const outputBytes = Buffer.byteLength(canonicalize(output), 'utf8');
+  if (outputBytes > brief.output.maximumOutputBytes) {
+    issues.push({
+      path: 'output',
+      rule: 'maximumOutputBytes',
+      detail: `Advisor ${brief.role.id} exceeded its canonical output budget.`,
+    });
+  }
+  return issues;
+}
+
 export function assertAdvisorOutputMatchesBrief(
   brief: OperatingAdvisorBrief,
   output: Pick<OperatingRoleResult, 'outcome' | 'proposals'>,
 ): void {
-  if (output.proposals.length > brief.output.maximumProposals) {
+  const violations = collectBriefContractViolations(brief, output);
+  if (violations.length > 0) {
     throw new OperateError(
       'E_OPERATE_ADVISOR_FAILED',
-      `Advisor ${brief.role.id} returned ${output.proposals.length} proposals; its canonical limit is ${brief.output.maximumProposals}.`,
+      violations.length === 1
+        ? violations[0].detail
+        : `Advisor ${brief.role.id} output violates its canonical brief in ${violations.length} ways: ${violations
+            .map((violation) => violation.detail)
+            .join(' ')}`,
+      { issues: violations },
     );
   }
-  const allowed = new Set(brief.output.allowedProposalTypes);
-  const disallowed = [
-    ...new Set(
-      output.proposals.map((proposal) => proposal.type).filter((type) => !allowed.has(type)),
+}
+
+/**
+ * Project the proposal `{type}` list from a RAW submitted advisor response so the
+ * per-role cap and allowed-type checks can run even on a schema-invalid payload —
+ * a schema failure must never short-circuit the cap/type categories. v1.4 native
+ * responses carry `actions` whose `routeKind` maps to a proposal type exactly as
+ * `normalizeAgentNativeResponse` does (only `decision` is a decision proposal);
+ * v1.3 responses carry `proposals` with an explicit `type`.
+ */
+function projectSubmittedProposalTypes(
+  response: unknown,
+  responseProtocol: '1.3.0' | '1.4.0',
+): Array<{ type?: string }> {
+  const record =
+    response && typeof response === 'object' && !Array.isArray(response)
+      ? (response as Record<string, unknown>)
+      : {};
+  if (responseProtocol === '1.4.0') {
+    const actions = Array.isArray(record.actions) ? record.actions : [];
+    return actions.map((action) => {
+      const routeKind =
+        action && typeof action === 'object' && !Array.isArray(action)
+          ? (action as Record<string, unknown>).routeKind
+          : undefined;
+      return { type: routeKindToProposalType(typeof routeKind === 'string' ? routeKind : '') };
+    });
+  }
+  const proposals = Array.isArray(record.proposals) ? record.proposals : [];
+  return proposals.map((proposal) => {
+    const type =
+      proposal && typeof proposal === 'object' && !Array.isArray(proposal)
+        ? (proposal as Record<string, unknown>).type
+        : undefined;
+    return { type: typeof type === 'string' ? type : undefined };
+  });
+}
+
+/**
+ * US-T1 batch validation: collect ALL advisor-response contract violations in one
+ * pass — the response-schema issues (a bad enum, a wrong-typed `gaps[].impact`, a
+ * malformed citation shape, …), the per-role proposal cap, and disallowed proposal
+ * types — as a single `{path, rule, detail}` list. Shared verbatim by the `record`
+ * path and the `harness validate` dry-run so the two can never diverge; the caller
+ * decides whether a non-empty list is a rejection (record) or a dry-run report
+ * (validate). Reads the RAW submitted response so a schema-invalid payload still
+ * discloses its cap/type violations in the same response instead of forcing a
+ * category-at-a-time resubmission cycle.
+ */
+export async function collectAdvisorResponseContractIssues(input: {
+  brief: OperatingAdvisorBrief;
+  response: unknown;
+  protocolVersion: '1.3.0' | '1.4.0';
+}): Promise<AdvisorContractIssue[]> {
+  const protocol = await loadOperatingProtocol();
+  const responseProtocol = input.protocolVersion === '1.4.0' ? '1.4.0' : '1.3.0';
+  const issues: AdvisorContractIssue[] = [];
+  // Category 1 — response schema (bad enum, wrong-typed gap impact, malformed
+  // citation shape, missing required fields). The protocol validator already
+  // returns EVERY schema issue at once; we only stop it from being the sole
+  // category by continuing to the brief-level bounds below.
+  for (const issue of protocol.validateProtocolArtifact(
+    'operating-advisor-response',
+    input.response,
+    { protocolVersion: responseProtocol },
+  )) {
+    // Preserve the pipeline's specific failing rule (`enum`, `oneOf`, `type`, …)
+    // rather than flattening every schema failure to one label, so a runtime sees
+    // exactly which constraint each path violated.
+    issues.push({ path: issue.path, rule: issue.rule, detail: issue.detail });
+  }
+  // Categories 2 & 3 — per-role proposal cap + disallowed proposal types, read
+  // from the raw response so they surface alongside any schema issues.
+  issues.push(
+    ...collectProposalBoundViolations(
+      input.brief,
+      projectSubmittedProposalTypes(input.response, responseProtocol),
     ),
-  ].sort();
-  if (disallowed.length > 0) {
-    throw new OperateError(
-      'E_OPERATE_ADVISOR_FAILED',
-      `Advisor ${
-        brief.role.id
-      } returned proposal types outside its canonical brief: ${disallowed.join(', ')}.`,
-    );
-  }
-  if (output.outcome === 'quiet' && output.proposals.length > 0) {
-    throw new OperateError(
-      'E_OPERATE_ADVISOR_FAILED',
-      `Advisor ${brief.role.id} declared a quiet result with proposals.`,
-    );
-  }
-  if (output.outcome === 'proposals' && output.proposals.length === 0) {
-    throw new OperateError(
-      'E_OPERATE_ADVISOR_FAILED',
-      `Advisor ${brief.role.id} declared proposals without a proposal.`,
-    );
-  }
-  const outputBytes = Buffer.byteLength(canonicalize(output), 'utf8');
-  if (outputBytes > brief.output.maximumOutputBytes) {
-    throw new OperateError(
-      'E_OPERATE_ADVISOR_FAILED',
-      `Advisor ${brief.role.id} exceeded its canonical output budget.`,
-    );
-  }
+  );
+  return issues;
 }
 
 export interface OperatingProviderManifestInput {
@@ -573,6 +859,24 @@ export interface OperatingMandate {
   };
   procedure?: string;
   responseSchema: 'operating-advisor-response@1.3.0' | 'operating-advisor-response@1.4.0';
+  /**
+   * US-T1: the DISCLOSED response contract the runtime must satisfy — the same
+   * bounds `record` enforces, shipped so an advisor can dereference them instead
+   * of only a `responseSchema` name it cannot resolve. Serialized verbatim from
+   * the role's brief output facet (`attachMandateResponseContract`); it introduces
+   * no new computation. Layered on by OpenPlanr AFTER the pipeline signs
+   * `mandateDigest` — exactly like `researchGuidance` — so it never alters the
+   * signed digest or the immutable mandate the digest pins. Absent only on the
+   * compatibility/pre-disclosure path.
+   */
+  output?: {
+    schema: OperatingAdvisorBrief['output']['schema'];
+    jsonSchema: Record<string, unknown>;
+    allowedProposalTypes: OperatingAdvisorBrief['output']['allowedProposalTypes'];
+    maximumProposals: number;
+    maximumOutputBytes: number;
+    requiredBehavior: string[];
+  };
   citationRequirement:
     | {
         everyClaimCited: true;
@@ -749,6 +1053,34 @@ export async function buildOperatingMandate(input: {
       input.bootstrapMap ?? null,
       input.researchBudgetMs ?? null,
     ),
+  };
+}
+
+/**
+ * US-T1: ship the disclosed response contract INSIDE the dispatched mandate.
+ * Serializes the role brief's ALREADY-COMPUTED output facet (schema pointer, the
+ * dereferenceable JSON Schema, allowed proposal types, the per-role proposal cap,
+ * the output-byte ceiling, and required behaviors) onto the mandate as its
+ * `output` block — no new computation, just disclosure of what `record` already
+ * enforces. Layered on AFTER the pipeline signs `mandateDigest` (the returned
+ * object keeps the pipeline's signed digest untouched), exactly like
+ * `researchGuidance`, so no digest recomputation is required and writer/verifier
+ * stay in agreement over the immutable, signed mandate the digest pins.
+ */
+export function attachMandateResponseContract(
+  mandate: OperatingMandate,
+  brief: OperatingAdvisorBrief,
+): OperatingMandate {
+  return {
+    ...mandate,
+    output: {
+      schema: brief.output.schema,
+      jsonSchema: brief.output.jsonSchema,
+      allowedProposalTypes: [...brief.output.allowedProposalTypes],
+      maximumProposals: brief.output.maximumProposals,
+      maximumOutputBytes: brief.output.maximumOutputBytes,
+      requiredBehavior: [...brief.output.requiredBehavior],
+    },
   };
 }
 
@@ -959,7 +1291,7 @@ export async function createNativeMissionOperatingRoleResult(input: {
     }
     output = sanitizeMissionOutput(parsed.data);
   }
-  const brief = protocol.createOperatingAdvisorBrief(input.mandate.roleId);
+  const brief = createRegistryReconciledAdvisorBrief(protocol, input.mandate.roleId);
   assertAdvisorOutputMatchesBrief(
     brief,
     output as unknown as Pick<OperatingRoleResult, 'outcome' | 'proposals'>,
@@ -1372,7 +1704,7 @@ export async function dispatchOperatingAdvisors(input: {
         dispatch,
       };
     }
-    const roleBrief = protocol.createOperatingAdvisorBrief(role.roleId);
+    const roleBrief = createRegistryReconciledAdvisorBrief(protocol, role.roleId);
     const context = roleContext(input.context, role.roleId, new Set<string>());
     if (resolution.native) {
       // Confine the native lens to the bounded read-only toolset over the

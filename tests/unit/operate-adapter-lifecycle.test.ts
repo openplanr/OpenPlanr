@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_OPERATING_ROLE_RESEARCH_BUDGET_MS } from '../../src/services/operate/advisors.js';
+import { DEFAULT_ADAPTER_LEASE_DURATION_MS } from '../../src/services/operate/config.js';
 import { OperatingEventStore } from '../../src/services/operate/event-store.js';
 import {
   createOperatingAdapterStartHandoff,
@@ -786,10 +787,10 @@ describe('native operating advisor lifecycle', () => {
     expect((recovered as { lease: string }).lease).not.toBe(session.lease);
   });
 
-  it('surfaces the lease expiry and remaining time in prepare output and handoff (default 15 minutes)', async () => {
+  it('surfaces the lease expiry, remaining time, and TTL in prepare output and handoff (configured default)', async () => {
     const fixture = await advisingCycle();
     const base = Date.parse('2026-07-28T10:00:00.000Z');
-    const fifteenMinutes = 15 * 60 * 1_000;
+    const leaseMs = DEFAULT_ADAPTER_LEASE_DURATION_MS;
     const prepared = (await operateAdapterLifecycle({
       ...fixture,
       action: 'prepare',
@@ -799,6 +800,7 @@ describe('native operating advisor lifecycle', () => {
       now: () => new Date(base),
     })) as {
       expiresAt: string;
+      session: { expiresAt: string; leaseTtlSeconds: number };
       leaseStatus: {
         expiresAt: string;
         remainingMs: number;
@@ -808,15 +810,19 @@ describe('native operating advisor lifecycle', () => {
       handoff: { binding: { expiresAt: string | null } };
     };
 
-    // With no machine-local preference, the lease keeps its historical 15-minute
-    // default, measured from the injected clock rather than wall-clock.
-    expect(prepared.expiresAt).toBe(new Date(base + fifteenMinutes).toISOString());
+    // With no machine-local preference the lease keeps the resolved default,
+    // measured from the injected clock rather than wall-clock.
+    expect(prepared.expiresAt).toBe(new Date(base + leaseMs).toISOString());
     expect(prepared.leaseStatus).toEqual({
-      expiresAt: new Date(base + fifteenMinutes).toISOString(),
-      remainingMs: fifteenMinutes,
-      remainingSeconds: 900,
+      expiresAt: new Date(base + leaseMs).toISOString(),
+      remainingMs: leaseMs,
+      remainingSeconds: Math.floor(leaseMs / 1_000),
       expired: false,
     });
+    // T4: the prepare handoff embeds `session.expiresAt` + `session.leaseTtlSeconds`
+    // so a caller can schedule heartbeats against a real deadline.
+    expect(prepared.session.expiresAt).toBe(new Date(base + leaseMs).toISOString());
+    expect(prepared.session.leaseTtlSeconds).toBe(Math.floor(leaseMs / 1_000));
     // The handoff a native runtime consumes surfaces the same expiry it must honor.
     expect(prepared.handoff.binding.expiresAt).toBe(prepared.expiresAt);
   });
@@ -825,7 +831,7 @@ describe('native operating advisor lifecycle', () => {
     const fixture = await advisingCycle();
     let clockMs = Date.parse('2026-07-28T10:00:00.000Z');
     const now = () => new Date(clockMs);
-    const fifteenMinutes = 15 * 60 * 1_000;
+    const leaseMs = DEFAULT_ADAPTER_LEASE_DURATION_MS;
 
     const prepared = (await operateAdapterLifecycle({
       ...fixture,
@@ -836,10 +842,11 @@ describe('native operating advisor lifecycle', () => {
       now,
     })) as { roles: string[]; lease: string; expiresAt: string };
     const preparedExpiry = prepared.expiresAt;
-    expect(Date.parse(preparedExpiry)).toBe(clockMs + fifteenMinutes);
+    expect(Date.parse(preparedExpiry)).toBe(clockMs + leaseMs);
 
     // Advance five minutes and record the first role: the record must push expiry
-    // forward to now + 15 minutes, not leave the original prepare-time expiry.
+    // forward to now + one full lease window, not leave the original prepare-time
+    // expiry.
     clockMs += 5 * 60 * 1_000;
     const recorded = (await operateAdapterLifecycle({
       ...fixture,
@@ -851,15 +858,16 @@ describe('native operating advisor lifecycle', () => {
       stdin: JSON.stringify(quietAdvisorResponse()),
       now,
     })) as {
-      session: { expiresAt: string };
+      session: { expiresAt: string; leaseTtlSeconds: number };
       leaseStatus: { expiresAt: string; remainingMs: number };
       handoff: { binding: { expiresAt: string | null } };
     };
-    const refreshedExpiry = new Date(clockMs + fifteenMinutes).toISOString();
+    const refreshedExpiry = new Date(clockMs + leaseMs).toISOString();
     expect(recorded.session.expiresAt).toBe(refreshedExpiry);
+    expect(recorded.session.leaseTtlSeconds).toBe(Math.floor(leaseMs / 1_000));
     expect(Date.parse(recorded.session.expiresAt)).toBeGreaterThan(Date.parse(preparedExpiry));
     expect(recorded.leaseStatus.expiresAt).toBe(refreshedExpiry);
-    expect(recorded.leaseStatus.remainingMs).toBe(fifteenMinutes);
+    expect(recorded.leaseStatus.remainingMs).toBe(leaseMs);
     expect(recorded.handoff.binding.expiresAt).toBe(refreshedExpiry);
 
     // The refresh is persisted to the session file, not just echoed in the response.
@@ -872,7 +880,7 @@ describe('native operating advisor lifecycle', () => {
 
     // Let the refreshed window lapse and attempt the next record: expiry is still
     // enforced even though an earlier record had pushed it forward.
-    clockMs += fifteenMinutes + 1;
+    clockMs += leaseMs + 1;
     await expect(
       operateAdapterLifecycle({
         ...fixture,
@@ -890,10 +898,14 @@ describe('native operating advisor lifecycle', () => {
     });
   });
 
-  it('honors a machine-local configured lease duration on prepare', async () => {
+  it('auto-renews on record so a later record survives past the ORIGINAL lease expiry (short TTL)', async () => {
     const fixture = await advisingCycle();
-    const base = Date.parse('2026-07-28T10:00:00.000Z');
-    const thirtyMinutes = 30 * 60 * 1_000;
+    // A short 2-minute test lease so the second record lands well past the
+    // prepare-time expiry — it can only succeed if the FIRST record extended the
+    // lease by a full TTL. This is the renewal-not-field-presence proof, and the
+    // non-vacuity target: reverting the record-path `expiresAt` refresh turns the
+    // final record into `E_OPERATE_ADVISOR_FAILED` ("Adapter session expired.").
+    const shortLeaseMs = 2 * 60 * 1_000;
     const paths = resolveOperatingPaths(fixture.projectRoot, { localRoot: fixture.localRoot });
     await mkdir(paths.localRoot, { recursive: true });
     await writeFile(
@@ -904,7 +916,103 @@ describe('native operating advisor lifecycle', () => {
         sensitivityCeiling: 'internal',
         evidenceTtlMs: 7 * 24 * 60 * 60 * 1_000,
         enabledSources: ['repository'],
-        adapterLeaseDurationMs: thirtyMinutes,
+        adapterLeaseDurationMs: shortLeaseMs,
+      })}\n`,
+      { mode: 0o600 },
+    );
+
+    let clockMs = Date.parse('2026-07-28T10:00:00.000Z');
+    const now = () => new Date(clockMs);
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'renewal',
+      now,
+    })) as { roles: string[]; lease: string; expiresAt: string };
+    const [firstRole, secondRole] = [...prepared.roles].sort();
+    const originalExpiryMs = Date.parse(prepared.expiresAt);
+    expect(originalExpiryMs).toBe(clockMs + shortLeaseMs);
+
+    // First record lands one minute in — comfortably inside the original window —
+    // and auto-renews the lease forward to (now + full TTL).
+    clockMs += 60_000;
+    await operateAdapterLifecycle({
+      ...fixture,
+      action: 'record',
+      cycleId: 'CYCLE-001',
+      lease: prepared.lease,
+      idempotencyKey: 'renewal',
+      role: firstRole,
+      stdin: JSON.stringify(quietAdvisorResponse()),
+      now,
+    });
+
+    // Jump PAST the original prepare-time expiry: without the first record's
+    // renewal the shared session would already be dead here.
+    clockMs = originalExpiryMs + 30_000;
+    expect(clockMs).toBeGreaterThan(originalExpiryMs);
+
+    const second = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'record',
+      cycleId: 'CYCLE-001',
+      lease: prepared.lease,
+      idempotencyKey: 'renewal',
+      role: secondRole,
+      stdin: JSON.stringify(quietAdvisorResponse()),
+      now,
+    })) as { recorded: string };
+    expect(second.recorded).toBe(secondRole);
+  });
+
+  it('surfaces session.expiresAt and leaseTtlSeconds on a successful resume handoff', async () => {
+    const fixture = await advisingCycle();
+    const base = Date.parse('2026-07-28T10:00:00.000Z');
+    const leaseMs = DEFAULT_ADAPTER_LEASE_DURATION_MS;
+    const prepared = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'prepare',
+      cycleId: 'CYCLE-001',
+      evidenceDigest: fixture.evidenceDigest,
+      idempotencyKey: 'resume-surface',
+      now: () => new Date(base),
+    })) as { lease: string };
+
+    // A resume within the window returns the live session view carrying the lease
+    // deadline and TTL a caller schedules heartbeats against (the fourth handoff
+    // kind — prepare/record/heartbeat/resume all expose `session.*`).
+    const resumed = (await operateAdapterLifecycle({
+      ...fixture,
+      action: 'resume',
+      cycleId: 'CYCLE-001',
+      lease: prepared.lease,
+      idempotencyKey: 'resume-surface',
+      now: () => new Date(base + 60_000),
+    })) as { session: { expiresAt: string; leaseTtlSeconds: number } };
+    expect(resumed.session.expiresAt).toBe(new Date(base + leaseMs).toISOString());
+    expect(resumed.session.leaseTtlSeconds).toBe(Math.floor(leaseMs / 1_000));
+  });
+
+  it('honors a machine-local configured lease duration on prepare', async () => {
+    const fixture = await advisingCycle();
+    const base = Date.parse('2026-07-28T10:00:00.000Z');
+    // A value deliberately distinct from the resolved default, so this proves the
+    // per-project preference wins rather than coincidentally matching the default.
+    const configuredLease = 45 * 60 * 1_000;
+    expect(configuredLease).not.toBe(DEFAULT_ADAPTER_LEASE_DURATION_MS);
+    const paths = resolveOperatingPaths(fixture.projectRoot, { localRoot: fixture.localRoot });
+    await mkdir(paths.localRoot, { recursive: true });
+    await writeFile(
+      join(paths.localRoot, 'preferences.json'),
+      `${JSON.stringify({
+        runtime: 'auto',
+        timezone: 'UTC',
+        sensitivityCeiling: 'internal',
+        evidenceTtlMs: 7 * 24 * 60 * 60 * 1_000,
+        enabledSources: ['repository'],
+        adapterLeaseDurationMs: configuredLease,
       })}\n`,
       { mode: 0o600 },
     );
@@ -916,11 +1024,55 @@ describe('native operating advisor lifecycle', () => {
       evidenceDigest: fixture.evidenceDigest,
       idempotencyKey: 'lease-configurable',
       now: () => new Date(base),
-    })) as { expiresAt: string; leaseStatus: { remainingMs: number } };
+    })) as {
+      expiresAt: string;
+      session: { leaseTtlSeconds: number };
+      leaseStatus: { remainingMs: number };
+    };
 
-    // Prepare honors the configured 30-minute lease instead of the 15-minute default.
-    expect(prepared.expiresAt).toBe(new Date(base + thirtyMinutes).toISOString());
-    expect(prepared.leaseStatus.remainingMs).toBe(thirtyMinutes);
+    // Prepare honors the configured lease instead of the resolved default.
+    expect(prepared.expiresAt).toBe(new Date(base + configuredLease).toISOString());
+    expect(prepared.leaseStatus.remainingMs).toBe(configuredLease);
+    expect(prepared.session.leaseTtlSeconds).toBe(Math.floor(configuredLease / 1_000));
+  });
+
+  it('honors the OPENPLANR_ADAPTER_LEASE_MS machine seam as the resolved default and fails closed on a malformed value', async () => {
+    const fixture = await advisingCycle();
+    const base = Date.parse('2026-07-28T10:00:00.000Z');
+    const seamMs = 40 * 60 * 1_000;
+    expect(seamMs).not.toBe(DEFAULT_ADAPTER_LEASE_DURATION_MS);
+    const previous = process.env.OPENPLANR_ADAPTER_LEASE_MS;
+    try {
+      // With no per-project preference the seam widens the default for every cycle.
+      process.env.OPENPLANR_ADAPTER_LEASE_MS = String(seamMs);
+      const prepared = (await operateAdapterLifecycle({
+        ...fixture,
+        action: 'prepare',
+        cycleId: 'CYCLE-001',
+        evidenceDigest: fixture.evidenceDigest,
+        idempotencyKey: 'lease-seam',
+        now: () => new Date(base),
+      })) as { expiresAt: string; session: { leaseTtlSeconds: number } };
+      expect(prepared.expiresAt).toBe(new Date(base + seamMs).toISOString());
+      expect(prepared.session.leaseTtlSeconds).toBe(Math.floor(seamMs / 1_000));
+
+      // A malformed seam fails closed rather than silently weakening the lease.
+      process.env.OPENPLANR_ADAPTER_LEASE_MS = 'not-a-number';
+      const second = await advisingCycle();
+      await expect(
+        operateAdapterLifecycle({
+          ...second,
+          action: 'prepare',
+          cycleId: 'CYCLE-001',
+          evidenceDigest: second.evidenceDigest,
+          idempotencyKey: 'lease-seam-bad',
+          now: () => new Date(base),
+        }),
+      ).rejects.toMatchObject({ code: 'E_OPERATE_CONFIG_INVALID' });
+    } finally {
+      if (previous === undefined) delete process.env.OPENPLANR_ADAPTER_LEASE_MS;
+      else process.env.OPENPLANR_ADAPTER_LEASE_MS = previous;
+    }
   });
 
   it('supersedes a finalized session from a superseded board generation instead of a fatal cancel', async () => {
@@ -1217,7 +1369,7 @@ describe('durable per-role recording over the fan-out contract (SPEC-005 T-002)'
   it('renews the lease via heartbeat with no role result and no status change', async () => {
     let clockMs = Date.parse('2026-07-28T10:00:00.000Z');
     const now = () => new Date(clockMs);
-    const fifteenMinutes = 15 * 60 * 1_000;
+    const leaseMs = DEFAULT_ADAPTER_LEASE_DURATION_MS;
     const fixture = await advisingCycle();
     const prepared = (await operateAdapterLifecycle({
       ...fixture,
@@ -1241,8 +1393,9 @@ describe('durable per-role recording over the fan-out contract (SPEC-005 T-002)'
       now,
     });
 
-    // Near the record's refreshed window, heartbeat with no --role and no stdin.
-    clockMs += 14 * 60 * 1_000;
+    // Near the record's refreshed window (one minute before it lapses), heartbeat
+    // with no --role and no stdin.
+    clockMs += leaseMs - 60_000;
     const beat = (await operateAdapterLifecycle({
       ...fixture,
       action: 'heartbeat',
@@ -1251,13 +1404,19 @@ describe('durable per-role recording over the fan-out contract (SPEC-005 T-002)'
       idempotencyKey: 'heartbeat',
       now,
     })) as {
-      session: { expiresAt: string; recordedRoles: string[]; state: string };
+      session: {
+        expiresAt: string;
+        recordedRoles: string[];
+        state: string;
+        leaseTtlSeconds: number;
+      };
       leaseStatus: { expiresAt: string; remainingMs: number; expired: boolean };
       handoff: { state: string; next: Array<{ role: string }> };
     };
     // The lease moves forward a full window from now; no role result was required.
-    expect(beat.session.expiresAt).toBe(new Date(clockMs + fifteenMinutes).toISOString());
-    expect(beat.leaseStatus.remainingMs).toBe(fifteenMinutes);
+    expect(beat.session.expiresAt).toBe(new Date(clockMs + leaseMs).toISOString());
+    expect(beat.session.leaseTtlSeconds).toBe(Math.floor(leaseMs / 1_000));
+    expect(beat.leaseStatus.remainingMs).toBe(leaseMs);
     expect(beat.leaseStatus.expired).toBe(false);
     // Recorded stays recorded, pending stays pending — heartbeat changed neither.
     expect(beat.session.recordedRoles).toEqual([firstRole]);
