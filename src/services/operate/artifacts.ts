@@ -129,12 +129,22 @@ export async function commitGeneratedArtifact(input: {
 // Planr-artifact citations name a control artifact by its stable ID; the file
 // lives in a prefix-derived `.planr/` directory but its slug is unknown, so the
 // resolver lists the directory at the pinned revision and matches on the ID.
+//
+// The keys are the product's REAL artifact-class prefixes: the default
+// `.planr/config.json` `idPrefix` values (EPIC/FEAT/US/TASK/QT/BL/SPRINT/SPEC)
+// plus the operate register classes (ADR/DEC/FND/GAP/OUT). The bootstrap map
+// handed to every advisor points at `.planr/backlog` and `.planr/quick` as
+// primary evidence, so `BL-*` (backlog) and `QT-*` (quick-task) citations must
+// resolve rather than fail the anchor as an unknown class.
 const PLANR_ARTIFACT_DIRECTORIES: Record<string, string[]> = {
   EPIC: ['.planr/epics'],
   FEAT: ['.planr/features'],
   US: ['.planr/stories'],
   SPEC: ['.planr/specs'],
   TASK: ['.planr/tasks'],
+  QT: ['.planr/quick'],
+  BL: ['.planr/backlog'],
+  SPRINT: ['.planr/sprints'],
   ADR: ['.planr/adrs'],
   DEC: ['.planr/decisions', '.planr/operate/decisions'],
   FND: ['.planr/findings', '.planr/operate/findings'],
@@ -142,8 +152,23 @@ const PLANR_ARTIFACT_DIRECTORIES: Record<string, string[]> = {
   OUT: ['.planr/outcomes', '.planr/operate/outcomes'],
 };
 
-const PLANR_ARTIFACT_ID_PATTERN =
-  /^(?:EPIC|FEAT|US|SPEC|TASK|ADR|DEC|FND|GAP|OUT)-[A-Za-z0-9._-]+$/;
+/**
+ * The real planr artifact-class prefixes a `planr`-kind citation may name,
+ * derived from the directory map so the anchor allowlist and the resolver can
+ * never drift. Sorted for a deterministic, byte-stable alternation.
+ */
+export const PLANR_ARTIFACT_CLASS_PREFIXES: readonly string[] = Object.freeze(
+  Object.keys(PLANR_ARTIFACT_DIRECTORIES).sort(),
+);
+
+const PLANR_ARTIFACT_ID_PATTERN = new RegExp(
+  `^(?:${PLANR_ARTIFACT_CLASS_PREFIXES.join('|')})-[A-Za-z0-9._-]+$`,
+);
+
+/** Whether `id` names a known planr artifact class (`EPIC-…`, `BL-…`, `QT-…`, …). */
+export function isPlanrArtifactId(id: string): boolean {
+  return PLANR_ARTIFACT_ID_PATTERN.test(id);
+}
 
 export interface PlanrArtifactCitationResolution {
   /** Engine-computed existence fact the citation resolver consumes fail-closed. */
@@ -318,7 +343,7 @@ export async function resolvePlanrArtifactCitation(input: {
     sensitivity,
     redactions: [],
   };
-  if (!PLANR_ARTIFACT_ID_PATTERN.test(input.artifactId)) return empty;
+  if (!isPlanrArtifactId(input.artifactId)) return empty;
   const prefix = planrArtifactPrefix(input.artifactId);
   const directories = prefix ? PLANR_ARTIFACT_DIRECTORIES[prefix] : undefined;
   if (!directories) return empty;

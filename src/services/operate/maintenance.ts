@@ -15,12 +15,16 @@ import {
   type AgentNativeAdvisorResponse,
   advisorResponseContractDetails,
   assertAdvisorOutputMatchesBrief,
+  attachMandateResponseContract,
   buildOperatingMandate,
+  collectAdvisorResponseContractIssues,
   createNativeMissionOperatingRoleResult,
+  createRegistryReconciledAdvisorBrief,
   DEFAULT_OPERATING_ROLE_RESEARCH_BUDGET_MS,
   type OperatingMandate,
 } from './advisors.js';
 import { canonicalDigest, canonicalize, sha256Digest } from './canonical.js';
+import { citationComponentsFromWorkspace } from './citation-resolution.js';
 import { operatingProjectKey, readOperatingAdapterLeaseDurationMs } from './config.js';
 import { buildOperatingBootstrapMap } from './context-research.js';
 import { gateRecordedProposalCitations } from './engine.js';
@@ -48,6 +52,7 @@ import {
 } from './types.js';
 import {
   readOperatingConfig,
+  readOperatingWorkspaceRoots,
   refreshOperatingWorkspaceManifest,
   resolveContainedPath,
   resolveOperatingPaths,
@@ -90,6 +95,26 @@ function adapterSessionSummary(
 ): Omit<PrivateAdvisorSession, 'roleBriefs' | 'roleMandates'> {
   const { roleBriefs: _roleBriefs, roleMandates: _roleMandates, ...summary } = session;
   return summary;
+}
+
+/**
+ * The response-facing `session` view every harness handoff embeds (FR2 / DevEx
+ * T4). It is the machine-local session summary (heavy `roleBriefs`/`roleMandates`
+ * stripped) plus `leaseTtlSeconds` — the size of ONE lease window in whole
+ * seconds. Together with `session.expiresAt` (the absolute deadline) this lets a
+ * caller schedule heartbeats against a real deadline: renew before `expiresAt`,
+ * and know each renew/record buys another `leaseTtlSeconds`. Surfaced identically
+ * on `prepare`, `record`, `heartbeat`, and `resume` so no handoff kind leaves the
+ * lease window invisible.
+ */
+function sessionView(
+  session: PrivateAdvisorSession,
+  leaseDurationMs: number,
+): Omit<PrivateAdvisorSession, 'roleBriefs' | 'roleMandates'> & { leaseTtlSeconds: number } {
+  return {
+    ...adapterSessionSummary(session),
+    leaseTtlSeconds: Math.floor(leaseDurationMs / 1_000),
+  };
 }
 
 async function adapterHandoff(session: PrivateAdvisorSession): Promise<OperatingAdapterHandoff> {
@@ -1548,7 +1573,15 @@ export async function createOperatingAdapterStartHandoff(input: {
 
 export async function operateAdapterLifecycle(input: {
   projectRoot: string;
-  action: 'prepare' | 'record' | 'resume' | 'finalize' | 'cancel' | 'heartbeat' | 'abandon';
+  action:
+    | 'prepare'
+    | 'record'
+    | 'validate'
+    | 'resume'
+    | 'finalize'
+    | 'cancel'
+    | 'heartbeat'
+    | 'abandon';
   cycleId?: string;
   evidenceDigest?: string;
   lease?: string;
@@ -1568,6 +1601,75 @@ export async function operateAdapterLifecycle(input: {
    */
   now?: () => Date;
 }): Promise<unknown> {
+  // US-T1 dry-run: `harness validate` checks a draft advisor response against the
+  // EXACT contract `record` enforces, but is read-only — it reads the prepared
+  // session to reuse that role's brief + protocol version, takes NO lease, consumes
+  // NO idempotency key, and mutates nothing. Handled before the record-path guards
+  // (which require an idempotency key and, below, a lease) so a runtime can iterate
+  // on its response with zero state cost. It shares collectAdvisorResponseContract-
+  // Issues with the record path, so the dry-run and the real rejection never diverge.
+  if (input.action === 'validate') {
+    if (!input.cycleId) {
+      throw new OperateError('E_OPERATE_CONFIG_INVALID', 'Adapter validate requires --cycle-id.');
+    }
+    if (!input.role || !input.stdin) {
+      throw new OperateError(
+        'E_OPERATE_CONFIG_INVALID',
+        'Adapter validate requires --role and JSON on stdin.',
+      );
+    }
+    const validateNowMs = (input.now?.() ?? new Date()).getTime();
+    // Read-only: `readAdapterSession` reads the prepared session and checks expiry
+    // only — it never asserts or refreshes the lease (that is `assertAdapterBinding`,
+    // deliberately skipped here). Nothing below writes.
+    const session = await readAdapterSession(
+      input.projectRoot,
+      input.cycleId,
+      input.localRoot,
+      validateNowMs,
+    );
+    if (!session.roles.includes(input.role)) {
+      throw new OperateError(
+        'E_OPERATE_ADVISOR_ISOLATION',
+        `Role ${input.role} was not bound by adapter prepare.`,
+      );
+    }
+    const brief = session.roleBriefs[input.role];
+    let submitted: unknown;
+    try {
+      submitted = JSON.parse(input.stdin) as unknown;
+    } catch {
+      throw new OperateError(
+        'E_OPERATE_ADVISOR_FAILED',
+        'Native advisor response must be one valid JSON document.',
+        { ...advisorResponseContractDetails(brief) },
+      );
+    }
+    const issues = await collectAdvisorResponseContractIssues({
+      brief,
+      response: submitted,
+      protocolVersion: session.roleMandates[input.role].protocolVersion,
+    });
+    // Same complete-issues output as a `record` rejection: when the draft fails, it
+    // is one E_OPERATE_ADVISOR_FAILED whose `data.issues` array spans every category
+    // at once — so a runtime's error handling is identical to the record path — but
+    // it consumed no lease and wrote nothing.
+    if (issues.length > 0) {
+      throw new OperateError(
+        'E_OPERATE_ADVISOR_FAILED',
+        `Native ${input.role} response does not satisfy the disclosed advisor contract (${
+          issues.length
+        } issue${issues.length === 1 ? '' : 's'}).`,
+        { issues, ...advisorResponseContractDetails(brief) },
+      );
+    }
+    return {
+      validated: input.role,
+      valid: true,
+      issues,
+      ...advisorResponseContractDetails(brief),
+    };
+  }
   if (!input.cycleId || !input.idempotencyKey) {
     throw new OperateError(
       'E_OPERATE_CONFIG_INVALID',
@@ -1575,9 +1677,10 @@ export async function operateAdapterLifecycle(input: {
     );
   }
   const nowMs = (input.now?.() ?? new Date()).getTime();
-  // The lease window is a machine-local preference (default 15 minutes). Resolved
-  // once so both the fresh `prepare` expiry and the per-`record` refresh use the
-  // same configured duration.
+  // The lease window is a machine-local preference (default 30 minutes, or the
+  // `OPENPLANR_ADAPTER_LEASE_MS` seam). Resolved once so both the fresh `prepare`
+  // expiry and the per-`record` refresh use the same configured duration, and so
+  // every handoff response can echo it as `session.leaseTtlSeconds`.
   const leaseDurationMs = await readOperatingAdapterLeaseDurationMs(input.projectRoot, {
     localRoot: input.localRoot,
   });
@@ -1705,6 +1808,7 @@ export async function operateAdapterLifecycle(input: {
           }
           return {
             ...normalized,
+            session: sessionView(normalized, leaseDurationMs),
             leaseStatus: adapterLeaseStatus(normalized, nowMs),
             handoff: await adapterHandoff(normalized),
           };
@@ -1781,7 +1885,23 @@ export async function operateAdapterLifecycle(input: {
     // Every requested role dispatches; the bound role set is exactly `roles`.
     const dispatchedRoles = roles;
     const roleBriefs: Record<string, OperatingAdvisorBrief> = Object.fromEntries(
-      Object.keys(roleMandates).map((role) => [role, protocol.createOperatingAdvisorBrief(role)]),
+      Object.keys(roleMandates).map((role) => [
+        role,
+        createRegistryReconciledAdvisorBrief(protocol, role),
+      ]),
+    );
+    // US-T1: ship the disclosed response contract INSIDE every dispatched mandate.
+    // Serialize each role brief's already-computed output facet onto its mandate's
+    // `output` block so the runtime that must satisfy the contract can dereference
+    // it, instead of only a `responseSchema` name it cannot resolve. Layered on
+    // AFTER the pipeline signed each `mandateDigest` — exactly like the FR12
+    // research guidance — so it never alters the signed digest or the immutable
+    // mandate the digest pins (`roleInputDigests` below still equals it verbatim).
+    const dispatchedMandates: Record<string, OperatingMandate> = Object.fromEntries(
+      Object.entries(roleMandates).map(([role, mandate]) => [
+        role,
+        attachMandateResponseContract(mandate, roleBriefs[role]),
+      ]),
     );
     // A role's committed input digest is its mandate digest. The record path
     // binds a recorded result to exactly this value.
@@ -1830,13 +1950,14 @@ export async function operateAdapterLifecycle(input: {
       roles: dispatchedRoles,
       recordedRoles: validRecordedRoles.sort(),
       roleBriefs,
-      roleMandates,
+      roleMandates: dispatchedMandates,
       roleInputDigests,
     };
     await atomicPrivateWrite(target, session);
     return {
       ...session,
-      mandates: roleMandates,
+      mandates: dispatchedMandates,
+      session: sessionView(session, leaseDurationMs),
       leaseStatus: adapterLeaseStatus(session, nowMs),
       handoff: await adapterHandoff(session),
     };
@@ -1892,7 +2013,7 @@ export async function operateAdapterLifecycle(input: {
       }),
     );
     return {
-      session: adapterSessionSummary(renewed),
+      session: sessionView(renewed, leaseDurationMs),
       leaseStatus: adapterLeaseStatus(renewed, nowMs),
       handoff: await adapterHandoff(renewed),
     };
@@ -1977,7 +2098,7 @@ export async function operateAdapterLifecycle(input: {
       abandoned: input.role,
       notEvaluated: true,
       reason,
-      session: adapterSessionSummary(updated),
+      session: sessionView(updated, leaseDurationMs),
       leaseStatus: adapterLeaseStatus(updated, nowMs),
       handoff: await adapterHandoff(updated),
     };
@@ -1992,6 +2113,7 @@ export async function operateAdapterLifecycle(input: {
     }
     return {
       ...session,
+      session: sessionView(session, leaseDurationMs),
       leaseStatus: adapterLeaseStatus(session, nowMs),
       handoff: await adapterHandoff(session),
     };
@@ -2006,7 +2128,7 @@ export async function operateAdapterLifecycle(input: {
     }
     if (session.state === 'cancelled') {
       return {
-        session: adapterSessionSummary(session),
+        session: sessionView(session, leaseDurationMs),
         leaseStatus: adapterLeaseStatus(session, nowMs),
         handoff: await adapterHandoff(session),
       };
@@ -2014,7 +2136,7 @@ export async function operateAdapterLifecycle(input: {
     const cancelled = { ...session, state: 'cancelled' as const };
     await atomicPrivateWrite(target, cancelled);
     return {
-      session: adapterSessionSummary(cancelled),
+      session: sessionView(cancelled, leaseDurationMs),
       leaseStatus: adapterLeaseStatus(cancelled, nowMs),
       handoff: await adapterHandoff(cancelled),
     };
@@ -2166,6 +2288,31 @@ export async function operateAdapterLifecycle(input: {
         }
       }
       const mandate = session.roleMandates[input.role];
+      // US-T1 batch validation: collect EVERY advisor-contract violation (response
+      // schema issues, the per-role proposal cap, disallowed proposal types) in one
+      // pass and reject with ALL of them, so a runtime never learns one category per
+      // rejected resubmission. Shared verbatim with `harness validate` via
+      // collectAdvisorResponseContractIssues so the record path and the dry-run can
+      // never disagree. Runs after the secret scan (never echo a secret in an issue)
+      // and before the citation gate mutates anything.
+      const contractIssues = await collectAdvisorResponseContractIssues({
+        brief: session.roleBriefs[input.role],
+        response: submitted,
+        protocolVersion: mandate.protocolVersion,
+      });
+      if (contractIssues.length > 0) {
+        throw new OperateError(
+          'E_OPERATE_ADVISOR_FAILED',
+          `Native ${input.role} response does not satisfy the disclosed advisor contract (${
+            contractIssues.length
+          } issue${contractIssues.length === 1 ? '' : 's'}).`,
+          {
+            issues: contractIssues,
+            ...advisorResponseContractDetails(session.roleBriefs[input.role]),
+            recoveryCommand: retryRunCommand(session),
+          },
+        );
+      }
       try {
         const gated = await createNativeMissionOperatingRoleResult({
           mandate,
@@ -2174,7 +2321,7 @@ export async function operateAdapterLifecycle(input: {
           runtime: session.runtime,
           pinnedRevision: session.pinnedRevision,
           resolveCitations: async (roleResults) => {
-            const [workspace, sensitivityCeiling, config] = await Promise.all([
+            const [workspace, sensitivityCeiling, config, workspaceRoots] = await Promise.all([
               refreshOperatingWorkspaceManifest(input.projectRoot, {
                 localRoot: input.localRoot,
               }),
@@ -2182,6 +2329,7 @@ export async function operateAdapterLifecycle(input: {
               readOperatingConfig(input.projectRoot, { localRoot: input.localRoot }).catch(
                 () => null,
               ),
+              readOperatingWorkspaceRoots(input.projectRoot, { localRoot: input.localRoot }),
             ]);
             return gateRecordedProposalCitations({
               roleResults,
@@ -2196,6 +2344,7 @@ export async function operateAdapterLifecycle(input: {
                   sensitivityCeiling,
                 ),
                 owner: config?.decisionOwner,
+                components: citationComponentsFromWorkspace(workspace, workspaceRoots),
               },
             });
           },
@@ -2367,7 +2516,7 @@ export async function operateAdapterLifecycle(input: {
       result,
       ...(recordGaps.length > 0 ? { citationGaps: recordGaps } : {}),
       ...(recordNotEvaluated ? { notEvaluated: true } : {}),
-      session: adapterSessionSummary(updated),
+      session: sessionView(updated, leaseDurationMs),
       leaseStatus: adapterLeaseStatus(updated, nowMs),
       handoff: await adapterHandoff(updated),
     };
@@ -2396,7 +2545,7 @@ export async function operateAdapterLifecycle(input: {
       ),
     );
     return {
-      session: adapterSessionSummary(session),
+      session: sessionView(session, leaseDurationMs),
       results: summaries,
       leaseStatus: adapterLeaseStatus(session, nowMs),
       handoff: await adapterHandoff(session),
@@ -2530,7 +2679,7 @@ export async function operateAdapterLifecycle(input: {
     input.cycleId as string,
   );
   return {
-    session: adapterSessionSummary(finalized),
+    session: sessionView(finalized, leaseDurationMs),
     results: results.map((result) => ({
       roleId: result.roleId,
       outcome: result.outcome,

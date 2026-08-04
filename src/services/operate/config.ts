@@ -221,8 +221,9 @@ type OperatingPreferencesRecord = OperatingLocalPreferences & {
    * FR10 / T-008 adapter session lease duration, in milliseconds. Machine-local,
    * alongside `evidenceTtlMs` — the v1.2 `operating-config`
    * artifact surface is frozen (`additionalProperties: false`), so this policy knob
-   * lives in `preferences.json`, not `config.json`. Absent means the 15-minute
-   * default; a present value is bounded-validated before it is honored.
+   * lives in `preferences.json`, not `config.json`. Absent means the resolved
+   * default (30 minutes, or the `OPENPLANR_ADAPTER_LEASE_MS` seam); a present value
+   * is bounded-validated before it is honored.
    *
    * SPEC-005 FR2: this is the length of one lease window, not a stall remedy. A
    * session held open past its window is renewed with `planr operate harness
@@ -300,17 +301,51 @@ export async function recordOperatingLastRunAt(input: {
 }
 
 /**
- * FR10 / T-008 default adapter session lease: 15 minutes. A prepared native
+ * FR10 / T-008 default adapter session lease: 30 minutes. A prepared native
  * adapter session expires this long after `prepare`, and each successful `record`
  * refreshes the window forward from the moment the record lands. This was a
  * hardcoded constant in `maintenance.ts`; it is now the machine-local default,
- * overridable per project via `preferences.json`.
+ * overridable per project via `preferences.json` and per machine via
+ * `OPENPLANR_ADAPTER_LEASE_MS`.
+ *
+ * The historical 15-minute default sat BELOW observed agent runtimes: the Chair
+ * phase is a single ~16-minute dispatch with no intermediate `record` to
+ * auto-renew, so a 15-minute lease structurally could not outlast it and expired
+ * mid-run. The default is raised to comfortably clear the observed p95 (~16 min)
+ * with headroom for the tail — ~1.9× p95 — while staying well inside the 60-minute
+ * ceiling so a runaway session still cannot hold the lease for an hour.
  */
-export const DEFAULT_ADAPTER_LEASE_DURATION_MS = 15 * 60 * 1_000;
+export const DEFAULT_ADAPTER_LEASE_DURATION_MS = 30 * 60 * 1_000;
 
 /** Bounded adapter-lease range: one minute to one hour. */
 const MIN_ADAPTER_LEASE_DURATION_MS = 60 * 1_000;
 const MAX_ADAPTER_LEASE_DURATION_MS = 60 * 60 * 1_000;
+
+/**
+ * Resolve the compiled adapter-lease default, honoring the `OPENPLANR_ADAPTER_LEASE_MS`
+ * machine seam (same shape as `OPENPLANR_ECOSYSTEM_SOURCE` / `OPENPLANR_NPM_BIN`):
+ * unset in production, it lets a machine that consistently runs longer agents widen
+ * the default without editing every project's `preferences.json`. A present value is
+ * bounds-validated [1 min, 60 min] and fails closed on a malformed value — a corrupt
+ * seam never quietly weakens or inflates the lease, exactly as a corrupt preference
+ * does not.
+ */
+export function resolveDefaultAdapterLeaseDurationMs(): number {
+  const override = process.env.OPENPLANR_ADAPTER_LEASE_MS?.trim();
+  if (!override) return DEFAULT_ADAPTER_LEASE_DURATION_MS;
+  const parsed = Number(override);
+  if (
+    !Number.isInteger(parsed) ||
+    parsed < MIN_ADAPTER_LEASE_DURATION_MS ||
+    parsed > MAX_ADAPTER_LEASE_DURATION_MS
+  ) {
+    throw new OperateError(
+      'E_OPERATE_CONFIG_INVALID',
+      `OPENPLANR_ADAPTER_LEASE_MS must be an integer from ${MIN_ADAPTER_LEASE_DURATION_MS} to ${MAX_ADAPTER_LEASE_DURATION_MS} milliseconds.`,
+    );
+  }
+  return parsed;
+}
 
 /**
  * Strictly validate an optional adapter-lease duration (milliseconds) before it is
@@ -336,9 +371,11 @@ export function normalizeOperatingAdapterLeaseDurationMs(value: unknown): number
 }
 
 /**
- * Read the machine-local adapter-lease duration (milliseconds), or the 15-minute
- * default when unset. Machine-local, alongside `evidenceTtlMs`; a present value is
- * rejected rather than trusted.
+ * Read the machine-local adapter-lease duration (milliseconds), or the resolved
+ * default (30 minutes, or the `OPENPLANR_ADAPTER_LEASE_MS` seam) when unset.
+ * Machine-local, alongside `evidenceTtlMs`; a present value is rejected rather than
+ * trusted. An explicit per-project `preferences.json` value still wins over the
+ * machine seam.
  *
  * SPEC-005 FR2: this duration is the size of ONE lease window, not the fix for a
  * slow lens. The sanctioned way to hold a session open while a role is still
@@ -353,7 +390,7 @@ export async function readOperatingAdapterLeaseDurationMs(
 ): Promise<number> {
   const preferences = await readOperatingPreferencesRecord(projectRoot, options);
   if (preferences?.adapterLeaseDurationMs === undefined) {
-    return DEFAULT_ADAPTER_LEASE_DURATION_MS;
+    return resolveDefaultAdapterLeaseDurationMs();
   }
   return normalizeOperatingAdapterLeaseDurationMs(preferences.adapterLeaseDurationMs);
 }

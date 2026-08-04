@@ -40,6 +40,16 @@ planr operate inspect
 planr operate demo
 ```
 
+On an uninitialized project, the recommended first command is bare
+`planr operate`. It runs the research-first bootstrap (`context refresh`),
+pre-filling most charter fields from the repository before initialization —
+rather than starting cold in the guided questionnaire:
+
+```bash
+planr operate                     # research-first: pre-fill the charter, then guide init
+planr operate context refresh     # run only the research step
+```
+
 In an installed runtime, invoke the workflow once:
 
 ```bash
@@ -153,6 +163,12 @@ harness prepare → harness record → harness finalize → governed continuatio
                                   └──────────────→ harness cancel
 ```
 
+`harness validate` is the free dry-run companion to `record`: it takes the same
+stdin payload, runs the same validator, and returns every violation in one
+response — consuming no lease and needing no idempotency key. A runtime should
+validate before recording; a rejected `record` and a rejected `validate` report
+identical issues, so the two can never disagree.
+
 `resume` returns the current state of the same unexpired, digest-bound session.
 `cancel` ends only that private session. Invalid, expired, or drifted bindings
 fail closed; the runtime follows the exact recovery action returned by the CLI
@@ -181,7 +197,14 @@ planr operate report                    # concise Markdown for all lenses
 planr operate report --lens CTO         # one executive lens
 planr operate report --format json      # structured terminal output
 planr operate report --json             # one versioned automation result
+planr operate report --html --out report.html   # self-contained, shareable HTML
 ```
+
+`--html` renders the cycle into a single, self-contained, offline HTML file
+(inline CSS, real tables, no remote references) that opens cleanly in
+`planr artifact open`. `--out <path>` chooses the destination; the default is
+alongside the cycle directory, else a temp file. The command prints the written
+path and the exact `planr artifact open <path> --title "..."` follow-up.
 
 The report includes executive synthesis, separate CEO/CTO/CPO/CMO/COO/Chair
 analysis, agreements, conflicts, priorities, decisions, experiments, proposed

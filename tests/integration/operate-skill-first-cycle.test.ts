@@ -180,7 +180,8 @@ describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => 
       return result;
     };
 
-    // 1. inspect — a bare, uninitialized project points only at init.
+    // 1. inspect — a bare, uninitialized project points at the research-first entry
+    // (FND-001), not cold into the guided questionnaire.
     const inspected = await run({
       action: 'inspect',
       projectRoot,
@@ -189,7 +190,7 @@ describe('operate skill-first, zero-adapter-command cycle (FR9 / E-009)', () => 
     });
     expect(inspected).toMatchObject({ ok: true, action: 'inspect' });
     expect((inspected.data as { initialized?: boolean }).initialized).toBe(false);
-    expect(inspected.nextActions).toEqual(['planr operate init']);
+    expect(inspected.nextActions).toEqual(['planr operate', 'planr operate context refresh']);
 
     // 2. init preview — the JSON facade returns the digest-bound apply action the
     // skill confirms; nothing is written yet.

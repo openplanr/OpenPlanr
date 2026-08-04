@@ -90,10 +90,12 @@ export async function executeGitReadOnly(
   return stdout;
 }
 
-const GIT_CITATION_REVISION_PATTERN = /^[a-f0-9]{7,64}$/;
-// Mirrors the canonical `operating-citation.repositoryPath` pattern: a bounded,
-// dot-traversal-free, repository-relative path that never begins with a dot.
-const GIT_CITATION_PATH_PATTERN = /^(?!.*\.\.)[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+const GIT_CITATION_REVISION_PATTERN = /^[A-Fa-f0-9]{7,64}$/;
+// Mirrors the `operating-citation@1.4.0` repository-path shape: a bounded,
+// traversal-free, repository-relative path. A leading dot IS permitted so the
+// dot-prefixed roots every advisor mandate authorizes (`.github/`, `.planr/`,
+// `.changeset/`, …) are readable; only a `..` traversal segment stays forbidden.
+const GIT_CITATION_PATH_PATTERN = /^(?!.*\.\.)[A-Za-z0-9.][A-Za-z0-9._/-]*$/;
 // The `.planr/` control-artifact surface is dot-prefixed, so citation-by-artifact
 // reads validate against a distinct, still-bounded `.planr`-rooted pattern.
 const PLANR_CITATION_PATH_PATTERN = /^\.planr(?:\/[A-Za-z0-9][A-Za-z0-9._-]*)*$/;
@@ -108,7 +110,10 @@ export function assertGitCitationRevision(revision: string): void {
   }
 }
 
-function assertGitCitationRepositoryPath(relativePath: string): void {
+// Exported so the cross-component conformance suite can assert this git-read-layer
+// path validator and the record-time citation anchor accept/reject an identical
+// probe set — the two v1.3-pattern copies that once drifted apart must not again.
+export function assertGitCitationRepositoryPath(relativePath: string): void {
   if (
     typeof relativePath !== 'string' ||
     relativePath.length === 0 ||

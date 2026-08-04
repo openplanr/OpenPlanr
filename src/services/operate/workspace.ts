@@ -414,6 +414,34 @@ export async function refreshOperatingWorkspaceManifest(
   });
 }
 
+/**
+ * Read the machine-local `workspace-roots.json` (component ID → absolute
+ * checkout root) if present. Returns null when the map is absent or malformed —
+ * callers treat a missing map as "no sibling components resolvable here" rather
+ * than failing, so a single-repository project stays fully functional.
+ */
+export async function readOperatingWorkspaceRoots(
+  projectRoot: string,
+  options: { localRoot?: string } = {},
+): Promise<OperatingWorkspaceRoots | null> {
+  const paths = resolveOperatingPaths(projectRoot, options);
+  try {
+    const parsed = JSON.parse(await readFile(paths.roots, 'utf8')) as OperatingWorkspaceRoots;
+    if (
+      !parsed ||
+      typeof parsed !== 'object' ||
+      !parsed.roots ||
+      typeof parsed.roots !== 'object' ||
+      Array.isArray(parsed.roots)
+    ) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 export async function ensureOperatingDirectories(
   projectRoot: string,
   options: { localRoot?: string } = {},
