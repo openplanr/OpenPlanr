@@ -1,0 +1,12 @@
+# OPERATE-SPEC-013
+
+Release record binding for `openplanr@1.25.1`.
+
+What changed in this release is in [CHANGELOG.md](../../CHANGELOG.md) under `1.25.1`.
+The coordinated release record — participants, versions, published artifacts, and
+canary evidence — is operation `OPERATE-SPEC-013` in
+[openplanr/marketplace](https://github.com/openplanr/marketplace).
+
+This file exists because that operation binds this path, and the binding is part of
+the operation's digest so it cannot be retargeted after the fact. Releases recorded
+under the current convention bind `CHANGELOG.md` directly and add no file here.
