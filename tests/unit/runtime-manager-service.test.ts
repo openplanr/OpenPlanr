@@ -200,7 +200,9 @@ describe('runtime setup', () => {
     expect(lock.components).toEqual({
       cli: cliVersion,
       pipeline: pipelineVersion,
-      skills: '1.23.0',
+      // Symbolic, like its two siblings — a literal here just re-breaks on the next
+      // skills release without testing anything the constant does not already say.
+      skills: OPENPLANR_SKILLS_VERSION,
     });
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-artifact', 'SKILL.md'))).toBe(true);
     expect(existsSync(join(userHome, '.codex', 'skills', 'planr-operate', 'SKILL.md'))).toBe(true);

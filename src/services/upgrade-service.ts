@@ -253,6 +253,31 @@ function violatesRange(version: string | null, range: string | undefined): boole
 }
 
 /**
+ * Only a version strictly *behind* another has an upgrade available. Drift used to be
+ * plain inequality, which made "different" and "older" the same thing: an installed
+ * build ahead of the registry — a linked dev build, a prerelease, a canary, or a
+ * maintainer mid-release — classified as `upgrade-available`, and the offer rendered a
+ * **downgrade** as an upgrade. Accepting "always keep me current" would then roll the
+ * newer build back on every invocation.
+ *
+ * Direction is deliberately the only thing added here. `violatesRange` stays untouched:
+ * a range violation is direction-independent and remains an incompatibility either way.
+ * An unparseable version is never "behind" — a prerelease must not be silently rolled
+ * back to a stable release just because its shape is unrecognised.
+ */
+function isBehind(installed: string | null, published: string | undefined): boolean {
+  if (!installed || !published) return false;
+  const actual = stableVersionParts(installed);
+  const target = stableVersionParts(published);
+  if (!actual || !target) return false;
+  for (let index = 0; index < 3; index += 1) {
+    if (actual[index] < target[index]) return true;
+    if (actual[index] > target[index]) return false;
+  }
+  return false;
+}
+
+/**
  * FR3: read the published compatibility manifest, compare it against the real
  * installed tuple (this CLI's version, plus both host-plugin versions), and
  * report whether the tuple is aligned, has an upgrade available, or is
@@ -280,11 +305,14 @@ export async function reconcileInstalledTuple(
     return { status: 'unknown', installed, published: null, ecosystemSource };
   }
 
-  const cliDrift = installed.cli !== published.cli.version;
+  // "Behind", not "different". `classifyComponentDrift` documents `cliDrift` as "a CLI
+  // that merely trails an upgrade", so a direction check is what that input was always
+  // meant to carry — an installed component ahead of the registry has nothing to upgrade.
+  const cliDrift = isBehind(installed.cli, published.cli.version);
   const componentDrift =
     cliDrift ||
-    (installed.skills !== null && installed.skills !== published.skills.version) ||
-    (installed.pipeline !== null && installed.pipeline !== published.pipeline.version);
+    isBehind(installed.skills, published.skills.version) ||
+    isBehind(installed.pipeline, published.pipeline.version);
   // A real mutual-compatibility violation: an installed component sits outside
   // the range its published sibling declares. Absent (uninstalled) plugins are
   // not violations — that is a different condition from incompatibility.
@@ -539,6 +567,21 @@ export type MigrationRunner = (
   ctx: { projectDir: string },
 ) => Promise<MigrationRunResult[]>;
 
+/**
+ * FR4's plugin-half prescription, derived independently of whether the CLI half moved.
+ *
+ * Two situations need these commands: a completed CLI upgrade, and a tuple where the CLI
+ * is already current but the plugins trail (the state every release creates for anyone
+ * who upgrades the npm half first). The second path used to reach no prescription at all
+ * while its own message promised one. Deriving the commands here means both surfaces read
+ * from one place and can never print different instructions for the same machine.
+ */
+export function pluginHalfPrescription(claudeCommandRunner?: ClaudeCommandRunner): string[] {
+  const pipelineVersion = resolvePipelinePackage(false)?.version ?? readOpenPlanrVersion();
+  const inspection = inspectClaudePluginIntegration(pipelineVersion, claudeCommandRunner);
+  return prescribePluginHalfCommands(inspection.operations);
+}
+
 export interface ExecuteCliHalfUpgradeInput {
   projectDir: string;
   targetCliVersion: string;
@@ -668,9 +711,7 @@ export async function executeCliHalfUpgrade(
   // "no entries", not as a failed upgrade (which would misreport a machine that
   // is, in fact, upgraded).
   const changelogBullets = summarizeChangelogBetween(previousVersion, verifiedVersion);
-  const pipelineVersion = resolvePipelinePackage(false)?.version ?? verifiedVersion;
-  const inspection = inspectClaudePluginIntegration(pipelineVersion, input.claudeCommandRunner);
-  const pluginHalfCommands = prescribePluginHalfCommands(inspection.operations);
+  const pluginHalfCommands = pluginHalfPrescription(input.claudeCommandRunner);
 
   return {
     ok: true,

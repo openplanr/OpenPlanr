@@ -10,6 +10,14 @@ import {
 } from '../../src/services/claude-plugin-service.js';
 
 const pipelineVersion = '0.32.1';
+/**
+ * One patch above whatever the CLI currently targets, so the "a newer advertised version
+ * wins" fixture stays newer by construction instead of by coincidence.
+ */
+const advertisedSkillsVersion = (() => {
+  const [major, minor, patch] = OPENPLANR_SKILLS_VERSION.split('.').map(Number);
+  return `${major}.${minor}.${patch + 1}`;
+})();
 const roots: string[] = [];
 
 function pluginPath(name: string, version: string, manifest = true): string {
@@ -42,7 +50,11 @@ describe('Claude plugin integration', () => {
       join(marketplaceRoot, '.claude-plugin', 'marketplace.json'),
       `${JSON.stringify({
         plugins: [
-          { name: 'openplanr', version: '1.23.1' },
+          // Derived, never a literal: this fixture only means anything while it is
+          // *newer* than what the CLI targets, and a hardcoded version silently stops
+          // being newer the next time the constant moves — which is exactly what a
+          // stale literal did here before.
+          { name: 'openplanr', version: advertisedSkillsVersion },
           { name: 'planr-pipeline', version: '0.32.2' },
         ],
       })}\n`,
@@ -83,7 +95,7 @@ describe('Claude plugin integration', () => {
     const inspection = inspectClaudePluginIntegration(pipelineVersion, runner);
 
     expect(inspection.plugins.map((plugin) => plugin.expectedVersion)).toEqual([
-      '1.23.1',
+      advertisedSkillsVersion,
       '0.32.2',
     ]);
     expect(inspection.operations.map((operation) => operation.kind)).toEqual([

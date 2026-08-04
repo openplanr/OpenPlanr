@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -22,6 +23,8 @@ import {
 const cliVersion = JSON.parse(readFileSync(resolve('package.json'), 'utf8')).version as string;
 const [cliMajor, cliMinor] = cliVersion.split('.').map(Number);
 const higherCli = `${cliMajor}.${cliMinor + 1}.0`;
+/** A published version *below* the installed CLI — the BL-005 downgrade-offer case. */
+const lowerCli = `${cliMajor}.${cliMinor - 1}.0`;
 
 let root: string;
 let userHome: string;
@@ -286,6 +289,63 @@ describe('reconcileInstalledTuple', () => {
     expect(result.installed).toEqual({ cli: cliVersion, skills: null, pipeline: null });
     // An absent plugin is not a compatibility violation.
     expect(result.status).toBe('aligned');
+  });
+
+  // BL-005 — drift used to be plain inequality, so "different" and "older" were the same
+  // thing. Anyone on a build ahead of the registry (a linked dev build, a prerelease, a
+  // maintainer mid-release) was offered a *downgrade* labelled as an upgrade, and
+  // "always keep me current" would have applied it on every invocation.
+  it('never reports upgrade-available when the installed CLI is ahead of published', async () => {
+    const published = manifest({
+      cliVersion: lowerCli,
+      skillsVersion: '1.24.0',
+      pipelineVersion: '0.39.0',
+      cliRange: `^${lowerCli}`,
+    });
+    const result = await reconcileInstalledTuple('/tmp/project', {
+      claudeCommandRunner: makeRunner({ skills: '1.24.0', pipeline: '0.39.0' }),
+      fetchImpl: jsonFetch(published),
+    });
+    expect(result.installed.cli).toBe(cliVersion);
+    expect(result.published?.cli.version).toBe(lowerCli);
+    // The decisive assertion: an installed version ahead of published has nothing to
+    // upgrade to, so no offer may be surfaced for it.
+    expect(result.status).not.toBe('upgrade-available');
+    expect(result.status).toBe('aligned');
+  });
+
+  it('reports aligned when installed plugins are ahead of published, not incompatible', async () => {
+    const published = manifest({
+      cliVersion,
+      skillsVersion: '1.24.0',
+      pipelineVersion: '0.39.0',
+    });
+    const result = await reconcileInstalledTuple('/tmp/project', {
+      // Both plugins ahead of what the manifest publishes, CLI exactly at published.
+      claudeCommandRunner: makeRunner({ skills: '1.25.0', pipeline: '0.39.1' }),
+      fetchImpl: jsonFetch(published),
+    });
+    // `aligned`, not merely "not upgrade-available": under plain inequality this tuple
+    // read as drift with no explaining CLI advance, which classifies as `incompatible` —
+    // so asserting only the absence of an offer would have passed before the fix too.
+    // Nothing here is behind anything, so there is no drift to report at all.
+    expect(result.status).toBe('aligned');
+  });
+
+  it('still reports upgrade-available when the CLI is genuinely behind', async () => {
+    // The counterpart to the two above: adding a direction check must not silence the
+    // case the offer exists to serve.
+    const published = manifest({
+      cliVersion: higherCli,
+      skillsVersion: '1.24.0',
+      pipelineVersion: '0.39.0',
+      cliRange: `^${cliVersion}`,
+    });
+    const result = await reconcileInstalledTuple('/tmp/project', {
+      claudeCommandRunner: makeRunner({ skills: '1.24.0', pipeline: '0.39.0' }),
+      fetchImpl: jsonFetch(published),
+    });
+    expect(result.status).toBe('upgrade-available');
   });
 });
 
@@ -563,4 +623,101 @@ describe('planCliUpgrade (FR4 — execute what it can)', () => {
   it('does not upgrade when the manifest is unavailable', () => {
     expect(planCliUpgrade(reconciliation('unknown', '1.22.0', '1.22.0')).proceed).toBe(false);
   });
+});
+
+// ---------------------------------------------------------------------------
+// BL-007 (SPEC-006 FR4) — when the CLI is already current but the plugin half
+// trails, `apply` returns before the prescription is ever built, while its own
+// message promises "run the prescribed commands below". That state is what every
+// release creates for anyone who upgrades the npm half first, and it shipped
+// because the prescription was only ever tested as a bare function.
+//
+// This drives the real CLI as a subprocess through the repo's tsx loader, so it
+// exercises the current wiring rather than a service call: a fabricated manifest
+// (OPENPLANR_ECOSYSTEM_SOURCE) publishes plugin versions ahead of what a stubbed
+// `claude` (OPENPLANR_CLAUDE_BIN) reports installed, with the CLI exactly at the
+// published version.
+// ---------------------------------------------------------------------------
+describe('upgrade apply prescribes the plugin half when only the plugins trail', () => {
+  const cliEntry = resolve('src/cli/index.ts');
+
+  function stubClaude(scriptPath: string, installed: { skills: string; pipeline: string }): void {
+    writeFileSync(
+      scriptPath,
+      `const key = process.argv.slice(2).join(' ');
+if (key === '--version') { process.stdout.write('1.0.0'); process.exit(0); }
+if (key === 'plugin marketplace list --json') {
+  process.stdout.write(JSON.stringify([{ name: 'openplanr', repo: 'openplanr/marketplace' }]));
+  process.exit(0);
+}
+if (key === 'plugin list --json') {
+  process.stdout.write(JSON.stringify([
+    { id: 'openplanr@openplanr', version: ${JSON.stringify(installed.skills)}, scope: 'user', enabled: true },
+    { id: 'planr-pipeline@openplanr', version: ${JSON.stringify(installed.pipeline)}, scope: 'user', enabled: true },
+  ]));
+  process.exit(0);
+}
+process.stdout.write('[]');
+process.exit(0);
+`,
+    );
+  }
+
+  it('prints the marketplace refresh first, then an update per trailing plugin', () => {
+    const manifestPath = join(root, 'ecosystem.json');
+    writeFileSync(
+      manifestPath,
+      JSON.stringify({
+        components: {
+          // The CLI is exactly at the published version — nothing for the npm half to do.
+          cli: { version: cliVersion, pipelineRange: '^0.40.0' },
+          pipeline: { version: '0.40.0', cliRange: `^${cliVersion}` },
+          skills: { version: '1.26.0', cliRange: `^${cliVersion}` },
+        },
+      }),
+    );
+
+    const claudeStub = join(root, 'claude-stub.cjs');
+    stubClaude(claudeStub, { skills: '1.25.0', pipeline: '0.39.0' });
+
+    // `apply` sets exit code 1 on an incompatible tuple — correctly, since the tuple is
+    // not resolved by this command. `execFileSync` throws on that, so the stdout it
+    // captured is read off the error. The output is the assertion target either way.
+    let output: string;
+    try {
+      output = execFileSync(
+        process.execPath,
+        ['--import', 'tsx', cliEntry, '--project-dir', root, 'upgrade', 'apply', '--yes'],
+        {
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            OPENPLANR_HOME: userHome,
+            OPENPLANR_ECOSYSTEM_SOURCE: manifestPath,
+            OPENPLANR_CLAUDE_BIN: claudeStub,
+            NO_COLOR: '1',
+          },
+          stdio: ['ignore', 'pipe', 'pipe'],
+        },
+      );
+    } catch (error) {
+      output = (error as { stdout?: string }).stdout ?? '';
+    }
+
+    // The promise in the reason string must be kept by the same invocation.
+    expect(output).toContain('the plugin half must move');
+    const refreshAt = output.indexOf('claude plugin marketplace update openplanr');
+    const pipelineAt = output.indexOf('claude plugin update planr-pipeline@openplanr');
+    const skillsAt = output.indexOf('claude plugin update openplanr@openplanr');
+
+    expect(refreshAt).toBeGreaterThanOrEqual(0);
+    // Both trailing plugins are named. Omitting one is the silent-stale-install
+    // failure FR4 exists to prevent: the user runs every command and is still behind.
+    expect(pipelineAt).toBeGreaterThanOrEqual(0);
+    expect(skillsAt).toBeGreaterThanOrEqual(0);
+    // Order is load-bearing: without the refresh first the installer reinstalls the
+    // cached stale version and the user believes they upgraded.
+    expect(refreshAt).toBeLessThan(pipelineAt);
+    expect(refreshAt).toBeLessThan(skillsAt);
+  }, 30_000);
 });

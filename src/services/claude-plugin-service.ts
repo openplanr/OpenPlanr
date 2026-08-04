@@ -4,7 +4,15 @@ import path from 'node:path';
 
 export const OPENPLANR_CLAUDE_MARKETPLACE = 'openplanr';
 export const OPENPLANR_CLAUDE_MARKETPLACE_SOURCE = 'openplanr/marketplace';
-export const OPENPLANR_SKILLS_VERSION = '1.23.0';
+/**
+ * The skills-plugin version this CLI targets. It had drifted three releases behind the
+ * published bundle, and because the plugin-half prescription derives its skills target
+ * from here, a genuinely stale skills plugin was silently omitted from the commands — a
+ * user could run every prescribed command and still be on an old bundle believing they
+ * were current. Bumping it with each skills release is the interim contract; deriving it
+ * from the published manifest instead is tracked separately.
+ */
+export const OPENPLANR_SKILLS_VERSION = '1.26.0';
 
 export type ClaudePluginOperationKind =
   | 'add-marketplace'
@@ -73,11 +81,25 @@ interface InstalledPlugin {
   installPath?: string;
 }
 
+/**
+ * `OPENPLANR_CLAUDE_BIN` is a test seam of the same shape as `upgrade-service.ts`'s
+ * `OPENPLANR_NPM_BIN`: a path to a Node script standing in for the `claude` binary, so a
+ * test can drive the real CLI end to end against a fabricated plugin tuple. Bare
+ * `spawnSync('claude')` resolves only `.exe` on Windows, which a stub that must branch on
+ * its arguments cannot be — without this seam the plugin-half path is only testable on
+ * POSIX, and that is precisely the path that shipped a promise with no commands behind it.
+ * Unset in production, where the real `claude` runs.
+ */
 function defaultRunner(args: string[]): ClaudeCommandResult {
-  const result = spawnSync('claude', args, {
-    encoding: 'utf8',
-    windowsHide: true,
-  });
+  const override = process.env.OPENPLANR_CLAUDE_BIN?.trim();
+  const result = spawnSync(
+    override ? process.execPath : 'claude',
+    override ? [override, ...args] : args,
+    {
+      encoding: 'utf8',
+      windowsHide: true,
+    },
+  );
   return {
     status: result.status,
     stdout: result.stdout ?? '',
