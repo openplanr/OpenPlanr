@@ -34,6 +34,10 @@ describe('guided Operating Board package surface', () => {
     const manifest = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as {
       optionalDependencies?: Record<string, string>;
     };
-    expect(manifest.optionalDependencies?.['planr-pipeline']).toBe('0.40.0');
+    // The contract is *exactness*, not a particular number: the packed manifest must pin
+    // one resolved version, never a range that could float. Asserting a literal instead
+    // meant every pipeline bump broke this until someone hand-edited it, which cost a
+    // full CI round-trip during the 0.40.0 release and tested nothing extra.
+    expect(manifest.optionalDependencies?.['planr-pipeline']).toMatch(/^\d+\.\d+\.\d+$/);
   });
 });
