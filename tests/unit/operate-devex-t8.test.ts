@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -52,6 +51,11 @@ const INSTALLED_ROOT = resolve('node_modules/planr-pipeline');
  * seam then falls through to node_modules — which would quietly prove nothing),
  * and rolling back a single file is what isolates the schema as the gate.
  *
+ * The old schema is a committed fixture, not a `git show` of the v0.40.0 tag: CI
+ * checks the sibling out shallow at the current release, so that tag exists only
+ * on a full local clone. Frozen history is safe to vendor — v0.40.0's bytes can
+ * never change — and vendoring is what makes the proof run everywhere.
+ *
  * Originally this proof read whatever sat in node_modules, which held only while
  * the CLI's pin happened to be 0.40.0; bumping that pin (the 1.25.1 setup fix)
  * correctly falsified it. An old-reader invariant has to name the old revision.
@@ -60,13 +64,8 @@ const OLD_READER_ROOT = mkdtempSync(join(tmpdir(), 'openplanr-t8-old-reader-'));
 cpSync(INSTALLED_ROOT, OLD_READER_ROOT, { recursive: true });
 writeFileSync(
   join(OLD_READER_ROOT, 'schemas', 'v1.4.0', 'operating-advisor-response.schema.json'),
-  execFileSync(
-    'git',
-    ['-C', BRANCH_ROOT, 'show', 'v0.40.0:schemas/v1.4.0/operating-advisor-response.schema.json'],
-    { encoding: 'utf8' },
-  ),
+  readFileSync(resolve('tests/fixtures/operating-advisor-response.v0.40.0.schema.json'), 'utf8'),
 );
-
 interface ContractIssue {
   path: string;
   rule: string;

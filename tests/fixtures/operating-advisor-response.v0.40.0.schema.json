@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/operating-advisor-response.schema.json",
+  "title": "OpenPlanr Protocol v1.4 agent-native operating advisor response",
+  "description": "Expressive runtime-authored analysis plus deterministic, citation-bearing actions. Uncited opinion belongs only in analysisMarkdown and cannot materialize work.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outcome", "analysisMarkdown", "claims", "actions", "gaps", "conflicts"],
+  "properties": {
+    "outcome": { "type": "string", "enum": ["actions", "quiet", "partial"] },
+    "analysisMarkdown": { "type": "string", "minLength": 1, "maxLength": 131072 },
+    "claims": {
+      "type": "array", "maxItems": 40,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "statement", "epistemicStatus", "confidence", "citations"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "statement": { "type": "string", "minLength": 1, "maxLength": 8192 },
+          "epistemicStatus": { "type": "string", "enum": ["observed", "inferred", "hypothesis", "owner-confirmed", "unknown"] },
+          "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "citations": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "$ref": "operating-citation.schema.json" } }
+        }
+      }
+    },
+    "actions": {
+      "type": "array", "maxItems": 20,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["actionKey", "title", "summary", "lane", "routeKind", "horizon", "confidence", "citations"],
+        "properties": {
+          "actionKey": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" },
+          "title": { "type": "string", "minLength": 1, "maxLength": 240 },
+          "summary": { "type": "string", "minLength": 1, "maxLength": 8192 },
+          "lane": { "type": "string", "enum": ["DEV", "OWNER", "AGENT"] },
+          "routeKind": { "type": "string", "enum": ["quick-task", "spec", "epic", "decision", "agent-artifact", "experiment", "metric"] },
+          "horizon": { "type": "string", "enum": ["immediate", "next", "later"] },
+          "confidence": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "impact": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "ease": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "critical": { "type": "boolean" },
+          "citations": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "$ref": "operating-citation.schema.json" } }
+        }
+      }
+    },
+    "gaps": { "type": "array", "maxItems": 20, "items": { "type": "object", "additionalProperties": false, "required": ["id", "question", "impact"], "properties": { "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }, "question": { "type": "string", "minLength": 1, "maxLength": 4096 }, "impact": { "type": "string", "minLength": 1, "maxLength": 4096 }, "ownerRequired": { "type": "boolean" } } } },
+    "conflicts": { "type": "array", "maxItems": 20, "items": { "type": "object", "additionalProperties": false, "required": ["id", "summary", "actionKeys"], "properties": { "id": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }, "summary": { "type": "string", "minLength": 1, "maxLength": 4096 }, "actionKeys": { "type": "array", "minItems": 2, "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" } } } } }
+  }
+}
