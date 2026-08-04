@@ -1,5 +1,59 @@
 # Changelog
 
+## 1.24.1
+
+### Patch Changes
+
+- [`c784039`](https://github.com/openplanr/OpenPlanr/commit/c7840399872442fdaaeb5e5dd09c31740f460b03) Report an invalid `.planr/config.json` as an actionable error instead of a raw stack trace.
+
+`targets` and `createdAt` are the two config fields required with no default, while every
+other field defaults. A config missing either — hand-edited, partially written, or
+hand-authored — crashed **every** config-reading command with an unhandled `ZodError`
+stack trace, because the CLI's top-level handler rethrows anything without an `E_` code.
+
+The failure now names the file, every failing field with its path, and the command to
+repair it, exiting cleanly through the handler's existing error contract. A genuinely
+missing required field still fails — it just says so legibly rather than dumping a trace.
+
+- [`0c2599a`](https://github.com/openplanr/OpenPlanr/commit/0c2599aaeb6d553bef656f2b300046a1b1a64034) Make `setup` and `doctor` describe the install they actually produced.
+
+**`doctor` names the skill file that exists.** Its three `operate-skill` messages hardcoded
+the namespaced `planr-operate`, so a `--no-prefix` install — where the file on disk is
+`operate` — got a diagnostic with the right status about a filename the user does not have.
+All three now interpolate the installed name.
+
+**The setup preview states the naming scheme.** The choice is persisted per project, so a
+plain re-run could install bare verbs with nothing in the summary saying so. The preview
+now reports `Command names: namespaced` or `bare (--no-prefix)`, resolved from the same
+value the installer uses.
+
+**The Cursor no-op is now pinned by a test.** `applyCommandPrefix` is threaded through the
+Cursor branch but computes identity there, since no Cursor rule filename starts with
+`planr-`. That "intentional symmetry, not dead code" claim rested entirely on a source
+comment; a later broadening of the prefix match would have silently begun renaming Cursor
+rules with nothing to catch it.
+
+- [`57f5d0a`](https://github.com/openplanr/OpenPlanr/commit/57f5d0a4ace09fb69859f2bae12035c12809db43) Stop `planr upgrade` from offering a downgrade, and make it actually print the plugin-half commands it promises.
+
+**An installed version ahead of the registry is no longer an "upgrade".** Drift was computed
+as plain inequality, so "different" and "older" were the same thing: anyone on a build ahead
+of published — a linked dev build, a prerelease, a maintainer mid-release — was offered a
+downgrade labelled as an upgrade, and accepting "always keep me current" would have rolled
+the newer build back on every invocation. Only a version strictly _behind_ now counts.
+Range violations are untouched, since those are direction-independent.
+
+**The prescription is no longer promised and withheld.** When the CLI is already current but
+the host plugins trail — the state every release creates for anyone who upgrades the npm half
+first — `apply` returned early with a message ending "run the prescribed commands below" and
+then printed nothing, on both the human and `--json` surfaces. The commands are now built on
+that path too, from the same helpers the post-upgrade path uses, so the two can never print
+different instructions for the same machine.
+
+**The skills plugin is no longer silently omitted.** The version the CLI targets for the
+skills bundle had drifted three releases behind, and because the prescription derives its
+target from it, a genuinely stale skills plugin was left out of the commands entirely — a
+user could run every prescribed command and still be behind, believing they were current.
+
 ## 1.24.0
 
 ### Minor Changes
