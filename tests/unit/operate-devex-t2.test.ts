@@ -193,77 +193,80 @@ describe('FND-001 — inspect points an uninitialized project at research-first'
 });
 
 // ── Deliverable C — `operate report --html` ─────────────────────────────────
-describe('operate report --html renders a self-contained shareable board', () => {
-  let projectDir = '';
-  let stateRoot = '';
+describe.skipIf(!existsSync(resolve('.planr/operate')))(
+  'operate report --html renders a self-contained shareable board (CLI arm — needs a locally recorded cycle)',
+  () => {
+    let projectDir = '';
+    let stateRoot = '';
 
-  // The CLI arm needs a genuinely recorded operate cycle to render. That exists on a
-  // dev machine after any real board run, but the repo's .planr/ is gitignored, so CI
-  // has none — the original unconditional cpSync of repo state failed CI on first run
-  // (works-on-my-machine, this batch's own defect class). The arm self-gates; the
-  // rendering itself is covered unconditionally by the unit arm below it.
-  const hasLocalCycle = existsSync(repoOperateDir);
+    // The CLI arm needs a genuinely recorded operate cycle to render. That exists on a
+    // dev machine after any real board run, but the repo's .planr/ is gitignored, so CI
+    // has none — the original unconditional cpSync of repo state failed CI on first run
+    // (works-on-my-machine, this batch's own defect class). The arm self-gates; the
+    // rendering itself is covered unconditionally by the unit arm below it.
+    const hasLocalCycle = existsSync(repoOperateDir);
 
-  beforeAll(async () => {
-    projectDir = await temporaryDirectory('openplanr-t2-html-');
-    stateRoot = await temporaryDirectory('openplanr-t2-html-state-');
-    if (hasLocalCycle) {
-      await mkdir(join(projectDir, '.planr'), { recursive: true });
-      cpSync(repoOperateDir, join(projectDir, '.planr', 'operate'), { recursive: true });
-    }
-  });
+    beforeAll(async () => {
+      projectDir = await temporaryDirectory('openplanr-t2-html-');
+      stateRoot = await temporaryDirectory('openplanr-t2-html-state-');
+      if (hasLocalCycle) {
+        await mkdir(join(projectDir, '.planr'), { recursive: true });
+        cpSync(repoOperateDir, join(projectDir, '.planr', 'operate'), { recursive: true });
+      }
+    });
 
-  it.skipIf(!existsSync(repoOperateDir))(
-    'drives through the CLI to real table markup, zero remote attributes, and the open suggestion',
-    async () => {
-      const outPath = join(await temporaryDirectory('openplanr-t2-html-out-'), 'board.html');
+    it.skipIf(!existsSync(repoOperateDir))(
+      'drives through the CLI to real table markup, zero remote attributes, and the open suggestion',
+      async () => {
+        const outPath = join(await temporaryDirectory('openplanr-t2-html-out-'), 'board.html');
+
+        const run = runCli(
+          projectDir,
+          ['operate', 'report', 'CYCLE-001', '--html', '--out', outPath],
+          stateRoot,
+        );
+
+        expect(run.status).toBe(0);
+        // Human mode prints the path and the exact artifact-open follow-up.
+        expect(run.stdout).toContain('planr artifact open');
+        expect(run.stdout).toContain(outPath);
+        expect(existsSync(outPath)).toBe(true);
+
+        const html = readFileSync(outPath, 'utf8');
+        // Real table markup, not a fenced pipe dump.
+        expect(html).toMatch(/<table>/);
+        expect(html).toMatch(/<th>/);
+        expect(html).toMatch(/<td>/);
+        // Self-contained shell.
+        expect(html.startsWith('<!DOCTYPE html>')).toBe(true);
+        // The artifact validator blocks remote hrefs in attributes: there must be zero
+        // `src=`/`href=` pointing at a remote URL, and no anchor tags at all.
+        expect(html).not.toMatch(/(?:src|href)\s*=\s*["']?https?:/i);
+        expect(html).not.toMatch(/<a\s[^>]*href/i);
+      },
+      30_000,
+    );
+
+    it('returns { path, suggestedNext } on the --json surface', async () => {
+      const outPath = join(await temporaryDirectory('openplanr-t2-html-json-'), 'board.html');
 
       const run = runCli(
         projectDir,
-        ['operate', 'report', 'CYCLE-001', '--html', '--out', outPath],
+        ['operate', 'report', 'CYCLE-001', '--html', '--out', outPath, '--json'],
         stateRoot,
       );
 
       expect(run.status).toBe(0);
-      // Human mode prints the path and the exact artifact-open follow-up.
-      expect(run.stdout).toContain('planr artifact open');
-      expect(run.stdout).toContain(outPath);
-      expect(existsSync(outPath)).toBe(true);
-
-      const html = readFileSync(outPath, 'utf8');
-      // Real table markup, not a fenced pipe dump.
-      expect(html).toMatch(/<table>/);
-      expect(html).toMatch(/<th>/);
-      expect(html).toMatch(/<td>/);
-      // Self-contained shell.
-      expect(html.startsWith('<!DOCTYPE html>')).toBe(true);
-      // The artifact validator blocks remote hrefs in attributes: there must be zero
-      // `src=`/`href=` pointing at a remote URL, and no anchor tags at all.
-      expect(html).not.toMatch(/(?:src|href)\s*=\s*["']?https?:/i);
-      expect(html).not.toMatch(/<a\s[^>]*href/i);
-    },
-    30_000,
-  );
-
-  it('returns { path, suggestedNext } on the --json surface', async () => {
-    const outPath = join(await temporaryDirectory('openplanr-t2-html-json-'), 'board.html');
-
-    const run = runCli(
-      projectDir,
-      ['operate', 'report', 'CYCLE-001', '--html', '--out', outPath, '--json'],
-      stateRoot,
-    );
-
-    expect(run.status).toBe(0);
-    const payload = JSON.parse(run.stdout.trim()) as {
-      ok: boolean;
-      data?: { path?: string; suggestedNext?: string };
-    };
-    expect(payload.ok).toBe(true);
-    expect(payload.data?.path).toBe(outPath);
-    expect(payload.data?.suggestedNext).toContain('planr artifact open');
-  }, 30_000);
-});
+      const payload = JSON.parse(run.stdout.trim()) as {
+        ok: boolean;
+        data?: { path?: string; suggestedNext?: string };
+      };
+      expect(payload.ok).toBe(true);
+      expect(payload.data?.path).toBe(outPath);
+      expect(payload.data?.suggestedNext).toContain('planr artifact open');
+    }, 30_000);
+  },
+);
 
 // ── Docs — first-command guidance matches the shipped behaviour ──────────────
 describe('report --html rendering (unit arm — runs everywhere, no cycle needed)', () => {
