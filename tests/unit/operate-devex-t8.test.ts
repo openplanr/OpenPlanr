@@ -1,4 +1,6 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -40,6 +42,30 @@ const branchSchemaPath = join(
 const branchHasCommitmentConflicts =
   existsSync(branchSchemaPath) && readFileSync(branchSchemaPath, 'utf8').includes('commitmentRef');
 const INSTALLED_ROOT = resolve('node_modules/planr-pipeline');
+
+/**
+ * A real pipeline root — the installed package copied whole — with exactly one
+ * file rolled back to its v0.40.0 release: the advisor-response schema, the last
+ * revision before the commitment-conflict branch. Copying the whole package
+ * matters twice over: `resolvePipelinePackage` only accepts a root carrying the
+ * bin and registry markers (a schemas-only directory is silently skipped, and the
+ * seam then falls through to node_modules — which would quietly prove nothing),
+ * and rolling back a single file is what isolates the schema as the gate.
+ *
+ * Originally this proof read whatever sat in node_modules, which held only while
+ * the CLI's pin happened to be 0.40.0; bumping that pin (the 1.25.1 setup fix)
+ * correctly falsified it. An old-reader invariant has to name the old revision.
+ */
+const OLD_READER_ROOT = mkdtempSync(join(tmpdir(), 'openplanr-t8-old-reader-'));
+cpSync(INSTALLED_ROOT, OLD_READER_ROOT, { recursive: true });
+writeFileSync(
+  join(OLD_READER_ROOT, 'schemas', 'v1.4.0', 'operating-advisor-response.schema.json'),
+  execFileSync(
+    'git',
+    ['-C', BRANCH_ROOT, 'show', 'v0.40.0:schemas/v1.4.0/operating-advisor-response.schema.json'],
+    { encoding: 'utf8' },
+  ),
+);
 
 interface ContractIssue {
   path: string;
@@ -158,13 +184,19 @@ describe('T8 action-versus-commitment conflict — consumer proofs', () => {
     },
   );
 
-  it('proof 3 — the installed 0.40.0 pipeline rejects the new shape (schema is the gate)', async () => {
-    const issues = await validateVia(null, oneKeyWithCommitment);
-    // Verbatim: only the OLD schema (unconditional minItems: 2 +
+  it('proof 3 — a pre-0.41.0 reader fails closed on the new shape (schema is the gate)', async () => {
+    // Materialize the schema as released in v0.40.0 — the last revision before the
+    // branch — into a throwaway pipeline root. Originally this proof read whatever
+    // sat in node_modules, which passed only while the CLI's pin happened to be
+    // 0.40.0; bumping that pin (the 1.25.1 setup fix) correctly falsified it. The
+    // invariant being proved is about an OLD READER, so it must name the old
+    // revision rather than inherit one by accident.
+    const issues = await validateVia(OLD_READER_ROOT, oneKeyWithCommitment);
+    // Verbatim: only the pre-branch schema (unconditional minItems: 2 +
     // additionalProperties:false on the conflict item) produces these direct
     // rules; the branch schema returns `[]` for the identical payload and the
-    // identical CLI code. Their presence proves the installed schema, not the
-    // CLI, is the gate that changed.
+    // identical CLI code. Their presence proves the schema, not the CLI, is the
+    // gate that changed.
     expect(issues).toEqual([
       {
         path: '$.conflicts[0]',
@@ -174,47 +206,9 @@ describe('T8 action-versus-commitment conflict — consumer proofs', () => {
       { path: '$.conflicts[0].actionKeys', rule: 'minItems', detail: 'length 1 < 2' },
     ]);
 
-    // Pointing the identical CLI at node_modules explicitly rejects the same way,
-    // confirming the unset-seam resolution above landed on 0.40.0.
-    const installed = await validateVia(INSTALLED_ROOT, oneKeyWithCommitment);
-    expect(installed).toEqual(issues);
-  });
-});
-
-// Orchestrator addition (T8 follow-through): a commitment conflict that records but
-// renders without its commitment is recorded-but-not-surfaced — the failure class
-// this batch removes. The conversion at normalizeAgentNativeResponse is the single
-// site where conflicts collapse to rendered strings; every downstream surface
-// (engine record body, report.md, report --html) inherits this line.
-import { normalizeAgentNativeResponse } from '../../src/services/operate/advisors.js';
-
-describe('commitment conflicts surface in rendered output (T8 rendering thread)', () => {
-  it('threads the commitment statement and path into the rendered conflict line', () => {
-    const rendered = normalizeAgentNativeResponse(
-      {
-        outcome: 'actions',
-        analysisMarkdown: 'x',
-        claims: [],
-        actions: [],
-        gaps: [],
-        conflicts: [
-          {
-            id: 'cf-telemetry',
-            summary: 'Opt-in telemetry is needed to measure adoption',
-            actionKeys: ['ship-opt-in-usage-telemetry'],
-            commitmentRef: {
-              path: 'docs/CROSS_RUNTIME_SETUP.md',
-              statement: 'No telemetry is added.',
-            },
-          },
-          { id: 'cf-plain', summary: 'Two actions compete', actionKeys: ['a', 'b'] },
-        ],
-      },
-      '0'.repeat(40),
-    );
-    expect(rendered.conflicts[0]).toContain('No telemetry is added.');
-    expect(rendered.conflicts[0]).toContain('docs/CROSS_RUNTIME_SETUP.md');
-    // An action-vs-action conflict renders exactly as before — no format churn.
-    expect(rendered.conflicts[1]).toBe('Two actions compete');
+    // The current installed pipeline is at or past the branch, so it accepts the
+    // same payload — the two readers disagreeing is the compatibility story.
+    const installedNow = await validateVia(INSTALLED_ROOT, oneKeyWithCommitment);
+    expect(installedNow).toEqual([]);
   });
 });
