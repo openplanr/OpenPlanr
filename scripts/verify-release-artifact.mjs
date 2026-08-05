@@ -212,17 +212,15 @@ try {
 
   // A first-time author supplies the minimum. If the questionnaire rejects that,
   // the journey dead-ends before a cycle can start.
-  const questionnaire = json(['operate', 'init', '--json']).questionnaire;
-  const envelope = { ...questionnaire.submission.envelope.fixedFields };
-  envelope.questionnaireDigest = questionnaire.digest;
-  envelope.submittedAt = new Date().toISOString();
-  // Answer each question by its OWN type and constraints. A fixture that sends
-  // the same string to every question passes only while the questionnaire
-  // happens to be all free text: a choice question then fails with "contains an
-  // unsupported choice", which is what blocked the first release run using this
-  // gate. Prefer the CLI's own suggestion — that is the value a real operator is
-  // offered — and fall back to the declared vocabulary.
-  const byId = new Map((questionnaire.questions ?? []).map((q) => [q.questionId, q]));
+  // Initialization is a MULTI-STAGE questionnaire: answering one stage returns
+  // the next stage, not a preview, and the stage count differs by environment —
+  // a developer machine surfaced one question where CI surfaced several. A
+  // fixture that answers once and expects a preview passes locally and fails in
+  // CI, which is exactly how this gate blocked two release runs.
+  //
+  // Walk the stages the way an operator does: answer whatever is asked, using the
+  // CLI's own suggestion first, until a write-free preview with a confirmation
+  // digest appears.
   const answerFor = (question) => {
     if (question?.suggestedValue !== undefined && question.suggestedValue !== null) {
       return question.suggestedValue;
@@ -233,44 +231,54 @@ try {
     if (question?.type === 'boolean') return true;
     return 'Release Gate';
   };
-  envelope.answers = questionnaire.submission.envelope.dynamicFields.answers.items.map((item) => ({
-    questionId: item.questionId,
-    questionVersion: item.questionVersion,
-    sensitivity: item.sensitivity,
-    value: answerFor(byId.get(item.questionId)),
-  }));
-  // A rejection here is a JOURNEY failure, not a broken gate: report it as a
-  // failed assertion naming the reason, rather than letting a non-zero exit
-  // surface as "the gate could not run".
-  let preview = { ok: false, message: '' };
-  try {
-    preview = JSON.parse(
-      cliOutput(['operate', 'init', '--resume', questionnaire.sessionId, '--stdin', '--json'], {
-        input: JSON.stringify(envelope),
-      }),
+
+  const answerStage = (stage) => {
+    const spec = stage.submission.envelope;
+    const byId = new Map((stage.questions ?? []).map((q) => [q.questionId, q]));
+    const envelope = { ...spec.fixedFields };
+    envelope.questionnaireDigest = stage.digest;
+    envelope.submittedAt = new Date().toISOString();
+    envelope.answers = spec.dynamicFields.answers.items.map((item) => ({
+      questionId: item.questionId,
+      questionVersion: item.questionVersion,
+      sensitivity: item.sensitivity,
+      value: answerFor(byId.get(item.questionId)),
+    }));
+    return jsonWithInput(
+      ['operate', 'init', '--resume', stage.sessionId, '--stdin', '--json'],
+      JSON.stringify(envelope),
     );
-  } catch (error) {
-    const payload = String(error.stdout ?? '');
-    try {
-      preview = JSON.parse(payload);
-    } catch {
-      preview = { ok: false, message: payload.slice(0, 200) || String(error.message).slice(0, 200) };
-    }
+  };
+
+  const confirmationOf = (payload) => {
+    const next = String(payload?.next?.[0] ?? '');
+    return next.includes('--confirm ') ? next.split('--confirm ')[1].split(' ')[0] : null;
+  };
+
+  let stage = json(['operate', 'init', '--json']).questionnaire;
+  let response;
+  let confirmDigest = null;
+  // Bounded: the questionnaire declares totalSteps, and a stage that neither
+  // advances nor produces a preview is a defect, not something to retry forever.
+  for (let attempt = 0; attempt < 6 && !confirmDigest; attempt += 1) {
+    response = answerStage(stage);
+    confirmDigest = confirmationOf(response);
+    if (confirmDigest) break;
+    if (!response?.questionnaire) break;
+    stage = response.questionnaire;
   }
+
   check(
-    'a minimal first-run questionnaire reaches the write-free preview',
-    preview.ok === true,
-    preview.message ?? '',
+    'a first-run questionnaire reaches the write-free preview',
+    Boolean(confirmDigest),
+    confirmDigest ? '' : (response?.message ?? 'no confirmation digest was offered'),
   );
-  if (preview.ok !== true) {
-    // The rest of the journey depends on an initialized board; stopping here
-    // keeps the report honest instead of cascading unrelated failures.
+  if (!confirmDigest) {
     console.log('  … remaining cycle checks skipped: initialization did not complete');
     throw new JourneyStop();
   }
 
-  const confirmDigest = String(preview.next?.[0] ?? '').split('--confirm ')[1]?.split(' ')[0];
-  json(['operate', 'init', '--resume', questionnaire.sessionId, '--confirm', confirmDigest, '--yes', '--json']);
+  json(['operate', 'init', '--resume', stage.sessionId, '--confirm', confirmDigest, '--yes', '--json']);
 
   const started = json(['operate', 'run', '--json']);
   const prepareArgs = String(started.next?.[0] ?? '').replace(/^planr /, '').split(' ');
@@ -294,7 +302,7 @@ try {
   // A public workflow permission line is not a secret. Discarding a whole result
   // for quoting one cost a real cycle two round-trips and nearly a lens.
   const permissionLine = ['id', 'token'].join('-') + ': write';
-  const response = {
+  const advisorResponse = {
     outcome: 'actions',
     analysisMarkdown: `The publish workflow requests ${permissionLine} so provenance can be attested.`,
     claims: [
@@ -333,7 +341,7 @@ try {
         '--idempotency-key', session.idempotencyKey,
         '--stdin', '--json',
       ],
-      { input: JSON.stringify(response) },
+      { input: JSON.stringify(advisorResponse) },
     );
     recorded = true;
   } catch (error) {
