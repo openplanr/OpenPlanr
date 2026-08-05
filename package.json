@@ -48,7 +48,8 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "test:heavy": "vitest run --config vitest.heavy.config.ts",
-    "verify:release-artifact": "node scripts/verify-release-artifact.mjs"
+    "verify:release-artifact": "node scripts/verify-release-artifact.mjs",
+    "verify:release-journey": "node scripts/verify-release-journey.mjs"
   },
   "engines": {
     "node": ">=20.0.0"
