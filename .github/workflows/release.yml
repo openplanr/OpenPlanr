@@ -57,6 +57,12 @@ jobs:
 
       # When changesets exist: creates a "Version Packages" PR
       # When no changesets: checks if current version has a release, creates one if not
+      # The last gate before a release can be cut: install the packed tarball
+      # into a clean prefix and actually use it. Every defect that reached users
+      # this week passed a green unit suite and failed only once assembled.
+      - name: Verify the packed artifact performs the primary journey
+        run: npm run verify:release-artifact
+
       - name: Create Release PR
         id: changesets
         uses: changesets/action@v1
