@@ -458,6 +458,21 @@ export function detectSecretMetadata(value: string): SecretDetectionMetadata[] {
   );
 }
 
+/**
+ * The detections that must REFUSE the content outright — a known token, an
+ * authorization header, a private key, a JWT, or a credential URL.
+ *
+ * The remaining categories (`assignment`, `structured-secret`) are secret-SHAPED
+ * rather than secret: a `token: write` workflow permission or a `password:` key
+ * quoted from public configuration matches them. Those are exactly what the
+ * redaction path is built to rewrite in place, so a caller that rejects on ANY
+ * detection discards legitimate content. Callers that must fail closed rather
+ * than redact filter on this set, as the citation resolver does.
+ */
+export function hardBlockedSecretDetections(value: string): SecretDetectionMetadata[] {
+  return detectSecretMetadata(value).filter((detection) => detection.hardBlock);
+}
+
 export function containsSecret(value: string): boolean {
   return detectSecretMetadata(value).length > 0;
 }

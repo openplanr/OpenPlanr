@@ -4,6 +4,7 @@ import { resolveAIProviderReadiness } from '../ai-service.js';
 import { loadConfig } from '../config-service.js';
 import { computeNextDueAt } from './cadence.js';
 import { canonicalDigest, sha256Digest } from './canonical.js';
+import { verifyOperatingCompletionPhases } from './completion.js';
 import {
   applyOperatingInitialization,
   getOperatingProfile,
@@ -79,6 +80,7 @@ import {
   operatingCacheAction,
   operatingIntegrityAction,
   purgeBoardMachineLocalCaches,
+  readPersistedOperatingRoleResults,
   reapStalledOperatingRoles,
   repairOperatingSecurity,
 } from './maintenance.js';
@@ -87,11 +89,12 @@ import {
   applyOperatingProfileMigration,
   inspectOperatingProfileMigration,
 } from './profile-migration.js';
-import { renderOperatingBrief } from './projection.js';
+import { OPERATING_BOARD_ROLES, renderOperatingBrief } from './projection.js';
 import { persistOperatingProjections } from './projection-persistence.js';
 import { loadOperatingProtocol, resolveOperatingPipelineRoot } from './protocol.js';
 import { readOperatingReport } from './reports.js';
 import {
+  OPERATE_AGENT_PROTOCOL_VERSION,
   type OperateActionRequest,
   type OperateActionResult,
   OperateError,
@@ -709,7 +712,11 @@ async function inspect(request: OperateActionRequest): Promise<OperateActionResu
       pipeline: {
         available: Boolean(pipelineRoot),
         root: pipelineRoot ? '(installed)' : null,
-        protocolVersion: pipelineRoot ? '1.2.0' : null,
+        // The contract the installed pipeline ENFORCES — mandates are signed and
+        // validated at the agent protocol version. This previously reported the
+        // frozen on-disk artifact envelope version instead, so the first command
+        // of the journey advertised a two-generation-stale capability.
+        protocolVersion: pipelineRoot ? OPERATE_AGENT_PROTOCOL_VERSION : null,
       },
       commitSafeRoot: project ? '.planr/operate' : null,
       machineLocalState: customStateRoot ? paths.localRoot : '~/.planr/operate/<project-hash>',
@@ -1296,6 +1303,67 @@ async function profileMigration(request: OperateActionRequest): Promise<OperateA
   });
 }
 
+/**
+ * The cycle states a governed cycle carries while it is still mid-flight: work
+ * may already be durably recorded, but no gate has been reached. The aggregate
+ * surfaces (`status`, `review`) must never describe a board in one of these
+ * states as quiet or as standing at the review gate — the per-lens board files
+ * stay honest, so an aggregate that claims otherwise is the only thing a reader
+ * can be misled by.
+ */
+const OPERATING_IN_FLIGHT_CYCLE_STATES = new Set([
+  'preparing',
+  'collecting',
+  'advising',
+  'consolidating',
+]);
+
+/** The only cycle states that genuinely present the mandatory human review gate. */
+const OPERATING_REVIEW_GATE_CYCLE_STATES = new Set(['reviewable', 'blocked', 'failed']);
+
+/**
+ * The advisory lenses a cycle is expected to record: the roles the cycle itself
+ * enabled (or every board role when it recorded no explicit selection), with
+ * Chair always expected because the review gate needs the consolidation.
+ */
+function expectedOperatingCycleRoles(cycle: Record<string, unknown>): string[] {
+  const enabled = Array.isArray(cycle.enabledRoles)
+    ? cycle.enabledRoles.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  const wanted = new Set<string>(
+    enabled.length > 0 ? enabled : OPERATING_BOARD_ROLES.map((role) => role.id),
+  );
+  wanted.add('chair');
+  return OPERATING_BOARD_ROLES.map((role) => role.id).filter((id) => wanted.has(id));
+}
+
+/**
+ * The truthful one-line account of a mid-flight cycle for `status`: how much of
+ * the board has durably recorded, and what is still outstanding before the
+ * review gate. Sourced from the committed `advisor-result` records, never from
+ * `state.summary.quiet` — projected findings only exist after consolidation, so
+ * a board with five recorded lenses and no Chair still summarizes as quiet, and
+ * reporting that summary is the false-negative this replaces.
+ */
+async function describeInFlightOperatingCycle(
+  store: OperatingEventStore,
+  cycle: Record<string, unknown> & { id: string; state: string },
+): Promise<string> {
+  const expected = expectedOperatingCycleRoles(cycle);
+  const results = await readPersistedOperatingRoleResults(store, cycle.id);
+  const recorded = new Set<string>(results.map((result) => result.roleId));
+  const pending = expected.filter((roleId) => !recorded.has(roleId));
+  const proposals = results.reduce((total, result) => total + result.proposals.length, 0);
+  return [
+    `Cycle ${cycle.id} is ${cycle.state}, not quiet:`,
+    `${expected.filter((roleId) => recorded.has(roleId)).length} of ${expected.length}`,
+    `advisory lens result(s) recorded, ${proposals} recorded proposal(s) awaiting consolidation.`,
+    pending.length > 0
+      ? `Outstanding lens(es): ${pending.join(', ')}.`
+      : 'Every expected lens has recorded; consolidation into a reviewable board is outstanding.',
+  ].join(' ');
+}
+
 async function status(request: OperateActionRequest): Promise<OperateActionResult> {
   const config = await validateOperatingConfiguration(request.projectRoot);
   const localRoot = option<string | undefined>(request, 'localRoot', undefined);
@@ -1316,14 +1384,24 @@ async function status(request: OperateActionRequest): Promise<OperateActionResul
     localRoot ? { localRoot } : {},
   );
   const nextDueAt = await computeNextDueAt(config.cadence, lastRunAt, now);
+  // A cycle that is still preparing/collecting/advising/consolidating is
+  // mid-flight, so neither `quiet` nor a surfaced-findings count describes it:
+  // both are projections that only become meaningful after consolidation. Report
+  // the real cycle state and the outstanding lenses instead.
+  const inFlightCycle =
+    activeCycle && OPERATING_IN_FLIGHT_CYCLE_STATES.has(activeCycle.state)
+      ? activeCycle
+      : undefined;
   return success(request.action, {
     data: { ...state, cadence: { mode: config.cadence, lastRunAt, nextDueAt } },
     message:
       activeCycle?.state === 'blocked'
         ? `Operating Board is blocked on ${state.summary.openGaps} evidence or advisor readiness gap(s).`
-        : state.summary.quiet
-          ? 'Operating Board is quiet.'
-          : `${state.summary.surfacedFindings} finding(s) are surfaced.`,
+        : inFlightCycle
+          ? await describeInFlightOperatingCycle(store, inFlightCycle)
+          : state.summary.quiet
+            ? 'Operating Board is quiet.'
+            : `${state.summary.surfacedFindings} finding(s) are surfaced.`,
   });
 }
 
@@ -1585,26 +1663,79 @@ async function contextResearch(request: OperateActionRequest): Promise<OperateAc
   });
 }
 
+/**
+ * Whether `review` is genuinely standing at the mandatory human review gate —
+ * and, when it is not, the exact phase the cycle actually reached plus the
+ * artifacts still missing. Verified from the committed cycle state and the
+ * on-disk artifacts (`verifyOperatingCompletionPhases`), never from the fact
+ * that the command ran: announcing the gate for a cycle still in `advising`
+ * tells a reader the board is done deliberating when five lenses are recorded
+ * and the Chair has not run.
+ */
+async function operatingReviewGateMessage(input: {
+  projectRoot: string;
+  cycleId?: string;
+  localRoot?: string;
+}): Promise<{ message: string; warnings: string[] }> {
+  const scoped = input.localRoot ? { localRoot: input.localRoot } : {};
+  const state = await new OperatingEventStore(input.projectRoot, scoped).state();
+  const targetId = input.cycleId ?? state.summary.currentCycleId ?? undefined;
+  const cycle = targetId ? state.cycles.find((entry) => entry.id === targetId) : undefined;
+  if (!cycle) {
+    return {
+      message:
+        'No governed operating cycle exists yet, so no review gate has been reached. No route has been applied.',
+      warnings: [],
+    };
+  }
+  if (OPERATING_REVIEW_GATE_CYCLE_STATES.has(cycle.state)) {
+    return {
+      message: 'This is the mandatory human review gate. No route has been applied.',
+      warnings: [],
+    };
+  }
+  const completion = await verifyOperatingCompletionPhases(
+    state,
+    cycle.id,
+    resolveOperatingPaths(input.projectRoot, scoped),
+  );
+  return {
+    message: [
+      `Cycle ${cycle.id} is ${cycle.state} and has NOT reached the human review gate.`,
+      `Verified on disk: reached phase ${completion.reachedPhase ?? 'none'} (${completion.reachedLabel}).`,
+      ...(completion.nextPhase
+        ? [`Current phase: ${completion.nextPhase} — ${completion.nextLabel}.`]
+        : []),
+      ...(completion.missing.length > 0
+        ? [`Still missing: ${completion.missing.join('; ')}.`]
+        : []),
+      'No route has been applied.',
+    ].join(' '),
+    warnings: completion.missing.map((item) => `Missing before the review gate: ${item}`),
+  };
+}
+
 async function reviewOrBrief(request: OperateActionRequest): Promise<OperateActionResult> {
   const cycleId = argument(request, 'cycleId');
   // FR3/E-003: the human review gate renders report Markdown (brief + per-role
   // lens reports + exact next actions), never a raw `JSON.stringify` of the
   // state. `--json` keeps returning the exact raw state object, byte-unchanged.
   const human = request.action === 'review' && !option(request, 'json', false);
+  const localRoot = option<string | undefined>(request, 'localRoot', undefined);
   const data = await readOperatingReview({
     projectRoot: request.projectRoot,
     cycleId,
     brief: request.action === 'brief',
     human,
-    localRoot: option<string | undefined>(request, 'localRoot', undefined),
+    localRoot,
   });
-  return success(request.action, {
-    data,
-    message:
-      request.action === 'review'
-        ? 'This is the mandatory human review gate. No route has been applied.'
-        : undefined,
+  if (request.action !== 'review') return success(request.action, { data });
+  const gate = await operatingReviewGateMessage({
+    projectRoot: request.projectRoot,
+    cycleId,
+    localRoot,
   });
+  return success(request.action, { data, message: gate.message, warnings: gate.warnings });
 }
 
 async function report(request: OperateActionRequest): Promise<OperateActionResult> {
