@@ -92,6 +92,7 @@ try {
     JSON.parse(readFileSync(join(prefix, 'node_modules', ...segments, 'package.json'), 'utf8'));
   const installedPipeline = readManifest('planr-pipeline');
   console.log(`  · installed pipeline ${installedPipeline.version}`);
+  console.log(`  · OPENPLANR_PIPELINE_ROOT cleared: ${environment.OPENPLANR_PIPELINE_ROOT === undefined}`);
   // Deliberately NOT asserted here: "the resolved pipeline equals the declared
   // pin" is a tautology — npm installs exactly what the manifest declares, so it
   // can never fail and would be a green check that proves nothing. Whether the
@@ -291,12 +292,16 @@ try {
     mandate.responseSchema === mandate.output?.schema,
     `enforced ${mandate.responseSchema}, disclosed ${mandate.output?.schema}`,
   );
+  const disclosed = mandate.output?.jsonSchema;
   check(
     'the disclosed schema is dereferenceable and matches that version',
-    String(mandate.output?.jsonSchema?.$id ?? '').includes(
-      String(mandate.responseSchema ?? '').split('@')[1] ?? 'x',
-    ),
-    `$id ${mandate.output?.jsonSchema?.$id}`,
+    String(disclosed?.$id ?? '').includes(String(mandate.responseSchema ?? '').split('@')[1] ?? 'x'),
+    // Report the actual shape, not just the missing value: a check that says
+    // "$id undefined" cannot distinguish an absent schema from a wrong one, and
+    // this failed in CI while passing on two local runtimes.
+    `$id=${disclosed?.$id} type=${typeof disclosed} keys=${
+      disclosed && typeof disclosed === 'object' ? Object.keys(disclosed).slice(0, 8).join(',') : 'n/a'
+    } outputKeys=${Object.keys(mandate.output ?? {}).join(',')}`,
   );
 
   // A public workflow permission line is not a secret. Discarding a whole result
@@ -345,7 +350,7 @@ try {
     );
     recorded = true;
   } catch (error) {
-    notes.push(`record stderr: ${String(error.stdout ?? error.stderr ?? '').slice(0, 300)}`);
+    notes.push(`record failed: ${String(error.stdout ?? error.stderr ?? error.message).slice(0, 1500)}`);
   }
   check('a result quoting a public permission line records', recorded);
 
