@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.25.3
+
+### Patch Changes
+
+- [`9742583`](https://github.com/openplanr/OpenPlanr/commit/97425830cab9bfff2cf62f58ecc66eb6ed434974) Ship with `planr-pipeline@0.42.0`, which requires an explicit `protocolVersion`
+  when building a legacy advisor brief. The previous silent default allowed a
+  frozen v1.2 contract to reach a Protocol v1.4 mandate.
+
 ## 1.25.2
 
 ### Patch Changes
