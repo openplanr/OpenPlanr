@@ -636,11 +636,19 @@ describe('US-T1 disclosed contract, batched validation, and lease-free validate 
     // Assert on the ACTUAL prepare output, not a unit fixture.
     const mandate = prepared.mandates['strategy-finance'];
     expect(mandate.output).toBeDefined();
-    expect(mandate.output?.schema).toBe('operating-advisor-response@1.2.0');
+    // The disclosed contract must be the ENFORCED one. This assertion previously
+    // demanded '@1.2.0' — it encoded the defect a live cycle later hit: the
+    // mandate enforced v1.4 while disclosing the frozen v1.2 schema, so an
+    // advisor that followed the disclosure failed validation every time. A green
+    // suite asserting the wrong contract is why that shipped.
+    expect(mandate.output?.schema).toBe(mandate.responseSchema);
+    expect(mandate.output?.schema).toBe('operating-advisor-response@1.4.0');
     // A dereferenceable JSON Schema, not just a schema NAME the runtime cannot resolve.
     expect(mandate.output?.jsonSchema).toBeTruthy();
     expect(typeof mandate.output?.jsonSchema).toBe('object');
-    expect(mandate.output?.allowedProposalTypes).toEqual(['data-gap', 'decision', 'finding']);
+    // Only the types a v1.4 action can actually express: `data-gap` has no
+    // routeKind that maps to it, so disclosing it invited a rejection.
+    expect(mandate.output?.allowedProposalTypes).toEqual(['decision', 'finding']);
     expect(mandate.output?.maximumProposals).toBe(4);
     expect(mandate.output?.maximumOutputBytes).toBeGreaterThan(0);
     expect(Array.isArray(mandate.output?.requiredBehavior)).toBe(true);
@@ -1056,8 +1064,11 @@ describe('T5 — registry-reconciled proposal bounds unblock the Chair and bind 
     const output = prepared.mandates.chair.output;
     expect(output?.maximumProposals).toBe(12);
     expect(output?.allowedProposalTypes).toEqual(expect.arrayContaining(['finding', 'decision']));
-    // The frozen consolidation vocabulary is LEFT intact, not removed.
-    expect(output?.allowedProposalTypes).toEqual(expect.arrayContaining(['merge', 'sequence']));
+    // The frozen consolidation vocabulary is LEFT intact on the legacy brief —
+    // but it is NOT disclosed on a v1.4 mandate, because no v1.4 action can
+    // express `merge` or `sequence`; disclosing them promised a shape the
+    // enforcer rejects.
+    expect(output?.allowedProposalTypes).not.toEqual(expect.arrayContaining(['merge', 'sequence']));
   });
 
   it('binds every role: maximumProposals === registry maxActions and the routeKind image is allowed (iterated, no hardcoded role list)', async () => {

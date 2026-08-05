@@ -564,11 +564,18 @@ describe('invariant 5: the prepared mandate discloses every field the record val
       expect(Array.isArray(output.allowedProposalTypes), `${roleId} allowedProposalTypes`).toBe(
         true,
       );
-      expect([...output.allowedProposalTypes].sort()).toEqual(
-        [...brief.output.allowedProposalTypes].sort(),
-      );
+      // The disclosure must be a SUBSET of what record enforces — never equal to
+      // the legacy brief's vocabulary, which contains types no v1.4 action can
+      // express. Comparing the two for equality is what let the stale-contract
+      // defect pass CI.
+      for (const disclosed of output.allowedProposalTypes) {
+        expect(brief.output.allowedProposalTypes, `${roleId} discloses ${disclosed}`).toContain(
+          disclosed,
+        );
+      }
       expect(output.jsonSchema && typeof output.jsonSchema, `${roleId} jsonSchema`).toBe('object');
-      expect(output.schema).toBe(brief.output.schema);
+      // Disclosed identity ≡ enforced identity, by construction.
+      expect(output.schema).toBe(mandate.responseSchema);
     }
   });
 });

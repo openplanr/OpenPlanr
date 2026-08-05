@@ -34,7 +34,12 @@ import { guidedSessionStatus, purgeGuidedSessions } from './interaction/session-
 import { assertCommittedOperatingView, recoverOperatingTransactions } from './journal.js';
 import { withOperatingLock } from './lock-service.js';
 import { assertOperatingArtifact, loadOperatingProtocol } from './protocol.js';
-import { containsSecret, redactSensitiveText } from './redaction.js';
+import {
+  containsSecret,
+  hardBlockedSecretDetections,
+  redactSensitiveText,
+  type SecretDetectionMetadata,
+} from './redaction.js';
 import { cleanOperatingScratch, listAbandonedOperatingScratch } from './scratch.js';
 import {
   OPERATE_MISSION_PROTOCOL_VERSION,
@@ -274,6 +279,31 @@ function adapterLeaseStatus(
 
 function retryRunCommand(session: Pick<PrivateAdvisorSession, 'cycleId' | 'runtime'>): string {
   return `planr operate run --cycle-id ${session.cycleId} --runtime ${session.runtime} --json`;
+}
+
+/**
+ * The command that actually escapes a blocked second binding.
+ *
+ * A prepare rejected because another session is still open used to be handed
+ * `planr operate run …` as its recovery — but that command's prepare
+ * continuation re-enters this same branch and returns the identical error with
+ * the identical suggestion. An agent following the CLI's own guidance loops
+ * forever. The way out is to close the OPEN session, so that is what is named.
+ *
+ * The open session's lease is deliberately NOT interpolated: it belongs to the
+ * holder of that session, and echoing a live credential into an error payload a
+ * different caller receives would leak it. The placeholder says where it comes
+ * from instead.
+ */
+function closeOpenSessionCommand(
+  session: Pick<PrivateAdvisorSession, 'cycleId'>,
+  action: 'finalize' | 'cancel' = 'cancel',
+): string {
+  return (
+    `planr operate harness ${action} --cycle-id ${session.cycleId} ` +
+    '--evidence-digest <open-session-evidence-digest> --lease <open-session-lease> ' +
+    '--idempotency-key <open-session-idempotency-key> --json'
+  );
 }
 
 async function atomicPrivateWrite(target: string, value: unknown): Promise<void> {
@@ -1512,6 +1542,80 @@ async function deriveOperatingMandateRoots(projectRoot: string): Promise<string[
   return [...roots].sort();
 }
 
+/** One hard-blocked secret detection, bound to the advisor field it was found in. */
+interface HardBlockedSecretField {
+  field: string;
+  category: SecretDetectionMetadata['category'];
+  ruleId: string;
+  line: number;
+}
+
+/**
+ * Refuse advisor text ONLY for a hard-blocked secret category — a known token, an
+ * authorization header, a private key, a JWT, or a credential URL — exactly as the
+ * citation resolver does.
+ *
+ * The soft categories are secret-SHAPED, not secret: a public `token: write`
+ * workflow permission quoted inside an analysis matches `structured-secret`.
+ * Rejecting the whole submission over one of those destroys legitimate work for
+ * content the redaction path already handles — the result body's free text is
+ * redacted inside `createNativeMissionOperatingRoleResult`, and the v1.4 rich
+ * fields are redacted here before they are persisted.
+ *
+ * EVERY offending field is reported in one error, with its detection category, so
+ * a runtime learns the complete list from a single rejection instead of one field
+ * per resubmission. Only locations and categories are disclosed, never the value.
+ */
+function assertNoHardBlockedSecrets(
+  fields: ReadonlyArray<{ location: string; value: unknown }>,
+  context: { roleId: string; subject: string },
+): void {
+  const detected: HardBlockedSecretField[] = fields.flatMap((field) =>
+    typeof field.value === 'string'
+      ? hardBlockedSecretDetections(field.value).map((detection) => ({
+          field: field.location,
+          category: detection.category,
+          ruleId: detection.ruleId,
+          line: detection.line,
+        }))
+      : [],
+  );
+  if (detected.length === 0) return;
+  const locations = detected.map((entry) => `${entry.field} (${entry.category})`).join(', ');
+  throw new OperateError(
+    'E_OPERATE_SECRET_DETECTED',
+    `${context.subject} contains ${detected.length} secret${
+      detected.length === 1 ? '' : 's'
+    } at ${locations}; nothing was persisted.`,
+    { roleId: context.roleId, fields: detected },
+  );
+}
+
+/**
+ * Redact the soft (non-hard-blocking) secret shapes out of a v1.4 advisor report
+ * before it is persisted.
+ *
+ * The committed result's free text is already redacted inside
+ * `createNativeMissionOperatingRoleResult`; the report's rich fields
+ * (`analysisMarkdown`, claims, actions) are the only advisor text that reaches the
+ * `advisor-report` record and the committed board Markdown verbatim, so the same
+ * redaction has to run over them here. PII redaction stays off: this is the secret
+ * boundary, not the PII one.
+ */
+function redactAdvisorReportText(value: unknown): unknown {
+  if (typeof value === 'string') return redactSensitiveText(value, { redactPii: false }).value;
+  if (Array.isArray(value)) return value.map(redactAdvisorReportText);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+        key,
+        redactAdvisorReportText(entry),
+      ]),
+    );
+  }
+  return value;
+}
+
 export async function createOperatingAdapterStartHandoff(input: {
   projectRoot: string;
   cycleId: string;
@@ -1816,8 +1920,13 @@ export async function operateAdapterLifecycle(input: {
         if (!sessionExpired(normalized) && ['prepared', 'recording'].includes(normalized.state)) {
           throw new OperateError(
             'E_OPERATE_ADVISOR_ISOLATION',
-            `Cycle ${input.cycleId} already has an active adapter session with another binding.`,
-            { recoveryCommand: retryRunCommand(normalized) },
+            `Cycle ${input.cycleId} already has an active adapter session with another binding. ` +
+              'Close that session before preparing a new one.',
+            {
+              // Names the escape, not the command that just failed.
+              recoveryCommand: closeOpenSessionCommand(normalized),
+              alternateRecoveryCommand: closeOpenSessionCommand(normalized, 'finalize'),
+            },
           );
         }
         // FR4: a finalized/expired/cancelled same-board session no longer forces
@@ -2278,15 +2387,10 @@ export async function operateAdapterLifecycle(input: {
           (value, index) => ({ location: `conflicts.${index}`, value }),
         ),
       ];
-      for (const field of submittedText) {
-        if (typeof field.value === 'string' && containsSecret(field.value)) {
-          throw new OperateError(
-            'E_OPERATE_SECRET_DETECTED',
-            `Native advisor response contains a secret at ${field.location}; nothing was persisted.`,
-            { roleId: input.role, field: field.location },
-          );
-        }
-      }
+      assertNoHardBlockedSecrets(submittedText, {
+        roleId: input.role,
+        subject: 'Native advisor response',
+      });
       const mandate = session.roleMandates[input.role];
       // US-T1 batch validation: collect EVERY advisor-contract violation (response
       // schema issues, the per-role proposal cap, disallowed proposal types) in one
@@ -2369,10 +2473,13 @@ export async function operateAdapterLifecycle(input: {
     // happen on this path — otherwise a token in a proposal title reaches the
     // commit-safe records and the brief projection unredacted.
     //
-    // This rejects rather than redacts: the result is bound by resultDigest, so
-    // rewriting the content in place would invalidate the binding that proves
-    // the runtime returned exactly this. A runtime that emits a secret must
-    // produce a clean result, not have one silently edited underneath it.
+    // A hard-blocked category rejects rather than redacts: the result is bound by
+    // resultDigest, so rewriting the content in place would invalidate the binding
+    // that proves the runtime returned exactly this. A runtime that emits a real
+    // secret must produce a clean result, not have one silently edited underneath
+    // it. Soft, secret-SHAPED matches were already redacted by
+    // sanitizeGeneratedPlainText inside the result builder, so they never reach
+    // here as a reason to discard the result.
     const generatedText = [
       ...(result.proposals ?? []).flatMap((proposal) =>
         (['title', 'problem', 'proposal'] as const).map((field) => ({
@@ -2389,15 +2496,10 @@ export async function operateAdapterLifecycle(input: {
         value,
       })),
     ];
-    for (const field of generatedText) {
-      if (typeof field.value === 'string' && containsSecret(field.value)) {
-        throw new OperateError(
-          'E_OPERATE_SECRET_DETECTED',
-          `Recorded advisor output contains a secret at ${field.location}; nothing was persisted.`,
-          { roleId: input.role, field: field.location },
-        );
-      }
-    }
+    assertNoHardBlockedSecrets(generatedText, {
+      roleId: input.role,
+      subject: 'Recorded advisor output',
+    });
     if (result.cycleId !== input.cycleId || result.roleId !== input.role) {
       throw new OperateError(
         'E_OPERATE_ADVISOR_ISOLATION',
@@ -2435,17 +2537,23 @@ export async function operateAdapterLifecycle(input: {
       path.join(path.dirname(target), `${input.cycleId}.${input.role}.json`),
       result,
     );
+    // The v1.4 report is the ONLY advisor text persisted verbatim (response.json →
+    // the `advisor-report` record → the committed board Markdown), so its soft,
+    // secret-SHAPED matches are redacted here rather than rejected — the same
+    // treatment the result body's text already received. The identical object is
+    // written to disk and committed as the record, so finalize (which re-reads
+    // response.json) can never disagree with this record.
     const advisorReport =
       session.protocolVersion === '1.4.0' &&
       submitted &&
       typeof submitted === 'object' &&
       !Array.isArray(submitted)
-        ? (submitted as Record<string, unknown>)
+        ? (redactAdvisorReportText(submitted) as Record<string, unknown>)
         : null;
     if (session.protocolVersion === '1.4.0') {
       await atomicPrivateWrite(
         path.join(path.dirname(target), `${input.cycleId}.${input.role}.response.json`),
-        submitted,
+        advisorReport ?? submitted,
       );
     }
     // The role's validated result is now durable in its own machine-local file

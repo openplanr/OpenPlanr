@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -254,9 +255,24 @@ const registryProposalBoundsSchema = z
   .passthrough();
 
 interface AdvisorBriefRegistrySource {
-  createOperatingAdvisorBrief(roleId: string): OperatingAdvisorBrief;
+  createOperatingAdvisorBrief(
+    roleId: string,
+    options?: { protocolVersion?: string },
+  ): OperatingAdvisorBrief;
   listOperatingRoles(): Array<Record<string, unknown> & { id: string }>;
 }
+
+/**
+ * The legacy protocol version OpenPlanr explicitly requests when it needs a role's
+ * pack-style brief. The brief supplies ONLY the per-role bounds the record path
+ * enforces (the proposal cap, the allowed proposal types, the output-byte ceiling)
+ * and the capability tier — never the response contract, which a mandate discloses
+ * from its own `responseSchema`. The version is stated rather than defaulted: the
+ * pipeline refuses a Protocol v1.4 brief outright and no longer guesses a version,
+ * because a silently defaulted one is exactly how a legacy contract reaches a
+ * session that never asked for it.
+ */
+const LEGACY_ADVISOR_BRIEF_PROTOCOL_VERSION = '1.2.0';
 
 /**
  * The IMAGE of a role's registry `allowedRouteKinds` under `routeKindToProposalType`
@@ -319,7 +335,9 @@ export function createRegistryReconciledAdvisorBrief(
   protocol: AdvisorBriefRegistrySource,
   roleId: string,
 ): OperatingAdvisorBrief {
-  const brief = protocol.createOperatingAdvisorBrief(roleId);
+  const brief = protocol.createOperatingAdvisorBrief(roleId, {
+    protocolVersion: LEGACY_ADVISOR_BRIEF_PROTOCOL_VERSION,
+  });
   const role = protocol.listOperatingRoles().find((entry) => entry.id === roleId);
   if (!role) {
     throw new OperateError(
@@ -861,16 +879,19 @@ export interface OperatingMandate {
   responseSchema: 'operating-advisor-response@1.3.0' | 'operating-advisor-response@1.4.0';
   /**
    * US-T1: the DISCLOSED response contract the runtime must satisfy — the same
-   * bounds `record` enforces, shipped so an advisor can dereference them instead
-   * of only a `responseSchema` name it cannot resolve. Serialized verbatim from
-   * the role's brief output facet (`attachMandateResponseContract`); it introduces
-   * no new computation. Layered on by OpenPlanr AFTER the pipeline signs
-   * `mandateDigest` — exactly like `researchGuidance` — so it never alters the
-   * signed digest or the immutable mandate the digest pins. Absent only on the
+   * contract `record` enforces, shipped so an advisor can dereference it instead
+   * of only a `responseSchema` name it cannot resolve
+   * (`attachMandateResponseContract`). The response schema is resolved from this
+   * mandate's OWN `responseSchema` — hence the `schema` field is typed as that
+   * exact value, so the compiler itself forbids disclosing a contract other than
+   * the enforced one — while the per-role bounds come from the brief `record`
+   * enforces. Layered on by OpenPlanr AFTER the pipeline signs `mandateDigest` —
+   * exactly like `researchGuidance` — so it never alters the signed digest or the
+   * immutable mandate the digest pins. Absent only on the
    * compatibility/pre-disclosure path.
    */
   output?: {
-    schema: OperatingAdvisorBrief['output']['schema'];
+    schema: OperatingMandate['responseSchema'];
     jsonSchema: Record<string, unknown>;
     allowedProposalTypes: OperatingAdvisorBrief['output']['allowedProposalTypes'];
     maximumProposals: number;
@@ -1056,28 +1077,194 @@ export async function buildOperatingMandate(input: {
   };
 }
 
+const OPERATING_RESPONSE_SCHEMA_FILE = 'operating-advisor-response.schema.json';
+
+function schemaRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
 /**
- * US-T1: ship the disclosed response contract INSIDE the dispatched mandate.
- * Serializes the role brief's ALREADY-COMPUTED output facet (schema pointer, the
- * dereferenceable JSON Schema, allowed proposal types, the per-role proposal cap,
- * the output-byte ceiling, and required behaviors) onto the mandate as its
- * `output` block — no new computation, just disclosure of what `record` already
- * enforces. Layered on AFTER the pipeline signs `mandateDigest` (the returned
- * object keeps the pipeline's signed digest untouched), exactly like
- * `researchGuidance`, so no digest recomputation is required and writer/verifier
- * stay in agreement over the immutable, signed mandate the digest pins.
+ * Read one packaged protocol schema document from the resolved pipeline install.
+ * Synchronous because the disclosure is attached on the synchronous prepare path;
+ * a missing or unreadable schema is a typed failure, never a silent fallback to a
+ * schema the runtime is not validated against.
+ */
+function readPipelineProtocolSchema(
+  protocolVersion: string,
+  file: string,
+): Record<string, unknown> {
+  const root = resolveOperatingPipelineRoot({ requireMission: true });
+  if (!root) {
+    throw new OperateError(
+      'E_OPERATE_MISSION_UNAVAILABLE',
+      'Disclosing a mandate response contract requires the pipeline package with the Protocol v1.4 schemas.',
+    );
+  }
+  const location = path.join(root, 'schemas', `v${protocolVersion}`, file);
+  let raw: string;
+  try {
+    raw = readFileSync(location, 'utf8');
+  } catch (error) {
+    throw new OperateError(
+      'E_PIPELINE_VERSION_INCOMPATIBLE',
+      `Installed planr-pipeline does not ship ${file} for Protocol ${protocolVersion} at ${location}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+  const parsed = schemaRecord(JSON.parse(raw) as unknown);
+  if (!parsed) {
+    throw new OperateError(
+      'E_PIPELINE_VERSION_INCOMPATIBLE',
+      `${location} is not a JSON Schema object, so the mandate cannot disclose it.`,
+    );
+  }
+  return parsed;
+}
+
+/** Collect every sibling-file `$ref` (`#/$defs/...` pointers are already local). */
+function collectRelativeSchemaRefs(node: unknown, into: Set<string>): void {
+  if (Array.isArray(node)) {
+    for (const item of node) collectRelativeSchemaRefs(item, into);
+    return;
+  }
+  const record = schemaRecord(node);
+  if (!record) return;
+  for (const [key, value] of Object.entries(record)) {
+    if (key === '$ref' && typeof value === 'string') {
+      if (value.endsWith('.schema.json') && !value.includes('://')) into.add(value);
+      continue;
+    }
+    collectRelativeSchemaRefs(value, into);
+  }
+}
+
+const disclosedResponseSchemas = new Map<string, Record<string, unknown>>();
+
+/**
+ * Resolve the advisor-response schema for one protocol version as a SELF-CONTAINED
+ * document. The packaged v1.3/v1.4 response schemas reference the sibling citation
+ * schema by file name, which a runtime holding only the mandate cannot dereference,
+ * so each referenced resource is embedded under `$defs` verbatim. JSON Schema
+ * 2020-12 bundling: an embedded resource keeps its own `$id`, so the existing
+ * sibling `$ref` resolves against the embedded copy and that copy's internal
+ * `#/$defs/...` pointers still resolve inside it. Nothing is rewritten, so the
+ * disclosed schema stays byte-faithful to the enforced one.
+ */
+function resolveDisclosedResponseSchema(protocolVersion: string): Record<string, unknown> {
+  const cached = disclosedResponseSchemas.get(protocolVersion);
+  if (cached) return structuredClone(cached);
+  const schema = readPipelineProtocolSchema(protocolVersion, OPERATING_RESPONSE_SCHEMA_FILE);
+  const identifier = typeof schema.$id === 'string' ? schema.$id : '';
+  if (!identifier.endsWith(`/v${protocolVersion}/${OPERATING_RESPONSE_SCHEMA_FILE}`)) {
+    throw new OperateError(
+      'E_PIPELINE_VERSION_INCOMPATIBLE',
+      `The advisor-response schema packaged for Protocol ${protocolVersion} declares $id "${identifier}", which does not name that version; disclosing it would hand the runtime a contract it is not validated against.`,
+    );
+  }
+  const references = new Set<string>();
+  collectRelativeSchemaRefs(schema, references);
+  const embedded = { ...(schemaRecord(schema.$defs) ?? {}) };
+  for (const reference of [...references].sort()) {
+    embedded[reference.replace(/\.schema\.json$/, '')] = readPipelineProtocolSchema(
+      protocolVersion,
+      reference,
+    );
+  }
+  const bundled =
+    references.size > 0 ? { ...schema, $defs: embedded } : (schema as Record<string, unknown>);
+  disclosedResponseSchemas.set(protocolVersion, bundled);
+  return structuredClone(bundled);
+}
+
+/** The `actions[].routeKind` vocabulary a Protocol v1.4 response may author. */
+function disclosedRouteKinds(jsonSchema: Record<string, unknown>): string[] {
+  const routeKind = schemaRecord(
+    schemaRecord(
+      schemaRecord(schemaRecord(schemaRecord(jsonSchema.properties)?.actions)?.items)?.properties,
+    )?.routeKind,
+  );
+  const values: unknown[] = Array.isArray(routeKind?.enum) ? routeKind.enum : [];
+  const kinds = values.filter((value): value is string => typeof value === 'string');
+  if (kinds.length === 0) {
+    throw new OperateError(
+      'E_PIPELINE_VERSION_INCOMPATIBLE',
+      'The Protocol v1.4 advisor-response schema declares no actions[].routeKind vocabulary, so the mandate cannot disclose the proposal types its actions can produce.',
+    );
+  }
+  return kinds;
+}
+
+/**
+ * The proposal types the disclosed response can ACTUALLY produce. A Protocol v1.4
+ * response carries no proposal `type` at all — it carries actions whose
+ * `routeKind` the record path projects through `routeKindToProposalType` — so
+ * disclosing the frozen v1.2 vocabulary (`data-gap`, or the Chair's
+ * `merge`/`sequence`) would name types no v1.4 action can express. The disclosed
+ * set is therefore the image of the disclosed route-kind vocabulary, and it must
+ * stay within the set `record` enforces from the registry-reconciled brief; a set
+ * the enforcer would reject is a defect, not a disclosure.
+ */
+function disclosedProposalTypes(
+  mandate: OperatingMandate,
+  brief: OperatingAdvisorBrief,
+  jsonSchema: Record<string, unknown>,
+): OperatingAdvisorBrief['output']['allowedProposalTypes'] {
+  if (mandate.protocolVersion !== '1.4.0') return [...brief.output.allowedProposalTypes];
+  const image = [...new Set(disclosedRouteKinds(jsonSchema).map(routeKindToProposalType))].sort();
+  const enforced = new Set<string>(brief.output.allowedProposalTypes);
+  const rejected = image.filter((type) => !enforced.has(type));
+  if (rejected.length > 0) {
+    throw new OperateError(
+      'E_OPERATE_STATE_INVALID',
+      `Advisor ${mandate.roleId} would disclose proposal types its own enforced brief rejects: ${rejected.join(', ')}.`,
+    );
+  }
+  return image;
+}
+
+/**
+ * US-T1: ship the disclosed response contract INSIDE the dispatched mandate — the
+ * dereferenceable response JSON Schema plus the per-role bounds `record` enforces
+ * (the proposal cap, the reachable proposal types, the output-byte ceiling, and
+ * required behaviors) — so a runtime can satisfy the contract instead of guessing
+ * at a `responseSchema` name it cannot resolve.
+ *
+ * DEFECT this closes: the schema was previously taken from the role's pack-style
+ * brief. That brief is a compatibility-only projection the pipeline builds for
+ * Protocol v1.2/v1.3 sessions and refuses to build for v1.4 at all, so it can
+ * never express the v1.4 contract — yet a v1.4 mandate enforcing
+ * `operating-advisor-response@1.4.0` disclosed that legacy contract, and an advisor
+ * that followed the disclosure literally was rejected by the enforced schema
+ * (v1.2 `proposals` where v1.4 requires `analysisMarkdown`/`claims`/`actions`, and
+ * a `proposals|quiet` outcome where v1.4 admits `actions|quiet|partial`). The
+ * schema is therefore resolved from the mandate's OWN `responseSchema`, which is
+ * also the value disclosed as `output.schema` — so the disclosed identity and the
+ * enforced one agree by construction, at the type level as well as at runtime.
+ *
+ * Layered on AFTER the pipeline signs `mandateDigest` (the returned object keeps
+ * the pipeline's signed digest untouched), exactly like `researchGuidance`, so no
+ * digest recomputation is required and writer/verifier stay in agreement over the
+ * immutable, signed mandate the digest pins.
  */
 export function attachMandateResponseContract(
   mandate: OperatingMandate,
   brief: OperatingAdvisorBrief,
 ): OperatingMandate {
+  const version = mandate.responseSchema.split('@')[1] ?? '';
+  const jsonSchema = resolveDisclosedResponseSchema(version);
   return {
     ...mandate,
     output: {
-      schema: brief.output.schema,
-      jsonSchema: brief.output.jsonSchema,
-      allowedProposalTypes: [...brief.output.allowedProposalTypes],
+      schema: mandate.responseSchema,
+      jsonSchema,
+      allowedProposalTypes: disclosedProposalTypes(mandate, brief, jsonSchema),
       maximumProposals: brief.output.maximumProposals,
+      // The ENFORCED ceiling, not the larger v1.4 registry budget: `record`
+      // measures the canonicalized committed output against this brief value, so
+      // disclosing a wider ceiling would recreate the divergence above.
       maximumOutputBytes: brief.output.maximumOutputBytes,
       requiredBehavior: [...brief.output.requiredBehavior],
     },
