@@ -143,7 +143,51 @@ try {
   // mandate whose disclosed and enforced contracts diverged, a record path that
   // discarded a valid result, and status surfaces that reported a quiet board
   // while results sat on disk. Each was invisible to a green unit suite.
-  const json = (args) => JSON.parse(cliOutput(args));
+  /**
+   * Run a `--json` command and return its payload.
+   *
+   * The CLI signals lifecycle states through exit codes — a healthy handoff is
+   * not exit 0 — so a non-zero status is not by itself a failure. What matters
+   * is the payload's `ok`. Capturing stdout on both paths also means a real
+   * failure reports the CLI's own message instead of "Command failed", which is
+   * what the first CI run of this gate produced and could not be acted on.
+   */
+  const jsonWithInput = (args, input) => {
+    try {
+      return JSON.parse(cliOutput(args, { input }));
+    } catch (error) {
+      const raw = String(error.stdout ?? '');
+      if (raw.trim()) {
+        try {
+          return JSON.parse(raw);
+        } catch {
+          /* fall through */
+        }
+      }
+      throw new Error(
+        `${args.join(' ')} failed (exit ${error.status ?? '?'}): ${(raw || String(error.stderr ?? error.message)).slice(0, 300)}`,
+      );
+    }
+  };
+
+  const json = (args) => {
+    let raw;
+    try {
+      raw = cliOutput(args);
+    } catch (error) {
+      raw = String(error.stdout ?? '');
+      if (!raw.trim()) {
+        throw new Error(
+          `${args.join(' ')} produced no output (exit ${error.status}): ${String(error.stderr ?? '').slice(0, 300)}`,
+        );
+      }
+    }
+    try {
+      return JSON.parse(raw);
+    } catch {
+      throw new Error(`${args.join(' ')} did not emit JSON: ${raw.slice(0, 300)}`);
+    }
+  };
   const revision = run('git', ['rev-parse', 'HEAD'], { cwd: project }).trim();
   const citation = (extra = {}) => ({
     kind: 'repository',
@@ -155,8 +199,7 @@ try {
   });
 
   json(['operate', '--json']);
-  cliOutput(['operate', 'context', 'review', '--stdin', '--json'], {
-    input: JSON.stringify([
+  jsonWithInput(['operate', 'context', 'review', '--stdin', '--json'], JSON.stringify([
       {
         id: 'CTX-purpose',
         field: 'purpose',
@@ -165,8 +208,7 @@ try {
         confidence: 5,
         citations: [citation()],
       },
-    ]),
-  });
+    ]));
 
   // A first-time author supplies the minimum. If the questionnaire rejects that,
   // the journey dead-ends before a cycle can start.
