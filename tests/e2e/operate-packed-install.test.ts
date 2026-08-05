@@ -275,7 +275,13 @@ describe('packed full Operating Board lifecycle', () => {
     expect(jsonResult(fullCli, fullInstallRoot, ['operate', 'inspect', '--json'])).toMatchObject({
       ok: true,
       action: 'inspect',
-      data: { pipeline: { available: true, protocolVersion: '1.2.0' } },
+      // The CONTRACT the installed pipeline enforces — mandates are signed and
+      // validated at the agent protocol version. This asserted '1.2.0' (the
+      // frozen on-disk artifact envelope) and so encoded the very defect a live
+      // cycle later hit: the journey's first command advertising a capability
+      // two generations stale. A packed-install test asserting the wrong value
+      // is worse than none — it certifies the artifact and the bug together.
+      data: { pipeline: { available: true, protocolVersion: '1.4.0' } },
     });
   });
 
