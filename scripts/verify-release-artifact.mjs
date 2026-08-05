@@ -216,11 +216,28 @@ try {
   const envelope = { ...questionnaire.submission.envelope.fixedFields };
   envelope.questionnaireDigest = questionnaire.digest;
   envelope.submittedAt = new Date().toISOString();
+  // Answer each question by its OWN type and constraints. A fixture that sends
+  // the same string to every question passes only while the questionnaire
+  // happens to be all free text: a choice question then fails with "contains an
+  // unsupported choice", which is what blocked the first release run using this
+  // gate. Prefer the CLI's own suggestion — that is the value a real operator is
+  // offered — and fall back to the declared vocabulary.
+  const byId = new Map((questionnaire.questions ?? []).map((q) => [q.questionId, q]));
+  const answerFor = (question) => {
+    if (question?.suggestedValue !== undefined && question.suggestedValue !== null) {
+      return question.suggestedValue;
+    }
+    const choices = question?.choices?.map((choice) => choice.id) ?? [];
+    if (choices.length) return question.type === 'multi-choice' ? [choices[0]] : choices[0];
+    if (question?.type === 'repeated-text') return ['Release gate fixture'];
+    if (question?.type === 'boolean') return true;
+    return 'Release Gate';
+  };
   envelope.answers = questionnaire.submission.envelope.dynamicFields.answers.items.map((item) => ({
     questionId: item.questionId,
     questionVersion: item.questionVersion,
     sensitivity: item.sensitivity,
-    value: 'Release Gate',
+    value: answerFor(byId.get(item.questionId)),
   }));
   // A rejection here is a JOURNEY failure, not a broken gate: report it as a
   // failed assertion naming the reason, rather than letting a non-zero exit
