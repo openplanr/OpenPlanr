@@ -1,23 +1,12 @@
-# OPERATE-SPEC-005 CLI work item
+# OPERATE-SPEC-005
 
-Umbrella specification: `SPEC-005`  
-Release participant: `openplanr@1.18.0`
+Release record binding for `openplanr@1.18.0`.
 
-This repository's contribution to the coordinated field-fix release of the
-Operating Board: native mission dispatch wired end to end through the adapter
-lifecycle (mission packets with bounded read-only grants and v1.3
-citation-bearing responses), pack input budgets enforced fail-closed at
-field-incident scale, a human renderer for the mandatory review gate,
-`ok: true` interaction continuations with directly executable confirmation
-argv, machine-local state bound to board identity with matching doctor
-staleness diagnostics, typed provider-bootstrap errors with actionable
-remedies, real host-runtime detection in the guided path, the onboarding
-questionnaire diet with per-choice preselection and `--answers-file`, and
-surfaced, refreshing, configurable adapter session leases.
+What changed in this release is in [CHANGELOG.md](../../CHANGELOG.md) under `1.18.0`.
+The coordinated release record — participants, versions, published artifacts, and
+canary evidence — is operation `OPERATE-SPEC-005` in
+[openplanr/marketplace](https://github.com/openplanr/marketplace).
 
-Full feature documentation: `docs/feat-operating-board-field-fix-release/`.
-Depends on `planr-pipeline@0.34.0` (mission record actions naming the
-generated lens agents; both protocol registries at 1.3.0).
-
-Before publication each participant may compensate locally; after an npm
-package is public, recovery is forward-fix only.
+This file exists because that operation binds this path, and the binding is part of
+the operation's digest so it cannot be retargeted after the fact. Releases recorded
+under the current convention bind `CHANGELOG.md` directly and add no file here.
