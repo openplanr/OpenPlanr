@@ -281,11 +281,42 @@ try {
 
   json(['operate', 'init', '--resume', stage.sessionId, '--confirm', confirmDigest, '--yes', '--json']);
 
-  const started = json(['operate', 'run', '--json']);
-  const prepareArgs = String(started.next?.[0] ?? '').replace(/^planr /, '').split(' ');
-  const prepared = json([...prepareArgs]);
-  const session = prepared.data ?? {};
-  const mandate = session.mandates?.['strategy-finance'] ?? {};
+  // Follow the handoff rather than assuming the first `run` offers prepare. The
+  // cycle advances through several actions and their order is not fixed; a gate
+  // that hard-codes one step silently runs the wrong command and then asserts
+  // against an empty object.
+  let handoff = json(['operate', 'run', '--json']);
+  let prepared = null;
+  const visited = [];
+  for (let step = 0; step < 5; step += 1) {
+    const nextCommand = String(handoff.next?.[0] ?? '');
+    visited.push(nextCommand || '(no next action)');
+    if (!nextCommand) break;
+    const args = nextCommand.replace(/^planr /, '').split(' ').filter(Boolean);
+    const payload = json(args);
+    if (payload?.data?.mandates) {
+      prepared = payload;
+      break;
+    }
+    handoff = payload;
+  }
+
+  const session = prepared?.data ?? {};
+  const mandate = session.mandates?.['strategy-finance'];
+
+  // Assert the mandate EXISTS before comparing its fields. Comparing
+  // `mandate.responseSchema === mandate.output?.schema` on a missing mandate is
+  // `undefined === undefined` — a green check that proves nothing, which is
+  // exactly what masked a failed prepare in CI.
+  check(
+    'harness prepare produced a role mandate',
+    Boolean(mandate?.responseSchema),
+    `handoff chain: ${visited.join(' → ')}`,
+  );
+  if (!mandate?.responseSchema) {
+    console.log('  … remaining cycle checks skipped: no mandate was prepared');
+    throw new JourneyStop();
+  }
 
   check(
     'the mandate discloses the contract it enforces',
