@@ -282,7 +282,11 @@ function conditionVisible(
   });
 }
 
-function normalizeValue(question: GuidedQuestion, value: GuidedQuestionValue): GuidedQuestionValue {
+/** Exported for the bounded-validation tests; the engine calls it internally. */
+export function normalizeGuidedAnswerValue(
+  question: GuidedQuestion,
+  value: GuidedQuestionValue,
+): GuidedQuestionValue {
   const normalized = Array.isArray(value)
     ? [...new Set(value.map((entry) => entry.trim()).filter(Boolean))]
     : typeof value === 'string'
@@ -302,18 +306,44 @@ function normalizeValue(question: GuidedQuestion, value: GuidedQuestionValue): G
   }
   const length = typeof normalized === 'string' ? normalized.length : undefined;
   const itemCount = Array.isArray(normalized) ? normalized.length : undefined;
-  if (
-    (length !== undefined &&
-      ((question.validation?.minLength !== undefined && length < question.validation.minLength) ||
-        (question.validation?.maxLength !== undefined &&
-          length > question.validation.maxLength))) ||
-    (itemCount !== undefined &&
-      ((question.validation?.minItems !== undefined && itemCount < question.validation.minItems) ||
-        (question.validation?.maxItems !== undefined && itemCount > question.validation.maxItems)))
-  ) {
+
+  // An OPTIONAL question left empty is absent, not invalid. Lower bounds describe
+  // what a supplied answer must contain; applying them to an empty optional answer
+  // rejects the questionnaire on a field the author was never asked to fill.
+  //
+  // This is not hypothetical: a first `operate init` on a clean project failed its
+  // write-free preview with "Known unknowns does not satisfy its bounded validation
+  // rules" — a question declared `required: false` whose own contract says it never
+  // blocks the preview. There was no way to satisfy it from the questionnaire,
+  // because the questionnaire never surfaced it.
+  const supplied = itemCount !== undefined ? itemCount > 0 : (length ?? 0) > 0;
+  if (!question.required && !supplied) return normalized;
+
+  const violations: string[] = [];
+  if (length !== undefined) {
+    const { minLength, maxLength } = question.validation ?? {};
+    if (minLength !== undefined && length < minLength) {
+      violations.push(`needs at least ${minLength} character(s), received ${length}`);
+    }
+    if (maxLength !== undefined && length > maxLength) {
+      violations.push(`allows at most ${maxLength} character(s), received ${length}`);
+    }
+  }
+  if (itemCount !== undefined) {
+    const { minItems, maxItems } = question.validation ?? {};
+    if (minItems !== undefined && itemCount < minItems) {
+      violations.push(`needs at least ${minItems} item(s), received ${itemCount}`);
+    }
+    if (maxItems !== undefined && itemCount > maxItems) {
+      violations.push(`allows at most ${maxItems} item(s), received ${itemCount}`);
+    }
+  }
+  if (violations.length) {
+    // State the rule and the received value. The previous message named only the
+    // field, leaving an author to guess which bound was missed and by how much.
     throw new OperateError(
       'E_OPERATE_QUESTIONNAIRE_INVALID',
-      `${question.label} does not satisfy its bounded validation rules.`,
+      `${question.label} does not satisfy its bounded validation rules: ${violations.join('; ')}.`,
     );
   }
   return normalized;
@@ -343,7 +373,7 @@ export async function evaluateOperatingInitQuestions(input: {
   for (const definition of definitions) {
     const current = definition.read(answers);
     if (current !== undefined && answered(current)) {
-      answers = definition.write(answers, normalizeValue(definition.question, current));
+      answers = definition.write(answers, normalizeGuidedAnswerValue(definition.question, current));
     }
   }
   validateSemanticAnswers(answers);
@@ -424,7 +454,7 @@ export function applyOperatingInitAnswer(
       `Unknown Operating Board question: ${questionId}.`,
     );
   }
-  return definition.write(answers, normalizeValue(definition.question, value));
+  return definition.write(answers, normalizeGuidedAnswerValue(definition.question, value));
 }
 
 export async function createOperatingInitQuestionnaire(input: {

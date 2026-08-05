@@ -32,6 +32,9 @@ import { fileURLToPath } from 'node:url';
  */
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+/** Thrown to end the journey early after a check has already been recorded. */
+class JourneyStop extends Error {}
 const failures = [];
 const notes = [];
 
@@ -97,6 +100,15 @@ try {
   // uniquely adds is what happens when the product is actually used.
 
   writeFileSync(join(project, 'package.json'), '{"name":"gate-project","version":"1.0.0"}\n');
+  // Citations are anchored to a revision, so the fixture has to be a real
+  // repository with a real commit — the same thing a user's project is.
+  run('git', ['init', '-q'], { cwd: project });
+  run('git', ['add', '-A'], { cwd: project });
+  run(
+    'git',
+    ['-c', 'user.email=gate@example.invalid', '-c', 'user.name=Release Gate', 'commit', '-qm', 'fixture'],
+    { cwd: project },
+  );
 
   const inspect = JSON.parse(cliOutput(['operate', 'inspect', '--json']));
   check('operate inspect succeeds on a fresh project', inspect.ok === true);
@@ -125,11 +137,176 @@ try {
   })();
   check('setup installed the runtime skills it reported', skills.length > 0, `found ${skills.length}`);
 
+  // ── The cycle itself ────────────────────────────────────────────────────
+  // Everything above is reachable by inspection. These steps require actually
+  // driving the product, and they are where the expensive defects lived: a
+  // mandate whose disclosed and enforced contracts diverged, a record path that
+  // discarded a valid result, and status surfaces that reported a quiet board
+  // while results sat on disk. Each was invisible to a green unit suite.
+  const json = (args) => JSON.parse(cliOutput(args));
+  const revision = run('git', ['rev-parse', 'HEAD'], { cwd: project }).trim();
+  const citation = (extra = {}) => ({
+    kind: 'repository',
+    path: 'package.json',
+    startLine: 1,
+    endLine: 3,
+    revision,
+    ...extra,
+  });
+
+  json(['operate', '--json']);
+  cliOutput(['operate', 'context', 'review', '--stdin', '--json'], {
+    input: JSON.stringify([
+      {
+        id: 'CTX-purpose',
+        field: 'purpose',
+        value: 'A release-gate fixture driven end to end against the packed artifact.',
+        epistemicStatus: 'observed',
+        confidence: 5,
+        citations: [citation()],
+      },
+    ]),
+  });
+
+  // A first-time author supplies the minimum. If the questionnaire rejects that,
+  // the journey dead-ends before a cycle can start.
+  const questionnaire = json(['operate', 'init', '--json']).questionnaire;
+  const envelope = { ...questionnaire.submission.envelope.fixedFields };
+  envelope.questionnaireDigest = questionnaire.digest;
+  envelope.submittedAt = new Date().toISOString();
+  envelope.answers = questionnaire.submission.envelope.dynamicFields.answers.items.map((item) => ({
+    questionId: item.questionId,
+    questionVersion: item.questionVersion,
+    sensitivity: item.sensitivity,
+    value: 'Release Gate',
+  }));
+  // A rejection here is a JOURNEY failure, not a broken gate: report it as a
+  // failed assertion naming the reason, rather than letting a non-zero exit
+  // surface as "the gate could not run".
+  let preview = { ok: false, message: '' };
+  try {
+    preview = JSON.parse(
+      cliOutput(['operate', 'init', '--resume', questionnaire.sessionId, '--stdin', '--json'], {
+        input: JSON.stringify(envelope),
+      }),
+    );
+  } catch (error) {
+    const payload = String(error.stdout ?? '');
+    try {
+      preview = JSON.parse(payload);
+    } catch {
+      preview = { ok: false, message: payload.slice(0, 200) || String(error.message).slice(0, 200) };
+    }
+  }
+  check(
+    'a minimal first-run questionnaire reaches the write-free preview',
+    preview.ok === true,
+    preview.message ?? '',
+  );
+  if (preview.ok !== true) {
+    // The rest of the journey depends on an initialized board; stopping here
+    // keeps the report honest instead of cascading unrelated failures.
+    console.log('  … remaining cycle checks skipped: initialization did not complete');
+    throw new JourneyStop();
+  }
+
+  const confirmDigest = String(preview.next?.[0] ?? '').split('--confirm ')[1]?.split(' ')[0];
+  json(['operate', 'init', '--resume', questionnaire.sessionId, '--confirm', confirmDigest, '--yes', '--json']);
+
+  const started = json(['operate', 'run', '--json']);
+  const prepareArgs = String(started.next?.[0] ?? '').replace(/^planr /, '').split(' ');
+  const prepared = json([...prepareArgs]);
+  const session = prepared.data ?? {};
+  const mandate = session.mandates?.['strategy-finance'] ?? {};
+
+  check(
+    'the mandate discloses the contract it enforces',
+    mandate.responseSchema === mandate.output?.schema,
+    `enforced ${mandate.responseSchema}, disclosed ${mandate.output?.schema}`,
+  );
+  check(
+    'the disclosed schema is dereferenceable and matches that version',
+    String(mandate.output?.jsonSchema?.$id ?? '').includes(
+      String(mandate.responseSchema ?? '').split('@')[1] ?? 'x',
+    ),
+    `$id ${mandate.output?.jsonSchema?.$id}`,
+  );
+
+  // A public workflow permission line is not a secret. Discarding a whole result
+  // for quoting one cost a real cycle two round-trips and nearly a lens.
+  const permissionLine = ['id', 'token'].join('-') + ': write';
+  const response = {
+    outcome: 'actions',
+    analysisMarkdown: `The publish workflow requests ${permissionLine} so provenance can be attested.`,
+    claims: [
+      {
+        id: 'c1',
+        statement: `The workflow declares ${permissionLine}.`,
+        epistemicStatus: 'observed',
+        confidence: 5,
+        citations: [citation()],
+      },
+    ],
+    actions: [
+      {
+        actionKey: 'gate-probe',
+        title: 'Release gate probe',
+        summary: 'Recorded by the release-artifact gate.',
+        lane: 'DEV',
+        routeKind: 'quick-task',
+        horizon: 'immediate',
+        confidence: 5,
+        citations: [citation()],
+      },
+    ],
+    gaps: [],
+    conflicts: [],
+  };
+  let recorded = false;
+  try {
+    cliOutput(
+      [
+        'operate', 'harness', 'record',
+        '--role', 'strategy-finance',
+        '--cycle-id', session.cycleId,
+        '--evidence-digest', session.evidenceDigest,
+        '--lease', session.lease,
+        '--idempotency-key', session.idempotencyKey,
+        '--stdin', '--json',
+      ],
+      { input: JSON.stringify(response) },
+    );
+    recorded = true;
+  } catch (error) {
+    notes.push(`record stderr: ${String(error.stdout ?? error.stderr ?? '').slice(0, 300)}`);
+  }
+  check('a result quoting a public permission line records', recorded);
+
+  // With one lens recorded and the Chair outstanding, no surface may claim the
+  // board is quiet or that the review gate has been reached.
+  const statusText = cliOutput(['operate', 'status']);
+  check(
+    'status does not call a mid-flight cycle quiet',
+    !/is quiet|Board is quiet/.test(statusText) || /not quiet/.test(statusText),
+    statusText.split('\n')[0]?.slice(0, 120),
+  );
+  const reviewText = cliOutput(['operate', 'review']);
+  check(
+    'review does not claim a review gate the cycle has not reached',
+    /has not reached the review gate/.test(reviewText),
+    reviewText.split('\n')[0]?.slice(0, 120),
+  );
+
   console.log('');
 } catch (error) {
-  console.error(`\nRelease-artifact gate could not run: ${error.message}`);
-  if (workspace) rmSync(workspace, { recursive: true, force: true });
-  process.exit(2);
+  // A JourneyStop means a check already recorded the failure and the remaining
+  // steps depend on what failed — exit 1 (the artifact is broken), not 2 (the
+  // gate is broken). Everything else is the gate itself failing to run.
+  if (!(error instanceof JourneyStop)) {
+    console.error(`\nRelease-artifact gate could not run: ${error.message}`);
+    if (workspace) rmSync(workspace, { recursive: true, force: true });
+    process.exit(2);
+  }
 }
 
 if (workspace) rmSync(workspace, { recursive: true, force: true });
