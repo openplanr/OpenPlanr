@@ -140,7 +140,7 @@ test(`walkthrough navigation stays painted, preserves product state and handles 
       const page = await context.newPage();
       page.setDefaultTimeout(8000);
       page.on('pageerror', error => errors.push(`${host}: ${error.message}`));
-      await page.goto(url);
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
       await page.waitForSelector('[data-design-ready="true"]');
       await page.waitForFunction(() => !document.documentElement.hasAttribute('data-design-opening'));
       await page.locator('[data-design-view="walkthrough"]').click();

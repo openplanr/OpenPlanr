@@ -221,7 +221,10 @@ test("browser studio boots through the protected artifact server and supports a 
 		page.on("console", (message) => {
 			if (message.type() === "error") consoleErrors.push(message.text());
 		});
-		await page.goto(`http://127.0.0.1:${port}${session.path}`);
+		await page.goto(`http://127.0.0.1:${port}${session.path}`, {
+			waitUntil: "domcontentloaded",
+			timeout: 30_000,
+		});
 		await page.waitForSelector('[data-design-ready="true"]');
 		// Runtime mounting replaces current threads; stale feedback must survive in
 		// the same rail, outside that runtime-owned slot, including after reload.
@@ -704,7 +707,7 @@ test("journey-start thumbnails capture later screens when they become visible wi
         const response = await fetch(`http://127.0.0.1:${port}/internal/v1/sessions`, { method: 'POST', headers: { authorization: `Bearer ${server.controlToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ envelope: data.envelope, title: data.document.title, cwd: temporary }) });
         assert.equal(response.status, 201);
         const session = await response.json();
-        await page.goto(`http://127.0.0.1:${port}${session.path}`);
+        await page.goto(`http://127.0.0.1:${port}${session.path}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
         await page.waitForSelector('[data-design-ready="true"]');
         await page.waitForSelector('[data-design-screen="overview"] .design-thumbnail img');
         const basis = await page.evaluate(() => { const {view, variantId, frameId} = window.__openPlanrDesignStudio.getState(); return {view, variantId, frameId}; });

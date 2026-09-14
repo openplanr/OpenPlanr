@@ -24,6 +24,7 @@ const steps = Object.freeze([
     cwd: root,
     args: [
       '--test',
+      '--test-concurrency=1',
       'tests/protocol/design-contracts.test.mjs',
       'packages/artifact/tests/local-document.test.mjs',
       'packages/artifact/tests/pin-stability.test.mjs',

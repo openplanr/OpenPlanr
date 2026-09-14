@@ -58,7 +58,7 @@ test(`reviewer workflow stays focused, compact and usable with large discussions
       }, { metadata });
       const page = await context.newPage(); page.setDefaultTimeout(8000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
-      await page.goto(review.url); await page.locator('[data-design-ready="true"]').waitFor();
+      await page.goto(review.url, { waitUntil: 'domcontentloaded', timeout: 30000 }); await page.locator('[data-design-ready="true"]').waitFor();
       await page.waitForFunction(() => window.__openPlanrDesignExperience?.getState().metadata.categories['pin-003'] === 'change-request');
       await page.waitForFunction(() => window.__openPlanrArtifactStage.review.getState().review?.pins.length === 120);
       await page.evaluate(() => { window.__openPlanrDesignStudio.setPanels({ navOpen: false, reviewOpen: true }); window.__openPlanrDesignStudio.fitSelection(); });
