@@ -140,7 +140,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
           />
         </Card>
       ) : (
-        <>
+        <section className="pc-list__surface" aria-label="Planning artifact index">
           <Toolbar
             right={<Switch size="sm" checked={compact} onChange={setCompact} label="Compact" />}
           >
@@ -231,7 +231,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               </div>
             </nav>
           ) : null}
-        </>
+        </section>
       )}
     </div>
   );

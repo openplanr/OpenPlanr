@@ -1828,6 +1828,7 @@ button.pc-tally__cell:focus-visible {
 
 /* ===== dependency graph + outline ===== */
 .pc-graph {
+  position: relative;
   margin: 0;
   overflow: auto;
   background-color: var(--pc-graph-canvas);
@@ -1840,23 +1841,52 @@ button.pc-tally__cell:focus-visible {
   position: relative;
   min-width: 100%;
 }
+.pc-graph__ranks {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 42px;
+  border-bottom: 1px solid var(--pc-border-subtle);
+  background: color-mix(in srgb, var(--pc-surface-panel) 82%, transparent);
+}
+.pc-graph__rank {
+  position: absolute;
+  top: 13px;
+  max-width: 148px;
+  overflow: hidden;
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
 .pc-graph__edges {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
 }
 .pc-graph__edge {
   fill: none;
   stroke: var(--pc-graph-edge);
   stroke-width: 1.25;
+  opacity: 0.38;
+  transition:
+    opacity var(--pc-dur-fast) var(--pc-ease-standard),
+    stroke var(--pc-dur-fast) var(--pc-ease-standard);
 }
 .pc-graph__edge[data-active="true"] {
   stroke: var(--pc-graph-edge-active);
   stroke-width: 1.75;
+  opacity: 1;
 }
 .pc-graph__edge[data-blocked="true"] {
   stroke: var(--pc-graph-edge-blocked);
   stroke-dasharray: 4 3;
+  opacity: 0.72;
+}
+.pc-graph[data-tracing="true"] .pc-graph__edge:not([data-active="true"]) {
+  opacity: 0.08;
 }
 .pc-graph-node {
   position: absolute;
@@ -1871,12 +1901,17 @@ button.pc-tally__cell:focus-visible {
   background: var(--pc-surface-card);
   border: 1px solid var(--pc-border-default);
   border-radius: var(--pc-radius-sm);
-  box-shadow: var(--pc-shadow-sm);
+  box-shadow: var(--pc-shadow-hairline);
   cursor: pointer;
   transition: var(--pc-transition-ui);
 }
+.pc-graph[data-tracing="true"] .pc-graph-node:not([data-related="true"]) {
+  opacity: 0.38;
+}
 .pc-graph-node:hover {
+  background: var(--pc-surface-hover);
   border-color: var(--pc-border-strong);
+  box-shadow: var(--pc-shadow-sm);
 }
 .pc-graph-node:focus-visible {
   outline: none;
@@ -1886,6 +1921,9 @@ button.pc-tally__cell:focus-visible {
 .pc-graph-node[data-selected="true"] {
   background: var(--pc-surface-selected);
   border-color: var(--pc-border-accent);
+  box-shadow:
+    0 0 0 2px var(--pc-focus-halo),
+    var(--pc-shadow-sm);
 }
 .pc-graph-node[data-blocked="true"] {
   border-color: var(--pc-astate-failed-border);

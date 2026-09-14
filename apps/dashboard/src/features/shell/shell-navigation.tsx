@@ -142,6 +142,8 @@ function MobileNavigation({
   operateAvailable: boolean;
 }>) {
   const [moreOpen, setMoreOpen] = useState(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: every route change closes the secondary sheet.
+  useEffect(() => setMoreOpen(false), [route.kind]);
   const primary =
     product === 'operate'
       ? (OPERATE_SECTIONS[0]?.items.slice(0, 3) ?? [])
@@ -174,7 +176,9 @@ function MobileNavigation({
         href={alternateProduct.href}
         data-unavailable={alternateProduct.unavailable || undefined}
         title={
-          alternateProduct.unavailable ? 'operate — no command gateway in this build' : undefined
+          alternateProduct.unavailable
+            ? 'operate — local reviews available; actions require a command gateway'
+            : undefined
         }
       >
         <PcIcon name={alternateProduct.icon} size={16} />
@@ -239,7 +243,11 @@ export function NavRail({ product, route, operateAvailable, onOpenPalette }: Nav
             href="#/operate/today"
             aria-current={product === 'operate' ? 'page' : undefined}
             data-unavailable={operateUnavailable || undefined}
-            title={operateUnavailable ? 'operate — no command gateway in this build' : 'operate'}
+            title={
+              operateUnavailable
+                ? 'operate — local reviews available; actions require a command gateway'
+                : 'operate'
+            }
           >
             <PcIcon name={operateUnavailable ? 'unplug' : 'gauge'} size={12} />
             operate
@@ -592,23 +600,23 @@ export function Inspector({ mode, selection, floating }: InspectorProps) {
           description="Pick a row in a table or a node in the graph to read it here."
         />
       ) : selection.kind === 'action' ? (
-        <>
+        <div className="pc-shell-inspector__content" aria-live="polite">
           <div className="pc-shell-inspector__head">
             <span className="pc-shell-inspector__id">{selection.actionId}</span>
             <StateBadge state={selection.state} size="sm" />
           </div>
           <h2 className="pc-shell-inspector__title">{selection.title}</h2>
-          <div>
-            <Field label="revision" mono>
+          <div className="pc-shell-inspector__metadata">
+            <Field label="Revision" mono>
               {selection.revision}
             </Field>
-            <Field label="route" mono>
+            <Field label="Route" mono>
               {selection.route ?? <Absent />}
             </Field>
-            <Field label="executions" mono>
+            <Field label="Executions" mono>
               {selection.executions > 0 ? selection.executions : <Absent>none</Absent>}
             </Field>
-            <Field label="deepLink" mono>
+            <Field label="Deep link" mono>
               {selection.deepLink ?? <Absent />}
             </Field>
           </div>
@@ -622,28 +630,28 @@ export function Inspector({ mode, selection, floating }: InspectorProps) {
               Open action
             </Button>
           ) : null}
-        </>
+        </div>
       ) : (
-        <>
+        <div className="pc-shell-inspector__content" aria-live="polite">
           <div className="pc-shell-inspector__head">
             <WorkItemChip type={selection.type} id={selection.id} />
             <ArtifactStatus status={selection.status} size="sm" />
           </div>
           <h2 className="pc-shell-inspector__title">{selection.title}</h2>
-          <div>
-            <Field label="type" mono>
+          <div className="pc-shell-inspector__metadata">
+            <Field label="Type" mono>
               {selection.type}
             </Field>
-            <Field label="sprintId" mono>
+            <Field label="Sprint" mono>
               {selection.sprintId ?? <Absent />}
             </Field>
-            <Field label="updated" mono>
+            <Field label="Updated" mono>
               {selection.updated ?? <Absent />}
             </Field>
-            <Field label="dependsOn" mono>
+            <Field label="Dependencies" mono>
               {selection.dependsOn.length > 0 ? selection.dependsOn.join(', ') : <Absent />}
             </Field>
-            <Field label="ref" mono>
+            <Field label="Reference" mono>
               {selection.ref ?? <Absent />}
             </Field>
           </div>
@@ -657,7 +665,7 @@ export function Inspector({ mode, selection, floating }: InspectorProps) {
               Open artifact
             </Button>
           ) : null}
-        </>
+        </div>
       )}
     </aside>
   );

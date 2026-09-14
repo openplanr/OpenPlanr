@@ -393,6 +393,7 @@ export type DependencyGraphProps = Readonly<{
   nodes: readonly GraphNode[];
   edges: readonly GraphEdge[];
   view?: 'graph' | 'outline';
+  flow?: 'source-to-target' | 'target-to-source';
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   height?: number;
@@ -409,10 +410,172 @@ const GRAPH_TYPE_ORDER = [
   'quick',
   'sprint',
 ];
-const GRAPH_COL_W = 176;
-const GRAPH_ROW_H = 46;
-const GRAPH_NODE_W = 148;
-const GRAPH_NODE_H = 30;
+const GRAPH_COL_W = 220;
+const GRAPH_ROW_H = 52;
+const GRAPH_NODE_W = 184;
+const GRAPH_NODE_H = 34;
+const GRAPH_VIEWBOX_WIDTH = 1_000;
+
+function graphNodeOrder(left: GraphNode, right: GraphNode): number {
+  const leftType = GRAPH_TYPE_ORDER.indexOf(left.type);
+  const rightType = GRAPH_TYPE_ORDER.indexOf(right.type);
+  const byType =
+    (leftType < 0 ? GRAPH_TYPE_ORDER.length : leftType) -
+    (rightType < 0 ? GRAPH_TYPE_ORDER.length : rightType);
+  return byType || left.id.localeCompare(right.id, undefined, { numeric: true });
+}
+
+/**
+ * Collapse cycles, then rank the resulting DAG. This keeps same-type tasks in their actual
+ * dependency stages instead of stacking the entire project in one artifact-type column.
+ */
+function dependencyRanks(
+  nodes: readonly GraphNode[],
+  edges: readonly GraphEdge[],
+): ReadonlyMap<string, number> {
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const outgoing = new Map<string, string[]>();
+  for (const node of nodes) outgoing.set(node.id, []);
+  for (const edge of edges) {
+    if (nodeIds.has(edge.from) && nodeIds.has(edge.to)) outgoing.get(edge.from)?.push(edge.to);
+  }
+
+  let sequence = 0;
+  const discovered = new Map<string, number>();
+  const low = new Map<string, number>();
+  const stack: string[] = [];
+  const stacked = new Set<string>();
+  const components: string[][] = [];
+  const visit = (id: string): void => {
+    discovered.set(id, sequence);
+    low.set(id, sequence);
+    sequence += 1;
+    stack.push(id);
+    stacked.add(id);
+    for (const next of outgoing.get(id) ?? []) {
+      if (!discovered.has(next)) {
+        visit(next);
+        low.set(id, Math.min(low.get(id) ?? 0, low.get(next) ?? 0));
+      } else if (stacked.has(next)) {
+        low.set(id, Math.min(low.get(id) ?? 0, discovered.get(next) ?? 0));
+      }
+    }
+    if (low.get(id) !== discovered.get(id)) return;
+    const component: string[] = [];
+    while (stack.length > 0) {
+      const member = stack.pop();
+      if (member === undefined) break;
+      stacked.delete(member);
+      component.push(member);
+      if (member === id) break;
+    }
+    components.push(component);
+  };
+  for (const node of [...nodes].sort(graphNodeOrder)) {
+    if (!discovered.has(node.id)) visit(node.id);
+  }
+
+  const componentOf = new Map<string, number>();
+  components.forEach((component, index) => {
+    for (const id of component) componentOf.set(id, index);
+  });
+  const componentOutgoing = components.map(() => new Set<number>());
+  const indegree = components.map(() => 0);
+  for (const edge of edges) {
+    const from = componentOf.get(edge.from);
+    const to = componentOf.get(edge.to);
+    if (from === undefined || to === undefined || from === to || componentOutgoing[from]?.has(to)) {
+      continue;
+    }
+    componentOutgoing[from]?.add(to);
+    indegree[to] = (indegree[to] ?? 0) + 1;
+  }
+  const componentKey = (index: number) =>
+    [...(components[index] ?? [])].sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true }),
+    )[0] ?? '';
+  const queue = components
+    .map((_, index) => index)
+    .filter((index) => indegree[index] === 0)
+    .sort((a, b) => componentKey(a).localeCompare(componentKey(b), undefined, { numeric: true }));
+  const componentRank = components.map(() => 0);
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current === undefined) break;
+    for (const next of componentOutgoing[current] ?? []) {
+      componentRank[next] = Math.max(componentRank[next] ?? 0, (componentRank[current] ?? 0) + 1);
+      indegree[next] = (indegree[next] ?? 0) - 1;
+      if (indegree[next] === 0) {
+        queue.push(next);
+        queue.sort((a, b) =>
+          componentKey(a).localeCompare(componentKey(b), undefined, { numeric: true }),
+        );
+      }
+    }
+  }
+  return new Map(nodes.map((node) => [node.id, componentRank[componentOf.get(node.id) ?? 0] ?? 0]));
+}
+
+/**
+ * Two deterministic barycentric sweeps keep connected work close across adjacent stages.
+ * This removes most avoidable crossings without hiding edges or changing dependency rank.
+ */
+function orderDependencyColumns(
+  source: readonly (readonly GraphNode[])[],
+  edges: readonly GraphEdge[],
+  rankById: ReadonlyMap<string, number>,
+): GraphNode[][] {
+  const columns = source.map((column) => [...column]);
+  const rowPosition = new Map<string, number>();
+  const remember = (rank: number) => {
+    const column = columns[rank] ?? [];
+    const denominator = Math.max(1, column.length - 1);
+    column.forEach((node, index) => {
+      rowPosition.set(node.id, index / denominator);
+    });
+  };
+  const sortRank = (rank: number, direction: 'parents' | 'children') => {
+    const column = columns[rank] ?? [];
+    const scored = column.map((node) => {
+      const neighbors = edges
+        .filter((edge) => (direction === 'parents' ? edge.to === node.id : edge.from === node.id))
+        .map((edge) => (direction === 'parents' ? edge.from : edge.to))
+        .filter((id) => {
+          const neighborRank = rankById.get(id);
+          return (
+            neighborRank !== undefined &&
+            (direction === 'parents' ? neighborRank < rank : neighborRank > rank)
+          );
+        })
+        .map((id) => rowPosition.get(id))
+        .filter((position): position is number => position !== undefined);
+      return {
+        node,
+        score:
+          neighbors.length > 0
+            ? neighbors.reduce((total, position) => total + position, 0) / neighbors.length
+            : null,
+      };
+    });
+    scored.sort((left, right) => {
+      if (left.score === null && right.score === null) return graphNodeOrder(left.node, right.node);
+      if (left.score === null) return 1;
+      if (right.score === null) return -1;
+      return left.score - right.score || graphNodeOrder(left.node, right.node);
+    });
+    columns[rank] = scored.map(({ node }) => node);
+    remember(rank);
+  };
+
+  for (let pass = 0; pass < 2; pass += 1) {
+    columns.forEach((_, rank) => {
+      remember(rank);
+    });
+    for (let rank = 1; rank < columns.length; rank += 1) sortRank(rank, 'parents');
+    for (let rank = columns.length - 2; rank >= 0; rank -= 1) sortRank(rank, 'children');
+  }
+  return columns;
+}
 
 function OutlineBranch({
   node,
@@ -482,14 +645,19 @@ export function DependencyGraph({
   nodes,
   edges,
   view = 'graph',
+  flow = 'source-to-target',
   selectedId,
   onSelect,
   height,
 }: DependencyGraphProps) {
   const byId = new Map(nodes.map((node) => [node.id, node]));
+  const presentationEdges =
+    flow === 'target-to-source'
+      ? edges.map((edge) => ({ ...edge, from: edge.to, to: edge.from }))
+      : edges;
 
   if (view === 'outline') {
-    const roots = nodes.filter((node) => !edges.some((edge) => edge.to === node.id));
+    const roots = nodes.filter((node) => !presentationEdges.some((edge) => edge.to === node.id));
     return (
       <div className="pc-graph-outline">
         <ul className="pc-graph-outline__list">
@@ -499,7 +667,7 @@ export function DependencyGraph({
               node={root}
               depth={0}
               byId={byId}
-              edges={edges}
+              edges={presentationEdges}
               selectedId={selectedId}
               onSelect={onSelect}
             />
@@ -509,30 +677,69 @@ export function DependencyGraph({
     );
   }
 
-  const columns = GRAPH_TYPE_ORDER.map((type) => ({
-    type,
-    items: nodes.filter((node) => node.type === type),
-  })).filter((column) => column.items.length > 0);
-  const position = new Map<string, { x: number; y: number }>();
-  columns.forEach((column, columnIndex) => {
-    column.items.forEach((node, rowIndex) => {
-      position.set(node.id, { x: columnIndex * GRAPH_COL_W + 8, y: rowIndex * GRAPH_ROW_H + 8 });
+  const rankById = dependencyRanks(nodes, presentationEdges);
+  const rankCount = Math.max(0, ...rankById.values()) + 1;
+  const columns = orderDependencyColumns(
+    Array.from({ length: rankCount }, (_, rank) =>
+      [...nodes].filter((node) => rankById.get(node.id) === rank).sort(graphNodeOrder),
+    ),
+    presentationEdges,
+    rankById,
+  );
+  const maxRows = Math.max(1, ...columns.map((column) => column.length));
+  const canvasHeight = Math.max(height ?? 0, maxRows * GRAPH_ROW_H + 78);
+  const minWidth = Math.max(680, rankCount * GRAPH_COL_W + 48);
+  const tracedIds = new Set(
+    presentationEdges.filter((edge) => edge.active).flatMap((edge) => [edge.from, edge.to]),
+  );
+  const position = new Map<string, { x: number; xPercent: number; y: number }>();
+  columns.forEach((column, rank) => {
+    const xPercent = rankCount === 1 ? 50 : 7 + (rank / (rankCount - 1)) * 86;
+    const top = 48 + ((maxRows - column.length) * GRAPH_ROW_H) / 2;
+    column.forEach((node, rowIndex) => {
+      position.set(node.id, {
+        x: (xPercent / 100) * GRAPH_VIEWBOX_WIDTH,
+        xPercent,
+        y: top + rowIndex * GRAPH_ROW_H,
+      });
     });
   });
-  const width = columns.length * GRAPH_COL_W;
-  const canvasHeight =
-    Math.max(1, ...columns.map((column) => column.items.length)) * GRAPH_ROW_H + 16;
 
   return (
-    <figure className="pc-graph" aria-label="Dependency graph" style={{ height }}>
-      <div className="pc-graph__canvas" style={{ width, height: canvasHeight }}>
-        <svg className="pc-graph__edges" width={width} height={canvasHeight} aria-hidden="true">
+    <figure
+      className="pc-graph"
+      aria-label="Dependency graph"
+      data-tracing={tracedIds.size > 0 || undefined}
+      style={{ height }}
+    >
+      <div className="pc-graph__canvas" style={{ minWidth, height: canvasHeight }}>
+        <div className="pc-graph__ranks" aria-hidden="true">
+          {columns.map((column, rank) => {
+            const xPercent = rankCount === 1 ? 50 : 7 + (rank / (rankCount - 1)) * 86;
+            return (
+              <span
+                // biome-ignore lint/suspicious/noArrayIndexKey: dependency rank is the stable identity.
+                key={rank}
+                className="pc-graph__rank"
+                style={{ left: `${xPercent}%` }}
+              >
+                {rank === 0 ? 'foundation' : `stage ${rank + 1}`} · {column.length}
+              </span>
+            );
+          })}
+        </div>
+        <svg
+          className="pc-graph__edges"
+          viewBox={`0 0 ${GRAPH_VIEWBOX_WIDTH} ${canvasHeight}`}
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
           <title>Dependency edges</title>
-          {edges.map((edge) => {
+          {presentationEdges.map((edge) => {
             const from = position.get(edge.from);
             const to = position.get(edge.to);
             if (!from || !to) return null;
-            const x1 = from.x + GRAPH_NODE_W;
+            const x1 = from.x;
             const y1 = from.y + GRAPH_NODE_H / 2;
             const x2 = to.x;
             const y2 = to.y + GRAPH_NODE_H / 2;
@@ -544,6 +751,7 @@ export function DependencyGraph({
                 data-blocked={edge.blocked || undefined}
                 data-active={edge.active || undefined}
                 d={`M${x1},${y1} C${midX},${y1} ${midX},${y2} ${x2},${y2}`}
+                vectorEffect="non-scaling-stroke"
               />
             );
           })}
@@ -557,9 +765,17 @@ export function DependencyGraph({
               type="button"
               className="pc-graph-node"
               data-selected={selectedId === node.id || undefined}
+              data-related={tracedIds.has(node.id) || undefined}
               data-blocked={node.blocked || undefined}
-              style={{ left: point.x, top: point.y, width: GRAPH_NODE_W, height: GRAPH_NODE_H }}
+              style={{
+                left: `calc(${point.xPercent}% - ${GRAPH_NODE_W / 2}px)`,
+                top: point.y,
+                width: GRAPH_NODE_W,
+                height: GRAPH_NODE_H,
+              }}
               onClick={onSelect ? () => onSelect(node.id) : undefined}
+              title={`${node.id} · ${node.label}`}
+              aria-label={`${node.id}: ${node.label}${node.blocked ? ', blocked' : ''}`}
             >
               <span className="pc-graph-node__dot" data-type={node.type} aria-hidden="true" />
               <span className="pc-graph-node__code">{node.id}</span>
@@ -639,7 +855,8 @@ export function SprintProgress({
   days,
   compact = false,
 }: SprintProgressProps) {
-  const total = segments.reduce((sum, segment) => sum + segment.count, 0) || 1;
+  const actualTotal = segments.reduce((sum, segment) => sum + segment.count, 0);
+  const denominator = actualTotal || 1;
   return (
     <div className="pc-sprint" data-compact={compact || undefined}>
       <div className="pc-sprint__head">
@@ -649,7 +866,7 @@ export function SprintProgress({
             day {day}/{days}
           </span>
         ) : null}
-        <span className="pc-sprint__total">{total} items</span>
+        <span className="pc-sprint__total">{actualTotal} items</span>
       </div>
       <div className="pc-sprint__bar" role="img" aria-label={`${name} progress`}>
         {segments.map((segment) => (
@@ -657,7 +874,7 @@ export function SprintProgress({
             key={segment.state}
             className="pc-sprint__seg"
             data-state={segment.state}
-            style={{ width: `${(segment.count / total) * 100}%` }}
+            style={{ width: `${(segment.count / denominator) * 100}%` }}
             title={`${segment.label ?? segment.state}: ${segment.count}`}
           />
         ))}

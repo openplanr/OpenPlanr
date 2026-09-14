@@ -18,18 +18,25 @@
   grid-auto-flow: column;
   grid-auto-columns: minmax(224px, 1fr);
   gap: 12px;
-  align-items: start;
+  height: clamp(340px, calc(100dvh - 250px), 720px);
+  min-height: 0;
+  align-items: stretch;
   margin-top: 12px;
   padding-bottom: 8px;
   overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
 }
 
 .pc-status-board__column {
   display: flex;
+  min-height: 0;
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  max-height: 100%;
   padding: 10px;
+  overflow: hidden;
   background: var(--pc-surface-panel);
   border: 1px solid var(--pc-border-subtle);
   border-radius: var(--pc-radius-md);
@@ -37,6 +44,7 @@
 
 .pc-status-board__head {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 8px;
   padding-bottom: 2px;
@@ -59,8 +67,13 @@
 
 .pc-status-board__cards {
   display: flex;
+  min-height: 0;
   flex-direction: column;
   gap: 6px;
+  padding-right: 3px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .pc-status-board__card {
@@ -125,6 +138,12 @@
 @media (prefers-reduced-motion: reduce) {
   .pc-status-board__card {
     transition: none;
+  }
+}
+
+@media (max-height: 680px) {
+  .pc-status-board {
+    height: max(300px, calc(100dvh - 220px));
   }
 }
 

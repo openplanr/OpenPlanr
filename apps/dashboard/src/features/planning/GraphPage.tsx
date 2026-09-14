@@ -144,6 +144,11 @@ export function GraphPage({ currentBinding, current }: GraphPageProps) {
     inspector.selection?.kind === 'node'
       ? (index.graphIdOf.get(inspector.selection.id) ?? null)
       : null;
+  const visibleEdges = drawnEdges.map((edge) =>
+    selectedId !== null && (edge.from === selectedId || edge.to === selectedId)
+      ? { ...edge, active: true }
+      : edge,
+  );
   const openNode = (graphId: string) => {
     const node = index.byGraphId.get(graphId);
     if (node) inspectPlanningNode(node);
@@ -158,7 +163,11 @@ export function GraphPage({ currentBinding, current }: GraphPageProps) {
           eyebrow="planr-diagram · graph"
           title="Graph"
           count={`${index.nodes.length} nodes · ${index.edges.length} edges`}
-          description="Two equal presentations of the same edges. Neither is a fallback for the other."
+          description={
+            kind === 'depends_on'
+              ? 'A dependency map ordered from prerequisites to dependent work. Select a node to trace its relationships and inspect its record.'
+              : 'A containment map ordered from parent artifacts to their children. Select a node to inspect its record.'
+          }
         />
         {model.graph.nodes.length === 0 ? (
           <Card padding={0}>
@@ -207,8 +216,9 @@ export function GraphPage({ currentBinding, current }: GraphPageProps) {
               <div style={{ marginTop: 6 }}>
                 <DependencyGraph
                   nodes={index.nodes}
-                  edges={drawnEdges}
+                  edges={visibleEdges}
                   view={view}
+                  flow={kind === 'depends_on' ? 'target-to-source' : 'source-to-target'}
                   selectedId={selectedId}
                   onSelect={openNode}
                   height={GRAPH_HEIGHT}

@@ -181,7 +181,12 @@ export function classifyGraphStatus(rawStatus: unknown): GraphStatus {
     .trim()
     .toLowerCase();
   if (status === 'blocked') return 'blocked';
-  if (status === 'in-progress' || status === 'in_progress' || status === 'in progress') {
+  if (
+    status === 'active' ||
+    status === 'in-progress' ||
+    status === 'in_progress' ||
+    status === 'in progress'
+  ) {
     return 'in-progress';
   }
   if (DONE_STATES.has(status)) return 'done';
@@ -212,9 +217,10 @@ function buildNode(absPath: string, planrDir: string, includeBody: boolean): Gra
   const type = inferType(relativeDir, localId);
   const scope = specScopeOf(relativeDir);
   const id = scope && type !== 'spec' ? `${scope}/${localId}` : localId;
+  const authoredTitle = frontmatter.title ?? frontmatter.name;
   const title =
-    frontmatter.title != null && String(frontmatter.title).trim() !== ''
-      ? String(frontmatter.title)
+    authoredTitle != null && String(authoredTitle).trim() !== ''
+      ? String(authoredTitle)
       : localId;
 
   frontmatter.id = localId;

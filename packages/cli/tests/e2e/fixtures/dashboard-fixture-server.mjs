@@ -62,20 +62,140 @@ function bootstrapForRequest(request) {
   }
 }
 
+function planningForRequest(request) {
+  try {
+    const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
+    if (referer.searchParams.get('planningScenario') !== 'delivery') return fixture.planning;
+  } catch {
+    return fixture.planning;
+  }
+  const graph = {
+    nodes: [
+      {
+        id: 'EPIC-009',
+        type: 'epic',
+        title: 'Reliable registration operations',
+        status: 'in-progress',
+        frontmatter: { id: 'EPIC-009', updated: '2026-09-08' },
+      },
+      {
+        id: 'QT-070',
+        type: 'quick',
+        title: 'Configure the dedicated CRM flow',
+        status: 'done',
+        frontmatter: { id: 'QT-070', updated: '2026-09-03' },
+      },
+      {
+        id: 'QT-071',
+        type: 'quick',
+        title: 'Make failed CRM registrations visible and replayable',
+        status: 'in-progress',
+        frontmatter: {
+          id: 'QT-071',
+          dependsOn: ['QT-070'],
+          updated: '2026-09-08',
+          githubIssue: 162,
+        },
+      },
+      {
+        id: 'T-072',
+        type: 'task',
+        title: 'Add structured logs and correlation IDs',
+        status: 'outstanding',
+        frontmatter: { id: 'T-072', dependsOn: ['QT-071'], updated: '2026-09-09' },
+      },
+      {
+        id: 'T-073',
+        type: 'task',
+        title: 'Verify alerting and replay outcomes',
+        status: 'blocked',
+        frontmatter: { id: 'T-073', dependsOn: ['T-072'], updated: '2026-09-10' },
+      },
+      {
+        id: 'SPRINT-009',
+        type: 'sprint',
+        title: 'SPRINT-009',
+        status: 'outstanding',
+        frontmatter: {
+          id: 'SPRINT-009',
+          name: 'CRM recovery and observability',
+          status: 'active',
+          startDate: '2026-09-08',
+          endDate: '2026-09-22',
+          goal: 'Recover failed registrations and prove the path is observable.',
+          taskIds: ['QT-071', 'T-072', 'T-073'],
+        },
+      },
+      ...Array.from({ length: 32 }, (_, index) => ({
+        id: `QT-${String(index + 100).padStart(3, '0')}`,
+        type: 'quick',
+        title: `Completed maintenance item ${index + 1}`,
+        status: 'done',
+        frontmatter: {
+          id: `QT-${String(index + 100).padStart(3, '0')}`,
+          updated: '2026-09-01',
+        },
+      })),
+    ],
+    edges: [
+      { from: 'QT-071', to: 'QT-070', kind: 'depends_on' },
+      { from: 'T-072', to: 'QT-071', kind: 'depends_on' },
+      { from: 'T-073', to: 'T-072', kind: 'depends_on' },
+    ],
+  };
+  return {
+    ...fixture.planning,
+    cursor: { ...fixture.planning.cursor, viewHash: sha256Jcs(graph) },
+    mode: 'agile',
+    graph,
+  };
+}
+
 const LOCAL_REVIEW_ID = '2026-09-14-modul-events';
 const LOCAL_REVIEW_MARKDOWN = `# Operating board report — Modul events
 
+## Scope
+- **Subject:** Modul events release operations
+- **Window:** current snapshot on main
+- **Requested decision:** periodic review
+- **Custody:** local-only
+
 ## Executive summary
-Act now on the verified release path.
+**Overall signal: act now.** Act now on the verified release path.
 
 ## Decision queue
-### D1 — P0 Verify the CRM flow
+### D1 — [P0] Verify the CRM flow
 - **Recommendation:** Run the smoke test before engineering work.
+- **Why now:** A dated event depends on the flow and failures are silent.
+- **Suggested owner:** Asem; CRM owner if it fails
+- **Confidence:** high on the code path; unknown on current flow state
+- **First step:** Run the CRM smoke test and record the result.
+- **Expected result:** The test row reaches created and failed rows are counted.
+- **Check:** Inspect the admin row and record a dated result.
+- **Dependencies:** none
+- **Sources:** \`docs/crm-registration-webhook.md:12\`
 
 ## Action plan
-| ID | Priority | Action |
-|---|---|---|
-| A1 | P0 | Run the CRM smoke test |
+| ID | Priority | Action | Suggested owner | First step | Success measure | Check | Depends on |
+|---|---|---|---|---|---|---|---|
+| A1 | P0 | Run the CRM smoke test | Asem | Submit one test registration | Row reaches created | Inspect the admin row | D1 |
+
+## Risks and dissent
+- **Challenger dissent:** Verify before dispatching engineering.
+
+## Decision-changing gaps
+- **G1 — Live flow state:** A smoke test decides whether this is an outage or hardening.
+
+## Review coverage
+| Lens | Outcome | Note | Informed |
+|---|---|---|---|
+| CEO | reported (signal: action) | \`ceo.md\` | D1 |
+| CTO | reported (signal: action) | \`cto.md\` | D1 |
+| CPO | reported (signal: action) | \`cpo.md\` | D1 |
+| CMO | reported (signal: insufficient context) | \`cmo.md\` | watch acquisition |
+| COO | reported (signal: action) | \`coo.md\` | D1 |
+| Challenger | reported (verdict: holds with exceptions) | \`challenger.md\` | D1 |
+| Chair | reported | \`chair.md\` | synthesis |
 
 ## Issues
 - **I1 — Validator wrapper:** exits one after clean validation.
@@ -84,9 +204,119 @@ const LOCAL_REVIEW_ITEM = Object.freeze({
   cycleId: LOCAL_REVIEW_ID,
   title: 'Operating board report — Modul events',
   summary: 'Act now on the verified release path.',
+  signal: 'act now',
   updatedAt: '2026-09-14T20:10:00.000Z',
-  counts: Object.freeze({ decisions: 1, actions: 1, issues: 1 }),
+  counts: Object.freeze({ decisions: 1, actions: 1, gaps: 1, issues: 1 }),
   href: `#/operate/cycles/${LOCAL_REVIEW_ID}`,
+});
+const LOCAL_REVIEW_DETAIL = Object.freeze({
+  ...LOCAL_REVIEW_ITEM,
+  scope: Object.freeze({
+    subject: 'Modul events release operations',
+    window: 'current snapshot on main',
+    requestedDecision: 'periodic review',
+    custody: 'local-only',
+  }),
+  decisions: Object.freeze([
+    Object.freeze({
+      id: 'D1',
+      priority: 'P0',
+      title: 'Verify the CRM flow',
+      recommendation: 'Run the smoke test before engineering work.',
+      whyNow: 'A dated event depends on the flow and failures are silent.',
+      owner: 'Asem; CRM owner if it fails',
+      confidence: 'high on the code path; unknown on current flow state',
+      firstStep: 'Run the CRM smoke test and record the result.',
+      expectedResult: 'The test row reaches created and failed rows are counted.',
+      check: 'Inspect the admin row and record a dated result.',
+      dependencies: 'none',
+      revisitWhen: '',
+      sources: 'docs/crm-registration-webhook.md:12',
+      dissent: 'Verify before dispatching engineering.',
+    }),
+  ]),
+  actions: Object.freeze([
+    Object.freeze({
+      id: 'A1',
+      priority: 'P0',
+      action: 'Run the CRM smoke test',
+      owner: 'Asem',
+      firstStep: 'Submit one test registration before dispatching QT-071',
+      successMeasure: 'Row reaches created',
+      check: 'Inspect the admin row',
+      dependencies: 'D1',
+      state: 'proposed',
+    }),
+  ]),
+  gaps: Object.freeze([
+    Object.freeze({
+      id: 'G1',
+      title: 'Live flow state',
+      detail: 'A smoke test decides whether this is an outage or hardening.',
+    }),
+  ]),
+  risks: Object.freeze([
+    Object.freeze({
+      id: 'R1',
+      title: 'Challenger dissent',
+      detail: 'Verify before dispatching engineering.',
+    }),
+  ]),
+  issues: Object.freeze([
+    Object.freeze({
+      id: 'I1',
+      title: 'Validator wrapper',
+      detail: 'exits one after clean validation.',
+    }),
+  ]),
+  lenses: Object.freeze(
+    [
+      ['CEO', 'action', 5, 'D1'],
+      ['CTO', 'action', 5, 'D1'],
+      ['CPO', 'action', 5, 'D1'],
+      ['CMO', 'insufficient context', 4, 'watch acquisition'],
+      ['COO', 'action', 5, 'D1'],
+      ['Challenger', 'holds with exceptions', 1, 'D1'],
+      ['Chair', 'reported', 1, 'synthesis'],
+    ].map(([name, signal, findings, informed]) =>
+      Object.freeze({
+        name,
+        filename: `${String(name).toLowerCase()}.md`,
+        present: true,
+        outcome: `reported (signal: ${signal})`,
+        signal,
+        informed,
+        findings,
+        recommendation: '',
+      }),
+    ),
+  ),
+  evidence: Object.freeze([
+    Object.freeze({
+      id: 'E1',
+      reference: 'docs/crm-registration-webhook.md:12',
+      kind: 'source location',
+      freshness: 'captured in cycle',
+    }),
+  ]),
+  recovery: Object.freeze({
+    complete: true,
+    presentFiles: Object.freeze([
+      'board-report.md',
+      'cycle.md',
+      'ceo.md',
+      'cto.md',
+      'cpo.md',
+      'cmo.md',
+      'coo.md',
+      'challenger.md',
+      'chair.md',
+    ]),
+    missingFiles: Object.freeze([]),
+    totalBytes: 14_208,
+    custody: 'local-only',
+  }),
+  markdown: LOCAL_REVIEW_MARKDOWN,
 });
 
 function localReviewRequest(request) {
@@ -488,7 +718,7 @@ async function routeApi(request, response, next) {
           domainVersion: '1.0.0',
           generation: String(DASHBOARD_FIXTURE_GENERATION),
         });
-      return valid ? responseJson(response, 200, fixture.planning) : refuse(response);
+      return valid ? responseJson(response, 200, planningForRequest(request)) : refuse(response);
     }
     if (pathname === '/api/planning/events') {
       const valid =
@@ -503,28 +733,33 @@ async function routeApi(request, response, next) {
         });
       return valid ? openStream(request, response) : refuse(response);
     }
-    if (pathname === '/api/operate/local-reviews' && localReviewRequest(request)) {
-      const valid = request.method === 'GET' && exactQuery(url, { page: '1', pageSize: '12' });
+    if (pathname === '/api/operate/local-reviews') {
+      const embeddedRequest = exactQuery(url, { page: '1', pageSize: '1' });
+      const routeRequest =
+        localReviewRequest(request) && exactQuery(url, { page: '1', pageSize: '12' });
+      const valid = request.method === 'GET' && (embeddedRequest || routeRequest);
       return valid
         ? responseJson(response, 200, {
             kind: 'local-operate-review-index',
             schemaVersion: '1.0.0',
             readOnly: true,
-            pagination: { page: 1, pageSize: 12, pageCount: 1, total: 1 },
+            pagination: {
+              page: 1,
+              pageSize: embeddedRequest ? 1 : 12,
+              pageCount: 1,
+              total: 1,
+            },
             items: [LOCAL_REVIEW_ITEM],
           })
         : refuse(response);
     }
-    if (
-      pathname === `/api/operate/local-reviews/${LOCAL_REVIEW_ID}` &&
-      localReviewRequest(request)
-    ) {
+    if (pathname === `/api/operate/local-reviews/${LOCAL_REVIEW_ID}`) {
       return request.method === 'GET' && exactQuery(url, {})
         ? responseJson(response, 200, {
             kind: 'local-operate-review',
             schemaVersion: '1.0.0',
             readOnly: true,
-            item: { ...LOCAL_REVIEW_ITEM, markdown: LOCAL_REVIEW_MARKDOWN },
+            item: LOCAL_REVIEW_DETAIL,
           })
         : refuse(response);
     }

@@ -5,7 +5,18 @@
 }
 
 .pc-list .pc-toolbar-bar {
-  margin: 4px 0 0;
+  margin: 0;
+}
+
+.pc-list__surface {
+  display: grid;
+  gap: var(--pc-space-2);
+  margin-top: var(--pc-space-3);
+  padding: var(--pc-space-2);
+  overflow: hidden;
+  background: var(--pc-surface-panel);
+  border: 1px solid var(--pc-border-default);
+  border-radius: var(--pc-radius-md);
 }
 
 .pc-list__note {
@@ -20,7 +31,9 @@
   gap: var(--pc-space-3);
   min-height: 44px;
   padding: var(--pc-space-2) var(--pc-space-3);
-  border-top: 1px solid var(--pc-border-subtle);
+  background: var(--pc-surface-card);
+  border: 1px solid var(--pc-border-default);
+  border-radius: var(--pc-radius-sm);
 }
 
 .pc-list__page-status {

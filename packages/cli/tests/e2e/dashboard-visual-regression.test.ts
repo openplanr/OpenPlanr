@@ -109,7 +109,9 @@ async function openFixture(page: Page, route = '#/overview', options = {}) {
       await workspace.getByRole('textbox', { name: 'Search query' }).fill('appointment');
       await expect(workspace).toContainText(expectation.readyText);
     }
-    await expect(workspace).toContainText(expectation.readyText);
+    if (!('planningScenario' in options)) {
+      await expect(workspace).toContainText(expectation.readyText);
+    }
     await expect(workspace).not.toContainText('cannot be trusted');
   } finally {
     page.off('pageerror', onPageError);
@@ -295,24 +297,83 @@ test.describe('dashboard real-browser quality', () => {
     ).toBeVisible();
     await expect(detail).toContainText('Act now on the verified release path.');
     await expect(detail).toContainText('Run the CRM smoke test');
+    await expect(detail.getByRole('heading', { name: 'Review coverage' })).toBeVisible();
+    await expect(detail.getByRole('heading', { name: 'Decision record' })).toBeVisible();
     await expect(detail.getByText('Read-only')).toBeVisible();
     await expect(detail).not.toContainText('No command gateway in this build');
 
-    await page.getByRole('link', { name: 'History' }).click();
+    const navigation = page.getByRole('navigation', { name: 'Dashboard navigation' });
+
+    await navigation.getByRole('link', { name: 'Today', exact: true }).click();
+    const today = page.locator('[data-route-kind="operate.today"]');
+    await expect(today.getByRole('heading', { level: 1, name: 'Operate today' })).toBeVisible();
+    await expect(today.getByRole('heading', { name: 'Lens coverage' })).toBeVisible();
+    await expect(today).toContainText('Board signal · act now');
+
+    await navigation.getByRole('link', { name: 'Inbox', exact: true }).click();
+    const inbox = page.locator('[data-route-kind="operate.inbox"]');
+    await expect(inbox.getByRole('heading', { level: 1, name: 'Decision inbox' })).toBeVisible();
+    await expect(inbox).toContainText('Recommendations require human disposition');
+    await expect(inbox).toContainText('Live flow state');
+
+    await navigation.getByRole('link', { name: 'Actions', exact: true }).click();
+    const actions = page.locator('[data-route-kind="operate.actions"]');
+    await expect(actions.getByRole('heading', { level: 1, name: 'Action register' })).toBeVisible();
+    await expect(actions.getByRole('link', { name: /Run the CRM smoke test/u })).toBeVisible();
+    await expect(actions).toContainText('Submit one test registration');
+
+    await navigation.getByRole('link', { name: 'Evidence', exact: true }).click();
+    const evidence = page.locator('[data-route-kind="operate.evidence"]');
+    await expect(
+      evidence.getByRole('heading', { level: 1, name: 'Evidence register' }),
+    ).toBeVisible();
+    await expect(evidence).toContainText('docs/crm-registration-webhook.md:12');
+
+    await navigation.getByRole('link', { name: 'Outcomes', exact: true }).click();
+    const outcomes = page.locator('[data-route-kind="operate.outcomes"]');
+    await expect(
+      outcomes.getByRole('heading', { level: 1, name: 'Outcome tracking' }),
+    ).toBeVisible();
+    await expect(outcomes).toContainText('awaiting observed evidence');
+
+    await navigation.getByRole('link', { name: 'Recovery', exact: true }).click();
+    const recovery = page.locator('[data-route-kind="operate.recovery"]');
+    await expect(
+      recovery.getByRole('heading', { level: 1, name: 'Cycle integrity' }),
+    ).toBeVisible();
+    await expect(recovery).toContainText('Complete review bundle detected');
+
+    await navigation.getByRole('link', { name: 'History', exact: true }).click();
     const history = page.locator('[data-route-kind="operate.history"]');
     await expect(history).toBeVisible();
-    await expect(history.getByRole('heading', { level: 1, name: 'Review history' })).toBeVisible();
+    await expect(
+      history.getByRole('heading', { level: 1, name: 'Operating history' }),
+    ).toBeVisible();
     await expect(
       history.getByRole('link', { name: /Operating board report — Modul events/u }),
     ).toBeVisible();
     await expect(history.getByRole('heading', { name: 'Decision queue' })).toHaveCount(0);
 
-    await page.getByRole('link', { name: 'Cycles' }).click();
+    await navigation.getByRole('link', { name: 'Cycles', exact: true }).click();
     const cycles = page.locator('[data-route-kind="operate.cycles"]');
     await expect(cycles.getByRole('heading', { level: 1, name: 'Operating cycles' })).toBeVisible();
     await expect(
       cycles.getByRole('link', { name: /Operating board report — Modul events/u }),
     ).toBeVisible();
+
+    await page.setViewportSize({ width: 320, height: 568 });
+    await page.goto(fixtureUrl('#/operate/today', { localOperate: '1' }));
+    const compactToday = page.locator('[data-route-kind="operate.today"]');
+    await expect(
+      compactToday.getByRole('heading', { level: 1, name: 'Operate today' }),
+    ).toBeVisible();
+    expect(
+      await compactToday
+        .locator('.pc-local-review__signal')
+        .evaluate((element) => element.scrollHeight <= element.clientHeight + 1),
+    ).toBe(true);
+    expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+    expect(await axeViolations(page)).toEqual([]);
 
     expect(requests.length).toBeGreaterThanOrEqual(3);
     expect(requests.every((request) => request.method() === 'GET')).toBe(true);
@@ -635,6 +696,66 @@ test.describe('dashboard real-browser quality', () => {
         await expectGoldenScreenshot(page, 'console-planning-graph-ready.png');
       }
     }
+  });
+
+  test('turns a real delivery plan into staged graph, bounded board, and sprint intelligence', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openFixture(page, '#/graph', { planningScenario: 'delivery' });
+
+    const graph = page.locator('[data-route-kind="planning.graph"]');
+    await expect(graph.locator('.pc-graph-node')).toHaveCount(4);
+    await expect(graph.locator('.pc-graph__rank')).toHaveCount(4);
+    const nodePositions = await graph
+      .locator('.pc-graph-node')
+      .evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().x)));
+    expect(new Set(nodePositions).size).toBe(4);
+    expect(Math.max(...nodePositions) - Math.min(...nodePositions)).toBeGreaterThan(500);
+
+    await graph.getByRole('button', { name: /QT-071:/u }).click();
+    const inspector = page.getByRole('complementary', { name: 'Inspector' });
+    await expect(inspector).toContainText('Make failed CRM registrations visible and replayable');
+    await expect(inspector).toContainText('Dependencies');
+    await expect(inspector.getByRole('button', { name: /Open artifact/u })).toBeVisible();
+    expect(await inspector.evaluate((node) => getComputedStyle(node).animationName)).toBe(
+      'pc-inspector-enter',
+    );
+
+    await page.evaluate(() => {
+      window.location.hash = '#/list';
+    });
+    await expect(page.locator('[data-route-kind="planning.list"]')).toBeVisible();
+    expect(await inspector.evaluate((node) => getComputedStyle(node).animationName)).toBe(
+      'pc-inspector-enter',
+    );
+
+    await openFixture(page, '#/board', { planningScenario: 'delivery' });
+    const doneCards = page
+      .locator('.pc-status-board__column')
+      .filter({ hasText: 'done' })
+      .locator('.pc-status-board__cards');
+    await expect(doneCards.locator('.pc-status-board__card')).toHaveCount(33);
+    const boardScroll = await doneCards.evaluate((element) => ({
+      overflowY: getComputedStyle(element).overflowY,
+      scrolls: element.scrollHeight > element.clientHeight,
+    }));
+    expect(boardScroll).toEqual({ overflowY: 'auto', scrolls: true });
+
+    await openFixture(page, '#/sprints', { planningScenario: 'delivery' });
+    const sprint = page.locator('[data-route-kind="planning.sprints"]');
+    await expect(
+      sprint.getByRole('heading', { name: 'CRM recovery and observability' }),
+    ).toBeVisible();
+    await expect(sprint.getByRole('table', { name: 'Members of SPRINT-009' })).toContainText(
+      'QT-071',
+    );
+    await expect(sprint).toContainText('3 items');
+    await expect(sprint).toContainText('Latest operating review');
+    await expect(sprint).toContainText('1 reference this scope');
+    await expect(sprint).toContainText('Submit one test registration before dispatching QT-071');
+    expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+    expect(await axeViolations(page)).toEqual([]);
   });
 
   test('does not replace a verified Planning workspace while changing Planning routes', async ({

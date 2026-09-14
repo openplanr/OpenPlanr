@@ -124,8 +124,8 @@
     "pathRecords": 2100,
     "dispositionCounts": {
       "regenerated": 205,
-      "merged": 541,
-      "moved": 270,
+      "merged": 542,
+      "moved": 269,
       "retired": 57,
       "exact": 1008,
       "excluded": 19
@@ -9810,8 +9810,8 @@
         "mode": "100644",
         "sha256": "092b201daa4e5313b3595366351acc4056f51a5afb1eb13bce77957a4e0901ff"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/cli/src/services/graph-service.ts",
@@ -9820,10 +9820,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "092b201daa4e5313b3595366351acc4056f51a5afb1eb13bce77957a4e0901ff",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -67046,5 +67044,5 @@
       }
     }
   ],
-  "documentDigest": "sha256:9e08c0a80ec827aff6e99a93ac57437dd58a8890fa650f27ec74a0a21e6e2654"
+  "documentDigest": "sha256:329c5b9f70d9e61941629347e6b6d709ffb410888c35896effdd1bf2b7d7d785"
 }

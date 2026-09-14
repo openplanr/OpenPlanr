@@ -62,6 +62,8 @@ const EVOLVED_MAPPING_IDS = new Set([
   'openplanr-cli:overlay:src/cli/error-boundary.ts',
   'openplanr-cli:cutoff:src/services/credential-backends.ts',
   'openplanr-cli:cutoff:tests/unit/credential-backends.test.ts',
+  // Sprint projections retain authored names and normalize the established active state.
+  'openplanr-cli:cutoff:src/services/graph-service.ts',
   // Public snapshot removes internal issue narration; behavior and original cutoffs remain preserved.
   'openplanr-cli:cutoff:src/cli/helpers/bulk-checkbox-update.ts',
   'openplanr-cli:cutoff:src/services/linear/task-status-aggregation.ts',

@@ -215,7 +215,7 @@ const ADDRESSED_STATES = new Set(['promoted', 'superseded']);
 export function classifyStatus(rawStatus) {
   const s = String(rawStatus ?? '').trim().toLowerCase();
   if (s === 'blocked') return 'blocked';
-  if (s === 'in-progress' || s === 'in_progress' || s === 'in progress') return 'in-progress';
+  if (s === 'active' || s === 'in-progress' || s === 'in_progress' || s === 'in progress') return 'in-progress';
   if (DONE_STATES.has(s)) return 'done';
   if (ADDRESSED_STATES.has(s)) return 'addressed';
   return 'outstanding';
@@ -382,7 +382,11 @@ function buildNode(absPath, planrDir, includeBody) {
   fm.id = localId;
   if (scope) fm.specScope = scope;
 
-  const title = fm.title != null && String(fm.title).trim() !== '' ? String(fm.title) : localId;
+  const authoredTitle = fm.title ?? fm.name;
+  const title =
+    authoredTitle != null && String(authoredTitle).trim() !== ''
+      ? String(authoredTitle)
+      : localId;
   const status = classifyStatus(fm.status);
 
   const node = { id, type, title, status, frontmatter: fm };

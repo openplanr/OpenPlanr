@@ -170,6 +170,7 @@ export function UnifiedShell() {
           </main>
           {inspectorOpen ? (
             <Inspector
+              key={`${route.kind}:${route.subjectId ?? ''}:${inspectorStore.openTick}`}
               mode={inspectorMode}
               selection={inspectorStore.selection}
               floating={narrow}
