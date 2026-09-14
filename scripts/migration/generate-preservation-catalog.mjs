@@ -2,6 +2,7 @@
 
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { excludePrivateDecisionRecords } from './private-decision-records.mjs';
+import { excludeArchivedDashboardRecords } from './archived-dashboard-records.mjs';
 import path from 'node:path';
 
 import { DIAGRAM_V16_REGISTRIES, PROTOCOL_V17_REGISTRIES } from '../../packages/protocol/src/skill-source-contracts.mjs';
@@ -38,6 +39,9 @@ const ROOT_WORKFLOW_CONTRACT_PATHS = new Set([
   'tests/unit/pipeline-pin-parity.test.ts',
 ]);
 const EVOLVED_MAPPING_IDS = new Set([
+  // Current documentation no longer links to retired SPEC-016 planning records.
+  'planr-pipeline:cutoff:docs/dashboard.md',
+  'planr-pipeline:cutoff:docs/operate/DASHBOARD.md',
   // Release proofs follow declared package versions across Changesets updates.
   'planr-pipeline:cutoff:tests/ecosystem/operate-v2-product-package.test.mjs',
   'planr-pipeline:cutoff:tests/pipeline/doctor-release-changelog.test.mjs',
@@ -343,7 +347,10 @@ const evolvedPathInventory = evidence
         'openplanr-preservation-path-inventory',
       ),
     );
-const pathInventory = await excludePrivateDecisionRecords(evolvedPathInventory, { custodyRoot: privateDecisionCustodyRoot });
+const decisionPathInventory = await excludePrivateDecisionRecords(evolvedPathInventory, { custodyRoot: privateDecisionCustodyRoot });
+const archivedDashboardFlag = argv.indexOf('--archived-dashboard-custody');
+const archivedDashboardCustodyRoot = archivedDashboardFlag >= 0 ? argv[archivedDashboardFlag + 1] : undefined;
+const pathInventory = await excludeArchivedDashboardRecords(decisionPathInventory, { custodyRoot: archivedDashboardCustodyRoot });
 const committedSurface = evidence
   ? null
   : await readAndVerifyCommittedDocument(SURFACE_PATH, 'openplanr-preservation-surface-catalog');
@@ -1266,7 +1273,7 @@ node --test conformance/migration/preservation-catalog.test.mjs
 
 \`--check\` is mutation-free. Clean-clone \`--write\` refreshes derived surfaces, generator/asset custody, the sealed baseline, and this documentation while retaining the committed source path floor. Reclassifying a source path still requires the original custody evidence.
 
-Private decision-record exclusion is an explicit reviewed classification. Its first application requires \`--private-decision-custody <restored-snapshot>\` and compares each original source hash before recording the public exclusion. Subsequent clean-clone checks use the sealed redacted inventory. This Markdown report is private and is produced only in write mode.
+Private decision-record exclusion is an explicit reviewed classification. Its first application requires \`--private-decision-custody <restored-snapshot>\` and compares each original source hash before recording the public exclusion. Subsequent clean-clone checks use the sealed redacted inventory. Retired dashboard planning records likewise require \`--archived-dashboard-custody <archive-directory>\` on initial exclusion, preserving their original hashes and executable modes. Subsequent checks need no private archive. This Markdown report is private and is produced only in write mode.
 
 Current seals: path inventory \`${inventory.documentDigest}\`; surface catalog \`${surface.documentDigest}\`; baseline \`${baseline.documentDigest}\`.
 `;
@@ -1280,7 +1287,7 @@ function dispositionMeaning(name) {
     regenerated: 'Canonical source owns behavior; compatibility bytes are generated.',
     retired: 'Removal is intentional and verified as an absence contract.',
     external: 'Source remains in the separately deployed web repository.',
-    excluded: 'Private decision records remain in verified custody and are excluded from public source.',
+    excluded: 'Private decisions and retired planning records remain in verified custody outside public source.',
   }[name];
 }
 

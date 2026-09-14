@@ -102,5 +102,5 @@ A dashboard screen is complete only when all applicable evidence exists:
 - no legacy asset or test-fixture path in the production bundle.
 
 The current [dashboard reference](../dashboard.md) documents the unified server
-and product boundary. Historical direct-DOM implementation notes are explicitly
-archived under `docs/feat-dashboard/` and are not a supported fallback.
+and product boundary. The retired direct-DOM implementation is not a supported
+fallback.
