@@ -79,7 +79,9 @@ describe('root release proof and public package artifacts', () => {
 
   it('runs the root verification graph against all supported Node lines', () => {
     expect(releaseProofWorkflow).toContain('node: [20, 22, 24]');
-    expect(releaseProofWorkflow).toContain('npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium');
+    expect(releaseProofWorkflow).toContain(
+      'npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium',
+    );
     expect(releaseProofWorkflow).toContain('run: npm ci');
     expect(releaseProofWorkflow).toContain('run: npm run verify');
     expect(workspaceScripts.verify).toContain('npm run verify:packed:strict');
