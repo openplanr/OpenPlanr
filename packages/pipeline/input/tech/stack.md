@@ -13,12 +13,14 @@
 
 ## Project Identity
 
+The package version is declared in `package.json`. `schemaVersion` identifies
+the stack document contract and changes only when that contract changes.
+
 ```yaml
 schemaVersion: "1.0.0"
 AppName: "planr-pipeline"
-Version: "0.44.0"
 Description: "Portable OpenPlanr PO, Design, Review, DEV, QA, artifact review, and delivery pipeline (Protocol v1.0 artifacts + additive v1.1/v1.2 capabilities)"
-Repository: "https://github.com/openplanr/planr-pipeline"
+Repository: "https://github.com/openplanr/OpenPlanr"
 ```
 
 ---
@@ -133,7 +135,7 @@ DoNotUse:
 
 MustPreserve:
   - "agents/*.md YAML frontmatter `tools:` field — manifest-enforced security boundary"
-  - "schemas/v1.0.0/ as the canonical v1.0.0 protocol schema source"
+  - "schemas/v1.0.0/ as the self-contained projection of packages/protocol/schemas/v1.0.0/"
   - "conformance/expected/*.json fixture goldens"
   - "registry/artifact-theme.json and docs/artifact-review-approval.md as established design artifacts"
   - "Protocol v1.0 planning schemas while adding optional v1.1 artifact contracts"

@@ -265,56 +265,38 @@ function runEnvironmentChecks(pkg) {
 
 function runVersionAndProtocolChecks(pkg) {
   const version = pkg.version;
-  ok(
-    'versions.runtime-package',
-    'Versions',
-    `planr-pipeline ${version} is a prompt-free runtime package; host plugin versions are owned by the workspace`,
-  );
+  // Package versions are release identities, not document or schema versions.
+  // Validate the declared identity without requiring tutorial prose to repeat it.
+  try {
+    renderLedgerVersionProjection({ packageName: pkg.name, declaredVersion: version });
+    if (pkg.name !== 'planr-pipeline') throw new Error('expected the planr-pipeline package');
+    ok(
+      'versions.runtime-package',
+      'Versions',
+      `${pkg.name} ${version} is a prompt-free runtime package; host plugin versions are owned by the workspace`,
+    );
+  } catch (error) {
+    fail('versions.runtime-package', 'Versions', `Invalid pipeline package identity: ${error.message}`, 'Declare planr-pipeline and an exact semantic version in package.json.');
+  }
 
   if (sourceCheckout) {
     const stack = readText('input/tech/stack.md');
-    const stackVersion = stack.match(/^Version:\s*"([^"]+)"/m)?.[1];
-    if (stackVersion === version) {
-      ok('versions.stack', 'Versions', `input/tech/stack.md Version matches ${version}`);
+    const stackName = stack.match(/^AppName:\s*"([^"]+)"/m)?.[1];
+    const stackSchemaVersion = stack.match(/^schemaVersion:\s*"([^"]+)"/m)?.[1];
+    const declaredSchema = readOptionalJsonFile(join(root, 'schemas/v1.0.0/stack.schema.json'));
+    const expectedSchemaVersion = declaredSchema?.properties?.schemaVersion?.const;
+    if (stackName === pkg.name && expectedSchemaVersion && stackSchemaVersion === expectedSchemaVersion) {
+      ok('versions.stack', 'Versions', `input/tech/stack.md identifies ${pkg.name} with schemaVersion ${expectedSchemaVersion}; package versions are owned by package.json`);
     } else {
-      fail('versions.stack', 'Versions', `input/tech/stack.md Version is ${stackVersion || '(missing)'}, expected ${version}`, 'Update input/tech/stack.md release metadata.');
+      fail('versions.stack', 'Versions', `input/tech/stack.md must identify ${pkg.name} and the declared stack schemaVersion ${expectedSchemaVersion || '(missing)'}`, 'Restore AppName and schemaVersion in input/tech/stack.md; keep the package version in package.json.');
     }
   } else {
     ok('versions.package-mode', 'Versions', 'installed package health mode does not require repository-only release metadata');
   }
 
-  // Release docs are checked against the ledger projection of this repository's
-  // own row, so the expected text is derived once rather than restated here. A
-  // package version the ledger cannot project is itself a version failure.
-  let projection = null;
-  try {
-    projection = renderLedgerVersionProjection({ packageName: pkg.name, declaredVersion: version });
-  } catch (error) {
-    fail('versions.ledger-projection', 'Versions', `package identity ${pkg.name}@${version} is not projectable as a release ledger row: ${error.message}`, 'Declare an exact package name and semantic version in package.json.');
-  }
-
   const protocol = readText('docs/protocol/README.md');
-  if (projection === null) {
-    fail('versions.protocol-readme', 'Versions', 'protocol README cannot be checked against an unprojectable package identity', 'Fix package.json, then re-run doctor.');
-  } else if (protocol.includes(projection)) {
-    ok('versions.protocol-readme', 'Versions', `protocol README states the ledger projection ${projection}`);
-  } else {
-    fail('versions.protocol-readme', 'Versions', `protocol README does not state the ledger projection ${projection}`, 'Update docs/protocol/README.md.');
-  }
-
-  if (sourceCheckout) {
-    const matrix = readText('docs/compatibility-matrix.md');
-    if (projection === null) {
-      fail('versions.compatibility-matrix', 'Versions', 'compatibility matrix cannot be checked against an unprojectable package identity', 'Fix package.json, then re-run doctor.');
-    } else if (matrix.includes(projection)) {
-      ok('versions.compatibility-matrix', 'Versions', `compatibility matrix states the ledger projection ${projection}`);
-    } else {
-      fail('versions.compatibility-matrix', 'Versions', `compatibility matrix does not state the ledger projection ${projection}`, 'Update docs/compatibility-matrix.md.');
-    }
-  }
-
   if (protocol.includes('schemas/v1.0.0/')) {
-    ok('protocol.schema-reference', 'Protocol', 'protocol README points to schemas/v1.0.0 as canonical');
+    ok('protocol.schema-reference', 'Protocol', 'protocol README points to the schemas/v1.0.0 compatibility assets');
   } else {
     fail('protocol.schema-reference', 'Protocol', 'protocol README does not point to schemas/v1.0.0', 'Keep schema ownership explicit in docs/protocol/README.md.');
   }

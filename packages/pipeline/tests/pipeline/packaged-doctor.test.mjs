@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,7 +13,7 @@ function copy(source, target) {
   cpSync(source, target, { recursive: true });
 }
 
-test('the installed package doctor does not require source-only release files', () => {
+test('the installed package doctor accepts a package release bump without source-only release files', () => {
   const temp = mkdtempSync(join(tmpdir(), 'planr-packaged-doctor-'));
   const packageRoot = join(temp, 'node_modules', '@openplanr', 'pipeline');
   const projectRoot = join(temp, 'project');
@@ -42,6 +42,10 @@ test('the installed package doctor does not require source-only release files', 
   ]) {
     copy(join(root, relativePath), join(packageRoot, relativePath));
   }
+  const packagePath = join(packageRoot, 'package.json');
+  const pkg = JSON.parse(readFileSync(packagePath, 'utf8'));
+  const nextVersion = `${Number(pkg.version.split('.')[0]) + 1}.0.0`;
+  writeFileSync(packagePath, JSON.stringify({ ...pkg, version: nextVersion }));
   writeFileSync(join(projectRoot, '.env'), 'SAFE_VALUE=yes\n');
 
   const result = spawnSync(process.execPath, [join(packageRoot, 'scripts/doctor.mjs'), '--json'], {

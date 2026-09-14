@@ -7,7 +7,9 @@
 > Operate Runtime 2.0 adds the durable Assignment/tool/replay foundation.
 > Ownership: `packages/protocol/schemas/` is canonical in the OpenPlanr workspace;
 > `planr-pipeline/schemas/` is its self-contained public-package projection.
-> Current development baseline: planr-pipeline v0.44.0.
+> Package releases: `openplanr`, `planr-pipeline`, and `@openplanr/protocol`
+> have independent package versions declared in their package manifests.
+> Package updates do not change artifact or schema versions automatically.
 
 The OpenPlanr Protocol is the runtime-agnostic contract for spec-driven AI development. It defines:
 
@@ -32,7 +34,7 @@ OpenPlanr ships across multiple workspace domains and three first-class AI codin
 |---|---|---|
 | `planr` CLI | Dedicated planning, artifact lifecycle, setup, routing, and Doctor | `packages/cli` |
 | `planr-pipeline` | Complete PO, Design, DEV, and QA public compatibility package | `packages/pipeline` |
-| Protocol | Schemas, registries, and portable contracts | `packages/protocol` |
+| `@openplanr/protocol` | Schemas, registries, and portable contracts | `packages/protocol` |
 | runtime skills | Reusable planning and delivery workflows | `skills/` and `agents/` |
 | marketplace | Generated Claude metadata and resolved compatibility manifest | `.claude-plugin/` and `ecosystem.json` |
 | hosted web | Independently deployed artifact and room transport | external `openplanr-web` repository |
@@ -51,9 +53,8 @@ The protocol is the contract. Runtimes are adapters.
 | `agent-roles.md` | 9 roles, including optional entity-scaffold. Inputs, outputs, tool guardrails, capability tier. |
 | `commands.md` | `PLAN` and `SHIP` as command contracts. Mode detection, validation, orchestration, exits. R1 normative. |
 | `runtime-adapters.md` | How Claude Code plugin, Cursor MDC rules, and Codex AGENTS.md implement this protocol. |
-| `../operate/README.md` | Source-checkout-only canonical Operate handoff: current branch truth, executive-board requirement, dashboard status, and continuation plan. |
 | `../artifact-review.md` | Engine API, `planr artifact` commands, sandbox, privacy, sharing, and design-board integration. |
-| `operate-runtime-v2.md` | Technical Protocol 2.0 reference: contract identities, bounded lifecycle, guards/actions, replay, exact-byte metadata, and package exports. Product vision and current status live in the Operate handoff hub. |
+| `operate-runtime-v2.md` | Technical Protocol 2.0 reference: contract identities, bounded lifecycle, guards/actions, replay, exact-byte metadata, and package exports.  |
 | `../generated/roles.md` | Generated nine-role registry table. |
 | `../generated/adapters.md` | Generated certified-adapter capability table. |
 
@@ -68,7 +69,7 @@ precedent from the OpenPlanr CLI Linear integration). The amendment is
 backward-compatible: artifacts without the fields stay valid, unknown fields
 (including any rank/ordering field, which is deliberately excluded) are still
 rejected, and `schemaVersion` stays `"1.0.0"`. See
-[`spec-artifacts.md`](spec-artifacts.md) and ADR-012.
+[`spec-artifacts.md`](spec-artifacts.md).
 
 Canonical workspace schemas live in `packages/protocol/schemas/`. This public
 package retains [`../../schemas/v1.0.0/`](../../schemas/v1.0.0/) and additive

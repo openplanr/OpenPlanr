@@ -123,3 +123,57 @@ test('the shipped changelog documents the version this repository is about to re
     `CHANGELOG.md has no section for package.json version ${pkg.version}`,
   );
 });
+
+function versionCheck(report, id) {
+  const check = report.checks.find((entry) => entry.id === id);
+  assert.ok(check, `doctor must report ${id}`);
+  return check;
+}
+
+test('package release bumps preserve schema versions without rewriting documentation', () => {
+  const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const nextVersion = `${Number(pkg.version.split('.')[0]) + 1}.0.0`;
+  const checkout = buildCheckout(nextVersion);
+  const documents = ['docs/protocol/README.md', 'docs/compatibility-matrix.md', 'input/tech/stack.md'];
+  const before = documents.map((path) => readFileSync(join(checkout, path), 'utf8'));
+  for (const text of before) {
+    assert.equal(text.includes(`planr-pipeline v${nextVersion}`), false);
+    assert.equal(text.split("\n").includes(`Version: "${nextVersion}"`), false);
+  }
+
+  const report = runDoctor(checkout, ['--strict']);
+  for (const id of [
+    'versions.runtime-package',
+    'versions.stack',
+    'protocol.schema-reference',
+    'protocol.schemas-present',
+    'protocol.ownership-reference',
+  ]) {
+    assert.equal(versionCheck(report, id).status, 'ok', JSON.stringify(report));
+  }
+  assert.equal(report.checks.some(({ id }) => ['versions.protocol-readme', 'versions.compatibility-matrix'].includes(id)), false);
+  assert.deepEqual(documents.map((path) => readFileSync(join(checkout, path), 'utf8')), before);
+  assert.equal(JSON.parse(readFileSync(join(checkout, 'schemas/v1.0.0/stack.schema.json'), 'utf8')).properties.schemaVersion.const, '1.0.0');
+});
+
+test('release version independence still refuses an invalid package identity', () => {
+  const checkout = buildCheckout('not-a-version');
+  assert.equal(versionCheck(runDoctor(checkout), 'versions.runtime-package').status, 'fail');
+  const pkg = JSON.parse(readFileSync(join(checkout, 'package.json'), 'utf8'));
+  writeFileSync(join(checkout, 'package.json'), JSON.stringify({ ...pkg, name: 'unrelated-package', version: '3.0.0' }));
+  assert.equal(versionCheck(runDoctor(checkout), 'versions.runtime-package').status, 'fail');
+});
+
+test('release version independence still refuses incompatible stack and missing schema references', () => {
+  const checkout = buildCheckout('3.0.0');
+  const stackPath = join(checkout, 'input/tech/stack.md');
+  const stack = readFileSync(stackPath, 'utf8');
+  writeFileSync(stackPath, stack.replace('schemaVersion: "1.0.0"', 'schemaVersion: "9.0.0"'));
+  assert.equal(versionCheck(runDoctor(checkout), 'versions.stack').status, 'fail');
+  writeFileSync(stackPath, stack.replace('AppName: "planr-pipeline"', 'AppName: "unrelated-package"'));
+  assert.equal(versionCheck(runDoctor(checkout), 'versions.stack').status, 'fail');
+  writeFileSync(stackPath, stack);
+  const protocolPath = join(checkout, 'docs/protocol/README.md');
+  writeFileSync(protocolPath, readFileSync(protocolPath, 'utf8').replaceAll('schemas/v1.0.0/', 'schemas/unknown/'));
+  assert.equal(versionCheck(runDoctor(checkout), 'protocol.schema-reference').status, 'fail');
+});

@@ -80,8 +80,8 @@ them.
 
 | Check area | Fix |
 |---|---|
-| Versions | Update `package.json`, `input/tech/stack.md`, protocol docs, and compatibility docs together; host plugin versions are owned by the workspace. |
-| Protocol | Keep schemas under `schemas/v1.0.0/` canonical and use `qa_gate_status` values `passed`, `failed`, `skipped`. |
+| Versions | Correct the package identity in `package.json` and regenerate workspace metadata. Package releases do not require version edits in prose or stack documents; host plugin versions are owned by the workspace. |
+| Protocol | Restore the self-contained schema projection from `packages/protocol/schemas/`. Keep stack `schemaVersion` aligned with its schema and use `qa_gate_status` values `passed`, `failed`, `skipped`. |
 | Ecosystem | Regenerate workspace metadata after internal domain changes; point Doctor at `openplanr-web` only when checking that external service. |
 | Daemons | Run `planr doctor --fix`; it previews, confirms, rechecks, and removes only stale Planr-owned daemon state. |
 | Credentials | Keep project `.env` files with `OPENAI_API_KEY` ignored, or move the key to user-level credentials. |

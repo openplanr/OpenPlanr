@@ -1,17 +1,16 @@
 # Compatibility Matrix - Protocol artifacts, shared capabilities, and Operate
 
-> Per-capability parity across the three first-class runtime adapters. Development baseline: planr-pipeline v0.44.0.
+> Per-capability parity across the three first-class runtime adapters.
 
-Every version and compatibility range stated in this document is a verified
-projection, never a hand-written fallback. In the legacy multi-repository
-layout it derives from the frozen five-row release ledger. In the consolidated
-workspace, CLI and pipeline versions derive from the generated ecosystem
-manifest and are bound to the current two-package packed-workspace proof;
-`skills/` and marketplace metadata are catalog domains rather than independent
-package rows, and `openplanr-web` remains external. `npm run
-verify:release-ledger` refuses drift under either policy. See
-[`release-ledger.md`](release-ledger.md) for the exact strict commands and proof
-boundaries.
+Package versions are declared in `packages/cli/package.json`,
+`packages/pipeline/package.json`, and `packages/protocol/package.json`.
+Document and schema versions identify their contracts independently. Release
+verification binds the three generated package identities to their packed
+archives through `ecosystem.json` and the packed-workspace proof; this capability
+matrix does not duplicate release numbers. `skills/` and marketplace metadata
+are generated catalog domains, and `openplanr-web` remains an independent hosted
+consumer. See [`release-ledger.md`](release-ledger.md) for proof boundaries and
+historical release compatibility.
 
 ## TL;DR
 
@@ -19,7 +18,7 @@ OpenPlanr ships three runtime adapters that all consume the same protocol artifa
 
 | Runtime | Install | Adapter |
 |---|---|---|
-| Claude Code | `planr setup --runtime claude` | Native skills, frozen legacy commands, and tool-enforced agents sourced from the portable package |
+| Claude Code | `planr setup --runtime claude` | Native skills and agents generated from the canonical workspace sources |
 | Cursor | `planr setup --runtime cursor` | Portable project rules, nine role files, and Composer handoff |
 | Codex | `planr setup --runtime codex` | User skills, concise project policy, and dynamic subagent fallback |
 
@@ -29,7 +28,7 @@ Same `.planr/specs/` directories. Same SPEC, US, Task, stack, graph, and `.pipel
 
 | Capability | Claude Code | Cursor | Codex |
 |---|---|---|---|
-| Operate machine client | `/planr-pipeline:operate` skill over `planr operate ... --json` | `openplanr-operate.mdc` over the same machine commands | Installed `$planr-operate` skill over the same machine commands |
+| Operate machine client | `/planr:operate` skill over `planr operate ... --json` | `openplanr-operate.mdc` over the same machine commands | Installed `$planr-operate` skill over the same machine commands |
 | Operate public domains | Installed `business@1.0.0` and `software@1.0.0` registrations through one OpenPlanr composition | Same installed registrations and composition | Same installed registrations and composition |
 | Operate Planning handoff | Exact preview, separate human confirmation, exact create-SPEC digest | Same machine result and gate | Same machine result and gate |
 | PLAN orchestration | Native slash command or router | Composer handoff from router | Installed `$planr-plan` skill or headless router |
@@ -91,7 +90,7 @@ Compatibility is reported at three explicit levels:
   Every non-read-only structured action is confirmed independently with the
   exact digest returned by the CLI.
 - Stories, tasks, stack files, design specs, graph output, run manifests, and shipped markers use schemas under `schemas/v1.0.0/`.
-- The canonical schema source for this cleanup cycle is `planr-pipeline/schemas/v1.0.0/`; OpenPlanr CLI docs mirror that contract for CLI users.
+- The canonical schema source is `packages/protocol/schemas/`, published as `@openplanr/protocol`. CLI and pipeline retain self-contained compatibility projections.
 
 The runtime guarantee is not identical tool behavior:
 
@@ -103,7 +102,7 @@ The runtime guarantee is not identical tool behavior:
 
 ## Dispatch Modes
 
-`/planr-pipeline:ship` binds dispatch behavior from the runtime:
+`/planr:ship` binds dispatch behavior from the runtime:
 
 | Runtime | Default behavior | Reason |
 |---|---|---|
@@ -219,7 +218,7 @@ npm run conformance:check
 
 For consolidated release custody, generate the root packed-workspace proof and
 pass it to the pipeline ledger verifier with `--strict --proof`. This proves the
-public `openplanr` and `planr-pipeline` artifacts without requiring local
+public `openplanr`, `planr-pipeline`, and `@openplanr/protocol` artifacts without requiring local
 package rows for the generated skills/marketplace catalogs or the external web
 deployment.
 
@@ -238,4 +237,5 @@ For runtime-operated fixtures, use `conformance/runner.mjs` with `--setup`, then
 
 ---
 
-*OpenPlanr Protocol v1.0 artifacts + v1.1–v1.4 ecosystem contracts + Operate (Protocol 2.0) — development compatibility matrix for planr-pipeline v0.44.0, verified by the layout-aware release-ledger policy.*
+*Capabilities are verified through Protocol conformance and the three-package
+packed-workspace proof. Package releases and schema versions are independent.*
