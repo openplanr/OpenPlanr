@@ -3,6 +3,7 @@
 import { readFile, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { verifyReleaseChangelogHistory } from './release-changelog-history.mjs';
 import {
   DIAGRAM_V16_REGISTRIES,
   PROTOCOL_V16_CONTRACT_FILES,
@@ -72,6 +73,7 @@ export async function verifyPreservationCatalog() {
       sourceCutoffs: 'PASS',
       zeroUnmappedPaths: 'PASS',
       byteBoundDestinations: pathResults.byteBoundDestinations,
+      preservedReleaseHistories: pathResults.preservedReleaseHistories,
       declaredDestinationExistence: pathResults.existenceDestinations,
       externalAndAbsenceDeclarations: pathResults.nonLocalDeclarations,
       protocolAndSurfaceCounts: 'PASS',
@@ -115,6 +117,7 @@ async function verifyPaths(inventory) {
   const perSourceIncluded = new Map();
   let byteBoundDestinations = 0;
   let existenceDestinations = 0;
+  let preservedReleaseHistories = 0;
   let nonLocalDeclarations = 0;
 
   for (const mapping of inventory.pathMappings) {
@@ -138,6 +141,15 @@ async function verifyPaths(inventory) {
       }
       assert(matches.length > 0, `No byte-identical destination remains for ${mapping.mappingId}.`);
       byteBoundDestinations += 1;
+      continue;
+    }
+
+    if (mapping.verification.policy === 'release-history-bound') {
+      const destination = mapping.destinations[0];
+      normalizeRelativePath(destination.path);
+      verifyReleaseChangelogHistory(mapping, await readFile(path.join(REPOSITORY_ROOT, destination.path)));
+      assert(await executableMatchesExpectation(destination.path, false), `Executable changelog rejected: ${mapping.mappingId}`);
+      preservedReleaseHistories += 1;
       continue;
     }
 
@@ -192,6 +204,7 @@ async function verifyPaths(inventory) {
     pathRecords: inventory.pathMappings.length,
     byteBoundDestinations,
     existenceDestinations,
+    preservedReleaseHistories,
     nonLocalDeclarations,
   };
 }

@@ -11,5 +11,6 @@
   "privatePackages": {
     "version": true,
     "tag": false
-  }
+  },
+  "prettier": false
 }

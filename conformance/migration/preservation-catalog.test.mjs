@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { verifyPreservationCatalog } from '../../scripts/migration/verify-preservation-catalog.mjs';
+import { RELEASE_CHANGELOG_PATHS, preserveReleaseChangelogHistory, verifyReleaseChangelogHistory } from '../../scripts/migration/release-changelog-history.mjs';
+import { sha256 } from '../../scripts/migration/preservation-lib.mjs';
 import { GENERATOR_STEPS } from '../../scripts/generate-all.mjs';
 import {
   PROTOCOL_V16_CONTRACT_FILES,
@@ -105,4 +108,49 @@ test('surface catalog locks every required compatibility floor', async () => {
   assert.equal(catalog.packageSurface.baselineExportKeys.length, 37);
   assert.equal(catalog.packageSurface.baselineRootSymbols.length, 229);
   assert.deepEqual([...new Set(catalog.outputs.map((output) => output.outputClass))].sort(), ['A', 'B', 'C', 'D']);
+});
+
+test('release changelogs require verified original custody and preserve history through prepended releases', async () => {
+  const custodyRoot = await mkdtemp(path.join(tmpdir(), 'openplanr-changelog-history-'));
+  try {
+    const original = Buffer.from('# Changelog\n\nOriginal introduction.\n\n## [0.1.0] — original release\n\n- Preserve *exact* historical bytes.\n');
+    const inventory = { coverage: {}, pathMappings: [] };
+    for (const [mappingId, destination] of Object.entries(RELEASE_CHANGELOG_PATHS)) {
+      const target = path.join(custodyRoot, destination);
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, original);
+      inventory.pathMappings.push({
+        mappingId, sourcePath: 'CHANGELOG.md', included: { sha256: sha256(original) },
+        cutoff: { present: true }, disposition: 'exact', destinations: [{ path: destination }],
+        verification: { policy: 'byte-bound', sha256: sha256(original) },
+      });
+    }
+    inventory.pathMappings.push({ mappingId: 'unrelated-source', disposition: 'exact', verification: { policy: 'byte-bound' } });
+    await assert.rejects(preserveReleaseChangelogHistory(inventory), /requires --release-changelog-custody/u);
+    const classified = await preserveReleaseChangelogHistory(inventory, { custodyRoot });
+    assert.deepEqual(classified.pathMappings.at(-1), inventory.pathMappings.at(-1));
+    assert.deepEqual(await preserveReleaseChangelogHistory(classified), classified);
+    for (const mapping of classified.pathMappings.slice(0, 2)) {
+      assert.equal(mapping.included.sha256, sha256(original));
+      assert.equal(mapping.verification.sha256, sha256(original));
+      verifyReleaseChangelogHistory(mapping, original);
+      const prefix = original.subarray(0, mapping.verification.prefixBytes);
+      const suffix = original.subarray(mapping.verification.prefixBytes);
+      const appendReleases = Buffer.concat([prefix, Buffer.from('\n## 1.1.0\n\n### Minor Changes\n\n- New feature.\n\n## 1.0.0\n\n- Prior feature.\n'), suffix]);
+      verifyReleaseChangelogHistory(mapping, appendReleases);
+      for (const changed of [
+        Buffer.from(appendReleases.toString().replace('*exact*', '_exact_')),
+        Buffer.from(appendReleases.toString().replace('Changelog', 'Edited title')),
+        appendReleases.subarray(0, appendReleases.length - 1),
+        Buffer.concat([appendReleases, Buffer.from('Appended history edit')]),
+      ]) assert.throws(() => verifyReleaseChangelogHistory(mapping, changed), /history changed|history was truncated/u);
+      assert.throws(() => verifyReleaseChangelogHistory(mapping, Buffer.concat([prefix, Buffer.from('Arbitrary replacement\n'), suffix])), /Expected prepended release notes/u);
+      assert.throws(() => verifyReleaseChangelogHistory({ ...mapping, mappingId: 'unrelated-source' }, original), /Not an approved release changelog/u);
+    }
+    const first = path.join(custodyRoot, Object.values(RELEASE_CHANGELOG_PATHS)[0]);
+    await writeFile(first, Buffer.concat([original, Buffer.from('Changed')]));
+    await assert.rejects(preserveReleaseChangelogHistory(inventory, { custodyRoot }), /custody bytes differ/u);
+  } finally {
+    await rm(custodyRoot, { recursive: true, force: true });
+  }
 });

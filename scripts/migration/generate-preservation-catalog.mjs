@@ -2,6 +2,7 @@
 
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { excludePrivateDecisionRecords } from './private-decision-records.mjs';
+import { preserveReleaseChangelogHistory } from './release-changelog-history.mjs';
 import { excludeArchivedDashboardRecords } from './archived-dashboard-records.mjs';
 import path from 'node:path';
 
@@ -350,7 +351,10 @@ const evolvedPathInventory = evidence
 const decisionPathInventory = await excludePrivateDecisionRecords(evolvedPathInventory, { custodyRoot: privateDecisionCustodyRoot });
 const archivedDashboardFlag = argv.indexOf('--archived-dashboard-custody');
 const archivedDashboardCustodyRoot = archivedDashboardFlag >= 0 ? argv[archivedDashboardFlag + 1] : undefined;
-const pathInventory = await excludeArchivedDashboardRecords(decisionPathInventory, { custodyRoot: archivedDashboardCustodyRoot });
+const archivedPathInventory = await excludeArchivedDashboardRecords(decisionPathInventory, { custodyRoot: archivedDashboardCustodyRoot });
+const changelogCustodyFlag = argv.indexOf('--release-changelog-custody');
+const changelogCustodyRoot = changelogCustodyFlag >= 0 ? argv[changelogCustodyFlag + 1] : undefined;
+const pathInventory = await preserveReleaseChangelogHistory(archivedPathInventory, { custodyRoot: changelogCustodyRoot });
 const committedSurface = evidence
   ? null
   : await readAndVerifyCommittedDocument(SURFACE_PATH, 'openplanr-preservation-surface-catalog');

@@ -143,11 +143,11 @@
     "pathRecords": 2237,
     "dispositionCounts": {
       "regenerated": 205,
-      "merged": 530,
-      "moved": 280,
+      "merged": 532,
+      "moved": 279,
       "retired": 56,
       "external": 137,
-      "exact": 1010,
+      "exact": 1009,
       "excluded": 19
     },
     "unmappedPaths": 0
@@ -1306,8 +1306,8 @@
         "mode": "100644",
         "sha256": "3a1dd2be98f442a731c3a18bd00f8cc3a3327d33327af9781902ffd247e8a327"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "new-release-notes-preserve-captured-history",
       "destinations": [
         {
           "path": "packages/cli/CHANGELOG.md",
@@ -1316,9 +1316,11 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
+        "policy": "release-history-bound",
         "requirement": "any",
         "sha256": "3a1dd2be98f442a731c3a18bd00f8cc3a3327d33327af9781902ffd247e8a327",
+        "prefixBytes": 12,
+        "historyBytes": 107593,
         "executable": false
       }
     },
@@ -27817,8 +27819,8 @@
         "mode": "100644",
         "sha256": "b8c7e4c98ce0e2201423075e19fc9052125aeb084954b985efae77f43e02e299"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "new-release-notes-preserve-captured-history",
       "destinations": [
         {
           "path": "packages/pipeline/CHANGELOG.md",
@@ -27827,9 +27829,11 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
+        "policy": "release-history-bound",
         "requirement": "any",
         "sha256": "b8c7e4c98ce0e2201423075e19fc9052125aeb084954b985efae77f43e02e299",
+        "prefixBytes": 12,
+        "historyBytes": 157499,
         "executable": false
       }
     },
@@ -70925,5 +70929,5 @@
       }
     }
   ],
-  "documentDigest": "sha256:5afdd7a6422ad124dd94200518974c1d3ee73cbf38821516315103905207118c"
+  "documentDigest": "sha256:3ac5ae6b65cdf685c92e98921c3f3f78349a484dd746fc351d2b0b71f435b5d1"
 }
