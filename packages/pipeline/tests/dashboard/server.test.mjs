@@ -298,16 +298,37 @@ test('dashboard server: local operating reviews are bounded, paginated, and refr
   const firstReport = [
     '# Operating board report — Modul events',
     '',
+    '## Scope',
+    '- **Subject:** Modul events release operations',
+    '- **Window:** current snapshot',
+    '- **Requested decision:** periodic review',
+    '- **Custody:** local-only',
+    '',
     '## Executive summary',
-    'Act now on the release path.',
+    '**Overall signal: act now.** Act now on the release path.',
     '',
     '## Decision queue',
-    '### D1 — P0 Verify the CRM flow',
+    '### D1 — [P0] Verify the CRM flow',
+    '- **Recommendation:** Run the smoke test before engineering work.',
+    '- **Why now:** A dated event depends on this flow.',
+    '- **Suggested owner:** Asem',
+    '- **First step:** Run `crm:smoke`.',
+    '- **Expected result:** The test row reaches created.',
+    '- **Check:** Inspect the admin row.',
+    '- **Sources:** `docs/crm.md:12`',
     '',
     '## Action plan',
-    '| ID | Priority | Action |',
-    '|---|---|---|',
-    '| A1 | P0 | Run the smoke test |',
+    '| ID | Priority | Action | Suggested owner | First step | Success measure | Check | Depends on |',
+    '|---|---|---|---|---|---|---|---|',
+    '| A1 | P0 | Run the smoke test | Asem | Run `crm:smoke` | Row is created | Inspect row | D1 |',
+    '',
+    '## Decision-changing gaps',
+    '- **G1 — Live flow state:** Verify it with the smoke test.',
+    '',
+    '## Review coverage',
+    '| Lens | Outcome | Note | Informed |',
+    '|---|---|---|---|',
+    '| CEO | reported (signal: action) | `ceo.md` | D1 |',
     '',
     '## Issues',
     '- **I1 — Wrapper:** exits one after a clean validation.',
@@ -316,6 +337,7 @@ test('dashboard server: local operating reviews are bounded, paginated, and refr
   writeFileSync(join(cycleDir, 'board-report.md'), firstReport);
   const privateFile = join(fixtureRoot, 'private-report.md');
   writeFileSync(privateFile, '# must never be served\nprivate-marker\n');
+  symlinkSync(privateFile, join(cycleDir, 'ceo.md'));
   symlinkSync(privateFile, join(unsafeDir, 'board-report.md'));
   const fixture = dashboardFixture(fixtureRoot, {}, { includeAssetDigests: true });
   const dash = createDashboardServer({
@@ -338,7 +360,9 @@ test('dashboard server: local operating reviews are bounded, paginated, and refr
     assert.equal(index.items[0].cycleId, cycleId);
     assert.equal(index.items[0].counts.decisions, 1);
     assert.equal(index.items[0].counts.actions, 1);
+    assert.equal(index.items[0].counts.gaps, 1);
     assert.equal(index.items[0].counts.issues, 1);
+    assert.equal(index.items[0].signal, 'act now');
     assert.equal(indexResponse.body.includes(fixtureRoot), false);
     assert.equal(indexResponse.body.includes('private-marker'), false);
 
@@ -349,6 +373,15 @@ test('dashboard server: local operating reviews are bounded, paginated, and refr
     assert.equal(detail.kind, 'local-operate-review');
     assert.equal(detail.readOnly, true);
     assert.equal(detail.item.markdown, firstReport);
+    assert.equal(detail.item.decisions[0].priority, 'P0');
+    assert.equal(detail.item.decisions[0].owner, 'Asem');
+    assert.equal(detail.item.actions[0].firstStep, 'Run crm:smoke');
+    assert.equal(detail.item.gaps[0].id, 'G1');
+    assert.equal(detail.item.lenses[0].signal, 'action');
+    assert.equal(detail.item.lenses[0].present, false);
+    assert.equal(detail.item.evidence[0].reference, 'docs/crm.md:12');
+    assert.equal(detailResponse.body.includes('private-marker'), false);
+    assert.equal(detail.item.recovery.complete, false);
 
     const updatedReport = firstReport.replace('Act now on the release path.', 'Act now; CRM is verified.');
     writeFileSync(join(cycleDir, 'board-report.md'), updatedReport);
