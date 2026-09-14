@@ -10,6 +10,7 @@ import {
   DashboardTestSurface,
   renderDashboardComponent,
 } from '../../../../apps/dashboard/src/test/component-harness.js';
+import { SEMVER_REGEX } from '../../../protocol/src/semver.mjs';
 
 const cliRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const workspaceRoot = resolve(cliRoot, '../..');
@@ -31,8 +32,12 @@ const components = JSON.parse(readFileSync(resolve(dashboardRoot, 'components.js
   aliases?: Record<string, string>;
 };
 
+const protocolManifest = JSON.parse(
+  readFileSync(resolve(workspaceRoot, 'packages/protocol/package.json'), 'utf8'),
+) as { version: string };
+
 const EXPECTED_RUNTIME = {
-  '@openplanr/protocol': '0.1.0',
+  '@openplanr/protocol': protocolManifest.version,
   '@tanstack/react-query': '5.101.4',
   'class-variance-authority': '0.7.1',
   clsx: '2.1.1',
@@ -64,14 +69,14 @@ function importSpecifiers(source: string): string[] {
 }
 
 describe('dashboard workspace boundary', () => {
-  it('owns the browser app as a private 0.1 package with exact portable dependencies', () => {
+  it('owns the browser app as an npm-private package with exact portable dependencies', () => {
     expect(packageJson).toMatchObject({
       name: '@openplanr/dashboard-app',
-      version: '0.1.0',
       private: true,
       engines: { node: '>=20.0.0' },
       dependencies: EXPECTED_RUNTIME,
     });
+    expect(packageJson.version).toMatch(SEMVER_REGEX);
     for (const version of Object.values({
       ...packageJson.dependencies,
       ...packageJson.devDependencies,

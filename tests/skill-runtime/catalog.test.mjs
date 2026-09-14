@@ -61,7 +61,8 @@ test('skill runtime is declarative and does not import workflow implementations'
     assert.doesNotMatch(source, /@openplanr\/(?:operate|artifact|design)/u, file);
   }
   const manifest = JSON.parse(readFileSync(resolve(root, 'packages/skill-runtime/package.json'), 'utf8'));
-  assert.deepEqual(manifest.dependencies, { '@openplanr/protocol': '0.1.0' });
+  const protocol = JSON.parse(readFileSync(resolve(root, 'packages/protocol/package.json'), 'utf8'));
+  assert.deepEqual(manifest.dependencies, { '@openplanr/protocol': protocol.version });
   const protocolSource = readFileSync(resolve(root, 'packages/skill-runtime/src/protocol.mjs'), 'utf8');
   assert.match(protocolSource, /from '@openplanr\/protocol\/registries'/u);
 });
