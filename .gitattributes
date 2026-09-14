@@ -6,3 +6,12 @@ packages/pipeline/lib/generated/** linguist-generated=true
 packages/pipeline/registry/generated-skill-assets.json linguist-generated=true
 packages/protocol/src/generated/** linguist-generated=true
 skills/planr-*/contribution.json linguist-generated=true
+
+# Markdown uses trailing spaces for intentional hard line breaks.
+*.md whitespace=-blank-at-eol
+
+# Preserve imported compatibility bytes; do not normalize historical EOF spacing.
+packages/cli/.gitattributes whitespace=-blank-at-eof
+packages/pipeline/lib/dashboard/generated/*.mjs linguist-generated=true whitespace=-blank-at-eof
+packages/pipeline/lib/dashboard/operate-review-display-workspace-contract.d.mts whitespace=-blank-at-eof
+packages/pipeline/lib/protocol/index.d.ts linguist-generated=true whitespace=-blank-at-eof
