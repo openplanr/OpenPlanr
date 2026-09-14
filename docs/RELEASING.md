@@ -30,13 +30,16 @@ clean job materializes generated ignored host distributions and compiled CLI
 exports before verification. Check generated tracked outputs against the commit.
 
 In a disposable checkout, run the version operation before changing the actual
-release branch:
+release branch. Create a local rehearsal commit before testing: packed and
+recovery tests clone `HEAD`, so their inputs must include the versioned files.
 
 ```bash
 npm run version-packages
 npm install --package-lock-only --ignore-scripts
 npm run generate
 npm run build
+git add --all
+git commit -m "chore: rehearse package releases"
 npm run lint
 npm test
 npm run verify
@@ -45,8 +48,9 @@ npm run verify
 Changesets consumes pending files, updates package and dependency versions and
 writes readable changelogs together. Review all resulting notes, versions and
 lockfile changes. Do not freeze checks to historical version strings or edit old
-schema versions merely to match a package bump. Commit the reviewed release changes
-only after the rehearsal passes. Several feature Changesets in one consolidation
+schema versions merely to match a package bump. Keep the rehearsal commit in the
+disposable checkout. Commit the reviewed release changes on the actual release
+branch only after the rehearsal passes. Several feature Changesets in one consolidation
 commit are normal.
 
 ## Public repository and publication gates
