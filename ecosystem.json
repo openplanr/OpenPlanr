@@ -19,7 +19,7 @@
       "packages/integrations",
       "apps/dashboard"
     ],
-    "manifestDigest": "sha256:c1010af2fe9b2239b495bb21be78db8d65c82310585b0bd5434e2f1d6a965755"
+    "manifestDigest": "sha256:6030b328d6d826493436992e27bbc8f3ee35c490a425b9d57da2f08afa529f53"
   },
   "protocol": {
     "current": "1.8.0",
@@ -48,7 +48,7 @@
       "version": "1.25.3",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:91a65c53ddfb01f5d117c6df5e2caee991b712322de2aa5b3100f4278a763d95"
+      "manifestDigest": "sha256:4e12d0cfb766b0501e999490f58b822547b8e09a5f60cd5747075e047868bcce"
     },
     "pipeline": {
       "package": "planr-pipeline",

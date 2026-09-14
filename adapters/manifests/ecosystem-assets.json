@@ -14,7 +14,7 @@
     },
     {
       "path": "package.json",
-      "digest": "sha256:c1010af2fe9b2239b495bb21be78db8d65c82310585b0bd5434e2f1d6a965755"
+      "digest": "sha256:6030b328d6d826493436992e27bbc8f3ee35c490a425b9d57da2f08afa529f53"
     },
     {
       "path": "packages/artifact/package.json",
@@ -22,7 +22,7 @@
     },
     {
       "path": "packages/cli/package.json",
-      "digest": "sha256:91a65c53ddfb01f5d117c6df5e2caee991b712322de2aa5b3100f4278a763d95"
+      "digest": "sha256:4e12d0cfb766b0501e999490f58b822547b8e09a5f60cd5747075e047868bcce"
     },
     {
       "path": "packages/design/package.json",
@@ -128,7 +128,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:2a36bc8865738cae7889368d590804315a39ce5350f723c0d834db2e3f7098bc"
+      "digest": "sha256:34b7b9bb7ed303767ea605b4aed4c3f5592c60cc75959d9649c03ec8d7d4ddf1"
     }
   ]
 }

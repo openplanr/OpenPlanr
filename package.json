@@ -54,7 +54,10 @@
     "version-packages": "changeset version"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.30.0"
+    "@changesets/cli": "^2.30.0",
+    "@vitest/coverage-v8": "4.1.11",
+    "jsdom": "26.1.0",
+    "vitest": "4.1.11"
   },
   "overrides": {
     "miniflare": {
