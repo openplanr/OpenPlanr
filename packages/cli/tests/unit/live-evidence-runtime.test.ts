@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { sha256CanonicalJson } from '../../src/services/canonical-json.js';
 import { businessMetricsLiveEvidenceAdapterV2 } from '../../src/services/connectors/adapters/business-metrics.js';
@@ -116,7 +117,7 @@ function normalize(input: MatrixCase, sourceIdentityHash = hash('b')) {
 }
 
 describe('live-evidence connector adapters', () => {
-  it('binds Package-B registry rows to the exact six OpenPlanr adapter bytes', () => {
+  it('binds original registry provenance to the exact six OpenPlanr adapter bytes', async () => {
     const pipelinePackageRoot = resolvePipelinePackageRoot();
     const registry = JSON.parse(
       readFileSync(join(pipelinePackageRoot, 'registry/live-evidence-providers.json'), 'utf8'),
@@ -132,8 +133,27 @@ describe('live-evidence connector adapters', () => {
     };
     const openPlanrPackage = JSON.parse(readFileSync(resolve('package.json'), 'utf8')) as {
       name: string;
-      version: string;
     };
+    const contracts = (await import(
+      pathToFileURL(join(pipelinePackageRoot, 'lib/pipeline/index.mjs')).href
+    )) as {
+      assertLiveEvidenceProviderRegistryV2(value: unknown, options: unknown): unknown;
+      assertLiveEvidenceProviderRegistrationV2(value: unknown, options: unknown): unknown;
+    };
+    const { OPEN_REFERENCE_EVIDENCE_REGISTRY_V2: baseRegistry } = (await import(
+      pathToFileURL(join(pipelinePackageRoot, 'lib/operate/evidence-v2.mjs')).href
+    )) as {
+      OPEN_REFERENCE_EVIDENCE_REGISTRY_V2: { providers: unknown[]; resolvers: unknown[] };
+    };
+    const contractOptions = {
+      baseEvidenceProviders: baseRegistry.providers,
+      baseResolvers: baseRegistry.resolvers,
+    };
+    // Validate schema identities, the registry/registration hashes, and the exact
+    // base provider/resolver records with the runtime's real contract reader.
+    expect(() =>
+      contracts.assertLiveEvidenceProviderRegistryV2(registry, contractOptions),
+    ).not.toThrow();
     const expectedIds = [
       'business-metrics',
       'deployment-health',
@@ -154,7 +174,15 @@ describe('live-evidence connector adapters', () => {
       expect(row.conformanceDigest).toBe(adapter.definition.conformanceDigest);
       expect(row.implementation.id).toBe(adapter.definition.adapterId);
       expect(row.provenance.packageName).toBe(openPlanrPackage.name);
-      expect(row.provenance.packageVersion).toBe(openPlanrPackage.version);
+      // This version records the original registration, not the current CLI
+      // release. Repackaging unchanged adapters must preserve that provenance.
+      const repackagedVersion = `${Number(row.provenance.packageVersion.split('.')[0]) + 1}.0.0`;
+      expect(() =>
+        contracts.assertLiveEvidenceProviderRegistrationV2(
+          { ...row, provenance: { ...row.provenance, packageVersion: repackagedVersion } },
+          contractOptions,
+        ),
+      ).toThrow(/registrationHash does not bind the exact canonical record/u);
       expect(row.provenance.integrity).toBe(
         `sha256:${createHash('sha256').update(readFileSync(source)).digest('hex')}`,
       );
