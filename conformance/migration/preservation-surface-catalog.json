@@ -3968,12 +3968,12 @@
     {
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "sourcePath": "scripts/marketplace/generate-ecosystem.mjs",
-      "sourceSha256": "1338b0024b9edff8534d8313edffc57e7224ea0da4d0b0755f0e02a7b114689d"
+      "sourceSha256": "bff176b8361ec365069ec98fe4e2e8fab8bb5a3bcf573fd01c4b5231aee9a5e4"
     },
     {
       "generatorId": "scripts-migration-generate-preservation-catalog",
       "sourcePath": "scripts/migration/generate-preservation-catalog.mjs",
-      "sourceSha256": "47f5bb405a31832374663a50976df7289e5893eb7e0912c2fc02102f3b7bf2b7"
+      "sourceSha256": "2a8c19c620dac2e6acd5b25891067b8129636471e4662a1fbd1737472fb03f22"
     },
     {
       "generatorId": "scripts-protocol-project-protocol",
@@ -4020,7 +4020,7 @@
       "path": "adapters/manifests/ecosystem-assets.json",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "manifest",
-      "sha256": "c84125bb58fc2baa3585511dd0ec4cf99e082a0f14034cbaa8d68f6dd6612b89"
+      "sha256": "c963034216c1bfdd8d4ef7c422c43597230fa83a0070e170879175854ba84112"
     },
     {
       "path": "adapters/manifests/generated-assets.json",
@@ -18036,5 +18036,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:2c736e1d155c38d3329426c9a7796affce6b461df8a132c59d9f45df03bb7115"
+  "documentDigest": "sha256:f93b8f55c62aac58a8242701c6c80c7843ea86976be5e0ddb313217f24b98c00"
 }

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
@@ -59,7 +59,7 @@ test('new versions do not permit publishing private workspaces or introducing fo
 
 test('Changesets versions the actual pending notes, updates exact pins, and generates readable changelogs without publishing', () => {
   const directory = mkdtempSync(join(tmpdir(), 'openplanr-release-versioning-'));
-  const env = { ...process.env, CI: '1', NO_COLOR: '1', GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' };
+  const env = { ...process.env, PATH: [dirname(process.execPath), process.env.PATH ?? ''].join(delimiter), CI: '1', NO_COLOR: '1', GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' };
   const run = (command, args) => {
     const result = spawnSync(command, args, { cwd: directory, env, encoding: 'utf8', timeout: 60_000 });
     assert.equal(result.status, 0, `${command} ${args.join(' ')}\n${result.stdout}\n${result.stderr}`);
@@ -79,6 +79,10 @@ test('Changesets versions the actual pending notes, updates exact pins, and gene
     // This is a metadata-only version rehearsal. No installation, package
     // publication, source override, or change to the developer's tree occurs.
     symlinkSync(join(root, 'node_modules'), join(directory, 'node_modules'), 'dir');
+    for (const path of Object.keys(WORKSPACE_IDENTITIES)) {
+      const dependencies = join(root, path, 'node_modules');
+      if (existsSync(dependencies)) symlinkSync(dependencies, join(directory, path, 'node_modules'), 'dir');
+    }
     run('git', ['init', '--initial-branch=main', '--quiet']);
     run('git', ['add', 'package.json', 'packages', 'apps', '.changeset']);
     run('git', ['-c', 'user.name=Release test', '-c', 'user.email=release-test@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--message=Initialize disposable release fixture']);
@@ -106,6 +110,51 @@ test('Changesets versions the actual pending notes, updates exact pins, and gene
       assert.match(notes, /planr spec decompose/u);
     }
     assert.deepEqual(readdirSync(join(directory, '.changeset')).filter(file => file.endsWith('.md') && file !== 'README.md'), []);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+
+test('a real package version operation regenerates current runtime projections without changing document contracts', { timeout: 120_000 }, () => {
+  const directory = mkdtempSync(join(tmpdir(), 'openplanr-release-generation-'));
+  const env = { ...process.env, PATH: [dirname(process.execPath), process.env.PATH ?? ''].join(delimiter), CI: '1', NO_COLOR: '1', GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' };
+  const run = (command, args, cwd = directory) => {
+    const result = spawnSync(command, args, { cwd, env, encoding: 'utf8', timeout: 60_000, maxBuffer: 16 * 1024 * 1024 });
+    assert.equal(result.status, 0, `${command} ${args.join(' ')}\n${result.stdout}\n${result.stderr}`);
+    return result.stdout;
+  };
+  try {
+    // Copy current tracked source bytes, including the generator under test;
+    // no private planning files, sibling checkout, or Git history is required.
+    const files = run('git', ['ls-files', '-z'], root).split('\0').filter(Boolean);
+    for (const path of files) {
+      const destination = join(directory, path);
+      mkdirSync(dirname(destination), { recursive: true });
+      cpSync(join(root, path), destination);
+    }
+    symlinkSync(join(root, 'node_modules'), join(directory, 'node_modules'), 'dir');
+    for (const path of Object.keys(WORKSPACE_IDENTITIES)) {
+      const dependencies = join(root, path, 'node_modules');
+      if (existsSync(dependencies)) symlinkSync(dependencies, join(directory, path, 'node_modules'), 'dir');
+    }
+    run('git', ['init', '--initial-branch=main', '--quiet']);
+    run('git', ['add', '.']);
+    run('git', ['-c', 'user.name=Release test', '-c', 'user.email=release-test@example.invalid', '-c', 'commit.gpgsign=false', 'commit', '--quiet', '--message=Initialize disposable source fixture']);
+    const contractPaths = files.filter(path => path.startsWith('packages/protocol/schemas/') || path === 'packages/protocol/registry/adapters.json');
+    const contracts = new Map(contractPaths.map(path => [path, readFileSync(join(directory, path))]));
+    const previous = readJson(join(directory, 'packages/pipeline/package.json')).version;
+    writeFileSync(join(directory, '.changeset/runtime-version-regression.md'), '---\n"openplanr": minor\n"planr-pipeline": minor\n"@openplanr/protocol": minor\n---\n\nExercise runtime release projections after a real version operation.\n');
+    run(process.execPath, [join(root, 'node_modules/@changesets/cli/bin.js'), 'version']);
+    run(process.execPath, ['scripts/generate-all.mjs']);
+    const current = readJson(join(directory, 'packages/pipeline/package.json')).version;
+    assert.notEqual(current, previous);
+    const ecosystem = readJson(join(directory, 'ecosystem.json'));
+    assert.equal(ecosystem.components.pipeline.version, current);
+    assert.equal(ecosystem.compatibility.cliOptionalPipeline.version, current);
+    assert.ok(ecosystem.adapters.hosts.every(({ version }) => version === current));
+    for (const [path, bytes] of contracts) assert.deepEqual(readFileSync(join(directory, path)), bytes, path);
+    run(process.execPath, ['scripts/generate-all.mjs', '--check']);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

@@ -67,6 +67,7 @@ test('catalog, schema, role, skill, and adapter membership is exact', () => {
   assert.ok(ecosystem.catalogs.roles.ids.includes('planr-documentation'));
   assert.ok(!ecosystem.catalogs.roles.ids.includes('planr-docs'));
   assert.deepEqual(ecosystem.adapters.hosts.map(({ id }) => id), ['claude-code', 'codex', 'cursor']);
+  assert.ok(ecosystem.adapters.hosts.every(({ version }) => version === json('packages/pipeline/package.json').version));
   assert.equal(ecosystem.registries.capturedEvaluationContracts.lifecycle, 'byte-preserved');
   assert.equal(ecosystem.registries.capturedEvaluationContracts.hostProfiles.count, 3);
   assert.equal(ecosystem.registries.capturedEvaluationContracts.graders.count, 6);

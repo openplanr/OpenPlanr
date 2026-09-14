@@ -350,7 +350,9 @@ async function buildOutputs() {
     },
     adapters: {
       registry: digestRef('packages/protocol/registry/adapters.json'),
-      hosts: adapterRegistry.adapters.map(({ id, version, capabilityLevel }) => ({ id, version, capabilityLevel })).sort((left, right) => left.id.localeCompare(right.id)),
+      // Registry versions describe the preserved adapter contract. Runtime
+      // package release projections follow the implementation manifest.
+      hosts: adapterRegistry.adapters.map(({ id, capabilityLevel }) => ({ id, version: components.pipeline.version, capabilityLevel })).sort((left, right) => left.id.localeCompare(right.id)),
       generatedAssets: { ...digestRef('adapters/manifests/generated-assets.json'), count: skillAssets.assets.length },
     },
     schemas: {

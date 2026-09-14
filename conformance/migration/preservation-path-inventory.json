@@ -143,11 +143,11 @@
     "pathRecords": 2237,
     "dispositionCounts": {
       "regenerated": 205,
-      "merged": 527,
+      "merged": 528,
       "moved": 280,
       "retired": 56,
       "external": 137,
-      "exact": 1025,
+      "exact": 1024,
       "excluded": 7
     },
     "unmappedPaths": 0
@@ -68196,8 +68196,8 @@
         "mode": "100644",
         "sha256": "0d18965cbdac3f7c31b74ebd8d323c8d984b3397f9d6b339d787958bb20f0fe5"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/tests/pipeline/doctor-release-changelog.test.mjs",
@@ -68206,10 +68206,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "0d18965cbdac3f7c31b74ebd8d323c8d984b3397f9d6b339d787958bb20f0fe5",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -71039,5 +71037,5 @@
       }
     }
   ],
-  "documentDigest": "sha256:a9e12e03880c46612b1fa9cb2336d1eb7f092da975ed5228d6f5cd76fe746c9c"
+  "documentDigest": "sha256:9996532b66e89768100fc2544648297ce482a73cbc09c8b256c57ab49baf05ac"
 }

@@ -40,6 +40,7 @@ const ROOT_WORKFLOW_CONTRACT_PATHS = new Set([
 const EVOLVED_MAPPING_IDS = new Set([
   // Release proofs follow declared package versions across Changesets updates.
   'planr-pipeline:cutoff:tests/ecosystem/operate-v2-product-package.test.mjs',
+  'planr-pipeline:cutoff:tests/pipeline/doctor-release-changelog.test.mjs',
   // Public docs retain normative rules after private ADR links are removed.
   // The legacy canary is explicitly identified as a manual consumer audit.
   'planr-pipeline:cutoff:docs/artifact-review.md',

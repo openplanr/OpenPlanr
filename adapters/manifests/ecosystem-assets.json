@@ -98,7 +98,7 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:1338b0024b9edff8534d8313edffc57e7224ea0da4d0b0755f0e02a7b114689d"
+      "digest": "sha256:bff176b8361ec365069ec98fe4e2e8fab8bb5a3bcf573fd01c4b5231aee9a5e4"
     }
   ],
   "outputs": [
