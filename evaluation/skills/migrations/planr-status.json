@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-status",
+  "family": "planning-tools",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-status/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-status/skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Clarified status selection for done, pending, blocked, and next-work questions."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:54978f8e5e2ccd95d63970d9c6be05c7053a190f06d1cadad4e5ffc8ecc0a5ce",
+      "successorDigest": "sha256:fdc5f45371326b50d846a08c2ae6ff2ae6f63f798a1e7ff151734f1339de61d9"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:54978f8e5e2ccd95d63970d9c6be05c7053a190f06d1cadad4e5ffc8ecc0a5ce",
+      "successorDigest": "sha256:fdc5f45371326b50d846a08c2ae6ff2ae6f63f798a1e7ff151734f1339de61d9"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:c423832db8de1b66d9a71b9ead596a9f14e5ae7f9d44eafa8a524dd84cc9ca44",
+      "successorDigest": "sha256:879cbc875fcc8d731185eb582084b9f97d37339bb9d8f648125b1e3e33823bd0"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:54978f8e5e2ccd95d63970d9c6be05c7053a190f06d1cadad4e5ffc8ecc0a5ce",
+      "successorDigest": "sha256:fdc5f45371326b50d846a08c2ae6ff2ae6f63f798a1e7ff151734f1339de61d9"
+    }
+  ]
+}

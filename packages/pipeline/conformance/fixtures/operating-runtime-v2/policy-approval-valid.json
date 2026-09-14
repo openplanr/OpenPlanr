@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "policyPrecedence": [
+    { "id": "core", "precedence": 300, "narrowingOnly": false },
+    { "id": "project", "precedence": 200, "narrowingOnly": true },
+    { "id": "domain", "precedence": 100, "narrowingOnly": true }
+  ],
+  "effectClasses": ["read-only", "machine-local-write", "project-write", "provider-call", "external-effect", "destructive"],
+  "outcomes": ["automatic", "named-single-party", "named-multi-party", "threshold", "deferred", "rejected", "prohibited"],
+  "hardProhibitions": ["credential-change", "customer-contact", "destructive", "funds-transfer", "payment-transfer", "production-deploy", "production-merge", "publication", "secret-mutation"],
+  "approvalCases": [
+    { "outcome": "automatic", "partyCount": 0, "threshold": 0, "expectedDisposition": "approved" },
+    { "outcome": "named-single-party", "partyCount": 1, "threshold": 1, "expectedDisposition": "approved" },
+    { "outcome": "named-multi-party", "partyCount": 2, "threshold": 2, "expectedDisposition": "approved" },
+    { "outcome": "threshold", "partyCount": 3, "threshold": 2, "expectedDisposition": "approved" },
+    { "outcome": "deferred", "partyCount": 0, "threshold": 0, "expectedDisposition": "deferred" },
+    { "outcome": "rejected", "partyCount": 0, "threshold": 0, "expectedDisposition": "rejected" },
+    { "outcome": "prohibited", "partyCount": 0, "threshold": 0, "expectedDisposition": "rejected" }
+  ]
+}

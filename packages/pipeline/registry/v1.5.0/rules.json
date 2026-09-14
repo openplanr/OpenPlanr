@@ -1,0 +1,261 @@
+{
+  "kind": "rule-catalog",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.5.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "rules": [
+    {
+      "ruleId": "R1",
+      "ruleVersion": "1.0.0",
+      "title": "Request-directed workflow",
+      "status": "active",
+      "normativeText": "Planning requests produce planning artifacts. Implementation requests continue through code and the relevant engineering checks.",
+      "enforcementPoints": [
+        {
+          "package": "@openplanr/pipeline",
+          "path": "packages/pipeline/lib/pipeline/plan-ship-boundary.mjs",
+          "symbol": "plan-ship-boundary"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/rule-catalog.test.mjs"
+      ],
+      "citedBy": [
+        "docs/rules.md",
+        "agents/shared/rules.md"
+      ],
+      "source": {
+        "path": "docs/rules.md",
+        "digest": "sha256:93a84c9011d50aa002659d20b8955faf1f316da3d59257570bfef16b57a81f20"
+      }
+    },
+    {
+      "ruleId": "R10",
+      "ruleVersion": "1.0.0",
+      "title": "Role QA parity",
+      "status": "active",
+      "normativeText": "No role is releasable without corresponding QA verification coverage and generated adapter parity.",
+      "enforcementPoints": [
+        {
+          "package": "@openplanr/pipeline",
+          "path": "packages/pipeline/lib/pipeline/role-parity.mjs",
+          "symbol": "role-parity"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/rule-catalog.test.mjs"
+      ],
+      "citedBy": [
+        "docs/rules.md",
+        "agents/shared/rules.md"
+      ],
+      "source": {
+        "path": "docs/rules.md",
+        "digest": "sha256:93a84c9011d50aa002659d20b8955faf1f316da3d59257570bfef16b57a81f20"
+      }
+    },
+    {
+      "ruleId": "R2",
+      "ruleVersion": "1.0.0",
+      "title": "Bounded story decomposition",
+      "status": "active",
+      "normativeText": "A story produces at most two implementation tasks: frontend and backend when design or UI input exists, otherwise one backend task.",
+      "enforcementPoints": [
+        {
+          "package": "@openplanr/pipeline",
+          "path": "packages/pipeline/lib/pipeline/task-decomposition.mjs",
+          "symbol": "task-decomposition"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/rule-catalog.test.mjs"
+      ],
+      "citedBy": [
+        "docs/rules.md",
+        "agents/shared/rules.md"
+      ],
+      "source": {
+        "path": "docs/rules.md",
+        "digest": "sha256:93a84c9011d50aa002659d20b8955faf1f316da3d59257570bfef16b57a81f20"
+      }
+    },
+    {
+      "ruleId": "R3",
+      "ruleVersion": "1.0.0",
+      "title": "Portable capability tiers",
+      "status": "active",
+      "normativeText": "Roles use registry-owned capability tiers and adapters own host model mapping; vendor model names are not protocol truth.",
+      "enforcementPoints": [
+        {
+          "package": "@openplanr/pipeline",
+          "path": "packages/pipeline/lib/pipeline/role-resolution.mjs",
+          "symbol": "role-resolution"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/rule-catalog.test.mjs"
+      ],
+      "citedBy": [
+        "docs/rules.md",
+        "agents/shared/rules.md"
+      ],
+      "source": {
+        "path": "docs/rules.md",
+        "digest": "sha256:93a84c9011d50aa002659d20b8955faf1f316da3d59257570bfef16b57a81f20"
+      }
+    },
+    {
+      "ruleId": "R4",
+      "ruleVersion": "1.0.0",
+      "title": "Generated task custody",
+      "status": "active",
+      "normativeText": "Generated task documents are not manually edited; their reviewed parent source is corrected and deterministic generation is rerun.",
+      "enforcementPoints": [
+        {
+          "package": "@openplanr/pipeline",
+          "path": "packages/pipeline/lib/pipeline/task-generation.mjs",
+          "symbol": "task-generation"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/rule-catalog.test.mjs"
+      ],
+      "citedBy": [
+        "docs/rules.md",
+        "agents/shared/rules.md"
+      ],
+      "source": {
+        "path": "docs/rules.md",
+        "digest": "sha256:93a84c9011d50aa002659d20b8955faf1f316da3d59257570bfef16b57a81f20"
+      }
+    },
+    {
+      "ruleId": "R5",
+      "ruleVersion": "1.0.0",
+      "title": "Immutable Preserve boundaries",
+      "status": "active",
+      "normativeText": "Every Preserve repository path is immutable for the complete task and SHIP run and is verified against its bound baseline.",
+      "enforcementPoints": [
+        {
+          "package": "@openplanr/pipeline",
+          "path": "packages/pipeline/lib/pipeline/preserve-verification.mjs",
+          "symbol": "preserve-verification"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/rule-catalog.test.mjs"
+      ],
+      "citedBy": [
+        "docs/rules.md",
+        "agents/shared/rules.md"
+      ],
+      "source": {
+        "path": "docs/rules.md",
+        "digest": "sha256:93a84c9011d50aa002659d20b8955faf1f316da3d59257570bfef16b57a81f20"
+      }
+    },
+    {
+      "ruleId": "R6",
+      "ruleVersion": "1.0.0",
+      "title": "Adaptive recovery",
+      "status": "active",
+      "normativeText": "Use command results and diagnostics to choose useful corrections, continue while meaningful engineering progress is possible, and report a genuine impasse with the relevant error context.",
+      "enforcementPoints": [
+        {
+          "package": "@openplanr/pipeline",
+          "path": "packages/pipeline/lib/pipeline/adaptive-recovery.mjs",
+          "symbol": "adaptive-recovery"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/rule-catalog.test.mjs"
+      ],
+      "citedBy": [
+        "docs/rules.md",
+        "agents/shared/rules.md"
+      ],
+      "source": {
+        "path": "docs/rules.md",
+        "digest": "sha256:93a84c9011d50aa002659d20b8955faf1f316da3d59257570bfef16b57a81f20"
+      }
+    },
+    {
+      "ruleId": "R7",
+      "ruleVersion": "1.0.0",
+      "title": "Proportional verification",
+      "status": "active",
+      "normativeText": "Local work uses verification proportional to its risk and directly corrects relevant failures. Dedicated release certification owns release closure.",
+      "enforcementPoints": [
+        {
+          "package": "@openplanr/pipeline",
+          "path": "packages/pipeline/lib/pipeline/ship-closure.mjs",
+          "symbol": "ship-closure"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/rule-catalog.test.mjs"
+      ],
+      "citedBy": [
+        "docs/rules.md",
+        "agents/shared/rules.md"
+      ],
+      "source": {
+        "path": "docs/rules.md",
+        "digest": "sha256:93a84c9011d50aa002659d20b8955faf1f316da3d59257570bfef16b57a81f20"
+      }
+    },
+    {
+      "ruleId": "R8",
+      "ruleVersion": "1.0.0",
+      "title": "Read-only database inspection",
+      "status": "active",
+      "normativeText": "Database inspection is read-only and cannot issue DDL, DML, or any external mutation.",
+      "enforcementPoints": [
+        {
+          "package": "@openplanr/pipeline",
+          "path": "packages/pipeline/lib/pipeline/database-authority.mjs",
+          "symbol": "database-authority"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/rule-catalog.test.mjs"
+      ],
+      "citedBy": [
+        "docs/rules.md",
+        "agents/shared/rules.md"
+      ],
+      "source": {
+        "path": "docs/rules.md",
+        "digest": "sha256:93a84c9011d50aa002659d20b8955faf1f316da3d59257570bfef16b57a81f20"
+      }
+    },
+    {
+      "ruleId": "R9",
+      "ruleVersion": "1.0.0",
+      "title": "Implementation ownership",
+      "status": "active",
+      "normativeText": "Frontend and backend ownership boundaries are binding; companion changes must be acceptance-required, disclosed, and outside Preserve.",
+      "enforcementPoints": [
+        {
+          "package": "@openplanr/pipeline",
+          "path": "packages/pipeline/lib/pipeline/ownership-boundary.mjs",
+          "symbol": "ownership-boundary"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/rule-catalog.test.mjs"
+      ],
+      "citedBy": [
+        "docs/rules.md",
+        "agents/shared/rules.md"
+      ],
+      "source": {
+        "path": "docs/rules.md",
+        "digest": "sha256:93a84c9011d50aa002659d20b8955faf1f316da3d59257570bfef16b57a81f20"
+      }
+    }
+  ],
+  "documentDigest": "sha256:b66d52fcdafac4eac1f7d11f54666d32bdcc78a55662550305e88ccb3f429480"
+}

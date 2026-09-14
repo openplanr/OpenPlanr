@@ -1,0 +1,50 @@
+{
+  "protocolVersion": "2.0.0",
+  "runtimeVersion": "0.42.0",
+  "observedAt": "2026-08-12T12:00:00Z",
+  "catalogDigest": "sha256:e5c93534b8ca3eb427a075851b72d7b44226366a72f2dafa51352c8a07791b02",
+  "capabilitySelection": {
+    "providerId": "open-reference-capability-provider",
+    "providerVersion": "1.0.0",
+    "domainId": "software",
+    "actionKind": { "id": "software-operating-hypothesis", "version": "1.0.0" },
+    "capability": { "id": "bounded-project-write", "version": "1.0.0" },
+    "targetKind": "project-record",
+    "effectClass": "project-write"
+  },
+  "policySelection": {
+    "providerId": "open-reference-policy-provider",
+    "providerVersion": "1.0.0",
+    "domainId": "software",
+    "actionKind": { "id": "software-operating-hypothesis", "version": "1.0.0" },
+    "policyRef": { "id": "bounded-project-write-policy", "version": "1.0.0" },
+    "effectClass": "project-write"
+  },
+  "projectExecutorSelection": {
+    "executorId": "open-reference-project-executor",
+    "executorVersion": "1.0.0",
+    "domainId": "software",
+    "actionKind": { "id": "software-operating-hypothesis", "version": "1.0.0" },
+    "capability": { "id": "bounded-project-write", "version": "1.0.0" },
+    "targetKind": "project-record",
+    "effectClass": "project-write",
+    "operationKind": "execute"
+  },
+  "containmentExecutorSelection": {
+    "executorId": "open-reference-containment-executor",
+    "executorVersion": "1.0.0",
+    "domainId": "business",
+    "actionKind": { "id": "business-operating-hypothesis", "version": "1.0.0" },
+    "capability": { "id": "synthetic-contained-write", "version": "1.0.0" },
+    "targetKind": "synthetic-target",
+    "effectClass": "machine-local-write",
+    "operationKind": "execute"
+  },
+  "expected": {
+    "capabilityProvider": "open-reference-capability-provider@1.0.0",
+    "policyProvider": "open-reference-policy-provider@1.0.0",
+    "projectExecutor": "open-reference-project-executor@1.0.0",
+    "containmentExecutor": "open-reference-containment-executor@1.0.0",
+    "fallback": null
+  }
+}

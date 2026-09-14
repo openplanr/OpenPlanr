@@ -1,0 +1,6 @@
+{
+  "scope": { "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0" },
+  "sourceCycleId": "cyc_00000001",
+  "laterCycleId": "cyc_00000002",
+  "expectedRelations": ["source", "touched", "carried-forward"]
+}

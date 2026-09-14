@@ -1,0 +1,104 @@
+{
+  "kind": "evaluation-corpus",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.4.0",
+  "corpusId": "ecp_75c9af3e509ac5710a26b4d7c408a5712b06cec5c1488b19e1bfc36ef3b7e9ac",
+  "corpusDigest": "sha256:75c9af3e509ac5710a26b4d7c408a5712b06cec5c1488b19e1bfc36ef3b7e9ac",
+  "title": "planr-browser-qa certification corpus",
+  "skill": {
+    "id": "planr-browser-qa",
+    "version": "1.0.0"
+  },
+  "members": [
+    {
+      "scenarioId": "esc_07596c560eee37c5ff195d1db29d9ec6c465f37c8339cc3819820c48b36b71ce",
+      "scenarioDigest": "sha256:07596c560eee37c5ff195d1db29d9ec6c465f37c8339cc3819820c48b36b71ce",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/claude-code/permission-denied.json"
+    },
+    {
+      "scenarioId": "esc_0858507fed47492be5d3fe755cd05f60c16e0236bc7030d0f3127ceebd38285c",
+      "scenarioDigest": "sha256:0858507fed47492be5d3fe755cd05f60c16e0236bc7030d0f3127ceebd38285c",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/codex/ambiguity.json"
+    },
+    {
+      "scenarioId": "esc_08fb5cefe994d0faaa7aa336e111e1977992a7d81950e9ecab96f41558ea4d71",
+      "scenarioDigest": "sha256:08fb5cefe994d0faaa7aa336e111e1977992a7d81950e9ecab96f41558ea4d71",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/cursor/ambiguity.json"
+    },
+    {
+      "scenarioId": "esc_0eda23aa7501a2fcbac5a026cef580a18356e0940cffa77b99e39e9a30aa026e",
+      "scenarioDigest": "sha256:0eda23aa7501a2fcbac5a026cef580a18356e0940cffa77b99e39e9a30aa026e",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/claude-code/negative.json"
+    },
+    {
+      "scenarioId": "esc_101193ec458a6d46b5e4598d289e676dff9b653cccb13a4c191f70200ea0b3ab",
+      "scenarioDigest": "sha256:101193ec458a6d46b5e4598d289e676dff9b653cccb13a4c191f70200ea0b3ab",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/cursor/permission-denied.json"
+    },
+    {
+      "scenarioId": "esc_1d9d62ca6aecd0d53c3de88665f8b607191cac0ed59c87ea8f255955b8908aa0",
+      "scenarioDigest": "sha256:1d9d62ca6aecd0d53c3de88665f8b607191cac0ed59c87ea8f255955b8908aa0",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/codex/negative.json"
+    },
+    {
+      "scenarioId": "esc_26666b69ce1529f3fa074a8346d136fdd97c29183160b2a9611a6cedba2dc75e",
+      "scenarioDigest": "sha256:26666b69ce1529f3fa074a8346d136fdd97c29183160b2a9611a6cedba2dc75e",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/claude-code/recovery.json"
+    },
+    {
+      "scenarioId": "esc_4726c5e23888d6c81cd7577871a60d26412fb904eb1d91811c22156eb3974b5c",
+      "scenarioDigest": "sha256:4726c5e23888d6c81cd7577871a60d26412fb904eb1d91811c22156eb3974b5c",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/codex/packed-install.json"
+    },
+    {
+      "scenarioId": "esc_4a2213a1d86f8dd33944bebe10afa566489f1e1aaf554f5e0de0d343093a5c68",
+      "scenarioDigest": "sha256:4a2213a1d86f8dd33944bebe10afa566489f1e1aaf554f5e0de0d343093a5c68",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/claude-code/packed-install.json"
+    },
+    {
+      "scenarioId": "esc_4dac84f5fbe8349b7164c9c3c0ea686a7b219617209530ec7a4f96d356ca7763",
+      "scenarioDigest": "sha256:4dac84f5fbe8349b7164c9c3c0ea686a7b219617209530ec7a4f96d356ca7763",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/claude-code/positive.json"
+    },
+    {
+      "scenarioId": "esc_68edda36ba3c74d7a2d7ea11ca37304b83f874c0e569b3b1e391f6a647ec16f9",
+      "scenarioDigest": "sha256:68edda36ba3c74d7a2d7ea11ca37304b83f874c0e569b3b1e391f6a647ec16f9",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/codex/positive.json"
+    },
+    {
+      "scenarioId": "esc_6ae924c195365f2e1550e5e7a6b7bf978fd44474e327b91dbf78e69bcc3706b2",
+      "scenarioDigest": "sha256:6ae924c195365f2e1550e5e7a6b7bf978fd44474e327b91dbf78e69bcc3706b2",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/codex/recovery.json"
+    },
+    {
+      "scenarioId": "esc_7621c9e64b9b6f9b03152cbfb2f46b4dd23fb25f7a3a7214daadb4d0a297befe",
+      "scenarioDigest": "sha256:7621c9e64b9b6f9b03152cbfb2f46b4dd23fb25f7a3a7214daadb4d0a297befe",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/cursor/positive.json"
+    },
+    {
+      "scenarioId": "esc_91ce0d02ea12133e584fe6f087b47dc46a7b8a0437cee5869cddb9999555ec9f",
+      "scenarioDigest": "sha256:91ce0d02ea12133e584fe6f087b47dc46a7b8a0437cee5869cddb9999555ec9f",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/codex/permission-denied.json"
+    },
+    {
+      "scenarioId": "esc_92583f1a5d66ace7d74ac0fcf2088532d62a9bdbc423070583c996bdfeeb05a7",
+      "scenarioDigest": "sha256:92583f1a5d66ace7d74ac0fcf2088532d62a9bdbc423070583c996bdfeeb05a7",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/claude-code/ambiguity.json"
+    },
+    {
+      "scenarioId": "esc_bdb5f48e8ea45212f747dbf7af40f37ff443e02a9ab1e6ad6e8a9c7c5888f7db",
+      "scenarioDigest": "sha256:bdb5f48e8ea45212f747dbf7af40f37ff443e02a9ab1e6ad6e8a9c7c5888f7db",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/cursor/negative.json"
+    },
+    {
+      "scenarioId": "esc_c4faba3aef41abae9b61cc7418705d7700ce4afad882b9219df1820429d07b99",
+      "scenarioDigest": "sha256:c4faba3aef41abae9b61cc7418705d7700ce4afad882b9219df1820429d07b99",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/cursor/packed-install.json"
+    },
+    {
+      "scenarioId": "esc_c6467e3a26febdeeb726c14f8adcdf32554fe3b213b1163faff3abff6ffdbc80",
+      "scenarioDigest": "sha256:c6467e3a26febdeeb726c14f8adcdf32554fe3b213b1163faff3abff6ffdbc80",
+      "sourcePath": "evaluation/scenarios/planr-browser-qa/cursor/recovery.json"
+    }
+  ]
+}

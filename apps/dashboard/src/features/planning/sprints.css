@@ -1,0 +1,65 @@
+/* Planning · Sprints: one selectable card per sprint artifact, then the membership table. */
+
+.op-planning.pc-sprints {
+  gap: 0;
+}
+
+.pc-sprints__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pc-sprints__card {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: var(--pc-surface-card);
+  border: 1px solid var(--pc-border-default);
+  border-radius: var(--pc-radius-md);
+  cursor: pointer;
+  transition: var(--pc-transition-ui);
+}
+
+.pc-sprints__card:hover {
+  border-color: var(--pc-border-strong);
+}
+
+.pc-sprints__card[data-active="true"] {
+  background: var(--pc-surface-selected);
+  border-color: var(--pc-border-accent);
+}
+
+.pc-sprints__card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--pc-focus-halo);
+}
+
+.pc-sprints__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.pc-sprints__head > :last-child {
+  margin-left: auto;
+}
+
+.pc-sprints__members {
+  margin-top: 18px;
+}
+
+.pc-sprints__empty {
+  padding: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-sprints__card {
+    transition: none;
+  }
+}

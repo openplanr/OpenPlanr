@@ -1,0 +1,9 @@
+{
+  "missingArtifact": "ARTIFACT_NOT_FOUND",
+  "unacceptedArtifact": "ARTIFACT_NOT_FOUND",
+  "scopeMismatch": "EVIDENCE_SOURCE_SCOPE_MISMATCH",
+  "wrongType": "OBJECT_TYPE_MISMATCH",
+  "wrongHash": "ARTIFACT_HASH_MISMATCH",
+  "denied": "CAPABILITY_DENIED",
+  "kindMismatch": "UNSUPPORTED_EVIDENCE_KIND"
+}

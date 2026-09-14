@@ -1,0 +1,25 @@
+{
+  "kind": "landing-workflow-assets",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "generator": "scripts/generate-landing-workflow-assets.mjs",
+  "workflowCatalogDigest": "sha256:7bff6d6150b6cef7d46603216d4225bc9000f9f286a203c65e668a077b3ead80",
+  "assets": [
+    {
+      "path": "lib/pipeline/landing.mjs",
+      "digest": "sha256:fe4ec4a33968ec39d7e803deb97bf70ee0138b68fe247f0dd2632af0abaff9b2"
+    },
+    {
+      "path": "lib/pipeline/landing.d.mts",
+      "digest": "sha256:b297ab06f6bd5651aad7df6c7ba6b09947baadd9371888b8f1e18411e2db12cf"
+    },
+    {
+      "path": "schemas/v1.2.0/landing-workflow-catalog.schema.json",
+      "digest": "sha256:af482aacfe418f9fac868f45d18bd8ca2e816de8259ff0f427049cb1e37d5561"
+    },
+    {
+      "path": "registry/landing-workflows.json",
+      "digest": "sha256:7bff6d6150b6cef7d46603216d4225bc9000f9f286a203c65e668a077b3ead80"
+    }
+  ]
+}

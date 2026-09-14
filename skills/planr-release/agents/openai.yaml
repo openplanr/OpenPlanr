@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Release"
+  short_description: "Choose and maintain a product's versioning scheme, classify…"
+  default_prompt: "Use $planr-release to choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing."
+policy:
+  allow_implicit_invocation: true

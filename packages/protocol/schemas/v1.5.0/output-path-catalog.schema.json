@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.5.0/output-path-catalog.schema.json",
+  "x-openplanr-contract": {
+    "id": "output-path-catalog",
+    "version": "1.5.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "outputCatalogDigest",
+    "outputs"
+  ],
+  "properties": {
+    "kind": {
+      "const": "output-path-catalog"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.5.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "outputCatalogDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "outputId",
+          "pathTemplates"
+        ],
+        "properties": {
+          "outputId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "pathTemplates": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "default",
+              "spec-driven"
+            ],
+            "properties": {
+              "default": {
+                "$ref": "common.schema.json#/$defs/relativePath"
+              },
+              "spec-driven": {
+                "$ref": "common.schema.json#/$defs/relativePath"
+              }
+            }
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 512
+    }
+  }
+}

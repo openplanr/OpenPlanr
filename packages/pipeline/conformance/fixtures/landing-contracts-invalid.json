@@ -1,0 +1,47 @@
+{
+  "landing-plan": [
+    { "name": "unknown field", "operation": "add", "path": "/effectCapability", "value": "deploy", "expectedLayer": "schema" },
+    { "name": "portable plan claims authority", "operation": "replace", "path": "/authority", "value": "external-effect", "expectedLayer": "schema" },
+    { "name": "unsupported SHIP schema version", "operation": "replace", "path": "/shipClosure/schemaVersion", "value": "2.0.0", "expectedLayer": "schema" },
+    { "name": "mixed SHIP protocol version", "operation": "replace", "path": "/shipClosure/protocolVersion", "value": "1.2.0", "expectedLayer": "schema" },
+    { "name": "non-passing SHIP receipt", "operation": "replace", "path": "/shipClosure/terminalStatus", "value": "blocked", "expectedLayer": "schema" },
+    { "name": "deploy without preconfirmed containment", "operation": "replace", "path": "/operations/0/containment", "value": null, "expectedLayer": "schema" },
+    { "name": "operation registration custody substitution", "operation": "replace", "path": "/operations/0/registrationHash", "value": "sha256:3030303030303030303030303030303030303030303030303030303030303030", "expectedLayer": "binding-conflict" }
+  ],
+  "landing-confirmation": [
+    { "name": "unknown field", "operation": "add", "path": "/effectGrant", "value": true, "expectedLayer": "schema" },
+    { "name": "portable confirmation claims authority", "operation": "replace", "path": "/authority", "value": "external-effect", "expectedLayer": "schema" },
+    { "name": "docket supplies a default", "operation": "replace", "path": "/docket/defaultChoice", "value": "confirm", "expectedLayer": "schema" },
+    { "name": "docket cancellation has an effect", "operation": "replace", "path": "/docket/cancelEffect", "value": "rollback", "expectedLayer": "schema" },
+    { "name": "changed docket target under the same confirmation", "operation": "replace", "path": "/docket/currentTargetHash", "value": "sha256:3030303030303030303030303030303030303030303030303030303030303030", "expectedLayer": "custody-conflict" },
+    { "name": "confirmation changes plan custody", "operation": "replace", "path": "/planHash", "value": "sha256:3131313131313131313131313131313131313131313131313131313131313131", "expectedLayer": "binding-conflict" }
+  ],
+  "landing-event": [
+    { "name": "unknown field", "operation": "add", "path": "/credential", "value": "secret", "expectedLayer": "schema" },
+    { "name": "unsupported protocol version", "operation": "replace", "path": "/protocolVersion", "value": "1.1.0", "expectedLayer": "schema" },
+    { "name": "caller-selected event identity", "operation": "replace", "path": "/eventId", "value": "caller-event", "expectedLayer": "schema" }
+  ],
+  "landing-phase-receipt": [
+    { "name": "unknown field", "operation": "add", "path": "/rollbackCapability", "value": true, "expectedLayer": "schema" },
+    { "name": "recovery required without containment", "operation": "replace", "path": "/containment", "value": null, "expectedLayer": "schema" },
+    { "name": "recovery required without recovery docket", "operation": "replace", "path": "/recovery", "value": null, "expectedLayer": "schema" },
+    { "name": "recovery docket claims rollback authority", "operation": "replace", "path": "/recovery/authority", "value": "rollback", "expectedLayer": "schema" },
+    { "name": "recovery docket supplies a default", "operation": "replace", "path": "/recovery/defaultChoice", "value": "rollback", "expectedLayer": "schema" },
+    { "name": "phase changes operation registration custody", "operation": "replace", "path": "/operationRegistrationHash", "value": "sha256:3030303030303030303030303030303030303030303030303030303030303030", "expectedLayer": "binding-conflict" }
+  ],
+  "landing-receipt": [
+    { "name": "unknown field", "operation": "add", "path": "/deploymentCredential", "value": "secret", "expectedLayer": "schema" },
+    { "name": "portable receipt claims authority", "operation": "replace", "path": "/authority", "value": "external-effect", "expectedLayer": "schema" },
+    { "name": "recovery summary claims rollback authority", "operation": "replace", "path": "/recovery/authority", "value": "rollback", "expectedLayer": "schema" },
+    { "name": "recovery summary supplies a default", "operation": "replace", "path": "/recovery/defaultChoice", "value": "rollback", "expectedLayer": "schema" },
+    { "name": "foreign SHIP protocol version", "operation": "replace", "path": "/shipClosure/protocolVersion", "value": "1.2.0", "expectedLayer": "schema" },
+    { "name": "receipt changes plan custody", "operation": "replace", "path": "/planHash", "value": "sha256:3131313131313131313131313131313131313131313131313131313131313131", "expectedLayer": "binding-conflict" }
+  ],
+  "landing-operation-registry": [
+    { "name": "unknown field", "operation": "add", "path": "/modulePath", "value": "./deploy.mjs", "expectedLayer": "schema" },
+    { "name": "unsupported registry version", "operation": "replace", "path": "/registryVersion", "value": "2.0.0", "expectedLayer": "schema" },
+    { "name": "registry claims portable authority", "operation": "replace", "path": "/authority", "value": "external-effect", "expectedLayer": "schema" },
+    { "name": "operation claims portable authority", "operation": "replace", "path": "/operations/0/portableAuthority", "value": "external-effect", "expectedLayer": "schema" },
+    { "name": "operation carries executable implementation", "operation": "add", "path": "/operations/0/implementation", "value": { "modulePath": "./deploy.mjs" }, "expectedLayer": "schema" }
+  ]
+}

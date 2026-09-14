@@ -1,0 +1,12 @@
+{
+  "scope": { "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0" },
+  "repository": { "repositoryId": "repo-control", "maxBytes": 1024, "classification": "internal" },
+  "candidate": {
+    "kind": "operating-evidence-candidate", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0",
+    "candidateId": "evc_git_valid_001", "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0", "sourceArtifactId": "art_00000002",
+    "evidenceKind": "git",
+    "locator": { "repositoryId": "repo-control", "revision": "HEAD", "objectType": "blob", "path": "notes/evidence.txt", "lines": { "start": 2, "end": 3 } },
+    "provider": { "id": "local-git-evidence-provider", "version": "2.0.0" },
+    "resolver": { "id": "local-git-evidence-resolver", "version": "2.0.0" }
+  }
+}

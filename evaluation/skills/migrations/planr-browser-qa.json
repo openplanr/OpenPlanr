@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-browser-qa",
+  "family": "quality",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-browser-qa/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-browser-qa/skill.json",
+    "version": "2.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Removed SHIP-run, trusted-adapter, attestation, and evidence prerequisites; browser QA now runs directly with concise results."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:7ec450ada7f5bfca3e094ef1ab2bd6cedf8706299dae9d6426da5cb98428c776",
+      "successorDigest": "sha256:6ea1abe6cc81b04d0418ec5ea354920e10a765685403c492f9a7a282dab69de2"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:7ec450ada7f5bfca3e094ef1ab2bd6cedf8706299dae9d6426da5cb98428c776",
+      "successorDigest": "sha256:6ea1abe6cc81b04d0418ec5ea354920e10a765685403c492f9a7a282dab69de2"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:1da27da503f81dbc678f0a288671e66a3d9ba7f252b563370c41ff6c46628fbb",
+      "successorDigest": "sha256:84c963d6e4a30171db8ee1fb99f7621e1a2c018ba4d42004d18222026e2423ed"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:7ec450ada7f5bfca3e094ef1ab2bd6cedf8706299dae9d6426da5cb98428c776",
+      "successorDigest": "sha256:6ea1abe6cc81b04d0418ec5ea354920e10a765685403c492f9a7a282dab69de2"
+    }
+  ]
+}

@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; frame-src data:; img-src data: blob:; font-src data:; connect-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'">
+  <title>OpenPlanr Artifact Review — preview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg:#08080c; --chrome:#0e0e14; --panel:#141420; --raised:#1a1a2a;
+      --stage:#0a0b0e; --rule:#222236; --text:#f4f4fa; --muted:#9999b8;
+      --primary:#5eead4; --primary-strong:#2dd4bf; --warning:#f59e0b;
+      --danger:#f87171; --on-danger:#08080c; --question:#60a5fa; --on-question:#08080c;
+      --resolved:#8e8eb4; --on-resolved:#08080c; --on-improve:#08080c;
+      --shadow:0 22px 70px rgba(0,0,0,.34),0 2px 8px rgba(0,0,0,.24);
+      --font-display:"Outfit","Avenir Next",sans-serif;
+      --font-body:"DM Sans","Avenir Next",sans-serif;
+      --font-mono:"Source Code Pro","SFMono-Regular",monospace;
+      --toolbar:48px; --rail:344px; --ease:cubic-bezier(.2,.8,.2,1);
+    }
+    html[data-theme="light"] {
+      color-scheme: light;
+      --bg:#f6f7f9; --chrome:#fff; --panel:#fbfbfd; --raised:#f0f2f5;
+      --stage:#e9edf2; --rule:#dfe3ea; --text:#171722; --muted:#65657d;
+      --primary:#087f73; --primary-strong:#06665d; --warning:#a85f00;
+      --danger:#c53f4f; --on-danger:#fff; --question:#2563a8; --on-question:#fff;
+      --resolved:#697386; --on-resolved:#fff; --on-improve:#fff;
+      --shadow:0 22px 70px rgba(35,45,62,.16),0 2px 8px rgba(35,45,62,.10);
+    }
+    * { box-sizing:border-box }
+    html,body { height:100%; margin:0 }
+    body { overflow:hidden; background:var(--bg); color:var(--text); font:13px/1.45 var(--font-body); -webkit-font-smoothing:antialiased }
+    button,input,textarea,select { font:inherit }
+    button { color:inherit }
+    button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible { outline:2px solid var(--primary); outline-offset:2px }
+    .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important }
+    .app { height:100%; display:grid; grid-template-rows:var(--toolbar) 1fr }
+    .toolbar { position:relative; z-index:40; display:flex; align-items:center; gap:10px; padding:0 10px 0 14px; background:color-mix(in srgb,var(--chrome) 96%,transparent); border-bottom:1px solid var(--rule) }
+    .brand { display:flex; align-items:center; gap:9px; min-width:0 }
+    .mark { position:relative; width:20px; height:20px; flex:none; transform:rotate(45deg); border:1px solid color-mix(in srgb,var(--primary) 70%,var(--rule)); border-radius:5px }
+    .mark::before,.mark::after { content:""; position:absolute; background:var(--primary); border-radius:2px }
+    .mark::before { width:4px; height:4px; left:3px; top:3px; box-shadow:8px 8px 0 var(--warning) }
+    .mark::after { width:8px; height:2px; left:6px; top:9px; transform:rotate(-45deg) }
+    .titleblock { min-width:0; display:flex; align-items:baseline; gap:8px }
+    .title { max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:600 13px/1 var(--font-display); letter-spacing:-.01em }
+    .meta { color:var(--muted); font:10px/1 var(--font-mono); white-space:nowrap }
+    .privacy { display:flex; align-items:center; gap:5px; color:var(--muted); font-size:11px; white-space:nowrap }
+    .privacy::before { content:""; width:6px; height:6px; border-radius:50%; background:var(--primary); box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 14%,transparent) }
+    .spacer { flex:1 }
+    .group { height:30px; display:flex; align-items:center; gap:2px; padding:2px; border:1px solid var(--rule); border-radius:9px; background:var(--bg) }
+    .tool,.icon { height:24px; border:0; border-radius:6px; background:transparent; cursor:pointer; transition:background 160ms var(--ease),color 160ms var(--ease),transform 120ms var(--ease) }
+    .tool { padding:0 9px; color:var(--muted); font-size:11px; font-weight:600 }
+    .tool.on { color:var(--bg); background:var(--primary) }
+    .icon { min-width:26px; padding:0 7px; color:var(--muted); font:11px/1 var(--font-mono) }
+    .icon:hover,.tool:hover { color:var(--text); background:var(--raised) }
+    .icon:active,.tool:active,.primary:active { transform:scale(.96) }
+    .primary { height:30px; padding:0 13px; border:1px solid var(--primary); border-radius:9px; background:var(--primary); color:var(--bg); font-weight:700; cursor:pointer; transition:transform 120ms var(--ease),background 160ms var(--ease) }
+    .primary:hover { background:var(--primary-strong) }
+    .primary.ghost { background:transparent; color:var(--text); border-color:var(--rule) }
+    .feedback-btn { display:flex; align-items:center; gap:7px }
+    .count { min-width:17px; height:17px; display:grid; place-items:center; border-radius:999px; background:var(--raised); color:var(--muted); font:10px/1 var(--font-mono) }
+    .workspace { min-height:0; display:grid; grid-template-columns:1fr var(--rail); transition:grid-template-columns 180ms var(--ease) }
+    .workspace.rail-closed { grid-template-columns:1fr 0 }
+    .stage { min-width:0; min-height:0; position:relative; overflow:auto; background-color:var(--stage); background-image:radial-gradient(color-mix(in srgb,var(--muted) 20%,transparent) 1px,transparent 1px); background-size:20px 20px }
+    .stage-head { position:sticky; top:0; z-index:10; height:34px; padding:0 14px; display:flex; align-items:center; justify-content:space-between; color:var(--muted); font:10px/1 var(--font-mono); pointer-events:none }
+    .stage-controls { position:sticky; top:34px; z-index:12; min-height:42px; padding:5px 14px 7px; display:flex; align-items:center; gap:8px; background:linear-gradient(var(--stage) 72%,transparent) }
+    .view-group { flex:none }
+    .variants { min-width:0; display:flex; align-items:center; gap:5px; overflow:auto; scrollbar-width:none }
+    .variant { flex:none; height:28px; padding:0 10px; border:1px solid var(--rule); border-radius:8px; color:var(--muted); background:var(--chrome); cursor:pointer; font-size:10px; font-weight:650 }
+    .variant[aria-selected="true"] { color:var(--text); border-color:var(--primary); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--primary) 24%,transparent) }
+    .state-select { margin-left:auto; height:28px; max-width:138px; padding:0 24px 0 8px; border:1px solid var(--rule); border-radius:8px; color:var(--muted); background:var(--chrome); font-size:10px }
+    [data-view="single"] .variants { display:none }
+    .viewport { min-width:980px; min-height:680px; display:grid; place-items:start center; padding:8px 34px 64px }
+    .frame-wrap { position:relative; width:1440px; min-width:1440px; height:900px; transform:scale(.72); transform-origin:top left; transition:transform 160ms var(--ease) }
+    .frame-wrap.is-split { width:2892px; min-width:2892px }
+    .frame-grid { width:100%; height:100%; display:grid; grid-template-columns:1fr; gap:12px }
+    .frame-grid.split { grid-template-columns:1fr 1fr }
+    .artifact-panel { position:relative; min-width:0; height:100% }
+    .artifact-panel.secondary { display:none }
+    .frame-grid.split .artifact-panel.secondary { display:block }
+    .frame-label { position:absolute; z-index:4; left:10px; top:10px; padding:5px 7px; border-radius:6px; color:#fff; background:rgba(8,8,12,.74); backdrop-filter:blur(5px); font:9px/1 var(--font-mono); pointer-events:none }
+    .frame { width:100%; height:100%; overflow:hidden; background:#fff; border:0; border-radius:12px; box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--rule) 78%,#fff),var(--shadow) }
+    iframe { width:100%; height:100%; border:0; display:block; background:#fff }
+    .pin-layer { position:absolute; inset:0; z-index:6; pointer-events:none }
+    .pin-layer.armed { pointer-events:auto; cursor:crosshair }
+    .is-split .pin-layer { right:auto; width:1440px }
+    .pin { position:absolute; width:25px; height:25px; display:grid; place-items:center; transform:translate(-50%,-100%); pointer-events:auto; border:2px solid white; border-radius:50% 50% 50% 5px; color:var(--on-danger); background:var(--danger); box-shadow:0 5px 14px rgba(0,0,0,.3); font:700 10px/1 var(--font-mono); rotate:-45deg; cursor:pointer }
+    .pin span { rotate:45deg }
+    .pin.improve { color:var(--on-improve); background:var(--primary-strong) }
+    .pin.question { color:var(--on-question); background:var(--question) }
+    .pin.resolved { color:var(--on-resolved); background:var(--resolved) }
+    .pin.active { box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 32%,transparent),0 5px 14px rgba(0,0,0,.3) }
+    .stage-state { position:absolute; inset:0; z-index:30; display:none; place-items:center; padding:24px; border:1px solid var(--rule); border-radius:12px; background:color-mix(in srgb,var(--stage) 94%,transparent); text-align:center }
+    .stage-state.show { display:grid }
+    .stage-state-card { max-width:390px; padding:24px; border:1px solid var(--rule); border-radius:14px; background:var(--chrome); box-shadow:var(--shadow) }
+    .stage-state-card b { display:block; margin-bottom:7px; font:650 18px/1.15 var(--font-display) }
+    .stage-state-card p { margin:0; color:var(--muted) }
+    .composer { position:absolute; z-index:20; width:286px; padding:12px; border:1px solid var(--rule); border-radius:12px; background:var(--chrome); box-shadow:var(--shadow); display:none }
+    .composer.show { display:block; animation:lift 180ms var(--ease) }
+    .composer strong { display:block; margin-bottom:8px; font:600 12px/1 var(--font-display) }
+    .composer textarea { width:100%; min-height:74px; resize:vertical; padding:9px; color:var(--text); background:var(--raised); border:1px solid var(--rule); border-radius:8px }
+    .composer-row { display:flex; align-items:center; gap:6px; margin-top:9px }
+    .intent { border:1px solid var(--rule); border-radius:999px; padding:4px 8px; color:var(--muted); background:transparent; cursor:pointer; font-size:10px }
+    .intent.on { color:var(--text); border-color:var(--primary); background:color-mix(in srgb,var(--primary) 12%,transparent) }
+    .composer-row .primary { margin-left:auto; height:27px }
+    .rail { min-width:0; display:grid; grid-template-rows:auto 1fr auto; overflow:hidden; background:var(--panel); border-left:1px solid var(--rule); transition:opacity 140ms var(--ease) }
+    .rail-closed .rail { opacity:0; pointer-events:none }
+    .rail-header { height:48px; padding:0 14px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--rule) }
+    .rail-header h2 { margin:0; font:600 13px/1 var(--font-display) }
+    .reviewers { display:flex; align-items:center }
+    .avatar { width:23px; height:23px; margin-left:-5px; display:grid; place-items:center; border:2px solid var(--panel); border-radius:50%; background:#5b4db1; color:white; font:700 8px/1 var(--font-body) }
+    .avatar:nth-child(2) { background:#0b7f73 }
+    .feed { overflow:auto; padding:14px }
+    .summary { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px }
+    .metric { padding:10px; border:1px solid var(--rule); border-radius:10px; background:var(--chrome) }
+    .metric b { display:block; font:600 18px/1 var(--font-display); letter-spacing:-.03em }
+    .metric span { color:var(--muted); font-size:10px }
+    .thread { position:relative; padding:12px 12px 12px 38px; margin-bottom:8px; border:1px solid var(--rule); border-radius:12px; background:var(--chrome); transition:border-color 140ms var(--ease),transform 140ms var(--ease) }
+    .thread:hover { border-color:color-mix(in srgb,var(--primary) 55%,var(--rule)); transform:translateY(-1px) }
+    .thread.active { border-color:var(--primary); box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 15%,transparent) }
+    .thread.resolved { opacity:.72 }
+    .thread-num { position:absolute; left:11px; top:12px; width:18px; height:18px; display:grid; place-items:center; border-radius:6px; color:var(--on-danger); background:var(--danger); font:700 9px/1 var(--font-mono) }
+    .thread.improve .thread-num { color:var(--on-improve); background:var(--primary-strong) }
+    .thread.question .thread-num { color:var(--on-question); background:var(--question) }
+    .thread.resolved .thread-num { color:var(--on-resolved); background:var(--resolved) }
+    .thread-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:5px }
+    .thread-top b { font-size:11px }
+    .thread-top time { color:var(--muted); font:9px/1 var(--font-mono) }
+    .thread p { margin:0; color:var(--text); font-size:12px; line-height:1.45 }
+    .reply { margin-top:9px; padding:8px; border-left:2px solid var(--rule); border-radius:0 7px 7px 0; background:var(--panel); color:var(--muted); font-size:11px }
+    .thread-actions { margin-top:8px; display:flex; align-items:center; gap:6px }
+    .thread-action { padding:3px 6px; border:0; border-radius:5px; color:var(--muted); background:var(--raised); cursor:pointer; font-size:9px }
+    .tag { display:inline-flex; margin-top:8px; padding:3px 6px; border-radius:999px; color:var(--muted); background:var(--raised); font:9px/1 var(--font-mono); text-transform:uppercase; letter-spacing:.06em }
+    .decision { padding:12px; border-top:1px solid var(--rule); background:var(--chrome) }
+    .decision textarea { width:100%; min-height:58px; padding:9px; resize:none; color:var(--text); background:var(--panel); border:1px solid var(--rule); border-radius:9px }
+    .decision-actions { display:grid; grid-template-columns:1fr 1.2fr; gap:8px; margin-top:8px }
+    .decision-state { min-height:20px; margin-top:7px; color:var(--muted); font-size:10px }
+    .decision[data-decision="approved"] .decision-state { color:var(--primary) }
+    .decision[data-decision="changes_requested"] .decision-state { color:var(--danger) }
+    .approve { color:var(--primary); border-color:color-mix(in srgb,var(--primary) 45%,var(--rule))!important }
+    .request { color:var(--on-danger); background:var(--danger); border-color:var(--danger) }
+    .modal-backdrop { position:fixed; inset:0; z-index:80; display:none; place-items:center; padding:20px; background:rgba(3,4,8,.68); backdrop-filter:blur(8px) }
+    .modal-backdrop.show { display:grid }
+    .modal { width:min(520px,100%); overflow:hidden; border:1px solid var(--rule); border-radius:16px; background:var(--chrome); box-shadow:0 28px 100px rgba(0,0,0,.48); animation:lift 180ms var(--ease) }
+    .modal-head { padding:16px 18px 12px; display:flex; justify-content:space-between; align-items:flex-start }
+    .modal h2 { margin:0 0 4px; font:650 18px/1.15 var(--font-display); letter-spacing:-.025em }
+    .modal p { margin:0; color:var(--muted); font-size:12px }
+    .receipt { margin:8px 18px 16px; overflow:hidden; border:1px solid var(--rule); border-radius:12px; background:var(--panel) }
+    .receipt-row { min-height:58px; padding:11px 12px; display:grid; grid-template-columns:28px 1fr auto; gap:10px; align-items:center; border-bottom:1px solid var(--rule) }
+    .receipt-row:last-child { border:0 }
+    .receipt-row.active { background:color-mix(in srgb,var(--primary) 8%,var(--panel)); box-shadow:inset 3px 0 var(--primary) }
+    .receipt-icon { width:28px; height:28px; display:grid; place-items:center; border-radius:8px; background:var(--raised); font:12px/1 var(--font-mono) }
+    .receipt-row strong { display:block; font-size:12px }
+    .receipt-row small { color:var(--muted); font-size:10.5px }
+    .receipt-state { color:var(--primary); font:9px/1 var(--font-mono); text-transform:uppercase; letter-spacing:.07em }
+    .modal-actions { padding:12px 18px 16px; display:flex; justify-content:flex-end; gap:8px }
+    .toast { position:fixed; z-index:120; left:50%; bottom:20px; transform:translate(-50%,20px); opacity:0; padding:9px 13px; border:1px solid var(--rule); border-radius:999px; background:var(--text); color:var(--bg); box-shadow:var(--shadow); font-weight:600; transition:opacity 180ms var(--ease),transform 180ms var(--ease); pointer-events:none }
+    .toast.show { opacity:1; transform:translate(-50%,0) }
+    @keyframes lift { from { opacity:0; transform:translateY(8px) scale(.985) } }
+    @media (max-width:900px) {
+      .meta,.privacy,.zoom-group { display:none }
+      .title { max-width:170px }
+      .workspace { grid-template-columns:1fr }
+      .workspace.rail-closed { grid-template-columns:1fr }
+      .rail { position:fixed; z-index:50; left:0; right:0; bottom:0; height:min(52vh,480px); border:1px solid var(--rule); border-radius:16px 16px 0 0; box-shadow:var(--shadow); transform:translateY(0); transition:transform 180ms var(--ease) }
+      .rail-closed .rail { transform:translateY(100%); opacity:1 }
+      .frame-wrap { width:1440px; min-width:1440px }
+      .frame-wrap.is-split { width:2892px; min-width:2892px }
+      .viewport { justify-content:start; padding-left:14px }
+    }
+    @media (max-width:620px) {
+      .toolbar { gap:6px; padding-left:10px }
+      .brand { max-width:145px }
+      .titleblock { display:block }
+      .title { max-width:110px }
+      .mode-group .tool { width:28px; padding:0; font-size:0 }
+      .mode-group .tool::first-letter { font-size:11px }
+      .theme-label,.share-label { display:none }
+      .primary { padding:0 9px }
+      .stage-controls { padding-left:10px; padding-right:10px }
+      .state-select { max-width:108px }
+    }
+    @media (max-width:390px) {
+      .toolbar { gap:5px; padding-inline:8px; overflow:hidden }
+      .brand { max-width:20px }
+      .titleblock { display:none }
+      .feedback-btn { width:30px; padding:0; justify-content:center; font-size:0 }
+      .feedback-btn .count { font-size:10px }
+      .variant { padding-inline:8px }
+      .rail { height:52vh }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      *,*::before,*::after { animation-duration:.001ms!important; transition-duration:.001ms!important; scroll-behavior:auto!important }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-label="OpenPlanr artifact review preview">
+    <header class="toolbar">
+      <div class="brand" aria-label="OpenPlanr">
+        <span class="mark" aria-hidden="true"></span>
+        <span class="titleblock"><span class="title">Checkout confidence pass</span><span class="meta">HTML · 1440×900</span></span>
+      </div>
+      <span class="privacy" id="privacyState">Local review</span>
+      <span class="spacer"></span>
+      <div class="group zoom-group" aria-label="Viewport controls">
+        <button class="icon" id="zoomOut" aria-label="Zoom out">−</button><button class="icon" id="zoomLabel" aria-label="Reset zoom">100%</button><button class="icon" id="zoomIn" aria-label="Zoom in">+</button>
+      </div>
+      <div class="group mode-group" aria-label="Review mode">
+        <button class="tool on" type="button" data-mode="interact" aria-pressed="true" title="Interact with artifact (I)">Interact</button>
+        <button class="tool" type="button" data-mode="comment" aria-pressed="false" title="Place a comment (C)">Comment</button>
+      </div>
+      <button class="primary ghost" type="button" id="themeBtn" aria-label="Change shell theme"><span class="theme-label" id="themeLabel">Auto</span> ◐</button>
+      <button class="primary ghost feedback-btn" type="button" id="feedbackBtn" aria-controls="feedbackRail" aria-expanded="true">Feedback <span class="count" id="feedbackCount">3</span></button>
+      <button class="primary" type="button" id="shareBtn" aria-haspopup="dialog"><span class="share-label">Share</span> ↗</button>
+    </header>
+
+    <section class="workspace" id="workspace">
+      <div class="stage" id="artifactStage" data-view="variants">
+        <div class="stage-head"><span id="artifactBreadcrumb">ARTIFACT / CHECKOUT</span><span id="modeHint" role="status" aria-live="polite">Interactions enabled</span></div>
+        <div class="stage-controls" aria-label="Preview controls">
+          <div class="group view-group" aria-label="Artifact display mode">
+            <button class="tool" type="button" data-view="single" aria-pressed="false">Single</button>
+            <button class="tool on" type="button" data-view="variants" aria-pressed="true">Variants</button>
+            <button class="tool" type="button" data-view="split" aria-pressed="false">Split</button>
+          </div>
+          <div class="variants" role="tablist" aria-label="Artifact variants">
+            <button class="variant" type="button" role="tab" data-variant="checkout" aria-selected="true" aria-controls="artifact">01 Checkout</button>
+            <button class="variant" type="button" role="tab" data-variant="insights" aria-selected="false" aria-controls="artifact">02 Insights</button>
+            <button class="variant" type="button" role="tab" data-variant="components" aria-selected="false" aria-controls="artifact">03 Components</button>
+          </div>
+          <label class="sr-only" for="previewState">Preview state</label>
+          <select class="state-select" id="previewState" aria-label="Preview state">
+            <option value="ready">Ready</option>
+            <option value="bundling">Bundling</option>
+            <option value="loading">Loading</option>
+            <option value="empty">Empty artifact</option>
+            <option value="invalid">Invalid fragment</option>
+            <option value="expired">Expired paste</option>
+            <option value="wrong-key">Wrong key</option>
+            <option value="unsupported">Unsupported browser</option>
+            <option value="viewport-mismatch">Viewport mismatch</option>
+            <option value="navigation-blocked">Navigation blocked</option>
+          </select>
+        </div>
+        <div class="viewport">
+          <div class="frame-wrap" id="frameWrap">
+            <div class="frame-grid" id="frameGrid">
+              <section class="artifact-panel" aria-label="Primary artifact">
+                <span class="frame-label" id="primaryLabel">01 · Checkout</span>
+                <div class="frame"><iframe id="artifact" title="Checkout artifact" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>
+              </section>
+              <section class="artifact-panel secondary" aria-label="Comparison artifact">
+                <span class="frame-label" id="secondaryLabel">02 · Insights</span>
+                <div class="frame"><iframe id="artifactSecondary" title="Insights comparison artifact" sandbox="allow-scripts" referrerpolicy="no-referrer"></iframe></div>
+              </section>
+            </div>
+            <div class="pin-layer" id="pinLayer" role="region" tabindex="-1" aria-label="Artifact annotation surface">
+              <button class="pin" type="button" id="pin-1" style="left:42%;top:37%" data-thread="1" aria-controls="thread-1" aria-label="Open fix comment 1"><span>1</span></button>
+              <button class="pin improve" type="button" id="pin-2" style="left:69%;top:61%" data-thread="2" aria-controls="thread-2" aria-label="Open improve comment 2"><span>2</span></button>
+              <button class="pin question resolved" type="button" id="pin-3" style="left:82%;top:24%" data-thread="3" aria-controls="thread-3" aria-label="Open resolved question 3"><span>3</span></button>
+            </div>
+            <form class="composer" id="composer" role="dialog" aria-modal="false" aria-labelledby="composerTitle">
+              <strong id="composerTitle">Comment on this region</strong>
+              <textarea id="commentText" placeholder="Describe what should change…" required></textarea>
+              <div class="composer-row">
+                <button type="button" class="intent on" data-intent="fix" aria-pressed="true">Fix</button><button type="button" class="intent" data-intent="improve" aria-pressed="false">Improve</button><button type="button" class="intent" data-intent="question" aria-pressed="false">Question</button>
+                <button class="primary" type="submit">Add comment</button>
+              </div>
+            </form>
+            <div class="stage-state" id="stageState" role="status" aria-live="polite">
+              <div class="stage-state-card"><b id="stageStateTitle"></b><p id="stageStateCopy"></p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="rail" id="feedbackRail" aria-label="Review feedback">
+        <div class="rail-header"><h2>Review feedback</h2><div class="reviewers" aria-label="Reviewers"><span class="avatar">AS</span><span class="avatar">MK</span></div></div>
+        <div class="feed" id="feed">
+          <div class="summary"><div class="metric"><b id="openCount">2</b><span>Open comments</span></div><div class="metric"><b>2</b><span>Reviewers</span></div></div>
+          <article class="thread" id="thread-1" data-thread="1" tabindex="0" aria-controls="pin-1" aria-label="Fix comment 1 by Asem"><span class="thread-num">1</span><div class="thread-top"><b>Asem</b><time>2m ago</time></div><p>Make the delivery promise visible before the payment choice. It changes the decision.</p><span class="tag">Fix · Summary</span><div class="thread-actions"><button class="thread-action resolve-btn" type="button">Resolve</button><button class="thread-action reply-btn" type="button">Reply</button></div></article>
+          <article class="thread improve" id="thread-2" data-thread="2" tabindex="0" aria-controls="pin-2" aria-label="Improve comment 2 by Maya"><span class="thread-num">2</span><div class="thread-top"><b>Maya</b><time>Just now</time></div><p>The saved-card state is clear. Keep this treatment for every returning payment method.</p><div class="reply"><b>Asem</b> Agreed — applying it across saved cards.</div><span class="tag">Improve · Payment</span><div class="thread-actions"><button class="thread-action resolve-btn" type="button">Resolve</button><button class="thread-action reply-btn" type="button">Reply</button></div></article>
+          <article class="thread question resolved" id="thread-3" data-thread="3" tabindex="0" aria-controls="pin-3" aria-label="Resolved question 3 by Asem"><span class="thread-num">3</span><div class="thread-top"><b>Asem</b><time>1m ago</time></div><p>Does this security note remain visible when the order summary collapses?</p><div class="reply"><b>Maya</b> Yes. It remains pinned below the total.</div><span class="tag">Resolved · Trust</span><div class="thread-actions"><button class="thread-action resolve-btn" type="button">Reopen</button><button class="thread-action reply-btn" type="button">Reply</button></div></article>
+        </div>
+        <div class="decision" id="decisionDock" data-decision="pending">
+          <textarea id="overall" aria-label="Overall review note" placeholder="Overall note for the coding agent…"></textarea>
+          <div class="decision-actions"><button class="primary ghost approve" type="button" id="approveBtn">Approve</button><button class="primary request" type="button" id="requestBtn">Request changes</button></div>
+          <div class="decision-state" id="decisionState" role="status" aria-live="polite">Decision pending</div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="shareModal" role="dialog" aria-modal="true" aria-labelledby="shareTitle" aria-hidden="true">
+    <section class="modal">
+      <div class="modal-head"><div><h2 id="shareTitle">Share this review</h2><p>Choose where the bytes live. The artifact stays encrypted when storage is needed.</p></div><button class="icon" id="closeShare" aria-label="Close share dialog">×</button></div>
+      <div class="receipt" aria-label="Privacy receipt">
+        <button class="receipt-row active" type="button" data-share="fragment"><span class="receipt-icon">#</span><span><strong>Private fragment</strong><small>Compressed into the URL. Nothing is uploaded.</small></span><span class="receipt-state">6.2 KB</span></button>
+        <button class="receipt-row" type="button" data-share="short"><span class="receipt-icon">◇</span><span><strong>Encrypted short link</strong><small>AES-256-GCM ciphertext stored until 21 July; the key stays in this link.</small></span><span class="receipt-state">7 days · 14.8 KB</span></button>
+      </div>
+      <div class="modal-actions"><button class="primary ghost" id="cancelShare">Cancel</button><button class="primary" id="copyShare">Copy private link</button></div>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      const $ = (selector) => document.querySelector(selector);
+      const $$ = (selector) => [...document.querySelectorAll(selector)];
+      const artifactCsp = "default-src 'none'; img-src data: blob:; media-src data: blob:; font-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline' blob:; worker-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'";
+      const artifactDocument = ({ title, accent, body, script }) => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><meta http-equiv="Content-Security-Policy" content="${artifactCsp}"><title>${title}</title><style>
+        :root{--ink:#17201f;--muted:#667370;--line:#dce5e2;--accent:${accent};--paper:#fbfcfb;--soft:#eff6f4}*{box-sizing:border-box}body{margin:0;min-height:900px;background:var(--paper);color:var(--ink);font:15px/1.45 ui-sans-serif,system-ui,sans-serif}button{font:inherit}.shell{min-height:900px;padding:52px 60px}.eyebrow{color:var(--accent);font-size:11px;font-weight:800;letter-spacing:.14em}.hero{margin:10px 0 34px;font-size:42px;line-height:1;letter-spacing:-.045em}.card{border:1px solid var(--line);border-radius:16px;background:white;box-shadow:0 16px 44px rgba(34,61,55,.08)}.action{border:0;border-radius:9px;padding:12px 16px;background:var(--accent);color:white;font-weight:750;cursor:pointer}.muted{color:var(--muted)}
+      </style></head><body>${body}<script>${script};(()=>{const __planrReportViewport=()=>parent.postMessage({type:'openplanr:artifact-ready',viewport:{width:innerWidth,height:innerHeight}},'*');__planrReportViewport();addEventListener('resize',__planrReportViewport)})()<\/script></body></html>`;
+
+      const artifacts = [
+        {
+          id: 'checkout',
+          order: '01',
+          title: 'Checkout confidence pass',
+          label: 'Checkout',
+          html: artifactDocument({
+            title: 'Checkout confidence pass',
+            accent: '#087f73',
+            body: `<main class="shell"><span class="eyebrow">NORTHLINE / SECURE CHECKOUT</span><h1 class="hero">Finish your order</h1><div style="display:grid;grid-template-columns:1fr 390px;gap:24px"><section class="card" style="padding:28px"><h2>Delivery speed</h2><div id="delivery" style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><button class="action" data-choice="Tomorrow">Tomorrow · Free</button><button class="action" data-choice="Thursday" style="background:#e7efed;color:#17201f">Thursday · Lower emissions</button></div><h2 style="margin-top:32px">Payment</h2><div class="card" style="padding:18px;box-shadow:none">Visa ending 4242 <span class="muted">· Saved securely</span></div></section><aside class="card" style="padding:28px;background:#10201d;color:#f4fbf9"><h2>Order summary</h2><p class="muted" style="color:#a9bcb7">Field jacket · Forest · Medium</p><div style="display:flex;justify-content:space-between;font-size:24px;font-weight:800;margin:90px 0 24px"><span>Total</span><span>$148</span></div><button class="action" id="pay" style="width:100%;background:#5eead4;color:#071310">Pay $148</button><p id="result" aria-live="polite"></p></aside></div></main>`,
+            script: `document.querySelectorAll('[data-choice]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-choice]').forEach(item=>{item.style.background='#e7efed';item.style.color='#17201f'});button.style.background='#087f73';button.style.color='white'}));document.getElementById('pay').addEventListener('click',()=>document.getElementById('result').textContent='Demo payment interaction completed ✓');`,
+          }),
+        },
+        {
+          id: 'insights',
+          order: '02',
+          title: 'Launch insights dashboard',
+          label: 'Insights',
+          html: artifactDocument({
+            title: 'Launch insights dashboard',
+            accent: '#2563a8',
+            body: `<main class="shell" style="background:#f6f8fc"><span class="eyebrow">ATLAS / PRODUCT SIGNALS</span><h1 class="hero">Launch pulse</h1><div id="ranges" style="display:flex;gap:8px;margin-bottom:20px"><button class="action" data-range="7">7 days</button><button class="action" data-range="30" style="background:#e6ebf4;color:#17201f">30 days</button><button class="action" data-range="90" style="background:#e6ebf4;color:#17201f">90 days</button></div><section class="card" style="padding:28px"><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px"><div><span class="muted">Activation</span><h2 style="font-size:36px;margin:8px 0">68.4%</h2></div><div><span class="muted">Returning teams</span><h2 style="font-size:36px;margin:8px 0">1,284</h2></div><div><span class="muted">Time to value</span><h2 style="font-size:36px;margin:8px 0">8m 12s</h2></div></div><div style="height:290px;margin-top:30px;border-radius:12px;background:linear-gradient(180deg,rgba(37,99,168,.20),transparent),repeating-linear-gradient(90deg,transparent 0 118px,#e2e8f1 119px 120px)"></div><p id="rangeResult" class="muted" aria-live="polite">Showing the last 7 days</p></section></main>`,
+            script: `document.querySelectorAll('[data-range]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-range]').forEach(item=>{item.style.background='#e6ebf4';item.style.color='#17201f'});button.style.background='#2563a8';button.style.color='white';document.getElementById('rangeResult').textContent='Showing the last '+button.dataset.range+' days'}));`,
+          }),
+        },
+        {
+          id: 'components',
+          order: '03',
+          title: 'Component state explorer',
+          label: 'Components',
+          html: artifactDocument({
+            title: 'Component state explorer',
+            accent: '#7c3aed',
+            body: `<main class="shell"><span class="eyebrow">OPENPLANR / COMPONENT LAB</span><h1 class="hero">Decision controls</h1><div style="display:grid;grid-template-columns:230px 1fr;gap:24px"><nav class="card" style="padding:14px"><button class="action" data-panel="buttons" style="width:100%">Buttons</button><button class="action" data-panel="inputs" style="width:100%;margin-top:8px;background:#eee9f8;color:#17201f">Inputs</button><button class="action" data-panel="states" style="width:100%;margin-top:8px;background:#eee9f8;color:#17201f">States</button></nav><section class="card" style="padding:30px"><h2 id="componentTitle">Buttons</h2><p class="muted">Keyboard-visible, semantic, and token-derived controls.</p><div style="display:flex;align-items:center;gap:14px;margin-top:70px"><button class="action">Primary action</button><button class="action" style="background:#eee9f8;color:#17201f">Secondary</button><button class="action" disabled style="opacity:.48">Unavailable</button></div><p id="componentResult" aria-live="polite"></p></section></div></main>`,
+            script: `document.querySelectorAll('[data-panel]').forEach(button=>button.addEventListener('click',()=>{document.getElementById('componentTitle').textContent=button.textContent;document.getElementById('componentResult').textContent=button.textContent+' component state selected'}));`,
+          }),
+        },
+      ];
+
+      const preview = {
+        view: 'variants',
+        selected: 0,
+        mode: 'interact',
+        zoom: .72,
+        theme: 'auto',
+        railOpen: true,
+        activeThread: null,
+        state: 'ready',
+      };
+      const stage = $('#artifactStage');
+      const frameWrap = $('#frameWrap');
+      const frameGrid = $('#frameGrid');
+      const primary = $('#artifact');
+      const secondary = $('#artifactSecondary');
+      const pinLayer = $('#pinLayer');
+      const rail = $('#feedbackRail');
+      const modal = $('#shareModal');
+      const app = $('.app');
+      let lastDialogFocus = null;
+      let draftPoint = null;
+      let selectedIntent = 'fix';
+      let viewportValidationTimer = null;
+      const artifactFrameStates = new WeakMap();
+
+      function announce(message) {
+        $('#modeHint').textContent = message;
+      }
+
+      function artifactDataUrl(html) {
+        const bytes = new TextEncoder().encode(html);
+        const chunks = [];
+        for (let offset = 0; offset < bytes.length; offset += 32768) {
+          chunks.push(String.fromCharCode(...bytes.subarray(offset, offset + 32768)));
+        }
+        return `data:text/html;charset=utf-8;base64,${btoa(chunks.join(''))}`;
+      }
+
+      function replaceArtifactDocument(frame, html) {
+        const url = artifactDataUrl(html);
+        artifactFrameStates.set(frame, { url, expectedLoads: 1, recoveryCount: 0 });
+        frame.src = url;
+      }
+
+      function guardArtifactNavigation(event) {
+        const frame = event.currentTarget;
+        const state = artifactFrameStates.get(frame);
+        if (!state) return;
+        if (state.expectedLoads > 0) {
+          state.expectedLoads -= 1;
+          return;
+        }
+        if (state.recoveryCount === 0) {
+          state.recoveryCount = 1;
+          state.expectedLoads = 1;
+          frame.src = state.url;
+          announce('Artifact navigation was blocked; the packaged preview was restored.');
+          return;
+        }
+        artifactFrameStates.delete(frame);
+        frame.removeAttribute('src');
+        $('#previewState').value = 'navigation-blocked';
+        setPreviewState('navigation-blocked');
+      }
+
+      function renderArtifacts() {
+        const artifact = artifacts[preview.selected];
+        const comparison = artifacts[(preview.selected + 1) % artifacts.length];
+        replaceArtifactDocument(primary, artifact.html);
+        primary.title = `${artifact.title} artifact`;
+        replaceArtifactDocument(secondary, comparison.html);
+        secondary.title = `${comparison.title} comparison artifact`;
+        $('#primaryLabel').textContent = `${artifact.order} · ${artifact.label}`;
+        $('#secondaryLabel').textContent = `${comparison.order} · ${comparison.label}`;
+        $('#artifactBreadcrumb').textContent = `ARTIFACT / ${artifact.label.toUpperCase()}`;
+        $('.title').textContent = artifact.title;
+        $$('.variant').forEach((button, index) => {
+          const selected = index === preview.selected;
+          button.setAttribute('aria-selected', String(selected));
+          button.tabIndex = selected ? 0 : -1;
+        });
+      }
+
+      function setView(next) {
+        preview.view = next;
+        stage.dataset.view = next;
+        const split = next === 'split';
+        frameGrid.classList.toggle('split', split);
+        frameWrap.classList.toggle('is-split', split);
+        $$('.view-group [data-view]').forEach((button) => {
+          const selected = button.dataset.view === next;
+          button.classList.toggle('on', selected);
+          button.setAttribute('aria-pressed', String(selected));
+        });
+        frameGrid.getBoundingClientRect();
+        renderArtifacts();
+        announce(split ? 'Split comparison enabled' : next === 'variants' ? 'Variant review enabled' : 'Single artifact review enabled');
+      }
+
+      function selectArtifact(id) {
+        const index = artifacts.findIndex((artifact) => artifact.id === id);
+        if (index < 0) return;
+        preview.selected = index;
+        renderArtifacts();
+        announce(`${artifacts[index].label} variant selected`);
+      }
+
+      function setReviewMode(next) {
+        preview.mode = next;
+        $$('.mode-group .tool').forEach((button) => {
+          const selected = button.dataset.mode === next;
+          button.classList.toggle('on', selected);
+          button.setAttribute('aria-pressed', String(selected));
+        });
+        pinLayer.classList.toggle('armed', next === 'comment');
+        pinLayer.tabIndex = next === 'comment' && preview.state === 'ready' ? 0 : -1;
+        primary.style.pointerEvents = next === 'comment' ? 'none' : 'auto';
+        secondary.style.pointerEvents = next === 'comment' ? 'none' : 'auto';
+        primary.tabIndex = next === 'comment' ? -1 : 0;
+        secondary.tabIndex = next === 'comment' ? -1 : 0;
+        if (next === 'interact') closeComposer();
+        announce(next === 'comment' ? 'Comment mode. Select a region to leave feedback.' : 'Interact mode. Artifact interactions enabled.');
+        if (next === 'comment' && preview.state === 'ready') pinLayer.focus({ preventScroll: true });
+      }
+
+      function setZoom(value) {
+        preview.zoom = Math.max(.5, Math.min(1, value));
+        frameWrap.style.transform = `scale(${preview.zoom})`;
+        $('#zoomLabel').textContent = `${Math.round(preview.zoom * 100)}%`;
+      }
+
+      function closeComposer({ restoreFocus = false } = {}) {
+        const composer = $('#composer');
+        const wasOpen = composer.classList.contains('show');
+        composer.classList.remove('show');
+        draftPoint = null;
+        if (restoreFocus && wasOpen && preview.mode === 'comment' && preview.state === 'ready') {
+          pinLayer.focus({ preventScroll: true });
+        }
+      }
+
+      function openComposerAt(x, y) {
+        if (preview.mode !== 'comment' || preview.state !== 'ready') return;
+        const normalizedX = Math.max(0, Math.min(1, x));
+        const normalizedY = Math.max(0, Math.min(1, y));
+        const localX = normalizedX * pinLayer.clientWidth;
+        const localY = normalizedY * pinLayer.clientHeight;
+        draftPoint = { x: normalizedX, y: normalizedY };
+        const composer = $('#composer');
+        composer.style.left = `${Math.max(8, Math.min(localX + 14, pinLayer.clientWidth - 300))}px`;
+        composer.style.top = `${Math.max(8, Math.min(localY + 14, pinLayer.clientHeight - 170))}px`;
+        composer.classList.add('show');
+        $('#commentText').focus();
+        announce(`Comment composer opened at ${Math.round(normalizedX * 100)}%, ${Math.round(normalizedY * 100)}%.`);
+      }
+
+      function setRail(open) {
+        preview.railOpen = open;
+        $('#workspace').classList.toggle('rail-closed', !open);
+        $('#feedbackBtn').setAttribute('aria-expanded', String(open));
+        rail.toggleAttribute('inert', !open);
+        rail.setAttribute('aria-hidden', String(!open));
+        announce(open ? 'Feedback panel opened' : 'Feedback panel closed');
+      }
+
+      function applyTheme(choice) {
+        preview.theme = choice;
+        const darkSystem = globalThis.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
+        document.documentElement.dataset.theme = choice === 'auto' ? (darkSystem ? 'dark' : 'light') : choice;
+        document.documentElement.dataset.themeChoice = choice;
+        $('#themeLabel').textContent = choice[0].toUpperCase() + choice.slice(1);
+        $('#themeBtn').setAttribute('aria-label', `Shell theme ${choice}; activate to change`);
+        announce(`Shell theme set to ${choice}`);
+      }
+
+      const stateMessages = {
+        bundling: ['Bundling artifact', 'Packaging local scripts, styles, fonts, and images without network access.'],
+        loading: ['Loading private review', 'Validating the envelope and frozen artifact viewport.'],
+        empty: ['No artifact content', 'Choose a bundled HTML artifact to begin this review.'],
+        invalid: ['This fragment is invalid', 'The private URL payload could not be decoded or validated.'],
+        expired: ['This encrypted review expired', 'Ask the sender for a new immutable review link.'],
+        'wrong-key': ['This key cannot decrypt the review', 'Use the complete link, including its private fragment key.'],
+        unsupported: ['Browser support is required', 'Use a current browser with raw DEFLATE and Web Crypto support.'],
+        'viewport-mismatch': ['Artifact viewport could not be frozen', 'Expected an exact 1440×900 artifact coordinate system.'],
+        'navigation-blocked': ['Artifact navigation was blocked', 'The packaged artifact tried to replace its isolated document. Reload the trusted artifact to continue.'],
+      };
+
+      function setPreviewState(next) {
+        const overlay = $('#stageState');
+        const message = stateMessages[next];
+        preview.state = next;
+        overlay.classList.toggle('show', Boolean(message));
+        overlay.setAttribute('aria-hidden', String(!message));
+        for (const surface of [frameGrid, pinLayer]) {
+          surface.toggleAttribute('inert', Boolean(message));
+          if (message) surface.setAttribute('aria-hidden', 'true');
+          else surface.removeAttribute('aria-hidden');
+        }
+        pinLayer.tabIndex = !message && preview.mode === 'comment' ? 0 : -1;
+        if (message) {
+          closeComposer();
+          $('#stageStateTitle').textContent = message[0];
+          $('#stageStateCopy').textContent = message[1];
+          announce(message[0]);
+        } else {
+          announce('Artifact ready for review');
+        }
+      }
+
+      function focusPair(id, target) {
+        const pin = $(`#pin-${id}`);
+        const thread = $(`#thread-${id}`);
+        if (!pin || !thread) return;
+        preview.activeThread = id;
+        $$('.pin,.thread').forEach((item) => item.classList.remove('active'));
+        pin.classList.add('active');
+        thread.classList.add('active');
+        setRail(true);
+        if (target === 'thread') {
+          const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+          thread.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'center' });
+          thread.focus({ preventScroll: true });
+        } else {
+          pin.focus({ preventScroll: true });
+        }
+        announce(`Comment ${id} focused`);
+      }
+
+      function wireThread(thread) {
+        const id = thread.dataset.thread;
+        const pin = $(`#pin-${id}`);
+        if (pin) pin.onclick = () => focusPair(id, 'thread');
+        thread.onclick = (event) => {
+          if (event.target.closest('button')) return;
+          focusPair(id, 'pin');
+        };
+        thread.onkeydown = (event) => {
+          if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('button')) {
+            event.preventDefault();
+            focusPair(id, 'pin');
+          }
+        };
+        const resolve = thread.querySelector('.resolve-btn');
+        if (resolve) resolve.onclick = (event) => {
+          event.stopPropagation();
+          const resolved = !thread.classList.contains('resolved');
+          thread.classList.toggle('resolved', resolved);
+          pin?.classList.toggle('resolved', resolved);
+          resolve.textContent = resolved ? 'Reopen' : 'Resolve';
+          const open = $$('.thread:not(.resolved)').length;
+          $('#openCount').textContent = String(open);
+          announce(`Comment ${id} ${resolved ? 'resolved' : 'reopened'}`);
+        };
+        const reply = thread.querySelector('.reply-btn');
+        if (reply) reply.onclick = (event) => {
+          event.stopPropagation();
+          if (!thread.querySelector('.reply[data-preview-reply]')) {
+            const sample = document.createElement('div');
+            sample.className = 'reply';
+            sample.dataset.previewReply = 'true';
+            sample.innerHTML = '<b>You</b> Draft reply added for this prototype.';
+            thread.querySelector('.tag')?.before(sample);
+          }
+          announce(`Reply added to comment ${id}`);
+        };
+      }
+
+      function setDecision(decision) {
+        const dock = $('#decisionDock');
+        dock.dataset.decision = decision;
+        const message = decision === 'approved'
+          ? 'Artifact decision: Approved — preview state only; product design remains proposed.'
+          : 'Artifact decision: Changes requested — structured feedback is ready to return.';
+        $('#decisionState').textContent = message;
+        announce(message);
+      }
+
+      function openShare() {
+        lastDialogFocus = document.activeElement;
+        app.toggleAttribute('inert', true);
+        app.setAttribute('aria-hidden', 'true');
+        modal.classList.add('show');
+        modal.setAttribute('aria-hidden', 'false');
+        $('#closeShare').focus();
+      }
+
+      function closeShare() {
+        if (!modal.classList.contains('show')) return;
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+        app.toggleAttribute('inert', false);
+        app.removeAttribute('aria-hidden');
+        lastDialogFocus?.focus();
+      }
+
+      function trapDialogFocus(event) {
+        if (event.key !== 'Tab' || !modal.classList.contains('show')) return;
+        const focusable = $$('button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled])').filter((element) => modal.contains(element));
+        const first = focusable[0];
+        const last = focusable.at(-1);
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+
+      $$('.view-group [data-view]').forEach((button) => { button.onclick = () => setView(button.dataset.view); });
+      $$('.variant').forEach((button) => {
+        button.onclick = () => selectArtifact(button.dataset.variant);
+        button.onkeydown = (event) => {
+          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault();
+          const current = artifacts.findIndex((artifact) => artifact.id === button.dataset.variant);
+          const next = event.key === 'Home' ? 0 : event.key === 'End' ? artifacts.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + artifacts.length) % artifacts.length;
+          selectArtifact(artifacts[next].id);
+          $(`.variant[data-variant="${artifacts[next].id}"]`).focus();
+        };
+      });
+      $$('.mode-group .tool').forEach((button) => { button.onclick = () => setReviewMode(button.dataset.mode); });
+      $$('.intent').forEach((button) => {
+        button.onclick = () => {
+          selectedIntent = button.dataset.intent;
+          $$('.intent').forEach((item) => {
+            const selected = item === button;
+            item.classList.toggle('on', selected);
+            item.setAttribute('aria-pressed', String(selected));
+          });
+        };
+      });
+      $('#zoomOut').onclick = () => setZoom(preview.zoom - .1);
+      $('#zoomIn').onclick = () => setZoom(preview.zoom + .1);
+      $('#zoomLabel').onclick = () => setZoom(.72);
+      $('#feedbackBtn').onclick = () => setRail(!preview.railOpen);
+      $('#themeBtn').onclick = () => applyTheme({ auto: 'light', light: 'dark', dark: 'auto' }[preview.theme]);
+      $('#previewState').onchange = (event) => setPreviewState(event.target.value);
+      $$('.thread').forEach(wireThread);
+      $('#approveBtn').onclick = () => setDecision('approved');
+      $('#requestBtn').onclick = () => setDecision('changes_requested');
+      $('#shareBtn').onclick = openShare;
+      $('#closeShare').onclick = closeShare;
+      $('#cancelShare').onclick = closeShare;
+      $$('.receipt-row').forEach((row) => {
+        row.setAttribute('aria-pressed', String(row.classList.contains('active')));
+        row.onclick = () => {
+          $$('.receipt-row').forEach((item) => {
+            const selected = item === row;
+            item.classList.toggle('active', selected);
+            item.setAttribute('aria-pressed', String(selected));
+          });
+          $('#copyShare').textContent = row.dataset.share === 'short' ? 'Create encrypted link' : 'Copy private link';
+        };
+      });
+      $('#copyShare').onclick = () => {
+        const short = $('.receipt-row.active').dataset.share === 'short';
+        $('#privacyState').textContent = short ? 'Encrypted short link' : 'Private fragment';
+        closeShare();
+        announce(short ? 'Encrypted link created; ciphertext expires in 7 days and the key stays in the link.' : 'Private fragment copied; nothing was uploaded.');
+      };
+
+      primary.addEventListener('load', guardArtifactNavigation);
+      secondary.addEventListener('load', guardArtifactNavigation);
+
+      globalThis.addEventListener('message', (event) => {
+        if (event.data?.type !== 'openplanr:artifact-ready') return;
+        const frame = [primary, secondary].find((candidate) => candidate.contentWindow === event.source);
+        if (!frame) return;
+        const width = Number(event.data.viewport?.width);
+        const height = Number(event.data.viewport?.height);
+        frame.dataset.viewport = `${width}x${height}`;
+        frame.dataset.viewportValid = String(width === 1440 && height === 900);
+        clearTimeout(viewportValidationTimer);
+        viewportValidationTimer = setTimeout(() => {
+          const expectedFrames = preview.view === 'split' ? [primary, secondary] : [primary];
+          const viewportValid = expectedFrames.every((candidate) => candidate.dataset.viewportValid === 'true');
+          if (!viewportValid) {
+            $('#previewState').value = 'viewport-mismatch';
+            setPreviewState('viewport-mismatch');
+          } else if (preview.state === 'viewport-mismatch') {
+            $('#previewState').value = 'ready';
+            setPreviewState('ready');
+          }
+        }, 80);
+      });
+
+      pinLayer.addEventListener('click', (event) => {
+        if (preview.mode !== 'comment' || event.target.closest('.pin')) return;
+        const rect = pinLayer.getBoundingClientRect();
+        openComposerAt(
+          (event.clientX - rect.left) / rect.width,
+          (event.clientY - rect.top) / rect.height,
+        );
+      });
+      pinLayer.addEventListener('keydown', (event) => {
+        if (!['Enter', ' '].includes(event.key) || event.target.closest('.pin')) return;
+        event.preventDefault();
+        openComposerAt(.5, .5);
+      });
+      $('#composer').addEventListener('submit', (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const text = $('#commentText').value.trim();
+        if (!text || !draftPoint) return;
+        const id = String($$('.pin').length + 1);
+        const intentClass = selectedIntent === 'fix' ? '' : selectedIntent;
+        const pin = document.createElement('button');
+        pin.type = 'button';
+        pin.id = `pin-${id}`;
+        pin.dataset.thread = id;
+        pin.className = `pin ${intentClass}`.trim();
+        pin.style.left = `${draftPoint.x * 100}%`;
+        pin.style.top = `${draftPoint.y * 100}%`;
+        pin.setAttribute('aria-controls', `thread-${id}`);
+        pin.setAttribute('aria-label', `Open ${selectedIntent} comment ${id}`);
+        pin.innerHTML = `<span>${id}</span>`;
+        pinLayer.append(pin);
+        const thread = document.createElement('article');
+        thread.id = `thread-${id}`;
+        thread.dataset.thread = id;
+        thread.className = `thread ${intentClass}`.trim();
+        thread.tabIndex = 0;
+        thread.setAttribute('aria-controls', pin.id);
+        thread.innerHTML = `<span class="thread-num">${id}</span><div class="thread-top"><b>You</b><time>Just now</time></div><p></p><span class="tag">${selectedIntent} · ${artifacts[preview.selected].label}</span><div class="thread-actions"><button class="thread-action resolve-btn" type="button">Resolve</button><button class="thread-action reply-btn" type="button">Reply</button></div>`;
+        thread.querySelector('p').textContent = text;
+        $('#feed').append(thread);
+        wireThread(thread);
+        $('#feedbackCount').textContent = String($$('.thread').length);
+        $('#openCount').textContent = String($$('.thread:not(.resolved)').length);
+        $('#commentText').value = '';
+        closeComposer();
+        focusPair(id, 'thread');
+      }, true);
+
+      document.addEventListener('keydown', (event) => {
+        trapDialogFocus(event);
+        if (event.key === 'Escape') {
+          closeShare();
+          closeComposer({ restoreFocus: true });
+          return;
+        }
+        if (event.target.matches('textarea,input,select') || modal.classList.contains('show')) return;
+        if (event.key.toLowerCase() === 'i') setReviewMode('interact');
+        if (event.key.toLowerCase() === 'c') setReviewMode('comment');
+      }, true);
+
+      setView('variants');
+      setReviewMode('interact');
+      setZoom(.72);
+      setRail(true);
+      applyTheme('auto');
+      setPreviewState('ready');
+      globalThis.__openPlanrArtifactPreview = Object.freeze({
+        artifacts: artifacts.map(({ id, order, title, label }) => ({ id, order, title, label })),
+        state: preview,
+        selectArtifact,
+        setView,
+        setReviewMode,
+        setPreviewState,
+        setDecision,
+      });
+    })();
+  </script>
+</body>
+</html>

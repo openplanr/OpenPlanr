@@ -1,0 +1,346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.9.0/design-review-bundle.schema.json",
+  "x-openplanr-contract": {
+    "id": "design-review-bundle",
+    "version": "1.9.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "openplanr-design-review-bundle"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "design": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "$ref": "#/$defs/text"
+        },
+        "frames": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "label",
+              "width",
+              "height"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "label": {
+                "$ref": "#/$defs/text"
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16384
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16384
+              }
+            }
+          }
+        },
+        "screens": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "title"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "description": {
+                "$ref": "#/$defs/text"
+              },
+              "anchors": {
+                "$ref": "#/$defs/ids"
+              }
+            }
+          }
+        },
+        "screenOrder": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "flows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "title",
+              "screens"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "screens": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/id"
+                }
+              }
+            }
+          }
+        },
+        "variants": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "label",
+              "status"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "label": {
+                "$ref": "#/$defs/text"
+              },
+              "description": {
+                "$ref": "#/$defs/text"
+              },
+              "status": {
+                "enum": [
+                  "ready",
+                  "failed"
+                ]
+              },
+              "issue": {
+                "$ref": "#/$defs/text"
+              }
+            },
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "failed"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "issue"
+              ]
+            }
+          }
+        },
+        "selectedVariant": {
+          "$ref": "#/$defs/id"
+        },
+        "defaultView": {
+          "enum": [
+            "canvas",
+            "prototype",
+            "walkthrough"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "frames",
+        "screens",
+        "screenOrder",
+        "variants",
+        "selectedVariant",
+        "defaultView"
+      ]
+    },
+    "envelope": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "artifacts",
+        "viewer"
+      ]
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifactId",
+          "screenId",
+          "variantId",
+          "frameId"
+        ],
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "screenId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "variantId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "frameId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      }
+    },
+    "state": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "positions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y"
+            ],
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": -10000000,
+                "maximum": 10000000
+              },
+              "y": {
+                "type": "number",
+                "minimum": -10000000,
+                "maximum": 10000000
+              }
+            }
+          }
+        }
+      }
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "verification": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "verified",
+            "unverified",
+            "failed",
+            "pending"
+          ]
+        }
+      }
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "design",
+    "envelope",
+    "entries",
+    "revision"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "ids": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "uniqueItems": true
+    },
+    "localPath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path relative to the authored document directory. No URL, traversal, encoded path, query or fragment.",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)(?!.*[/ ]$)[^\\\\:\\u0000-\\u001F%?#]+$"
+    },
+    "paths": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/localPath"
+      },
+      "uniqueItems": true
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "html"
+      ],
+      "properties": {
+        "html": {
+          "$ref": "#/$defs/localPath"
+        },
+        "styles": {
+          "$ref": "#/$defs/paths"
+        },
+        "scripts": {
+          "$ref": "#/$defs/paths"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,163 @@
+{
+  "kind": "openplanr-skill-contribution",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.8.0",
+  "id": "workflows",
+  "skills": [
+    {
+      "id": "planr-artifact",
+      "source": "skills/planr-artifact/openplanr.skill.json",
+      "authorityClass": "read-only-view",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-artifact",
+          "argv": [
+            "artifact"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "planr-dashboard",
+      "source": "skills/planr-dashboard/openplanr.skill.json",
+      "authorityClass": "read-only-view",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-dashboard",
+          "argv": [
+            "dashboard"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "planr-design",
+      "source": "skills/planr-design/openplanr.skill.json",
+      "authorityClass": "planning-write",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-artifact",
+          "argv": [
+            "artifact"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "planr-design-loop",
+      "source": "skills/planr-design-loop/openplanr.skill.json",
+      "authorityClass": "planning-write",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-artifact",
+          "argv": [
+            "artifact"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "planr-design-review",
+      "source": "skills/planr-design-review/openplanr.skill.json",
+      "authorityClass": "review-evidence",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-artifact",
+          "argv": [
+            "artifact"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "planr-diagram",
+      "source": "skills/planr-diagram/openplanr.skill.json",
+      "authorityClass": "artifact-authoring",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-diagram",
+          "argv": [
+            "diagram"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "planr-doctor",
+      "source": "skills/planr-doctor/openplanr.skill.json",
+      "authorityClass": "diagnostic",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-doctor",
+          "argv": [
+            "doctor"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        },
+        {
+          "commandId": "cli-upgrade",
+          "argv": [
+            "upgrade"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "planr-plan",
+      "source": "skills/planr-plan/openplanr.skill.json",
+      "authorityClass": "planning-write",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-ship",
+      "source": "skills/planr-ship/openplanr.skill.json",
+      "authorityClass": "implementation",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-status",
+      "source": "skills/planr-status/openplanr.skill.json",
+      "authorityClass": "read-only-view",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-status",
+          "argv": [
+            "status"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "planr-sync",
+      "source": "skills/planr-sync/openplanr.skill.json",
+      "authorityClass": "planning-write",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-sync",
+          "argv": [
+            "sync"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    }
+  ]
+}

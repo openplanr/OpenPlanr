@@ -1,0 +1,26 @@
+{
+  "kind": "openplanr-skill-package",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.8.0",
+  "skillId": "planr-browser-qa",
+  "skillVersion": "2.0.0",
+  "entrypoint": "SKILL.md",
+  "hosts": [
+    "claude-code",
+    "codex",
+    "chatgpt",
+    "cursor"
+  ],
+  "execution": "host-agent",
+  "resources": [
+    {
+      "path": "agents/openai.yaml",
+      "kind": "agent-metadata",
+      "hosts": [
+        "codex",
+        "chatgpt"
+      ],
+      "executable": false
+    }
+  ]
+}

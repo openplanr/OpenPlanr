@@ -1,0 +1,44 @@
+{
+  "kind": "evaluation-scenario",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.4.0",
+  "scenarioId": "esc_a28203cb060899ca6f935ce42d5ce258efc67cdf14a63379a83f0a1155820b66",
+  "scenarioDigest": "sha256:a28203cb060899ca6f935ce42d5ce258efc67cdf14a63379a83f0a1155820b66",
+  "title": "planr-investigate ambiguity journey on cursor",
+  "intent": "A prompt carrying only half the declared trigger must ask one clarifying question rather than guess.",
+  "skill": {
+    "id": "planr-investigate",
+    "version": "1.0.0"
+  },
+  "hostProfileRef": {
+    "hostProfileId": "ehp_7fa4ce3e06316fe557b9a0c2d623fdcc",
+    "hostProfileDigest": "sha256:7fa4ce3e06316fe557b9a0c2d623fdcc353344154b441d6b7ade15827ef9001b"
+  },
+  "promptClass": "ambiguous",
+  "expectedTrigger": {
+    "outcome": "clarify",
+    "rationale": "The prompt carries partial trigger signal, so acting without clarification would guess at intent."
+  },
+  "declaredPermissions": [
+    {
+      "capability": "file-read",
+      "decision": "granted"
+    },
+    {
+      "capability": "network",
+      "decision": "denied"
+    }
+  ],
+  "riskClass": "read-only",
+  "fixtureRefs": [
+    {
+      "fixtureId": "efx_a57ecef4265c36ca06fde040ec700e4e3b057eaf8ca3563e2085400b185c78a8",
+      "contentDigest": "sha256:8c212cbe45a709c91350858cce9f8359f8c2bdcba0596e039dd3fd369fc09113",
+      "role": "prompt"
+    }
+  ],
+  "budgetRef": {
+    "budgetId": "ebg_ab599b6434d21be4ca9100655147859e",
+    "budgetDigest": "sha256:ab599b6434d21be4ca9100655147859ea7d7015710797231fb73c48af8b02dee"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "kind": "diagram-primitive-fixture",
+  "schemaVersion": "1.0.0",
+  "primitive": "lane",
+  "grammarId": "swimlane",
+  "fixture": "fixtures/diagram/grammars/swimlane.planr-diagram.json",
+  "description": "Canonical lane primitive example in the swimlane grammar."
+}

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Plan"
+  short_description: "Turn a Protocol-compatible specification or product intent into…"
+  default_prompt: "Use $planr-plan to turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation."
+policy:
+  allow_implicit_invocation: true

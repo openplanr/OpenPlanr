@@ -1,0 +1,91 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "wardley-fixture",
+  "title": "Wardley map fixture",
+  "summary": "Canonical semantic fixture for the wardley map grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "wardley",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Wardley map A",
+      "kind": "primary-item",
+      "description": "First semantic item in the wardley map fixture.",
+      "semanticPosition": {
+        "horizontal": 0.25,
+        "vertical": 0.7,
+        "meaning": "Semantic placement on the declared axes."
+      }
+    },
+    {
+      "id": "item-b",
+      "label": "Wardley map B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the wardley map fixture.",
+      "semanticPosition": {
+        "horizontal": 0.75,
+        "vertical": 0.3,
+        "meaning": "Semantic placement on the declared axes."
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "relation-a-b",
+      "from": "item-a",
+      "to": "item-b",
+      "kind": "flow",
+      "label": "continues",
+      "weight": null
+    }
+  ],
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [
+    {
+      "id": "axis-horizontal",
+      "label": "Horizontal meaning",
+      "scale": "linear"
+    },
+    {
+      "id": "axis-vertical",
+      "label": "Vertical meaning",
+      "scale": "linear"
+    }
+  ],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Wardley map fixture",
+    "description": "A compact wardley map example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:b22806d457bdd90a9bac4166763e5c71a056b2b31c9504f7aca22fd79280d326"
+}

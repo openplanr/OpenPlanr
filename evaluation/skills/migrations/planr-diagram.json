@@ -1,0 +1,53 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-diagram",
+  "family": "diagram",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-diagram/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-diagram/skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Rebased progressive-reference links onto each host's native generated support directory.",
+    "Changed supporting-reference mentions from opaque inline paths to navigable Markdown links."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:d5b2600b9a3f523a49986c2801fc744a7d0e695b95353077f15a061307436220",
+      "successorDigest": "sha256:69216be53116d7b2ef568f7bbb7550b23bd5b84a0e4d8031ae4b8b95173465bc"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:d5b2600b9a3f523a49986c2801fc744a7d0e695b95353077f15a061307436220",
+      "successorDigest": "sha256:69216be53116d7b2ef568f7bbb7550b23bd5b84a0e4d8031ae4b8b95173465bc"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:a829e58deb90e81dbf9e0ce48eec275995aa4f2014acb2e40f860d8ebfa0fc4a",
+      "successorDigest": "sha256:4a14c2d056c4895764caf4be3e894a3953fba0248966c97ece1cd0716f7c7c5a"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:d5b2600b9a3f523a49986c2801fc744a7d0e695b95353077f15a061307436220",
+      "successorDigest": "sha256:69216be53116d7b2ef568f7bbb7550b23bd5b84a0e4d8031ae4b8b95173465bc"
+    }
+  ]
+}

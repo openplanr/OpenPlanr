@@ -1,0 +1,165 @@
+.op-planning-handoff {
+  display: grid;
+  gap: var(--op-space-6);
+}
+
+.op-planning-handoff__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--op-space-4);
+}
+
+.op-planning-handoff__header h1,
+.op-planning-handoff__card h2,
+.op-planning-origin__header h2 {
+  margin: 0;
+  font-size: var(--op-type-section-size);
+}
+
+.op-planning-handoff__layout {
+  display: grid;
+  gap: var(--op-space-5);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.op-planning-handoff__stack,
+.op-planning-handoff__grid {
+  display: grid;
+  gap: var(--op-space-4);
+}
+
+.op-planning-handoff__card {
+  display: grid;
+  gap: var(--op-space-3);
+  padding: var(--op-space-4);
+  border: 1px solid var(--op-divider);
+  border-radius: var(--op-radius-surface);
+  background: var(--op-surface);
+}
+
+.op-planning-handoff__actions,
+.op-planning-handoff__dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--op-space-3);
+}
+
+.op-planning-handoff__form {
+  display: grid;
+  gap: var(--op-space-3);
+}
+
+.op-planning-handoff__field {
+  display: grid;
+  gap: var(--op-space-2);
+}
+
+.op-planning-handoff__field textarea,
+.op-planning-handoff__field input {
+  width: 100%;
+  min-height: var(--op-density-control);
+  padding: var(--op-space-3);
+  border: 1px solid var(--op-divider);
+  border-radius: var(--op-radius-control);
+  background: var(--op-canvas);
+}
+
+.op-planning-handoff__spec-preview,
+.op-planning-handoff__commands {
+  overflow: auto;
+  padding: var(--op-space-3);
+  border-radius: var(--op-radius-control);
+  background: var(--op-code);
+  color: var(--op-on-code);
+  white-space: pre-wrap;
+}
+
+.op-planning-handoff__notice {
+  margin: 0;
+  padding: var(--op-space-3) var(--op-space-4);
+  border-radius: var(--op-radius-control);
+  background: var(--op-canvas);
+}
+
+.op-planning-handoff__perspectives,
+.op-planning-handoff__evidence,
+.op-planning-trace {
+  display: grid;
+  gap: var(--op-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.op-planning-handoff__overlay {
+  position: fixed;
+  inset: 0;
+  background: color-mix(in srgb, var(--op-ink) 40%, transparent);
+}
+
+.op-planning-handoff__dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 20;
+  display: grid;
+  width: min(560px, calc(100vw - var(--op-space-6)));
+  gap: var(--op-space-4);
+  padding: var(--op-space-5);
+  border-radius: var(--op-radius-surface);
+  background: var(--op-surface);
+  transform: translate(-50%, -50%);
+}
+
+.op-planning-origin {
+  display: grid;
+  gap: var(--op-space-4);
+  padding: var(--op-space-4);
+  border: 1px solid var(--op-divider);
+  border-radius: var(--op-radius-surface);
+  background: var(--op-surface);
+}
+
+.op-planning-origin__header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--op-space-3);
+}
+
+.op-planning-trace__meta,
+.op-planning-trace__reason {
+  display: block;
+  color: var(--op-muted);
+  font-size: var(--op-type-technical-size);
+}
+
+.op-cycle-link--primary {
+  font-weight: var(--op-type-display-weight);
+}
+
+@media (max-width: 960px) {
+  .op-planning-handoff__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .op-planning-handoff__dialog,
+  .op-planning-handoff__overlay {
+    transition-duration: 0s;
+  }
+}
+
+@media (forced-colors: active) {
+  .op-planning-handoff__dialog,
+  .op-planning-handoff__overlay {
+    border: 1px solid CanvasText;
+  }
+
+  .op-planning-handoff__notice {
+    border-inline-start-color: CanvasText;
+  }
+}

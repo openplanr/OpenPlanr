@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Plan Review"
+  short_description: "Review an OpenPlanr plan for product, engineering, design, and…"
+  default_prompt: "Use $planr-plan-review to review an OpenPlanr plan for product, engineering, design, and developer-experience problems. Use after planning and before implementation to improve the plan."
+policy:
+  allow_implicit_invocation: true

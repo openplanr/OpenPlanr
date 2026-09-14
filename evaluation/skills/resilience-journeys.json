@@ -1,0 +1,69 @@
+{
+  "kind": "openplanr-skill-resilience-journeys",
+  "schemaVersion": "1.0.0",
+  "journeys": [
+    {
+      "id": "denied-native-chat-fallback",
+      "kind": "interaction",
+      "hostProfile": { "id": "codex-default", "version": "1.0.0" },
+      "runtimeCapabilities": {
+        "native-questions": { "state": "denied", "source": "codex:composer" },
+        "structured-chat": { "state": "available", "source": "codex:chat" },
+        "attached-terminal": { "state": "available", "source": "codex:terminal" }
+      },
+      "questionIds": ["materialChoice"],
+      "expect": { "status": "completed", "surface": "chat", "phase": "awaiting-input" }
+    },
+    {
+      "id": "permission-denied",
+      "kind": "capability",
+      "hostProfile": { "id": "codex-default", "version": "1.0.0" },
+      "runtimeCapabilities": { "native-questions": { "state": "denied", "source": "codex:composer" } },
+      "required": ["native-questions"],
+      "expect": { "status": "denied" }
+    },
+    {
+      "id": "headless-answer-required",
+      "kind": "interaction",
+      "hostProfile": { "id": "pipeline-default", "version": "1.1.0" },
+      "runtimeCapabilities": { "attached-terminal": { "state": "unavailable", "source": "pipeline:terminal" } },
+      "questionIds": ["repositoryName"],
+      "expect": { "status": "blocked", "surface": "headless", "phase": "unanswered" }
+    },
+    {
+      "id": "headless-safe-default",
+      "kind": "interaction",
+      "hostProfile": { "id": "pipeline-default", "version": "1.1.0" },
+      "runtimeCapabilities": { "attached-terminal": { "state": "unavailable", "source": "pipeline:terminal" } },
+      "questionIds": ["safeDefault"],
+      "headlessQuestionPolicy": { "include-drafts": { "materiality": "non-material", "defaultSafety": "safe" } },
+      "expect": { "status": "completed", "surface": "headless", "phase": "answered" }
+    },
+    {
+      "id": "interrupted-session-recovered",
+      "kind": "recovery",
+      "skillId": "planr-plan",
+      "questionIds": ["materialChoice"],
+      "startedAt": "2026-08-31T00:00:00Z",
+      "checkpointedAt": "2026-08-31T00:00:01Z",
+      "resumedAt": "2026-08-31T00:00:02Z",
+      "checkpointContext": { "repository": "openplanr", "task": "SPEC-003/T-008" },
+      "resumeContext": { "repository": "openplanr", "task": "SPEC-003/T-008" },
+      "safeState": { "step": "matching" },
+      "expect": { "status": "completed", "mode": "recovered" }
+    },
+    {
+      "id": "stale-session-starts-fresh",
+      "kind": "recovery",
+      "skillId": "planr-plan",
+      "questionIds": ["materialChoice"],
+      "startedAt": "2026-08-31T00:00:00Z",
+      "checkpointedAt": "2026-08-31T00:00:01Z",
+      "resumedAt": "2026-08-31T00:00:02Z",
+      "checkpointContext": { "repository": "openplanr", "task": "SPEC-003/T-008" },
+      "resumeContext": { "repository": "openplanr", "task": "SPEC-003/T-009" },
+      "safeState": { "step": "matching" },
+      "expect": { "status": "completed", "mode": "fresh" }
+    }
+  ]
+}

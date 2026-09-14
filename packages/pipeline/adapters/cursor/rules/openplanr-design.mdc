@@ -1,0 +1,16 @@
+---
+description: "Create or route an OpenPlanr product-design workflow using portable board assets. Use for a new UI direction; use the loop or review skills for iteration."
+alwaysApply: false
+---
+
+# Planr Design
+
+Invoke `planr pipeline design-engine` with the user's design subcommand and
+repository-relative artifact paths. The command owns rendering, manifests, review
+state, and safe file updates; keep those mechanics out of the prompt.
+
+Use the host's native question surface only when a missing source, format, or
+design direction would materially change the result. Preview the generated local
+artifact, apply pinned feedback when requested, and return the artifact path,
+design-spec path, validation state, and next useful action. Sharing and moving into
+PLAN remain separate user choices.

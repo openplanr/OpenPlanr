@@ -1,0 +1,72 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "nested-fixture",
+  "title": "Nested containment fixture",
+  "summary": "Canonical semantic fixture for the nested containment grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "nested",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Nested containment A",
+      "kind": "primary-item",
+      "description": "First semantic item in the nested containment fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "Nested containment B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the nested containment fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [],
+  "groups": [
+    {
+      "id": "group-main",
+      "label": "Primary group",
+      "members": [
+        "item-a",
+        "item-b"
+      ]
+    }
+  ],
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Nested containment fixture",
+    "description": "A compact nested containment example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:e0517a9db39e1e768932c990868674a7ab19479bb94cf996e970e56b6f20c81c"
+}

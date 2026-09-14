@@ -1,0 +1,50 @@
+{
+  "contractIds": [
+    "operating-model-state",
+    "operating-snapshot",
+    "operating-objective",
+    "operating-metric",
+    "operating-metric-observation",
+    "operating-risk",
+    "operating-assumption",
+    "operating-claim",
+    "operating-domain-projection",
+    "business-operating-snapshot-projection",
+    "software-operating-snapshot-projection",
+    "operating-delta",
+    "operating-intelligence-plan",
+    "operating-intelligence-input-bundle",
+    "operating-decision-ledger",
+    "operating-advisor-result",
+    "operating-challenger-review",
+    "operating-action-verification-plan",
+    "operating-outcome",
+    "operating-learning",
+    "operating-scenario",
+    "operating-event-trigger",
+    "operate-snapshot-provider-registration",
+    "operate-metric-provider-registration",
+    "operate-verification-provider-registration"
+  ],
+  "projectionIdentities": [
+    "business-operating-snapshot-projection@1.0.0",
+    "software-operating-snapshot-projection@1.0.0"
+  ],
+  "apiDomainContracts": {
+    "business": {
+      "apiDomainId": "business",
+      "id": "business-domain",
+      "version": "1.0.0"
+    },
+    "software": {
+      "apiDomainId": "software",
+      "id": "software-domain",
+      "version": "1.0.0"
+    }
+  },
+  "providerRegistrationContractIds": [
+    "operate-snapshot-provider-registration",
+    "operate-metric-provider-registration",
+    "operate-verification-provider-registration"
+  ]
+}

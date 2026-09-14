@@ -1,0 +1,661 @@
+{
+  "kind": "role-registry",
+  "schemaVersion": "1.1.0",
+  "protocolVersion": "1.5.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "roles": [
+    {
+      "roleId": "planr-backend",
+      "roleVersion": "1.0.0",
+      "displayName": "Backend",
+      "description": "Canonical backend role for the OpenPlanr dev phase.",
+      "legacyAliases": [
+        {
+          "id": "backend-agent",
+          "status": "compatibility",
+          "since": "1.5.0",
+          "removalVersion": null
+        }
+      ],
+      "phase": "dev",
+      "activation": "conditional",
+      "capabilityTier": "implementation-high",
+      "authorityClass": "implementation",
+      "writeBoundary": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedOutputClasses": [
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "scope-expansion",
+          "deploy",
+          "publish",
+          "credential-write"
+        ]
+      },
+      "source": {
+        "path": "agents/dev/planr-backend/AGENT.md",
+        "digest": "sha256:99d0ccd37ce38e7d0c0b38f9250cff90b6d0840e3ada36692344ed63e3bce4f3"
+      },
+      "taskKinds": [
+        "backend"
+      ],
+      "outputContracts": [
+        {
+          "id": "implementation-result",
+          "version": "1.0.0"
+        }
+      ],
+      "ruleIds": [
+        "R3",
+        "R5",
+        "R6",
+        "R7",
+        "R9",
+        "R10"
+      ],
+      "adapterMappings": [
+        {
+          "host": "claude-code",
+          "nativeId": "backend-agent",
+          "generatedPath": "adapters/claude-code/agents/backend-agent.md"
+        },
+        {
+          "host": "codex",
+          "nativeId": "planr-backend",
+          "generatedPath": "adapters/codex/agents/planr-backend.md"
+        },
+        {
+          "host": "cursor",
+          "nativeId": "planr-backend",
+          "generatedPath": "adapters/cursor/agents/planr-backend.md"
+        }
+      ],
+      "qaCoverage": [
+        "tests/protocol/role-alias-registry.test.mjs",
+        "evaluation/roles/planr-backend.json"
+      ]
+    },
+    {
+      "roleId": "planr-database",
+      "roleVersion": "1.0.0",
+      "displayName": "Database",
+      "description": "Canonical database role for the OpenPlanr po-preflight phase.",
+      "legacyAliases": [
+        {
+          "id": "db-agent",
+          "status": "compatibility",
+          "since": "1.5.0",
+          "removalVersion": null
+        }
+      ],
+      "phase": "po-preflight",
+      "activation": "conditional",
+      "capabilityTier": "analysis-high",
+      "authorityClass": "database-inspection",
+      "writeBoundary": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "read-only",
+        "allowedOutputClasses": [
+          "A"
+        ],
+        "forbiddenEffects": [
+          "database-mutation",
+          "deploy",
+          "publish",
+          "credential-write",
+          "scope-expansion"
+        ]
+      },
+      "source": {
+        "path": "agents/po/preflight/planr-database/AGENT.md",
+        "digest": "sha256:e9a428c7f60116ac5c02bcfb498a292adbc8a027536870630cc9b3d74199adc3"
+      },
+      "taskKinds": [
+        "database"
+      ],
+      "outputContracts": [
+        {
+          "id": "task-output-manifest",
+          "version": "1.0.0"
+        }
+      ],
+      "ruleIds": [
+        "R3",
+        "R8",
+        "R10"
+      ],
+      "adapterMappings": [
+        {
+          "host": "claude-code",
+          "nativeId": "db-agent",
+          "generatedPath": "adapters/claude-code/agents/db-agent.md"
+        },
+        {
+          "host": "codex",
+          "nativeId": "planr-database",
+          "generatedPath": "adapters/codex/agents/planr-database.md"
+        },
+        {
+          "host": "cursor",
+          "nativeId": "planr-database",
+          "generatedPath": "adapters/cursor/agents/planr-database.md"
+        }
+      ],
+      "qaCoverage": [
+        "tests/protocol/role-alias-registry.test.mjs",
+        "evaluation/roles/planr-database.json"
+      ]
+    },
+    {
+      "roleId": "planr-designer",
+      "roleVersion": "1.0.0",
+      "displayName": "Designer",
+      "description": "Canonical designer role for the OpenPlanr po phase.",
+      "legacyAliases": [
+        {
+          "id": "designer-agent",
+          "status": "compatibility",
+          "since": "1.5.0",
+          "removalVersion": null
+        }
+      ],
+      "phase": "po",
+      "activation": "conditional",
+      "capabilityTier": "analysis-high",
+      "authorityClass": "design-planning",
+      "writeBoundary": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedOutputClasses": [
+          "A",
+          "B"
+        ],
+        "forbiddenEffects": [
+          "deploy",
+          "publish",
+          "credential-write",
+          "scope-expansion"
+        ]
+      },
+      "source": {
+        "path": "agents/po/planr-designer/AGENT.md",
+        "digest": "sha256:f657a9e9b89025f93fc50dbf35d693e2eeb54d688fe287fede80c9c6d9cc1f83"
+      },
+      "taskKinds": [],
+      "outputContracts": [
+        {
+          "id": "designer-output",
+          "version": "1.0.0"
+        }
+      ],
+      "ruleIds": [
+        "R1",
+        "R3",
+        "R10"
+      ],
+      "adapterMappings": [
+        {
+          "host": "claude-code",
+          "nativeId": "designer-agent",
+          "generatedPath": "adapters/claude-code/agents/designer-agent.md"
+        },
+        {
+          "host": "codex",
+          "nativeId": "planr-designer",
+          "generatedPath": "adapters/codex/agents/planr-designer.md"
+        },
+        {
+          "host": "cursor",
+          "nativeId": "planr-designer",
+          "generatedPath": "adapters/cursor/agents/planr-designer.md"
+        }
+      ],
+      "qaCoverage": [
+        "tests/protocol/role-alias-registry.test.mjs",
+        "evaluation/roles/planr-designer.json"
+      ]
+    },
+    {
+      "roleId": "planr-devops",
+      "roleVersion": "1.0.0",
+      "displayName": "Devops",
+      "description": "Canonical devops role for the OpenPlanr post-build phase.",
+      "legacyAliases": [
+        {
+          "id": "devops-agent",
+          "status": "compatibility",
+          "since": "1.5.0",
+          "removalVersion": null
+        }
+      ],
+      "phase": "post-build",
+      "activation": "conditional",
+      "capabilityTier": "analysis-high",
+      "authorityClass": "infrastructure-configuration",
+      "writeBoundary": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedOutputClasses": [
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "deploy",
+          "publish",
+          "credential-write",
+          "scope-expansion"
+        ]
+      },
+      "source": {
+        "path": "agents/post-build/planr-devops/AGENT.md",
+        "digest": "sha256:8bf4f408c167672979e16ede57743e551d0e9f576b3cdb0251cdac6462e8b014"
+      },
+      "taskKinds": [
+        "devops"
+      ],
+      "outputContracts": [
+        {
+          "id": "task-output-manifest",
+          "version": "1.0.0"
+        }
+      ],
+      "ruleIds": [
+        "R3",
+        "R5",
+        "R6",
+        "R7",
+        "R10"
+      ],
+      "adapterMappings": [
+        {
+          "host": "claude-code",
+          "nativeId": "devops-agent",
+          "generatedPath": "adapters/claude-code/agents/devops-agent.md"
+        },
+        {
+          "host": "codex",
+          "nativeId": "planr-devops",
+          "generatedPath": "adapters/codex/agents/planr-devops.md"
+        },
+        {
+          "host": "cursor",
+          "nativeId": "planr-devops",
+          "generatedPath": "adapters/cursor/agents/planr-devops.md"
+        }
+      ],
+      "qaCoverage": [
+        "tests/protocol/role-alias-registry.test.mjs",
+        "evaluation/roles/planr-devops.json"
+      ]
+    },
+    {
+      "roleId": "planr-documentation",
+      "roleVersion": "1.0.0",
+      "displayName": "Documentation",
+      "description": "Canonical documentation role for the OpenPlanr post-build phase.",
+      "legacyAliases": [
+        {
+          "id": "doc-gen-agent",
+          "status": "compatibility",
+          "since": "1.5.0",
+          "removalVersion": null
+        }
+      ],
+      "phase": "post-build",
+      "activation": "conditional",
+      "capabilityTier": "analysis-high",
+      "authorityClass": "documentation",
+      "writeBoundary": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedOutputClasses": [
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "deploy",
+          "publish",
+          "credential-write",
+          "scope-expansion"
+        ]
+      },
+      "source": {
+        "path": "agents/post-build/planr-documentation/AGENT.md",
+        "digest": "sha256:dc4b6fe5be51f36f01ed6469064e488adca787263b19111577eb684cdb340c38"
+      },
+      "taskKinds": [
+        "documentation"
+      ],
+      "outputContracts": [
+        {
+          "id": "task-output-manifest",
+          "version": "1.0.0"
+        }
+      ],
+      "ruleIds": [
+        "R3",
+        "R5",
+        "R6",
+        "R7",
+        "R10"
+      ],
+      "adapterMappings": [
+        {
+          "host": "claude-code",
+          "nativeId": "doc-gen-agent",
+          "generatedPath": "adapters/claude-code/agents/doc-gen-agent.md"
+        },
+        {
+          "host": "codex",
+          "nativeId": "planr-documentation",
+          "generatedPath": "adapters/codex/agents/planr-documentation.md"
+        },
+        {
+          "host": "cursor",
+          "nativeId": "planr-documentation",
+          "generatedPath": "adapters/cursor/agents/planr-documentation.md"
+        }
+      ],
+      "qaCoverage": [
+        "tests/protocol/role-alias-registry.test.mjs",
+        "evaluation/roles/planr-documentation.json"
+      ]
+    },
+    {
+      "roleId": "planr-entity-scaffold",
+      "roleVersion": "1.0.0",
+      "displayName": "Entity Scaffold",
+      "description": "Canonical entity-scaffold role for the OpenPlanr po-preflight phase.",
+      "legacyAliases": [
+        {
+          "id": "entity-scaffold-agent",
+          "status": "compatibility",
+          "since": "1.5.0",
+          "removalVersion": null
+        }
+      ],
+      "phase": "po-preflight",
+      "activation": "manual",
+      "capabilityTier": "analysis-high",
+      "authorityClass": "entity-scaffold",
+      "writeBoundary": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedOutputClasses": [
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "database-mutation",
+          "deploy",
+          "publish",
+          "credential-write",
+          "scope-expansion"
+        ]
+      },
+      "source": {
+        "path": "agents/po/preflight/planr-entity-scaffold/AGENT.md",
+        "digest": "sha256:91aa0984c3166bf56175505efc595138fef6664d2efe49a7c343dff8c8ea680a"
+      },
+      "taskKinds": [
+        "entity-scaffold"
+      ],
+      "outputContracts": [
+        {
+          "id": "task-output-manifest",
+          "version": "1.0.0"
+        }
+      ],
+      "ruleIds": [
+        "R3",
+        "R5",
+        "R6",
+        "R10"
+      ],
+      "adapterMappings": [
+        {
+          "host": "claude-code",
+          "nativeId": "entity-scaffold-agent",
+          "generatedPath": "adapters/claude-code/agents/entity-scaffold-agent.md"
+        },
+        {
+          "host": "codex",
+          "nativeId": "planr-entity-scaffold",
+          "generatedPath": "adapters/codex/agents/planr-entity-scaffold.md"
+        },
+        {
+          "host": "cursor",
+          "nativeId": "planr-entity-scaffold",
+          "generatedPath": "adapters/cursor/agents/planr-entity-scaffold.md"
+        }
+      ],
+      "qaCoverage": [
+        "tests/protocol/role-alias-registry.test.mjs",
+        "evaluation/roles/planr-entity-scaffold.json"
+      ]
+    },
+    {
+      "roleId": "planr-frontend",
+      "roleVersion": "1.0.0",
+      "displayName": "Frontend",
+      "description": "Canonical frontend role for the OpenPlanr dev phase.",
+      "legacyAliases": [
+        {
+          "id": "frontend-agent",
+          "status": "compatibility",
+          "since": "1.5.0",
+          "removalVersion": null
+        }
+      ],
+      "phase": "dev",
+      "activation": "conditional",
+      "capabilityTier": "implementation-high",
+      "authorityClass": "implementation",
+      "writeBoundary": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedOutputClasses": [
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "scope-expansion",
+          "deploy",
+          "publish",
+          "credential-write"
+        ]
+      },
+      "source": {
+        "path": "agents/dev/planr-frontend/AGENT.md",
+        "digest": "sha256:8c1b9ccc6f5c3ded686797a38282c406435fa44f174d30e8d70ba208f7928a22"
+      },
+      "taskKinds": [
+        "frontend"
+      ],
+      "outputContracts": [
+        {
+          "id": "implementation-result",
+          "version": "1.0.0"
+        }
+      ],
+      "ruleIds": [
+        "R2",
+        "R3",
+        "R5",
+        "R6",
+        "R7",
+        "R9",
+        "R10"
+      ],
+      "adapterMappings": [
+        {
+          "host": "claude-code",
+          "nativeId": "frontend-agent",
+          "generatedPath": "adapters/claude-code/agents/frontend-agent.md"
+        },
+        {
+          "host": "codex",
+          "nativeId": "planr-frontend",
+          "generatedPath": "adapters/codex/agents/planr-frontend.md"
+        },
+        {
+          "host": "cursor",
+          "nativeId": "planr-frontend",
+          "generatedPath": "adapters/cursor/agents/planr-frontend.md"
+        }
+      ],
+      "qaCoverage": [
+        "tests/protocol/role-alias-registry.test.mjs",
+        "evaluation/roles/planr-frontend.json"
+      ]
+    },
+    {
+      "roleId": "planr-qa",
+      "roleVersion": "1.0.0",
+      "displayName": "Qa",
+      "description": "Canonical qa role for the OpenPlanr qa phase.",
+      "legacyAliases": [
+        {
+          "id": "qa-agent",
+          "status": "compatibility",
+          "since": "1.5.0",
+          "removalVersion": null
+        }
+      ],
+      "phase": "qa",
+      "activation": "always",
+      "capabilityTier": "read-only-qa",
+      "authorityClass": "quality-verification",
+      "writeBoundary": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedOutputClasses": [
+          "B"
+        ],
+        "forbiddenEffects": [
+          "database-mutation",
+          "deploy",
+          "publish",
+          "credential-write",
+          "scope-expansion"
+        ]
+      },
+      "source": {
+        "path": "agents/qa/planr-qa/AGENT.md",
+        "digest": "sha256:90e72cda705e78e2b9112b24bcec610111b07535e02dd8f0cc9110329f830c37"
+      },
+      "taskKinds": [
+        "qa"
+      ],
+      "outputContracts": [
+        {
+          "id": "task-output-manifest",
+          "version": "1.0.0"
+        }
+      ],
+      "ruleIds": [
+        "R5",
+        "R6",
+        "R7",
+        "R10"
+      ],
+      "adapterMappings": [
+        {
+          "host": "claude-code",
+          "nativeId": "qa-agent",
+          "generatedPath": "adapters/claude-code/agents/qa-agent.md"
+        },
+        {
+          "host": "codex",
+          "nativeId": "planr-qa",
+          "generatedPath": "adapters/codex/agents/planr-qa.md"
+        },
+        {
+          "host": "cursor",
+          "nativeId": "planr-qa",
+          "generatedPath": "adapters/cursor/agents/planr-qa.md"
+        }
+      ],
+      "qaCoverage": [
+        "tests/protocol/role-alias-registry.test.mjs",
+        "evaluation/roles/planr-qa.json"
+      ]
+    },
+    {
+      "roleId": "planr-specification",
+      "roleVersion": "1.0.0",
+      "displayName": "Specification",
+      "description": "Canonical specification role for the OpenPlanr po phase.",
+      "legacyAliases": [
+        {
+          "id": "specification-agent",
+          "status": "compatibility",
+          "since": "1.5.0",
+          "removalVersion": null
+        }
+      ],
+      "phase": "po",
+      "activation": "always",
+      "capabilityTier": "analysis-high",
+      "authorityClass": "planning-write",
+      "writeBoundary": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedOutputClasses": [
+          "A"
+        ],
+        "forbiddenEffects": [
+          "deploy",
+          "publish",
+          "credential-write",
+          "scope-expansion"
+        ]
+      },
+      "source": {
+        "path": "agents/po/planr-specification/AGENT.md",
+        "digest": "sha256:656e82510fe29e5548a1109497c0eb70124cd000f05a2ee16d2719efd7b9b0c6"
+      },
+      "taskKinds": [],
+      "outputContracts": [
+        {
+          "id": "specification-output",
+          "version": "1.0.0"
+        }
+      ],
+      "ruleIds": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R10"
+      ],
+      "adapterMappings": [
+        {
+          "host": "claude-code",
+          "nativeId": "specification-agent",
+          "generatedPath": "adapters/claude-code/agents/specification-agent.md"
+        },
+        {
+          "host": "codex",
+          "nativeId": "planr-specification",
+          "generatedPath": "adapters/codex/agents/planr-specification.md"
+        },
+        {
+          "host": "cursor",
+          "nativeId": "planr-specification",
+          "generatedPath": "adapters/cursor/agents/planr-specification.md"
+        }
+      ],
+      "qaCoverage": [
+        "tests/protocol/role-alias-registry.test.mjs",
+        "evaluation/roles/planr-specification.json"
+      ]
+    }
+  ],
+  "documentDigest": "sha256:b981337a45537d67f4b119351b4c96d610d26320a9ee3232793fd143151d924b"
+}

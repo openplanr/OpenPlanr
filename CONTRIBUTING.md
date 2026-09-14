@@ -1,166 +1,100 @@
-# Contributing to Planr
+# Contributing to OpenPlanr
 
-Thank you for your interest in contributing to Planr! This guide will help you get started.
+Use an issue or pull request in [openplanr/OpenPlanr](https://github.com/openplanr/OpenPlanr)
+to explain the problem and proposed behavior. Report vulnerabilities privately as
+specified in [SECURITY.md](SECURITY.md). Participation follows our
+[Code of Conduct](CODE_OF_CONDUCT.md).
 
-## Development Setup
+## Development setup
 
-### Prerequisites
-
-- Node.js >= 20.0.0
-- npm >= 10.0.0
-
-### Getting Started
+Use Node.js 24 for contributor work, Git, and npm. Runtime compatibility checks
+also cover Node.js 20 and 22. Run these commands from the repository root:
 
 ```bash
-# Fork and clone the repo
-git clone https://github.com/openplanr/OpenPlanr.git
-cd openplanr
-
-# Install dependencies
-npm install
-
-# Build the project
+npm ci
+./node_modules/.bin/playwright install chromium
+npm run generate
 npm run build
-
-# Run from source (no build needed)
-npx tsx src/cli/index.ts --help
-
-# Link globally for testing
-npm install -g .
-planr --help
+npm run test:focused
 ```
 
-## Project Structure
+There is one root lockfile. Do not install independent dependency trees inside
+workspace packages or introduce sibling-checkout requirements.
 
-```text
-src/
-├── cli/
-│   ├── index.ts              # CLI entry point (commander setup)
-│   └── commands/             # One file per command group
-│       ├── init.ts
-│       ├── epic.ts
-│       ├── feature.ts
-│       ├── story.ts
-│       ├── task.ts
-│       ├── quick.ts
-│       ├── backlog.ts
-│       ├── sprint.ts
-│       ├── template.ts
-│       ├── checklist.ts
-│       ├── rules.ts
-│       ├── config.ts
-│       ├── plan.ts
-│       ├── refine.ts
-│       ├── estimate.ts
-│       ├── search.ts
-│       ├── sync.ts
-│       ├── github.ts
-│       ├── export.ts
-│       └── status.ts
-├── services/                 # Business logic
-│   ├── artifact-service.ts   # Generic CRUD for all artifact types
-│   ├── artifact-gathering.ts # Context gathering for AI prompts
-│   ├── config-service.ts     # Config file management
-│   ├── checklist-service.ts  # Checklist operations
-│   ├── id-service.ts         # Auto-incrementing ID generation
-│   ├── prompt-service.ts     # Interactive prompt wrappers
-│   ├── rules-service.ts      # AI rule file generation
-│   └── template-service.ts   # Handlebars template rendering
-├── models/
-│   ├── schema.ts             # Zod validation schemas
-│   └── types.ts              # TypeScript type definitions
-├── templates/                # Handlebars templates
-│   ├── epics/
-│   ├── features/
-│   ├── stories/
-│   ├── tasks/
-│   ├── checklists/
-│   ├── adrs/
-│   └── rules/
-│       ├── cursor/           # .mdc rule templates
-│       ├── claude/           # CLAUDE.md template
-│       └── codex/            # AGENTS.md template
-└── utils/
-    ├── constants.ts
-    ├── fs.ts                 # File system helpers
-    ├── logger.ts             # Chalk-based logger
-    └── slugify.ts
-```
+Generation creates ignored local host distributions as well as checked-in
+projections. A fresh clone must run `npm run generate` before
+`npm run check:generated`; check mode validates existing output and does not
+bootstrap missing distributions. Build before running packed-package verification
+so the CLI's compiled exports exist.
 
-## Making Changes
+## Make a focused change
 
-### Branch Naming
+1. Read the related code, tests, and public [architecture guide](docs/architecture/README.md). Local ADRs and planning records stay in ignored `.planr/` and are not required by contributor CI.
+2. Change the canonical owner first: Protocol contracts, then domain code, then
+   downstream CLI, host adapters, and documentation as needed.
+3. Add regression coverage for changed behavior and update user-facing guidance.
+4. Regenerate derived files and include the required projections in the same PR.
+5. Describe the concrete behavior change, validation results, and limitations.
 
-- `feat/description` — new features
-- `fix/description` — bug fixes
-- `docs/description` — documentation changes
-- `refactor/description` — code refactoring
-- `test/description` — test additions/changes
+Use product-oriented branch names such as `fix/diagram-labels` or
+`feat/review-navigation`, and concise commits describing the change. Keep private
+planning, credentials, local runtime state, and customer examples out of commits.
 
-### Commit Messages
+By submitting a contribution, you agree to license it under the license that
+applies to the files you modify, and you represent that you have the right to do
+so. This does not transfer your copyright. If a contribution introduces a new
+license or changes a licensing boundary, discuss it with the maintainers before
+opening the pull request and include the required license and notice files.
 
-Use clear, descriptive commit messages:
+## Generated sources
 
-```
-feat: add --ai flag for AI-powered epic generation
-fix: handle missing config file gracefully
-docs: update CLI reference with new commands
-refactor: extract template rendering into service
-test: add unit tests for id-service
-```
-
-### Adding a New Command
-
-1. Create a new file in `src/cli/commands/`
-2. Export a `registerXxxCommand(program: Command)` function
-3. Register it in `src/cli/index.ts`
-4. Add a Handlebars template in `src/templates/` if needed
-5. Update `docs/CLI.md` with the new command
-
-### Adding a New AI Target
-
-1. Add template files in `src/templates/rules/<target>/`
-2. Update `src/services/rules-service.ts` to handle the target
-3. Update the config schema in `src/models/schema.ts`
-
-## Testing
+Edit canonical skill content under `skills/`, role guidance under `agents/`, and
+domain sources under their owning workspace. Do not hand-edit generated adapters
+or compatibility projections. Run:
 
 ```bash
-# Run all tests
+npm run generate
+npm run check:generated
+npm run check:boundaries
+```
+
+When changing CLI registration, refresh its command catalog after building:
+
+```bash
+npm run build --workspace=openplanr
+npm run generate:command-catalog --workspace=openplanr
+npm run generate
+```
+
+## Verification
+
+Run focused tests while working. Before submitting a change that affects package
+or runtime behavior, run the relevant full checks:
+
+```bash
+npm run generate
+npm run lint
+npm run build
 npm test
-
-# Watch mode
-npm run test:watch
+npm run verify
 ```
 
-### Testing Commands Manually
+In a clean verification checkout, run `git diff --exit-code HEAD --` after
+generation and after the build. Ignored local distributions may be created, but
+tracked files must reproduce without changes. During development, review and
+commit intentional source and generated-output changes before applying this gate.
 
-```bash
-# Create a temp directory to test in
-mkdir /tmp/planr-test && cd /tmp/planr-test
+`npm run verify` checks generated assets, boundaries, preservation records,
+focused tests, and isolated packed-package behavior. It does not replace the full
+workspace test command or manual/browser checks for UI changes. The CI workflows
+under `.github/workflows/` define their additional runtime and browser coverage.
 
-# Run commands from source
-npx tsx /path/to/openplanr/src/cli/index.ts init
-npx tsx /path/to/openplanr/src/cli/index.ts epic create
-```
+Record failed or unavailable checks honestly. Do not update fixtures simply to
+hide a regression, or make an unsupported compatibility claim from one local run.
 
-## Pull Request Process
+## Review and release
 
-1. Ensure your code builds without errors (`npm run build`)
-2. Update documentation if you changed any commands or behavior
-3. Add tests for new functionality where possible
-4. Keep PRs focused — one feature or fix per PR
-5. Write a clear PR description explaining what and why
-
-## Code Style
-
-- TypeScript strict mode is enabled
-- Use ES modules (`import`/`export`)
-- Prefer `async`/`await` over raw promises
-- Use Zod for runtime validation
-- Use Handlebars for all template rendering
-- Keep CLI commands thin — put logic in services
-
-## Questions?
-
-Open an issue on GitHub if you have questions or need help getting started.
+Maintainers review changes for correctness, compatibility, usability, and clear
+ownership. A merge or successful CI run does not itself authorize a deployment,
+package publication, or repository-history cutover. See
+[Releasing](docs/RELEASING.md) for the release process.

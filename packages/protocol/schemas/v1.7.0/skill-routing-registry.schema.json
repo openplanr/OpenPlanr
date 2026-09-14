@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.7.0/skill-routing-registry.schema.json",
+  "x-openplanr-contract": {
+    "id": "skill-routing-registry",
+    "version": "1.7.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "policies"
+  ],
+  "properties": {
+    "kind": {
+      "const": "skill-routing-registry"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.7.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "policies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "routingPolicyId",
+          "routingPolicyVersion",
+          "description",
+          "includeModules",
+          "references",
+          "order"
+        ],
+        "properties": {
+          "routingPolicyId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "routingPolicyVersion": {
+            "$ref": "common.schema.json#/$defs/semver"
+          },
+          "description": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "includeModules": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/moduleRef"
+            },
+            "minItems": 0,
+            "maxItems": 128
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/moduleRef"
+            },
+            "minItems": 0,
+            "maxItems": 128
+          },
+          "order": {
+            "enum": [
+              "declared",
+              "topological"
+            ]
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 128
+    }
+  }
+}

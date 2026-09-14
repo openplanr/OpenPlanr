@@ -1,0 +1,11 @@
+{
+  "runtime": "codex",
+  "runtimeVersion": "fixture",
+  "runtimeReport": {
+    "nativeQuestions": false,
+    "structuredChat": false,
+    "attachedTerminal": true
+  },
+  "expectedMode": "terminal",
+  "expectedFallback": true
+}

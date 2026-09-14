@@ -1,0 +1,14 @@
+{
+  "kind": "structured-action",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "id": "apply-workflow-configuration",
+  "label": "Apply this workflow configuration",
+  "command": "planr guided-answer submit --yes --json",
+  "effect": "project-write",
+  "providerUse": false,
+  "requiresConfirmation": false,
+  "confirmationScope": null,
+  "confirmationDigest": null,
+  "recommended": true
+}

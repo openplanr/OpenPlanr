@@ -1,0 +1,542 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "openplanr-domain-projection",
+  "domain": "operate",
+  "generator": "scripts/domains/project-domains.mjs",
+  "entries": [
+    {
+      "source": "packages/operate/lib/operate/action-verification-v2.d.mts",
+      "target": "lib/operate/action-verification-v2.d.mts",
+      "sha256": "c8978b0eaa48b1df1bca0ae82fa1064b10d8ebaaa258d43caf50e6074b74f841",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/action-verification-v2.mjs",
+      "target": "lib/operate/action-verification-v2.mjs",
+      "sha256": "cd28b247aa804a2452b0fd6fab837e21941aaceb77e734e34004c28818c4c69a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/approvals-v2.d.mts",
+      "target": "lib/operate/approvals-v2.d.mts",
+      "sha256": "1f0c01718cff97f969e2301813fd89ef34b79a56e335e83ed55ce5568539dc7f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/approvals-v2.mjs",
+      "target": "lib/operate/approvals-v2.mjs",
+      "sha256": "84055864e43c50e6e8d35329c6917d2e0bf7a12696e9e7de9ec40d52d3fa465f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/assignment-contract-v2.mjs",
+      "target": "lib/operate/assignment-contract-v2.mjs",
+      "sha256": "9e1a363968b05b18f251adb2524de887753e0d25a624b8b4825fbce7841e9612",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/authorization-v2.d.mts",
+      "target": "lib/operate/authorization-v2.d.mts",
+      "sha256": "df412a569be11a5869fdedc69f74131674a92e466a69990ed33a592dcf94e5c9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/authorization-v2.mjs",
+      "target": "lib/operate/authorization-v2.mjs",
+      "sha256": "32ea3a1c7431d6d88abadc29105d30c3038f890b709789f49fee47bd24b033d3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/contracts/compiler.mjs",
+      "target": "lib/operate/contracts/compiler.mjs",
+      "sha256": "15fc1f46f40ce671c7a078c37c264a105cc03e076d988b397872f14f01e2a27f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/contracts/mandate-appendix-v2.mjs",
+      "target": "lib/operate/contracts/mandate-appendix-v2.mjs",
+      "sha256": "dffda7b1503b78996f37720287adb9b4d85c67261fddd39473317a9efe5b4fa8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/contracts/operate-adapter-skills.mjs",
+      "target": "lib/operate/contracts/operate-adapter-skills.mjs",
+      "sha256": "f9b354515964a10ef63b9e161d1d28d639e764beec15ee561d601f06c4b312aa",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/contracts/role-skills.mjs",
+      "target": "lib/operate/contracts/role-skills.mjs",
+      "sha256": "4b815f068b3fd3ec331d5846d32de3ab24149aaeff9c889ea9117356d4fc1d91",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/cycle-closure-v2.d.mts",
+      "target": "lib/operate/cycle-closure-v2.d.mts",
+      "sha256": "988bf84371eb4a8d1f4b039810067bca862b79e52a95f3e69f17c8563287d528",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/cycle-closure-v2.mjs",
+      "target": "lib/operate/cycle-closure-v2.mjs",
+      "sha256": "1cbaefdc3ae7e7c6cf3abb9121dd25d9350746b7ee5a1612cdf61986137e496e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/evidence-artifact-v2.mjs",
+      "target": "lib/operate/evidence-artifact-v2.mjs",
+      "sha256": "2d792ce9b5f62a095ef683ad42a62f66241f2fe0c08e5a65f01d6a1df6bf4cde",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/evidence-filesystem-v2.mjs",
+      "target": "lib/operate/evidence-filesystem-v2.mjs",
+      "sha256": "46c62bef20e66b12cf097fec20b1e134222f52b586402967dba8bb2c3a14ea68",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/evidence-git-v2.mjs",
+      "target": "lib/operate/evidence-git-v2.mjs",
+      "sha256": "f5708d99084f70443377be194ad0e50d9383a88020305422efcbc23e6c3f6957",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/evidence-materialization-v2.d.mts",
+      "target": "lib/operate/evidence-materialization-v2.d.mts",
+      "sha256": "459d448e47d4888f5c22ef756e50f1a4655daa792ddc3397424dc0fdf30f4eec",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/evidence-materialization-v2.mjs",
+      "target": "lib/operate/evidence-materialization-v2.mjs",
+      "sha256": "7fad36ebf21870e63e2b03830d048610ba72659685dc14ee93840216b2523b3b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/evidence-planr-v2.mjs",
+      "target": "lib/operate/evidence-planr-v2.mjs",
+      "sha256": "eaa76a3ec1f82b24ace80b93b4eeaedea6bc1e37589642d36d3874f81d931e93",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/evidence-projections-v2.d.mts",
+      "target": "lib/operate/evidence-projections-v2.d.mts",
+      "sha256": "eba0486f87fcad81596f285e0ed143da5e55341745fdf1b69a93d4cc5257f09f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/evidence-projections-v2.mjs",
+      "target": "lib/operate/evidence-projections-v2.mjs",
+      "sha256": "da382248b1c4fb40af0cf3e84d6abe8e2a3021fc9d288e6d20c9acde3e61dff2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/evidence-registry-v2.d.mts",
+      "target": "lib/operate/evidence-registry-v2.d.mts",
+      "sha256": "d830326f20b6e50abf95e68b8b32467981db095022bc7fbfcb9201dd9c7bc0bc",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/evidence-registry-v2.mjs",
+      "target": "lib/operate/evidence-registry-v2.mjs",
+      "sha256": "4ed3e24d9f120d95f09a1c50a5465199a354d66b917c58c2e806ce9185d3d811",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/evidence-v2.d.mts",
+      "target": "lib/operate/evidence-v2.d.mts",
+      "sha256": "98a42870436ac46d8baa00bdfd2c8f004ebde45c26d64f3d1b033ea289d3973e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/evidence-v2.mjs",
+      "target": "lib/operate/evidence-v2.mjs",
+      "sha256": "a84b7d4663e60abb17ac7703980cf43c5e782df8a6fb7a49a229695376ab3842",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/execution-verification-v2.d.mts",
+      "target": "lib/operate/execution-verification-v2.d.mts",
+      "sha256": "bbdfa8a7661fbfd69013e615cdd60a4cb350e8cd959cb247ced8d5840189070b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/execution-verification-v2.mjs",
+      "target": "lib/operate/execution-verification-v2.mjs",
+      "sha256": "c4eb755f1baafafa256b58bd908316acf9d6feb35b6518a26f4394611b94b6ce",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/executive-board-compatibility-v2.d.mts",
+      "target": "lib/operate/executive-board-compatibility-v2.d.mts",
+      "sha256": "f9b291606c40c5e75069fb42cf88e3896dc48a07d36d7cacc81763ad51c70f94",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/executive-board-compatibility-v2.mjs",
+      "target": "lib/operate/executive-board-compatibility-v2.mjs",
+      "sha256": "5cdf47c165c5307e0100b14077af2163a3cce2b228d36912c041b7fa32279855",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/executive-board-materialization-v2.d.mts",
+      "target": "lib/operate/executive-board-materialization-v2.d.mts",
+      "sha256": "d7dedd3a1a136d8457f4ab3dfa522f6c549a9e468a95ab345ba490aa7cde60c8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/executive-board-materialization-v2.mjs",
+      "target": "lib/operate/executive-board-materialization-v2.mjs",
+      "sha256": "fd356322e0b67b9485afd6a4bd955067597f78f10d323be9588d08312dd5b84c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/executive-board-projection-v2.mjs",
+      "target": "lib/operate/executive-board-projection-v2.mjs",
+      "sha256": "0af46580664c8944a7f396fd4a8579b0ffb35f396543a1f97892c22031328266",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/experience-projection-v2.d.mts",
+      "target": "lib/operate/experience-projection-v2.d.mts",
+      "sha256": "dd015b5a0717f1e4586824eab10df39fa0281a8c3dc8626d4eb96ee0f3f7d29b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/experience-projection-v2.mjs",
+      "target": "lib/operate/experience-projection-v2.mjs",
+      "sha256": "8547e1a5f3aa3fce47814eca9ca4d8a82381f524e1d5d03c3d40a9e85fc015e0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/extensions-v2.d.mts",
+      "target": "lib/operate/extensions-v2.d.mts",
+      "sha256": "d743b89afc81432de90d89c6ea41ad5ab8469c8a848af9d9df8d3ee6add7c9fa",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/extensions-v2.mjs",
+      "target": "lib/operate/extensions-v2.mjs",
+      "sha256": "4aa8ee52437bf7b3734a91b2f4f887191333e7c2bf710aa1595bc29fc4fd94f2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/governed-execution-v2.d.mts",
+      "target": "lib/operate/governed-execution-v2.d.mts",
+      "sha256": "b361e497576afd423947ecbfbf93ced4b144dbe8d970219940a6334b445f1d66",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/governed-execution-v2.mjs",
+      "target": "lib/operate/governed-execution-v2.mjs",
+      "sha256": "977ca750accdbcd28c0d9d605e9fdfb0983f0ccf67c38d34dd18d58e6ef1f4be",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/governed-extensions-v2.d.mts",
+      "target": "lib/operate/governed-extensions-v2.d.mts",
+      "sha256": "db2ac757145d244daac680ca088de468fc1724d8a84a72488c83aa941c01c471",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/governed-extensions-v2.mjs",
+      "target": "lib/operate/governed-extensions-v2.mjs",
+      "sha256": "7a2d90b7e329a1b607510e6408206360a5d63e0ea903c03ea3a3c2440087368d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/governed-recovery-v2.d.mts",
+      "target": "lib/operate/governed-recovery-v2.d.mts",
+      "sha256": "b0566caf3637dcd18f540f2cd1b717ede33fe6e9d59c074df32ea44540ef437a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/governed-recovery-v2.mjs",
+      "target": "lib/operate/governed-recovery-v2.mjs",
+      "sha256": "b089f5139cba512839e347ddc4bc15b878c0c7fc98b042ba39f730fe52b2e6f5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/intelligence-input-bundle-v2.mjs",
+      "target": "lib/operate/intelligence-input-bundle-v2.mjs",
+      "sha256": "11eb9e3f2480ca0d23b835253e2d9d51e2edd29b11f0627c4c0ebe795e647533",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/intelligence-ledger-v2.mjs",
+      "target": "lib/operate/intelligence-ledger-v2.mjs",
+      "sha256": "7640acb7c227ee7d3cab53c297a7066fe7f3a0e7b2bac6f45fc6dc8f9bf58d16",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/intelligence-output-identities-v2.mjs",
+      "target": "lib/operate/intelligence-output-identities-v2.mjs",
+      "sha256": "e8780060d59b30f59df4c039075b3ff9cefdb1286e3ddc38a8438a547f851aec",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/intelligence-replay-v2.mjs",
+      "target": "lib/operate/intelligence-replay-v2.mjs",
+      "sha256": "05192d426b153f656b1ee2371bbe743b93a1f6975f5c64856513a066640a7b83",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/intelligence-result-validator-v2.mjs",
+      "target": "lib/operate/intelligence-result-validator-v2.mjs",
+      "sha256": "31c15df07a8475d068207d859174d708caacf9e49fbc0fa6a2f24eb41a31ac4d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/intelligence-router-v2.d.mts",
+      "target": "lib/operate/intelligence-router-v2.d.mts",
+      "sha256": "8e2ccfec93128cc5dbe505f0509932022954d4578fe3004852590abf247a3a8c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/intelligence-router-v2.mjs",
+      "target": "lib/operate/intelligence-router-v2.mjs",
+      "sha256": "030a6440a9c0c3b362b05e84c304fa5dc2cb0b344767208f658c403580d705ad",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-delta-v2.d.mts",
+      "target": "lib/operate/operating-delta-v2.d.mts",
+      "sha256": "c24d3ffb37c13f741684a785a947f9d24ea7230e75acf3d119959cb7f6c56870",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-delta-v2.mjs",
+      "target": "lib/operate/operating-delta-v2.mjs",
+      "sha256": "d78fb835d338c2449f6a81c5c28147dcfb619c104109a30238a7b68ef97d7820",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-domains-v2.d.mts",
+      "target": "lib/operate/operating-domains-v2.d.mts",
+      "sha256": "deeaac3fdf9c04c9e3c907b06f8415d95600b6d7884542813caa1aa34c95e310",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-domains-v2.mjs",
+      "target": "lib/operate/operating-domains-v2.mjs",
+      "sha256": "50dd32b21eaea4a83be777c65d9a0ecd23f9b2fbc76ad845ac94f48a17024c27",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-intelligence-state-v2.d.mts",
+      "target": "lib/operate/operating-intelligence-state-v2.d.mts",
+      "sha256": "3dfce16b4b9e4bab4b643bfeeb9f90fb6d1ba3c4e6cc1c04f7a5f614be169b62",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-intelligence-state-v2.mjs",
+      "target": "lib/operate/operating-intelligence-state-v2.mjs",
+      "sha256": "49b4dfd71053f201db38fc20224cd822b157f35f7622d3e3eff7ebd2513f2ff0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-signal-providers-v2.d.mts",
+      "target": "lib/operate/operating-signal-providers-v2.d.mts",
+      "sha256": "036f94365934be973c98b57410c8499fe56f40381b1de2ab49691d41785a0def",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-signal-providers-v2.mjs",
+      "target": "lib/operate/operating-signal-providers-v2.mjs",
+      "sha256": "495a708e8c93a55d4ba5d2116d15a3755b10d96960cf8cff5f9b566597a148c3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-snapshots-v2.d.mts",
+      "target": "lib/operate/operating-snapshots-v2.d.mts",
+      "sha256": "b95716dc257530fd5da58ba7ca7b853800bda108e4c85e91d17e811fac6dce3c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-snapshots-v2.mjs",
+      "target": "lib/operate/operating-snapshots-v2.mjs",
+      "sha256": "a43f9e269c613827f5e230a1902e2b89e24066e99a177967019d24d8c95fa07d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-state-v2.d.mts",
+      "target": "lib/operate/operating-state-v2.d.mts",
+      "sha256": "44050ea39c4be2f445506940cb6e63a89573783a449da371fd5334c9cb1e479c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-state-v2.mjs",
+      "target": "lib/operate/operating-state-v2.mjs",
+      "sha256": "03b79e4ca2b4042a4af8787f5a8156eaa2cab322ff87bf21f20a01bb664245c0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-triggers-v2.d.mts",
+      "target": "lib/operate/operating-triggers-v2.d.mts",
+      "sha256": "2cc7cd2a73309a42d562b7e09212ba57cc5dfaa0c70b6aa5db4d5b9e4b5d7245",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/operating-triggers-v2.mjs",
+      "target": "lib/operate/operating-triggers-v2.mjs",
+      "sha256": "659292fa13874cd561305d2eb2168798b0eed53e146f158016f1d62d8d834595",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/persistent-work-projections-v2.d.mts",
+      "target": "lib/operate/persistent-work-projections-v2.d.mts",
+      "sha256": "3b1c774be2d1c4be5a0a06423a825b709c2b741471193b8c434450ad7c6d8d23",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/persistent-work-projections-v2.mjs",
+      "target": "lib/operate/persistent-work-projections-v2.mjs",
+      "sha256": "50685e372cc09a9e0256a31254177c8328155cab91079ead64b89818f9d78efb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/persistent-work-v2.d.mts",
+      "target": "lib/operate/persistent-work-v2.d.mts",
+      "sha256": "c3aad67fc0594a7bb84b95a6b9dd1666279f3d2409c5c4eae448557444b5d9a9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/persistent-work-v2.mjs",
+      "target": "lib/operate/persistent-work-v2.mjs",
+      "sha256": "3377d785091363cbc508ce545b7b896f213e7f1b53d71a39ef477a50520ce8b3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/planning-bridge-v2.d.mts",
+      "target": "lib/operate/planning-bridge-v2.d.mts",
+      "sha256": "1fb2d9fba5a1e2a3956b191a09e0e345e5bb1bba98092eedfb02058c3ba37d8d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/planning-bridge-v2.mjs",
+      "target": "lib/operate/planning-bridge-v2.mjs",
+      "sha256": "bc617d50eb75676da40d44efcc657283f9760b5c1298caf9334c696b7905d31b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/policy-v2.d.mts",
+      "target": "lib/operate/policy-v2.d.mts",
+      "sha256": "6849361798637d6121e8d8ad15d30c2cd924df9cc9900d746151eebc5096ce19",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/policy-v2.mjs",
+      "target": "lib/operate/policy-v2.mjs",
+      "sha256": "31cb62e527673b6d719a8cadfc48ce35714a178a93baa7ffa7dbc0a5dfeed1d4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/reference-governed-executors-v2.d.mts",
+      "target": "lib/operate/reference-governed-executors-v2.d.mts",
+      "sha256": "640463c9b3cefb748e76589beb6e7e91d5e6806a59f191e248d61a6ed804cefb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/reference-governed-executors-v2.mjs",
+      "target": "lib/operate/reference-governed-executors-v2.mjs",
+      "sha256": "9fa5f651d052e38bb3917ecf54add6bdbb72404280d02cc6369ab993563cdee0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/result-packet-v2.d.mts",
+      "target": "lib/operate/result-packet-v2.d.mts",
+      "sha256": "b04da287e6cfb65f4b04b427d823d1f09df75abe0ef371e9c9fd1e4b90fa72b7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/result-packet-v2.mjs",
+      "target": "lib/operate/result-packet-v2.mjs",
+      "sha256": "b795ddf9f92c3d85e423bde47c1368c9d66e27827367306320de39d2d9c499f0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/review-bound-submission-v2.d.mts",
+      "target": "lib/operate/review-bound-submission-v2.d.mts",
+      "sha256": "17e2b6e273088433a896b21ceb90862df003a8522865357c2e9824f2a8b5ace4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/review-bound-submission-v2.mjs",
+      "target": "lib/operate/review-bound-submission-v2.mjs",
+      "sha256": "6c9f383df01629f80962f22a352c9f48ed9270175df3f090a0df173106ee756e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/runtime-event-reducer-v2.mjs",
+      "target": "lib/operate/runtime-event-reducer-v2.mjs",
+      "sha256": "98aed7109a7f1fd5e1397c81919e27197e3083d9bdabaddffe4919a2b9789154",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/runtime-foundation.d.mts",
+      "target": "lib/operate/runtime-foundation.d.mts",
+      "sha256": "661445ec536b64daabb043faaf056873b2cdd97cba7397be6c0a2a0dbbf99ccd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/runtime-foundation.mjs",
+      "target": "lib/operate/runtime-foundation.mjs",
+      "sha256": "4206c0e6142afd0368c926471ab00666b1a73f508abf8adb4c6dae08e1a4b0f9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/runtime-foundation/authority.mjs",
+      "target": "lib/operate/runtime-foundation/authority.mjs",
+      "sha256": "2105a27f53a5e6f6c8bf602e4fb9b98116a9e568c252616fbdd6ba9919115d66",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/runtime-foundation/evidence-state.mjs",
+      "target": "lib/operate/runtime-foundation/evidence-state.mjs",
+      "sha256": "ac978b3b64988a049ac910c22b974fd921ef4e1acb7b49a35ac7f837422aea7a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/runtime-foundation/execution.mjs",
+      "target": "lib/operate/runtime-foundation/execution.mjs",
+      "sha256": "c1ec0abd4742e3af9d5652a256d60f3afd0fbe1f396f91b7eacd5da4d100bc97",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/runtime-foundation/intelligence.mjs",
+      "target": "lib/operate/runtime-foundation/intelligence.mjs",
+      "sha256": "04087f200380b5ce63bd976fbb9515cc1c3d119c6d3b1a97262e5faabd6c0069",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/runtime-foundation/protocol.mjs",
+      "target": "lib/operate/runtime-foundation/protocol.mjs",
+      "sha256": "65bf3e718149b1f8ec189bf8b5a1f2bd398fe84f190857dfd5804f8b13b86b40",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/scheduler-v2.d.mts",
+      "target": "lib/operate/scheduler-v2.d.mts",
+      "sha256": "239bb19bd5b25d9650a937a69ce478d26fb07278bafa70392d4dc146a7b0fd16",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/scheduler-v2.mjs",
+      "target": "lib/operate/scheduler-v2.mjs",
+      "sha256": "934e1e36067b8e4d9ac4c5bab2c90f629aaff68e069208e2d6ae4ebc93c1b510",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/trace-matrix-v2.d.mts",
+      "target": "lib/operate/trace-matrix-v2.d.mts",
+      "sha256": "0a77ff80f8c5214aadd18e3604c46ea372c277b9669ff01d26d7561ea4f7aeb9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/operate/lib/operate/trace-matrix-v2.mjs",
+      "target": "lib/operate/trace-matrix-v2.mjs",
+      "sha256": "a6981d0355c6070c9b3623845b39ea1ee52897439d8b5eca4da0f2fa6a43c31f",
+      "mode": "644"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "fixture": "native-dispatch-nd1-parallel",
+  "gate": "ND1",
+  "task_count": 6,
+  "ready_first_turn": ["T-001", "T-002", "T-003", "T-004", "T-005", "T-006"],
+  "agent_calls_first_turn": 6,
+  "turns": 1,
+  "dispatch_order": ["T-001", "T-002", "T-003", "T-004", "T-005", "T-006"],
+  "any_isolation_field": false,
+  "max_parallel_referenced": false
+}

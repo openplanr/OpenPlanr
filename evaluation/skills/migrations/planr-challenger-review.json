@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-challenger-review",
+  "family": "operate-synthesis",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-challenger-review/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-challenger-review/skill.json",
+    "version": "2.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Clarified that the challenger skill is selected to stress-test assumptions or executive consensus."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:c4f0932ed4b9822ec561a321f7a62a6690acb86d488879081c87ed4ddc7e8380",
+      "successorDigest": "sha256:25e5c7b611d6d5e378c9a4a2e3a32a18167527a2602561ab773ff1e34c3c5679"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:ae2a37303e224c7944cd4cf0d242cbccbd6e080da89bd7b0e3654f18537b80b3",
+      "successorDigest": "sha256:dc1a7fab20c33295aa51b61b57347dac372597607f107e2602f8567076fb2edd"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:7b407367d26d95fbed31690cd5f90ae8be83419e5140d611350eae7032cd0d15",
+      "successorDigest": "sha256:88753a2a8c5e6741a8315b9899a9e7bdb05b6a9709d233015d52df8e4732f62d"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:c4f0932ed4b9822ec561a321f7a62a6690acb86d488879081c87ed4ddc7e8380",
+      "successorDigest": "sha256:25e5c7b611d6d5e378c9a4a2e3a32a18167527a2602561ab773ff1e34c3c5679"
+    }
+  ]
+}

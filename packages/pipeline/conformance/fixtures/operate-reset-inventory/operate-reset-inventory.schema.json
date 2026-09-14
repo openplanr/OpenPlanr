@@ -1,0 +1,379 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/operate-reset-inventory.schema.json",
+  "title": "Operate reset surface inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "inventoryId",
+    "classifications",
+    "repositories",
+    "surfaces",
+    "evidenceGaps",
+    "protectedPreserveEvidence"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "inventoryId": {
+      "const": "operate-2.0-legacy-surface-inventory"
+    },
+    "classifications": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "enum": [
+          "KEEP_SHARED_FOUNDATION",
+          "KEEP_V2",
+          "REWRITE_V2",
+          "DELETE_LEGACY",
+          "DEFER_OWNER"
+        ]
+      }
+    },
+    "repositories": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "availability",
+          "identity",
+          "revision",
+          "worktree",
+          "writeAuthority"
+        ],
+        "properties": {
+          "id": {
+            "enum": [
+              "planr-pipeline",
+              "OpenPlanr",
+              "skills",
+              "marketplace"
+            ]
+          },
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          },
+          "identity": {
+            "type": "string",
+            "minLength": 1
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1
+          },
+          "worktree": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "entries"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "clean",
+                  "dirty",
+                  "unavailable"
+                ]
+              },
+              "entries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "path",
+                    "index",
+                    "worktree"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1,
+                      "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._@/:-]+$"
+                    },
+                    "index": {
+                      "type": "string"
+                    },
+                    "worktree": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "writeAuthority": {
+            "enum": [
+              "authorized-current-task",
+              "read-only-inspection",
+              "unavailable"
+            ]
+          },
+          "evidenceGap": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "repositoryId",
+          "path",
+          "kind",
+          "classification",
+          "rationale",
+          "ownership",
+          "evidence",
+          "reachability",
+          "proposedProof"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 3
+          },
+          "repositoryId": {
+            "enum": [
+              "planr-pipeline",
+              "OpenPlanr",
+              "skills",
+              "marketplace"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._@/:-]+$"
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "classification": {
+            "enum": [
+              "KEEP_SHARED_FOUNDATION",
+              "KEEP_V2",
+              "REWRITE_V2",
+              "DELETE_LEGACY",
+              "DEFER_OWNER"
+            ]
+          },
+          "rationale": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ownership": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "observations",
+              "imports",
+              "markdownLinks",
+              "packageReachability",
+              "generatorEvidence",
+              "schemaRegistration",
+              "testCoverage",
+              "documentationLinks",
+              "downstreamReferences"
+            ],
+            "properties": {
+              "observations": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string"
+                }
+              },
+              "imports": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "markdownLinks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "packageReachability": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "generatorEvidence": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._@/:-]+$"
+                }
+              },
+              "schemaRegistration": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "testCoverage": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "documentationLinks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "downstreamReferences": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "reachability": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "method",
+              "incoming",
+              "outgoing",
+              "unresolved"
+            ],
+            "properties": {
+              "method": {
+                "type": "string",
+                "minLength": 1
+              },
+              "incoming": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "outgoing": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "unresolved": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "proposedProof": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "mode",
+              "requirement"
+            ],
+            "properties": {
+              "mode": {
+                "enum": [
+                  "absence",
+                  "replacement",
+                  "owner-proof",
+                  "preserve"
+                ]
+              },
+              "requirement": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "protectedPreserve": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "recordedSha256",
+              "observedSha256",
+              "preserveOnly"
+            ],
+            "properties": {
+              "recordedSha256": {
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "observedSha256": {
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "preserveOnly": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "evidenceGaps": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "protectedPreserveEvidence": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "recordedSha256",
+          "observedSha256",
+          "matchesRecorded",
+          "preserveOnly"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._@/:-]+$"
+          },
+          "recordedSha256": {
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "observedSha256": {
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "matchesRecorded": {
+            "const": true
+          },
+          "preserveOnly": {
+            "const": true
+          }
+        }
+      }
+    }
+  }
+}

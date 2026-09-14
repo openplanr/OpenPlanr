@@ -1,0 +1,36 @@
+{
+  "scenario": {
+    "kind": "operating-scenario",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "scenarioId": "scn_trigger_valid_001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "snapshotId": "snp_trigger_valid_001",
+    "base": { "statement": "The metric remains within its present range.", "assumptionIds": ["asm_trigger_valid_001"], "evidenceRefIds": ["evr_trigger_valid_001"], "sourceArtifactId": "art_trigger_valid_001" },
+    "upside": { "statement": "The metric improves after a future observation.", "assumptionIds": ["asm_trigger_valid_001"], "evidenceRefIds": ["evr_trigger_valid_001"], "sourceArtifactId": "art_trigger_valid_001" },
+    "downside": { "statement": "The metric worsens in the next observation window.", "assumptionIds": ["asm_trigger_valid_001"], "evidenceRefIds": ["evr_trigger_valid_001"], "sourceArtifactId": "art_trigger_valid_001" },
+    "breakEven": "The metric reaches the declared target at the next observation.",
+    "assumptionIds": ["asm_trigger_valid_001"],
+    "evidenceRefIds": ["evr_trigger_valid_001"],
+    "uncertainty": "The next observation has not yet been accepted.",
+    "sourceArtifactId": "art_trigger_valid_001",
+    "createdAt": "2026-08-09T12:00:00.000Z"
+  },
+  "trigger": {
+    "kind": "operating-event-trigger",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "triggerId": "trg_trigger_valid_001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "snapshotId": "snp_trigger_valid_001",
+    "condition": "A fresh independent observation crosses the declared threshold.",
+    "evidenceRefIds": ["evr_trigger_valid_001"],
+    "requestedWork": "observation",
+    "sourceArtifactId": "art_trigger_valid_001",
+    "createdAt": "2026-08-09T12:00:00.000Z"
+  }
+}

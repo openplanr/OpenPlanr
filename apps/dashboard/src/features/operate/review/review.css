@@ -1,0 +1,112 @@
+.op-review {
+  display: grid;
+  gap: var(--op-space-6);
+  max-width: 1060px;
+}
+
+.op-review,
+.op-review > * {
+  min-width: 0;
+}
+
+.op-review__hero,
+.op-review__choice-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+  gap: var(--op-space-6);
+  align-items: start;
+}
+
+.op-review__status,
+.op-review__proof,
+.op-review__recommendations dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: var(--op-space-3);
+  margin: 0;
+}
+
+.op-review__status div,
+.op-review__proof div,
+.op-review__choice,
+.op-review__challenge-grid section {
+  padding: var(--op-space-3);
+  border: 1px solid var(--op-divider);
+}
+
+.op-review__notice,
+.op-review__choice-brief {
+  padding: var(--op-space-3);
+  border-inline-start: 4px solid var(--op-control);
+  background: var(--op-surface);
+}
+
+.op-review__notice[data-tone="refusal"] {
+  border-color: var(--op-refusal);
+}
+
+.op-review__recommendations,
+.op-review__claims,
+.op-review__challenge-grid ol,
+.op-review__evidence-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.op-review__choice,
+.op-review__choice span,
+.op-review__challenge-grid,
+.op-review__technical,
+.op-review fieldset {
+  display: grid;
+  gap: var(--op-space-3);
+}
+
+.op-review__choice {
+  grid-template-columns: 24px 1fr;
+  cursor: pointer;
+}
+
+.op-review__choice:has(input:checked) {
+  border-color: var(--op-control);
+  background: var(--op-selected);
+}
+
+.op-review fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.op-review__challenge-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.op-review__challenge-grid > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.op-review__evidence-links,
+.op-review__claims {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.op-review__table-scroll {
+  overflow: auto;
+}
+
+.op-review table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+@media (max-width: 800px) {
+  .op-review__hero,
+  .op-review__choice-layout,
+  .op-review__challenge-grid {
+    grid-template-columns: 1fr;
+  }
+}

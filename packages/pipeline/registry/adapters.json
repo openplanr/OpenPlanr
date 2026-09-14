@@ -1,0 +1,110 @@
+{
+  "kind": "adapter-registry",
+  "schemaVersion": "1.1.0",
+  "protocolVersion": "1.4.0",
+  "pipelineVersion": "0.44.0",
+  "adapters": [
+    {
+      "id": "claude-code",
+      "version": "0.44.0",
+      "capabilityLevel": "product",
+      "installScopes": ["user", "project"],
+      "entrypoints": {
+        "plan": "/planr-pipeline:plan",
+        "design": "/planr-pipeline:design",
+        "ship": "/planr-pipeline:ship",
+        "land": "/planr-pipeline:planr-land",
+        "dashboard": "/planr-pipeline:dashboard",
+        "artifact": "planr artifact",
+        "sync": "/planr-pipeline:sync",
+        "doctor": "planr pipeline doctor"
+      },
+      "capabilities": {
+        "subagents": "native",
+        "hooks": true,
+        "toolIsolation": "enforced",
+        "parallelDispatch": true,
+        "parallelDispatchMode": "native",
+        "headlessBridge": true,
+        "artifactReview": true,
+        "interactiveQuestions": "native"
+      },
+      "assets": ["commands", "operate-skill", "agents", "procedures", "templates", "schemas", "artifact-review"],
+      "healthChecks": ["plugin-installed", "commands-present", "operate-machine-json", "artifact-command-valid", "guided-native-capability-reported"],
+      "drivers": {
+        "install": "openplanr://drivers/claude-code/install",
+        "migrate": "openplanr://drivers/claude-code/migrate",
+        "rollback": "openplanr://drivers/claude-code/rollback",
+        "uninstall": "openplanr://drivers/claude-code/uninstall"
+      }
+    },
+    {
+      "id": "codex",
+      "version": "0.44.0",
+      "capabilityLevel": "workflow",
+      "installScopes": ["user", "project"],
+      "entrypoints": {
+        "plan": "$planr-plan",
+        "design": "$planr-design",
+        "ship": "$planr-ship",
+        "land": "$planr-land",
+        "dashboard": "$planr-dashboard",
+        "artifact": "$planr-artifact",
+        "sync": "$planr-sync",
+        "doctor": "$planr-doctor"
+      },
+      "capabilities": {
+        "subagents": "dynamic",
+        "hooks": true,
+        "toolIsolation": "advisory",
+        "parallelDispatch": true,
+        "parallelDispatchMode": "dynamic",
+        "headlessBridge": true,
+        "artifactReview": true,
+        "interactiveQuestions": "native"
+      },
+      "assets": ["skills", "operate-skill", "project-guidance", "procedures", "role-instructions", "schemas", "templates", "artifact-review"],
+      "healthChecks": ["skills-present", "operate-machine-json", "project-guidance-current", "runtime-authenticated", "artifact-command-valid", "guided-dynamic-capability-reported"],
+      "drivers": {
+        "install": "openplanr://drivers/codex/install",
+        "migrate": "openplanr://drivers/codex/migrate",
+        "rollback": "openplanr://drivers/codex/rollback",
+        "uninstall": "openplanr://drivers/codex/uninstall"
+      }
+    },
+    {
+      "id": "cursor",
+      "version": "0.44.0",
+      "capabilityLevel": "workflow",
+      "installScopes": ["project"],
+      "entrypoints": {
+        "plan": "plan {feature}",
+        "design": "design {feature}",
+        "ship": "ship {feature}",
+        "land": "land with planr",
+        "dashboard": "open planr dashboard",
+        "artifact": "planr artifact",
+        "sync": "sync planr",
+        "doctor": "planr pipeline doctor"
+      },
+      "capabilities": {
+        "subagents": "advisory",
+        "hooks": false,
+        "toolIsolation": "advisory",
+        "parallelDispatch": false,
+        "parallelDispatchMode": "host",
+        "headlessBridge": false,
+        "artifactReview": true,
+        "interactiveQuestions": "chat"
+      },
+      "assets": ["rules", "operate-rule", "roles", "procedures", "schemas", "templates", "artifact-review"],
+      "healthChecks": ["rules-present", "operate-machine-json", "portable-assets-present", "no-foreign-runtime-paths", "artifact-command-valid", "guided-chat-capability-reported"],
+      "drivers": {
+        "install": "openplanr://drivers/cursor/install",
+        "migrate": "openplanr://drivers/cursor/migrate",
+        "rollback": "openplanr://drivers/cursor/rollback",
+        "uninstall": "openplanr://drivers/cursor/uninstall"
+      }
+    }
+  ]
+}

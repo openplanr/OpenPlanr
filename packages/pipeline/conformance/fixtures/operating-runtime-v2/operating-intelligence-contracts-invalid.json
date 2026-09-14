@@ -1,0 +1,21 @@
+{
+  "implicitDomainContract": {
+    "domainId": "business",
+    "domainContract": { "apiDomainId": "business", "id": "business", "version": "1.0.0" }
+  },
+  "businessProjectionWrongVersion": {
+    "domainContract": { "apiDomainId": "business", "id": "business-domain", "version": "2.0.0" }
+  },
+  "softwareProjectionWrongDomain": {
+    "domainId": "business"
+  },
+  "dynamicProvider": {
+    "implementation": { "kind": "module", "path": "./provider.mjs" }
+  },
+  "effectAuthorizingProvider": {
+    "returnSemantics": "external-effect"
+  },
+  "phaseSixRecord": {
+    "kind": "operate-executor-registration"
+  }
+}

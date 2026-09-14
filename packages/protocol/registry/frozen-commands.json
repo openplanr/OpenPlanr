@@ -1,0 +1,15 @@
+{
+  "kind": "frozen-command-registry",
+  "schemaVersion": "1.0.0",
+  "description": "Closed, frozen enumeration of the plugin's commands/*.md surface. This list is a ceiling, not a cull: it may shrink by attrition but must never grow. Every new workflow ships as a skill only, never as a new command. tests/orchestration/frozen-command-surface.test.mjs enforces that the on-disk commands/*.md set equals this declared set exactly. Five entries are workflow aliases that have a matching planr-* skill counterpart (hasSkillAlias: true); the remaining three are Claude-Code-only commands with no skill counterpart (hasSkillAlias: false).",
+  "commands": [
+    { "slug": "plan", "hasSkillAlias": true, "skillName": "planr-plan" },
+    { "slug": "design", "hasSkillAlias": true, "skillName": "planr-design" },
+    { "slug": "ship", "hasSkillAlias": true, "skillName": "planr-ship" },
+    { "slug": "sync", "hasSkillAlias": true, "skillName": "planr-sync" },
+    { "slug": "dashboard", "hasSkillAlias": true, "skillName": "planr-dashboard" },
+    { "slug": "status", "hasSkillAlias": false, "skillName": null },
+    { "slug": "design-loop", "hasSkillAlias": false, "skillName": null },
+    { "slug": "design-review", "hasSkillAlias": false, "skillName": null }
+  ]
+}

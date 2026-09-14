@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/evidence-diagnostic.schema.json",
+  "title": "OpenPlanr Protocol v1.2 safe evidence diagnostic",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "candidateId",
+    "source",
+    "componentId",
+    "ruleId",
+    "contentDigest",
+    "projectHead",
+    "valueDisclosed",
+    "actions"
+  ],
+  "properties": {
+    "kind": { "const": "evidence-diagnostic" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "candidateId": { "type": "string", "pattern": "^EVC-[A-Za-z0-9._-]{8,128}$" },
+    "source": {
+      "type": "string",
+      "enum": ["repository", "planr", "git", "import-json", "import-csv", "github", "linear"]
+    },
+    "componentId": { "type": "string", "pattern": "^[a-z][a-z0-9._-]{0,127}$" },
+    "location": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^(?!/)(?![A-Za-z]:[\\\\/])(?!.*(?:^|/)\\.\\.(?:/|$))[^\\r\\n]+$"
+    },
+    "line": { "type": "integer", "minimum": 1, "maximum": 100000000 },
+    "ruleId": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,127}$" },
+    "category": {
+      "type": "string",
+      "enum": ["assignment", "known-token", "authorization", "private-key", "jwt", "credential-url", "structured-secret"]
+    },
+    "contentDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "projectHead": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "valueDisclosed": { "const": false },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "ruleId",
+        "contentDigest",
+        "projectHead",
+        "reason",
+        "confirmationDigest",
+        "classifiedAt",
+        "classifiedBy"
+      ],
+      "properties": {
+        "status": { "type": "string", "enum": ["false-positive", "confirmed-secret"] },
+        "ruleId": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,127}$" },
+        "contentDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "projectHead": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "confirmationDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "classifiedAt": { "type": "string", "format": "date-time" },
+        "classifiedBy": { "type": "string", "minLength": 1, "maxLength": 160 }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "$ref": "https://openplanr.dev/schemas/v1.2.0/structured-action.schema.json"
+      }
+    }
+  }
+}

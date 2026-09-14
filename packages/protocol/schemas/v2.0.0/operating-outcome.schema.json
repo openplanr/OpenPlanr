@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-outcome.schema.json",
+  "x-openplanr-contract": { "id": "operating-outcome", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 observed action outcome",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "outcomeId", "actionId", "scopeId", "domainId", "domainVersion", "verificationPlanId", "status", "observationIds", "evidenceRefIds", "sourceArtifactId", "observedAt"],
+  "properties": {
+    "kind": { "const": "operating-outcome" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "2.0.0" }, "outcomeId": { "$ref": "#/$defs/outcomeId" }, "actionId": { "$ref": "#/$defs/actionId" }, "scopeId": { "$ref": "#/$defs/id" }, "domainId": { "$ref": "#/$defs/id" }, "domainVersion": { "$ref": "#/$defs/version" }, "verificationPlanId": { "$ref": "#/$defs/planId" }, "status": { "enum": ["succeeded", "failed", "blocked", "cancelled", "insufficient-evidence"] }, "observationIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/observationId" } }, "evidenceRefIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRefId" } }, "sourceArtifactId": { "$ref": "#/$defs/artifactId" }, "observedAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": { "actionId": { "type": "string", "pattern": "^act_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "evidenceRefId": { "type": "string", "pattern": "^evr_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "id": { "type": "string", "minLength": 1, "maxLength": 128 }, "observationId": { "type": "string", "pattern": "^mob_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "outcomeId": { "type": "string", "pattern": "^out_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "planId": { "type": "string", "pattern": "^vfy_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" } }
+}

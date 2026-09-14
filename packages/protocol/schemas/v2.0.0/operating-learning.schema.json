@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-learning.schema.json",
+  "x-openplanr-contract": { "id": "operating-learning", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 durable operating learning",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "learningId", "scopeId", "domainId", "domainVersion", "statement", "outcomeId", "assumptionIds", "decisionIds", "evidenceRefIds", "sourceArtifactId", "createdAt"],
+  "properties": {
+    "kind": { "const": "operating-learning" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "2.0.0" }, "learningId": { "$ref": "#/$defs/learningId" }, "scopeId": { "$ref": "#/$defs/id" }, "domainId": { "$ref": "#/$defs/id" }, "domainVersion": { "$ref": "#/$defs/version" }, "statement": { "$ref": "#/$defs/text" }, "outcomeId": { "$ref": "#/$defs/outcomeId" }, "assumptionIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/assumptionId" } }, "decisionIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/decisionId" } }, "evidenceRefIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRefId" } }, "sourceArtifactId": { "$ref": "#/$defs/artifactId" }, "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": { "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "assumptionId": { "type": "string", "pattern": "^asm_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "decisionId": { "type": "string", "pattern": "^dec_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "evidenceRefId": { "type": "string", "pattern": "^evr_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "id": { "type": "string", "minLength": 1, "maxLength": 128 }, "learningId": { "type": "string", "pattern": "^lrn_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "outcomeId": { "type": "string", "pattern": "^out_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "text": { "type": "string", "minLength": 1, "maxLength": 4096, "pattern": "^.*\\S.*$" }, "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" } }
+}

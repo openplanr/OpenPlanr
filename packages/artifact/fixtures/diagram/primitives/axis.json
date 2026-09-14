@@ -1,0 +1,8 @@
+{
+  "kind": "diagram-primitive-fixture",
+  "schemaVersion": "1.0.0",
+  "primitive": "axis",
+  "grammarId": "bar",
+  "fixture": "fixtures/diagram/grammars/bar.planr-diagram.json",
+  "description": "Canonical axis primitive example in the bar grammar."
+}

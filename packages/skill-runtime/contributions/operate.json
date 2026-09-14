@@ -1,0 +1,65 @@
+{
+  "kind": "openplanr-skill-contribution",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.8.0",
+  "id": "operate",
+  "skills": [
+    {
+      "id": "planr-ceo-review",
+      "source": "skills/planr-ceo-review/openplanr.skill.json",
+      "authorityClass": "review-evidence",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-chair-review",
+      "source": "skills/planr-chair-review/openplanr.skill.json",
+      "authorityClass": "review-evidence",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-challenger-review",
+      "source": "skills/planr-challenger-review/openplanr.skill.json",
+      "authorityClass": "review-evidence",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-cmo-review",
+      "source": "skills/planr-cmo-review/openplanr.skill.json",
+      "authorityClass": "review-evidence",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-coo-review",
+      "source": "skills/planr-coo-review/openplanr.skill.json",
+      "authorityClass": "review-evidence",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-cpo-review",
+      "source": "skills/planr-cpo-review/openplanr.skill.json",
+      "authorityClass": "review-evidence",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-cto-review",
+      "source": "skills/planr-cto-review/openplanr.skill.json",
+      "authorityClass": "review-evidence",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-operate",
+      "source": "skills/planr-operate/openplanr.skill.json",
+      "authorityClass": "operate-orchestration",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-operate",
+          "argv": [
+            "operate"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    }
+  ]
+}

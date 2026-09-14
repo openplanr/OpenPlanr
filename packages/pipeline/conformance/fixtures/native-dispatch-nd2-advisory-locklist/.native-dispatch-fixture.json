@@ -1,0 +1,6 @@
+{
+  "fixture": "native-dispatch-nd2-advisory-locklist",
+  "gate": "ND2",
+  "mode": "multi-task",
+  "description": "Two tasks both modify a lock-listed path (package.json) with no dependsOn. They still dispatch in the SAME turn (no serialization); the dispatch prompt carries a non-enforcing advisory note. No --max-parallel anywhere. (FR9, FR9a, FR6a)"
+}

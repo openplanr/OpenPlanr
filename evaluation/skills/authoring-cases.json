@@ -1,0 +1,41 @@
+{
+  "kind": "openplanr-skill-authoring-evaluation",
+  "schemaVersion": "1.0.0",
+  "skillDir": "examples/skills/minimal-composed",
+  "commands": [
+    {
+      "command": "lint",
+      "script": "scripts/skills/lint.mjs",
+      "writesOutput": false
+    },
+    {
+      "command": "generate",
+      "script": "scripts/skills/generate-composed.mjs",
+      "writesOutput": true
+    },
+    {
+      "command": "check",
+      "script": "scripts/skills/check.mjs",
+      "writesOutput": false
+    },
+    {
+      "command": "preview",
+      "script": "scripts/skills/preview.mjs",
+      "writesOutput": false
+    },
+    {
+      "command": "evaluate",
+      "script": "scripts/skills/evaluate.mjs",
+      "writesOutput": false
+    }
+  ],
+  "diagnosticCase": {
+    "id": "module-version-drift",
+    "command": "check",
+    "path": "skill.json",
+    "expectedCode": "E_SKILL_MODULE_UNDECLARED",
+    "expectedOwnerKind": "module-registry",
+    "expectedOwnerVersion": "9.9.9",
+    "expectedPath": "modules.json"
+  }
+}

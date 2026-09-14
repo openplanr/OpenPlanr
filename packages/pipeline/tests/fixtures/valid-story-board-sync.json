@@ -1,0 +1,12 @@
+{
+  "id": "US-001",
+  "title": "Coverage story",
+  "specId": "SPEC-007",
+  "slug": "coverage-story",
+  "schemaVersion": "1.0.0",
+  "status": "pending",
+  "created": "2026-05-03",
+  "updated": "2026-08-02",
+  "kanbanosId": "ckb1x9q2w0001qzrm2d4e6g8b",
+  "contentHash": "sha256:2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae"
+}

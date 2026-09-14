@@ -1,0 +1,111 @@
+{
+  "kind": "diagram-semantic-pattern-registry",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "patterns": [
+    {
+      "patternId": "fan-in-bottleneck",
+      "patternVersion": "1.0.0",
+      "triggers": [
+        "queue",
+        "bottleneck",
+        "fan in"
+      ],
+      "candidateGrammars": [
+        "dependency-graph",
+        "sankey",
+        "data-flow"
+      ],
+      "selection": "rank-only"
+    },
+    {
+      "patternId": "repeated-stages",
+      "patternVersion": "1.0.0",
+      "triggers": [
+        "stages",
+        "pipeline slots",
+        "repeat"
+      ],
+      "candidateGrammars": [
+        "process",
+        "swimlane",
+        "data-flow"
+      ],
+      "selection": "rank-only"
+    },
+    {
+      "patternId": "unstructured-transformation",
+      "patternVersion": "1.0.0",
+      "triggers": [
+        "unstructured input",
+        "transform",
+        "normalize"
+      ],
+      "candidateGrammars": [
+        "data-flow",
+        "dp-integration"
+      ],
+      "selection": "rank-only"
+    },
+    {
+      "patternId": "paired-policy-trace",
+      "patternVersion": "1.0.0",
+      "triggers": [
+        "policy trace",
+        "allow deny",
+        "decision path"
+      ],
+      "candidateGrammars": [
+        "sequence",
+        "flowchart"
+      ],
+      "selection": "rank-only"
+    },
+    {
+      "patternId": "secure-paved-road",
+      "patternVersion": "1.0.0",
+      "triggers": [
+        "secure path",
+        "paved road",
+        "guardrails"
+      ],
+      "candidateGrammars": [
+        "architecture",
+        "deployment"
+      ],
+      "selection": "rank-only"
+    },
+    {
+      "patternId": "governance-catalog",
+      "patternVersion": "1.0.0",
+      "triggers": [
+        "catalog",
+        "governance",
+        "ownership"
+      ],
+      "candidateGrammars": [
+        "tree",
+        "org-chart",
+        "layer-stack"
+      ],
+      "selection": "rank-only"
+    },
+    {
+      "patternId": "compensating-layers",
+      "patternVersion": "1.0.0",
+      "triggers": [
+        "defense in depth",
+        "compensating controls"
+      ],
+      "candidateGrammars": [
+        "layer-stack",
+        "dp-security-matrix"
+      ],
+      "selection": "rank-only"
+    }
+  ],
+  "documentDigest": "sha256:36a925bd1be54ef9a80ccd44039c9390dd7c4cc00185dbc03ba01be8997e222f"
+}

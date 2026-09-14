@@ -1,0 +1,136 @@
+/* Planning · Board: one column per artifact status, cards open the global inspector. */
+
+.op-planning--board {
+  gap: 0;
+}
+
+.op-planning--board .pc-toolbar-bar {
+  margin: 8px 0 0;
+}
+
+.pc-status-board__group {
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-tertiary);
+}
+
+.pc-status-board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(224px, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 12px;
+  padding-bottom: 8px;
+  overflow-x: auto;
+}
+
+.pc-status-board__column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  background: var(--pc-surface-panel);
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: var(--pc-radius-md);
+}
+
+.pc-status-board__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.pc-status-board__label {
+  min-width: 0;
+  overflow: hidden;
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pc-status-board__count {
+  margin-left: auto;
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-tertiary);
+}
+
+.pc-status-board__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pc-status-board__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px 9px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  background: var(--pc-surface-card);
+  border: 1px solid var(--pc-border-default);
+  border-radius: var(--pc-radius-sm);
+  cursor: pointer;
+  transition: var(--pc-transition-ui);
+}
+
+.pc-status-board__card:hover {
+  background: var(--pc-surface-hover);
+  border-color: var(--pc-border-strong);
+}
+
+.pc-status-board__card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--pc-focus-halo);
+}
+
+.pc-status-board__title {
+  font: var(--pc-type-body-sm);
+  color: var(--pc-text-primary);
+  text-wrap: pretty;
+}
+
+.pc-status-board__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pc-status-board__sprint,
+.pc-status-board__updated {
+  min-width: 0;
+  overflow: hidden;
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pc-status-board__updated {
+  margin-left: auto;
+}
+
+.pc-status-board__empty {
+  padding: 6px 2px;
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-tertiary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-status-board__card {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .pc-status-board__column,
+  .pc-status-board__card {
+    border-color: ButtonText;
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "kind": "openplanr-frozen-command-aliases",
+  "schemaVersion": "1.0.0",
+  "commands": [
+    { "slug": "dashboard", "skillId": "planr-dashboard", "argumentHint": "" },
+    { "slug": "design", "skillId": "planr-design", "argumentHint": "<slug> [options]" },
+    { "slug": "design-loop", "skillId": "planr-design-loop", "argumentHint": "<target> [options]" },
+    { "slug": "design-review", "skillId": "planr-design-review", "argumentHint": "<slug> [--yes]" },
+    { "slug": "plan", "skillId": "planr-plan", "argumentHint": "<feature>" },
+    { "slug": "ship", "skillId": "planr-ship", "argumentHint": "<feature> [--task <id>]" },
+    { "slug": "status", "skillId": "planr-status", "argumentHint": "[slug]" },
+    { "slug": "sync", "skillId": "planr-sync", "argumentHint": "" }
+  ]
+}

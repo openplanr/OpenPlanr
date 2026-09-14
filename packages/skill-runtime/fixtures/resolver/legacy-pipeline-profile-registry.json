@@ -1,0 +1,41 @@
+{
+  "kind": "skill-host-profile-registry",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "profiles": [
+    {
+      "hostProfileId": "pipeline-default",
+      "hostProfileVersion": "1.0.0",
+      "host": "pipeline",
+      "description": "Host-neutral pipeline projection profile; narrows to read-only repository access.",
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "read"
+        ],
+        "allowedTools": [
+          "read"
+        ],
+        "allowedOperations": [
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A"
+        ],
+        "forbiddenEffects": [
+          "network-write"
+        ]
+      },
+      "source": {
+        "path": "packages/protocol/host-profiles/pipeline.md",
+        "digest": "sha256:f5039bb4c67fac1e934ed803d0728723806a6712b53c5dd3c99ce6144ffb5482"
+      },
+      "overlayModules": []
+    }
+  ],
+  "documentDigest": "sha256:f02f77cb6dca702a9093fc11f824e4bfad0c701be9a35d5eea79c0b28fee7744"
+}

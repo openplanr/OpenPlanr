@@ -1,0 +1,53 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-doctor",
+  "family": "diagnostics",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-doctor/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-doctor/skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Moved the upgrade walkthrough to a routed progressive reference.",
+    "Changed the upgrade reference from an opaque inline path to a navigable packaged Markdown link."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:0cb0541102066c0f29968cfaf3df4954d12dc94b24f8d2acecb9f23160547aa6",
+      "successorDigest": "sha256:aadebad1133caea05a16ab7e18e97a788c45be68da0965bec4c85bade3b95708"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:0cb0541102066c0f29968cfaf3df4954d12dc94b24f8d2acecb9f23160547aa6",
+      "successorDigest": "sha256:aadebad1133caea05a16ab7e18e97a788c45be68da0965bec4c85bade3b95708"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:2492ac9abe0882e5f6cb6553f3362985f870d2f64c3b00b8d6ef3536abac0542",
+      "successorDigest": "sha256:1f1a9396764d3aada69b92671c5e9038c3c1c774d4473b10ec734348820ca8f7"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:0cb0541102066c0f29968cfaf3df4954d12dc94b24f8d2acecb9f23160547aa6",
+      "successorDigest": "sha256:aadebad1133caea05a16ab7e18e97a788c45be68da0965bec4c85bade3b95708"
+    }
+  ]
+}

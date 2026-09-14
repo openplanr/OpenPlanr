@@ -1,0 +1,115 @@
+{
+  "kind": "professional-skills",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.1.0",
+  "catalogVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "skills": [
+    {
+      "skillId": "planr-browser-qa",
+      "sourceOwner": "skills",
+      "sourceVersion": "1.0.0",
+      "sourceSnapshot": "---\nname: planr-browser-qa\ndescription: Run structured browser-backed QA for real routes, forms, viewports, accessibility, console, and network behavior. Use for UI, authentication, session, navigation, or browser-network changes, and whenever SHIP declares the browser gate mandatory.\n---\n\n# Planr Browser QA\n\n1. Use only an active SHIP run whose frozen gate set requires browser QA.\n2. Require a registered trusted browser runtime adapter before execution. The portable `prepare-browser-qa` and `record-browser-qa` CLI paths intentionally return `E_BROWSER_QA_TRUSTED_HOST_REQUIRED`; stop and hand off instead of fabricating a host, attestation, result, or digest.\n3. Through that adapter, establish the ephemeral session and engine-owned runtime capability before the result, then exercise only the declared routes, forms, viewports, accessibility, console, and network checks. Never persist credentials or session secrets.\n4. Let the same adapter verify raw screenshot, trace, accessibility, console, and network bytes and submit the runtime-attested result through the engine-owned recording path. Caller-authored JSON or rehashed evidence cannot certify PASS.\n5. If a mandatory browser, trusted adapter, or session is unavailable, retain a blocking result; never skip, infer PASS, open review, add reviewers, register a correction, or write lifecycle truth.\n",
+      "sourceDigest": "sha256:7ec450ada7f5bfca3e094ef1ab2bd6cedf8706299dae9d6426da5cb98428c776",
+      "contracts": {
+        "inputs": [{ "id": "browser-qa-gate", "version": "1.0.0" }, { "id": "browser-qa-session", "version": "1.0.0" }],
+        "outputs": [{ "id": "browser-qa-result", "version": "1.0.0" }]
+      },
+      "authorityClass": "quality-evidence",
+      "triggerPolicy": {
+        "include": ["test this UI in a real browser", "verify routes, forms, accessibility, console, and network behavior"],
+        "exclude": ["unit-test-only backend work", "requests to approve, land, publish, or release"],
+        "deferTo": ["planr-ship", "planr-land"]
+      },
+      "cliRequirements": [
+        { "id": "pipeline-prepare-browser-qa", "argv": ["pipeline", "prepare-browser-qa", "<feature>"], "requiredOptions": ["--run-id", "--json"] },
+        { "id": "pipeline-record-browser-qa", "argv": ["pipeline", "record-browser-qa", "<feature>"], "requiredOptions": ["--run-id", "--generation", "--result-file", "--json"], "inputOptions": ["--session-file"] }
+      ],
+      "hosts": [
+        { "host": "claude-code", "entrypoint": "/planr-pipeline:planr-browser-qa", "path": "skills/planr-browser-qa/SKILL.md" },
+        { "host": "codex", "entrypoint": "$planr-browser-qa", "path": "adapters/codex/skills/planr-browser-qa/SKILL.md" },
+        { "host": "cursor", "entrypoint": "planr-browser-qa", "path": "adapters/cursor/rules/openplanr-browser-qa.mdc" }
+      ]
+    },
+    {
+      "skillId": "planr-investigate",
+      "sourceOwner": "skills",
+      "sourceVersion": "1.0.0",
+      "sourceSnapshot": "---\nname: planr-investigate\ndescription: Reproduce and prove a root cause, or apply one authorized bounded fix with regression evidence. Use when asked to diagnose a bug, investigate an error, establish causality, or fix a defect from an immutable diagnosis receipt.\n---\n\n# Planr Investigate\n\n1. Create one closed `diagnose` or `fix` request. Diagnose start, command-backed experiments, and verification require a registered runtime adapter with the engine-issued read-only command host; on `E_INVESTIGATION_COMMAND_HOST_REQUIRED`, stop and hand off rather than executing commands independently.\n2. Start a fix only from the exact proven diagnosis receipt and unchanged baseline. Run `planr pipeline investigate start <feature> --request-file <path|-> --json` in an interactive owner terminal and confirm the exact request digest; caller-authored authority JSON cannot replace the one-shot capability.\n3. Advance non-command observations, hypotheses, diagnosis, and bounded change records with `planr pipeline investigate advance <feature> --run-id <runId> --event-file <path|-> --json`. Command-backed experiments and `investigate verify` must remain with the trusted adapter.\n4. Finalize with `planr pipeline investigate finalize <feature> --run-id <runId> --json` and stop at its immutable receipt.\n5. Diagnose mode is read-only. Never invent evidence, edit outside the declared scope, approve, start SHIP, land, publish, release, or author lifecycle markers.\n",
+      "sourceDigest": "sha256:4fc6fdfb7b088ba185eea26ce1e7feb28a6cb469669d53d218a322bc9fea5b55",
+      "contracts": {
+        "inputs": [{ "id": "investigation-request", "version": "1.0.0" }],
+        "outputs": [{ "id": "investigation-receipt", "version": "1.0.0" }]
+      },
+      "authorityClass": "diagnose-or-authorized-fix",
+      "triggerPolicy": {
+        "include": ["diagnose this bug and prove the root cause", "apply a bounded fix from the accepted diagnosis"],
+        "exclude": ["unscoped feature implementation", "requests to approve, land, publish, or release"],
+        "deferTo": ["planr-spec", "planr-ship", "planr-land"]
+      },
+      "cliRequirements": [
+        { "id": "pipeline-investigate-start", "argv": ["pipeline", "investigate", "start", "<feature>"], "requiredOptions": ["--request-file", "--json"] },
+        { "id": "pipeline-investigate-advance", "argv": ["pipeline", "investigate", "advance", "<feature>"], "requiredOptions": ["--run-id", "--event-file", "--json"] },
+        { "id": "pipeline-investigate-verify", "argv": ["pipeline", "investigate", "verify", "<feature>"], "requiredOptions": ["--run-id", "--json"] },
+        { "id": "pipeline-investigate-finalize", "argv": ["pipeline", "investigate", "finalize", "<feature>"], "requiredOptions": ["--run-id", "--json"] }
+      ],
+      "hosts": [
+        { "host": "claude-code", "entrypoint": "/planr-pipeline:planr-investigate", "path": "skills/planr-investigate/SKILL.md" },
+        { "host": "codex", "entrypoint": "$planr-investigate", "path": "adapters/codex/skills/planr-investigate/SKILL.md" },
+        { "host": "cursor", "entrypoint": "planr-investigate", "path": "adapters/cursor/rules/openplanr-investigate.mdc" }
+      ]
+    },
+    {
+      "skillId": "planr-plan-review",
+      "sourceOwner": "skills",
+      "sourceVersion": "1.0.0",
+      "sourceSnapshot": "---\nname: planr-plan-review\ndescription: Run one finite digest-bound professional review of a prepared Planr plan with CEO, engineering, design, and DevEx perspectives. Use after a professional specification is planned and before the owner decides whether PLAN may proceed to SHIP.\n---\n\n# Planr Plan Review\n\n1. Run `planr pipeline prepare-plan-review <feature> --json` and present the exact plan digest, scope, roster, and unresolved prerequisites.\n2. Start once with `planr pipeline start-plan-review <feature> --runtime <runtimeId> --json`. Use the frozen CEO, engineering, design, and DevEx roster as one consolidated batch.\n3. Submit only declared review events through `planr pipeline advance-plan-review <feature> --run-id <runId> --event-file <path|-> --json`. Do not create parallel or late review loops.\n4. Preserve findings, dissent, and uncertainty in the immutable receipt. Never claim owner approval, approve PLAN to SHIP, start SHIP, edit planning truth directly, land, publish, or release.\n5. Return the receipt and exact owner-facing decision boundary. The owner remains the only R1 authority.\n",
+      "sourceDigest": "sha256:a196877214e5b787d19e5f5805159e25f72da1a9ccacf8b89916bfc22bfba37a",
+      "contracts": {
+        "inputs": [{ "id": "professional-specification", "version": "1.0.0" }],
+        "outputs": [{ "id": "planning-review-receipt", "version": "1.0.0" }]
+      },
+      "authorityClass": "review-evidence",
+      "triggerPolicy": {
+        "include": ["professionally review this prepared plan", "challenge this plan with CEO, engineering, design, and DevEx perspectives"],
+        "exclude": ["approve the plan for the owner", "implement, ship, land, publish, or release the plan"],
+        "deferTo": ["planr-plan", "planr-ship", "planr-land"]
+      },
+      "cliRequirements": [
+        { "id": "pipeline-prepare-plan-review", "argv": ["pipeline", "prepare-plan-review", "<feature>"], "requiredOptions": ["--json"] },
+        { "id": "pipeline-start-plan-review", "argv": ["pipeline", "start-plan-review", "<feature>"], "requiredOptions": ["--runtime", "--json"] },
+        { "id": "pipeline-advance-plan-review", "argv": ["pipeline", "advance-plan-review", "<feature>"], "requiredOptions": ["--run-id", "--event-file", "--json"] }
+      ],
+      "hosts": [
+        { "host": "claude-code", "entrypoint": "/planr-pipeline:planr-plan-review", "path": "skills/planr-plan-review/SKILL.md" },
+        { "host": "codex", "entrypoint": "$planr-plan-review", "path": "adapters/codex/skills/planr-plan-review/SKILL.md" },
+        { "host": "cursor", "entrypoint": "planr-plan-review", "path": "adapters/cursor/rules/openplanr-plan-review.mdc" }
+      ]
+    },
+    {
+      "skillId": "planr-spec",
+      "sourceOwner": "skills",
+      "sourceVersion": "1.0.0",
+      "sourceSnapshot": "---\nname: planr-spec\ndescription: Turn vague product or engineering intent into a measurable professional Planr specification with constraints, evidence expectations, failure modes, and rollback. Use when requirements are unclear or a new feature needs bounded scope before PLAN.\n---\n\n# Planr Spec\n\n1. Invoke the installed public `planr spec` flow with the user's intent or file. Let OpenPlanr own questioning, IDs, persistence, and validation.\n2. Resolve measurable outcomes, constraints, evidence expectations, failure modes, rollback, and explicit exclusions through the returned guided interaction. Do not invent approval or implementation authority.\n3. Require the resulting artifact to declare `professional-specification@1.0.0`; surface typed missing inputs instead of silently filling them.\n4. Stop with the professional specification ready for human review. Never auto-chain PLAN, plan review, SHIP, implementation, landing, publication, deployment, or release.\n",
+      "sourceDigest": "sha256:aaf628d67ed69e5078e4c6321cc2510649a001f255a8716a414f03d8106114c9",
+      "contracts": {
+        "inputs": [{ "id": "intent", "version": "1.0.0" }],
+        "outputs": [{ "id": "professional-specification", "version": "1.0.0" }]
+      },
+      "authorityClass": "planning-write",
+      "triggerPolicy": {
+        "include": ["turn this vague idea into a measurable specification", "define scope, evidence, failure modes, and rollback before planning"],
+        "exclude": ["review an existing plan", "implement, ship, land, publish, or release a feature"],
+        "deferTo": ["planr-plan", "planr-plan-review", "planr-ship", "planr-land"]
+      },
+      "cliRequirements": [
+        { "id": "spec-create", "argv": ["spec", "<intent-or-file>"], "requiredOptions": [] }
+      ],
+      "hosts": [
+        { "host": "claude-code", "entrypoint": "/planr-pipeline:planr-spec", "path": "skills/planr-spec/SKILL.md" },
+        { "host": "codex", "entrypoint": "$planr-spec", "path": "adapters/codex/skills/planr-spec/SKILL.md" },
+        { "host": "cursor", "entrypoint": "planr-spec", "path": "adapters/cursor/rules/openplanr-spec.mdc" }
+      ]
+    }
+  ]
+}

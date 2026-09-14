@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-ship",
+  "family": "implementation",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-ship/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-ship/skill.json",
+    "version": "1.1.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Define local implementation completion, deterministic verification discovery, risk-directed checks, overlap-safe execution, concise rendering, and the Planr Land transition."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:5143b35787b5d562f73fb7e6711d4b12e5836ccb86da0813be1266f78873a472",
+      "successorDigest": "sha256:0048311c66c829945e07a5616034bcad9edd415d054f7142db90188d1c512ec2"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:a84522df101681421dcba82313d7a6d9d1cc966f354dffff1d5d0e8b7ae7c9ce",
+      "successorDigest": "sha256:961f5ad2c99df315c689e45bb746b3e3f231bc6075d2656832f732df8b475f4f"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:d4b5bd0cab8f65185eb52d2e42e5f2064ba38c1be9f5423978bb7c61a98a5057",
+      "successorDigest": "sha256:b1da60fa83f7e9b36e1bebb4e62b010ff98609d7f5f74a712b0050f04c052ff3"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:d36c08f38ff6a748c8af9da39e0086f7a6a84c1caef2e50c0454f25f1a6865cc",
+      "successorDigest": "sha256:919567d084f3055ce9479733cc55fb22ac101a8953daef71c2202bcfbbc029c1"
+    }
+  ]
+}

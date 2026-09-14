@@ -1,0 +1,6 @@
+{
+  "missingProtocolVersion": { "delete": "protocolVersion" },
+  "mixedProtocolVersion": { "patch": { "protocolVersion": "1.4.0" } },
+  "missingSchemaVersion": { "delete": "schemaVersion" },
+  "mixedSchemaVersion": { "patch": { "schemaVersion": "2.0.0" } }
+}

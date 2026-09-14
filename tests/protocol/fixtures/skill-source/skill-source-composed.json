@@ -1,0 +1,45 @@
+{
+  "kind": "skill-source",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "documentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "skillId": "planr-plan",
+  "skillVersion": "1.0.0",
+  "sourceFormat": "composed-v1",
+  "authorityCeiling": {
+    "repositoryAccess": "declared-paths",
+    "externalDataAccess": "read-only",
+    "allowedCapabilities": ["context-gathering", "planning-write"],
+    "allowedTools": ["edit", "read"],
+    "allowedOperations": ["plan"],
+    "allowedOutputClasses": ["A", "B"],
+    "forbiddenEffects": ["deploy", "publish"]
+  },
+  "template": {
+    "path": "skills/planr-plan/SKILL.md.tmpl",
+    "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "modules": [
+    {
+      "moduleId": "context-gathering",
+      "moduleVersion": "1.0.0",
+      "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  ],
+  "references": [
+    {
+      "module": {
+        "moduleId": "review-quality",
+        "moduleVersion": "1.0.0",
+        "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "routed": true
+    }
+  ],
+  "hostProfiles": [
+    { "id": "claude-code-default", "version": "1.0.0" }
+  ]
+}

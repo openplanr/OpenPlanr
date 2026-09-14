@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-evidence-resolution.schema.json",
+  "x-openplanr-contract": { "id": "operating-evidence-resolution", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 evidence resolution outcome",
+  "description": "Runtime-owned outcome envelope. A rejection contains safe structured context only; a resolution binds one immutable evidence Artifact.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "resolutionId", "candidateId", "scopeId", "domainId", "domainVersion", "sourceArtifactId", "evidenceKind", "sourceContract", "provider", "resolver", "outcome", "evidenceRefId", "evidenceArtifactId", "error", "resolvedAt"],
+  "properties": {
+    "kind": { "const": "operating-evidence-resolution" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "resolutionId": { "$ref": "#/$defs/resolutionId" },
+    "candidateId": { "$ref": "#/$defs/candidateId" },
+    "scopeId": { "$ref": "#/$defs/identifier" },
+    "domainId": { "$ref": "#/$defs/identifier" },
+    "domainVersion": { "$ref": "#/$defs/version" },
+    "sourceArtifactId": { "$ref": "#/$defs/artifactId" },
+    "evidenceKind": { "enum": ["git", "filesystem", "planr", "operate-artifact"] },
+    "sourceContract": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sourceContract" }] },
+    "provider": { "$ref": "operating-evidence-candidate.schema.json#/$defs/implementationRef" },
+    "resolver": { "$ref": "operating-evidence-candidate.schema.json#/$defs/implementationRef" },
+    "outcome": { "enum": ["resolved", "rejected"] },
+    "evidenceRefId": { "type": ["string", "null"], "pattern": "^evr_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "evidenceArtifactId": { "type": ["string", "null"], "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "error": { "type": ["object", "null"], "additionalProperties": false, "required": ["code", "retryable", "context"], "properties": { "code": { "$ref": "#/$defs/errorCode" }, "retryable": { "type": "boolean" }, "context": { "$ref": "#/$defs/safeErrorContext" } } },
+    "resolvedAt": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    { "if": { "properties": { "outcome": { "const": "resolved" } } }, "then": { "properties": { "sourceContract": { "$ref": "#/$defs/sourceContract" }, "evidenceRefId": { "type": "string" }, "evidenceArtifactId": { "type": "string" }, "error": { "const": null } } } },
+    { "if": { "properties": { "outcome": { "const": "rejected" } } }, "then": { "properties": { "sourceContract": { "const": null }, "evidenceRefId": { "const": null }, "evidenceArtifactId": { "const": null }, "error": { "type": "object" } } } }
+  ],
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "resolutionId": { "type": "string", "pattern": "^evs_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "candidateId": { "type": "string", "pattern": "^evc_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "sourceContract": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "$ref": "#/$defs/identifier" }, "version": { "$ref": "#/$defs/version" } } },
+    "errorCode": { "enum": ["SOURCE_NOT_FOUND", "REVISION_NOT_FOUND", "OBJECT_TYPE_MISMATCH", "PATH_NOT_FOUND", "LINE_RANGE_INVALID", "ANCESTRY_MISMATCH", "ARTIFACT_NOT_FOUND", "ARTIFACT_HASH_MISMATCH", "SOURCE_UNTRACKED", "SOURCE_STALE", "CAPABILITY_DENIED", "CONSENT_REQUIRED", "SENSITIVITY_BLOCKED", "SECRET_DETECTED", "UNSUPPORTED_EVIDENCE_KIND", "EVIDENCE_PROVIDER_UNAVAILABLE", "EVIDENCE_RESOLVER_UNREGISTERED", "EVIDENCE_RESOLVER_UNAVAILABLE", "EVIDENCE_RESOLVER_VERSION_UNSUPPORTED", "EVIDENCE_SOURCE_SCOPE_MISMATCH", "EVIDENCE_LOCATOR_INVALID"] },
+    "safeErrorContext": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "evidenceKind": { "enum": ["git", "filesystem", "planr", "operate-artifact"] },
+        "repositoryId": { "$ref": "#/$defs/identifier" },
+        "sourceRootId": { "$ref": "#/$defs/identifier" },
+        "projectId": { "$ref": "#/$defs/identifier" },
+        "artifactId": { "$ref": "#/$defs/artifactId" },
+        "resolverId": { "$ref": "#/$defs/identifier" }
+      }
+    }
+  }
+}

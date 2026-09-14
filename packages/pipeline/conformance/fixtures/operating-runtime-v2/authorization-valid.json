@@ -1,0 +1,84 @@
+{
+  "now": "2026-08-10T08:03:00Z",
+  "toolCapabilities": {
+    "reviewSubmit": { "id": "operate-review-submit", "version": "2.0.0" },
+    "actionApprove": { "id": "operate-action-approve", "version": "2.0.0" },
+    "actionExecute": { "id": "operate-action-execute", "version": "2.0.0" },
+    "actionRollback": { "id": "operate-action-rollback", "version": "2.0.0" }
+  },
+  "scope": { "scopeId": "scope-acme", "domainId": "software", "domainVersion": "1.0.0" },
+  "target": { "kind": "project-record", "id": "record-0001", "revision": "rev-0001" },
+  "action": {
+    "kind": "operating-action",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "actionId": "act_00000001",
+    "revisionId": "actrev_00000001",
+    "revision": 1,
+    "predecessorRevisionId": null,
+    "actionHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "scopeId": "scope-acme",
+    "domainId": "software",
+    "domainVersion": "1.0.0",
+    "sourceCycleId": "cyc_00000001",
+    "sourceArtifactId": "art_00000002",
+    "title": "Apply one bounded project record change",
+    "state": "approved",
+    "actionKind": { "id": "software-operating-hypothesis", "version": "1.0.0" },
+    "requestedCapability": { "id": "bounded-project-write", "version": "1.0.0" },
+    "targetBinding": { "kind": "project-record", "id": "record-0001", "revision": "rev-0001" },
+    "effectClass": "project-write",
+    "preconditionArtifactIds": ["art_00000002"],
+    "executionBinding": {
+      "policyId": "bounded-project-write-policy",
+      "policyVersion": "1.0.0",
+      "rollbackRequired": true,
+      "verificationRequired": true
+    },
+    "ownerActorId": "owner-0001",
+    "accountabilityDisposition": null,
+    "sourceDecisionId": "dec_00000001",
+    "sourceFindingIds": ["fnd_00000001"],
+    "dependsOnActionIds": [],
+    "objectiveId": "obj_00000001",
+    "expectedResult": "The exact reviewed project record changes once.",
+    "metricId": "met_00000001",
+    "baseline": 0,
+    "target": 1,
+    "verificationWindow": "immediate",
+    "verificationPlanId": "vfy_00000001",
+    "createdAt": "2026-08-10T08:00:00Z",
+    "updatedAt": "2026-08-10T08:01:00Z"
+  },
+  "approveRequest": {
+    "action": {
+      "actionId": "act_00000001",
+      "revision": 1,
+      "actionHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    "decision": "approved"
+  },
+  "executeRequest": {
+    "action": {
+      "actionId": "act_00000001",
+      "revision": 1,
+      "actionHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  },
+  "rollbackRequest": {
+    "action": {
+      "actionId": "act_00000001",
+      "revision": 1,
+      "actionHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    "originalOperationId": "op_00000001",
+    "rollbackPlanId": "rbp_00000001"
+  },
+  "expected": {
+    "approveAllowed": true,
+    "executeAllowed": true,
+    "rollbackAllowed": true,
+    "replayAllowed": true,
+    "replaySkipsLiveAuthority": true
+  }
+}

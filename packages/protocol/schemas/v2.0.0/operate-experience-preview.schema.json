@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operate-experience-preview.schema.json",
+  "x-openplanr-contract": { "id": "operate-experience-preview", "version": "1.0.0" },
+  "title": "OpenPlanr Operate governed experience preview",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "previewId", "scopeId", "domainId", "domainVersion", "actorId", "subject", "eventHead", "sourceViewHash", "actionDigest", "allowedAction", "authority", "consequence", "reasonCodes", "transition", "issuedAt", "expiresAt", "previewHash"],
+  "properties": {
+    "kind": { "const": "operate-experience-preview" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "previewId": { "type": "string", "pattern": "^xprv_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "scopeId": { "$ref": "#/$defs/id" }, "domainId": { "$ref": "#/$defs/id" }, "domainVersion": { "$ref": "#/$defs/version" },
+    "actorId": { "$ref": "#/$defs/id" },
+    "subject": { "$ref": "#/$defs/subject" },
+    "eventHead": { "$ref": "#/$defs/eventHead" },
+    "sourceViewHash": { "$ref": "#/$defs/hash" },
+    "actionDigest": { "$ref": "#/$defs/hash" },
+    "allowedAction": { "$ref": "operate-allowed-action.schema.json" },
+    "authority": { "enum": ["allowed", "refused", "read-only"] },
+    "consequence": { "$ref": "#/$defs/text" },
+    "reasonCodes": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" } },
+    "transition": { "$ref": "#/$defs/transition" },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "previewHash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "version": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 8192, "pattern": "^[\\s\\S]*\\S[\\s\\S]*$" },
+    "subject": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "id", "revision", "hash"],
+      "properties": { "kind": { "enum": ["cycle", "assignment", "artifact", "decision", "review", "action"] }, "id": { "$ref": "#/$defs/id" }, "revision": { "type": ["integer", "null"], "minimum": 1 }, "hash": { "$ref": "#/$defs/hash" } },
+      "allOf": [
+        { "if": { "properties": { "kind": { "enum": ["decision", "action"] } }, "required": ["kind"] }, "then": { "properties": { "revision": { "type": "integer", "minimum": 1 } } } },
+        { "if": { "properties": { "kind": { "enum": ["cycle", "assignment", "artifact", "review"] } }, "required": ["kind"] }, "then": { "properties": { "revision": { "type": "null" } } } }
+      ]
+    },
+    "eventHead": { "oneOf": [
+      { "type": "object", "additionalProperties": false, "required": ["sequence", "hash"], "properties": { "sequence": { "const": 0 }, "hash": { "type": "null" } } },
+      { "type": "object", "additionalProperties": false, "required": ["sequence", "hash"], "properties": { "sequence": { "type": "integer", "minimum": 1 }, "hash": { "$ref": "#/$defs/hash" } } }
+    ] },
+    "transitionTarget": { "type": "object", "additionalProperties": false, "required": ["kind", "id", "revision", "hash", "disposition"], "properties": { "kind": { "$ref": "#/$defs/id" }, "id": { "$ref": "#/$defs/id" }, "revision": { "type": ["integer", "string", "null"], "minimum": 1, "minLength": 1, "maxLength": 128 }, "hash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }, "disposition": { "type": ["string", "null"], "minLength": 1, "maxLength": 128 } } },
+    "party": { "type": "object", "additionalProperties": false, "required": ["partyId", "actorKind", "actorId", "requiredCapability", "state", "redacted"], "properties": { "partyId": { "$ref": "#/$defs/id" }, "actorKind": { "enum": ["human", "engine"] }, "actorId": { "type": ["string", "null"], "minLength": 1, "maxLength": 128 }, "requiredCapability": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "$ref": "#/$defs/id" }, "version": { "$ref": "#/$defs/version" } } }, "state": { "enum": ["required", "recorded", "redacted"] }, "redacted": { "type": "boolean" } } },
+    "threshold": { "type": "object", "additionalProperties": false, "required": ["required", "recorded", "remaining", "parties"], "properties": { "required": { "type": "integer", "minimum": 1 }, "recorded": { "type": "integer", "minimum": 0 }, "remaining": { "type": "integer", "minimum": 0 }, "parties": { "type": "array", "items": { "$ref": "#/$defs/party" } } } },
+    "transition": { "type": "object", "additionalProperties": false, "required": ["kind", "targets", "reversible", "nextState", "threshold"], "properties": { "kind": { "enum": ["review", "approval", "verification", "execution", "rollback"] }, "targets": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/transitionTarget" } }, "reversible": { "type": "boolean" }, "nextState": { "$ref": "#/$defs/id" }, "threshold": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/threshold" }] } } }
+  }
+}

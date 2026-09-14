@@ -1,0 +1,263 @@
+{
+  "release-ledger": {
+    "kind": "release-ledger",
+    "schemaVersion": "1.3.0",
+    "generatedAt": "2026-08-25T09:16:00.000Z",
+    "repositoryKeys": [
+      "pipeline",
+      "web",
+      "cli",
+      "skills",
+      "marketplace"
+    ],
+    "rows": [
+      {
+        "repositoryKey": "pipeline",
+        "packageName": "planr-pipeline",
+        "declaredVersion": "0.42.0",
+        "baselineCommit": "d5d0d155192eb08fe8ca42f453cf8d0aaf52b31a",
+        "clean": true,
+        "sourceInventoryDigest": "sha256:07d73e644cc602c3b0fab0d89783603a570f541505efed862b43177d3e5a59fb",
+        "payloadDigest": "sha256:0b1eece814766bca889a7c03541b1a148c4ff64a245bac5b0f8f4f681a378473",
+        "exportSurfaceDigest": "sha256:b798c48019f257ed41584336fc10a3f7a62bc594c0add9bffc53ee394788660c",
+        "terminalReceipt": {
+          "digest": "sha256:bec388c04a6ddcc8146edea91d05f4ec92d556e919bead52e865f6a51c06875f",
+          "state": "closed",
+          "boundPayloadDigest": "sha256:0b1eece814766bca889a7c03541b1a148c4ff64a245bac5b0f8f4f681a378473"
+        }
+      },
+      {
+        "repositoryKey": "web",
+        "packageName": "openplanr-web",
+        "declaredVersion": "0.1.0",
+        "baselineCommit": "432ea8ce98ec0a07fc44e8d4095bb27be40ee80e",
+        "clean": true,
+        "sourceInventoryDigest": "sha256:d433ffccec14fd4c0be2c14a0015a0b71440dabec5921d82944642a791288dc4",
+        "payloadDigest": "sha256:94af2497916fcd3c6e9997a7c2074bf93c835d67bee58ef880f708f22d520e7b",
+        "exportSurfaceDigest": "sha256:09f5ed5e527234fcf95c112e8660972698f81a7a787795d9d352c2fb80759572",
+        "terminalReceipt": {
+          "digest": "sha256:9e5182c7fa895b69b8450cc647640da9d421d2d4352d257b82c4e0ec630fb1bc",
+          "state": "closed",
+          "boundPayloadDigest": "sha256:94af2497916fcd3c6e9997a7c2074bf93c835d67bee58ef880f708f22d520e7b"
+        }
+      },
+      {
+        "repositoryKey": "cli",
+        "packageName": "openplanr",
+        "declaredVersion": "1.25.3",
+        "baselineCommit": "b652b8542375b8a51c6eb727fe672c4a22c0567b",
+        "clean": true,
+        "sourceInventoryDigest": "sha256:1eae6655ce6745e2585d9c82cb98a9add9c2bb3a705788d17ca348b311660ec2",
+        "payloadDigest": "sha256:1b21b12eababf51a5b135accb94b66539b7f8ce0823f3278b8bfa1e15d2645c4",
+        "exportSurfaceDigest": "sha256:12f0481918575aecba1d5b089306d7a88dd935f1295edc70bdf079c50907abfc",
+        "terminalReceipt": {
+          "digest": "sha256:9e9efb1a29e27601ceb30851d3aeffe8d83c8f8b00cd1e59a60e969f998b8e48",
+          "state": "closed",
+          "boundPayloadDigest": "sha256:1b21b12eababf51a5b135accb94b66539b7f8ce0823f3278b8bfa1e15d2645c4"
+        }
+      },
+      {
+        "repositoryKey": "skills",
+        "packageName": "@openplanr/skills",
+        "declaredVersion": "1.26.2",
+        "baselineCommit": "db0c85618090748c9e6d71ddc27a0496edf735d6",
+        "clean": true,
+        "sourceInventoryDigest": "sha256:9baeb5fd64636e67997fa89c15c2eec7852edca95777d4c803d35b88fcc71a71",
+        "payloadDigest": "sha256:6a526266b136c268b0ca55f8f3d60408e117bbc7f3308fa67971641b1603529b",
+        "exportSurfaceDigest": "sha256:caf1b6cdbe0a429c2dce4662c980c347095e86caf95bf4d5881f76d1252b3f1a",
+        "terminalReceipt": {
+          "digest": "sha256:6da6856236d09f3a5b47b1357e94d37ae6880e15ef17b723ef41cd891d60beac",
+          "state": "closed",
+          "boundPayloadDigest": "sha256:6a526266b136c268b0ca55f8f3d60408e117bbc7f3308fa67971641b1603529b"
+        }
+      },
+      {
+        "repositoryKey": "marketplace",
+        "packageName": "openplanr-marketplace",
+        "declaredVersion": "1.14.0",
+        "baselineCommit": "1bc64497ee044719cf19e1d6c5c4dba044c8087c",
+        "clean": true,
+        "sourceInventoryDigest": "sha256:328e61cbcb01fa52dea9a8c3b8c26c17def5df4b76d6598ae15de7e5d8b1ee78",
+        "payloadDigest": "sha256:dee4f89d3b0d339994725228e2b4cef2fc760b0c9309eb6a63350facb0fc7fd0",
+        "exportSurfaceDigest": "sha256:60b082a61ca779c26739fec35fc957913b6fca9128a9958ad7407153f1da1031",
+        "terminalReceipt": {
+          "digest": "sha256:24a5848954876170947ccac0bf0d007c8e21df22ca30fd5403193af9d7b27854",
+          "state": "closed",
+          "boundPayloadDigest": "sha256:dee4f89d3b0d339994725228e2b4cef2fc760b0c9309eb6a63350facb0fc7fd0"
+        }
+      }
+    ],
+    "manifestBinding": {
+      "manifestDigest": "sha256:ff03a419e4ec34daff3794c93dfc6324b05cddb9805384f34c65fe83f3ef8679",
+      "manifestSchemaVersion": "1.1.0"
+    },
+    "ledgerId": "rlg_8784ba699994b1a0eb983e900d9981a9",
+    "ledgerDigest": "sha256:8784ba699994b1a0eb983e900d9981a9a03fc23c441ab53b7e4dc91ef7c2adb1"
+  },
+  "release-ledger-receipt": {
+    "kind": "release-ledger-receipt",
+    "schemaVersion": "1.3.0",
+    "recordType": "verification",
+    "authority": "none",
+    "issuedAt": "2026-08-25T09:16:00.000Z",
+    "ledgerDigest": "sha256:8784ba699994b1a0eb983e900d9981a9a03fc23c441ab53b7e4dc91ef7c2adb1",
+    "claimSetDigest": "sha256:fe47fcdf1d449e16ad7aef28bf1bac72abf02d1092df39bb95884cc1d8545436",
+    "result": "verified",
+    "refusals": [],
+    "receiptId": "rlr_278abb479290f79540f5e7fa45f2bd6b",
+    "receiptDigest": "sha256:278abb479290f79540f5e7fa45f2bd6b3187e7aad4dff818ea8e6f8b585e8fbc"
+  },
+  "ecosystem-manifest": {
+    "schemaVersion": "1.1.0",
+    "generatedAt": "2026-08-25T13:48:14.570Z",
+    "protocol": {
+      "current": "1.1.0",
+      "supported": [
+        "1.0.x",
+        "1.1.x"
+      ]
+    },
+    "components": {
+      "cli": {
+        "version": "1.25.3",
+        "pipelineRange": "^0.42.0"
+      },
+      "pipeline": {
+        "version": "0.42.0",
+        "cliRange": "^1.25.3"
+      },
+      "skills": {
+        "version": "1.26.2",
+        "cliRange": "^1.25.3"
+      },
+      "marketplace": {
+        "version": "1.14.0"
+      }
+    },
+    "adapters": [
+      {
+        "runtime": "claude-code",
+        "version": "0.42.0",
+        "capabilityLevel": "product",
+        "pipelineRange": "^0.42.0"
+      },
+      {
+        "runtime": "codex",
+        "version": "0.42.0",
+        "capabilityLevel": "workflow",
+        "pipelineRange": "^0.42.0"
+      },
+      {
+        "runtime": "cursor",
+        "version": "0.42.0",
+        "capabilityLevel": "workflow",
+        "pipelineRange": "^0.42.0"
+      }
+    ],
+    "professionalSkills": {
+      "catalogVersion": "1.0.0",
+      "membershipDigest": "sha256:d66c19e85a03cfa5615fc2d95e548a1f2363a75f2ee7648ecef378a7685a23a8",
+      "bundleDigest": "sha256:3ee9229f7fede9687986eb05828ca42573337e25d778cc225178bc80bff98774",
+      "skillIds": [
+        "planr-browser-qa",
+        "planr-investigate",
+        "planr-plan-review",
+        "planr-spec"
+      ],
+      "skills": [
+        {
+          "skillId": "planr-browser-qa",
+          "sourceVersion": "1.0.0",
+          "sourceDigest": "sha256:7ec450ada7f5bfca3e094ef1ab2bd6cedf8706299dae9d6426da5cb98428c776",
+          "authorityClass": "quality-evidence",
+          "triggerPolicy": {
+            "include": [
+              "test this UI in a real browser",
+              "verify routes, forms, accessibility, console, and network behavior"
+            ],
+            "exclude": [
+              "unit-test-only backend work",
+              "requests to approve, land, publish, or release"
+            ],
+            "deferTo": [
+              "planr-ship",
+              "planr-land"
+            ]
+          }
+        },
+        {
+          "skillId": "planr-investigate",
+          "sourceVersion": "1.0.0",
+          "sourceDigest": "sha256:4fc6fdfb7b088ba185eea26ce1e7feb28a6cb469669d53d218a322bc9fea5b55",
+          "authorityClass": "diagnose-or-authorized-fix",
+          "triggerPolicy": {
+            "include": [
+              "diagnose this bug and prove the root cause",
+              "apply a bounded fix from the accepted diagnosis"
+            ],
+            "exclude": [
+              "unscoped feature implementation",
+              "requests to approve, land, publish, or release"
+            ],
+            "deferTo": [
+              "planr-spec",
+              "planr-ship",
+              "planr-land"
+            ]
+          }
+        },
+        {
+          "skillId": "planr-plan-review",
+          "sourceVersion": "1.0.0",
+          "sourceDigest": "sha256:a196877214e5b787d19e5f5805159e25f72da1a9ccacf8b89916bfc22bfba37a",
+          "authorityClass": "review-evidence",
+          "triggerPolicy": {
+            "include": [
+              "professionally review this prepared plan",
+              "challenge this plan with CEO, engineering, design, and DevEx perspectives"
+            ],
+            "exclude": [
+              "approve the plan for the owner",
+              "implement, ship, land, publish, or release the plan"
+            ],
+            "deferTo": [
+              "planr-plan",
+              "planr-ship",
+              "planr-land"
+            ]
+          }
+        },
+        {
+          "skillId": "planr-spec",
+          "sourceVersion": "1.0.0",
+          "sourceDigest": "sha256:aaf628d67ed69e5078e4c6321cc2510649a001f255a8716a414f03d8106114c9",
+          "authorityClass": "planning-write",
+          "triggerPolicy": {
+            "include": [
+              "turn this vague idea into a measurable specification",
+              "define scope, evidence, failure modes, and rollback before planning"
+            ],
+            "exclude": [
+              "review an existing plan",
+              "implement, ship, land, publish, or release a feature"
+            ],
+            "deferTo": [
+              "planr-plan",
+              "planr-plan-review",
+              "planr-ship",
+              "planr-land"
+            ]
+          }
+        }
+      ]
+    },
+    "landingWorkflow": {
+      "workflowId": "planr-land",
+      "workflowVersion": "1.0.0",
+      "catalogVersion": "1.0.0",
+      "authority": "none",
+      "catalogHash": "sha256:6f76d7e2416ca7919ac5bbeb01cc2a045582fb9a94e0bdad064dd91b0e798c81",
+      "bundleDigest": "sha256:7bff6d6150b6cef7d46603216d4225bc9000f9f286a203c65e668a077b3ead80"
+    }
+  }
+}

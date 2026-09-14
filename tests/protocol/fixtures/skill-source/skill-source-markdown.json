@@ -1,0 +1,25 @@
+{
+  "kind": "skill-source",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "documentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "skillId": "planr-status",
+  "skillVersion": "1.0.0",
+  "sourceFormat": "markdown-v1",
+  "authorityCeiling": {
+    "repositoryAccess": "read-only",
+    "externalDataAccess": "none",
+    "allowedCapabilities": ["read-only-view"],
+    "allowedTools": ["read"],
+    "allowedOperations": ["status"],
+    "allowedOutputClasses": ["B"],
+    "forbiddenEffects": ["deploy", "publish", "database-mutation"]
+  },
+  "markdown": {
+    "path": "skills/planr-status/SKILL.md",
+    "digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  }
+}

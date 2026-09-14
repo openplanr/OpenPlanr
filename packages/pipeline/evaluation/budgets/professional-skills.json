@@ -1,0 +1,28 @@
+{
+  "kind": "evaluation-budget",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.4.0",
+  "budgetId": "ebg_ab599b6434d21be4ca9100655147859e",
+  "budgetDigest": "sha256:ab599b6434d21be4ca9100655147859ea7d7015710797231fb73c48af8b02dee",
+  "carriesMeasurement": false,
+  "scope": {
+    "kind": "corpus",
+    "id": "planr.professional.skills"
+  },
+  "ceilings": {
+    "latencyMsP50Ceiling": 45000,
+    "latencyMsP95Ceiling": 90000,
+    "inputTokensCeiling": 120000,
+    "outputTokensCeiling": 40000,
+    "totalTokensCeiling": 160000,
+    "costEstimateCurrency": "USD",
+    "costEstimateMicrosCeiling": 480000,
+    "permissionPromptCeiling": 64,
+    "retryCeiling": 32
+  },
+  "baseline": {
+    "frozen": true,
+    "baselineDigest": "sha256:dbbef2ace6813bccb14a023016353be40f9d8755ba4a73a4878d31ae35af24ab",
+    "capturedAt": "2026-08-25T00:00:00.000Z"
+  }
+}

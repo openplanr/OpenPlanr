@@ -1,0 +1,92 @@
+{
+  "kind": "openplanr-diagram-renderer-spike-results",
+  "schemaVersion": "1.0.0",
+  "recordedAt": "2026-08-31",
+  "selected": "@resvg/resvg-js@2.6.2",
+  "font": "@expo-google-fonts/inter@0.4.2/400Regular/Inter_400Regular.ttf",
+  "darwinFlowchartStructuralDigest": "sha256:c4ce659b70b0d6700aed38458f994126208c768efded0a511a3287f9dd9be3f4",
+  "linuxFlowchartStructuralDigest": "sha256:b7eb7086b07682fc6a00265dd73d84f28627a5d7bf23678496c85a328dfef621",
+  "payloadBytes": 11627477,
+  "payloadLimitBytes": 15728640,
+  "galleryFixtures": 39,
+  "networkAttempts": 0,
+  "runs": [
+    {
+      "node": "v26.5.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "coldMs": 224.383,
+      "galleryMs": 3276.596,
+      "totalPngBytes": 337171,
+      "passed": true
+    },
+    {
+      "node": "v20.20.2",
+      "platform": "darwin",
+      "arch": "arm64",
+      "coldMs": 252.898,
+      "galleryMs": 3481.554,
+      "totalPngBytes": 337171,
+      "passed": true
+    },
+    {
+      "node": "v22.23.2",
+      "platform": "darwin",
+      "arch": "arm64",
+      "coldMs": 211.63,
+      "galleryMs": 3366.356,
+      "totalPngBytes": 337171,
+      "passed": true
+    }
+  ],
+  "packedLinuxRuns": [
+    {
+      "node": "v22.23.1",
+      "platform": "linux",
+      "arch": "arm64",
+      "libc": "musl",
+      "structuralDigest": "sha256:b7eb7086b07682fc6a00265dd73d84f28627a5d7bf23678496c85a328dfef621",
+      "png": {
+        "width": 1902,
+        "height": 360,
+        "bytes": 6836,
+        "digest": "sha256:11485d60ef57216a32385a9c4f61487fc02ef02fc3bcbe7fb4915057fcfac6a2"
+      },
+      "quality": "pass",
+      "networkAttempts": 0,
+      "passed": true
+    },
+    {
+      "node": "v20.20.2",
+      "platform": "linux",
+      "arch": "arm64",
+      "libc": "musl",
+      "structuralDigest": "sha256:b7eb7086b07682fc6a00265dd73d84f28627a5d7bf23678496c85a328dfef621",
+      "png": {
+        "width": 1902,
+        "height": 360,
+        "bytes": 6836,
+        "digest": "sha256:11485d60ef57216a32385a9c4f61487fc02ef02fc3bcbe7fb4915057fcfac6a2"
+      },
+      "quality": "pass",
+      "networkAttempts": 0,
+      "passed": true
+    }
+  ],
+  "coverage": {
+    "executed": [
+      "darwin-arm64",
+      "linux-arm64-musl"
+    ],
+    "declaredPrebuilds": [
+      "darwin-arm64",
+      "darwin-x64",
+      "linux-arm64-gnu",
+      "linux-arm64-musl",
+      "linux-x64-gnu",
+      "linux-x64-musl"
+    ],
+    "linuxExecution": "packed-tarball-network-disabled"
+  },
+  "passed": true
+}

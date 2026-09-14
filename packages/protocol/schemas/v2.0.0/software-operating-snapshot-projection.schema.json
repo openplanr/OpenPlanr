@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/software-operating-snapshot-projection.schema.json",
+  "x-openplanr-contract": { "id": "software-operating-snapshot-projection", "version": "1.0.0" },
+  "title": "OpenPlanr public software operating snapshot projection",
+  "description": "The exact public identity software-operating-snapshot-projection@1.0.0. It is a rebuildable view over the domain-neutral state, not a repository-specific kernel field.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "projectionId", "scopeId", "domainId", "domainVersion", "domainContract", "snapshotId", "stateId", "sourceArtifactIds", "derivedAt"],
+  "properties": {
+    "kind": { "const": "software-operating-snapshot-projection" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "2.0.0" }, "projectionId": { "$ref": "#/$defs/projectionId" }, "scopeId": { "$ref": "#/$defs/id" }, "domainId": { "const": "software" }, "domainVersion": { "$ref": "#/$defs/version" }, "domainContract": { "$ref": "#/$defs/domainContract" }, "snapshotId": { "$ref": "#/$defs/snapshotId" }, "stateId": { "$ref": "#/$defs/stateId" }, "sourceArtifactIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/artifactId" } }, "derivedAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": { "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "domainContract": { "type": "object", "additionalProperties": false, "required": ["apiDomainId", "id", "version"], "properties": { "apiDomainId": { "const": "software" }, "id": { "const": "software-domain" }, "version": { "const": "1.0.0" } } }, "id": { "type": "string", "minLength": 1, "maxLength": 128 }, "projectionId": { "type": "string", "pattern": "^prj_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "snapshotId": { "type": "string", "pattern": "^snp_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "stateId": { "type": "string", "pattern": "^oms_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" } }
+}

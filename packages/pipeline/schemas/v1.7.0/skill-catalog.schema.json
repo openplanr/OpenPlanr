@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.7.0/skill-catalog.schema.json",
+  "x-openplanr-contract": {
+    "id": "skill-catalog",
+    "version": "1.7.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "catalogVersion",
+    "sources"
+  ],
+  "properties": {
+    "kind": {
+      "const": "skill-catalog"
+    },
+    "schemaVersion": {
+      "const": "1.7.0"
+    },
+    "protocolVersion": {
+      "const": "1.7.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "catalogVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "skillId",
+          "skillVersion",
+          "sourceFormat",
+          "sourceDigest",
+          "moduleGraphDigest",
+          "source"
+        ],
+        "properties": {
+          "skillId": {
+            "$ref": "common.schema.json#/$defs/skillId"
+          },
+          "skillVersion": {
+            "$ref": "common.schema.json#/$defs/semver"
+          },
+          "sourceFormat": {
+            "$ref": "common.schema.json#/$defs/sourceFormat"
+          },
+          "sourceDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "moduleGraphDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "source": {
+            "$ref": "common.schema.json#/$defs/sourceRef"
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 256
+    }
+  }
+}

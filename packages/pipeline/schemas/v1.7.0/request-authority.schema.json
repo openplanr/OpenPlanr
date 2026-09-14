@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.7.0/request-authority.schema.json",
+  "x-openplanr-contract": {
+    "id": "request-authority",
+    "version": "1.7.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "repositoryAccess",
+    "capabilities",
+    "tools",
+    "forbiddenEffects"
+  ],
+  "properties": {
+    "kind": {
+      "const": "request-authority"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.7.0"
+    },
+    "repositoryAccess": {
+      "enum": [
+        "request-scope",
+        "declared-paths",
+        "read-only",
+        "none"
+      ]
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "context-gathering",
+          "local-execution",
+          "planning-write",
+          "read",
+          "read-only-view",
+          "write"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "read",
+          "edit",
+          "shell"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "forbiddenEffects": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    }
+  }
+}

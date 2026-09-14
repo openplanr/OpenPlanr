@@ -1,0 +1,584 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.10.0/design-review-bundle.schema.json",
+  "x-openplanr-contract": {
+    "id": "design-review-bundle",
+    "version": "1.10.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "openplanr-design-review-bundle"
+    },
+    "schemaVersion": {
+      "const": "1.1.0"
+    },
+    "design": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "title": {
+          "$ref": "#/$defs/text"
+        },
+        "frames": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "label",
+              "width",
+              "height"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "label": {
+                "$ref": "#/$defs/text"
+              },
+              "width": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16384
+              },
+              "height": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 16384
+              }
+            }
+          }
+        },
+        "screens": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "title"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "description": {
+                "$ref": "#/$defs/text"
+              },
+              "anchors": {
+                "$ref": "#/$defs/ids"
+              }
+            }
+          }
+        },
+        "screenOrder": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "uniqueItems": true
+        },
+        "flows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "title",
+              "screens"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "title": {
+                "$ref": "#/$defs/text"
+              },
+              "screens": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/$defs/id"
+                }
+              }
+            }
+          }
+        },
+        "variants": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "label",
+              "status"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id"
+              },
+              "label": {
+                "$ref": "#/$defs/text"
+              },
+              "description": {
+                "$ref": "#/$defs/text"
+              },
+              "status": {
+                "enum": [
+                  "ready",
+                  "failed"
+                ]
+              },
+              "issue": {
+                "$ref": "#/$defs/text"
+              }
+            },
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "failed"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "issue"
+              ]
+            }
+          }
+        },
+        "selectedVariant": {
+          "$ref": "#/$defs/id"
+        },
+        "defaultView": {
+          "enum": [
+            "canvas",
+            "prototype",
+            "walkthrough"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "frames",
+        "screens",
+        "screenOrder",
+        "variants",
+        "selectedVariant",
+        "defaultView"
+      ]
+    },
+    "envelope": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "artifacts",
+        "viewer"
+      ]
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifactId",
+          "screenId",
+          "variantId",
+          "frameId"
+        ],
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "screenId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "variantId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "frameId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      }
+    },
+    "state": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "positions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "x",
+              "y"
+            ],
+            "properties": {
+              "x": {
+                "type": "number",
+                "minimum": -10000000,
+                "maximum": 10000000
+              },
+              "y": {
+                "type": "number",
+                "minimum": -10000000,
+                "maximum": 10000000
+              }
+            }
+          }
+        }
+      }
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "verification": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "verified",
+            "unverified",
+            "failed",
+            "pending"
+          ]
+        }
+      }
+    },
+    "reviewContext": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://openplanr.dev/schemas/v1.10.0/design-review-context.schema.json",
+      "x-openplanr-contract": {
+        "id": "design-review-context",
+        "version": "1.10.0"
+      },
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "openplanr-design-review-context"
+        },
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "designId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "brief": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "purpose": {
+              "type": "string",
+              "maxLength": 16384
+            },
+            "requests": {
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "string",
+                "maxLength": 16384
+              }
+            },
+            "audience": {
+              "type": "string",
+              "maxLength": 16384
+            }
+          },
+          "required": [
+            "purpose",
+            "requests"
+          ]
+        },
+        "revisionSummary": {
+          "type": "string",
+          "maxLength": 16384
+        },
+        "implementation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "tokens": {
+              "type": "array",
+              "maxItems": 512,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "value": {
+                    "type": "string",
+                    "maxLength": 16384
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 16384
+                  }
+                },
+                "required": [
+                  "name",
+                  "value"
+                ]
+              }
+            },
+            "components": {
+              "type": "array",
+              "maxItems": 256,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 16384
+                  },
+                  "screenIds": {
+                    "type": "array",
+                    "maxItems": 256,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    }
+                  },
+                  "anchorIds": {
+                    "type": "array",
+                    "maxItems": 256,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    }
+                  },
+                  "states": {
+                    "type": "array",
+                    "maxItems": 256,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "description": {
+                          "type": "string",
+                          "maxLength": 16384
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "description"
+                      ]
+                    }
+                  },
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 16384
+                  },
+                  "responsive": {
+                    "type": "string",
+                    "maxLength": 16384
+                  },
+                  "accessibility": {
+                    "type": "string",
+                    "maxLength": 16384
+                  }
+                },
+                "required": [
+                  "id",
+                  "name"
+                ]
+              }
+            },
+            "responsive": {
+              "type": "array",
+              "maxItems": 256,
+              "items": {
+                "type": "string",
+                "maxLength": 16384
+              }
+            },
+            "accessibility": {
+              "type": "array",
+              "maxItems": 256,
+              "items": {
+                "type": "string",
+                "maxLength": 16384
+              }
+            }
+          },
+          "required": [
+            "tokens",
+            "components",
+            "responsive",
+            "accessibility"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "schemaVersion",
+        "designId",
+        "brief",
+        "implementation"
+      ]
+    },
+    "contextDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "fingerprints": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "screenId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "variantId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "frameId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "contentDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "guidanceDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "screenId",
+          "variantId",
+          "frameId",
+          "contentDigest",
+          "guidanceDigest"
+        ]
+      }
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "design",
+    "envelope",
+    "entries",
+    "revision",
+    "reviewContext",
+    "contextDigest",
+    "fingerprints"
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "ids": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "uniqueItems": true
+    },
+    "localPath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path relative to the authored document directory. No URL, traversal, encoded path, query or fragment.",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))(?!.*//)(?!.*[/ ]$)[^\\\\:\\u0000-\\u001F%?#]+$"
+    },
+    "paths": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/localPath"
+      },
+      "uniqueItems": true
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "html"
+      ],
+      "properties": {
+        "html": {
+          "$ref": "#/$defs/localPath"
+        },
+        "styles": {
+          "$ref": "#/$defs/paths"
+        },
+        "scripts": {
+          "$ref": "#/$defs/paths"
+        }
+      }
+    }
+  }
+}

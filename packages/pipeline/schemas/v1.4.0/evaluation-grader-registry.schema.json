@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/evaluation-grader-registry.schema.json",
+  "title": "Protocol 1.4 evaluation grader registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "registryId", "registryVersion", "digestAlgorithm", "canonicalization", "memberOrder", "graders", "registryDigest"],
+  "properties": {
+    "kind": { "const": "evaluation-grader-registry" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.4.0" },
+    "registryId": { "type": "string", "pattern": "^egrr_[a-f0-9]{32}$" },
+    "registryVersion": { "const": "1.0.0" },
+    "digestAlgorithm": { "const": "sha256" },
+    "canonicalization": { "const": "jcs" },
+    "memberOrder": { "const": "graderName-ascending" },
+    "graders": { "type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": { "$ref": "./evaluation-grader-registration.schema.json" } },
+    "registryDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}

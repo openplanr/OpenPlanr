@@ -1,0 +1,25 @@
+{
+  "cases": [
+    {
+      "id": "effect-success-forges-hypothesis-success",
+      "executionStatus": "success",
+      "hypothesisStatus": "confirmed",
+      "outcomeId": null
+    },
+    {
+      "id": "terminal-action-reopened",
+      "from": "completed",
+      "to": "in_progress"
+    },
+    {
+      "id": "verification-without-plan",
+      "assignmentKind": "verification",
+      "verificationPlanId": null
+    },
+    {
+      "id": "replay-dispatches-effect",
+      "replayed": true,
+      "effectCount": 1
+    }
+  ]
+}

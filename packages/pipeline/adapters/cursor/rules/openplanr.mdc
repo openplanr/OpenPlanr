@@ -1,0 +1,25 @@
+---
+description: OpenPlanr project guidance
+alwaysApply: true
+---
+
+Use the installed OpenPlanr rules when they match the request. They provide
+procedures and context plus stable output conventions and diagnostics.
+
+Infer reversible details from the repository. When a consequential decision
+cannot be inferred, use Cursor's native structured question surface; if it is
+unavailable, ask one concise chat question at a time. Never dump a written
+questionnaire on the user.
+
+Spec, Plan, Plan Review, and Ship are guidance-first workflows. Planning-only
+requests stop after the plan; implementation requests continue through the
+relevant code changes and checks. Verify work in proportion to risk and fix
+relevant failures directly.
+
+Invoke artifact review through `planr artifact`. Generic HTML defaults to the
+headless `document` presentation; design boards and spatial variant reviews
+use `canvas`.
+
+For Operate requests, apply `openplanr-operate.mdc`. It may dispatch the
+relevant review lenses and returns prioritized advice with concrete next
+actions. Operate does not govern implementation or widen the user's request.

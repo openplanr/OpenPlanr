@@ -1,0 +1,7 @@
+{
+  "fixture": "native-dispatch-nd4-coherent",
+  "gate": "ND4",
+  "mode": "coherent",
+  "description": "Codex native dispatch and Cursor sequential fallback both drain the ready graph in one user invocation; only an explicit --task selector narrows scope.",
+  "invocations": "invocations.json"
+}

@@ -1,0 +1,42 @@
+{
+  "imports": [],
+  "modules": [
+    {
+      "moduleId": "planr-investigate-workflow",
+      "moduleVersion": "2.0.0",
+      "moduleKind": "shared",
+      "description": "Task-specific planr-investigate workflow guidance.",
+      "source": "modules/workflow.md",
+      "appliesWhen": "Whenever planr-investigate is selected.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read",
+          "write"
+        ],
+        "allowedTools": [
+          "read",
+          "edit",
+          "shell"
+        ],
+        "allowedOperations": [
+          "compile",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      }
+    }
+  ]
+}

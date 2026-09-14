@@ -1,0 +1,104 @@
+{
+  "release-compatibility-claim": {
+    "kind": "release-compatibility-claim",
+    "schemaVersion": "1.3.0",
+    "ledgerDigest": "sha256:8784ba699994b1a0eb983e900d9981a9a03fc23c441ab53b7e4dc91ef7c2adb1",
+    "consumer": {
+      "repositoryKey": "cli",
+      "payloadDigest": "sha256:1b21b12eababf51a5b135accb94b66539b7f8ce0823f3278b8bfa1e15d2645c4",
+      "terminalReceiptDigest": "sha256:9e9efb1a29e27601ceb30851d3aeffe8d83c8f8b00cd1e59a60e969f998b8e48"
+    },
+    "producer": {
+      "repositoryKey": "pipeline",
+      "payloadDigest": "sha256:0b1eece814766bca889a7c03541b1a148c4ff64a245bac5b0f8f4f681a378473",
+      "terminalReceiptDigest": "sha256:bec388c04a6ddcc8146edea91d05f4ec92d556e919bead52e865f6a51c06875f",
+      "declaredVersion": "0.42.0"
+    },
+    "derivation": "caret-range-from-producer-declared-version",
+    "display": "^0.42.0",
+    "claimId": "rcc_16d2cbaa9926a5f78bd9d7ddd0f81bc8",
+    "claimDigest": "sha256:16d2cbaa9926a5f78bd9d7ddd0f81bc8050872661dcdc36ac54fc5d6968c24cd"
+  },
+  "claimSet": [
+    {
+      "kind": "release-compatibility-claim",
+      "schemaVersion": "1.3.0",
+      "ledgerDigest": "sha256:8784ba699994b1a0eb983e900d9981a9a03fc23c441ab53b7e4dc91ef7c2adb1",
+      "consumer": {
+        "repositoryKey": "cli",
+        "payloadDigest": "sha256:1b21b12eababf51a5b135accb94b66539b7f8ce0823f3278b8bfa1e15d2645c4",
+        "terminalReceiptDigest": "sha256:9e9efb1a29e27601ceb30851d3aeffe8d83c8f8b00cd1e59a60e969f998b8e48"
+      },
+      "producer": {
+        "repositoryKey": "pipeline",
+        "payloadDigest": "sha256:0b1eece814766bca889a7c03541b1a148c4ff64a245bac5b0f8f4f681a378473",
+        "terminalReceiptDigest": "sha256:bec388c04a6ddcc8146edea91d05f4ec92d556e919bead52e865f6a51c06875f",
+        "declaredVersion": "0.42.0"
+      },
+      "derivation": "caret-range-from-producer-declared-version",
+      "display": "^0.42.0",
+      "claimId": "rcc_16d2cbaa9926a5f78bd9d7ddd0f81bc8",
+      "claimDigest": "sha256:16d2cbaa9926a5f78bd9d7ddd0f81bc8050872661dcdc36ac54fc5d6968c24cd"
+    },
+    {
+      "kind": "release-compatibility-claim",
+      "schemaVersion": "1.3.0",
+      "ledgerDigest": "sha256:8784ba699994b1a0eb983e900d9981a9a03fc23c441ab53b7e4dc91ef7c2adb1",
+      "consumer": {
+        "repositoryKey": "pipeline",
+        "payloadDigest": "sha256:0b1eece814766bca889a7c03541b1a148c4ff64a245bac5b0f8f4f681a378473",
+        "terminalReceiptDigest": "sha256:bec388c04a6ddcc8146edea91d05f4ec92d556e919bead52e865f6a51c06875f"
+      },
+      "producer": {
+        "repositoryKey": "cli",
+        "payloadDigest": "sha256:1b21b12eababf51a5b135accb94b66539b7f8ce0823f3278b8bfa1e15d2645c4",
+        "terminalReceiptDigest": "sha256:9e9efb1a29e27601ceb30851d3aeffe8d83c8f8b00cd1e59a60e969f998b8e48",
+        "declaredVersion": "1.25.3"
+      },
+      "derivation": "caret-range-from-producer-declared-version",
+      "display": "^1.25.3",
+      "claimId": "rcc_23e224e60dc541103b8d40b99bcd2196",
+      "claimDigest": "sha256:23e224e60dc541103b8d40b99bcd219640e0d8ef36cc442e107c11ee0ef0c6f5"
+    },
+    {
+      "kind": "release-compatibility-claim",
+      "schemaVersion": "1.3.0",
+      "ledgerDigest": "sha256:8784ba699994b1a0eb983e900d9981a9a03fc23c441ab53b7e4dc91ef7c2adb1",
+      "consumer": {
+        "repositoryKey": "skills",
+        "payloadDigest": "sha256:6a526266b136c268b0ca55f8f3d60408e117bbc7f3308fa67971641b1603529b",
+        "terminalReceiptDigest": "sha256:6da6856236d09f3a5b47b1357e94d37ae6880e15ef17b723ef41cd891d60beac"
+      },
+      "producer": {
+        "repositoryKey": "cli",
+        "payloadDigest": "sha256:1b21b12eababf51a5b135accb94b66539b7f8ce0823f3278b8bfa1e15d2645c4",
+        "terminalReceiptDigest": "sha256:9e9efb1a29e27601ceb30851d3aeffe8d83c8f8b00cd1e59a60e969f998b8e48",
+        "declaredVersion": "1.25.3"
+      },
+      "derivation": "caret-range-from-producer-declared-version",
+      "display": "^1.25.3",
+      "claimId": "rcc_fed37d8e42a6c9f3fa02feb1bd6037d8",
+      "claimDigest": "sha256:fed37d8e42a6c9f3fa02feb1bd6037d81b167a8cc0bfe6af4958032ca5b9eef3"
+    },
+    {
+      "kind": "release-compatibility-claim",
+      "schemaVersion": "1.3.0",
+      "ledgerDigest": "sha256:8784ba699994b1a0eb983e900d9981a9a03fc23c441ab53b7e4dc91ef7c2adb1",
+      "consumer": {
+        "repositoryKey": "marketplace",
+        "payloadDigest": "sha256:dee4f89d3b0d339994725228e2b4cef2fc760b0c9309eb6a63350facb0fc7fd0",
+        "terminalReceiptDigest": "sha256:24a5848954876170947ccac0bf0d007c8e21df22ca30fd5403193af9d7b27854"
+      },
+      "producer": {
+        "repositoryKey": "pipeline",
+        "payloadDigest": "sha256:0b1eece814766bca889a7c03541b1a148c4ff64a245bac5b0f8f4f681a378473",
+        "terminalReceiptDigest": "sha256:bec388c04a6ddcc8146edea91d05f4ec92d556e919bead52e865f6a51c06875f",
+        "declaredVersion": "0.42.0"
+      },
+      "derivation": "caret-range-from-producer-declared-version",
+      "display": "^0.42.0",
+      "claimId": "rcc_f6fe6c44206e0bfe4e91d56676dea76a",
+      "claimDigest": "sha256:f6fe6c44206e0bfe4e91d56676dea76a9af2bd847814908d0ad4fa650af10626"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/artifact-paste.schema.json",
+  "title": "OpenPlanr encrypted artifact paste boundary",
+  "oneOf": [
+    {
+      "title": "Create paste request",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "operation", "iv", "ciphertext", "ttl"],
+      "properties": {
+        "schemaVersion": { "const": "1.0.0" },
+        "operation": { "const": "create" },
+        "iv": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16}$" },
+        "ciphertext": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9_-]+$" },
+        "ttl": { "type": "string", "enum": ["1d", "7d", "30d"] }
+      }
+    },
+    {
+      "title": "Created paste response",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "operation", "id", "expiresAt", "deletionToken"],
+      "properties": {
+        "schemaVersion": { "const": "1.0.0" },
+        "operation": { "const": "created" },
+        "id": { "type": "string", "minLength": 16, "maxLength": 128, "pattern": "^[A-Za-z0-9_-]+$" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "deletionToken": { "type": "string", "minLength": 32, "maxLength": 256, "pattern": "^[A-Za-z0-9_-]+$" }
+      }
+    },
+    {
+      "title": "Ciphertext storage record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "operation", "id", "iv", "ciphertext", "expiresAt", "size", "deletionTokenHash"],
+      "properties": {
+        "schemaVersion": { "const": "1.0.0" },
+        "operation": { "const": "stored" },
+        "id": { "type": "string", "minLength": 16, "maxLength": 128, "pattern": "^[A-Za-z0-9_-]+$" },
+        "iv": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16}$" },
+        "ciphertext": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9_-]+$" },
+        "expiresAt": { "type": "string", "format": "date-time" },
+        "size": { "type": "integer", "minimum": 1, "maximum": 5242880 },
+        "deletionTokenHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  ]
+}

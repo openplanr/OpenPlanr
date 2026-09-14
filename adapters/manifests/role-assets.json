@@ -1,0 +1,73 @@
+{
+  "kind": "role-adapter-assets",
+  "schemaVersion": "2.0.0",
+  "protocolVersion": "1.8.0",
+  "roleIds": [
+    "planr-backend",
+    "planr-database",
+    "planr-designer",
+    "planr-devops",
+    "planr-documentation",
+    "planr-entity-scaffold",
+    "planr-frontend",
+    "planr-qa",
+    "planr-specification"
+  ],
+  "aliases": [],
+  "roles": [
+    {
+      "id": "planr-backend",
+      "source": "agents/dev/planr-backend/AGENT.md",
+      "path": "dist/plugins/claude/openplanr/agents/planr-backend.md",
+      "digest": "sha256:8290dfdefd47d7d766676bc78c8f83a96a63c69ff35ee63a41464ae45da81a9d"
+    },
+    {
+      "id": "planr-database",
+      "source": "agents/po/preflight/planr-database/AGENT.md",
+      "path": "dist/plugins/claude/openplanr/agents/planr-database.md",
+      "digest": "sha256:9f26efbd3980c92618f395c4137713b8b39fa56ddfe4cb2f85fc1edc8ef93115"
+    },
+    {
+      "id": "planr-designer",
+      "source": "agents/po/planr-designer/AGENT.md",
+      "path": "dist/plugins/claude/openplanr/agents/planr-designer.md",
+      "digest": "sha256:3990b4e9ed4d2184f0f11dd088269f3b73129227adc89c5c91be17c775972a61"
+    },
+    {
+      "id": "planr-devops",
+      "source": "agents/post-build/planr-devops/AGENT.md",
+      "path": "dist/plugins/claude/openplanr/agents/planr-devops.md",
+      "digest": "sha256:1f294d527a8b8d71203117e03439106c6e22896d82be57e58b4e9b3464c9f33a"
+    },
+    {
+      "id": "planr-documentation",
+      "source": "agents/post-build/planr-documentation/AGENT.md",
+      "path": "dist/plugins/claude/openplanr/agents/planr-documentation.md",
+      "digest": "sha256:7374a7f2b4a57c15347d51f5a938c32d88a8da4fac49e6bb966465463a7e5a7f"
+    },
+    {
+      "id": "planr-entity-scaffold",
+      "source": "agents/po/preflight/planr-entity-scaffold/AGENT.md",
+      "path": "dist/plugins/claude/openplanr/agents/planr-entity-scaffold.md",
+      "digest": "sha256:612dfd614734b90387fd9614324a0d8d2f1104cdb960d803107761cdd4872aac"
+    },
+    {
+      "id": "planr-frontend",
+      "source": "agents/dev/planr-frontend/AGENT.md",
+      "path": "dist/plugins/claude/openplanr/agents/planr-frontend.md",
+      "digest": "sha256:35191c25e3cd2c1aad4791db5b244088801a1e5c14de0531f4f8856cd9bb67f2"
+    },
+    {
+      "id": "planr-qa",
+      "source": "agents/qa/planr-qa/AGENT.md",
+      "path": "dist/plugins/claude/openplanr/agents/planr-qa.md",
+      "digest": "sha256:9dda1414cac5fe4c0155f750c05f60810afde2b581766b99dab358fd66b73dd6"
+    },
+    {
+      "id": "planr-specification",
+      "source": "agents/po/planr-specification/AGENT.md",
+      "path": "dist/plugins/claude/openplanr/agents/planr-specification.md",
+      "digest": "sha256:bbeca127a8f6d6fd0d3a1ad167effbbc277db3331e2891d378a060160c665f53"
+    }
+  ]
+}

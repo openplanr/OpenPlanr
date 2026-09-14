@@ -1,0 +1,42 @@
+{
+  "imports": [],
+  "modules": [
+    {
+      "moduleId": "planr-plan-workflow",
+      "moduleVersion": "1.1.0",
+      "moduleKind": "context",
+      "description": "Task-specific planr-plan workflow guidance.",
+      "source": "modules/workflow.md",
+      "appliesWhen": "Whenever planr-plan is selected.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read",
+          "write"
+        ],
+        "allowedTools": [
+          "read",
+          "edit"
+        ],
+        "allowedOperations": [
+          "compile",
+          "spec",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      }
+    }
+  ]
+}

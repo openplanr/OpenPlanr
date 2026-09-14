@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "openplanr",
+  "version": "0.1.0",
+  "description": "Canonical OpenPlanr planning, delivery, Operate, artifact, design, and review skills with Protocol-owned role agents.",
+  "author": {
+    "name": "AsemDevs"
+  },
+  "license": "MIT",
+  "skills": [
+    "./skills/"
+  ],
+  "commands": [
+    "./commands/"
+  ],
+  "agents": [
+    "./agents/backend-agent.md",
+    "./agents/db-agent.md",
+    "./agents/designer-agent.md",
+    "./agents/devops-agent.md",
+    "./agents/doc-gen-agent.md",
+    "./agents/entity-scaffold-agent.md",
+    "./agents/frontend-agent.md",
+    "./agents/qa-agent.md",
+    "./agents/specification-agent.md"
+  ]
+}

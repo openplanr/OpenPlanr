@@ -1,0 +1,88 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "sankey-fixture",
+  "title": "Sankey fixture",
+  "summary": "Canonical semantic fixture for the sankey grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "sankey",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Sankey A",
+      "kind": "primary-item",
+      "description": "First semantic item in the sankey fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "Sankey B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the sankey fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [
+    {
+      "id": "relation-a-b",
+      "from": "item-a",
+      "to": "item-b",
+      "kind": "flow",
+      "label": "continues",
+      "weight": null
+    }
+  ],
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [
+    {
+      "id": "series-main",
+      "label": "Primary series",
+      "values": [
+        {
+          "key": "A",
+          "value": 3
+        },
+        {
+          "key": "B",
+          "value": 5
+        }
+      ]
+    }
+  ],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Sankey fixture",
+    "description": "A compact sankey example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b",
+      "series-main"
+    ]
+  },
+  "documentDigest": "sha256:7dd365116110713972253e15cf97c61478d5a653ca614b542d52c1cae387225c"
+}

@@ -1,0 +1,63 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "tree-fixture",
+  "title": "Tree fixture",
+  "summary": "Canonical semantic fixture for the tree grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "tree",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Tree A",
+      "kind": "primary-item",
+      "description": "First semantic item in the tree fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "Tree B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the tree fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [],
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Tree fixture",
+    "description": "A compact tree example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:ca2aca272a46a8857507a7fcba259069243d3a1559a4770e42f8561d8c5065f8"
+}

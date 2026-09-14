@@ -1,0 +1,37 @@
+{
+  "kind": "operating-governed-operation",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "2.0.0",
+  "operationId": "caller-selected-key",
+  "operationKind": "execute",
+  "action": {
+    "actionId": "act_runtime0001",
+    "revision": 3,
+    "actionHash": "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "assignmentId": "asg_runtime0001",
+  "requestFingerprint": "caller-idempotency-key",
+  "evaluationId": "pevl_runtime0001",
+  "approvalIds": ["aprv_runtime0001"],
+  "grantId": "cgr_runtime0001",
+  "capability": { "id": "bounded-project-write", "version": "1.0.0" },
+  "target": { "kind": "project-record", "id": "record-0001", "revision": "rev-0001" },
+  "effectClass": "destructive",
+  "executor": {
+    "executorId": "open-reference-project-executor",
+    "executorVersion": "1.0.0"
+  },
+  "connector": { "id": "disposable-local-project-connector", "version": "1.0.0" },
+  "preconditionArtifactIds": ["art_runtime0001"],
+  "inputArtifactIds": ["art_runtime0001"],
+  "verificationPlanId": "vfy_runtime0001",
+  "rollbackClass": "reversible",
+  "state": "dispatching",
+  "intentEventId": "evt_runtime0001",
+  "resultId": null,
+  "rollbackPlanId": null,
+  "parentOperationId": null,
+  "createdAt": "2026-08-10T12:00:00Z",
+  "updatedAt": "2026-08-10T12:00:00Z",
+  "operationHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+}

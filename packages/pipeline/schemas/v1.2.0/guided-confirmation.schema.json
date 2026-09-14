@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/guided-confirmation.schema.json",
+  "title": "OpenPlanr Protocol v1.2 guided confirmation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "confirmationId",
+    "state",
+    "actionId",
+    "sessionId",
+    "command",
+    "effect",
+    "providerUse",
+    "confirmationScope",
+    "confirmationDigest",
+    "projectIdentity",
+    "projectHead",
+    "configHead",
+    "arguments",
+    "destinations",
+    "writes",
+    "createdAt",
+    "expiresAt"
+  ],
+  "properties": {
+    "kind": { "const": "guided-confirmation" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "confirmationId": { "type": "string", "pattern": "^GIC-[A-Za-z0-9._-]{8,128}$" },
+    "state": { "type": "string", "enum": ["preview", "confirmed", "rejected", "expired", "stale"] },
+    "actionId": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,127}$" },
+    "sessionId": { "type": "string", "pattern": "^GIS-[A-Za-z0-9._-]{8,128}$" },
+    "command": { "type": "string", "pattern": "^planr [^\\r\\n]{1,1024}$" },
+    "effect": {
+      "type": "string",
+      "enum": ["read-only", "machine-local-write", "project-write", "provider-call", "external-effect"]
+    },
+    "providerUse": { "type": "boolean" },
+    "confirmationScope": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "confirmationDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "projectIdentity": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "projectHead": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "configHead": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "eventHead": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["sequence", "hash"],
+      "properties": {
+        "sequence": { "type": "integer", "minimum": 0 },
+        "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+      }
+    },
+    "arguments": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "type": "string", "maxLength": 4096 }
+    },
+    "destinations": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "type": "string", "maxLength": 4096 }
+    },
+    "writes": {
+      "type": "array",
+      "maxItems": 100,
+      "uniqueItems": true,
+      "items": { "type": "string", "maxLength": 4096 }
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "confirmedAt": { "type": "string", "format": "date-time" },
+    "confirmedBy": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "terminalReason": { "type": "string", "minLength": 1, "maxLength": 500 }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "title": "Provider action",
+          "properties": {
+            "effect": { "const": "provider-call" },
+            "providerUse": { "const": true }
+          }
+        },
+        {
+          "title": "Non-provider action",
+          "properties": {
+            "effect": { "enum": ["read-only", "machine-local-write", "project-write", "external-effect"] },
+            "providerUse": { "const": false }
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "title": "Confirmation preview",
+          "properties": { "state": { "const": "preview" } }
+        },
+        {
+          "title": "Confirmed",
+          "required": ["confirmedAt", "confirmedBy"],
+          "properties": { "state": { "const": "confirmed" } }
+        },
+        {
+          "title": "Rejected",
+          "required": ["terminalReason"],
+          "properties": { "state": { "const": "rejected" } }
+        },
+        {
+          "title": "Expired",
+          "required": ["terminalReason"],
+          "properties": { "state": { "const": "expired" } }
+        },
+        {
+          "title": "Stale",
+          "required": ["terminalReason"],
+          "properties": { "state": { "const": "stale" } }
+        }
+      ]
+    }
+  ]
+}

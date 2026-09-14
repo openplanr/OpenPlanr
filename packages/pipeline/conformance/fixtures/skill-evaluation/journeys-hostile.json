@@ -1,0 +1,117 @@
+{
+  "packedMembers": [
+    { "name": "a parent traversal member", "path": "../outside/SKILL.md", "expectedCode": "E_EVALUATION_PACKED_MEMBER_REFUSED" },
+    { "name": "a nested traversal member", "path": "skills/../../outside/SKILL.md", "expectedCode": "E_EVALUATION_PACKED_MEMBER_REFUSED" },
+    { "name": "an absolute member path", "path": "/etc/planr/SKILL.md", "expectedCode": "E_EVALUATION_PACKED_MEMBER_REFUSED" },
+    { "name": "a sibling checkout reference", "path": "../../sibling-checkout/skills/SKILL.md", "expectedCode": "E_EVALUATION_PACKED_MEMBER_REFUSED" }
+  ],
+  "publishProjections": [
+    { "name": "a raw prompt", "value": { "prompt": "test this UI in a real browser" }, "expectedCode": "E_EVALUATION_PUBLISH_UNSAFE" },
+    { "name": "a raw model output", "value": { "modelOutput": "I will invoke the skill" }, "expectedCode": "E_EVALUATION_PUBLISH_UNSAFE" },
+    { "name": "a screenshot payload", "value": { "screenshot": "iVBORw0KGgo" }, "expectedCode": "E_EVALUATION_PUBLISH_UNSAFE" },
+    { "name": "an absolute filesystem location", "value": { "location": "/var/folders/evaluation/run/trace.log" }, "expectedCode": "E_EVALUATION_PUBLISH_UNSAFE" },
+    { "name": "a bearer credential", "value": { "note": "authorization: Bearer abcdefghijklmnopqrstuvwx" }, "expectedCode": "E_EVALUATION_PUBLISH_UNSAFE" },
+    { "name": "a stack frame", "value": { "detail": "boom\n    at runEvaluation (runner.mjs:1:1)" }, "expectedCode": "E_EVALUATION_PUBLISH_UNSAFE" },
+    { "name": "an unbounded free-text field", "value": { "summary": "the run completed and here is a long human explanation that no publishable projection is allowed to carry because it is free text rather than a counter" }, "expectedCode": "E_EVALUATION_PUBLISH_UNSAFE" }
+  ],
+  "waiverMutations": [
+    {
+      "name": "a waiver aimed at package parity",
+      "operations": [{ "op": "replace", "path": "/metric", "value": "package-parity" }],
+      "expectedCode": "E_EVALUATION_WAIVER_REFUSED",
+      "layer": "contract"
+    },
+    {
+      "name": "a waiver aimed at schema validity",
+      "operations": [{ "op": "replace", "path": "/metric", "value": "schema-validity" }],
+      "expectedCode": "E_EVALUATION_WAIVER_REFUSED",
+      "layer": "contract"
+    },
+    {
+      "name": "a waiver aimed at a P0 finding",
+      "operations": [{ "op": "replace", "path": "/metric", "value": "finding-severity-p0" }],
+      "expectedCode": "E_EVALUATION_WAIVER_REFUSED",
+      "layer": "contract"
+    },
+    {
+      "name": "a waiver aimed at a P1 finding",
+      "operations": [{ "op": "replace", "path": "/metric", "value": "finding-severity-p1" }],
+      "expectedCode": "E_EVALUATION_WAIVER_REFUSED",
+      "layer": "contract"
+    },
+    {
+      "name": "a waiver whose horizon never closes",
+      "operations": [{ "op": "replace", "path": "/expiresAt", "value": "2027-08-01T00:00:00.000Z" }],
+      "expectedCode": "E_EVALUATION_WAIVER_REFUSED",
+      "layer": "contract"
+    },
+    {
+      "name": "an expired waiver",
+      "operations": [
+        { "op": "replace", "path": "/issuedAt", "value": "2026-05-01T00:00:00.000Z" },
+        { "op": "replace", "path": "/expiresAt", "value": "2026-06-01T00:00:00.000Z" }
+      ],
+      "expectedCode": "E_EVALUATION_WAIVER_REFUSED",
+      "layer": "admission"
+    },
+    {
+      "name": "a waiver signed by a non-owner",
+      "operations": [{ "op": "replace", "path": "/ownerSignature/identity", "value": "contributor.without.authority" }],
+      "expectedCode": "E_EVALUATION_WAIVER_REFUSED",
+      "layer": "admission"
+    },
+    {
+      "name": "a waiver issued under a different gate policy",
+      "operations": [{ "op": "replace", "path": "/gatePolicyDigest", "value": "sha256:1111111111111111111111111111111111111111111111111111111111111111" }],
+      "expectedCode": "E_EVALUATION_WAIVER_REFUSED",
+      "layer": "admission"
+    },
+    {
+      "name": "a waiver naming a scenario this run never graded",
+      "operations": [{ "op": "replace", "path": "/scope/scenarioDigest", "value": "sha256:2222222222222222222222222222222222222222222222222222222222222222" }],
+      "expectedCode": "E_EVALUATION_WAIVER_REFUSED",
+      "layer": "admission"
+    }
+  ],
+  "fabricatedAdapters": [
+    {
+      "name": "an adapter that is not registered as trusted",
+      "adapter": { "trusted": false, "attests": ["route", "form", "viewport", "accessibility", "console", "network"] },
+      "expectedTerminalReason": "BROWSER_TRUSTED_HOST_REQUIRED",
+      "expectedAbsenceCode": "host-unavailable"
+    },
+    {
+      "name": "a trusted adapter that cannot attest the console channel",
+      "adapter": { "trusted": true, "attests": ["route", "form", "viewport", "accessibility", "network"] },
+      "expectedTerminalReason": "BROWSER_EVIDENCE_UNATTESTED",
+      "expectedAbsenceCode": "host-unavailable"
+    }
+  ],
+  "staleEvidence": [
+    {
+      "name": "a changed scenario byte invalidates exactly that scenario",
+      "changedInput": "scenarioDigest",
+      "expectedReason": "input-digest-changed"
+    },
+    {
+      "name": "a substituted grader version invalidates exactly that scenario",
+      "changedInput": "graderRegistrationDigest",
+      "expectedReason": "input-digest-changed"
+    },
+    {
+      "name": "a substituted host profile invalidates exactly that scenario",
+      "changedInput": "hostProfileDigest",
+      "expectedReason": "input-digest-changed"
+    },
+    {
+      "name": "a changed package inventory invalidates exactly that scenario",
+      "changedInput": "packageDigest",
+      "expectedReason": "input-digest-changed"
+    },
+    {
+      "name": "a changed skill source byte invalidates exactly that scenario",
+      "changedInput": "sourceDigest",
+      "expectedReason": "input-digest-changed"
+    }
+  ]
+}

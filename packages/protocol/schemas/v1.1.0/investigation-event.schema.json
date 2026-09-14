@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://openplanr.dev/schemas/v1.1.0/investigation-event.schema.json",
+  "title": "OpenPlanr Protocol 1.1 investigation advance event",
+  "oneOf": [
+    { "$ref": "#/$defs/observation" }, { "$ref": "#/$defs/hypotheses" }, { "$ref": "#/$defs/experiment" }, { "$ref": "#/$defs/diagnosis" }, { "$ref": "#/$defs/change" }
+  ],
+  "$defs": {
+    "base": { "type": "object", "required": ["type", "expectedGeneration"], "properties": { "expectedGeneration": { "type": "integer", "minimum": 0 }, "eventId": { "type": "string", "pattern": "^ive_[a-f0-9]{32}$" } } },
+    "observation": { "type": "object", "additionalProperties": false, "required": ["type", "expectedGeneration", "observation"], "properties": { "type": { "const": "observation.recorded" }, "expectedGeneration": { "type": "integer", "minimum": 0 }, "eventId": { "type": "string", "pattern": "^ive_[a-f0-9]{32}$" }, "observation": { "type": "object" } } },
+    "hypotheses": { "type": "object", "additionalProperties": false, "required": ["type", "expectedGeneration", "hypotheses"], "properties": { "type": { "const": "hypotheses.registered" }, "expectedGeneration": { "type": "integer", "minimum": 0 }, "eventId": { "type": "string", "pattern": "^ive_[a-f0-9]{32}$" }, "hypotheses": { "type": "array", "minItems": 2, "maxItems": 32 } } },
+    "experiment": { "type": "object", "additionalProperties": false, "required": ["type", "expectedGeneration", "experiment"], "properties": { "type": { "const": "experiment.ran" }, "expectedGeneration": { "type": "integer", "minimum": 0 }, "eventId": { "type": "string", "pattern": "^ive_[a-f0-9]{32}$" }, "experiment": { "type": "object" } } },
+    "diagnosis": { "type": "object", "additionalProperties": false, "required": ["type", "expectedGeneration", "diagnosis"], "properties": { "type": { "const": "diagnosis.concluded" }, "expectedGeneration": { "type": "integer", "minimum": 0 }, "eventId": { "type": "string", "pattern": "^ive_[a-f0-9]{32}$" }, "diagnosis": { "type": "object" } } },
+    "change": { "type": "object", "additionalProperties": false, "required": ["type", "expectedGeneration", "summary"], "properties": { "type": { "const": "change.recorded" }, "expectedGeneration": { "type": "integer", "minimum": 0 }, "eventId": { "type": "string", "pattern": "^ive_[a-f0-9]{32}$" }, "summary": { "type": "string", "minLength": 1, "maxLength": 4000 } } }
+  }
+}

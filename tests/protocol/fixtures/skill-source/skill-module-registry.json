@@ -1,0 +1,33 @@
+{
+  "kind": "skill-module-registry",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "documentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "modules": [
+    {
+      "moduleId": "context-gathering",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "context",
+      "description": "Shared progressive context-gathering behavior for planning skills.",
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "read-only",
+        "allowedCapabilities": ["context-gathering"],
+        "allowedTools": ["read"],
+        "allowedOperations": ["plan"],
+        "allowedOutputClasses": ["A"],
+        "forbiddenEffects": ["deploy", "publish", "credential-write"]
+      },
+      "source": {
+        "path": "skills/modules/context-gathering/module.json",
+        "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "appliesWhen": "The skill needs to gather task context before implementation.",
+      "dependsOn": [],
+      "references": []
+    }
+  ]
+}

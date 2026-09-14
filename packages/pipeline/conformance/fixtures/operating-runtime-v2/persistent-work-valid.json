@@ -1,0 +1,177 @@
+{
+  "finding": {
+    "kind": "operating-finding",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "findingId": "fnd_00000001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "origin": "persistent-work",
+    "sourceCycleId": "cyc_00000001",
+    "sourceArtifactId": "art_00000002",
+    "title": "Revenue risk",
+    "statement": "Revenue is below plan.",
+    "state": "open",
+    "ownerActorId": "owner-001",
+    "revisitAt": null,
+    "createdAt": "2026-08-08T08:00:00Z",
+    "updatedAt": "2026-08-08T08:00:00Z"
+  },
+  "decision": {
+    "kind": "operating-decision",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "decisionId": "dec_00000001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "origin": "persistent-work",
+    "sourceCycleId": "cyc_00000001",
+    "sourceArtifactId": "art_00000002",
+    "title": "Prioritize retention",
+    "question": "What should we prioritize?",
+    "outcome": null,
+    "rationale": "Retention is the largest risk.",
+    "evidenceRefIds": [
+      "evr_00000001"
+    ],
+    "alternatives": [
+      "Prioritize acquisition instead."
+    ],
+    "confidence": 0.8,
+    "assumptionIds": [],
+    "expectedUpside": "More retained customers.",
+    "expectedDownside": "Less acquisition capacity.",
+    "dissent": [],
+    "reopenConditions": [
+      "A contradicting retention observation is accepted."
+    ],
+    "revisitConditions": [
+      "Retention changes materially."
+    ],
+    "state": "proposed",
+    "ownerActorId": "owner-001",
+    "revisitAt": null,
+    "revision": 1,
+    "predecessorDecisionId": null,
+    "historyDecisionIds": [],
+    "createdAt": "2026-08-08T08:00:00Z",
+    "updatedAt": "2026-08-08T08:00:00Z"
+  },
+  "action": {
+    "kind": "operating-action",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "actionId": "act_00000001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "sourceCycleId": "cyc_00000001",
+    "sourceArtifactId": "art_00000001",
+    "title": "Interview customers",
+    "state": "proposed",
+    "ownerActorId": "owner-001",
+    "accountabilityDisposition": null,
+    "sourceDecisionId": "dec_00000001",
+    "sourceFindingIds": [
+      "fnd_00000001"
+    ],
+    "dependsOnActionIds": [],
+    "objectiveId": "obj_00000001",
+    "expectedResult": "Validate the retention hypothesis.",
+    "metricId": "met_00000001",
+    "baseline": 0.82,
+    "target": 0.9,
+    "verificationWindow": "30d",
+    "verificationPlanId": "vfy_00000001",
+    "createdAt": "2026-08-08T08:00:00Z",
+    "updatedAt": "2026-08-08T08:00:00Z"
+  },
+  "changeSet": {
+    "kind": "operating-work-change-set",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "cycleId": "cyc_00000001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "findings": [
+      {
+        "draftRef": "draft_find_0001",
+        "title": "Revenue risk",
+        "statement": "Revenue is below plan.",
+        "state": "open",
+        "ownerActorId": "owner-001",
+        "revisitAt": null
+      }
+    ],
+    "decisions": [
+      {
+        "draftRef": "draft_decision_01",
+        "title": "Prioritize retention",
+        "question": "What should we prioritize?",
+        "rationale": "Retention is the largest current risk.",
+        "evidenceRefIds": [
+          "evr_00000001"
+        ],
+        "alternatives": [
+          "Prioritize acquisition instead."
+        ],
+        "confidence": 0.8,
+        "assumptionIds": [],
+        "expectedUpside": "More retained customers.",
+        "expectedDownside": "Less acquisition capacity.",
+        "dissent": [],
+        "reopenConditions": [
+          "A contradictory retention observation is accepted."
+        ],
+        "revisitConditions": [
+          "Retention changes materially."
+        ],
+        "ownerActorId": "owner-001",
+        "revisitAt": null
+      }
+    ],
+    "actions": [
+      {
+        "draftRef": "draft_action_001",
+        "title": "Interview customers",
+        "ownerActorId": "owner-001",
+        "accountabilityDisposition": null,
+        "sourceDecisionDraftRef": "draft_decision_01",
+        "sourceFindingDraftRefs": [
+          "draft_find_0001"
+        ],
+        "dependsOnActionDraftRefs": [],
+        "objectiveId": "obj_00000001",
+        "expectedResult": "Validate the retention hypothesis.",
+        "metricId": "met_00000001",
+        "baseline": 0.82,
+        "target": 0.9,
+        "verificationWindow": "30d",
+        "verificationPlanId": "vfy_00000001"
+      }
+    ]
+  },
+  "ledger": {
+    "kind": "operating-work-ledger",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "generatedAt": "2026-08-08T08:00:00Z",
+    "findings": [],
+    "decisions": [],
+    "actions": [],
+    "cycleLinks": [
+      {
+        "entityKind": "finding",
+        "entityId": "fnd_00000001",
+        "cycleId": "cyc_00000001",
+        "relation": "source"
+      }
+    ]
+  }
+}

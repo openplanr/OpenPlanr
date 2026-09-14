@@ -1,0 +1,11 @@
+{
+  "kind": "evaluation-baseline",
+  "schemaVersion": "1.0.0",
+  "frozen": true,
+  "scope": "planr.professional.skills",
+  "capturedAt": "2026-08-25T00:00:00.000Z",
+  "latencyMsP50": 1000,
+  "latencyMsP95": 1500,
+  "costEstimateCurrency": "USD",
+  "costEstimateMicros": 21141
+}

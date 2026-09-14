@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://openplanr.dev/schemas/v1.1.0/investigation-fix.schema.json",
+  "title": "OpenPlanr Protocol 1.1 authorized fix evidence", "type": "object", "additionalProperties": false,
+  "required": ["diagnosisReceiptHash", "authorityDigest", "change", "regression", "relevantSuite"],
+  "properties": {
+    "diagnosisReceiptHash": { "$ref": "#/$defs/digest" }, "authorityDigest": { "$ref": "#/$defs/digest" },
+    "change": { "type": "object", "additionalProperties": false, "required": ["summary", "fromBaselineDigest", "toBaselineDigest", "changedPaths"], "properties": { "summary": { "type": "string", "minLength": 1, "maxLength": 4000 }, "fromBaselineDigest": { "$ref": "#/$defs/digest" }, "toBaselineDigest": { "$ref": "#/$defs/digest" }, "changedPaths": { "type": "array", "minItems": 1, "maxItems": 1024, "uniqueItems": true, "items": { "type": "object", "additionalProperties": false, "required": ["repositoryKey", "path", "changeType"], "properties": { "repositoryKey": { "type": "string", "minLength": 1, "maxLength": 64 }, "path": { "type": "string", "minLength": 1, "maxLength": 512 }, "changeType": { "enum": ["add", "delete", "replace", "modify"] } } } } } },
+    "regression": { "$ref": "#/$defs/digest" }, "relevantSuite": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": { "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } }
+}

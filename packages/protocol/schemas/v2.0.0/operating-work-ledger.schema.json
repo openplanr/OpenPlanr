@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-work-ledger.schema.json",
+  "x-openplanr-contract": { "id": "operating-work-ledger", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 rebuildable persistent-work ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "scopeId", "domainId", "domainVersion", "generatedAt", "findings", "decisions", "actions", "cycleLinks"],
+  "properties": {
+    "kind": { "const": "operating-work-ledger" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "scopeId": { "$ref": "#/$defs/nonPlaceholder" },
+    "domainId": { "$ref": "#/$defs/nonPlaceholder" },
+    "domainVersion": { "allOf": [{ "$ref": "#/$defs/nonPlaceholder" }, { "maxLength": 64 }] },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "findings": { "type": "array", "items": { "$ref": "operating-finding.schema.json" } },
+    "decisions": { "type": "array", "items": { "$ref": "operating-decision.schema.json" } },
+    "actions": { "type": "array", "items": { "$ref": "operating-action.schema.json" } },
+    "cycleLinks": { "type": "array", "items": { "$ref": "#/$defs/cycleLink" } }
+  },
+  "$defs": {
+    "cycleLink": {
+      "type": "object", "additionalProperties": false,
+      "required": ["entityKind", "entityId", "cycleId", "relation"],
+      "properties": {
+        "entityKind": { "type": "string", "enum": ["finding", "decision", "action"] },
+        "entityId": { "type": "string", "pattern": "^(?:fnd|dec|act)_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "cycleId": { "type": "string", "pattern": "^cyc_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "relation": { "type": "string", "enum": ["source", "touched", "carried-forward"] }
+      },
+      "oneOf": [
+        { "properties": { "entityKind": { "const": "finding" }, "entityId": { "pattern": "^fnd_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" } } },
+        { "properties": { "entityKind": { "const": "decision" }, "entityId": { "pattern": "^dec_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" } } },
+        { "properties": { "entityKind": { "const": "action" }, "entityId": { "pattern": "^act_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" } } }
+      ]
+    },
+    "nonPlaceholder": { "type": "string", "minLength": 1, "maxLength": 128, "not": { "pattern": "(?:<[^>]+>|\\{\\{[^}]+\\}\\})" } }
+  }
+}

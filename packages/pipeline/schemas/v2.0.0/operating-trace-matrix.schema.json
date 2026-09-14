@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-trace-matrix.schema.json",
+  "x-openplanr-contract": { "id": "operating-trace-matrix", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 bounded reciprocal trace matrix",
+  "description": "Access-safe identity graph joining operating requirements and absences to seats, accepted work, proof, decisions, governed actions, and verification. Every edge is listed once and reciprocally indexed by both endpoint nodes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind", "schemaVersion", "protocolVersion", "matrixId", "scopeId", "domainId",
+    "domainVersion", "cycleId", "eventHead", "limits", "nodes", "edges", "omissions",
+    "proof", "matrixHash"
+  ],
+  "properties": {
+    "kind": { "const": "operating-trace-matrix" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "matrixId": { "type": "string", "pattern": "^trx_[a-f0-9]{32}$" },
+    "scopeId": { "$ref": "#/$defs/id" },
+    "domainId": { "$ref": "#/$defs/id" },
+    "domainVersion": { "$ref": "#/$defs/version" },
+    "cycleId": { "$ref": "#/$defs/id" },
+    "eventHead": { "$ref": "#/$defs/eventHead" },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxNodes", "maxEdges", "truncated"],
+      "properties": {
+        "maxNodes": { "const": 8192 },
+        "maxEdges": { "const": 32768 },
+        "truncated": { "const": false }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "maxItems": 8192,
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 32768,
+      "items": { "$ref": "#/$defs/edge" }
+    },
+    "omissions": {
+      "type": "array",
+      "maxItems": 8192,
+      "items": { "$ref": "#/$defs/omission" }
+    },
+    "proof": { "$ref": "#/$defs/proof" },
+    "matrixHash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "nodeId": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "eventHead": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false, "required": ["sequence", "hash"],
+          "properties": { "sequence": { "const": 0 }, "hash": { "const": null } }
+        },
+        {
+          "type": "object", "additionalProperties": false, "required": ["sequence", "hash"],
+          "properties": { "sequence": { "type": "integer", "minimum": 1 }, "hash": { "$ref": "#/$defs/hash" } }
+        }
+      ]
+    },
+    "nodeKind": {
+      "enum": [
+        "requirement", "absence", "seat", "assignment", "artifact", "claim",
+        "evidence-ref", "finding", "decision", "action", "disposition",
+        "verification", "outcome"
+      ]
+    },
+    "locator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id", "contract", "scopeId", "domainId", "domainVersion", "cycleId"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/nodeKind" },
+        "id": { "$ref": "#/$defs/nodeId" },
+        "contract": {
+          "type": "object", "additionalProperties": false, "required": ["id", "version"],
+          "properties": { "id": { "$ref": "#/$defs/id" }, "version": { "$ref": "#/$defs/version" } }
+        },
+        "scopeId": { "$ref": "#/$defs/id" },
+        "domainId": { "$ref": "#/$defs/id" },
+        "domainVersion": { "$ref": "#/$defs/version" },
+        "cycleId": { "$ref": "#/$defs/id" }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["locator", "accessState", "proofState", "inboundEdgeIds", "outboundEdgeIds"],
+      "properties": {
+        "locator": { "$ref": "#/$defs/locator" },
+        "accessState": { "enum": ["available", "restricted", "absent"] },
+        "proofState": {
+          "enum": [
+            "not-applicable", "pending", "terminal", "accepted", "rejected", "failed",
+            "abandoned", "verified", "stale", "supported", "contradicted", "contested",
+            "unverified", "absent", "restricted", "proposed", "governed", "completed",
+            "insufficient"
+          ]
+        },
+        "inboundEdgeIds": {
+          "type": "array", "maxItems": 32768, "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^tre_[a-f0-9]{32}$" }
+        },
+        "outboundEdgeIds": {
+          "type": "array", "maxItems": 32768, "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^tre_[a-f0-9]{32}$" }
+        }
+      }
+    },
+    "endpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": { "kind": { "$ref": "#/$defs/nodeKind" }, "id": { "$ref": "#/$defs/nodeId" } }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["edgeId", "relation", "from", "to"],
+      "properties": {
+        "edgeId": { "type": "string", "pattern": "^tre_[a-f0-9]{32}$" },
+        "relation": {
+          "enum": [
+            "declares", "assigned-to", "issued-as", "records", "produces", "contains",
+            "supported-by", "contradicted-by", "informs", "challenges", "decides",
+            "proposes", "disposes", "governed-by", "verified-by", "observed-as"
+          ]
+        },
+        "from": { "$ref": "#/$defs/endpoint" },
+        "to": { "$ref": "#/$defs/endpoint" }
+      }
+    },
+    "omission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["omissionId", "kind", "subject", "subjectId", "reasonCode", "incidentEdgeCount"],
+      "properties": {
+        "omissionId": { "type": "string", "pattern": "^tro_[a-f0-9]{32}$" },
+        "kind": { "enum": ["restricted", "absent"] },
+        "subject": { "$ref": "#/$defs/nodeKind" },
+        "subjectId": { "$ref": "#/$defs/nodeId" },
+        "reasonCode": { "enum": ["OPERATE_TRACE_ACCESS_RESTRICTED", "OPERATE_TRACE_TYPED_ABSENCE", "OPERATE_TRACE_ROLE_NOT_SELECTED"] },
+        "incidentEdgeCount": { "type": "integer", "minimum": 0, "maximum": 32768 }
+      }
+    },
+    "proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "terminalAssignments", "acceptedArtifacts", "verifiedEvidence", "staleEvidence",
+        "supportedClaims", "contradictedClaims", "unverifiedClaims", "restrictedNodes",
+        "typedAbsences", "verifiedActions"
+      ],
+      "properties": {
+        "terminalAssignments": { "type": "integer", "minimum": 0, "maximum": 8192 },
+        "acceptedArtifacts": { "type": "integer", "minimum": 0, "maximum": 8192 },
+        "verifiedEvidence": { "type": "integer", "minimum": 0, "maximum": 8192 },
+        "staleEvidence": { "type": "integer", "minimum": 0, "maximum": 8192 },
+        "supportedClaims": { "type": "integer", "minimum": 0, "maximum": 8192 },
+        "contradictedClaims": { "type": "integer", "minimum": 0, "maximum": 8192 },
+        "unverifiedClaims": { "type": "integer", "minimum": 0, "maximum": 8192 },
+        "restrictedNodes": { "type": "integer", "minimum": 0, "maximum": 8192 },
+        "typedAbsences": { "type": "integer", "minimum": 0, "maximum": 8192 },
+        "verifiedActions": { "type": "integer", "minimum": 0, "maximum": 8192 }
+      }
+    }
+  }
+}

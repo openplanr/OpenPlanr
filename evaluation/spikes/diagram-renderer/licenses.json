@@ -1,0 +1,40 @@
+{
+  "kind": "openplanr-diagram-renderer-license-report",
+  "schemaVersion": "1.0.0",
+  "selected": [
+    {
+      "package": "@resvg/resvg-js",
+      "version": "2.6.2",
+      "license": "MPL-2.0",
+      "source": "https://github.com/thx/resvg-js"
+    },
+    {
+      "package": "@resvg/resvg-js-darwin-arm64",
+      "version": "2.6.2",
+      "license": "MPL-2.0",
+      "source": "https://github.com/thx/resvg-js"
+    },
+    {
+      "package": "@expo-google-fonts/inter",
+      "version": "0.4.2",
+      "license": "MIT AND OFL-1.1",
+      "usedAsset": "400Regular/Inter_400Regular.ttf",
+      "source": "https://github.com/expo/google-fonts"
+    }
+  ],
+  "review": "Dependencies remain separate unmodified packages. MPL-2.0 notice/source obligations and the Inter OFL notice must accompany distribution; OpenPlanr source remains MIT.",
+  "rejected": [
+    {
+      "package": "sharp",
+      "version": "0.35.4",
+      "license": "Apache-2.0",
+      "transitiveConcern": "platform libvips packages are LGPL-3.0-or-later and exceed the payload target"
+    },
+    {
+      "package": "@excalidraw/mermaid-to-excalidraw",
+      "version": "2.2.2",
+      "license": "MIT",
+      "transitiveConcern": "full Mermaid runtime graph is unnecessary for the certified flowchart scene slice"
+    }
+  ]
+}

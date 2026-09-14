@@ -1,0 +1,15 @@
+{
+  "id": "T-001",
+  "title": "Implement tests",
+  "storyId": "US-001",
+  "specId": "SPEC-007",
+  "slug": "implement-tests",
+  "schemaVersion": "1.0.0",
+  "type": "Tech",
+  "agent": "backend-agent",
+  "status": "pending",
+  "created": "2026-05-03",
+  "updated": "2026-08-02",
+  "kanbanosId": "ckb1x9q2w0002qzrm7k1m9n3c",
+  "contentHash": "sha256:fcde2b2edba56bf408601fb721fe9b5c338d10ee429ea04fae5511b68fbf8fb9"
+}

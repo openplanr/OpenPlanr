@@ -1,0 +1,1116 @@
+{
+  "kind": "openplanr-markdown-v1-projection-inventory",
+  "schemaVersion": "1.0.0",
+  "note": "Frozen exact-byte inventory of the 23 markdown-v1 skills and their 138 primary host projections. Independently computed by T-002; ordering is ascending by path (localeCompare), each entry canonicalized via RFC 8785 JCS, inventoryDigest = sha256Hex(canonicalizeJson(entries)).",
+  "skillCount": 23,
+  "projectionCount": 138,
+  "orderingScheme": "entries sorted ascending by path via String.localeCompare",
+  "digestScheme": "inventoryDigest = sha256 over RFC-8785 canonical JSON of the ordered entries array",
+  "inventoryDigest": "sha256:1192cc69b93e5b7810316db5909e37f6c4e0269ff258066cd2d55578dcc37a21",
+  "entries": [
+    {
+      "path": "adapters/claude-code/skills/planr-artifact/SKILL.md",
+      "skillId": "planr-artifact",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 1871,
+      "digest": "sha256:2547fef9ebe77939445e92a946f1a5cbd95b1da63687c62459c657a0694fd42c"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-browser-qa/SKILL.md",
+      "skillId": "planr-browser-qa",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 1364,
+      "digest": "sha256:7ec450ada7f5bfca3e094ef1ab2bd6cedf8706299dae9d6426da5cb98428c776"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-ceo-review/SKILL.md",
+      "skillId": "planr-ceo-review",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 6323,
+      "digest": "sha256:3cf347f9dee7c6d7c19efefc9c7e76383c366bd576df52212f81ebc77cd8c20d"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-chair-review/SKILL.md",
+      "skillId": "planr-chair-review",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 3781,
+      "digest": "sha256:878f6bc77daebc1d6f70a4407035fe1d9a957129371a4daba6179ea86d962ccf"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-challenger-review/SKILL.md",
+      "skillId": "planr-challenger-review",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 3342,
+      "digest": "sha256:c4f0932ed4b9822ec561a321f7a62a6690acb86d488879081c87ed4ddc7e8380"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-cmo-review/SKILL.md",
+      "skillId": "planr-cmo-review",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 6257,
+      "digest": "sha256:79e44f96af0547f4855d2c888839b5d7829c4de8e1b8f3e972bd0a32cd659970"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-coo-review/SKILL.md",
+      "skillId": "planr-coo-review",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 6211,
+      "digest": "sha256:2536bfd926f21f1ca81dda73c6ed36d6f75d536da695f1378039d6bb0adff245"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-cpo-review/SKILL.md",
+      "skillId": "planr-cpo-review",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 6412,
+      "digest": "sha256:141303f1c6c7960c73bd2421fc3642d80c7f9c16f15cd92083cd5f140ce17cac"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-cto-review/SKILL.md",
+      "skillId": "planr-cto-review",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 6245,
+      "digest": "sha256:adb578765f385f63e1629d2003ba8e653ebc3dfcf27e5de714a66087ddc2740a"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-dashboard/SKILL.md",
+      "skillId": "planr-dashboard",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 529,
+      "digest": "sha256:0bdf1adf6ec201e4e6da6b6c3d4c51fa57642256df3884df34c1407ac7410506"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-design-loop/SKILL.md",
+      "skillId": "planr-design-loop",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 908,
+      "digest": "sha256:193772a9a9251bb6fef8c1293884b6407d710873a4435db151f12ea9f77c39aa"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-design-review/SKILL.md",
+      "skillId": "planr-design-review",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 840,
+      "digest": "sha256:e9e8afba139491c3bc5830352621d0e4adaa31df910457f7fc3af03f7004c96c"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-design/SKILL.md",
+      "skillId": "planr-design",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 683,
+      "digest": "sha256:bee090a0b6e0cd7f428a4ad92a0f46a399f70ffa18e0db1959d6a2fa839a30e7"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-doctor/SKILL.md",
+      "skillId": "planr-doctor",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 2094,
+      "digest": "sha256:0cb0541102066c0f29968cfaf3df4954d12dc94b24f8d2acecb9f23160547aa6"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-investigate/SKILL.md",
+      "skillId": "planr-investigate",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 1463,
+      "digest": "sha256:4fc6fdfb7b088ba185eea26ce1e7feb28a6cb469669d53d218a322bc9fea5b55"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-land/SKILL.md",
+      "skillId": "planr-land",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 1243,
+      "digest": "sha256:6dfa4bb90334bfbce73348e82b7941b456f8529dc1901c390bbb890c13a92fc0"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-operate/SKILL.md",
+      "skillId": "planr-operate",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 7750,
+      "digest": "sha256:c630d2075e90012ccc8d5b22020874dc0541ecd4217b58eeca4157d59123d1b1"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-plan-review/SKILL.md",
+      "skillId": "planr-plan-review",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 1705,
+      "digest": "sha256:17ff6d288737312c0e22cfbea966db3a3a17790295a8d6884fb0c75e66e73d08"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-plan/SKILL.md",
+      "skillId": "planr-plan",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 4761,
+      "digest": "sha256:f8f70d67b311e22e0756d17e7d953d57c8a1eaed8aaf08b8b9649c94dc8cc8f6"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-ship/SKILL.md",
+      "skillId": "planr-ship",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 2994,
+      "digest": "sha256:5143b35787b5d562f73fb7e6711d4b12e5836ccb86da0813be1266f78873a472"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-spec/SKILL.md",
+      "skillId": "planr-spec",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 2536,
+      "digest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-status/SKILL.md",
+      "skillId": "planr-status",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 806,
+      "digest": "sha256:54978f8e5e2ccd95d63970d9c6be05c7053a190f06d1cadad4e5ffc8ecc0a5ce"
+    },
+    {
+      "path": "adapters/claude-code/skills/planr-sync/SKILL.md",
+      "skillId": "planr-sync",
+      "surface": "workspace",
+      "host": "claude-code",
+      "byteLength": 639,
+      "digest": "sha256:3d92bd8260d471436db1ba738ab59cb6c719333d7df1ab27a167e9e2a96dbdff"
+    },
+    {
+      "path": "adapters/codex/skills/planr-artifact/SKILL.md",
+      "skillId": "planr-artifact",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 1871,
+      "digest": "sha256:2547fef9ebe77939445e92a946f1a5cbd95b1da63687c62459c657a0694fd42c"
+    },
+    {
+      "path": "adapters/codex/skills/planr-browser-qa/SKILL.md",
+      "skillId": "planr-browser-qa",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 1364,
+      "digest": "sha256:7ec450ada7f5bfca3e094ef1ab2bd6cedf8706299dae9d6426da5cb98428c776"
+    },
+    {
+      "path": "adapters/codex/skills/planr-ceo-review/SKILL.md",
+      "skillId": "planr-ceo-review",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 6229,
+      "digest": "sha256:967459458defcc3c10a826874c76d860dc2c2b4faf676d66d6594c63a455245d"
+    },
+    {
+      "path": "adapters/codex/skills/planr-chair-review/SKILL.md",
+      "skillId": "planr-chair-review",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 3740,
+      "digest": "sha256:cb8892b5bb2c4d5c73ba5946b54d0f2f7627dd0fc30e3d7ec99dc8355eeb20e8"
+    },
+    {
+      "path": "adapters/codex/skills/planr-challenger-review/SKILL.md",
+      "skillId": "planr-challenger-review",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 3248,
+      "digest": "sha256:ae2a37303e224c7944cd4cf0d242cbccbd6e080da89bd7b0e3654f18537b80b3"
+    },
+    {
+      "path": "adapters/codex/skills/planr-cmo-review/SKILL.md",
+      "skillId": "planr-cmo-review",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 6163,
+      "digest": "sha256:66c0d35c4758b8e0c0e7338c6117a74a8d8393921e07499228d077362b5b5dc8"
+    },
+    {
+      "path": "adapters/codex/skills/planr-coo-review/SKILL.md",
+      "skillId": "planr-coo-review",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 6117,
+      "digest": "sha256:7de2be3c90cc5a34274bc336fcfb53e3209e0f143c0a554dfda495cc3d616dc0"
+    },
+    {
+      "path": "adapters/codex/skills/planr-cpo-review/SKILL.md",
+      "skillId": "planr-cpo-review",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 6318,
+      "digest": "sha256:184d0346bfae951ca2eb075f4ec6e634b03ba4415f1466c454f859edf48367f0"
+    },
+    {
+      "path": "adapters/codex/skills/planr-cto-review/SKILL.md",
+      "skillId": "planr-cto-review",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 6151,
+      "digest": "sha256:978252101877e339f337757ab3779c683a717709c60d772f6b5826040866c0fd"
+    },
+    {
+      "path": "adapters/codex/skills/planr-dashboard/SKILL.md",
+      "skillId": "planr-dashboard",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 529,
+      "digest": "sha256:0bdf1adf6ec201e4e6da6b6c3d4c51fa57642256df3884df34c1407ac7410506"
+    },
+    {
+      "path": "adapters/codex/skills/planr-design-loop/SKILL.md",
+      "skillId": "planr-design-loop",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 908,
+      "digest": "sha256:193772a9a9251bb6fef8c1293884b6407d710873a4435db151f12ea9f77c39aa"
+    },
+    {
+      "path": "adapters/codex/skills/planr-design-review/SKILL.md",
+      "skillId": "planr-design-review",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 840,
+      "digest": "sha256:e9e8afba139491c3bc5830352621d0e4adaa31df910457f7fc3af03f7004c96c"
+    },
+    {
+      "path": "adapters/codex/skills/planr-design/SKILL.md",
+      "skillId": "planr-design",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 683,
+      "digest": "sha256:bee090a0b6e0cd7f428a4ad92a0f46a399f70ffa18e0db1959d6a2fa839a30e7"
+    },
+    {
+      "path": "adapters/codex/skills/planr-doctor/SKILL.md",
+      "skillId": "planr-doctor",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 2094,
+      "digest": "sha256:0cb0541102066c0f29968cfaf3df4954d12dc94b24f8d2acecb9f23160547aa6"
+    },
+    {
+      "path": "adapters/codex/skills/planr-investigate/SKILL.md",
+      "skillId": "planr-investigate",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 1463,
+      "digest": "sha256:4fc6fdfb7b088ba185eea26ce1e7feb28a6cb469669d53d218a322bc9fea5b55"
+    },
+    {
+      "path": "adapters/codex/skills/planr-land/SKILL.md",
+      "skillId": "planr-land",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 1243,
+      "digest": "sha256:6dfa4bb90334bfbce73348e82b7941b456f8529dc1901c390bbb890c13a92fc0"
+    },
+    {
+      "path": "adapters/codex/skills/planr-operate/SKILL.md",
+      "skillId": "planr-operate",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 7750,
+      "digest": "sha256:c630d2075e90012ccc8d5b22020874dc0541ecd4217b58eeca4157d59123d1b1"
+    },
+    {
+      "path": "adapters/codex/skills/planr-plan-review/SKILL.md",
+      "skillId": "planr-plan-review",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 1705,
+      "digest": "sha256:17ff6d288737312c0e22cfbea966db3a3a17790295a8d6884fb0c75e66e73d08"
+    },
+    {
+      "path": "adapters/codex/skills/planr-plan/SKILL.md",
+      "skillId": "planr-plan",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 4760,
+      "digest": "sha256:f9698b642f1c819728f45561b6d3e632843b5915c7aa0158e47af098701826d1"
+    },
+    {
+      "path": "adapters/codex/skills/planr-ship/SKILL.md",
+      "skillId": "planr-ship",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 2993,
+      "digest": "sha256:a84522df101681421dcba82313d7a6d9d1cc966f354dffff1d5d0e8b7ae7c9ce"
+    },
+    {
+      "path": "adapters/codex/skills/planr-spec/SKILL.md",
+      "skillId": "planr-spec",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 2536,
+      "digest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85"
+    },
+    {
+      "path": "adapters/codex/skills/planr-status/SKILL.md",
+      "skillId": "planr-status",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 806,
+      "digest": "sha256:54978f8e5e2ccd95d63970d9c6be05c7053a190f06d1cadad4e5ffc8ecc0a5ce"
+    },
+    {
+      "path": "adapters/codex/skills/planr-sync/SKILL.md",
+      "skillId": "planr-sync",
+      "surface": "workspace",
+      "host": "codex",
+      "byteLength": 639,
+      "digest": "sha256:3d92bd8260d471436db1ba738ab59cb6c719333d7df1ab27a167e9e2a96dbdff"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-artifact.mdc",
+      "skillId": "planr-artifact",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 1856,
+      "digest": "sha256:3aaa83593ecac51637e69540334079beb0b863ec0ca908796395499352d2c7da"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-browser-qa.mdc",
+      "skillId": "planr-browser-qa",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 1360,
+      "digest": "sha256:1da27da503f81dbc678f0a288671e66a3d9ba7f252b563370c41ff6c46628fbb"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-ceo-review.mdc",
+      "skillId": "planr-ceo-review",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 6210,
+      "digest": "sha256:4155b428e06fe921c59681711f0d1bfc49b4a30aa4718ee8c69e8df77a9b2f94"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-chair-review.mdc",
+      "skillId": "planr-chair-review",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 3719,
+      "digest": "sha256:e295d5902f95d422db2e94a594c01fb833622bd2642e4f090d2f73cc1894fa9a"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-challenger-review.mdc",
+      "skillId": "planr-challenger-review",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 3222,
+      "digest": "sha256:7b407367d26d95fbed31690cd5f90ae8be83419e5140d611350eae7032cd0d15"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-cmo-review.mdc",
+      "skillId": "planr-cmo-review",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 6144,
+      "digest": "sha256:d1b723bb184ec62c27de48b9e28893edd03e1a9ff9e2d92a454394d70dea0ad1"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-coo-review.mdc",
+      "skillId": "planr-coo-review",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 6098,
+      "digest": "sha256:20bcebce620ae11be790024b3869f1c4a49977ab561476b0ab71b1e07520feab"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-cpo-review.mdc",
+      "skillId": "planr-cpo-review",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 6299,
+      "digest": "sha256:a079fdcddfe0e36d89f8cf2fc9743bac5d3ced7bf988f53483e3453d16b68825"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-cto-review.mdc",
+      "skillId": "planr-cto-review",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 6132,
+      "digest": "sha256:7186f6d9aa0ee1cefd177719bd35cf692a9b5cc7fcf7bf0ccbec9f06a8db4d2b"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-dashboard.mdc",
+      "skillId": "planr-dashboard",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 513,
+      "digest": "sha256:29466a5cdf98834dd11fd3802b68d7a66642bac0ebca1b8c45166aba874f3347"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-design-loop.mdc",
+      "skillId": "planr-design-loop",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 890,
+      "digest": "sha256:d836a1f8bd330fa80f93a7fadf6cd86cdc3c0022fc3cb6d0a0f4c3769851db29"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-design-review.mdc",
+      "skillId": "planr-design-review",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 820,
+      "digest": "sha256:88e4e34614db6854a4405ff2335591c918bf8665befb6e7de98bc035058ea966"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-design.mdc",
+      "skillId": "planr-design",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 670,
+      "digest": "sha256:8ac449340e4ec89d083303a3c09e3dd285342d71b595574ce43e74a42ecf22c6"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-doctor.mdc",
+      "skillId": "planr-doctor",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 2081,
+      "digest": "sha256:2492ac9abe0882e5f6cb6553f3362985f870d2f64c3b00b8d6ef3536abac0542"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-investigate.mdc",
+      "skillId": "planr-investigate",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 1458,
+      "digest": "sha256:cd8258b4f91199b9ffe130774904e70f3f9cfe5dac13768c401a4f569ac0ce6b"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-land.mdc",
+      "skillId": "planr-land",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 1232,
+      "digest": "sha256:0b36043a05563efffe5e68ca532a68ec3a0bf964c8cbbfe3fcc551177c123cd5"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-operate.mdc",
+      "skillId": "planr-operate",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 7734,
+      "digest": "sha256:ceeead8e6cffceffde6f0c4a38526760a8031a3ddc3a4e834321c702aff1fc3b"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-plan-review.mdc",
+      "skillId": "planr-plan-review",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 1687,
+      "digest": "sha256:c24b96c011b5d615c36acbb59c2faa6519f08bdb97a06885059dc9f45d920fec"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-plan.mdc",
+      "skillId": "planr-plan",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 4750,
+      "digest": "sha256:8c00b11ec5400fee0de8e3286636b46f0abe6cd86b6703928c2065331d8b4aa4"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-ship.mdc",
+      "skillId": "planr-ship",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 2983,
+      "digest": "sha256:d4b5bd0cab8f65185eb52d2e42e5f2064ba38c1be9f5423978bb7c61a98a5057"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-spec.mdc",
+      "skillId": "planr-spec",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 2525,
+      "digest": "sha256:d153d49a34019848fb836974192d6c679308fa7939135d4f11dad8f067e4e880"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-status.mdc",
+      "skillId": "planr-status",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 793,
+      "digest": "sha256:c423832db8de1b66d9a71b9ead596a9f14e5ae7f9d44eafa8a524dd84cc9ca44"
+    },
+    {
+      "path": "adapters/cursor/rules/planr-sync.mdc",
+      "skillId": "planr-sync",
+      "surface": "workspace",
+      "host": "cursor",
+      "byteLength": 628,
+      "digest": "sha256:2438f97d2e659e2519cb16507586609c760eb0e0564c7d3f1b80feb8d48c3eb7"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-artifact/SKILL.md",
+      "skillId": "planr-artifact",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 1871,
+      "digest": "sha256:2547fef9ebe77939445e92a946f1a5cbd95b1da63687c62459c657a0694fd42c"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-browser-qa/SKILL.md",
+      "skillId": "planr-browser-qa",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 1364,
+      "digest": "sha256:7ec450ada7f5bfca3e094ef1ab2bd6cedf8706299dae9d6426da5cb98428c776"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-ceo-review/SKILL.md",
+      "skillId": "planr-ceo-review",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 6229,
+      "digest": "sha256:967459458defcc3c10a826874c76d860dc2c2b4faf676d66d6594c63a455245d"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-chair-review/SKILL.md",
+      "skillId": "planr-chair-review",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 3740,
+      "digest": "sha256:cb8892b5bb2c4d5c73ba5946b54d0f2f7627dd0fc30e3d7ec99dc8355eeb20e8"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-challenger-review/SKILL.md",
+      "skillId": "planr-challenger-review",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 3248,
+      "digest": "sha256:ae2a37303e224c7944cd4cf0d242cbccbd6e080da89bd7b0e3654f18537b80b3"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-cmo-review/SKILL.md",
+      "skillId": "planr-cmo-review",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 6163,
+      "digest": "sha256:66c0d35c4758b8e0c0e7338c6117a74a8d8393921e07499228d077362b5b5dc8"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-coo-review/SKILL.md",
+      "skillId": "planr-coo-review",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 6117,
+      "digest": "sha256:7de2be3c90cc5a34274bc336fcfb53e3209e0f143c0a554dfda495cc3d616dc0"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-cpo-review/SKILL.md",
+      "skillId": "planr-cpo-review",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 6318,
+      "digest": "sha256:184d0346bfae951ca2eb075f4ec6e634b03ba4415f1466c454f859edf48367f0"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-cto-review/SKILL.md",
+      "skillId": "planr-cto-review",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 6151,
+      "digest": "sha256:978252101877e339f337757ab3779c683a717709c60d772f6b5826040866c0fd"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-dashboard/SKILL.md",
+      "skillId": "planr-dashboard",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 529,
+      "digest": "sha256:0bdf1adf6ec201e4e6da6b6c3d4c51fa57642256df3884df34c1407ac7410506"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-design-loop/SKILL.md",
+      "skillId": "planr-design-loop",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 908,
+      "digest": "sha256:193772a9a9251bb6fef8c1293884b6407d710873a4435db151f12ea9f77c39aa"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-design-review/SKILL.md",
+      "skillId": "planr-design-review",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 840,
+      "digest": "sha256:e9e8afba139491c3bc5830352621d0e4adaa31df910457f7fc3af03f7004c96c"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-design/SKILL.md",
+      "skillId": "planr-design",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 683,
+      "digest": "sha256:bee090a0b6e0cd7f428a4ad92a0f46a399f70ffa18e0db1959d6a2fa839a30e7"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-doctor/SKILL.md",
+      "skillId": "planr-doctor",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 2094,
+      "digest": "sha256:0cb0541102066c0f29968cfaf3df4954d12dc94b24f8d2acecb9f23160547aa6"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-investigate/SKILL.md",
+      "skillId": "planr-investigate",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 1463,
+      "digest": "sha256:4fc6fdfb7b088ba185eea26ce1e7feb28a6cb469669d53d218a322bc9fea5b55"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-land/SKILL.md",
+      "skillId": "planr-land",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 1243,
+      "digest": "sha256:6dfa4bb90334bfbce73348e82b7941b456f8529dc1901c390bbb890c13a92fc0"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-operate/SKILL.md",
+      "skillId": "planr-operate",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 7750,
+      "digest": "sha256:c630d2075e90012ccc8d5b22020874dc0541ecd4217b58eeca4157d59123d1b1"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-plan-review/SKILL.md",
+      "skillId": "planr-plan-review",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 1705,
+      "digest": "sha256:17ff6d288737312c0e22cfbea966db3a3a17790295a8d6884fb0c75e66e73d08"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-plan/SKILL.md",
+      "skillId": "planr-plan",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 4760,
+      "digest": "sha256:f9698b642f1c819728f45561b6d3e632843b5915c7aa0158e47af098701826d1"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-ship/SKILL.md",
+      "skillId": "planr-ship",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 2993,
+      "digest": "sha256:a84522df101681421dcba82313d7a6d9d1cc966f354dffff1d5d0e8b7ae7c9ce"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-spec/SKILL.md",
+      "skillId": "planr-spec",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 2536,
+      "digest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-status/SKILL.md",
+      "skillId": "planr-status",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 806,
+      "digest": "sha256:54978f8e5e2ccd95d63970d9c6be05c7053a190f06d1cadad4e5ffc8ecc0a5ce"
+    },
+    {
+      "path": "packages/pipeline/adapters/codex/skills/planr-sync/SKILL.md",
+      "skillId": "planr-sync",
+      "surface": "package",
+      "host": "codex",
+      "byteLength": 639,
+      "digest": "sha256:3d92bd8260d471436db1ba738ab59cb6c719333d7df1ab27a167e9e2a96dbdff"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-artifact.mdc",
+      "skillId": "planr-artifact",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 1856,
+      "digest": "sha256:3aaa83593ecac51637e69540334079beb0b863ec0ca908796395499352d2c7da"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-browser-qa.mdc",
+      "skillId": "planr-browser-qa",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 1360,
+      "digest": "sha256:1da27da503f81dbc678f0a288671e66a3d9ba7f252b563370c41ff6c46628fbb"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-ceo-review.mdc",
+      "skillId": "planr-ceo-review",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 6210,
+      "digest": "sha256:4155b428e06fe921c59681711f0d1bfc49b4a30aa4718ee8c69e8df77a9b2f94"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-chair-review.mdc",
+      "skillId": "planr-chair-review",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 3719,
+      "digest": "sha256:e295d5902f95d422db2e94a594c01fb833622bd2642e4f090d2f73cc1894fa9a"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-challenger-review.mdc",
+      "skillId": "planr-challenger-review",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 3222,
+      "digest": "sha256:7b407367d26d95fbed31690cd5f90ae8be83419e5140d611350eae7032cd0d15"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-cmo-review.mdc",
+      "skillId": "planr-cmo-review",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 6144,
+      "digest": "sha256:d1b723bb184ec62c27de48b9e28893edd03e1a9ff9e2d92a454394d70dea0ad1"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-coo-review.mdc",
+      "skillId": "planr-coo-review",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 6098,
+      "digest": "sha256:20bcebce620ae11be790024b3869f1c4a49977ab561476b0ab71b1e07520feab"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-cpo-review.mdc",
+      "skillId": "planr-cpo-review",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 6299,
+      "digest": "sha256:a079fdcddfe0e36d89f8cf2fc9743bac5d3ced7bf988f53483e3453d16b68825"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-cto-review.mdc",
+      "skillId": "planr-cto-review",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 6132,
+      "digest": "sha256:7186f6d9aa0ee1cefd177719bd35cf692a9b5cc7fcf7bf0ccbec9f06a8db4d2b"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-dashboard.mdc",
+      "skillId": "planr-dashboard",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 513,
+      "digest": "sha256:29466a5cdf98834dd11fd3802b68d7a66642bac0ebca1b8c45166aba874f3347"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-design-loop.mdc",
+      "skillId": "planr-design-loop",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 890,
+      "digest": "sha256:d836a1f8bd330fa80f93a7fadf6cd86cdc3c0022fc3cb6d0a0f4c3769851db29"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-design-review.mdc",
+      "skillId": "planr-design-review",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 820,
+      "digest": "sha256:88e4e34614db6854a4405ff2335591c918bf8665befb6e7de98bc035058ea966"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-design.mdc",
+      "skillId": "planr-design",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 670,
+      "digest": "sha256:8ac449340e4ec89d083303a3c09e3dd285342d71b595574ce43e74a42ecf22c6"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-doctor.mdc",
+      "skillId": "planr-doctor",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 2081,
+      "digest": "sha256:2492ac9abe0882e5f6cb6553f3362985f870d2f64c3b00b8d6ef3536abac0542"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-investigate.mdc",
+      "skillId": "planr-investigate",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 1458,
+      "digest": "sha256:cd8258b4f91199b9ffe130774904e70f3f9cfe5dac13768c401a4f569ac0ce6b"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-land.mdc",
+      "skillId": "planr-land",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 1232,
+      "digest": "sha256:0b36043a05563efffe5e68ca532a68ec3a0bf964c8cbbfe3fcc551177c123cd5"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-operate.mdc",
+      "skillId": "planr-operate",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 7734,
+      "digest": "sha256:ceeead8e6cffceffde6f0c4a38526760a8031a3ddc3a4e834321c702aff1fc3b"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-plan-review.mdc",
+      "skillId": "planr-plan-review",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 1687,
+      "digest": "sha256:c24b96c011b5d615c36acbb59c2faa6519f08bdb97a06885059dc9f45d920fec"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-plan.mdc",
+      "skillId": "planr-plan",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 4750,
+      "digest": "sha256:8c00b11ec5400fee0de8e3286636b46f0abe6cd86b6703928c2065331d8b4aa4"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-ship.mdc",
+      "skillId": "planr-ship",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 2983,
+      "digest": "sha256:d4b5bd0cab8f65185eb52d2e42e5f2064ba38c1be9f5423978bb7c61a98a5057"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-spec.mdc",
+      "skillId": "planr-spec",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 2525,
+      "digest": "sha256:d153d49a34019848fb836974192d6c679308fa7939135d4f11dad8f067e4e880"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-status.mdc",
+      "skillId": "planr-status",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 793,
+      "digest": "sha256:c423832db8de1b66d9a71b9ead596a9f14e5ae7f9d44eafa8a524dd84cc9ca44"
+    },
+    {
+      "path": "packages/pipeline/adapters/cursor/rules/openplanr-sync.mdc",
+      "skillId": "planr-sync",
+      "surface": "package",
+      "host": "cursor",
+      "byteLength": 628,
+      "digest": "sha256:2438f97d2e659e2519cb16507586609c760eb0e0564c7d3f1b80feb8d48c3eb7"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-artifact/SKILL.md",
+      "skillId": "planr-artifact",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 1871,
+      "digest": "sha256:2547fef9ebe77939445e92a946f1a5cbd95b1da63687c62459c657a0694fd42c"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-browser-qa/SKILL.md",
+      "skillId": "planr-browser-qa",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 1364,
+      "digest": "sha256:7ec450ada7f5bfca3e094ef1ab2bd6cedf8706299dae9d6426da5cb98428c776"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-ceo-review/SKILL.md",
+      "skillId": "planr-ceo-review",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 6323,
+      "digest": "sha256:3cf347f9dee7c6d7c19efefc9c7e76383c366bd576df52212f81ebc77cd8c20d"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-chair-review/SKILL.md",
+      "skillId": "planr-chair-review",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 3781,
+      "digest": "sha256:878f6bc77daebc1d6f70a4407035fe1d9a957129371a4daba6179ea86d962ccf"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-challenger-review/SKILL.md",
+      "skillId": "planr-challenger-review",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 3342,
+      "digest": "sha256:c4f0932ed4b9822ec561a321f7a62a6690acb86d488879081c87ed4ddc7e8380"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-cmo-review/SKILL.md",
+      "skillId": "planr-cmo-review",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 6257,
+      "digest": "sha256:79e44f96af0547f4855d2c888839b5d7829c4de8e1b8f3e972bd0a32cd659970"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-coo-review/SKILL.md",
+      "skillId": "planr-coo-review",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 6211,
+      "digest": "sha256:2536bfd926f21f1ca81dda73c6ed36d6f75d536da695f1378039d6bb0adff245"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-cpo-review/SKILL.md",
+      "skillId": "planr-cpo-review",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 6412,
+      "digest": "sha256:141303f1c6c7960c73bd2421fc3642d80c7f9c16f15cd92083cd5f140ce17cac"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-cto-review/SKILL.md",
+      "skillId": "planr-cto-review",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 6245,
+      "digest": "sha256:adb578765f385f63e1629d2003ba8e653ebc3dfcf27e5de714a66087ddc2740a"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-dashboard/SKILL.md",
+      "skillId": "planr-dashboard",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 529,
+      "digest": "sha256:0bdf1adf6ec201e4e6da6b6c3d4c51fa57642256df3884df34c1407ac7410506"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-design-loop/SKILL.md",
+      "skillId": "planr-design-loop",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 908,
+      "digest": "sha256:193772a9a9251bb6fef8c1293884b6407d710873a4435db151f12ea9f77c39aa"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-design-review/SKILL.md",
+      "skillId": "planr-design-review",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 840,
+      "digest": "sha256:e9e8afba139491c3bc5830352621d0e4adaa31df910457f7fc3af03f7004c96c"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-design/SKILL.md",
+      "skillId": "planr-design",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 683,
+      "digest": "sha256:bee090a0b6e0cd7f428a4ad92a0f46a399f70ffa18e0db1959d6a2fa839a30e7"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-doctor/SKILL.md",
+      "skillId": "planr-doctor",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 2094,
+      "digest": "sha256:0cb0541102066c0f29968cfaf3df4954d12dc94b24f8d2acecb9f23160547aa6"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-investigate/SKILL.md",
+      "skillId": "planr-investigate",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 1463,
+      "digest": "sha256:4fc6fdfb7b088ba185eea26ce1e7feb28a6cb469669d53d218a322bc9fea5b55"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-land/SKILL.md",
+      "skillId": "planr-land",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 1243,
+      "digest": "sha256:6dfa4bb90334bfbce73348e82b7941b456f8529dc1901c390bbb890c13a92fc0"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-operate/SKILL.md",
+      "skillId": "planr-operate",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 7750,
+      "digest": "sha256:c630d2075e90012ccc8d5b22020874dc0541ecd4217b58eeca4157d59123d1b1"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-plan-review/SKILL.md",
+      "skillId": "planr-plan-review",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 1705,
+      "digest": "sha256:17ff6d288737312c0e22cfbea966db3a3a17790295a8d6884fb0c75e66e73d08"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-plan/SKILL.md",
+      "skillId": "planr-plan",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 4786,
+      "digest": "sha256:e7b66c1646a3691f2b63774219d3a8353e3eb33d918f33d46df9dadf560a04a1"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-ship/SKILL.md",
+      "skillId": "planr-ship",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 3019,
+      "digest": "sha256:d36c08f38ff6a748c8af9da39e0086f7a6a84c1caef2e50c0454f25f1a6865cc"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-spec/SKILL.md",
+      "skillId": "planr-spec",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 2536,
+      "digest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-status/SKILL.md",
+      "skillId": "planr-status",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 806,
+      "digest": "sha256:54978f8e5e2ccd95d63970d9c6be05c7053a190f06d1cadad4e5ffc8ecc0a5ce"
+    },
+    {
+      "path": "packages/pipeline/skills/planr-sync/SKILL.md",
+      "skillId": "planr-sync",
+      "surface": "package",
+      "host": "pipeline",
+      "byteLength": 639,
+      "digest": "sha256:3d92bd8260d471436db1ba738ab59cb6c719333d7df1ab27a167e9e2a96dbdff"
+    }
+  ]
+}

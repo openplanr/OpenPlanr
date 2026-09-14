@@ -1,0 +1,14 @@
+/* Planning · List: toolbar, then the table; rows open the global inspector. */
+
+.op-planning.pc-list {
+  gap: 0;
+}
+
+.pc-list .pc-toolbar-bar {
+  margin: 4px 0 0;
+}
+
+.pc-list__note {
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-tertiary);
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-claim.schema.json",
+  "x-openplanr-contract": { "id": "operating-claim", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 evidence-linked claim",
+  "description": "A material claim links typed supporting and/or contradicting EvidenceRefs. It is not arbitrary citation prose.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "claimId", "scopeId", "domainId", "domainVersion", "statement", "epistemicStatus", "confidence", "supportingEvidenceRefIds", "contradictingEvidenceRefIds", "assumptionIds", "changeCondition", "sourceArtifactId", "createdAt"],
+  "properties": {
+    "kind": { "const": "operating-claim" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "2.0.0" }, "claimId": { "$ref": "#/$defs/claimId" }, "scopeId": { "$ref": "#/$defs/id" }, "domainId": { "$ref": "#/$defs/id" }, "domainVersion": { "$ref": "#/$defs/version" }, "statement": { "$ref": "#/$defs/text" }, "epistemicStatus": { "enum": ["known", "strongly-supported", "probable", "speculative", "unknown"] }, "confidence": { "type": "number", "minimum": 0, "maximum": 1 }, "supportingEvidenceRefIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRefId" } }, "contradictingEvidenceRefIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRefId" } }, "assumptionIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/assumptionId" } }, "changeCondition": { "$ref": "#/$defs/text" }, "sourceArtifactId": { "$ref": "#/$defs/artifactId" }, "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [{ "if": { "properties": { "epistemicStatus": { "enum": ["known", "strongly-supported", "probable"] } } }, "then": { "anyOf": [{ "properties": { "supportingEvidenceRefIds": { "minItems": 1 } } }, { "properties": { "contradictingEvidenceRefIds": { "minItems": 1 } } }] } }],
+  "$defs": {
+    "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "assumptionId": { "type": "string", "pattern": "^asm_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "claimId": { "type": "string", "pattern": "^clm_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "evidenceRefId": { "type": "string", "pattern": "^evr_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "id": { "type": "string", "minLength": 1, "maxLength": 128 }, "text": { "type": "string", "minLength": 1, "maxLength": 4096, "pattern": "^[\\s\\S]*\\S[\\s\\S]*$" }, "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" }
+  }
+}

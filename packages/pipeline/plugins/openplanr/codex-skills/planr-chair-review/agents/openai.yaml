@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Chair Review"
+  short_description: "Synthesize an Operate cycle into a prioritized decision queue…"
+  default_prompt: "Use $planr-chair-review to synthesize an Operate cycle into a prioritized decision queue and action plan. Use after specialist reviews when leadership needs one coherent brief."
+policy:
+  allow_implicit_invocation: true

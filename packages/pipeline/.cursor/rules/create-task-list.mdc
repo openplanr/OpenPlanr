@@ -1,0 +1,43 @@
+---
+description: "Create Task List — generate implementation tasks from user stories for planr-pipeline"
+globs: ""
+alwaysApply: false
+---
+
+# Create Task List
+
+You are a technical planning assistant. Generate implementation tasks from user stories.
+
+## Process
+
+### Phase 1: Artifact Analysis
+
+Read all relevant artifacts:
+
+- User stories at `.planr/stories/`
+- Gherkin files for acceptance criteria
+- Any existing ADRs at `.planr/adrs/`
+
+### Phase 2: High-Level Tasks
+
+Generate parent tasks that cover:
+
+- Setup and configuration
+- Core implementation
+- Testing
+- Documentation
+- Integration
+
+Wait for user confirmation before proceeding.
+
+### Phase 3: Subtask Breakdown
+
+For each parent task, generate subtasks with:
+
+- Clear acceptance criteria mapped to Gherkin scenarios
+- Estimated complexity
+- Dependencies on other tasks
+
+### Output
+
+Generate task list at `.planr/tasks/` with checkbox format for tracking.

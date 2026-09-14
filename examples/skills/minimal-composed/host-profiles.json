@@ -1,0 +1,21 @@
+{
+  "profiles": [
+    {
+      "hostProfileId": "minimal-claude-code",
+      "hostProfileVersion": "1.0.0",
+      "host": "claude-code",
+      "description": "Claude Code overlay that narrows the skill to read-only repository access.",
+      "source": "profiles/claude-code.md",
+      "overlayModules": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": ["read"],
+        "allowedTools": ["read"],
+        "allowedOperations": ["render"],
+        "allowedOutputClasses": ["A"],
+        "forbiddenEffects": ["network-write", "external-publish"]
+      }
+    }
+  ]
+}

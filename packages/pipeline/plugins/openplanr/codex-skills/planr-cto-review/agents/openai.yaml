@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Cto Review"
+  short_description: "Produce a grounded technology and delivery-risk review for an…"
+  default_prompt: "Use $planr-cto-review to produce a grounded technology and delivery-risk review for an Operate cycle. Use when architecture, reliability, security, or execution risk needs a CTO lens."
+policy:
+  allow_implicit_invocation: true

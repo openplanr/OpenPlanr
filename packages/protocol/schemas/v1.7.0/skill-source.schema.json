@@ -1,0 +1,169 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.7.0/skill-source.schema.json",
+  "x-openplanr-contract": {
+    "id": "skill-source",
+    "version": "1.7.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "skillId",
+    "skillVersion",
+    "sourceFormat",
+    "authorityCeiling"
+  ],
+  "properties": {
+    "kind": {
+      "const": "skill-source"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.7.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "skillId": {
+      "$ref": "common.schema.json#/$defs/skillId"
+    },
+    "skillVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "sourceFormat": {
+      "$ref": "common.schema.json#/$defs/sourceFormat"
+    },
+    "authorityCeiling": {
+      "$ref": "common.schema.json#/$defs/authorityCeiling"
+    },
+    "markdown": {
+      "$ref": "common.schema.json#/$defs/sourceRef"
+    },
+    "template": {
+      "$ref": "common.schema.json#/$defs/sourceRef"
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/moduleRef"
+      },
+      "minItems": 0,
+      "maxItems": 256
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "module",
+          "routed"
+        ],
+        "properties": {
+          "module": {
+            "$ref": "common.schema.json#/$defs/moduleRef"
+          },
+          "routed": {
+            "const": true
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 256
+    },
+    "hostProfiles": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/contractRef"
+      },
+      "minItems": 0,
+      "maxItems": 8,
+      "uniqueItems": true
+    },
+    "guidedQuestions": {
+      "type": "array",
+      "items": {
+        "$ref": "https://openplanr.dev/schemas/v1.2.0/guided-question.schema.json"
+      },
+      "minItems": 0,
+      "maxItems": 64
+    }
+  },
+  "oneOf": [
+    {
+      "title": "markdown-v1 compatibility source",
+      "required": [
+        "markdown"
+      ],
+      "properties": {
+        "sourceFormat": {
+          "const": "markdown-v1"
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "template"
+            ]
+          },
+          {
+            "required": [
+              "modules"
+            ]
+          },
+          {
+            "required": [
+              "references"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "composed-v1 source graph",
+      "required": [
+        "template",
+        "modules",
+        "hostProfiles"
+      ],
+      "properties": {
+        "sourceFormat": {
+          "const": "composed-v1"
+        },
+        "hostProfiles": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/contractRef"
+          },
+          "minItems": 1,
+          "maxItems": 8,
+          "uniqueItems": true
+        }
+      },
+      "not": {
+        "required": [
+          "markdown"
+        ]
+      }
+    }
+  ]
+}

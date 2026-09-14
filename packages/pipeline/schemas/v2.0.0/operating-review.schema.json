@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-review.schema.json",
+  "x-openplanr-contract": { "id": "operating-review", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 cycle-scoped review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "reviewId", "cycleId", "ownerActorId", "state", "disposition", "workDispositions", "createdAt", "updatedAt"],
+  "properties": {
+    "kind": { "const": "operating-review" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "reviewId": { "type": "string", "pattern": "^rev_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "cycleId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "subject": { "$ref": "#/$defs/subject" },
+    "ownerActorId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "state": { "type": "string", "enum": ["pending", "approved", "changes_requested", "rejected", "cancelled"] },
+    "disposition": { "type": ["string", "null"], "enum": [null, "approved", "changes_requested", "rejected", "cancelled"] },
+    "workDispositions": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/workDisposition" } },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "oneOf": [
+    { "title": "pending review", "properties": { "state": { "const": "pending" }, "disposition": { "const": null }, "workDispositions": { "maxItems": 0 } } },
+    { "title": "approved review", "properties": { "state": { "const": "approved" }, "disposition": { "const": "approved" } } },
+    { "title": "changes requested review", "properties": { "state": { "const": "changes_requested" }, "disposition": { "const": "changes_requested" }, "workDispositions": { "maxItems": 0 } } },
+    { "title": "rejected review", "properties": { "state": { "const": "rejected" }, "disposition": { "const": "rejected" }, "workDispositions": { "maxItems": 0 } } },
+    { "title": "cancelled review", "properties": { "state": { "const": "cancelled" }, "disposition": { "const": "cancelled" }, "workDispositions": { "maxItems": 0 } } }
+  ],
+  "$defs": {
+    "subject": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["type", "cycleId"], "properties": { "type": { "const": "cycle" }, "cycleId": { "type": "string", "minLength": 1, "maxLength": 128 } } },
+        { "type": "object", "additionalProperties": false, "required": ["type", "actionId", "revision", "actionHash"], "properties": { "type": { "const": "action" }, "actionId": { "type": "string", "pattern": "^act_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "revision": { "type": "integer", "minimum": 1 }, "actionHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } } }
+      ]
+    },
+    "workDisposition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["entityType", "entityId", "disposition"],
+      "properties": {
+        "entityType": { "type": "string", "enum": ["operating-finding", "operating-decision", "operating-action"] },
+        "entityId": { "type": "string", "pattern": "^(?:fnd|dec|act)_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "disposition": { "type": "string", "enum": ["accepted", "approved", "rejected", "resolved", "deferred", "superseded", "cancelled"] }
+      }
+    }
+  }
+}

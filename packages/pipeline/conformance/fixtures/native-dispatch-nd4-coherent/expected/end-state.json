@@ -1,0 +1,9 @@
+{
+  "fixture": "native-dispatch-nd4-coherent",
+  "gate": "ND4",
+  "task_count": 2,
+  "ready_tasks": ["T-001", "T-002"],
+  "coherent_invocations": 1,
+  "coherent_completed_tasks": ["T-001", "T-002"],
+  "selected_completed_tasks": ["T-002"]
+}

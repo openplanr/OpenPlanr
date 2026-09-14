@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.0.0/design-manifest.schema.json",
+  "title": "OpenPlanr design manifest — finalized.json (v1.0.0)",
+  "description": "Metadata written alongside a generated design artifact by /planr-pipeline:design, at <design-dir>/finalized.json. The discriminator field is `design_format`, NOT `format` (the latter is a reserved JSON-Schema keyword). Cross-field rules (framework 'react' only for canvas) are enforced by lib/design/manifest.mjs validateManifest, not expressible in this schema subset.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "design_format",
+    "source",
+    "content_provenance",
+    "framework",
+    "screens",
+    "screen_count",
+    "iterations",
+    "generated_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0",
+      "description": "Schema version pin."
+    },
+    "design_format": {
+      "type": "string",
+      "enum": ["prototype", "walkthrough", "canvas"],
+      "description": "Which renderer produced the artifact."
+    },
+    "source": {
+      "type": "string",
+      "enum": ["spec", "png", "describe"],
+      "description": "How the design was sourced (mirrors the --from flag)."
+    },
+    "content_provenance": {
+      "type": "string",
+      "enum": ["spec", "inferred"],
+      "description": "Whether screen content came from the spec or was inferred to fill a thin spec."
+    },
+    "framework": {
+      "type": "string",
+      "enum": ["vanilla", "react"],
+      "description": "Render substrate. prototype/walkthrough = vanilla + Pretext; canvas = react."
+    },
+    "screens": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Ordered screen names rendered in the artifact."
+    },
+    "screen_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Length of screens (denormalized for quick status reads)."
+    },
+    "iterations": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of evolve passes applied to this artifact."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?(?:Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "nav_mode": {
+      "type": "string",
+      "enum": ["anchor", "lazy"],
+      "description": "Walkthrough navigation mode; omitted for non-walkthrough formats."
+    },
+    "screen_name": {
+      "type": "string",
+      "description": "Primary screen / output-directory basename."
+    },
+    "branch": {
+      "type": "string",
+      "description": "Git branch at generation time."
+    },
+    "spec_id": {
+      "type": "string",
+      "description": "Owning SPEC/FEAT id (e.g. SPEC-015)."
+    },
+    "html_file": {
+      "type": "string",
+      "description": "Primary artifact filename (e.g. finalized.html, canvas.html)."
+    },
+    "pretext_tier": {
+      "type": "string",
+      "description": "Pretext API tier chosen for vanilla formats."
+    }
+  }
+}

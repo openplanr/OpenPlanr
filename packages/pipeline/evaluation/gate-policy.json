@@ -1,0 +1,79 @@
+{
+  "kind": "evaluation-gate-policy",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.4.0",
+  "policyId": "egp_ee307529466bee6670db978a98db0717",
+  "gatePolicyDigest": "sha256:ee307529466bee6670db978a98db07172a5fc48bfce0a1c15fd229605323e75f",
+  "budgetDigest": "sha256:ab599b6434d21be4ca9100655147859ea7d7015710797231fb73c48af8b02dee",
+  "baselineDigest": "sha256:dbbef2ace6813bccb14a023016353be40f9d8755ba4a73a4878d31ae35af24ab",
+  "gates": {
+    "trigger-precision": {
+      "comparator": ">=",
+      "unit": "basis-points",
+      "threshold": 9500,
+      "waivable": true
+    },
+    "trigger-recall": {
+      "comparator": ">=",
+      "unit": "basis-points",
+      "threshold": 9500,
+      "waivable": true
+    },
+    "journey-completion": {
+      "comparator": ">=",
+      "unit": "basis-points",
+      "threshold": 9000,
+      "waivable": true
+    },
+    "schema-validity": {
+      "comparator": "==",
+      "unit": "basis-points",
+      "threshold": 10000,
+      "waivable": false
+    },
+    "asset-parity": {
+      "comparator": "==",
+      "unit": "basis-points",
+      "threshold": 10000,
+      "waivable": true
+    },
+    "export-parity": {
+      "comparator": "==",
+      "unit": "basis-points",
+      "threshold": 10000,
+      "waivable": true
+    },
+    "package-parity": {
+      "comparator": "==",
+      "unit": "basis-points",
+      "threshold": 10000,
+      "waivable": false
+    },
+    "finding-severity-p0": {
+      "comparator": "<=",
+      "unit": "count",
+      "threshold": 0,
+      "waivable": false
+    },
+    "finding-severity-p1": {
+      "comparator": "<=",
+      "unit": "count",
+      "threshold": 0,
+      "waivable": false
+    },
+    "latency-regression": {
+      "comparator": "<=",
+      "unit": "basis-points",
+      "threshold": 2000,
+      "waivable": true,
+      "measuredAgainst": "frozen-baseline"
+    },
+    "cost-regression": {
+      "comparator": "<=",
+      "unit": "basis-points",
+      "threshold": 2000,
+      "waivable": true,
+      "measuredAgainst": "frozen-baseline"
+    }
+  }
+}

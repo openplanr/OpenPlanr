@@ -1,0 +1,296 @@
+{
+  "kind": "openplanr-skill-release-performance",
+  "schemaVersion": "1.0.0",
+  "node": "v22.23.2",
+  "platform": "darwin-arm64",
+  "samples": 3,
+  "timings": {
+    "generatedCheck": {
+      "samples": [
+        2950.017,
+        2926.073,
+        2762.511
+      ],
+      "medianMs": 2926.073,
+      "p95Ms": 2950.017
+    },
+    "releasePackaging": {
+      "samples": [
+        73.93,
+        70.887,
+        73.328
+      ],
+      "medianMs": 73.328,
+      "p95Ms": 73.93
+    },
+    "installedContentCanary": {
+      "samples": [
+        503.867,
+        451.044,
+        452.976
+      ],
+      "medianMs": 452.976,
+      "p95Ms": 503.867
+    },
+    "routingEvaluation": {
+      "samples": [
+        391.614,
+        419.751,
+        336.27
+      ],
+      "medianMs": 391.614,
+      "p95Ms": 419.751
+    }
+  },
+  "content": {
+    "estimation": "UTF-8 bytes divided by four; measurement is a comparison budget, not a tokenizer claim.",
+    "skills": [
+      {
+        "skillId": "planr-artifact",
+        "primaryBytes": 1981,
+        "primaryLines": 37,
+        "metadataBytes": 354,
+        "selectedContextBytes": 1981,
+        "selectedContextTokenEstimate": 496,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-browser-qa",
+        "primaryBytes": 1711,
+        "primaryLines": 34,
+        "metadataBytes": 412,
+        "selectedContextBytes": 1711,
+        "selectedContextTokenEstimate": 428,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-ceo-review",
+        "primaryBytes": 6244,
+        "primaryLines": 152,
+        "metadataBytes": 373,
+        "selectedContextBytes": 6244,
+        "selectedContextTokenEstimate": 1561,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-chair-review",
+        "primaryBytes": 3766,
+        "primaryLines": 100,
+        "metadataBytes": 375,
+        "selectedContextBytes": 3766,
+        "selectedContextTokenEstimate": 942,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-challenger-review",
+        "primaryBytes": 3282,
+        "primaryLines": 85,
+        "metadataBytes": 392,
+        "selectedContextBytes": 3282,
+        "selectedContextTokenEstimate": 821,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-cmo-review",
+        "primaryBytes": 6182,
+        "primaryLines": 151,
+        "metadataBytes": 379,
+        "selectedContextBytes": 6182,
+        "selectedContextTokenEstimate": 1546,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-coo-review",
+        "primaryBytes": 6133,
+        "primaryLines": 150,
+        "metadataBytes": 387,
+        "selectedContextBytes": 6133,
+        "selectedContextTokenEstimate": 1534,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-cpo-review",
+        "primaryBytes": 6326,
+        "primaryLines": 153,
+        "metadataBytes": 377,
+        "selectedContextBytes": 6326,
+        "selectedContextTokenEstimate": 1582,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-cto-review",
+        "primaryBytes": 6162,
+        "primaryLines": 152,
+        "metadataBytes": 380,
+        "selectedContextBytes": 6162,
+        "selectedContextTokenEstimate": 1541,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-dashboard",
+        "primaryBytes": 659,
+        "primaryLines": 15,
+        "metadataBytes": 366,
+        "selectedContextBytes": 659,
+        "selectedContextTokenEstimate": 165,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-design",
+        "primaryBytes": 810,
+        "primaryLines": 17,
+        "metadataBytes": 365,
+        "selectedContextBytes": 810,
+        "selectedContextTokenEstimate": 203,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-design-loop",
+        "primaryBytes": 1082,
+        "primaryLines": 20,
+        "metadataBytes": 373,
+        "selectedContextBytes": 1082,
+        "selectedContextTokenEstimate": 271,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-design-review",
+        "primaryBytes": 886,
+        "primaryLines": 19,
+        "metadataBytes": 388,
+        "selectedContextBytes": 886,
+        "selectedContextTokenEstimate": 222,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-diagram",
+        "primaryBytes": 2220,
+        "primaryLines": 49,
+        "metadataBytes": 380,
+        "selectedContextBytes": 4415,
+        "selectedContextTokenEstimate": 1104,
+        "supportFiles": 2
+      },
+      {
+        "skillId": "planr-doctor",
+        "primaryBytes": 2213,
+        "primaryLines": 40,
+        "metadataBytes": 385,
+        "selectedContextBytes": 6253,
+        "selectedContextTokenEstimate": 1564,
+        "supportFiles": 1
+      },
+      {
+        "skillId": "planr-investigate",
+        "primaryBytes": 1419,
+        "primaryLines": 31,
+        "metadataBytes": 387,
+        "selectedContextBytes": 1419,
+        "selectedContextTokenEstimate": 355,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-land",
+        "primaryBytes": 1641,
+        "primaryLines": 30,
+        "metadataBytes": 379,
+        "selectedContextBytes": 1641,
+        "selectedContextTokenEstimate": 411,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-operate",
+        "primaryBytes": 7803,
+        "primaryLines": 175,
+        "metadataBytes": 381,
+        "selectedContextBytes": 7803,
+        "selectedContextTokenEstimate": 1951,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-plan",
+        "primaryBytes": 4052,
+        "primaryLines": 90,
+        "metadataBytes": 393,
+        "selectedContextBytes": 4052,
+        "selectedContextTokenEstimate": 1013,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-plan-review",
+        "primaryBytes": 1685,
+        "primaryLines": 39,
+        "metadataBytes": 384,
+        "selectedContextBytes": 1685,
+        "selectedContextTokenEstimate": 422,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-ship",
+        "primaryBytes": 3775,
+        "primaryLines": 88,
+        "metadataBytes": 399,
+        "selectedContextBytes": 3775,
+        "selectedContextTokenEstimate": 944,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-spec",
+        "primaryBytes": 2536,
+        "primaryLines": 55,
+        "metadataBytes": 415,
+        "selectedContextBytes": 2536,
+        "selectedContextTokenEstimate": 634,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-status",
+        "primaryBytes": 850,
+        "primaryLines": 19,
+        "metadataBytes": 355,
+        "selectedContextBytes": 850,
+        "selectedContextTokenEstimate": 213,
+        "supportFiles": 0
+      },
+      {
+        "skillId": "planr-sync",
+        "primaryBytes": 786,
+        "primaryLines": 16,
+        "metadataBytes": 365,
+        "selectedContextBytes": 786,
+        "selectedContextTokenEstimate": 197,
+        "supportFiles": 0
+      }
+    ],
+    "totals": {
+      "canonicalSkills": 24,
+      "metadataBytes": 9144,
+      "selectedContextBytes": 80439,
+      "maxPrimaryLines": 175,
+      "maxSelectedContextTokenEstimate": 1951,
+      "pluginFiles": 103,
+      "pluginBytes": 234485,
+      "releaseFiles": 301,
+      "releaseBytes": 1219062
+    }
+  },
+  "budgets": {
+    "generatedCheckP95Ms": 30000,
+    "releasePackagingP95Ms": 5000,
+    "installedContentCanaryP95Ms": 15000,
+    "routingEvaluationP95Ms": 5000,
+    "maxPrimaryLines": 500,
+    "maxSelectedContextTokenEstimate": 12000,
+    "pluginBytes": 1048576
+  },
+  "checks": {
+    "generatedCheck": true,
+    "releasePackaging": true,
+    "installedContentCanary": true,
+    "routingEvaluation": true,
+    "primaryLength": true,
+    "selectedContext": true,
+    "pluginSize": true
+  },
+  "status": "pass"
+}

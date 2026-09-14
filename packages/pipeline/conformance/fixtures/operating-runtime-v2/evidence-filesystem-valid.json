@@ -1,0 +1,11 @@
+{
+  "scope": { "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0" },
+  "sourceRoot": { "sourceRootId": "workspace-root", "maxBytes": 1024, "classification": "internal" },
+  "candidate": {
+    "kind": "operating-evidence-candidate", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0",
+    "candidateId": "evc_filesystem_001", "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0", "sourceArtifactId": "art_00000002",
+    "evidenceKind": "filesystem", "locator": { "sourceRootId": "workspace-root", "path": "notes/evidence.txt" },
+    "provider": { "id": "local-filesystem-evidence-provider", "version": "2.0.0" },
+    "resolver": { "id": "local-filesystem-evidence-resolver", "version": "2.0.0" }
+  }
+}

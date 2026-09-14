@@ -1,0 +1,15 @@
+{
+  "kind": "openplanr-role-contributions",
+  "schemaVersion": "1.0.0",
+  "roles": [
+    { "id": "planr-database", "source": "agents/po/preflight/planr-database/AGENT.md" },
+    { "id": "planr-designer", "source": "agents/po/planr-designer/AGENT.md" },
+    { "id": "planr-specification", "source": "agents/po/planr-specification/AGENT.md" },
+    { "id": "planr-entity-scaffold", "source": "agents/po/preflight/planr-entity-scaffold/AGENT.md" },
+    { "id": "planr-frontend", "source": "agents/dev/planr-frontend/AGENT.md" },
+    { "id": "planr-backend", "source": "agents/dev/planr-backend/AGENT.md" },
+    { "id": "planr-qa", "source": "agents/qa/planr-qa/AGENT.md" },
+    { "id": "planr-devops", "source": "agents/post-build/planr-devops/AGENT.md" },
+    { "id": "planr-documentation", "source": "agents/post-build/planr-documentation/AGENT.md" }
+  ]
+}

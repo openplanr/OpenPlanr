@@ -1,13 +1,17 @@
 # Changesets
 
-This folder is managed by [@changesets/cli](https://github.com/changesets/changesets).
+OpenPlanr uses independent package versions. Public targets are `openplanr`,
+`planr-pipeline`, and `@openplanr/protocol`. Other workspaces are versioned for
+integration but cannot be published to npm. All local product source remains MIT.
+Package versions are separate from schema/document versions.
 
-When submitting a PR, add a changeset describing your changes:
+Write one changeset for each independently understandable package-facing change.
+Several changesets can ship from one branch or consolidation commit. Release notes
+must explain behavior and migration steps, not just file moves. Breaking supported
+commands or imports requires a breaking-change note and appropriate version.
 
-```bash
-npx changeset
-```
-
-This creates a markdown file in `.changeset/` that describes what changed and whether it's a `patch`, `minor`, or `major` bump. The file is committed with your PR.
-
-When changesets are merged to `main`, the Release GitHub Action opens a "Version Packages" PR that bumps the version and updates CHANGELOG.md. Merging that PR publishes to npm.
+Run `npm run changeset -- status` to inspect pending changes and
+`npm run version-packages` in a disposable checkout to rehearse versioning.
+Changesets consumes the notes, updates versions and generates package changelogs.
+Refresh the root lockfile and generated projections, then rerun release checks.
+See [Releasing](../docs/RELEASING.md). Publication is a separate authorized action.

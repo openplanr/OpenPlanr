@@ -1,0 +1,18 @@
+{
+  "zeroDependency": {
+    "assignmentId": "asg_00000001",
+    "dependencyPolicy": { "kind": "none" },
+    "dependsOn": [],
+    "expectedReleaseOrder": ["asg_00000001"]
+  },
+  "thresholdWithPermittedAbsence": {
+    "assignmentId": "asg_00000003",
+    "dependencyPolicy": {
+      "kind": "threshold",
+      "minimumSatisfied": 2,
+      "allowedTerminalOutcomes": ["abandoned"]
+    },
+    "dependsOn": ["asg_00000001", "asg_00000002"],
+    "expectedProofOutcomes": ["validated", "abandoned"]
+  }
+}

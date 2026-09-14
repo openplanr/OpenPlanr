@@ -1,0 +1,53 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-investigate",
+  "family": "diagnostics",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-investigate/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-investigate/skill.json",
+    "version": "2.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Removed run IDs, receipts, digests, event files, typed authorization, and trusted-command-host prerequisites.",
+    "Removed redundant negative governance narration from the user-facing workflow."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:4fc6fdfb7b088ba185eea26ce1e7feb28a6cb469669d53d218a322bc9fea5b55",
+      "successorDigest": "sha256:2662dc8f9cf6543ad84a96c5d579bbbb8a811ec43205e2ebd69a609a5b59ae2a"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:4fc6fdfb7b088ba185eea26ce1e7feb28a6cb469669d53d218a322bc9fea5b55",
+      "successorDigest": "sha256:2662dc8f9cf6543ad84a96c5d579bbbb8a811ec43205e2ebd69a609a5b59ae2a"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:cd8258b4f91199b9ffe130774904e70f3f9cfe5dac13768c401a4f569ac0ce6b",
+      "successorDigest": "sha256:10380e74375697898695343c6d85e9f97cb5baaec3edfdf71ed1151eda7c88fa"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:4fc6fdfb7b088ba185eea26ce1e7feb28a6cb469669d53d218a322bc9fea5b55",
+      "successorDigest": "sha256:2662dc8f9cf6543ad84a96c5d579bbbb8a811ec43205e2ebd69a609a5b59ae2a"
+    }
+  ]
+}

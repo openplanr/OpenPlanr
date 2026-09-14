@@ -1,0 +1,12 @@
+---
+description: "OpenPlanr host-native semantic workflow boundary for {{projectName}}"
+globs: ""
+alwaysApply: false
+---
+
+## OpenPlanr host-native workflows
+
+Run `planr-spec`, `planr-plan`, and `planr-ship` as native Cursor agent workflows.
+They inspect and modify the repository in the current session; they never launch
+a second model-backed CLI process. Use `planr setup --runtime cursor --scope project`
+to install the complete 24-skill rule package under `.cursor/rules/openplanr/`.

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/browser-qa-session.schema.json",
+  "type": "object", "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "sessionId", "suppliedAt", "expiresAt", "signedIn", "custody", "persisted"],
+  "properties": {
+    "kind": { "const": "browser-qa-session" }, "schemaVersion": { "const": "1.0.0" },
+    "sessionId": { "type": "string", "pattern": "^bqs_[a-f0-9]{32}$" },
+    "suppliedAt": { "type": "string", "format": "date-time" }, "expiresAt": { "type": "string", "format": "date-time" },
+    "signedIn": { "type": "boolean" }, "custody": { "const": "external-ephemeral" }, "persisted": { "const": false }
+  }
+}

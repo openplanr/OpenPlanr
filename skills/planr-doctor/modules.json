@@ -1,0 +1,77 @@
+{
+  "imports": [],
+  "modules": [
+    {
+      "moduleId": "planr-doctor-workflow",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "shared",
+      "description": "Task-specific planr-doctor workflow guidance.",
+      "source": "modules/workflow.md",
+      "appliesWhen": "Whenever planr-doctor is selected.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read"
+        ],
+        "allowedTools": [
+          "read",
+          "shell"
+        ],
+        "allowedOperations": [
+          "compile",
+          "doctor",
+          "render",
+          "upgrade"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      }
+    },
+    {
+      "moduleId": "upgrade",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "context",
+      "description": "Progressive upgrade walkthrough for Planr Doctor.",
+      "source": "references/upgrade.md",
+      "appliesWhen": "Only when Doctor is driving an OpenPlanr upgrade.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read"
+        ],
+        "allowedTools": [
+          "read",
+          "shell"
+        ],
+        "allowedOperations": [
+          "compile",
+          "doctor",
+          "render",
+          "upgrade"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      }
+    }
+  ]
+}

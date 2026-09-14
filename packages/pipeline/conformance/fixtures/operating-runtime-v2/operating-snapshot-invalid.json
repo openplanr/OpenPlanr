@@ -1,0 +1,21 @@
+{
+  "kind": "operating-snapshot",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "2.0.0",
+  "snapshotId": "snp_snapshot_invalid_001",
+  "scopeId": "scope-acme",
+  "domainId": "business",
+  "domainVersion": "1.0.0",
+  "domainContract": {
+    "apiDomainId": "business",
+    "id": "business-domain",
+    "version": "1.0.0"
+  },
+  "stateId": "oms_snapshot_invalid_001",
+  "runtimeHash": "sha256:not-a-valid-hash",
+  "previousSnapshotId": null,
+  "sourceArtifactIds": ["art_snapshot_001"],
+  "evidenceRefIds": [],
+  "sourceRevisions": [],
+  "createdAt": "2026-08-09T12:00:00.000Z"
+}

@@ -1,0 +1,67 @@
+{
+  "kind": "openplanr-diagram-renderer-candidate-matrix",
+  "schemaVersion": "1.0.0",
+  "decision": "semantic-svg-resvg",
+  "payloadTargetBytes": 15728640,
+  "candidates": [
+    {
+      "id": "semantic-svg-resvg",
+      "components": [
+        "OpenPlanr semantic IR/layout",
+        "@resvg/resvg-js@2.6.2",
+        "@expo-google-fonts/inter@0.4.2"
+      ],
+      "status": "selected",
+      "offline": true,
+      "browserRequired": false,
+      "nativeCoverage": [
+        "darwin-arm64",
+        "darwin-x64",
+        "linux-arm64-gnu",
+        "linux-arm64-musl",
+        "linux-x64-gnu",
+        "linux-x64-musl"
+      ],
+      "reason": "Small active-platform binary, packaged font, direct SVG-to-PNG conversion, stable output, and no browser download."
+    },
+    {
+      "id": "sharp-libvips",
+      "components": [
+        "sharp@0.35.4",
+        "platform libvips"
+      ],
+      "status": "rejected",
+      "offline": true,
+      "browserRequired": false,
+      "reason": "The active libvips package alone is about 17.3 MiB and exceeds the complete 15 MiB added-payload target; it also carries LGPL-3.0-or-later runtime custody."
+    },
+    {
+      "id": "packaged-mermaid-playwright",
+      "components": [
+        "Mermaid browser bundle",
+        "Playwright",
+        "Chromium"
+      ],
+      "status": "control-only",
+      "offline": false,
+      "browserRequired": true,
+      "reason": "Useful as a development visual control, but production would require a downloaded browser and materially larger runtime."
+    },
+    {
+      "id": "external-mermaid-cli",
+      "components": [
+        "@mermaid-js/mermaid-cli@11.16.0",
+        "external browser installation"
+      ],
+      "status": "rejected",
+      "offline": false,
+      "browserRequired": true,
+      "reason": "Depends on external CLI/browser availability and violates self-contained offline package requirements."
+    }
+  ],
+  "editableConversion": {
+    "officialCandidate": "@excalidraw/mermaid-to-excalidraw@2.2.2",
+    "status": "rejected-for-runtime",
+    "reason": "MIT-compatible but pulls the full Mermaid parser/runtime graph; the production slice uses a smaller deterministic native flowchart scene projection and reports every other grammar unsupported."
+  }
+}

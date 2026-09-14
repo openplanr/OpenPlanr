@@ -1,0 +1,9 @@
+{
+  "duplicateAssignment": "duplicate assignmentId",
+  "unknownDependency": "unknown dependency reference",
+  "crossCycleDependency": "cross-cycle dependency reference",
+  "selfDependency": "self dependency reference",
+  "cyclicGraph": "cyclic dependency graph",
+  "invalidThreshold": "threshold cardinality outside its declared dependencies",
+  "unpermittedTerminalOutcome": "failed dependency not named by the threshold policy"
+}

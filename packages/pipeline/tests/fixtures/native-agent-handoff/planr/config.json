@@ -1,0 +1,15 @@
+{
+  "projectName": "native-agent-handoff-fixture",
+  "targets": ["cursor", "claude", "codex"],
+  "idPrefix": {
+    "epic": "EPIC",
+    "feature": "FEAT",
+    "story": "US",
+    "task": "TASK",
+    "quick": "QT",
+    "backlog": "BL",
+    "sprint": "SPRINT",
+    "spec": "SPEC"
+  },
+  "defaultAgent": "claude"
+}

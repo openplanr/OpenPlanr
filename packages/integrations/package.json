@@ -1,0 +1,31 @@
+{
+  "name": "@openplanr/integrations",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared deterministic GitHub and Linear integration primitives for OpenPlanr.",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.mts",
+      "import": "./src/index.mjs"
+    },
+    "./portable-sync": {
+      "types": "./src/portable-sync.d.mts",
+      "import": "./src/portable-sync.mjs"
+    }
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node --check src/index.mjs && node --check src/portable-sync.mjs",
+    "lint": "node --check src/index.mjs && node --check src/portable-sync.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT"
+}

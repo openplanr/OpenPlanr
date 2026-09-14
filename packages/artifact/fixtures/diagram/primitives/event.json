@@ -1,0 +1,8 @@
+{
+  "kind": "diagram-primitive-fixture",
+  "schemaVersion": "1.0.0",
+  "primitive": "event",
+  "grammarId": "timeline",
+  "fixture": "fixtures/diagram/grammars/timeline.planr-diagram.json",
+  "description": "Canonical event primitive example in the timeline grammar."
+}

@@ -1,0 +1,8 @@
+{
+  "kind": "diagram-primitive-fixture",
+  "schemaVersion": "1.0.0",
+  "primitive": "annotation",
+  "grammarId": "architecture",
+  "fixture": "fixtures/diagram/grammars/architecture.planr-diagram.json",
+  "description": "Canonical annotation primitive example in the architecture grammar."
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-scenario.schema.json",
+  "x-openplanr-contract": { "id": "operating-scenario", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 transparent scenario analysis",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "scenarioId", "scopeId", "domainId", "domainVersion", "snapshotId", "base", "upside", "downside", "breakEven", "assumptionIds", "evidenceRefIds", "uncertainty", "sourceArtifactId", "createdAt"],
+  "properties": {
+    "kind": { "const": "operating-scenario" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "2.0.0" }, "scenarioId": { "$ref": "#/$defs/scenarioId" }, "scopeId": { "$ref": "#/$defs/id" }, "domainId": { "$ref": "#/$defs/id" }, "domainVersion": { "$ref": "#/$defs/version" }, "snapshotId": { "$ref": "#/$defs/snapshotId" }, "base": { "$ref": "#/$defs/case" }, "upside": { "$ref": "#/$defs/case" }, "downside": { "$ref": "#/$defs/case" }, "breakEven": { "$ref": "#/$defs/text" }, "assumptionIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/assumptionId" } }, "evidenceRefIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRefId" } }, "uncertainty": { "$ref": "#/$defs/text" }, "sourceArtifactId": { "$ref": "#/$defs/artifactId" }, "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": { "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "assumptionId": { "type": "string", "pattern": "^asm_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "case": { "type": "object", "additionalProperties": false, "required": ["statement", "assumptionIds", "evidenceRefIds", "sourceArtifactId"], "properties": { "statement": { "$ref": "#/$defs/text" }, "assumptionIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/assumptionId" } }, "evidenceRefIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRefId" } }, "sourceArtifactId": { "$ref": "#/$defs/artifactId" } } }, "evidenceRefId": { "type": "string", "pattern": "^evr_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "id": { "type": "string", "minLength": 1, "maxLength": 128 }, "scenarioId": { "type": "string", "pattern": "^scn_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "snapshotId": { "type": "string", "pattern": "^snp_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "text": { "type": "string", "minLength": 1, "maxLength": 4096, "pattern": "^.*\\S.*$" }, "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" } }
+}

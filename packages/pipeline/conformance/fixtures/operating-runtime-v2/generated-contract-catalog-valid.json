@@ -1,0 +1,38 @@
+{
+  "protocol": { "id": "operate", "version": "2.0.0", "versionPolicy": "exact" },
+  "roles": [
+    {
+      "id": "advisor",
+      "version": "2.0.0",
+      "output": {
+      "schemaId": "operating-advisor-result",
+        "schemaVersion": "2.0.0",
+        "mediaType": "application/json",
+        "maxBytes": 262144
+      },
+      "limits": { "maxProposals": 1, "maxActions": 0 }
+    },
+    {
+      "id": "chair",
+      "version": "2.0.0",
+      "output": {
+      "schemaId": "operating-decision-ledger",
+        "schemaVersion": "2.0.0",
+        "mediaType": "application/json",
+        "maxBytes": 262144
+      },
+      "limits": { "maxProposals": 1, "maxActions": 0 }
+    },
+    {
+      "id": "challenger",
+      "version": "2.0.0",
+      "output": {
+      "schemaId": "operating-challenger-review",
+        "schemaVersion": "2.0.0",
+        "mediaType": "application/json",
+        "maxBytes": 262144
+      },
+      "limits": { "maxProposals": 1, "maxActions": 0 }
+    }
+  ]
+}

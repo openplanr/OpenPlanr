@@ -1,0 +1,63 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "dependency-graph-fixture",
+  "title": "Dependency graph fixture",
+  "summary": "Canonical semantic fixture for the dependency graph grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "dependency-graph",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Dependency graph A",
+      "kind": "primary-item",
+      "description": "First semantic item in the dependency graph fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "Dependency graph B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the dependency graph fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [],
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Dependency graph fixture",
+    "description": "A compact dependency graph example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:a6180015fb34e51c71abf4532239a43a12c9dcef6979e3dd2db45a2ea0ff183c"
+}

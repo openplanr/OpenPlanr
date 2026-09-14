@@ -1,0 +1,48 @@
+{
+  "imports": [
+    {
+      "moduleId": "operate-advisor-contract",
+      "moduleVersion": "2.0.0"
+    }
+  ],
+  "modules": [
+    {
+      "moduleId": "planr-coo-review-workflow",
+      "moduleVersion": "2.0.0",
+      "moduleKind": "shared",
+      "description": "Task-specific planr-coo-review workflow guidance.",
+      "source": "modules/workflow.md",
+      "appliesWhen": "Whenever planr-coo-review is selected.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read",
+          "write"
+        ],
+        "allowedTools": [
+          "read",
+          "edit",
+          "shell"
+        ],
+        "allowedOperations": [
+          "compile",
+          "operate",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+/* Planning · Detail and SPEC trace: identity row, tabs, then one card per section. */
+
+.op-planning.pc-detail {
+  gap: 0;
+}
+
+.pc-detail__identity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.pc-detail__mono {
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-tertiary);
+}
+
+.pc-detail__stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.pc-detail__fields {
+  display: grid;
+}
+
+.pc-detail__none {
+  padding: 10px 12px;
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-tertiary);
+}
+
+.pc-detail__empty {
+  padding: 8px;
+}
+
+.pc-detail__indent {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.pc-detail__body {
+  display: grid;
+  gap: 16px;
+}
+
+.pc-detail__section {
+  display: grid;
+  gap: 8px;
+}
+
+.pc-detail__label {
+  margin: 0;
+  font: var(--pc-type-mono-sm);
+  letter-spacing: var(--pc-tracking-wide);
+  text-transform: uppercase;
+  color: var(--pc-text-tertiary);
+}
+
+.pc-detail__criteria {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  font: var(--pc-type-body-sm);
+  color: var(--pc-text-primary);
+}
+
+.pc-detail__subtasks {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pc-detail__subtask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--pc-type-body-sm);
+  color: var(--pc-text-primary);
+}
+
+.pc-detail__markdown {
+  margin: 0;
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,407 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.10.0/design-review-handoff.schema.json",
+  "x-openplanr-contract": {
+    "id": "design-review-handoff",
+    "version": "1.10.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "openplanr-design-review-handoff"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 16384
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "approved"
+      ]
+    },
+    "basis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "designId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "sourceRevision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "contextDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "reviewOf": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "selectedVariant": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "feedbackDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "verificationDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "feedbackWatermark": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "designId",
+        "sourceRevision",
+        "contextDigest",
+        "reviewOf",
+        "selectedVariant",
+        "feedbackDigest",
+        "verificationDigest",
+        "feedbackWatermark"
+      ]
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "summary": {
+          "type": "string",
+          "maxLength": 16384
+        },
+        "agreedChanges": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "pinId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "reviewId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "screenId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "revisionId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "refinement": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "stale": {
+                "type": "boolean"
+              },
+              "author": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "reviewOf": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 16384
+              }
+            },
+            "required": [
+              "pinId",
+              "text"
+            ]
+          }
+        },
+        "openQuestions": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "pinId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "reviewId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "screenId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "revisionId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "refinement": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "stale": {
+                "type": "boolean"
+              },
+              "author": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "reviewOf": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 16384
+              }
+            },
+            "required": [
+              "pinId",
+              "text"
+            ]
+          }
+        },
+        "deferred": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "pinId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "reviewId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "screenId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "revisionId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "refinement": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "stale": {
+                "type": "boolean"
+              },
+              "author": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "reviewOf": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 16384
+              }
+            },
+            "required": [
+              "pinId",
+              "text"
+            ]
+          }
+        },
+        "rejected": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "pinId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "reviewId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "screenId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "revisionId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "refinement": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "stale": {
+                "type": "boolean"
+              },
+              "author": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "reviewOf": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 16384
+              }
+            },
+            "required": [
+              "pinId",
+              "text"
+            ]
+          }
+        }
+      },
+      "required": [
+        "summary",
+        "agreedChanges",
+        "openQuestions",
+        "deferred",
+        "rejected"
+      ]
+    },
+    "contentHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "markdown": {
+      "type": "string",
+      "maxLength": 2097152
+    },
+    "affectedScreens": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      }
+    },
+    "verificationGaps": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "string",
+        "maxLength": 16384
+      }
+    },
+    "reviewNotes": {
+      "type": "array",
+      "maxItems": 10000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reviewId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 16384
+          }
+        },
+        "required": [
+          "reviewId",
+          "text"
+        ]
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contentHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "contentHash",
+        "at"
+      ]
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "title",
+    "version",
+    "status",
+    "basis",
+    "content",
+    "contentHash",
+    "markdown",
+    "affectedScreens",
+    "verificationGaps",
+    "reviewNotes"
+  ]
+}

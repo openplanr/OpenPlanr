@@ -1,0 +1,373 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.5.0/task-manifest.schema.json",
+  "x-openplanr-contract": {
+    "id": "task-manifest",
+    "version": "1.5.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "taskManifestId",
+    "task",
+    "parent",
+    "routing",
+    "dependencies",
+    "scope",
+    "inputs",
+    "expectedOutputs",
+    "acceptanceRefs",
+    "ruleIds",
+    "reviewBinding",
+    "producer",
+    "issuedAt"
+  ],
+  "properties": {
+    "kind": {
+      "const": "task-manifest"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.5.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "taskManifestId": {
+      "type": "string",
+      "pattern": "^tmf_[0-9a-f]{32}$"
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "taskId",
+        "path",
+        "schemaRef",
+        "contentDigest"
+      ],
+      "properties": {
+        "taskId": {
+          "$ref": "common.schema.json#/$defs/taskId"
+        },
+        "path": {
+          "$ref": "common.schema.json#/$defs/relativePath"
+        },
+        "schemaRef": {
+          "$ref": "common.schema.json#/$defs/contractRef"
+        },
+        "contentDigest": {
+          "$ref": "common.schema.json#/$defs/digest"
+        }
+      }
+    },
+    "parent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projectMode",
+        "storyId",
+        "specId",
+        "featureSlug"
+      ],
+      "properties": {
+        "projectMode": {
+          "enum": [
+            "spec-driven",
+            "default"
+          ]
+        },
+        "storyId": {
+          "$ref": "common.schema.json#/$defs/storyId"
+        },
+        "specId": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/specId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "featureSlug": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "projectMode": {
+              "const": "spec-driven"
+            },
+            "specId": {
+              "$ref": "common.schema.json#/$defs/specId"
+            },
+            "featureSlug": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "properties": {
+            "projectMode": {
+              "const": "default"
+            },
+            "specId": {
+              "type": "null"
+            },
+            "featureSlug": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "taskKind",
+        "roleId",
+        "roleVersion",
+        "taskKindRegistryDigest",
+        "roleRegistryDigest"
+      ],
+      "properties": {
+        "taskKind": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "roleId": {
+          "$ref": "common.schema.json#/$defs/roleId"
+        },
+        "roleVersion": {
+          "$ref": "common.schema.json#/$defs/semver"
+        },
+        "taskKindRegistryDigest": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "roleRegistryDigest": {
+          "$ref": "common.schema.json#/$defs/digest"
+        }
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskId",
+          "taskManifestDigest"
+        ],
+        "properties": {
+          "taskId": {
+            "$ref": "common.schema.json#/$defs/taskId"
+          },
+          "taskManifestDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 256
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "create",
+        "modify",
+        "preserve"
+      ],
+      "properties": {
+        "create": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/repositoryPath"
+          },
+          "minItems": 0,
+          "maxItems": 1024
+        },
+        "modify": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/repositoryPath"
+          },
+          "minItems": 0,
+          "maxItems": 1024
+        },
+        "preserve": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/repositoryPath"
+          },
+          "minItems": 0,
+          "maxItems": 1024
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifactId",
+          "contractRef",
+          "path",
+          "digest",
+          "required"
+        ],
+        "properties": {
+          "artifactId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "contractRef": {
+            "$ref": "common.schema.json#/$defs/contractRef"
+          },
+          "path": {
+            "$ref": "common.schema.json#/$defs/relativePath"
+          },
+          "digest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 256
+    },
+    "expectedOutputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "outputId",
+          "contractRef",
+          "paths",
+          "pathArguments"
+        ],
+        "properties": {
+          "outputId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "contractRef": {
+            "$ref": "common.schema.json#/$defs/contractRef"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/repositoryPath"
+            },
+            "minItems": 0,
+            "maxItems": 128
+          },
+          "pathArguments": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 256
+    },
+    "acceptanceRefs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "reference",
+          "statement"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "gherkin-scenario",
+              "verification-statement"
+            ]
+          },
+          "reference": {
+            "$ref": "common.schema.json#/$defs/relativePath"
+          },
+          "statement": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 256
+    },
+    "ruleIds": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/ruleId"
+      },
+      "minItems": 1,
+      "maxItems": 10,
+      "uniqueItems": true
+    },
+    "reviewBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "planDigest",
+        "planningReviewReceiptDigest",
+        "ownerDecisionDigest"
+      ],
+      "properties": {
+        "planDigest": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "planningReviewReceiptDigest": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "ownerDecisionDigest": {
+          "$ref": "common.schema.json#/$defs/digest"
+        }
+      }
+    },
+    "producer": {
+      "$ref": "common.schema.json#/$defs/producer"
+    },
+    "issuedAt": {
+      "$ref": "common.schema.json#/$defs/dateTime"
+    }
+  }
+}

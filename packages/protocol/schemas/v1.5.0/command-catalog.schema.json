@@ -1,0 +1,296 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.5.0/command-catalog.schema.json",
+  "x-openplanr-contract": {
+    "id": "command-catalog",
+    "version": "1.5.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "binaries",
+    "inventory",
+    "commands",
+    "negativeContracts"
+  ],
+  "properties": {
+    "kind": {
+      "const": "command-catalog"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.5.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "binaries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "lifecycle",
+          "aliasOf"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "lifecycle": {
+            "enum": [
+              "canonical",
+              "exact-alias",
+              "deprecated-exact-alias"
+            ]
+          },
+          "aliasOf": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rootCommandModules",
+        "rootCommandSlugs",
+        "pipelineMachineLeaves",
+        "pipelineMachineGrammar",
+        "frozenClaudeDocuments",
+        "frozenClaudeSlugs"
+      ],
+      "properties": {
+        "rootCommandModules": {
+          "const": 39
+        },
+        "rootCommandSlugs": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "minItems": 39,
+          "maxItems": 39,
+          "uniqueItems": true
+        },
+        "pipelineMachineLeaves": {
+          "const": 31
+        },
+        "pipelineMachineGrammar": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "minItems": 1,
+            "maxItems": 8
+          },
+          "minItems": 31,
+          "maxItems": 31
+        },
+        "frozenClaudeDocuments": {
+          "const": 8
+        },
+        "frozenClaudeSlugs": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "minItems": 8,
+          "maxItems": 8,
+          "uniqueItems": true
+        }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "commandId",
+          "surface",
+          "argv",
+          "lifecycle",
+          "ownerPackage",
+          "source",
+          "authorityClass",
+          "machineJson",
+          "outputContracts",
+          "skillId",
+          "aliases",
+          "testRefs"
+        ],
+        "properties": {
+          "commandId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "surface": {
+            "enum": [
+              "cli-root",
+              "cli-leaf",
+              "pipeline-machine",
+              "frozen-host-alias"
+            ]
+          },
+          "argv": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "minItems": 1,
+            "maxItems": 16
+          },
+          "lifecycle": {
+            "enum": [
+              "active",
+              "compatibility-alias",
+              "deprecated"
+            ]
+          },
+          "ownerPackage": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "source": {
+            "$ref": "common.schema.json#/$defs/sourceRef"
+          },
+          "authorityClass": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "machineJson": {
+            "type": "boolean"
+          },
+          "outputContracts": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/contractRef"
+            },
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "skillId": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/skillId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1,
+              "maxItems": 16
+            },
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "testRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/relativePath"
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 512
+    },
+    "negativeContracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "negativeContractId",
+          "forbiddenArgvPrefix",
+          "forbiddenPaths",
+          "reason",
+          "testRefs"
+        ],
+        "properties": {
+          "negativeContractId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "forbiddenArgvPrefix": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "maxItems": 16
+          },
+          "forbiddenPaths": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/relativePath"
+            },
+            "minItems": 0,
+            "maxItems": 64,
+            "uniqueItems": true
+          },
+          "reason": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "testRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/relativePath"
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 64
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "kind": "evaluation-host-profile",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.4.0",
+  "hostProfileId": "ehp_926364f7fe15acefa31b8273fd9bcad3",
+  "host": "claude-code",
+  "profileVersion": "1.0.0",
+  "runtime": "cli",
+  "platform": "darwin",
+  "capabilityTier": "product",
+  "permissionModel": {
+    "mode": "prompted",
+    "promptSurface": "terminal",
+    "toolIsolation": "enforced",
+    "escalation": "refused"
+  },
+  "outputModes": [
+    "artifact",
+    "file",
+    "json",
+    "markdown",
+    "text"
+  ],
+  "skillHostSupport": true,
+  "certifiedFullPipelineRuntime": false,
+  "adapterBinding": {
+    "contractId": "adapter-registry",
+    "schemaVersion": "1.1.0",
+    "protocolVersion": "1.4.0",
+    "adapterId": "claude-code",
+    "adapterVersion": "0.42.0",
+    "recordDigest": "sha256:b6789c4d4fb59ae51a57e3b16d733aa5b9c9a48858c24f8d533a9f5b8177b893"
+  },
+  "provenance": {
+    "packageName": "planr-pipeline",
+    "packageVersion": "0.42.0",
+    "sourceDigest": "sha256:a8d3d71ff7d30b01ce2d94933c7e21188dd4c5aec0894d2ed564fa0e245a4354"
+  },
+  "profileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0"
+}

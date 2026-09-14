@@ -1,0 +1,23 @@
+{
+  "kind": "openplanr-skill-adoption-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-release",
+  "family": "release",
+  "source": {
+    "format": "standard-skill-bundle",
+    "entrypoint": "skills/planr-release/SKILL.md",
+    "supportFiles": 6
+  },
+  "successor": {
+    "sourceFormat": "package-v1",
+    "path": "skills/planr-release/openplanr.skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "adapted",
+  "intendedChanges": [
+    "Namespaced release-engineering as planr-release.",
+    "Separated versioning and release communication from planr-land readiness and planr-ship implementation.",
+    "Kept remote pull-request collection opt-in and kept local version preparation untagged by default.",
+    "Preserved all three references, both templates, and the deterministic collection script from the supplied bundle."
+  ]
+}

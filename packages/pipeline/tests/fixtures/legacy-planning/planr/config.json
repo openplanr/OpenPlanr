@@ -1,0 +1,13 @@
+{
+  "projectName": "legacy-planning-fixture",
+  "idPrefix": {
+    "epic": "EPIC",
+    "feature": "FEAT",
+    "story": "US",
+    "task": "TASK",
+    "quick": "QT",
+    "backlog": "BL",
+    "sprint": "SPRINT",
+    "spec": "SPEC"
+  }
+}

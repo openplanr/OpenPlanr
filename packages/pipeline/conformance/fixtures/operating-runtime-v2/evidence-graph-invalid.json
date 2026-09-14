@@ -1,0 +1,27 @@
+{
+  "kind": "operating-evidence-graph",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "2.0.0",
+  "scopeId": "scope-acme",
+  "domainId": "business",
+  "domainVersion": "1.0.0",
+  "generatedAt": "2026-08-09T10:00:00.000Z",
+  "evidenceRefs": [],
+  "edges": [{
+    "kind": "operating-evidence-edge",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "edgeId": "eve_graph_001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "sourceArtifactId": "art_source_001",
+    "localClaimId": "local-claim-graph-001",
+    "relation": "derivedFrom",
+    "evidenceRefId": "evr_graph_001",
+    "createdBy": { "kind": "runtime", "id": "openplanr" },
+    "createdAt": "2026-08-09T10:00:00.000Z",
+    "confidence": 0.8,
+    "classification": "internal"
+  }]
+}

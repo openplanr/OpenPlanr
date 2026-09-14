@@ -1,0 +1,368 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "openplanr-domain-projection",
+  "domain": "design",
+  "generator": "scripts/domains/project-domains.mjs",
+  "entries": [
+    {
+      "source": "packages/design/lib/design-engine/artifact-adapter.mjs",
+      "target": "lib/design-engine/artifact-adapter.mjs",
+      "sha256": "b057a25b1059c784ee49ef5c70d590c511d382713a8f59f796b20f68f1e234c4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/auth.mjs",
+      "target": "lib/design-engine/auth.mjs",
+      "sha256": "dbe9bc032bbc9ce34e7ba8fe9b7147cac0faccb25d5deb0c5268d4ba9d184596",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/board-adapter.mjs",
+      "target": "lib/design-engine/board-adapter.mjs",
+      "sha256": "c92683d863d440f4dd903e4ad08e1c9a5948ad25eeee2d3b06301e984b7e5c23",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/board-token.mjs",
+      "target": "lib/design-engine/board-token.mjs",
+      "sha256": "a20e3f463877662f6fe0e9de6079bbaa2f96986adbeb5892939ac882f7c90065",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/board.mjs",
+      "target": "lib/design-engine/board.mjs",
+      "sha256": "3b4807a0c2e0dbd65cc282a7f9ccc7d4dd4eb1cc56aaa494838c30b33b7bf6b7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/canvas-wrap.mjs",
+      "target": "lib/design-engine/canvas-wrap.mjs",
+      "sha256": "a7beba5dc47b1455a1f06b3baae1e0cc1a50fce529d9253833b1fe4fa441eadb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/cli.mjs",
+      "target": "lib/design-engine/cli.mjs",
+      "sha256": "e790e7a4f88fead286a437df3589a24baeb7029147171b9a83ce817ae3c97f9d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/daemon.mjs",
+      "target": "lib/design-engine/daemon.mjs",
+      "sha256": "3623f48a202cb2afb0dca6edff869f3e6b0fecfc518af81ed68eeaa30a22fe29",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/feedback.mjs",
+      "target": "lib/design-engine/feedback.mjs",
+      "sha256": "aafc661534dc1509c040fb3818a7fc4946b4abf0d418e485709e970d2ae06660",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/paths.mjs",
+      "target": "lib/design-engine/paths.mjs",
+      "sha256": "90d55fc47f384f1753ff18e790514c32d10a6afede28d71f13a19ddb0c2d3fa2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/providers/claudeSvg.mjs",
+      "target": "lib/design-engine/providers/claudeSvg.mjs",
+      "sha256": "ade6f77d6d55bc63e4673bee3d2a9c2fffb67cc4ee10f1b368bcf5acc0ddc053",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/providers/index.mjs",
+      "target": "lib/design-engine/providers/index.mjs",
+      "sha256": "1a0a449ed99b684247c51e8ad77ffe3b8eba655fdc4b10418d38263b6c0b4429",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/providers/openai.mjs",
+      "target": "lib/design-engine/providers/openai.mjs",
+      "sha256": "faf2c94aaa728afd42bcc676e34b678b2cc2a1d35ea7e09dab8de42fc7340ab3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/server-util.mjs",
+      "target": "lib/design-engine/server-util.mjs",
+      "sha256": "f5dc66d498c8bbb64c9f22123830c67ca411bb23e6e9746c2f3e36fc08ae9e09",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/session.mjs",
+      "target": "lib/design-engine/session.mjs",
+      "sha256": "cfb161c35580c61485f642bc04d2d7d6020de37b6588aaf93798d53277d54bca",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design-engine/taste.mjs",
+      "target": "lib/design-engine/taste.mjs",
+      "sha256": "04f19d416ba75da0ef014280b17fad56516089e5b4015856f2a7a4f5db19d406",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/browser-audit.mjs",
+      "target": "lib/design/browser-audit.mjs",
+      "sha256": "bdf7a7514cc330dfce1fab0f3f2187c2716d0ef076b6defe3671fffa24c8740d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/cli-parser.mjs",
+      "target": "lib/design/cli-parser.mjs",
+      "sha256": "f41b4b3b452cc74fbdc6d91fc1ae2a6974c9a3d8ede839a9e5e4dbaacb68ad2a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/company-publication.mjs",
+      "target": "lib/design/company-publication.mjs",
+      "sha256": "7142e104c9390eae767090ed37bb3b94331a9f618c7988ad2f6051e1274ebdb1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/context.mjs",
+      "target": "lib/design/context.mjs",
+      "sha256": "e4c4a0c41f87e753783a107d13396964c5eaaf8af3e10e7386007606b6e6e9a0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/contrast.mjs",
+      "target": "lib/design/contrast.mjs",
+      "sha256": "5c634f2cdaf2ea604aa11996c0413701c72552ded52a2bd555431c6ef1cb1af0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/designSystem.mjs",
+      "target": "lib/design/designSystem.mjs",
+      "sha256": "fa14389d297755c2164c63e07c4e195f7cf043677af18a7e887c30e338e5f722",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/document.mjs",
+      "target": "lib/design/document.mjs",
+      "sha256": "33f1a9fa80ce4e6fc4bcb0ab2035ca56d4df2600371df3cc36c0b15cd1f04ffb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/escape.mjs",
+      "target": "lib/design/escape.mjs",
+      "sha256": "676d9b4fca80521d970e0b046ab99b7f608f4b0462c5c6e835173f9b0ea5e2c5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/handoff.mjs",
+      "target": "lib/design/handoff.mjs",
+      "sha256": "4fe304f52013458364c8a7a0e09f40bc4e3b525dc5bc920e566ae47cbf4a3371",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/index.mjs",
+      "target": "lib/design/index.mjs",
+      "sha256": "2472d6e2fb0822f1d8614db04ed434394bab69a28cd18e63778b0914f73626e0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/interactivity.mjs",
+      "target": "lib/design/interactivity.mjs",
+      "sha256": "45966c4224d52c4a80b3732cf863640acb88bd0edcf44834b09749f290e97c96",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/lint.mjs",
+      "target": "lib/design/lint.mjs",
+      "sha256": "a9ee5452068d1845074adfec6fcf63f67d41f95fd4623ad9ed842cc6968c8465",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/manifest.mjs",
+      "target": "lib/design/manifest.mjs",
+      "sha256": "bfb41e0dcd38304f63af70627a336b15f758b0cea4d0d6b6f0d78727714120f1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/mime-types.mjs",
+      "target": "lib/design/mime-types.mjs",
+      "sha256": "24fe435b0c9e73d24aa1e2bcd0c0d831c68e975af36bd59c371d4eaa3cef5d98",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/path-util.mjs",
+      "target": "lib/design/path-util.mjs",
+      "sha256": "4e9fbf73123e0ec523ab7cd52707ea31975196a8e7fa382e2170957051251aa6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/recommendFormat.mjs",
+      "target": "lib/design/recommendFormat.mjs",
+      "sha256": "109fa39686e13998bd7ec1f2bafca8a0440f94fb0789f16f4f9a9eb434ac1277",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/review-export.mjs",
+      "target": "lib/design/review-export.mjs",
+      "sha256": "8a7dd97d5295b63dc04c4a2805037e2b1dd27ab12cadc0a7dff3ef1912780c86",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/review.mjs",
+      "target": "lib/design/review.mjs",
+      "sha256": "62f20a4f87f48fdefe17cd38f83d339950bdfa831b01e1c7e20ecfd8e9c39334",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/schema-loader.mjs",
+      "target": "lib/design/schema-loader.mjs",
+      "sha256": "8f0b47d7ba9f31fdce80eb852b32445d6b82c4711d2d3109be8300e84e1e9775",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/screens.mjs",
+      "target": "lib/design/screens.mjs",
+      "sha256": "aad4b77a9ef8f22b37f7317b68959badca2bf14264ece8af0fe4a029066908cf",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/share.mjs",
+      "target": "lib/design/share.mjs",
+      "sha256": "ad19e7a1c73c1258de082c9ecd2372f6d8feea5d68b54da91e5dac5218c6143d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/studio-render.mjs",
+      "target": "lib/design/studio-render.mjs",
+      "sha256": "6a7c2542625d27d7c9191f9161f0d01911fb1567ff50b13ca2dd3062d93fd1a0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/studio.mjs",
+      "target": "lib/design/studio.mjs",
+      "sha256": "0b296af19c856828aed6eecf4838cf4931f0ffd215b097486af343df8467a0db",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/tokens.mjs",
+      "target": "lib/design/tokens.mjs",
+      "sha256": "888a98cfcf19fea4243925c50621ab168730485fe8dfbc04a4118575131db105",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/utility.mjs",
+      "target": "lib/design/utility.mjs",
+      "sha256": "46ed6bb4a129fa4a007a584ec404cce449399ffe45e0928fcc3d6cbdef4cc58d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/walkthroughNav.mjs",
+      "target": "lib/design/walkthroughNav.mjs",
+      "sha256": "2dd8c4ba25f2850cf50fbd04c4d8e9e901dbc3f96e2e2da07909369427ff31a3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/workspace-client.mjs",
+      "target": "lib/design/workspace-client.mjs",
+      "sha256": "0c00460dc3bc1d4bc269a4317a84c6a9c522b34649734eaeffe072f4f1d6a342",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/workspace-feedback.mjs",
+      "target": "lib/design/workspace-feedback.mjs",
+      "sha256": "8d50380433f7571e7aa940dd96502c4794933427998e7c14c851f38e0fec0bc1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/design/canvas-shell.html",
+      "target": "templates/design/canvas-shell.html",
+      "sha256": "d24ac6bc33053dbc69b4f5ed6005c0cb8f4c582a5616fcac80cd58b530d1d0e5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/design/DesignCanvas.jsx",
+      "target": "templates/design/DesignCanvas.jsx",
+      "sha256": "27617a3f6553c2c4d6a492b57fab0b97bf5a9844ea1c87f8d26b8e49ffd69c54",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/design/prototype-shell.html",
+      "target": "templates/design/prototype-shell.html",
+      "sha256": "e3f8d42dc4d1846ca3f676bc1c232554d2ef8408fd50ae89b032873e8194f2cb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/design/README.md",
+      "target": "templates/design/README.md",
+      "sha256": "35190739f080dd4c950d72cdf98ddb06a4ff4ef993ea2f3facd45cbc64771588",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/design/vendor/DesignCanvas.js",
+      "target": "templates/design/vendor/DesignCanvas.js",
+      "sha256": "7612fd76df23b99bf0527cc366001646ae9852c5d19d198ff7fab68d3ce32209",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/design/vendor/fetch-vendor.mjs",
+      "target": "templates/design/vendor/fetch-vendor.mjs",
+      "sha256": "f040d51a3284a9daa7331a220822b1fb58dfb2ca4523bb2b83344d279bdfe30d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/design/vendor/pretext.js",
+      "target": "templates/design/vendor/pretext.js",
+      "sha256": "c85e755d86d33718e66978d18a2733eb5d11cf44747f58846bd390ed0d6f24e7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/design/vendor/react-dom.production.min.js",
+      "target": "templates/design/vendor/react-dom.production.min.js",
+      "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/design/vendor/react.production.min.js",
+      "target": "templates/design/vendor/react.production.min.js",
+      "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/design/walkthrough-shell.html",
+      "target": "templates/design/walkthrough-shell.html",
+      "sha256": "bccf59f399e317e16f10431897fad95e883f3b1156afaf0b91e667a923c76175",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/studio/enhancements.css",
+      "target": "templates/studio/enhancements.css",
+      "sha256": "df58a7ee4ffcadac780d3170abbeb00cfecb1f42db692ba62eb6f66a251bd0ea",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/studio/enhancements.js",
+      "target": "templates/studio/enhancements.js",
+      "sha256": "482167abecf8276c6a167872a17e22431102bf5e7459cd228cf4cf55b2a2491f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/studio/share.css",
+      "target": "templates/studio/share.css",
+      "sha256": "6923307acbdba81a4bcd1d24e5ed1553dc49b6f0a656222f397d36fd34afe265",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/studio/share.js",
+      "target": "templates/studio/share.js",
+      "sha256": "fb84152fecc65758e999baae03472874c38c14ce98fb4dbad5c7ef67a80aad5e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/studio/studio.css",
+      "target": "templates/studio/studio.css",
+      "sha256": "8310b73b821764f5b1fc0fc9e0eda86f461f14ac89c683209b50b85a83f004d5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/studio/studio.js",
+      "target": "templates/studio/studio.js",
+      "sha256": "9875850ff7fbf2f8cd34578dffe0a327609e1fc7e5158e63167b0bd43c4a9dad",
+      "mode": "644"
+    }
+  ]
+}

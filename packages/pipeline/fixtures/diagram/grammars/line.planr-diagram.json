@@ -1,0 +1,73 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "line-fixture",
+  "title": "Line chart fixture",
+  "summary": "Canonical semantic fixture for the line chart grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "line",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [],
+  "relations": [],
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [
+    {
+      "id": "series-main",
+      "label": "Primary series",
+      "values": [
+        {
+          "key": "A",
+          "value": 3
+        },
+        {
+          "key": "B",
+          "value": 5
+        }
+      ]
+    }
+  ],
+  "axes": [
+    {
+      "id": "axis-horizontal",
+      "label": "Horizontal meaning",
+      "scale": "linear"
+    },
+    {
+      "id": "axis-vertical",
+      "label": "Vertical meaning",
+      "scale": "linear"
+    }
+  ],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Line chart fixture",
+    "description": "A compact line chart example with semantic reading order.",
+    "readingOrder": [
+      "series-main"
+    ]
+  },
+  "documentDigest": "sha256:b2631bd07085e87a6d0d45fa2767a5871fe42696c86549de55758ec183c876aa"
+}

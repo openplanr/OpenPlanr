@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://openplanr.dev/schemas/v1.1.0/investigation-record.schema.json",
+  "title": "OpenPlanr Protocol 1.1 active investigation record", "type": "object",
+  "required": ["kind", "schemaVersion", "protocolVersion", "recordType", "runId", "mode", "generation", "state", "feature", "requestDigest", "targetScope", "initialBaseline", "currentBaselineDigest", "events", "createdAt", "updatedAt", "terminal", "receiptHash"],
+  "properties": { "kind": { "const": "investigation-record" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "1.1.0" }, "recordType": { "const": "active" }, "runId": { "type": "string", "pattern": "^inv_[a-f0-9]{32}$" }, "mode": { "enum": ["diagnose", "fix"] }, "generation": { "type": "integer", "minimum": 0 }, "state": { "enum": ["investigating", "diagnosed", "authorized", "changed", "verified"] }, "feature": { "type": "object" }, "requestDigest": { "$ref": "#/$defs/digest" }, "targetScope": { "type": "array", "minItems": 1 }, "initialBaseline": { "type": "object" }, "currentBaselineDigest": { "$ref": "#/$defs/digest" }, "events": { "type": "array", "maxItems": 256 }, "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" }, "terminal": { "type": "null" }, "receiptHash": { "type": "null" } },
+  "$defs": { "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } }
+}

@@ -1,0 +1,11 @@
+{
+  "missingSource": "SOURCE_NOT_FOUND",
+  "missingRevision": "REVISION_NOT_FOUND",
+  "wrongType": "OBJECT_TYPE_MISMATCH",
+  "missingPath": "PATH_NOT_FOUND",
+  "invalidRange": "LINE_RANGE_INVALID",
+  "wrongAncestry": "ANCESTRY_MISMATCH",
+  "denied": "CAPABILITY_DENIED",
+  "oversized": "SENSITIVITY_BLOCKED",
+  "secret": "SECRET_DETECTED"
+}

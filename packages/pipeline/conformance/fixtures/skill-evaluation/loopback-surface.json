@@ -1,0 +1,26 @@
+{
+  "kind": "evaluation-loopback-surface",
+  "schemaVersion": "1.0.0",
+  "routes": [
+    {
+      "path": "/",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "document": "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Evaluation loopback surface</title>\n</head>\n<body>\n<main>\n<h1>Evaluation loopback surface</h1>\n<p>A disposable surface a browser journey exercises. It carries no script, so its console channel is provably absent.</p>\n<a href=\"/review\">Open the review route</a>\n</main>\n</body>\n</html>\n"
+    },
+    {
+      "path": "/review",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "document": "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Evaluation loopback review</title>\n</head>\n<body>\n<main>\n<h1>Review decision</h1>\n<form action=\"/review\" method=\"post\">\n<label for=\"decision\">Decision</label>\n<input id=\"decision\" name=\"decision\" type=\"text\">\n<label for=\"note\">Note</label>\n<input id=\"note\" name=\"note\" type=\"text\">\n<button type=\"submit\">Record</button>\n</form>\n</main>\n</body>\n</html>\n"
+    }
+  ],
+  "viewports": [
+    { "name": "mobile", "width": 390, "height": 844 },
+    { "name": "tablet", "width": 834, "height": 1112 },
+    { "name": "desktop", "width": 1440, "height": 900 }
+  ],
+  "forms": [
+    { "route": "/review", "action": "/review", "method": "post", "fields": ["decision", "note"] }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "fixture": "native-dispatch-nd3-dependson",
+  "gate": "ND3",
+  "task_count": 2,
+  "ready_first_turn": ["T-001"],
+  "agent_calls_first_turn": 1,
+  "ready_after_t001_done": ["T-002"],
+  "turns": 2,
+  "dispatch_order": ["T-001", "T-002"],
+  "t002_depends_on": ["T-001"],
+  "t002_ready_before_t001_done": false,
+  "any_isolation_field": false,
+  "max_parallel_referenced": false
+}

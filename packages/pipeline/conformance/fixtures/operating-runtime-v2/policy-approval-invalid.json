@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "vectors": [
+    { "id": "lower-tier-widens-outcome", "mutation": { "type": "lower-tier-widens-outcome" }, "expectedCode": "POLICY_EVALUATION_REJECTED" },
+    { "id": "required-policy-omitted", "mutation": { "type": "required-policy-omitted" }, "expectedCode": "POLICY_EVALUATION_REJECTED" },
+    { "id": "core-prohibition-weakened", "mutation": { "type": "core-prohibition-weakened" }, "expectedCode": "POLICY_EVALUATION_REJECTED" },
+    { "id": "action-revision-copied", "mutation": { "type": "approval-field", "path": "action.revision", "value": 2 }, "expectedCode": "APPROVAL_INVALID" },
+    { "id": "policy-version-copied", "mutation": { "type": "approval-field", "path": "policy.policyVersion", "value": "2.0.0" }, "expectedCode": "APPROVAL_INVALID" },
+    { "id": "capability-copied", "mutation": { "type": "approval-field", "path": "capability.id", "value": "broader-write" }, "expectedCode": "APPROVAL_INVALID" },
+    { "id": "target-drifted", "mutation": { "type": "approval-field", "path": "target.revision", "value": "rev-other" }, "expectedCode": "APPROVAL_INVALID" },
+    { "id": "effect-drifted", "mutation": { "type": "approval-field", "path": "effectClass", "value": "read-only" }, "expectedCode": "APPROVAL_INVALID" },
+    { "id": "forged-requirement-cardinality", "mutation": { "type": "forged-requirement-cardinality" }, "expectedCode": "APPROVAL_INVALID" },
+    { "id": "actor-reused-across-parties", "mutation": { "type": "actor-reused-across-requirements" }, "expectedCode": "APPROVAL_INVALID" },
+    { "id": "partial-quorum", "mutation": { "type": "partial-quorum" }, "expectedCode": "APPROVAL_REQUIRED" },
+    { "id": "expired-approval", "mutation": { "type": "expired-approval" }, "expectedCode": "APPROVAL_EXPIRED" },
+    { "id": "consumed-approval", "mutation": { "type": "consumed-approval" }, "expectedCode": "APPROVAL_INVALID" },
+    { "id": "divergent-approval-id-reuse", "mutation": { "type": "divergent-approval-id-reuse" }, "expectedCode": "APPROVAL_INVALID" },
+    { "id": "cycle-review-substitution", "mutation": { "type": "cycle-review-substitution" }, "expectedCode": "APPROVAL_REQUIRED" },
+    { "id": "prior-evaluation-reuse", "mutation": { "type": "prior-evaluation-reuse" }, "expectedCode": "APPROVAL_REQUIRED" }
+  ]
+}

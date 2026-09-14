@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/landing-operation-registry.schema.json",
+  "title": "Protocol 1.2 Landing Operation Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "registryVersion", "authority", "operations", "registryHash"],
+  "properties": {
+    "kind": { "const": "landing-operation-registry" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "1.2.0" }, "registryVersion": { "const": "1.0.0" }, "authority": { "const": "none" }, "operations": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "$ref": "#/$defs/operation" } }, "registryHash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" }, "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" }, "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "operation": { "type": "object", "additionalProperties": false, "required": ["operationId", "operationVersion", "kind", "effectClass", "recoveryClass", "runtimeAdapterRequired", "portableAuthority", "inputContract", "outputContract", "compatibleOperateContracts", "registrationHash"], "properties": { "operationId": { "$ref": "#/$defs/id" }, "operationVersion": { "$ref": "#/$defs/version" }, "kind": { "enum": ["commit", "pull-request", "merge", "package", "publish", "deploy", "canary", "verify", "rollback", "compensate"] }, "effectClass": { "enum": ["project-write", "provider-call", "external-effect", "destructive"] }, "recoveryClass": { "enum": ["reversible", "compensatable", "irreversible"] }, "runtimeAdapterRequired": { "const": true }, "portableAuthority": { "const": "none" }, "inputContract": { "$ref": "#/$defs/contract" }, "outputContract": { "$ref": "#/$defs/contract" }, "compatibleOperateContracts": { "type": "array", "maxItems": 4, "uniqueItems": true, "items": { "enum": ["operate-executor-registration", "operating-governed-operation", "operating-action-verification-plan", "operating-checkpoint", "operating-rollback-plan", "operating-rollback-result"] } }, "registrationHash": { "$ref": "#/$defs/hash" } } },
+    "contract": { "type": "object", "additionalProperties": false, "required": ["schemaId", "schemaVersion", "protocolVersion"], "properties": { "schemaId": { "$ref": "#/$defs/id" }, "schemaVersion": { "$ref": "#/$defs/version" }, "protocolVersion": { "$ref": "#/$defs/version" } } }
+  }
+}

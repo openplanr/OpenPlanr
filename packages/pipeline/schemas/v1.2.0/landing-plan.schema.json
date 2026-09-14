@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/landing-plan.schema.json",
+  "title": "Protocol 1.2 Landing Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "planId", "authority", "shipClosure", "feature", "candidateDigest", "candidateInventoryDigest", "repositories", "currentTargetHash", "operations", "preconditions", "createdAt", "expiresAt", "planHash"],
+  "properties": {
+    "kind": { "const": "landing-plan" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "planId": { "type": "string", "pattern": "^land_[a-f0-9]{32}$" },
+    "authority": { "const": "none" },
+    "shipClosure": { "$ref": "#/$defs/shipClosure" },
+    "feature": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "candidateDigest": { "$ref": "#/$defs/hash" },
+    "candidateInventoryDigest": { "$ref": "#/$defs/hash" },
+    "repositories": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "$ref": "#/$defs/repository" } },
+    "currentTargetHash": { "$ref": "#/$defs/hash" },
+    "operations": { "type": "array", "minItems": 1, "maxItems": 64, "items": { "$ref": "#/$defs/operation" } },
+    "preconditions": { "type": "array", "maxItems": 64, "items": { "type": "object", "additionalProperties": false, "required": ["id", "kind", "proofHash", "mandatory"], "properties": { "id": { "$ref": "#/$defs/id" }, "kind": { "enum": ["candidate-current", "target-current", "provider-available", "canary-ready", "rollback-ready", "containment-ready"] }, "proofHash": { "$ref": "#/$defs/hash" }, "mandatory": { "const": true } } } },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "planHash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "shipClosure": { "type": "object", "additionalProperties": false, "required": ["contractId", "schemaVersion", "protocolVersion", "recordType", "runId", "terminalStatus", "receiptHash", "recordDigest"], "properties": { "contractId": { "const": "ship-closure" }, "schemaVersion": { "enum": ["1.0.0", "1.1.0", "1.2.0"] }, "protocolVersion": { "const": "1.1.0" }, "recordType": { "const": "receipt" }, "runId": { "type": "string", "pattern": "^ship_[a-f0-9]{32}$" }, "terminalStatus": { "const": "passed" }, "receiptHash": { "$ref": "#/$defs/hash" }, "recordDigest": { "$ref": "#/$defs/hash" } } },
+    "repository": { "type": "object", "additionalProperties": false, "required": ["repositoryKey", "baselineDigest", "head", "inventoryDigest", "projectionDigest"], "properties": { "repositoryKey": { "$ref": "#/$defs/id" }, "baselineDigest": { "$ref": "#/$defs/hash" }, "head": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" }, "inventoryDigest": { "$ref": "#/$defs/hash" }, "projectionDigest": { "$ref": "#/$defs/hash" } } },
+    "recordRef": { "type": "object", "additionalProperties": false, "required": ["contractId", "schemaVersion", "protocolVersion", "recordId", "recordDigest"], "properties": { "contractId": { "enum": ["operate-executor-registration", "operating-governed-operation", "operating-action-verification-plan", "operating-checkpoint", "operating-rollback-plan", "operating-rollback-result"] }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "2.0.0" }, "recordId": { "type": "string", "minLength": 1, "maxLength": 128 }, "recordDigest": { "$ref": "#/$defs/hash" } } },
+    "containment": { "type": "object", "additionalProperties": false, "required": ["policyHash", "state", "stopPromotion", "stopNewTraffic", "isolateFailedTarget", "retainLastKnownGood", "trafficStateHash", "residualStateHash", "expiresAt", "consequences", "recoveryChoices", "authority"], "properties": { "policyHash": { "$ref": "#/$defs/hash" }, "state": { "const": "preconfirmed" }, "stopPromotion": { "const": true }, "stopNewTraffic": { "const": true }, "isolateFailedTarget": { "const": true }, "retainLastKnownGood": { "type": "boolean" }, "trafficStateHash": { "$ref": "#/$defs/hash" }, "residualStateHash": { "$ref": "#/$defs/hash" }, "expiresAt": { "type": "string", "format": "date-time" }, "consequences": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "minLength": 1, "maxLength": 512 } }, "recoveryChoices": { "type": "array", "minItems": 1, "maxItems": 3, "uniqueItems": true, "items": { "enum": ["rollback", "compensate", "forward-fix"] } }, "authority": { "const": "containment-only" } } },
+    "operation": { "type": "object", "additionalProperties": false, "required": ["operationId", "registryOperationId", "registrationHash", "kind", "repositoryKey", "dependsOn", "effectClass", "recoveryClass", "targetBeforeHash", "inputDigest", "outputContract", "preconditionHashes", "timeoutMs", "retryPolicy", "executorRegistration", "operateBindings", "containment"], "properties": { "operationId": { "type": "string", "pattern": "^lop_[a-f0-9]{32}$" }, "registryOperationId": { "$ref": "#/$defs/id" }, "registrationHash": { "$ref": "#/$defs/hash" }, "kind": { "enum": ["commit", "pull-request", "merge", "package", "publish", "deploy", "canary", "verify", "rollback", "compensate"] }, "repositoryKey": { "$ref": "#/$defs/id" }, "dependsOn": { "type": "array", "maxItems": 16, "uniqueItems": true, "items": { "type": "string", "pattern": "^lop_[a-f0-9]{32}$" } }, "effectClass": { "enum": ["project-write", "provider-call", "external-effect", "destructive"] }, "recoveryClass": { "enum": ["reversible", "compensatable", "irreversible"] }, "targetBeforeHash": { "$ref": "#/$defs/hash" }, "inputDigest": { "$ref": "#/$defs/hash" }, "outputContract": { "type": "object", "additionalProperties": false, "required": ["schemaId", "schemaVersion"], "properties": { "schemaId": { "$ref": "#/$defs/id" }, "schemaVersion": { "$ref": "#/$defs/version" } } }, "preconditionHashes": { "type": "array", "maxItems": 64, "uniqueItems": true, "items": { "$ref": "#/$defs/hash" } }, "timeoutMs": { "type": "integer", "minimum": 1, "maximum": 3600000 }, "retryPolicy": { "enum": ["none", "reconcile-before-retry"] }, "executorRegistration": { "allOf": [{ "$ref": "#/$defs/recordRef" }, { "properties": { "contractId": { "const": "operate-executor-registration" } } }] }, "operateBindings": { "type": "array", "maxItems": 6, "items": { "$ref": "#/$defs/recordRef" } }, "containment": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/containment" }] } }, "allOf": [{ "if": { "properties": { "kind": { "const": "deploy" } }, "required": ["kind"] }, "then": { "properties": { "containment": { "$ref": "#/$defs/containment" } } } }] }
+  }
+}

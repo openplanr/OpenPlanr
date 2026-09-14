@@ -1,0 +1,36 @@
+{
+  "kind": "openplanr-preservation-verification-baseline",
+  "schemaVersion": "1.0.0",
+  "migrationId": "openplanr-monorepo",
+  "inventoryDigest": "sha256:a9e12e03880c46612b1fa9cb2336d1eb7f092da975ed5228d6f5cd76fe746c9c",
+  "surfaceCatalogDigest": "sha256:9138591ef92b342e7a717164061c131f582e64203888d885fed40964c74ff2cd",
+  "coverage": {
+    "cutoffTrackedPaths": 2124,
+    "includedOpenPlanrOverlayPaths": 618,
+    "pathRecords": 2237,
+    "unmappedPaths": 0,
+    "features": 36,
+    "rootCommands": 39,
+    "pipelineMachineLeaves": 31,
+    "frozenAliases": 8,
+    "canonicalSkills": 25,
+    "roles": 9,
+    "rules": 10,
+    "originalSchemas": 180,
+    "additiveSchemas": 48,
+    "legacyRegistries": 12,
+    "canonicalRegistries": 12,
+    "baselinePackageExports": 37,
+    "baselineRootSymbols": 229,
+    "generators": 19,
+    "generatedAssets": 2198,
+    "outputContracts": 23,
+    "outputClasses": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ]
+  },
+  "documentDigest": "sha256:32169f923a1798c772b8479fb4eca269e9b0a0a32261bd427c0e3cd0e4641f2f"
+}

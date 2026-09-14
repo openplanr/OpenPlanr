@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-sync",
+  "family": "planning-tools",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-sync/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-sync/skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Removed unresolved package procedure and command dependencies while preserving the public sync workflow and report contract."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:3d92bd8260d471436db1ba738ab59cb6c719333d7df1ab27a167e9e2a96dbdff",
+      "successorDigest": "sha256:0b6d149a9e9e1a69765562be2ba0ac14a8cea98181ad996b6bfd69a8c13432a4"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:3d92bd8260d471436db1ba738ab59cb6c719333d7df1ab27a167e9e2a96dbdff",
+      "successorDigest": "sha256:0b6d149a9e9e1a69765562be2ba0ac14a8cea98181ad996b6bfd69a8c13432a4"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:2438f97d2e659e2519cb16507586609c760eb0e0564c7d3f1b80feb8d48c3eb7",
+      "successorDigest": "sha256:ead7c122e5d681ab8c969c8738e2f27028fad48ec093caaaf0d5724997062dca"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:3d92bd8260d471436db1ba738ab59cb6c719333d7df1ab27a167e9e2a96dbdff",
+      "successorDigest": "sha256:0b6d149a9e9e1a69765562be2ba0ac14a8cea98181ad996b6bfd69a8c13432a4"
+    }
+  ]
+}

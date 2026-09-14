@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-action.schema.json",
+  "x-openplanr-contract": { "id": "operating-action", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 persistent operating action",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "actionId", "scopeId", "domainId", "domainVersion", "sourceCycleId", "sourceArtifactId", "title", "state", "ownerActorId", "accountabilityDisposition", "sourceDecisionId", "sourceFindingIds", "dependsOnActionIds", "objectiveId", "expectedResult", "metricId", "baseline", "target", "verificationWindow", "verificationPlanId", "createdAt", "updatedAt"],
+  "properties": {
+    "kind": { "const": "operating-action" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "actionId": { "type": "string", "pattern": "^act_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "revisionId": { "type": "string", "pattern": "^actrev_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "predecessorRevisionId": { "type": ["string", "null"], "pattern": "^actrev_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "actionHash": { "$ref": "#/$defs/hash" },
+    "scopeId": { "$ref": "#/$defs/nonPlaceholder" },
+    "domainId": { "$ref": "#/$defs/nonPlaceholder" },
+    "domainVersion": { "allOf": [{ "$ref": "#/$defs/nonPlaceholder" }, { "maxLength": 64 }] },
+    "sourceCycleId": { "$ref": "#/$defs/cycleId" },
+    "sourceArtifactId": { "$ref": "#/$defs/artifactId" },
+    "title": { "$ref": "#/$defs/title" },
+    "state": { "type": "string", "enum": ["proposed", "approved", "queued", "in_progress", "completed", "blocked", "rejected", "deferred", "cancelled"] },
+    "actionKind": { "$ref": "#/$defs/versionedId" },
+    "requestedCapability": { "$ref": "#/$defs/versionedId" },
+    "targetBinding": { "$ref": "#/$defs/targetBinding" },
+    "effectClass": { "$ref": "#/$defs/effectClass" },
+    "preconditionArtifactIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/artifactId" } },
+    "executionBinding": { "$ref": "#/$defs/executionBinding" },
+    "ownerActorId": { "type": ["string", "null"], "minLength": 1, "maxLength": 128 },
+    "accountabilityDisposition": { "type": ["string", "null"], "enum": [null, "unowned", "blocked"] },
+    "sourceDecisionId": { "type": ["string", "null"], "pattern": "^dec_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "sourceFindingIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^fnd_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" } },
+    "dependsOnActionIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^act_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" } },
+    "objectiveId": { "$ref": "#/$defs/objectiveId" },
+    "expectedResult": { "$ref": "#/$defs/nonBlankText" },
+    "metricId": { "$ref": "#/$defs/metricId" },
+    "baseline": { "type": "number" },
+    "target": { "type": "number" },
+    "verificationWindow": { "$ref": "#/$defs/nonBlankText" },
+    "verificationPlanId": { "$ref": "#/$defs/verificationPlanId" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "ownerActorId": { "type": "null" } } },
+      "then": { "properties": { "accountabilityDisposition": { "type": "string", "enum": ["unowned", "blocked"] } } }
+    },
+    {
+      "if": { "properties": { "ownerActorId": { "type": "string" } } },
+      "then": { "properties": { "accountabilityDisposition": { "const": null } } }
+    },
+    {
+      "if": { "required": ["revisionId"] }, "then": { "$ref": "#/$defs/completeGovernedTuple" }
+    },
+    { "if": { "required": ["revision"] }, "then": { "$ref": "#/$defs/completeGovernedTuple" } },
+    { "if": { "required": ["predecessorRevisionId"] }, "then": { "$ref": "#/$defs/completeGovernedTuple" } },
+    { "if": { "required": ["actionHash"] }, "then": { "$ref": "#/$defs/completeGovernedTuple" } },
+    { "if": { "required": ["actionKind"] }, "then": { "$ref": "#/$defs/completeGovernedTuple" } },
+    { "if": { "required": ["requestedCapability"] }, "then": { "$ref": "#/$defs/completeGovernedTuple" } },
+    { "if": { "required": ["targetBinding"] }, "then": { "$ref": "#/$defs/completeGovernedTuple" } },
+    { "if": { "required": ["effectClass"] }, "then": { "$ref": "#/$defs/completeGovernedTuple" } },
+    { "if": { "required": ["preconditionArtifactIds"] }, "then": { "$ref": "#/$defs/completeGovernedTuple" } },
+    { "if": { "required": ["executionBinding"] }, "then": { "$ref": "#/$defs/completeGovernedTuple" } }
+  ],
+  "$defs": {
+    "completeGovernedTuple": { "required": ["revisionId", "revision", "predecessorRevisionId", "actionHash", "actionKind", "requestedCapability", "targetBinding", "effectClass", "preconditionArtifactIds", "executionBinding"] },
+    "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "cycleId": { "type": "string", "pattern": "^cyc_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "metricId": { "type": "string", "pattern": "^met_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "nonPlaceholder": { "type": "string", "minLength": 1, "maxLength": 128, "not": { "pattern": "(?:<[^>]+>|\\{\\{[^}]+\\}\\})" } },
+    "nonBlankText": { "type": "string", "minLength": 1, "maxLength": 4096, "pattern": "^[\\s\\S]*\\S[\\s\\S]*$" },
+    "objectiveId": { "type": "string", "pattern": "^obj_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^\\S(?:[\\s\\S]*\\S)?$", "not": { "pattern": "(?:<[^>]+>|\\{\\{[^}]+\\}\\})" } },
+    "verificationPlanId": { "type": "string", "pattern": "^vfy_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }
+    ,"hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "versionedId": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "$ref": "#/$defs/identifier" }, "version": { "$ref": "#/$defs/version" } } },
+    "effectClass": { "enum": ["read-only", "machine-local-write", "project-write", "provider-call", "external-effect", "destructive"] },
+    "targetBinding": { "type": "object", "additionalProperties": false, "required": ["kind", "id", "revision"], "properties": { "kind": { "$ref": "#/$defs/identifier" }, "id": { "type": "string", "minLength": 1, "maxLength": 128 }, "revision": { "type": "string", "minLength": 1, "maxLength": 128 } } },
+    "executionBinding": { "type": "object", "additionalProperties": false, "required": ["policyId", "policyVersion", "rollbackRequired", "verificationRequired"], "properties": { "policyId": { "$ref": "#/$defs/identifier" }, "policyVersion": { "$ref": "#/$defs/version" }, "rollbackRequired": { "type": "boolean" }, "verificationRequired": { "const": true } } }
+  }
+}

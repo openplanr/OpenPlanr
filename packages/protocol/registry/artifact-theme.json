@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0.0",
+  "name": "OpenPlanr Artifact Review",
+  "typography": {
+    "display": "Outfit",
+    "body": "DM Sans",
+    "mono": "Source Code Pro"
+  },
+  "layout": {
+    "toolbarHeight": 48,
+    "reviewRailWidth": 344,
+    "radiusSmall": 8,
+    "radiusMedium": 12,
+    "radiusLarge": 16,
+    "motionFastMs": 120,
+    "motionBaseMs": 180
+  },
+  "themes": {
+    "dark": {
+      "background": "#08080c",
+      "chrome": "#0e0e14",
+      "panel": "#141420",
+      "raised": "#1a1a2a",
+      "stage": "#0a0b0e",
+      "rule": "#222236",
+      "text": "#f4f4fa",
+      "textMuted": "#9999b8",
+      "primary": "#5eead4",
+      "primaryStrong": "#2dd4bf",
+      "warning": "#f59e0b",
+      "danger": "#f87171",
+      "onDanger": "#08080c",
+      "question": "#60a5fa",
+      "onQuestion": "#08080c",
+      "resolved": "#8e8eb4",
+      "onResolved": "#08080c",
+      "onImprove": "#08080c"
+    },
+    "light": {
+      "background": "#f6f7f9",
+      "chrome": "#ffffff",
+      "panel": "#fbfbfd",
+      "raised": "#f0f2f5",
+      "stage": "#e9edf2",
+      "rule": "#dfe3ea",
+      "text": "#171722",
+      "textMuted": "#65657d",
+      "primary": "#087f73",
+      "primaryStrong": "#06665d",
+      "warning": "#a85f00",
+      "danger": "#c53f4f",
+      "onDanger": "#ffffff",
+      "question": "#2563a8",
+      "onQuestion": "#ffffff",
+      "resolved": "#697386",
+      "onResolved": "#ffffff",
+      "onImprove": "#ffffff"
+    }
+  }
+}

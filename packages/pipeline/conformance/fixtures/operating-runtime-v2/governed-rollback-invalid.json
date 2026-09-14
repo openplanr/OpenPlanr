@@ -1,0 +1,16 @@
+{
+  "vectors": [
+    { "id": "unsupported", "path": "rollbackPlan.eligibility", "value": "unsupported", "expectedCode": "ROLLBACK_NOT_ELIGIBLE" },
+    { "id": "prohibited", "path": "rollbackPlan.eligibility", "value": "prohibited", "expectedCode": "ROLLBACK_NOT_ELIGIBLE" },
+    { "id": "expired", "path": "rollbackPlan.expiresAt", "value": "2026-08-09T08:00:00Z", "expectedCode": "ROLLBACK_NOT_ELIGIBLE" },
+    { "id": "stale-target", "path": "rollbackResult.targetBeforeHash", "value": "sha256:7777777777777777777777777777777777777777777777777777777777777777", "expectedCode": "ROLLBACK_NOT_ELIGIBLE" },
+    { "id": "baseline-divergent", "path": "rollbackResult.baselineHash", "value": "sha256:8888888888888888888888888888888888888888888888888888888888888888", "expectedCode": "ROLLBACK_NOT_ELIGIBLE" },
+    { "id": "plan-divergent", "path": "rollbackResult.rollbackPlanId", "value": "rbp_divergent01", "expectedCode": "OPERATION_CONFLICT" },
+    { "id": "original-operation-divergent", "path": "rollbackResult.originalOperationId", "value": "op_divergent01", "expectedCode": "OPERATION_CONFLICT" },
+    { "id": "fabricated-success", "path": "rollbackResult.targetAfterHash", "value": "sha256:9999999999999999999999999999999999999999999999999999999999999999", "expectedCode": "RESULT_CONTRACT_INVALID" },
+    { "id": "destructive-plan", "path": "rollbackPlan.effectClass", "value": "destructive", "expectedCode": "E_PROTOCOL_ARTIFACT_INVALID" },
+    { "id": "unknown-reconciliation", "path": "reconciliation.classification", "value": "unknown", "expectedCode": "OPERATION_UNCERTAIN" },
+    { "id": "repeated", "path": "rollbackResult.rollbackOperationId", "value": "op_conformance02", "expectedCode": "OPERATION_CONFLICT" },
+    { "id": "concurrent", "path": "rollbackResult.rollbackOperationId", "value": "op_concurrent01", "expectedCode": "OPERATION_CONFLICT" }
+  ]
+}

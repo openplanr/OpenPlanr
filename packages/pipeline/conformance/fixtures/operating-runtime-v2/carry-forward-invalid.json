@@ -1,0 +1,14 @@
+{
+  "missingRequiredDisposition": {
+    "reviewId": "rev_00000001",
+    "disposition": "approved",
+    "workDispositions": [
+      { "entityType": "operating-finding", "entityId": "fnd_00000001", "disposition": "deferred" }
+    ]
+  },
+  "cancelledIsNotClosure": {
+    "reviewId": "rev_00000001",
+    "disposition": "cancelled",
+    "workDispositions": []
+  }
+}

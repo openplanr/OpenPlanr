@@ -1,0 +1,12 @@
+{
+  "kind": "guided-runtime-assets",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.2.0",
+  "generator": "scripts/generate-guided-adapters.mjs",
+  "assets": [
+    {
+      "path": "adapters/cursor/rules/openplanr.mdc",
+      "digest": "sha256:7b9139fe6738b7ffdc15ef9232ba77be9cc27f783a7601119208f3a441dcb42d"
+    }
+  ]
+}

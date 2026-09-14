@@ -1,0 +1,480 @@
+/*
+ * Planr Console design tokens (Planning console vertical slice).
+ * Namespaced --pc-* so they never collide with the legacy --op-* system or
+ * Tailwind v4's @theme vars. Warm ink neutrals + an acid-lime signal.
+ * Geist is declared as a font stack only (no CDN); it falls back to system-ui
+ * until the family is self-hosted.
+ */
+:root {
+  /* raw ramp — warm ink (brown-black), acid lime, and semantic hues */
+  --pc-ink-950: #141210;
+  --pc-ink-900: #1b1815;
+  --pc-ink-850: #221f1b;
+  --pc-ink-800: #2a2622;
+  --pc-ink-700: #3a342f;
+  --pc-ink-600: #544c45;
+  --pc-ink-500: #726960;
+  --pc-ink-400: #968c81;
+  --pc-ink-300: #b9afa3;
+  --pc-ink-200: #d9d2c7;
+  --pc-ink-150: #e5dfd5;
+  --pc-ink-100: #eee9e0;
+  --pc-ink-50: #f6f3ec;
+  --pc-paper: #fcfbf8;
+  --pc-white: #ffffff;
+  --pc-lime-100: #f0fbce;
+  --pc-lime-200: #e2f79e;
+  --pc-lime-300: #d2f26a;
+  --pc-lime-400: #bce633;
+  --pc-lime-500: #a3ce12;
+  --pc-lime-600: #7ea00e;
+  --pc-lime-700: #5c750c;
+  --pc-lime-800: #3f5109;
+  --pc-amber-100: #fdf0d6;
+  --pc-amber-300: #f5c563;
+  --pc-amber-500: #de9410;
+  --pc-amber-700: #94600a;
+  --pc-verm-100: #fce4de;
+  --pc-verm-300: #f4a392;
+  --pc-verm-500: #de4526;
+  --pc-verm-700: #9c2c15;
+  --pc-teal-100: #dcf0e9;
+  --pc-teal-300: #8fcfbb;
+  --pc-teal-500: #2c8a70;
+  --pc-teal-700: #1d6152;
+  --pc-indigo-300: #a5afee;
+  --pc-indigo-500: #4356ce;
+  --pc-indigo-700: #2c3a93;
+
+  /* type + geometry */
+  --pc-font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --pc-font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --pc-text-2xs: 11px;
+  --pc-text-xs: 12px;
+  --pc-text-sm: 13px;
+  --pc-text-base: 14px;
+  --pc-text-md: 15px;
+  --pc-text-lg: 18px;
+  --pc-text-xl: 22px;
+  --pc-weight-regular: 400;
+  --pc-weight-medium: 500;
+  --pc-weight-semibold: 600;
+  --pc-tracking-snug: -0.01em;
+  --pc-tracking-wide: 0.04em;
+  --pc-radius-xs: 3px;
+  --pc-radius-sm: 5px;
+  --pc-radius-md: 7px;
+  --pc-radius-pill: 999px;
+  --pc-row-height: 34px;
+  --pc-row-height-compact: 28px;
+
+  /* semantic — light */
+  --pc-surface-app: var(--pc-ink-50);
+  --pc-surface-panel: var(--pc-paper);
+  --pc-surface-card: var(--pc-white);
+  --pc-surface-sunken: var(--pc-ink-100);
+  --pc-surface-hover: rgba(20, 18, 16, 0.04);
+  --pc-surface-selected: var(--pc-lime-100);
+  --pc-row-stripe: rgba(20, 18, 16, 0.022);
+  --pc-text-primary: var(--pc-ink-900);
+  --pc-text-secondary: var(--pc-ink-600);
+  --pc-text-tertiary: var(--pc-ink-500);
+  --pc-border-subtle: var(--pc-ink-150);
+  --pc-border-default: var(--pc-ink-200);
+  --pc-border-strong: var(--pc-ink-400);
+  --pc-accent: var(--pc-lime-400);
+  --pc-accent-hover: var(--pc-lime-500);
+  --pc-accent-ink: var(--pc-lime-700);
+  --pc-on-accent: var(--pc-ink-950);
+  --pc-focus-ring: var(--pc-ink-900);
+  --pc-focus-halo: var(--pc-lime-300);
+
+  /* real artifact statuses (done | in-progress | blocked | outstanding | addressed) */
+  --pc-status-outstanding-fg: var(--pc-amber-700);
+  --pc-status-outstanding-bg: var(--pc-amber-100);
+  --pc-status-outstanding-border: var(--pc-amber-300);
+  --pc-status-in-progress-fg: var(--pc-lime-800);
+  --pc-status-in-progress-bg: var(--pc-lime-100);
+  --pc-status-in-progress-border: var(--pc-lime-400);
+  --pc-status-blocked-fg: var(--pc-verm-700);
+  --pc-status-blocked-bg: var(--pc-verm-100);
+  --pc-status-blocked-border: var(--pc-verm-300);
+  --pc-status-done-fg: var(--pc-teal-700);
+  --pc-status-done-bg: var(--pc-teal-100);
+  --pc-status-done-border: var(--pc-teal-300);
+  --pc-status-addressed-fg: var(--pc-ink-600);
+  --pc-status-addressed-bg: var(--pc-ink-100);
+  --pc-status-addressed-border: var(--pc-ink-200);
+
+  /* capability accents — planr-{name} */
+  --pc-planr-plan: var(--pc-indigo-500);
+  --pc-planr-ship: var(--pc-lime-600);
+  --pc-planr-operate: var(--pc-amber-500);
+  --pc-planr-diagram: var(--pc-teal-500);
+  --pc-planr-status: var(--pc-ink-600);
+
+  /* artifact type accents (epic → spec) */
+  --pc-type-epic: var(--pc-indigo-500);
+  --pc-type-feature: var(--pc-teal-500);
+  --pc-type-story: var(--pc-lime-600);
+  --pc-type-task: var(--pc-ink-500);
+  --pc-type-spec: var(--pc-amber-500);
+  --pc-type-other: var(--pc-ink-400);
+}
+
+/* semantic — dark: first-class, keyed on the dashboard's [data-theme] convention */
+:root[data-theme="dark"] {
+  --pc-surface-app: var(--pc-ink-950);
+  --pc-surface-panel: var(--pc-ink-900);
+  --pc-surface-card: var(--pc-ink-850);
+  --pc-surface-sunken: #0e0c0b;
+  --pc-surface-hover: rgba(246, 243, 236, 0.05);
+  --pc-surface-selected: rgba(188, 230, 51, 0.14);
+  --pc-row-stripe: rgba(246, 243, 236, 0.02);
+  --pc-text-primary: var(--pc-ink-50);
+  --pc-text-secondary: var(--pc-ink-300);
+  --pc-text-tertiary: var(--pc-ink-400);
+  --pc-border-subtle: var(--pc-ink-850);
+  --pc-border-default: var(--pc-ink-700);
+  --pc-border-strong: var(--pc-ink-500);
+  --pc-accent: var(--pc-lime-400);
+  --pc-accent-hover: var(--pc-lime-300);
+  --pc-accent-ink: var(--pc-lime-300);
+  --pc-on-accent: var(--pc-ink-950);
+  --pc-focus-ring: var(--pc-lime-300);
+  --pc-focus-halo: rgba(188, 230, 51, 0.35);
+  --pc-status-outstanding-fg: var(--pc-amber-300);
+  --pc-status-outstanding-bg: rgba(222, 148, 16, 0.16);
+  --pc-status-outstanding-border: rgba(245, 197, 99, 0.45);
+  --pc-status-in-progress-fg: var(--pc-lime-300);
+  --pc-status-in-progress-bg: rgba(188, 230, 51, 0.16);
+  --pc-status-in-progress-border: rgba(188, 230, 51, 0.5);
+  --pc-status-blocked-fg: var(--pc-verm-300);
+  --pc-status-blocked-bg: rgba(222, 69, 38, 0.18);
+  --pc-status-blocked-border: rgba(244, 163, 146, 0.42);
+  --pc-status-done-fg: var(--pc-teal-300);
+  --pc-status-done-bg: rgba(44, 138, 112, 0.18);
+  --pc-status-done-border: rgba(143, 207, 187, 0.4);
+  --pc-status-addressed-fg: var(--pc-ink-300);
+  --pc-status-addressed-bg: rgba(246, 243, 236, 0.07);
+  --pc-status-addressed-border: var(--pc-ink-700);
+  --pc-planr-plan: var(--pc-indigo-300);
+  --pc-planr-ship: var(--pc-lime-400);
+  --pc-planr-operate: var(--pc-amber-300);
+  --pc-planr-diagram: var(--pc-teal-300);
+  --pc-planr-status: var(--pc-ink-300);
+  --pc-type-epic: var(--pc-indigo-300);
+  --pc-type-feature: var(--pc-teal-300);
+  --pc-type-story: var(--pc-lime-400);
+  --pc-type-task: var(--pc-ink-400);
+  --pc-type-spec: var(--pc-amber-300);
+  --pc-type-other: var(--pc-ink-500);
+}
+
+/* ===== Full prototype alignment: extended tokens (theme-invariant) ===== */
+:root {
+  /* raw ramp steps the prototype semantic layer needs beyond the slice subset */
+  --pc-indigo-100: #e2e6fa;
+  --pc-amber-900: #4e3305;
+  --pc-verm-900: #54180b;
+  --pc-teal-900: #0f332c;
+  --pc-indigo-900: #171e4e;
+
+  /* type ramp + named roles */
+  --pc-text-2xl: 28px;
+  --pc-text-3xl: 36px;
+  --pc-text-4xl: 48px;
+  --pc-leading-tight: 1.15;
+  --pc-leading-snug: 1.3;
+  --pc-leading-normal: 1.45;
+  --pc-leading-relaxed: 1.6;
+  --pc-weight-light: 300;
+  --pc-weight-bold: 700;
+  --pc-tracking-tight: -0.02em;
+  --pc-tracking-normal: 0;
+  --pc-tracking-caps: 0.09em;
+  --pc-type-display:
+    var(--pc-weight-semibold) var(--pc-text-3xl) / var(--pc-leading-tight) var(--pc-font-sans);
+  --pc-type-title:
+    var(--pc-weight-semibold) var(--pc-text-xl) / var(--pc-leading-snug) var(--pc-font-sans);
+  --pc-type-section:
+    var(--pc-weight-semibold) var(--pc-text-md) / var(--pc-leading-snug) var(--pc-font-sans);
+  --pc-type-body:
+    var(--pc-weight-regular) var(--pc-text-base) / var(--pc-leading-normal) var(--pc-font-sans);
+  --pc-type-body-sm:
+    var(--pc-weight-regular) var(--pc-text-sm) / var(--pc-leading-normal) var(--pc-font-sans);
+  --pc-type-label: var(--pc-weight-medium) var(--pc-text-xs) / 1.2 var(--pc-font-sans);
+  --pc-type-mono: var(--pc-weight-regular) var(--pc-text-xs) / 1.35 var(--pc-font-mono);
+  --pc-type-mono-sm: var(--pc-weight-regular) var(--pc-text-2xs) / 1.3 var(--pc-font-mono);
+  --pc-type-key: var(--pc-weight-medium) var(--pc-text-2xs) / 1 var(--pc-font-mono);
+
+  /* 4px spacing grid with dense half-steps */
+  --pc-space-0-5: 2px;
+  --pc-space-1: 4px;
+  --pc-space-1-5: 6px;
+  --pc-space-2: 8px;
+  --pc-space-3: 12px;
+  --pc-space-4: 16px;
+  --pc-space-5: 20px;
+  --pc-space-6: 24px;
+  --pc-space-8: 32px;
+  --pc-space-10: 40px;
+  --pc-space-12: 48px;
+  --pc-space-16: 64px;
+  --pc-space-20: 80px;
+
+  /* shell geometry */
+  --pc-rail-width: 52px;
+  --pc-sidebar-width: 248px;
+  --pc-inspector-width: 344px;
+  --pc-topbar-height: 48px;
+  --pc-statusbar-height: 28px;
+  --pc-content-max: 1600px;
+  --pc-gutter: 20px;
+
+  /* extra radii */
+  --pc-radius-none: 0;
+  --pc-radius-lg: 10px;
+  --pc-radius-xl: 14px;
+
+  /* elevation (light) — hairline borders do most of the work */
+  --pc-shadow-none: none;
+  --pc-shadow-hairline: 0 0 0 1px var(--pc-border-subtle);
+  --pc-shadow-sm: 0 1px 2px rgba(20, 18, 16, 0.06), 0 0 0 1px rgba(20, 18, 16, 0.05);
+  --pc-shadow-md: 0 4px 12px -2px rgba(20, 18, 16, 0.1), 0 0 0 1px rgba(20, 18, 16, 0.06);
+  --pc-shadow-lg: 0 18px 44px -12px rgba(20, 18, 16, 0.22), 0 0 0 1px rgba(20, 18, 16, 0.07);
+
+  /* motion — fast, mechanical */
+  --pc-dur-instant: 80ms;
+  --pc-dur-fast: 120ms;
+  --pc-dur-base: 180ms;
+  --pc-dur-slow: 260ms;
+  --pc-dur-pulse: 1600ms;
+  --pc-ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --pc-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --pc-transition-ui:
+    background-color var(--pc-dur-fast) var(--pc-ease-out),
+    border-color var(--pc-dur-fast) var(--pc-ease-out), color var(--pc-dur-fast) var(--pc-ease-out);
+
+  /* governed action states — proposed/running/closed/failed/blocked (light) */
+  --pc-astate-proposed-fg: var(--pc-amber-700);
+  --pc-astate-proposed-bg: var(--pc-amber-100);
+  --pc-astate-proposed-border: var(--pc-amber-300);
+  --pc-astate-proposed-solid: var(--pc-amber-500);
+  --pc-astate-running-fg: var(--pc-lime-800);
+  --pc-astate-running-bg: var(--pc-lime-100);
+  --pc-astate-running-border: var(--pc-lime-400);
+  --pc-astate-running-solid: var(--pc-lime-400);
+  --pc-astate-closed-fg: var(--pc-teal-700);
+  --pc-astate-closed-bg: var(--pc-teal-100);
+  --pc-astate-closed-border: var(--pc-teal-300);
+  --pc-astate-closed-solid: var(--pc-teal-500);
+  --pc-astate-failed-fg: var(--pc-verm-700);
+  --pc-astate-failed-bg: var(--pc-verm-100);
+  --pc-astate-failed-border: var(--pc-verm-300);
+  --pc-astate-failed-solid: var(--pc-verm-500);
+  --pc-astate-blocked-fg: var(--pc-ink-700);
+  --pc-astate-blocked-bg: var(--pc-ink-100);
+  --pc-astate-blocked-border: var(--pc-ink-300);
+  --pc-astate-blocked-solid: var(--pc-ink-500);
+
+  /* dependency graph (light) */
+  --pc-graph-canvas: var(--pc-ink-50);
+  --pc-graph-grid: var(--pc-ink-150);
+  --pc-graph-edge: var(--pc-ink-300);
+  --pc-graph-edge-active: var(--pc-lime-500);
+  --pc-graph-edge-blocked: var(--pc-verm-500);
+  --pc-graph-node-epic: var(--pc-indigo-500);
+  --pc-graph-node-feature: var(--pc-teal-500);
+  --pc-graph-node-story: var(--pc-lime-600);
+  --pc-graph-node-task: var(--pc-ink-500);
+  --pc-graph-node-spec: var(--pc-amber-500);
+}
+
+/* extended tokens that vary by theme — explicit dark, then system-dark */
+:root[data-theme="dark"] {
+  --pc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(246, 243, 236, 0.06);
+  --pc-shadow-md: 0 6px 16px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(246, 243, 236, 0.07);
+  --pc-shadow-lg: 0 22px 50px -14px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(246, 243, 236, 0.09);
+  --pc-astate-proposed-fg: var(--pc-amber-300);
+  --pc-astate-proposed-bg: rgba(222, 148, 16, 0.16);
+  --pc-astate-proposed-border: rgba(245, 197, 99, 0.45);
+  --pc-astate-running-fg: var(--pc-lime-300);
+  --pc-astate-running-bg: rgba(188, 230, 51, 0.16);
+  --pc-astate-running-border: rgba(188, 230, 51, 0.5);
+  --pc-astate-closed-fg: var(--pc-teal-300);
+  --pc-astate-closed-bg: rgba(44, 138, 112, 0.18);
+  --pc-astate-closed-border: rgba(143, 207, 187, 0.4);
+  --pc-astate-failed-fg: var(--pc-verm-300);
+  --pc-astate-failed-bg: rgba(222, 69, 38, 0.18);
+  --pc-astate-failed-border: rgba(244, 163, 146, 0.42);
+  --pc-astate-blocked-fg: var(--pc-ink-300);
+  --pc-astate-blocked-bg: rgba(246, 243, 236, 0.07);
+  --pc-astate-blocked-border: var(--pc-ink-700);
+  --pc-graph-canvas: var(--pc-ink-950);
+  --pc-graph-grid: var(--pc-ink-850);
+  --pc-graph-edge: var(--pc-ink-700);
+  --pc-graph-edge-active: var(--pc-lime-400);
+  --pc-graph-edge-blocked: var(--pc-verm-300);
+  --pc-graph-node-epic: var(--pc-indigo-300);
+  --pc-graph-node-feature: var(--pc-teal-300);
+  --pc-graph-node-story: var(--pc-lime-400);
+  --pc-graph-node-task: var(--pc-ink-400);
+  --pc-graph-node-spec: var(--pc-amber-300);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(246, 243, 236, 0.06);
+    --pc-shadow-md: 0 6px 16px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(246, 243, 236, 0.07);
+    --pc-shadow-lg: 0 22px 50px -14px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(246, 243, 236, 0.09);
+    --pc-astate-proposed-fg: var(--pc-amber-300);
+    --pc-astate-proposed-bg: rgba(222, 148, 16, 0.16);
+    --pc-astate-proposed-border: rgba(245, 197, 99, 0.45);
+    --pc-astate-running-fg: var(--pc-lime-300);
+    --pc-astate-running-bg: rgba(188, 230, 51, 0.16);
+    --pc-astate-running-border: rgba(188, 230, 51, 0.5);
+    --pc-astate-closed-fg: var(--pc-teal-300);
+    --pc-astate-closed-bg: rgba(44, 138, 112, 0.18);
+    --pc-astate-closed-border: rgba(143, 207, 187, 0.4);
+    --pc-astate-failed-fg: var(--pc-verm-300);
+    --pc-astate-failed-bg: rgba(222, 69, 38, 0.18);
+    --pc-astate-failed-border: rgba(244, 163, 146, 0.42);
+    --pc-astate-blocked-fg: var(--pc-ink-300);
+    --pc-astate-blocked-bg: rgba(246, 243, 236, 0.07);
+    --pc-astate-blocked-border: var(--pc-ink-700);
+    --pc-graph-canvas: var(--pc-ink-950);
+    --pc-graph-grid: var(--pc-ink-850);
+    --pc-graph-edge: var(--pc-ink-700);
+    --pc-graph-edge-active: var(--pc-lime-400);
+    --pc-graph-edge-blocked: var(--pc-verm-300);
+    --pc-graph-node-epic: var(--pc-indigo-300);
+    --pc-graph-node-feature: var(--pc-teal-300);
+    --pc-graph-node-story: var(--pc-lime-400);
+    --pc-graph-node-task: var(--pc-ink-400);
+    --pc-graph-node-spec: var(--pc-amber-300);
+  }
+}
+
+/* ===== Planr App v1: remaining semantic aliases from the design system ===== */
+:root {
+  --pc-row-height: 32px;
+  --pc-row-height-compact: 28px;
+  --pc-surface-raised: var(--pc-white);
+  --pc-surface-inverse: var(--pc-ink-900);
+  --pc-surface-active: rgba(20, 18, 16, 0.08);
+  --pc-surface-scrim: rgba(20, 18, 16, 0.42);
+  --pc-text-disabled: var(--pc-ink-400);
+  --pc-text-inverse: var(--pc-paper);
+  --pc-text-link: var(--pc-indigo-700);
+  --pc-text-link-hover: var(--pc-indigo-500);
+  --pc-border-inverse: var(--pc-ink-700);
+  --pc-border-accent: var(--pc-lime-500);
+  --pc-accent-press: var(--pc-lime-600);
+  --pc-accent-quiet: var(--pc-lime-100);
+  --pc-focus-width: 2px;
+  --pc-focus-offset: 2px;
+  --pc-blur-overlay: blur(6px);
+  --pc-table-header-bg: var(--pc-ink-50);
+  --pc-ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --pc-shadow-hairline: 0 0 0 1px var(--pc-border-subtle);
+
+  /* artifact status as a dot + label (ArtifactStatus). Distinct from the chip tokens above. */
+  --pc-artifact-done-solid: var(--pc-teal-500);
+  --pc-artifact-done-fg: var(--pc-text-secondary);
+  --pc-artifact-in-progress-solid: var(--pc-lime-600);
+  --pc-artifact-in-progress-fg: var(--pc-text-primary);
+  --pc-artifact-blocked-solid: var(--pc-verm-500);
+  --pc-artifact-blocked-fg: var(--pc-verm-700);
+  --pc-artifact-outstanding-solid: var(--pc-ink-400);
+  --pc-artifact-outstanding-fg: var(--pc-text-tertiary);
+  --pc-artifact-addressed-solid: var(--pc-indigo-500);
+  --pc-artifact-addressed-fg: var(--pc-text-secondary);
+}
+
+:root[data-theme="dark"] {
+  --pc-surface-raised: var(--pc-ink-800);
+  --pc-surface-inverse: var(--pc-ink-50);
+  --pc-surface-active: rgba(246, 243, 236, 0.09);
+  --pc-surface-scrim: rgba(10, 9, 8, 0.62);
+  --pc-text-disabled: var(--pc-ink-600);
+  --pc-text-inverse: var(--pc-ink-950);
+  --pc-text-link: var(--pc-indigo-300);
+  --pc-text-link-hover: #c3cbf6;
+  --pc-border-inverse: var(--pc-ink-200);
+  --pc-accent-press: var(--pc-lime-500);
+  --pc-accent-quiet: rgba(188, 230, 51, 0.16);
+  --pc-table-header-bg: var(--pc-ink-900);
+  --pc-artifact-done-solid: var(--pc-teal-300);
+  --pc-artifact-in-progress-solid: var(--pc-lime-400);
+  --pc-artifact-blocked-solid: var(--pc-verm-300);
+  --pc-artifact-blocked-fg: var(--pc-verm-300);
+  --pc-artifact-outstanding-solid: var(--pc-ink-600);
+  --pc-artifact-addressed-solid: var(--pc-indigo-300);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pc-surface-raised: var(--pc-ink-800);
+    --pc-surface-inverse: var(--pc-ink-50);
+    --pc-surface-active: rgba(246, 243, 236, 0.09);
+    --pc-surface-scrim: rgba(10, 9, 8, 0.62);
+    --pc-text-disabled: var(--pc-ink-600);
+    --pc-text-inverse: var(--pc-ink-950);
+    --pc-text-link: var(--pc-indigo-300);
+    --pc-text-link-hover: #c3cbf6;
+    --pc-border-inverse: var(--pc-ink-200);
+    --pc-accent-press: var(--pc-lime-500);
+    --pc-accent-quiet: rgba(188, 230, 51, 0.16);
+    --pc-table-header-bg: var(--pc-ink-900);
+    --pc-artifact-done-solid: var(--pc-teal-300);
+    --pc-artifact-in-progress-solid: var(--pc-lime-400);
+    --pc-artifact-blocked-solid: var(--pc-verm-300);
+    --pc-artifact-blocked-fg: var(--pc-verm-300);
+    --pc-artifact-outstanding-solid: var(--pc-ink-600);
+    --pc-artifact-addressed-solid: var(--pc-indigo-300);
+  }
+}
+
+/* honor system dark unless the user pinned light, matching the --op-* system */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pc-surface-app: var(--pc-ink-950);
+    --pc-surface-panel: var(--pc-ink-900);
+    --pc-surface-card: var(--pc-ink-850);
+    --pc-surface-sunken: #0e0c0b;
+    --pc-surface-hover: rgba(246, 243, 236, 0.05);
+    --pc-surface-selected: rgba(188, 230, 51, 0.14);
+    --pc-row-stripe: rgba(246, 243, 236, 0.02);
+    --pc-text-primary: var(--pc-ink-50);
+    --pc-text-secondary: var(--pc-ink-300);
+    --pc-text-tertiary: var(--pc-ink-400);
+    --pc-border-subtle: var(--pc-ink-850);
+    --pc-border-default: var(--pc-ink-700);
+    --pc-border-strong: var(--pc-ink-500);
+    --pc-accent-ink: var(--pc-lime-300);
+    --pc-focus-ring: var(--pc-lime-300);
+    --pc-focus-halo: rgba(188, 230, 51, 0.35);
+    --pc-status-outstanding-fg: var(--pc-amber-300);
+    --pc-status-outstanding-bg: rgba(222, 148, 16, 0.16);
+    --pc-status-outstanding-border: rgba(245, 197, 99, 0.45);
+    --pc-status-in-progress-fg: var(--pc-lime-300);
+    --pc-status-in-progress-bg: rgba(188, 230, 51, 0.16);
+    --pc-status-in-progress-border: rgba(188, 230, 51, 0.5);
+    --pc-status-blocked-fg: var(--pc-verm-300);
+    --pc-status-blocked-bg: rgba(222, 69, 38, 0.18);
+    --pc-status-blocked-border: rgba(244, 163, 146, 0.42);
+    --pc-status-done-fg: var(--pc-teal-300);
+    --pc-status-done-bg: rgba(44, 138, 112, 0.18);
+    --pc-status-done-border: rgba(143, 207, 187, 0.4);
+    --pc-status-addressed-fg: var(--pc-ink-300);
+    --pc-status-addressed-bg: rgba(246, 243, 236, 0.07);
+    --pc-status-addressed-border: var(--pc-ink-700);
+    --pc-type-epic: var(--pc-indigo-300);
+    --pc-type-feature: var(--pc-teal-300);
+    --pc-type-story: var(--pc-lime-400);
+    --pc-type-task: var(--pc-ink-400);
+    --pc-type-spec: var(--pc-amber-300);
+    --pc-type-other: var(--pc-ink-500);
+  }
+}

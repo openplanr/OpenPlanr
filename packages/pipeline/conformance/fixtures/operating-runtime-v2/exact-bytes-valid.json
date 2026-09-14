@@ -1,0 +1,7 @@
+{
+  "text": "{\n  \"kind\": \"operating-advisor-result\",\n  \"schemaVersion\": \"1.0.0\",\n  \"protocolVersion\": \"2.0.0\",\n  \"café\": \"Δ\",\n  \"items\": []\n}\n",
+  "contentBase64": "ewogICJraW5kIjogIm9wZXJhdGluZy1hZHZpc29yLXJlc3VsdCIsCiAgInNjaGVtYVZlcnNpb24iOiAiMS4wLjAiLAogICJwcm90b2NvbFZlcnNpb24iOiAiMi4wLjAiLAogICJjYWbDqSI6ICLOlCIsCiAgIml0ZW1zIjogW10KfQo=",
+  "sizeBytes": 131,
+  "rawHash": "sha256:fbfc80bb49896631c18e4dbe8378724976a2bf854bc534e6164258bc6a1751d2",
+  "canonicalHash": "sha256:a9850aec76171449456530887bcb55ef91c0b3377b33d648c2d455b0d217c220"
+}

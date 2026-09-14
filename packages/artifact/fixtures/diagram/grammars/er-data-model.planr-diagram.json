@@ -1,0 +1,63 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "er-data-model-fixture",
+  "title": "ER data model fixture",
+  "summary": "Canonical semantic fixture for the er data model grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "er-data-model",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "ER data model A",
+      "kind": "primary-item",
+      "description": "First semantic item in the er data model fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "ER data model B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the er data model fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [],
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "ER data model fixture",
+    "description": "A compact er data model example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:6bf82b29bb301a754aa168c38720c147ed9e35c6bd28efe11b0fcc4c7208df31"
+}

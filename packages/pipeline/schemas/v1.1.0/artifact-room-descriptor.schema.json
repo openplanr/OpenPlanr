@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/artifact-room-descriptor.schema.json",
+  "title": "OpenPlanr signed live-room descriptor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "protocolVersion", "roomId", "reviewOf", "ownerKey", "capabilities", "createdAt"],
+  "properties": {
+    "schemaVersion": { "const": "2.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "roomId": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,128}$" },
+    "reviewOf": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "ownerKey": { "$ref": "#/$defs/publicKey" },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewer", "owner", "management"],
+      "properties": {
+        "reviewer": { "const": "reviewer-write" },
+        "owner": { "const": "owner-verdict" },
+        "management": { "const": "room-management" }
+      }
+    },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "publicKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "encoding", "keyId", "value"],
+      "properties": {
+        "algorithm": { "const": "ECDSA-P256-SHA256" },
+        "encoding": { "const": "spki-base64url" },
+        "keyId": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "value": { "type": "string", "pattern": "^[A-Za-z0-9_-]{64,342}$" }
+      }
+    }
+  }
+}

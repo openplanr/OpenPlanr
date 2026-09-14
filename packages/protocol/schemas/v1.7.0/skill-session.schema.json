@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.7.0/skill-session.schema.json",
+  "x-openplanr-contract": {
+    "id": "skill-session",
+    "version": "1.7.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "sessionId",
+    "skillId",
+    "startedAt",
+    "state",
+    "questions"
+  ],
+  "properties": {
+    "kind": {
+      "const": "skill-session"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.7.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "sessionId": {
+      "type": "string",
+      "pattern": "^GIS-[A-Za-z0-9._-]{8,128}$"
+    },
+    "skillId": {
+      "$ref": "common.schema.json#/$defs/skillId"
+    },
+    "startedAt": {
+      "$ref": "common.schema.json#/$defs/dateTime"
+    },
+    "state": {
+      "enum": [
+        "open",
+        "answered",
+        "closed",
+        "expired"
+      ]
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "$ref": "https://openplanr.dev/schemas/v1.2.0/guided-question.schema.json"
+      },
+      "minItems": 0,
+      "maxItems": 64
+    }
+  }
+}

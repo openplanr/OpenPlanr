@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.9.0/design-workspace-create.schema.json",
+  "x-openplanr-contract": {
+    "id": "design-workspace-create",
+    "version": "1.9.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22,64}$"
+    },
+    "ownerPublicKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kty",
+        "crv",
+        "x",
+        "y"
+      ],
+      "properties": {
+        "kty": {
+          "const": "EC"
+        },
+        "crv": {
+          "const": "P-256"
+        },
+        "x": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "minLength": 43,
+          "maxLength": 43
+        },
+        "y": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "minLength": 43,
+          "maxLength": 43
+        },
+        "ext": {
+          "type": "boolean"
+        },
+        "key_ops": {
+          "type": "array",
+          "items": {
+            "const": "verify"
+          },
+          "maxItems": 1
+        }
+      }
+    },
+    "ownerAuthHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reviewerAuthHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "epoch": {
+      "const": 1
+    },
+    "keyring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "iv",
+        "ciphertext"
+      ],
+      "properties": {
+        "iv": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "minLength": 16,
+          "maxLength": 16
+        },
+        "ciphertext": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "minLength": 22,
+          "maxLength": 6990507
+        }
+      }
+    },
+    "revision": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://openplanr.dev/schemas/v1.9.0/design-workspace-revision.schema.json",
+      "x-openplanr-contract": {
+        "id": "design-workspace-revision",
+        "version": "1.9.0"
+      },
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{22,64}$"
+        },
+        "epoch": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2147483647
+        },
+        "reviewOf": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "iv": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "minLength": 16,
+          "maxLength": 16
+        },
+        "ciphertext": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "minLength": 22,
+          "maxLength": 6990507
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "minLength": 86,
+          "maxLength": 86
+        }
+      },
+      "required": [
+        "id",
+        "epoch",
+        "reviewOf",
+        "createdAt",
+        "iv",
+        "ciphertext",
+        "signature"
+      ]
+    },
+    "operationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22,64}$"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 86,
+      "maxLength": 86
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "ownerPublicKey",
+    "ownerAuthHash",
+    "reviewerAuthHash",
+    "epoch",
+    "keyring",
+    "revision",
+    "operationId",
+    "signature"
+  ]
+}

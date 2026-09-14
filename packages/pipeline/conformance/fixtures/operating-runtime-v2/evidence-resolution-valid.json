@@ -1,0 +1,36 @@
+{
+  "candidate": {
+    "kind": "operating-evidence-candidate",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "candidateId": "evc_resolution_001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "sourceArtifactId": "art_source_001",
+    "evidenceKind": "operate-artifact",
+    "locator": {
+      "artifactId": "art_target_001",
+      "expectedArtifactType": "advisor-result",
+      "expectedSchemaId": "advisor-result",
+      "expectedSchemaVersion": "1.0.0",
+      "expectedRawHash": "sha256:c078e2f30413472ac0c00648474fd9d12c192d895860972a60629a715d5c72d5"
+    },
+    "provider": { "id": "local-operate-artifact-evidence-provider", "version": "2.0.0" },
+    "resolver": { "id": "local-operate-artifact-evidence-resolver", "version": "2.0.0" }
+  },
+  "claimLinks": [{
+    "sourceArtifactId": "art_source_001",
+    "localClaimId": "local-claim-resolution-001",
+    "relation": "supportedBy",
+    "confidence": 0.8
+  }],
+  "draft": {
+    "resolutionId": "evs_resolution_001",
+    "eventId": "evt-evidence-resolution-001",
+    "timestamp": "2026-08-09T10:00:00.000Z",
+    "correlationId": "corr-evidence-resolution-001",
+    "evidenceRefId": "evr_resolution_001",
+    "evidenceArtifactId": "art_evidence_001"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "polar-fixture",
+  "title": "Polar chart fixture",
+  "summary": "Canonical semantic fixture for the polar chart grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "polar",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "radial",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [],
+  "relations": [],
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [
+    {
+      "id": "series-main",
+      "label": "Primary series",
+      "values": [
+        {
+          "key": "A",
+          "value": 3
+        },
+        {
+          "key": "B",
+          "value": 5
+        }
+      ]
+    }
+  ],
+  "axes": [
+    {
+      "id": "axis-horizontal",
+      "label": "Horizontal meaning",
+      "scale": "linear"
+    },
+    {
+      "id": "axis-vertical",
+      "label": "Vertical meaning",
+      "scale": "linear"
+    }
+  ],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Polar chart fixture",
+    "description": "A compact polar chart example with semantic reading order.",
+    "readingOrder": [
+      "series-main"
+    ]
+  },
+  "documentDigest": "sha256:c3acebb435ec9af2453e43eba522b0c21a2f70b98fdf1f2a9ca77f81e5331afd"
+}

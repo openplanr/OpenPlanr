@@ -1,0 +1,36 @@
+{
+  "cycleStart": [
+    { "field": "scope.scopeId", "value": "<scope-id>" },
+    { "field": "scope.scopeId", "value": "scope-{{domainId}}" },
+    { "field": "scope.domainId", "value": "{{domainId}}" },
+    { "field": "scope.domainId", "value": "prefix-<scope-id>" },
+    { "field": "scope.domainVersion", "value": "<version>" },
+    { "field": "scope.domainVersion", "value": "v{{version}}" },
+    { "field": "focus.0", "value": "<focus>" },
+    { "field": "focus.0", "value": "prefix-<focus>" },
+    { "field": "ownerActorId", "value": "<owner-actor-id>" },
+    { "field": "ownerActorId", "value": "owner-{{actorId}}" }
+  ],
+  "cycleIdentity": [
+    { "tool": "operate.cycle.get", "field": "cycleId", "value": "<cycle-id>" },
+    { "tool": "operate.cycle.get", "field": "cycleId", "value": "cycle-{{cycleId}}" },
+    { "tool": "operate.cycle.resume", "field": "cycleId", "value": "{{cycleId}}" },
+    { "tool": "operate.cycle.resume", "field": "cycleId", "value": "prefix-<cycle-id>" }
+  ],
+  "assignmentClaim": [
+    { "field": "actor.actorId", "value": "<actor-id>" },
+    { "field": "actor.actorId", "value": "agent-{{actorId}}" },
+    { "field": "actor.runtime", "value": "{{runtime}}" },
+    { "field": "actor.runtime", "value": "runtime-<name>" }
+  ],
+  "assignmentSubmit": [
+    { "field": "mediaType", "value": "<media-type>" },
+    { "field": "mediaType", "value": "application/{{type}}" }
+  ],
+  "labels": [
+    "<action-label>",
+    "Run <next-action> now",
+    "{{actionLabel}}",
+    "Resume {{cycleId}}"
+  ]
+}

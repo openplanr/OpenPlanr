@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.3.0/release-ledger.schema.json",
+  "title": "OpenPlanr coordinated release ledger",
+  "x-openplanr-contract": { "id": "release-ledger", "version": "1.3.0" },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "generatedAt", "repositoryKeys", "rows", "manifestBinding", "ledgerId", "ledgerDigest"],
+  "properties": {
+    "kind": { "const": "release-ledger" },
+    "schemaVersion": { "const": "1.3.0" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "repositoryKeys": { "type": "array", "minItems": 5, "maxItems": 5, "uniqueItems": true, "items": { "$ref": "#/$defs/repositoryKey" } },
+    "rows": { "type": "array", "minItems": 5, "maxItems": 5, "uniqueItems": true, "items": { "$ref": "#/$defs/row" } },
+    "manifestBinding": { "$ref": "#/$defs/manifestBinding" },
+    "ledgerId": { "type": "string", "pattern": "^rlg_[a-f0-9]{32}$" },
+    "ledgerDigest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "repositoryKey": { "enum": ["pipeline", "web", "cli", "skills", "marketplace"] },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$" },
+    "packageName": { "type": "string", "pattern": "^(?:@[a-z0-9._~-]+/)?[a-z0-9._~-]+$" },
+    "terminalReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["digest", "state", "boundPayloadDigest"],
+      "properties": {
+        "digest": { "$ref": "#/$defs/digest" },
+        "state": { "const": "closed" },
+        "boundPayloadDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repositoryKey", "packageName", "declaredVersion", "baselineCommit", "clean", "sourceInventoryDigest", "payloadDigest", "exportSurfaceDigest", "terminalReceipt"],
+      "properties": {
+        "repositoryKey": { "$ref": "#/$defs/repositoryKey" },
+        "packageName": { "$ref": "#/$defs/packageName" },
+        "declaredVersion": { "$ref": "#/$defs/version" },
+        "baselineCommit": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+        "clean": { "const": true },
+        "sourceInventoryDigest": { "$ref": "#/$defs/digest" },
+        "payloadDigest": { "$ref": "#/$defs/digest" },
+        "exportSurfaceDigest": { "$ref": "#/$defs/digest" },
+        "terminalReceipt": { "$ref": "#/$defs/terminalReceipt" }
+      }
+    },
+    "manifestBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["manifestDigest", "manifestSchemaVersion"],
+      "properties": {
+        "manifestDigest": { "$ref": "#/$defs/digest" },
+        "manifestSchemaVersion": { "const": "1.1.0" }
+      }
+    }
+  }
+}

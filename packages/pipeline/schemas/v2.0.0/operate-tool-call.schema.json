@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operate-tool-call.schema.json",
+  "x-openplanr-contract": { "id": "operate-tool-call", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 tool call",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "direction", "operation"],
+  "properties": {
+    "kind": { "const": "operate-tool-call" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "direction": { "type": "string", "enum": ["request", "response"] },
+    "operation": { "type": "string", "enum": ["operate.cycle.start", "operate.cycle.get", "operate.cycle.resume", "operate.assignment.claim", "operate.assignment.submit", "operate.artifact.get", "operate.review.get", "operate.review.submit", "operate.action.approve", "operate.action.execute", "operate.action.rollback"] },
+    "request": {},
+    "response": { "$ref": "operate-api-envelope.schema.json" }
+  },
+  "oneOf": [
+    { "title": "cycle.start request", "$ref": "#/$defs/cycleStartRequest" },
+    { "title": "cycle.get request", "$ref": "#/$defs/cycleGetRequest" },
+    { "title": "cycle.resume request", "$ref": "#/$defs/cycleResumeRequest" },
+    { "title": "assignment.claim request", "$ref": "#/$defs/assignmentClaimRequest" },
+    { "title": "assignment.submit request", "$ref": "#/$defs/assignmentSubmitRequest" },
+    { "title": "artifact.get request", "$ref": "#/$defs/artifactGetRequest" },
+    { "title": "review.get request", "$ref": "#/$defs/reviewGetRequest" },
+    { "title": "review.submit request", "$ref": "#/$defs/reviewSubmitRequest" },
+    { "title": "action.approve request", "$ref": "#/$defs/actionApproveRequest" },
+    { "title": "action.execute request", "$ref": "#/$defs/actionExecuteRequest" },
+    { "title": "action.rollback request", "$ref": "#/$defs/actionRollbackRequest" },
+    { "title": "cycle.start response", "$ref": "#/$defs/cycleStartResponse" },
+    { "title": "cycle.get response", "$ref": "#/$defs/cycleGetResponse" },
+    { "title": "cycle.resume response", "$ref": "#/$defs/cycleResumeResponse" },
+    { "title": "assignment.claim response", "$ref": "#/$defs/assignmentClaimResponse" },
+    { "title": "assignment.submit response", "$ref": "#/$defs/assignmentSubmitResponse" },
+    { "title": "artifact.get response", "$ref": "#/$defs/artifactGetResponse" },
+    { "title": "review.get response", "$ref": "#/$defs/reviewGetResponse" },
+    { "title": "review.submit response", "$ref": "#/$defs/reviewSubmitResponse" },
+    { "title": "action.approve response", "$ref": "#/$defs/actionApproveResponse" },
+    { "title": "action.execute response", "$ref": "#/$defs/actionExecuteResponse" },
+    { "title": "action.rollback response", "$ref": "#/$defs/actionRollbackResponse" }
+  ],
+  "$defs": {
+    "requestBase": { "required": ["request"], "properties": { "direction": { "const": "request" } }, "not": { "required": ["response"] } },
+    "responseBase": { "required": ["response"], "properties": { "direction": { "const": "response" } }, "not": { "required": ["request"] } },
+    "cycleStartRequest": { "allOf": [{ "$ref": "#/$defs/requestBase" }, { "properties": { "operation": { "const": "operate.cycle.start" }, "request": { "$ref": "#/$defs/cycleStartArguments" } } }] },
+    "cycleGetRequest": { "allOf": [{ "$ref": "#/$defs/requestBase" }, { "properties": { "operation": { "const": "operate.cycle.get" }, "request": { "$ref": "#/$defs/cycleIdentityArguments" } } }] },
+    "cycleResumeRequest": { "allOf": [{ "$ref": "#/$defs/requestBase" }, { "properties": { "operation": { "const": "operate.cycle.resume" }, "request": { "$ref": "#/$defs/cycleIdentityArguments" } } }] },
+    "assignmentClaimRequest": { "allOf": [{ "$ref": "#/$defs/requestBase" }, { "properties": { "operation": { "const": "operate.assignment.claim" }, "request": { "$ref": "#/$defs/assignmentClaimArguments" } } }] },
+    "assignmentSubmitRequest": { "allOf": [{ "$ref": "#/$defs/requestBase" }, { "properties": { "operation": { "const": "operate.assignment.submit" }, "request": { "$ref": "#/$defs/assignmentSubmitArguments" } } }] },
+    "artifactGetRequest": { "allOf": [{ "$ref": "#/$defs/requestBase" }, { "properties": { "operation": { "const": "operate.artifact.get" }, "request": { "$ref": "#/$defs/artifactGetArguments" } } }] },
+    "reviewGetRequest": { "allOf": [{ "$ref": "#/$defs/requestBase" }, { "properties": { "operation": { "const": "operate.review.get" }, "request": { "$ref": "#/$defs/reviewIdentityArguments" } } }] },
+    "reviewSubmitRequest": { "allOf": [{ "$ref": "#/$defs/requestBase" }, { "properties": { "operation": { "const": "operate.review.submit" }, "request": { "$ref": "#/$defs/reviewSubmitArguments" } } }] },
+    "actionApproveRequest": { "allOf": [{ "$ref": "#/$defs/requestBase" }, { "properties": { "operation": { "const": "operate.action.approve" }, "request": { "$ref": "#/$defs/actionApproveArguments" } } }] },
+    "actionExecuteRequest": { "allOf": [{ "$ref": "#/$defs/requestBase" }, { "properties": { "operation": { "const": "operate.action.execute" }, "request": { "$ref": "#/$defs/actionExecuteArguments" } } }] },
+    "actionRollbackRequest": { "allOf": [{ "$ref": "#/$defs/requestBase" }, { "properties": { "operation": { "const": "operate.action.rollback" }, "request": { "$ref": "#/$defs/actionRollbackArguments" } } }] },
+    "cycleStartResponse": { "allOf": [{ "$ref": "#/$defs/responseBase" }, { "properties": { "operation": { "const": "operate.cycle.start" }, "response": { "allOf": [{ "$ref": "operate-api-envelope.schema.json" }, { "properties": { "operation": { "const": "operate.cycle.start" } } }] } } }] },
+    "cycleGetResponse": { "allOf": [{ "$ref": "#/$defs/responseBase" }, { "properties": { "operation": { "const": "operate.cycle.get" }, "response": { "allOf": [{ "$ref": "operate-api-envelope.schema.json" }, { "properties": { "operation": { "const": "operate.cycle.get" } } }] } } }] },
+    "cycleResumeResponse": { "allOf": [{ "$ref": "#/$defs/responseBase" }, { "properties": { "operation": { "const": "operate.cycle.resume" }, "response": { "allOf": [{ "$ref": "operate-api-envelope.schema.json" }, { "properties": { "operation": { "const": "operate.cycle.resume" } } }] } } }] },
+    "assignmentClaimResponse": { "allOf": [{ "$ref": "#/$defs/responseBase" }, { "properties": { "operation": { "const": "operate.assignment.claim" }, "response": { "allOf": [{ "$ref": "operate-api-envelope.schema.json" }, { "properties": { "operation": { "const": "operate.assignment.claim" } } }] } } }] },
+    "assignmentSubmitResponse": { "allOf": [{ "$ref": "#/$defs/responseBase" }, { "properties": { "operation": { "const": "operate.assignment.submit" }, "response": { "allOf": [{ "$ref": "operate-api-envelope.schema.json" }, { "properties": { "operation": { "const": "operate.assignment.submit" } } }] } } }] },
+    "artifactGetResponse": { "allOf": [{ "$ref": "#/$defs/responseBase" }, { "properties": { "operation": { "const": "operate.artifact.get" }, "response": { "allOf": [{ "$ref": "operate-api-envelope.schema.json" }, { "properties": { "operation": { "const": "operate.artifact.get" } } }] } } }] },
+    "reviewGetResponse": { "allOf": [{ "$ref": "#/$defs/responseBase" }, { "properties": { "operation": { "const": "operate.review.get" }, "response": { "allOf": [{ "$ref": "operate-api-envelope.schema.json" }, { "properties": { "operation": { "const": "operate.review.get" } } }] } } }] },
+    "reviewSubmitResponse": { "allOf": [{ "$ref": "#/$defs/responseBase" }, { "properties": { "operation": { "const": "operate.review.submit" }, "response": { "allOf": [{ "$ref": "operate-api-envelope.schema.json" }, { "properties": { "operation": { "const": "operate.review.submit" } } }] } } }] },
+    "actionApproveResponse": { "allOf": [{ "$ref": "#/$defs/responseBase" }, { "properties": { "operation": { "const": "operate.action.approve" }, "response": { "allOf": [{ "$ref": "operate-api-envelope.schema.json" }, { "properties": { "operation": { "const": "operate.action.approve" } } }] } } }] },
+    "actionExecuteResponse": { "allOf": [{ "$ref": "#/$defs/responseBase" }, { "properties": { "operation": { "const": "operate.action.execute" }, "response": { "allOf": [{ "$ref": "operate-api-envelope.schema.json" }, { "properties": { "operation": { "const": "operate.action.execute" } } }] } } }] },
+    "actionRollbackResponse": { "allOf": [{ "$ref": "#/$defs/responseBase" }, { "properties": { "operation": { "const": "operate.action.rollback" }, "response": { "allOf": [{ "$ref": "operate-api-envelope.schema.json" }, { "properties": { "operation": { "const": "operate.action.rollback" } } }] } } }] },
+    "cycleStartArguments": {
+      "type": "object", "additionalProperties": false, "required": ["scope", "focus", "trigger", "mode", "ownerActorId"],
+      "properties": {
+        "scope": {
+          "type": "object", "additionalProperties": false, "required": ["scopeId", "domainId", "domainVersion"],
+          "properties": {
+            "scopeId": { "$ref": "#/$defs/nonPlaceholder" },
+            "domainId": { "$ref": "#/$defs/nonPlaceholder" },
+            "domainVersion": { "allOf": [{ "$ref": "#/$defs/nonPlaceholder" }, { "maxLength": 64 }] }
+          }
+        },
+        "focus": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/nonPlaceholder" } },
+        "trigger": { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "manual" } } },
+        "mode": { "type": "string", "enum": ["standard", "preview"] },
+        "ownerActorId": { "$ref": "#/$defs/nonPlaceholder" },
+        "deliveryRoute": { "type": "string", "enum": ["contained-execution", "planning-work", "human-external", "observe-only"] }
+      }
+    },
+    "cycleIdentityArguments": { "type": "object", "additionalProperties": false, "required": ["cycleId"], "properties": { "cycleId": { "$ref": "#/$defs/nonPlaceholder" } } },
+    "assignmentClaimArguments": {
+      "type": "object", "additionalProperties": false, "required": ["assignmentId", "actor"],
+      "properties": {
+        "assignmentId": { "type": "string", "pattern": "^asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "actor": { "$ref": "#/$defs/publicActor" }
+      }
+    },
+    "assignmentSubmitArguments": {
+      "type": "object", "additionalProperties": false, "required": ["assignmentId", "submissionId", "actor", "mediaType", "encoding", "contentBase64"],
+      "properties": {
+        "assignmentId": { "type": "string", "pattern": "^asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "submissionId": { "type": "string", "pattern": "^sub_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "actor": { "$ref": "#/$defs/publicActor" },
+        "mediaType": { "$ref": "#/$defs/nonPlaceholder" },
+        "encoding": { "type": "string", "enum": ["utf-8", "binary"] },
+        "contentBase64": { "type": "string", "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$" }
+      }
+    },
+    "artifactGetArguments": {
+      "type": "object", "additionalProperties": false, "required": ["artifactId", "representation", "actor", "scope", "assignmentId"],
+      "properties": {
+        "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "representation": { "type": "string", "enum": ["raw", "canonical", "metadata", "decoded-json"] },
+        "actor": { "$ref": "#/$defs/publicActor" },
+        "scope": { "$ref": "#/$defs/scope" },
+        "assignmentId": { "type": ["string", "null"], "pattern": "^asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }
+      },
+      "allOf": [{
+        "if": { "properties": { "actor": { "properties": { "kind": { "const": "agent" } }, "required": ["kind"] } }, "required": ["actor"] },
+        "then": { "properties": { "assignmentId": { "type": "string" } } }
+      }]
+    },
+    "reviewIdentityArguments": {
+      "type": "object", "additionalProperties": false, "required": ["reviewId", "cycleId", "actor", "scope"],
+      "properties": {
+        "reviewId": { "type": "string", "pattern": "^rev_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "cycleId": { "type": "string", "pattern": "^cyc_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "actor": { "$ref": "#/$defs/humanActor" },
+        "scope": { "$ref": "#/$defs/scope" }
+      }
+    },
+    "reviewSubmitArguments": {
+      "type": "object", "additionalProperties": false, "required": ["reviewId", "cycleId", "actor", "scope", "disposition", "workDispositions"],
+      "properties": {
+        "reviewId": { "type": "string", "pattern": "^rev_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "cycleId": { "type": "string", "pattern": "^cyc_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "actor": { "$ref": "#/$defs/humanActor" },
+        "scope": { "$ref": "#/$defs/scope" },
+        "disposition": { "type": "string", "enum": ["approved", "changes_requested", "rejected", "cancelled"] },
+        "workDispositions": { "type": "array", "maxItems": 1024, "uniqueItems": true, "items": { "$ref": "operating-review.schema.json#/$defs/workDisposition" } }
+      }
+    },
+    "actionApproveArguments": { "$ref": "operate-allowed-action.schema.json#/$defs/actionApproveArguments" },
+    "actionExecuteArguments": { "$ref": "operate-allowed-action.schema.json#/$defs/actionExecuteArguments" },
+    "actionRollbackArguments": { "$ref": "operate-allowed-action.schema.json#/$defs/actionRollbackArguments" },
+    "publicActor": {
+      "type": "object", "additionalProperties": false, "required": ["actorId", "kind", "runtime"],
+      "properties": {
+        "actorId": { "$ref": "#/$defs/nonPlaceholder" },
+        "kind": { "type": "string", "enum": ["agent", "human"] },
+        "runtime": { "$ref": "#/$defs/nonPlaceholder" }
+      }
+    },
+    "humanActor": {
+      "type": "object", "additionalProperties": false, "required": ["actorId", "kind", "runtime"],
+      "properties": {
+        "actorId": { "$ref": "#/$defs/nonPlaceholder" },
+        "kind": { "const": "human" },
+        "runtime": { "$ref": "#/$defs/nonPlaceholder" }
+      }
+    },
+    "scope": {
+      "type": "object", "additionalProperties": false, "required": ["scopeId", "domainId", "domainVersion"],
+      "properties": {
+        "scopeId": { "$ref": "#/$defs/nonPlaceholder" },
+        "domainId": { "$ref": "#/$defs/nonPlaceholder" },
+        "domainVersion": { "allOf": [{ "$ref": "#/$defs/nonPlaceholder" }, { "maxLength": 64 }] }
+      }
+    },
+    "nonPlaceholder": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "not": { "pattern": "(?:<[^>]+>|\\{\\{[^}]+\\}\\})" }
+    }
+  }
+}

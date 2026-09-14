@@ -1,0 +1,8 @@
+{
+  "kind": "operate-tool-call",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "2.0.0",
+  "direction": "request",
+  "operation": "operate.cycle.start",
+  "request": { "scope": {} }
+}

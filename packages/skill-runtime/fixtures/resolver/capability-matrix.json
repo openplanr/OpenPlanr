@@ -1,0 +1,39 @@
+{
+  "claude-native": {
+    "attached-terminal": { "state": "available", "source": "claude-code:terminal" },
+    "native-questions": { "state": "available", "source": "claude-code:questions" },
+    "structured-chat": { "state": "available", "source": "claude-code:chat" }
+  },
+  "codex-native": {
+    "attached-terminal": { "state": "available", "source": "codex:terminal" },
+    "native-questions": { "state": "available", "source": "codex:composer" },
+    "structured-chat": { "state": "available", "source": "codex:chat" }
+  },
+  "codex-chat-fallback": {
+    "attached-terminal": { "state": "available", "source": "codex:terminal" },
+    "native-questions": { "state": "unavailable", "source": "codex:composer" },
+    "structured-chat": { "state": "available", "source": "codex:chat" }
+  },
+  "codex-terminal-fallback": {
+    "attached-terminal": { "state": "available", "source": "codex:terminal" },
+    "native-questions": { "state": "unavailable", "source": "codex:composer" },
+    "structured-chat": { "state": "unavailable", "source": "codex:chat" }
+  },
+  "codex-headless": {
+    "attached-terminal": { "state": "unavailable", "source": "codex:terminal" },
+    "native-questions": { "state": "unavailable", "source": "codex:composer" },
+    "structured-chat": { "state": "unavailable", "source": "codex:chat" }
+  },
+  "codex-denied": {
+    "attached-terminal": { "state": "unavailable", "source": "codex:terminal" },
+    "native-questions": { "state": "denied", "source": "codex:composer" },
+    "structured-chat": { "state": "unavailable", "source": "codex:chat" }
+  },
+  "cursor-chat": {
+    "attached-terminal": { "state": "available", "source": "cursor:terminal" },
+    "structured-chat": { "state": "available", "source": "cursor:chat" }
+  },
+  "pipeline-terminal": {
+    "attached-terminal": { "state": "available", "source": "pipeline:terminal" }
+  }
+}

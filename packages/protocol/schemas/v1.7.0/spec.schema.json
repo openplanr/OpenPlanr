@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.7.0/spec.schema.json",
+  "x-openplanr-contract": {
+    "id": "spec",
+    "version": "1.7.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "slug",
+    "schemaVersion",
+    "status",
+    "priority",
+    "created",
+    "updated",
+    "ui_files",
+    "tech_dependencies"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^(?:SPEC|FEAT)-\\d{3,}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "schemaVersion": {
+      "const": "1.7.0"
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "shaping",
+        "shaped",
+        "decomposing",
+        "decomposed",
+        "ready-for-pipeline",
+        "in-pipeline",
+        "done"
+      ]
+    },
+    "created": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "priority": {
+      "enum": [
+        "P0",
+        "P1",
+        "P2",
+        "P3"
+      ]
+    },
+    "milestone": {
+      "type": "string"
+    },
+    "po": {
+      "type": "string"
+    },
+    "ui_files": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "tech_dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "specificationContract": {
+      "const": "professional-specification@1.0.0"
+    },
+    "review_specialists": {
+      "type": "array",
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "security-reviewer",
+          "performance-reviewer",
+          "migration-reviewer",
+          "api-contract-reviewer",
+          "data-integrity-reviewer"
+        ]
+      }
+    },
+    "kanbanosId": {
+      "type": "string",
+      "minLength": 8,
+      "pattern": "^[A-Za-z0-9_-]{8,128}$"
+    },
+    "contentHash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  }
+}

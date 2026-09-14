@@ -1,0 +1,72 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "dp-security-matrix-fixture",
+  "title": "Data platform security matrix fixture",
+  "summary": "Canonical semantic fixture for the data platform security matrix grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "dp-security-matrix",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Data platform security matrix A",
+      "kind": "primary-item",
+      "description": "First semantic item in the data platform security matrix fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "Data platform security matrix B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the data platform security matrix fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [],
+  "groups": [],
+  "lanes": [
+    {
+      "id": "lane-main",
+      "label": "Primary lane",
+      "members": [
+        "item-a",
+        "item-b"
+      ]
+    }
+  ],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Data platform security matrix fixture",
+    "description": "A compact data platform security matrix example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:b5872f1c490c99d7a115859e93218ad722393dc037336e4e7186c0e7b5ef770d"
+}

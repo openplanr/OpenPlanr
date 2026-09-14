@@ -1,0 +1,32 @@
+{
+  "kind": "operating-decision-ledger",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "2.0.0",
+  "ledgerId": "ldg_00000001",
+  "scopeId": "scope-acme",
+  "domainId": "business",
+  "domainVersion": "1.0.0",
+  "snapshotId": "snp_00000001",
+  "intelligencePlanId": "ipl_00000001",
+  "advisorArtifactIds": ["art_00000002"],
+  "challengerArtifactId": null,
+  "decisions": [{
+    "title": "Retain customers",
+    "question": "What should we prioritize?",
+    "outcome": "Retention",
+    "rationale": "It is below target.",
+    "evidenceRefIds": ["evr_00000001"],
+    "alternatives": ["Acquisition"],
+    "confidence": 0.8,
+    "assumptionIds": [],
+    "upside": "Higher retention.",
+    "downside": "Less acquisition work.",
+    "uncertainty": "Retention response may vary by cohort.",
+    "ownerActorId": "owner-001",
+    "revisitConditions": ["Metric changes."],
+    "actionHypotheses": []
+  }],
+  "dissent": [],
+  "sourceArtifactId": "art_00000002",
+  "createdAt": "2026-08-09T08:00:00Z"
+}

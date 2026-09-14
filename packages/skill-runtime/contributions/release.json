@@ -1,0 +1,29 @@
+{
+  "kind": "openplanr-skill-contribution",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.8.0",
+  "id": "release",
+  "skills": [
+    {
+      "id": "planr-land",
+      "source": "skills/planr-land/openplanr.skill.json",
+      "authorityClass": "release-preparation",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-land",
+          "argv": [
+            "land"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "id": "planr-release",
+      "source": "skills/planr-release/openplanr.skill.json",
+      "authorityClass": "release-preparation",
+      "utilityRequirements": []
+    }
+  ]
+}

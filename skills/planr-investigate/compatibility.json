@@ -1,0 +1,12 @@
+{
+  "kind": "openplanr-skill-migration-declaration",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-investigate",
+  "baseline": "SKILL.md",
+  "successor": "skill.json",
+  "classification": "intentional",
+  "intendedChanges": [
+    "Removed run IDs, receipts, digests, event files, typed authorization, and trusted-command-host prerequisites.",
+    "Removed redundant negative governance narration from the user-facing workflow."
+  ]
+}

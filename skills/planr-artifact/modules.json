@@ -1,0 +1,39 @@
+{
+  "imports": [],
+  "modules": [
+    {
+      "moduleId": "planr-artifact-workflow",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "shared",
+      "description": "Task-specific planr-artifact workflow guidance.",
+      "source": "modules/workflow.md",
+      "appliesWhen": "Whenever planr-artifact is selected.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read"
+        ],
+        "allowedTools": [
+          "read"
+        ],
+        "allowedOperations": [
+          "artifact",
+          "compile",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      }
+    }
+  ]
+}

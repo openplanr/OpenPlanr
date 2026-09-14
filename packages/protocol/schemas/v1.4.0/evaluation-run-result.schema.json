@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/evaluation-run-result.schema.json",
+  "title": "OpenPlanr Protocol 1.4 evaluation run result",
+  "type": "object", "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "runResultId", "runId", "visibility", "publishable", "evidenceTransport", "corpusDigest", "graderRegistryDigest", "hostProfileRegistryDigest", "hostProfiles", "budgetDigest", "gatePolicyDigest", "packageDigest", "sourceDigest", "observations", "measurements", "findingCounts", "rawEvidence", "terminalReason", "startedAt", "completedAt", "runResultDigest"],
+  "properties": {
+    "kind": { "const": "evaluation-run-result" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "1.4.0" },
+    "runResultId": { "type": "string", "pattern": "^ers_[a-f0-9]{32}$" },
+    "runId": { "type": "string", "pattern": "^eru_[a-f0-9]{32}$" },
+    "visibility": { "const": "local" },
+    "publishable": { "const": false, "description": "The aggregate report is the only publishable projection of a run." },
+    "evidenceTransport": { "const": "digest-only" },
+    "corpusDigest": { "$ref": "#/$defs/digest" },
+    "graderRegistryDigest": { "$ref": "#/$defs/digest" },
+    "hostProfileRegistryDigest": { "$ref": "#/$defs/digest" },
+    "hostProfiles": {
+      "type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["hostProfileId", "profileDigest"],
+        "properties": { "hostProfileId": { "type": "string", "pattern": "^ehp_[a-f0-9]{32}$" }, "profileDigest": { "$ref": "#/$defs/digest" } }
+      }
+    },
+    "budgetDigest": { "$ref": "#/$defs/digest" },
+    "gatePolicyDigest": { "$ref": "#/$defs/digest" },
+    "packageDigest": { "$ref": "#/$defs/digest" },
+    "sourceDigest": { "$ref": "#/$defs/digest" },
+    "observations": {
+      "type": "array", "minItems": 1, "maxItems": 4096, "uniqueItems": true,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["observationId", "observationDigest", "scenarioDigest", "outcome"],
+        "properties": {
+          "observationId": { "type": "string", "pattern": "^eob_[a-f0-9]{32}$" },
+          "observationDigest": { "$ref": "#/$defs/digest" },
+          "scenarioDigest": { "$ref": "#/$defs/digest" },
+          "outcome": { "enum": ["pass", "fail", "absent"] }
+        }
+      }
+    },
+    "measurements": {
+      "type": "object", "additionalProperties": false,
+      "required": ["latencyMsP50", "latencyMsP95", "inputTokens", "outputTokens", "totalTokens", "costEstimateCurrency", "costEstimateMicros", "permissionPrompts", "retries"],
+      "properties": {
+        "latencyMsP50": { "$ref": "#/$defs/durationMs" },
+        "latencyMsP95": { "$ref": "#/$defs/durationMs" },
+        "inputTokens": { "$ref": "#/$defs/tokenCount" },
+        "outputTokens": { "$ref": "#/$defs/tokenCount" },
+        "totalTokens": { "$ref": "#/$defs/tokenCount" },
+        "costEstimateCurrency": { "const": "USD" },
+        "costEstimateMicros": { "$ref": "#/$defs/costMicros" },
+        "permissionPrompts": { "$ref": "#/$defs/counter" },
+        "retries": { "$ref": "#/$defs/counter" }
+      }
+    },
+    "findingCounts": {
+      "type": "object", "additionalProperties": false, "required": ["p0", "p1", "p2", "p3"],
+      "properties": { "p0": { "$ref": "#/$defs/counter" }, "p1": { "$ref": "#/$defs/counter" }, "p2": { "$ref": "#/$defs/counter" }, "p3": { "$ref": "#/$defs/counter" } }
+    },
+    "rawEvidence": {
+      "type": "array", "maxItems": 4096, "uniqueItems": true,
+      "description": "Prompts, traces, screenshots, and model output are referenced by digest. The bytes stay in the local store and never enter this record.",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["evidenceId", "class", "contentDigest", "byteLength"],
+        "properties": {
+          "evidenceId": { "type": "string", "pattern": "^eev_[a-f0-9]{32}$" },
+          "class": { "enum": ["prompt", "trace", "screenshot", "model-output"] },
+          "contentDigest": { "$ref": "#/$defs/digest" },
+          "byteLength": { "type": "integer", "minimum": 0, "maximum": 1099511627776 }
+        }
+      }
+    },
+    "terminalReason": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$" },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "runResultDigest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "durationMs": { "type": "integer", "minimum": 0, "maximum": 86400000 },
+    "tokenCount": { "type": "integer", "minimum": 0, "maximum": 100000000 },
+    "costMicros": { "type": "integer", "minimum": 0, "maximum": 1000000000000 },
+    "counter": { "type": "integer", "minimum": 0, "maximum": 1000000 }
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "kind": "openplanr-ecosystem-generated-assets",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.5.0",
+  "generator": "scripts/marketplace/generate-ecosystem.mjs",
+  "inputs": [
+    {
+      "path": "adapters/manifests/generated-assets.json",
+      "digest": "sha256:039f8b36ee4ff5db9a36347c5e21054cf2bca7796e9382b815bbda3ab83ff446"
+    },
+    {
+      "path": "apps/dashboard/package.json",
+      "digest": "sha256:880471e9b43c26c4793f16f0474d2ed641363a4e5ae5a73b684ba125a1bf4edf"
+    },
+    {
+      "path": "package.json",
+      "digest": "sha256:c1010af2fe9b2239b495bb21be78db8d65c82310585b0bd5434e2f1d6a965755"
+    },
+    {
+      "path": "packages/artifact/package.json",
+      "digest": "sha256:fd5e76bcbea21c3099b5d6098fac0fba7f70519190a0cb88da05038ced88a06c"
+    },
+    {
+      "path": "packages/cli/package.json",
+      "digest": "sha256:91a65c53ddfb01f5d117c6df5e2caee991b712322de2aa5b3100f4278a763d95"
+    },
+    {
+      "path": "packages/design/package.json",
+      "digest": "sha256:7a8ef7ea3773d842e7fc3712b378b51fb5ea469289c1bcc7531a0eca537a3a29"
+    },
+    {
+      "path": "packages/integrations/package.json",
+      "digest": "sha256:4ffd8249731ab6f6f668fa2d145d6298807af3ee29ebfc0c7cda46c32b9c3397"
+    },
+    {
+      "path": "packages/operate/package.json",
+      "digest": "sha256:9e80d9287bf4573213461e0ca96c27d2a8f24b02f49620aee4cb60e4a6660d14"
+    },
+    {
+      "path": "packages/pipeline/package.json",
+      "digest": "sha256:1552e826f65c55a0b32912761ac3881f01bf9bfac3a5d75274a6c0f85a09302e"
+    },
+    {
+      "path": "packages/protocol/package.json",
+      "digest": "sha256:f8bd998d28d1c8a4cda38d0c02d18173bfd4689c20ec3e4f3f2d2ca787c5c9d8"
+    },
+    {
+      "path": "packages/protocol/registries/commands.json",
+      "digest": "sha256:27bacf3fa082d94550e7cb3cc26ba88e3d94e0e1cd4c58ae4c9622cd26f8444f"
+    },
+    {
+      "path": "packages/protocol/registries/output-paths.json",
+      "digest": "sha256:19513acdf5c718c8ca6f35f271313ec40f6e2d9eac69d39bfb2058a3c1eacfa1"
+    },
+    {
+      "path": "packages/protocol/registries/outputs.json",
+      "digest": "sha256:3fe574b6957cda821b1bc8255168445be8b0a123669d76e556576dda4604454b"
+    },
+    {
+      "path": "packages/protocol/registries/roles.json",
+      "digest": "sha256:e135a1dc550dc8ec9bd6ed00cf7560603c25f5ea3b910ede14fe219a185b15b2"
+    },
+    {
+      "path": "packages/protocol/registries/rules.json",
+      "digest": "sha256:91c1d7aef6a0bd0c44224ff84d43cacedb916f2dc353af0505ccf252dbf5aa7a"
+    },
+    {
+      "path": "packages/protocol/registries/skills.json",
+      "digest": "sha256:9cb2bf73b536b6a6e862b8e188bd79a90aba0829d040960fc5685f494f1d3419"
+    },
+    {
+      "path": "packages/protocol/registries/task-kinds.json",
+      "digest": "sha256:123ceaeeadb2c3c1dfabf0b47c06ec67ace8a3d8a30289798903be43180eb49a"
+    },
+    {
+      "path": "packages/protocol/registry/adapters.json",
+      "digest": "sha256:4f5c47977aac550ddfc2fc87b8cbaa8258ca96b61b66cd745d466c3f993c8d94"
+    },
+    {
+      "path": "packages/protocol/registry/evaluation-graders.json",
+      "digest": "sha256:aae843fe55fa84b1a04e02fef3ed8bbeafe0d8a65b071922013368b7c987a68e"
+    },
+    {
+      "path": "packages/protocol/registry/evaluation-host-profiles.json",
+      "digest": "sha256:125e755d4c09d9e8949f5bf727a7a69669b4991d2d94d6b36a87eff71d310552"
+    },
+    {
+      "path": "packages/protocol/src/semver.mjs",
+      "digest": "sha256:2d42ef2a034534d5a04b515961e9993bd9b0a4cfe9fb44af537ea656632726fa"
+    },
+    {
+      "path": "packages/skill-runtime/package.json",
+      "digest": "sha256:66562cb4b71589ca8ecc813b5461fe1a021553755935e0c5f98738bf6424bb7b"
+    },
+    {
+      "path": "scripts/lib/workspace-release-policy.mjs",
+      "digest": "sha256:015fba5b22b21554d403565094bac09ffa9007856408344b2a36bf81362a3be9"
+    },
+    {
+      "path": "scripts/marketplace/generate-ecosystem.mjs",
+      "digest": "sha256:1338b0024b9edff8534d8313edffc57e7224ea0da4d0b0755f0e02a7b114689d"
+    }
+  ],
+  "outputs": [
+    {
+      "path": ".claude-plugin/marketplace.json",
+      "digest": "sha256:27c2d33fc1856a592fe80d35500e3a5fe8a9d7639bfe28d958e30df9c1d620bc"
+    },
+    {
+      "path": ".claude-plugin/plugin.json",
+      "digest": "sha256:9af253f59bd2007c6e022a56034ebf61f325ebf85879f6a57d8f7950ee98fce4"
+    },
+    {
+      "path": "adapters/manifests/codex-plugin-content.json",
+      "digest": "sha256:b26ca6254440b08877637d07d8be028342fa4921ba715e1dfae4e042637da3ae"
+    },
+    {
+      "path": "docs/generated/adapters.md",
+      "digest": "sha256:5f9dbfc12142892d70fdc8ebf664edbacd937ebff433f17cfb603f1880b6aa0c"
+    },
+    {
+      "path": "docs/generated/ecosystem.md",
+      "digest": "sha256:74f10abccf1ccc0db8f26ff50ee322509fd54a5b09595d04d48b7e6bccbd5725"
+    },
+    {
+      "path": "docs/generated/skills.md",
+      "digest": "sha256:56ed7af99a4d8486a785eb039c16fb0ba1e47dd9be2178a851fd880e05839e73"
+    },
+    {
+      "path": "ecosystem.json",
+      "digest": "sha256:2a36bc8865738cae7889368d590804315a39ce5350f723c0d834db2e3f7098bc"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "kind": "openplanr-skill-contribution",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.8.0",
+  "id": "professional",
+  "skills": [
+    {
+      "id": "planr-browser-qa",
+      "source": "skills/planr-browser-qa/openplanr.skill.json",
+      "authorityClass": "review-evidence",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-investigate",
+      "source": "skills/planr-investigate/openplanr.skill.json",
+      "authorityClass": "diagnostic",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-plan-review",
+      "source": "skills/planr-plan-review/openplanr.skill.json",
+      "authorityClass": "review-evidence",
+      "utilityRequirements": []
+    },
+    {
+      "id": "planr-spec",
+      "source": "skills/planr-spec/openplanr.skill.json",
+      "authorityClass": "planning-write",
+      "utilityRequirements": []
+    }
+  ]
+}

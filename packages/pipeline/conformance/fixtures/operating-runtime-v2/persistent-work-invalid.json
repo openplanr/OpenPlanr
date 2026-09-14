@@ -1,0 +1,7 @@
+{
+  "finding": { "patch": { "state": "parked" } },
+  "decision": { "patch": { "title": " " } },
+  "action": { "patch": { "ownerActorId": null, "accountabilityDisposition": null } },
+  "changeSet": { "patch": { "protocolVersion": "1.4.0" } },
+  "ledger": { "patch": { "cycleLinks": [{"entityKind":"finding","entityId":"act_00000001","cycleId":"cyc_00000001","relation":"source"}] } }
+}

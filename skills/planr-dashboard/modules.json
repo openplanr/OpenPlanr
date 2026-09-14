@@ -1,0 +1,39 @@
+{
+  "imports": [],
+  "modules": [
+    {
+      "moduleId": "planr-dashboard-workflow",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "shared",
+      "description": "Task-specific planr-dashboard workflow guidance.",
+      "source": "modules/workflow.md",
+      "appliesWhen": "Whenever planr-dashboard is selected.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read"
+        ],
+        "allowedTools": [
+          "read"
+        ],
+        "allowedOperations": [
+          "compile",
+          "pipeline",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      }
+    }
+  ]
+}

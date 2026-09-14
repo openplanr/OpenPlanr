@@ -1,0 +1,63 @@
+{
+  "kind": "frozen-command-alias-assets",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.5.0",
+  "commands": [
+    {
+      "slug": "dashboard",
+      "skillId": "planr-dashboard",
+      "argumentHint": "",
+      "path": "adapters/claude-code/commands/dashboard.md",
+      "digest": "sha256:0fa0ad1ce81d55a217354ea62dfc774950e0a5e031e5b5045e6b349d38a97375"
+    },
+    {
+      "slug": "design",
+      "skillId": "planr-design",
+      "argumentHint": "<slug> [options]",
+      "path": "adapters/claude-code/commands/design.md",
+      "digest": "sha256:7472450fb98744ad2ccfe88ca0bd3bcc5f80a82ce8e7fc00ab9931a4d7072485"
+    },
+    {
+      "slug": "design-loop",
+      "skillId": "planr-design-loop",
+      "argumentHint": "<target> [options]",
+      "path": "adapters/claude-code/commands/design-loop.md",
+      "digest": "sha256:5ba322fb5e94c6e7671eb061457872dfd2311ce1fcaae822bda096d59f1eeebd"
+    },
+    {
+      "slug": "design-review",
+      "skillId": "planr-design-review",
+      "argumentHint": "<slug> [--yes]",
+      "path": "adapters/claude-code/commands/design-review.md",
+      "digest": "sha256:b7676ceb3260e62cff5353ab94e40f5301e9095091a49d7c9bfdc35a2eca8965"
+    },
+    {
+      "slug": "plan",
+      "skillId": "planr-plan",
+      "argumentHint": "<feature>",
+      "path": "adapters/claude-code/commands/plan.md",
+      "digest": "sha256:c667d932ea432728941eb810fb57b3b01ee071426cf1e7a41d9885ed7738258a"
+    },
+    {
+      "slug": "ship",
+      "skillId": "planr-ship",
+      "argumentHint": "<feature> [--task <id>]",
+      "path": "adapters/claude-code/commands/ship.md",
+      "digest": "sha256:bb6bff0df9c8a4dd0a1199cb6889de3a5533568aa864491d437d1aed6099e22a"
+    },
+    {
+      "slug": "status",
+      "skillId": "planr-status",
+      "argumentHint": "[slug]",
+      "path": "adapters/claude-code/commands/status.md",
+      "digest": "sha256:5059da08bbecd6f78bc7d82d21128c327b47ab259a328283b384750300668f06"
+    },
+    {
+      "slug": "sync",
+      "skillId": "planr-sync",
+      "argumentHint": "",
+      "path": "adapters/claude-code/commands/sync.md",
+      "digest": "sha256:014fba35fb8dbccdd0c96e5f1913c3b814f36e6dae85d4819aca07bdbd8a1493"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "skillId": "planr-hello",
+  "skillVersion": "1.0.0",
+  "sourceFormat": "composed-v1",
+  "template": "SKILL.md.tmpl",
+  "authorityCeiling": {
+    "repositoryAccess": "declared-paths",
+    "externalDataAccess": "read-only",
+    "allowedCapabilities": ["read", "write"],
+    "allowedTools": ["read", "edit"],
+    "allowedOperations": ["compile", "render"],
+    "allowedOutputClasses": ["A", "B"],
+    "forbiddenEffects": ["network-write"]
+  },
+  "modules": [
+    { "moduleId": "hello-intro", "moduleVersion": "1.0.0" }
+  ],
+  "references": [
+    { "moduleId": "hello-reference", "moduleVersion": "1.0.0" }
+  ],
+  "hostProfiles": [
+    { "id": "minimal-claude-code", "version": "1.0.0" }
+  ]
+}

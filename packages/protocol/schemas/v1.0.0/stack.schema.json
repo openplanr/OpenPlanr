@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.0.0/stack.schema.json",
+  "title": "OpenPlanr stack.md required keys (v1.0.0)",
+  "description": "JSON Schema for the canonical key set extracted from input/tech/stack.md. The stack file is YAML-in-markdown; consumers extract the keys into a single flat object before validation. BuildCommand, TestCommand, Language, Framework, and ORM are required (ORM may be empty string for stacks without a database).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "BuildCommand",
+    "TestCommand",
+    "Language",
+    "Framework",
+    "ORM"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0",
+      "description": "Pinned to the OpenPlanr Protocol reader version."
+    },
+    "AppName": {
+      "type": "string",
+      "description": "Project name."
+    },
+    "Version": {
+      "type": "string",
+      "description": "Project version."
+    },
+    "Description": {
+      "type": "string",
+      "description": "Short project description."
+    },
+    "Repository": {
+      "type": "string",
+      "description": "Source repository URL."
+    },
+    "Language": {
+      "type": "string",
+      "description": "Primary backend language (e.g. TypeScript, Python, JavaScript (Node ESM)). May be empty for non-applicable stacks."
+    },
+    "Framework": {
+      "type": "string",
+      "description": "Backend framework or runtime (e.g. NestJS, Next.js, Claude Code plugin). May be empty when not applicable."
+    },
+    "RuntimeVersion": {
+      "type": "string",
+      "description": "Runtime/engine version requirement (e.g. Node 20+)."
+    },
+    "AuthStrategy": {
+      "type": "string",
+      "description": "Authentication strategy (e.g. JWT, OAuth, NextAuth)."
+    },
+    "APIStyle": {
+      "type": "string",
+      "description": "API style (e.g. REST, GraphQL, RPC)."
+    },
+    "TestFramework": {
+      "type": "string",
+      "description": "Backend test framework (e.g. Vitest, Jest, pytest, node:test)."
+    },
+    "DatabaseType": {
+      "type": "string",
+      "description": "Database engine (e.g. postgres, mysql, sqlite). Empty when no DB."
+    },
+    "DatabaseHost": {
+      "type": "string",
+      "description": "Database host."
+    },
+    "DatabasePort": {
+      "type": ["string", "integer"],
+      "description": "Database port (string or integer)."
+    },
+    "DatabaseName": {
+      "type": "string",
+      "description": "Database name."
+    },
+    "DatabaseUser": {
+      "type": "string",
+      "description": "Database user."
+    },
+    "DatabasePassword": {
+      "type": "string",
+      "description": "Database password (typically a secret reference, not a literal)."
+    },
+    "ORM": {
+      "type": "string",
+      "description": "ORM (e.g. Prisma, TypeORM, Drizzle, EF Core, SQLAlchemy). Empty string is valid when the project has no DB."
+    },
+    "MigrationTool": {
+      "type": "string",
+      "description": "Migration tool (e.g. prisma migrate, alembic, knex)."
+    },
+    "UIFramework": {
+      "type": "string",
+      "description": "Frontend UI framework (e.g. React, Vue, SolidJS)."
+    },
+    "CSSStrategy": {
+      "type": "string",
+      "description": "CSS approach (e.g. Tailwind, CSS Modules, styled-components)."
+    },
+    "ComponentLibrary": {
+      "type": "string",
+      "description": "Component library (e.g. shadcn/ui, MUI, Radix)."
+    },
+    "StateManagement": {
+      "type": "string",
+      "description": "State management library (e.g. Zustand, Redux Toolkit, TanStack Query)."
+    },
+    "FormLibrary": {
+      "type": "string",
+      "description": "Form library (e.g. React Hook Form, Formik)."
+    },
+    "HTTPClient": {
+      "type": "string",
+      "description": "HTTP client (e.g. fetch, axios, ky)."
+    },
+    "ContainerRuntime": {
+      "type": "string",
+      "description": "Container runtime (e.g. Docker, Podman)."
+    },
+    "Orchestration": {
+      "type": "string",
+      "description": "Orchestrator (e.g. Kubernetes, Docker Compose, Fly.io)."
+    },
+    "CIProvider": {
+      "type": "string",
+      "description": "CI provider (e.g. GitHub Actions, GitLab CI, CircleCI)."
+    },
+    "CloudProvider": {
+      "type": "string",
+      "description": "Cloud provider (e.g. AWS, GCP, Azure, Vercel, Fly.io)."
+    },
+    "SecretManagement": {
+      "type": "string",
+      "description": "Secret manager (e.g. AWS Secrets Manager, Vault, .env)."
+    },
+    "NamingConvention": {
+      "type": "object",
+      "description": "Code naming conventions across files, components, functions, constants, and database identifiers.",
+      "additionalProperties": true
+    },
+    "FolderStructure": {
+      "type": "string",
+      "description": "Folder structure style (e.g. domain-based, feature-based, type-based)."
+    },
+    "TestCoverage": {
+      "type": "string",
+      "description": "Coverage policy summary."
+    },
+    "BuildCommand": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Shell command DEV agents run during the correction loop. Must exit 0 for a clean build."
+    },
+    "TestCommand": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Shell command DEV agents run during the correction loop. Must exit 0 for a clean test pass."
+    },
+    "LintCommand": {
+      "type": "string",
+      "description": "Optional lint command. When non-empty, must exit 0."
+    },
+    "TypeCheckCommand": {
+      "type": "string",
+      "description": "Optional type-check command. When non-empty, must exit 0."
+    },
+    "ActiveStackFiles": {
+      "type": "array",
+      "description": "Resolved paths to active stack overlay files (e.g. backend/nestjs.md, database/prisma.md). Empty array when none.",
+      "items": { "type": "string" }
+    },
+    "DoNotUse": {
+      "type": "array",
+      "description": "Hard exclusions agents must respect.",
+      "items": { "type": "string" }
+    },
+    "MustPreserve": {
+      "type": "array",
+      "description": "Files or invariants agents must never modify.",
+      "items": { "type": "string" }
+    }
+  }
+}

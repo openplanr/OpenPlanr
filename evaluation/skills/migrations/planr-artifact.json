@@ -1,0 +1,53 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-artifact",
+  "family": "artifact",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-artifact/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-artifact/skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Clarified the discovery description with the concrete review-board selection context.",
+    "Replaced prose approval for stale feedback with one native import-or-skip question when the choice is missing."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:2547fef9ebe77939445e92a946f1a5cbd95b1da63687c62459c657a0694fd42c",
+      "successorDigest": "sha256:69d3c87187eb344b4ccc9d9a937c8939b4f71d8e0f4065e11fe4b3aa420390e5"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:2547fef9ebe77939445e92a946f1a5cbd95b1da63687c62459c657a0694fd42c",
+      "successorDigest": "sha256:69d3c87187eb344b4ccc9d9a937c8939b4f71d8e0f4065e11fe4b3aa420390e5"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:3aaa83593ecac51637e69540334079beb0b863ec0ca908796395499352d2c7da",
+      "successorDigest": "sha256:dc7d7a272cdf49c82f53e077f69c8a919792fd82d696c8486dd5cef62d5fbaf2"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:2547fef9ebe77939445e92a946f1a5cbd95b1da63687c62459c657a0694fd42c",
+      "successorDigest": "sha256:69d3c87187eb344b4ccc9d9a937c8939b4f71d8e0f4065e11fe4b3aa420390e5"
+    }
+  ]
+}

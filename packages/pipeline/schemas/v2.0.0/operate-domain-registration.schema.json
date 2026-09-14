@@ -1,0 +1,284 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operate-domain-registration.schema.json",
+  "x-openplanr-contract": { "id": "operate-domain-registration", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 domain registration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "domainId", "domainVersion", "provenance", "roles", "requirements"],
+  "properties": {
+    "kind": { "const": "operate-domain-registration" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "domainId": { "$ref": "#/$defs/identifier" },
+    "domainVersion": { "$ref": "#/$defs/version" },
+    "domainContract": { "$ref": "#/$defs/domainContract" },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "roles": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": { "$ref": "#/$defs/role" } },
+    "vocabulary": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/vocabularyTerm" } },
+    "projectionContracts": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/projectionContract" } },
+    "actionKinds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/actionKind" } },
+    "requestedCapabilities": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/requestedCapability" } },
+    "policyRequirements": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/policyRequirement" } },
+    "requirements": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "domainId": { "enum": ["business", "software"] } } },
+      "then": { "required": ["domainContract"] }
+    },
+    {
+      "if": { "properties": { "domainId": { "const": "business" } } },
+      "then": {
+        "properties": {
+          "domainContract": { "$ref": "#/$defs/businessDomainContract" },
+          "projectionContracts": { "$ref": "#/$defs/businessProjectionContracts" },
+          "roles": { "$ref": "#/$defs/rolesWithChallenger" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "domainId": { "const": "software" } } },
+      "then": {
+        "properties": {
+          "domainContract": { "$ref": "#/$defs/softwareDomainContract" },
+          "projectionContracts": { "$ref": "#/$defs/softwareProjectionContracts" },
+          "roles": { "$ref": "#/$defs/rolesWithChallenger" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "label": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^\\S(?:.*\\S)?$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "domainContract": {
+      "type": "object", "additionalProperties": false,
+      "required": ["apiDomainId", "id", "version"],
+      "properties": {
+        "apiDomainId": { "$ref": "#/$defs/identifier" },
+        "id": { "$ref": "#/$defs/identifier" },
+        "version": { "$ref": "#/$defs/version" }
+      }
+    },
+    "businessDomainContract": {
+      "type": "object", "additionalProperties": false,
+      "required": ["apiDomainId", "id", "version"],
+      "properties": {
+        "apiDomainId": { "const": "business" },
+        "id": { "const": "business-domain" },
+        "version": { "const": "1.0.0" }
+      }
+    },
+    "softwareDomainContract": {
+      "type": "object", "additionalProperties": false,
+      "required": ["apiDomainId", "id", "version"],
+      "properties": {
+        "apiDomainId": { "const": "software" },
+        "id": { "const": "software-domain" },
+        "version": { "const": "1.0.0" }
+      }
+    },
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["packageName", "packageVersion", "integrity"],
+      "properties": {
+        "packageName": { "$ref": "#/$defs/identifier" },
+        "packageVersion": { "$ref": "#/$defs/version" },
+        "integrity": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "output": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schemaId", "schemaVersion", "mediaType", "maxBytes"],
+      "properties": {
+        "schemaId": { "enum": ["operating-advisor-result", "operating-challenger-review", "operating-decision-ledger"] },
+        "schemaVersion": { "const": "2.0.0" },
+        "mediaType": { "const": "application/json" },
+        "maxBytes": { "type": "integer", "minimum": 1, "maximum": 262144 }
+      }
+    },
+    "dependencyPolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": { "id": { "enum": ["none", "all-required", "threshold"] }, "version": { "const": "1.0.0" } }
+    },
+    "mandateCapability": {
+      "type": "string",
+      "enum": ["repository.read", "planr.read", "git.read", "artifact.read", "artifact.submit"]
+    },
+    "mandateForbiddenEffect": {
+      "type": "string",
+      "enum": ["repository.write", "production.deploy", "payment.change", "customer-contact", "publish", "spend", "ship", "governed-execution"]
+    },
+    "mandate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["scope", "allowedEvidence", "allowedCapabilities", "forbiddenEffects", "capabilityCeiling", "skillId"],
+      "properties": {
+        "scope": { "$ref": "#/$defs/text" },
+        "allowedEvidence": {
+          "type": "array", "minItems": 1, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/text" }
+        },
+        "allowedCapabilities": {
+          "type": "array", "minItems": 2, "maxItems": 5, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/mandateCapability" }
+        },
+        "forbiddenEffects": {
+          "type": "array", "minItems": 8, "maxItems": 8, "uniqueItems": true,
+          "items": { "$ref": "#/$defs/mandateForbiddenEffect" }
+        },
+        "capabilityCeiling": { "const": "read-only" },
+        "skillId": { "$ref": "#/$defs/identifier" }
+      },
+      "allOf": [
+        { "properties": { "allowedCapabilities": { "contains": { "const": "artifact.read" } } } },
+        { "properties": { "allowedCapabilities": { "contains": { "const": "artifact.submit" } } } }
+      ]
+    },
+    "role": {
+      "type": "object", "additionalProperties": false,
+      "required": ["roleId", "roleKind", "label", "roleVersion", "output", "mandate", "analysisRubric", "analysisProfile", "evidenceRequirements", "resultRequirements", "selfAudit", "dependencyPolicy", "requirements"],
+      "properties": {
+        "roleId": { "$ref": "#/$defs/identifier" },
+        "roleKind": { "enum": ["advisor", "challenger", "chair"] },
+        "label": { "$ref": "#/$defs/label" },
+        "roleVersion": { "const": "2.0.0" },
+        "output": { "$ref": "#/$defs/output" },
+        "mandate": { "$ref": "#/$defs/mandate" },
+        "analysisRubric": { "$ref": "#/$defs/analysisRubric" },
+        "analysisProfile": { "$ref": "operating-assignment.schema.json#/$defs/analysisProfile" },
+        "evidenceRequirements": { "type": "array", "maxItems": 64, "items": { "$ref": "operating-assignment.schema.json#/$defs/evidenceRequirement" } },
+        "resultRequirements": { "type": "array", "minItems": 1, "maxItems": 64, "items": { "$ref": "operating-assignment.schema.json#/$defs/resultRequirement" } },
+        "selfAudit": { "$ref": "#/$defs/selfAudit" },
+        "dependencyPolicy": { "$ref": "#/$defs/dependencyPolicy" },
+        "requirements": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "roleKind": { "const": "advisor" } } },
+          "then": { "properties": { "output": { "properties": { "schemaId": { "const": "operating-advisor-result" } } }, "evidenceRequirements": { "minItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "roleKind": { "const": "challenger" } } },
+          "then": { "properties": { "output": { "properties": { "schemaId": { "const": "operating-challenger-review" } } } } }
+        },
+        {
+          "if": { "properties": { "roleKind": { "const": "chair" } } },
+          "then": { "properties": { "output": { "properties": { "schemaId": { "const": "operating-decision-ledger" } } } } }
+        }
+      ]
+    },
+    "analysisRubric": {
+      "type": "object", "additionalProperties": false,
+      "required": ["requiredQuestions", "requiredEvidence", "failureModes", "artifactQualityBar", "outOfScope"],
+      "properties": {
+        "requiredQuestions": { "$ref": "#/$defs/rubricClauses" },
+        "requiredEvidence": { "$ref": "#/$defs/rubricClauses" },
+        "failureModes": { "$ref": "#/$defs/rubricClauses" },
+        "artifactQualityBar": { "$ref": "#/$defs/rubricClauses" },
+        "outOfScope": { "$ref": "#/$defs/rubricClauses" }
+      }
+    },
+    "selfAudit": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidenceCoverage", "questionCoverage", "claimQuality", "profileCompleteness", "gapsAndUncertainty", "forbiddenEffects", "promptInjection", "machinePreflight"],
+      "properties": {
+        "evidenceCoverage": { "$ref": "#/$defs/rubricClauses" },
+        "questionCoverage": { "$ref": "#/$defs/rubricClauses" },
+        "claimQuality": { "$ref": "#/$defs/rubricClauses" },
+        "profileCompleteness": { "$ref": "#/$defs/rubricClauses" },
+        "gapsAndUncertainty": { "$ref": "#/$defs/rubricClauses" },
+        "forbiddenEffects": { "$ref": "#/$defs/rubricClauses" },
+        "promptInjection": { "$ref": "#/$defs/rubricClauses" },
+        "machinePreflight": { "$ref": "#/$defs/rubricClauses" }
+      }
+    },
+    "rubricClauses": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 1024, "pattern": "^\\S(?:.*\\S)?$" }
+    },
+    "actionKind": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "version": { "$ref": "#/$defs/version" }
+      }
+    },
+    "projectionContract": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schemaId", "schemaVersion"],
+      "properties": {
+        "schemaId": { "$ref": "#/$defs/identifier" },
+        "schemaVersion": { "$ref": "#/$defs/version" }
+      }
+    },
+    "businessProjectionContracts": {
+      "type": "array", "minItems": 1, "maxItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["schemaId", "schemaVersion"],
+        "properties": {
+          "schemaId": { "const": "business-operating-snapshot-projection" },
+          "schemaVersion": { "const": "1.0.0" }
+        }
+      }
+    },
+    "softwareProjectionContracts": {
+      "type": "array", "minItems": 1, "maxItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["schemaId", "schemaVersion"],
+        "properties": {
+          "schemaId": { "const": "software-operating-snapshot-projection" },
+          "schemaVersion": { "const": "1.0.0" }
+        }
+      }
+    },
+    "requestedCapability": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "version", "reason"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "version": { "$ref": "#/$defs/version" },
+        "reason": { "$ref": "#/$defs/text" }
+      }
+    },
+    "policyRequirement": {
+      "type": "object", "additionalProperties": false,
+      "required": ["actionKind", "capability", "policy"],
+      "properties": {
+        "actionKind": { "$ref": "#/$defs/actionKind" },
+        "capability": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "$ref": "#/$defs/identifier" }, "version": { "$ref": "#/$defs/version" } } },
+        "policy": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "$ref": "#/$defs/identifier" }, "version": { "$ref": "#/$defs/version" } } }
+      }
+    },
+    "rolesWithChallenger": {
+      "type": "array",
+      "contains": {
+        "type": "object",
+        "required": ["roleKind", "roleVersion"],
+        "properties": {
+          "roleKind": { "const": "challenger" },
+          "roleVersion": { "const": "2.0.0" }
+        }
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "text": {
+      "type": "string", "minLength": 1, "maxLength": 4096,
+      "pattern": "^.*\\S.*$"
+    },
+    "vocabularyTerm": {
+      "type": "object", "additionalProperties": false,
+      "required": ["term", "definition"],
+      "properties": {
+        "term": { "$ref": "#/$defs/identifier" },
+        "definition": { "$ref": "#/$defs/text" }
+      }
+    }
+  }
+}

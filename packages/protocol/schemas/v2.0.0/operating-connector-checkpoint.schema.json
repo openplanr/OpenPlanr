@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-connector-checkpoint.schema.json",
+  "x-openplanr-contract": { "id": "operating-connector-checkpoint", "version": "2.0.0" },
+  "title": "Operating Connector Checkpoint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "checkpointId", "generation", "lastEventId", "lastEventHash", "state", "requestId", "requestHash", "effect", "provider", "providerRegistrationHash", "adapterVersion", "sourceIdentityHash", "consentRecordId", "consentRecordHash", "consentExpiresAt", "runtimeCapabilityHash", "credentialRefHash", "boundsHash", "queryHash", "windowHash", "health", "redactionVersion", "predecessorDigest", "watermarkDigest", "artifactId", "artifactHash", "absenceDigest", "createdAt", "updatedAt", "checkpointHash"],
+  "properties": {
+    "kind": { "const": "operating-connector-checkpoint" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "2.0.0" },
+    "checkpointId": { "type": "string", "pattern": "^lchk_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "generation": { "type": "integer", "minimum": 0 }, "lastEventId": { "type": ["string", "null"], "pattern": "^lcev_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "lastEventHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+    "state": { "enum": ["prepared", "requesting", "materialized", "committed", "absent", "uncertain"] },
+    "requestId": { "type": "string", "pattern": "^lreq_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "requestHash": { "$ref": "#/$defs/hash" }, "effect": { "const": "provider-call" },
+    "provider": { "$ref": "#/$defs/versionedId" }, "providerRegistrationHash": { "$ref": "#/$defs/hash" }, "adapterVersion": { "$ref": "#/$defs/version" }, "sourceIdentityHash": { "$ref": "#/$defs/hash" },
+    "consentRecordId": { "type": ["string", "null"], "pattern": "^lcon_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "consentRecordHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }, "consentExpiresAt": { "type": ["string", "null"], "format": "date-time" }, "runtimeCapabilityHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }, "credentialRefHash": { "$ref": "#/$defs/hash" }, "boundsHash": { "$ref": "#/$defs/hash" }, "queryHash": { "$ref": "#/$defs/hash" }, "windowHash": { "$ref": "#/$defs/hash" }, "health": { "$ref": "#/$defs/health" }, "redactionVersion": { "$ref": "#/$defs/version" },
+    "predecessorDigest": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }, "watermarkDigest": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+    "artifactId": { "type": ["string", "null"], "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "artifactHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }, "absenceDigest": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+    "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" }, "checkpointHash": { "$ref": "#/$defs/hash" }
+  },
+  "allOf": [
+    { "if": { "properties": { "state": { "const": "prepared" } }, "required": ["state"] }, "then": { "properties": { "consentRecordId": { "const": null }, "consentRecordHash": { "const": null }, "consentExpiresAt": { "const": null }, "runtimeCapabilityHash": { "const": null }, "artifactId": { "const": null }, "artifactHash": { "const": null }, "absenceDigest": { "const": null } } } },
+    { "if": { "properties": { "state": { "enum": ["requesting", "materialized", "committed"] } }, "required": ["state"] }, "then": { "properties": { "consentRecordId": { "type": "string" }, "consentRecordHash": { "type": "string" }, "consentExpiresAt": { "type": "string" }, "runtimeCapabilityHash": { "type": "string" }, "absenceDigest": { "const": null } } } },
+    { "if": { "properties": { "state": { "const": "requesting" } }, "required": ["state"] }, "then": { "properties": { "artifactId": { "const": null }, "artifactHash": { "const": null } } } },
+    { "if": { "properties": { "state": { "enum": ["materialized", "committed"] } }, "required": ["state"] }, "then": { "properties": { "health": { "properties": { "status": { "const": "available" } } }, "artifactId": { "type": "string" }, "artifactHash": { "type": "string" } } } },
+    { "if": { "properties": { "state": { "enum": ["absent", "uncertain"] } }, "required": ["state"] }, "then": { "properties": { "artifactId": { "const": null }, "artifactHash": { "const": null }, "absenceDigest": { "type": "string" } } } }
+  ],
+  "$defs": { "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" }, "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" }, "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }, "versionedId": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "$ref": "#/$defs/id" }, "version": { "$ref": "#/$defs/version" } } }, "health": { "type": "object", "additionalProperties": false, "required": ["status", "checkedAt", "freshUntil", "proofDigest"], "properties": { "status": { "enum": ["available", "degraded", "unavailable"] }, "checkedAt": { "type": "string", "format": "date-time" }, "freshUntil": { "type": "string", "format": "date-time" }, "proofDigest": { "$ref": "#/$defs/hash" } } } }
+}

@@ -1,0 +1,63 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "database-schema-fixture",
+  "title": "Database schema fixture",
+  "summary": "Canonical semantic fixture for the database schema grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "database-schema",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Database schema A",
+      "kind": "primary-item",
+      "description": "First semantic item in the database schema fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "Database schema B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the database schema fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [],
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Database schema fixture",
+    "description": "A compact database schema example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:419c41827f99b2f3011ddfb93e409e8a8719977fc5e3886e03700762320998d4"
+}

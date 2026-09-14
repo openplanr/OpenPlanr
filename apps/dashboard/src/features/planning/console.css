@@ -1,0 +1,26 @@
+/* The header, toolbar and catalog stack at kit spacing, not the workspace grid gap. */
+.op-planning.pc-console {
+  gap: 0;
+}
+
+.pc-console__shown {
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-tertiary);
+}
+
+.pc-console__catalog {
+  display: grid;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+/* Group tables sit inside cards, so the table's own frame would double the card edge. */
+.pc-console__catalog .pc-card {
+  overflow: hidden;
+}
+
+.pc-console__catalog .pc-table-wrap {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}

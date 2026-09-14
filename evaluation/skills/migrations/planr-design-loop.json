@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-design-loop",
+  "family": "design",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-design-loop/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-design-loop/skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Replaced approval-gate language with native missing-choice questions and user-selected design directions."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:193772a9a9251bb6fef8c1293884b6407d710873a4435db151f12ea9f77c39aa",
+      "successorDigest": "sha256:8fac45fd2c9b220cead5dfb4a026d2c587316a9f74b485c19de5af8d377d5597"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:193772a9a9251bb6fef8c1293884b6407d710873a4435db151f12ea9f77c39aa",
+      "successorDigest": "sha256:8fac45fd2c9b220cead5dfb4a026d2c587316a9f74b485c19de5af8d377d5597"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:d836a1f8bd330fa80f93a7fadf6cd86cdc3c0022fc3cb6d0a0f4c3769851db29",
+      "successorDigest": "sha256:cc8f3975136e00513c8d30961f0c3e6203d9901841d2aea17854d7d374732f7c"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:193772a9a9251bb6fef8c1293884b6407d710873a4435db151f12ea9f77c39aa",
+      "successorDigest": "sha256:8fac45fd2c9b220cead5dfb4a026d2c587316a9f74b485c19de5af8d377d5597"
+    }
+  ]
+}

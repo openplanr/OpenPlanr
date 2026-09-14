@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-plan",
+  "family": "planning",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-plan/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-plan/skill.json",
+    "version": "1.1.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Adopt Protocol 1.7 global IDs, acceptance mappings, risk/browser metadata, preview and replacement guidance, and an exact Plan-to-Ship handoff."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:f8f70d67b311e22e0756d17e7d953d57c8a1eaed8aaf08b8b9649c94dc8cc8f6",
+      "successorDigest": "sha256:802e5db945349a37156a47a6720b96172d7ab34b335ee4a92063d27bd74d1247"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:f9698b642f1c819728f45561b6d3e632843b5915c7aa0158e47af098701826d1",
+      "successorDigest": "sha256:d598ac2214ac717ce87d03fd2d1699426fbd022d907ff413c385b3c5db00794b"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:8c00b11ec5400fee0de8e3286636b46f0abe6cd86b6703928c2065331d8b4aa4",
+      "successorDigest": "sha256:e872bca2938265197b520733dfdd72ddf8faa15028ad545beab5d86877a30bc6"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:e7b66c1646a3691f2b63774219d3a8353e3eb33d918f33d46df9dadf560a04a1",
+      "successorDigest": "sha256:ca70a0c5480ecf2281b667893df6c2059ebc70f4cbd8b92a97e88f1380a2f1d1"
+    }
+  ]
+}

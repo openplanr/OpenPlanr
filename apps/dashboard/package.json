@@ -1,0 +1,49 @@
+{
+  "name": "@openplanr/dashboard-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-safe local OpenPlanr planning and Operate dashboard",
+  "license": "MIT",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "build": "vite build --config vite.config.ts",
+    "lint": "biome check src/ tests/",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "npm run test:architecture",
+    "test:architecture": "node --test tests/architecture/*.test.mjs",
+    "check": "npm run test:architecture && npm run typecheck && npm run lint && npm run build"
+  },
+  "dependencies": {
+    "@openplanr/protocol": "0.1.0",
+    "@tanstack/react-query": "5.101.4",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "1.31.0",
+    "radix-ui": "1.6.7",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-router": "7.18.3",
+    "tailwind-merge": "3.6.0",
+    "tw-animate-css": "1.4.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.9",
+    "@tailwindcss/vite": "4.1.14",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.4",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "4.7.0",
+    "axe-core": "4.13.0",
+    "tailwindcss": "4.1.14",
+    "typescript": "^6.0.2",
+    "vite": "6.4.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

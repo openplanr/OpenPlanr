@@ -1,0 +1,20 @@
+{
+  "kind": "operating-delta",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "2.0.0",
+  "deltaId": "dlt_delta_invalid_001",
+  "scopeId": "scope-acme",
+  "domainId": "business",
+  "domainVersion": "1.0.0",
+  "priorSnapshotId": null,
+  "currentSnapshotId": "snp_delta_current_001",
+  "sourceRevisionChanges": [],
+  "metricChanges": [],
+  "staleEvidenceRefIds": [],
+  "conflictingEvidenceRefIds": [],
+  "invalidatedAssumptionIds": [],
+  "exposedRiskIds": [],
+  "decisionRevisitIds": [],
+  "sourceArtifactId": "not-an-artifact-id",
+  "derivedAt": "not-a-timestamp"
+}

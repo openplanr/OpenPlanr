@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Cpo Review"
+  short_description: "Produce a grounded product and activation review for an Operate…"
+  default_prompt: "Use $planr-cpo-review to produce a grounded product and activation review for an Operate cycle. Use when customer value, activation, prioritization, or adoption needs a CPO lens."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,226 @@
+{
+  "profiles": [
+    {
+      "hostProfileId": "planr-spec-claude-code",
+      "hostProfileVersion": "1.0.0",
+      "host": "claude-code",
+      "description": "claude-code projection profile for planr-spec.",
+      "source": "shared/profiles/claude-code.md",
+      "overlayModules": [],
+      "authorityCeiling": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read",
+          "write"
+        ],
+        "allowedTools": [
+          "read",
+          "edit"
+        ],
+        "allowedOperations": [
+          "compile",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      },
+      "runtimeCapabilities": [
+        "attached-terminal",
+        "native-questions",
+        "structured-chat"
+      ],
+      "interactionBindings": [
+        {
+          "surface": "native",
+          "protocolInteraction": "native",
+          "capabilityId": "native-questions"
+        },
+        {
+          "surface": "chat",
+          "protocolInteraction": "chat",
+          "capabilityId": "structured-chat"
+        },
+        {
+          "surface": "terminal",
+          "protocolInteraction": "terminal",
+          "capabilityId": "attached-terminal"
+        },
+        {
+          "surface": "headless",
+          "protocolInteraction": "none"
+        }
+      ]
+    },
+    {
+      "hostProfileId": "planr-spec-codex",
+      "hostProfileVersion": "1.0.0",
+      "host": "codex",
+      "description": "codex projection profile for planr-spec.",
+      "source": "shared/profiles/codex.md",
+      "overlayModules": [],
+      "authorityCeiling": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read",
+          "write"
+        ],
+        "allowedTools": [
+          "read",
+          "edit"
+        ],
+        "allowedOperations": [
+          "compile",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      },
+      "runtimeCapabilities": [
+        "attached-terminal",
+        "native-questions",
+        "structured-chat"
+      ],
+      "interactionBindings": [
+        {
+          "surface": "native",
+          "protocolInteraction": "native",
+          "capabilityId": "native-questions"
+        },
+        {
+          "surface": "chat",
+          "protocolInteraction": "chat",
+          "capabilityId": "structured-chat"
+        },
+        {
+          "surface": "terminal",
+          "protocolInteraction": "terminal",
+          "capabilityId": "attached-terminal"
+        },
+        {
+          "surface": "headless",
+          "protocolInteraction": "none"
+        }
+      ]
+    },
+    {
+      "hostProfileId": "planr-spec-cursor",
+      "hostProfileVersion": "1.0.0",
+      "host": "cursor",
+      "description": "cursor projection profile for planr-spec.",
+      "source": "shared/profiles/cursor.md",
+      "overlayModules": [],
+      "authorityCeiling": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read",
+          "write"
+        ],
+        "allowedTools": [
+          "read",
+          "edit"
+        ],
+        "allowedOperations": [
+          "compile",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      },
+      "runtimeCapabilities": [
+        "attached-terminal",
+        "structured-chat"
+      ],
+      "interactionBindings": [
+        {
+          "surface": "chat",
+          "protocolInteraction": "chat",
+          "capabilityId": "structured-chat"
+        },
+        {
+          "surface": "terminal",
+          "protocolInteraction": "terminal",
+          "capabilityId": "attached-terminal"
+        },
+        {
+          "surface": "headless",
+          "protocolInteraction": "none"
+        }
+      ]
+    },
+    {
+      "hostProfileId": "planr-spec-pipeline",
+      "hostProfileVersion": "1.0.0",
+      "host": "pipeline",
+      "description": "pipeline projection profile for planr-spec.",
+      "source": "shared/profiles/pipeline.md",
+      "overlayModules": [],
+      "authorityCeiling": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read",
+          "write"
+        ],
+        "allowedTools": [
+          "read",
+          "edit"
+        ],
+        "allowedOperations": [
+          "compile",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      },
+      "runtimeCapabilities": [
+        "attached-terminal"
+      ],
+      "interactionBindings": [
+        {
+          "surface": "terminal",
+          "protocolInteraction": "terminal",
+          "capabilityId": "attached-terminal"
+        },
+        {
+          "surface": "headless",
+          "protocolInteraction": "none"
+        }
+      ]
+    }
+  ]
+}

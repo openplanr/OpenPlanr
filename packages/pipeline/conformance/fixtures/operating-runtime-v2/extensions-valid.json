@@ -1,0 +1,160 @@
+{
+  "domainRegistrations": [
+    {
+      "kind": "operate-domain-registration",
+      "schemaVersion": "1.0.0",
+      "protocolVersion": "2.0.0",
+      "domainId": "reference-domain",
+      "domainVersion": "1.0.0",
+      "provenance": { "packageName": "planr-pipeline", "packageVersion": "0.42.0", "integrity": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+      "roles": [
+        { "roleId": "advisor", "roleKind": "advisor", "label": "Advisor", "roleVersion": "2.0.0", "output": { "schemaId": "operating-advisor-result", "schemaVersion": "2.0.0", "mediaType": "application/json", "maxBytes": 262144 }, "analysisRubric": {"requiredQuestions":["Which repository evidence bears on the stated objective?","What is the largest risk in the current change surface?","What alternative implementation path exists, and what does it cost?","What remains unverified?"],"requiredEvidence":["Repository and git-history evidence refs in scope.","Planning artifacts.","CI or test evidence where available."],"failureModes":["Presenting style preference as risk.","Claims without a file locator.","Recommending a rewrite without pricing it.","Asserting coverage without test evidence."],"artifactQualityBar":["Every claim carries a locator.","Every risk carries exposure and reversibility.","Unverified statements are labelled."],"outOfScope":["Company strategy.","Market and positioning.","Finance.","Customer commitments.","Any executive-title framing."]}, "dependencyPolicy": { "id": "none", "version": "1.0.0" }, "requirements": ["bounded-input"] },
+        { "roleId": "chair", "roleKind": "chair", "label": "Chair", "roleVersion": "2.0.0", "output": { "schemaId": "operating-decision-ledger", "schemaVersion": "2.0.0", "mediaType": "application/json", "maxBytes": 262144 }, "analysisRubric": {"requiredQuestions":["What do the accepted Artifacts jointly support, and where do they conflict?","Which conflicts remain unresolved and must stay visible?","Which gaps limit this synthesis?","Which decisions need a named human owner, and what is each revisit condition?","Which proposed actions are justified, measurable, and permitted under policy?"],"requiredEvidence":["Terminal advisor Artifacts.","The Challenger Artifact.","Every typed absence, abandonment, and rejection in the Cycle."],"failureModes":["Merging conflict into false consensus.","Synthesising advice on behalf of an absent lens.","Proposing an action without a measurable expected result.","Implying approval or execution.","Dropping the Challenger's findings."],"artifactQualityBar":["Material disagreement preserved rather than resolved.","Each proposed Decision carries rationale, evidence, alternatives, confidence, and revisit conditions.","Each proposed Action carries owner, expected result, and verification method."],"outOfScope":["Approving, executing, publishing, deploying, or spending.","Contacting customers.","Invoking PLAN or SHIP.","Editing an advisor Artifact."]}, "dependencyPolicy": { "id": "all-required", "version": "1.0.0" }, "requirements": ["validated-input"] },
+        { "roleId": "challenger", "roleKind": "challenger", "label": "Challenger", "roleVersion": "2.0.0", "output": { "schemaId": "operating-challenger-review", "schemaVersion": "2.0.0", "mediaType": "application/json", "maxBytes": 262144 }, "analysisRubric": {"requiredQuestions":["Which claims lack supporting evidence, and which are contradicted?","Where do two advisors agree for the same weak reason?","What alternative was never considered?","Which downside is unpriced, and which irreversible action is presented as reversible?","Where is stated confidence higher than the evidence supports?"],"requiredEvidence":["Only the accepted advisor Artifacts and the same Snapshot and Delta."],"failureModes":["Substituting its own recommendation for a critique.","Challenging tone instead of substance.","Inventing evidence to refute a claim.","Treating absence of evidence as proof of the opposite.","Challenging a seat that recorded typed absence as if it had reported."],"artifactQualityBar":["Every finding cites the exact Artifact and claim it addresses.","Distinguishes unsupported from contradicted.","Names correlated reasoning explicitly when found."],"outOfScope":["Proposing its preferred plan.","Re-running advisor analysis.","Reading hidden reasoning or prompts.","Ranking seats by quality."]}, "dependencyPolicy": { "id": "all-required", "version": "1.0.0" }, "requirements": ["independent-challenge", "validated-input"] }
+      ],
+      "vocabulary": [{ "term": "operating-signal", "definition": "A domain-declared observation used in operating analysis." }],
+      "projectionContracts": [{ "schemaId": "operating-domain-projection", "schemaVersion": "2.0.0" }],
+      "actionKinds": [{ "id": "operating-hypothesis", "version": "1.0.0" }],
+      "requestedCapabilities": [{ "id": "accepted-artifact-read", "version": "1.0.0", "reason": "Read accepted artifacts for bounded analysis." }],
+      "requirements": ["explicit-scope-binding"]
+    }
+  ],
+  "agentRuntimeManifests": [
+    {
+      "kind": "agent-runtime-manifest",
+      "schemaVersion": "1.0.0",
+      "protocolVersion": "2.0.0",
+      "runtimeId": "reference-agent-runtime",
+      "runtimeVersion": "1.0.0",
+      "provenance": { "packageName": "planr-pipeline", "packageVersion": "0.42.0", "integrity": "sha256:2222222222222222222222222222222222222222222222222222222222222222" },
+      "implementation": { "packageName": "planr-pipeline", "packageVersion": "0.42.0", "exportName": "planr-pipeline/operate/runtime-v2", "availability": "available" },
+      "supportedContracts": [
+        { "schemaId": "operating-cycle", "schemaVersion": "2.0.0" },
+        { "schemaId": "operating-assignment", "schemaVersion": "2.0.0" },
+        { "schemaId": "operate-tool-call", "schemaVersion": "2.0.0" }
+      ],
+      "capabilitiesRequested": ["operate.assignment.submit", "operate.cycle.get"],
+      "limits": { "maxConcurrentAssignments": 1, "maxOutputBytes": 262144 },
+      "health": { "status": "conformant", "checkedAt": "2026-08-08T08:00:00Z", "conformanceDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333" },
+      "fallback": { "kind": "unavailable" }
+    }
+  ],
+  "governedExecutionRegistrations": {
+    "capabilityProviders": [
+      {
+        "kind": "operate-capability-provider-registration",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "2.0.0",
+        "providerId": "open-reference-capability-provider",
+        "providerVersion": "1.0.0",
+        "capabilities": [{ "id": "bounded-project-write", "version": "1.0.0" }, { "id": "synthetic-contained-write", "version": "1.0.0" }],
+        "supportedActionKinds": [{ "id": "business-operating-hypothesis", "version": "1.0.0" }, { "id": "software-operating-hypothesis", "version": "1.0.0" }],
+        "supportedDomains": ["business", "software"],
+        "supportedTargetKinds": ["project-record", "synthetic-target"],
+        "effectCeiling": "project-write",
+        "inputContract": { "schemaId": "operating-action", "schemaVersion": "2.0.0" },
+        "outputContract": { "schemaId": "operating-capability-availability", "schemaVersion": "2.0.0" },
+        "errorContract": { "schemaId": "operate-api-envelope", "schemaVersion": "2.0.0" },
+        "errorCodes": ["CAPABILITY_PROVIDER_UNAVAILABLE", "CAPABILITY_UNAVAILABLE", "OPERATING_PROVIDER_INPUT_INVALID"],
+        "timeoutPolicy": { "timeoutMs": 30000, "onTimeout": "fail-closed" },
+        "retryPolicy": { "maxAttempts": 1, "backoff": "none", "retryableErrorCodes": ["CAPABILITY_PROVIDER_UNAVAILABLE"] },
+        "idempotency": { "keySource": "runtime-derived-request-fingerprint", "replay": "return-recorded-result", "intrinsicallyIdempotent": true },
+        "reconciliation": { "supported": false, "mode": "none" },
+        "health": { "status": "available", "checkedAt": "2026-08-01T00:00:00Z", "expiresAt": "2027-08-12T00:00:00Z", "healthHash": "sha256:3fdd9a3fdf42be315a6e476a3a2cc07f5ff3cf843f211ad099fbdbbdb641759a" },
+        "versionCompatibility": { "protocolVersion": "2.0.0", "minimumRuntimeVersion": "0.42.0", "maximumRuntimeVersion": null },
+        "provenance": { "packageName": "planr-pipeline", "packageVersion": "0.42.0", "integrity": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
+        "conformanceDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "implementation": { "source": "built-in", "id": "open-reference-capability-provider-v2" },
+        "fallback": { "kind": "unavailable", "errorCode": "CAPABILITY_PROVIDER_UNAVAILABLE" }
+      }
+    ],
+    "policyProviders": [
+      {
+        "kind": "operate-policy-provider-registration",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "2.0.0",
+        "providerId": "open-reference-policy-provider",
+        "providerVersion": "1.0.0",
+        "policyRefs": [{ "id": "bounded-project-write-policy", "version": "1.0.0" }, { "id": "synthetic-containment-policy", "version": "1.0.0" }],
+        "supportedActionKinds": [{ "id": "business-operating-hypothesis", "version": "1.0.0" }, { "id": "software-operating-hypothesis", "version": "1.0.0" }],
+        "supportedDomains": ["business", "software"],
+        "effectCeiling": "project-write",
+        "tier": "domain",
+        "precedence": 100,
+        "narrowingOnly": true,
+        "inputContract": { "schemaId": "operating-action", "schemaVersion": "2.0.0" },
+        "outputContract": { "schemaId": "operating-policy-evaluation", "schemaVersion": "2.0.0" },
+        "errorContract": { "schemaId": "operate-api-envelope", "schemaVersion": "2.0.0" },
+        "errorCodes": ["POLICY_PROVIDER_UNAVAILABLE", "POLICY_EVALUATION_REJECTED", "POLICY_EVALUATION_DEFERRED", "POLICY_PROHIBITED", "OPERATING_PROVIDER_INPUT_INVALID"],
+        "timeoutPolicy": { "timeoutMs": 30000, "onTimeout": "fail-closed" },
+        "retryPolicy": { "maxAttempts": 1, "backoff": "none", "retryableErrorCodes": ["POLICY_PROVIDER_UNAVAILABLE"] },
+        "idempotency": { "keySource": "runtime-derived-request-fingerprint", "replay": "return-recorded-result", "intrinsicallyIdempotent": false },
+        "reconciliation": { "supported": false, "mode": "none" },
+        "health": { "status": "available", "checkedAt": "2026-08-01T00:00:00Z", "expiresAt": "2027-08-12T00:00:00Z", "healthHash": "sha256:3fdd9a3fdf42be315a6e476a3a2cc07f5ff3cf843f211ad099fbdbbdb641759a" },
+        "versionCompatibility": { "protocolVersion": "2.0.0", "minimumRuntimeVersion": "0.42.0", "maximumRuntimeVersion": null },
+        "provenance": { "packageName": "planr-pipeline", "packageVersion": "0.42.0", "integrity": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" },
+        "conformanceDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "implementation": { "source": "built-in", "id": "open-reference-policy-provider-v2" },
+        "fallback": { "kind": "unavailable", "errorCode": "POLICY_PROVIDER_UNAVAILABLE" }
+      }
+    ],
+    "executors": [
+      {
+        "kind": "operate-executor-registration",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "2.0.0",
+        "executorId": "open-reference-project-executor",
+        "executorVersion": "1.0.0",
+        "operationKinds": ["execute", "rollback"],
+        "capabilities": [{ "id": "bounded-project-write", "version": "1.0.0" }],
+        "supportedActionKinds": [{ "id": "business-operating-hypothesis", "version": "1.0.0" }, { "id": "software-operating-hypothesis", "version": "1.0.0" }],
+        "supportedDomains": ["business", "software"],
+        "supportedTargetKinds": ["project-record"],
+        "effectCeiling": "project-write",
+        "inputContract": { "schemaId": "operating-governed-operation", "schemaVersion": "2.0.0" },
+        "outputContract": { "schemaId": "operating-execution-result", "schemaVersion": "2.0.0" },
+        "rollbackContract": { "schemaId": "operating-rollback-result", "schemaVersion": "2.0.0" },
+        "errorContract": { "schemaId": "operate-api-envelope", "schemaVersion": "2.0.0" },
+        "errorCodes": ["EXECUTOR_UNAVAILABLE", "OPERATION_CONFLICT", "OPERATION_UNCERTAIN", "OPERATING_PROVIDER_INPUT_INVALID"],
+        "timeoutPolicy": { "timeoutMs": 30000, "onTimeout": "fail-closed" },
+        "retryPolicy": { "maxAttempts": 1, "backoff": "none", "retryableErrorCodes": ["EXECUTOR_UNAVAILABLE"] },
+        "idempotency": { "keySource": "runtime-derived-request-fingerprint", "replay": "return-recorded-result", "intrinsicallyIdempotent": true },
+        "reconciliation": { "supported": true, "mode": "deterministic" },
+        "health": { "status": "available", "checkedAt": "2026-08-01T00:00:00Z", "expiresAt": "2027-08-12T00:00:00Z", "healthHash": "sha256:3fdd9a3fdf42be315a6e476a3a2cc07f5ff3cf843f211ad099fbdbbdb641759a" },
+        "versionCompatibility": { "protocolVersion": "2.0.0", "minimumRuntimeVersion": "0.42.0", "maximumRuntimeVersion": null },
+        "provenance": { "packageName": "planr-pipeline", "packageVersion": "0.42.0", "integrity": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" },
+        "conformanceDigest": "sha256:abababababababababababababababababababababababababababababababab",
+        "implementation": { "source": "built-in", "id": "open-reference-project-executor-v2" },
+        "fallback": { "kind": "unavailable", "errorCode": "EXECUTOR_UNAVAILABLE" }
+      },
+      {
+        "kind": "operate-executor-registration",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "2.0.0",
+        "executorId": "open-reference-containment-executor",
+        "executorVersion": "1.0.0",
+        "operationKinds": ["execute", "rollback"],
+        "capabilities": [{ "id": "synthetic-contained-write", "version": "1.0.0" }],
+        "supportedActionKinds": [{ "id": "business-operating-hypothesis", "version": "1.0.0" }, { "id": "software-operating-hypothesis", "version": "1.0.0" }],
+        "supportedDomains": ["business", "software"],
+        "supportedTargetKinds": ["synthetic-target"],
+        "effectCeiling": "machine-local-write",
+        "inputContract": { "schemaId": "operating-governed-operation", "schemaVersion": "2.0.0" },
+        "outputContract": { "schemaId": "operating-execution-result", "schemaVersion": "2.0.0" },
+        "rollbackContract": { "schemaId": "operating-rollback-result", "schemaVersion": "2.0.0" },
+        "errorContract": { "schemaId": "operate-api-envelope", "schemaVersion": "2.0.0" },
+        "errorCodes": ["EXECUTOR_UNAVAILABLE", "OPERATION_CONFLICT", "OPERATION_UNCERTAIN", "OPERATING_PROVIDER_INPUT_INVALID"],
+        "timeoutPolicy": { "timeoutMs": 30000, "onTimeout": "fail-closed" },
+        "retryPolicy": { "maxAttempts": 1, "backoff": "none", "retryableErrorCodes": ["EXECUTOR_UNAVAILABLE"] },
+        "idempotency": { "keySource": "runtime-derived-request-fingerprint", "replay": "return-recorded-result", "intrinsicallyIdempotent": true },
+        "reconciliation": { "supported": true, "mode": "deterministic" },
+        "health": { "status": "available", "checkedAt": "2026-08-01T00:00:00Z", "expiresAt": "2027-08-12T00:00:00Z", "healthHash": "sha256:3fdd9a3fdf42be315a6e476a3a2cc07f5ff3cf843f211ad099fbdbbdb641759a" },
+        "versionCompatibility": { "protocolVersion": "2.0.0", "minimumRuntimeVersion": "0.42.0", "maximumRuntimeVersion": null },
+        "provenance": { "packageName": "planr-pipeline", "packageVersion": "0.42.0", "integrity": "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd" },
+        "conformanceDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "implementation": { "source": "built-in", "id": "open-reference-containment-executor-v2" },
+        "fallback": { "kind": "unavailable", "errorCode": "EXECUTOR_UNAVAILABLE" }
+      }
+    ]
+  }
+}

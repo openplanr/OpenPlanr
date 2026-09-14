@@ -1,0 +1,115 @@
+{
+  "name": "@openplanr/protocol",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Canonical OpenPlanr schemas, registries, typed errors, and portable contract validation",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.d.mts",
+      "import": "./src/index.mjs",
+      "default": "./src/index.mjs"
+    },
+    "./errors": {
+      "types": "./src/errors.d.mts",
+      "import": "./src/errors.mjs"
+    },
+    "./canonical-json": {
+      "types": "./src/canonical-json.d.mts",
+      "import": "./src/canonical-json.mjs"
+    },
+    "./json-schema": {
+      "types": "./src/json-schema.d.mts",
+      "import": "./src/json-schema.mjs"
+    },
+    "./semver": {
+      "types": "./src/semver.d.mts",
+      "import": "./src/semver.mjs"
+    },
+    "./contracts": {
+      "types": "./src/contracts.d.mts",
+      "import": "./src/contracts.mjs"
+    },
+    "./browser-contracts": {
+      "types": "./src/browser-contracts.d.mts",
+      "import": "./src/browser-contracts.mjs"
+    },
+    "./diagram-contracts": {
+      "types": "./src/diagram-contracts.d.mts",
+      "import": "./src/diagram-contracts.mjs"
+    },
+    "./design-contracts": {
+      "types": "./src/design-contracts.d.mts",
+      "import": "./src/design-contracts.mjs"
+    },
+    "./design-publication-contracts": {
+      "types": "./src/design-publication-contracts.d.mts",
+      "import": "./src/design-publication-contracts.mjs"
+    },
+    "./registries": {
+      "types": "./src/registries.d.mts",
+      "import": "./src/registries.mjs"
+    },
+    "./task-contracts": {
+      "types": "./src/task-contracts.d.mts",
+      "import": "./src/task-contracts.mjs"
+    },
+    "./planning-contracts": {
+      "types": "./src/planning-contracts.d.mts",
+      "import": "./src/planning-contracts.mjs"
+    },
+    "./dashboard/*": "./lib/dashboard/*",
+    "./operate-contract-catalog-v2": "./src/generated/contract-catalog-v2.mjs",
+    "./operate-experience-live-patch": "./src/compat/operate-experience-live-patch.mjs",
+    "./live-evidence-v2": "./src/compat/live-evidence-v2.mjs",
+    "./operating-planning-contracts": "./src/compat/operating-planning-contracts.mjs",
+    "./schemas/*": "./schemas/*",
+    "./registry/*": "./registry/*",
+    "./registries/*": "./registries/*",
+    "./package.json": "./package.json",
+    "./workspace-contracts": {
+      "types": "./src/workspace-contracts.d.mts",
+      "import": "./src/workspace-contracts.mjs"
+    },
+    "./review-experience-contracts": {
+      "types": "./src/review-experience-contracts.d.mts",
+      "import": "./src/review-experience-contracts.mjs"
+    },
+    "./enterprise-contracts": {
+      "types": "./src/enterprise-contracts.d.mts",
+      "import": "./src/enterprise-contracts.mjs"
+    }
+  },
+  "files": [
+    "schemas/**/*.json",
+    "registry/**/*.json",
+    "registries/**/*.json",
+    "lib/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "generate": "node scripts/generate-protocol-assets.mjs",
+    "check": "node scripts/generate-protocol-assets.mjs --check",
+    "test": "node --test ../../tests/protocol/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openplanr/OpenPlanr.git",
+    "directory": "packages/protocol"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1",
+    "miniflare": "4.20260708.1",
+    "playwright": "1.61.1",
+    "typescript": "6.0.2"
+  }
+}

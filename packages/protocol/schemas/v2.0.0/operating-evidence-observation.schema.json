@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-evidence-observation.schema.json",
+  "x-openplanr-contract": { "id": "operating-evidence-observation", "version": "2.0.0" },
+  "title": "Operating Evidence Observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "evidenceObservationId", "measurementPlan", "metricId", "metricObservation", "provider", "providerRegistrationHash", "checkpoint", "ingestion", "artifact", "evidenceRefs", "value", "unit", "dimension", "observedAt", "freshUntil", "classification", "status", "providerConfidence", "absences", "contradictions", "observationHash"],
+  "properties": {
+    "kind": { "const": "operating-evidence-observation" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "evidenceObservationId": { "type": "string", "pattern": "^eobs_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "measurementPlan": { "allOf": [{ "$ref": "#/$defs/recordRef" }, { "properties": { "contractId": { "const": "operating-measurement-plan" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "2.0.0" }, "recordId": { "type": "string", "pattern": "^mpln_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" } } }] },
+    "metricId": { "type": "string", "pattern": "^met_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "metricObservation": { "oneOf": [{ "type": "null" }, { "allOf": [{ "$ref": "#/$defs/recordRef" }, { "properties": { "contractId": { "const": "operating-metric-observation" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "2.0.0" }, "recordId": { "type": "string", "pattern": "^mob_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" } } }] }] },
+    "provider": { "$ref": "#/$defs/versionedId" },
+    "providerRegistrationHash": { "$ref": "#/$defs/hash" },
+    "checkpoint": { "type": "object", "additionalProperties": false, "required": ["checkpointId", "checkpointHash"], "properties": { "checkpointId": { "type": "string", "pattern": "^lchk_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "checkpointHash": { "$ref": "#/$defs/hash" } } },
+    "ingestion": { "type": "object", "additionalProperties": false, "required": ["ingestionId", "ingestionHash"], "properties": { "ingestionId": { "type": "string", "pattern": "^ling_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "ingestionHash": { "$ref": "#/$defs/hash" } } },
+    "artifact": { "type": "object", "additionalProperties": false, "required": ["artifactId", "recordDigest"], "properties": { "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "recordDigest": { "$ref": "#/$defs/hash" } } },
+    "evidenceRefs": { "type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": { "type": "object", "additionalProperties": false, "required": ["evidenceRefId", "recordDigest"], "properties": { "evidenceRefId": { "type": "string", "pattern": "^evr_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "recordDigest": { "$ref": "#/$defs/hash" } } } },
+    "value": { "type": ["number", "null"] },
+    "unit": { "$ref": "#/$defs/id" },
+    "dimension": { "$ref": "#/$defs/id" },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "freshUntil": { "type": "string", "format": "date-time" },
+    "classification": { "enum": ["public", "internal", "confidential", "restricted"] },
+    "status": { "enum": ["observed", "absent", "contradicted"] },
+    "providerConfidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "absences": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/absence" } },
+    "contradictions": { "type": "array", "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/hash" } },
+    "observationHash": { "$ref": "#/$defs/hash" }
+  },
+  "allOf": [
+    { "if": { "properties": { "status": { "const": "observed" } }, "required": ["status"] }, "then": { "properties": { "metricObservation": { "type": "object" }, "value": { "type": "number" }, "absences": { "maxItems": 0 }, "contradictions": { "maxItems": 0 } } } },
+    { "if": { "properties": { "status": { "const": "absent" } }, "required": ["status"] }, "then": { "properties": { "metricObservation": { "const": null }, "value": { "const": null }, "absences": { "minItems": 1 }, "contradictions": { "maxItems": 0 } } } },
+    { "if": { "properties": { "status": { "const": "contradicted" } }, "required": ["status"] }, "then": { "properties": { "metricObservation": { "const": null }, "contradictions": { "minItems": 1 } } } }
+  ],
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "versionedId": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "$ref": "#/$defs/id" }, "version": { "$ref": "#/$defs/version" } } },
+    "recordRef": { "type": "object", "additionalProperties": false, "required": ["contractId", "schemaVersion", "protocolVersion", "recordId", "recordDigest"], "properties": { "contractId": { "$ref": "#/$defs/id" }, "schemaVersion": { "$ref": "#/$defs/version" }, "protocolVersion": { "$ref": "#/$defs/version" }, "recordId": { "type": "string", "minLength": 1, "maxLength": 128 }, "recordDigest": { "$ref": "#/$defs/hash" } } },
+    "absence": { "type": "object", "additionalProperties": false, "required": ["kind", "reasonCode", "detailsHash"], "properties": { "kind": { "enum": ["missing-consent", "missing-credential", "stale", "unhealthy", "provider-unavailable", "rate-limited", "insufficient-evidence", "unsupported"] }, "reasonCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" }, "detailsHash": { "$ref": "#/$defs/hash" } } }
+  }
+}

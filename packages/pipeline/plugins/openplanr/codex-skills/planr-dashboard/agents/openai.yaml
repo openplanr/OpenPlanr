@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Dashboard"
+  short_description: "Start or inspect the loopback-only OpenPlanr planning dashboard…"
+  default_prompt: "Use $planr-dashboard to start or inspect the loopback-only OpenPlanr planning dashboard. Use when the user wants to view local planning or Operate state in the browser."
+policy:
+  allow_implicit_invocation: true

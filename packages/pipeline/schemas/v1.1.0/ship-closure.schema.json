@@ -1,0 +1,353 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/ship-closure.schema.json",
+  "title": "OpenPlanr monotonic SHIP closure",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind", "schemaVersion", "protocolVersion", "recordType", "runId",
+    "generation", "state", "feature", "mode", "runtime", "createdAt",
+    "updatedAt", "approvedScope", "tasks", "repositories", "reviewerRoster",
+    "rosterDigest", "gates", "gateSetDigest", "candidateRevisions", "reviews", "gateEvidence", "events",
+    "correctionImpact", "terminal", "receiptHash", "startedFromReceiptHash",
+    "reopenReason", "operatingOriginCorrelation"
+  ],
+  "properties": {
+    "kind": { "const": "ship-closure" },
+    "schemaVersion": { "type": "string", "enum": ["1.0.0", "1.1.0", "1.2.0"] },
+    "protocolVersion": { "const": "1.1.0" },
+    "recordType": { "type": "string", "enum": ["active", "receipt"] },
+    "runId": { "type": "string", "pattern": "^ship_[a-f0-9]{32}$" },
+    "generation": { "type": "integer", "minimum": 0 },
+    "state": {
+      "type": "string",
+      "enum": [
+        "implementing", "reviewing_initial", "correction_required",
+        "reviewing_targeted", "ready_for_final", "passed", "blocked"
+      ]
+    },
+    "feature": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "mode": { "type": "string", "enum": ["default", "spec-driven"] },
+    "runtime": { "type": "string", "enum": ["claude-code", "cursor", "codex", "unknown"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "approvedScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["featureRoot", "taskIds", "digest"],
+      "properties": {
+        "featureRoot": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "taskIds": { "type": "array", "maxItems": 256, "items": { "type": "string", "minLength": 1, "maxLength": 128 }, "uniqueItems": true },
+        "digest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": { "$ref": "#/$defs/task" }
+    },
+    "repositories": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": { "$ref": "#/$defs/repository" }
+    },
+    "reviewerRoster": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128 },
+      "uniqueItems": true
+    },
+    "rosterDigest": { "$ref": "#/$defs/digest" },
+    "gates": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/gate" }
+    },
+    "gateSetDigest": { "$ref": "#/$defs/digest" },
+    "candidateRevisions": {
+      "type": "array",
+      "maxItems": 2,
+      "items": { "$ref": "#/$defs/candidate" }
+    },
+    "reviews": {
+      "type": "array",
+      "maxItems": 2,
+      "items": { "$ref": "#/$defs/review" }
+    },
+    "gateEvidence": {
+      "type": "array",
+      "maxItems": 96,
+      "items": { "$ref": "#/$defs/gateEvidence" }
+    },
+    "events": {
+      "type": "array",
+      "maxItems": 512,
+      "items": { "$ref": "#/$defs/eventReceipt" }
+    },
+    "correctionImpact": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["summary", "findingIds", "paths", "affectedGateIds"],
+          "properties": {
+            "summary": { "type": "string", "minLength": 1, "maxLength": 4096 },
+            "findingIds": { "type": "array", "minItems": 1, "maxItems": 256, "items": { "type": "string", "minLength": 1, "maxLength": 128 }, "uniqueItems": true },
+            "paths": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/$defs/repositoryPath" }, "uniqueItems": true },
+            "affectedGateIds": { "type": "array", "maxItems": 32, "items": { "type": "string", "minLength": 1, "maxLength": 128 }, "uniqueItems": true }
+          }
+        }
+      ]
+    },
+    "terminal": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "at", "reason", "candidateDigest", "gateEvidenceDigest"],
+          "properties": {
+            "status": { "type": "string", "enum": ["passed", "blocked"] },
+            "at": { "type": "string", "format": "date-time" },
+            "reason": { "type": ["string", "null"], "maxLength": 4096 },
+            "candidateDigest": { "$ref": "#/$defs/digest" },
+            "gateEvidenceDigest": { "$ref": "#/$defs/digest" }
+          }
+        }
+      ]
+    },
+    "receiptHash": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/digest" }]
+    },
+    "startedFromReceiptHash": {
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/digest" }]
+    },
+    "reopenReason": { "type": ["string", "null"], "minLength": 1, "maxLength": 4096 },
+    "planningReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["receiptHash", "planDigest", "ownerDecisionDigest"],
+      "properties": {
+        "receiptHash": { "$ref": "#/$defs/digest" },
+        "planDigest": { "$ref": "#/$defs/digest" },
+        "ownerDecisionDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "riskClassification": { "$ref": "ship-risk-classification.schema.json" },
+    "browserQaRecords": {
+      "type": "array", "maxItems": 2,
+      "items": { "$ref": "browser-qa-gate.schema.json" }
+    },
+    "operatingOriginCorrelation": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["correlation_id", "proposal_id", "proposal_hash", "transaction_id", "receipt_hash"],
+          "properties": {
+            "correlation_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+            "proposal_id": { "type": "string", "pattern": "^oprop_[a-f0-9]{32}$" },
+            "proposal_hash": { "$ref": "#/$defs/digest" },
+            "transaction_id": { "type": "string", "pattern": "^txn_[a-f0-9]{32}$" },
+            "receipt_hash": { "$ref": "#/$defs/digest" }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "repositoryPath": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repositoryKey", "path"],
+      "properties": {
+        "repositoryKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128 },
+        "path": { "type": "string", "minLength": 1, "maxLength": 1024 }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "storyId", "path", "status", "dependsOn", "agent", "filesWritten", "filesModified", "blockedReason", "preserve"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "storyId": { "type": ["string", "null"], "maxLength": 128 },
+        "path": { "$ref": "#/$defs/repositoryPath" },
+        "status": { "type": "string", "enum": ["pending", "completed", "blocked"] },
+        "dependsOn": { "type": "array", "maxItems": 256, "items": { "type": "string", "minLength": 1, "maxLength": 128 }, "uniqueItems": true },
+        "agent": { "type": ["string", "null"], "maxLength": 128 },
+        "filesWritten": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/$defs/repositoryPath" }, "uniqueItems": true },
+        "filesModified": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/$defs/repositoryPath" }, "uniqueItems": true },
+        "blockedReason": { "type": ["string", "null"], "maxLength": 4096 },
+        "preserve": { "type": "array", "maxItems": 256, "items": { "$ref": "#/$defs/preserve" }, "uniqueItems": true }
+      }
+    },
+    "preserve": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repositoryKey", "path", "identity"],
+      "properties": {
+        "repositoryKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128 },
+        "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "identity": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repositoryKey", "root", "head", "baselineDigest"],
+      "properties": {
+        "repositoryKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128 },
+        "root": { "type": ["string", "null"], "maxLength": 4096 },
+        "head": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+        "baselineDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "repositoryKey", "argv", "inputs", "dependsOn", "finalRelevantSuite"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128 },
+        "repositoryKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128 },
+        "argv": { "type": "array", "minItems": 1, "maxItems": 128, "items": { "type": "string", "minLength": 1, "maxLength": 4096 } },
+        "inputs": { "type": "array", "minItems": 1, "maxItems": 512, "items": { "$ref": "#/$defs/repositoryPath" }, "uniqueItems": true },
+        "dependsOn": { "type": "array", "maxItems": 32, "items": { "type": "string", "minLength": 1, "maxLength": 128 }, "uniqueItems": true },
+        "finalRelevantSuite": { "type": "boolean" },
+        "gateType": { "type": "string", "enum": ["command", "browser-qa"] }
+      }
+    },
+    "inventoryEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repositoryKey", "path", "changeType", "kind", "mode", "contentDigest", "symlinkTarget", "originalPath"],
+      "properties": {
+        "repositoryKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128 },
+        "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "changeType": { "type": "string", "enum": ["added", "modified", "deleted", "renamed"] },
+        "kind": { "type": "string", "enum": ["file", "directory", "symlink", "missing"] },
+        "mode": { "type": ["integer", "null"], "minimum": 0 },
+        "contentDigest": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/digest" }] },
+        "symlinkTarget": { "type": ["string", "null"], "maxLength": 4096 },
+        "originalPath": { "type": ["string", "null"], "maxLength": 1024 }
+      }
+    },
+    "candidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "sealedAt", "digest", "repositories", "inventory"],
+      "properties": {
+        "revision": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "sealedAt": { "type": "string", "format": "date-time" },
+        "digest": { "$ref": "#/$defs/digest" },
+        "repositories": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 16,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["repositoryKey", "head", "baselineDigest", "inventoryDigest"],
+            "properties": {
+              "repositoryKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128 },
+              "head": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+              "baselineDigest": { "$ref": "#/$defs/digest" },
+              "inventoryDigest": { "$ref": "#/$defs/digest" }
+            }
+          }
+        },
+        "inventory": { "type": "array", "maxItems": 10000, "items": { "$ref": "#/$defs/inventoryEntry" } }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "severity", "basis", "title", "evidence", "taskIds", "paths", "acceptanceRefs", "disposition"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^fnd_[a-f0-9]{32}$" },
+        "severity": { "type": "string", "enum": ["P0", "P1", "P2"] },
+        "basis": { "type": "string", "enum": ["acceptance", "security", "privacy", "correctness", "data-loss", "release-integrity"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "evidence": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "taskIds": { "type": "array", "maxItems": 256, "items": { "type": "string", "minLength": 1, "maxLength": 128 }, "uniqueItems": true },
+        "paths": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/$defs/repositoryPath" }, "uniqueItems": true },
+        "acceptanceRefs": { "type": "array", "maxItems": 256, "items": { "type": "string", "minLength": 1, "maxLength": 512 }, "uniqueItems": true },
+        "disposition": { "type": "string", "enum": ["open", "resolved", "remains", "deferred"] }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "candidateRevision", "reviewerIds", "contributions", "candidateDigest", "rosterDigest", "gateSetDigest", "summary", "reviewedFindingIds", "findings", "closedAt"],
+      "properties": {
+        "phase": { "type": "string", "enum": ["initial", "targeted"] },
+        "candidateRevision": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "reviewerIds": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128 }, "uniqueItems": true },
+        "contributions": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "$ref": "#/$defs/reviewContribution" } },
+        "candidateDigest": { "$ref": "#/$defs/digest" },
+        "rosterDigest": { "$ref": "#/$defs/digest" },
+        "gateSetDigest": { "$ref": "#/$defs/digest" },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "reviewedFindingIds": { "type": "array", "maxItems": 256, "items": { "type": "string", "minLength": 1, "maxLength": 128 }, "uniqueItems": true },
+        "findings": { "type": "array", "maxItems": 256, "items": { "$ref": "#/$defs/finding" } },
+        "closedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "reviewContribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewerId", "summary", "evidenceDigest"],
+      "properties": {
+        "reviewerId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128 },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "evidenceDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "gateEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gateId", "phase", "candidateDigest", "inputDigest", "status", "startedAt", "endedAt", "exitCode", "stdoutDigest", "stderrDigest", "stdoutExcerpt", "stderrExcerpt", "reusedFromPhase"],
+      "properties": {
+        "gateId": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$", "maxLength": 128 },
+        "phase": { "type": "string", "enum": ["initial", "targeted", "final"] },
+        "candidateDigest": { "$ref": "#/$defs/digest" },
+        "inputDigest": { "$ref": "#/$defs/digest" },
+        "status": { "type": "string", "enum": ["passed", "failed", "skipped", "reused"] },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "endedAt": { "type": "string", "format": "date-time" },
+        "exitCode": { "type": ["integer", "null"] },
+        "stdoutDigest": { "$ref": "#/$defs/digest" },
+        "stderrDigest": { "$ref": "#/$defs/digest" },
+        "stdoutExcerpt": { "type": "string", "maxLength": 4096 },
+        "stderrExcerpt": { "type": "string", "maxLength": 4096 },
+        "reusedFromPhase": { "type": ["string", "null"], "enum": ["initial", "targeted", "final", null] }
+      }
+    },
+    "eventReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eventId", "type", "inputDigest", "generation", "at"],
+      "properties": {
+        "eventId": { "type": "string", "pattern": "^evt_[a-f0-9]{32}$" },
+        "type": { "type": "string", "enum": ["task.completed", "task.blocked", "review.opened", "review.closed", "correction.registered", "browser-qa.recorded", "gates.recorded", "closure.finalized"] },
+        "inputDigest": { "$ref": "#/$defs/digest" },
+        "generation": { "type": "integer", "minimum": 1 },
+        "at": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "schemaVersion": { "const": "1.2.0" } }, "required": ["schemaVersion"] },
+      "then": { "required": ["planningReview", "riskClassification", "browserQaRecords"] },
+      "else": { "not": { "anyOf": [{ "required": ["riskClassification"] }, { "required": ["browserQaRecords"] }] } }
+    }
+  ]
+}

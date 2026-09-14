@@ -1,0 +1,5 @@
+flowchart LR
+  intake[Capture request] --> review{Ready to render?}
+  review -->|yes| publish[Publish offline assets]
+  review -->|no| refine[Refine semantic source]
+  refine --> review
