@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -31,6 +32,8 @@ const RUN_ID = `ship_${'1'.repeat(32)}`;
 const RECEIPT_PATH = `.ship/receipts/${RUN_ID}.json`;
 const FEATURE_ROOT = '.planr/specs/SPEC-001-retention-workflow';
 const NOW = '2026-08-21T12:00:00.000Z';
+const pipelineVersion = createRequire(import.meta.url)('planr-pipeline/package.json')
+  .version as string;
 
 function digest(value: unknown): string {
   return sha256Jcs(value as never);
@@ -331,7 +334,7 @@ function buildFixture() {
     shipRun: {
       runId: RUN_ID,
       runtime: 'codex',
-      packageVersion: '0.44.0',
+      packageVersion: pipelineVersion,
       manifestHash: digest('manifest'),
       status: 'blocked',
     },
@@ -467,6 +470,13 @@ function validate(fixture: ReturnType<typeof buildFixture>): void {
 describe('SHIP closure delivery evidence', () => {
   it('uses a fixture that satisfies the frozen closure contract', () => {
     expect(() => assertShipClosure(buildFixture().receipt)).not.toThrow();
+  });
+
+  it('rejects delivery evidence claiming a different producer package version', () => {
+    const fixture = buildFixture();
+    fixture.input.shipRun.packageVersion = `${pipelineVersion}-mismatched-producer`;
+
+    expect(() => validate(fixture)).toThrow(/compatibility projection conflicts/u);
   });
 
   it('uses provenance to distinguish same-shape legacy fallback from missing current receipts', async () => {
