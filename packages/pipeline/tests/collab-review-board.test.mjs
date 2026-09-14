@@ -20,7 +20,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { validate } from '../conformance/json-schema-validate.mjs';
-import { createDaemon } from '../lib/design-engine/daemon.mjs';
+import { createDaemon, daemonControlHeaders } from '../lib/design-engine/daemon.mjs';
 import { openSse, isEvent } from './sse-client.mjs';
 import {
   mergeFeedback,
@@ -270,7 +270,7 @@ async function startBoard() {
 
   const reg = await fetch(`${base}/api/boards`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...daemonControlHeaders({ PLANR_HOME: home }) },
     body: JSON.stringify({ id, dir: boardDir }),
   });
   assert.equal(reg.status, 200, 'board registers');
@@ -311,7 +311,7 @@ const contributionFor = (author, comment, over = {}) => ({
 const postFeedback = (base, id, feedback) =>
   fetch(`${base}/boards/${encodeURIComponent(id)}/api/feedback`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { origin: base, 'content-type': 'application/json' },
     body: JSON.stringify({ kind: 'submit', feedback }),
   });
 

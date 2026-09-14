@@ -19,7 +19,7 @@ The conformance test fixture (`planr-pipeline/conformance/`) verifies items 5 an
 
 ## Claude Code adapter (canonical)
 
-**Repo:** `openplanr/planr-pipeline`
+**Repo:** `openplanr/OpenPlanr` (`packages/pipeline`)
 **Install:** `planr setup --runtime claude`
 **Adapter version:** independently versioned and locked through the compatibility manifest
 
@@ -162,10 +162,10 @@ To add a fourth runtime (e.g., Aider, Cline, Continue):
 3. Generate runtime assets from the shared role and command registries.
 4. Add detection, migration, rollback, and uninstall drivers to `planr`.
 5. Run the conformance test fixture against the new adapter.
-6. Submit a PR to `planr-pipeline` with the adapter spec and matrix entry.
+6. Submit a PR to `openplanr/OpenPlanr` with the adapter spec and matrix entry.
 
 The protocol is open. New runtimes are welcome.
 
 ---
 
-*OpenPlanr Protocol v1.0.0 — runtime adapter specs.*
+*OpenPlanr Protocol runtime adapter specifications.*

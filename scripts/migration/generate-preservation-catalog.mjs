@@ -81,6 +81,13 @@ const EVOLVED_MAPPING_IDS = new Set([
   'openplanr-cli:cutoff:CLAUDE.md',
   'openplanr-cli:cutoff:docs/CLI.md',
   'openplanr-cli:cutoff:docs/CROSS_RUNTIME_SETUP.md',
+  'openplanr-cli:cutoff:docs/TROUBLESHOOTING.md',
+  // Publication now refuses same-version archives whose registry integrity differs.
+  'openplanr-cli:cutoff:scripts/publish-if-needed.mjs',
+  // The heavy suite includes the packed legacy Operate migration round trip.
+  'openplanr-cli:cutoff:vitest.heavy.config.ts',
+  // The browser fixture exposes read-only local operating-review compatibility routes.
+  'openplanr-cli:cutoff:tests/e2e/fixtures/dashboard-fixture-server.mjs',
   'openplanr-cli:cutoff:input/tech/stack.md',
   'openplanr-cli:cutoff:lib/dashboard-verifier.mjs',
   'openplanr-cli:cutoff:README.md',
@@ -112,6 +119,9 @@ const EVOLVED_MAPPING_IDS = new Set([
   'openplanr-cli:overlay:src/services/runtime-manager/inventory.ts',
   'openplanr-cli:overlay:src/services/runtime-manager/global-state.ts',
   'openplanr-cli:overlay:src/services/operate/path-custody.ts',
+  'openplanr-cli:overlay:src/services/operate/pinned-legacy-replay-runner.ts',
+  'openplanr-cli:overlay:src/services/operate/storage-layout.ts',
+  'openplanr-cli:overlay:src/services/operate/storage-migration-service.ts',
   'openplanr-cli:overlay:src/services/operate/planning-handoff-service.ts',
   'openplanr-cli:overlay:src/services/operate/spec-operating-origin-service.ts',
   'openplanr-cli:overlay:src/services/operate/store.ts',
@@ -128,6 +138,7 @@ const EVOLVED_MAPPING_IDS = new Set([
   'openplanr-cli:cutoff:src/utils/constants.ts',
   'openplanr-cli:cutoff:src/utils/logger.ts',
   'openplanr-cli:overlay:tests/integration/operate-measurement-schedule.test.ts',
+  'openplanr-cli:overlay:tests/unit/operate-neutral-naming.test.ts',
   'openplanr-cli:cutoff:tests/e2e/fixtures/dashboard-api-fixture.mjs',
   'openplanr-cli:overlay:tests/e2e/land-sandbox.test.ts',
   'openplanr-cli:overlay:tests/integration/cli-boundary.test.ts',
@@ -143,6 +154,7 @@ const EVOLVED_MAPPING_IDS = new Set([
   // inside scaled previews while preserving the same capability assertions.
   'planr-pipeline:cutoff:tests/artifact/design-board-integration.test.mjs',
   'planr-pipeline:cutoff:tests/artifact/sandbox-hostile.test.mjs',
+  'planr-pipeline:cutoff:tests/design-engine/feedback-resolve.test.mjs',
   // The review shell now owns fixed, mobile-safe comment composition and compact replies.
   'planr-pipeline:cutoff:templates/artifact-review-shell.html',
   // The review-stage controller now preserves stable pins, focused modes, and smooth transitions.
@@ -335,19 +347,29 @@ const HOST_NATIVE_RETIRED_MAPPING_IDS = new Set([
   'openplanr-cli:overlay:tests/unit/live-evidence-cli.test.ts',
 ]);
 
+const POST_CONSOLIDATION_RETIRED_MAPPING_IDS = new Map([
+  [
+    'openplanr-cli:overlay:scripts/create-pinned-legacy-operate-replay-proof.mjs',
+    'bundled-operate-compatibility-reader-replaces-external-verifier',
+  ],
+]);
+
 const evidence = evidencePath ? JSON.parse(await readFile(path.resolve(evidencePath), 'utf8')) : null;
 if (evidence) validateEvidence(evidence);
 
 const privateCustodyFlag = argv.indexOf('--private-decision-custody');
 const privateDecisionCustodyRoot = privateCustodyFlag >= 0 ? argv[privateCustodyFlag + 1] : undefined;
-const evolvedPathInventory = evidence
+const inventoryFloor = evidence
   ? await buildPathInventory(evidence)
-  : await applyExplicitEvolutionMappings(
+  : excludePrivateWebRecords(
       await readAndVerifyCommittedDocument(
         INVENTORY_PATH,
         'openplanr-preservation-path-inventory',
       ),
     );
+const evolvedPathInventory = evidence
+  ? inventoryFloor
+  : await applyExplicitEvolutionMappings(inventoryFloor);
 const decisionPathInventory = await excludePrivateDecisionRecords(evolvedPathInventory, { custodyRoot: privateDecisionCustodyRoot });
 const archivedDashboardFlag = argv.indexOf('--archived-dashboard-custody');
 const archivedDashboardCustodyRoot = archivedDashboardFlag >= 0 ? argv[archivedDashboardFlag + 1] : undefined;
@@ -427,6 +449,9 @@ async function buildPathInventory(value) {
   const mappings = [];
   const sources = [];
   for (const source of value.sources) {
+    // The private hosted product is retained in custody evidence only. Public
+    // conformance data must not publish its source tree, filenames, or digests.
+    if (source.id === 'web') continue;
     const expected = EXPECTED_SOURCES[source.id];
     const currentByPath = new Map(source.trackedCurrent.map((entry) => [entry.path, entry]));
     const statusByPath = new Map(source.statusEntries.map((entry) => [entry.path, entry.xy]));
@@ -573,6 +598,16 @@ async function applyExplicitEvolutionMappings(committed) {
     changed = true;
   }
 
+  for (const [mappingId, reasonCode] of POST_CONSOLIDATION_RETIRED_MAPPING_IDS) {
+    const mapping = mappings.get(mappingId);
+    assert(mapping, `Post-consolidation retired mapping is missing: ${mappingId}`);
+    mapping.disposition = 'retired';
+    mapping.reasonCode = reasonCode;
+    mapping.destinations = [];
+    mapping.verification = { policy: 'declared-absence' };
+    changed = true;
+  }
+
   for (const mappingId of EVOLVED_MAPPING_IDS) {
     const mapping = mappings.get(mappingId);
     assert(mapping, `Explicit evolved mapping is missing: ${mappingId}`);
@@ -608,6 +643,31 @@ async function applyExplicitEvolutionMappings(committed) {
   }
 
   if (!changed) return committed;
+  inventory.coverage.dispositionCounts = Object.create(null);
+  for (const mapping of inventory.pathMappings) {
+    inventory.coverage.dispositionCounts[mapping.disposition] =
+      (inventory.coverage.dispositionCounts[mapping.disposition] ?? 0) + 1;
+  }
+  delete inventory.documentDigest;
+  return sealDocument(inventory);
+}
+
+function excludePrivateWebRecords(committed) {
+  if (!committed.sources.some((source) => source.sourceId === 'openplanr-web')) {
+    return committed;
+  }
+  const inventory = structuredClone(committed);
+  inventory.sources = inventory.sources.filter(
+    (source) => source.sourceId !== 'openplanr-web',
+  );
+  inventory.pathMappings = inventory.pathMappings.filter(
+    (mapping) => mapping.sourceId !== 'openplanr-web',
+  );
+  inventory.coverage.cutoffTrackedPaths = inventory.sources.reduce(
+    (sum, source) => sum + source.cutoffTrackedPaths,
+    0,
+  );
+  inventory.coverage.pathRecords = inventory.pathMappings.length;
   inventory.coverage.dispositionCounts = Object.create(null);
   for (const mapping of inventory.pathMappings) {
     inventory.coverage.dispositionCounts[mapping.disposition] =

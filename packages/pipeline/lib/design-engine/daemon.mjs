@@ -36,8 +36,9 @@
  */
 
 import { createServer } from 'node:http';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import {
-  existsSync, mkdirSync, readFileSync, statSync, writeFileSync,
+  chmodSync, existsSync, lstatSync, mkdirSync, readFileSync, statSync, writeFileSync,
 } from 'node:fs';
 import { createRequire } from 'node:module';
 import {
@@ -47,6 +48,7 @@ import { fileURLToPath } from 'node:url';
 
 import { daemonDir } from './paths.mjs';
 import {
+  assertLoopbackRequest,
   closeHttpServer,
   listenLoopback,
   readRequestBody,
@@ -85,10 +87,61 @@ export {
  * daemon running stale code and restart it instead of reusing it forever. A
  * daemon started before this field existed reports no version → treated as stale.
  */
-export const DAEMON_VERSION = 3;
+export const DAEMON_VERSION = 4;
 
 /** Cap on a request body (bytes) — a feedback round is small; this bounds memory per request. */
 const MAX_BODY_SIZE = 5_000_000;
+const CONTROL_TOKEN_FILE = 'control-token';
+const DAEMON_KIND = 'openplanr-design-daemon';
+const CONTROL_TOKEN = /^[a-f0-9]{64}$/u;
+
+function controlTokenPath(env = process.env) {
+  return join(daemonDir(env), CONTROL_TOKEN_FILE);
+}
+
+function readControlToken(env = process.env) {
+  const path = controlTokenPath(env);
+  try {
+    const entry = lstatSync(path);
+    if (!entry.isFile() || entry.isSymbolicLink()
+      || (process.platform !== 'win32' && (entry.mode & 0o077))) return null;
+    const token = readFileSync(path, 'utf8').trim();
+    return CONTROL_TOKEN.test(token) ? token : null;
+  } catch {
+    return null;
+  }
+}
+
+function ensureControlToken(env = process.env) {
+  const stateDir = daemonDir(env);
+  mkdirSync(stateDir, { recursive: true, mode: 0o700 });
+  if (process.platform !== 'win32') chmodSync(stateDir, 0o700);
+  const existing = readControlToken(env);
+  if (existing) return existing;
+  const path = controlTokenPath(env);
+  const token = randomBytes(32).toString('hex');
+  try {
+    writeFileSync(path, `${token}\n`, { flag: 'wx', mode: 0o600 });
+    return token;
+  } catch (error) {
+    if (error?.code !== 'EEXIST') throw error;
+    const raced = readControlToken(env);
+    if (raced) return raced;
+    throw new Error('The design daemon control token is invalid; remove the private daemon state before retrying.');
+  }
+}
+
+function hasControlToken(req, token) {
+  const presented = req.headers?.['x-openplanr-daemon-token'];
+  if (typeof presented !== 'string' || !CONTROL_TOKEN.test(presented)) return false;
+  return timingSafeEqual(Buffer.from(presented), Buffer.from(token));
+}
+
+export function daemonControlHeaders(env = process.env) {
+  const token = readControlToken(env);
+  if (!token) throw new Error('The design daemon control token is unavailable. Start the daemon before using its control API.');
+  return Object.freeze({ 'x-openplanr-daemon-token': token });
+}
 
 const json = (res, code, body) => {
   res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' });
@@ -113,7 +166,7 @@ const designBoardAdapterPath = join(
 
 export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch } = {}) {
   const stateDir = daemonDir(env);
-  mkdirSync(stateDir, { recursive: true });
+  const controlToken = ensureControlToken(env);
   const registryPath = join(stateDir, 'boards.json');
 
   const loadRegistry = () => {
@@ -323,10 +376,23 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
+      const internal = hasControlToken(req, controlToken);
+      assertLoopbackRequest(req, {
+        port: req.socket.localPort,
+        mutating: req.method !== 'GET' && req.method !== 'HEAD',
+        internal,
+      });
       const parts = url.pathname.split('/').filter(Boolean);
 
       if (req.method === 'GET' && url.pathname === '/health') {
-        return json(res, 200, { ok: true, pid: process.pid, version: DAEMON_VERSION, boards: Object.keys(loadRegistry()).length });
+        if (!internal) return json(res, 403, { error: 'daemon control authentication required' });
+        return json(res, 200, {
+          ok: true,
+          kind: DAEMON_KIND,
+          pid: process.pid,
+          version: DAEMON_VERSION,
+          boards: Object.keys(loadRegistry()).length,
+        });
       }
 
       if (req.method === 'GET' && url.pathname === '/') {
@@ -341,6 +407,7 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
       }
 
       if (req.method === 'POST' && url.pathname === '/api/boards') {
+        if (!internal) return json(res, 403, { error: 'daemon control authentication required' });
         const { id, dir } = JSON.parse(await readBody(req) || '{}');
         if (!id || !dir) return json(res, 400, { error: 'id and dir required' });
         if (!existsSync(join(dir, 'board.html'))) {
@@ -679,6 +746,9 @@ export function createDaemon({ env = process.env, fetchImpl = globalThis.fetch }
 
       return json(res, 404, { error: 'not found' });
     } catch (err) {
+      if (String(err?.code ?? '').startsWith('E_LOOPBACK_')) {
+        return json(res, 403, { error: 'loopback request rejected' });
+      }
       return json(res, 500, { error: String(err.message ?? err) });
     }
   });
@@ -700,15 +770,34 @@ export async function findRunningDaemon({ env = process.env, fetchImpl = fetch }
   const portFile = join(daemonDir(env), 'port');
   if (!existsSync(portFile)) return null;
   const port = Number(readFileSync(portFile, 'utf-8').trim());
-  if (!port) return null;
+  if (!Number.isSafeInteger(port) || port < 1 || port > 65535) return null;
+  let headers;
+  try { headers = daemonControlHeaders(env); } catch { return null; }
   try {
-    const res = await fetchImpl(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(800) });
+    const res = await fetchImpl(`http://127.0.0.1:${port}/health`, {
+      headers,
+      signal: AbortSignal.timeout(800),
+    });
     if (res.ok) {
       const health = await res.json().catch(() => ({}));
-      return { port, pid: health.pid ?? null, version: health.version ?? null };
+      if (
+        health?.ok === true
+        && health.kind === DAEMON_KIND
+        && Number.isSafeInteger(health.pid)
+        && health.pid > 0
+        && Number.isSafeInteger(health.version)
+      ) {
+        return {
+          authenticated: true,
+          kind: DAEMON_KIND,
+          port,
+          pid: health.pid,
+          version: health.version,
+        };
+      }
     }
   } catch {
-    /* dead daemon — caller starts a fresh one (rule 14) */
+    /* dead or unauthenticated daemon — caller starts a fresh one */
   }
   return null;
 }
@@ -719,9 +808,17 @@ export async function findRunningDaemon({ env = process.env, fetchImpl = fetch }
  * Safe to call with null/undefined running.
  */
 export async function killRunningDaemon(running) {
-  if (!running || !running.pid) return;
-  try { process.kill(running.pid); } catch { /* already gone, or not ours */ }
+  if (
+    !running
+    || running.authenticated !== true
+    || running.kind !== DAEMON_KIND
+    || !Number.isSafeInteger(running.pid)
+    || running.pid <= 0
+    || running.pid === process.pid
+  ) return false;
+  try { process.kill(running.pid); } catch { return false; }
   await new Promise((r) => setTimeout(r, 200));
+  return true;
 }
 
 // CLI entry: `node daemon.mjs --serve [port]`

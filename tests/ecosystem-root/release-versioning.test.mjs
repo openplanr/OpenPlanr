@@ -127,7 +127,9 @@ test('a real package version operation regenerates current runtime projections w
   try {
     // Copy current tracked source bytes, including the generator under test;
     // no private planning files, sibling checkout, or Git history is required.
-    const files = run('git', ['ls-files', '-z'], root).split('\0').filter(Boolean);
+    const files = run('git', ['ls-files', '-z'], root)
+      .split('\0')
+      .filter(path => path && existsSync(join(root, path)));
     for (const path of files) {
       const destination = join(directory, path);
       mkdirSync(dirname(destination), { recursive: true });

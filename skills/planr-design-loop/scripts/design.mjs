@@ -9450,14 +9450,14 @@ var validateNode = (value, schema3, path, errs, context) => {
   if (value !== null && typeof value === "object" && !Array.isArray(value)) {
     if (Array.isArray(schema3.required)) {
       for (const req of schema3.required) {
-        if (!(req in value)) {
+        if (!Object.hasOwn(value, req)) {
           errs.push({ path, rule: "required", detail: `missing required property '${req}'` });
         }
       }
     }
     const props = schema3.properties || {};
     for (const [k, v] of Object.entries(value)) {
-      if (!(k in props)) {
+      if (!Object.hasOwn(props, k)) {
         if (schema3.additionalProperties === false) {
           errs.push({ path, rule: "additionalProperties", detail: `unknown property '${k}'` });
         } else if (schema3.additionalProperties === true || schema3.additionalProperties !== null && typeof schema3.additionalProperties === "object") {
@@ -9466,7 +9466,7 @@ var validateNode = (value, schema3, path, errs, context) => {
       }
     }
     for (const [k, v] of Object.entries(value)) {
-      if (props[k]) validateNode(v, props[k], `${path}.${k}`, errs, context);
+      if (Object.hasOwn(props, k)) validateNode(v, props[k], `${path}.${k}`, errs, context);
     }
   }
   if (Array.isArray(schema3.oneOf)) {
@@ -9849,7 +9849,9 @@ import {
   existsSync,
   mkdirSync,
   openSync,
+  lstatSync,
   readFileSync as readFileSync2,
+  readdirSync,
   renameSync,
   rmSync,
   statSync,
@@ -9869,6 +9871,17 @@ function readJsonState(path) {
     return value && typeof value === "object" && !Array.isArray(value) ? value : null;
   } catch {
     return null;
+  }
+}
+function writePrivateJsonState(path, value, { mode = 384 } = {}) {
+  mkdirSync(dirname2(path), { recursive: true, mode: 448 });
+  const temporary = `${path}.${process.pid}.${randomBytes3(8).toString("hex")}.tmp`;
+  try {
+    writeFileSync(temporary, `${JSON.stringify(value, null, 2)}
+`, { mode });
+    renameSync(temporary, path);
+  } finally {
+    rmSync(temporary, { force: true });
   }
 }
 function isProcessAlive(pid) {
@@ -9966,11 +9979,18 @@ function readRequestBody(req, { maxBytes, encoding = null } = {}) {
 function assertLoopbackRequest(req, {
   port,
   mutating = false,
-  internal = false
+  internal = false,
+  hosts = [LOOPBACK_HOST]
 } = {}) {
-  const expectedHost = `${LOOPBACK_HOST}:${port}`;
+  const allowedHosts = new Set(hosts);
+  const hostHeaders = req.headersDistinct?.host;
+  const receivedHost = req.headers?.host;
+  const separator = typeof receivedHost === "string" ? receivedHost.lastIndexOf(":") : -1;
+  const receivedName = separator > 0 ? receivedHost.slice(0, separator) : "";
+  const receivedPort = separator > 0 ? receivedHost.slice(separator + 1) : "";
+  const expectedHost = `${receivedName}:${port}`;
   const expectedOrigin = `http://${expectedHost}`;
-  if (req.headers?.host !== expectedHost) {
+  if (!allowedHosts.has(receivedName) || receivedPort !== String(port) || Array.isArray(hostHeaders) && hostHeaders.length !== 1) {
     throw codedError("E_LOOPBACK_HOST", "Loopback Host header rejected.");
   }
   const origin = req.headers?.origin;
@@ -9993,7 +10013,6 @@ var wait = (milliseconds) => new Promise((resolveWait) => setTimeout(resolveWait
 async function acquireStartLock(path, {
   timeout = 5e3,
   poll = 25,
-  stale = 15e3,
   pid = process.pid,
   now = () => Date.now(),
   isAlive = isProcessAlive,
@@ -10001,39 +10020,71 @@ async function acquireStartLock(path, {
 } = {}) {
   mkdirSync(dirname2(path), { recursive: true, mode: 448 });
   const started = now();
+  if (existsSync(path)) {
+    throw codedError(
+      "E_START_LOCK_LEGACY",
+      `A legacy startup lock must be cleared after confirming its owner is stopped: ${path}`
+    );
+  }
+  const directory = `${path}.writers`;
+  mkdirSync(directory, { recursive: true, mode: 448 });
+  const directoryInfo = lstatSync(directory);
+  if (!directoryInfo.isDirectory() || directoryInfo.isSymbolicLink()) {
+    throw codedError("E_START_LOCK_UNSAFE", `Startup lock directory is unsafe: ${directory}`);
+  }
   const owner = randomBytes3(16).toString("hex");
-  while (now() - started <= timeout) {
-    let fd;
-    try {
-      fd = openSync(path, "wx", 384);
-      writeFileSync(fd, `${JSON.stringify({ pid, owner, createdAt: now() })}
-`);
-      closeSync(fd);
-      fd = void 0;
-      return () => {
-        const current = readJsonState(path);
-        if (current?.owner === owner && current?.pid === pid) rmSync(path, { force: true });
-      };
-    } catch (error) {
-      if (fd !== void 0) closeSync(fd);
-      if (error?.code !== "EEXIST") throw error;
-      const current = readJsonState(path);
-      let oldEnough = false;
+  const name = `${pid}-${owner}.json`;
+  const recordPath = join3(directory, name);
+  const announce = (ticket) => writePrivateJsonState(recordPath, { pid, owner, ticket });
+  const writers = () => {
+    const result = [];
+    for (const entry of readdirSync(directory)) {
+      if (!entry.endsWith(".json")) continue;
+      const match = /^([1-9]\d*)-([a-f0-9]{32})\.json$/u.exec(entry);
+      if (!match) throw codedError("E_START_LOCK_UNSAFE", `Startup lock record is invalid: ${entry}`);
+      const entryPath = join3(directory, entry);
+      let info;
       try {
-        oldEnough = now() - statSync(path).mtimeMs > stale;
-      } catch {
-        oldEnough = true;
+        info = lstatSync(entryPath);
+      } catch (error) {
+        if (error?.code === "ENOENT") continue;
+        throw error;
       }
-      const deadOwner = Number.isInteger(current?.pid) && current.pid > 0 && !isAlive(current.pid);
-      const invalidStale = !Number.isInteger(current?.pid) && oldEnough;
-      if (deadOwner || invalidStale) {
-        rmSync(path, { force: true });
+      if (!info.isFile() || info.isSymbolicLink() || info.size > 1024) {
+        throw codedError("E_START_LOCK_UNSAFE", `Startup lock record is unsafe: ${entry}`);
+      }
+      const value = readJsonState(entryPath);
+      if (value?.pid !== Number(match[1]) || value?.owner !== match[2] || !Number.isSafeInteger(value.ticket) || value.ticket < 0) throw codedError("E_START_LOCK_UNSAFE", `Startup lock record is invalid: ${entry}`);
+      if (!isAlive(value.pid)) {
+        rmSync(entryPath, { force: true });
         continue;
+      }
+      result.push({ ...value, name: entry });
+    }
+    return result;
+  };
+  try {
+    announce(0);
+    const ticket = Math.max(0, ...writers().map((writer) => writer.ticket)) + 1;
+    if (!Number.isSafeInteger(ticket)) {
+      throw codedError("E_START_LOCK_UNSAFE", "Startup lock ticket limit reached.");
+    }
+    announce(ticket);
+    while (now() - started <= timeout) {
+      const blocked = writers().some((writer) => writer.name !== name && (writer.ticket === 0 || writer.ticket < ticket || writer.ticket === ticket && writer.name < name));
+      if (!blocked) {
+        return () => {
+          const current = readJsonState(recordPath);
+          if (current?.owner === owner && current?.pid === pid) rmSync(recordPath, { force: true });
+        };
       }
       await waitImpl(poll);
     }
+    throw codedError("E_START_LOCK_TIMEOUT", `Timed out waiting for startup lock: ${path}`);
+  } catch (error) {
+    rmSync(recordPath, { force: true });
+    throw error;
   }
-  throw codedError("E_START_LOCK_TIMEOUT", `Timed out waiting for startup lock: ${path}`);
 }
 
 // packages/artifact/lib/artifact/local-document.mjs
@@ -10449,7 +10500,7 @@ ${result.errors.join("\n")}`);
 
 // packages/design/lib/design/context.mjs
 import { createHash as createHash3 } from "node:crypto";
-import { existsSync as existsSync2, readFileSync as readFileSync4, readdirSync, realpathSync as realpathSync2 } from "node:fs";
+import { existsSync as existsSync2, readFileSync as readFileSync4, readdirSync as readdirSync2, realpathSync as realpathSync2 } from "node:fs";
 import { dirname as dirname4, join as join4, resolve as resolve2 } from "node:path";
 
 // packages/protocol/src/canonical-json.mjs
@@ -10924,7 +10975,7 @@ var localRoot = (file) => realpathSync2(dirname4(resolve2(file)));
 function listDesignRevisions(file) {
   const root = localRoot(file);
   const pointer = JSON.parse(readFileSync4(join4(root, ".design/current.json"), "utf8"));
-  const revisions = readdirSync(join4(root, ".design/revisions")).filter((name) => /^[a-f0-9]{64}$/u.test(name)).map((revision) => {
+  const revisions = readdirSync2(join4(root, ".design/revisions")).filter((name) => /^[a-f0-9]{64}$/u.test(name)).map((revision) => {
     const value = JSON.parse(readFileSync4(join4(root, ".design/revisions", revision, "render.json"), "utf8"));
     return { revision, createdAt: value.manifest.generated_at, summary: value.reviewContext?.revisionSummary ?? "", fingerprints: value.fingerprints ?? [] };
   }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -13965,7 +14016,7 @@ import { dirname as dirname11, join as join10 } from "node:path";
 // packages/artifact/lib/artifact/import.mjs
 import {
   existsSync as existsSync5,
-  lstatSync as lstatSync2,
+  lstatSync as lstatSync3,
   mkdirSync as mkdirSync4,
   readFileSync as readFileSync10,
   realpathSync as realpathSync4,
@@ -14201,7 +14252,7 @@ function effectiveReviewDecision(value) {
 import { randomBytes as randomBytes4, randomUUID as randomUUID2 } from "node:crypto";
 import {
   existsSync as existsSync4,
-  lstatSync,
+  lstatSync as lstatSync2,
   mkdirSync as mkdirSync3,
   readFileSync as readFileSync9,
   renameSync as renameSync3,
@@ -14212,7 +14263,7 @@ import {
 import { dirname as dirname6 } from "node:path";
 var ARTIFACT_REVIEW_MAX_STATE_BYTES = 5 * 1024 * 1024;
 var reviewPathQueues = /* @__PURE__ */ new Map();
-function finalEntry(path, fs = { lstatSync }) {
+function finalEntry(path, fs = { lstatSync: lstatSync2 }) {
   try {
     return fs.lstatSync(path);
   } catch (error) {
@@ -14294,7 +14345,7 @@ function writeArtifactReviewState(path, ledger, {
   suffix = `${process.pid}.${randomBytes4(8).toString("hex")}`
 } = {}) {
   validateReviewLedger(ledger);
-  const fs = { existsSync: existsSync4, lstatSync, mkdirSync: mkdirSync3, writeFileSync: writeFileSync3, renameSync: renameSync3, rmSync: rmSync3, ...fileSystem };
+  const fs = { existsSync: existsSync4, lstatSync: lstatSync2, mkdirSync: mkdirSync3, writeFileSync: writeFileSync3, renameSync: renameSync3, rmSync: rmSync3, ...fileSystem };
   const temporary = `${path}.${suffix}.tmp`;
   const serialized = serializeReviewState(ledger);
   if (Buffer.byteLength(serialized, "utf8") > ARTIFACT_REVIEW_MAX_STATE_BYTES) {
@@ -14449,7 +14500,7 @@ var ARTIFACT_ID_RE2 = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 function pathError(code, message) {
   throw new PipelineError(code, message, "Choose a real, non-symlinked project or user review destination.");
 }
-function pathEntry(path, fs = { lstatSync: lstatSync2 }) {
+function pathEntry(path, fs = { lstatSync: lstatSync3 }) {
   try {
     return fs.lstatSync(path);
   } catch (error) {
@@ -14465,7 +14516,7 @@ function parseablePlanrConfig(root) {
   const path = join6(root, ".planr", "config.json");
   if (!existsSync5(path)) return false;
   try {
-    if (lstatSync2(path).isSymbolicLink()) return false;
+    if (lstatSync3(path).isSymbolicLink()) return false;
     const value = JSON.parse(readFileSync10(path, "utf8"));
     return value && typeof value === "object" && !Array.isArray(value) && (typeof value.projectName === "string" && value.projectName.trim() !== "" || value.idPrefix && typeof value.idPrefix === "object" && !Array.isArray(value.idPrefix) && Object.keys(value.idPrefix).length > 0);
   } catch (error) {
@@ -14476,17 +14527,17 @@ function hasGitMarker(root) {
   const marker = join6(root, ".git");
   if (!existsSync5(marker)) return false;
   try {
-    const stat = lstatSync2(marker);
+    const stat = lstatSync3(marker);
     if (stat.isSymbolicLink()) return false;
     if (stat.isDirectory()) {
       const head = join6(marker, "HEAD");
-      return existsSync5(head) && lstatSync2(head).isFile();
+      return existsSync5(head) && lstatSync3(head).isFile();
     }
     if (!stat.isFile() || stat.size > 4096) return false;
     const match = /^gitdir:\s*(.+?)\s*$/u.exec(readFileSync10(marker, "utf8"));
     if (!match) return false;
     const gitDir = resolve4(root, match[1]);
-    return existsSync5(gitDir) && statSync4(gitDir).isDirectory() && existsSync5(join6(gitDir, "HEAD")) && lstatSync2(join6(gitDir, "HEAD")).isFile();
+    return existsSync5(gitDir) && statSync4(gitDir).isDirectory() && existsSync5(join6(gitDir, "HEAD")) && lstatSync3(join6(gitDir, "HEAD")).isFile();
   } catch (error) {
     return false;
   }
@@ -14513,7 +14564,7 @@ function findArtifactProjectRoot(start = process.cwd(), { env = process.env } = 
 }
 function assertSafeDestination(base, relativeParts) {
   const absoluteBase = resolve4(base);
-  if (existsSync5(absoluteBase) && lstatSync2(absoluteBase).isSymbolicLink()) {
+  if (existsSync5(absoluteBase) && lstatSync3(absoluteBase).isSymbolicLink()) {
     pathError(ARTIFACT_ERROR_CODES.SYMLINK_ESCAPE, "Artifact review destination base is a symlink.");
   }
   let realBase = absoluteBase;
@@ -14552,7 +14603,7 @@ function resolveArtifactReviewDestination({
     if (!existsSync5(lexical) || !statSync4(lexical).isDirectory()) {
       pathError(ARTIFACT_ERROR_CODES.REVIEW_IMPORT, "Design review destination does not exist.");
     }
-    if (lstatSync2(lexical).isSymbolicLink()) {
+    if (lstatSync3(lexical).isSymbolicLink()) {
       pathError(ARTIFACT_ERROR_CODES.SYMLINK_ESCAPE, "Design review destination must be a real directory.");
     }
     const requested = realpathSync4(lexical);
@@ -14588,7 +14639,7 @@ function resolveArtifactReviewDestination({
 
 // packages/artifact/lib/artifact/review-server.mjs
 import { createServer } from "node:http";
-import { existsSync as existsSync6, lstatSync as lstatSync3, mkdirSync as mkdirSync5, readFileSync as readFileSync11, readdirSync as readdirSync2, rmSync as rmSync5 } from "node:fs";
+import { existsSync as existsSync6, lstatSync as lstatSync4, mkdirSync as mkdirSync5, readFileSync as readFileSync11, readdirSync as readdirSync3, rmSync as rmSync5 } from "node:fs";
 import { dirname as dirname8, join as join7 } from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 var here = dirname8(fileURLToPath2(new URL("./runtime/packages/artifact/lib/artifact/review-server.mjs", import.meta.url).href));
@@ -15196,7 +15247,7 @@ function createArtifactReviewServer({
 }
 
 // packages/design/lib/design/share.mjs
-import { chmodSync, closeSync as closeSync3, existsSync as existsSync7, fsyncSync, lstatSync as lstatSync4, mkdirSync as mkdirSync6, openSync as openSync3, readFileSync as readFileSync12, realpathSync as realpathSync5, renameSync as renameSync5, unlinkSync, writeFileSync as writeFileSync5 } from "node:fs";
+import { chmodSync, closeSync as closeSync3, existsSync as existsSync7, fsyncSync, lstatSync as lstatSync5, mkdirSync as mkdirSync6, openSync as openSync3, readFileSync as readFileSync12, realpathSync as realpathSync5, renameSync as renameSync5, unlinkSync, writeFileSync as writeFileSync5 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
 import { dirname as dirname9, isAbsolute as isAbsolute3, join as join8, relative as relative3, resolve as resolve5 } from "node:path";
 import { randomBytes as randomBytes5 } from "node:crypto";
@@ -15813,17 +15864,17 @@ ${current.document.id}`);
 }
 function ensurePrivateDirectory(root) {
   for (let path = root; dirname9(path) !== path; path = dirname9(path)) {
-    if (existsSync7(path) && lstatSync4(path).isSymbolicLink()) throw new Error("Design custody directory must not contain symbolic links.");
+    if (existsSync7(path) && lstatSync5(path).isSymbolicLink()) throw new Error("Design custody directory must not contain symbolic links.");
   }
   mkdirSync6(root, { recursive: true, mode: 448 });
-  const stat = lstatSync4(root);
+  const stat = lstatSync5(root);
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error("Design custody must use a private local directory.");
-  chmodSync(root, 448);
+  if (process.platform !== "win32") chmodSync(root, 448);
 }
 function readCustody(path) {
   if (!existsSync7(path)) return null;
-  const stat = lstatSync4(path);
-  if (!stat.isFile() || stat.isSymbolicLink() || stat.mode & 63) throw new Error("Design owner custody must be a private 0600 file.");
+  const stat = lstatSync5(path);
+  if (!stat.isFile() || stat.isSymbolicLink() || process.platform !== "win32" && stat.mode & 63) throw new Error("Design owner custody must be a private 0600 file.");
   const record = JSON.parse(readFileSync12(path, "utf8"));
   if (record.kind !== FORMAT || record.schemaVersion !== "1.0.0" || !record.custody) throw new Error("Design owner custody is invalid.");
   return record;
@@ -15840,12 +15891,14 @@ function writeCustody(path, record) {
   }
   try {
     renameSync5(temp, path);
-    chmodSync(path, 384);
-    const directory = openSync3(dirname9(path), "r");
-    try {
-      fsyncSync(directory);
-    } finally {
-      closeSync3(directory);
+    if (process.platform !== "win32") {
+      chmodSync(path, 384);
+      const directory = openSync3(dirname9(path), "r");
+      try {
+        fsyncSync(directory);
+      } finally {
+        closeSync3(directory);
+      }
     }
   } catch (error) {
     try {

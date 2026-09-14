@@ -25,7 +25,7 @@ const ROUTE_FIXTURES = [
   {
     kind: 'planning.graph',
     hash: '#/graph',
-    readyText: 'Improve appointment reminder delivery',
+    readyText: 'No depends_on edges in this plan',
     composition: 'shell',
   },
   {
@@ -43,7 +43,7 @@ const ROUTE_FIXTURES = [
   {
     kind: 'planning.sprints',
     hash: '#/sprints',
-    readyText: 'No active sprint returned',
+    readyText: 'No sprints yet',
     composition: 'shell',
   },
   {
@@ -80,7 +80,7 @@ const ROUTE_FIXTURES = [
     kind: 'system.diagnostics',
     hash: '#/diagnostics',
     readyText: 'Dashboard compatibility is certified',
-    composition: 'diagnostics',
+    composition: 'shell',
   },
   {
     kind: 'operate.today',

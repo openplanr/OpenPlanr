@@ -18,7 +18,7 @@ import {
   DESIGN_BOARD_SOURCES_FILE,
   renderBoardHtml,
 } from '../../lib/design-engine/board.mjs';
-import { createDaemon } from '../../lib/design-engine/daemon.mjs';
+import { createDaemon, daemonControlHeaders } from '../../lib/design-engine/daemon.mjs';
 import { digestArtifactEnvelope } from '../../lib/artifact/envelope.mjs';
 import { createArtifactReview } from '../../lib/artifact/review.mjs';
 
@@ -78,7 +78,7 @@ async function fixture() {
   const id = `checkout--${'b'.repeat(24)}`;
   const registration = await fetch(`${base}/api/boards`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...daemonControlHeaders({ PLANR_HOME: home }) },
     body: JSON.stringify({ id, dir: sessionDir }),
   });
   assert.equal(registration.status, 200);
@@ -167,7 +167,7 @@ test('generic review writes translate into the unchanged durable feedback contra
 
   const saved = await fetch(`${boardBase}api/artifact-review`, {
     method: 'PUT',
-    headers: { 'content-type': 'application/json' },
+    headers: { origin: base, 'content-type': 'application/json' },
     body: JSON.stringify({ review }),
   });
   assert.equal(saved.status, 200);
@@ -189,7 +189,7 @@ test('generic review writes translate into the unchanged durable feedback contra
   const stale = { ...review, reviewOf: 'f'.repeat(64) };
   const rejected = await fetch(`${boardBase}api/artifact-review`, {
     method: 'PUT',
-    headers: { 'content-type': 'application/json' },
+    headers: { origin: base, 'content-type': 'application/json' },
     body: JSON.stringify({ review: stale }),
   });
   assert.equal(rejected.status, 409);
@@ -211,7 +211,7 @@ test('legacy next-round fields and remix payload keep their persisted wire shape
   };
   const saved = await fetch(`${boardBase}api/feedback`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { origin: base, 'content-type': 'application/json' },
     body: JSON.stringify({ kind: 'submit', feedback: { ...common, preferred: 'A' } }),
   });
   assert.equal(saved.status, 200);
@@ -223,7 +223,7 @@ test('legacy next-round fields and remix payload keep their persisted wire shape
 
   const pending = await fetch(`${boardBase}api/feedback`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { origin: base, 'content-type': 'application/json' },
     body: JSON.stringify({
       kind: 'pending',
       feedback: {

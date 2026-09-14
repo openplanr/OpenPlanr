@@ -186,15 +186,167 @@
       "classification": "deterministic-preserved"
     },
     {
-      "path": "operate inspect",
+      "path": "operate domains",
       "classification": "deterministic-preserved"
     },
     {
-      "path": "operate show",
+      "path": "operate validate-note",
       "classification": "deterministic-preserved"
     },
     {
-      "path": "operate validate",
+      "path": "operate dashboard",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate start",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate get",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate resume",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate planning",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate planning preview",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate planning create-spec",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate assignment",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate assignment prepare",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate assignment validate",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate assignment submit",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate assignment recover",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate claim",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate submit",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate artifact",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate review",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate decide",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate measurement",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate measurement preview",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate measurement enable",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate measurement disable",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate measurement status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate experience",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate today",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate cycles",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate evidence",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate outcomes",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate history",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate cycle",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate outcome",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate search",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate export",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery storage-status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery migrate-storage",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery rollback-storage",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery inspect",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery restore",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery clear-stale-lock",
       "classification": "deterministic-preserved"
     },
     {

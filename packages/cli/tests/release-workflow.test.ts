@@ -1,12 +1,4 @@
-import {
-  lstatSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +12,8 @@ const cliRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const workspaceRoot = resolve(cliRoot, '..', '..');
 const workflowRoot = join(workspaceRoot, '.github', 'workflows');
 const releaseProofWorkflow = readFileSync(join(workflowRoot, 'release-proof.yml'), 'utf8');
+const publishPackagesWorkflow = readFileSync(join(workflowRoot, 'publish-packages.yml'), 'utf8');
+const publishIfNeeded = readFileSync(join(cliRoot, 'scripts', 'publish-if-needed.mjs'), 'utf8');
 const releaseArtifactVerifier = readFileSync(
   join(cliRoot, 'scripts', 'verify-release-artifact.mjs'),
   'utf8',
@@ -40,10 +34,19 @@ const strictPackedWorkspaceVerifier = readFileSync(
   join(workspaceRoot, 'scripts', 'verify-packed-workspace-strict.mjs'),
   'utf8',
 );
-const pinnedOperateVerifier = readFileSync(
-  join(cliRoot, 'scripts', 'create-pinned-legacy-operate-replay-proof.mjs'),
+const bundledOperateVerifier = readFileSync(
+  join(cliRoot, 'src', 'services', 'operate', 'pinned-legacy-replay-runner.ts'),
   'utf8',
 );
+const operationsRegistration = readFileSync(
+  join(cliRoot, 'src', 'cli', 'commands', 'groups', 'operations.ts'),
+  'utf8',
+);
+const packagedGuides = [
+  readFileSync(join(cliRoot, 'README.md'), 'utf8'),
+  readFileSync(join(cliRoot, 'docs', 'CLI.md'), 'utf8'),
+  readFileSync(join(cliRoot, 'docs', 'TROUBLESHOOTING.md'), 'utf8'),
+];
 const packageScripts = (
   JSON.parse(readFileSync(join(cliRoot, 'package.json'), 'utf8')) as {
     scripts: Record<string, string>;
@@ -97,6 +100,26 @@ describe('root release proof and public package artifacts', () => {
       'node scripts/verify-release-artifact.mjs',
     );
     expect(packageScripts.prepack).toBe('npm run build');
+  });
+
+  it('publishes reviewed archives idempotently and rejects same-version byte conflicts', () => {
+    expect(publishPackagesWorkflow).toContain("'dist.integrity'");
+    expect(publishPackagesWorkflow).toContain('candidateIntegrity');
+    expect(publishPackagesWorkflow).toContain("return 'identical'");
+    expect(publishPackagesWorkflow).toContain('already exists with different bytes');
+    expect(publishPackagesWorkflow).toContain(
+      'publish succeeded but npm did not expose the reviewed bytes',
+    );
+    expect(publishPackagesWorkflow).toContain('for (let attempt = 0; attempt < 5; attempt += 1)');
+    expect(publishPackagesWorkflow).not.toContain("execFileSync('npm', ['publish'");
+    expect(publishIfNeeded).toContain("['pack', '--json', '--ignore-scripts'");
+    expect(publishIfNeeded).toContain("['publish', candidate.archive, '--ignore-scripts'");
+    expect(publishIfNeeded).toContain('await reconcilePublication(publish.status)');
+    expect(publishIfNeeded).toContain(
+      'publish succeeded but npm did not expose the reviewed bytes',
+    );
+    expect(publishIfNeeded).toContain('rmSync(candidate.destination');
+    expect(publishIfNeeded).not.toContain("spawnSync('npm', ['publish']");
   });
 
   it('certifies one frozen build through deterministic packs and installed bytes', () => {
@@ -174,17 +197,58 @@ describe('root release proof and public package artifacts', () => {
         'docs/ARTIFACT_REVIEW.md',
         'docs/CLI.md',
         'docs/CROSS_RUNTIME_SETUP.md',
+        'docs/TROUBLESHOOTING.md',
       ]),
     );
   });
 
-  it('ships one real pinned Operate verifier without sibling repository discovery', () => {
-    const asset = 'scripts/create-pinned-legacy-operate-replay-proof.mjs';
-    expect(packageManifest.files).toContain(asset);
-    expect(lstatSync(join(cliRoot, asset)).isSymbolicLink()).toBe(false);
-    expect(pinnedOperateVerifier).toContain('OPENPLANR_VERIFIER_SOURCE_ROOT');
-    expect(pinnedOperateVerifier).toContain('PLANR_PIPELINE_VERIFIER_SOURCE_ROOT');
-    expect(pinnedOperateVerifier).not.toContain("path.resolve(scriptRoot, '..', 'planr-pipeline')");
+  it('keeps packaged guides on the current deterministic command surface', () => {
+    const retiredExamples = [
+      'planr plan',
+      'planr refine',
+      'planr revise',
+      'planr estimate',
+      'planr pipeline',
+      'planr spec decompose',
+      'planr backlog prioritize',
+      'planr backlog promote',
+      'planr backlog close',
+      'planr sprint add',
+      'planr sprint status',
+      'planr sprint close',
+      'planr sprint history',
+      'planr quick promote',
+      'planr story create --epic',
+      'planr init --no-ai',
+      'planr init --no-pipeline-rules',
+    ];
+    for (const guide of packagedGuides) {
+      for (const example of retiredExamples) expect(guide).not.toContain(example);
+    }
+  });
+
+  it('registers the complete public Operate facade used by packed release verification', () => {
+    expect(operationsRegistration).toContain("from '../operate.js'");
+    expect(operationsRegistration).not.toContain('operate-utilities');
+    for (const verifier of [releaseArtifactVerifier, releaseJourneyVerifier]) {
+      expect(verifier).toContain("['operate', 'recovery', 'inspect', '--json']");
+    }
+  });
+
+  it('builds a bundled Operate verifier without Git, network, or sibling checkout discovery', () => {
+    expect(bundledOperateVerifier).toContain("implementation: 'bundled-compatibility-reader'");
+    expect(bundledOperateVerifier).toContain('const STORE_VERSION = 3');
+    expect(bundledOperateVerifier).toContain('verifyJournal');
+    expect(bundledOperateVerifier).toContain('replayIndexProjection');
+    expect(bundledOperateVerifier).not.toMatch(
+      /(?:from ['"]\.\/store\.js['"]|from ['"]\.\/composition\.js['"]|planr-pipeline\/protocol)/u,
+    );
+    expect(bundledOperateVerifier).not.toMatch(
+      /(?:child_process|execFile|spawn|git|npm|VERIFIER_SOURCE_ROOT)/u,
+    );
+    expect(packageManifest.files).not.toContain(
+      'scripts/create-pinned-legacy-operate-replay-proof.mjs',
+    );
   });
 
   it('probes the packed Node CLI through the current read-only Operate contract', () => {

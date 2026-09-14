@@ -88,21 +88,47 @@ export async function executeGitHubOperations(operations, { cwd = process.cwd(),
   return { provider: 'github', applied: true, results };
 }
 
-async function linearRequest(query, variables, token) {
+async function linearRequest(query, variables, token, fetchImpl = fetch) {
   if (!token) throw new IntegrationError('E_LINEAR_CREDENTIAL', 'Linear credentials are unavailable.');
-  const response = await fetch(LINEAR_ENDPOINT, {
-    method: 'POST',
-    headers: { authorization: token, 'content-type': 'application/json' },
-    body: JSON.stringify({ query, variables }),
-  });
-  const payload = await response.json();
-  if (!response.ok || payload.errors?.length) {
+  let response;
+  let payload;
+  try {
+    response = await fetchImpl(LINEAR_ENDPOINT, {
+      method: 'POST',
+      headers: { authorization: token, 'content-type': 'application/json' },
+      body: JSON.stringify({ query, variables }),
+    });
+    payload = await response.json();
+  } catch (error) {
+    throw new IntegrationError('E_LINEAR_API', 'Linear synchronization transport failed.', {
+      cause: String(error?.message ?? error),
+    });
+  }
+  if (!response.ok || !payload || typeof payload !== 'object' || payload.errors?.length) {
     throw new IntegrationError('E_LINEAR_API', 'Linear rejected the synchronization request.', {
       status: response.status,
-      errors: payload.errors,
+      errors: payload?.errors,
     });
   }
   return payload.data;
+}
+
+function requireLinearMutationResult(data, field) {
+  const result = data?.[field];
+  const issue = result?.issue;
+  if (
+    result?.success !== true
+    || !issue
+    || typeof issue.id !== 'string'
+    || typeof issue.identifier !== 'string'
+    || typeof issue.url !== 'string'
+  ) {
+    throw new IntegrationError('E_LINEAR_API', `Linear ${field} did not confirm a successful issue mutation.`, {
+      field,
+      success: result?.success ?? null,
+    });
+  }
+  return issue;
 }
 
 export async function inspectLinear({ token = process.env.PLANR_LINEAR_TOKEN } = {}) {
@@ -124,7 +150,7 @@ export async function executeLinearOperations(
         { input: { teamId: operation.teamId, title: operation.title, description: operation.body } },
         token,
       );
-      results.push({ action: 'create', ...data.issueCreate.issue });
+      results.push({ action: 'create', ...requireLinearMutationResult(data, 'issueCreate') });
       continue;
     }
     if (operation.action === 'update' && isLikelyLinearIssueId(operation.id)) {
@@ -133,7 +159,7 @@ export async function executeLinearOperations(
         { id: operation.id, input: { title: operation.title, description: operation.body, stateId: operation.state } },
         token,
       );
-      results.push({ action: 'update', ...data.issueUpdate.issue });
+      results.push({ action: 'update', ...requireLinearMutationResult(data, 'issueUpdate') });
       continue;
     }
     throw new IntegrationError('E_SYNC_OPERATION', 'Unsupported Linear synchronization operation.', { operation });

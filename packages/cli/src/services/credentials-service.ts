@@ -102,9 +102,11 @@ export async function resolveApiKey(provider: string): Promise<string | undefine
     if (key) return key;
   }
 
-  // 3. Encrypted file
-  const key = await encryptedFileBackend.get(provider);
-  if (key) return key;
+  // 3. Encrypted file, only with an explicit operator passphrase.
+  if (await encryptedFileBackend.isAvailable()) {
+    const key = await encryptedFileBackend.get(provider);
+    if (key) return key;
+  }
 
   return undefined;
 }
@@ -126,9 +128,11 @@ export async function resolveApiKeySource(
     if (key) return { key, source: 'keychain' };
   }
 
-  // 3. Encrypted file
-  const key = await encryptedFileBackend.get(provider);
-  if (key) return { key, source: 'encrypted-file' };
+  // 3. Encrypted file, only with an explicit operator passphrase.
+  if (await encryptedFileBackend.isAvailable()) {
+    const key = await encryptedFileBackend.get(provider);
+    if (key) return { key, source: 'encrypted-file' };
+  }
 
   return undefined;
 }
@@ -149,6 +153,11 @@ export async function saveCredential(provider: string, apiKey: string): Promise<
     }
   }
 
+  if (!(await encryptedFileBackend.isAvailable())) {
+    throw new Error(
+      'The OS keychain is unavailable. Set PLANR_CREDENTIAL_FILE_PASSPHRASE to a strong passphrase before using encrypted-file credential storage.',
+    );
+  }
   await encryptedFileBackend.set(provider, apiKey);
   return 'encrypted-file';
 }
@@ -165,6 +174,11 @@ export async function saveRecordedCredential(
     } catch {
       /* Use strict fallback. */
     }
+  }
+  if (!(await encryptedFileBackend.isAvailable())) {
+    throw new Error(
+      'The OS keychain is unavailable. Set PLANR_CREDENTIAL_FILE_PASSPHRASE to a strong passphrase before using encrypted-file credential storage.',
+    );
   }
   await encryptedFileBackend.setStrict(provider, value);
   return 'encrypted-file';
@@ -203,7 +217,7 @@ export async function removeStoredCredential(
 /** Delete a stored credential from all backends. */
 export async function clearCredential(provider: string): Promise<void> {
   await keychainBackend.delete(provider);
-  await encryptedFileBackend.delete(provider);
+  if (await encryptedFileBackend.isAvailable()) await encryptedFileBackend.delete(provider);
 }
 
 /**
@@ -213,10 +227,12 @@ export async function clearCredential(provider: string): Promise<void> {
 export async function loadCredentials(): Promise<Record<string, string>> {
   const result: Record<string, string> = {};
 
-  // Load from encrypted file first
-  for (const provider of ['linear']) {
-    const key = await encryptedFileBackend.get(provider);
-    if (key) result[provider] = key;
+  // Load from encrypted file first when its operator secret is available.
+  if (await encryptedFileBackend.isAvailable()) {
+    for (const provider of ['linear']) {
+      const key = await encryptedFileBackend.get(provider);
+      if (key) result[provider] = key;
+    }
   }
 
   // Keychain entries override (they're the preferred backend)

@@ -1294,6 +1294,11 @@ export async function previewCompanyProposal(root: string, bindingId: string, pr
     );
   const baseLayout = await loadLayout(root, bindingId);
   const transformed = runtime.applyEnterpriseOperations(original, proposal, { layout: baseLayout });
+  if (transformed.layoutChanged)
+    return fail(
+      'E_COMPANY_AUTHORING',
+      'Layout proposals cannot be applied until the local renderer and publication path consume stored layout state.',
+    );
   const pipeline = resolvePipelinePackage(true);
   if (!pipeline) return fail('E_COMPANY_RUNTIME', 'The OpenPlanr workflow package is unavailable.');
   const canonical = await import(

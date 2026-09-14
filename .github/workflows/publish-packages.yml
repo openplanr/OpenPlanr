@@ -80,7 +80,7 @@ jobs:
           node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
           import { createHash } from 'node:crypto';
-          import { execFileSync } from 'node:child_process';
+          import { execFileSync, spawnSync } from 'node:child_process';
           const proof = JSON.parse(readFileSync('release/publication.json', 'utf8'));
           const expected = process.env;
           const names = ['@openplanr/protocol', 'planr-pipeline', 'openplanr'];
@@ -96,5 +96,43 @@ jobs:
             const found = JSON.parse(execFileSync('npm', ['view', `${name}@${version}`, 'version', '--json'], { encoding: 'utf8' }));
             if (found !== version) throw new Error(`Publish ${name}@${version} before this package`);
           }
-          execFileSync('npm', ['publish', archive, '--ignore-scripts', '--access', 'public', '--provenance', '--tag', expected.RELEASE_TAG], { stdio: 'inherit' });
+          const candidateIntegrity = `sha512-${createHash('sha512').update(readFileSync(archive)).digest('base64')}`;
+          const registryIntegrity = () => {
+            const result = spawnSync('npm', ['view', `${proof.name}@${proof.version}`, 'dist.integrity', '--json'], {
+              encoding: 'utf8',
+              stdio: ['ignore', 'pipe', 'pipe'],
+            });
+            if (result.status !== 0) return null;
+            const integrity = JSON.parse(result.stdout);
+            if (typeof integrity !== 'string' || !/^sha512-[A-Za-z0-9+/]+={0,2}$/.test(integrity)) {
+              throw new Error('Registry returned invalid integrity for an existing package');
+            }
+            return integrity;
+          };
+          const assertPublishable = () => {
+            const integrity = registryIntegrity();
+            if (integrity === null) return 'absent';
+            if (integrity === candidateIntegrity) return 'identical';
+            throw new Error(`${proof.name}@${proof.version} already exists with different bytes`);
+          };
+          if (assertPublishable() === 'identical') {
+            console.log(`${proof.name}@${proof.version} already has the reviewed bytes; skipping publish`);
+            process.exit(0);
+          }
+          const publish = spawnSync(
+            'npm',
+            ['publish', archive, '--ignore-scripts', '--access', 'public', '--provenance', '--tag', expected.RELEASE_TAG],
+            { stdio: 'inherit' },
+          );
+          for (let attempt = 0; attempt < 5; attempt += 1) {
+            if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 2_000));
+            if (assertPublishable() === 'identical') {
+              console.log(`${proof.name}@${proof.version} has the reviewed bytes after publish`);
+              process.exit(0);
+            }
+          }
+          if (publish.status === 0) {
+            throw new Error(`${proof.name}@${proof.version} publish succeeded but npm did not expose the reviewed bytes`);
+          }
+          process.exit(publish.status ?? 1);
           NODE

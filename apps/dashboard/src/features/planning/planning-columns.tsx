@@ -33,9 +33,15 @@ export function dependsOnOf(node: PlanningModelNode): readonly string[] {
     : [];
 }
 
-/** Outgoing depends_on count, derived from edges so it needs no field the model lacks. */
-export function outgoingDependencyCount(edges: readonly PlanningModelEdge[], id: string): number {
-  return edges.filter((edge) => edge.kind === 'depends_on' && edge.from === id).length;
+/** Build outgoing dependency counts once so table rendering remains O(nodes + edges). */
+export function outgoingDependencyCounts(
+  edges: readonly PlanningModelEdge[],
+): ReadonlyMap<string, number> {
+  const counts = new Map<string, number>();
+  for (const edge of edges) {
+    if (edge.kind === 'depends_on') counts.set(edge.from, (counts.get(edge.from) ?? 0) + 1);
+  }
+  return counts;
 }
 
 type Column = DataTableColumn<PlanningModelNode>;
@@ -87,7 +93,13 @@ export const REF_COLUMN: Column = Object.freeze({
   render: (node: PlanningModelNode) => refOf(node) ?? <Absent />,
 });
 
-export function dependencyCountColumn(edges: readonly PlanningModelEdge[]): Column {
+export function dependencyCountColumn(
+  edgesOrCounts: readonly PlanningModelEdge[] | ReadonlyMap<string, number>,
+): Column {
+  const counts =
+    typeof (edgesOrCounts as ReadonlyMap<string, number>).get === 'function'
+      ? (edgesOrCounts as ReadonlyMap<string, number>)
+      : outgoingDependencyCounts(edgesOrCounts as readonly PlanningModelEdge[]);
   return Object.freeze({
     key: 'deps',
     label: 'Deps',
@@ -95,7 +107,7 @@ export function dependencyCountColumn(edges: readonly PlanningModelEdge[]): Colu
     mono: true,
     align: 'right',
     render: (node: PlanningModelNode) => {
-      const count = outgoingDependencyCount(edges, node.id);
+      const count = counts.get(node.id) ?? 0;
       return count > 0 ? String(count) : <Absent />;
     },
   });

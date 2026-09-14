@@ -50,6 +50,8 @@ import {
   decodeOperateExperienceCheckpoint,
   encodeOperateExperienceCheckpoint,
   readOperatingProjection,
+  readLocalOperateReview,
+  readLocalOperateReviewIndex,
   readOperateExperienceProjection,
   selectOperateExperienceAuditDisplaySurface,
   selectOperateCycleDisplayWorkspace,
@@ -69,6 +71,7 @@ import {
   engineGetNode,
 } from './server/planning.mjs';
 import {
+  assertLoopbackRequest,
   createWatcher,
   listenLoopback,
   MIME,
@@ -2073,6 +2076,11 @@ export function createDashboardServer({
     let planningRequest = false;
     try {
       const url = new URL(req.url, 'http://localhost');
+      assertLoopbackRequest(req, {
+        port: req.socket.localPort,
+        mutating: req.method !== 'GET' && req.method !== 'HEAD',
+        hosts: ['127.0.0.1', 'localhost'],
+      });
       const { pathname } = url;
       const parts = pathname.split('/').filter(Boolean);
 
@@ -2495,6 +2503,41 @@ export function createDashboardServer({
 
       if (req.method === 'GET' && pathname === '/api/graph') {
         return json(res, 200, readGraph());
+      }
+
+      if (req.method === 'GET' && pathname === '/api/operate/local-reviews') {
+        const pageValue = url.searchParams.get('page');
+        const pageSizeValue = url.searchParams.get('pageSize');
+        const page = pageValue === null ? 1 : Number(pageValue);
+        const pageSize = pageSizeValue === null ? 20 : Number(pageSizeValue);
+        if (
+          [...url.searchParams.keys()].some((key) => key !== 'page' && key !== 'pageSize')
+          || [...url.searchParams.getAll('page')].length > 1
+          || [...url.searchParams.getAll('pageSize')].length > 1
+          || !Number.isSafeInteger(page) || page < 1
+          || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 50
+        ) {
+          return dashboardSafeErrorJson(res, 400, {
+            code: 'DASHBOARD_RESPONSE_INVALID', retryable: false, context: {},
+          });
+        }
+        return experienceJson(res, 200, readLocalOperateReviewIndex(planrDir, { page, pageSize }));
+      }
+
+      if (req.method === 'GET' && parts.length === 4
+        && parts.slice(0, 3).join('/') === 'api/operate/local-reviews') {
+        let cycleId;
+        try {
+          cycleId = decodeURIComponent(parts[3]);
+        } catch {
+          cycleId = '';
+        }
+        const report = readLocalOperateReview(planrDir, cycleId);
+        return report
+          ? experienceJson(res, 200, report)
+          : dashboardSafeErrorJson(res, 404, {
+            code: 'DASHBOARD_ERROR_UNAVAILABLE', retryable: false, context: {},
+          });
       }
 
       if (req.method === 'GET' && pathname === '/api/operate') {
@@ -3106,6 +3149,13 @@ export function createDashboardServer({
 
       return json(res, 404, { error: 'not found' });
     } catch (err) {
+      if (String(err?.code ?? '').startsWith('E_LOOPBACK_')) {
+        return dashboardSafeErrorJson(res, 400, {
+          code: 'DASHBOARD_LOOPBACK_REQUEST_REJECTED',
+          retryable: false,
+          context: {},
+        });
+      }
       if (commandRequest) return commandError(res, err);
       if (planningRequest) return planningResponseError(res);
       if (res.headersSent) {

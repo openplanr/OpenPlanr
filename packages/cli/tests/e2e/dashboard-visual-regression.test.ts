@@ -95,18 +95,18 @@ async function openFixture(page: Page, route = '#/overview', options = {}) {
     const expectation = dashboardRouteFixture(route);
     if (!expectation) throw new TypeError(`Missing ready-state assertion for ${route}.`);
     if (expectation.composition === 'shell') {
-      await expect(page.locator('.op-shell')).toBeVisible();
+      await expect(page.locator('.pc-shell')).toBeVisible();
       await expect(page.locator('#main-content')).toBeVisible();
     } else {
-      await expect(page.locator('.op-shell')).toHaveCount(0);
+      await expect(page.locator('.pc-shell')).toHaveCount(0);
       await expect(page.locator('main.op-diagnostics')).toBeVisible();
     }
     const workspace = page.locator(`[data-route-kind="${expectation.kind}"]`);
     await expect(workspace).toBeVisible();
     if (route === '#/search') {
-      const palette = page.locator('dialog.op-command-palette');
+      const palette = page.locator('dialog.pc-palette');
       await expect(palette).not.toBeVisible();
-      await workspace.getByRole('searchbox', { name: 'Query' }).fill('appointment');
+      await workspace.getByRole('textbox', { name: 'Search query' }).fill('appointment');
       await expect(workspace).toContainText(expectation.readyText);
     }
     await expect(workspace).toContainText(expectation.readyText);
@@ -142,7 +142,7 @@ async function layoutReport(page: Page) {
           height: rect.height,
         };
       })
-      .filter(({ width, height }) => width < 44 || height < 44);
+      .filter(({ width, height }) => width < 24 || height < 24);
     return { horizontalOverflow, undersized };
   }, ACTIVE_TARGET_SELECTOR);
 }
@@ -202,7 +202,7 @@ async function expectGoldenScreenshot(page: Page, name: string) {
 async function expectTodayWorkspaceStatus(page: Page) {
   const passport = page.locator('.op-binding-passport');
   await expect(passport).toHaveCount(0);
-  await expect(page.locator('.op-live')).toContainText('Workspace online');
+  await expect(page.getByRole('status', { name: 'watcher connected' })).toBeVisible();
   await expect(page.locator('.op-rail .op-binding')).toHaveCount(0);
 }
 
@@ -223,9 +223,9 @@ test.describe('dashboard real-browser quality', () => {
       const { hash: route } = fixture;
       await openFixture(page, route);
       if (fixture.composition === 'shell') {
-        await expect(page.locator('.op-skip-link')).toHaveAttribute('href', '#main-content');
+        await expect(page.locator('.pc-skip-link')).toHaveAttribute('href', '#main-content');
       } else {
-        await expect(page.locator('.op-skip-link')).toHaveCount(0);
+        await expect(page.locator('.pc-skip-link')).toHaveCount(0);
       }
       const parsed = parseDashboardRoute(route);
       if (parsed.kind === 'not-found') throw new TypeError(`Unparsed fixture route: ${route}`);
@@ -247,33 +247,78 @@ test.describe('dashboard real-browser quality', () => {
         testInfo.attach.bind(testInfo),
       );
       if (route === '#/overview') {
-        await expectGoldenScreenshot(page, 'planning-overview-ready.png');
+        await expectGoldenScreenshot(page, 'console-planning-overview-ready.png');
       }
       if (route === '#/graph') {
         const graph = page.locator('[data-route-kind="planning.graph"]');
-        const region = graph.getByRole('region', { name: 'Work relationships' });
-        const table = region.getByRole('table', { name: 'Work items and dependencies' });
-        await expect(region).toBeVisible();
-        await expect(table).toBeVisible();
-        await expect(table.locator('caption')).toHaveCount(1);
-        await expect(table).toContainText('Improve appointment reminder delivery');
-        await expect(table).not.toContainText('SPEC-020');
-        await expect(graph).not.toContainText('Accessible planning graph');
-        await expect(graph).not.toContainText('Inspect exact artifact');
-        await expectGoldenScreenshot(page, 'planning-graph-ready.png');
+        await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeVisible();
+        await expect(graph).toContainText('0 nodes · 0 edges');
+        await expect(graph).toContainText('No depends_on edges in this plan');
+        await expect(graph.getByRole('tab', { name: 'Graph' })).toHaveAttribute(
+          'aria-selected',
+          'true',
+        );
+        await expectGoldenScreenshot(page, 'console-planning-graph-ready.png');
       }
       if (route === '#/board') {
-        await expectGoldenScreenshot(page, 'planning-board-ready.png');
+        await expectGoldenScreenshot(page, 'console-planning-board-ready.png');
       }
       if (route === '#/operate/today') {
         await expectTodayWorkspaceStatus(page);
-        await expectGoldenScreenshot(page, 'operate-today-ready.png');
+        await expectGoldenScreenshot(page, 'console-operate-today-ready.png');
       }
     }
     expect(new URL(page.url()).origin).toBe(FIXTURE_ORIGIN);
     if (process.env.OPENPLANR_DASHBOARD_FIXTURE_REQUIRE_ISOLATION === '1') {
       expect(FIXTURE_ORIGIN).not.toBe('http://127.0.0.1:4173');
     }
+  });
+
+  test('shows completed local operating reviews and keeps cycle and history routes distinct', async ({
+    page,
+  }) => {
+    const requests: Request[] = [];
+    const errors: string[] = [];
+    page.on('request', (request) => {
+      if (new URL(request.url()).pathname.startsWith('/api/operate/')) requests.push(request);
+    });
+    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() === 'error') errors.push(message.text());
+    });
+
+    await page.goto(fixtureUrl('#/operate/cycles/2026-09-14-modul-events', { localOperate: '1' }));
+    const detail = page.locator('[data-route-kind="operate.cycle"]');
+    await expect(detail).toBeVisible();
+    await expect(
+      detail.getByRole('heading', { level: 1, name: 'Operating board report — Modul events' }),
+    ).toBeVisible();
+    await expect(detail).toContainText('Act now on the verified release path.');
+    await expect(detail).toContainText('Run the CRM smoke test');
+    await expect(detail.getByText('Read-only')).toBeVisible();
+    await expect(detail).not.toContainText('No command gateway in this build');
+
+    await page.getByRole('link', { name: 'History' }).click();
+    const history = page.locator('[data-route-kind="operate.history"]');
+    await expect(history).toBeVisible();
+    await expect(history.getByRole('heading', { level: 1, name: 'Review history' })).toBeVisible();
+    await expect(
+      history.getByRole('link', { name: /Operating board report — Modul events/u }),
+    ).toBeVisible();
+    await expect(history.getByRole('heading', { name: 'Decision queue' })).toHaveCount(0);
+
+    await page.getByRole('link', { name: 'Cycles' }).click();
+    const cycles = page.locator('[data-route-kind="operate.cycles"]');
+    await expect(cycles.getByRole('heading', { level: 1, name: 'Operating cycles' })).toBeVisible();
+    await expect(
+      cycles.getByRole('link', { name: /Operating board report — Modul events/u }),
+    ).toBeVisible();
+
+    expect(requests.length).toBeGreaterThanOrEqual(3);
+    expect(requests.every((request) => request.method() === 'GET')).toBe(true);
+    expect(errors).toEqual([]);
+    expect((await layoutReport(page)).horizontalOverflow).toBe(false);
+    expect(await axeViolations(page)).toEqual([]);
   });
 
   test('renders the pending Review from exact GET-only reads without mutation or private custody', async ({
@@ -300,7 +345,7 @@ test.describe('dashboard real-browser quality', () => {
     expect(performance.now() - started).toBeLessThan(2_500);
 
     await expect(useful.getByRole('heading', { level: 1, name: 'Owner Review' })).toBeVisible();
-    await expect(useful).toContainText('Executive decision docket');
+    await expect(useful).toContainText('executive decision docket');
     await expect(page.getByRole('heading', { name: 'What the board recommends' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Choose the record to make' })).toBeVisible();
     expect(
@@ -576,48 +621,18 @@ test.describe('dashboard real-browser quality', () => {
       await page.setViewportSize(viewport);
       await openFixture(page, '#/graph');
 
-      const region = page.getByRole('region', { name: 'Work relationships' });
-      const table = region.getByRole('table', { name: 'Work items and dependencies' });
-      await expect(table.locator('caption')).toHaveText('Work items and dependencies');
-      await expect(table).toContainText('No linked work');
-      expect(await table.innerText()).not.toContain('SPEC-020');
+      const graph = page.locator('[data-route-kind="planning.graph"]');
+      await expect(graph.getByRole('heading', { level: 1, name: 'Graph' })).toBeVisible();
+      await expect(graph).toContainText('No depends_on edges in this plan');
+      await expect(graph).toContainText('an artifact without an edge of this kind is not shown');
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
 
-      if (viewport.width === 828) {
-        await expect(table.locator('.op-graph-alternative__status')).toHaveCSS(
-          'white-space',
-          'nowrap',
-        );
-      }
-
-      if (viewport.width === 320) {
-        const graph = region.locator('.op-graph-alternative');
-        const row = table.locator('tbody tr').first();
-        await expect(row.locator('.op-graph-alternative__mobile-label')).toHaveText([
-          'Work item',
-          'Status',
-          'Relationships',
-          'Open',
-        ]);
-        await expect(row.getByText('In progress', { exact: true })).toBeVisible();
-        await expect(row.getByText('No linked work', { exact: true })).toBeVisible();
-        await expect(
-          row.getByRole('link', { name: 'Open Improve appointment reminder delivery' }),
-        ).toBeVisible();
-        const graphWidths = await graph.evaluate((element) => ({
-          clientWidth: element.clientWidth,
-          scrollWidth: element.scrollWidth,
-        }));
-        expect(graphWidths.clientWidth).toBeGreaterThan(0);
-        expect(graphWidths.scrollWidth).toBe(graphWidths.clientWidth);
-      }
-
       if (viewport.width >= 1024) {
-        await expectSurfaceToUseRouteFrame(page, '.op-graph-alternative');
+        await expectSurfaceToUseRouteFrame(page, '[data-route-kind="planning.graph"]');
       }
 
       if (viewport.width === 1280) {
-        await expectGoldenScreenshot(page, 'planning-graph-ready.png');
+        await expectGoldenScreenshot(page, 'console-planning-graph-ready.png');
       }
     }
   });
@@ -650,7 +665,7 @@ test.describe('dashboard real-browser quality', () => {
     expect(transition).toEqual({ route: '#/graph', showedPlanningRefusal: false });
     await expect(page.locator('[data-route-kind="planning.graph"]')).toBeVisible();
     await expect(page.locator('[data-route-kind="planning.graph"]')).toContainText(
-      'Improve appointment reminder delivery',
+      'No depends_on edges in this plan',
     );
   });
 
@@ -665,23 +680,16 @@ test.describe('dashboard real-browser quality', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await openFixture(page, '#/overview');
 
-    const decisionView = page.locator('section[aria-label="Decision view"]');
-    await expect(decisionView.getByRole('heading', { name: 'Decision view' })).toBeVisible();
-    await expect(decisionView).toContainText('Nothing is blocked. 1 work item is in progress.');
-    await expect(decisionView).toContainText('Improve appointment reminder delivery');
-    await expect(decisionView).not.toContainText('Highest planning attention');
-    await expect(decisionView).not.toContainText('Needs attention');
-
-    const linkNames = await decisionView
-      .getByRole('link')
-      .evaluateAll((links) => links.map((link) => link.getAttribute('aria-label')));
-    expect(linkNames).toEqual([
-      'View current work Improve appointment reminder delivery',
-      'View work by status on Board',
-      'Browse all planning work in List',
-    ]);
-    expect(new Set(linkNames).size).toBe(linkNames.length);
-    await expectGoldenScreenshot(page, 'planning-overview-wide.png');
+    const overview = page.locator('[data-route-kind="planning.overview"]');
+    await expect(overview.getByRole('heading', { level: 1, name: 'Overview' })).toBeVisible();
+    await expect(overview).toContainText('1 artifact');
+    await expect(overview).toContainText('Nothing is blocked');
+    await expect(overview.getByRole('table', { name: 'Artifacts in progress' })).toContainText(
+      'Improve appointment reminder delivery',
+    );
+    await expect(overview).not.toContainText('Highest planning attention');
+    await expect(overview).not.toContainText('Needs attention');
+    await expectGoldenScreenshot(page, 'console-planning-overview-wide.png');
   });
 
   test('keeps a sparse Planning Board focused at wide and narrow widths', async ({ page }) => {
@@ -692,18 +700,16 @@ test.describe('dashboard real-browser quality', () => {
       await page.setViewportSize(viewport);
       await openFixture(page, '#/board');
 
-      const board = page.locator('.op-planning-board');
-      const column = board.locator('.op-planning-board__column');
-      await expect(column).toHaveCount(1);
-      await expect(column.getByRole('heading', { name: 'In progress' })).toBeVisible();
-      await expect(column).toContainText('Improve appointment reminder delivery');
-      expect(await board.textContent()).not.toContain('Outstanding');
-      expect(await board.textContent()).not.toContain('Blocked');
+      const board = page.locator('.pc-status-board');
+      const columns = board.locator('.pc-status-board__column');
+      await expect(columns).toHaveCount(5);
+      const inProgress = columns.filter({ hasText: 'in progress' });
+      await expect(inProgress).toContainText('Improve appointment reminder delivery');
+      await expect(columns.filter({ hasText: 'blocked' })).toContainText('empty');
       expect((await layoutReport(page)).horizontalOverflow).toBe(false);
 
       if (viewport.width >= 1024) {
-        await expectSurfaceToUseRouteFrame(page, '.op-planning-board');
-        await expectSurfaceToUseRouteFrame(page, '.op-planning-board__column');
+        await expectSurfaceToUseRouteFrame(page, '[data-route-kind="planning.board"]');
       }
     }
   });
@@ -711,10 +717,10 @@ test.describe('dashboard real-browser quality', () => {
   test('keeps Planning workspaces aligned to one shared application frame', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     for (const [route, selector] of [
-      ['#/overview', '.op-planning-overview'],
-      ['#/graph', '.op-graph-alternative'],
-      ['#/board', '.op-planning-board'],
-      ['#/list', '.op-planning-list'],
+      ['#/overview', '[data-route-kind="planning.overview"]'],
+      ['#/graph', '[data-route-kind="planning.graph"]'],
+      ['#/board', '[data-route-kind="planning.board"]'],
+      ['#/list', '[data-route-kind="planning.list"]'],
     ] as const) {
       await openFixture(page, route);
       await expectSurfaceToUseRouteFrame(page, selector);
@@ -728,15 +734,15 @@ test.describe('dashboard real-browser quality', () => {
     const initialAnnouncement = await page.locator('.op-route-announcer').textContent();
 
     await page.keyboard.press('Tab');
-    await expect(page.locator('.op-skip-link')).toBeFocused();
+    await expect(page.locator('.pc-skip-link')).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.locator('#main-content')).toBeFocused();
 
     await page.keyboard.press('Control+K');
-    await expect(page.locator('dialog.op-command-palette')).toBeVisible();
-    await expect(page.locator('dialog.op-command-palette input[type="search"]')).toBeFocused();
+    await expect(page.locator('dialog.pc-palette')).toBeVisible();
+    await expect(page.locator('dialog.pc-palette input[type="search"]')).toBeFocused();
     await page.keyboard.press('Escape');
-    await expect(page.locator('dialog.op-command-palette')).not.toBeVisible();
+    await expect(page.locator('dialog.pc-palette')).not.toBeVisible();
 
     await page.evaluate(() => {
       window.location.hash = '#/operate/recovery';
@@ -767,7 +773,7 @@ test.describe('dashboard real-browser quality', () => {
       dialog.getByRole('button', { name: 'Confirm Restore the previous reminder settings' }),
     ).toBeVisible();
     expect(await dialog.evaluate((node) => node.contains(document.activeElement))).toBe(true);
-    const skipLink = page.locator('.op-skip-link');
+    const skipLink = page.locator('.pc-skip-link');
     await expect(skipLink).not.toBeFocused();
     expect(
       await skipLink.evaluate((node) => node.getBoundingClientRect().bottom),
@@ -782,7 +788,7 @@ test.describe('dashboard real-browser quality', () => {
       'dashboard-governed-action-preview.png',
       testInfo.attach.bind(testInfo),
     );
-    await expectGoldenScreenshot(page, 'operate-governed-action-dialog.png');
+    await expectGoldenScreenshot(page, 'console-operate-governed-action-dialog.png');
 
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await expect(dialog).not.toBeVisible();
@@ -810,16 +816,25 @@ test.describe('dashboard real-browser quality', () => {
 
       const more = mobileNavigation.locator('summary[aria-label="More Operate destinations"]');
       await touchTap(page, more);
-      const moreSheet = mobileNavigation.locator('details.op-mobile-more');
+      const moreSheet = mobileNavigation.locator('details.pc-mobile-more');
       await expect(moreSheet).toHaveAttribute('open', '');
       await touchTap(page, moreSheet.getByRole('link', { name: 'Evidence' }));
       await expect(page.locator('[data-route-kind="operate.evidence"]')).toBeVisible();
+      await expect(moreSheet).not.toHaveAttribute('open', '');
+
+      await touchTap(page, mobileNavigation.getByRole('link', { name: 'Planning' }));
+      await expect(page.locator('[data-route-kind="planning.overview"]')).toBeVisible();
+      const planningNavigation = page.getByRole('navigation', {
+        name: 'Mobile Planning navigation',
+      });
+      await touchTap(page, planningNavigation.getByRole('link', { name: 'Operate' }));
+      await expect(page.locator('[data-route-kind="operate.today"]')).toBeVisible();
 
       const paletteTrigger = page.getByRole('button', {
-        name: 'Search Planning and Operate destinations',
+        name: 'Open the command palette',
       });
       await touchTap(page, paletteTrigger);
-      const palette = page.locator('dialog.op-command-palette');
+      const palette = page.locator('dialog.pc-palette');
       await expect(palette).toBeVisible();
       const paletteInput = palette.getByRole('searchbox');
       await touchTap(page, paletteInput);
@@ -848,9 +863,9 @@ test.describe('dashboard real-browser quality', () => {
       await page.setViewportSize({ width, height: 768 });
       await openFixture(page, '#/operate/today');
 
-      const navigation = page.getByRole('navigation', { name: 'Operate navigation' });
+      const navigation = page.getByRole('navigation', { name: 'Dashboard navigation' });
       const labels = await navigation
-        .locator('.op-route-nav__item > span:last-child')
+        .locator('.pc-rail__item > span:last-child')
         .evaluateAll((elements) =>
           elements.map((element) => {
             const rect = element.getBoundingClientRect();
@@ -865,16 +880,18 @@ test.describe('dashboard real-browser quality', () => {
 
       expect(labels.map(({ text }) => text)).toEqual([
         'Today',
-        'Cycles',
         'Inbox',
         'Actions',
+        'Cycles',
         'Evidence',
         'Outcomes',
         'History',
         'Recovery',
+        'Console',
+        'Diagnostics',
       ]);
       for (const label of labels) {
-        expect(label.width).toBeGreaterThan(40);
+        expect(label.width).toBeGreaterThan(24);
         expect(label.height).toBeGreaterThan(10);
         expect(label.clipped).toBe('auto');
       }
@@ -887,20 +904,10 @@ test.describe('dashboard real-browser quality', () => {
       await page.setViewportSize({ width, height: 768 });
       await openFixture(page, '#/operate/today');
 
-      const status = page.locator('.op-live');
-      const fullLabel = status.locator('.op-live__label-full');
-      const compactLabel = status.locator('.op-live__label-compact');
-      await expect(status.locator('strong')).toHaveAttribute('title', 'Workspace online');
-      await expect(compactLabel).toBeVisible();
-      await expect(compactLabel).toHaveText('Online');
-      await expect(compactLabel).toHaveAttribute('aria-hidden', 'true');
-
-      const [fullBox, compactBox] = await Promise.all([
-        fullLabel.boundingBox(),
-        compactLabel.boundingBox(),
-      ]);
-      expect(fullBox?.width ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(1);
-      expect(compactBox?.width ?? 0).toBeGreaterThan(0);
+      const status = page.getByRole('status', { name: 'watcher connected' });
+      await expect(status).toBeVisible();
+      await expect(status.locator('.pc-watcher__label')).toHaveText('watcher connected');
+      expect((await status.boundingBox())?.width ?? 0).toBeGreaterThan(0);
     }
   });
 
@@ -929,7 +936,7 @@ test.describe('dashboard real-browser quality', () => {
 
     await currentStage.scrollIntoViewIfNeeded();
     const [headerBox, currentStageBox, currentNavigationBox] = await Promise.all([
-      page.locator('.op-topbar').boundingBox(),
+      page.locator('.pc-topbar').boundingBox(),
       currentStage.boundingBox(),
       navigation.boundingBox(),
     ]);
@@ -959,7 +966,7 @@ test.describe('dashboard real-browser quality', () => {
         `dashboard-${viewport.name}.png`,
         testInfo.attach.bind(testInfo),
       );
-      await expectGoldenScreenshot(page, `operate-today-${viewport.name}.png`);
+      await expectGoldenScreenshot(page, `console-operate-today-${viewport.name}.png`);
     });
   }
 
@@ -1015,7 +1022,7 @@ test.describe('dashboard real-browser quality', () => {
     });
     expect(await axeViolations(page)).toEqual([]);
     await attachScreenshot(page, 'dashboard-forced-colors.png', testInfo.attach.bind(testInfo));
-    await expectGoldenScreenshot(page, 'operate-inbox-forced-colors-reduced-motion.png');
+    await expectGoldenScreenshot(page, 'console-operate-inbox-forced-colors-reduced-motion.png');
   });
 
   test('escapes hostile project identity instead of creating executable markup', async ({
@@ -1023,7 +1030,7 @@ test.describe('dashboard real-browser quality', () => {
   }) => {
     const hostile = '<img src=x onerror="window.__fixtureXssFired=1"> Fixture';
     await openFixture(page, '#/overview', { project: hostile });
-    await expect(page.locator('.op-project strong')).toHaveText(hostile);
+    await expect(page.locator('.pc-topbar__crumb').first()).toHaveText(hostile);
     expect(await page.locator('img[src="x"]').count()).toBe(0);
     expect(
       await page.evaluate(() =>

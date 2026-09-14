@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useDashboard } from '../../app/providers.js';
 import { CompatibilityPage } from '../diagnostics/CompatibilityPage.js';
+import { LocalOperateReviews } from '../operate/local-reviews/LocalOperateReviews.js';
 import {
   planningNodesFromProductState,
   resolvePlanningWorkspace,
@@ -14,10 +15,7 @@ import {
   BootScreen,
   INSPECTOR_DOCK_WIDTH,
   IncompatibleNotice,
-  OperateUnavailable,
   PlaneBanner,
-  SHELL_MIN_WIDTH,
-  TooNarrow,
 } from './shell-planes.js';
 import './unified-shell.css';
 
@@ -69,8 +67,6 @@ export function UnifiedShell() {
   useEffect(() => {
     if (inspectorStore.openTick > 0) setInspectorOpen(true);
   }, [inspectorStore.openTick]);
-
-  if (width < SHELL_MIN_WIDTH) return <TooNarrow width={width} />;
 
   const product = route.product ?? 'planning';
   const incompatible = bootPhase === 'incompatible' || connection.state === 'incompatible';
@@ -134,7 +130,7 @@ export function UnifiedShell() {
             aria-busy={booting || undefined}
           >
             {operateWithoutGateway ? (
-              <OperateUnavailable />
+              <LocalOperateReviews key={route.kind} route={route} origin={bootstrap.origin} />
             ) : booting ? (
               <BootScreen route={route} phase={bootPhase} detail={bootDetail} />
             ) : (

@@ -28,3 +28,7 @@ export {
 export { assertOperateReviewDisplayWorkspaceV1 } from '../operate-review-display-workspace-contract.mjs';
 export { assertOperatingReviewReceiptV2 } from '../operate-review-contract.mjs';
 export { readOperatingProjection } from '../operate-reader.mjs';
+export {
+  readLocalOperateReview,
+  readLocalOperateReviewIndex,
+} from '../operate-local-review-reader.mjs';

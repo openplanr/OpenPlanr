@@ -42,6 +42,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(keychainBackend.isAvailable).mockResolvedValue(false);
   vi.mocked(keychainBackend.get).mockResolvedValue(undefined);
+  vi.mocked(encryptedFileBackend.isAvailable).mockResolvedValue(true);
   vi.mocked(encryptedFileBackend.get).mockResolvedValue(undefined);
 });
 
@@ -86,6 +87,14 @@ describe('deterministic integration credentials', () => {
     vi.mocked(keychainBackend.isAvailable).mockResolvedValue(true);
     await expect(saveCredential('linear', 'lin-test')).resolves.toBe('keychain');
     expect(keychainBackend.set).toHaveBeenCalledWith('linear', 'lin-test');
+  });
+
+  it('fails closed when neither a keychain nor an explicit encrypted-file secret is available', async () => {
+    vi.mocked(encryptedFileBackend.isAvailable).mockResolvedValue(false);
+    await expect(saveCredential('linear', 'lin-first')).rejects.toThrow(
+      'PLANR_CREDENTIAL_FILE_PASSPHRASE',
+    );
+    expect(encryptedFileBackend.set).not.toHaveBeenCalled();
   });
 
   it('falls back to encrypted storage when keychain is unavailable or fails', async () => {

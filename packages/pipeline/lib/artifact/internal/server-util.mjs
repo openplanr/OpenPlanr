@@ -12,7 +12,9 @@ import {
   existsSync,
   mkdirSync,
   openSync,
+  lstatSync,
   readFileSync,
+  readdirSync,
   renameSync,
   rmSync,
   statSync,
@@ -207,10 +209,21 @@ export function assertLoopbackRequest(req, {
   port,
   mutating = false,
   internal = false,
+  hosts = [LOOPBACK_HOST],
 } = {}) {
-  const expectedHost = `${LOOPBACK_HOST}:${port}`;
+  const allowedHosts = new Set(hosts);
+  const hostHeaders = req.headersDistinct?.host;
+  const receivedHost = req.headers?.host;
+  const separator = typeof receivedHost === 'string' ? receivedHost.lastIndexOf(':') : -1;
+  const receivedName = separator > 0 ? receivedHost.slice(0, separator) : '';
+  const receivedPort = separator > 0 ? receivedHost.slice(separator + 1) : '';
+  const expectedHost = `${receivedName}:${port}`;
   const expectedOrigin = `http://${expectedHost}`;
-  if (req.headers?.host !== expectedHost) {
+  if (
+    !allowedHosts.has(receivedName)
+    || receivedPort !== String(port)
+    || (Array.isArray(hostHeaders) && hostHeaders.length !== 1)
+  ) {
     throw codedError('E_LOOPBACK_HOST', 'Loopback Host header rejected.');
   }
   const origin = req.headers?.origin;
@@ -257,7 +270,6 @@ const wait = (milliseconds) => new Promise((resolveWait) => setTimeout(resolveWa
 export async function acquireStartLock(path, {
   timeout = 5_000,
   poll = 25,
-  stale = 15_000,
   pid = process.pid,
   now = () => Date.now(),
   isAlive = isProcessAlive,
@@ -265,32 +277,88 @@ export async function acquireStartLock(path, {
 } = {}) {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   const started = now();
+
+  // Older releases used one shared lock file. Removing that pathname after
+  // inspecting it is inherently racy because another legacy process can replace
+  // it before unlink. Fail closed and preserve the record for explicit cleanup.
+  if (existsSync(path)) {
+    throw codedError(
+      'E_START_LOCK_LEGACY',
+      `A legacy startup lock must be cleared after confirming its owner is stopped: ${path}`,
+    );
+  }
+
+  const directory = `${path}.writers`;
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  const directoryInfo = lstatSync(directory);
+  if (!directoryInfo.isDirectory() || directoryInfo.isSymbolicLink()) {
+    throw codedError('E_START_LOCK_UNSAFE', `Startup lock directory is unsafe: ${directory}`);
+  }
   const owner = randomBytes(16).toString('hex');
-  while (now() - started <= timeout) {
-    let fd;
-    try {
-      fd = openSync(path, 'wx', 0o600);
-      writeFileSync(fd, `${JSON.stringify({ pid, owner, createdAt: now() })}\n`);
-      closeSync(fd);
-      fd = undefined;
-      return () => {
-        const current = readJsonState(path);
-        if (current?.owner === owner && current?.pid === pid) rmSync(path, { force: true });
-      };
-    } catch (error) {
-      if (fd !== undefined) closeSync(fd);
-      if (error?.code !== 'EEXIST') throw error;
-      const current = readJsonState(path);
-      let oldEnough = false;
-      try { oldEnough = now() - statSync(path).mtimeMs > stale; } catch { oldEnough = true; }
-      const deadOwner = Number.isInteger(current?.pid) && current.pid > 0 && !isAlive(current.pid);
-      const invalidStale = !Number.isInteger(current?.pid) && oldEnough;
-      if (deadOwner || invalidStale) {
-        rmSync(path, { force: true });
+  const name = `${pid}-${owner}.json`;
+  const recordPath = join(directory, name);
+
+  const announce = (ticket) => writePrivateJsonState(recordPath, { pid, owner, ticket });
+  const writers = () => {
+    const result = [];
+    for (const entry of readdirSync(directory)) {
+      if (!entry.endsWith('.json')) continue;
+      const match = /^([1-9]\d*)-([a-f0-9]{32})\.json$/u.exec(entry);
+      if (!match) throw codedError('E_START_LOCK_UNSAFE', `Startup lock record is invalid: ${entry}`);
+      const entryPath = join(directory, entry);
+      let info;
+      try { info = lstatSync(entryPath); } catch (error) {
+        if (error?.code === 'ENOENT') continue;
+        throw error;
+      }
+      if (!info.isFile() || info.isSymbolicLink() || info.size > 1024) {
+        throw codedError('E_START_LOCK_UNSAFE', `Startup lock record is unsafe: ${entry}`);
+      }
+      const value = readJsonState(entryPath);
+      if (
+        value?.pid !== Number(match[1])
+        || value?.owner !== match[2]
+        || !Number.isSafeInteger(value.ticket)
+        || value.ticket < 0
+      ) throw codedError('E_START_LOCK_UNSAFE', `Startup lock record is invalid: ${entry}`);
+      if (!isAlive(value.pid)) {
+        // Writer names are random and never reused. Reclaimers can remove this
+        // exact dead writer without risking a later owner's record.
+        rmSync(entryPath, { force: true });
         continue;
+      }
+      result.push({ ...value, name: entry });
+    }
+    return result;
+  };
+
+  try {
+    announce(0);
+    const ticket = Math.max(0, ...writers().map((writer) => writer.ticket)) + 1;
+    if (!Number.isSafeInteger(ticket)) {
+      throw codedError('E_START_LOCK_UNSAFE', 'Startup lock ticket limit reached.');
+    }
+    announce(ticket);
+    while (now() - started <= timeout) {
+      const blocked = writers().some((writer) => (
+        writer.name !== name
+        && (
+          writer.ticket === 0
+          || writer.ticket < ticket
+          || (writer.ticket === ticket && writer.name < name)
+        )
+      ));
+      if (!blocked) {
+        return () => {
+          const current = readJsonState(recordPath);
+          if (current?.owner === owner && current?.pid === pid) rmSync(recordPath, { force: true });
+        };
       }
       await waitImpl(poll);
     }
+    throw codedError('E_START_LOCK_TIMEOUT', `Timed out waiting for startup lock: ${path}`);
+  } catch (error) {
+    rmSync(recordPath, { force: true });
+    throw error;
   }
-  throw codedError('E_START_LOCK_TIMEOUT', `Timed out waiting for startup lock: ${path}`);
 }

@@ -16,16 +16,18 @@ import { withCredentialWriteLock } from '../../src/services/credential-write-loc
  */
 
 const testPlanrDir = mkdtempSync(join(tmpdir(), 'openplanr-credentials-test-'));
-const backend = new EncryptedFileBackend(testPlanrDir);
+const TEST_PASSPHRASE = 'test-only-passphrase-with-32-characters';
+const backend = new EncryptedFileBackend(testPlanrDir, { passphrase: TEST_PASSPHRASE });
 
 afterAll(() => {
   rmSync(testPlanrDir, { recursive: true, force: true });
 });
 
 describe('EncryptedFileBackend', () => {
-  it('is always available', async () => {
-    const backend = new EncryptedFileBackend();
-    expect(await backend.isAvailable()).toBe(true);
+  it('fails closed without an explicit strong passphrase', async () => {
+    const backend = new EncryptedFileBackend(testPlanrDir, { passphrase: 'short' });
+    expect(await backend.isAvailable()).toBe(false);
+    await expect(backend.setStrict('provider', 'secret')).rejects.toThrow('at least 20');
   });
 });
 
@@ -105,7 +107,7 @@ describe('strict rotating credential storage', () => {
   it('treats removal of an absent credential as idempotent success', async () => {
     const isolated = mkdtempSync(join(tmpdir(), 'company-credential-strict-'));
     try {
-      const strict = new EncryptedFileBackend(isolated);
+      const strict = new EncryptedFileBackend(isolated, { passphrase: TEST_PASSPHRASE });
       expect(await strict.deleteStrict('absent')).toBe(true);
       await strict.setStrict('company', 'renewed-token');
       expect(await strict.getStrict('company')).toBe('renewed-token');
@@ -122,7 +124,7 @@ describe('strict rotating credential storage', () => {
     try {
       const file = join(isolated, 'credentials.enc');
       await writeFile(file, 'interrupted ciphertext');
-      const strict = new EncryptedFileBackend(isolated);
+      const strict = new EncryptedFileBackend(isolated, { passphrase: TEST_PASSPHRASE });
       await expect(strict.getStrict('company')).rejects.toThrow('preserved');
       await expect(strict.setStrict('company', 'new-token')).rejects.toThrow('preserved');
       await expect(strict.deleteStrict('company')).rejects.toThrow('preserved');
@@ -137,8 +139,8 @@ describe('shared encrypted credential mutation lock', () => {
   it('preserves independent strict and legacy updates, including concurrent deletes', async () => {
     const isolated = mkdtempSync(join(tmpdir(), 'credential-concurrency-'));
     try {
-      const first = new EncryptedFileBackend(isolated);
-      const second = new EncryptedFileBackend(isolated);
+      const first = new EncryptedFileBackend(isolated, { passphrase: TEST_PASSPHRASE });
+      const second = new EncryptedFileBackend(isolated, { passphrase: TEST_PASSPHRASE });
       await first.setStrict('old-token', 'old');
       await Promise.all([
         first.setStrict('company-token', 'renewed'),
@@ -160,7 +162,7 @@ describe('shared encrypted credential mutation lock', () => {
     try {
       const source = new URL('../../src/services/credential-backends.ts', import.meta.url).href;
       const code = `const {EncryptedFileBackend}=await import(process.argv[1]);
-        const backend=new EncryptedFileBackend(process.argv[2]);
+        const backend=new EncryptedFileBackend(process.argv[2],{passphrase:process.argv[4]});
         for(let i=0;i<3;i++)await backend[process.argv[3]==='strict'?'setStrict':'set'](process.argv[3]+i,'fixture'+i);`;
       await Promise.all(
         ['strict', 'legacy'].map((mode) =>
@@ -173,10 +175,11 @@ describe('shared encrypted credential mutation lock', () => {
             source,
             isolated,
             mode,
+            TEST_PASSPHRASE,
           ]),
         ),
       );
-      const read = new EncryptedFileBackend(isolated);
+      const read = new EncryptedFileBackend(isolated, { passphrase: TEST_PASSPHRASE });
       for (const mode of ['strict', 'legacy'])
         for (let i = 0; i < 3; i++) expect(await read.getStrict(mode + i)).toBe('fixture' + i);
     } finally {

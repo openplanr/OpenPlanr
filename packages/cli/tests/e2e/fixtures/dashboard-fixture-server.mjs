@@ -41,10 +41,60 @@ function bootstrapForRequest(request) {
   try {
     const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
     const name = referer.searchParams.get('project');
-    if (name === null) return fixture.bootstrap;
-    return { ...fixture.bootstrap, project: { ...fixture.bootstrap.project, name } };
+    const localOperate = referer.searchParams.get('localOperate') === '1';
+    const bootstrap = localOperate
+      ? {
+          ...fixture.bootstrap,
+          capabilities: {
+            ...fixture.bootstrap.capabilities,
+            operateCommands: {
+              ...fixture.bootstrap.capabilities.operateCommands,
+              available: false,
+            },
+          },
+          queryRoots: { ...fixture.bootstrap.queryRoots, operate: null },
+        }
+      : fixture.bootstrap;
+    if (name === null) return bootstrap;
+    return { ...bootstrap, project: { ...bootstrap.project, name } };
   } catch {
     return fixture.bootstrap;
+  }
+}
+
+const LOCAL_REVIEW_ID = '2026-09-14-modul-events';
+const LOCAL_REVIEW_MARKDOWN = `# Operating board report — Modul events
+
+## Executive summary
+Act now on the verified release path.
+
+## Decision queue
+### D1 — P0 Verify the CRM flow
+- **Recommendation:** Run the smoke test before engineering work.
+
+## Action plan
+| ID | Priority | Action |
+|---|---|---|
+| A1 | P0 | Run the CRM smoke test |
+
+## Issues
+- **I1 — Validator wrapper:** exits one after clean validation.
+`;
+const LOCAL_REVIEW_ITEM = Object.freeze({
+  cycleId: LOCAL_REVIEW_ID,
+  title: 'Operating board report — Modul events',
+  summary: 'Act now on the verified release path.',
+  updatedAt: '2026-09-14T20:10:00.000Z',
+  counts: Object.freeze({ decisions: 1, actions: 1, issues: 1 }),
+  href: `#/operate/cycles/${LOCAL_REVIEW_ID}`,
+});
+
+function localReviewRequest(request) {
+  try {
+    const referer = new URL(request.headers.referer ?? DASHBOARD_FIXTURE_ORIGIN);
+    return referer.searchParams.get('localOperate') === '1';
+  } catch {
+    return false;
   }
 }
 
@@ -452,6 +502,31 @@ async function routeApi(request, response, next) {
           generation: String(DASHBOARD_FIXTURE_GENERATION),
         });
       return valid ? openStream(request, response) : refuse(response);
+    }
+    if (pathname === '/api/operate/local-reviews' && localReviewRequest(request)) {
+      const valid = request.method === 'GET' && exactQuery(url, { page: '1', pageSize: '12' });
+      return valid
+        ? responseJson(response, 200, {
+            kind: 'local-operate-review-index',
+            schemaVersion: '1.0.0',
+            readOnly: true,
+            pagination: { page: 1, pageSize: 12, pageCount: 1, total: 1 },
+            items: [LOCAL_REVIEW_ITEM],
+          })
+        : refuse(response);
+    }
+    if (
+      pathname === `/api/operate/local-reviews/${LOCAL_REVIEW_ID}` &&
+      localReviewRequest(request)
+    ) {
+      return request.method === 'GET' && exactQuery(url, {})
+        ? responseJson(response, 200, {
+            kind: 'local-operate-review',
+            schemaVersion: '1.0.0',
+            readOnly: true,
+            item: { ...LOCAL_REVIEW_ITEM, markdown: LOCAL_REVIEW_MARKDOWN },
+          })
+        : refuse(response);
     }
     if (pathname === '/api/operate/events') {
       const valid =

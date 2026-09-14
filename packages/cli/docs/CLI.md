@@ -23,7 +23,7 @@ Planr auto-detects non-TTY environments (CI, coding agents) and skips interactiv
 ```bash
 # Explicit flag
 planr epic create --title "My App" --yes
-planr plan --epic EPIC-001 -y
+planr task create --story US-001 --title "Implement approved story" --yes
 
 # Auto-detected (no TTY)
 echo "" | planr epic create --title "My App"
@@ -33,7 +33,6 @@ echo "" | planr epic create --title "My App"
 
 - Confirmations return their default value (usually `yes`)
 - Select menus pick the first/primary option (e.g., "Save" for epics)
-- `--manual` mode exits with an error (requires interactive input)
 - All skipped prompts are logged with `[auto]` prefix in dim output
 
 ---
@@ -103,520 +102,50 @@ The preview reports the selected revision, digest, byte size, content, and wheth
 
 Retrieved content is untrusted input, including HTML and SVG. Inspect it as data. `company proposal` previews typed changes; `company apply` is a separate explicit local action, currently limited to validated canonical diagram JSON. Packaged designs are retrieved as inert review copies and cannot be applied over authored design documents; edit their source files locally and use a reviewed company push instead. A successful application records `applied-locally` with remote acknowledgement pending. Preserve local backups and recovery journals, and retry the same application after interruption. These development commands do not establish enterprise production readiness.
 
+
 ---
 
-### `planr init`
+### Deterministic planning artifacts
 
-Initialize Planr in the current project.
+Initialize project-local storage, then create planning artifacts from explicit flags or a JSON object:
 
 ```bash
-planr init
 planr init --name "my-project"
-planr init --no-ai
+planr epic create "Platform renewal"
+planr feature create "OAuth sign-in" --epic EPIC-001
+planr story create "Sign in with the company identity provider" --feature FEAT-001
+planr task create "Implement approved sign-in flow" --story US-001
+planr quick create "Fix the callback error"
+planr backlog add "Add callback rate limits" --priority high --tag security
+planr sprint create "Sprint 1" --duration 2w
 ```
 
-| Option          | Description            | Required     |
-| --------------- | ---------------------- | ------------ |
-| `--name <name>` | Project name           | No (prompts) |
-| `--no-ai`       | Skip AI provider setup | No           |
+Every planning type provides `list`, `show <id>`, and `update <id>`. Creation accepts `--title`, `--data <path>` (or `-` for stdin), the deprecated `--file` alias, and `--json`. Parent IDs may be supplied by flags or JSON:
 
-**What it creates:**
+| Artifact | Required relationship or fields |
+| --- | --- |
+| Epic | A title |
+| Feature | A title and `--epic <id>` |
+| Story | A title and `--feature <id>` |
+| Task | A title and exactly one of `--story <id>` or `--feature <id>` |
+| Quick task | A description or input file; optional `--epic <id>` |
+| Backlog item | A description; optional priority, tags, and epic |
+| Sprint | A title; duration defaults to `2w` |
 
-```text
-project-root/
-└── .planr/
-    ├── config.json            # Project configuration
-    ├── epics/
-    ├── features/
-    ├── stories/
-    ├── tasks/
-    ├── quick/
-    ├── backlog/
-    ├── sprints/
-    ├── templates/             # Custom task templates
-    ├── adrs/
-    ├── checklists/
-    │   └── agile-checklist.md  # Development checklist
-    └── diagrams/
-```
-
----
-
-### `planr epic create`
-
-Create a new epic. With AI configured, provide a brief description and the AI expands it into a full epic. Use `--file` to feed a detailed PRD or requirements document.
+Use deterministic JSON when an agent or integration supplies complete fields:
 
 ```bash
-planr epic create
-planr epic create --title "User Authentication" --owner "Engineering"
-planr epic create --file ./prd.md
-planr epic create --manual
+planr epic create --data epic.json --json
+planr feature create --data feature.json --json
+planr task create --data - --json < task.json
 ```
 
-| Option            | Description                                     | Required     |
-| ----------------- | ----------------------------------------------- | ------------ |
-| `--title <title>` | Epic title or brief description                 | No (prompts) |
-| `--file <path>`   | Read epic description from a file (e.g., a PRD) | No           |
-| `--owner <owner>` | Epic owner                                      | No (prompts) |
-| `--manual`        | Use manual interactive prompts instead of AI    | No           |
+`planr update <ids...>` supports bulk status changes. `--all-done` and `--all-pending` also update canonical task checkboxes for task and quick-task artifacts. Use each command's `--help` output for its exact options.
 
-When `--file` is provided, the full file content is sent to the AI with document-extraction framing so that all requirements, features, and success criteria are incorporated into the generated epic.
-
-**Interactive prompts:**
-
-1. Epic title
-2. Owner
-3. Business value
-4. Target users
-5. Problem statement
-6. Solution overview
-7. Success criteria
-8. Key features (comma-separated)
-9. Dependencies (default: "None")
-10. Risks (default: "None")
-
-**Output:** `.planr/epics/EPIC-001-<slug>.md`
-
----
-
-### `planr epic list`
-
-List all epics.
-
-```bash
-planr epic list
-```
-
-**Example output:**
-
-```text
-Epics
-  EPIC-001  User Authentication
-  EPIC-002  Payment Integration
-```
-
----
-
-### `planr feature create`
-
-Create features from an epic. With AI configured, the AI reads the epic and generates multiple features automatically.
-
-```bash
-planr feature create --epic EPIC-001
-planr feature create --epic EPIC-001 --title "OAuth Login"
-planr feature create --epic EPIC-001 --count 5
-planr feature create --epic EPIC-001 --manual
-```
-
-| Option            | Description                                  | Required        |
-| ----------------- | -------------------------------------------- | --------------- |
-| `--epic <epicId>` | Parent epic ID                               | **Yes**         |
-| `--title <title>` | Feature title (manual mode)                  | No (prompts)    |
-| `--count <n>`     | Number of features to generate (AI mode)     | No (AI decides) |
-| `--manual`        | Use manual interactive prompts instead of AI | No              |
-
-**Interactive prompts:**
-
-1. Feature title
-2. Owner
-3. Overview
-4. Functional requirements (comma-separated)
-5. Dependencies (default: "None")
-6. Technical considerations (default: "None")
-7. Risks (default: "None")
-8. Success metrics
-
-**Output:** `.planr/features/FEAT-001-<slug>.md`
-
----
-
-### `planr feature list`
-
-List all features.
-
-```bash
-planr feature list
-planr feature list --epic EPIC-001    # filter by epic
-```
-
-| Option            | Description       | Required |
-| ----------------- | ----------------- | -------- |
-| `--epic <epicId>` | Filter by epic ID | No       |
-
----
-
-### `planr story create`
-
-Create user stories from a feature, or batch-generate stories for all features under an epic.
-
-```bash
-# Single feature:
-planr story create --feature FEAT-001
-planr story create --feature FEAT-001 --title "Login with Google"
-planr story create --feature FEAT-001 --manual
-
-# Batch — all features under an epic:
-planr story create --epic EPIC-001
-```
-
-| Option                  | Description                                            | Required                       |
-| ----------------------- | ------------------------------------------------------ | ------------------------------ |
-| `--feature <featureId>` | Parent feature ID                                      | One of `--feature` or `--epic` |
-| `--epic <epicId>`       | Parent epic ID — generates stories for all features    | One of `--feature` or `--epic` |
-| `--title <title>`       | Story title (manual mode only)                         | No                             |
-| `--manual`              | Use manual prompts instead of AI (single feature only) | No                             |
-
-**Interactive prompts:**
-
-1. Story title
-2. As a (role)
-3. I want to (goal)
-4. So that (benefit)
-5. Additional notes (optional)
-
-**Output — two files:**
-
-```text
-.planr/stories/
-├── US-001-<slug>.md              # User story markdown
-└── US-001-gherkin.feature        # Gherkin acceptance criteria
-```
-
----
-
-### `planr story list`
-
-List all user stories.
-
-```bash
-planr story list
-planr story list --feature FEAT-001    # filter by feature
-```
-
-| Option                  | Description          | Required |
-| ----------------------- | -------------------- | -------- |
-| `--feature <featureId>` | Filter by feature ID | No       |
-
----
-
-### `planr task create`
-
-Create an implementation task list from a story or feature. With AI configured, gathers comprehensive context for intelligent task generation.
-
-```bash
-planr task create --story US-001                    # AI: one story + full planning context
-planr task create --feature FEAT-001                # AI: every story under feature + full context (higher output token budget)
-planr task create --story US-001 --title "Tasks"    # with custom title
-planr task create --story US-001 --manual           # manual mode (story only; no AI)
-```
-
-| Option                  | Description                                                                                | Required                                     |
-| ----------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------- |
-| `--story <storyId>`     | AI tasks from one story                                                                    | One of `--story` or `--feature`              |
-| `--feature <featureId>` | AI tasks from **all** stories under the feature (single task list, linked from each story) | One of `--story` or `--feature`              |
-| `--title <title>`       | Task list title                                                                            | No (AI generates it)                         |
-| `--manual`              | Manual interactive prompts instead of AI                                                   | No (`--story` only; `--feature` requires AI) |
-
-**What it gathers (AI mode):**
-
-Context is built by `gatherStoryArtifacts` / `gatherFeatureArtifacts` and passed to the same task-generation prompt. In both modes the model sees:
-
-- **User stories** — one story (`--story`) or every story linked to the feature (`--feature`)
-- **Gherkin** — `*-gherkin.feature` for each story included
-- **Parent feature** and **parent epic** markdown
-- **ADRs** — all architecture decision records in the project
-- **Codebase context** — tech stack / tree / related files derived from story text (and for `--feature`, from **all** story bodies plus the feature)
-
-`--feature` uses a larger completion budget (`taskFeature`, 32K tokens) than `--story` (`task`, 16K tokens) because the prompt and expected task list are typically bigger.
-
-The AI generates grouped subtasks with acceptance criteria mapping and relevant files.
-
-**Manual mode:** If AI is not configured, `planr task create --story` prompts for task names (comma-separated). `--feature` always requires AI.
-
-**Output:** `.planr/tasks/TASK-001-<slug>.md`
-
----
-
-### `planr task list`
-
-List all task lists.
-
-```bash
-planr task list
-planr task list --story US-001    # filter by story
-```
-
-| Option              | Description        | Required |
-| ------------------- | ------------------ | -------- |
-| `--story <storyId>` | Filter by story ID | No       |
-
----
-
-### `planr task update` / `planr quick update` / `planr update`
-
-Set status and (optionally) flip every `N.M` task checkbox in the body.
-
-```bash
-planr task update TASK-001 --status done                # frontmatter status only
-planr task update TASK-001 --all-done                   # status=done AND every checkbox → [x]
-planr task update TASK-001 --all-pending                # status=pending AND every checkbox → [ ]
-planr quick update QT-001 --all-done                    # same flag works on QT
-planr update TASK-001 TASK-002 --all-done               # bulk across multiple ids
-```
-
-| Option           | Description                                                                                                              |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `--status`       | Set frontmatter status only                                                                                              |
-| `--all-done`     | Set `status: done` AND flip every `N.M` checkbox in the body to `[x]`. Implies status — combining with `--status` errors. |
-| `--all-pending`  | Set `status: pending` AND flip every `N.M` checkbox to `[ ]`. Mutually exclusive with `--all-done` and `--status`.       |
-
-`--all-done` / `--all-pending` only flip canonical `- [ ] **N.M**` task lines — prose, headings, frontmatter, and non-task bullets are preserved byte-for-byte. The flag is the recommended way to mark "feature shipped" because it leaves the task body in the state that `planr linear push` and `planr linear tasklist-sync` will mirror to Linear.
-
----
-
-### `planr backlog add`
-
-Capture a backlog item — a quick way to record ideas, bugs, or work items without breaking your flow.
-
-```bash
-planr backlog add "add user profiles"
-planr backlog add "fix login redirect" --priority critical --tag bug
-planr backlog add "refactor auth middleware" --priority low --tag tech-debt
-planr backlog add "rate-limit the upload API" --epic EPIC-001        # link at capture time
-```
-
-| Option               | Description                                                                                                  | Default      |
-| -------------------- | ------------------------------------------------------------------------------------------------------------ | ------------ |
-| `<description>`      | Item description                                                                                             | **Required** |
-| `--priority <level>` | `critical`, `high`, `medium`, or `low`                                                                       | `medium`     |
-| `--tag <tag>`        | Tag for categorization (e.g., `bug`, `feature`, `tech-debt`)                                                 | None         |
-| `--epic <epicId>`    | Link the BL to an epic. `planr linear push EPIC-XXX` will cascade into this BL and include it in that epic's Linear container. | None         |
-
-**Output:** `.planr/backlog/BL-001-<slug>.md`
-
----
-
-### `planr backlog list`
-
-List and filter backlog items.
-
-```bash
-planr backlog list
-planr backlog list --tag bug
-planr backlog list --priority high
-planr backlog list --status open
-```
-
-| Option               | Description                                     | Default |
-| -------------------- | ----------------------------------------------- | ------- |
-| `--tag <tag>`        | Filter by tag                                   | All     |
-| `--priority <level>` | Filter by priority                              | All     |
-| `--status <status>`  | Filter by status (`open`, `closed`, `promoted`) | All     |
-
-Items are sorted by priority (critical → high → medium → low).
-
----
-
-### `planr backlog prioritize`
-
-AI-powered prioritization. The AI scores each open item by impact and effort, then reorders and assigns priorities.
-
-```bash
-planr backlog prioritize
-```
-
-Requires AI to be configured. After scoring, displays the reordered list with impact/effort scores and reasoning. Prompts for confirmation before applying changes.
-
----
-
-### `planr backlog promote`
-
-Promote a backlog item into the agile hierarchy or a quick task.
-
-```bash
-planr backlog promote BL-001 --quick                           # AI-generate a task breakdown from the BL body
-planr backlog promote BL-001 --quick --manual                  # single-task QT from the BL title (skip AI)
-planr backlog promote BL-001 --quick --epic EPIC-001           # AI-generated + linked to an epic
-planr backlog promote BL-001 --story --feature FEAT-001        # promote to story
-```
-
-| Option                  | Description                                                                                                                                        | Required                      |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| `<itemId>`              | Backlog item ID                                                                                                                                    | **Yes**                       |
-| `--quick`               | Promote to a quick task                                                                                                                            | One of `--quick` or `--story` |
-| `--story`               | Promote to a user story                                                                                                                            | One of `--quick` or `--story` |
-| `--feature <featureId>` | Parent feature (required with `--story`)                                                                                                           | With `--story`                |
-| `--epic <epicId>`       | (`--quick` only) Link the new QT to an epic. Overrides the BL's own `epicId`/`parentEpic`; stories chain through `--feature` and ignore this.      | No                            |
-| `--manual`              | (`--quick` only) Skip the AI pass and create a single-task QT from the BL title (legacy behavior). Useful for trivial BLs or when AI isn't configured. | No                            |
-
-**AI-driven task breakdown (default with `--quick`)**
-
-When AI is configured, `--quick` reads the BL's full markdown body — description, acceptance criteria, notes, threat models, links — and feeds it through the same AI pipeline as `planr quick create`. The resulting QT contains a realistic task breakdown that a coding agent can execute step by step, not just a restated title. The new QT's frontmatter carries `sourceBacklog: "BL-XXX"` as provenance.
-
-If AI is not configured, `--quick` falls back to the single-task behavior with a warning (equivalent to `--manual`). Use `--manual` explicitly when you want the single-task behavior even with AI configured (e.g., for one-liner BLs that don't need a breakdown).
-
-**Epic linkage**
-
-- `--quick`: if the BL has `epicId` (or legacy `parentEpic`) in its frontmatter, the new QT inherits it automatically. `--epic EPIC-XXX` overrides that inheritance. With an epic link, `planr linear push EPIC-XXX` cascades into the new QT (it lands inside the epic's Linear container instead of the standalone project).
-- `--story`: the story's chain to an epic runs through its parent feature's `epicId`, so `--epic` is not needed here.
-
-The original backlog item is marked as `promoted` with a link to the created artifact.
-
----
-
-### `planr backlog close`
-
-Close/archive a backlog item.
-
-```bash
-planr backlog close BL-001
-```
-
-| Argument   | Description     | Required |
-| ---------- | --------------- | -------- |
-| `<itemId>` | Backlog item ID | **Yes**  |
-
----
-
-### `planr sprint create`
-
-Create a time-boxed sprint. Only one sprint can be active at a time.
-
-```bash
-planr sprint create --name "Sprint 1" --duration 2w
-planr sprint create --name "Sprint 2" --duration 1w
-```
-
-| Option                  | Description                                | Required |
-| ----------------------- | ------------------------------------------ | -------- |
-| `--name <name>`         | Sprint name                                | **Yes**  |
-| `--duration <duration>` | Sprint duration: `1w`, `2w`, `3w`, or `4w` | **Yes**  |
-
-**Output:** `.planr/sprints/SPRINT-001-<slug>.md`
-
----
-
-### `planr sprint add`
-
-Assign tasks to the active sprint — manually or with AI auto-selection.
-
-```bash
-planr sprint add TASK-001 QT-001          # add specific tasks
-planr sprint add --auto                   # AI selects by priority and velocity
-```
-
-| Argument/Option | Description                                                       | Required                          |
-| --------------- | ----------------------------------------------------------------- | --------------------------------- |
-| `[taskIds...]`  | Task or quick-task IDs to add                                     | One of `[taskIds...]` or `--auto` |
-| `--auto`        | AI selects tasks based on priority, velocity, and sprint capacity | One of `[taskIds...]` or `--auto` |
-
-With `--auto`, the AI considers past sprint velocity, task priorities, and estimated points to fill the sprint capacity. Requires AI to be configured.
-
----
-
-### `planr sprint status`
-
-Progress dashboard for the active sprint.
-
-```bash
-planr sprint status
-```
-
-Displays:
-
-- Sprint name, dates, and days remaining
-- Per-task completion status with progress bars
-- Overall completion percentage
-- Velocity metrics
-
----
-
-### `planr sprint close`
-
-Archive the active sprint and review results.
-
-```bash
-planr sprint close
-```
-
-Marks the sprint as `closed`, lists incomplete tasks for carry-over consideration, and optionally opens an editor for a retrospective note.
-
----
-
-### `planr sprint list`
-
-List all sprints with status badges and task counts.
-
-```bash
-planr sprint list
-```
-
----
-
-### `planr sprint history`
-
-Velocity chart across past sprints.
-
-```bash
-planr sprint history
-```
-
-Displays a bar chart of completed story points per sprint with average velocity calculation.
-
----
-
-### `planr quick create`
-
-Create a standalone task list with AI or manually — without the full agile hierarchy.
-
-```bash
-planr quick create "add user profiles"
-planr quick create --file spec.md
-planr quick create --manual
-planr quick create "add webhook retry" --epic EPIC-001      # link at creation time
-```
-
-| Option            | Description                                                                                                                     | Required     |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `<description>`   | Task description                                                                                                                | No (prompts) |
-| `--file <path>`   | Generate tasks from a PRD or spec file                                                                                          | No           |
-| `--manual`        | Interactive task entry without AI                                                                                               | No           |
-| `--epic <epicId>` | Link the QT to an epic. `planr linear push EPIC-XXX` will cascade into this QT and create it inside the epic's Linear container. | No           |
-
-**Output:** `.planr/quick/QT-001-<slug>.md`
-
----
-
-### `planr quick list`
-
-List all quick task lists.
-
-```bash
-planr quick list
-```
-
----
-
-### `planr quick promote`
-
-Graduate a quick task into the agile hierarchy.
-
-```bash
-planr quick promote QT-001 --story US-001
-planr quick promote QT-001 --feature FEAT-001
-```
-
-| Option                  | Description                   | Required                        |
-| ----------------------- | ----------------------------- | ------------------------------- |
-| `<taskId>`              | Quick task ID                 | **Yes**                         |
-| `--story <storyId>`     | Attach to an existing story   | One of `--story` or `--feature` |
-| `--feature <featureId>` | Attach to an existing feature | One of `--story` or `--feature` |
-
----
 
 ### `planr spec`
 
-Spec-driven planning mode — third posture alongside agile + QT, designed for **planning *for* AI coding agents**. Each spec is a self-contained directory at `.planr/specs/SPEC-NNN-{slug}/` containing the spec doc, decomposed User Stories, decomposed Tasks, and any UI design assets. The artifact schema mirrors the [planr-pipeline](https://github.com/openplanr/planr-pipeline) canonical protocol schemas under `schemas/v1.0.0/` — file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment, DoD with build/test commands. The two products use one artifact contract; no conversion adapter ever.
+Spec-driven planning mode — third posture alongside agile + QT, designed for **planning *for* AI coding agents**. Each spec is a self-contained directory at `.planr/specs/SPEC-NNN-{slug}/` containing the spec doc, decomposed User Stories, decomposed Tasks, and any UI design assets. The artifact schema mirrors the [planr-pipeline](https://github.com/openplanr/OpenPlanr/tree/main/packages/pipeline) canonical protocol schemas under `schemas/v1.0.0/` — file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment, DoD with build/test commands. The two products use one artifact contract; no conversion adapter ever.
 
 The generated artifact contract and command examples in this section are the
 packaged source of truth for spec-driven mode.
@@ -675,41 +204,9 @@ planr spec shape SPEC-001
 
 ---
 
-#### `planr spec decompose`
-
-AI-driven decomposition of a spec into User Stories and Tasks matching the planr-pipeline schema (file Create/Modify/Preserve lists, Type=UI|Tech, agent assignment). The heart of spec-driven mode.
-
-```bash
-planr spec decompose SPEC-001
-planr spec decompose SPEC-001 --no-code-context     # skip codebase scan, faster
-planr spec decompose SPEC-001 --max-stories 4       # cap at 4 stories
-planr spec decompose SPEC-001 --force               # overwrite existing decomposition
-```
-
-| Option              | Description                                                            | Required |
-| ------------------- | ---------------------------------------------------------------------- | -------- |
-| `<specId>`          | Spec ID (e.g., `SPEC-001`)                                             | **Yes**  |
-| `--force`           | Overwrite existing US/Task files (default: refuse if any exist)        | No       |
-| `--no-code-context` | Skip the codebase scanner (tasks reference generic paths the user must edit) | No       |
-| `--max-stories <n>` | Cap the number of stories the AI emits (1-8)                          | No       |
-
-**Behavior:**
-- Always scans the codebase via the existing `buildCodebaseContext()` so generated tasks reference real file paths matching your stack
-- Reads `input/tech/stack.md` (best-effort) for stack-specific hints
-- Detects `ui_files` in SPEC frontmatter — emits 2 tasks per US (UI + Tech) when PNGs are attached, otherwise 1 task per US (Tech) per planr-pipeline rule R2
-- Status: `pending|shaping → decomposing → decomposed`
-- Refuses to overwrite existing US/Task files unless `--force` is passed (matches `planr quick create` UX)
-- Validates AI output via Zod schema (rejects malformed responses; surfaces clear validation errors)
-
-Works with all three AI providers (Anthropic, OpenAI, Ollama) via planr's existing `AIProvider` abstraction.
-
-**Output:** populates `.planr/specs/SPEC-NNN-{slug}/{stories,tasks}/` with the generated artifacts.
-
----
-
 #### `planr spec sync`
 
-Validate spec integrity and auto-fix safe inconsistencies. Use after manual edits, after a failed `decompose`, or when in doubt.
+Validate spec integrity and auto-fix safe inconsistencies. Use after manual edits, interrupted work, or when in doubt.
 
 ```bash
 planr spec sync                       # scan all specs
@@ -774,7 +271,9 @@ planr spec destroy SPEC-001 --yes
 
 #### `planr spec attach-design`
 
-Copy PNG mockup files into the spec's `design/` subdirectory and update `ui_files` frontmatter on the SPEC. The pipeline `designer-agent` reads these PNGs to generate `design/design-spec.md` when `planr pipeline plan` runs.
+Copy PNG mockup files into the spec's `design/` subdirectory and update
+`ui_files` frontmatter on the SPEC. The `planr:plan` host skill reads these
+inputs while it builds the reviewed implementation plan.
 
 ```bash
 planr spec attach-design SPEC-001 --files login.png signup.png
@@ -791,8 +290,10 @@ planr spec promote SPEC-001
 ```
 
 After promotion, run from any configured runtime:
-```
-planr pipeline plan {slug}
+
+```text
+/planr:plan       # Claude Code
+$planr:plan       # Codex
 ```
 
 ---
@@ -926,23 +427,18 @@ planr checklist reset
 
 ### `planr init`
 
-Initialize planning in the current project. Sets up `.planr/`, optional AI
-configuration, and agile project context. Runtime installation belongs to `planr setup`.
+Initialize deterministic project storage in `.planr/`. Runtime installation belongs to `planr setup`.
 
 ```bash
 planr init
-planr init --name my-project --yes
-planr init --no-ai --yes
+planr init --name my-project
+planr init --force
 ```
 
-| Option                  | Description                                                                | Default                     |
-| ----------------------- | -------------------------------------------------------------------------- | --------------------------- |
-| `--name <name>`         | Project name                                                               | basename of cwd             |
-| `--no-ai`               | Skip AI provider setup                                                     | AI prompt enabled           |
-| `--no-pipeline-rules`   | Deprecated compatibility flag                                          | Runtime setup is separate   |
-| `--yes` / `-y`          | Non-interactive mode (accept all defaults)                                 | Interactive                 |
-
-Run `planr setup` before or after init to install runtime workflows safely.
+| Option | Description |
+| --- | --- |
+| `--name <name>` | Project name; defaults to the current directory name |
+| `--force` | Replace an existing project configuration intentionally |
 
 ---
 
@@ -974,8 +470,8 @@ version compatible with this CLI.
 without mutating Claude Code. `doctor --fix` never changes plugin packages.
 Restart Claude Code when setup or `runtime update` reports a plugin change.
 
-Use `planr pipeline plan|design|design-loop|design-review|ship|status|dashboard|sync|doctor`
-to route the complete delivery workflow.
+Use the corresponding `planr:*` skills through the installed runtime adapter.
+Semantic workflows are not duplicated as utility CLI commands.
 
 ### `planr operate`
 
@@ -1107,7 +603,7 @@ planr rules generate --dry-run                             # preview without wri
 
 **`--scope agile` (default — preserves existing behaviour):** generates the agile-mode rules for epic → feature → story → task workflows.
 
-**`--scope pipeline`:** generates rule files that drive the [planr-pipeline](https://github.com/openplanr/planr-pipeline) two-phase spec-driven workflow on the chosen runtime. Cross-runtime parity with the Claude Code plugin.
+**`--scope pipeline`:** generates rule files that drive the [planr-pipeline](https://github.com/openplanr/OpenPlanr/tree/main/packages/pipeline) two-phase spec-driven workflow on the chosen runtime. Cross-runtime parity with the Claude Code plugin.
 
 **Generated files by `target × scope`:**
 
@@ -1124,64 +620,6 @@ planr rules generate --dry-run                             # preview without wri
 **Cross-runtime support:** v1.0 artifacts plus v1.1 capability contracts run on
 Claude Code, Cursor, and Codex. Codex uses skills and native subagents when exposed;
 Cursor uses Composer handoff with sequential fallback.
-
----
-
-### `planr plan`
-
-Full agile planning flow in a single command. Cascades through the hierarchy: Epic → Features → Stories → Tasks.
-
-```bash
-planr plan                          # start from scratch (creates epic first)
-planr plan --epic EPIC-001          # start from existing epic → features → stories → tasks
-planr plan --feature FEAT-001       # start from existing feature → stories → tasks
-planr plan --story US-001           # start from existing story → tasks only
-```
-
-| Option                  | Description                    | Required |
-| ----------------------- | ------------------------------ | -------- |
-| `--epic <epicId>`       | Start from an existing epic    | No       |
-| `--feature <featureId>` | Start from an existing feature | No       |
-| `--story <storyId>`     | Start from an existing story   | No       |
-
-When no flag is provided, the command prompts for an epic brief and cascades through the full hierarchy. Each step asks for confirmation before proceeding to the next level.
-
-Requires AI to be configured (`planr config set-provider`).
-
----
-
-### `planr refine`
-
-AI-powered review and improvement suggestions for any existing artifact.
-
-```bash
-planr refine EPIC-001               # review an epic
-planr refine FEAT-002               # review a feature
-planr refine US-003                  # review a user story
-planr refine EPIC-001 --cascade     # refine epic + all features → stories → tasks
-```
-
-| Argument/Option | Description                                                | Required |
-| --------------- | ---------------------------------------------------------- | -------- |
-| `<artifactId>`  | Any artifact ID (EPIC-001, FEAT-002, US-003, TASK-004)     | **Yes**  |
-| `--cascade`     | Refine all children down the hierarchy after this artifact | No       |
-
-The AI analyzes the artifact and provides:
-
-1. A list of improvement suggestions
-2. An improved version of the artifact
-
-After review, you can:
-
-- **Apply** — write the improved version to disk
-- **View** — preview the improved version, then choose to apply or skip
-- **Skip** — keep the original unchanged
-
-With `--cascade`, the command automatically proceeds to refine all child artifacts after the parent. The cascade follows the full hierarchy: epic → features → stories → tasks. Each child still gets its own view/apply/skip prompt.
-
-Without `--cascade`, the command suggests next steps after applying (shows child artifacts that may need re-alignment).
-
-Requires AI to be configured.
 
 ---
 
@@ -1250,58 +688,11 @@ The JSON output follows `planr-pipeline/schemas/v1.0.0/graph.schema.json`.
 
 ### `planr config show`
 
-Display the current project configuration including AI provider, model, and API key status.
+Display the current deterministic project configuration.
 
 ```bash
 planr config show
 ```
-
----
-
-### `planr config set-provider`
-
-Set the AI provider for content generation.
-
-```bash
-planr config set-provider                # interactive prompt
-planr config set-provider anthropic      # set directly
-```
-
-| Argument     | Description                        | Required     |
-| ------------ | ---------------------------------- | ------------ |
-| `[provider]` | `anthropic`, `openai`, or `ollama` | No (prompts) |
-
----
-
-### `planr config set-key`
-
-Store an API key securely in `~/.planr/credentials.json`.
-
-```bash
-planr config set-key                     # interactive prompt
-planr config set-key anthropic           # set for specific provider
-```
-
-| Argument     | Description             | Required     |
-| ------------ | ----------------------- | ------------ |
-| `[provider]` | `anthropic` or `openai` | No (prompts) |
-
----
-
-### `planr config set-model`
-
-Set the AI model to use for content generation.
-
-```bash
-planr config set-model claude-sonnet-4-20250514
-planr config set-model gpt-4o
-```
-
-| Argument  | Description                                                         | Required |
-| --------- | ------------------------------------------------------------------- | -------- |
-| `<model>` | Model name (e.g., `claude-sonnet-4-20250514`, `gpt-4o`, `llama3.1`) | **Yes**  |
-
-Requires AI provider to be configured first (`planr config set-provider`).
 
 ---
 
@@ -1391,7 +782,7 @@ The `--all-done` flag on `planr task update` (see above) is the recommended path
 
 **Estimate sync**
 
-`planr linear push` also writes OpenPlanr's `estimatedPoints` (from `planr estimate --save`, or hand-edited `storyPoints`) to Linear's native Issue estimation field, per the team's configured scale:
+`planr linear push` also writes an artifact's reviewed `estimatedPoints` or `storyPoints` to Linear's native Issue estimation field, per the team's configured scale:
 
 | Team scale | Behavior |
 |---|---|
@@ -1403,7 +794,7 @@ The `--all-done` flag on `planr task update` (see above) is the recommended path
 
 Applies to FEAT / US / QT / BL pushes. TASK is intentionally out of scope — one Linear TaskList issue aggregates multiple local `TASK-*.md` files (same rationale as the TASK status deferral), so estimate aggregation rules are tracked as a follow-up.
 
-The team scale is auto-detected per push run (one extra API round-trip, cached); no config needed. Set `estimatedPoints: <n>` in the artifact's frontmatter (or run `planr estimate <id> --save` to generate it from AI), then `planr linear push` will send it.
+The team scale is auto-detected per push run and cached. Set a reviewed `estimatedPoints: <n>` in the artifact frontmatter, then `planr linear push` sends it.
 
 **Status-name aliases (push side):** values like `completed`, `cancelled`, `canceled`, and `todo` on a QT/feature/story are transparently treated as `done`/`pending` so hand-edited frontmatter using Linear's native vocabulary still works.
 
@@ -1502,7 +893,7 @@ Quick tasks and backlog items push as top-level issues in a user-chosen standalo
 
 **Epic-linked QT / BL**
 
-A QT or BL file with `epicId: "EPIC-XXX"` (or legacy `parentEpic`) in frontmatter is pulled into that epic's Linear container instead of the standalone project. `planr linear push EPIC-XXX` cascades to every linked QT/BL. Unlinked ones stay in the standalone project. `planr quick create --epic`, `planr backlog add --epic`, and `planr backlog promote --quick --epic` set the link at creation time.
+A QT or BL file with `epicId: "EPIC-XXX"` (or legacy `parentEpic`) in frontmatter is pulled into that epic's Linear container instead of the standalone project. `planr linear push EPIC-XXX` cascades to every linked QT/BL. Unlinked ones stay in the standalone project. `planr quick create --epic` and `planr backlog add --epic` set the link at creation time.
 
 **Mapping:** Epic → Linear project (or milestone / label — see strategies above); feature → top-level issue; story → sub-issue of the feature issue; per-feature merged task list → sub-issue; linked QT/BL → top-level issue in the epic's container. Optional `linear.pushStateIds` maps `pending` / `in-progress` / `done` to Linear workflow **state id** (uuid). Optional `linear.defaultProjectLead` is the Linear user id for project `leadId`. See `planr linear sync` for pulling status **from** Linear into frontmatter.
 
@@ -1724,25 +1115,6 @@ Per-segment audio replay is reserved (`TranscriptSegment.audioOffsetMs` exists i
 
 ---
 
-### `planr story standup`
-
-Append linted standup notes from a transcript directly onto an existing user story. This is the convenience entry point when you already know which story the standup belongs to.
-
-```bash
-planr story standup --story US-029 --file standups/2026-04-19.txt --lint
-cat ramble.txt | planr story standup --story US-029
-```
-
-| Option                 | Description                                                          | Required     |
-| ---------------------- | -------------------------------------------------------------------- | ------------ |
-| `--story <storyId>`    | Target story (e.g. `US-029`)                                         | **Yes**      |
-| `--file <path>`        | Transcript file. If omitted, the command reads stdin.                | No (stdin)   |
-| `--lint`               | Run the report linter before appending; non-zero exit on errors      | `false`      |
-
-Notes are appended under a `## Standup notes` section; existing content is preserved.
-
----
-
 ### `planr export`
 
 Generate a consolidated planning report in markdown, JSON, or HTML format.
@@ -1769,48 +1141,36 @@ planr export --output ./reports                 # custom output directory
 
 ---
 
+
 ## Workflow
 
-There are two main workflows — the **agile hierarchy** for structured planning, and the **backlog + sprint** flow for day-to-day work:
+Use the CLI to maintain deterministic repository artifacts; invoke host skills for semantic planning and implementation:
 
 ```text
-# Agile Hierarchy
 planr init
-  └─ planr epic create
-       └─ planr feature create --epic EPIC-001
-            └─ planr story create --feature FEAT-001   (single feature)
-            └─ planr story create --epic EPIC-001     (all features at once)
-                 ├─ planr task create --story US-001   (one story + feature/epic/Gherkin/ADRs/codebase)
-                 ├─ planr task create --feature FEAT-001   (all stories in feature + same artifact context; larger AI budget)
-                 └─ planr rules generate           (generate agent rules for implementation)
+  └─ planr epic create "Platform renewal"
+       └─ planr feature create "OAuth sign-in" --epic EPIC-001
+            └─ planr story create "Company sign-in" --feature FEAT-001
+                 └─ planr task create "Implement approved flow" --story US-001
 
-planr plan                  ← full automated flow (Epic → Features → Stories → Tasks)
+planr backlog add "Investigate callback failures" --priority high
+planr backlog list
+planr backlog update BL-001 --status closed
 
-# Backlog & Sprint
-planr backlog add "..."     ← capture ideas as they come
-planr backlog prioritize    ← AI sorts by impact/effort
-planr backlog promote BL-001 --quick   ← move to task when ready
+planr sprint create "Sprint 1" --duration 2w
+planr sprint list
+planr sprint show SPRINT-001
+planr sprint update SPRINT-001 --status closed
 
-planr sprint create --name "Sprint 1" --duration 2w
-planr sprint add TASK-001 QT-001       ← assign tasks (or --auto for AI)
-planr sprint status                    ← track progress
-planr sprint close                     ← archive sprint
-
-# Templates
-planr template use rest-endpoint --title "User API"   ← generate from pattern
-
-# Tools
-planr refine EPIC-001       ← AI review and improvement suggestions
-planr estimate US-001       ← AI effort estimation
-planr sync                  ← validate and fix cross-references
-planr rules generate        ← generate AI rules from your artifacts
-planr status                ← see progress overview
-planr github push --all     ← push artifacts to GitHub Issues
-planr github sync           ← bi-directional status sync with GitHub
-planr export --format html  ← generate planning report
+planr sync
+planr status
+planr rules generate
+planr github push --all
+planr github sync
+planr export --format html
 ```
 
----
+For semantic decomposition, invoke the installed `planr:plan` skill. After reviewing the plan, invoke `planr:ship` separately.
 
 ## ID Convention
 

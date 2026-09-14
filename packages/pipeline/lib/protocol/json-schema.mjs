@@ -185,14 +185,14 @@ const validateNode = (value, schema, path, errs, context) => {
   if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
     if (Array.isArray(schema.required)) {
       for (const req of schema.required) {
-        if (!(req in value)) {
+        if (!Object.hasOwn(value, req)) {
           errs.push({ path, rule: 'required', detail: `missing required property '${req}'` });
         }
       }
     }
     const props = schema.properties || {};
     for (const [k, v] of Object.entries(value)) {
-      if (!(k in props)) {
+      if (!Object.hasOwn(props, k)) {
         if (schema.additionalProperties === false) {
           errs.push({ path, rule: 'additionalProperties', detail: `unknown property '${k}'` });
         } else if (
@@ -204,7 +204,7 @@ const validateNode = (value, schema, path, errs, context) => {
       }
     }
     for (const [k, v] of Object.entries(value)) {
-      if (props[k]) validateNode(v, props[k], `${path}.${k}`, errs, context);
+      if (Object.hasOwn(props, k)) validateNode(v, props[k], `${path}.${k}`, errs, context);
     }
   }
 

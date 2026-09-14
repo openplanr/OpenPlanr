@@ -2,6 +2,8 @@ import {
   inspectOperateStorage,
   migrateOperateStorage,
   type OperateStorageMigrationReceipt,
+  type OperateStorageRollbackReceipt,
+  rollbackOperateStorageMigration,
 } from './storage-layout.js';
 
 export type OperateStorageStatus = Readonly<{
@@ -10,7 +12,7 @@ export type OperateStorageStatus = Readonly<{
   legacySources: readonly ('operate-v2' | 'operate-legacy')[];
   interruptedEntries: readonly string[];
   pinnedVerifierRequired: boolean;
-  nextAction: 'none' | 'migrate-storage' | 'recover-interrupted-migration';
+  nextAction: 'none' | 'migrate-storage';
 }>;
 
 export async function readOperateStorageStatus(projectDir: string): Promise<OperateStorageStatus> {
@@ -25,12 +27,9 @@ export async function readOperateStorageStatus(projectDir: string): Promise<Oper
     legacySources: Object.freeze(legacySources),
     interruptedEntries: Object.freeze([...inspection.interruptedEntries]),
     pinnedVerifierRequired: inspection.legacyV2Root !== null,
-    nextAction:
-      inspection.status === 'migration-required'
-        ? 'migrate-storage'
-        : inspection.status === 'interrupted'
-          ? 'recover-interrupted-migration'
-          : 'none',
+    nextAction: ['migration-required', 'interrupted'].includes(inspection.status)
+      ? 'migrate-storage'
+      : 'none',
   });
 }
 
@@ -39,4 +38,11 @@ export async function migrateProjectOperateStorage(
   projectDir: string,
 ): Promise<OperateStorageMigrationReceipt> {
   return await migrateOperateStorage(projectDir);
+}
+
+/** Explicit, lossless rollback to the preserved pre-migration v2 Store. */
+export async function rollbackProjectOperateStorage(
+  projectDir: string,
+): Promise<OperateStorageRollbackReceipt> {
+  return await rollbackOperateStorageMigration(projectDir);
 }

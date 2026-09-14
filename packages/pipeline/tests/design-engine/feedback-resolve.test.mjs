@@ -7,7 +7,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { test } from 'node:test';
 
-import { createDaemon } from '../../lib/design-engine/daemon.mjs';
+import { createDaemon, daemonControlHeaders, killRunningDaemon } from '../../lib/design-engine/daemon.mjs';
 import { publicBoardId } from '../../lib/design-engine/board-token.mjs';
 
 const execFileP = promisify(execFile);
@@ -25,7 +25,7 @@ const fb = (id, pins, authors) => ({
 });
 const postFeedback = (port, id, feedback) => fetch(
   `http://127.0.0.1:${port}/boards/${encodeURIComponent(id)}/api/feedback`,
-  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'submit', feedback }) },
+  { method: 'POST', headers: { origin: `http://127.0.0.1:${port}`, 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'submit', feedback }) },
 ).then((r) => r.json());
 const durablePins = (boardDir) => JSON.parse(readFileSync(join(boardDir, 'feedback.json'), 'utf-8')).pins;
 
@@ -40,7 +40,7 @@ async function setup() {
   const daemon = createDaemon({ env });
   const port = await daemon.listen();
   await fetch(`http://127.0.0.1:${port}/api/boards`, {
-    method: 'POST', headers: { 'content-type': 'application/json' },
+    method: 'POST', headers: { 'content-type': 'application/json', ...daemonControlHeaders(env) },
     body: JSON.stringify({ id, dir: boardDir }),
   }).then((r) => r.json());
   const teardown = async () => {
@@ -102,5 +102,27 @@ test('feedback resolve: unknown pin id is a non-fatal no-op (reported as missing
     assert.equal(res.ok, true);
     assert.deepEqual(res.resolved, ['real01']);
     assert.deepEqual(res.missing, ['ghost']);
+  } finally { await s.teardown(); }
+});
+
+
+test('daemon control and browser mutation boundaries reject unauthenticated and cross-origin calls', async () => {
+  const s = await setup();
+  try {
+    const health = await fetch(`http://127.0.0.1:${s.port}/health`);
+    assert.equal(health.status, 403);
+    const registration = await fetch(`http://127.0.0.1:${s.port}/api/boards`, {
+      method: 'POST',
+      headers: { origin: `http://127.0.0.1:${s.port}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ id: s.id, dir: s.boardDir }),
+    });
+    assert.equal(registration.status, 403);
+    const hostile = await fetch(`http://127.0.0.1:${s.port}/boards/${encodeURIComponent(s.id)}/api/feedback`, {
+      method: 'POST',
+      headers: { origin: 'https://attacker.invalid', 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'submit', feedback: fb(s.id, [], []) }),
+    });
+    assert.equal(hostile.status, 403);
+    assert.equal(await killRunningDaemon({ authenticated: true, kind: 'not-openplanr', pid: 2147483647 }), false);
   } finally { await s.teardown(); }
 });

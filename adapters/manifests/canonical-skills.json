@@ -976,7 +976,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:def285366adae060d10469126a4a2f988e3873d7837e680c8dcff187a4254c9a"
+          "digest": "sha256:f36de4266917a109e96459c25f24cff070278dbb4d6a38c8627eb27e46c15cdc"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -1502,7 +1502,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:def285366adae060d10469126a4a2f988e3873d7837e680c8dcff187a4254c9a"
+          "digest": "sha256:f36de4266917a109e96459c25f24cff070278dbb4d6a38c8627eb27e46c15cdc"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2028,7 +2028,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:def285366adae060d10469126a4a2f988e3873d7837e680c8dcff187a4254c9a"
+          "digest": "sha256:f36de4266917a109e96459c25f24cff070278dbb4d6a38c8627eb27e46c15cdc"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2660,7 +2660,7 @@
       "source": "skills/planr-operate/openplanr.skill.json",
       "entrypoint": "skills/planr-operate/SKILL.md",
       "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
-      "sourceDigest": "sha256:96f1e713e0a7089b3cdbf6db4752bf55cd0da40d52cee8aec27a21874f2ac6a6",
+      "sourceDigest": "sha256:86c4a22a0f8584ae502af67c9426f81797a4095a4b2dd229086610a9ba72645e",
       "resources": [
         {
           "path": "scripts/validate-note.mjs",
@@ -2800,7 +2800,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:def285366adae060d10469126a4a2f988e3873d7837e680c8dcff187a4254c9a"
+          "digest": "sha256:f36de4266917a109e96459c25f24cff070278dbb4d6a38c8627eb27e46c15cdc"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -3494,7 +3494,7 @@
             "cursor"
           ],
           "executable": true,
-          "digest": "sha256:676f7e31990cd57a8537de8155b9163fa4dd28ad39ae899584151e46e792faf2"
+          "digest": "sha256:6378ad3477e4be8b7e916c4249404c50cafecac1c70ffbf5a1a2fce195dfea16"
         },
         {
           "path": "agents/openai.yaml",

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ARTIFACT_STATUS_ORDER,
+  Button,
   Card,
   CommandHint,
   DataTable,
@@ -20,6 +21,7 @@ import {
   dependencyCountColumn,
   frontmatterString,
   ITEM_COLUMN,
+  outgoingDependencyCounts,
   REF_COLUMN,
   SPRINT_COLUMN,
   STATUS_COLUMN,
@@ -44,6 +46,7 @@ export type ListPageProps = Readonly<{
 }>;
 
 const ALL = 'all';
+const PAGE_SIZE = 100;
 const TYPES: readonly PlanningArtifactType[] = Object.freeze([
   'epic',
   'feature',
@@ -94,6 +97,7 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
   const [status, setStatus] = useState<string>(() => takeListStatus() ?? ALL);
   const [compact, setCompact] = useState(false);
   const [sort, setSort] = useState<DataTableSort>({ key: 'updated', dir: 'desc' });
+  const [page, setPage] = useState(0);
   const inspector = useInspectorStore();
 
   const model = resolvePlanningWorkspace(current, currentBinding);
@@ -108,6 +112,12 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
     statusFilter: isStatus(status) ? status : null,
   });
   const rows = sort.key === 'updated' ? sortByUpdated(filtered, sort.dir) : filtered;
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pageStart = currentPage * PAGE_SIZE;
+  const visibleRows = rows.slice(pageStart, pageStart + PAGE_SIZE);
+  const dependencyCounts = outgoingDependencyCounts(model.graph.edges);
+  const resetPage = () => setPage(0);
   const selectedId = inspector.selection?.kind === 'node' ? inspector.selection.id : undefined;
 
   return (
@@ -141,14 +151,20 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               placeholder="Filter by id or title"
               ariaLabel="Filter by id or title"
               value={query}
-              onChange={setQuery}
+              onChange={(value) => {
+                setQuery(value);
+                resetPage();
+              }}
             />
             <Select
               size="sm"
               width={128}
               ariaLabel="Filter by type"
               value={type}
-              onChange={setType}
+              onChange={(value) => {
+                setType(value);
+                resetPage();
+              }}
               options={TYPE_OPTIONS}
             />
             <Select
@@ -156,23 +172,27 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               width={138}
               ariaLabel="Filter by status"
               value={status}
-              onChange={setStatus}
+              onChange={(value) => {
+                setStatus(value);
+                resetPage();
+              }}
               options={STATUS_OPTIONS}
             />
             <ToolbarDivider />
             <span className="pc-list__note">read-only view of .planr/</span>
           </Toolbar>
           <DataTable
-            rows={rows}
+            rows={visibleRows}
             compact={compact}
             selectedId={selectedId}
             sort={sort}
-            onSort={(key) =>
+            onSort={(key) => {
               setSort((current) => ({
                 key,
                 dir: current.key === key && current.dir === 'desc' ? 'asc' : 'desc',
-              }))
-            }
+              }));
+              resetPage();
+            }}
             onRowClick={inspectPlanningNode}
             caption="Planning artifacts"
             emptyMessage="No node matches this filter."
@@ -180,11 +200,37 @@ export function ListPage({ currentBinding, current }: ListPageProps) {
               ITEM_COLUMN,
               STATUS_COLUMN,
               SPRINT_COLUMN,
-              dependencyCountColumn(model.graph.edges),
+              dependencyCountColumn(dependencyCounts),
               UPDATED_SORTABLE,
               REF_COLUMN,
             ]}
           />
+          {rows.length > PAGE_SIZE ? (
+            <nav className="pc-list__pagination" aria-label="Planning artifact pages">
+              <span className="pc-list__page-status" aria-live="polite">
+                Page {currentPage + 1} of {pageCount} · {pageStart + 1}–
+                {Math.min(pageStart + PAGE_SIZE, rows.length)} of {rows.length}
+              </span>
+              <div className="pc-list__page-actions">
+                <Button
+                  size="sm"
+                  icon="chevron-left"
+                  disabled={currentPage === 0}
+                  onClick={() => setPage(Math.max(0, currentPage - 1))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  size="sm"
+                  iconAfter="chevron-right"
+                  disabled={currentPage + 1 >= pageCount}
+                  onClick={() => setPage(Math.min(pageCount - 1, currentPage + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            </nav>
+          ) : null}
         </>
       )}
     </div>

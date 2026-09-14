@@ -165,13 +165,6 @@ async function verifyPaths(inventory) {
       continue;
     }
 
-    if (mapping.verification.policy === 'external-reference') {
-      assert(mapping.disposition === 'external', `External mapping has invalid disposition: ${mapping.mappingId}`);
-      assert(mapping.destinations.every((entry) => entry.path.startsWith('external/openplanr-web/')), `Invalid external reference: ${mapping.mappingId}`);
-      nonLocalDeclarations += 1;
-      continue;
-    }
-
     if (mapping.verification.policy === 'declared-absence') {
       assert(['retired', 'excluded'].includes(mapping.disposition), `Absence mapping has invalid disposition: ${mapping.mappingId}`);
       assert(mapping.destinations.length === 0, `Absence mapping unexpectedly declares a destination: ${mapping.mappingId}`);
@@ -183,6 +176,7 @@ async function verifyPaths(inventory) {
   }
 
   for (const [evidenceId, expected] of Object.entries(EXPECTED_SOURCES)) {
+    if (evidenceId === 'web') continue;
     const source = inventory.sources.find((entry) => entry.sourceId === expected.sourceId);
     assert(source, `Missing redacted source ledger: ${expected.sourceId}`);
     assert(source.cutoffCommit === expected.cutoffCommit, `Cutoff drift: ${expected.sourceId}`);
@@ -190,12 +184,20 @@ async function verifyPaths(inventory) {
     assert(source.package.version === expected.packageVersion, `Package version drift: ${expected.sourceId}`);
     assert(perSourceCutoff.get(expected.sourceId) === expected.cutoffTrackedPaths, `Cutoff path coverage drift: ${expected.sourceId}`);
     assert(perSourceIncluded.get(expected.sourceId) === expected.includedPaths, `Included path coverage drift: ${expected.sourceId}`);
-    if (evidenceId === 'web') assert(source.includedState === 'external-reference', 'Web must remain an external reference.');
   }
 
+  assert(
+    inventory.sources.every((source) => source.sourceId !== EXPECTED_SOURCES.web.sourceId),
+    'Public preservation data must not include the private web source ledger.',
+  );
+  assert(
+    inventory.pathMappings.every((mapping) => mapping.sourceId !== EXPECTED_SOURCES.web.sourceId),
+    'Public preservation data must not include private web path mappings.',
+  );
+
   const cutoffTrackedPaths = [...perSourceCutoff.values()].reduce((sum, count) => sum + count, 0);
-  assert(cutoffTrackedPaths === 2124, `Expected 2,124 cutoff paths, got ${cutoffTrackedPaths}.`);
-  assert(inventory.pathMappings.length === 2237, `Expected 2,237 path records, got ${inventory.pathMappings.length}.`);
+  assert(cutoffTrackedPaths === 1987, `Expected 1,987 public cutoff paths, got ${cutoffTrackedPaths}.`);
+  assert(inventory.pathMappings.length === 2100, `Expected 2,100 public path records, got ${inventory.pathMappings.length}.`);
   assert(perSourceIncluded.get('openplanr-cli') === 618, 'OpenPlanr included overlay must contain 618 paths.');
 
   return {

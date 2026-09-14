@@ -12,3 +12,35 @@
   font: var(--pc-type-mono-sm);
   color: var(--pc-text-tertiary);
 }
+
+.pc-list__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pc-space-3);
+  min-height: 44px;
+  padding: var(--pc-space-2) var(--pc-space-3);
+  border-top: 1px solid var(--pc-border-subtle);
+}
+
+.pc-list__page-status {
+  font: var(--pc-type-body-sm);
+  color: var(--pc-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pc-list__page-actions {
+  display: flex;
+  gap: var(--pc-space-2);
+}
+
+@media (max-width: 560px) {
+  .pc-list__pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pc-list__page-actions {
+    justify-content: space-between;
+  }
+}

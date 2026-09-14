@@ -38,7 +38,7 @@ import {
   renderBoardHtml,
 } from './board.mjs';
 import { createDesignBoardArtifactEnvelope } from './artifact-adapter.mjs';
-import { findRunningDaemon, DAEMON_VERSION, createDaemon, killRunningDaemon } from './daemon.mjs';
+import { daemonControlHeaders, findRunningDaemon, DAEMON_VERSION, createDaemon, killRunningDaemon } from './daemon.mjs';
 import { publicBoardId } from './board-token.mjs';
 import { loadProfile, saveProfile, updateTaste, detectConflicts } from './taste.mjs';
 import { imageDimensions, buildImageCanvasData, wrapInCanvas, discoverVariants } from './canvas-wrap.mjs';
@@ -448,7 +448,7 @@ async function cmdBoard(args) {
   const port = await ensureDaemon();
   const reg = await fetch(`http://127.0.0.1:${port}/api/boards`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...daemonControlHeaders() },
     body: JSON.stringify({ id, dir }),
   }).then((r) => r.json());
   if (reg.error) fail(`daemon refused the board: ${reg.error}`);
@@ -487,7 +487,8 @@ async function cmdFeedback(args) {
   const base = `http://127.0.0.1:${running.port}/boards/${encodeURIComponent(id)}/api/feedback`;
 
   // GET the durable record so id + author (the merge key) come straight from the store.
-  const stored = await fetch(base).then((r) => r.json()).catch(() => null);
+  const controlHeaders = daemonControlHeaders();
+  const stored = await fetch(base, { headers: controlHeaders }).then((r) => r.json()).catch(() => null);
   if (!stored) fail(`feedback resolve: could not read feedback for board "${id}" (is it registered?)`);
   const pins = Array.isArray(stored.pins) ? stored.pins : [];
 
@@ -511,7 +512,7 @@ async function cmdFeedback(args) {
     };
     const res = await fetch(base, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...controlHeaders },
       body: JSON.stringify({ kind: 'submit', feedback: contribution }),
     }).then((r) => r.json().then((b) => ({ ok: r.ok, error: b && b.error })))
       .catch((e) => ({ ok: false, error: String(e?.message ?? e) }));

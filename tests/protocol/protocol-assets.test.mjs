@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 
@@ -108,4 +109,47 @@ test('the Protocol root exposes v1.6 contracts while the Node validator subpath 
     '--moduleResolution', 'NodeNext',
     join(root, 'tests', 'protocol', 'fixtures', 'root-export-contract.mts'),
   ], { cwd: root, encoding: 'utf8' });
+});
+
+test('every runtime contract export has a consumable TypeScript declaration', async () => {
+  const runtime = await import('../../packages/protocol/src/contracts.mjs');
+  const exportNames = Object.keys(runtime).sort();
+  const declarations = readFileSync(join(protocol, 'src', 'contracts.d.mts'), 'utf8');
+  for (const name of exportNames) {
+    assert.match(
+      declarations,
+      new RegExp(`export declare (?:const|function) ${name}\\b`, 'u'),
+      `missing declaration for ${name}`,
+    );
+  }
+
+  const temporary = mkdtempSync(join(tmpdir(), 'openplanr-contract-types-'));
+  try {
+    const fixture = join(temporary, 'consumer.mts');
+    const modulePath = join(protocol, 'src', 'contracts.mjs').replaceAll('\\\\', '/');
+    writeFileSync(
+      fixture,
+      `import { ${exportNames.join(', ')} } from ${JSON.stringify(modulePath)};\n` +
+        `export const imported = [${exportNames.join(', ')}] as const;\n`,
+    );
+    execFileSync(
+      process.execPath,
+      [
+        join(root, 'node_modules', 'typescript', 'bin', 'tsc'),
+        '--noEmit',
+        '--strict',
+        '--skipLibCheck',
+        '--target',
+        'ES2022',
+        '--module',
+        'NodeNext',
+        '--moduleResolution',
+        'NodeNext',
+        fixture,
+      ],
+      { cwd: root, encoding: 'utf8' },
+    );
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
 });

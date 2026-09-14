@@ -498,7 +498,7 @@ function verifyCliAliases({
     { id: 'help', args: ['--help'], expectedExit: 0, output: 'text' },
     {
       id: 'json-success',
-      args: ['operate', 'inspect', 'package.json'],
+      args: ['operate', 'recovery', 'inspect', '--json'],
       expectedExit: 0,
       output: 'json',
     },
@@ -815,14 +815,17 @@ function verifyFullInstall({
   const inspection = runCli(
     nodeExecutable,
     cliRoot,
-    ['operate', 'inspect', 'package.json'],
+    ['operate', 'recovery', 'inspect', '--json'],
     { cwd: operateProject, env: environment },
   );
-  const inspectionReport = assertJsonOutput(inspection, 'planr operate inspect');
+  const inspectionReport = assertJsonOutput(inspection, 'planr operate recovery inspect');
   if (
     inspection.status !== 0
-    || inspectionReport.type !== 'file'
-    || inspectionReport.bytes <= 0
+    || inspectionReport.ok !== true
+    || inspectionReport.operation !== 'operate.recovery.inspect'
+    || inspectionReport.data?.status !== 'empty'
+    || inspectionReport.data?.allowedRecovery !== 'none'
+    || inspectionReport.data?.integrityBoundary?.model !== 'project-local-integrity'
   ) {
     throw new ProofFailure('E_CLI_OPERATE_FAILED', 'Packed planr operate is not functional.');
   }
@@ -946,20 +949,43 @@ function verifyCliOnlyInstall({
   if (
     version.status !== 0 ||
     help.status !== 0 ||
-    !help.stdout.includes('Inspect and validate local Operate artifacts')
+    !help.stdout.includes('Run and resume the durable OpenPlanr Operate lifecycle')
   ) {
-    throw new ProofFailure('E_CLI_ONLY_START_FAILED', 'CLI-only package does not start or expose Operate help.');
+    throw new ProofFailure(
+      'E_CLI_ONLY_START_FAILED',
+      'CLI-only package does not start or expose Operate help.',
+      JSON.stringify({
+        version: {
+          status: version.status,
+          stdout: version.stdout,
+          stderr: version.stderr,
+        },
+        help: {
+          status: help.status,
+          stdout: help.stdout,
+          stderr: help.stderr,
+        },
+      }),
+    );
   }
-  const inspection = runCli(nodeExecutable, cliRoot, ['operate', 'inspect', 'package.json'], {
-    cwd: project,
-    env: environment,
-  });
-  const inspectionReport = assertJsonOutput(inspection, 'CLI-only Operate inspection');
-  if (inspection.status !== 0 || inspectionReport.type !== 'file') {
+  const inspection = runCli(
+    nodeExecutable,
+    cliRoot,
+    ['operate', 'recovery', 'storage-status', '--json'],
+    { cwd: project, env: environment },
+  );
+  const inspectionReport = assertJsonOutput(inspection, 'CLI-only Operate storage inspection');
+  if (
+    inspection.status !== 0
+    || inspectionReport.kind !== 'operate-storage-status'
+    || inspectionReport.status !== 'empty'
+    || inspectionReport.pinnedVerifierRequired !== false
+    || inspectionReport.nextAction !== 'none'
+  ) {
     throw new ProofFailure(
       'E_CLI_ONLY_OPTIONAL_BOUNDARY',
       'CLI-only Operate inspection crossed the optional-package boundary.',
-      JSON.stringify({ status: inspection.status, type: inspectionReport.type }),
+      JSON.stringify({ status: inspection.status, inspection: inspectionReport }),
     );
   }
   return {

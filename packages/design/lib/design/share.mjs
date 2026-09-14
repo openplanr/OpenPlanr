@@ -44,12 +44,12 @@ function ensurePrivateDirectory(root) {
   mkdirSync(root, { recursive: true, mode: 0o700 });
   const stat = lstatSync(root);
   if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('Design custody must use a private local directory.');
-  chmodSync(root, 0o700);
+  if (process.platform !== 'win32') chmodSync(root, 0o700);
 }
 function readCustody(path) {
   if (!existsSync(path)) return null;
   const stat = lstatSync(path);
-  if (!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o077)) throw new Error('Design owner custody must be a private 0600 file.');
+  if (!stat.isFile() || stat.isSymbolicLink() || (process.platform !== 'win32' && (stat.mode & 0o077))) throw new Error('Design owner custody must be a private 0600 file.');
   const record = JSON.parse(readFileSync(path, 'utf8'));
   if (record.kind !== FORMAT || record.schemaVersion !== '1.0.0' || !record.custody) throw new Error('Design owner custody is invalid.');
   return record;
@@ -58,7 +58,14 @@ function writeCustody(path, record) {
   const temp = `${path}.${randomBytes(8).toString('hex')}.tmp`;
   const fd = openSync(temp, 'wx', 0o600);
   try { writeFileSync(fd, `${JSON.stringify(record)}\n`); fsyncSync(fd); } finally { closeSync(fd); }
-  try { renameSync(temp, path); chmodSync(path, 0o600); const directory = openSync(dirname(path), 'r'); try { fsyncSync(directory); } finally { closeSync(directory); } } catch (error) { try { unlinkSync(temp); } catch {} throw error; }
+  try {
+    renameSync(temp, path);
+    if (process.platform !== 'win32') {
+      chmodSync(path, 0o600);
+      const directory = openSync(dirname(path), 'r');
+      try { fsyncSync(directory); } finally { closeSync(directory); }
+    }
+  } catch (error) { try { unlinkSync(temp); } catch {} throw error; }
 }
 async function withCustody(file, options, action) {
   const location = custodyLocation(file, options);

@@ -417,7 +417,7 @@
         },
         {
           "path": "skills/design/scripts/design.mjs",
-          "digest": "sha256:def285366adae060d10469126a4a2f988e3873d7837e680c8dcff187a4254c9a"
+          "digest": "sha256:f36de4266917a109e96459c25f24cff070278dbb4d6a38c8627eb27e46c15cdc"
         },
         {
           "path": "skills/design/schemas/design-document.schema.json",
@@ -598,7 +598,7 @@
         },
         {
           "path": "skills/design-loop/scripts/design.mjs",
-          "digest": "sha256:def285366adae060d10469126a4a2f988e3873d7837e680c8dcff187a4254c9a"
+          "digest": "sha256:f36de4266917a109e96459c25f24cff070278dbb4d6a38c8627eb27e46c15cdc"
         },
         {
           "path": "skills/design-loop/schemas/design-document.schema.json",
@@ -779,7 +779,7 @@
         },
         {
           "path": "skills/design-review/scripts/design.mjs",
-          "digest": "sha256:def285366adae060d10469126a4a2f988e3873d7837e680c8dcff187a4254c9a"
+          "digest": "sha256:f36de4266917a109e96459c25f24cff070278dbb4d6a38c8627eb27e46c15cdc"
         },
         {
           "path": "skills/design-review/schemas/design-document.schema.json",
@@ -1012,7 +1012,7 @@
       "assets": [
         {
           "path": "skills/operate/SKILL.md",
-          "digest": "sha256:1e76e669e52ccf9fb1f1bb71229c2149a97479909a0dd6ecaecb75221f853ba7"
+          "digest": "sha256:e7f4e6e62a1a12e72b7aeb196a824103e7f828ff899a69277e74ae29201d5526"
         },
         {
           "path": "skills/operate/openplanr.skill.json",
@@ -1069,7 +1069,7 @@
         },
         {
           "path": "skills/plan/scripts/design.mjs",
-          "digest": "sha256:def285366adae060d10469126a4a2f988e3873d7837e680c8dcff187a4254c9a"
+          "digest": "sha256:f36de4266917a109e96459c25f24cff070278dbb4d6a38c8627eb27e46c15cdc"
         },
         {
           "path": "skills/plan/schemas/design-document.schema.json",
@@ -1351,7 +1351,7 @@
         },
         {
           "path": "skills/sync/scripts/sync.mjs",
-          "digest": "sha256:676f7e31990cd57a8537de8155b9163fa4dd28ad39ae899584151e46e792faf2"
+          "digest": "sha256:6378ad3477e4be8b7e916c4249404c50cafecac1c70ffbf5a1a2fce195dfea16"
         },
         {
           "path": "skills/sync/agents/openai.yaml",

@@ -13,6 +13,7 @@ import {
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { assertOperatePathCustody, assertOperateTreeCustody } from './path-custody.js';
+import { withOperateProjectTransaction } from './project-transaction-lock.js';
 
 const STORE_FORMAT = 'openplanr-operate-store';
 const STORE_VERSION = 3;
@@ -877,6 +878,16 @@ export class OperateStore {
   }
 
   async commit(
+    runtime: Omit<OperateStoredRuntime, 'generation'>,
+    expectedGeneration: string | null,
+  ): Promise<OperateStoredRuntime> {
+    return await withOperateProjectTransaction(
+      this.projectDir,
+      async () => await this.commitUnlocked(runtime, expectedGeneration),
+    );
+  }
+
+  private async commitUnlocked(
     runtime: Omit<OperateStoredRuntime, 'generation'>,
     expectedGeneration: string | null,
   ): Promise<OperateStoredRuntime> {

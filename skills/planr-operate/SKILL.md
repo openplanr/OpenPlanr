@@ -175,5 +175,7 @@ Return the absolute `board-report.md` path, overall signal, decision count, acti
 one-line issues summary.
 
 When the OpenPlanr dashboard is running, the operating cycle is browsable at
-`#/operate/cycles/<id>` and the daily view at `#/operate/today`. This is
-navigation only.
+`#/operate/cycles/<id>`, the completed review index at `#/operate/cycles`, and the latest
+completed review at `#/operate/today`. The standalone dashboard presents these local reports
+read-only and refreshes them automatically. Inbox, actions, evidence, outcomes, recovery, and
+all mutations require an actor-bound governed Operate session.

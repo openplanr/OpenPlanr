@@ -118,8 +118,16 @@ export class KeychainBackend implements CredentialBackend {
 // 2. Encrypted File Backend
 // ---------------------------------------------------------------------------
 
-/** Derive a 256-bit key from machine identity + per-installation salt. */
-function deriveKey(salt: Buffer): Buffer {
+const CREDENTIAL_PASSPHRASE_ENV = 'PLANR_CREDENTIAL_FILE_PASSPHRASE';
+const MINIMUM_PASSPHRASE_LENGTH = 20;
+
+/** Derive a 256-bit key only from an explicit operator secret and installation salt. */
+function deriveKey(passphrase: string, salt: Buffer): Buffer {
+  return crypto.scryptSync(passphrase, salt, 32, { N: 16384, r: 8, p: 1 });
+}
+
+/** Read legacy ciphertext without continuing to use machine identity for new writes. */
+function deriveLegacyKey(salt: Buffer): Buffer {
   const machineId = `${os.hostname()}:${os.userInfo().username}`;
   return crypto.scryptSync(machineId, salt, 32, { N: 16384, r: 8, p: 1 });
 }
@@ -139,6 +147,8 @@ async function getSalt(planrDir: string, saltFile: string): Promise<Buffer> {
 }
 
 interface EncryptedEnvelope {
+  version?: 1 | 2;
+  kdf?: 'scrypt';
   iv: string;
   tag: string;
   data: string;
@@ -150,6 +160,8 @@ function encrypt(plaintext: string, key: Buffer): EncryptedEnvelope {
   const encrypted = Buffer.concat([cipher.update(plaintext, 'utf-8'), cipher.final()]);
   const tag = cipher.getAuthTag();
   return {
+    version: 2,
+    kdf: 'scrypt',
     iv: iv.toString('hex'),
     tag: tag.toString('hex'),
     data: encrypted.toString('hex'),
@@ -171,15 +183,34 @@ export class EncryptedFileBackend implements CredentialBackend {
   private readonly planrDir: string;
   private readonly encryptedFile: string;
   private readonly saltFile: string;
+  private readonly configuredPassphrase: string | undefined;
 
-  constructor(planrDir = PLANR_DIR) {
+  constructor(planrDir = PLANR_DIR, options: { passphrase?: string } = {}) {
     this.planrDir = planrDir;
     this.encryptedFile = path.join(planrDir, 'credentials.enc');
     this.saltFile = path.join(planrDir, '.credential-salt');
+    this.configuredPassphrase = options.passphrase;
+  }
+
+  private passphrase(): string | undefined {
+    const value = this.configuredPassphrase ?? process.env[CREDENTIAL_PASSPHRASE_ENV];
+    return typeof value === 'string' && value.length >= MINIMUM_PASSPHRASE_LENGTH
+      ? value
+      : undefined;
   }
 
   async isAvailable(): Promise<boolean> {
-    return true; // Always available as the universal fallback
+    return this.passphrase() !== undefined;
+  }
+
+  private requirePassphrase(): string {
+    const value = this.passphrase();
+    if (!value) {
+      throw new Error(
+        `${CREDENTIAL_PASSPHRASE_ENV} must contain at least ${MINIMUM_PASSPHRASE_LENGTH} characters when the OS keychain is unavailable.`,
+      );
+    }
+    return value;
   }
 
   private async loadAll(strict = false): Promise<Record<string, string>> {
@@ -189,9 +220,13 @@ export class EncryptedFileBackend implements CredentialBackend {
       const raw = await readFile(this.encryptedFile, 'utf-8');
       const envelope: EncryptedEnvelope = JSON.parse(raw);
       const salt = await getSalt(this.planrDir, this.saltFile);
-      const key = deriveKey(salt);
+      const key =
+        envelope.version === 2 ? deriveKey(this.requirePassphrase(), salt) : deriveLegacyKey(salt);
       const json = decrypt(envelope, key);
-      return JSON.parse(json) as Record<string, string>;
+      const value = JSON.parse(json) as Record<string, string>;
+      if (!value || typeof value !== 'object' || Array.isArray(value))
+        throw new Error('invalid credential payload');
+      return value;
     } catch (err) {
       if (strict)
         throw new Error(
@@ -215,7 +250,7 @@ export class EncryptedFileBackend implements CredentialBackend {
   private async saveAll(credentials: Record<string, string>): Promise<void> {
     await mkdir(this.planrDir, { recursive: true });
     const salt = await getSalt(this.planrDir, this.saltFile);
-    const key = deriveKey(salt);
+    const key = deriveKey(this.requirePassphrase(), salt);
     const envelope = encrypt(JSON.stringify(credentials), key);
     const temporary = `${this.encryptedFile}.${crypto.randomUUID()}.tmp`;
     try {
@@ -255,7 +290,7 @@ export class EncryptedFileBackend implements CredentialBackend {
   async deleteStrict(provider: string): Promise<boolean> {
     return withCredentialWriteLock(this.planrDir, async () => {
       const all = await this.loadAll(true);
-      if (!(provider in all)) return true;
+      if (!Object.hasOwn(all, provider)) return true;
       delete all[provider];
       await this.saveAll(all);
       return true;
@@ -269,7 +304,7 @@ export class EncryptedFileBackend implements CredentialBackend {
 
   async set(provider: string, value: string): Promise<void> {
     return withCredentialWriteLock(this.planrDir, async () => {
-      const all = await this.loadAll();
+      const all = await this.loadAll(true);
       all[provider] = value;
       await this.saveAll(all);
     });
@@ -277,8 +312,8 @@ export class EncryptedFileBackend implements CredentialBackend {
 
   async delete(provider: string): Promise<boolean> {
     return withCredentialWriteLock(this.planrDir, async () => {
-      const all = await this.loadAll();
-      if (!(provider in all)) return false;
+      const all = await this.loadAll(true);
+      if (!Object.hasOwn(all, provider)) return false;
       delete all[provider];
       await this.saveAll(all);
       return true;

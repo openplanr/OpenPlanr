@@ -22,7 +22,7 @@ import { assertOperateExperienceSurfaceV1 } from "./operate-experience-surface-c
 import { issueOperateReviewDisplayWorkspaceV1 } from "./operate-review-display-workspace-contract.mjs";
 
 const PROJECTION_RELATIVE_PATH = "operate/projections/experience-view.json";
-const DEFAULT_MAX_BYTES = 4 * 1024 * 1024;
+const DEFAULT_MAX_BYTES = 16 * 1024 * 1024;
 const STATUS_REASON = Object.freeze({
 	ready: [],
 	"read-only": ["OPERATE_READ_ONLY"],

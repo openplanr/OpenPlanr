@@ -441,12 +441,12 @@ export function registerEpicCommand(program: Command) {
 }
 export function registerFeatureCommand(program: Command) {
   registerCommon(program, 'feature', (command) =>
-    command.requiredOption('--epic <id>', 'parent epic ID'),
+    command.option('--epic <id>', 'parent epic ID; may also come from --data'),
   );
 }
 export function registerStoryCommand(program: Command) {
   registerCommon(program, 'story', (command) =>
-    command.requiredOption('--feature <id>', 'parent feature ID'),
+    command.option('--feature <id>', 'parent feature ID; may also come from --data'),
   );
 }
 export function registerTaskCommand(program: Command) {

@@ -4,7 +4,6 @@ import {
   Card,
   CommandHint,
   InlineAlert,
-  Kbd,
   PcIcon,
   SectionHeader,
   Skeleton,
@@ -14,54 +13,8 @@ import {
 } from '../../design-system/components/index.js';
 import './console-shell.css';
 
-/*
- * The console is desktop-only. Below 1024 the rail, a dense table and the inspector cannot
- * coexist, and there is no phone path into a local loopback CLI app — so the shell states the
- * floor instead of growing a second information architecture.
- */
-export const SHELL_MIN_WIDTH = 1024;
 /** Below this the inspector floats over the plane instead of taking layout width. */
 export const INSPECTOR_DOCK_WIDTH = 1180;
-
-export function TooNarrow({ width }: Readonly<{ width: number }>) {
-  return (
-    <div className="pc-too-narrow">
-      <span className="pc-too-narrow__brand">
-        <span className="pc-too-narrow__tile" aria-hidden="true">
-          P
-        </span>
-        <span className="pc-too-narrow__wordmark">openplanr</span>
-      </span>
-      <span className="pc-too-narrow__glyph" aria-hidden="true">
-        <PcIcon name="panel-left-close" size={20} />
-      </span>
-      <div className="pc-too-narrow__copy">
-        <h1>Use a wider window</h1>
-        <p>
-          The console needs at least {SHELL_MIN_WIDTH}px. Below that the navigation rail, a table at
-          console density and the inspector cannot sit side by side, and nothing here would be
-          readable at 13px.
-        </p>
-      </div>
-      <div className="pc-too-narrow__meta">
-        <span>now {width}px</span>
-        <span>·</span>
-        <span>needs {SHELL_MIN_WIDTH}px</span>
-      </div>
-      <div className="pc-too-narrow__hint">
-        <CommandHint
-          command="/planr-dashboard"
-          label="the console runs where the repository is"
-          size="sm"
-        />
-        <span className="pc-too-narrow__keys">
-          navigation is <Kbd size="sm">⌘</Kbd>
-          <Kbd size="sm">K</Kbd> once there is room
-        </span>
-      </div>
-    </div>
-  );
-}
 
 type TransitShape = 'overview' | 'table' | 'graph' | 'board' | 'cards' | 'detail';
 type RouteShape = Readonly<{
@@ -284,67 +237,6 @@ export function IncompatibleNotice({ detail }: Readonly<{ detail: string | null 
       <InlineAlert tone="info" title="Nothing was changed">
         The dashboard only ever reads. No file was migrated, rewritten or removed.
       </InlineAlert>
-    </div>
-  );
-}
-
-const OPERATE_SURFACES = Object.freeze([
-  { kind: 'operate.today', icon: 'target', label: 'Today', slug: 'today' },
-  { kind: 'operate.inbox', icon: 'inbox', label: 'Inbox', slug: 'inbox' },
-  { kind: 'operate.actions', icon: 'git-pull-request', label: 'Actions', slug: 'actions' },
-  { kind: 'operate.cycles', icon: 'calendar-days', label: 'Cycles', slug: 'cycles' },
-  { kind: 'operate.evidence', icon: 'file-check', label: 'Evidence', slug: 'evidence' },
-  { kind: 'operate.outcomes', icon: 'flag', label: 'Outcomes', slug: 'outcomes' },
-  { kind: 'operate.history', icon: 'history', label: 'History', slug: 'history' },
-  { kind: 'operate.recovery', icon: 'life-buoy', label: 'Recovery', slug: 'recovery' },
-] as const);
-
-/**
- * Operate with no query root in the bootstrap envelope. The standalone dashboard reads the
- * graph directly and never starts the command gateway, so this is the expected state.
- */
-export function OperateUnavailable() {
-  return (
-    <div className="pc-shell__scroll">
-      <SectionHeader
-        eyebrow="planr-operate"
-        title="Operate"
-        description="Governed actions, cycles and their durable record."
-      />
-      <Card padding={0}>
-        <div className="pc-operate-off__lead">
-          <span className="pc-operate-off__glyph" aria-hidden="true">
-            <PcIcon name="unplug" size={20} />
-          </span>
-          <div className="pc-operate-off__copy">
-            <h2>No command gateway in this build</h2>
-            <p>
-              The standalone dashboard reads the <code>.planr/</code> graph directly. Operate data
-              lives behind the gateway, which only the operate dashboard starts. Planning is fully
-              available.
-            </p>
-          </div>
-          <CommandHint command="/planr-operate" label="start the gateway to populate these views" />
-        </div>
-        <div className="pc-operate-off__surfaces">
-          <div className="pc-operate-off__label">eight surfaces wait behind the gateway</div>
-          <ul>
-            {OPERATE_SURFACES.map((surface) => (
-              <li key={surface.kind}>
-                <PcIcon name={surface.icon} size={13} color="var(--pc-text-tertiary)" />
-                <span>{surface.label}</span>
-                <span className="pc-operate-off__slug">{surface.slug}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="pc-operate-off__note">
-          <InlineAlert tone="info" title="This is the expected state, not an error">
-            Most sessions of the standalone dashboard never leave Planning. Nothing here is broken
-            and nothing needs retrying.
-          </InlineAlert>
-        </div>
-      </Card>
     </div>
   );
 }

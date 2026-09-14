@@ -31,13 +31,13 @@
     "dist/",
     "lib/",
     "bin/",
-    "scripts/create-pinned-legacy-operate-replay-proof.mjs",
     "install.sh",
     "install.ps1",
     "CONTRIBUTING.md",
     "docs/ARTIFACT_REVIEW.md",
     "docs/CLI.md",
     "docs/CROSS_RUNTIME_SETUP.md",
+    "docs/TROUBLESHOOTING.md",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"
@@ -72,8 +72,7 @@
     "verify:dashboard-assets": "node scripts/verify-dashboard-assets.mjs",
     "test:dashboard:cutover": "vitest run tests/e2e/dashboard-cutover.test.ts tests/e2e/dashboard-upgrade-downgrade.test.ts",
     "verify:release-journey": "node scripts/verify-release-journey.mjs",
-    "verify:release-artifact": "node scripts/verify-release-artifact.mjs",
-    "verify:legacy-operate-proof": "node scripts/create-pinned-legacy-operate-replay-proof.mjs"
+    "verify:release-artifact": "node scripts/verify-release-artifact.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

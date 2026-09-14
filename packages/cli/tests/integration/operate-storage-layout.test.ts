@@ -21,6 +21,7 @@ vi.mock('../../src/services/operate/pinned-legacy-replay-runner.js', () => ({
   runPinnedLegacyReplayVerifier: pinnedVerifierMock,
 }));
 
+import { withOperateProjectTransaction } from '../../src/services/operate/project-transaction-lock.js';
 import {
   adapterRepositoryReadCapabilities,
   readScreenedRepositoryText,
@@ -31,6 +32,7 @@ import {
   inspectOperateStorage,
   migrateOperateStorage,
   type OperateLegacyReplayProof,
+  rollbackOperateStorageMigration,
 } from '../../src/services/operate/storage-layout.js';
 import { createEmptyOperatePreferences, OperateStore } from '../../src/services/operate/store.js';
 import { createTestProject, type TestProject } from '../helpers/test-project.js';
@@ -144,10 +146,8 @@ async function createLegacyV2Store(project: TestProject): Promise<{
       artifactHashes: [],
     },
     verifier: {
-      product: 'openplanr',
-      productVersion: '1.25.3+git.7859e52dd89f',
-      pipelinePackage: 'planr-pipeline',
-      pipelineVersion: '0.42.0+git.d6bcb5574aaf',
+      implementation: 'bundled-compatibility-reader',
+      verifierVersion: '1.0.0',
     },
     verifiedAt: '2026-08-20T11:59:00.000Z',
   };
@@ -157,6 +157,75 @@ async function createLegacyV2Store(project: TestProject): Promise<{
 }
 
 describe('neutral Operate storage layout', () => {
+  it('serializes concurrent project transactions even when they start in the same millisecond', async () => {
+    const project = await createTestProject('operate-project-transaction-serialization');
+    projects.push(project);
+    const order: string[] = [];
+    let releaseFirst: (() => void) | null = null;
+    const firstMayFinish = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const firstEntered = new Promise<void>((resolve) => {
+      void withOperateProjectTransaction(project.dir, async () => {
+        order.push('first-enter');
+        resolve();
+        await firstMayFinish;
+        order.push('first-exit');
+      });
+    });
+    await firstEntered;
+    const second = withOperateProjectTransaction(project.dir, async () => {
+      order.push('second-enter');
+    });
+    await new Promise((resolve) => setTimeout(resolve, 75));
+    expect(order).toEqual(['first-enter']);
+    releaseFirst?.();
+    await second;
+    expect(order).toEqual(['first-enter', 'first-exit', 'second-enter']);
+    await expect(
+      lstat(join(project.dir, '.planr', '.operate-transaction-lock.json')),
+    ).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('holds Store commits behind migration and rollback project custody', async () => {
+    const project = await createTestProject('operate-store-project-transaction');
+    projects.push(project);
+    let releaseTransaction: (() => void) | null = null;
+    const transactionMayFinish = new Promise<void>((resolve) => {
+      releaseTransaction = resolve;
+    });
+    let transactionEntered: (() => void) | null = null;
+    const entered = new Promise<void>((resolve) => {
+      transactionEntered = resolve;
+    });
+    const transaction = withOperateProjectTransaction(project.dir, async () => {
+      transactionEntered?.();
+      await transactionMayFinish;
+    });
+    await entered;
+    const state = { eventHead: { sequence: 0, hash: null }, eventReplayIndex: [], cycles: [] };
+    let committed = false;
+    const commit = new OperateStore(project.dir)
+      .commit(
+        {
+          baseState: state,
+          state,
+          events: [],
+          artifacts: new Map(),
+          preferences: createEmptyOperatePreferences(),
+        },
+        null,
+      )
+      .then(() => {
+        committed = true;
+      });
+    await new Promise((resolve) => setTimeout(resolve, 75));
+    expect(committed).toBe(false);
+    releaseTransaction?.();
+    await Promise.all([transaction, commit]);
+    expect(committed).toBe(true);
+  });
+
   it('rejects root, child, and Store symlink custody without touching external targets', async () => {
     const rootProject = await createTestProject('operate-storage-root-symlink');
     const childProject = await createTestProject('operate-storage-child-symlink');
@@ -331,7 +400,7 @@ describe('neutral Operate storage layout', () => {
     ).toEqual(['repository.read']);
   });
 
-  it('matches a pre-change replay proof, hashes both old roots, and archives exact bytes before a clean state', async () => {
+  it('matches a bundled replay proof, activates exact v2 state, and archives rollback bytes', async () => {
     const project = await createTestProject('operate-storage-migration');
     projects.push(project);
     const legacy = await createLegacyV2Store(project);
@@ -367,6 +436,11 @@ describe('neutral Operate storage layout', () => {
       ),
     ).toBe(`${legacy.generation}\n`);
     expect(await inspectOperateStorage(project.dir)).toMatchObject({ status: 'ready' });
+    expect(await readFile(join(project.dir, '.planr', 'operate', 'state', 'CURRENT'), 'utf8')).toBe(
+      `${legacy.generation}\n`,
+    );
+    expect(receipt.activatedState).toEqual(legacy.proof.tree);
+    expect(receipt.rollbackArchiveId).toBe('2026-08-20T12-00-00.000Z-operate-v2');
     expect(JSON.stringify(receipt)).not.toContain(project.dir);
     const archivedV2 = join(
       project.dir,
@@ -660,12 +734,152 @@ describe('neutral Operate storage layout', () => {
 
     const forged = {
       ...legacy.proof,
-      verifier: { ...legacy.proof.verifier, productVersion: '1.25.3+git.000000000000' },
+      verifier: { ...legacy.proof.verifier, verifierVersion: '9.9.9' },
     } as OperateLegacyReplayProof;
     pinnedVerifierMock.mockResolvedValueOnce(forged);
     await expect(migrateOperateStorage(project.dir)).rejects.toMatchObject({
       code: 'OPERATE_STORE_INCOMPATIBLE',
     });
+  });
+
+  it('rolls a migration back without deleting the activated forward state', async () => {
+    const project = await createTestProject('operate-storage-explicit-rollback');
+    projects.push(project);
+    const legacy = await createLegacyV2Store(project);
+    await migrateOperateStorage(project.dir, {
+      now: new Date('2026-08-20T12:08:00.000Z'),
+    });
+    await writeFile(
+      join(project.dir, '.planr', 'operate', 'packets', 'forward.json'),
+      '{"ok":true}\n',
+    );
+
+    const receipt = await rollbackOperateStorageMigration(project.dir);
+
+    expect(receipt).toMatchObject({
+      kind: 'operate-storage-rollback-receipt',
+      restoredSource: 'operate-v2',
+    });
+    expect(await readFile(join(legacy.root, 'CURRENT'), 'utf8')).toBe(`${legacy.generation}\n`);
+    expect(
+      await readFile(
+        join(project.dir, '.planr', receipt.forwardSnapshotId, 'packets', 'forward.json'),
+        'utf8',
+      ),
+    ).toBe('{"ok":true}\n');
+    expect(await inspectOperateStorage(project.dir)).toMatchObject({
+      status: 'migration-required',
+    });
+  });
+
+  it('restores both pre-migration roots and preserves the activated forward state', async () => {
+    const project = await createTestProject('operate-storage-dual-root-rollback');
+    projects.push(project);
+    const legacy = await createLegacyV2Store(project);
+    const neutral = join(project.dir, '.planr', 'operate');
+    for (const directory of ['state', 'packets', 'projections', 'archive']) {
+      await mkdir(join(neutral, directory), { recursive: true });
+    }
+    await writeFile(join(neutral, 'state', 'old-neutral.json'), '{"old":true}\n');
+    await migrateOperateStorage(project.dir, {
+      now: new Date('2026-08-20T12:09:00.000Z'),
+    });
+    await writeFile(join(neutral, 'packets', 'forward.json'), '{"forward":true}\n');
+
+    const receipt = await rollbackOperateStorageMigration(project.dir);
+
+    expect(receipt.restoredLegacyTree).not.toBeNull();
+    expect(await readFile(join(legacy.root, 'CURRENT'), 'utf8')).toBe(`${legacy.generation}\n`);
+    expect(await readFile(join(neutral, 'state', 'old-neutral.json'), 'utf8')).toBe(
+      '{"old":true}\n',
+    );
+    expect(
+      await readFile(
+        join(project.dir, '.planr', receipt.forwardSnapshotId, 'packets', 'forward.json'),
+        'utf8',
+      ),
+    ).toBe('{"forward":true}\n');
+  });
+
+  it.each(['afterProgress', 'afterRestoreV2', 'afterParkForward', 'afterRestoreNeutral'] as const)(
+    'resumes an interrupted dual-root rollback after %s',
+    async (point) => {
+      const project = await createTestProject(`operate-storage-rollback-${point}`);
+      projects.push(project);
+      const legacy = await createLegacyV2Store(project);
+      const neutral = join(project.dir, '.planr', 'operate');
+      for (const directory of ['state', 'packets', 'projections', 'archive']) {
+        await mkdir(join(neutral, directory), { recursive: true });
+      }
+      await writeFile(join(neutral, 'state', 'old-neutral.json'), `${point}\n`);
+      await migrateOperateStorage(project.dir, {
+        now: new Date('2026-08-20T12:10:00.000Z'),
+      });
+      await writeFile(join(neutral, 'packets', 'forward.json'), `${point}\n`);
+      const interrupt = async () => {
+        throw Object.assign(new Error(`interrupted ${point}`), {
+          code: 'OPERATE_ROLLBACK_INTERRUPTED',
+        });
+      };
+
+      await expect(
+        rollbackOperateStorageMigration(project.dir, { [point]: interrupt }),
+      ).rejects.toMatchObject({ code: 'OPERATE_ROLLBACK_INTERRUPTED' });
+      expect(await inspectOperateStorage(project.dir)).toMatchObject({ status: 'interrupted' });
+
+      const receipt = await rollbackOperateStorageMigration(project.dir);
+      expect(await readFile(join(legacy.root, 'CURRENT'), 'utf8')).toBe(`${legacy.generation}\n`);
+      expect(await readFile(join(neutral, 'state', 'old-neutral.json'), 'utf8')).toBe(`${point}\n`);
+      expect(
+        await readFile(
+          join(project.dir, '.planr', receipt.forwardSnapshotId, 'packets', 'forward.json'),
+          'utf8',
+        ),
+      ).toBe(`${point}\n`);
+      expect((await inspectOperateStorage(project.dir)).interruptedEntries).toEqual([]);
+    },
+  );
+
+  it('preserves an unreceipted staging tree before retrying migration', async () => {
+    const project = await createTestProject('operate-storage-unreceipted-stage');
+    projects.push(project);
+    await createLegacyV2Store(project);
+    const nonce = 'a'.repeat(32);
+    const staged = join(project.dir, '.planr', `.operate-stage-${nonce}`);
+    await mkdir(staged, { recursive: true });
+    await writeFile(join(staged, 'partial.txt'), 'unverified staged bytes\n');
+
+    const receipt = await migrateOperateStorage(project.dir, {
+      now: new Date('2026-08-20T12:11:00.000Z'),
+    });
+
+    expect(receipt.migrated).toBe(true);
+    expect(
+      await readFile(
+        join(project.dir, '.planr', 'operate-recovery', `abandoned-stage-${nonce}`, 'partial.txt'),
+        'utf8',
+      ),
+    ).toBe('unverified staged bytes\n');
+    expect(await inspectOperateStorage(project.dir)).toMatchObject({ status: 'ready' });
+  });
+
+  it('serializes competing rollbacks without losing either result tree', async () => {
+    const project = await createTestProject('operate-storage-concurrent-rollback');
+    projects.push(project);
+    const legacy = await createLegacyV2Store(project);
+    await migrateOperateStorage(project.dir, {
+      now: new Date('2026-08-20T12:12:00.000Z'),
+    });
+
+    const results = await Promise.allSettled([
+      rollbackOperateStorageMigration(project.dir),
+      rollbackOperateStorageMigration(project.dir),
+    ]);
+
+    expect(results.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter(({ status }) => status === 'rejected')).toHaveLength(1);
+    expect(await readFile(join(legacy.root, 'CURRENT'), 'utf8')).toBe(`${legacy.generation}\n`);
+    expect((await inspectOperateStorage(project.dir)).interruptedEntries).toEqual([]);
   });
 
   it('fails closed when an interrupted staged or parked migration is present', async () => {

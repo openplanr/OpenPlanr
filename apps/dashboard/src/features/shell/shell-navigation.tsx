@@ -108,6 +108,102 @@ function RailLink({ item, route }: Readonly<{ item: RailItem; route: ParsedDashb
   );
 }
 
+function MobileRailLink({
+  item,
+  route,
+  onNavigate,
+}: Readonly<{
+  item: RailItem;
+  route: ParsedDashboardRoute;
+  onNavigate?: () => void;
+}>) {
+  const definition = DEFINITION_BY_KIND.get(item.kind);
+  if (!definition) return null;
+  return (
+    <a
+      className="pc-mobile-nav__item"
+      href={definition.href}
+      aria-current={navigationIsCurrent(definition, route) ? 'page' : undefined}
+      onClick={onNavigate}
+    >
+      <PcIcon name={item.icon} size={16} />
+      <span>{definition.label}</span>
+    </a>
+  );
+}
+
+function MobileNavigation({
+  product,
+  route,
+  operateAvailable,
+}: Readonly<{
+  product: DashboardProduct;
+  route: ParsedDashboardRoute;
+  operateAvailable: boolean;
+}>) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const primary =
+    product === 'operate'
+      ? (OPERATE_SECTIONS[0]?.items.slice(0, 3) ?? [])
+      : (PLANNING_SECTIONS[0]?.items.slice(0, 3) ?? []);
+  const secondary =
+    product === 'operate'
+      ? [
+          ...(OPERATE_SECTIONS[0]?.items.slice(3) ?? []),
+          ...(OPERATE_SECTIONS[1]?.items ?? []),
+          ...REFERENCE_ITEMS,
+        ]
+      : [...(PLANNING_SECTIONS[0]?.items.slice(3) ?? []), ...REFERENCE_ITEMS];
+  const productLabel = product === 'operate' ? 'Operate' : 'Planning';
+  const alternateProduct =
+    product === 'operate'
+      ? { href: '#/overview', icon: 'list-tree' as const, label: 'Planning', unavailable: false }
+      : {
+          href: '#/operate/today',
+          icon: operateAvailable ? ('gauge' as const) : ('unplug' as const),
+          label: 'Operate',
+          unavailable: !operateAvailable,
+        };
+  return (
+    <nav className="pc-mobile-nav" aria-label={`Mobile ${productLabel} navigation`}>
+      {primary.map((item) => (
+        <MobileRailLink key={item.kind} item={item} route={route} />
+      ))}
+      <a
+        className="pc-mobile-nav__item"
+        href={alternateProduct.href}
+        data-unavailable={alternateProduct.unavailable || undefined}
+        title={
+          alternateProduct.unavailable ? 'operate — no command gateway in this build' : undefined
+        }
+      >
+        <PcIcon name={alternateProduct.icon} size={16} />
+        <span>{alternateProduct.label}</span>
+      </a>
+      <details
+        className="pc-mobile-more"
+        open={moreOpen}
+        onToggle={(event) => setMoreOpen(event.currentTarget.open)}
+      >
+        <summary className="pc-mobile-nav__item" aria-label={`More ${productLabel} destinations`}>
+          <PcIcon name="layers" size={16} />
+          <span>More</span>
+        </summary>
+        <div className="pc-mobile-more__sheet">
+          {secondary.map((item) => (
+            <MobileRailLink
+              key={item.kind}
+              item={item}
+              route={route}
+              onNavigate={() => setMoreOpen(false)}
+            />
+          ))}
+        </div>
+      </details>
+    </nav>
+  );
+}
+
 export type NavRailProps = Readonly<{
   product: DashboardProduct;
   route: ParsedDashboardRoute;
@@ -120,65 +216,73 @@ export function NavRail({ product, route, operateAvailable, onOpenPalette }: Nav
   const sections = product === 'operate' ? OPERATE_SECTIONS : PLANNING_SECTIONS;
   const operateUnavailable = !operateAvailable;
   return (
-    <nav className="pc-rail" aria-label="Dashboard navigation">
-      <div className="pc-rail__brand">
-        <span className="pc-rail__tile" aria-hidden="true">
-          P
-        </span>
-        <span className="pc-rail__wordmark">openplanr</span>
-        <PcIcon name="chevrons-up-down" size={13} color="var(--pc-text-tertiary)" />
-      </div>
-      <div className="pc-rail__products">
-        <a
-          className="pc-rail__product"
-          href="#/overview"
-          aria-current={product === 'planning' ? 'page' : undefined}
+    <>
+      <nav className="pc-rail" aria-label="Dashboard navigation">
+        <div className="pc-rail__brand">
+          <span className="pc-rail__tile" aria-hidden="true">
+            P
+          </span>
+          <span className="pc-rail__wordmark">openplanr</span>
+          <PcIcon name="chevrons-up-down" size={13} color="var(--pc-text-tertiary)" />
+        </div>
+        <div className="pc-rail__products">
+          <a
+            className="pc-rail__product"
+            href="#/overview"
+            aria-current={product === 'planning' ? 'page' : undefined}
+          >
+            <PcIcon name="list-tree" size={12} />
+            planning
+          </a>
+          <a
+            className="pc-rail__product"
+            href="#/operate/today"
+            aria-current={product === 'operate' ? 'page' : undefined}
+            data-unavailable={operateUnavailable || undefined}
+            title={operateUnavailable ? 'operate — no command gateway in this build' : 'operate'}
+          >
+            <PcIcon name={operateUnavailable ? 'unplug' : 'gauge'} size={12} />
+            operate
+          </a>
+        </div>
+        <button
+          type="button"
+          className="pc-rail__palette"
+          onClick={onOpenPalette}
+          aria-keyshortcuts="Meta+K Control+K"
         >
-          <PcIcon name="list-tree" size={12} />
-          planning
-        </a>
-        <a
-          className="pc-rail__product"
-          href="#/operate/today"
-          aria-current={product === 'operate' ? 'page' : undefined}
-          data-unavailable={operateUnavailable || undefined}
-          title={operateUnavailable ? 'operate — no command gateway in this build' : 'operate'}
-        >
-          <PcIcon name={operateUnavailable ? 'unplug' : 'gauge'} size={12} />
-          operate
-        </a>
-      </div>
-      <button
-        type="button"
-        className="pc-rail__palette"
-        onClick={onOpenPalette}
-        aria-keyshortcuts="Meta+K Control+K"
-      >
-        <PcIcon name="search" size={13} />
-        <span>Command…</span>
-        <span className="pc-rail__keys">
-          <Kbd size="sm">⌘</Kbd>
-          <Kbd size="sm">K</Kbd>
-        </span>
-      </button>
-      <div className="pc-rail__sections">
-        {sections.map((section) => (
-          <div className="pc-rail__section" key={section.label}>
-            <div className="pc-rail__label">{section.label}</div>
-            <div className="pc-rail__items">
-              {section.items.map((item) => (
-                <RailLink key={item.kind} item={item} route={route} />
-              ))}
+          <PcIcon name="search" size={13} />
+          <span>Command…</span>
+          <span className="pc-rail__keys">
+            <Kbd size="sm">⌘</Kbd>
+            <Kbd size="sm">K</Kbd>
+          </span>
+        </button>
+        <div className="pc-rail__sections">
+          {sections.map((section) => (
+            <div className="pc-rail__section" key={section.label}>
+              <div className="pc-rail__label">{section.label}</div>
+              <div className="pc-rail__items">
+                {section.items.map((item) => (
+                  <RailLink key={item.kind} item={item} route={route} />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
-      <div className="pc-rail__footer">
-        {REFERENCE_ITEMS.map((item) => (
-          <RailLink key={item.kind} item={item} route={route} />
-        ))}
-      </div>
-    </nav>
+          ))}
+        </div>
+        <div className="pc-rail__footer">
+          {REFERENCE_ITEMS.map((item) => (
+            <RailLink key={item.kind} item={item} route={route} />
+          ))}
+        </div>
+      </nav>
+      <MobileNavigation
+        key={route.kind}
+        product={product}
+        route={route}
+        operateAvailable={operateAvailable}
+      />
+    </>
   );
 }
 
@@ -256,7 +360,7 @@ export function ConnectionChip({ state }: Readonly<{ state: ConnectionState }>) 
 export function WatcherDot({ state }: Readonly<{ state: ConnectionState }>) {
   const recipe = CONNECTION_STATES[state];
   return (
-    <span className="pc-watcher">
+    <span className="pc-watcher" role="status" aria-label={recipe.dotLabel}>
       <span className="pc-watcher__dot" data-dot={recipe.dot} aria-hidden="true" />
       <span className="pc-watcher__label">{recipe.dotLabel}</span>
     </span>

@@ -72,54 +72,6 @@ planr status --project-dir /path/to/project
 
 ---
 
-## AI provider errors
-
-### "Invalid API key"
-
-Your API key is missing or incorrect. Set it with:
-
-```bash
-planr config set-key anthropic
-# or
-planr config set-key openai
-```
-
-Keys are stored in `~/.planr/credentials.json`. You can also set them via environment variables:
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-export OPENAI_API_KEY=sk-...
-```
-
-### "Rate limited"
-
-You've hit the provider's rate limit. Wait a moment and try again. The error message will indicate how long to wait.
-
-### "Could not connect to Ollama"
-
-If using Ollama, make sure it's running:
-
-```bash
-ollama serve
-```
-
-By default, Planr connects to `http://localhost:11434`. To use a different URL, set it in your config.
-
----
-
-## "AI not configured"
-
-Commands like `planr plan`, `planr refine`, and AI-powered `planr task create` require an AI provider. Set one up:
-
-```bash
-planr config set-provider    # choose anthropic, openai, or ollama
-planr config set-key         # enter your API key
-```
-
-Manual mode (no AI) is available for `planr epic create`, `planr feature create`, `planr story create`, and `planr task create --story`. `planr task create --feature` always requires AI.
-
----
-
 ## Artifact review issues
 
 ### `E_PIPELINE_NOT_INSTALLED`

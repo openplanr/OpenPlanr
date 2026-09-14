@@ -48,7 +48,7 @@
       "version": "1.25.3",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:4e12d0cfb766b0501e999490f58b822547b8e09a5f60cd5747075e047868bcce"
+      "manifestDigest": "sha256:95fed48f225c69e2e8722a99299420efaebaac52958022072a9b9efd5064a5f8"
     },
     "pipeline": {
       "package": "planr-pipeline",
@@ -135,7 +135,7 @@
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:27bacf3fa082d94550e7cb3cc26ba88e3d94e0e1cd4c58ae4c9622cd26f8444f",
+      "digest": "sha256:68739441bd2987882b8a4f2a8d23bf2e1247731aca866319660adcace1b65240",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -333,7 +333,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:039f8b36ee4ff5db9a36347c5e21054cf2bca7796e9382b815bbda3ab83ff446",
+      "digest": "sha256:6d67615036ef0c998259a362a8c25e84668b4b47f673c7fff0cc76c904fdfc73",
       "count": 1630
     }
   },

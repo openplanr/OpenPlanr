@@ -78,7 +78,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/json-schema.mjs",
       "target": "lib/protocol/json-schema.mjs",
-      "sha256": "645430d1cb37309bfaa768fcad88274e636abaea68ddfa8d58bf86762a477f60",
+      "sha256": "faaf6ba2ab151f27fb22780a6d944e14186518cd5450529ca8bd59113a75c249",
       "mode": "644"
     },
     {
@@ -126,7 +126,7 @@
     {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
-      "sha256": "27bacf3fa082d94550e7cb3cc26ba88e3d94e0e1cd4c58ae4c9622cd26f8444f",
+      "sha256": "68739441bd2987882b8a4f2a8d23bf2e1247731aca866319660adcace1b65240",
       "mode": "644"
     },
     {

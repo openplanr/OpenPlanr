@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { get } from 'node:http';
 import {
-  mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync,
+  mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync,
 } from 'node:fs';
 import { connect } from 'node:net';
 import { dirname, join } from 'node:path';
@@ -283,6 +283,85 @@ test('dashboard server: /api/graph, /api/events SSE, and reuse-if-running', asyn
   } finally {
     await dash.close();
     rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test('dashboard server: local operating reviews are bounded, paginated, and refresh without a gateway', async () => {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), 'planr-dash-local-operate-'));
+  const projectPlanrDir = join(fixtureRoot, 'project', '.planr');
+  const operateDir = join(projectPlanrDir, 'operate');
+  const cycleId = '2026-09-14-modul-events';
+  const cycleDir = join(operateDir, cycleId);
+  const unsafeDir = join(operateDir, 'unsafe-cycle');
+  mkdirSync(cycleDir, { recursive: true });
+  mkdirSync(unsafeDir, { recursive: true });
+  const firstReport = [
+    '# Operating board report — Modul events',
+    '',
+    '## Executive summary',
+    'Act now on the release path.',
+    '',
+    '## Decision queue',
+    '### D1 — P0 Verify the CRM flow',
+    '',
+    '## Action plan',
+    '| ID | Priority | Action |',
+    '|---|---|---|',
+    '| A1 | P0 | Run the smoke test |',
+    '',
+    '## Issues',
+    '- **I1 — Wrapper:** exits one after a clean validation.',
+    '',
+  ].join('\n');
+  writeFileSync(join(cycleDir, 'board-report.md'), firstReport);
+  const privateFile = join(fixtureRoot, 'private-report.md');
+  writeFileSync(privateFile, '# must never be served\nprivate-marker\n');
+  symlinkSync(privateFile, join(unsafeDir, 'board-report.md'));
+  const fixture = dashboardFixture(fixtureRoot, {}, { includeAssetDigests: true });
+  const dash = createDashboardServer({
+    staticRoot: fixture.staticRoot,
+    dashboardBuildId: fixture.manifest.buildId,
+    planrDir: projectPlanrDir,
+    watch: false,
+  });
+  try {
+    const port = await dash.listen(0, {
+      env: { ...process.env, PLANR_HOME: join(fixtureRoot, 'home') },
+    });
+    const indexResponse = await request(port, '/api/operate/local-reviews?page=1&pageSize=10');
+    assert.equal(indexResponse.status, 200);
+    assert.equal(indexResponse.headers['cache-control'], 'no-store');
+    const index = JSON.parse(indexResponse.body);
+    assert.equal(index.kind, 'local-operate-review-index');
+    assert.equal(index.readOnly, true);
+    assert.deepEqual(index.pagination, { page: 1, pageSize: 10, pageCount: 1, total: 1 });
+    assert.equal(index.items[0].cycleId, cycleId);
+    assert.equal(index.items[0].counts.decisions, 1);
+    assert.equal(index.items[0].counts.actions, 1);
+    assert.equal(index.items[0].counts.issues, 1);
+    assert.equal(indexResponse.body.includes(fixtureRoot), false);
+    assert.equal(indexResponse.body.includes('private-marker'), false);
+
+    const detailPath = `/api/operate/local-reviews/${encodeURIComponent(cycleId)}`;
+    const detailResponse = await request(port, detailPath);
+    assert.equal(detailResponse.status, 200);
+    const detail = JSON.parse(detailResponse.body);
+    assert.equal(detail.kind, 'local-operate-review');
+    assert.equal(detail.readOnly, true);
+    assert.equal(detail.item.markdown, firstReport);
+
+    const updatedReport = firstReport.replace('Act now on the release path.', 'Act now; CRM is verified.');
+    writeFileSync(join(cycleDir, 'board-report.md'), updatedReport);
+    const refreshed = JSON.parse((await request(port, detailPath)).body);
+    assert.equal(refreshed.item.markdown, updatedReport);
+
+    const malformed = await request(port, '/api/operate/local-reviews?page=1&page=2');
+    assert.equal(malformed.status, 400);
+    const traversal = await request(port, '/api/operate/local-reviews/%2e%2e');
+    assert.equal(traversal.status, 400);
+  } finally {
+    await dash.close();
+    rmSync(fixtureRoot, { recursive: true, force: true });
   }
 });
 
@@ -953,6 +1032,40 @@ test('dashboard server: bootstrap rejects duplicate and wrong-port Host before c
     } finally {
       await throwing.close();
     }
+  } finally {
+    await dash.close();
+    rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('dashboard server: every route enforces loopback Host and mutation Origin', async () => {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), 'planr-dash-global-boundary-'));
+  const fixture = dashboardFixture(fixtureRoot);
+  const dash = createDashboardServer({
+    staticRoot: fixture.staticRoot,
+    dashboardBuildId: fixture.manifest.buildId,
+    planrDir,
+    watch: false,
+  });
+  try {
+    const port = await dash.listen(0, {
+      env: { ...process.env, PLANR_HOME: join(fixtureRoot, 'home') },
+    });
+    for (const route of ['/', '/assets/main.js', '/api/graph', '/api/events']) {
+      const response = await request(port, route, { Host: 'attacker.example' });
+      assert.equal(response.status, 400, `${route} must reject a foreign Host`);
+    }
+    const hostileMutation = await rawRequest(
+      port,
+      `POST /api/graph HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nOrigin: https://attacker.example\r\nContent-Length: 0\r\nConnection: close\r\n\r\n`,
+    );
+    assert.match(hostileMutation, /^HTTP\/1\.1 400/u);
+
+    const localMutation = await rawRequest(
+      port,
+      `POST /api/graph HTTP/1.1\r\nHost: 127.0.0.1:${port}\r\nOrigin: http://127.0.0.1:${port}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n`,
+    );
+    assert.match(localMutation, /^HTTP\/1\.1 404/u);
   } finally {
     await dash.close();
     rmSync(fixtureRoot, { recursive: true, force: true });

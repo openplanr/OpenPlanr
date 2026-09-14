@@ -155,7 +155,7 @@ export interface OpenPlanrConfig {
      * agent-execution contracts (file Create/Modify/Preserve lists,
      * Type=UI|Tech, agent assignment, build/test DoD). See
      * `docs/proposals/spec-driven-mode.md` and
-     * https://github.com/openplanr/planr-pipeline for the schema.
+     * https://github.com/openplanr/OpenPlanr/tree/main/packages/protocol for the schema.
      */
     spec: string;
   };

@@ -4,11 +4,12 @@ import { describe, expect, it } from 'vitest';
 
 const roots = ['src', 'scripts', 'tests', 'docs'];
 const legacyAllowlist = new Set([
-  'scripts/create-pinned-legacy-operate-replay-proof.mjs',
+  'src/services/operate/pinned-legacy-replay-runner.ts',
   'src/services/operate/repository-read-service.ts',
   'src/services/operate/storage-layout.ts',
   'src/services/operate/storage-migration-service.ts',
   'tests/integration/operate-storage-layout.test.ts',
+  'tests/e2e/operate-migration-packed-install.test.ts',
   'tests/unit/operate-cli-contract.test.ts',
   'tests/unit/no-discarded-error-cause.test.ts',
   'src/services/pipeline-package-service.ts',

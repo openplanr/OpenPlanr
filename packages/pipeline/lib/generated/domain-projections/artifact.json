@@ -601,7 +601,7 @@
     {
       "source": "packages/artifact/lib/artifact/internal/server-util.mjs",
       "target": "lib/artifact/internal/server-util.mjs",
-      "sha256": "5152caf4c098a21317d2e43754aa8a3d19bc7fb0aa7debf2c21d02c5c008960c",
+      "sha256": "00254e3f41b2f238c80b7140b7e8b4eb275bc3a44a6d7af01e4f693bebbe6b8b",
       "mode": "644"
     },
     {

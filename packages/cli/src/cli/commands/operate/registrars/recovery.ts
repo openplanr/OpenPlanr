@@ -2,6 +2,7 @@ import type { Command } from 'commander';
 import {
   migrateProjectOperateStorage,
   readOperateStorageStatus,
+  rollbackProjectOperateStorage,
 } from '../../../../services/operate/storage-migration-service.js';
 import { display } from '../../../../utils/logger.js';
 import type { OperateCommandOptions } from '../input.js';
@@ -27,7 +28,7 @@ export function registerRecoveryCommands(
           display.line(`Legacy sources: ${status.legacySources.join(', ')}`);
         }
         if (status.pinnedVerifierRequired) {
-          display.line('The pinned pre-change replay verifier will run before migration.');
+          display.line('The bundled offline compatibility verifier will run before migration.');
         }
         display.line(`Next action: ${status.nextAction}`);
       }
@@ -35,7 +36,7 @@ export function registerRecoveryCommands(
   recovery
     .command('migrate-storage')
     .description(
-      'Run the pinned pre-change verifier, archive legacy storage, and start clean state',
+      'Replay-verify legacy v2 storage and activate its exact state with rollback custody',
     )
     .option('--json')
     .action(async (options: OperateCommandOptions) => {
@@ -45,10 +46,20 @@ export function registerRecoveryCommands(
       else {
         display.line(
           receipt.migrated
-            ? `Archived ${receipt.archives.length} legacy Operate store(s).`
+            ? `Activated verified legacy state; retained ${receipt.archives.length} rollback archive(s).`
             : 'Operate storage already uses the neutral layout.',
         );
       }
+    });
+  recovery
+    .command('rollback-storage')
+    .description('Restore the verified pre-migration v2 Store and preserve forward state')
+    .option('--json')
+    .action(async (options: OperateCommandOptions) => {
+      const receipt = await rollbackProjectOperateStorage(program.opts().projectDir as string);
+      if (options.json) display.line(JSON.stringify(receipt));
+      else
+        display.line(`Restored ${receipt.restoredSource}; preserved ${receipt.forwardSnapshotId}.`);
     });
   recovery
     .command('inspect')

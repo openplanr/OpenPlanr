@@ -667,31 +667,20 @@ describe('validated semantic proposal application', () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(fetcher.mock.calls.every((call) => (call[1].method ?? 'GET') === 'GET')).toBe(true);
   });
-  it('keeps layout-only changes outside canonical source and preserves its exact bytes', async () => {
+  it('rejects layout proposals until renderer and publication consumers are wired', async () => {
     await installRuntimeFixture();
     const original = await readFile(path.join(root, 'diagram.json'), 'utf8');
     const bindingId = await publish();
     mockProposal(proposal([{ op: 'set-layout', targetId: 'item-a', x: 120, y: 80 }] as never));
-    expect((await applyCompanyProposal(root, bindingId, 'proposal1')).status).toBe(
-      'applied-locally',
-    );
+    await expect(applyCompanyProposal(root, bindingId, 'proposal1')).rejects.toMatchObject({
+      code: 'E_COMPANY_AUTHORING',
+    });
     expect(await readFile(path.join(root, 'diagram.json'), 'utf8')).toBe(original);
-    expect((await applyCompanyProposal(root, bindingId, 'proposal1')).status).toBe(
-      'already-applied-locally',
-    );
-    expect(await readFile(path.join(root, 'diagram.json'), 'utf8')).toBe(original);
-    expect(
-      JSON.parse(
-        await readFile(path.join(root, '.local/company/applications/proposal1.json'), 'utf8'),
-      ).remoteAcknowledgement,
-    ).toBe('pending');
-    expect(
-      JSON.parse(
-        await readFile(path.join(root, '.local/company/layouts', bindingId + '.json'), 'utf8'),
-      ).layout,
-    ).toEqual({ 'item-a': { x: 120, y: 80 } });
+    await expect(
+      readFile(path.join(root, '.local/company/applications/proposal1.json')),
+    ).rejects.toMatchObject({ code: 'ENOENT' });
   });
-  for (const interruption of ['source', 'layout', 'receipt'] as const) {
+  for (const interruption of ['source', 'receipt'] as const) {
     it(`recovers an interruption before ${interruption} persistence without fetching or applying twice`, async () => {
       await installRuntimeFixture();
       const original = await readFile(path.join(root, 'diagram.json'), 'utf8');
@@ -699,15 +688,12 @@ describe('validated semantic proposal application', () => {
       mockProposal(
         proposal([
           { op: 'set-field', targetId: 'item-a', field: 'label', value: 'Applicant' },
-          { op: 'set-layout', targetId: 'item-a', x: 120, y: 80 },
         ] as never),
       );
       const stopAt =
         interruption === 'source'
           ? path.join(root, 'diagram.json')
-          : interruption === 'layout'
-            ? path.join(root, '.local/company/layouts', bindingId + '.json')
-            : path.join(root, '.local/company/applications/proposal1.json');
+          : path.join(root, '.local/company/applications/proposal1.json');
       diskFault.beforeRename = async (_source, target) => {
         if (target === stopAt) throw new Error('simulated interrupted persistence');
       };
@@ -745,11 +731,6 @@ describe('validated semantic proposal application', () => {
       expect(
         JSON.parse(await readFile(path.join(root, 'diagram.json'), 'utf8')).nodes[0].label,
       ).toBe('Applicant');
-      expect(
-        JSON.parse(
-          await readFile(path.join(root, '.local/company/layouts', bindingId + '.json'), 'utf8'),
-        ).layout,
-      ).toEqual({ 'item-a': { x: 120, y: 80 } });
       const receipt = JSON.parse(
         await readFile(path.join(root, '.local/company/applications/proposal1.json'), 'utf8'),
       );
@@ -766,14 +747,13 @@ describe('validated semantic proposal application', () => {
       );
     });
   }
-  for (const edited of ['source', 'layout'] as const) {
+  for (const edited of ['source'] as const) {
     it(`preserves unrelated ${edited} edits after interruption instead of recovering over them`, async () => {
       await installRuntimeFixture();
       const bindingId = await publish();
       mockProposal(
         proposal([
           { op: 'set-field', targetId: 'item-a', field: 'label', value: 'Applicant' },
-          { op: 'set-layout', targetId: 'item-a', x: 120, y: 80 },
         ] as never),
       );
       diskFault.beforeRename = async (_source, target) => {
@@ -784,18 +764,8 @@ describe('validated semantic proposal application', () => {
         'receipt interrupted',
       );
       diskFault.beforeRename = undefined;
-      const target =
-        edited === 'source'
-          ? path.join(root, 'diagram.json')
-          : path.join(root, '.local/company/layouts', bindingId + '.json');
-      const userContent =
-        edited === 'source'
-          ? '{"subsequentUserEdit":true}'
-          : JSON.stringify({
-              schemaVersion: '1.0.0',
-              bindingId,
-              layout: { 'item-a': { x: 900, y: 300 } },
-            });
+      const target = path.join(root, 'diagram.json');
+      const userContent = '{"subsequentUserEdit":true}';
       await writeFile(target, userContent);
       const fetcher = vi.fn();
       vi.stubGlobal('fetch', fetcher);
@@ -847,31 +817,18 @@ describe('validated semantic proposal application', () => {
     fetcher.mockResolvedValueOnce(json({ artifact, headRevisionId: 'r1' }));
     expect((await previewCompanyPush(root, bindingId)).status).toBe('preview');
   });
-  it('recovers layout-only application without rewriting source and rejects altered staging', async () => {
+  it('does not stage rejected layout-only proposals', async () => {
     await installRuntimeFixture();
     const original = await readFile(path.join(root, 'diagram.json'), 'utf8');
     const bindingId = await publish();
     mockProposal(proposal([{ op: 'set-layout', targetId: 'item-a', x: 120, y: 80 }] as never));
-    diskFault.beforeRename = async (_source, target) => {
-      if (target === path.join(root, '.local/company/applications/proposal1.json'))
-        throw new Error('receipt interrupted');
-    };
-    await expect(applyCompanyProposal(root, bindingId, 'proposal1')).rejects.toThrow(
-      'receipt interrupted',
-    );
-    diskFault.beforeRename = undefined;
-    const staging = path.join(root, '.local/company/application-content/proposal1.json');
-    await writeFile(staging, '{}');
-    await expect(applyCompanyProposal(root, bindingId, 'proposal1')).rejects.toThrow(
-      'digest check',
-    );
+    await expect(applyCompanyProposal(root, bindingId, 'proposal1')).rejects.toMatchObject({
+      code: 'E_COMPANY_AUTHORING',
+    });
     expect(await readFile(path.join(root, 'diagram.json'), 'utf8')).toBe(original);
-    await writeFile(staging, original);
-    vi.stubGlobal('fetch', vi.fn());
-    expect((await applyCompanyProposal(root, bindingId, 'proposal1')).status).toBe(
-      'applied-locally',
-    );
-    expect(await readFile(path.join(root, 'diagram.json'), 'utf8')).toBe(original);
+    await expect(
+      readFile(path.join(root, '.local/company/application-content/proposal1.json')),
+    ).rejects.toMatchObject({ code: 'ENOENT' });
   });
   it('reclaims a terminated binding owner but never a live owner', async () => {
     await installRuntimeFixture();

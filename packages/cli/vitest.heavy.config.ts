@@ -10,6 +10,7 @@ export default defineConfig({
       // against it — the SPEC-006 Trap-A proof that `planr upgrade status`
       // reads the actual installed CLI version, not an in-memory fixture.
       'tests/e2e/upgrade-packed-install.test.ts',
+      'tests/e2e/operate-migration-packed-install.test.ts',
       'tests/dashboard/operate-actions-recovery.test.tsx',
     ],
     fileParallelism: false,

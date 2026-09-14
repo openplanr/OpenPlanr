@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
   chmod,
+  cp,
   lstat,
   mkdir,
   readdir,
@@ -12,14 +13,14 @@ import {
 } from 'node:fs/promises';
 import path from 'node:path';
 import { assertOperatePathCustody } from './path-custody.js';
-import { runPinnedLegacyReplayVerifier } from './pinned-legacy-replay-runner.js';
+import { withOperateProjectTransaction } from './project-transaction-lock.js';
 import { OperateStore } from './store.js';
 
 const PRIVATE_IGNORE_ENTRIES = ['/state/', '/packets/', '/archive/'] as const;
 const LEGACY_OPERATE_DIRECTORY = 'operate-v2';
 const MIGRATION_PROGRESS_FILE = '.migration-in-progress.json';
-const PRE_SPEC_024_PRODUCT_VERSION = '1.25.3+git.7859e52dd89f';
-const PRE_SPEC_024_PIPELINE_VERSION = '0.42.0+git.d6bcb5574aaf';
+const ROLLBACK_PROGRESS_PATTERN = /^\.operate-rollback-([a-f0-9]{32})\.json$/u;
+const BUNDLED_LEGACY_VERIFIER_VERSION = '1.0.0';
 
 export type OperateStorageInspection = Readonly<{
   status: 'empty' | 'ready' | 'migration-required' | 'interrupted';
@@ -42,6 +43,16 @@ export type OperateStorageMigrationReceipt = Readonly<{
   migrated: boolean;
   archives: readonly OperateStorageArchive[];
   verificationProofHash: string | null;
+  activatedState: TreeDigest | null;
+  rollbackArchiveId: string | null;
+}>;
+
+export type OperateStorageRollbackReceipt = Readonly<{
+  kind: 'operate-storage-rollback-receipt';
+  restoredSource: 'operate-v2';
+  restoredTree: TreeDigest;
+  restoredLegacyTree: TreeDigest | null;
+  forwardSnapshotId: string;
 }>;
 
 export type OperateLegacyReplayProof = Readonly<{
@@ -58,10 +69,8 @@ export type OperateLegacyReplayProof = Readonly<{
     artifactHashes: readonly Readonly<{ artifactId: string; rawHash: string }>[];
   }>;
   verifier: Readonly<{
-    product: 'openplanr';
-    productVersion: string;
-    pipelinePackage: 'planr-pipeline';
-    pipelineVersion: string;
+    implementation: 'bundled-compatibility-reader';
+    verifierVersion: '1.0.0';
   }>;
   verifiedAt: string;
   receiptHash: string;
@@ -81,6 +90,15 @@ type MigrationProgress = Readonly<{
     fileCount: number;
     archiveId: string;
   }>[];
+}>;
+
+type RollbackProgress = Readonly<{
+  kind: 'operate-storage-rollback-progress';
+  schemaVersion: '1.0.0';
+  nonce: string;
+  forwardSnapshotId: string;
+  v2: OperateStorageArchive;
+  neutral: OperateStorageArchive | null;
 }>;
 
 async function projectFingerprint(projectDir: string): Promise<string> {
@@ -108,15 +126,12 @@ function legacyProofPayload(proof: Omit<OperateLegacyReplayProof, 'receiptHash'>
       })),
     },
     verifier: {
-      product: proof.verifier.product,
-      productVersion: proof.verifier.productVersion,
-      pipelinePackage: proof.verifier.pipelinePackage,
-      pipelineVersion: proof.verifier.pipelineVersion,
+      implementation: proof.verifier.implementation,
+      verifierVersion: proof.verifier.verifierVersion,
     },
     verifiedAt: proof.verifiedAt,
   });
 }
-
 function legacyProofHash(proof: Omit<OperateLegacyReplayProof, 'receiptHash'>): string {
   return `sha256:${createHash('sha256').update(legacyProofPayload(proof)).digest('hex')}`;
 }
@@ -387,11 +402,9 @@ async function assertLegacyReplayProof(
       ? eventHead.hash !== null
       : typeof eventHead.hash !== 'string' || !/^sha256:[a-f0-9]{64}$/u.test(eventHead.hash)) ||
     JSON.stringify(Object.keys(verifier).sort()) !==
-      JSON.stringify(['pipelinePackage', 'pipelineVersion', 'product', 'productVersion']) ||
-    verifier.product !== 'openplanr' ||
-    verifier.pipelinePackage !== 'planr-pipeline' ||
-    verifier.productVersion !== PRE_SPEC_024_PRODUCT_VERSION ||
-    verifier.pipelineVersion !== PRE_SPEC_024_PIPELINE_VERSION ||
+      JSON.stringify(['implementation', 'verifierVersion']) ||
+    verifier.implementation !== 'bundled-compatibility-reader' ||
+    verifier.verifierVersion !== BUNDLED_LEGACY_VERIFIER_VERSION ||
     typeof proof.verifiedAt !== 'string' ||
     Number.isNaN(Date.parse(proof.verifiedAt)) ||
     typeof proof.receiptHash !== 'string' ||
@@ -439,10 +452,8 @@ async function assertLegacyReplayProof(
       artifactHashes: Object.freeze(normalizedArtifacts),
     }),
     verifier: Object.freeze({
-      product: 'openplanr' as const,
-      productVersion: verifier.productVersion as string,
-      pipelinePackage: 'planr-pipeline' as const,
-      pipelineVersion: verifier.pipelineVersion as string,
+      implementation: 'bundled-compatibility-reader' as const,
+      verifierVersion: BUNDLED_LEGACY_VERIFIER_VERSION,
     }),
     verifiedAt: proof.verifiedAt as string,
   });
@@ -472,12 +483,9 @@ export async function verifyOperateLegacyReplayProof(
     requireDirectory: true,
   });
   if (!(await isDirectory(legacyRoot))) {
-    throw Object.assign(
-      new Error('No legacy Operate 2.0 Store is available for proof verification.'),
-      {
-        code: 'OPERATE_STORE_INCOMPATIBLE',
-      },
-    );
+    throw Object.assign(new Error('No legacy Operate Store is available for proof verification.'), {
+      code: 'OPERATE_STORE_INCOMPATIBLE',
+    });
   }
   const proof = await assertLegacyReplayProof(projectDir, value, await digestTree(legacyRoot));
   await new OperateStore(projectDir, { root: legacyRoot }).verifyReplayProofCustody(proof.replay);
@@ -624,13 +632,43 @@ async function recoverPreActivationMigration(
       code: 'OPERATE_STORE_INCOMPATIBLE',
     });
   }
+  const progress = await readMigrationProgress(projectDir, staging);
+  if (!progress) {
+    const sourceV2 = path.join(planrRoot, LEGACY_OPERATE_DIRECTORY);
+    if (parkedEntries.length === 0 && (await exists(sourceV2))) {
+      const recoveryRoot = path.join(planrRoot, 'operate-recovery');
+      const preservedStage = path.join(recoveryRoot, `abandoned-stage-${nonce}`);
+      await assertOperatePathCustody(projectDir, recoveryRoot, {
+        code: 'OPERATE_STORE_INCOMPATIBLE',
+        message: 'Operate migration recovery cannot traverse symbolic links.',
+      });
+      await mkdir(recoveryRoot, { recursive: true, mode: 0o700 });
+      await assertOperatePathCustody(projectDir, recoveryRoot, {
+        code: 'OPERATE_STORE_INCOMPATIBLE',
+        message: 'Operate migration recovery cannot traverse symbolic links.',
+        requireDirectory: true,
+      });
+      if (await exists(preservedStage)) {
+        throw Object.assign(new Error('Interrupted Operate staging recovery already exists.'), {
+          code: 'OPERATE_STORE_INCOMPATIBLE',
+        });
+      }
+      await rename(staging, preservedStage);
+      return await migrateOperateStorageUnlocked(projectDir, { onArchive });
+    }
+    throw Object.assign(
+      new Error(
+        'Interrupted Operate staging has no progress receipt and cannot be resumed safely.',
+      ),
+      { code: 'OPERATE_STORE_CORRUPT' },
+    );
+  }
   if (!(await isCurrentLayout(staging))) {
     throw Object.assign(new Error('Interrupted Operate staging layout is incomplete.'), {
       code: 'OPERATE_STORE_CORRUPT',
     });
   }
-  const progress = await readMigrationProgress(projectDir, staging);
-  if (!progress || progress.nonce !== nonce) {
+  if (progress.nonce !== nonce) {
     throw Object.assign(new Error('Interrupted Operate staging progress is missing or foreign.'), {
       code: 'OPERATE_STORE_CORRUPT',
     });
@@ -748,6 +786,9 @@ async function completeInterruptedMigration(
     migrated: true,
     archives: Object.freeze(archives),
     verificationProofHash: progress.verificationProofHash,
+    activatedState: await digestTree(path.join(root, 'state')),
+    rollbackArchiveId:
+      progress.sources.find(({ source }) => source === 'operate-v2')?.archiveId ?? null,
   });
   await atomicWrite(
     projectDir,
@@ -776,10 +817,16 @@ export async function inspectOperateStorage(projectDir: string): Promise<Operate
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
     throw error;
   });
+  const rollbackMarkers = planrEntries.filter((entry) =>
+    ROLLBACK_PROGRESS_PATTERN.test(entry.name),
+  );
   const interruptedCandidates = planrEntries.filter(
     (entry) =>
       /^\.operate-stage-[a-f0-9-]+$/u.test(entry.name) ||
-      /^\.operate-legacy-[a-f0-9-]+$/u.test(entry.name),
+      /^\.operate-legacy-[a-f0-9-]+$/u.test(entry.name) ||
+      /^\.operate-v2-restore-[a-f0-9-]+$/u.test(entry.name) ||
+      /^\.operate-neutral-restore-[a-f0-9-]+$/u.test(entry.name) ||
+      (rollbackMarkers.length > 0 && /^\.operate-forward-[a-f0-9-]+$/u.test(entry.name)),
   );
   for (const entry of interruptedCandidates) {
     await assertOperatePathCustody(projectDir, path.join(planrRoot, entry.name), {
@@ -788,7 +835,16 @@ export async function inspectOperateStorage(projectDir: string): Promise<Operate
       requireDirectory: true,
     });
   }
-  const interruptedEntries = interruptedCandidates.map((entry) => entry.name).sort();
+  for (const entry of rollbackMarkers) {
+    await assertOperatePathCustody(projectDir, path.join(planrRoot, entry.name), {
+      code: 'OPERATE_STORE_INCOMPATIBLE',
+      message: 'Interrupted Operate rollback progress cannot traverse symbolic links.',
+      requireFile: true,
+    });
+  }
+  const interruptedEntries = [...interruptedCandidates, ...rollbackMarkers]
+    .map((entry) => entry.name)
+    .sort();
   if (progress) interruptedEntries.push(`operate/archive/${MIGRATION_PROGRESS_FILE}`);
   return Object.freeze({
     status:
@@ -823,7 +879,7 @@ export async function ensureOperateStorageLayout(projectDir: string): Promise<st
   return inspection.root;
 }
 
-export async function migrateOperateStorage(
+async function migrateOperateStorageUnlocked(
   projectDir: string,
   options: {
     now?: Date;
@@ -847,6 +903,8 @@ export async function migrateOperateStorage(
       migrated: false,
       archives: [],
       verificationProofHash: null,
+      activatedState: null,
+      rollbackArchiveId: null,
     });
   }
   if (inspection.status === 'empty') {
@@ -856,7 +914,18 @@ export async function migrateOperateStorage(
       migrated: false,
       archives: [],
       verificationProofHash: null,
+      activatedState: null,
+      rollbackArchiveId: null,
     });
+  }
+
+  if (!inspection.legacyV2Root) {
+    throw Object.assign(
+      new Error(
+        'This legacy Operate layout has no bundled deterministic converter. Its bytes were preserved unchanged.',
+      ),
+      { code: 'OPERATE_STORE_INCOMPATIBLE' },
+    );
   }
 
   const sources = (
@@ -886,20 +955,47 @@ export async function migrateOperateStorage(
     ])
   ).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
-  let verificationProofHash: string | null = null;
-  if (inspection.legacyV2Root) {
-    const proof = await verifyOperateLegacyReplayProof(
-      projectDir,
-      await runPinnedLegacyReplayVerifier(projectDir),
-    );
-    verificationProofHash = proof.receiptHash;
-  }
+  const { runPinnedLegacyReplayVerifier } = await import('./pinned-legacy-replay-runner.js');
+  const verificationProof = await verifyOperateLegacyReplayProof(
+    projectDir,
+    await runPinnedLegacyReplayVerifier(projectDir),
+  );
+  const verificationProofHash = verificationProof.receiptHash;
 
   const planrRoot = path.dirname(inspection.root);
   const nonce = randomUUID().replaceAll('-', '');
   const staging = path.join(planrRoot, `.operate-stage-${nonce}`);
   const parkedNeutral = path.join(planrRoot, `.operate-legacy-${nonce}`);
   await createLayout(projectDir, staging);
+  const legacyV2Source = sources.find(({ source }) => source === 'operate-v2');
+  if (!legacyV2Source) {
+    throw Object.assign(
+      new Error('The verified legacy Operate Store disappeared before staging.'),
+      {
+        code: 'OPERATE_STORE_CORRUPT',
+      },
+    );
+  }
+  await rm(path.join(staging, 'state'), { recursive: true, force: true });
+  await cp(legacyV2Source.path, path.join(staging, 'state'), {
+    recursive: true,
+    errorOnExist: true,
+    preserveTimestamps: true,
+  });
+  await privatizeTree(path.join(staging, 'state'));
+  const activatedState = await digestTree(path.join(staging, 'state'));
+  if (
+    activatedState.hash !== legacyV2Source.digest.hash ||
+    activatedState.fileCount !== legacyV2Source.digest.fileCount
+  ) {
+    await rm(staging, { recursive: true, force: true });
+    throw Object.assign(new Error('The staged Operate state does not match the verified source.'), {
+      code: 'OPERATE_STORE_CORRUPT',
+    });
+  }
+  await new OperateStore(projectDir, {
+    root: path.join(staging, 'state'),
+  }).verifyReplayProofCustody(verificationProof.replay);
   const stamp = (options.now ?? new Date()).toISOString().replaceAll(':', '-');
   const progress: MigrationProgress = Object.freeze({
     kind: 'operate-storage-migration-progress',
@@ -965,6 +1061,8 @@ export async function migrateOperateStorage(
       migrated: true,
       archives: Object.freeze(archives),
       verificationProofHash,
+      activatedState,
+      rollbackArchiveId: `${stamp}-operate-v2`,
     });
     await atomicWrite(
       projectDir,
@@ -987,4 +1085,493 @@ export async function migrateOperateStorage(
     if (await exists(staging)) await rm(staging, { recursive: true, force: true });
     throw error;
   }
+}
+
+export async function migrateOperateStorage(
+  projectDir: string,
+  options: {
+    now?: Date;
+    onArchive?: (archive: OperateStorageArchive) => Promise<void>;
+    afterStagePrepared?: () => Promise<void>;
+    afterParkNeutral?: () => Promise<void>;
+    afterActivate?: () => Promise<void>;
+  } = {},
+): Promise<OperateStorageMigrationReceipt> {
+  return await withOperateProjectTransaction(
+    projectDir,
+    async () => await migrateOperateStorageUnlocked(projectDir, options),
+  );
+}
+
+function parsedMigrationReceipt(value: unknown): OperateStorageMigrationReceipt | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+  const receipt = value as Record<string, unknown>;
+  const activatedState =
+    receipt.activatedState !== null &&
+    typeof receipt.activatedState === 'object' &&
+    !Array.isArray(receipt.activatedState)
+      ? (receipt.activatedState as Record<string, unknown>)
+      : null;
+  const archiveRecords = Array.isArray(receipt.archives)
+    ? receipt.archives.map((entry) =>
+        entry !== null && typeof entry === 'object' && !Array.isArray(entry)
+          ? (entry as Record<string, unknown>)
+          : null,
+      )
+    : [];
+  const seenSources = new Set<string>();
+  if (
+    receipt.kind !== 'operate-storage-migration-receipt' ||
+    receipt.migrated !== true ||
+    archiveRecords.length < 1 ||
+    archiveRecords.length > 2 ||
+    archiveRecords.some((archive) => {
+      if (
+        archive === null ||
+        !['operate-v2', 'operate-legacy'].includes(String(archive.source)) ||
+        seenSources.has(String(archive.source)) ||
+        typeof archive.archiveId !== 'string' ||
+        !/^[0-9T.Z-]+-operate-(?:v2|legacy)$/u.test(archive.archiveId) ||
+        typeof archive.hash !== 'string' ||
+        !/^sha256:[a-f0-9]{64}$/u.test(archive.hash) ||
+        !Number.isSafeInteger(archive.fileCount) ||
+        Number(archive.fileCount) < 0
+      ) {
+        return true;
+      }
+      seenSources.add(String(archive.source));
+      return false;
+    }) ||
+    typeof receipt.rollbackArchiveId !== 'string' ||
+    !seenSources.has('operate-v2') ||
+    activatedState === null ||
+    typeof activatedState.hash !== 'string' ||
+    !/^sha256:[a-f0-9]{64}$/u.test(activatedState.hash) ||
+    !Number.isSafeInteger(activatedState.fileCount) ||
+    Number(activatedState.fileCount) < 0 ||
+    (receipt.verificationProofHash !== null &&
+      (typeof receipt.verificationProofHash !== 'string' ||
+        !/^sha256:[a-f0-9]{64}$/u.test(receipt.verificationProofHash)))
+  ) {
+    return null;
+  }
+  return receipt as unknown as OperateStorageMigrationReceipt;
+}
+
+function assertRollbackProgress(value: unknown): RollbackProgress {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw Object.assign(new Error('Interrupted Operate rollback progress is invalid.'), {
+      code: 'OPERATE_STORE_CORRUPT',
+    });
+  }
+  const progress = value as Record<string, unknown>;
+  const archive = (
+    candidate: unknown,
+    expectedSource: OperateStorageArchive['source'],
+  ): OperateStorageArchive => {
+    if (candidate === null || typeof candidate !== 'object' || Array.isArray(candidate)) {
+      throw Object.assign(new Error('Interrupted Operate rollback archive is invalid.'), {
+        code: 'OPERATE_STORE_CORRUPT',
+      });
+    }
+    const record = candidate as Record<string, unknown>;
+    if (
+      record.source !== expectedSource ||
+      typeof record.archiveId !== 'string' ||
+      !/^[0-9T.Z-]+-operate-(?:v2|legacy)$/u.test(record.archiveId) ||
+      typeof record.hash !== 'string' ||
+      !/^sha256:[a-f0-9]{64}$/u.test(record.hash) ||
+      !Number.isSafeInteger(record.fileCount) ||
+      Number(record.fileCount) < 0
+    ) {
+      throw Object.assign(new Error('Interrupted Operate rollback archive custody is invalid.'), {
+        code: 'OPERATE_STORE_CORRUPT',
+      });
+    }
+    return Object.freeze({
+      source: expectedSource,
+      archiveId: record.archiveId,
+      hash: record.hash,
+      fileCount: Number(record.fileCount),
+    });
+  };
+  if (
+    progress.kind !== 'operate-storage-rollback-progress' ||
+    progress.schemaVersion !== '1.0.0' ||
+    typeof progress.nonce !== 'string' ||
+    !/^[a-f0-9]{32}$/u.test(progress.nonce) ||
+    progress.forwardSnapshotId !== `.operate-forward-${progress.nonce}`
+  ) {
+    throw Object.assign(new Error('Interrupted Operate rollback progress is invalid.'), {
+      code: 'OPERATE_STORE_CORRUPT',
+    });
+  }
+  return Object.freeze({
+    kind: 'operate-storage-rollback-progress',
+    schemaVersion: '1.0.0',
+    nonce: progress.nonce,
+    forwardSnapshotId: progress.forwardSnapshotId,
+    v2: archive(progress.v2, 'operate-v2'),
+    neutral: progress.neutral === null ? null : archive(progress.neutral, 'operate-legacy'),
+  });
+}
+
+async function readRollbackProgress(projectDir: string): Promise<{
+  path: string;
+  value: RollbackProgress;
+} | null> {
+  const planrRoot = path.join(path.resolve(projectDir), '.planr');
+  const entries = await readdir(planrRoot, { withFileTypes: true }).catch((error) => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw error;
+  });
+  const names = entries
+    .map((entry) => entry.name)
+    .filter((name) => ROLLBACK_PROGRESS_PATTERN.test(name));
+  if (names.length > 1) {
+    throw Object.assign(new Error('Multiple interrupted Operate rollbacks are ambiguous.'), {
+      code: 'OPERATE_STORE_INCOMPATIBLE',
+    });
+  }
+  if (names.length === 0) return null;
+  const progressPath = path.join(planrRoot, names[0]);
+  await assertOperatePathCustody(projectDir, progressPath, {
+    code: 'OPERATE_STORE_INCOMPATIBLE',
+    message: 'Operate rollback progress cannot traverse symbolic links.',
+    requireFile: true,
+  });
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(progressPath, 'utf8')) as unknown;
+  } catch (error) {
+    if (!(error instanceof SyntaxError)) throw error;
+    throw Object.assign(new Error('Interrupted Operate rollback progress is not valid JSON.'), {
+      code: 'OPERATE_STORE_CORRUPT',
+    });
+  }
+  const value = assertRollbackProgress(parsed);
+  if (path.basename(progressPath) !== `.operate-rollback-${value.nonce}.json`) {
+    throw Object.assign(new Error('Interrupted Operate rollback identity is invalid.'), {
+      code: 'OPERATE_STORE_CORRUPT',
+    });
+  }
+  return Object.freeze({ path: progressPath, value });
+}
+
+type RollbackHooks = Readonly<{
+  afterProgress?: () => Promise<void>;
+  afterRestoreV2?: () => Promise<void>;
+  afterParkForward?: () => Promise<void>;
+  afterRestoreNeutral?: () => Promise<void>;
+}>;
+
+async function completeInterruptedRollback(
+  projectDir: string,
+  progressPath: string,
+  progress: RollbackProgress,
+  hooks: RollbackHooks = {},
+): Promise<OperateStorageRollbackReceipt> {
+  const planrRoot = path.join(path.resolve(projectDir), '.planr');
+  const root = path.join(planrRoot, 'operate');
+  const legacyRoot = path.join(planrRoot, LEGACY_OPERATE_DIRECTORY);
+  const stagedV2 = path.join(planrRoot, `.operate-v2-restore-${progress.nonce}`);
+  const stagedNeutral = path.join(planrRoot, `.operate-neutral-restore-${progress.nonce}`);
+  const forwardSnapshot = path.join(planrRoot, progress.forwardSnapshotId);
+  for (const candidate of [root, legacyRoot, stagedV2, stagedNeutral, forwardSnapshot]) {
+    await assertOperatePathCustody(projectDir, candidate, {
+      code: 'OPERATE_STORE_INCOMPATIBLE',
+      message: 'Operate rollback custody cannot traverse symbolic links.',
+    });
+  }
+  const assertDigest = async (
+    target: string,
+    expected: OperateStorageArchive,
+    label: string,
+  ): Promise<TreeDigest> => {
+    const digest = await digestTree(target);
+    if (digest.hash !== expected.hash || digest.fileCount !== expected.fileCount) {
+      throw Object.assign(new Error(`${label} no longer matches rollback custody.`), {
+        code: 'OPERATE_STORE_CORRUPT',
+      });
+    }
+    return digest;
+  };
+
+  if (!(await exists(legacyRoot))) {
+    if (!(await exists(stagedV2))) {
+      throw Object.assign(new Error('Interrupted legacy Operate rollback custody is missing.'), {
+        code: 'OPERATE_STORE_CORRUPT',
+      });
+    }
+    await assertDigest(stagedV2, progress.v2, 'Staged legacy Operate state');
+    await rename(stagedV2, legacyRoot);
+    await hooks.afterRestoreV2?.();
+  }
+  const restoredTree = await assertDigest(legacyRoot, progress.v2, 'Restored legacy Operate state');
+
+  if (!(await exists(forwardSnapshot))) {
+    if (!(await exists(root)) || !(await isCurrentLayout(root))) {
+      throw Object.assign(
+        new Error('Interrupted Operate forward state is missing or incomplete.'),
+        {
+          code: 'OPERATE_STORE_CORRUPT',
+        },
+      );
+    }
+    await rename(root, forwardSnapshot);
+    await hooks.afterParkForward?.();
+  }
+  if (!(await isCurrentLayout(forwardSnapshot))) {
+    throw Object.assign(new Error('Preserved Operate forward state is incomplete.'), {
+      code: 'OPERATE_STORE_CORRUPT',
+    });
+  }
+
+  let restoredLegacyTree: TreeDigest | null = null;
+  if (progress.neutral) {
+    if (!(await exists(root))) {
+      if (!(await exists(stagedNeutral))) {
+        throw Object.assign(new Error('Interrupted neutral Operate rollback custody is missing.'), {
+          code: 'OPERATE_STORE_CORRUPT',
+        });
+      }
+      await assertDigest(stagedNeutral, progress.neutral, 'Staged neutral Operate state');
+      await rename(stagedNeutral, root);
+      await hooks.afterRestoreNeutral?.();
+    }
+    restoredLegacyTree = await assertDigest(
+      root,
+      progress.neutral,
+      'Restored neutral Operate state',
+    );
+  } else if (await exists(root)) {
+    throw Object.assign(new Error('Operate rollback produced an unexpected neutral state.'), {
+      code: 'OPERATE_STORE_CORRUPT',
+    });
+  }
+
+  await rm(progressPath);
+  return Object.freeze({
+    kind: 'operate-storage-rollback-receipt',
+    restoredSource: 'operate-v2',
+    restoredTree,
+    restoredLegacyTree,
+    forwardSnapshotId: progress.forwardSnapshotId,
+  });
+}
+
+/**
+ * Restores the pre-migration Store without deleting the activated Store.
+ * The forward state is moved intact to a private recovery snapshot so rollback
+ * remains lossless even after the new runtime has accepted later writes.
+ */
+async function rollbackOperateStorageMigrationUnlocked(
+  projectDir: string,
+  hooks: RollbackHooks = {},
+): Promise<OperateStorageRollbackReceipt> {
+  const interrupted = await readRollbackProgress(projectDir);
+  if (interrupted) {
+    return await completeInterruptedRollback(
+      projectDir,
+      interrupted.path,
+      interrupted.value,
+      hooks,
+    );
+  }
+  const planrRoot = path.join(path.resolve(projectDir), '.planr');
+  const orphanedRestoreEntries = (
+    await readdir(planrRoot, { withFileTypes: true }).catch((error) => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw error;
+    })
+  )
+    .filter(
+      (entry) =>
+        entry.isDirectory() &&
+        (/^\.operate-v2-restore-[a-f0-9]{32}$/u.test(entry.name) ||
+          /^\.operate-neutral-restore-[a-f0-9]{32}$/u.test(entry.name)),
+    )
+    .map((entry) => path.join(planrRoot, entry.name));
+  if (orphanedRestoreEntries.length > 0) {
+    const root = path.join(planrRoot, 'operate');
+    const legacyRoot = path.join(planrRoot, LEGACY_OPERATE_DIRECTORY);
+    if (!(await isCurrentLayout(root)) || (await exists(legacyRoot))) {
+      throw Object.assign(new Error('Orphaned Operate rollback staging is ambiguous.'), {
+        code: 'OPERATE_STORE_INCOMPATIBLE',
+      });
+    }
+    const recoveryRoot = path.join(planrRoot, 'operate-recovery');
+    await assertOperatePathCustody(projectDir, recoveryRoot, {
+      code: 'OPERATE_STORE_INCOMPATIBLE',
+      message: 'Operate rollback recovery cannot traverse symbolic links.',
+    });
+    await mkdir(recoveryRoot, { recursive: true, mode: 0o700 });
+    for (const entry of orphanedRestoreEntries) {
+      await assertOperatePathCustody(projectDir, entry, {
+        code: 'OPERATE_STORE_INCOMPATIBLE',
+        message: 'Orphaned Operate rollback staging cannot traverse symbolic links.',
+        requireDirectory: true,
+      });
+      const preserved = path.join(recoveryRoot, `abandoned-${path.basename(entry)}`);
+      if (await exists(preserved)) {
+        throw Object.assign(new Error('Operate rollback recovery custody already exists.'), {
+          code: 'OPERATE_STORE_INCOMPATIBLE',
+        });
+      }
+      await rename(entry, preserved);
+    }
+  }
+  const inspection = await inspectOperateStorage(projectDir);
+  if (inspection.status !== 'ready') {
+    throw Object.assign(new Error('Operate storage rollback requires one ready migrated layout.'), {
+      code: 'OPERATE_STORE_INCOMPATIBLE',
+    });
+  }
+  const receiptNames = (await readdir(path.join(inspection.root, 'archive')))
+    .filter((entry) => entry.endsWith('-migration-receipt.json'))
+    .sort()
+    .reverse();
+  let receipt: OperateStorageMigrationReceipt | null = null;
+  for (const name of receiptNames) {
+    try {
+      receipt = parsedMigrationReceipt(
+        JSON.parse(await readFile(path.join(inspection.root, 'archive', name), 'utf8')) as unknown,
+      );
+    } catch (error) {
+      if (error instanceof SyntaxError) continue;
+      throw error;
+    }
+    if (receipt) break;
+  }
+  if (!receipt?.rollbackArchiveId) {
+    throw Object.assign(new Error('No verified Operate migration rollback archive is available.'), {
+      code: 'OPERATE_STORE_INCOMPATIBLE',
+    });
+  }
+  const expectedArchive = receipt.archives.find(
+    ({ source, archiveId }) => source === 'operate-v2' && archiveId === receipt?.rollbackArchiveId,
+  );
+  if (!expectedArchive) {
+    throw Object.assign(
+      new Error('The Operate migration receipt has no matching rollback custody.'),
+      {
+        code: 'OPERATE_STORE_CORRUPT',
+      },
+    );
+  }
+  const legacyRoot = path.join(planrRoot, LEGACY_OPERATE_DIRECTORY);
+  if (await exists(legacyRoot)) {
+    throw Object.assign(
+      new Error('A legacy version 2 Operate Store already exists; rollback is ambiguous.'),
+      {
+        code: 'OPERATE_STORE_INCOMPATIBLE',
+      },
+    );
+  }
+  const archiveRoot = path.join(inspection.root, 'archive', receipt.rollbackArchiveId);
+  const neutralArchive = receipt.archives.find(({ source }) => source === 'operate-legacy') ?? null;
+  const neutralArchiveRoot = neutralArchive
+    ? path.join(inspection.root, 'archive', neutralArchive.archiveId)
+    : null;
+  await assertOperatePathCustody(projectDir, archiveRoot, {
+    code: 'OPERATE_STORE_INCOMPATIBLE',
+    message: 'Operate rollback custody cannot traverse symbolic links.',
+    requireDirectory: true,
+  });
+  const archiveDigest = await digestTree(archiveRoot);
+  if (
+    archiveDigest.hash !== expectedArchive.hash ||
+    archiveDigest.fileCount !== expectedArchive.fileCount
+  ) {
+    throw Object.assign(new Error('The Operate rollback archive no longer matches its receipt.'), {
+      code: 'OPERATE_STORE_CORRUPT',
+    });
+  }
+  if (neutralArchiveRoot) {
+    await assertOperatePathCustody(projectDir, neutralArchiveRoot, {
+      code: 'OPERATE_STORE_INCOMPATIBLE',
+      message: 'Neutral Operate rollback custody cannot traverse symbolic links.',
+      requireDirectory: true,
+    });
+    const neutralDigest = await digestTree(neutralArchiveRoot);
+    if (
+      neutralDigest.hash !== neutralArchive?.hash ||
+      neutralDigest.fileCount !== neutralArchive.fileCount
+    ) {
+      throw Object.assign(
+        new Error('The neutral Operate rollback archive no longer matches its receipt.'),
+        { code: 'OPERATE_STORE_CORRUPT' },
+      );
+    }
+  }
+  const nonce = randomUUID().replaceAll('-', '');
+  const stagedLegacy = path.join(planrRoot, `.operate-v2-restore-${nonce}`);
+  const stagedNeutral = path.join(planrRoot, `.operate-neutral-restore-${nonce}`);
+  const forwardSnapshotId = `.operate-forward-${nonce}`;
+  try {
+    await cp(archiveRoot, stagedLegacy, {
+      recursive: true,
+      errorOnExist: true,
+      preserveTimestamps: true,
+    });
+    await privatizeTree(stagedLegacy);
+    const restoredTree = await digestTree(stagedLegacy);
+    if (
+      restoredTree.hash !== archiveDigest.hash ||
+      restoredTree.fileCount !== archiveDigest.fileCount
+    ) {
+      throw Object.assign(
+        new Error('The staged Operate rollback copy failed custody verification.'),
+        {
+          code: 'OPERATE_STORE_CORRUPT',
+        },
+      );
+    }
+    if (neutralArchiveRoot && neutralArchive) {
+      await cp(neutralArchiveRoot, stagedNeutral, {
+        recursive: true,
+        errorOnExist: true,
+        preserveTimestamps: true,
+      });
+      await privatizeTree(stagedNeutral);
+      const stagedNeutralDigest = await digestTree(stagedNeutral);
+      if (
+        stagedNeutralDigest.hash !== neutralArchive.hash ||
+        stagedNeutralDigest.fileCount !== neutralArchive.fileCount
+      ) {
+        throw Object.assign(
+          new Error('The staged neutral Operate rollback copy failed custody verification.'),
+          { code: 'OPERATE_STORE_CORRUPT' },
+        );
+      }
+    }
+    const progress = Object.freeze({
+      kind: 'operate-storage-rollback-progress' as const,
+      schemaVersion: '1.0.0' as const,
+      nonce,
+      forwardSnapshotId,
+      v2: expectedArchive,
+      neutral: neutralArchive,
+    });
+    const progressPath = path.join(planrRoot, `.operate-rollback-${nonce}.json`);
+    await atomicWrite(projectDir, progressPath, `${JSON.stringify(progress, null, 2)}\n`);
+    await hooks.afterProgress?.();
+    return await completeInterruptedRollback(projectDir, progressPath, progress, hooks);
+  } catch (error) {
+    if (!(await exists(path.join(planrRoot, `.operate-rollback-${nonce}.json`)))) {
+      await rm(stagedLegacy, { recursive: true, force: true });
+      await rm(stagedNeutral, { recursive: true, force: true });
+    }
+    throw error;
+  }
+}
+
+export async function rollbackOperateStorageMigration(
+  projectDir: string,
+  hooks: RollbackHooks = {},
+): Promise<OperateStorageRollbackReceipt> {
+  return await withOperateProjectTransaction(
+    projectDir,
+    async () => await rollbackOperateStorageMigrationUnlocked(projectDir, hooks),
+  );
 }

@@ -9,6 +9,7 @@ const dispatchMock = vi.hoisted(() => vi.fn());
 const domainListMock = vi.hoisted(() => vi.fn());
 const storageStatusMock = vi.hoisted(() => vi.fn());
 const storageMigrationMock = vi.hoisted(() => vi.fn());
+const storageRollbackMock = vi.hoisted(() => vi.fn());
 const temporaryRoots: string[] = [];
 const originalStdin = Object.getOwnPropertyDescriptor(process, 'stdin');
 
@@ -21,6 +22,7 @@ vi.mock('../../src/services/operate/domain-catalog-service.js', () => ({
 vi.mock('../../src/services/operate/storage-migration-service.js', () => ({
   readOperateStorageStatus: storageStatusMock,
   migrateProjectOperateStorage: storageMigrationMock,
+  rollbackProjectOperateStorage: storageRollbackMock,
 }));
 
 import type {
@@ -140,6 +142,16 @@ describe('Operate assignment CLI contract', () => {
       kind: 'operate-storage-migration-receipt',
       migrated: true,
       archives: [{ archiveId: 'archive-one', source: 'operate-v2' }],
+      verificationProofHash: `sha256:${'a'.repeat(64)}`,
+      activatedState: { hash: `sha256:${'b'.repeat(64)}`, fileCount: 4 },
+      rollbackArchiveId: 'archive-one',
+    });
+    storageRollbackMock.mockReset();
+    storageRollbackMock.mockResolvedValue({
+      kind: 'operate-storage-rollback-receipt',
+      restoredSource: 'operate-v2',
+      restoredTree: { hash: `sha256:${'b'.repeat(64)}`, fileCount: 4 },
+      forwardSnapshotId: '.operate-forward-fixture',
     });
   });
 
@@ -565,9 +577,18 @@ describe('Operate assignment CLI contract', () => {
       'migrate-storage',
       '--json',
     ]);
+    await program().parseAsync([
+      'node',
+      'planr',
+      'operate',
+      'recovery',
+      'rollback-storage',
+      '--json',
+    ]);
 
     expect(storageStatusMock).toHaveBeenCalledWith('/tmp/openplanr-cli-contract');
     expect(storageMigrationMock).toHaveBeenCalledWith('/tmp/openplanr-cli-contract');
+    expect(storageRollbackMock).toHaveBeenCalledWith('/tmp/openplanr-cli-contract');
   });
 });
 

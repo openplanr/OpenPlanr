@@ -28,7 +28,7 @@ test('preservation catalog verifies from committed data without custody evidence
     assert.equal(result.status, 'PASS');
     assert.equal(result.custodyEvidenceRequired, false);
     assert.deepEqual(result.coverage.outputClasses, ['A', 'B', 'C', 'D']);
-    assert.equal(result.coverage.pathRecords, 2237);
+    assert.equal(result.coverage.pathRecords, 2100);
     assert.equal(result.coverage.unmappedPaths, 0);
   } finally {
     if (previousEvidence === undefined) delete process.env.OPENPLANR_SOURCE_EVIDENCE;
@@ -67,10 +67,10 @@ test('root generation graph requires preservation after every other derived asse
 
 test('redacted path inventory accounts for all pinned sources and included overlay bytes', async () => {
   const inventory = JSON.parse(await readFile(INVENTORY, 'utf8'));
-  assert.equal(inventory.sources.length, 5);
-  assert.equal(inventory.coverage.cutoffTrackedPaths, 2124);
+  assert.equal(inventory.sources.length, 4);
+  assert.equal(inventory.coverage.cutoffTrackedPaths, 1987);
   assert.equal(inventory.coverage.includedOpenPlanrOverlayPaths, 618);
-  assert.equal(inventory.pathMappings.length, 2237);
+  assert.equal(inventory.pathMappings.length, 2100);
   assert.equal(
     Object.values(inventory.coverage.dispositionCounts).reduce((sum, count) => sum + count, 0),
     inventory.pathMappings.length,
@@ -81,6 +81,7 @@ test('redacted path inventory accounts for all pinned sources and included overl
   assert.doesNotMatch(serialized, /\/Users\//);
   assert.doesNotMatch(serialized, /\/private\/tmp\//);
   assert.doesNotMatch(serialized, /source-evidence\.json/);
+  assert.doesNotMatch(serialized, /openplanr-web/);
 });
 
 test('surface catalog locks every required compatibility floor', async () => {

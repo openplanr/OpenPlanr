@@ -5,7 +5,7 @@ import { registerDashboardCommand } from '../dashboard.js';
 import { registerDiagramCommand } from '../diagram/index.js';
 import { registerLandCommand } from '../land.js';
 import { registerLinearCommand } from '../linear.js';
-import { registerOperateCommand } from '../operate-utilities.js';
+import { registerOperateCommand } from '../operate.js';
 
 export function registerOperationsCommands(program: Command): void {
   registerArtifactCommand(program);
