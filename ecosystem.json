@@ -55,7 +55,7 @@
       "version": "0.44.0",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:1552e826f65c55a0b32912761ac3881f01bf9bfac3a5d75274a6c0f85a09302e"
+      "manifestDigest": "sha256:0787377ea64b4090160874232a806e83ce8b12e100ec76e6e1863c21db6d2c57"
     },
     "protocol": {
       "package": "@openplanr/protocol",

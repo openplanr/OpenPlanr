@@ -82,11 +82,19 @@ function measureLoadedRoute(current, binding, input, samples = 7) {
   return { response, ms: measurements[Math.floor(measurements.length / 2)] };
 }
 
+function collectRetainedHeap() {
+  assert.equal(typeof globalThis.gc, 'function', 'run this memory certification with --expose-gc');
+  // V8 may need more than one major collection to clear weak references and
+  // temporary validation graphs created by the preceding operation.
+  for (let pass = 0; pass < 3; pass += 1) globalThis.gc();
+  return process.memoryUsage().heapUsed;
+}
+
 test('10,000-Event Today, update, navigation, replay, and memory stay within product budgets', {
   timeout: 30_000,
 }, (context) => {
   const temporaryRoot = mkdtempSync(join(tmpdir(), 'openplanr-operate-projection-'));
-  const beforeHeap = process.memoryUsage().heapUsed;
+  const beforeHeap = collectRetainedHeap();
   const source = tenThousandEventView();
   try {
     const projectionPath = join(temporaryRoot, 'operate', 'projections', 'experience-view.json');
@@ -133,7 +141,7 @@ test('10,000-Event Today, update, navigation, replay, and memory stay within pro
     const history = replayRoute.response;
     const cycles = cycleRoute.response;
     const refreshed = updateRoute.response;
-    const heapDeltaBytes = Math.max(0, process.memoryUsage().heapUsed - beforeHeap);
+    const heapDeltaBytes = Math.max(0, collectRetainedHeap() - beforeHeap);
 
     context.diagnostic(JSON.stringify({
       projectionReadMs,
