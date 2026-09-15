@@ -21,5 +21,12 @@ SVG accessibility. Canonical fixtures, progressive references, and searchable
 script-free galleries are generated under `fixtures/diagram/`,
 `references/diagram/`, and `gallery/diagram/`.
 
+Layered graph layouts wrap long layer sequences, including large strongly
+connected components, into bands along the cross axis once the flow axis
+exceeds 4,096 units, balancing the scene toward a square. Any scene wider or
+taller than `MAX_DIAGRAM_SCENE_EXTENT` (16,384 units) fails with
+`E_DIAGRAM_RESOURCE_BUDGET_EXCEEDED` instead of emitting an artifact that
+viewers and the rasterizer reject.
+
 Run `npm run generate:diagram` after changing a diagram definition and
 `npm run check:diagram && npm test` before integration.

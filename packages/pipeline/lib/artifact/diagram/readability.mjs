@@ -1,5 +1,6 @@
 import { withDocumentDigest } from '../../protocol/canonical-json.mjs';
 
+import { DIAGRAM_ERROR_CODES, diagramFail } from './errors.mjs';
 import { assertDiagramDocument } from './model.mjs';
 import { getGrammar } from './registry.mjs';
 
@@ -17,19 +18,37 @@ function splitStrategy(document) {
   return ['by-subgraph', primaryItems(document)];
 }
 
-function buildSplitPlan(document, limit) {
-  const [strategy, preferred] = splitStrategy(document);
-  const allIds = primaryItems(document).map(({ id }) => id);
-  let groups;
-  if (['by-group', 'by-lane'].includes(strategy)) {
-    groups = preferred.map(({ id, label, members }) => ({ id, title: label, itemIds: members }));
-  } else {
-    groups = [];
-    for (let index = 0; index < allIds.length; index += limit) {
-      const number = Math.floor(index / limit) + 1;
-      groups.push({ id: `panel-${number}`, title: `${document.title} — panel ${number}`, itemIds: allIds.slice(index, index + limit) });
-    }
+// Protocol bounds a split plan to 2..32 panels of at most 256 items each.
+const MAX_SPLIT_PANELS = 32;
+const MAX_SPLIT_PANEL_ITEMS = 256;
+
+function chunkPanels(document, allIds, limit) {
+  if (allIds.length > MAX_SPLIT_PANELS * MAX_SPLIT_PANEL_ITEMS) {
+    diagramFail(DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED, 'Diagram exceeds the largest expressible split plan.', {
+      primaryItems: allIds.length,
+      maximum: MAX_SPLIT_PANELS * MAX_SPLIT_PANEL_ITEMS,
+      repair: 'Split the source into multiple named diagrams before rendering.',
+    });
   }
+  // Panels grow past the detail budget only when the panel cap forces it.
+  const size = Math.min(MAX_SPLIT_PANEL_ITEMS, Math.max(limit, Math.ceil(allIds.length / MAX_SPLIT_PANELS)));
+  const panels = [];
+  for (let index = 0; index < allIds.length; index += size) {
+    const number = Math.floor(index / size) + 1;
+    panels.push({ id: `panel-${number}`, title: `${document.title} — panel ${number}`, itemIds: allIds.slice(index, index + size) });
+  }
+  return panels;
+}
+
+function buildSplitPlan(document, limit) {
+  const [preferredStrategy, preferred] = splitStrategy(document);
+  const allIds = primaryItems(document).map(({ id }) => id);
+  const containersFit = ['by-group', 'by-lane'].includes(preferredStrategy) && preferred.length <= MAX_SPLIT_PANELS
+    && preferred.every(({ members }) => members.length > 0 && members.length <= MAX_SPLIT_PANEL_ITEMS);
+  const strategy = containersFit || preferredStrategy === 'by-sequence' ? preferredStrategy : 'by-subgraph';
+  let groups = containersFit
+    ? preferred.map(({ id, label, members }) => ({ id, title: label, itemIds: members }))
+    : chunkPanels(document, allIds, limit);
   if (groups.length < 2) {
     const midpoint = Math.max(1, Math.ceil(allIds.length / 2));
     groups = [

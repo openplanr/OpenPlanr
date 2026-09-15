@@ -1,6 +1,6 @@
 export const DIAGRAM_RENDERER = Object.freeze({
   id: 'openplanr-semantic-svg-resvg',
-  version: '1.1.0',
+  version: '1.2.0',
 });
 
 export const DIAGRAM_THEME = Object.freeze({
@@ -18,3 +18,5 @@ export const DIAGRAM_THEME = Object.freeze({
 
 export const RASTER_SCALE = 2;
 export const MAX_VISIBLE_LABEL_CHARACTERS = 2_048;
+/** Largest scene width or height, in SVG user units, that viewers and the rasterizer accept. */
+export const MAX_DIAGRAM_SCENE_EXTENT = 16_384;

@@ -26,4 +26,4 @@ export {
 } from './png.mjs';
 export { createFidelityReport, createRenderQualityReport } from './reports.mjs';
 export { escapeXml, renderDiagramSvg } from './svg.mjs';
-export { DIAGRAM_RENDERER, DIAGRAM_THEME, RASTER_SCALE } from './theme.mjs';
+export { DIAGRAM_RENDERER, DIAGRAM_THEME, MAX_DIAGRAM_SCENE_EXTENT, RASTER_SCALE } from './theme.mjs';

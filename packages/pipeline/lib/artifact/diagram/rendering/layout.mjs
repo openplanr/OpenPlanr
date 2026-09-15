@@ -1,9 +1,15 @@
 import { DIAGRAM_ERROR_CODES, diagramFail } from '../errors.mjs';
-import { MAX_VISIBLE_LABEL_CHARACTERS } from './theme.mjs';
+import { MAX_DIAGRAM_SCENE_EXTENT, MAX_VISIBLE_LABEL_CHARACTERS, RASTER_SCALE } from './theme.mjs';
 
 const PADDING = 64;
 const COLUMN_GAP = 88;
 const ROW_GAP = 88;
+// A band gap holds two routing lanes plus a two-line relation label.
+const BAND_GAP = 144;
+// Layered graphs longer than this along the flow axis wrap into bands.
+const BAND_WRAP_EXTENT = 4_096;
+// The longest band still rasterizes at RASTER_SCALE inside the viewport budget.
+const MAX_BAND_EXTENT = MAX_DIAGRAM_SCENE_EXTENT / RASTER_SCALE;
 const MIN_NODE_WIDTH = 220;
 const MAX_NODE_WIDTH = 420;
 const LINE_HEIGHT = 22;
@@ -198,6 +204,32 @@ function graphRanks(items, relations) {
   return ranks;
 }
 
+// Every strongly connected component occupies one layer per member, so a long
+// chain or a large cycle would otherwise stretch the flow axis without bound.
+// Bands wrap the layer sequence along the cross axis; the band length balances
+// the scene toward a square so it stays inside the viewport budget.
+function wrapLayers(layers, primarySize, crossSize, primaryGap) {
+  const total = layers.reduce((sum, layer, index) => sum + primarySize(layer) + (index === 0 ? 0 : primaryGap), 0);
+  if (total <= BAND_WRAP_EXTENT) return [layers];
+  const bandCross = Math.max(0, ...layers.map(crossSize)) + BAND_GAP;
+  const target = Math.min(MAX_BAND_EXTENT, Math.max(BAND_WRAP_EXTENT, Math.sqrt(total * bandCross)));
+  const bands = [];
+  let band = [];
+  let extent = 0;
+  for (const layer of layers) {
+    const size = primarySize(layer);
+    if (band.length > 0 && extent + primaryGap + size > target) {
+      bands.push(band);
+      band = [];
+      extent = 0;
+    }
+    extent += (band.length === 0 ? 0 : primaryGap) + size;
+    band.push(layer);
+  }
+  bands.push(band);
+  return bands;
+}
+
 function layeredGraphLayout(items, relations, direction) {
   const horizontal = ['left-right', 'right-left'].includes(direction);
   const ranks = graphRanks(items, relations);
@@ -207,27 +239,36 @@ function layeredGraphLayout(items, relations, direction) {
     if (!layers.has(rank)) layers.set(rank, []);
     layers.get(rank).push(createBox(item));
   }
-  const orderedLayers = [...layers.entries()].sort(([left], [right]) => left - right);
+  const orderedLayers = [...layers.entries()].sort(([left], [right]) => left - right).map(([, boxes]) => boxes);
   const layerCrossSize = (boxes) => boxes.reduce((total, box, index) => total + (horizontal ? box.height : box.width)
     + (index === 0 ? 0 : horizontal ? ROW_GAP : COLUMN_GAP), 0);
-  const maximumCrossSize = Math.max(0, ...orderedLayers.map(([, boxes]) => layerCrossSize(boxes)));
+  const layerPrimarySize = (boxes) => Math.max(0, ...boxes.map((box) => horizontal ? box.width : box.height));
+  const primaryGap = horizontal ? COLUMN_GAP : ROW_GAP;
+  const bands = wrapLayers(orderedLayers, layerPrimarySize, layerCrossSize, primaryGap);
   const raw = [];
-  let primary = PADDING;
-  for (const [, boxes] of orderedLayers) {
-    const primarySize = Math.max(0, ...boxes.map((box) => horizontal ? box.width : box.height));
-    let cross = PADDING + (maximumCrossSize - layerCrossSize(boxes)) / 2;
-    for (const box of boxes) {
-      raw.push({ ...box, x: horizontal ? primary : cross, y: horizontal ? cross : primary });
-      cross += (horizontal ? box.height + ROW_GAP : box.width + COLUMN_GAP);
+  const bandById = new Map();
+  let bandStart = PADDING;
+  for (const [bandIndex, bandLayers] of bands.entries()) {
+    const bandCrossSize = Math.max(0, ...bandLayers.map(layerCrossSize));
+    let primary = PADDING;
+    for (const boxes of bandLayers) {
+      let cross = bandStart + (bandCrossSize - layerCrossSize(boxes)) / 2;
+      for (const box of boxes) {
+        raw.push({ ...box, x: horizontal ? primary : cross, y: horizontal ? cross : primary });
+        bandById.set(box.id, bandIndex);
+        cross += (horizontal ? box.height + ROW_GAP : box.width + COLUMN_GAP);
+      }
+      primary += layerPrimarySize(boxes) + primaryGap;
     }
-    primary += primarySize + (horizontal ? COLUMN_GAP : ROW_GAP);
+    bandStart += bandCrossSize + BAND_GAP;
   }
   const rawWidth = Math.max(640, ...raw.map((box) => box.x + box.width + PADDING));
   const rawHeight = Math.max(360, ...raw.map((box) => box.y + box.height + PADDING));
   const boxes = raw.map((box) => direction === 'right-left'
     ? { ...box, x: rawWidth - box.x - box.width }
     : direction === 'bottom-up' ? { ...box, y: rawHeight - box.y - box.height } : box);
-  return { boxes, width: rawWidth, height: rawHeight };
+  const bounds = bands.map((_, bandIndex) => geometryBounds(boxes.filter((box) => bandById.get(box.id) === bandIndex)));
+  return { boxes, width: rawWidth, height: rawHeight, bands: { horizontal, byId: bandById, bounds } };
 }
 
 function segmentEntersBox([x1, y1], [x2, y2], box) {
@@ -270,8 +311,21 @@ function routeLength(points) {
     + Math.abs(x - points[index][0]) + Math.abs(y - points[index][1]), 0);
 }
 
-function graphEdges(document, boxes) {
+function selectRoute(candidates, boxes, source, target, allocatedLabelBounds) {
+  // Candidates are ordered by length before validation so a graph with many
+  // relations never validates every lane when the shortest one already fits.
+  return [...candidates].sort((left, right) => routeLength(left.points) - routeLength(right.points))
+    .find(({ points, bounds }) => !routeHitsBoxes(points, boxes, source, target)
+      && (!bounds || (!rectangleOverlapsBox(bounds, boxes)
+        && !allocatedLabelBounds.some((allocated) => rectanglesOverlap(bounds, allocated))))) ?? candidates[0];
+}
+
+function graphEdges(document, boxes, bands = null) {
   const boxIndex = new Map(boxes.map((box) => [box.id, box]));
+  const sceneBounds = geometryBounds(boxes);
+  const bandOf = (box) => bands?.byId.get(box.id) ?? 0;
+  const bandBounds = (box) => bands?.bounds[bandOf(box)] ?? sceneBounds;
+  const sameBand = (left, right) => bandOf(left) === bandOf(right);
   const pairs = new Map();
   for (const relation of document.relations) {
     if (!boxIndex.has(relation.from) || !boxIndex.has(relation.to)) continue;
@@ -286,7 +340,10 @@ function graphEdges(document, boxes) {
   for (const relations of pairs.values()) {
     const first = boxIndex.get(relations[0].from);
     const second = boxIndex.get(relations[0].to);
-    const horizontal = Math.abs(first.x + first.width / 2 - second.x - second.width / 2)
+    // Bands stack along the cross axis, so a relation between bands leaves
+    // through the band gap perpendicular to the flow direction.
+    const crossBand = bands !== null && !sameBand(first, second);
+    const horizontal = crossBand ? !bands.horizontal : Math.abs(first.x + first.width / 2 - second.x - second.width / 2)
       >= Math.abs(first.y + first.height / 2 - second.y - second.height / 2);
     const gap = horizontal
       ? Math.max(first.x, second.x) - Math.min(first.x + first.width, second.x + second.width)
@@ -323,8 +380,10 @@ function graphEdges(document, boxes) {
         const x2 = target.x + (sign > 0 ? 0 : target.width);
         const y1 = source.y + source.height / 2 + fraction * (source.height - 24);
         const y2 = target.y + target.height / 2 + fraction * (target.height - 24);
-        const sourceLayer = boxes.filter((box) => Math.abs(box.x - source.x) < 0.5);
-        const targetLayer = boxes.filter((box) => Math.abs(box.x - target.x) < 0.5);
+        const sourceLayer = crossBand ? [bandBounds(source)]
+          : boxes.filter((box) => sameBand(box, source) && Math.abs(box.x - source.x) < 0.5);
+        const targetLayer = crossBand ? [bandBounds(target)]
+          : boxes.filter((box) => sameBand(box, target) && Math.abs(box.x - target.x) < 0.5);
         const sourceLane = sign > 0
           ? Math.max(...sourceLayer.map((box) => box.x + box.width)) + 28
           : Math.min(...sourceLayer.map((box) => box.x)) - 28;
@@ -332,12 +391,16 @@ function graphEdges(document, boxes) {
           ? Math.min(...targetLayer.map((box) => box.x)) - 28
           : Math.max(...targetLayer.map((box) => box.x + box.width)) + 28;
         const middle = (source.y + source.height / 2 + target.y + target.height / 2) / 2 + slot * spacing;
-        const top = Math.min(...boxes.map((box) => box.y)) - 48;
-        const bottom = Math.max(...boxes.map((box) => box.y + box.height)) + label.height + 48;
-        const lanes = [middle, ...Array.from({ length: allocatedLabelBounds.length + 2 }, (_, laneIndex) => [
+        // Detours prefer the gap around the source band before the scene edge.
+        const outer = (bounds) => [bounds.y - 48, bounds.y + bounds.height + label.height + 48];
+        const [top, bottom] = outer(crossBand ? sceneBounds : bandBounds(source));
+        const [sceneTop, sceneBottom] = outer(sceneBounds);
+        const lanes = [...new Set([middle, ...Array.from({ length: allocatedLabelBounds.length + 2 }, (_, laneIndex) => [
           top - laneIndex * spacing,
           bottom + laneIndex * spacing,
-        ]).flat()];
+          sceneTop - laneIndex * spacing,
+          sceneBottom + laneIndex * spacing,
+        ]).flat()])];
         const candidates = lanes.map((lane) => {
           const points = [[x1, y1], [sourceLane, y1], [sourceLane, lane],
             [targetLane, lane], [targetLane, y2], [x2, y2]];
@@ -345,10 +408,7 @@ function graphEdges(document, boxes) {
             y: lane - label.height - 8, width: label.width, height: label.height } : null;
           return { lane, points, bounds };
         });
-        const candidate = candidates.filter(({ points, bounds }) => !routeHitsBoxes(points, boxes, source, target)
-          && (!bounds || (!rectangleOverlapsBox(bounds, boxes)
-            && !allocatedLabelBounds.some((allocated) => rectanglesOverlap(bounds, allocated)))))
-          .sort((left, right) => routeLength(left.points) - routeLength(right.points))[0] ?? candidates[0];
+        const candidate = selectRoute(candidates, boxes, source, target, allocatedLabelBounds);
         routePoints = candidate.points;
         labelX = (sourceLane + targetLane) / 2;
         labelY = candidate.lane - label.height - 8;
@@ -358,8 +418,10 @@ function graphEdges(document, boxes) {
         const x2 = target.x + target.width / 2 + fraction * (target.width - 24);
         const y1 = source.y + (sign > 0 ? source.height : 0);
         const y2 = target.y + (sign > 0 ? 0 : target.height);
-        const sourceLayer = boxes.filter((box) => Math.abs(box.y - source.y) < 0.5);
-        const targetLayer = boxes.filter((box) => Math.abs(box.y - target.y) < 0.5);
+        const sourceLayer = crossBand ? [bandBounds(source)]
+          : boxes.filter((box) => sameBand(box, source) && Math.abs(box.y - source.y) < 0.5);
+        const targetLayer = crossBand ? [bandBounds(target)]
+          : boxes.filter((box) => sameBand(box, target) && Math.abs(box.y - target.y) < 0.5);
         const sourceLane = sign > 0
           ? Math.max(...sourceLayer.map((box) => box.y + box.height)) + 28
           : Math.min(...sourceLayer.map((box) => box.y)) - 28;
@@ -367,12 +429,15 @@ function graphEdges(document, boxes) {
           ? Math.min(...targetLayer.map((box) => box.y)) - 28
           : Math.max(...targetLayer.map((box) => box.y + box.height)) + 28;
         const middle = (source.x + source.width / 2 + target.x + target.width / 2) / 2 + slot * spacing;
-        const left = Math.min(...boxes.map((box) => box.x)) - label.width / 2 - 48;
-        const right = Math.max(...boxes.map((box) => box.x + box.width)) + label.width / 2 + 48;
-        const lanes = [middle, ...Array.from({ length: allocatedLabelBounds.length + 2 }, (_, laneIndex) => [
+        const outer = (bounds) => [bounds.x - label.width / 2 - 48, bounds.x + bounds.width + label.width / 2 + 48];
+        const [left, right] = outer(crossBand ? sceneBounds : bandBounds(source));
+        const [sceneLeft, sceneRight] = outer(sceneBounds);
+        const lanes = [...new Set([middle, ...Array.from({ length: allocatedLabelBounds.length + 2 }, (_, laneIndex) => [
           left - laneIndex * spacing,
           right + laneIndex * spacing,
-        ]).flat()];
+          sceneLeft - laneIndex * spacing,
+          sceneRight + laneIndex * spacing,
+        ]).flat()])];
         const candidates = lanes.map((lane) => {
           const points = [[x1, y1], [x1, sourceLane], [lane, sourceLane],
             [lane, targetLane], [x2, targetLane], [x2, y2]];
@@ -380,10 +445,7 @@ function graphEdges(document, boxes) {
             y: (sourceLane + targetLane) / 2 - label.height / 2, width: label.width, height: label.height } : null;
           return { lane, points, bounds };
         });
-        const candidate = candidates.filter(({ points, bounds }) => !routeHitsBoxes(points, boxes, source, target)
-          && (!bounds || (!rectangleOverlapsBox(bounds, boxes)
-            && !allocatedLabelBounds.some((allocated) => rectanglesOverlap(bounds, allocated)))))
-          .sort((leftValue, rightValue) => routeLength(leftValue.points) - routeLength(rightValue.points))[0] ?? candidates[0];
+        const candidate = selectRoute(candidates, boxes, source, target, allocatedLabelBounds);
         routePoints = candidate.points;
         labelX = candidate.lane;
         labelY = (sourceLane + targetLane) / 2 - label.height / 2;
@@ -642,9 +704,22 @@ function sequenceLayout(document) {
   };
 }
 
+// Viewers and the rasterizer reject larger viewports, so an oversized scene
+// fails here with a repair instead of producing unusable artifacts.
+function assertSceneExtent(width, height) {
+  if (width <= MAX_DIAGRAM_SCENE_EXTENT && height <= MAX_DIAGRAM_SCENE_EXTENT) return;
+  diagramFail(DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED, 'Diagram layout exceeds the renderer viewport budget.', {
+    width,
+    height,
+    maximum: MAX_DIAGRAM_SCENE_EXTENT,
+    repair: 'Split the source into multiple named diagrams before rendering.',
+  });
+}
+
 export function layoutDiagram(document) {
   if (document.grammar.id === 'sequence') {
     const scene = sequenceLayout(document);
+    assertSceneExtent(scene.width, scene.height);
     return Object.freeze({
       ...scene,
       boxes: Object.freeze(scene.boxes.map(Object.freeze)),
@@ -670,7 +745,7 @@ export function layoutDiagram(document) {
   for (const box of layout.boxes) {
     box.emphasis = document.emphasis.find(({ targetId }) => targetId === box.id)?.level ?? null;
   }
-  const edges = graphEdges(document, layout.boxes);
+  const edges = graphEdges(document, layout.boxes, layout.bands ?? null);
   const groups = graphGroups(document, layout.boxes, edges);
   const notes = graphNotes(document, layout.boxes, edges, groups);
   const labelBounds = edges.flatMap((edge) => edge.labelBounds ? [edge.labelBounds] : []);
@@ -691,6 +766,7 @@ export function layoutDiagram(document) {
     if (Number.isFinite(note.anchorX)) note.anchorX += dx;
     if (Number.isFinite(note.anchorY)) note.anchorY += dy;
   }
+  assertSceneExtent(Math.ceil(width), Math.ceil(height));
   return Object.freeze({
     kind: 'graph',
     width: Math.ceil(width),

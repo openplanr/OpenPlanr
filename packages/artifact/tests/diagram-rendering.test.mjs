@@ -25,10 +25,16 @@ import {
   importMermaid,
   inspectDiagram,
   inspectDiagramPng,
+  layoutDiagram,
+  MAX_DIAGRAM_SCENE_EXTENT,
+  planDiagramQuality,
   renderDiagram,
   renderDiagramOutputs,
+  renderDiagramSvg,
   rerenderDiagram,
+  validateDiagramSvg,
 } from '../lib/artifact/diagram/index.mjs';
+import { prepareDiagramSvg } from '../lib/artifact/ui/diagram-svg.mjs';
 import {
   cleanupAbandonedDiagramStages,
   recoverInterruptedDiagramPromotion,
@@ -101,6 +107,32 @@ function dependencyFlowchart(direction) {
     accessibility: {
       title: 'Engineering change dependency flow',
       description: 'A change request progresses through parallel engineering work, review, deployment, and observation.',
+      readingOrder: [...nodes.map(({ id }) => id), ...relations.map(({ id }) => id)],
+    },
+  });
+}
+
+function directedRing(size, direction = 'left-right') {
+  const nodes = Array.from({ length: size }, (_, index) => ({
+    id: `node-${index + 1}`, label: `Step ${index + 1}`, kind: 'step', description: null, semanticPosition: null,
+  }));
+  const relations = nodes.map((node, index) => ({
+    id: `rel-${index + 1}`, from: node.id, to: nodes[(index + 1) % size].id, kind: 'flow', label: `to ${(index + 1) % size + 1}`, weight: null,
+  }));
+  return createDiagramDocument({
+    diagramId: `ring-${size}-${direction}`,
+    title: `Ring of ${size}`,
+    summary: 'One strongly connected component containing every node.',
+    audience: 'mixed',
+    grammar: { id: 'flowchart', version: '1.0.0' },
+    layout: { direction, detailTier: 'balanced' },
+    theme: { themeId: 'openplanr-default', mode: 'auto' },
+    source: { format: 'english', path: null, digest: null },
+    nodes,
+    relations,
+    accessibility: {
+      title: `Ring of ${size}`,
+      description: 'Each step flows to the next and the last step returns to the first.',
       readingOrder: [...nodes.map(({ id }) => id), ...relations.map(({ id }) => id)],
     },
   });
@@ -362,6 +394,78 @@ test('dependency graphs use topology-aware layers and route branches, fan-in, an
       assert.equal(forward, true, `${direction}: ${relation.from} precedes ${relation.to}`);
     }
   }
+});
+
+test('a 500-node directed ring wraps into bands inside the viewport boundary with every node and relation intact', () => {
+  for (const direction of ['left-right', 'top-down']) {
+    const document = directedRing(500, direction);
+    const { svg, scene } = renderDiagramSvg(document);
+    assert.equal(renderDiagramSvg(document).svg, svg, `${direction}: deterministic bytes`);
+    assert.ok(scene.width <= MAX_DIAGRAM_SCENE_EXTENT && scene.height <= MAX_DIAGRAM_SCENE_EXTENT, `${direction}: ${scene.width}x${scene.height}`);
+    assert.ok(Math.max(scene.width, scene.height) / Math.min(scene.width, scene.height) < 1.5, `${direction}: balanced bands`);
+    assert.equal(scene.boxes.length, 500);
+    assert.equal(scene.edges.length, 500);
+    assert.deepEqual(scene.boxes.map(({ label }) => label), document.nodes.map(({ label }) => label));
+    assert.deepEqual(scene.edges.map(({ id, from, to }) => [id, from, to]), document.relations.map(({ id, from, to }) => [id, from, to]));
+    assert.deepEqual(scene.edges.map(({ labelLines }) => labelLines.join(' ')), document.relations.map(({ label }) => label));
+    const boxes = new Map(scene.boxes.map((box) => [box.id, box]));
+    const onBorder = ([x, y], box) => (Math.abs(x - box.x) < 0.5 || Math.abs(x - box.x - box.width) < 0.5)
+      ? y >= box.y && y <= box.y + box.height
+      : (Math.abs(y - box.y) < 0.5 || Math.abs(y - box.y - box.height) < 0.5) && x >= box.x && x <= box.x + box.width;
+    for (const edge of scene.edges) {
+      assert.ok(onBorder(edge.routePoints[0], boxes.get(edge.from)), `${direction}: ${edge.id} leaves its source`);
+      assert.ok(onBorder(edge.routePoints.at(-1), boxes.get(edge.to)), `${direction}: ${edge.id} reaches its target`);
+    }
+    const quality = createRenderQualityReport(document, {
+      scene, png: { width: scene.width, height: scene.height, byteLength: 1 }, svgValidation: validateDiagramSvg(svg),
+    });
+    for (const id of ['svg-validated', 'node-overlap', 'label-overlap', 'label-node-overlap', 'edge-node-overlap', 'rendered-clipping', 'semantic-coverage']) {
+      assert.equal(quality.checks.find((check) => check.id === id).status, 'pass', `${direction}: ${id}`);
+    }
+    const prepared = prepareDiagramSvg(svg);
+    assert.deepEqual(prepared.scene, { width: scene.width, height: scene.height });
+    assert.equal(prepared.items.filter(({ kind }) => kind === 'Item').length, 500);
+    assert.equal(prepared.items.filter(({ kind }) => kind === 'Connection').length, 500);
+  }
+});
+
+test('a small cycle keeps its single-band layout and layered graphs that cannot fit refuse with the budget error', () => {
+  const rendered = renderDiagramOutputs(directedRing(8));
+  assert.equal(rendered.quality.status, 'pass');
+  assert.equal(rendered.scene.width, 2504);
+  assert.equal(rendered.scene.height, 448);
+  assert.equal(new Set(rendered.scene.boxes.map(({ y }) => y)).size, 1);
+  const leaves = Array.from({ length: 120 }, (_, index) => ({
+    id: `leaf-${index + 1}`, label: `Leaf ${index + 1}`, kind: 'step', description: null, semanticPosition: null,
+  }));
+  const base = directedRing(8);
+  const star = createDiagramDocument({
+    ...base,
+    documentDigest: undefined,
+    diagramId: 'wide-star',
+    nodes: [{ id: 'hub', label: 'Hub', kind: 'step', description: null, semanticPosition: null }, ...leaves],
+    relations: leaves.map((leaf, index) => ({ id: `spoke-${index + 1}`, from: 'hub', to: leaf.id, kind: 'flow', label: null, weight: null })),
+    accessibility: { ...base.accessibility, readingOrder: ['hub', ...leaves.map(({ id }) => id)] },
+  });
+  assert.throws(() => layoutDiagram(star), (error) => error?.code === DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED
+    && error.details.maximum === MAX_DIAGRAM_SCENE_EXTENT && error.details.height > MAX_DIAGRAM_SCENE_EXTENT);
+  assert.throws(() => renderDiagramSvg(star), (error) => error?.code === DIAGRAM_ERROR_CODES.RESOURCE_BUDGET_EXCEEDED);
+});
+
+test('large split plans stay within the Protocol panel bounds and keep every primary item exactly once', () => {
+  const document = directedRing(500);
+  const report = planDiagramQuality(document);
+  assertProtocolArtifact('diagram-quality-report', report, { protocolVersion: '1.6.0' });
+  assert.equal(report.status, 'split-required');
+  assert.deepEqual(planDiagramQuality(document).splitPlan, report.splitPlan);
+  const { panels } = report.splitPlan;
+  assert.ok(panels.length >= 2 && panels.length <= 32, `${panels.length} panels`);
+  assert.ok(panels.every(({ itemIds }) => itemIds.length >= 1 && itemIds.length <= 256));
+  assert.deepEqual(panels.flatMap(({ itemIds }) => itemIds), document.nodes.map(({ id }) => id));
+  assert.equal(new Set(panels.map(({ id }) => id)).size, panels.length);
+  const rendered = renderDiagramOutputs(directedRing(40));
+  assert.equal(rendered.quality.status, 'split-required');
+  assert.equal(rendered.quality.splitPlan.panels.length, 4);
 });
 
 test('graph quality rejects clipped route bends, partial label measurements, and labels or paths through nodes', () => {
