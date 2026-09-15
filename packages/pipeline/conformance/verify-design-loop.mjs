@@ -36,7 +36,7 @@ const { sheetContract, contractInstructions, validateSheet } = await import(
 const { createSession, appendRound, saveSession, loadSession } = await import(
   moduleUrl('lib/design-engine/session.mjs')
 );
-const { createDaemon, DAEMON_VERSION } = await import(
+const { createDaemon, daemonControlHeaders, DAEMON_VERSION } = await import(
   moduleUrl('lib/design-engine/daemon.mjs')
 );
 const {
@@ -124,8 +124,9 @@ writeFileSync(join(sessionDir, 'progress.json'), JSON.stringify({ variants: { A:
 const daemon = createDaemon();
 const port = await daemon.listen(0);
 const base = `http://127.0.0.1:${port}`;
+const controlHeaders = daemonControlHeaders();
 const reg = await (await fetch(`${base}/api/boards`, {
-  method: 'POST', headers: { 'content-type': 'application/json' },
+  method: 'POST', headers: { 'content-type': 'application/json', ...controlHeaders },
   body: JSON.stringify({ id: 'conf-loop', dir: sessionDir }),
 })).json();
 assert(reg.ok === true, 'board registered with the daemon');
@@ -175,7 +176,7 @@ assert(!indexHtml.includes('conf-loop'), 'root index does not enumerate register
 
 // the daemon reports its behaviour version, so a client can detect a daemon
 // running stale code and restart it instead of reusing it (SPEC-017).
-const health = await (await fetch(`${base}/health`)).json();
+const health = await (await fetch(`${base}/health`, { headers: controlHeaders })).json();
 assert(health.version === DAEMON_VERSION, 'daemon /health reports its version (stale-daemon restart guard)');
 
 // 4 — pending feedback with a pin → consumed on read
@@ -187,7 +188,7 @@ const pending = {
   pins: [{ id: 'a1b2c3d4e5f6', author: 'Reviewer', variant: 'A', x: 0.1, y: 0.1, w: 0.2, h: 0.1, comment: 'stroke too thin here', intent: 'fix' }],
 };
 const postPending = await (await fetch(`${base}/boards/conf-loop/api/feedback`, {
-  method: 'POST', headers: { 'content-type': 'application/json' },
+  method: 'POST', headers: { 'content-type': 'application/json', origin: base },
   body: JSON.stringify({ kind: 'pending', feedback: pending }),
 })).json();
 assert(postPending.ok === true, 'daemon accepted (and schema-validated) the pending feedback');
@@ -202,7 +203,9 @@ assert(validateSheet(readFileSync(v2, 'utf-8'), contract).pass, 'iterated sheet 
 session = appendRound(loadSession(sessionDir, 'A'), { outputPath: v2, feedback: 'bolder mark (pin: stroke too thin)' });
 saveSession(sessionDir, 'A', session);
 assert(loadSession(sessionDir, 'A').outputPaths.length === 2, 'session chained the iterate round');
-const reload = await (await fetch(`${base}/boards/conf-loop/api/reload`, { method: 'POST' })).json();
+const reload = await (await fetch(`${base}/boards/conf-loop/api/reload`, {
+  method: 'POST', headers: { origin: base },
+})).json();
 const prog = await (await fetch(`${base}/boards/conf-loop/api/progress`)).json();
 assert(reload.ok === true && prog.reloadGen === 1, 'reload bumps the generation the board polls');
 
@@ -211,7 +214,7 @@ log('\napprove + taste:');
 const submit = { ...pending, regenerated: false, preferred: 'A' };
 delete submit.regenerateAction;
 await fetch(`${base}/boards/conf-loop/api/feedback`, {
-  method: 'POST', headers: { 'content-type': 'application/json' },
+  method: 'POST', headers: { 'content-type': 'application/json', origin: base },
   body: JSON.stringify({ kind: 'submit', feedback: submit }),
 });
 const finalRound = readFeedback(sessionDir);

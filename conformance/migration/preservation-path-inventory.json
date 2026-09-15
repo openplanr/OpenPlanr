@@ -124,10 +124,10 @@
     "pathRecords": 2100,
     "dispositionCounts": {
       "regenerated": 205,
-      "merged": 543,
+      "merged": 544,
       "moved": 269,
       "retired": 57,
-      "exact": 1007,
+      "exact": 1006,
       "excluded": 19
     },
     "unmappedPaths": 0
@@ -30679,8 +30679,8 @@
         "mode": "100644",
         "sha256": "8fc8c44e75785259acfde4bd58caf04fc536eabfa4d89f413489fdf9aff8d53e"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/conformance/verify-design-loop.mjs",
@@ -30689,10 +30689,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "8fc8c44e75785259acfde4bd58caf04fc536eabfa4d89f413489fdf9aff8d53e",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -67042,5 +67040,5 @@
       }
     }
   ],
-  "documentDigest": "sha256:4dc9e0bc1daaa37185f9b1c25e34a63dad146bc201bffa259bbfa6daf2a64256"
+  "documentDigest": "sha256:fe3dd24bb73ae86e8c84e0106c0d1d17569f384a2ceb5152013768afdbddf927"
 }

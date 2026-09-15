@@ -158,6 +158,8 @@ const EVOLVED_MAPPING_IDS = new Set([
   'planr-pipeline:cutoff:tests/artifact/sandbox-hostile.test.mjs',
   // Legacy start locks now fail closed and require explicit operator removal.
   'planr-pipeline:cutoff:tests/artifact/review-server.test.mjs',
+  // The full design-loop proof authenticates daemon control and same-origin mutations.
+  'planr-pipeline:cutoff:conformance/verify-design-loop.mjs',
   'planr-pipeline:cutoff:tests/design-engine/feedback-resolve.test.mjs',
   // The review shell now owns fixed, mobile-safe comment composition and compact replies.
   'planr-pipeline:cutoff:templates/artifact-review-shell.html',

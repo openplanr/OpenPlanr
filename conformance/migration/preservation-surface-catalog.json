@@ -3973,7 +3973,7 @@
     {
       "generatorId": "scripts-migration-generate-preservation-catalog",
       "sourcePath": "scripts/migration/generate-preservation-catalog.mjs",
-      "sourceSha256": "b854b12cdcd002c1f087e7f16f0bc4367c68cd8645be12a1d1df0887ddba09da"
+      "sourceSha256": "070ebf953e086793d29b26b96571edb01ae5b6cc4d43d063397ed2ebed55e217"
     },
     {
       "generatorId": "scripts-protocol-project-protocol",
@@ -18036,5 +18036,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:1ba5d6849a47eb204651cbaf411b9320e6347f298018b483fa90c660efb8f02c"
+  "documentDigest": "sha256:5ccef3a09e621672b2814b2399a18b95c5b6ac4788b56162e113fef78cd48b06"
 }
