@@ -11,6 +11,8 @@ export default defineConfig({
       // reads the actual installed CLI version, not an in-memory fixture.
       'tests/e2e/upgrade-packed-install.test.ts',
       'tests/e2e/operate-migration-packed-install.test.ts',
+      // Exercises seven durable seats and can exceed the regular per-test budget under CI load.
+      'tests/integration/operate-lifecycle.test.ts',
       'tests/dashboard/operate-actions-recovery.test.tsx',
     ],
     fileParallelism: false,
