@@ -2074,14 +2074,17 @@ export function createDashboardServer({
   const server = createServer(async (req, res) => {
     let commandRequest = false;
     let planningRequest = false;
+    let pathname = null;
     try {
       const url = new URL(req.url, 'http://localhost');
+      pathname = url.pathname;
+      commandRequest = (req.method === 'POST' && OPERATE_COMMAND_ROUTES.has(pathname))
+        || (req.method === 'GET' && pathname.startsWith('/api/operate/planning/trace/'));
       assertLoopbackRequest(req, {
         port: req.socket.localPort,
         mutating: req.method !== 'GET' && req.method !== 'HEAD',
         hosts: ['127.0.0.1', 'localhost'],
       });
-      const { pathname } = url;
       const parts = pathname.split('/').filter(Boolean);
 
       if (req.method === 'GET' && pathname === '/api/bootstrap') {
@@ -3150,6 +3153,20 @@ export function createDashboardServer({
       return json(res, 404, { error: 'not found' });
     } catch (err) {
       if (String(err?.code ?? '').startsWith('E_LOOPBACK_')) {
+        if (req.method === 'GET' && pathname === '/api/bootstrap'
+          && err.code === 'E_LOOPBACK_HOST') {
+          return dashboardSafeErrorJson(res, 400, {
+            code: 'DASHBOARD_LOOPBACK_HOST_INVALID',
+            retryable: false,
+            context: {},
+          });
+        }
+        if (commandRequest) {
+          return commandError(res, {
+            code: 'OPERATE_ORIGIN_INVALID',
+            status: 403,
+          });
+        }
         return dashboardSafeErrorJson(res, 400, {
           code: 'DASHBOARD_LOOPBACK_REQUEST_REJECTED',
           retryable: false,

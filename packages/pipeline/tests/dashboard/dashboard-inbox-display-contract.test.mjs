@@ -13,6 +13,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { collectFilePaths } from "../helpers/files.mjs";
 import { resolveWorkspaceDependencyRoot } from "../helpers/workspace-dependency.mjs";
 
 import {
@@ -840,7 +841,7 @@ test("Inbox display and preview verifier have source, packed, public-import, and
 			],
 			{ cwd: consumer },
 		);
-		const files = run("rg", ["--files", output]).stdout.trim().split("\n");
+		const files = collectFilePaths(output);
 		const bundle = files.map((file) => readFileSync(file, "utf8")).join("\n");
 		assert.doesNotMatch(bundle, /node:(?:crypto|fs|path|url)/u);
 		assert.doesNotMatch(bundle, /protocol\/loader|protocol\/contracts/u);

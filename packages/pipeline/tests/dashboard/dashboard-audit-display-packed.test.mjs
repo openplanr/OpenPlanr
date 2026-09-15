@@ -16,6 +16,7 @@ import * as auditContract from "../../lib/dashboard/operate-experience-audit-dis
 import { selectOperateExperienceSurface } from "../../lib/dashboard/operate-experience-reader.mjs";
 import * as auditSchema from "../../schemas/v1.2.0/operate-experience-audit-display-surface.mjs";
 import { pairedOpenPlanrTools } from "../helpers/paired-openplanr.mjs";
+import { collectFilePaths } from "../helpers/files.mjs";
 import { resolveWorkspaceDependencyRoot } from "../helpers/workspace-dependency.mjs";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
@@ -293,10 +294,7 @@ test("packed audit verifier bundles synchronously without Node built-ins", {
 			],
 			{ cwd: consumer },
 		);
-		const chunks = run("rg", ["--files", output]);
-		const bundle = chunks.stdout
-			.trim()
-			.split("\n")
+		const bundle = collectFilePaths(output)
 			.map((path) => readFileSync(path, "utf8"))
 			.join("\n");
 		assert.doesNotMatch(bundle, /node:(?:crypto|fs|path|url)/u);
