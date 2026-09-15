@@ -11,7 +11,6 @@ export default defineConfig({
       '**/dist/**',
       'tests/dashboard/operate-actions-recovery.test.tsx',
       'tests/e2e/upgrade-packed-install.test.ts',
-      'tests/integration/operate-lifecycle.test.ts',
       'tests/e2e/dashboard-visual-regression.test.ts',
     ],
     testTimeout: 45_000,
