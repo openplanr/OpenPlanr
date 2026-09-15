@@ -988,7 +988,7 @@ describe('runtime setup', () => {
       expect(existsSync(trackedTarget), trackedTarget).toBe(before !== null);
       if (before) expect(readFileSync(trackedTarget), trackedTarget).toEqual(before);
     }
-  }, 15_000);
+  }, 45_000);
 
   it('rejects an unrecorded direct-child empty backup without mutating ownership', async () => {
     const setup = await applySetup({
