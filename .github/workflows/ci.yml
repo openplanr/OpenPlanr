@@ -146,7 +146,7 @@ jobs:
           npm run build
       - name: Run CLI test shard
         working-directory: packages/cli
-        run: npx --no-install vitest run --shard=${{ matrix.shard }}/6 --maxWorkers=1 --exclude tests/integration/operate-lifecycle.test.ts --exclude tests/integration/dashboard-operate-cycles.test.ts --exclude tests/unit/runtime-manager-service.test.ts
+        run: npx --no-install vitest run --shard=${{ matrix.shard }}/6 --maxWorkers=1 --exclude tests/integration/operate-lifecycle.test.ts --exclude tests/integration/dashboard-operate-cycles.test.ts --exclude tests/integration/operate-command-gateway.test.ts --exclude tests/integration/operate-planning-bridge.test.ts --exclude tests/unit/runtime-manager-service.test.ts
 
   cli-heavy-tests:
     name: Node 24 CLI heavy tests
@@ -169,6 +169,34 @@ jobs:
         run: |
           npm run test:heavy
           npx --no-install vitest run tests/integration/operate-lifecycle.test.ts tests/integration/dashboard-operate-cycles.test.ts --maxWorkers=1 --testTimeout=600000
+
+  cli-operate-boundary-tests:
+    name: Node 24 CLI Operate boundary (${{ matrix.suite }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: command gateway
+            file: tests/integration/operate-command-gateway.test.ts
+          - suite: planning bridge
+            file: tests/integration/operate-planning-bridge.test.ts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Prepare generated runtime
+        run: |
+          npm run generate
+          npm run build
+      - name: Run the Operate boundary suite in a fresh process
+        working-directory: packages/cli
+        run: npx --no-install vitest run ${{ matrix.file }} --maxWorkers=1
 
   cli-runtime-integrity-tests:
     name: Node 24 runtime integrity tests
@@ -199,6 +227,7 @@ jobs:
       - pipeline-tests
       - cli-tests
       - cli-heavy-tests
+      - cli-operate-boundary-tests
       - cli-runtime-integrity-tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
