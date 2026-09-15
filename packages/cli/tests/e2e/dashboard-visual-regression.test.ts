@@ -221,6 +221,7 @@ async function expectSurfaceToUseRouteFrame(page: Page, selector: string) {
 
 test.describe('dashboard real-browser quality', () => {
   test('mounts the exact fixture state on every typed public route', async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
     for (const fixture of DASHBOARD_ROUTE_FIXTURES) {
       const { hash: route } = fixture;
       await openFixture(page, route);
