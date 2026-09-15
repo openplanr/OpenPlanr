@@ -64,6 +64,7 @@ export declare const DIAGRAM_FONT: Readonly<Record<string, string>>;
 export declare const DIAGRAM_THEME: Readonly<Record<string, string | number>>;
 export declare const RASTER_SCALE: number;
 export declare const MAX_DIAGRAM_PNG_BYTES: number;
+export declare const MAX_DIAGRAM_SCENE_EXTENT: number;
 export declare const DIAGRAM_OUTPUT_MEDIA_TYPES: Readonly<Record<string, string>>;
 export declare const MERMAID_EXPORT_CAPABILITIES: Readonly<Record<string, Readonly<Record<string, string>>>>;
 export declare const EXCALIDRAW_EXPORT_CAPABILITIES: Readonly<Record<string, Readonly<Record<string, string>>>>;

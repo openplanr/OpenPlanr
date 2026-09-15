@@ -14454,13 +14454,13 @@
       "path": "packages/pipeline/lib/artifact/diagram/index.d.mts",
       "generatorId": "scripts-domains-project-domains",
       "custody": "public-package-projection",
-      "sha256": "7fdf078f7ce335dcf248d21d3ad233603f2166bae129ba3edac55ce50f156df6"
+      "sha256": "509a4bd050d7186bd80183650561c122bf3c41b94f55f2de58fb8a6ce192e3e6"
     },
     {
       "path": "packages/pipeline/lib/artifact/diagram/index.mjs",
       "generatorId": "scripts-domains-project-domains",
       "custody": "public-package-projection",
-      "sha256": "6f7dd1a21df351be8310643d458b8eb88e6763784945a2d3ce596a158c24578c"
+      "sha256": "6bdef41978f1d0bf5ce8c1d2ec49efeb8d56d2af244031d78837fe53c2156cce"
     },
     {
       "path": "packages/pipeline/lib/artifact/diagram/integration.mjs",
@@ -14502,7 +14502,7 @@
       "path": "packages/pipeline/lib/artifact/diagram/readability.mjs",
       "generatorId": "scripts-domains-project-domains",
       "custody": "public-package-projection",
-      "sha256": "ff61b1ef362230ace9426199c86661581fdc953f72f770018bed6d8a89344ba5"
+      "sha256": "c3b84d896f226a8764f072ab49427ce224946b8813c2d01df98cb0fe8d4d50e6"
     },
     {
       "path": "packages/pipeline/lib/artifact/diagram/references.mjs",
@@ -14526,13 +14526,13 @@
       "path": "packages/pipeline/lib/artifact/diagram/rendering/index.mjs",
       "generatorId": "scripts-domains-project-domains",
       "custody": "public-package-projection",
-      "sha256": "ef358a142d2ce1b01fa1b15af02110114dcb608bea681f05546bd570daff24ee"
+      "sha256": "96a29d17b7af3decb4f6a6932d7633835b7b797de63ccf4e8636e8efd6654bfe"
     },
     {
       "path": "packages/pipeline/lib/artifact/diagram/rendering/layout.mjs",
       "generatorId": "scripts-domains-project-domains",
       "custody": "public-package-projection",
-      "sha256": "9f7b7b6131a79b8b95ccbc7294c1447bc13ab1cd3a2a55bef696f5fde23e37cb"
+      "sha256": "300723ef241a4bd5d2ebd7312620ed8279ffe9f4de76816667cae25031b7a083"
     },
     {
       "path": "packages/pipeline/lib/artifact/diagram/rendering/png.mjs",
@@ -14556,7 +14556,7 @@
       "path": "packages/pipeline/lib/artifact/diagram/rendering/theme.mjs",
       "generatorId": "scripts-domains-project-domains",
       "custody": "public-package-projection",
-      "sha256": "910e14c7dce9c39304c36e3d554b345692ece9c458cd339f4fff804480e784f6"
+      "sha256": "02e010a57811968546ee3e39ff6c9f2a9ff45970f3408526aed4df3b7057eb0b"
     },
     {
       "path": "packages/pipeline/lib/artifact/diagram/router.mjs",
@@ -15066,7 +15066,7 @@
       "path": "packages/pipeline/lib/generated/domain-projections/artifact.json",
       "generatorId": "scripts-domains-project-domains",
       "custody": "manifest",
-      "sha256": "363a2de1e5f4c13d4289f0f20d21e2f48fee22a4eb6e77d1924ec247d19ed490"
+      "sha256": "dee7278b181fc2fd0af6557b0e452b8e7e572f0baa4432f6320ecb1e2579ded8"
     },
     {
       "path": "packages/pipeline/lib/generated/domain-projections/design.json",
@@ -18036,5 +18036,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:3ef30ccb9d4c8fbe29fbe5c793306d37b4fc49d9497c02d11a938b5de34bd9b3"
+  "documentDigest": "sha256:a184526dd43bb044b49f637f1988947769ebe39f1772cc24e3724d278e22f48e"
 }

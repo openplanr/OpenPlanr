@@ -44,6 +44,7 @@ export {
   DIAGRAM_RASTERIZER,
   DIAGRAM_THEME,
   MAX_DIAGRAM_PNG_BYTES,
+  MAX_DIAGRAM_SCENE_EXTENT,
   RASTER_SCALE,
   createFidelityReport,
   createRenderQualityReport,
