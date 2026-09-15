@@ -94,13 +94,8 @@ async function openFixture(page: Page, route = '#/overview', options = {}) {
     await page.goto(fixtureUrl(route, options));
     const expectation = dashboardRouteFixture(route);
     if (!expectation) throw new TypeError(`Missing ready-state assertion for ${route}.`);
-    if (expectation.composition === 'shell') {
-      await expect(page.locator('.pc-shell')).toBeVisible();
-      await expect(page.locator('#main-content')).toBeVisible();
-    } else {
-      await expect(page.locator('.pc-shell')).toHaveCount(0);
-      await expect(page.locator('main.op-diagnostics')).toBeVisible();
-    }
+    await expect(page.locator('.pc-shell')).toBeVisible();
+    await expect(page.locator('#main-content')).toBeVisible();
     const workspace = page.locator(`[data-route-kind="${expectation.kind}"]`);
     await expect(workspace).toBeVisible();
     if (route === '#/search') {
@@ -225,11 +220,7 @@ test.describe('dashboard real-browser quality', () => {
     for (const fixture of DASHBOARD_ROUTE_FIXTURES) {
       const { hash: route } = fixture;
       await openFixture(page, route);
-      if (fixture.composition === 'shell') {
-        await expect(page.locator('.pc-skip-link')).toHaveAttribute('href', '#main-content');
-      } else {
-        await expect(page.locator('.pc-skip-link')).toHaveCount(0);
-      }
+      await expect(page.locator('.pc-skip-link')).toHaveAttribute('href', '#main-content');
       const parsed = parseDashboardRoute(route);
       if (parsed.kind === 'not-found') throw new TypeError(`Unparsed fixture route: ${route}`);
       const definition = dashboardRouteDefinition(parsed);

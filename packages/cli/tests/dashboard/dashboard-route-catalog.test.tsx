@@ -42,7 +42,7 @@ describe('immutable public dashboard route fixture catalog', () => {
       expect(serializeDashboardRoute(route)).toBe(fixture.hash);
       const definition = dashboardRouteDefinition(route);
       expect(definition?.kind).toBe(fixture.kind);
-      expect(fixture.composition).toBe(definition?.product === null ? 'diagnostics' : 'shell');
+      expect(fixture.composition).toBe('shell');
     }
   });
 

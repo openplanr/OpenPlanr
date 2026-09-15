@@ -12,7 +12,7 @@ export type DashboardRouteFixture = Readonly<{
   kind: DashboardRouteKind;
   hash: string;
   readyText: string;
-  composition: 'shell' | 'diagnostics';
+  composition: 'shell';
 }>;
 
 const ROUTE_FIXTURES = [
@@ -80,7 +80,7 @@ const ROUTE_FIXTURES = [
     kind: 'system.diagnostics',
     hash: '#/diagnostics',
     readyText: 'Dashboard compatibility is certified',
-    composition: 'diagnostics',
+    composition: 'shell',
   },
   {
     kind: 'operate.today',
