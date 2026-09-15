@@ -146,7 +146,7 @@ jobs:
           npm run build
       - name: Run CLI test shard
         working-directory: packages/cli
-        run: npx --no-install vitest run --shard=${{ matrix.shard }}/4 --maxWorkers=1 --exclude tests/integration/operate-lifecycle.test.ts
+        run: npx --no-install vitest run --shard=${{ matrix.shard }}/4 --maxWorkers=1 --exclude tests/integration/operate-lifecycle.test.ts --exclude tests/integration/dashboard-operate-cycles.test.ts
 
   cli-heavy-tests:
     name: Node 24 CLI heavy tests
@@ -168,7 +168,7 @@ jobs:
         working-directory: packages/cli
         run: |
           npm run test:heavy
-          npx --no-install vitest run tests/integration/operate-lifecycle.test.ts --maxWorkers=1 --testTimeout=600000
+          npx --no-install vitest run tests/integration/operate-lifecycle.test.ts tests/integration/dashboard-operate-cycles.test.ts --maxWorkers=1 --testTimeout=600000
 
   verify:
     name: Node 24 full workspace verification
