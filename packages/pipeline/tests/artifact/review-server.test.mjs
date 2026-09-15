@@ -357,7 +357,7 @@ test('concurrent starts share one daemon and the last close cannot race a new re
   await replacement.close();
 });
 
-test('dead state and lock recover atomically while a foreign occupied port is never killed', async (t) => {
+test('legacy locks fail closed until explicitly cleared while a foreign occupied port is never killed', async (t) => {
   const env = isolatedEnv();
   const statePath = artifactReviewStatePath(0, env);
   const stateDir = join(env.PLANR_HOME, 'artifact-daemon');
@@ -369,6 +369,15 @@ test('dead state and lock recover atomically while a foreign occupied port is ne
   const lockPath = join(stateDir, 'start-default.lock');
   writeFileSync(lockPath, JSON.stringify({ pid: 999_999_999, owner: 'dead', createdAt: 0 }));
   chmodSync(lockPath, 0o600);
+  await assert.rejects(
+    startArtifactReview({ envelope: envelope(), env, noOpen: true }),
+    (error) => error.code === 'E_START_LOCK_LEGACY',
+  );
+  assert.equal(
+    readFileSync(lockPath, 'utf8'),
+    JSON.stringify({ pid: 999_999_999, owner: 'dead', createdAt: 0 }),
+  );
+  rmSync(lockPath);
   const recovered = await startArtifactReview({ envelope: envelope(), env, noOpen: true });
   assert.notEqual(recovered.port, 65534);
   assert.equal((await request(recovered.port, '/health')).status, 200);
