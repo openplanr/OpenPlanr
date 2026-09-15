@@ -87,7 +87,9 @@ describe('OpenPlanr design system', () => {
   });
 
   it('is the local Tailwind v4 source entry and replaces its generic theme with OpenPlanr semantics', () => {
-    expect(tokens.startsWith('@import "tailwindcss";')).toBe(true);
+    expect(tokens).toMatch(
+      /^@import "@fontsource-variable\/geist";\n@import "@fontsource-variable\/geist-mono";\n@import "tailwindcss";/u,
+    );
     expect(tokens).toContain('@theme inline');
     expect(tokens).toContain('--color-*: initial;');
     expect(tokens).toContain('--color-primary: var(--op-control);');

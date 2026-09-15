@@ -80,7 +80,7 @@ const ROUTE_FIXTURES = [
     kind: 'system.diagnostics',
     hash: '#/diagnostics',
     readyText: 'Dashboard compatibility is certified',
-    composition: 'shell',
+    composition: 'diagnostics',
   },
   {
     kind: 'operate.today',

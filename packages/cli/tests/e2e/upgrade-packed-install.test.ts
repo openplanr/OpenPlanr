@@ -216,37 +216,32 @@ describe('packed planr upgrade status', () => {
     expect(help.stdout).toContain('status');
   });
 
-  it('exposes only deterministic Operate inspection utilities', () => {
+  it('exposes the current deterministic Operate catalog and lifecycle surface', () => {
     const help = run(['operate', '--help']);
     expect(help.status, help.stderr || help.stdout).toBe(0);
     expect(help.stderr).toBe('');
-    expect(help.stdout).toContain('inspect');
-    expect(help.stdout).toContain('show');
-    expect(help.stdout).toContain('validate');
-    expect(help.stdout).not.toContain('domains');
-    expect(help.stdout).not.toContain('start');
+    for (const command of [
+      'domains',
+      'validate-note',
+      'start',
+      'planning',
+      'assignment',
+      'recovery',
+    ]) {
+      expect(help.stdout).toMatch(new RegExp(`^\\s{2}${command}(?:\\s|$)`, 'mu'));
+    }
+    expect(help.stdout).not.toMatch(/^\s{2}(?:inspect|show|validate)(?:\s|$)/mu);
 
     const domains = run(['operate', 'domains', '--json']);
     expect(domains.status).toBe(1);
-    expect(`${domains.stdout}${domains.stderr}`).toContain("unknown command 'domains'");
-
-    const invocation = run([
-      'operate',
-      'start',
-      '--scope',
-      'scope-clean-install',
-      '--owner',
-      'owner-clean-install',
-      '--domain',
-      'business',
-      '--domain-version',
-      '1.0.0',
-      '--json',
-    ]);
-    expect(invocation.status).toBe(1);
-    expect(`${invocation.stdout}${invocation.stderr}`).toContain("unknown command 'start'");
-    expect(`${invocation.stdout}${invocation.stderr}`).not.toContain('ERR_MODULE_NOT_FOUND');
-    expect(`${invocation.stdout}${invocation.stderr}`).not.toContain(packageRoot);
+    expect(JSON.parse(commandStdout(domains.stderr || domains.stdout))).toEqual({
+      ok: false,
+      code: 'E_OPERATE_PIPELINE_MISSING',
+      problem:
+        'Operate requires the optional planr-pipeline package. Reinstall OpenPlanr with optional dependencies (do not use --omit=optional).',
+    });
+    expect(`${domains.stdout}${domains.stderr}`).not.toContain('ERR_MODULE_NOT_FOUND');
+    expect(`${domains.stdout}${domains.stderr}`).not.toContain(packageRoot);
   });
 });
 

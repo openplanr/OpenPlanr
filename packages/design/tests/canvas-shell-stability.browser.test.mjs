@@ -70,6 +70,10 @@ test(`canvas zoom preserves shell geometry, minimap focus and frame identity (${
       const headerBefore=await page.screenshot({clip:headerClip});
       for (const action of ['in','in','out','out']) await page.locator(`[data-design-zoom="${action}"]`).click();
       assert.deepEqual(await page.locator('.design-canvas-tools').boundingBox(),before);
+      // Restore the pre-action focus before comparing pixels. Keyboard focus
+      // is an intentional toolbar paint and is independent of canvas movement.
+      await page.locator('.design-minimap-board').first().focus();
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
       const headerAfter=await page.screenshot({clip:headerClip});
       assert.deepEqual(headerAfter,headerBefore,'Canvas zoom does not repaint the header with different pixels');
       const scroll=await page.locator('.planr-stage-scroll').boundingBox();

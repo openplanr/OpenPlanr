@@ -1,5 +1,5 @@
 import { type SpawnSyncReturns, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -36,44 +36,40 @@ afterEach(() => {
 });
 
 describe('deterministic Operate utilities', { timeout: 30_000 }, () => {
-  it('inspects and shows local artifacts without starting an Operate workflow', () => {
+  it('reports neutral storage without starting or writing an Operate workflow', () => {
     const projectDir = temporaryProject();
-    const artifact = path.join(projectDir, 'review.md');
-    const content = '# Review\n\nLocal content.\n';
-    writeFileSync(artifact, content);
-
-    const inspection = run(projectDir, ['inspect', 'review.md']);
-    expect(inspection.status, inspection.stderr).toBe(0);
-    expect(JSON.parse(inspection.stdout)).toMatchObject({
-      type: 'file',
-      bytes: Buffer.byteLength(content),
+    const result = run(projectDir, ['recovery', 'storage-status', '--json']);
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual({
+      kind: 'operate-storage-status',
+      status: 'empty',
+      legacySources: [],
+      interruptedEntries: [],
+      pinnedVerifierRequired: false,
+      nextAction: 'none',
     });
-
-    const shown = run(projectDir, ['show', 'review.md']);
-    expect(shown.status, shown.stderr).toBe(0);
-    expect(shown.stdout).toBe(`${content}\n`);
+    expect(existsSync(path.join(projectDir, '.planr'))).toBe(false);
   });
 
-  it('validates local JSON through the Protocol reader and returns a bounded failure', () => {
+  it('validates a local review note and returns a bounded Protocol failure', () => {
     const projectDir = temporaryProject();
-    writeFileSync(path.join(projectDir, 'result.json'), '{}\n');
+    writeFileSync(path.join(projectDir, 'advisor.md'), '# Invalid\n');
     const failure = machineFailure(
-      run(projectDir, ['validate', 'result.json', '--kind', 'skill-package', '--json']),
+      run(projectDir, ['validate-note', 'advisor.md', '--profile', 'advisor', '--json']),
     );
-    expect(failure).toMatchObject({ ok: false, code: 'E_OPERATE_INVALID' });
-    expect(String(failure.problem)).toMatch(/^\d+ validation error\(s\)\.$/u);
+    expect(failure).toMatchObject({ ok: false, code: 'E_OPERATE_NOTE_INVALID' });
+    expect(String(failure.problem)).toMatch(
+      /^The Operate advisor note failed \d+ contract checks?\.$/u,
+    );
     expect(JSON.stringify(failure)).not.toContain(projectDir);
   });
 
-  it.each(['assignment', 'planning', 'validate-note'])(
-    'keeps retired %s governance commands absent',
-    (command) => {
-      const projectDir = temporaryProject();
-      expect(machineFailure(run(projectDir, [command, '--json']))).toEqual({
-        ok: false,
-        code: 'commander.unknownCommand',
-        problem: `unknown command '${command}'`,
-      });
-    },
-  );
+  it('advertises the current planning, assignment, validation, and recovery namespaces', () => {
+    const projectDir = temporaryProject();
+    const result = run(projectDir, ['--help']);
+    expect(result.status, result.stderr).toBe(0);
+    for (const command of ['planning', 'assignment', 'validate-note', 'recovery']) {
+      expect(result.stdout).toMatch(new RegExp(`^\\s{2}${command}(?:\\s|$)`, 'mu'));
+    }
+  });
 });

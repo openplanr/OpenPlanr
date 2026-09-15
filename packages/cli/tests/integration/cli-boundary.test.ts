@@ -128,7 +128,7 @@ describe('closed CLI and non-interactive quick boundary', { timeout: 30_000 }, (
     }
   });
 
-  it('uses the bounded JSON renderer for retired semantic command facades', async () => {
+  it('uses the bounded JSON renderer for retired and incomplete semantic commands', async () => {
     const created = await project();
     const pipeline = machineFailure(
       run(created.dir, ['pipeline', 'definitely-not-an-action', '--json']),
@@ -151,8 +151,8 @@ describe('closed CLI and non-interactive quick boundary', { timeout: 30_000 }, (
     );
     expect(operatePlanning).toEqual({
       ok: false,
-      code: 'commander.unknownCommand',
-      problem: "unknown command 'planning'",
+      code: 'commander.missingMandatoryOptionValue',
+      problem: "required option '--actor <actorId>' not specified",
     });
     expect(JSON.stringify({ pipeline, operatePlanning })).not.toContain(created.dir);
   });

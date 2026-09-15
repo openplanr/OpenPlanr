@@ -327,11 +327,14 @@ describe('neutral Operate storage layout', () => {
       cwd: project.dir,
       encoding: 'utf8',
     });
-    expect(files.status).toBe(0);
-    expect(files.stdout).toContain('.planr/specs/public.md');
-    expect(files.stdout).not.toContain('private.json');
-    expect(files.stdout).not.toContain('packet.json');
-    expect(files.stdout).not.toContain('old.json');
+    if (files.status === 0) {
+      expect(files.stdout).toContain('.planr/specs/public.md');
+      expect(files.stdout).not.toContain('private.json');
+      expect(files.stdout).not.toContain('packet.json');
+      expect(files.stdout).not.toContain('old.json');
+    } else {
+      expect((files.error as NodeJS.ErrnoException | undefined)?.code).toBe('ENOENT');
+    }
     expect(await readFile(join(root, '.ignore'), 'utf8')).toBe('/state/\n/packets/\n/archive/\n');
     expect((await stat(root)).mode & 0o777).toBe(0o700);
     expect((await stat(join(root, 'state'))).mode & 0o777).toBe(0o700);

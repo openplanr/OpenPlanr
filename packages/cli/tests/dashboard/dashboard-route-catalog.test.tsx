@@ -91,7 +91,9 @@ describe('immutable public dashboard route fixture catalog', () => {
     render(
       <NavRail product="operate" route={route} operateAvailable onOpenPalette={() => undefined} />,
     );
-    expect(screen.getByRole('link', { name: /Cycles/u }).getAttribute('aria-current')).toBe('page');
+    const cycleLinks = screen.getAllByRole('link', { name: /Cycles/u });
+    expect(cycleLinks.length).toBeGreaterThan(0);
+    for (const link of cycleLinks) expect(link.getAttribute('aria-current')).toBe('page');
     expect(screen.queryByRole('link', { name: /^Review$/u })).toBeNull();
   });
 

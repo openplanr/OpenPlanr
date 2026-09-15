@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 
-import { act, render } from '@testing-library/react';
+import { render, within } from '@testing-library/react';
 import { expect, it } from 'vitest';
 import { DashboardProviders } from '../../../../apps/dashboard/src/app/providers.js';
-import { SHELL_MIN_WIDTH } from '../../../../apps/dashboard/src/features/shell/shell-planes.js';
 import { UnifiedShell } from '../../../../apps/dashboard/src/features/shell/UnifiedShell.js';
 
-it('explains the local console window minimum and restores navigation after resizing', () => {
+it('keeps the full dashboard navigable at phone width', () => {
   const initialWidth = window.innerWidth;
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 480 });
   const rendered = render(
@@ -15,19 +14,12 @@ it('explains the local console window minimum and restores navigation after resi
     </DashboardProviders>,
   );
   try {
-    expect(rendered.getByRole('heading', { name: 'Use a wider window' })).toBeTruthy();
-    expect(rendered.container.textContent).toContain(`needs ${SHELL_MIN_WIDTH}px`);
-    expect(rendered.queryByRole('navigation')).toBeNull();
-    act(() => {
-      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 });
-      window.dispatchEvent(new Event('resize'));
-    });
-    expect(rendered.getByRole('navigation', { name: 'Dashboard navigation' })).toBeTruthy();
-    expect(rendered.getByRole('link', { name: 'planning' }).getAttribute('href')).toBe(
+    const navigation = rendered.getByRole('navigation', { name: 'Mobile Operate navigation' });
+    expect(
+      within(navigation).getByRole('link', { name: 'Today' }).getAttribute('aria-current'),
+    ).toBe('page');
+    expect(within(navigation).getByRole('link', { name: 'Planning' }).getAttribute('href')).toBe(
       '#/overview',
-    );
-    expect(rendered.getByRole('link', { name: 'operate' }).getAttribute('href')).toBe(
-      '#/operate/today',
     );
     expect(rendered.queryByRole('heading', { name: 'Use a wider window' })).toBeNull();
   } finally {

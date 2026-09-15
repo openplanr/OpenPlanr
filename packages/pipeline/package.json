@@ -221,7 +221,8 @@
     "pngjs": "7.0.0"
   },
   "scripts": {
-    "test": "npm run test:schema && npm run test:orchestration && npm run test:docs && npm run test:design && npm run test:design-engine && npm run test:artifact && npm run test:dashboard && npm run test:evaluation && npm run check:operate-contracts && npm run conformance:operate && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard && npm run conformance:unified-dashboard-absence && npm run conformance:skill-evaluation",
+    "test": "npm run test:orchestration && npm run test:surface",
+    "test:surface": "npm run test:schema && npm run test:docs && npm run test:design && npm run test:design-engine && npm run test:artifact && npm run test:dashboard && npm run test:evaluation && npm run check:operate-contracts && npm run conformance:operate && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard && npm run conformance:unified-dashboard-absence && npm run conformance:skill-evaluation",
     "generate:artifact-shell": "node scripts/generate-artifact-shell.mjs",
     "check:artifact-shell": "node scripts/generate-artifact-shell.mjs --check",
     "generate:operate-contracts": "node scripts/generate-operate-contracts.mjs --write",
@@ -283,7 +284,10 @@
     "test:schema": "node scripts/run-test-group.mjs tests/schema",
     "test:evaluation": "node scripts/run-test-group.mjs tests/evaluation",
     "evaluate:skills": "node scripts/run-evaluation.mjs",
-    "test:orchestration": "node --expose-gc --test tests/ecosystem/operate-v2-product-performance.test.mjs && node scripts/run-test-group.mjs tests/orchestration tests/ecosystem tests/pipeline --exclude tests/ecosystem/operate-v2-product-performance.test.mjs --exclude tests/ecosystem/unified-dashboard-consumer-install.test.mjs --exclude tests/ecosystem/unified-dashboard-package.test.mjs",
+    "test:orchestration": "npm run test:orchestration:runtime && npm run test:orchestration:ecosystem && npm run test:orchestration:pipeline",
+    "test:orchestration:runtime": "node scripts/run-test-group.mjs tests/orchestration",
+    "test:orchestration:ecosystem": "node --expose-gc --test tests/ecosystem/operate-v2-product-performance.test.mjs && node scripts/run-test-group.mjs tests/ecosystem --exclude tests/ecosystem/operate-v2-product-performance.test.mjs --exclude tests/ecosystem/unified-dashboard-consumer-install.test.mjs --exclude tests/ecosystem/unified-dashboard-package.test.mjs",
+    "test:orchestration:pipeline": "node scripts/run-test-group.mjs tests/pipeline",
     "test:operate-v2-development": "node --test tests/ecosystem/operate-v2-development-package.test.mjs",
     "test:operate-v2-phase2-package": "node --test tests/ecosystem/operate-v2-phase2-package.test.mjs",
     "test:operate-v2-phase3-package": "node --test tests/ecosystem/operate-v2-phase3-package.test.mjs",

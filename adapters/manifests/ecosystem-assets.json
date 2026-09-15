@@ -38,7 +38,7 @@
     },
     {
       "path": "packages/pipeline/package.json",
-      "digest": "sha256:0787377ea64b4090160874232a806e83ce8b12e100ec76e6e1863c21db6d2c57"
+      "digest": "sha256:483f2cc352f085223a3143e1d031e3fa98c43251385ef7605dc50f01e72936ec"
     },
     {
       "path": "packages/protocol/package.json",
@@ -128,7 +128,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:178d4fcd0bf417d9f30d395d5026cdc9d82cef5273d536d076cab0438e1e8fed"
+      "digest": "sha256:68ccd66219b086d711e782ef0d8948ce6b1e9e43ec0831cd19911f1fa812b655"
     }
   ]
 }
