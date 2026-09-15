@@ -43,6 +43,13 @@ const EVOLVED_MAPPING_IDS = new Set([
   // Current documentation no longer links to retired SPEC-016 planning records.
   'planr-pipeline:cutoff:docs/dashboard.md',
   'planr-pipeline:cutoff:docs/operate/DASHBOARD.md',
+  // Conformance fixtures track supported test toolchains after consolidation.
+  'planr-pipeline:cutoff:conformance/fixtures/default-mode-shipped/package.json',
+  'planr-pipeline:cutoff:conformance/fixtures/default-mode-shipped/package-lock.json',
+  'planr-pipeline:cutoff:conformance/fixtures/spec-driven-todo-shipped/package.json',
+  'planr-pipeline:cutoff:conformance/fixtures/spec-driven-todo-shipped/package-lock.json',
+  'planr-pipeline:cutoff:conformance/fixtures/spec-driven-todo/package.json',
+  'planr-pipeline:cutoff:conformance/fixtures/spec-driven-todo/package-lock.json',
   // Release proofs follow declared package versions across Changesets updates.
   'planr-pipeline:cutoff:tests/ecosystem/operate-v2-product-package.test.mjs',
   'planr-pipeline:cutoff:tests/pipeline/doctor-release-changelog.test.mjs',
