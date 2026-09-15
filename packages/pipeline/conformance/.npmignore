@@ -1,0 +1,2 @@
+# Repository-only migration/reset custody is not part of the public runtime.
+fixtures/operate-reset-inventory/

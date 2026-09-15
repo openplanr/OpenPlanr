@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-delivery-route.schema.json",
+  "x-openplanr-contract": { "id": "operating-delivery-route", "version": "1.0.0" },
+  "title": "OpenPlanr Operate delivery route",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "routeId", "scopeId", "domainId", "domainVersion", "action", "eventHead", "route", "rationale", "createdAt", "routeHash"],
+  "properties": {
+    "kind": { "const": "operating-delivery-route" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "routeId": { "type": "string", "pattern": "^droute_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "scopeId": { "$ref": "#/$defs/id" },
+    "domainId": { "$ref": "#/$defs/id" },
+    "domainVersion": { "$ref": "#/$defs/version" },
+    "action": { "$ref": "#/$defs/action" },
+    "eventHead": { "$ref": "#/$defs/eventHead" },
+    "route": { "enum": ["contained-execution", "planning-work", "human-external", "observe-only"] },
+    "rationale": { "$ref": "#/$defs/text" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "routeHash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 4096, "pattern": "^.*\\S.*$" },
+    "action": {
+      "type": "object", "additionalProperties": false,
+      "required": ["actionId", "revision", "actionHash"],
+      "properties": {
+        "actionId": { "type": "string", "pattern": "^act_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "revision": { "type": "integer", "minimum": 1 },
+        "actionHash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "eventHead": { "oneOf": [
+      { "type": "object", "additionalProperties": false, "required": ["sequence", "hash"], "properties": { "sequence": { "const": 0 }, "hash": { "type": "null" } } },
+      { "type": "object", "additionalProperties": false, "required": ["sequence", "hash"], "properties": { "sequence": { "type": "integer", "minimum": 1 }, "hash": { "$ref": "#/$defs/hash" } } }
+    ] }
+  }
+}

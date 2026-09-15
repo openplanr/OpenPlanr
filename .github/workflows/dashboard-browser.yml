@@ -1,0 +1,65 @@
+name: Dashboard Browser Tests
+
+on:
+  pull_request:
+    paths:
+      - 'apps/dashboard/**'
+      - 'packages/cli/tests/dashboard/**'
+      - 'packages/cli/tests/e2e/**'
+      - 'packages/cli/scripts/run-dashboard-browser-tests.mjs'
+      - 'packages/cli/vite.dashboard.fixture.config.ts'
+      - 'packages/operate/**'
+      - 'packages/pipeline/lib/dashboard/**'
+      - 'packages/protocol/**'
+      - 'scripts/dashboard/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/dashboard-browser.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/dashboard/**'
+      - 'packages/cli/tests/dashboard/**'
+      - 'packages/cli/tests/e2e/**'
+      - 'packages/cli/scripts/run-dashboard-browser-tests.mjs'
+      - 'packages/operate/**'
+      - 'packages/pipeline/lib/dashboard/**'
+      - 'packages/protocol/**'
+      - 'scripts/dashboard/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/dashboard-browser.yml'
+
+concurrency:
+  group: dashboard-browser-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  browser-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Install the pinned browser
+        run: npm exec --workspace=openplanr -- playwright install --with-deps chromium
+      - name: Run dashboard browser verification against local workspace packages
+        run: npm run test:browser --workspace=openplanr
+        env:
+          CI: 'true'
+      - name: Preserve browser diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-browser-diagnostics
+          path: packages/cli/test-results/
+          if-no-files-found: ignore
+          retention-days: 14

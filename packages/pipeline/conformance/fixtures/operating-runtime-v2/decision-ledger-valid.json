@@ -1,0 +1,169 @@
+{
+  "kind": "operating-decision-ledger",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "2.0.0",
+  "assignmentId": "asg_chair_fixture_001",
+  "roleId": "chair",
+  "roleVersion": "2.0.0",
+  "analysisProfile": {
+    "id": "decision-synthesis",
+    "version": "1.0.0",
+    "questionIds": [
+      "joint-support",
+      "unresolved-conflict",
+      "limiting-gaps",
+      "owner-and-revisit",
+      "measurable-actions"
+    ]
+  },
+  "ledgerId": "ldg_00000001",
+  "scopeId": "scope-acme",
+  "domainId": "business",
+  "domainVersion": "1.0.0",
+  "snapshotId": "snp_00000001",
+  "intelligencePlanId": "ipl_00000001",
+  "summary": "The issued evidence supports one measurable, reversible retention decision.",
+  "advisorArtifactIds": [
+    "art_00000002"
+  ],
+  "challengerArtifactId": null,
+  "advisorAbsenceGaps": [],
+  "evidenceGaps": [],
+  "questionCoverage": [
+    {
+      "questionId": "joint-support",
+      "disposition": "answered",
+      "answer": "The accepted Advisor claim and recommendation jointly support the bounded retention Decision.",
+      "decisionIds": ["decision:asg_chair_fixture_001:1"],
+      "findingIds": [],
+      "dissentIds": [],
+      "absenceIds": [],
+      "justification": null
+    },
+    {
+      "questionId": "unresolved-conflict",
+      "disposition": "answered",
+      "answer": "The Challenger Finding remains explicit in the Decision sources.",
+      "decisionIds": ["decision:asg_chair_fixture_001:1"],
+      "findingIds": ["finding:asg_challenger_fixture_001:1"],
+      "dissentIds": [],
+      "absenceIds": [],
+      "justification": null
+    },
+    {
+      "questionId": "limiting-gaps",
+      "disposition": "not-applicable",
+      "answer": "No runtime-issued typed absence limits this fixture synthesis.",
+      "decisionIds": [],
+      "findingIds": [],
+      "dissentIds": [],
+      "absenceIds": [],
+      "justification": "Both exact typed gap ledgers are empty."
+    },
+    {
+      "questionId": "owner-and-revisit",
+      "disposition": "answered",
+      "answer": "The Decision names its exact owner and a measurable revisit condition.",
+      "decisionIds": ["decision:asg_chair_fixture_001:1"],
+      "findingIds": [],
+      "dissentIds": [],
+      "absenceIds": [],
+      "justification": null
+    },
+    {
+      "questionId": "measurable-actions",
+      "disposition": "answered",
+      "answer": "The Decision contains one measurable Action hypothesis with a verification method.",
+      "decisionIds": ["decision:asg_chair_fixture_001:1"],
+      "findingIds": [],
+      "dissentIds": [],
+      "absenceIds": [],
+      "justification": null
+    }
+  ],
+  "decisions": [
+    {
+      "localDecisionId": "decision:asg_chair_fixture_001:1",
+      "title": "Retain customers",
+      "question": "What should we prioritize?",
+      "outcome": "Prioritize measurable retention work.",
+      "rationale": "Retention is below the declared target.",
+      "sourceClaimRefs": [
+        {
+          "advisorArtifactId": "art_00000002",
+          "localClaimId": "claim:asg_advisor_fixture_001:1"
+        }
+      ],
+      "sourceRecommendationRefs": [
+        {
+          "advisorArtifactId": "art_00000002",
+          "localRecommendationId": "recommendation:asg_advisor_fixture_001:1"
+        }
+      ],
+      "challengerFindingIds": [
+        "finding:asg_challenger_fixture_001:1"
+      ],
+      "evidenceRefIds": [
+        "evr_00000001"
+      ],
+      "alternativeDispositions": [
+        {
+          "sourceArtifactId": "art_00000002",
+          "localAlternativeId": "alternative:asg_advisor_fixture_001:1",
+          "title": "Prioritize acquisition instead",
+          "disposition": "rejected",
+          "rationale": "Retention has the higher current expected value."
+        }
+      ],
+      "confidence": 0.8,
+      "assumptionIds": [],
+      "upside": "Higher retention.",
+      "downside": "Less acquisition work.",
+      "uncertainty": "Retention response may vary by cohort.",
+      "reversibility": "Revisit the allocation after the next measurement window.",
+      "ownerActorId": "owner-001",
+      "revisitConditions": [
+        "The retention metric changes materially."
+      ],
+      "dissentIds": [],
+      "actionHypotheses": [
+        {
+          "localActionHypothesisId": "action-hypothesis:asg_chair_fixture_001:1",
+          "title": "Measure cohort retention",
+          "objectiveId": "obj_00000001",
+          "ownerActorId": "owner-001",
+          "accountabilityDisposition": null,
+          "expectedResult": "One accepted cohort observation clarifies retention.",
+          "metricId": "met_00000001",
+          "baseline": 0.6,
+          "target": 0.8,
+          "verificationWindow": "30d",
+          "verificationMethod": "Compare the accepted cohort retention observation with the declared target.",
+          "sourceClaimRefs": [
+            {
+              "advisorArtifactId": "art_00000002",
+              "localClaimId": "claim:asg_advisor_fixture_001:1"
+            }
+          ],
+          "sourceFindingIds": [
+            "finding:asg_challenger_fixture_001:1"
+          ],
+          "dependsOnActionHypothesisIds": []
+        }
+      ]
+    }
+  ],
+  "sourceDispositions": [
+    {
+      "sourceArtifactId": "art_00000002",
+      "sourceKind": "advisor-recommendation",
+      "localSourceId": "recommendation:asg_advisor_fixture_001:1",
+      "sourceOutcome": null,
+      "disposition": "accepted",
+      "localDecisionId": "decision:asg_chair_fixture_001:1",
+      "rationale": "The recommendation is evidence-linked, measurable, and reversible."
+    }
+  ],
+  "dissent": [],
+  "sourceArtifactId": "art_00000002"
+}

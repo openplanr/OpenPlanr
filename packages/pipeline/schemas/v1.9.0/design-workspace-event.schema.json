@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.9.0/design-workspace-event.schema.json",
+  "x-openplanr-contract": {
+    "id": "design-workspace-event",
+    "version": "1.9.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22,64}$"
+    },
+    "revisionId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{22,64}$"
+    },
+    "reviewOf": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "epoch": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2147483647
+    },
+    "iv": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 16,
+      "maxLength": 16
+    },
+    "ciphertext": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 22,
+      "maxLength": 6990507
+    },
+    "publicKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kty",
+        "crv",
+        "x",
+        "y"
+      ],
+      "properties": {
+        "kty": {
+          "const": "EC"
+        },
+        "crv": {
+          "const": "P-256"
+        },
+        "x": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "minLength": 43,
+          "maxLength": 43
+        },
+        "y": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "minLength": 43,
+          "maxLength": 43
+        },
+        "ext": {
+          "type": "boolean"
+        },
+        "key_ops": {
+          "type": "array",
+          "items": {
+            "const": "verify"
+          },
+          "maxItems": 1
+        }
+      }
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "minLength": 86,
+      "maxLength": 86
+    }
+  },
+  "required": [
+    "id",
+    "revisionId",
+    "reviewOf",
+    "epoch",
+    "iv",
+    "ciphertext",
+    "publicKey",
+    "signature"
+  ]
+}

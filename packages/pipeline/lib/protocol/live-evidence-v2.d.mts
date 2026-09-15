@@ -1,0 +1,24 @@
+export declare const LIVE_EVIDENCE_ABSENCE_KINDS_V2: readonly string[];
+export declare const LIVE_EVIDENCE_EFFECT_CLASS_V2: 'provider-call';
+export declare const LIVE_EVIDENCE_PORTABLE_AUTHORITY_V2: 'none';
+export declare const OPERATING_OUTCOME_EVALUATION_OPERATORS_V2: readonly string[];
+export declare class OperatingLiveEvidenceErrorV2 extends Error { code: string; details: Readonly<Record<string, unknown>>; }
+export declare function assertLiveEvidenceProviderRegistrationV2(record: unknown, options?: Record<string, unknown>): Readonly<Record<string, unknown>>;
+export declare function assertLiveEvidenceProviderRegistryV2(record: unknown, options?: Record<string, unknown>): Readonly<Record<string, unknown>>;
+export declare function registerLiveEvidenceProviderV2(registry: unknown, registration: unknown, options?: Record<string, unknown>): Readonly<Record<string, unknown>>;
+export declare function assertOperatingLiveEvidenceConsentRecordV2(record: unknown): Readonly<Record<string, unknown>>;
+export declare function assertOperatingLiveEvidenceIngestionV2(record: unknown, options?: Record<string, unknown>): Readonly<Record<string, unknown>>;
+export declare function deriveOperatingLiveEvidenceRequestHashV2(input: Record<string, unknown>): `sha256:${string}`;
+export declare function deriveOperatingLiveEvidenceContentDigestV2(record: Record<string, unknown>): `sha256:${string}`;
+export declare function assertAcceptedLiveEvidenceSourceV2(record: unknown, options: Record<string, unknown>): Readonly<Record<string, unknown>>;
+export declare function assertAcceptedLiveEvidenceBridgeV2(record: unknown, options: Record<string, unknown>): Readonly<Record<string, unknown>>;
+export declare function assertOperatingConnectorCheckpointV2(record: unknown): Readonly<Record<string, unknown>>;
+export declare function reduceOperatingConnectorCheckpointV2(current: unknown, event: unknown): Readonly<Record<string, unknown>>;
+export declare function assertOperatingMeasurementPlanV2(record: unknown, options?: Record<string, unknown>): Readonly<Record<string, unknown>>;
+export declare function assertOperatingMeasurementScheduleV2(record: unknown): Readonly<Record<string, unknown>>;
+export declare function assertOperatingMeasurementScheduleReceiptV2(record: unknown, options?: Record<string, unknown>): Readonly<Record<string, unknown>>;
+export declare function reduceOperatingMeasurementScheduleV2(schedule: unknown, transition: unknown, options?: { priorReceipt?: unknown }): Readonly<{ replay: boolean; schedule: Record<string, unknown>; receipt: Record<string, unknown> }>;
+export declare function assertOperatingEvidenceObservationV2(record: unknown, options?: Record<string, unknown>): Readonly<Record<string, unknown>>;
+export declare function assertOperatingOutcomeEvaluationV2(record: unknown, options?: Record<string, unknown>): Readonly<Record<string, unknown>>;
+export declare function evaluateOperatingOutcomeV2(input: Record<string, unknown>): Readonly<Record<string, unknown>>;
+export declare function assertOperatingLearningReceiptV2(record: unknown, options?: Record<string, unknown>): Readonly<Record<string, unknown>>;

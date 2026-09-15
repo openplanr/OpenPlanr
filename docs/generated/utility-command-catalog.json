@@ -1,0 +1,723 @@
+{
+  "kind": "openplanr-utility-command-catalog",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.8.0",
+  "semanticBoundary": "host-agent",
+  "utilityBoundary": "deterministic-cli",
+  "active": [
+    {
+      "path": "init",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "setup",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "doctor",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "runtime",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "runtime detect",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "runtime list",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "runtime install",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "runtime update",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "runtime remove",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "runtime rollback",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "runtime doctor",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "artifact",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "artifact open",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "artifact handoff",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "artifact share",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "artifact publish",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "artifact sync",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "artifact import",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "artifact export",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "company",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "company login",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "company logout",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "company connect",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "company projects",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "company preview",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "company publish",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "company push",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "company pull",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "company status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "company proposal",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "company apply",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "dashboard",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "diagram",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "diagram render",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "diagram inspect",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "diagram check",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "diagram gallery",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "diagram rerender",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "linear",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "linear init",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "linear sync",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "linear status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "linear push",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "linear tasklist-sync",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate domains",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate validate-note",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate dashboard",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate start",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate get",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate resume",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate planning",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate planning preview",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate planning create-spec",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate assignment",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate assignment prepare",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate assignment validate",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate assignment submit",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate assignment recover",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate claim",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate submit",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate artifact",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate review",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate decide",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate measurement",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate measurement preview",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate measurement enable",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate measurement disable",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate measurement status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate experience",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate today",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate cycles",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate evidence",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate outcomes",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate history",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate cycle",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate outcome",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate search",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate export",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery storage-status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery migrate-storage",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery rollback-storage",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery inspect",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery restore",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "operate recovery clear-stale-lock",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "land",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "land prepare",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "land show",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "land status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "land advance",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "backlog",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "backlog add",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "backlog list",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "backlog show",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "backlog update",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "epic",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "epic create",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "epic list",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "epic show",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "epic update",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "feature",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "feature create",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "feature list",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "feature show",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "feature update",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "story",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "story create",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "story list",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "story show",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "story update",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "task",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "task create",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "task list",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "task show",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "task update",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "quick",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "quick create",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "quick list",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "quick show",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "quick update",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "spec",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "spec init",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "spec create",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "spec shape",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "spec list",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "spec show",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "spec status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "spec destroy",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "spec attach-design",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "spec promote",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "spec sync",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "checklist",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "checklist show",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "checklist toggle",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "checklist reset",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "rules",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "rules generate",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "config",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "config show",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "config set-agent",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "config set-upgrade-policy",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "export",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "report",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "report-linter",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "context",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "voice",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "voice standup",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "github",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "github push",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "github sync",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "github status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "graph",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "search",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "sprint",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "sprint create",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "sprint list",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "sprint show",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "sprint update",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "sync",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "template",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "template list",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "template show",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "template use",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "template save",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "template delete",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "update",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "upgrade",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "upgrade status",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "upgrade apply",
+      "classification": "deterministic-preserved"
+    }
+  ],
+  "retired": [
+    {
+      "path": "estimate",
+      "classification": "semantic-moved-to-skill"
+    },
+    {
+      "path": "evidence",
+      "classification": "obsolete-governance-retired"
+    },
+    {
+      "path": "pipeline",
+      "classification": "obsolete-facade-retired"
+    },
+    {
+      "path": "plan",
+      "classification": "semantic-moved-to-skill"
+    },
+    {
+      "path": "refine",
+      "classification": "semantic-moved-to-skill"
+    },
+    {
+      "path": "revise",
+      "classification": "semantic-moved-to-skill"
+    },
+    {
+      "path": "spec decompose",
+      "classification": "semantic-moved-to-skill"
+    }
+  ]
+}

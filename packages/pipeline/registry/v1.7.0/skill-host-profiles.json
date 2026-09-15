@@ -1,0 +1,247 @@
+{
+  "kind": "skill-host-profile-registry",
+  "schemaVersion": "1.1.0",
+  "protocolVersion": "1.7.0",
+  "documentVersion": "1.1.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "profiles": [
+    {
+      "hostProfileId": "claude-code-default",
+      "hostProfileVersion": "1.0.0",
+      "host": "claude-code",
+      "description": "Claude Code profile with native questions and portable interactive fallbacks.",
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "read"
+        ],
+        "allowedTools": [
+          "read"
+        ],
+        "allowedOperations": [
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A"
+        ],
+        "forbiddenEffects": [
+          "network-write"
+        ]
+      },
+      "source": {
+        "path": "packages/protocol/host-profiles/claude-code.md",
+        "digest": "sha256:00ff4377d76f438c453547e24484d197d60e6830fba17e17a9e6051293efc030"
+      },
+      "overlayModules": [],
+      "runtimeCapabilities": [
+        "attached-terminal",
+        "native-questions",
+        "structured-chat"
+      ],
+      "interactionBindings": [
+        {
+          "surface": "native",
+          "protocolInteraction": "native",
+          "capabilityId": "native-questions"
+        },
+        {
+          "surface": "chat",
+          "protocolInteraction": "chat",
+          "capabilityId": "structured-chat"
+        },
+        {
+          "surface": "terminal",
+          "protocolInteraction": "terminal",
+          "capabilityId": "attached-terminal"
+        },
+        {
+          "surface": "headless",
+          "protocolInteraction": "none"
+        }
+      ]
+    },
+    {
+      "hostProfileId": "codex-default",
+      "hostProfileVersion": "1.0.0",
+      "host": "codex",
+      "description": "Codex profile with composer questions and portable interactive fallbacks.",
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "read"
+        ],
+        "allowedTools": [
+          "read"
+        ],
+        "allowedOperations": [
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A"
+        ],
+        "forbiddenEffects": [
+          "network-write"
+        ]
+      },
+      "source": {
+        "path": "packages/protocol/host-profiles/codex.md",
+        "digest": "sha256:fe7f1efa8a4ef5b4c51765e270cfc68368b060fdecb54148bdf1874688f01007"
+      },
+      "overlayModules": [],
+      "runtimeCapabilities": [
+        "attached-terminal",
+        "native-questions",
+        "structured-chat"
+      ],
+      "interactionBindings": [
+        {
+          "surface": "native",
+          "protocolInteraction": "native",
+          "capabilityId": "native-questions"
+        },
+        {
+          "surface": "chat",
+          "protocolInteraction": "chat",
+          "capabilityId": "structured-chat"
+        },
+        {
+          "surface": "terminal",
+          "protocolInteraction": "terminal",
+          "capabilityId": "attached-terminal"
+        },
+        {
+          "surface": "headless",
+          "protocolInteraction": "none"
+        }
+      ]
+    },
+    {
+      "hostProfileId": "cursor-default",
+      "hostProfileVersion": "1.0.0",
+      "host": "cursor",
+      "description": "Cursor profile with structured chat and attached-terminal fallbacks.",
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "read"
+        ],
+        "allowedTools": [
+          "read"
+        ],
+        "allowedOperations": [
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A"
+        ],
+        "forbiddenEffects": [
+          "network-write"
+        ]
+      },
+      "source": {
+        "path": "packages/protocol/host-profiles/cursor.md",
+        "digest": "sha256:a57cd97781cf646c4150da44235ddbd0b7904db3bbf009855a7ea022f6545098"
+      },
+      "overlayModules": [],
+      "runtimeCapabilities": [
+        "attached-terminal",
+        "structured-chat"
+      ],
+      "interactionBindings": [
+        {
+          "surface": "chat",
+          "protocolInteraction": "chat",
+          "capabilityId": "structured-chat"
+        },
+        {
+          "surface": "terminal",
+          "protocolInteraction": "terminal",
+          "capabilityId": "attached-terminal"
+        },
+        {
+          "surface": "headless",
+          "protocolInteraction": "none"
+        }
+      ]
+    },
+    {
+      "hostProfileId": "pipeline-default",
+      "hostProfileVersion": "1.0.0",
+      "host": "pipeline",
+      "description": "Host-neutral pipeline projection profile; narrows to read-only repository access.",
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "read"
+        ],
+        "allowedTools": [
+          "read"
+        ],
+        "allowedOperations": [
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A"
+        ],
+        "forbiddenEffects": [
+          "network-write"
+        ]
+      },
+      "source": {
+        "path": "packages/protocol/host-profiles/pipeline.md",
+        "digest": "sha256:f5039bb4c67fac1e934ed803d0728723806a6712b53c5dd3c99ce6144ffb5482"
+      },
+      "overlayModules": []
+    },
+    {
+      "hostProfileId": "pipeline-default",
+      "hostProfileVersion": "1.1.0",
+      "host": "pipeline",
+      "description": "Host-neutral pipeline profile with terminal and headless fallbacks.",
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "read"
+        ],
+        "allowedTools": [
+          "read"
+        ],
+        "allowedOperations": [
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A"
+        ],
+        "forbiddenEffects": [
+          "network-write"
+        ]
+      },
+      "source": {
+        "path": "packages/protocol/host-profiles/pipeline-capabilities.md",
+        "digest": "sha256:5f032622114c45adb510d85b73a019b9a0e2a347b868dff82440445e463c1a1f"
+      },
+      "overlayModules": [],
+      "runtimeCapabilities": [
+        "attached-terminal"
+      ],
+      "interactionBindings": [
+        {
+          "surface": "terminal",
+          "protocolInteraction": "terminal",
+          "capabilityId": "attached-terminal"
+        },
+        {
+          "surface": "headless",
+          "protocolInteraction": "none"
+        }
+      ]
+    }
+  ],
+  "documentDigest": "sha256:e1b8a3c4e1b3d66bc01bb1c0cf0b43591e596e232f1330285083b00a93b38db2"
+}

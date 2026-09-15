@@ -1,0 +1,11 @@
+{
+  "kind": "openplanr-skill-migration-declaration",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-sync",
+  "baseline": "SKILL.md",
+  "successor": "skill.json",
+  "classification": "intentional",
+  "intendedChanges": [
+    "Removed unresolved package procedure and command dependencies while preserving the public sync workflow and report contract."
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "imports": [],
+  "modules": [
+    {
+      "moduleId": "planr-ship-workflow",
+      "moduleVersion": "1.1.0",
+      "moduleKind": "implementation",
+      "description": "Task-specific planr-ship workflow guidance.",
+      "source": "modules/workflow.md",
+      "appliesWhen": "Whenever planr-ship is selected.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "request-scope",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "local-execution",
+          "read",
+          "write"
+        ],
+        "allowedTools": [
+          "read",
+          "edit",
+          "shell"
+        ],
+        "allowedOperations": [
+          "compile",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B",
+          "C"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      }
+    }
+  ]
+}

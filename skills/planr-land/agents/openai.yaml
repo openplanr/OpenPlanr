@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Land"
+  short_description: "Assess release readiness and prepare or inspect an OpenPlanr…"
+  default_prompt: "Use $planr-land to assess release readiness and prepare or inspect an OpenPlanr landing sequence. Use after implementation and checks are complete, before merge, publication, or deployment."
+policy:
+  allow_implicit_invocation: true

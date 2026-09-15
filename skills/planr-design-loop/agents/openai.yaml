@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Design Loop"
+  short_description: "Compare three materially different product design directions in…"
+  default_prompt: "Use $planr-design-loop to compare three materially different product design directions in a live review studio, collect pins and ratings, and develop the selected direction. Use for visual alternatives, comparison or a remix."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/planning-review-record.schema.json",
+  "title": "OpenPlanr Protocol 1.1 finite planning review record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind", "schemaVersion", "protocolVersion", "recordType", "runId", "generation", "state",
+    "feature", "runtime", "createdAt", "updatedAt", "reviewerRoster", "rosterDigest", "candidateRevisions",
+    "reviews", "correction", "reviewOutcome", "ownerDecision", "events", "terminal", "receiptHash"
+  ],
+  "properties": {
+    "kind": { "const": "planning-review" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.1.0" },
+    "recordType": { "type": "string", "enum": ["active", "receipt"] },
+    "runId": { "type": "string", "pattern": "^prr_[a-f0-9]{32}$" },
+    "generation": { "type": "integer", "minimum": 0 },
+    "state": { "type": "string", "enum": ["reviewing_initial", "correction_required", "reviewing_targeted", "awaiting_owner", "passed", "blocked"] },
+    "feature": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "featureId", "slug"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["spec-driven", "default"] },
+        "featureId": { "type": "string", "pattern": "^(?:SPEC|FEAT)-[0-9]{3}$" },
+        "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 160 }
+      }
+    },
+    "runtime": { "type": "string", "enum": ["claude-code", "codex", "cursor", "unknown"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "reviewerRoster": {
+      "type": "array", "minItems": 4, "maxItems": 9, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/reviewerId" }
+    },
+    "rosterDigest": { "$ref": "#/$defs/digest" },
+    "candidateRevisions": {
+      "type": "array", "minItems": 1, "maxItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["revision", "planDigest", "professionalSpecificationDigest", "createdAt"],
+        "properties": {
+          "revision": { "type": "integer", "minimum": 1, "maximum": 2 },
+          "planDigest": { "$ref": "#/$defs/digest" },
+          "professionalSpecificationDigest": { "$ref": "#/$defs/digest" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "reviews": {
+      "type": "array", "maxItems": 2,
+      "items": { "$ref": "#/$defs/review" }
+    },
+    "correction": {
+      "oneOf": [
+        { "type": "null", "title": "no correction" },
+        {
+          "title": "single correction", "type": "object", "additionalProperties": false,
+          "required": ["summary", "findingIds", "fromPlanDigest", "toPlanDigest", "registeredAt"],
+          "properties": {
+            "summary": { "$ref": "#/$defs/text" },
+            "findingIds": { "type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/findingId" } },
+            "fromPlanDigest": { "$ref": "#/$defs/digest" },
+            "toPlanDigest": { "$ref": "#/$defs/digest" },
+            "registeredAt": { "type": "string", "format": "date-time" }
+          }
+        }
+      ]
+    },
+    "reviewOutcome": { "type": ["string", "null"], "enum": [null, "pass-candidate", "blocked"] },
+    "ownerDecision": {
+      "oneOf": [
+        { "type": "null", "title": "pending owner" },
+        {
+          "title": "bound owner decision", "type": "object", "additionalProperties": false,
+          "required": ["ownerId", "decision", "reason", "candidateRevision", "planDigest", "decidedAt", "decisionDigest"],
+          "properties": {
+            "ownerId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@-]{0,159}$" },
+            "decision": { "type": "string", "enum": ["approved", "blocked"] },
+            "reason": { "$ref": "#/$defs/text" },
+            "candidateRevision": { "type": "integer", "minimum": 1, "maximum": 2 },
+            "planDigest": { "$ref": "#/$defs/digest" },
+            "decidedAt": { "type": "string", "format": "date-time" },
+            "decisionDigest": { "$ref": "#/$defs/digest" }
+          }
+        }
+      ]
+    },
+    "events": {
+      "type": "array", "maxItems": 8,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["eventId", "type", "generation", "inputDigest", "at"],
+        "properties": {
+          "eventId": { "type": "string", "pattern": "^pre_[a-f0-9]{32}$" },
+          "type": { "type": "string", "enum": ["review.closed", "correction.registered", "owner.decided"] },
+          "generation": { "type": "integer", "minimum": 1 },
+          "inputDigest": { "$ref": "#/$defs/digest" },
+          "at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "terminal": {
+      "oneOf": [
+        { "type": "null", "title": "active" },
+        {
+          "title": "terminal", "type": "object", "additionalProperties": false,
+          "required": ["status", "at", "reason", "planDigest", "ownerDecisionDigest"],
+          "properties": {
+            "status": { "type": "string", "enum": ["passed", "blocked"] },
+            "at": { "type": "string", "format": "date-time" },
+            "reason": { "$ref": "#/$defs/text" },
+            "planDigest": { "$ref": "#/$defs/digest" },
+            "ownerDecisionDigest": { "$ref": "#/$defs/digest" }
+          }
+        }
+      ]
+    },
+    "receiptHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "findingId": { "type": "string", "pattern": "^pfnd_[a-f0-9]{32}$" },
+    "reviewerId": { "type": "string", "enum": ["direction-reviewer", "engineering-reviewer", "design-reviewer", "devex-reviewer", "security-reviewer", "performance-reviewer", "migration-reviewer", "api-contract-reviewer", "data-integrity-reviewer"] },
+    "contribution": {
+      "type": "object", "additionalProperties": false,
+      "required": ["reviewerId", "reviewerVersion", "summary", "evidenceDigest"],
+      "properties": {
+        "reviewerId": { "$ref": "#/$defs/reviewerId" },
+        "reviewerVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "summary": { "$ref": "#/$defs/text" },
+        "evidenceDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "finding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "severity", "basis", "title", "evidence", "artifactRefs", "acceptanceRefs", "disposition"],
+      "properties": {
+        "id": { "$ref": "#/$defs/findingId" },
+        "severity": { "type": "string", "enum": ["P0", "P1", "P2"] },
+        "basis": { "type": "string", "enum": ["scope", "acceptance", "feasibility", "design", "devex", "security", "performance", "migration", "api-contract", "data-integrity"] },
+        "title": { "$ref": "#/$defs/text" },
+        "evidence": { "$ref": "#/$defs/text" },
+        "artifactRefs": { "type": "array", "maxItems": 64, "uniqueItems": true, "items": { "type": "string", "pattern": "^(?:SPEC|FEAT|US|T)-[0-9]{3}$" } },
+        "acceptanceRefs": { "type": "array", "maxItems": 64, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 240 } },
+        "disposition": { "type": "string", "enum": ["open", "resolved", "remains", "deferred"] }
+      }
+    },
+    "dissent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["reviewerId", "summary", "evidenceDigest"],
+      "properties": {
+        "reviewerId": { "$ref": "#/$defs/reviewerId" },
+        "summary": { "$ref": "#/$defs/text" },
+        "evidenceDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "review": {
+      "type": "object", "additionalProperties": false,
+      "required": ["phase", "candidateRevision", "candidateDigest", "reviewerIds", "contributions", "findings", "dissent", "reviewedFindingIds", "summary", "closedAt"],
+      "properties": {
+        "phase": { "type": "string", "enum": ["initial", "targeted"] },
+        "candidateRevision": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "candidateDigest": { "$ref": "#/$defs/digest" },
+        "reviewerIds": { "type": "array", "minItems": 4, "maxItems": 9, "uniqueItems": true, "items": { "$ref": "#/$defs/reviewerId" } },
+        "contributions": { "type": "array", "minItems": 4, "maxItems": 9, "items": { "$ref": "#/$defs/contribution" } },
+        "findings": { "type": "array", "maxItems": 128, "items": { "$ref": "#/$defs/finding" } },
+        "dissent": { "type": "array", "maxItems": 9, "items": { "$ref": "#/$defs/dissent" } },
+        "reviewedFindingIds": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/findingId" } },
+        "summary": { "$ref": "#/$defs/text" },
+        "closedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

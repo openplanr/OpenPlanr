@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-design",
+  "family": "design",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-design/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-design/skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Removed an unresolved command-document dependency and clarified public CLI ownership plus host-native interaction behavior."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:bee090a0b6e0cd7f428a4ad92a0f46a399f70ffa18e0db1959d6a2fa839a30e7",
+      "successorDigest": "sha256:8598950df72d77d7b0b35e4b483259e07d755fe202acbced8f4783c20b0b1c39"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:bee090a0b6e0cd7f428a4ad92a0f46a399f70ffa18e0db1959d6a2fa839a30e7",
+      "successorDigest": "sha256:8598950df72d77d7b0b35e4b483259e07d755fe202acbced8f4783c20b0b1c39"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:8ac449340e4ec89d083303a3c09e3dd285342d71b595574ce43e74a42ecf22c6",
+      "successorDigest": "sha256:833eacca3248007c2d82a9007171253466fbf5fa30dc84bf6c9d06c9b9b05839"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:bee090a0b6e0cd7f428a4ad92a0f46a399f70ffa18e0db1959d6a2fa839a30e7",
+      "successorDigest": "sha256:8598950df72d77d7b0b35e4b483259e07d755fe202acbced8f4783c20b0b1c39"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Sync"
+  short_description: "Audit OpenPlanr planning artifacts for graph and protocol drift…"
+  default_prompt: "Use $planr-sync to audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent."
+policy:
+  allow_implicit_invocation: true

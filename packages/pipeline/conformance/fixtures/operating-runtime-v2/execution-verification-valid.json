@@ -1,0 +1,45 @@
+{
+  "protocolVersion": "2.0.0",
+  "executionStatuses": [
+    "success",
+    "failure",
+    "blocked",
+    "uncertain",
+    "partial",
+    "cancelled",
+    "rolled-back"
+  ],
+  "hypothesisStatuses": [
+    "pending",
+    "confirmed",
+    "failed",
+    "blocked",
+    "cancelled",
+    "revisit"
+  ],
+  "actionPath": [
+    "approved",
+    "queued",
+    "in_progress",
+    "completed"
+  ],
+  "cyclePath": [
+    "awaiting_review",
+    "approved",
+    "executing",
+    "verifying",
+    "closed"
+  ],
+  "verificationOwnership": {
+    "assignmentKind": "verification",
+    "outputSchemaId": "operating-outcome",
+    "fromExistingPlan": true,
+    "effectCompletionImpliesHypothesisSuccess": false
+  },
+  "replay": {
+    "dispatchCount": 0,
+    "effectCount": 0,
+    "duplicateEvents": 0,
+    "duplicateAssignments": 0
+  }
+}

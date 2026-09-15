@@ -1,0 +1,50 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-spec",
+  "family": "planning",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-spec/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-spec/skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "exact",
+  "intendedChanges": [],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "exact",
+      "baselineDigest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85",
+      "successorDigest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85"
+    },
+    {
+      "host": "codex",
+      "status": "exact",
+      "baselineDigest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85",
+      "successorDigest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85"
+    },
+    {
+      "host": "cursor",
+      "status": "host-encoding-only",
+      "baselineDigest": "sha256:d153d49a34019848fb836974192d6c679308fa7939135d4f11dad8f067e4e880",
+      "successorDigest": "sha256:a397c56676261974a7acd86b1baef7b5c6e567d5bcfa9b14ee2111a44ee0df83"
+    },
+    {
+      "host": "pipeline",
+      "status": "exact",
+      "baselineDigest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85",
+      "successorDigest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85"
+    }
+  ]
+}

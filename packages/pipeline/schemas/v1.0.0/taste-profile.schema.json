@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.0.0/taste-profile.schema.json",
+  "title": "OpenPlanr design taste profile (v1.0.0)",
+  "description": "Per-project taste memory at ~/.planr/designs/<project>/taste-profile.json. Updated on BOTH approve and reject. `confidence` is stored raw; the 5%/week decay is computed AT READ TIME by lib/design-engine/taste.mjs (never persisted back as decayed). Conflicts between the profile and a new brief are FLAGGED to the user, never silently resolved. NOTE: each dimension inlines the same entry shape — the conformance validator's schema subset has no $ref.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "profile_version", "dimensions", "sessions"],
+  "properties": {
+    "schema_version": { "const": "1.0.0", "description": "Schema version pin." },
+    "profile_version": { "const": 1, "description": "Taste-profile format generation." },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fonts", "colors", "layouts", "aesthetics"],
+      "properties": {
+        "fonts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "confidence", "approved_count", "rejected_count", "last_seen"],
+            "properties": {
+              "value": { "type": "string", "minLength": 1 },
+              "confidence": { "type": "number", "minimum": 0 },
+              "approved_count": { "type": "number", "minimum": 0 },
+              "rejected_count": { "type": "number", "minimum": 0 },
+              "last_seen": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "colors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "confidence", "approved_count", "rejected_count", "last_seen"],
+            "properties": {
+              "value": { "type": "string", "minLength": 1 },
+              "confidence": { "type": "number", "minimum": 0 },
+              "approved_count": { "type": "number", "minimum": 0 },
+              "rejected_count": { "type": "number", "minimum": 0 },
+              "last_seen": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "layouts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "confidence", "approved_count", "rejected_count", "last_seen"],
+            "properties": {
+              "value": { "type": "string", "minLength": 1 },
+              "confidence": { "type": "number", "minimum": 0 },
+              "approved_count": { "type": "number", "minimum": 0 },
+              "rejected_count": { "type": "number", "minimum": 0 },
+              "last_seen": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "aesthetics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "confidence", "approved_count", "rejected_count", "last_seen"],
+            "properties": {
+              "value": { "type": "string", "minLength": 1 },
+              "confidence": { "type": "number", "minimum": 0 },
+              "approved_count": { "type": "number", "minimum": 0 },
+              "rejected_count": { "type": "number", "minimum": 0 },
+              "last_seen": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      },
+      "description": "Each dimension is an array of attribute entries {value, confidence, approved_count, rejected_count, last_seen}."
+    },
+    "sessions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sessionId", "verdict", "at"],
+        "properties": {
+          "sessionId": { "type": "string", "minLength": 1 },
+          "verdict": { "type": "string", "enum": ["approved", "rejected"] },
+          "at": { "type": "string", "minLength": 1, "description": "ISO timestamp." },
+          "artifact": { "type": "string", "description": "Path of the judged artifact." }
+        }
+      },
+      "description": "Audit trail of every taste update."
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "diagram-pin-1",
+  "author": { "id": "reviewer-1", "name": "Asem" },
+  "artifactId": "flowchart-fixture",
+  "variant": "diagram",
+  "region": { "x": 0.2, "y": 0.3, "w": 0.25, "h": 0.15 },
+  "viewport": { "width": 1440, "height": 900 },
+  "anchor": { "planrId": "step-1" },
+  "intent": "improve",
+  "status": "open",
+  "comment": "Make the decision branch easier to scan.",
+  "replies": [],
+  "createdAt": "2026-08-30T12:00:00.000Z",
+  "updatedAt": "2026-08-30T12:00:00.000Z"
+}

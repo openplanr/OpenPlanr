@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/dashboard-bootstrap.schema.json",
+  "title": "OpenPlanr dashboard bootstrap compatibility envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "ui",
+    "server",
+    "capabilities",
+    "project",
+    "queryRoots",
+    "origin",
+    "compatibility"
+  ],
+  "properties": {
+    "kind": { "const": "dashboard-bootstrap" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["buildId", "expectedBuildId", "assetManifestHash"],
+      "properties": {
+        "buildId": {
+          "type": ["string", "null"],
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$"
+        },
+        "expectedBuildId": {
+          "type": ["string", "null"],
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$"
+        },
+        "assetManifestHash": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      }
+    },
+    "server": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["packageVersion"],
+      "properties": {
+        "packageVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$"
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["planningGraph", "operateExperience", "operateCommands", "diagnostics"],
+      "properties": {
+        "planningGraph": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schemaVersion"],
+          "properties": { "schemaVersion": { "const": "1.0.0" } }
+        },
+        "operateExperience": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["protocolVersion", "schemaVersion"],
+          "properties": {
+            "protocolVersion": { "const": "2.0.0" },
+            "schemaVersion": { "const": "1.0.0" }
+          }
+        },
+        "operateCommands": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["protocolVersion", "transportVersion", "available"],
+          "properties": {
+            "protocolVersion": { "const": "2.0.0" },
+            "transportVersion": { "const": "1.0.0" },
+            "available": { "type": "boolean" }
+          }
+        },
+        "diagnostics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schemaVersion", "available"],
+          "properties": {
+            "schemaVersion": { "const": "1.0.0" },
+            "available": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "name", "branch", "products"],
+      "properties": {
+        "projectId": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F]+$"
+        },
+        "branch": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "products": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": { "type": "string", "enum": ["planning", "operate"] }
+        }
+      }
+    },
+    "queryRoots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["planning", "operate"],
+      "properties": {
+        "planning": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/queryRoot" }
+          ]
+        },
+        "operate": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/queryRoot" }
+          ]
+        }
+      }
+    },
+    "origin": {
+      "type": "string",
+      "pattern": "^http://(?:127\\.0\\.0\\.1|localhost):[1-9][0-9]{0,4}$"
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reasonCodes"],
+      "properties": {
+        "status": { "type": "string", "enum": ["compatible", "incompatible"] },
+        "reasonCodes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "DASHBOARD_MANIFEST_MISSING",
+              "DASHBOARD_MANIFEST_INVALID",
+              "DASHBOARD_ASSET_MISSING",
+              "DASHBOARD_BUILD_MISMATCH"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "queryRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actorId",
+        "projectId",
+        "scopeId",
+        "domainId",
+        "domainVersion",
+        "generation"
+      ],
+      "properties": {
+        "actorId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "projectId": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "scopeId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "domainId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "domainVersion": {
+          "type": "string",
+          "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$"
+        },
+        "generation": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "compatibility": {
+            "properties": { "status": { "const": "compatible" } },
+            "required": ["status"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "ui": {
+            "properties": {
+              "buildId": { "type": "string" },
+              "expectedBuildId": { "type": "string" },
+              "assetManifestHash": { "type": "string" }
+            }
+          },
+          "compatibility": {
+            "properties": { "reasonCodes": { "maxItems": 0 } }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "compatibility": {
+            "properties": { "reasonCodes": { "minItems": 1 } }
+          }
+        }
+      }
+    }
+  ]
+}

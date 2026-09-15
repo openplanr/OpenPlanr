@@ -1,0 +1,8 @@
+{
+  "kind": "diagram-primitive-fixture",
+  "schemaVersion": "1.0.0",
+  "primitive": "node",
+  "grammarId": "flowchart",
+  "fixture": "fixtures/diagram/grammars/flowchart.planr-diagram.json",
+  "description": "Canonical node primitive example in the flowchart grammar."
+}

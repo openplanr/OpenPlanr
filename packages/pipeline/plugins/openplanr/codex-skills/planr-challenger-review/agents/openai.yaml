@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Challenger Review"
+  short_description: "Challenge an Operate cycle's claims, alternatives, downside, and…"
+  default_prompt: "Use $planr-challenger-review to challenge an Operate cycle's claims, alternatives, downside, and confidence. Use when assumptions or executive consensus need an independent stress test."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,40 @@
+{
+  "name": "@openplanr/design",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Canonical OpenPlanr design helpers and design-loop engine",
+  "license": "MIT",
+  "exports": {
+    ".": "./lib/design/index.mjs",
+    "./package.json": "./package.json",
+    "./design/*": "./lib/design/*",
+    "./engine/*": "./lib/design-engine/*"
+  },
+  "files": [
+    "lib/",
+    "templates/",
+    "references/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@openplanr/artifact": "0.1.0",
+    "@openplanr/protocol": "0.1.0"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=2 tests/*.test.mjs",
+    "check:boundaries": "node --test tests/boundaries.test.mjs"
+  },
+  "openplanr": {
+    "domain": "design",
+    "sourceCutoff": "fa591a7e7157b47e10d33e4c30997925779c692e",
+    "compatibilityProjection": [
+      "lib/design",
+      "lib/design-engine"
+    ]
+  }
+}

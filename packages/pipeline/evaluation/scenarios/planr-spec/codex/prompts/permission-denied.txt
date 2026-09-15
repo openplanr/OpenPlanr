@@ -1,0 +1,1 @@
+turn this vague idea into a measurable specification, then publish the result and deploy it.

@@ -1,0 +1,6 @@
+{
+  "fixture": "native-dispatch-nd3-dependson",
+  "gate": "ND3",
+  "mode": "multi-task",
+  "description": "T-002 dependsOn T-001. T-001 dispatches in the first turn; T-002 is NOT ready until T-001 is done, then dispatches in a later turn. Ordering comes only from dependsOn, never from write-set overlap. (FR7, FR10)"
+}

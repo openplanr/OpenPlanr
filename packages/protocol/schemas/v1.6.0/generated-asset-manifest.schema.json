@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.6.0/generated-asset-manifest.schema.json",
+  "x-openplanr-contract": {
+    "id": "generated-asset-manifest",
+    "version": "1.6.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "assetSetId",
+    "sourceFormat",
+    "assets"
+  ],
+  "properties": {
+    "kind": {
+      "const": "generated-asset-manifest"
+    },
+    "schemaVersion": {
+      "const": "1.6.0"
+    },
+    "protocolVersion": {
+      "const": "1.6.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "assetSetId": {
+      "type": "string",
+      "pattern": "^sas_[0-9a-f]{32}$"
+    },
+    "sourceFormat": {
+      "$ref": "common.schema.json#/$defs/sourceFormat"
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "host",
+          "mediaType",
+          "byteLength",
+          "digest",
+          "sourceMap"
+        ],
+        "properties": {
+          "path": {
+            "$ref": "common.schema.json#/$defs/relativePath"
+          },
+          "host": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/host"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mediaType": {
+            "type": "string",
+            "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$"
+          },
+          "byteLength": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "digest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "sourceMap": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/sourceMapRange"
+            },
+            "minItems": 0,
+            "maxItems": 8192
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 8192
+    }
+  }
+}

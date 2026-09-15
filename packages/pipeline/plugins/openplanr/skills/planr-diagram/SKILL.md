@@ -1,0 +1,49 @@
+---
+name: planr-diagram
+description: Create, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.
+license: MIT
+---
+
+# Planr Diagram
+
+Use the public `planr diagram` surface for deterministic validation, rendering,
+fidelity reporting, and source custody. Do not reproduce renderer or manifest
+logic in the prompt.
+
+## Create from intent
+
+When the input is an English description, read the
+[intent-to-IR guide](references/diagram-intent-to-ir.md).
+Choose the grammar and detail tier from the available project context. Ask only
+when an unresolved choice would materially change the meaning; ask no more than
+three short decision-changing questions at once and prefer the host's native
+question UI. Write one canonical Protocol 1.6 diagram document, then run:
+
+```sh
+planr diagram render <file>.planr-diagram.json --json
+```
+
+For Mermaid input, pass the `.mmd` file directly. An edited Excalidraw scene is
+a source branch of an existing generated set; rerender its manifest with
+`--accept excalidraw` when the user chooses that branch.
+
+## Inspect and revise
+
+- `planr diagram inspect <input-or-manifest> --json` explains the current source,
+  outputs, editability, fidelity, and drift without changing files.
+- `planr diagram check <input-or-manifest> --json` verifies schema and manifest
+  custody.
+- `planr diagram rerender <manifest> --accept ir|mermaid|excalidraw --json`
+  regenerates from the selected source branch.
+- `planr diagram gallery [--type <type>] --json` lists grammars, aliases,
+  primitives, and layout families. Read the
+  [fidelity guide](references/diagram-fidelity.md) when choosing an editable
+  projection or explaining an omitted one.
+
+After a successful render, preview with the host's native local preview when it
+is available. Otherwise return the exact self-contained HTML path and the
+`nextAction` from the command result. Treat an omitted Mermaid or Excalidraw
+projection as a supported fidelity outcome when the result explains why.
+
+Report the selected grammar, manifest path, emitted files, validation status,
+editable source, fidelity or omissions, and the clearest next action.

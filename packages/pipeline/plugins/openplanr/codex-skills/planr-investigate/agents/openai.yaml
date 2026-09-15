@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Investigate"
+  short_description: "Diagnose a bug, regression, error, or unexplained behavior and…"
+  default_prompt: "Use $planr-investigate to diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery."
+policy:
+  allow_implicit_invocation: true

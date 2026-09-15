@@ -1,0 +1,81 @@
+{
+  "name": "@openplanr/skill-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.d.mts",
+      "import": "./src/index.mjs",
+      "default": "./src/index.mjs"
+    },
+    "./authoring": {
+      "types": "./src/authoring/index.d.mts",
+      "import": "./src/authoring/index.mjs",
+      "default": "./src/authoring/index.mjs"
+    },
+    "./compiler": {
+      "types": "./src/compiler/index.d.mts",
+      "import": "./src/compiler/index.mjs",
+      "default": "./src/compiler/index.mjs"
+    },
+    "./manifests": {
+      "types": "./src/manifests/index.d.mts",
+      "import": "./src/manifests/index.mjs",
+      "default": "./src/manifests/index.mjs"
+    },
+    "./matching": {
+      "types": "./src/matching/index.d.mts",
+      "import": "./src/matching/index.mjs",
+      "default": "./src/matching/index.mjs"
+    },
+    "./resolver": {
+      "types": "./src/resolver/index.d.mts",
+      "import": "./src/resolver/index.mjs",
+      "default": "./src/resolver/index.mjs"
+    },
+    "./versioning": {
+      "types": "./src/versioning/index.d.mts",
+      "import": "./src/versioning/index.mjs",
+      "default": "./src/versioning/index.mjs"
+    },
+    "./lifecycle": {
+      "types": "./src/lifecycle/index.d.mts",
+      "import": "./src/lifecycle/index.mjs",
+      "default": "./src/lifecycle/index.mjs"
+    },
+    "./linker": {
+      "types": "./src/linker/index.d.mts",
+      "import": "./src/linker/index.mjs",
+      "default": "./src/linker/index.mjs"
+    },
+    "./packaging": {
+      "types": "./src/packaging/index.d.mts",
+      "import": "./src/packaging/index.mjs",
+      "default": "./src/packaging/index.mjs"
+    },
+    "./catalog": "./src/catalog.mjs",
+    "./operate-review-contract": "./src/operate-review-contract.mjs",
+    "./operate-review-note": "./src/operate-review-note.mjs",
+    "./protocol": "./src/protocol.mjs",
+    "./render": "./src/render.mjs",
+    "./verification": "./src/verification/discover-checks.mjs",
+    "./contributions/*": "./contributions/*.json"
+  },
+  "files": [
+    "src/",
+    "contributions/",
+    "templates/"
+  ],
+  "dependencies": {
+    "@openplanr/protocol": "0.1.0"
+  },
+  "scripts": {
+    "generate": "node ../../scripts/skills/generate-v18.mjs --write",
+    "generate:check": "node ../../scripts/skills/generate-v18.mjs --check",
+    "test": "node --test ../../tests/skill-runtime/*.test.mjs"
+  }
+}

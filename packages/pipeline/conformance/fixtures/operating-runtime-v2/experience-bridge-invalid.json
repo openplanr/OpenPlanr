@@ -1,0 +1,11 @@
+{
+  "operate-experience-view": { "kind": "operate-experience-view", "protocolVersion": "2.0.0" },
+  "operate-review-display-workspace": { "kind": "operate-review-display-workspace", "payload": { "mutationEnabled": true } },
+  "operate-review-bound-submission": { "kind": "operate-review-bound-submission", "choiceHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff" },
+  "operate-experience-live-patch": { "kind": "operate-experience-live-patch", "operations": [{ "op": "remove", "path": "/actions" }] },
+  "operate-experience-preview": { "kind": "operate-experience-preview", "authority": "automatic" },
+  "operating-delivery-route": { "kind": "operating-delivery-route", "route": "auto-ship" },
+  "operating-planning-proposal": { "kind": "operating-planning-proposal", "hiddenReasoning": "must never cross the boundary" },
+  "operating-origin": { "kind": "operating-origin", "spec": { "privatePath": "redacted-machine-path" } },
+  "operating-delivery-evidence": { "kind": "operating-delivery-evidence", "outcomeStatus": "succeeded" }
+}

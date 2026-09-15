@@ -1,0 +1,39 @@
+{
+  "kind": "evaluation-host-profile",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.4.0",
+  "hostProfileId": "ehp_bc4c3519fae0932f47a703d9e2cd3b82",
+  "host": "codex",
+  "profileVersion": "1.0.0",
+  "runtime": "cli",
+  "platform": "darwin",
+  "capabilityTier": "workflow",
+  "permissionModel": {
+    "mode": "prompted",
+    "promptSurface": "terminal",
+    "toolIsolation": "advisory",
+    "escalation": "refused"
+  },
+  "outputModes": [
+    "file",
+    "json",
+    "markdown",
+    "text"
+  ],
+  "skillHostSupport": true,
+  "certifiedFullPipelineRuntime": false,
+  "adapterBinding": {
+    "contractId": "adapter-registry",
+    "schemaVersion": "1.1.0",
+    "protocolVersion": "1.4.0",
+    "adapterId": "codex",
+    "adapterVersion": "0.42.0",
+    "recordDigest": "sha256:24d7765f8e68de7724f03c739502aac77c7898184044caf68d35ecdb76d1854c"
+  },
+  "provenance": {
+    "packageName": "planr-pipeline",
+    "packageVersion": "0.42.0",
+    "sourceDigest": "sha256:5f0278bd5fd020c14b3c8b074c3a7743ec9a5035959bc256f9be21fdd87e683b"
+  },
+  "profileDigest": "sha256:bc4c3519fae0932f47a703d9e2cd3b82a873e83384ada9b1e54dfcfaf08fc1a7"
+}

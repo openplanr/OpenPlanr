@@ -1,0 +1,1073 @@
+{
+  "evaluation-scenario": {
+    "kind": "evaluation-scenario",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "scenarioId": "esc_f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5",
+    "scenarioDigest": "sha256:f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5",
+    "title": "A direct planning request invokes the planning skill",
+    "intent": "A prompt that names the planning work and the target feature must invoke the planning skill rather than answer inline.",
+    "skill": {
+      "id": "planr-plan",
+      "version": "1.0.0"
+    },
+    "hostProfileRef": {
+      "hostProfileId": "ehp_926364f7fe15acefa31b8273fd9bcad3",
+      "hostProfileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0"
+    },
+    "promptClass": "positive",
+    "expectedTrigger": {
+      "outcome": "invoke",
+      "rationale": "The prompt names planning work directly, so declining or clarifying is a recall miss."
+    },
+    "declaredPermissions": [
+      {
+        "capability": "file-read",
+        "decision": "granted"
+      },
+      {
+        "capability": "network",
+        "decision": "denied"
+      }
+    ],
+    "riskClass": "read-only",
+    "fixtureRefs": [
+      {
+        "fixtureId": "efx_b265b57ea7559b6efb52819a18a889e92ea5dc5a61fca406513ee80452cd4000",
+        "contentDigest": "sha256:d0da4b1ad14beafd658610c2b8e12b6956b06e3723e40581fbd64e2704f343d6",
+        "role": "prompt"
+      }
+    ],
+    "budgetRef": {
+      "budgetId": "ebg_3a27c2e12c6df94256687b3c9c628f8d",
+      "budgetDigest": "sha256:3a27c2e12c6df94256687b3c9c628f8d2cfab0be8a0a3076fac2bbca10081b11"
+    }
+  },
+  "evaluation-corpus": {
+    "kind": "evaluation-corpus",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "corpusId": "ecp_9388e0879ea692e3e2470c385be1fb3da3c7ab4a820410c92b3c5e0bd858fd89",
+    "corpusDigest": "sha256:9388e0879ea692e3e2470c385be1fb3da3c7ab4a820410c92b3c5e0bd858fd89",
+    "title": "planr-plan trigger corpus",
+    "skill": {
+      "id": "planr-plan",
+      "version": "1.0.0"
+    },
+    "members": [
+      {
+        "scenarioId": "esc_f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5",
+        "scenarioDigest": "sha256:f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5",
+        "sourcePath": "corpora/planr-plan/scenarios/plan-request-positive.json"
+      }
+    ]
+  },
+  "evaluation-fixture": {
+    "kind": "evaluation-fixture",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "fixtureId": "efx_b265b57ea7559b6efb52819a18a889e92ea5dc5a61fca406513ee80452cd4000",
+    "fixtureDigest": "sha256:b265b57ea7559b6efb52819a18a889e92ea5dc5a61fca406513ee80452cd4000",
+    "mediaKind": "text",
+    "byteLength": 33,
+    "contentDigest": "sha256:d0da4b1ad14beafd658610c2b8e12b6956b06e3723e40581fbd64e2704f343d6",
+    "sourcePath": "corpora/planr-plan/fixtures/plan-request-prompt.txt",
+    "retention": "local-only",
+    "containsCredentialMaterial": false
+  },
+  "evaluation-host-profile": {
+    "kind": "evaluation-host-profile",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "hostProfileId": "ehp_926364f7fe15acefa31b8273fd9bcad3",
+    "host": "claude-code",
+    "profileVersion": "1.0.0",
+    "runtime": "cli",
+    "platform": "darwin",
+    "capabilityTier": "product",
+    "permissionModel": {
+      "mode": "prompted",
+      "promptSurface": "terminal",
+      "toolIsolation": "enforced",
+      "escalation": "refused"
+    },
+    "outputModes": [
+      "artifact",
+      "file",
+      "json",
+      "markdown",
+      "text"
+    ],
+    "skillHostSupport": true,
+    "certifiedFullPipelineRuntime": false,
+    "adapterBinding": {
+      "contractId": "adapter-registry",
+      "schemaVersion": "1.1.0",
+      "protocolVersion": "1.4.0",
+      "adapterId": "claude-code",
+      "adapterVersion": "0.42.0",
+      "recordDigest": "sha256:b6789c4d4fb59ae51a57e3b16d733aa5b9c9a48858c24f8d533a9f5b8177b893"
+    },
+    "provenance": {
+      "packageName": "planr-pipeline",
+      "packageVersion": "0.42.0",
+      "sourceDigest": "sha256:a8d3d71ff7d30b01ce2d94933c7e21188dd4c5aec0894d2ed564fa0e245a4354"
+    },
+    "profileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0"
+  },
+  "evaluation-host-profile-registry": {
+    "kind": "evaluation-host-profile-registry",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "registryId": "ehpr_e41d66f0c65f915b3f53bb62ace0e32f",
+    "registryVersion": "1.0.0",
+    "digestAlgorithm": "sha256",
+    "canonicalization": "jcs",
+    "memberOrder": "host-ascending",
+    "profiles": [
+      {
+        "kind": "evaluation-host-profile",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "1.4.0",
+        "hostProfileId": "ehp_926364f7fe15acefa31b8273fd9bcad3",
+        "host": "claude-code",
+        "profileVersion": "1.0.0",
+        "runtime": "cli",
+        "platform": "darwin",
+        "capabilityTier": "product",
+        "permissionModel": {
+          "mode": "prompted",
+          "promptSurface": "terminal",
+          "toolIsolation": "enforced",
+          "escalation": "refused"
+        },
+        "outputModes": [
+          "artifact",
+          "file",
+          "json",
+          "markdown",
+          "text"
+        ],
+        "skillHostSupport": true,
+        "certifiedFullPipelineRuntime": false,
+        "adapterBinding": {
+          "contractId": "adapter-registry",
+          "schemaVersion": "1.1.0",
+          "protocolVersion": "1.4.0",
+          "adapterId": "claude-code",
+          "adapterVersion": "0.42.0",
+          "recordDigest": "sha256:b6789c4d4fb59ae51a57e3b16d733aa5b9c9a48858c24f8d533a9f5b8177b893"
+        },
+        "provenance": {
+          "packageName": "planr-pipeline",
+          "packageVersion": "0.42.0",
+          "sourceDigest": "sha256:a8d3d71ff7d30b01ce2d94933c7e21188dd4c5aec0894d2ed564fa0e245a4354"
+        },
+        "profileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0"
+      },
+      {
+        "kind": "evaluation-host-profile",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "1.4.0",
+        "hostProfileId": "ehp_bc4c3519fae0932f47a703d9e2cd3b82",
+        "host": "codex",
+        "profileVersion": "1.0.0",
+        "runtime": "cli",
+        "platform": "darwin",
+        "capabilityTier": "workflow",
+        "permissionModel": {
+          "mode": "prompted",
+          "promptSurface": "terminal",
+          "toolIsolation": "advisory",
+          "escalation": "refused"
+        },
+        "outputModes": [
+          "file",
+          "json",
+          "markdown",
+          "text"
+        ],
+        "skillHostSupport": true,
+        "certifiedFullPipelineRuntime": false,
+        "adapterBinding": {
+          "contractId": "adapter-registry",
+          "schemaVersion": "1.1.0",
+          "protocolVersion": "1.4.0",
+          "adapterId": "codex",
+          "adapterVersion": "0.42.0",
+          "recordDigest": "sha256:24d7765f8e68de7724f03c739502aac77c7898184044caf68d35ecdb76d1854c"
+        },
+        "provenance": {
+          "packageName": "planr-pipeline",
+          "packageVersion": "0.42.0",
+          "sourceDigest": "sha256:5f0278bd5fd020c14b3c8b074c3a7743ec9a5035959bc256f9be21fdd87e683b"
+        },
+        "profileDigest": "sha256:bc4c3519fae0932f47a703d9e2cd3b82a873e83384ada9b1e54dfcfaf08fc1a7"
+      },
+      {
+        "kind": "evaluation-host-profile",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "1.4.0",
+        "hostProfileId": "ehp_7fa4ce3e06316fe557b9a0c2d623fdcc",
+        "host": "cursor",
+        "profileVersion": "1.0.0",
+        "runtime": "ide-extension",
+        "platform": "darwin",
+        "capabilityTier": "workflow",
+        "permissionModel": {
+          "mode": "prompted",
+          "promptSurface": "chat",
+          "toolIsolation": "advisory",
+          "escalation": "refused"
+        },
+        "outputModes": [
+          "file",
+          "json",
+          "markdown",
+          "text"
+        ],
+        "skillHostSupport": true,
+        "certifiedFullPipelineRuntime": false,
+        "adapterBinding": {
+          "contractId": "adapter-registry",
+          "schemaVersion": "1.1.0",
+          "protocolVersion": "1.4.0",
+          "adapterId": "cursor",
+          "adapterVersion": "0.42.0",
+          "recordDigest": "sha256:2f15f5b4fa6f7f157ea23ec7fe51b6397042144c2b23df1fac1676ba3825b946"
+        },
+        "provenance": {
+          "packageName": "planr-pipeline",
+          "packageVersion": "0.42.0",
+          "sourceDigest": "sha256:140f7e80f186dfca515c284d45a621a0a3bf050298a48889662d1d415bfe2714"
+        },
+        "profileDigest": "sha256:7fa4ce3e06316fe557b9a0c2d623fdcc353344154b441d6b7ade15827ef9001b"
+      }
+    ],
+    "registryDigest": "sha256:e41d66f0c65f915b3f53bb62ace0e32f619c3bcaaad537421139e0b447dd6cf3"
+  },
+  "evaluation-grader-registration": {
+    "kind": "evaluation-grader-registration",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "graderId": "egr_04614ba9b65552ae5e5d30ddf8c6595d",
+    "graderName": "trigger-decision",
+    "graderVersion": "1.0.0",
+    "graderType": "deterministic-behaviour",
+    "declaredInputs": [
+      {
+        "inputKind": "host-profile",
+        "required": true,
+        "binding": "digest"
+      },
+      {
+        "inputKind": "run-trace",
+        "required": true,
+        "binding": "digest"
+      },
+      {
+        "inputKind": "scenario",
+        "required": true,
+        "binding": "digest"
+      }
+    ],
+    "determinism": {
+      "deterministic": true,
+      "modelCall": false,
+      "network": false,
+      "credentialUse": false,
+      "filesystemWrite": false,
+      "replay": "identical-output"
+    },
+    "telemetry": false,
+    "consent": null,
+    "credentialReference": null,
+    "outputContract": {
+      "contractId": "evaluation-observation",
+      "schemaVersion": "1.0.0",
+      "protocolVersion": "1.4.0"
+    },
+    "unavailableBehavior": "typed-absence",
+    "blocksContractValidation": false,
+    "provenance": {
+      "packageName": "planr-pipeline",
+      "packageVersion": "0.42.0",
+      "sourceDigest": "sha256:ed44ae357cca2f4cb350f0b1381d8a719a202d736b4885c1ad8277526f321334"
+    },
+    "registrationDigest": "sha256:04614ba9b65552ae5e5d30ddf8c6595d23b27021bf7a0f197a2e15963f87b5c0"
+  },
+  "evaluation-grader-registry": {
+    "kind": "evaluation-grader-registry",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "registryId": "egrr_0a168a9a8d592b0ec4762c5820ee657a",
+    "registryVersion": "1.0.0",
+    "digestAlgorithm": "sha256",
+    "canonicalization": "jcs",
+    "memberOrder": "graderName-ascending",
+    "graders": [
+      {
+        "kind": "evaluation-grader-registration",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "1.4.0",
+        "graderId": "egr_e67f4b646c09e5386c218a61d3f07d53",
+        "graderName": "budget-conformance",
+        "graderVersion": "1.0.0",
+        "graderType": "deterministic-behaviour",
+        "declaredInputs": [
+          {
+            "inputKind": "budget",
+            "required": true,
+            "binding": "digest"
+          },
+          {
+            "inputKind": "run-trace",
+            "required": true,
+            "binding": "digest"
+          },
+          {
+            "inputKind": "scenario",
+            "required": true,
+            "binding": "digest"
+          }
+        ],
+        "determinism": {
+          "deterministic": true,
+          "modelCall": false,
+          "network": false,
+          "credentialUse": false,
+          "filesystemWrite": false,
+          "replay": "identical-output"
+        },
+        "telemetry": false,
+        "consent": null,
+        "credentialReference": null,
+        "outputContract": {
+          "contractId": "evaluation-observation",
+          "schemaVersion": "1.0.0",
+          "protocolVersion": "1.4.0"
+        },
+        "unavailableBehavior": "typed-absence",
+        "blocksContractValidation": false,
+        "provenance": {
+          "packageName": "planr-pipeline",
+          "packageVersion": "0.42.0",
+          "sourceDigest": "sha256:f87cd3cc237082eeb79c991290c5332ea0dabf10fb5513a861f449bc6fff9881"
+        },
+        "registrationDigest": "sha256:e67f4b646c09e5386c218a61d3f07d53f7e2ad04667257498d6cc06a9207b2b5"
+      },
+      {
+        "kind": "evaluation-grader-registration",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "1.4.0",
+        "graderId": "egr_f373324c89e3e49498b627e36ff52e96",
+        "graderName": "declared-output-schema",
+        "graderVersion": "1.0.0",
+        "graderType": "deterministic-schema",
+        "declaredInputs": [
+          {
+            "inputKind": "declared-output",
+            "required": true,
+            "binding": "digest"
+          },
+          {
+            "inputKind": "scenario",
+            "required": true,
+            "binding": "digest"
+          }
+        ],
+        "determinism": {
+          "deterministic": true,
+          "modelCall": false,
+          "network": false,
+          "credentialUse": false,
+          "filesystemWrite": false,
+          "replay": "identical-output"
+        },
+        "telemetry": false,
+        "consent": null,
+        "credentialReference": null,
+        "outputContract": {
+          "contractId": "evaluation-observation",
+          "schemaVersion": "1.0.0",
+          "protocolVersion": "1.4.0"
+        },
+        "unavailableBehavior": "typed-absence",
+        "blocksContractValidation": false,
+        "provenance": {
+          "packageName": "planr-pipeline",
+          "packageVersion": "0.42.0",
+          "sourceDigest": "sha256:d6b8dc6ade14752bbf9140975cc56d851aa8e485edffd17a65831fe30aaeb943"
+        },
+        "registrationDigest": "sha256:f373324c89e3e49498b627e36ff52e96d75c34ed5efcde27902c5a81be40f52a"
+      },
+      {
+        "kind": "evaluation-grader-registration",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "1.4.0",
+        "graderId": "egr_1373bc6b6708c7236d83dcde002e0f6f",
+        "graderName": "journey-completion",
+        "graderVersion": "1.0.0",
+        "graderType": "deterministic-behaviour",
+        "declaredInputs": [
+          {
+            "inputKind": "fixture",
+            "required": true,
+            "binding": "digest"
+          },
+          {
+            "inputKind": "run-trace",
+            "required": true,
+            "binding": "digest"
+          },
+          {
+            "inputKind": "scenario",
+            "required": true,
+            "binding": "digest"
+          }
+        ],
+        "determinism": {
+          "deterministic": true,
+          "modelCall": false,
+          "network": false,
+          "credentialUse": false,
+          "filesystemWrite": false,
+          "replay": "identical-output"
+        },
+        "telemetry": false,
+        "consent": null,
+        "credentialReference": null,
+        "outputContract": {
+          "contractId": "evaluation-observation",
+          "schemaVersion": "1.0.0",
+          "protocolVersion": "1.4.0"
+        },
+        "unavailableBehavior": "typed-absence",
+        "blocksContractValidation": false,
+        "provenance": {
+          "packageName": "planr-pipeline",
+          "packageVersion": "0.42.0",
+          "sourceDigest": "sha256:6fac1351856b43e3e132b27be3bb443bc0e6413a7b81b033f06e374e506acedc"
+        },
+        "registrationDigest": "sha256:1373bc6b6708c7236d83dcde002e0f6f10cbf48decc4149b72b5e788e1dd0e90"
+      },
+      {
+        "kind": "evaluation-grader-registration",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "1.4.0",
+        "graderId": "egr_6bf8030725c040cf5c9e7733f5057704",
+        "graderName": "package-parity",
+        "graderVersion": "1.0.0",
+        "graderType": "deterministic-schema",
+        "declaredInputs": [
+          {
+            "inputKind": "package-manifest",
+            "required": true,
+            "binding": "digest"
+          },
+          {
+            "inputKind": "skill-source",
+            "required": true,
+            "binding": "digest"
+          }
+        ],
+        "determinism": {
+          "deterministic": true,
+          "modelCall": false,
+          "network": false,
+          "credentialUse": false,
+          "filesystemWrite": false,
+          "replay": "identical-output"
+        },
+        "telemetry": false,
+        "consent": null,
+        "credentialReference": null,
+        "outputContract": {
+          "contractId": "evaluation-observation",
+          "schemaVersion": "1.0.0",
+          "protocolVersion": "1.4.0"
+        },
+        "unavailableBehavior": "typed-absence",
+        "blocksContractValidation": false,
+        "provenance": {
+          "packageName": "planr-pipeline",
+          "packageVersion": "0.42.0",
+          "sourceDigest": "sha256:d42026dfbd499c3b2ee8b6d6daa327ebadf9e88db92a2ba26adaab512883e44b"
+        },
+        "registrationDigest": "sha256:6bf8030725c040cf5c9e7733f5057704f75d7530672deb37d34371b601dfbbd6"
+      },
+      {
+        "kind": "evaluation-grader-registration",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "1.4.0",
+        "graderId": "egr_a9c9ab8f4cffde10791849f61e9817fb",
+        "graderName": "permission-refusal",
+        "graderVersion": "1.0.0",
+        "graderType": "deterministic-behaviour",
+        "declaredInputs": [
+          {
+            "inputKind": "host-profile",
+            "required": true,
+            "binding": "digest"
+          },
+          {
+            "inputKind": "run-trace",
+            "required": true,
+            "binding": "digest"
+          },
+          {
+            "inputKind": "scenario",
+            "required": true,
+            "binding": "digest"
+          }
+        ],
+        "determinism": {
+          "deterministic": true,
+          "modelCall": false,
+          "network": false,
+          "credentialUse": false,
+          "filesystemWrite": false,
+          "replay": "identical-output"
+        },
+        "telemetry": false,
+        "consent": null,
+        "credentialReference": null,
+        "outputContract": {
+          "contractId": "evaluation-observation",
+          "schemaVersion": "1.0.0",
+          "protocolVersion": "1.4.0"
+        },
+        "unavailableBehavior": "typed-absence",
+        "blocksContractValidation": false,
+        "provenance": {
+          "packageName": "planr-pipeline",
+          "packageVersion": "0.42.0",
+          "sourceDigest": "sha256:bcb4cf3f336f99004e23043ffa063e0d9840f8b34cd6827231a7fca49a65a8b9"
+        },
+        "registrationDigest": "sha256:a9c9ab8f4cffde10791849f61e9817fb584ef7dc44a873330fa799efb168c2ed"
+      },
+      {
+        "kind": "evaluation-grader-registration",
+        "schemaVersion": "1.0.0",
+        "protocolVersion": "1.4.0",
+        "graderId": "egr_04614ba9b65552ae5e5d30ddf8c6595d",
+        "graderName": "trigger-decision",
+        "graderVersion": "1.0.0",
+        "graderType": "deterministic-behaviour",
+        "declaredInputs": [
+          {
+            "inputKind": "host-profile",
+            "required": true,
+            "binding": "digest"
+          },
+          {
+            "inputKind": "run-trace",
+            "required": true,
+            "binding": "digest"
+          },
+          {
+            "inputKind": "scenario",
+            "required": true,
+            "binding": "digest"
+          }
+        ],
+        "determinism": {
+          "deterministic": true,
+          "modelCall": false,
+          "network": false,
+          "credentialUse": false,
+          "filesystemWrite": false,
+          "replay": "identical-output"
+        },
+        "telemetry": false,
+        "consent": null,
+        "credentialReference": null,
+        "outputContract": {
+          "contractId": "evaluation-observation",
+          "schemaVersion": "1.0.0",
+          "protocolVersion": "1.4.0"
+        },
+        "unavailableBehavior": "typed-absence",
+        "blocksContractValidation": false,
+        "provenance": {
+          "packageName": "planr-pipeline",
+          "packageVersion": "0.42.0",
+          "sourceDigest": "sha256:ed44ae357cca2f4cb350f0b1381d8a719a202d736b4885c1ad8277526f321334"
+        },
+        "registrationDigest": "sha256:04614ba9b65552ae5e5d30ddf8c6595d23b27021bf7a0f197a2e15963f87b5c0"
+      }
+    ],
+    "registryDigest": "sha256:0a168a9a8d592b0ec4762c5820ee657a796804989575c1136fae1de9d43bdec0"
+  },
+  "evaluation-budget": {
+    "kind": "evaluation-budget",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "budgetId": "ebg_3a27c2e12c6df94256687b3c9c628f8d",
+    "budgetDigest": "sha256:3a27c2e12c6df94256687b3c9c628f8d2cfab0be8a0a3076fac2bbca10081b11",
+    "carriesMeasurement": false,
+    "scope": {
+      "kind": "corpus",
+      "id": "planr.plan.trigger"
+    },
+    "ceilings": {
+      "latencyMsP50Ceiling": 45000,
+      "latencyMsP95Ceiling": 90000,
+      "inputTokensCeiling": 120000,
+      "outputTokensCeiling": 40000,
+      "totalTokensCeiling": 160000,
+      "costEstimateCurrency": "USD",
+      "costEstimateMicrosCeiling": 250000,
+      "permissionPromptCeiling": 4,
+      "retryCeiling": 1
+    },
+    "baseline": {
+      "frozen": true,
+      "baselineDigest": "sha256:efb7be8b1fdeffa018b751f070f8ff34c4e3284ed6fac2e2ea67467200831f86",
+      "capturedAt": "2026-08-01T00:00:00.000Z"
+    }
+  },
+  "evaluation-gate-policy": {
+    "kind": "evaluation-gate-policy",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "policyId": "egp_66d04d7270993de3571b14d0c2d8a2bc",
+    "gatePolicyDigest": "sha256:66d04d7270993de3571b14d0c2d8a2bc4909c3e951c3294ae851fbfb7810bfc8",
+    "budgetDigest": "sha256:3a27c2e12c6df94256687b3c9c628f8d2cfab0be8a0a3076fac2bbca10081b11",
+    "baselineDigest": "sha256:efb7be8b1fdeffa018b751f070f8ff34c4e3284ed6fac2e2ea67467200831f86",
+    "gates": {
+      "trigger-precision": {
+        "comparator": ">=",
+        "unit": "basis-points",
+        "threshold": 9500,
+        "waivable": true
+      },
+      "trigger-recall": {
+        "comparator": ">=",
+        "unit": "basis-points",
+        "threshold": 9500,
+        "waivable": true
+      },
+      "journey-completion": {
+        "comparator": ">=",
+        "unit": "basis-points",
+        "threshold": 9000,
+        "waivable": true
+      },
+      "schema-validity": {
+        "comparator": "==",
+        "unit": "basis-points",
+        "threshold": 10000,
+        "waivable": false
+      },
+      "asset-parity": {
+        "comparator": "==",
+        "unit": "basis-points",
+        "threshold": 10000,
+        "waivable": true
+      },
+      "export-parity": {
+        "comparator": "==",
+        "unit": "basis-points",
+        "threshold": 10000,
+        "waivable": true
+      },
+      "package-parity": {
+        "comparator": "==",
+        "unit": "basis-points",
+        "threshold": 10000,
+        "waivable": false
+      },
+      "finding-severity-p0": {
+        "comparator": "<=",
+        "unit": "count",
+        "threshold": 0,
+        "waivable": false
+      },
+      "finding-severity-p1": {
+        "comparator": "<=",
+        "unit": "count",
+        "threshold": 0,
+        "waivable": false
+      },
+      "latency-regression": {
+        "comparator": "<=",
+        "unit": "basis-points",
+        "threshold": 2000,
+        "waivable": true,
+        "measuredAgainst": "frozen-baseline"
+      },
+      "cost-regression": {
+        "comparator": "<=",
+        "unit": "basis-points",
+        "threshold": 2000,
+        "waivable": true,
+        "measuredAgainst": "frozen-baseline"
+      }
+    }
+  },
+  "evaluation-observation": {
+    "kind": "evaluation-observation",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "observationId": "eob_9dbc0ba08e0485a8e0eb310239355a04",
+    "observationDigest": "sha256:9dbc0ba08e0485a8e0eb310239355a04f50b2d37bc6614c8aa13d05a702b6ff2",
+    "runId": "eru_a225499a2bbc8bf86cca711460f77cbf",
+    "scenario": {
+      "scenarioId": "esc_f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5",
+      "scenarioDigest": "sha256:f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5",
+      "corpusDigest": "sha256:9388e0879ea692e3e2470c385be1fb3da3c7ab4a820410c92b3c5e0bd858fd89",
+      "promptClass": "positive"
+    },
+    "grader": {
+      "graderId": "egr_04614ba9b65552ae5e5d30ddf8c6595d",
+      "graderVersion": "1.0.0",
+      "graderType": "deterministic-behaviour",
+      "registrationDigest": "sha256:04614ba9b65552ae5e5d30ddf8c6595d23b27021bf7a0f197a2e15963f87b5c0",
+      "registryDigest": "sha256:0a168a9a8d592b0ec4762c5820ee657a796804989575c1136fae1de9d43bdec0"
+    },
+    "hostProfile": {
+      "hostProfileId": "ehp_926364f7fe15acefa31b8273fd9bcad3",
+      "profileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0",
+      "registryDigest": "sha256:e41d66f0c65f915b3f53bb62ace0e32f619c3bcaaad537421139e0b447dd6cf3"
+    },
+    "fixtures": [
+      {
+        "fixtureId": "efx_b265b57ea7559b6efb52819a18a889e92ea5dc5a61fca406513ee80452cd4000",
+        "contentDigest": "sha256:d0da4b1ad14beafd658610c2b8e12b6956b06e3723e40581fbd64e2704f343d6"
+      }
+    ],
+    "packageDigest": "sha256:4e69df91969f307d4552e1cee38ffe68e1f93519846b96df87147e488d7ca30f",
+    "budgetDigest": "sha256:3a27c2e12c6df94256687b3c9c628f8d2cfab0be8a0a3076fac2bbca10081b11",
+    "outcome": "pass",
+    "terminalReason": "TRIGGER_MATCHED_EXPECTED",
+    "graderOutputDigest": "sha256:8ee86a124cca844d81133de89c13d0fae3aa39162e5c47a801bb7405a32c416f",
+    "absence": null,
+    "observedAt": "2026-08-25T09:14:02.000Z"
+  },
+  "evaluation-run-result": {
+    "kind": "evaluation-run-result",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "runResultId": "ers_590c2503788be746b8a913a98f957370",
+    "runResultDigest": "sha256:590c2503788be746b8a913a98f95737036f6f8c2f72965e683d7647c3f137417",
+    "runId": "eru_a225499a2bbc8bf86cca711460f77cbf",
+    "visibility": "local",
+    "publishable": false,
+    "evidenceTransport": "digest-only",
+    "corpusDigest": "sha256:9388e0879ea692e3e2470c385be1fb3da3c7ab4a820410c92b3c5e0bd858fd89",
+    "graderRegistryDigest": "sha256:0a168a9a8d592b0ec4762c5820ee657a796804989575c1136fae1de9d43bdec0",
+    "hostProfileRegistryDigest": "sha256:e41d66f0c65f915b3f53bb62ace0e32f619c3bcaaad537421139e0b447dd6cf3",
+    "hostProfiles": [
+      {
+        "hostProfileId": "ehp_926364f7fe15acefa31b8273fd9bcad3",
+        "profileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0"
+      }
+    ],
+    "budgetDigest": "sha256:3a27c2e12c6df94256687b3c9c628f8d2cfab0be8a0a3076fac2bbca10081b11",
+    "gatePolicyDigest": "sha256:66d04d7270993de3571b14d0c2d8a2bc4909c3e951c3294ae851fbfb7810bfc8",
+    "packageDigest": "sha256:4e69df91969f307d4552e1cee38ffe68e1f93519846b96df87147e488d7ca30f",
+    "sourceDigest": "sha256:41dccc5307a0489ecf0c06fe83f945672e105c9241bbca28e2fac270ae5f865f",
+    "observations": [
+      {
+        "observationId": "eob_9dbc0ba08e0485a8e0eb310239355a04",
+        "observationDigest": "sha256:9dbc0ba08e0485a8e0eb310239355a04f50b2d37bc6614c8aa13d05a702b6ff2",
+        "scenarioDigest": "sha256:f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5",
+        "outcome": "pass"
+      }
+    ],
+    "measurements": {
+      "latencyMsP50": 28400,
+      "latencyMsP95": 31500,
+      "inputTokens": 41200,
+      "outputTokens": 9800,
+      "totalTokens": 51000,
+      "costEstimateCurrency": "USD",
+      "costEstimateMicros": 189000,
+      "permissionPrompts": 1,
+      "retries": 0
+    },
+    "findingCounts": {
+      "p0": 0,
+      "p1": 0,
+      "p2": 1,
+      "p3": 2
+    },
+    "rawEvidence": [
+      {
+        "evidenceId": "eev_24f823f98964d84707e50c6ad4664fe4",
+        "class": "prompt",
+        "contentDigest": "sha256:d0da4b1ad14beafd658610c2b8e12b6956b06e3723e40581fbd64e2704f343d6",
+        "byteLength": 33
+      },
+      {
+        "evidenceId": "eev_36b4555f85a9c61149a6e3e856e80081",
+        "class": "trace",
+        "contentDigest": "sha256:92c673843cb188cf71af94140c2dfd885b8bd87626312a7d882f0fb50345e917",
+        "byteLength": 18432
+      }
+    ],
+    "terminalReason": "RUN_COMPLETED",
+    "startedAt": "2026-08-25T09:13:40.000Z",
+    "completedAt": "2026-08-25T09:14:11.000Z"
+  },
+  "evaluation-aggregate-report": {
+    "kind": "evaluation-aggregate-report",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "reportId": "ear_5a86da36b7afcbe37fa710828b074a76",
+    "reportDigest": "sha256:5a86da36b7afcbe37fa710828b074a764e1acfe41c1374a047e46b116a5c4624",
+    "generatedAt": "2026-08-25T09:15:00.000Z",
+    "redaction": {
+      "policyVersion": "1.0.0",
+      "rawPromptsExcluded": true,
+      "tracesExcluded": true,
+      "screenshotsExcluded": true,
+      "modelOutputExcluded": true,
+      "absolutePathsExcluded": true,
+      "credentialMaterialExcluded": true
+    },
+    "inputs": {
+      "corpusDigest": "sha256:9388e0879ea692e3e2470c385be1fb3da3c7ab4a820410c92b3c5e0bd858fd89",
+      "graderRegistryDigest": "sha256:0a168a9a8d592b0ec4762c5820ee657a796804989575c1136fae1de9d43bdec0",
+      "hostProfileRegistryDigest": "sha256:e41d66f0c65f915b3f53bb62ace0e32f619c3bcaaad537421139e0b447dd6cf3",
+      "gatePolicyDigest": "sha256:66d04d7270993de3571b14d0c2d8a2bc4909c3e951c3294ae851fbfb7810bfc8",
+      "budgetBaselineDigest": "sha256:efb7be8b1fdeffa018b751f070f8ff34c4e3284ed6fac2e2ea67467200831f86",
+      "hostProfileDigests": [
+        "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0"
+      ],
+      "runResultDigests": [
+        "sha256:590c2503788be746b8a913a98f95737036f6f8c2f72965e683d7647c3f137417"
+      ]
+    },
+    "counters": {
+      "scenariosTotal": 2,
+      "scenariosPassed": 1,
+      "scenariosFailed": 0,
+      "scenariosBlocked": 0,
+      "scenariosAbsent": 1,
+      "scenariosWaived": 0,
+      "triggerTruePositives": 1,
+      "triggerFalsePositives": 0,
+      "triggerFalseNegatives": 0,
+      "journeysAttempted": 1,
+      "journeysCompleted": 1,
+      "outputsValidated": 1,
+      "outputsSchemaValid": 1,
+      "assetsDeclared": 3,
+      "assetsPresent": 3,
+      "exportsDeclared": 2,
+      "exportsPresent": 2,
+      "packageMembersDeclared": 5,
+      "packageMembersPresent": 5,
+      "permissionPrompts": 1,
+      "retries": 0,
+      "findingsP0": 0,
+      "findingsP1": 0,
+      "findingsP2": 1,
+      "findingsP3": 2
+    },
+    "rates": {
+      "triggerPrecision": 10000,
+      "triggerRecall": 10000,
+      "journeyCompletion": 10000,
+      "schemaValidity": 10000,
+      "assetParity": 10000,
+      "exportParity": 10000,
+      "packageParity": 10000
+    },
+    "budget": {
+      "baselineDigest": "sha256:efb7be8b1fdeffa018b751f070f8ff34c4e3284ed6fac2e2ea67467200831f86",
+      "latencyMsBaseline": 30000,
+      "latencyMsObserved": 31500,
+      "latencyRegression": 500,
+      "costEstimateMicrosBaseline": 180000,
+      "costEstimateMicrosObserved": 189000,
+      "costRegression": 500,
+      "permissionPromptCeiling": 4,
+      "retryCeiling": 1
+    },
+    "absences": {
+      "graderMissing": 0,
+      "graderErrored": 0,
+      "graderUnavailable": 1,
+      "hostUnavailable": 0,
+      "fixtureUnavailable": 0,
+      "budgetExceeded": 0,
+      "notRun": 0
+    },
+    "skills": [
+      {
+        "skillId": "planr-plan",
+        "skillVersion": "1.0.0",
+        "scenariosTotal": 2,
+        "scenariosPassed": 1,
+        "scenariosFailed": 0,
+        "scenariosBlocked": 0,
+        "scenariosAbsent": 1,
+        "scenariosWaived": 0
+      }
+    ],
+    "scenarios": [
+      {
+        "scenarioDigest": "sha256:f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5",
+        "skillId": "planr-plan",
+        "hostProfileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0",
+        "graderRegistrationDigest": "sha256:04614ba9b65552ae5e5d30ddf8c6595d23b27021bf7a0f197a2e15963f87b5c0",
+        "fixtureSetDigest": "sha256:13875140e48ac8c4d80df722542a7861ff7cacba7d01e103a77ba78e65bb8584",
+        "promptClass": "positive",
+        "status": "passed",
+        "absenceReason": null,
+        "waiverDigest": null,
+        "observations": 1,
+        "latencyMs": 31500
+      },
+      {
+        "scenarioDigest": "sha256:0704528772a30306b1330da97d3f16f65963ff121d83e3a0ca3153973e98efb8",
+        "skillId": "planr-plan",
+        "hostProfileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0",
+        "graderRegistrationDigest": "sha256:04614ba9b65552ae5e5d30ddf8c6595d23b27021bf7a0f197a2e15963f87b5c0",
+        "fixtureSetDigest": "sha256:13875140e48ac8c4d80df722542a7861ff7cacba7d01e103a77ba78e65bb8584",
+        "promptClass": "negative",
+        "status": "absent",
+        "absenceReason": "grader-unavailable",
+        "waiverDigest": null,
+        "observations": 0,
+        "latencyMs": 0
+      }
+    ]
+  },
+  "evaluation-waiver": {
+    "kind": "evaluation-waiver",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "waiverId": "evw_3f130615ad4e9f3ee92c4b3f6555a73f",
+    "waiverDigest": "sha256:3f130615ad4e9f3ee92c4b3f6555a73f39ebae38888d72a979456793c3491ea2",
+    "gatePolicyDigest": "sha256:66d04d7270993de3571b14d0c2d8a2bc4909c3e951c3294ae851fbfb7810bfc8",
+    "metric": "latency-regression",
+    "scope": {
+      "kind": "scenario",
+      "scenarioDigest": "sha256:f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5"
+    },
+    "reason": {
+      "code": "environment-limitation",
+      "statement": "Shared runner cold start adds latency until the next frozen baseline is captured."
+    },
+    "ownerSignature": {
+      "identity": "openplanr.release.owner",
+      "keyIdentity": "openplanr.release.signing.2026",
+      "payloadDigest": "sha256:b67229ec015a69c0c3d41dd3103a209e12e81c9f789d17d94d035894639a744c"
+    },
+    "issuedAt": "2026-08-01T00:00:00.000Z",
+    "expiresAt": "2026-09-15T00:00:00.000Z",
+    "receiptVisibility": "visible"
+  },
+  "skill-certification-receipt": {
+    "kind": "skill-certification-receipt",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "recordType": "readiness",
+    "receiptId": "scr_db2bd98329e9bdfd9f7a620895fec789",
+    "receiptDigest": "sha256:db2bd98329e9bdfd9f7a620895fec7890b278d3df200647bc32a9d57a461a399",
+    "issuedAt": "2026-08-25T09:16:00.000Z",
+    "subject": {
+      "skillId": "planr-plan",
+      "skillVersion": "1.0.0",
+      "skillSourceDigest": "sha256:d3ba0c1f2c2490a49076606a8d79fe0a06239a650500fe1011457cd9369936a8"
+    },
+    "inputs": {
+      "corpusDigest": "sha256:9388e0879ea692e3e2470c385be1fb3da3c7ab4a820410c92b3c5e0bd858fd89",
+      "graderRegistryDigest": "sha256:0a168a9a8d592b0ec4762c5820ee657a796804989575c1136fae1de9d43bdec0",
+      "hostProfiles": [
+        {
+          "hostProfileId": "claude-code",
+          "hostProfileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0"
+        }
+      ],
+      "budgetBaselineDigest": "sha256:efb7be8b1fdeffa018b751f070f8ff34c4e3284ed6fac2e2ea67467200831f86",
+      "gatePolicyDigest": "sha256:66d04d7270993de3571b14d0c2d8a2bc4909c3e951c3294ae851fbfb7810bfc8",
+      "aggregateReportDigest": "sha256:5a86da36b7afcbe37fa710828b074a764e1acfe41c1374a047e46b116a5c4624"
+    },
+    "gateEvaluation": [
+      {
+        "metric": "trigger-precision",
+        "waivable": true,
+        "status": "met",
+        "waiverDigest": null
+      },
+      {
+        "metric": "trigger-recall",
+        "waivable": true,
+        "status": "met",
+        "waiverDigest": null
+      },
+      {
+        "metric": "journey-completion",
+        "waivable": true,
+        "status": "met",
+        "waiverDigest": null
+      },
+      {
+        "metric": "schema-validity",
+        "waivable": false,
+        "status": "met",
+        "waiverDigest": null
+      },
+      {
+        "metric": "asset-parity",
+        "waivable": true,
+        "status": "met",
+        "waiverDigest": null
+      },
+      {
+        "metric": "export-parity",
+        "waivable": true,
+        "status": "met",
+        "waiverDigest": null
+      },
+      {
+        "metric": "package-parity",
+        "waivable": false,
+        "status": "met",
+        "waiverDigest": null
+      },
+      {
+        "metric": "finding-severity-p0",
+        "waivable": false,
+        "status": "met",
+        "waiverDigest": null
+      },
+      {
+        "metric": "finding-severity-p1",
+        "waivable": false,
+        "status": "met",
+        "waiverDigest": null
+      },
+      {
+        "metric": "latency-regression",
+        "waivable": true,
+        "status": "waived",
+        "waiverDigest": "sha256:3f130615ad4e9f3ee92c4b3f6555a73f39ebae38888d72a979456793c3491ea2"
+      },
+      {
+        "metric": "cost-regression",
+        "waivable": true,
+        "status": "met",
+        "waiverDigest": null
+      }
+    ],
+    "appliedWaivers": [
+      {
+        "waiverDigest": "sha256:3f130615ad4e9f3ee92c4b3f6555a73f39ebae38888d72a979456793c3491ea2",
+        "metric": "latency-regression",
+        "scopeKind": "scenario",
+        "reasonCode": "environment-limitation",
+        "ownerSignatureIdentity": "openplanr.release.owner",
+        "issuedAt": "2026-08-01T00:00:00.000Z",
+        "expiresAt": "2026-09-15T00:00:00.000Z"
+      }
+    ],
+    "result": "release-ready",
+    "blockingMetrics": []
+  }
+}

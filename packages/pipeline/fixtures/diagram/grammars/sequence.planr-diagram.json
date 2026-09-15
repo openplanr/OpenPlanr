@@ -1,0 +1,87 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "sequence-fixture",
+  "title": "Sequence fixture",
+  "summary": "Canonical semantic fixture for the sequence grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "sequence",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Sequence A",
+      "kind": "primary-item",
+      "description": "First semantic item in the sequence fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "Sequence B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the sequence fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [
+    {
+      "id": "relation-a-b",
+      "from": "item-a",
+      "to": "item-b",
+      "kind": "flow",
+      "label": "continues",
+      "weight": null
+    }
+  ],
+  "groups": [],
+  "lanes": [],
+  "events": [
+    {
+      "id": "event-start",
+      "label": "Start",
+      "order": 0,
+      "at": null
+    },
+    {
+      "id": "event-finish",
+      "label": "Finish",
+      "order": 1,
+      "at": null
+    }
+  ],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Sequence fixture",
+    "description": "A compact sequence example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b",
+      "event-start",
+      "event-finish"
+    ]
+  },
+  "documentDigest": "sha256:cea6656d942cca900feffe54dac849f9504b20aba99f258a2bf2bd0fccb2c5cc"
+}

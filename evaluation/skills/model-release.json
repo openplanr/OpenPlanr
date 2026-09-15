@@ -1,0 +1,23 @@
+{
+  "kind": "openplanr-model-backed-skill-evaluation",
+  "schemaVersion": "1.0.0",
+  "model": "gpt-5.4-mini",
+  "hostClass": "codex-cli-metadata-only",
+  "corpus": "evaluation/skills/routing-corpus.json",
+  "skillCount": 24,
+  "caseCount": 60,
+  "passed": 60,
+  "accuracy": 1,
+  "falsePositiveCount": 0,
+  "falseNegativeCount": 0,
+  "latencyMs": 43668.347,
+  "usage": {
+    "input_tokens": 17676,
+    "cached_input_tokens": 1792,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 2621,
+    "reasoning_output_tokens": 1082
+  },
+  "status": "pass",
+  "failures": []
+}

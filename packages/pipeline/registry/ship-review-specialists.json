@@ -1,0 +1,42 @@
+{
+  "kind": "ship-review-specialist-registry",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.1.0",
+  "specialists": [
+    {
+      "id": "security",
+      "triggers": ["authentication", "authorization", "credentials", "permissions", "security"],
+      "capabilities": ["candidate.read", "evidence.read", "finding.contribute"],
+      "resultKind": "specialist-review-result",
+      "authority": "read-only-consolidated-review"
+    },
+    {
+      "id": "performance",
+      "triggers": ["benchmark", "budget", "latency", "performance"],
+      "capabilities": ["candidate.read", "evidence.read", "finding.contribute"],
+      "resultKind": "specialist-review-result",
+      "authority": "read-only-consolidated-review"
+    },
+    {
+      "id": "migration",
+      "triggers": ["migration", "rollback", "schema-transition"],
+      "capabilities": ["candidate.read", "evidence.read", "finding.contribute"],
+      "resultKind": "specialist-review-result",
+      "authority": "read-only-consolidated-review"
+    },
+    {
+      "id": "api-contract",
+      "triggers": ["api", "contract", "network", "route", "schema"],
+      "capabilities": ["candidate.read", "evidence.read", "finding.contribute"],
+      "resultKind": "specialist-review-result",
+      "authority": "read-only-consolidated-review"
+    },
+    {
+      "id": "data-integrity",
+      "triggers": ["data-write", "database", "persistence", "receipt", "storage"],
+      "capabilities": ["candidate.read", "evidence.read", "finding.contribute"],
+      "resultKind": "specialist-review-result",
+      "authority": "read-only-consolidated-review"
+    }
+  ]
+}

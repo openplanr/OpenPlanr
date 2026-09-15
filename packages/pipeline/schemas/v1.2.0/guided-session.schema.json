@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/guided-session.schema.json",
+  "title": "OpenPlanr Protocol v1.2 guided interaction session",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "sessionId",
+    "state",
+    "command",
+    "projectIdentity",
+    "projectHead",
+    "configHead",
+    "questionnaireDigest",
+    "questionnaireVersion",
+    "adapter",
+    "persistedAnswers",
+    "createdAt",
+    "updatedAt",
+    "expiresAt"
+  ],
+  "properties": {
+    "kind": { "const": "guided-session" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "sessionId": { "type": "string", "pattern": "^GIS-[A-Za-z0-9._-]{8,128}$" },
+    "state": {
+      "type": "string",
+      "enum": [
+        "created",
+        "awaiting-input",
+        "preview-ready",
+        "confirmed",
+        "applied",
+        "cancelled",
+        "expired",
+        "stale",
+        "invalid"
+      ]
+    },
+    "command": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,127}$" },
+    "projectIdentity": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "projectHead": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "configHead": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "questionnaireDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "questionnaireVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "version", "interaction"],
+      "properties": {
+        "runtime": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "version": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "interaction": { "type": "string", "enum": ["native", "chat", "terminal", "none"] }
+      }
+    },
+    "persistedAnswers": {
+      "type": "array",
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["questionId", "questionVersion", "sensitivity", "value"],
+        "properties": {
+          "questionId": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,63}$" },
+          "questionVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+          "sensitivity": { "type": "string", "enum": ["public", "internal"] },
+          "value": {
+            "oneOf": [
+              { "type": "string", "maxLength": 4096 },
+              { "type": "boolean" },
+              {
+                "type": "array",
+                "maxItems": 50,
+                "uniqueItems": true,
+                "items": { "type": "string", "maxLength": 4096 }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "previewDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "confirmationDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "confirmedAt": { "type": "string", "format": "date-time" },
+    "appliedAt": { "type": "string", "format": "date-time" },
+    "terminalReason": { "type": "string", "minLength": 1, "maxLength": 500 }
+  },
+  "oneOf": [
+    {
+      "title": "Created session",
+      "properties": { "state": { "const": "created" } }
+    },
+    {
+      "title": "Awaiting input",
+      "properties": { "state": { "const": "awaiting-input" } }
+    },
+    {
+      "title": "Preview ready",
+      "required": ["previewDigest"],
+      "properties": { "state": { "const": "preview-ready" } }
+    },
+    {
+      "title": "Confirmed session",
+      "required": ["previewDigest", "confirmationDigest", "confirmedAt"],
+      "properties": { "state": { "const": "confirmed" } }
+    },
+    {
+      "title": "Applied session",
+      "required": ["previewDigest", "confirmationDigest", "confirmedAt", "appliedAt"],
+      "properties": { "state": { "const": "applied" } }
+    },
+    {
+      "title": "Cancelled session",
+      "required": ["terminalReason"],
+      "properties": { "state": { "const": "cancelled" } }
+    },
+    {
+      "title": "Expired session",
+      "required": ["terminalReason"],
+      "properties": { "state": { "const": "expired" } }
+    },
+    {
+      "title": "Stale session",
+      "required": ["terminalReason"],
+      "properties": { "state": { "const": "stale" } }
+    },
+    {
+      "title": "Invalid session",
+      "required": ["terminalReason"],
+      "properties": { "state": { "const": "invalid" } }
+    }
+  ]
+}

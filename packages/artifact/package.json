@@ -1,0 +1,51 @@
+{
+  "name": "@openplanr/artifact",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Canonical OpenPlanr artifact review, sharing, and rendering runtime",
+  "license": "MIT",
+  "exports": {
+    ".": "./lib/artifact/index.mjs",
+    "./diagram": {
+      "types": "./lib/artifact/diagram/index.d.mts",
+      "import": "./lib/artifact/diagram/index.mjs"
+    },
+    "./package.json": "./package.json",
+    "./*": "./lib/artifact/*"
+  },
+  "files": [
+    "lib/",
+    "fixtures/",
+    "gallery/",
+    "references/",
+    "templates/",
+    "THIRD_PARTY_NOTICES.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@expo-google-fonts/inter": "0.4.2",
+    "@openplanr/protocol": "0.1.0",
+    "@resvg/resvg-js": "2.6.2",
+    "esbuild": "0.28.1",
+    "pako": "2.1.0",
+    "parse5": "8.0.1"
+  },
+  "scripts": {
+    "generate": "node scripts/generate-artifact-shell.mjs",
+    "check": "node scripts/generate-artifact-shell.mjs --check",
+    "generate:diagram": "node scripts/generate-diagram-assets.mjs",
+    "check:diagram": "node scripts/generate-diagram-assets.mjs --check",
+    "test": "node --test tests/*.test.mjs",
+    "check:boundaries": "node --test tests/boundaries.test.mjs"
+  },
+  "openplanr": {
+    "domain": "artifact",
+    "sourceCutoff": "fa591a7e7157b47e10d33e4c30997925779c692e",
+    "compatibilityProjection": "lib/artifact"
+  }
+}

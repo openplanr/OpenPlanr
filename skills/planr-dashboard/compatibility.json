@@ -1,0 +1,11 @@
+{
+  "kind": "openplanr-skill-migration-declaration",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-dashboard",
+  "baseline": "SKILL.md",
+  "successor": "skill.json",
+  "classification": "intentional",
+  "intendedChanges": [
+    "Removed an unresolved packaged procedure dependency and made the public dashboard command the executable owner."
+  ]
+}

@@ -1,0 +1,37 @@
+/* Planning · Overview: tally strip, then the blocked and in-progress tables. */
+
+.op-planning.pc-overview {
+  gap: 0;
+}
+
+.pc-overview__tally {
+  margin-top: 14px;
+}
+
+.pc-overview__stack {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.pc-overview__deps {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pc-overview__mono,
+.pc-overview code {
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-tertiary);
+}
+
+.pc-overview__note {
+  padding: 10px 12px;
+  border-top: 1px solid var(--pc-border-subtle);
+}
+
+.pc-overview__empty {
+  padding: 8px;
+}

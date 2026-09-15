@@ -1,0 +1,462 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.5.0/task-output-manifest.schema.json",
+  "x-openplanr-contract": {
+    "id": "task-output-manifest",
+    "version": "1.5.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "taskOutputId",
+    "taskBinding",
+    "roleBinding",
+    "attempt",
+    "outcome",
+    "startedAt",
+    "completedAt",
+    "changes",
+    "preserveVerification",
+    "commandEvidence",
+    "acceptanceEvidence",
+    "outputs",
+    "diagnostics",
+    "errorHandoff",
+    "externalEffects",
+    "producer"
+  ],
+  "properties": {
+    "kind": {
+      "const": "task-output-manifest"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.5.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "taskOutputId": {
+      "type": "string",
+      "pattern": "^tof_[0-9a-f]{32}$"
+    },
+    "taskBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "taskManifestId",
+        "taskManifestDigest"
+      ],
+      "properties": {
+        "taskManifestId": {
+          "type": "string",
+          "pattern": "^tmf_[0-9a-f]{32}$"
+        },
+        "taskManifestDigest": {
+          "$ref": "common.schema.json#/$defs/digest"
+        }
+      }
+    },
+    "roleBinding": {
+      "$ref": "common.schema.json#/$defs/roleBinding"
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "initialAttempt",
+        "correctionIteration"
+      ],
+      "properties": {
+        "initialAttempt": {
+          "const": 1
+        },
+        "correctionIteration": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "outcome": {
+      "enum": [
+        "completed",
+        "blocked"
+      ]
+    },
+    "startedAt": {
+      "$ref": "common.schema.json#/$defs/dateTime"
+    },
+    "completedAt": {
+      "$ref": "common.schema.json#/$defs/dateTime"
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "repositoryKey",
+          "path",
+          "operation",
+          "beforeDigest",
+          "afterDigest",
+          "byteLength"
+        ],
+        "properties": {
+          "repositoryKey": {
+            "$ref": "common.schema.json#/$defs/repositoryKey"
+          },
+          "path": {
+            "$ref": "common.schema.json#/$defs/relativePath"
+          },
+          "operation": {
+            "enum": [
+              "create",
+              "modify",
+              "delete"
+            ]
+          },
+          "beforeDigest": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "afterDigest": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "byteLength": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 4096
+    },
+    "preserveVerification": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "repositoryKey",
+          "path",
+          "beforeDigest",
+          "afterDigest",
+          "unchanged"
+        ],
+        "properties": {
+          "repositoryKey": {
+            "$ref": "common.schema.json#/$defs/repositoryKey"
+          },
+          "path": {
+            "$ref": "common.schema.json#/$defs/relativePath"
+          },
+          "beforeDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "afterDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "unchanged": {
+            "const": true
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 4096
+    },
+    "commandEvidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "commandId",
+          "argvDigest",
+          "workingDirectory",
+          "startedAt",
+          "completedAt",
+          "exitCode",
+          "stdoutDigest",
+          "stderrDigest",
+          "status"
+        ],
+        "properties": {
+          "commandId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "argvDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "workingDirectory": {
+            "$ref": "common.schema.json#/$defs/repositoryPath"
+          },
+          "startedAt": {
+            "$ref": "common.schema.json#/$defs/dateTime"
+          },
+          "completedAt": {
+            "$ref": "common.schema.json#/$defs/dateTime"
+          },
+          "exitCode": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stdoutDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "stderrDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "skipped-not-configured"
+            ]
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 128
+    },
+    "acceptanceEvidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "acceptanceRef",
+          "verifier",
+          "result",
+          "evidenceDigest"
+        ],
+        "properties": {
+          "acceptanceRef": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "verifier": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "result": {
+            "enum": [
+              "passed",
+              "failed",
+              "not-run"
+            ]
+          },
+          "evidenceDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 256
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "outputId",
+          "path",
+          "mediaType",
+          "byteLength",
+          "digest"
+        ],
+        "properties": {
+          "outputId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "path": {
+            "$ref": "common.schema.json#/$defs/repositoryPath"
+          },
+          "mediaType": {
+            "type": "string",
+            "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$"
+          },
+          "byteLength": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "digest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 512
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/diagnostic"
+      },
+      "minItems": 0,
+      "maxItems": 256
+    },
+    "errorHandoff": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "digest"
+          ],
+          "properties": {
+            "path": {
+              "$ref": "common.schema.json#/$defs/repositoryPath"
+            },
+            "digest": {
+              "$ref": "common.schema.json#/$defs/digest"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "externalEffects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "effectClass",
+          "description"
+        ],
+        "properties": {
+          "effectClass": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "description": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 0
+    },
+    "producer": {
+      "$ref": "common.schema.json#/$defs/producer"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "completed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "errorHandoff": {
+            "type": "null"
+          }
+        },
+        "not": {
+          "properties": {
+            "diagnostics": {
+              "contains": {
+                "properties": {
+                  "severity": {
+                    "const": "error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "blocked"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "diagnostics": {
+            "contains": {
+              "properties": {
+                "severity": {
+                  "const": "error"
+                }
+              }
+            },
+            "minContains": 1
+          },
+          "errorHandoff": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "roleBinding": {
+            "properties": {
+              "roleId": {
+                "const": "planr-qa"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "changes": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ]
+}

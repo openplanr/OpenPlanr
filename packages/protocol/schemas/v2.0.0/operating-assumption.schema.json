@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-assumption.schema.json",
+  "x-openplanr-contract": { "id": "operating-assumption", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 persistent assumption",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "assumptionId", "scopeId", "domainId", "domainVersion", "statement", "confidence", "status", "invalidationConditions", "affectedDecisionIds", "affectedActionIds", "evidenceRefIds", "sourceArtifactId", "closedAt", "createdAt", "updatedAt", "revisionId", "revision", "predecessorRevisionId"],
+  "properties": {
+    "kind": { "const": "operating-assumption" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "2.0.0" }, "assumptionId": { "$ref": "#/$defs/assumptionId" }, "scopeId": { "$ref": "#/$defs/id" }, "domainId": { "$ref": "#/$defs/id" }, "domainVersion": { "$ref": "#/$defs/version" }, "statement": { "$ref": "#/$defs/text" }, "confidence": { "type": "number", "minimum": 0, "maximum": 1 }, "status": { "enum": ["active", "validated", "invalidated", "closed", "superseded"] }, "invalidationConditions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/text" } }, "affectedDecisionIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/decisionId" } }, "affectedActionIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/actionId" } }, "evidenceRefIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRefId" } }, "sourceArtifactId": { "$ref": "#/$defs/artifactId" }, "closedAt": { "type": ["string", "null"], "format": "date-time" }, "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" }, "revisionId": { "$ref": "#/$defs/assumptionId" }, "revision": { "type": "integer", "minimum": 1 }, "predecessorRevisionId": { "type": ["string", "null"], "pattern": "^asm_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }
+  },
+  "allOf": [{ "if": { "properties": { "status": { "enum": ["invalidated", "closed"] } } }, "then": { "properties": { "closedAt": { "type": "string", "format": "date-time" } } } }],
+  "$defs": {
+    "actionId": { "type": "string", "pattern": "^act_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "assumptionId": { "type": "string", "pattern": "^asm_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "decisionId": { "type": "string", "pattern": "^dec_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "evidenceRefId": { "type": "string", "pattern": "^evr_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "id": { "type": "string", "minLength": 1, "maxLength": 128 }, "text": { "type": "string", "minLength": 1, "maxLength": 4096, "pattern": "^.*\\S.*$" }, "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" }
+  }
+}

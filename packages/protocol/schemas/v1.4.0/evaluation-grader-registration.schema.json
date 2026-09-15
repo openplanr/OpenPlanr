@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/evaluation-grader-registration.schema.json",
+  "title": "Protocol 1.4 evaluation grader registration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "graderId", "graderName", "graderVersion", "graderType", "declaredInputs", "determinism", "telemetry", "consent", "credentialReference", "outputContract", "unavailableBehavior", "blocksContractValidation", "provenance", "registrationDigest"],
+  "properties": {
+    "kind": { "const": "evaluation-grader-registration" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.4.0" },
+    "graderId": { "type": "string", "pattern": "^egr_[a-f0-9]{32}$" },
+    "graderName": { "$ref": "#/$defs/name" },
+    "graderVersion": { "$ref": "#/$defs/version" },
+    "graderType": { "enum": ["deterministic-schema", "deterministic-behaviour", "live-model-judgement"] },
+    "declaredInputs": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": { "$ref": "#/$defs/declaredInput" } },
+    "determinism": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deterministic", "modelCall", "network", "credentialUse", "filesystemWrite", "replay"],
+      "properties": {
+        "deterministic": { "type": "boolean" },
+        "modelCall": { "type": "boolean" },
+        "network": { "type": "boolean" },
+        "credentialUse": { "type": "boolean" },
+        "filesystemWrite": { "const": false },
+        "replay": { "enum": ["identical-output", "not-guaranteed"] }
+      }
+    },
+    "telemetry": { "const": false },
+    "consent": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "mode", "scope", "recordDigest", "grantedAt", "expiresAt", "noDefaultChoice"],
+          "properties": {
+            "required": { "const": true },
+            "mode": { "const": "named-owner-current" },
+            "scope": { "enum": ["single-run", "single-corpus"] },
+            "recordDigest": { "$ref": "#/$defs/digest" },
+            "grantedAt": { "type": "string", "format": "date-time" },
+            "expiresAt": { "type": "string", "format": "date-time" },
+            "noDefaultChoice": { "const": true }
+          }
+        }
+      ]
+    },
+    "credentialReference": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["refKind", "refName", "custody"],
+          "properties": {
+            "refKind": { "enum": ["environment-name", "os-custody-key"] },
+            "refName": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z][A-Za-z0-9_.-]*$" },
+            "custody": { "const": "host-owned" }
+          }
+        }
+      ]
+    },
+    "outputContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["contractId", "schemaVersion", "protocolVersion"],
+      "properties": {
+        "contractId": { "const": "evaluation-observation" },
+        "schemaVersion": { "const": "1.0.0" },
+        "protocolVersion": { "const": "1.4.0" }
+      }
+    },
+    "unavailableBehavior": { "const": "typed-absence" },
+    "blocksContractValidation": { "const": false },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["packageName", "packageVersion", "sourceDigest"],
+      "properties": {
+        "packageName": { "$ref": "#/$defs/name" },
+        "packageVersion": { "$ref": "#/$defs/version" },
+        "sourceDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "registrationDigest": { "$ref": "#/$defs/digest" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "graderType": { "enum": ["deterministic-schema", "deterministic-behaviour"] } }, "required": ["graderType"] },
+      "then": {
+        "properties": {
+          "determinism": {
+            "properties": {
+              "deterministic": { "const": true },
+              "modelCall": { "const": false },
+              "network": { "const": false },
+              "credentialUse": { "const": false },
+              "replay": { "const": "identical-output" }
+            }
+          },
+          "consent": { "const": null },
+          "credentialReference": { "const": null }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "graderType": { "const": "live-model-judgement" } }, "required": ["graderType"] },
+      "then": {
+        "required": ["consent", "credentialReference"],
+        "properties": {
+          "determinism": {
+            "properties": {
+              "deterministic": { "const": false },
+              "modelCall": { "const": true },
+              "replay": { "const": "not-guaranteed" }
+            }
+          },
+          "consent": { "type": "object" },
+          "credentialReference": { "type": "object" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "name": { "type": "string", "maxLength": 64, "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "declaredInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputKind", "required", "binding"],
+      "properties": {
+        "inputKind": { "enum": ["scenario", "fixture", "host-profile", "budget", "skill-source", "declared-output", "package-manifest", "run-trace"] },
+        "required": { "type": "boolean" },
+        "binding": { "const": "digest" }
+      }
+    }
+  }
+}

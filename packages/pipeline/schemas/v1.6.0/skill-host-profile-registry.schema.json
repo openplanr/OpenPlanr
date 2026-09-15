@@ -1,0 +1,526 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.6.0/skill-host-profile-registry.schema.json",
+  "x-openplanr-contract": {
+    "id": "skill-host-profile-registry",
+    "version": "1.6.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "profiles"
+  ],
+  "properties": {
+    "kind": {
+      "const": "skill-host-profile-registry"
+    },
+    "schemaVersion": {
+      "enum": [
+        "1.0.0",
+        "1.1.0"
+      ]
+    },
+    "protocolVersion": {
+      "const": "1.6.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "profiles": {
+      "type": "array"
+    }
+  },
+  "oneOf": [
+    {
+      "title": "Legacy host-profile registry",
+      "properties": {
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "documentVersion": {
+          "const": "1.0.0"
+        },
+        "profiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "hostProfileId",
+              "hostProfileVersion",
+              "host",
+              "description",
+              "authorityCeiling",
+              "source",
+              "overlayModules"
+            ],
+            "properties": {
+              "hostProfileId": {
+                "$ref": "common.schema.json#/$defs/identifier"
+              },
+              "hostProfileVersion": {
+                "$ref": "common.schema.json#/$defs/semver"
+              },
+              "host": {
+                "$ref": "common.schema.json#/$defs/host"
+              },
+              "description": {
+                "$ref": "common.schema.json#/$defs/nonBlankText"
+              },
+              "authorityCeiling": {
+                "$ref": "common.schema.json#/$defs/authorityCeiling"
+              },
+              "source": {
+                "$ref": "common.schema.json#/$defs/sourceRef"
+              },
+              "overlayModules": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/moduleRef"
+                },
+                "minItems": 0,
+                "maxItems": 64
+              }
+            }
+          },
+          "minItems": 0,
+          "maxItems": 128
+        }
+      }
+    },
+    {
+      "title": "Capability-aware host-profile registry",
+      "properties": {
+        "schemaVersion": {
+          "const": "1.1.0"
+        },
+        "documentVersion": {
+          "const": "1.1.0"
+        },
+        "profiles": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "hostProfileId",
+                  "hostProfileVersion",
+                  "host",
+                  "description",
+                  "authorityCeiling",
+                  "source",
+                  "overlayModules"
+                ],
+                "properties": {
+                  "hostProfileId": {
+                    "$ref": "common.schema.json#/$defs/identifier"
+                  },
+                  "hostProfileVersion": {
+                    "$ref": "common.schema.json#/$defs/semver"
+                  },
+                  "host": {
+                    "$ref": "common.schema.json#/$defs/host"
+                  },
+                  "description": {
+                    "$ref": "common.schema.json#/$defs/nonBlankText"
+                  },
+                  "authorityCeiling": {
+                    "$ref": "common.schema.json#/$defs/authorityCeiling"
+                  },
+                  "source": {
+                    "$ref": "common.schema.json#/$defs/sourceRef"
+                  },
+                  "overlayModules": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "common.schema.json#/$defs/moduleRef"
+                    },
+                    "minItems": 0,
+                    "maxItems": 64
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "hostProfileId",
+                  "hostProfileVersion",
+                  "host",
+                  "description",
+                  "authorityCeiling",
+                  "source",
+                  "overlayModules",
+                  "runtimeCapabilities",
+                  "interactionBindings"
+                ],
+                "properties": {
+                  "hostProfileId": {
+                    "$ref": "common.schema.json#/$defs/identifier"
+                  },
+                  "hostProfileVersion": {
+                    "$ref": "common.schema.json#/$defs/semver"
+                  },
+                  "host": {
+                    "$ref": "common.schema.json#/$defs/host"
+                  },
+                  "description": {
+                    "$ref": "common.schema.json#/$defs/nonBlankText"
+                  },
+                  "authorityCeiling": {
+                    "$ref": "common.schema.json#/$defs/authorityCeiling"
+                  },
+                  "source": {
+                    "$ref": "common.schema.json#/$defs/sourceRef"
+                  },
+                  "overlayModules": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "common.schema.json#/$defs/moduleRef"
+                    },
+                    "minItems": 0,
+                    "maxItems": 64
+                  },
+                  "runtimeCapabilities": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "common.schema.json#/$defs/runtimeCapability"
+                    },
+                    "minItems": 0,
+                    "maxItems": 16,
+                    "uniqueItems": true
+                  },
+                  "interactionBindings": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 4,
+                    "uniqueItems": true,
+                    "oneOf": [
+                      {
+                        "items": {
+                          "allOf": [
+                            {
+                              "$ref": "common.schema.json#/$defs/interactionBinding"
+                            },
+                            {
+                              "properties": {
+                                "surface": {
+                                  "enum": [
+                                    "native",
+                                    "chat",
+                                    "terminal"
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "maxItems": 1,
+                        "prefixItems": [
+                          {
+                            "allOf": [
+                              {
+                                "$ref": "common.schema.json#/$defs/interactionBinding"
+                              },
+                              {
+                                "properties": {
+                                  "surface": {
+                                    "const": "headless"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ],
+                        "items": false
+                      },
+                      {
+                        "minItems": 2,
+                        "maxItems": 2,
+                        "prefixItems": [
+                          {
+                            "allOf": [
+                              {
+                                "$ref": "common.schema.json#/$defs/interactionBinding"
+                              },
+                              {
+                                "properties": {
+                                  "surface": {
+                                    "enum": [
+                                      "native",
+                                      "chat",
+                                      "terminal"
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "allOf": [
+                              {
+                                "$ref": "common.schema.json#/$defs/interactionBinding"
+                              },
+                              {
+                                "properties": {
+                                  "surface": {
+                                    "const": "headless"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ],
+                        "items": false
+                      },
+                      {
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "prefixItems": [
+                          {
+                            "allOf": [
+                              {
+                                "$ref": "common.schema.json#/$defs/interactionBinding"
+                              },
+                              {
+                                "properties": {
+                                  "surface": {
+                                    "enum": [
+                                      "native",
+                                      "chat",
+                                      "terminal"
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "allOf": [
+                              {
+                                "$ref": "common.schema.json#/$defs/interactionBinding"
+                              },
+                              {
+                                "properties": {
+                                  "surface": {
+                                    "enum": [
+                                      "native",
+                                      "chat",
+                                      "terminal"
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "allOf": [
+                              {
+                                "$ref": "common.schema.json#/$defs/interactionBinding"
+                              },
+                              {
+                                "properties": {
+                                  "surface": {
+                                    "const": "headless"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ],
+                        "items": false
+                      },
+                      {
+                        "minItems": 4,
+                        "maxItems": 4,
+                        "prefixItems": [
+                          {
+                            "allOf": [
+                              {
+                                "$ref": "common.schema.json#/$defs/interactionBinding"
+                              },
+                              {
+                                "properties": {
+                                  "surface": {
+                                    "enum": [
+                                      "native",
+                                      "chat",
+                                      "terminal"
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "allOf": [
+                              {
+                                "$ref": "common.schema.json#/$defs/interactionBinding"
+                              },
+                              {
+                                "properties": {
+                                  "surface": {
+                                    "enum": [
+                                      "native",
+                                      "chat",
+                                      "terminal"
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "allOf": [
+                              {
+                                "$ref": "common.schema.json#/$defs/interactionBinding"
+                              },
+                              {
+                                "properties": {
+                                  "surface": {
+                                    "enum": [
+                                      "native",
+                                      "chat",
+                                      "terminal"
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "allOf": [
+                              {
+                                "$ref": "common.schema.json#/$defs/interactionBinding"
+                              },
+                              {
+                                "properties": {
+                                  "surface": {
+                                    "const": "headless"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ],
+                        "items": false
+                      }
+                    ]
+                  }
+                },
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "interactionBindings": {
+                          "contains": {
+                            "type": "object",
+                            "required": [
+                              "surface"
+                            ],
+                            "properties": {
+                              "surface": {
+                                "const": "native"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "runtimeCapabilities": {
+                          "contains": {
+                            "const": "native-questions"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "interactionBindings": {
+                          "contains": {
+                            "type": "object",
+                            "required": [
+                              "surface"
+                            ],
+                            "properties": {
+                              "surface": {
+                                "const": "chat"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "runtimeCapabilities": {
+                          "contains": {
+                            "const": "structured-chat"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "properties": {
+                        "interactionBindings": {
+                          "contains": {
+                            "type": "object",
+                            "required": [
+                              "surface"
+                            ],
+                            "properties": {
+                              "surface": {
+                                "const": "terminal"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "runtimeCapabilities": {
+                          "contains": {
+                            "const": "attached-terminal"
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 128
+        }
+      }
+    }
+  ]
+}

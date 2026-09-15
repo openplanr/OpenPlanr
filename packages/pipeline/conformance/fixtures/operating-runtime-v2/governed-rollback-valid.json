@@ -1,0 +1,37 @@
+{
+  "reconciliation": {
+    "classifications": ["applied", "not-applied", "partial", "unknown"],
+    "redispatchRule": "intrinsic-idempotency-or-deterministic-not-applied",
+    "unknownDisposition": "uncertain"
+  },
+  "rollbackPlan": {
+    "kind": "operating-rollback-plan", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0",
+    "rollbackPlanId": "rbp_conformance01", "operationId": "op_conformance01", "executionResultId": "xres_conformance01",
+    "action": { "actionId": "act_conformance01", "revision": 1, "actionHash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+    "eligibility": "eligible", "capability": { "id": "bounded-project-write", "version": "1.0.0" },
+    "effectClass": "project-write", "executor": { "executorId": "open-reference-project-executor", "executorVersion": "1.0.0" },
+    "baselineArtifactId": "art_conformance01", "baselineHash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "steps": [{ "stepId": "restore-exact-baseline", "description": "Restore the exact immutable pre-effect baseline.", "expectedTargetHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333" }],
+    "verificationPlanId": "vfy_conformance01", "expiresAt": "2026-08-12T08:00:00Z",
+    "planHash": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+  },
+  "rollbackResult": {
+    "kind": "operating-rollback-result", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0",
+    "rollbackResultId": "rbres_conformance01", "rollbackOperationId": "op_conformance02", "operationKind": "rollback",
+    "requestFingerprint": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    "originalOperationId": "op_conformance01", "executionResultId": "xres_conformance01", "rollbackPlanId": "rbp_conformance01",
+    "action": { "actionId": "act_conformance01", "revision": 1, "actionHash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+    "assignmentId": "asg_conformance01", "evaluationId": "pevl_conformance01", "approvalIds": [], "grantId": "cgr_conformance01",
+    "capability": { "id": "bounded-project-write", "version": "1.0.0" },
+    "target": { "kind": "project-record", "id": "conformance-record", "revision": "rev-before" },
+    "effectClass": "project-write", "executor": { "executorId": "open-reference-project-executor", "executorVersion": "1.0.0" }, "connector": { "id": "local-project-target", "version": "1.0.0" },
+    "status": "succeeded", "targetBeforeHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "targetAfterHash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "baselineArtifactId": "art_conformance01", "baselineHash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "inputArtifactIds": ["art_conformance01", "art_conformance02"], "outputArtifactIds": ["art_conformance03"],
+    "effectSummary": { "changed": true, "summary": "Restored the exact immutable pre-effect baseline.", "affectedTargetIds": ["conformance-record"] },
+    "resultArtifactId": "art_conformance03", "verificationPlanId": "vfy_conformance01",
+    "eventIds": ["evt_conformance01", "evt_conformance02"], "completedAt": "2026-08-10T08:05:00Z",
+    "resultHash": "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "imports": [],
+  "modules": [
+    {
+      "moduleId": "diagram-fidelity",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "context",
+      "description": "Projection fidelity and editable-source guidance for diagrams.",
+      "source": "references/diagram-fidelity.md",
+      "appliesWhen": "When editable projections, imports, or omitted outputs matter.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": ["context-gathering", "read"],
+        "allowedTools": ["read"],
+        "allowedOperations": ["diagram", "render"],
+        "allowedOutputClasses": ["A", "B", "D"],
+        "forbiddenEffects": ["external-publish", "remote-deploy"]
+      }
+    },
+    {
+      "moduleId": "diagram-intent-to-ir",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "context",
+      "description": "Natural-language intent to Protocol 1.6 diagram IR guidance.",
+      "source": "references/diagram-intent-to-ir.md",
+      "appliesWhen": "When the user provides English intent instead of structured diagram input.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedCapabilities": ["context-gathering", "read", "write"],
+        "allowedTools": ["read", "edit"],
+        "allowedOperations": ["diagram", "render"],
+        "allowedOutputClasses": ["A", "B", "D"],
+        "forbiddenEffects": ["external-publish", "remote-deploy"]
+      }
+    },
+    {
+      "moduleId": "planr-diagram-workflow",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "shared",
+      "description": "Task-specific planr-diagram workflow guidance.",
+      "source": "modules/workflow.md",
+      "appliesWhen": "Whenever planr-diagram is selected.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "declared-paths",
+        "externalDataAccess": "none",
+        "allowedCapabilities": ["context-gathering", "read", "write"],
+        "allowedTools": ["read", "edit", "shell"],
+        "allowedOperations": ["artifact", "diagram", "render"],
+        "allowedOutputClasses": ["A", "B", "D"],
+        "forbiddenEffects": ["external-publish", "remote-deploy"]
+      }
+    }
+  ]
+}

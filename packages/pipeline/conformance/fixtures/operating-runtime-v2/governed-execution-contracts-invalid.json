@@ -1,0 +1,15 @@
+{
+  "operating-action-policy": { "patch": { "decisionMode": "owner-decides" } },
+  "operating-policy-evaluation": { "patch": { "outcome": "allow" } },
+  "operating-approval-requirement": { "patch": { "threshold": 0 } },
+  "operating-approval-record": { "patch": { "grantId": "cgr_caller_supplied" } },
+  "operating-capability-availability": { "patch": { "effectCeiling": "destructive" } },
+  "operating-capability-grant": { "patch": { "useLimit": 2 } },
+  "operating-governed-operation": { "patch": { "idempotencyKey": "caller-key" } },
+  "operating-execution-result": { "patch": { "connectorCredentials": "secret" } },
+  "operating-rollback-plan": { "patch": { "modulePath": "./rollback.mjs" } },
+  "operating-rollback-result": { "patch": { "protocolVersion": "1.0.0" } },
+  "operate-capability-provider-registration": { "patch": { "credential": "secret" } },
+  "operate-policy-provider-registration": { "patch": { "policyDecision": "approved" } },
+  "operate-executor-registration": { "patch": { "effectCeiling": "destructive" } }
+}

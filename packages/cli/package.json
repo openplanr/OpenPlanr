@@ -1,0 +1,158 @@
+{
+  "name": "openplanr",
+  "version": "1.25.3",
+  "description": "Deterministic OpenPlanr utilities for planning storage, validation, rendering, setup, diagnostics, and GitHub/Linear synchronization",
+  "type": "module",
+  "main": "./dist/cli/index.js",
+  "types": "./dist/cli/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/cli/index.js",
+      "types": "./dist/cli/index.d.ts"
+    },
+    "./package.json": "./package.json",
+    "./dashboard": "./dist/dashboard/dashboard-manifest.json",
+    "./dashboard-verifier": {
+      "import": "./lib/dashboard-verifier.mjs",
+      "types": "./lib/dashboard-verifier.d.mts",
+      "default": "./lib/dashboard-verifier.mjs"
+    }
+  },
+  "bin": {
+    "planr": "./bin/planr.js",
+    "openplanr": "./bin/planr.js",
+    "opr": "./bin/planr.js"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "dist/",
+    "lib/",
+    "bin/",
+    "install.sh",
+    "install.ps1",
+    "CONTRIBUTING.md",
+    "docs/ARTIFACT_REVIEW.md",
+    "docs/CLI.md",
+    "docs/CROSS_RUNTIME_SETUP.md",
+    "docs/TROUBLESHOOTING.md",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/skills/generate-v18.mjs --write && node scripts/clean-dist.mjs && tsc && node scripts/copy-templates.mjs && node ../../scripts/dashboard/build-dashboard-assets.mjs && node scripts/verify-dashboard-assets.mjs",
+    "build:core": "node ../../scripts/skills/generate-v18.mjs --write && node scripts/clean-dist.mjs && tsc && node scripts/copy-templates.mjs",
+    "build:dashboard": "node ../../scripts/dashboard/build-dashboard-assets.mjs && node scripts/verify-dashboard-assets.mjs",
+    "check:dashboard-copy": "node ../../scripts/dashboard/copy-dashboard-assets.mjs --check",
+    "generate:command-catalog": "node scripts/check-command-catalog.mjs --write",
+    "check:command-catalog": "node scripts/check-command-catalog.mjs",
+    "typecheck:dashboard": "npm --prefix ../.. run typecheck --workspace=@openplanr/dashboard-app",
+    "dev": "tsx src/cli/index.ts",
+    "test": "vitest run && vitest run --config vitest.heavy.config.ts",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "biome check src/ tests/",
+    "lint:fix": "biome check --write src/ tests/",
+    "format": "biome format --write src/ tests/",
+    "format:check": "biome format src/ tests/",
+    "prepare": "husky",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run build",
+    "release": "node scripts/publish-if-needed.mjs",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "test:heavy": "vitest run --config vitest.heavy.config.ts",
+    "test:browser": "node scripts/run-dashboard-browser-tests.mjs",
+    "verify:dashboard-candidate": "node scripts/run-dashboard-browser-tests.mjs --compile-only",
+    "test:browser:fixture": "vite --config vite.dashboard.fixture.config.ts --configLoader runner",
+    "test:dashboard:build": "npm run build:dashboard && npm run check:dashboard-copy",
+    "verify:dashboard-assets": "node scripts/verify-dashboard-assets.mjs",
+    "test:dashboard:cutover": "vitest run tests/e2e/dashboard-cutover.test.ts tests/e2e/dashboard-upgrade-downgrade.test.ts",
+    "verify:release-journey": "node scripts/verify-release-journey.mjs",
+    "verify:release-artifact": "node scripts/verify-release-artifact.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "agile",
+    "planning",
+    "cli",
+    "cursor",
+    "claude",
+    "codex",
+    "backlog",
+    "sprint",
+    "templates",
+    "estimation",
+    "github",
+    "epic",
+    "user-story",
+    "scrum"
+  ],
+  "author": "OpenPlanr Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openplanr/OpenPlanr.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://openplanr.dev",
+  "bugs": {
+    "url": "https://github.com/openplanr/OpenPlanr/issues"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^8.3.2",
+    "@linear/sdk": "^65.2.0",
+    "@napi-rs/keyring": "^1.2.0",
+    "chalk": "^5.3.0",
+    "commander": "^14.0.3",
+    "handlebars": "^4.7.9",
+    "yaml": "^2.8.3",
+    "zod": "^4.3.6"
+  },
+  "optionalDependencies": {
+    "planr-pipeline": "0.44.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.9",
+    "@changesets/cli": "^2.30.0",
+    "@tailwindcss/vite": "4.1.14",
+    "@tanstack/react-query": "5.101.4",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.4",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "4.7.0",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "axe-core": "4.13.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "lucide-react": "1.31.0",
+    "tsx": "^4.19.0",
+    "radix-ui": "1.6.7",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-router": "7.18.3",
+    "tailwindcss": "4.1.14",
+    "tailwind-merge": "3.6.0",
+    "tw-animate-css": "1.4.0",
+    "typescript": "^6.0.2",
+    "vite": "6.4.3",
+    "@playwright/test": "1.61.1"
+  },
+  "overrides": {
+    "@changesets/parse": {
+      "js-yaml": "^4.3.0"
+    },
+    "read-yaml-file": {
+      "js-yaml": "^3.15.0"
+    }
+  }
+}

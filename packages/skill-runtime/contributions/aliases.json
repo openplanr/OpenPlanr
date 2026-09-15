@@ -1,0 +1,16 @@
+{
+  "kind": "openplanr-skill-aliases",
+  "schemaVersion": "1.0.0",
+  "aliases": [
+    {
+      "id": "openplanr",
+      "description": "Compatibility router for the canonical planr-* OpenPlanr skills.",
+      "source": "skills/openplanr/SKILL.md"
+    },
+    {
+      "id": "openplanr-unified",
+      "description": "Compatibility router for legacy unified OpenPlanr invocations.",
+      "source": "skills/openplanr-unified/SKILL.md"
+    }
+  ]
+}

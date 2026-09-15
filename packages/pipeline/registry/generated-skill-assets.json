@@ -1,0 +1,1970 @@
+{
+  "kind": "openplanr-package-skill-assets",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.5.0",
+  "generator": "scripts/skills/generate.mjs",
+  "skillIds": [
+    "planr-artifact",
+    "planr-browser-qa",
+    "planr-ceo-review",
+    "planr-chair-review",
+    "planr-challenger-review",
+    "planr-cmo-review",
+    "planr-coo-review",
+    "planr-cpo-review",
+    "planr-cto-review",
+    "planr-dashboard",
+    "planr-design",
+    "planr-design-loop",
+    "planr-design-review",
+    "planr-diagram",
+    "planr-doctor",
+    "planr-investigate",
+    "planr-land",
+    "planr-operate",
+    "planr-plan",
+    "planr-plan-review",
+    "planr-ship",
+    "planr-spec",
+    "planr-status",
+    "planr-sync"
+  ],
+  "skills": [
+    {
+      "id": "planr-artifact",
+      "commands": [
+        "artifact"
+      ],
+      "source": "skills/planr-artifact/skill.json",
+      "sourceDigest": "sha256:805484714adc2e8c495c497ee238678d85df2da7eb683a1c7d960431a679f68c",
+      "composedDigest": "sha256:69d3c87187eb344b4ccc9d9a937c8939b4f71d8e0f4065e11fe4b3aa420390e5",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:18600eb8a0efeaf5a1bcf6d3cbc9880e78064c8e2e750773338fd28bb406356b"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-artifact/SKILL.md",
+          "digest": "sha256:69d3c87187eb344b4ccc9d9a937c8939b4f71d8e0f4065e11fe4b3aa420390e5",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-artifact/SKILL.md",
+          "digest": "sha256:69d3c87187eb344b4ccc9d9a937c8939b4f71d8e0f4065e11fe4b3aa420390e5",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-artifact.mdc",
+          "digest": "sha256:dc7d7a272cdf49c82f53e077f69c8a919792fd82d696c8486dd5cef62d5fbaf2",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-browser-qa",
+      "commands": [],
+      "source": "skills/planr-browser-qa/skill.json",
+      "sourceDigest": "sha256:bc655e8ea6afbd2082c81db24c1df2e66112414c8eec60ecc20bfce8fcd98581",
+      "composedDigest": "sha256:6ea1abe6cc81b04d0418ec5ea354920e10a765685403c492f9a7a282dab69de2",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:5abb433de919ff56d780fc27bc9bb7ccee1a072ab0ad01e6bbc5e2518668765d"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-browser-qa/SKILL.md",
+          "digest": "sha256:6ea1abe6cc81b04d0418ec5ea354920e10a765685403c492f9a7a282dab69de2",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-browser-qa/SKILL.md",
+          "digest": "sha256:6ea1abe6cc81b04d0418ec5ea354920e10a765685403c492f9a7a282dab69de2",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-browser-qa.mdc",
+          "digest": "sha256:84c963d6e4a30171db8ee1fb99f7621e1a2c018ba4d42004d18222026e2423ed",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-ceo-review",
+      "commands": [],
+      "source": "skills/planr-ceo-review/skill.json",
+      "sourceDigest": "sha256:1bccc276477db5f88ef8388c7a1d4d5b1837ced19ca032374d836d9343967513",
+      "composedDigest": "sha256:e56e369012a60d5aa060af98a6244e253ce936ce6332decad105d0d5c945191d",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:5e5e6f2b4932c1dfcc806fc479f9c66177ebf0d5a20213d1c260c142ee8d79aa"
+        },
+        {
+          "path": "shared/modules/operate-advisor-contract.md",
+          "digest": "sha256:a25ef38b78f40da1bc29de6939e7ceaa2e36238b8584014c93d6e2d4e4c94462"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-ceo-review/SKILL.md",
+          "digest": "sha256:e56e369012a60d5aa060af98a6244e253ce936ce6332decad105d0d5c945191d",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-ceo-review/SKILL.md",
+          "digest": "sha256:4d2b9ce65e4e3f4de807b7b909e03fa8083ea4f6832fbfce1f9469498bae94de",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-ceo-review.mdc",
+          "digest": "sha256:2c36e59576cf20f65279e78c032b6770dc8b98c2ec5239c2a7a2e9d59ed3618d",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-chair-review",
+      "commands": [],
+      "source": "skills/planr-chair-review/skill.json",
+      "sourceDigest": "sha256:ccd175227a6124e2103d9d926fa62448b91280adee282f75325b1aed5bc246d9",
+      "composedDigest": "sha256:fd31aa1779efa753d8ad406e3e4c50c558e3849ff4ee919587fa8c9f2f703f64",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:0b0b5158cec94da221850e31b3255364f0db82f4c1eee8244aa0c5e37631b5d7"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-chair-review/SKILL.md",
+          "digest": "sha256:fd31aa1779efa753d8ad406e3e4c50c558e3849ff4ee919587fa8c9f2f703f64",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-chair-review/SKILL.md",
+          "digest": "sha256:e2623896e4de9191516f928577f02d7dbbc9283899ff26880bdd4b58a99d81ed",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-chair-review.mdc",
+          "digest": "sha256:66dbc568ba2fc5f9c8969181d6f9207324517fc4d48d88b0b5f9cd5f640da78f",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-challenger-review",
+      "commands": [],
+      "source": "skills/planr-challenger-review/skill.json",
+      "sourceDigest": "sha256:9d068293a96d9fbb98a28de2c0c85932f4e7598da96e56c93afe543754e9f411",
+      "composedDigest": "sha256:25e5c7b611d6d5e378c9a4a2e3a32a18167527a2602561ab773ff1e34c3c5679",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:d14a092e4eeaf20c1ff705ca58d0e688c2dd5aa07d4556d47ca1aa9b6716d7b4"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-challenger-review/SKILL.md",
+          "digest": "sha256:25e5c7b611d6d5e378c9a4a2e3a32a18167527a2602561ab773ff1e34c3c5679",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-challenger-review/SKILL.md",
+          "digest": "sha256:dc1a7fab20c33295aa51b61b57347dac372597607f107e2602f8567076fb2edd",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-challenger-review.mdc",
+          "digest": "sha256:88753a2a8c5e6741a8315b9899a9e7bdb05b6a9709d233015d52df8e4732f62d",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-cmo-review",
+      "commands": [],
+      "source": "skills/planr-cmo-review/skill.json",
+      "sourceDigest": "sha256:62d11aa1420c84c3e7105cfbac020e3923864a19ca70ca7556a263d6d9517234",
+      "composedDigest": "sha256:45981fc66d4b2bfbdcc94e35438c3b03413526be7908dcc08595e08b0f8533b2",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:f903d15a1a3a7468c6ff3f01ec0c96c255a9b598d0e8ca9dc5830916ba812b08"
+        },
+        {
+          "path": "shared/modules/operate-advisor-contract.md",
+          "digest": "sha256:a25ef38b78f40da1bc29de6939e7ceaa2e36238b8584014c93d6e2d4e4c94462"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-cmo-review/SKILL.md",
+          "digest": "sha256:45981fc66d4b2bfbdcc94e35438c3b03413526be7908dcc08595e08b0f8533b2",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-cmo-review/SKILL.md",
+          "digest": "sha256:89fe68eb31a61421b7053ebf680a9374fcffffba63603fdf2ce769c6613c8aaf",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-cmo-review.mdc",
+          "digest": "sha256:b83951716ada706f90281940f2f6d2e13d2a37f3b225fdfe4adb0f69e5d19bce",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-coo-review",
+      "commands": [],
+      "source": "skills/planr-coo-review/skill.json",
+      "sourceDigest": "sha256:9ca683e63ff84834ba0f95511d70adcb644053b9062bf733eff191a0f138c100",
+      "composedDigest": "sha256:8b8095b2899f3624d487ca89ed90e2cf94c6eff6254d46ce933461ff3f06d012",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:bb3d82531506000fa617b2da3e8a38c95d5d5cd2983c83bbb495f31236932ec8"
+        },
+        {
+          "path": "shared/modules/operate-advisor-contract.md",
+          "digest": "sha256:a25ef38b78f40da1bc29de6939e7ceaa2e36238b8584014c93d6e2d4e4c94462"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-coo-review/SKILL.md",
+          "digest": "sha256:8b8095b2899f3624d487ca89ed90e2cf94c6eff6254d46ce933461ff3f06d012",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-coo-review/SKILL.md",
+          "digest": "sha256:67d847ecb09b7e7cdb3c40fcd005a8506722cfb3086baffd707e0bfc2e3a16f6",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-coo-review.mdc",
+          "digest": "sha256:addd21d52cf99363aa0571661ff8cbb34e7b4bfa3202f1101795ad73b5491c38",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-cpo-review",
+      "commands": [],
+      "source": "skills/planr-cpo-review/skill.json",
+      "sourceDigest": "sha256:cfc6c201fddf8e22b2072388c9988dbfd8a1178bb828f30fec8e5ecfdd1ffa5b",
+      "composedDigest": "sha256:cbd6870f91ec79bc250ec90b823183a03ebe582c978a135dca30190bd40e9f7c",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:deaf1ec09e56913ae1dac6349805e8299f3acd350dea4927e9cc3949a39985fd"
+        },
+        {
+          "path": "shared/modules/operate-advisor-contract.md",
+          "digest": "sha256:a25ef38b78f40da1bc29de6939e7ceaa2e36238b8584014c93d6e2d4e4c94462"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-cpo-review/SKILL.md",
+          "digest": "sha256:cbd6870f91ec79bc250ec90b823183a03ebe582c978a135dca30190bd40e9f7c",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-cpo-review/SKILL.md",
+          "digest": "sha256:13ab85d7c92175194ce211009ea5fcea07ae7a0c2a8e5544de59c544622999f9",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-cpo-review.mdc",
+          "digest": "sha256:63012e1f3771405472cf6d6720f8d725108c15a57087adeddef492d18ce93819",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-cto-review",
+      "commands": [],
+      "source": "skills/planr-cto-review/skill.json",
+      "sourceDigest": "sha256:103f03bc22bb97c5ce092dc3d3451394dd584133d759b2b56777e41d1542a216",
+      "composedDigest": "sha256:cc61b4738356fa505afe1376dcebed53564ae03c89fa1d9d79eab74605503dc4",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:aaa082b00f55f713619792c540c11a52bd755a9142411f4db5b47da1a3471cb5"
+        },
+        {
+          "path": "shared/modules/operate-advisor-contract.md",
+          "digest": "sha256:a25ef38b78f40da1bc29de6939e7ceaa2e36238b8584014c93d6e2d4e4c94462"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-cto-review/SKILL.md",
+          "digest": "sha256:cc61b4738356fa505afe1376dcebed53564ae03c89fa1d9d79eab74605503dc4",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-cto-review/SKILL.md",
+          "digest": "sha256:d149c4fcfabd4a785b28dcae572abd11548100b6ad61ec77b95275451491f80f",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-cto-review.mdc",
+          "digest": "sha256:d732927085fdcb45f85b067decd96e3747e109e1ae9e6b1a27824c89b55e086a",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-dashboard",
+      "commands": [
+        "pipeline"
+      ],
+      "source": "skills/planr-dashboard/skill.json",
+      "sourceDigest": "sha256:bf3911e3060eb412e598c065cbe6b2307bde02906dcde95c705e188da0627635",
+      "composedDigest": "sha256:63a4c3bbe2355491b674a356caddc76ecf78d0834f013a2bd4d55444046721ad",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:36f61ef1bc39de4f1324669515bda083d0af1fcd0e5e3eefcf3ded8aeef50ab3"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-dashboard/SKILL.md",
+          "digest": "sha256:63a4c3bbe2355491b674a356caddc76ecf78d0834f013a2bd4d55444046721ad",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-dashboard/SKILL.md",
+          "digest": "sha256:63a4c3bbe2355491b674a356caddc76ecf78d0834f013a2bd4d55444046721ad",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-dashboard.mdc",
+          "digest": "sha256:2b35f797ce6cfc2493a4f2e5bf097af674e2cd831e188548a90b8cb2977010ca",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-design",
+      "commands": [
+        "pipeline"
+      ],
+      "source": "skills/planr-design/skill.json",
+      "sourceDigest": "sha256:2825e86e0803e6ea0ca374554b3b27725054c5ae4bc3c575fc9ef99938ea673d",
+      "composedDigest": "sha256:8598950df72d77d7b0b35e4b483259e07d755fe202acbced8f4783c20b0b1c39",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:3852eb864adfc60af3503bf8467b302cac943392ef96341694a3a5c404977c6a"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-design/SKILL.md",
+          "digest": "sha256:8598950df72d77d7b0b35e4b483259e07d755fe202acbced8f4783c20b0b1c39",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-design/SKILL.md",
+          "digest": "sha256:8598950df72d77d7b0b35e4b483259e07d755fe202acbced8f4783c20b0b1c39",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-design.mdc",
+          "digest": "sha256:833eacca3248007c2d82a9007171253466fbf5fa30dc84bf6c9d06c9b9b05839",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-design-loop",
+      "commands": [
+        "pipeline"
+      ],
+      "source": "skills/planr-design-loop/skill.json",
+      "sourceDigest": "sha256:43fe302600de26263dda0a076eb880385df6fcfd5b15e3ea60775270879b182e",
+      "composedDigest": "sha256:8fac45fd2c9b220cead5dfb4a026d2c587316a9f74b485c19de5af8d377d5597",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:03812120fd19f36884f31315f532efc3ac3d29ae2223c087141135a0e4d83e8e"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-design-loop/SKILL.md",
+          "digest": "sha256:8fac45fd2c9b220cead5dfb4a026d2c587316a9f74b485c19de5af8d377d5597",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-design-loop/SKILL.md",
+          "digest": "sha256:8fac45fd2c9b220cead5dfb4a026d2c587316a9f74b485c19de5af8d377d5597",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-design-loop.mdc",
+          "digest": "sha256:cc8f3975136e00513c8d30961f0c3e6203d9901841d2aea17854d7d374732f7c",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-design-review",
+      "commands": [
+        "pipeline"
+      ],
+      "source": "skills/planr-design-review/skill.json",
+      "sourceDigest": "sha256:6ae07c451c08a3adbd95a0dee31309bf7542838e841d39a94dc0c5132aecaf14",
+      "composedDigest": "sha256:0dbdac79eec04c547bd95699c3fbb214db079bf8cab0a4c23cc34406c619eac5",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:937191660107db0cfb8cd3672cffacc2583641b92ea02ed6d3e855b8c05ff772"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-design-review/SKILL.md",
+          "digest": "sha256:0dbdac79eec04c547bd95699c3fbb214db079bf8cab0a4c23cc34406c619eac5",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-design-review/SKILL.md",
+          "digest": "sha256:0dbdac79eec04c547bd95699c3fbb214db079bf8cab0a4c23cc34406c619eac5",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-design-review.mdc",
+          "digest": "sha256:964fb3b89da6d21da8686a238858da3476a7e028fa58b0948e054da44bbf15ba",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-diagram",
+      "commands": [
+        "diagram"
+      ],
+      "source": "skills/planr-diagram/skill.json",
+      "sourceDigest": "sha256:0b571d3229d2ead1a79abe2dca4190872363d5d88acad51192e740c266a032d3",
+      "composedDigest": "sha256:69216be53116d7b2ef568f7bbb7550b23bd5b84a0e4d8031ae4b8b95173465bc",
+      "compositionSources": [
+        {
+          "path": "references/diagram-fidelity.md",
+          "digest": "sha256:3eadcce2990f6d74a0eb96e26b78ecd7e493322ae6a8aee3cdcecc66ca3d75bd"
+        },
+        {
+          "path": "references/diagram-intent-to-ir.md",
+          "digest": "sha256:ce7d0107b02067c0d9fac6abe8e6a6ce8cb3f23aabcab801c6bb5a3824555c2e"
+        },
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:6a65d3b265f5b5b30ece99455097e105983ffd9472ede4f85a76c180af769e5f"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-diagram/SKILL.md",
+          "digest": "sha256:69216be53116d7b2ef568f7bbb7550b23bd5b84a0e4d8031ae4b8b95173465bc",
+          "supportAssets": [
+            {
+              "source": "skills/planr-diagram/references/diagram-fidelity.md",
+              "path": "skills/planr-diagram/references/diagram-fidelity.md",
+              "digest": "sha256:3eadcce2990f6d74a0eb96e26b78ecd7e493322ae6a8aee3cdcecc66ca3d75bd"
+            },
+            {
+              "source": "skills/planr-diagram/references/diagram-intent-to-ir.md",
+              "path": "skills/planr-diagram/references/diagram-intent-to-ir.md",
+              "digest": "sha256:ce7d0107b02067c0d9fac6abe8e6a6ce8cb3f23aabcab801c6bb5a3824555c2e"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-diagram/SKILL.md",
+          "digest": "sha256:69216be53116d7b2ef568f7bbb7550b23bd5b84a0e4d8031ae4b8b95173465bc",
+          "supportAssets": [
+            {
+              "source": "skills/planr-diagram/references/diagram-fidelity.md",
+              "path": "adapters/codex/skills/planr-diagram/references/diagram-fidelity.md",
+              "digest": "sha256:3eadcce2990f6d74a0eb96e26b78ecd7e493322ae6a8aee3cdcecc66ca3d75bd"
+            },
+            {
+              "source": "skills/planr-diagram/references/diagram-intent-to-ir.md",
+              "path": "adapters/codex/skills/planr-diagram/references/diagram-intent-to-ir.md",
+              "digest": "sha256:ce7d0107b02067c0d9fac6abe8e6a6ce8cb3f23aabcab801c6bb5a3824555c2e"
+            }
+          ]
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-diagram.mdc",
+          "digest": "sha256:4a14c2d056c4895764caf4be3e894a3953fba0248966c97ece1cd0716f7c7c5a",
+          "supportAssets": [
+            {
+              "source": "skills/planr-diagram/references/diagram-fidelity.md",
+              "path": "adapters/cursor/rules/references/planr-diagram/references/diagram-fidelity.md",
+              "digest": "sha256:3eadcce2990f6d74a0eb96e26b78ecd7e493322ae6a8aee3cdcecc66ca3d75bd"
+            },
+            {
+              "source": "skills/planr-diagram/references/diagram-intent-to-ir.md",
+              "path": "adapters/cursor/rules/references/planr-diagram/references/diagram-intent-to-ir.md",
+              "digest": "sha256:ce7d0107b02067c0d9fac6abe8e6a6ce8cb3f23aabcab801c6bb5a3824555c2e"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "planr-doctor",
+      "commands": [
+        "doctor",
+        "upgrade"
+      ],
+      "source": "skills/planr-doctor/skill.json",
+      "sourceDigest": "sha256:432a960f14825640f3c69df4a14b662dbdcf134aaa0adae455dfb6f1f3e208d7",
+      "composedDigest": "sha256:aadebad1133caea05a16ab7e18e97a788c45be68da0965bec4c85bade3b95708",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:c268e43097b9e6ac07b6cd1aff9a4268239c3d4cda5c6d26e7126b5dc6d2b902"
+        },
+        {
+          "path": "references/upgrade.md",
+          "digest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-doctor/SKILL.md",
+          "digest": "sha256:aadebad1133caea05a16ab7e18e97a788c45be68da0965bec4c85bade3b95708",
+          "supportAssets": [
+            {
+              "source": "skills/planr-doctor/references/upgrade.md",
+              "path": "skills/planr-doctor/references/upgrade.md",
+              "digest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1"
+            }
+          ]
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-doctor/SKILL.md",
+          "digest": "sha256:aadebad1133caea05a16ab7e18e97a788c45be68da0965bec4c85bade3b95708",
+          "supportAssets": [
+            {
+              "source": "skills/planr-doctor/references/upgrade.md",
+              "path": "adapters/codex/skills/planr-doctor/references/upgrade.md",
+              "digest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1"
+            }
+          ]
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-doctor.mdc",
+          "digest": "sha256:1f1a9396764d3aada69b92671c5e9038c3c1c774d4473b10ec734348820ca8f7",
+          "supportAssets": [
+            {
+              "source": "skills/planr-doctor/references/upgrade.md",
+              "path": "adapters/cursor/rules/references/planr-doctor/references/upgrade.md",
+              "digest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "planr-investigate",
+      "commands": [],
+      "source": "skills/planr-investigate/skill.json",
+      "sourceDigest": "sha256:ccb04f2f4ccf042f67d42a3c45ca5820595512de8247572704c78ac30bb72eaf",
+      "composedDigest": "sha256:2662dc8f9cf6543ad84a96c5d579bbbb8a811ec43205e2ebd69a609a5b59ae2a",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:ef5ad969a3d0604a4b1f42f49eb76c51452daf3d29a3dcbf5ff170dcbc00363e"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-investigate/SKILL.md",
+          "digest": "sha256:2662dc8f9cf6543ad84a96c5d579bbbb8a811ec43205e2ebd69a609a5b59ae2a",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-investigate/SKILL.md",
+          "digest": "sha256:2662dc8f9cf6543ad84a96c5d579bbbb8a811ec43205e2ebd69a609a5b59ae2a",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-investigate.mdc",
+          "digest": "sha256:10380e74375697898695343c6d85e9f97cb5baaec3edfdf71ed1151eda7c88fa",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-land",
+      "commands": [
+        "land"
+      ],
+      "source": "skills/planr-land/skill.json",
+      "sourceDigest": "sha256:931bfde56c889826cf4a511d35115c2ff12eda992927a68227cf46aaa3c106a6",
+      "composedDigest": "sha256:14221e78138ce7ac8ead6e2044a783ea9cc058b78cebbb49aef3407784ede5fc",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:252dc17a8aa6285eeccce0595ec55390b7e254059ca6582f78606b80f9a79c76"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-land/SKILL.md",
+          "digest": "sha256:14221e78138ce7ac8ead6e2044a783ea9cc058b78cebbb49aef3407784ede5fc",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-land/SKILL.md",
+          "digest": "sha256:14221e78138ce7ac8ead6e2044a783ea9cc058b78cebbb49aef3407784ede5fc",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-land.mdc",
+          "digest": "sha256:d61ea867ab3778efc4abf2bd2d27d8e454f7acf6d5f0effb9289ee73ed5a8dc5",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-operate",
+      "commands": [
+        "operate"
+      ],
+      "source": "skills/planr-operate/skill.json",
+      "sourceDigest": "sha256:245c4d0f73e14cc806bee58d77094060be0364a9c828f15111b016485a8d883b",
+      "composedDigest": "sha256:a5c9fb3712fa3a482095c1e7a0a15a15f95424e8867935765716489bde22db63",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:5e9c6fc1f1e636b5a7a0799a9d6f7e6388ef61e4e2dbe89e1c053206565d7c00"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-operate/SKILL.md",
+          "digest": "sha256:a5c9fb3712fa3a482095c1e7a0a15a15f95424e8867935765716489bde22db63",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-operate/SKILL.md",
+          "digest": "sha256:d12da06be8c767ad8c47242dc85b5634917940b2d34cd3e39441064016538e7f",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-operate.mdc",
+          "digest": "sha256:986fe3261846fdd11b2dacfddb12005a5bb582cf1319b25844f141f5512f5606",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-plan",
+      "commands": [],
+      "source": "skills/planr-plan/skill.json",
+      "sourceDigest": "sha256:4f83f63684fbb40048fec450e9a4b7b5720e1035ba27a14736cfb7ceccb18922",
+      "composedDigest": "sha256:ca70a0c5480ecf2281b667893df6c2059ebc70f4cbd8b92a97e88f1380a2f1d1",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:051faf8f3dca16c7c4da729cde59bbd7f984a99586049e0f9f7e9d94ce09e31f"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-plan/SKILL.md",
+          "digest": "sha256:ca70a0c5480ecf2281b667893df6c2059ebc70f4cbd8b92a97e88f1380a2f1d1",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-plan/SKILL.md",
+          "digest": "sha256:d598ac2214ac717ce87d03fd2d1699426fbd022d907ff413c385b3c5db00794b",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-plan.mdc",
+          "digest": "sha256:e872bca2938265197b520733dfdd72ddf8faa15028ad545beab5d86877a30bc6",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-plan-review",
+      "commands": [],
+      "source": "skills/planr-plan-review/skill.json",
+      "sourceDigest": "sha256:0731802df11fcb7e2e656d7bcc52a9958c7bfab33d0f8f8a34a7212f79748d66",
+      "composedDigest": "sha256:d168347e76edda7bec993684aa40eee7b05ad4d9389f4487263e39100d9f1623",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:87adb04f6f9cc785f935c004c7067548e332265e34038a826d8e5485f961a5cf"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-plan-review/SKILL.md",
+          "digest": "sha256:d168347e76edda7bec993684aa40eee7b05ad4d9389f4487263e39100d9f1623",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-plan-review/SKILL.md",
+          "digest": "sha256:d168347e76edda7bec993684aa40eee7b05ad4d9389f4487263e39100d9f1623",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-plan-review.mdc",
+          "digest": "sha256:52cb318ca3fa888124f75950c54b594bde7276a333855130a6919683ea093c2c",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-ship",
+      "commands": [],
+      "source": "skills/planr-ship/skill.json",
+      "sourceDigest": "sha256:77bcc133d9a73e8e9747d253e405b5fafcfca8cd7bb372cfcd33fc7e71f325fb",
+      "composedDigest": "sha256:919567d084f3055ce9479733cc55fb22ac101a8953daef71c2202bcfbbc029c1",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:e85375005af9e09ee6284ffc5887109dbee28206bdfffc8e8d46ac7ee279f8d8"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-ship/SKILL.md",
+          "digest": "sha256:919567d084f3055ce9479733cc55fb22ac101a8953daef71c2202bcfbbc029c1",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-ship/SKILL.md",
+          "digest": "sha256:961f5ad2c99df315c689e45bb746b3e3f231bc6075d2656832f732df8b475f4f",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-ship.mdc",
+          "digest": "sha256:b1da60fa83f7e9b36e1bebb4e62b010ff98609d7f5f74a712b0050f04c052ff3",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-spec",
+      "commands": [],
+      "source": "skills/planr-spec/skill.json",
+      "sourceDigest": "sha256:5608b69fded0a309a3283b954b43f02548166a2f3b4139c50e83504546fed27b",
+      "composedDigest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:cda3788a031eebc51e95bbd30e5f96499647f7a097b2898d0f19fcdffad180b2"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-spec/SKILL.md",
+          "digest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-spec/SKILL.md",
+          "digest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-spec.mdc",
+          "digest": "sha256:a397c56676261974a7acd86b1baef7b5c6e567d5bcfa9b14ee2111a44ee0df83",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-status",
+      "commands": [
+        "status",
+        "pipeline"
+      ],
+      "source": "skills/planr-status/skill.json",
+      "sourceDigest": "sha256:915494553c9098d987d14bf1c5d6d27ca093d383dae2f79b16ba8d2d043417d3",
+      "composedDigest": "sha256:fdc5f45371326b50d846a08c2ae6ff2ae6f63f798a1e7ff151734f1339de61d9",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:0d589938aa0b63a82cbce45d7a487a51f22c56e39504220ba0a6bd9eb908f0c5"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-status/SKILL.md",
+          "digest": "sha256:fdc5f45371326b50d846a08c2ae6ff2ae6f63f798a1e7ff151734f1339de61d9",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-status/SKILL.md",
+          "digest": "sha256:fdc5f45371326b50d846a08c2ae6ff2ae6f63f798a1e7ff151734f1339de61d9",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-status.mdc",
+          "digest": "sha256:879cbc875fcc8d731185eb582084b9f97d37339bb9d8f648125b1e3e33823bd0",
+          "supportAssets": []
+        }
+      ]
+    },
+    {
+      "id": "planr-sync",
+      "commands": [
+        "pipeline"
+      ],
+      "source": "skills/planr-sync/skill.json",
+      "sourceDigest": "sha256:9ae3e8f8c72989029503f93dcc2ac522b8c18bcc252f802e6b7d14464a2ba992",
+      "composedDigest": "sha256:0b6d149a9e9e1a69765562be2ba0ac14a8cea98181ad996b6bfd69a8c13432a4",
+      "compositionSources": [
+        {
+          "path": "modules/workflow.md",
+          "digest": "sha256:c95e77a4d5167720fe62c274f67670249213467954dd6aeeb2a9909bdeeb7fde"
+        }
+      ],
+      "assets": [
+        {
+          "host": "pipeline",
+          "path": "skills/planr-sync/SKILL.md",
+          "digest": "sha256:0b6d149a9e9e1a69765562be2ba0ac14a8cea98181ad996b6bfd69a8c13432a4",
+          "supportAssets": []
+        },
+        {
+          "host": "codex",
+          "path": "adapters/codex/skills/planr-sync/SKILL.md",
+          "digest": "sha256:0b6d149a9e9e1a69765562be2ba0ac14a8cea98181ad996b6bfd69a8c13432a4",
+          "supportAssets": []
+        },
+        {
+          "host": "cursor",
+          "path": "adapters/cursor/rules/openplanr-sync.mdc",
+          "digest": "sha256:ead7c122e5d681ab8c969c8738e2f27028fad48ec093caaaf0d5724997062dca",
+          "supportAssets": []
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "skillId": "planr-artifact",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-artifact/SKILL.md",
+      "digest": "sha256:69d3c87187eb344b4ccc9d9a937c8939b4f71d8e0f4065e11fe4b3aa420390e5",
+      "source": "skills/planr-artifact/skill.json",
+      "sourceDigest": "sha256:805484714adc2e8c495c497ee238678d85df2da7eb683a1c7d960431a679f68c"
+    },
+    {
+      "skillId": "planr-browser-qa",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-browser-qa/SKILL.md",
+      "digest": "sha256:6ea1abe6cc81b04d0418ec5ea354920e10a765685403c492f9a7a282dab69de2",
+      "source": "skills/planr-browser-qa/skill.json",
+      "sourceDigest": "sha256:bc655e8ea6afbd2082c81db24c1df2e66112414c8eec60ecc20bfce8fcd98581"
+    },
+    {
+      "skillId": "planr-ceo-review",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-ceo-review/SKILL.md",
+      "digest": "sha256:4d2b9ce65e4e3f4de807b7b909e03fa8083ea4f6832fbfce1f9469498bae94de",
+      "source": "skills/planr-ceo-review/skill.json",
+      "sourceDigest": "sha256:1bccc276477db5f88ef8388c7a1d4d5b1837ced19ca032374d836d9343967513"
+    },
+    {
+      "skillId": "planr-chair-review",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-chair-review/SKILL.md",
+      "digest": "sha256:e2623896e4de9191516f928577f02d7dbbc9283899ff26880bdd4b58a99d81ed",
+      "source": "skills/planr-chair-review/skill.json",
+      "sourceDigest": "sha256:ccd175227a6124e2103d9d926fa62448b91280adee282f75325b1aed5bc246d9"
+    },
+    {
+      "skillId": "planr-challenger-review",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-challenger-review/SKILL.md",
+      "digest": "sha256:dc1a7fab20c33295aa51b61b57347dac372597607f107e2602f8567076fb2edd",
+      "source": "skills/planr-challenger-review/skill.json",
+      "sourceDigest": "sha256:9d068293a96d9fbb98a28de2c0c85932f4e7598da96e56c93afe543754e9f411"
+    },
+    {
+      "skillId": "planr-cmo-review",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-cmo-review/SKILL.md",
+      "digest": "sha256:89fe68eb31a61421b7053ebf680a9374fcffffba63603fdf2ce769c6613c8aaf",
+      "source": "skills/planr-cmo-review/skill.json",
+      "sourceDigest": "sha256:62d11aa1420c84c3e7105cfbac020e3923864a19ca70ca7556a263d6d9517234"
+    },
+    {
+      "skillId": "planr-coo-review",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-coo-review/SKILL.md",
+      "digest": "sha256:67d847ecb09b7e7cdb3c40fcd005a8506722cfb3086baffd707e0bfc2e3a16f6",
+      "source": "skills/planr-coo-review/skill.json",
+      "sourceDigest": "sha256:9ca683e63ff84834ba0f95511d70adcb644053b9062bf733eff191a0f138c100"
+    },
+    {
+      "skillId": "planr-cpo-review",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-cpo-review/SKILL.md",
+      "digest": "sha256:13ab85d7c92175194ce211009ea5fcea07ae7a0c2a8e5544de59c544622999f9",
+      "source": "skills/planr-cpo-review/skill.json",
+      "sourceDigest": "sha256:cfc6c201fddf8e22b2072388c9988dbfd8a1178bb828f30fec8e5ecfdd1ffa5b"
+    },
+    {
+      "skillId": "planr-cto-review",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-cto-review/SKILL.md",
+      "digest": "sha256:d149c4fcfabd4a785b28dcae572abd11548100b6ad61ec77b95275451491f80f",
+      "source": "skills/planr-cto-review/skill.json",
+      "sourceDigest": "sha256:103f03bc22bb97c5ce092dc3d3451394dd584133d759b2b56777e41d1542a216"
+    },
+    {
+      "skillId": "planr-dashboard",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-dashboard/SKILL.md",
+      "digest": "sha256:63a4c3bbe2355491b674a356caddc76ecf78d0834f013a2bd4d55444046721ad",
+      "source": "skills/planr-dashboard/skill.json",
+      "sourceDigest": "sha256:bf3911e3060eb412e598c065cbe6b2307bde02906dcde95c705e188da0627635"
+    },
+    {
+      "skillId": "planr-design-loop",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-design-loop/SKILL.md",
+      "digest": "sha256:8fac45fd2c9b220cead5dfb4a026d2c587316a9f74b485c19de5af8d377d5597",
+      "source": "skills/planr-design-loop/skill.json",
+      "sourceDigest": "sha256:43fe302600de26263dda0a076eb880385df6fcfd5b15e3ea60775270879b182e"
+    },
+    {
+      "skillId": "planr-design-review",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-design-review/SKILL.md",
+      "digest": "sha256:0dbdac79eec04c547bd95699c3fbb214db079bf8cab0a4c23cc34406c619eac5",
+      "source": "skills/planr-design-review/skill.json",
+      "sourceDigest": "sha256:6ae07c451c08a3adbd95a0dee31309bf7542838e841d39a94dc0c5132aecaf14"
+    },
+    {
+      "skillId": "planr-design",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-design/SKILL.md",
+      "digest": "sha256:8598950df72d77d7b0b35e4b483259e07d755fe202acbced8f4783c20b0b1c39",
+      "source": "skills/planr-design/skill.json",
+      "sourceDigest": "sha256:2825e86e0803e6ea0ca374554b3b27725054c5ae4bc3c575fc9ef99938ea673d"
+    },
+    {
+      "skillId": "planr-diagram",
+      "host": "codex",
+      "kind": "support",
+      "path": "adapters/codex/skills/planr-diagram/references/diagram-fidelity.md",
+      "digest": "sha256:3eadcce2990f6d74a0eb96e26b78ecd7e493322ae6a8aee3cdcecc66ca3d75bd",
+      "source": "skills/planr-diagram/references/diagram-fidelity.md",
+      "sourceDigest": "sha256:3eadcce2990f6d74a0eb96e26b78ecd7e493322ae6a8aee3cdcecc66ca3d75bd"
+    },
+    {
+      "skillId": "planr-diagram",
+      "host": "codex",
+      "kind": "support",
+      "path": "adapters/codex/skills/planr-diagram/references/diagram-intent-to-ir.md",
+      "digest": "sha256:ce7d0107b02067c0d9fac6abe8e6a6ce8cb3f23aabcab801c6bb5a3824555c2e",
+      "source": "skills/planr-diagram/references/diagram-intent-to-ir.md",
+      "sourceDigest": "sha256:ce7d0107b02067c0d9fac6abe8e6a6ce8cb3f23aabcab801c6bb5a3824555c2e"
+    },
+    {
+      "skillId": "planr-diagram",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-diagram/SKILL.md",
+      "digest": "sha256:69216be53116d7b2ef568f7bbb7550b23bd5b84a0e4d8031ae4b8b95173465bc",
+      "source": "skills/planr-diagram/skill.json",
+      "sourceDigest": "sha256:0b571d3229d2ead1a79abe2dca4190872363d5d88acad51192e740c266a032d3"
+    },
+    {
+      "skillId": "planr-doctor",
+      "host": "codex",
+      "kind": "support",
+      "path": "adapters/codex/skills/planr-doctor/references/upgrade.md",
+      "digest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1",
+      "source": "skills/planr-doctor/references/upgrade.md",
+      "sourceDigest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1"
+    },
+    {
+      "skillId": "planr-doctor",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-doctor/SKILL.md",
+      "digest": "sha256:aadebad1133caea05a16ab7e18e97a788c45be68da0965bec4c85bade3b95708",
+      "source": "skills/planr-doctor/skill.json",
+      "sourceDigest": "sha256:432a960f14825640f3c69df4a14b662dbdcf134aaa0adae455dfb6f1f3e208d7"
+    },
+    {
+      "skillId": "planr-investigate",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-investigate/SKILL.md",
+      "digest": "sha256:2662dc8f9cf6543ad84a96c5d579bbbb8a811ec43205e2ebd69a609a5b59ae2a",
+      "source": "skills/planr-investigate/skill.json",
+      "sourceDigest": "sha256:ccb04f2f4ccf042f67d42a3c45ca5820595512de8247572704c78ac30bb72eaf"
+    },
+    {
+      "skillId": "planr-land",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-land/SKILL.md",
+      "digest": "sha256:14221e78138ce7ac8ead6e2044a783ea9cc058b78cebbb49aef3407784ede5fc",
+      "source": "skills/planr-land/skill.json",
+      "sourceDigest": "sha256:931bfde56c889826cf4a511d35115c2ff12eda992927a68227cf46aaa3c106a6"
+    },
+    {
+      "skillId": "planr-operate",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-operate/SKILL.md",
+      "digest": "sha256:d12da06be8c767ad8c47242dc85b5634917940b2d34cd3e39441064016538e7f",
+      "source": "skills/planr-operate/skill.json",
+      "sourceDigest": "sha256:245c4d0f73e14cc806bee58d77094060be0364a9c828f15111b016485a8d883b"
+    },
+    {
+      "skillId": "planr-plan-review",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-plan-review/SKILL.md",
+      "digest": "sha256:d168347e76edda7bec993684aa40eee7b05ad4d9389f4487263e39100d9f1623",
+      "source": "skills/planr-plan-review/skill.json",
+      "sourceDigest": "sha256:0731802df11fcb7e2e656d7bcc52a9958c7bfab33d0f8f8a34a7212f79748d66"
+    },
+    {
+      "skillId": "planr-plan",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-plan/SKILL.md",
+      "digest": "sha256:d598ac2214ac717ce87d03fd2d1699426fbd022d907ff413c385b3c5db00794b",
+      "source": "skills/planr-plan/skill.json",
+      "sourceDigest": "sha256:4f83f63684fbb40048fec450e9a4b7b5720e1035ba27a14736cfb7ceccb18922"
+    },
+    {
+      "skillId": "planr-ship",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-ship/SKILL.md",
+      "digest": "sha256:961f5ad2c99df315c689e45bb746b3e3f231bc6075d2656832f732df8b475f4f",
+      "source": "skills/planr-ship/skill.json",
+      "sourceDigest": "sha256:77bcc133d9a73e8e9747d253e405b5fafcfca8cd7bb372cfcd33fc7e71f325fb"
+    },
+    {
+      "skillId": "planr-spec",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-spec/SKILL.md",
+      "digest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85",
+      "source": "skills/planr-spec/skill.json",
+      "sourceDigest": "sha256:5608b69fded0a309a3283b954b43f02548166a2f3b4139c50e83504546fed27b"
+    },
+    {
+      "skillId": "planr-status",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-status/SKILL.md",
+      "digest": "sha256:fdc5f45371326b50d846a08c2ae6ff2ae6f63f798a1e7ff151734f1339de61d9",
+      "source": "skills/planr-status/skill.json",
+      "sourceDigest": "sha256:915494553c9098d987d14bf1c5d6d27ca093d383dae2f79b16ba8d2d043417d3"
+    },
+    {
+      "skillId": "planr-sync",
+      "host": "codex",
+      "kind": "skill",
+      "path": "adapters/codex/skills/planr-sync/SKILL.md",
+      "digest": "sha256:0b6d149a9e9e1a69765562be2ba0ac14a8cea98181ad996b6bfd69a8c13432a4",
+      "source": "skills/planr-sync/skill.json",
+      "sourceDigest": "sha256:9ae3e8f8c72989029503f93dcc2ac522b8c18bcc252f802e6b7d14464a2ba992"
+    },
+    {
+      "skillId": "planr-artifact",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-artifact.mdc",
+      "digest": "sha256:dc7d7a272cdf49c82f53e077f69c8a919792fd82d696c8486dd5cef62d5fbaf2",
+      "source": "skills/planr-artifact/skill.json",
+      "sourceDigest": "sha256:805484714adc2e8c495c497ee238678d85df2da7eb683a1c7d960431a679f68c"
+    },
+    {
+      "skillId": "planr-browser-qa",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-browser-qa.mdc",
+      "digest": "sha256:84c963d6e4a30171db8ee1fb99f7621e1a2c018ba4d42004d18222026e2423ed",
+      "source": "skills/planr-browser-qa/skill.json",
+      "sourceDigest": "sha256:bc655e8ea6afbd2082c81db24c1df2e66112414c8eec60ecc20bfce8fcd98581"
+    },
+    {
+      "skillId": "planr-ceo-review",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-ceo-review.mdc",
+      "digest": "sha256:2c36e59576cf20f65279e78c032b6770dc8b98c2ec5239c2a7a2e9d59ed3618d",
+      "source": "skills/planr-ceo-review/skill.json",
+      "sourceDigest": "sha256:1bccc276477db5f88ef8388c7a1d4d5b1837ced19ca032374d836d9343967513"
+    },
+    {
+      "skillId": "planr-chair-review",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-chair-review.mdc",
+      "digest": "sha256:66dbc568ba2fc5f9c8969181d6f9207324517fc4d48d88b0b5f9cd5f640da78f",
+      "source": "skills/planr-chair-review/skill.json",
+      "sourceDigest": "sha256:ccd175227a6124e2103d9d926fa62448b91280adee282f75325b1aed5bc246d9"
+    },
+    {
+      "skillId": "planr-challenger-review",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-challenger-review.mdc",
+      "digest": "sha256:88753a2a8c5e6741a8315b9899a9e7bdb05b6a9709d233015d52df8e4732f62d",
+      "source": "skills/planr-challenger-review/skill.json",
+      "sourceDigest": "sha256:9d068293a96d9fbb98a28de2c0c85932f4e7598da96e56c93afe543754e9f411"
+    },
+    {
+      "skillId": "planr-cmo-review",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-cmo-review.mdc",
+      "digest": "sha256:b83951716ada706f90281940f2f6d2e13d2a37f3b225fdfe4adb0f69e5d19bce",
+      "source": "skills/planr-cmo-review/skill.json",
+      "sourceDigest": "sha256:62d11aa1420c84c3e7105cfbac020e3923864a19ca70ca7556a263d6d9517234"
+    },
+    {
+      "skillId": "planr-coo-review",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-coo-review.mdc",
+      "digest": "sha256:addd21d52cf99363aa0571661ff8cbb34e7b4bfa3202f1101795ad73b5491c38",
+      "source": "skills/planr-coo-review/skill.json",
+      "sourceDigest": "sha256:9ca683e63ff84834ba0f95511d70adcb644053b9062bf733eff191a0f138c100"
+    },
+    {
+      "skillId": "planr-cpo-review",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-cpo-review.mdc",
+      "digest": "sha256:63012e1f3771405472cf6d6720f8d725108c15a57087adeddef492d18ce93819",
+      "source": "skills/planr-cpo-review/skill.json",
+      "sourceDigest": "sha256:cfc6c201fddf8e22b2072388c9988dbfd8a1178bb828f30fec8e5ecfdd1ffa5b"
+    },
+    {
+      "skillId": "planr-cto-review",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-cto-review.mdc",
+      "digest": "sha256:d732927085fdcb45f85b067decd96e3747e109e1ae9e6b1a27824c89b55e086a",
+      "source": "skills/planr-cto-review/skill.json",
+      "sourceDigest": "sha256:103f03bc22bb97c5ce092dc3d3451394dd584133d759b2b56777e41d1542a216"
+    },
+    {
+      "skillId": "planr-dashboard",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-dashboard.mdc",
+      "digest": "sha256:2b35f797ce6cfc2493a4f2e5bf097af674e2cd831e188548a90b8cb2977010ca",
+      "source": "skills/planr-dashboard/skill.json",
+      "sourceDigest": "sha256:bf3911e3060eb412e598c065cbe6b2307bde02906dcde95c705e188da0627635"
+    },
+    {
+      "skillId": "planr-design-loop",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-design-loop.mdc",
+      "digest": "sha256:cc8f3975136e00513c8d30961f0c3e6203d9901841d2aea17854d7d374732f7c",
+      "source": "skills/planr-design-loop/skill.json",
+      "sourceDigest": "sha256:43fe302600de26263dda0a076eb880385df6fcfd5b15e3ea60775270879b182e"
+    },
+    {
+      "skillId": "planr-design-review",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-design-review.mdc",
+      "digest": "sha256:964fb3b89da6d21da8686a238858da3476a7e028fa58b0948e054da44bbf15ba",
+      "source": "skills/planr-design-review/skill.json",
+      "sourceDigest": "sha256:6ae07c451c08a3adbd95a0dee31309bf7542838e841d39a94dc0c5132aecaf14"
+    },
+    {
+      "skillId": "planr-design",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-design.mdc",
+      "digest": "sha256:833eacca3248007c2d82a9007171253466fbf5fa30dc84bf6c9d06c9b9b05839",
+      "source": "skills/planr-design/skill.json",
+      "sourceDigest": "sha256:2825e86e0803e6ea0ca374554b3b27725054c5ae4bc3c575fc9ef99938ea673d"
+    },
+    {
+      "skillId": "planr-diagram",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-diagram.mdc",
+      "digest": "sha256:4a14c2d056c4895764caf4be3e894a3953fba0248966c97ece1cd0716f7c7c5a",
+      "source": "skills/planr-diagram/skill.json",
+      "sourceDigest": "sha256:0b571d3229d2ead1a79abe2dca4190872363d5d88acad51192e740c266a032d3"
+    },
+    {
+      "skillId": "planr-doctor",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-doctor.mdc",
+      "digest": "sha256:1f1a9396764d3aada69b92671c5e9038c3c1c774d4473b10ec734348820ca8f7",
+      "source": "skills/planr-doctor/skill.json",
+      "sourceDigest": "sha256:432a960f14825640f3c69df4a14b662dbdcf134aaa0adae455dfb6f1f3e208d7"
+    },
+    {
+      "skillId": "planr-investigate",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-investigate.mdc",
+      "digest": "sha256:10380e74375697898695343c6d85e9f97cb5baaec3edfdf71ed1151eda7c88fa",
+      "source": "skills/planr-investigate/skill.json",
+      "sourceDigest": "sha256:ccb04f2f4ccf042f67d42a3c45ca5820595512de8247572704c78ac30bb72eaf"
+    },
+    {
+      "skillId": "planr-land",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-land.mdc",
+      "digest": "sha256:d61ea867ab3778efc4abf2bd2d27d8e454f7acf6d5f0effb9289ee73ed5a8dc5",
+      "source": "skills/planr-land/skill.json",
+      "sourceDigest": "sha256:931bfde56c889826cf4a511d35115c2ff12eda992927a68227cf46aaa3c106a6"
+    },
+    {
+      "skillId": "planr-operate",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-operate.mdc",
+      "digest": "sha256:986fe3261846fdd11b2dacfddb12005a5bb582cf1319b25844f141f5512f5606",
+      "source": "skills/planr-operate/skill.json",
+      "sourceDigest": "sha256:245c4d0f73e14cc806bee58d77094060be0364a9c828f15111b016485a8d883b"
+    },
+    {
+      "skillId": "planr-plan-review",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-plan-review.mdc",
+      "digest": "sha256:52cb318ca3fa888124f75950c54b594bde7276a333855130a6919683ea093c2c",
+      "source": "skills/planr-plan-review/skill.json",
+      "sourceDigest": "sha256:0731802df11fcb7e2e656d7bcc52a9958c7bfab33d0f8f8a34a7212f79748d66"
+    },
+    {
+      "skillId": "planr-plan",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-plan.mdc",
+      "digest": "sha256:e872bca2938265197b520733dfdd72ddf8faa15028ad545beab5d86877a30bc6",
+      "source": "skills/planr-plan/skill.json",
+      "sourceDigest": "sha256:4f83f63684fbb40048fec450e9a4b7b5720e1035ba27a14736cfb7ceccb18922"
+    },
+    {
+      "skillId": "planr-ship",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-ship.mdc",
+      "digest": "sha256:b1da60fa83f7e9b36e1bebb4e62b010ff98609d7f5f74a712b0050f04c052ff3",
+      "source": "skills/planr-ship/skill.json",
+      "sourceDigest": "sha256:77bcc133d9a73e8e9747d253e405b5fafcfca8cd7bb372cfcd33fc7e71f325fb"
+    },
+    {
+      "skillId": "planr-spec",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-spec.mdc",
+      "digest": "sha256:a397c56676261974a7acd86b1baef7b5c6e567d5bcfa9b14ee2111a44ee0df83",
+      "source": "skills/planr-spec/skill.json",
+      "sourceDigest": "sha256:5608b69fded0a309a3283b954b43f02548166a2f3b4139c50e83504546fed27b"
+    },
+    {
+      "skillId": "planr-status",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-status.mdc",
+      "digest": "sha256:879cbc875fcc8d731185eb582084b9f97d37339bb9d8f648125b1e3e33823bd0",
+      "source": "skills/planr-status/skill.json",
+      "sourceDigest": "sha256:915494553c9098d987d14bf1c5d6d27ca093d383dae2f79b16ba8d2d043417d3"
+    },
+    {
+      "skillId": "planr-sync",
+      "host": "cursor",
+      "kind": "skill",
+      "path": "adapters/cursor/rules/openplanr-sync.mdc",
+      "digest": "sha256:ead7c122e5d681ab8c969c8738e2f27028fad48ec093caaaf0d5724997062dca",
+      "source": "skills/planr-sync/skill.json",
+      "sourceDigest": "sha256:9ae3e8f8c72989029503f93dcc2ac522b8c18bcc252f802e6b7d14464a2ba992"
+    },
+    {
+      "skillId": "planr-diagram",
+      "host": "cursor",
+      "kind": "support",
+      "path": "adapters/cursor/rules/references/planr-diagram/references/diagram-fidelity.md",
+      "digest": "sha256:3eadcce2990f6d74a0eb96e26b78ecd7e493322ae6a8aee3cdcecc66ca3d75bd",
+      "source": "skills/planr-diagram/references/diagram-fidelity.md",
+      "sourceDigest": "sha256:3eadcce2990f6d74a0eb96e26b78ecd7e493322ae6a8aee3cdcecc66ca3d75bd"
+    },
+    {
+      "skillId": "planr-diagram",
+      "host": "cursor",
+      "kind": "support",
+      "path": "adapters/cursor/rules/references/planr-diagram/references/diagram-intent-to-ir.md",
+      "digest": "sha256:ce7d0107b02067c0d9fac6abe8e6a6ce8cb3f23aabcab801c6bb5a3824555c2e",
+      "source": "skills/planr-diagram/references/diagram-intent-to-ir.md",
+      "sourceDigest": "sha256:ce7d0107b02067c0d9fac6abe8e6a6ce8cb3f23aabcab801c6bb5a3824555c2e"
+    },
+    {
+      "skillId": "planr-doctor",
+      "host": "cursor",
+      "kind": "support",
+      "path": "adapters/cursor/rules/references/planr-doctor/references/upgrade.md",
+      "digest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1",
+      "source": "skills/planr-doctor/references/upgrade.md",
+      "sourceDigest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1"
+    },
+    {
+      "skillId": "planr-artifact",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-artifact/SKILL.md",
+      "digest": "sha256:69d3c87187eb344b4ccc9d9a937c8939b4f71d8e0f4065e11fe4b3aa420390e5",
+      "source": "skills/planr-artifact/skill.json",
+      "sourceDigest": "sha256:805484714adc2e8c495c497ee238678d85df2da7eb683a1c7d960431a679f68c"
+    },
+    {
+      "skillId": "planr-browser-qa",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-browser-qa/SKILL.md",
+      "digest": "sha256:6ea1abe6cc81b04d0418ec5ea354920e10a765685403c492f9a7a282dab69de2",
+      "source": "skills/planr-browser-qa/skill.json",
+      "sourceDigest": "sha256:bc655e8ea6afbd2082c81db24c1df2e66112414c8eec60ecc20bfce8fcd98581"
+    },
+    {
+      "skillId": "planr-ceo-review",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-ceo-review/SKILL.md",
+      "digest": "sha256:e56e369012a60d5aa060af98a6244e253ce936ce6332decad105d0d5c945191d",
+      "source": "skills/planr-ceo-review/skill.json",
+      "sourceDigest": "sha256:1bccc276477db5f88ef8388c7a1d4d5b1837ced19ca032374d836d9343967513"
+    },
+    {
+      "skillId": "planr-chair-review",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-chair-review/SKILL.md",
+      "digest": "sha256:fd31aa1779efa753d8ad406e3e4c50c558e3849ff4ee919587fa8c9f2f703f64",
+      "source": "skills/planr-chair-review/skill.json",
+      "sourceDigest": "sha256:ccd175227a6124e2103d9d926fa62448b91280adee282f75325b1aed5bc246d9"
+    },
+    {
+      "skillId": "planr-challenger-review",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-challenger-review/SKILL.md",
+      "digest": "sha256:25e5c7b611d6d5e378c9a4a2e3a32a18167527a2602561ab773ff1e34c3c5679",
+      "source": "skills/planr-challenger-review/skill.json",
+      "sourceDigest": "sha256:9d068293a96d9fbb98a28de2c0c85932f4e7598da96e56c93afe543754e9f411"
+    },
+    {
+      "skillId": "planr-cmo-review",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-cmo-review/SKILL.md",
+      "digest": "sha256:45981fc66d4b2bfbdcc94e35438c3b03413526be7908dcc08595e08b0f8533b2",
+      "source": "skills/planr-cmo-review/skill.json",
+      "sourceDigest": "sha256:62d11aa1420c84c3e7105cfbac020e3923864a19ca70ca7556a263d6d9517234"
+    },
+    {
+      "skillId": "planr-coo-review",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-coo-review/SKILL.md",
+      "digest": "sha256:8b8095b2899f3624d487ca89ed90e2cf94c6eff6254d46ce933461ff3f06d012",
+      "source": "skills/planr-coo-review/skill.json",
+      "sourceDigest": "sha256:9ca683e63ff84834ba0f95511d70adcb644053b9062bf733eff191a0f138c100"
+    },
+    {
+      "skillId": "planr-cpo-review",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-cpo-review/SKILL.md",
+      "digest": "sha256:cbd6870f91ec79bc250ec90b823183a03ebe582c978a135dca30190bd40e9f7c",
+      "source": "skills/planr-cpo-review/skill.json",
+      "sourceDigest": "sha256:cfc6c201fddf8e22b2072388c9988dbfd8a1178bb828f30fec8e5ecfdd1ffa5b"
+    },
+    {
+      "skillId": "planr-cto-review",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-cto-review/SKILL.md",
+      "digest": "sha256:cc61b4738356fa505afe1376dcebed53564ae03c89fa1d9d79eab74605503dc4",
+      "source": "skills/planr-cto-review/skill.json",
+      "sourceDigest": "sha256:103f03bc22bb97c5ce092dc3d3451394dd584133d759b2b56777e41d1542a216"
+    },
+    {
+      "skillId": "planr-dashboard",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-dashboard/SKILL.md",
+      "digest": "sha256:63a4c3bbe2355491b674a356caddc76ecf78d0834f013a2bd4d55444046721ad",
+      "source": "skills/planr-dashboard/skill.json",
+      "sourceDigest": "sha256:bf3911e3060eb412e598c065cbe6b2307bde02906dcde95c705e188da0627635"
+    },
+    {
+      "skillId": "planr-design-loop",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-design-loop/SKILL.md",
+      "digest": "sha256:8fac45fd2c9b220cead5dfb4a026d2c587316a9f74b485c19de5af8d377d5597",
+      "source": "skills/planr-design-loop/skill.json",
+      "sourceDigest": "sha256:43fe302600de26263dda0a076eb880385df6fcfd5b15e3ea60775270879b182e"
+    },
+    {
+      "skillId": "planr-design-review",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-design-review/SKILL.md",
+      "digest": "sha256:0dbdac79eec04c547bd95699c3fbb214db079bf8cab0a4c23cc34406c619eac5",
+      "source": "skills/planr-design-review/skill.json",
+      "sourceDigest": "sha256:6ae07c451c08a3adbd95a0dee31309bf7542838e841d39a94dc0c5132aecaf14"
+    },
+    {
+      "skillId": "planr-design",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-design/SKILL.md",
+      "digest": "sha256:8598950df72d77d7b0b35e4b483259e07d755fe202acbced8f4783c20b0b1c39",
+      "source": "skills/planr-design/skill.json",
+      "sourceDigest": "sha256:2825e86e0803e6ea0ca374554b3b27725054c5ae4bc3c575fc9ef99938ea673d"
+    },
+    {
+      "skillId": "planr-diagram",
+      "host": "pipeline",
+      "kind": "support",
+      "path": "skills/planr-diagram/references/diagram-fidelity.md",
+      "digest": "sha256:3eadcce2990f6d74a0eb96e26b78ecd7e493322ae6a8aee3cdcecc66ca3d75bd",
+      "source": "skills/planr-diagram/references/diagram-fidelity.md",
+      "sourceDigest": "sha256:3eadcce2990f6d74a0eb96e26b78ecd7e493322ae6a8aee3cdcecc66ca3d75bd"
+    },
+    {
+      "skillId": "planr-diagram",
+      "host": "pipeline",
+      "kind": "support",
+      "path": "skills/planr-diagram/references/diagram-intent-to-ir.md",
+      "digest": "sha256:ce7d0107b02067c0d9fac6abe8e6a6ce8cb3f23aabcab801c6bb5a3824555c2e",
+      "source": "skills/planr-diagram/references/diagram-intent-to-ir.md",
+      "sourceDigest": "sha256:ce7d0107b02067c0d9fac6abe8e6a6ce8cb3f23aabcab801c6bb5a3824555c2e"
+    },
+    {
+      "skillId": "planr-diagram",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-diagram/SKILL.md",
+      "digest": "sha256:69216be53116d7b2ef568f7bbb7550b23bd5b84a0e4d8031ae4b8b95173465bc",
+      "source": "skills/planr-diagram/skill.json",
+      "sourceDigest": "sha256:0b571d3229d2ead1a79abe2dca4190872363d5d88acad51192e740c266a032d3"
+    },
+    {
+      "skillId": "planr-doctor",
+      "host": "pipeline",
+      "kind": "support",
+      "path": "skills/planr-doctor/references/upgrade.md",
+      "digest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1",
+      "source": "skills/planr-doctor/references/upgrade.md",
+      "sourceDigest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1"
+    },
+    {
+      "skillId": "planr-doctor",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-doctor/SKILL.md",
+      "digest": "sha256:aadebad1133caea05a16ab7e18e97a788c45be68da0965bec4c85bade3b95708",
+      "source": "skills/planr-doctor/skill.json",
+      "sourceDigest": "sha256:432a960f14825640f3c69df4a14b662dbdcf134aaa0adae455dfb6f1f3e208d7"
+    },
+    {
+      "skillId": "planr-investigate",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-investigate/SKILL.md",
+      "digest": "sha256:2662dc8f9cf6543ad84a96c5d579bbbb8a811ec43205e2ebd69a609a5b59ae2a",
+      "source": "skills/planr-investigate/skill.json",
+      "sourceDigest": "sha256:ccb04f2f4ccf042f67d42a3c45ca5820595512de8247572704c78ac30bb72eaf"
+    },
+    {
+      "skillId": "planr-land",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-land/SKILL.md",
+      "digest": "sha256:14221e78138ce7ac8ead6e2044a783ea9cc058b78cebbb49aef3407784ede5fc",
+      "source": "skills/planr-land/skill.json",
+      "sourceDigest": "sha256:931bfde56c889826cf4a511d35115c2ff12eda992927a68227cf46aaa3c106a6"
+    },
+    {
+      "skillId": "planr-operate",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-operate/SKILL.md",
+      "digest": "sha256:a5c9fb3712fa3a482095c1e7a0a15a15f95424e8867935765716489bde22db63",
+      "source": "skills/planr-operate/skill.json",
+      "sourceDigest": "sha256:245c4d0f73e14cc806bee58d77094060be0364a9c828f15111b016485a8d883b"
+    },
+    {
+      "skillId": "planr-plan-review",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-plan-review/SKILL.md",
+      "digest": "sha256:d168347e76edda7bec993684aa40eee7b05ad4d9389f4487263e39100d9f1623",
+      "source": "skills/planr-plan-review/skill.json",
+      "sourceDigest": "sha256:0731802df11fcb7e2e656d7bcc52a9958c7bfab33d0f8f8a34a7212f79748d66"
+    },
+    {
+      "skillId": "planr-plan",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-plan/SKILL.md",
+      "digest": "sha256:ca70a0c5480ecf2281b667893df6c2059ebc70f4cbd8b92a97e88f1380a2f1d1",
+      "source": "skills/planr-plan/skill.json",
+      "sourceDigest": "sha256:4f83f63684fbb40048fec450e9a4b7b5720e1035ba27a14736cfb7ceccb18922"
+    },
+    {
+      "skillId": "planr-ship",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-ship/SKILL.md",
+      "digest": "sha256:919567d084f3055ce9479733cc55fb22ac101a8953daef71c2202bcfbbc029c1",
+      "source": "skills/planr-ship/skill.json",
+      "sourceDigest": "sha256:77bcc133d9a73e8e9747d253e405b5fafcfca8cd7bb372cfcd33fc7e71f325fb"
+    },
+    {
+      "skillId": "planr-spec",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-spec/SKILL.md",
+      "digest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85",
+      "source": "skills/planr-spec/skill.json",
+      "sourceDigest": "sha256:5608b69fded0a309a3283b954b43f02548166a2f3b4139c50e83504546fed27b"
+    },
+    {
+      "skillId": "planr-status",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-status/SKILL.md",
+      "digest": "sha256:fdc5f45371326b50d846a08c2ae6ff2ae6f63f798a1e7ff151734f1339de61d9",
+      "source": "skills/planr-status/skill.json",
+      "sourceDigest": "sha256:915494553c9098d987d14bf1c5d6d27ca093d383dae2f79b16ba8d2d043417d3"
+    },
+    {
+      "skillId": "planr-sync",
+      "host": "pipeline",
+      "kind": "skill",
+      "path": "skills/planr-sync/SKILL.md",
+      "digest": "sha256:0b6d149a9e9e1a69765562be2ba0ac14a8cea98181ad996b6bfd69a8c13432a4",
+      "source": "skills/planr-sync/skill.json",
+      "sourceDigest": "sha256:9ae3e8f8c72989029503f93dcc2ac522b8c18bcc252f802e6b7d14464a2ba992"
+    }
+  ],
+  "roleIds": [
+    "planr-backend",
+    "planr-database",
+    "planr-designer",
+    "planr-devops",
+    "planr-documentation",
+    "planr-entity-scaffold",
+    "planr-frontend",
+    "planr-qa",
+    "planr-specification"
+  ],
+  "roles": [
+    {
+      "id": "planr-backend",
+      "alias": "backend-agent",
+      "source": "agents/dev/planr-backend/AGENT.md",
+      "sourceDigest": "sha256:99d0ccd37ce38e7d0c0b38f9250cff90b6d0840e3ada36692344ed63e3bce4f3",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/backend-agent.md",
+        "digest": "sha256:fd5fec86ded2c9b0576542955e40b0f4fdd7ead0b99955b4aa50c4ceb7de99c7"
+      }
+    },
+    {
+      "id": "planr-database",
+      "alias": "db-agent",
+      "source": "agents/po/preflight/planr-database/AGENT.md",
+      "sourceDigest": "sha256:e9a428c7f60116ac5c02bcfb498a292adbc8a027536870630cc9b3d74199adc3",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/db-agent.md",
+        "digest": "sha256:3a1c96edc87e0bf6c2e03887b252949a8a4d4063dbb49b549ccf4559d15b1980"
+      }
+    },
+    {
+      "id": "planr-designer",
+      "alias": "designer-agent",
+      "source": "agents/po/planr-designer/AGENT.md",
+      "sourceDigest": "sha256:8a2102429862fe455be3d8868ad39461d7d0ff3f2ac6b2c6503e0f82d8c04d77",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/designer-agent.md",
+        "digest": "sha256:7e60b0995adc79a20eec76558a31e19797d60e972b47ce5ea8872c764625efee"
+      }
+    },
+    {
+      "id": "planr-devops",
+      "alias": "devops-agent",
+      "source": "agents/post-build/planr-devops/AGENT.md",
+      "sourceDigest": "sha256:8bf4f408c167672979e16ede57743e551d0e9f576b3cdb0251cdac6462e8b014",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/devops-agent.md",
+        "digest": "sha256:c4bb60c762212aba7b3af8526a7e4a42d4299ae3a97b841a1395988f33b84694"
+      }
+    },
+    {
+      "id": "planr-documentation",
+      "alias": "doc-gen-agent",
+      "source": "agents/post-build/planr-documentation/AGENT.md",
+      "sourceDigest": "sha256:dc4b6fe5be51f36f01ed6469064e488adca787263b19111577eb684cdb340c38",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/doc-gen-agent.md",
+        "digest": "sha256:40b2c246586923faf2b9a42f348cacd0720840066dcd992e2fc853c4c20a1abf"
+      }
+    },
+    {
+      "id": "planr-entity-scaffold",
+      "alias": "entity-scaffold-agent",
+      "source": "agents/po/preflight/planr-entity-scaffold/AGENT.md",
+      "sourceDigest": "sha256:91aa0984c3166bf56175505efc595138fef6664d2efe49a7c343dff8c8ea680a",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/entity-scaffold-agent.md",
+        "digest": "sha256:e11d58a08d62b5d72158486ced1aeee1ad4832865a6a0689289397be3b3620d8"
+      }
+    },
+    {
+      "id": "planr-frontend",
+      "alias": "frontend-agent",
+      "source": "agents/dev/planr-frontend/AGENT.md",
+      "sourceDigest": "sha256:8c1b9ccc6f5c3ded686797a38282c406435fa44f174d30e8d70ba208f7928a22",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/frontend-agent.md",
+        "digest": "sha256:d97e0aceafe1ba69a9aa30e9a3e08435ea42da0c53d19fc20a2d9c2343e84200"
+      }
+    },
+    {
+      "id": "planr-qa",
+      "alias": "qa-agent",
+      "source": "agents/qa/planr-qa/AGENT.md",
+      "sourceDigest": "sha256:90e72cda705e78e2b9112b24bcec610111b07535e02dd8f0cc9110329f830c37",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/qa-agent.md",
+        "digest": "sha256:1f232804251183cee693368edfdfa68d36d27c5cc3dc142e70cb8d0fe3fda142"
+      }
+    },
+    {
+      "id": "planr-specification",
+      "alias": "specification-agent",
+      "source": "agents/po/planr-specification/AGENT.md",
+      "sourceDigest": "sha256:656e82510fe29e5548a1109497c0eb70124cd000f05a2ee16d2719efd7b9b0c6",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/specification-agent.md",
+        "digest": "sha256:f5e61f62309a5df19c89c2c174e04226193c151fda49c105fad679ff6f856b3b"
+      }
+    }
+  ],
+  "sharedModeAssets": [
+    {
+      "source": "agents/shared/modes/default/backend.md",
+      "sourceDigest": "sha256:790faf09e162103a845acb6e395ef4fc969afe2be0b9fb5058f72d05bd291896",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/default/backend.md",
+        "digest": "sha256:5843f4a73f9f204e73fd49c1479878bf84f9c498a69e063e463a38636283d148"
+      }
+    },
+    {
+      "source": "agents/shared/modes/default/designer.md",
+      "sourceDigest": "sha256:86a0d733e04490c7a08ef5665bbe027009a13ca44d844e761d6ca2d195bc930b",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/default/designer.md",
+        "digest": "sha256:c61d6958e6a28c1af4eb63ff7d1ff6cea139eac9328498f2911979aa8be1c79e"
+      }
+    },
+    {
+      "source": "agents/shared/modes/default/devops.md",
+      "sourceDigest": "sha256:77357efa6cbf8f0c30d398d7939b0f6263e6b593555c1ff69b12852f29896103",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/default/devops.md",
+        "digest": "sha256:b785f65af6d8c1e60635d304884fe381216d501fd1923cf9d4da629958821ef6"
+      }
+    },
+    {
+      "source": "agents/shared/modes/default/doc-gen.md",
+      "sourceDigest": "sha256:e90001f62aa1295583655762cbb0ce695f3ba6e7af14920c72e252ad00e5232c",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/default/doc-gen.md",
+        "digest": "sha256:c98604567f04822aae5f08aa0d7ce4f3440507bb4b469d421b72e39e7195af4b"
+      }
+    },
+    {
+      "source": "agents/shared/modes/default/frontend.md",
+      "sourceDigest": "sha256:2cb8c06b3df9c77573eb0340e9b926c0dd5f6338392487b4c2943aa565b2a931",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/default/frontend.md",
+        "digest": "sha256:89cbab98c9fb818fc5dc16919bcbcd0cc8f6de8b808a3b1274943faaeb386e66"
+      }
+    },
+    {
+      "source": "agents/shared/modes/default/qa.md",
+      "sourceDigest": "sha256:183acf372041a9f30a9e26350bdbcfd92ef273bdbfd0ebf34204d1b0f6de5489",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/default/qa.md",
+        "digest": "sha256:183acf372041a9f30a9e26350bdbcfd92ef273bdbfd0ebf34204d1b0f6de5489"
+      }
+    },
+    {
+      "source": "agents/shared/modes/default/specification.md",
+      "sourceDigest": "sha256:0aefe7339695fe2fb403666cc58137823b8d13bd9cfdbd096e0d1808440acc4a",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/default/specification.md",
+        "digest": "sha256:551523ca997cae54552dfeaeb420e582e773475500e0263fd1b43440f4bb7d49"
+      }
+    },
+    {
+      "source": "agents/shared/modes/shared/contract-create-modify-preserve.md",
+      "sourceDigest": "sha256:f7f5300710291cbe0b3486a82575dfcf8d2289e3cc4672c384fd27a0fffb9818",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/shared/contract-create-modify-preserve.md",
+        "digest": "sha256:f7f5300710291cbe0b3486a82575dfcf8d2289e3cc4672c384fd27a0fffb9818"
+      }
+    },
+    {
+      "source": "agents/shared/modes/shared/design-craft-rubric.md",
+      "sourceDigest": "sha256:1b1610312f6966d9580c53c801c30fa2c7996f59657a80643c1f92e0fca0d5e2",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/shared/design-craft-rubric.md",
+        "digest": "sha256:e41b153778d665581244bd78280dc563594c76067fcfdb85b4c7ed48d220f6b0"
+      }
+    },
+    {
+      "source": "agents/shared/modes/shared/design-principles.md",
+      "sourceDigest": "sha256:47a7c9aa16feb2ca99523498aaaca1697cf1c94d61983271351d652a132899f9",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/shared/design-principles.md",
+        "digest": "sha256:9a0ee261f21275fed45f0d72090cc2dd0ba17ad88158c97b073d46b3c4de9143"
+      }
+    },
+    {
+      "source": "agents/shared/modes/shared/design-spec-template.md",
+      "sourceDigest": "sha256:a995ef891383f7994088c17a6ba05527fe19b9e9ce0eb14cba319cc34b9ced90",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/shared/design-spec-template.md",
+        "digest": "sha256:e94669e6f63333b84d069c75db282eef6f470e74cf4ca290a33240273fc7e86b"
+      }
+    },
+    {
+      "source": "agents/shared/modes/shared/task-context-resolution.md",
+      "sourceDigest": "sha256:65feb46f692722a338f47eb069e92f9652709ddb2ab341132ca680dcad2f8142",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/shared/task-context-resolution.md",
+        "digest": "sha256:53a625069b03606217dc3c08f42dabaf9104e3e4e3aa0f8ba4d08ef5116239f7"
+      }
+    },
+    {
+      "source": "agents/shared/modes/shared/verification-and-recovery-backend.md",
+      "sourceDigest": "sha256:e54bb4f977e2e09f78d4532e29fb502c4ed1690dbf7dd5bf5eb49dc22917a048",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/shared/verification-and-recovery-backend.md",
+        "digest": "sha256:e54bb4f977e2e09f78d4532e29fb502c4ed1690dbf7dd5bf5eb49dc22917a048"
+      }
+    },
+    {
+      "source": "agents/shared/modes/shared/verification-and-recovery-frontend.md",
+      "sourceDigest": "sha256:8c956bdd3d8d550f2d81e984dec4144cb1cc7ce734f65a01a8e88a724dc5ce4c",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/shared/verification-and-recovery-frontend.md",
+        "digest": "sha256:8c956bdd3d8d550f2d81e984dec4144cb1cc7ce734f65a01a8e88a724dc5ce4c"
+      }
+    },
+    {
+      "source": "agents/shared/modes/spec-driven/backend.md",
+      "sourceDigest": "sha256:f1eaeee334585d8ed94d6f7300524ff746b38d53306057e0b5ada6dc6b3419bf",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/spec-driven/backend.md",
+        "digest": "sha256:10148348e765deaadcc1c43178e9418126cba9cf711c4d60e6874a28e8f22c79"
+      }
+    },
+    {
+      "source": "agents/shared/modes/spec-driven/designer.md",
+      "sourceDigest": "sha256:fa678112d9c61bbba3ec5fec32709ef5ba54741b6716a20dec130772e739355a",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/spec-driven/designer.md",
+        "digest": "sha256:1eedd28bf2e4e31072ab2d0d14c4eba2745c33bd936ea907a2364d9fae12e1e8"
+      }
+    },
+    {
+      "source": "agents/shared/modes/spec-driven/devops.md",
+      "sourceDigest": "sha256:5f5238177d8c906392286d6f3120c2d948b04ca3d4830adf5d84bc959500dabf",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/spec-driven/devops.md",
+        "digest": "sha256:32b868790afbf977049b235e48ff77714ad0b29d032f3c2fe1a02d9610c751a0"
+      }
+    },
+    {
+      "source": "agents/shared/modes/spec-driven/doc-gen.md",
+      "sourceDigest": "sha256:485ec3d4a83abd77e725270885cb951c489901c74e3395fb2bd221b8111c8017",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/spec-driven/doc-gen.md",
+        "digest": "sha256:dd15db3d55f53950265ad01fdf0c71e99bba7756cb0652739dba8bc2b61ad0d5"
+      }
+    },
+    {
+      "source": "agents/shared/modes/spec-driven/frontend.md",
+      "sourceDigest": "sha256:7d8ffe5c73c8aa60c57d1c8c60ce869d1083c79a9d2863352cf64c44d2e30028",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/spec-driven/frontend.md",
+        "digest": "sha256:889edd0e15e0952f8828632a22460a9f0604f2bcfc7b47900b04da961e012ba5"
+      }
+    },
+    {
+      "source": "agents/shared/modes/spec-driven/qa.md",
+      "sourceDigest": "sha256:775b6c6381619266f4eccae17f66651fa00b6dcef2ee43a147a2ec0622733eb0",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/spec-driven/qa.md",
+        "digest": "sha256:775b6c6381619266f4eccae17f66651fa00b6dcef2ee43a147a2ec0622733eb0"
+      }
+    },
+    {
+      "source": "agents/shared/modes/spec-driven/specification.md",
+      "sourceDigest": "sha256:76b9acaa01b796a648b227ae73e6fcd69c894abdb13b746b891b57e88c5a62e8",
+      "asset": {
+        "host": "pipeline",
+        "path": "agents/modes/spec-driven/specification.md",
+        "digest": "sha256:0c7e3c520dbbdfc224101c22c5fc5c24ea5980caa8ff2e62de231de4bf5d1337"
+      }
+    }
+  ],
+  "membershipDigest": "sha256:eede1ec69d214ff647b4941387341644a31ae5e64f6151ee57d8355bb1c46744",
+  "roleMembershipDigest": "sha256:2fef94f519d3692a45429cd80da7a2d0db50308b73eab4a197a045f8a632e5bb",
+  "sharedModeMembershipDigest": "sha256:deb472308b2506d298b24fc55d9a6eacaabf2ce8d253dbc4dd60a5b62f104431"
+}

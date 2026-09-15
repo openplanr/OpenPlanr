@@ -1,0 +1,7 @@
+{
+  "assets": [],
+  "buildId": "dashboard-test-fixture",
+  "entry": "index.html",
+  "kind": "openplanr-dashboard-build",
+  "schemaVersion": "1.0.0"
+}

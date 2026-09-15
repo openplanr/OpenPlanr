@@ -1,0 +1,22 @@
+{
+  "kind": "openplanr-evaluation-catalog",
+  "schemaVersion": "1.0.0",
+  "workspaceVersion": "0.1.0",
+  "compatibilityRoot": "packages/pipeline/evaluation",
+  "assets": {
+    "baselines": ["baselines/professional-skills.json"],
+    "budgets": ["budgets/professional-skills.json"],
+    "gatePolicy": "gate-policy.json",
+    "hosts": ["claude-code", "codex", "cursor"],
+    "skillAuthoringCases": ["skills/authoring-cases.json"],
+    "skillRoutingCorpus": "skills/routing-corpus.json",
+    "skillResilienceJourneys": "skills/resilience-journeys.json",
+    "skillImpactPolicy": "docs/skills/versioning-and-impact.md",
+    "scenarioSubjects": ["planr-browser-qa", "planr-investigate", "planr-plan-review", "planr-spec"]
+  },
+  "policies": {
+    "runtimeImportsAllowed": false,
+    "publicProjectionMustBeSelfContained": true,
+    "generatedProfilesMustMatchCapturedPipelineVersion": true
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "radar-fixture",
+  "title": "Radar chart fixture",
+  "summary": "Canonical semantic fixture for the radar chart grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "radar",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "radial",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [],
+  "relations": [],
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [
+    {
+      "id": "series-main",
+      "label": "Primary series",
+      "values": [
+        {
+          "key": "A",
+          "value": 3
+        },
+        {
+          "key": "B",
+          "value": 5
+        }
+      ]
+    }
+  ],
+  "axes": [
+    {
+      "id": "axis-horizontal",
+      "label": "Horizontal meaning",
+      "scale": "linear"
+    },
+    {
+      "id": "axis-vertical",
+      "label": "Vertical meaning",
+      "scale": "linear"
+    }
+  ],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Radar chart fixture",
+    "description": "A compact radar chart example with semantic reading order.",
+    "readingOrder": [
+      "series-main"
+    ]
+  },
+  "documentDigest": "sha256:3d2c48ef6b4581c0a83f425d1b38b6adf7e3a95602bedce793c7ce0e5874d0bb"
+}

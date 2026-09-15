@@ -1,0 +1,10 @@
+{
+  "duplicateProvider": "providers",
+  "duplicateResolver": "resolvers",
+  "unknownBuiltIn": { "target": "providers.0.implementation.id", "value": "untrusted-evidence-provider" },
+  "dynamicModule": { "target": "resolvers.0.moduleUrl", "value": "file:///tmp/evidence.mjs" },
+  "wrongCapability": { "target": "resolvers.1.requiredCapabilities", "value": ["evidence.filesystem.read"] },
+  "wrongEffect": { "target": "providers.0.effectClass", "value": "project-write" },
+  "unsupportedResolverVersion": "9.0.0",
+  "unknownResolver": "unknown-evidence-resolver"
+}

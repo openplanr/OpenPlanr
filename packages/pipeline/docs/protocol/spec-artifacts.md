@@ -1,0 +1,322 @@
+# OpenPlanr Protocol — Spec Artifacts (v1.0.0)
+
+> The runtime-agnostic schema for spec-driven mode artifacts. Identical bytes on Claude Code, Cursor, and Codex.
+>
+> **Canonical source of truth:** the JSON Schemas under [`schemas/v1.0.0/`](../../schemas/v1.0.0/).
+> The prose summaries and YAML examples in this document are illustrative —
+> if they ever drift from the schemas, the schemas win. Field-level descriptions,
+> enums, regex patterns, and required-key lists live in the schema files and
+> are validated by `node conformance/runner.mjs --validate-schema <spec-dir>`.
+
+## Directory layout
+
+Every spec is a self-contained directory under `.planr/specs/`:
+
+```
+.planr/specs/SPEC-NNN-{slug}/
+├── SPEC-NNN-{slug}.md              # the functional spec (one per directory)
+├── design/                         # optional — UI mockups + design-spec
+│   ├── *.png                       # PNGs attached via `planr spec attach-design`
+│   └── design-spec.md              # written by designer-agent
+├── stories/
+│   └── US-NNN-{slug}.md            # user stories scoped to this spec
+├── tasks/
+│   └── T-NNN-{slug}.md             # tasks scoped to this spec
+└── ...                             # implementation outputs live in the project paths named by each task
+```
+
+Low-level release-candidate tooling may add `.ship/`, `qa-report.md`, and
+`.pipeline-shipped` compatibility records. They are not inputs to ordinary Plan
+or Ship skills.
+
+An Operate-created SPEC also has one closed `operating-origin.json` beside the
+SPEC. Design, stories, tasks, PLAN, SHIP, and QA resolve correlation through that
+parent SPEC; child frontmatter cannot duplicate or override it.
+
+**ID scoping rule:** in spec-driven mode, `US-NNN` and `T-NNN` are scoped to their parent SPEC, not project-globally unique. Two specs can each have their own US-001. Disambiguate via path or via `specId` frontmatter.
+
+## SPEC frontmatter
+
+Identifies the functional spec and carries the fields used by `planr spec shape`,
+`planr spec decompose`, and the planr-pipeline specification-agent.
+
+**Canonical schema:** [`spec.schema.json`](../../schemas/v1.0.0/spec.schema.json)
+
+Illustrative example:
+
+```yaml
+---
+id: "SPEC-001"
+title: "User authentication"
+slug: "auth"
+schemaVersion: "1.0.0"
+status: "pending"
+priority: "P0"
+milestone: "v1.0"
+po: "asem@techarc.io"
+created: "2026-04-29"
+updated: "2026-04-29"
+ui_files: []
+tech_dependencies: []
+---
+```
+
+## SPEC body sections (in order)
+
+The spec body uses these H2 sections. `planr spec shape` writes them from interactive Q&A; `planr spec decompose` and the pipeline's specification-agent both read them.
+
+1. **`## Context & Goal`** — user need and intended outcome
+2. **`## Audience`** — primary and affected users
+3. **`## Outcome & Measurement`** — statement, measure, target, and timeframe
+4. **`## Functional Requirements`** — observable behavior
+5. **`## Business Rules`** — constraints and validations
+6. **`## Constraints`** — technical, legal, operational, time, or budget limits
+7. **`## Evidence Expectations`** — observable product checks
+8. **`## Failure Modes`** — credible failures and detection
+9. **`## Rollback`** — safe reversal or compensating action
+10. **`## Scope Boundaries`** — explicit in-scope and out-of-scope behavior
+11. **`## Acceptance Criteria`** — testable outcomes
+12. **`## Declared Risk Specialists`** — optional specialist lenses
+13. **`## Notes for Decomposition`** — implementation-planning hints
+
+## User Story frontmatter
+
+Scopes a story to its parent spec and carries its implementation status.
+US bodies follow the standard agile shape (`As a {role} I want {action} So that {benefit}`).
+
+**Canonical schema:** [`story.schema.json`](../../schemas/v1.0.0/story.schema.json)
+
+Illustrative example:
+
+```yaml
+---
+id: "US-001"
+title: "Login form with email + password"
+specId: "SPEC-001"
+slug: "login-form"
+schemaVersion: "1.0.0"
+status: "pending"
+priority: "P0"
+created: "2026-04-29"
+updated: "2026-04-29"
+---
+```
+
+The body headings are `## User Story`, `## Scope`, `## Acceptance Criteria`,
+`## Task Breakdown`, `## Dependencies`, and `## Notes`.
+
+## Task frontmatter
+
+Identifies a single execution unit owned by exactly one DEV agent. The `type` discriminator
+selects UI vs. Tech routing; `agent` names the responsible subagent.
+
+**Canonical schema:** [`task.schema.json`](../../schemas/v1.0.0/task.schema.json)
+
+Illustrative example:
+
+```yaml
+---
+id: "T-001"
+title: "Build LoginForm component"
+storyId: "US-001"
+specId: "SPEC-001"
+slug: "loginform"
+schemaVersion: "1.0.0"
+type: "UI"
+agent: "frontend-agent"
+status: "pending"
+created: "2026-04-29"
+updated: "2026-04-29"
+rationale: "The login story needs its user-facing form and route integration."
+dependsOn: []
+preserve:
+  - repositoryKey: project
+    path: "src/lib/auth/legacy.ts"
+---
+```
+
+## Task body sections
+
+Required:
+
+| Section | Generated by | Used by |
+|---|---|---|
+| Frontmatter (`rationale`, `dependsOn`, `preserve`) | specification-agent | Ship and DEV roles |
+| `## Objective` | specification-agent | DEV roles |
+| `## Files` → `### Create` | specification-agent | DEV roles |
+| `## Files` → `### Modify` | specification-agent | DEV roles |
+| `## Files` → `### Preserve (do not touch)` | specification-agent | DEV roles |
+| `## Technical Spec` | specification-agent | DEV roles |
+| `## Test Requirements` | specification-agent | DEV and QA roles |
+| `## Definition of Done` | specification-agent | DEV and QA roles |
+
+Full anatomy: `../task-anatomy.md`.
+
+Current generators emit an explicit structured Preserve declaration in task
+frontmatter. Entries are block YAML maps with `repositoryKey` and a
+repository-relative `path`; `preserve: []` means no protected path. The body
+section keeps the same information readable for the implementation agent.
+
+## Ship context resolution
+
+Ship resolves implementation context in this order:
+
+1. the exact `<SPEC_DIR>/tasks/T-NNN-{slug}.md` task;
+2. its `storyId` story and optional matching Gherkin sidecar;
+3. the enclosing specification;
+4. `input/tech/stack.md`, each installed `stacks/` default, then the active
+   host's project override;
+5. `design/design-spec.md` for UI work and `output/db/schema.json` for
+   persistence work;
+6. the implemented output or interface of each declared `dependsOn` task.
+
+A selector that matches no task or more than one story-scoped `T-NNN` reports
+the searched location and candidates. It never guesses from numbering, file
+overlap, or task order.
+
+## Board-sync identity fields (optional, sync-tool-written)
+
+SPEC, User Story, and Task frontmatter each accept two OPTIONAL fields that a
+board sync tool writes back after a successful push to the kanbanos hosted
+board — the same write-back pattern the OpenPlanr CLI Linear integration uses
+for `linearId`:
+
+| Field | Shape | Meaning |
+|---|---|---|
+| `kanbanosId` | `^[A-Za-z0-9_-]{8,128}$` | Opaque entity id on the hosted board. |
+| `contentHash` | `^sha256:[a-f0-9]{64}$` | Digest of the artifact content at the last successful sync (same shape as `operating-evidence-index-item@1.3.0`). |
+
+Normative synchronization rules:
+
+- Both fields are optional; artifacts without them remain valid `1.0.0`
+  artifacts. No `schemaVersion` bump — the amendment is backward-compatible.
+- Only sync tooling writes them, and only after a successful push. Humans and
+  planning agents never author or edit them by hand; the specification-agent
+  never emits them.
+- There is deliberately **no rank / ordering field**, and the schemas'
+  `additionalProperties: false` rejects any. Board ordering is board-sovereign
+  presentation state; rank churn never enters files.
+
+## `stack.md` (project technical configuration)
+
+The Tech-Lead-owned single source of truth for technology choices, build/test commands,
+and active stack overlays. Read by every DEV agent at the start of every task.
+
+**Canonical schema:** [`stack.schema.json`](../../schemas/v1.0.0/stack.schema.json)
+
+The schema validates the YAML blocks embedded inside `input/tech/stack.md` (project identity,
+database, backend stack, frontend stack, devops, naming conventions, build/test commands,
+active stack files, exclusions). See `input/tech/stack.md` in this repo for a working example.
+
+## SHIP closure receipt and `.pipeline-shipped` compatibility marker
+
+Protocol 1.1 SHIP runs terminate in one immutable receipt under
+`.ship/receipts/<runId>.json`. It binds the approved task graph, repository
+baselines, candidate revisions, Preserve boundaries, frozen reviewer/gate sets,
+finding batch, optional single correction, gate evidence, and terminal PASS or
+BLOCKED result. The runtime derives the human QA report and v1 marker from that
+receipt.
+
+The YAML marker remains readable for legacy consumers. New runs never treat it as
+independent authority.
+
+**Canonical schema:** [`pipeline-shipped.schema.json`](../../schemas/v1.0.0/pipeline-shipped.schema.json)
+
+Path:
+
+- **Default mode:** `output/feats/feat-{name}/.pipeline-shipped`
+- **Spec-driven mode:** `.planr/specs/SPEC-NNN-{slug}/.pipeline-shipped`
+
+Illustrative example:
+
+```yaml
+shipped_at: "2026-04-29T14:32:11Z"
+pipeline_version: "0.28.5"
+runtime: "claude-code"
+mode: "spec-driven"
+feature: "auth"
+tasks_executed: 6
+tasks_failed: 0
+qa_gate_status: "passed"
+duration_seconds: 412
+agents_invoked:
+  - frontend-agent
+  - backend-agent
+  - qa-agent
+  - devops-agent
+  - doc-gen-agent
+devops_status: "generated"
+docs_status: "generated"
+snapshot_status: "skipped"
+error_reports: []
+run_id: "ship_01J00000000000000000000000"
+```
+
+## How to validate
+
+Run the schema validator on any spec directory:
+
+```bash
+node conformance/runner.mjs --runtime claude-code --validate-schema .planr/specs/SPEC-NNN-{slug}
+```
+
+The runner walks the spec's frontmatter (SPEC, every story, every task), the project's
+`input/tech/stack.md`, and any `.pipeline-shipped` marker, validating each against its
+canonical schema under `schemas/v1.0.0/`. Exit code is 0 only when every artifact passes.
+
+## Schema version compatibility
+
+Both planr CLI and planr-pipeline produce and consume schema `1.0.0`. Future breaking changes will bump `schemaVersion` in lockstep across all runtime adapters. Keep them aligned via:
+
+```bash
+/plugin marketplace update openplanr           # for the pipeline plugin (Claude Code)
+npm i -g openplanr@latest                      # for the planr CLI
+planr rules generate --target cursor --scope pipeline   # regenerate Cursor rules after upgrade
+planr rules generate --target codex --scope pipeline    # regenerate AGENTS.md after upgrade
+```
+
+## Additive Protocol v1.1 artifact-review contracts
+
+Universal HTML review is an optional capability contract, not a new planning
+artifact type and not a required child of a SPEC directory. It leaves SPEC,
+story, task, stack, QA report, and `.pipeline-shipped` v1.0 schemas unchanged.
+
+The canonical schemas are:
+
+| Schema | Purpose |
+|---|---|
+| [`artifact-envelope.schema.json`](../../schemas/v1.1.0/artifact-envelope.schema.json) | Ordered, self-contained HTML artifacts, viewport/color-scheme state, viewer mode, and optional review. |
+| [`artifact-review.schema.json`](../../schemas/v1.1.0/artifact-review.schema.json) | Immutable review identity, verdict, overall feedback, normalized pins, stable anchors, authors, threads, and timestamps. |
+| [`artifact-paste.schema.json`](../../schemas/v1.1.0/artifact-paste.schema.json) | Strict request/response/storage shapes for encrypted, expiring short links. |
+| [`artifact-theme.schema.json`](../../schemas/v1.1.0/artifact-theme.schema.json) | Canonical tokens used to generate local and hosted review-shell assets. |
+
+`reviewOf` is a SHA-256 digest of the canonical envelope identity: its
+`schemaVersion`, ordered `artifacts`, and `viewer`, excluding `review`. Each
+artifact also carries a SHA-256 digest of its canonical bundled HTML. This makes
+stale imports detectable without allowing feedback to change the reviewed
+identity.
+
+Generic review state persists under `.planr/artifacts/<artifact-id>/` in a valid
+OpenPlanr project and under `~/.planr/artifacts/` otherwise. Design-board reviews
+retain the existing adjacent `feedback.json` contract and add an artifact-review
+state sidecar. Neither location changes the spec-driven directory layout above.
+
+Sharing transport is outside the planning tree. Fragment links contain an
+encoded, compressed payload after `#`; encrypted short links store ciphertext
+remotely and place the AES key only in the fragment. Both transports produce an
+immutable envelope, and importing returned feedback validates `reviewOf` before
+an atomic merge.
+
+## See also
+
+- [`schemas/v1.0.0/`](../../schemas/v1.0.0/) — canonical JSON Schemas (spec, story, task, stack, pipeline-shipped)
+- [`schemas/v1.1.0/`](../../schemas/v1.1.0/) — additive runtime, provenance, compatibility, and artifact-review contracts
+- [`../artifact-review.md`](../artifact-review.md) — engine API, commands, privacy, sandbox, and integration reference
+- `agent-roles.md` — 9 role contracts (inputs, outputs, tool guardrails)
+- `commands.md` — PLAN and SHIP command contracts
+- `runtime-adapters.md` — per-runtime adapter specs
+- `OpenPlanr/docs/reference/spec-schema.md` — companion schema reference generated for the planr CLI; `schemas/v1.0.0/` in this repo remains canonical for this cleanup cycle
+
+---
+
+*OpenPlanr Protocol v1.0.0 — spec artifacts contract.*

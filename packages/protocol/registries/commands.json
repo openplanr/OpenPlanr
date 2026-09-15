@@ -1,0 +1,1952 @@
+{
+  "kind": "command-catalog",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.5.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "binaries": [
+    {
+      "id": "openplanr",
+      "lifecycle": "exact-alias",
+      "aliasOf": "planr"
+    },
+    {
+      "id": "opr",
+      "lifecycle": "deprecated-exact-alias",
+      "aliasOf": "planr"
+    },
+    {
+      "id": "planr",
+      "lifecycle": "canonical",
+      "aliasOf": null
+    }
+  ],
+  "inventory": {
+    "rootCommandModules": 39,
+    "rootCommandSlugs": [
+      "artifact",
+      "backlog",
+      "checklist",
+      "config",
+      "context",
+      "diagram",
+      "doctor",
+      "epic",
+      "estimate",
+      "evidence",
+      "export",
+      "feature",
+      "github",
+      "graph",
+      "init",
+      "land",
+      "linear",
+      "operate",
+      "pipeline",
+      "plan",
+      "quick",
+      "refine",
+      "report-linter",
+      "report",
+      "revise",
+      "rules",
+      "runtime",
+      "search",
+      "setup",
+      "spec",
+      "sprint",
+      "status",
+      "story",
+      "sync",
+      "task",
+      "template",
+      "update",
+      "upgrade",
+      "voice"
+    ],
+    "pipelineMachineLeaves": 31,
+    "pipelineMachineGrammar": [
+      [
+        "advance-plan-review"
+      ],
+      [
+        "advance-ship"
+      ],
+      [
+        "complete-plan"
+      ],
+      [
+        "dashboard"
+      ],
+      [
+        "decide-plan-review"
+      ],
+      [
+        "design"
+      ],
+      [
+        "design-engine"
+      ],
+      [
+        "design-loop"
+      ],
+      [
+        "design-review"
+      ],
+      [
+        "doctor"
+      ],
+      [
+        "finalize-ship"
+      ],
+      [
+        "investigate",
+        "advance"
+      ],
+      [
+        "investigate",
+        "finalize"
+      ],
+      [
+        "investigate",
+        "start"
+      ],
+      [
+        "investigate",
+        "verify"
+      ],
+      [
+        "land"
+      ],
+      [
+        "plan"
+      ],
+      [
+        "plan-context"
+      ],
+      [
+        "prepare-browser-qa"
+      ],
+      [
+        "prepare-plan"
+      ],
+      [
+        "prepare-plan-review"
+      ],
+      [
+        "prepare-ship"
+      ],
+      [
+        "record-browser-qa"
+      ],
+      [
+        "reopen-ship"
+      ],
+      [
+        "run-ship-gates"
+      ],
+      [
+        "ship"
+      ],
+      [
+        "ship-context"
+      ],
+      [
+        "start-plan-review"
+      ],
+      [
+        "start-ship"
+      ],
+      [
+        "status"
+      ],
+      [
+        "sync"
+      ]
+    ],
+    "frozenClaudeDocuments": 8,
+    "frozenClaudeSlugs": [
+      "dashboard",
+      "design",
+      "design-loop",
+      "design-review",
+      "plan",
+      "ship",
+      "status",
+      "sync"
+    ]
+  },
+  "commands": [
+    {
+      "commandId": "cli-artifact",
+      "surface": "cli-root",
+      "argv": [
+        "artifact"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/artifact.ts",
+        "digest": "sha256:708f51ac3c0ef40a35e4af231b790775f12d69592a80c5de92d82d852e435a53"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-backlog",
+      "surface": "cli-root",
+      "argv": [
+        "backlog"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/backlog.ts",
+        "digest": "sha256:b2f4fc08d002ad545a122a08d188dd9468f76ce316216bd5b0566fbbccb37701"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-checklist",
+      "surface": "cli-root",
+      "argv": [
+        "checklist"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/checklist.ts",
+        "digest": "sha256:f05a28a75be57ddf19a3abcdd9c1cf062ac8799937973f0af4ec62dc2714d70f"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-config",
+      "surface": "cli-root",
+      "argv": [
+        "config"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/config-deterministic.ts",
+        "digest": "sha256:2a0bbdb3942be22aa72834cb60346452d9bf30b31282fbb322590447a3301515"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-context",
+      "surface": "cli-root",
+      "argv": [
+        "context"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/context.ts",
+        "digest": "sha256:97eb2fd7528e1f66053dd6f4cd87d87c3e298e412522d4cf772d732e032c88ac"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-diagram",
+      "surface": "cli-root",
+      "argv": [
+        "diagram"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/diagram/index.ts",
+        "digest": "sha256:6a5883e12fe9499b343bdff4a481aa94a82f06c4292ed42436e7961eb3883175"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-doctor",
+      "surface": "cli-root",
+      "argv": [
+        "doctor"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/doctor.ts",
+        "digest": "sha256:bcb11a8eeef9d5b22eb33290f81753b38383a20b46abed60594875d1c4c7f524"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-epic",
+      "surface": "cli-root",
+      "argv": [
+        "epic"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/epic.ts",
+        "digest": "sha256:b4d727c7696957c66cc8ca093f6fc983cf28f561b4c06d282d84c929690e4e16"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-estimate",
+      "surface": "cli-root",
+      "argv": [
+        "estimate"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "skills/planr-plan/SKILL.md",
+        "digest": "sha256:7cfff1b795f68e07c2fcd852c2acea0956aa4bef0d96e15a6a595aeb030cbe30"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-evidence",
+      "surface": "cli-root",
+      "argv": [
+        "evidence"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "docs/generated/utility-command-catalog.json",
+        "digest": "sha256:76f00eb4f83477363167f69264eab955b8b22aff137961b742d56e75dc28fbcb"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-export",
+      "surface": "cli-root",
+      "argv": [
+        "export"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/export.ts",
+        "digest": "sha256:e0c9fa1ad59e8ed189dcbfc639f4ce0a2ead0bcc8256125be44c68bb28943b9f"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-feature",
+      "surface": "cli-root",
+      "argv": [
+        "feature"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/feature.ts",
+        "digest": "sha256:33db964a050d1cc35bf466866b04327d7601107de775f1bca69ae91fbc59bf19"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-github",
+      "surface": "cli-root",
+      "argv": [
+        "github"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/github.ts",
+        "digest": "sha256:c9ef4fce61260d104c82f3f45b8ff61aee1028aa5fac5cd976f5179877a70c64"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-graph",
+      "surface": "cli-root",
+      "argv": [
+        "graph"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/graph.ts",
+        "digest": "sha256:a5dedb6837f16daec574e14643e417a6fd85241ad24c9d270e088ad7c93c2764"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-init",
+      "surface": "cli-root",
+      "argv": [
+        "init"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/init-deterministic.ts",
+        "digest": "sha256:6212d9f0582ab4a8d475b479aae52ed0fedb877c60038b9f88a309d7b93bafd9"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-land",
+      "surface": "cli-root",
+      "argv": [
+        "land"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/land.ts",
+        "digest": "sha256:a78dc2468ea65785f5bee7676c9ea95cb7980664b9c787f00008ae83091db8fa"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-linear",
+      "surface": "cli-root",
+      "argv": [
+        "linear"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/linear.ts",
+        "digest": "sha256:98cef47dbe58252f3c986e0bb2e5f657b7c945ec99eba773228c15f51b22a7a2"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-operate",
+      "surface": "cli-root",
+      "argv": [
+        "operate"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/operate.ts",
+        "digest": "sha256:c951ded12e72f1c9803ee6d4f5025cea9f7a4e277d6b2243583ddb686b618733"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-pipeline",
+      "surface": "cli-root",
+      "argv": [
+        "pipeline"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "docs/generated/utility-command-catalog.json",
+        "digest": "sha256:76f00eb4f83477363167f69264eab955b8b22aff137961b742d56e75dc28fbcb"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-plan",
+      "surface": "cli-root",
+      "argv": [
+        "plan"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "skills/planr-plan/SKILL.md",
+        "digest": "sha256:7cfff1b795f68e07c2fcd852c2acea0956aa4bef0d96e15a6a595aeb030cbe30"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-quick",
+      "surface": "cli-root",
+      "argv": [
+        "quick"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/quick.ts",
+        "digest": "sha256:84c5d10dba861e2dba814043e0824f4e4cb31de3cd33c5ab6054bbfbf2af4dd5"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-refine",
+      "surface": "cli-root",
+      "argv": [
+        "refine"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "skills/planr-spec/SKILL.md",
+        "digest": "sha256:e398052f18942980e79f7553c3412a703dcec19237cacc71ca50ce32196b9a0d"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-report",
+      "surface": "cli-root",
+      "argv": [
+        "report"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/report.ts",
+        "digest": "sha256:eecffdb3b3877b50ea4a339f3ee81834618d1eb9ad57392f0e118329b6026bc4"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-report-linter",
+      "surface": "cli-root",
+      "argv": [
+        "report-linter"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/report-linter.ts",
+        "digest": "sha256:2126c392ac241cff3274a9ce6d0799b868ed847c44aae999fae7b46e9d93881a"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-revise",
+      "surface": "cli-root",
+      "argv": [
+        "revise"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "skills/planr-spec/SKILL.md",
+        "digest": "sha256:e398052f18942980e79f7553c3412a703dcec19237cacc71ca50ce32196b9a0d"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-rules",
+      "surface": "cli-root",
+      "argv": [
+        "rules"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/rules.ts",
+        "digest": "sha256:bc8f998277559effe1439b37fcb420f0e6b1e1ab1fab8104ae97afb42a6a2bf7"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-runtime",
+      "surface": "cli-root",
+      "argv": [
+        "runtime"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/runtime.ts",
+        "digest": "sha256:0483b304c9b3d4638c45a66f98d0cf8a6a1df14ce5b3266ef8f85f32e80b7d73"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-search",
+      "surface": "cli-root",
+      "argv": [
+        "search"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/search.ts",
+        "digest": "sha256:46cc736a97d7c103ed92d98025fbf4e1a1fe726eeafdd5f682e2364221ca0f93"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-setup",
+      "surface": "cli-root",
+      "argv": [
+        "setup"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/setup.ts",
+        "digest": "sha256:866e47698db7a4f39ff487cac8e27ce1d474a0f078c12200164d414bab32d9a3"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-spec",
+      "surface": "cli-root",
+      "argv": [
+        "spec"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/spec.ts",
+        "digest": "sha256:4176ac9497403e7077d465a6843427e110c3ba6cdf07fcd21ce667f1c2dce6f5"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-sprint",
+      "surface": "cli-root",
+      "argv": [
+        "sprint"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/sprint.ts",
+        "digest": "sha256:96ccbaf3ca79265b8229e0a2fb04d16efdb4bc765d3f3e41bbcaa846516efb28"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-status",
+      "surface": "cli-root",
+      "argv": [
+        "status"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/status.ts",
+        "digest": "sha256:789fd8b1e904388a2fb157527fb12b5776a54235b7a59d134409e649580fb219"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-story",
+      "surface": "cli-root",
+      "argv": [
+        "story"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/story.ts",
+        "digest": "sha256:79b395593be203a1e976c32963e948f1b7d8a933a2f492eddd77683ea6e14034"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-sync",
+      "surface": "cli-root",
+      "argv": [
+        "sync"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/sync.ts",
+        "digest": "sha256:32d99e7df020cf8c599f8a8b6b69fec55aa077cbd43756ba615f9e38718120a0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-task",
+      "surface": "cli-root",
+      "argv": [
+        "task"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/task.ts",
+        "digest": "sha256:a58e9589126eeb39c0b43d6039696c99da0708cc153730d05d477ec234b9f7a6"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-template",
+      "surface": "cli-root",
+      "argv": [
+        "template"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/template.ts",
+        "digest": "sha256:7b6a17bbab776af08ea0e8a0343f28c8da0c24b1debd568f9c6e49bb53898899"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-update",
+      "surface": "cli-root",
+      "argv": [
+        "update"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/update.ts",
+        "digest": "sha256:647805ffca7cfe0275163cbe6701fb370660ed3d02497d340ae5c3ca38e1a079"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-upgrade",
+      "surface": "cli-root",
+      "argv": [
+        "upgrade"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/upgrade.ts",
+        "digest": "sha256:19a69560cae6ad55a484954ce4e4bc0763fb81ec6d518583e77dd7f381aebfc5"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "cli-voice",
+      "surface": "cli-root",
+      "argv": [
+        "voice"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "openplanr",
+      "source": {
+        "path": "packages/cli/src/cli/commands/voice.ts",
+        "digest": "sha256:012845bacf8341b4718b1b3545c1fe7728f2077059ad1edf34cfb8cd37f55a4b"
+      },
+      "authorityClass": "workflow",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "frozen-dashboard",
+      "surface": "frozen-host-alias",
+      "argv": [
+        "/planr-pipeline:dashboard"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "skills/planr-dashboard/SKILL.md",
+        "digest": "sha256:e2a9f224b48cd271c6ca0cd8e6868b344181ca2131f7dc0fb7a2ae8babf426b0"
+      },
+      "authorityClass": "compatibility-router",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": "planr-dashboard",
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "frozen-design",
+      "surface": "frozen-host-alias",
+      "argv": [
+        "/planr-pipeline:design"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "skills/planr-design/SKILL.md",
+        "digest": "sha256:e21e82a8f216c3a06a938965cdbeac5786e3b74776e821260b2630919106ae4d"
+      },
+      "authorityClass": "compatibility-router",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": "planr-design",
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "frozen-design-loop",
+      "surface": "frozen-host-alias",
+      "argv": [
+        "/planr-pipeline:design-loop"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "skills/planr-design-loop/SKILL.md",
+        "digest": "sha256:920bac7dd1cbca34ac8e497b006b918fb6787c0fbece3275244b67388f42a4f6"
+      },
+      "authorityClass": "compatibility-router",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": "planr-design-loop",
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "frozen-design-review",
+      "surface": "frozen-host-alias",
+      "argv": [
+        "/planr-pipeline:design-review"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "skills/planr-design-review/SKILL.md",
+        "digest": "sha256:a018e9a80e104cd444a6475514e7ac4231ca460d7a1ecbec604b0e173de608d0"
+      },
+      "authorityClass": "compatibility-router",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": "planr-design-review",
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "frozen-plan",
+      "surface": "frozen-host-alias",
+      "argv": [
+        "/planr-pipeline:plan"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "skills/planr-plan/SKILL.md",
+        "digest": "sha256:7cfff1b795f68e07c2fcd852c2acea0956aa4bef0d96e15a6a595aeb030cbe30"
+      },
+      "authorityClass": "compatibility-router",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": "planr-plan",
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "frozen-ship",
+      "surface": "frozen-host-alias",
+      "argv": [
+        "/planr-pipeline:ship"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "skills/planr-ship/SKILL.md",
+        "digest": "sha256:b0b1dcedcfa936432c5c4dcb672310ecbaa8d958159b6fcb81586692500bbb3d"
+      },
+      "authorityClass": "compatibility-router",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": "planr-ship",
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "frozen-status",
+      "surface": "frozen-host-alias",
+      "argv": [
+        "/planr-pipeline:status"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "skills/planr-status/SKILL.md",
+        "digest": "sha256:dbe87eff44eb493ddf8e003d10ef41178fcf1e1e93e3171ca5c44f295638f639"
+      },
+      "authorityClass": "compatibility-router",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": "planr-status",
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "frozen-sync",
+      "surface": "frozen-host-alias",
+      "argv": [
+        "/planr-pipeline:sync"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "skills/planr-sync/SKILL.md",
+        "digest": "sha256:09779a70133a14e31a2673e98237e74408cfe34eae9218fffa01a86e8e9290f5"
+      },
+      "authorityClass": "compatibility-router",
+      "machineJson": false,
+      "outputContracts": [],
+      "skillId": "planr-sync",
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-advance-plan-review",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "advance-plan-review"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-advance-ship",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "advance-ship"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-complete-plan",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "complete-plan"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-dashboard",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "dashboard"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-decide-plan-review",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "decide-plan-review"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-design",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "design"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-design-engine",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "design-engine"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-design-loop",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "design-loop"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-design-review",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "design-review"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-doctor",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "doctor"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-finalize-ship",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "finalize-ship"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-investigate-advance",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "investigate",
+        "advance"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-investigate-finalize",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "investigate",
+        "finalize"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-investigate-start",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "investigate",
+        "start"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-investigate-verify",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "investigate",
+        "verify"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-land",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "land"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-plan",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "plan"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-plan-context",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "plan-context"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-prepare-browser-qa",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "prepare-browser-qa"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-prepare-plan",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "prepare-plan"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-prepare-plan-review",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "prepare-plan-review"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-prepare-ship",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "prepare-ship"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-record-browser-qa",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "record-browser-qa"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-reopen-ship",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "reopen-ship"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-run-ship-gates",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "run-ship-gates"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-ship",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "ship"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-ship-context",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "ship-context"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-start-plan-review",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "start-plan-review"
+      ],
+      "lifecycle": "deprecated",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-start-ship",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "start-ship"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-status",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "status"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    },
+    {
+      "commandId": "pipeline-sync",
+      "surface": "pipeline-machine",
+      "argv": [
+        "pipeline",
+        "sync"
+      ],
+      "lifecycle": "active",
+      "ownerPackage": "planr-pipeline",
+      "source": {
+        "path": "packages/pipeline/bin/planr-pipeline.mjs",
+        "digest": "sha256:cb156a4a40ec0c0d930bb1800f5f9be26142e47cdc53131b7a6cddff6e65e3e0"
+      },
+      "authorityClass": "workflow",
+      "machineJson": true,
+      "outputContracts": [],
+      "skillId": null,
+      "aliases": [],
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs"
+      ]
+    }
+  ],
+  "negativeContracts": [
+    {
+      "negativeContractId": "retired-pipeline-operate",
+      "forbiddenArgvPrefix": [
+        "pipeline",
+        "operate"
+      ],
+      "forbiddenPaths": [
+        "packages/pipeline/commands/operate.md",
+        "packages/pipeline/skills/planr-operate/SKILL.md"
+      ],
+      "reason": "Operate remains a CLI-owned planr operate facade; pipeline-owned Operate grammar and plugin assets are retired.",
+      "testRefs": [
+        "tests/protocol/command-catalog.test.mjs",
+        "tests/ecosystem/operate-v2-clean-boundary-absence.test.mjs"
+      ]
+    },
+    {
+      "negativeContractId": "retired-semantic-cli-estimate",
+      "forbiddenArgvPrefix": [
+        "estimate"
+      ],
+      "forbiddenPaths": [
+        "packages/cli/src/cli/commands/estimate.ts"
+      ],
+      "reason": "Semantic estimate work belongs to the active host agent under Protocol 1.8.",
+      "testRefs": [
+        "packages/cli/tests/unit/command-registration-parity.test.ts"
+      ]
+    },
+    {
+      "negativeContractId": "retired-semantic-cli-evidence",
+      "forbiddenArgvPrefix": [
+        "evidence"
+      ],
+      "forbiddenPaths": [
+        "packages/cli/src/cli/commands/evidence.ts"
+      ],
+      "reason": "Semantic evidence work belongs to the active host agent under Protocol 1.8.",
+      "testRefs": [
+        "packages/cli/tests/unit/command-registration-parity.test.ts"
+      ]
+    },
+    {
+      "negativeContractId": "retired-semantic-cli-pipeline",
+      "forbiddenArgvPrefix": [
+        "pipeline"
+      ],
+      "forbiddenPaths": [
+        "packages/cli/src/cli/commands/pipeline.ts"
+      ],
+      "reason": "Semantic pipeline work belongs to the active host agent under Protocol 1.8.",
+      "testRefs": [
+        "packages/cli/tests/unit/command-registration-parity.test.ts"
+      ]
+    },
+    {
+      "negativeContractId": "retired-semantic-cli-plan",
+      "forbiddenArgvPrefix": [
+        "plan"
+      ],
+      "forbiddenPaths": [
+        "packages/cli/src/cli/commands/plan.ts"
+      ],
+      "reason": "Semantic plan work belongs to the active host agent under Protocol 1.8.",
+      "testRefs": [
+        "packages/cli/tests/unit/command-registration-parity.test.ts"
+      ]
+    },
+    {
+      "negativeContractId": "retired-semantic-cli-refine",
+      "forbiddenArgvPrefix": [
+        "refine"
+      ],
+      "forbiddenPaths": [
+        "packages/cli/src/cli/commands/refine.ts"
+      ],
+      "reason": "Semantic refine work belongs to the active host agent under Protocol 1.8.",
+      "testRefs": [
+        "packages/cli/tests/unit/command-registration-parity.test.ts"
+      ]
+    },
+    {
+      "negativeContractId": "retired-semantic-cli-revise",
+      "forbiddenArgvPrefix": [
+        "revise"
+      ],
+      "forbiddenPaths": [
+        "packages/cli/src/cli/commands/revise.ts"
+      ],
+      "reason": "Semantic revise work belongs to the active host agent under Protocol 1.8.",
+      "testRefs": [
+        "packages/cli/tests/unit/command-registration-parity.test.ts"
+      ]
+    }
+  ],
+  "documentDigest": "sha256:8794b9b12d8e654540b57c233cb4ea9994072e0d06adfdd187ea5707b1ab39b4"
+}

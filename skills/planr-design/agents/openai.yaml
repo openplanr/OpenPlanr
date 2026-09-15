@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Design"
+  short_description: "Design a polished product interface through adaptive…"
+  default_prompt: "Use $planr-design to design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,28 @@
+{
+  "kind": "operating-delta",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "2.0.0",
+  "deltaId": "dlt_delta_valid_001",
+  "scopeId": "scope-acme",
+  "domainId": "business",
+  "domainVersion": "1.0.0",
+  "priorSnapshotId": "snp_delta_prior_001",
+  "currentSnapshotId": "snp_delta_current_001",
+  "sourceRevisionChanges": [{
+    "subjectId": "art_delta_source_001",
+    "kind": "changed",
+    "evidenceRefIds": ["evr_delta_evidence_001"]
+  }],
+  "metricChanges": [{
+    "subjectId": "met_delta_metric_001",
+    "kind": "changed",
+    "evidenceRefIds": ["evr_delta_evidence_001"]
+  }],
+  "staleEvidenceRefIds": [],
+  "conflictingEvidenceRefIds": [],
+  "invalidatedAssumptionIds": [],
+  "exposedRiskIds": [],
+  "decisionRevisitIds": [],
+  "sourceArtifactId": "art_delta_source_001",
+  "derivedAt": "2026-08-09T12:00:00.000Z"
+}

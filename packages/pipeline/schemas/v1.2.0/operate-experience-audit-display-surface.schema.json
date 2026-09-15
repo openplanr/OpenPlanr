@@ -1,0 +1,328 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://openplanr.dev/schemas/v1.2.0/operate-experience-audit-display-surface.schema.json",
+	"x-openplanr-contract": {
+		"id": "operate-experience-audit-display-surface",
+		"version": "1.0.0"
+	},
+	"title": "OpenPlanr browser-verifiable access-safe audit display surface",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"kind",
+		"schemaVersion",
+		"protocolVersion",
+		"requestBinding",
+		"payload",
+		"integrity"
+	],
+	"properties": {
+		"kind": { "const": "operate-experience-audit-display-surface" },
+		"schemaVersion": { "const": "1.0.0" },
+		"protocolVersion": { "const": "2.0.0" },
+		"requestBinding": { "$ref": "#/$defs/requestBinding" },
+		"payload": { "$ref": "#/$defs/payload" },
+		"integrity": { "$ref": "#/$defs/integrity" }
+	},
+	"$defs": {
+		"requestBinding": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"actorId",
+				"scopeId",
+				"domainId",
+				"domainVersion",
+				"cycleId",
+				"subjectId",
+				"surface",
+				"query",
+				"format",
+				"generatedAt",
+				"eventHead",
+				"viewHash"
+			],
+			"properties": {
+				"actorId": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/id"
+				},
+				"scopeId": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/id"
+				},
+				"domainId": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/id"
+				},
+				"domainVersion": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/version"
+				},
+				"cycleId": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/id"
+				},
+				"subjectId": {
+					"oneOf": [
+						{ "type": "null" },
+						{
+							"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/id"
+						}
+					]
+				},
+				"surface": {
+					"enum": [
+						"evidence",
+						"outcomes",
+						"outcome",
+						"history",
+						"search",
+						"export"
+					]
+				},
+				"query": { "type": ["string", "null"], "maxLength": 512 },
+				"format": {
+					"type": ["string", "null"],
+					"enum": [null, "json", "html"]
+				},
+				"generatedAt": { "type": "string", "format": "date-time" },
+				"eventHead": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/eventHead"
+				},
+				"viewHash": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/hash"
+				}
+			}
+		},
+		"payload": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"ok",
+				"kind",
+				"schemaVersion",
+				"protocolVersion",
+				"surface",
+				"readOnly",
+				"mutationEnabled",
+				"scopeId",
+				"domainId",
+				"domainVersion",
+				"actorId",
+				"accessLevel",
+				"generatedAt",
+				"eventHead",
+				"viewHash",
+				"truthSummary",
+				"status",
+				"reasonCodes",
+				"data"
+			],
+			"properties": {
+				"ok": { "const": true },
+				"kind": { "const": "operate-experience-surface" },
+				"schemaVersion": { "const": "1.0.0" },
+				"protocolVersion": { "const": "2.0.0" },
+				"surface": {
+					"enum": [
+						"evidence",
+						"outcomes",
+						"outcome",
+						"history",
+						"search",
+						"export"
+					]
+				},
+				"readOnly": { "const": true },
+				"mutationEnabled": { "const": false },
+				"scopeId": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/id"
+				},
+				"domainId": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/id"
+				},
+				"domainVersion": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/version"
+				},
+				"actorId": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/id"
+				},
+				"accessLevel": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/accessLevel"
+				},
+				"generatedAt": { "type": "string", "format": "date-time" },
+				"eventHead": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/eventHead"
+				},
+				"viewHash": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/hash"
+				},
+				"truthSummary": {
+					"$ref": "../v2.0.0/operate-review-display-workspace.schema.json#/$defs/sharedTruthSummary"
+				},
+				"status": {
+					"enum": [
+						"ready",
+						"read-only",
+						"stale",
+						"partial",
+						"blocked",
+						"offline",
+						"incompatible",
+						"corrupt"
+					]
+				},
+				"reasonCodes": {
+					"type": "array",
+					"uniqueItems": true,
+					"items": { "type": "string" }
+				},
+				"data": { "type": "object" }
+			},
+			"allOf": [
+				{
+					"if": {
+						"properties": { "surface": { "const": "evidence" } },
+						"required": ["surface"]
+					},
+					"then": {
+						"properties": { "data": { "$ref": "#/$defs/evidenceData" } }
+					}
+				},
+				{
+					"if": {
+						"properties": { "surface": { "const": "outcomes" } },
+						"required": ["surface"]
+					},
+					"then": {
+						"properties": { "data": { "$ref": "#/$defs/outcomesData" } }
+					}
+				},
+				{
+					"if": {
+						"properties": { "surface": { "const": "outcome" } },
+						"required": ["surface"]
+					},
+					"then": {
+						"properties": { "data": { "$ref": "#/$defs/outcomeData" } }
+					}
+				},
+				{
+					"if": {
+						"properties": { "surface": { "const": "history" } },
+						"required": ["surface"]
+					},
+					"then": {
+						"properties": { "data": { "$ref": "#/$defs/historyData" } }
+					}
+				},
+				{
+					"if": {
+						"properties": { "surface": { "const": "search" } },
+						"required": ["surface"]
+					},
+					"then": { "properties": { "data": { "$ref": "#/$defs/searchData" } } }
+				},
+				{
+					"if": {
+						"properties": { "surface": { "const": "export" } },
+						"required": ["surface"]
+					},
+					"then": { "properties": { "data": { "$ref": "#/$defs/exportData" } } }
+				}
+			]
+		},
+		"objectArray": { "type": "array", "items": { "type": "object" } },
+		"evidenceData": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["evidence", "claims", "rationale"],
+			"properties": {
+				"evidence": { "$ref": "#/$defs/objectArray" },
+				"claims": { "$ref": "#/$defs/objectArray" },
+				"rationale": { "$ref": "#/$defs/objectArray" }
+			}
+		},
+		"outcomesData": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["domainMetrics", "outcomes", "learnings"],
+			"properties": {
+				"domainMetrics": { "$ref": "#/$defs/objectArray" },
+				"outcomes": { "$ref": "#/$defs/objectArray" },
+				"learnings": { "$ref": "#/$defs/objectArray" }
+			}
+		},
+		"outcomeData": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["outcome", "learnings"],
+			"properties": {
+				"outcome": { "type": "object" },
+				"learnings": { "$ref": "#/$defs/objectArray" }
+			}
+		},
+		"historyData": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["history", "replay"],
+			"properties": {
+				"history": { "$ref": "#/$defs/objectArray" },
+				"replay": { "type": "object" }
+			}
+		},
+		"searchData": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["query", "results"],
+			"properties": {
+				"query": { "type": "string", "maxLength": 512 },
+				"results": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"additionalProperties": false,
+						"required": ["kind", "subjectId", "title", "summary", "state"],
+						"properties": {
+							"kind": { "type": "string", "minLength": 1, "maxLength": 128 },
+							"subjectId": {
+								"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/id"
+							},
+							"title": { "type": "string", "minLength": 1, "maxLength": 4096 },
+							"summary": { "type": "string", "maxLength": 4096 },
+							"state": { "type": "string", "minLength": 1, "maxLength": 128 },
+							"deepLink": {
+								"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/deepLink"
+							}
+						}
+					}
+				}
+			}
+		},
+		"exportData": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["format", "mediaType", "content"],
+			"properties": {
+				"format": { "enum": ["json", "html"] },
+				"mediaType": {
+					"enum": ["application/json", "text/html; charset=utf-8"]
+				},
+				"content": { "type": "string" }
+			}
+		},
+		"integrity": {
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["algorithm", "domain", "sourceViewHash", "contentHash"],
+			"properties": {
+				"algorithm": { "const": "sha-256-jcs" },
+				"domain": {
+					"const": "openplanr:operate-experience-audit-display-surface:1.0.0"
+				},
+				"sourceViewHash": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/hash"
+				},
+				"contentHash": {
+					"$ref": "../v2.0.0/operate-experience-view.schema.json#/$defs/hash"
+				}
+			}
+		}
+	}
+}

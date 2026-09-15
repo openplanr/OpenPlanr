@@ -1,0 +1,10 @@
+{
+  "action": {
+    "kind": "operating-action",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "actionId": "act_verify_00000001",
+    "assignmentId": "asg_must_not_exist_001"
+  },
+  "reason": "An Action is not an Assignment and cannot carry an execution-work identity."
+}

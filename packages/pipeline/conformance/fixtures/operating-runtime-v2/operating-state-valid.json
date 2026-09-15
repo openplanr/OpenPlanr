@@ -1,0 +1,19 @@
+{
+  "kind": "operating-model-state",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "2.0.0",
+  "stateId": "oms_state_valid_001",
+  "scopeId": "scope-acme",
+  "domainId": "business",
+  "domainVersion": "1.0.0",
+  "snapshotId": "snp_state_valid_001",
+  "runtimeHash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "objectives": [],
+  "metrics": [],
+  "findings": [],
+  "decisions": [],
+  "actions": [],
+  "risks": [],
+  "assumptions": [],
+  "generatedAt": "2026-08-09T12:00:00.000Z"
+}

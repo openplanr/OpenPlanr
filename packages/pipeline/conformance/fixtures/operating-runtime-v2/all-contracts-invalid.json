@@ -1,0 +1,369 @@
+{
+  "operating-cycle": {
+    "patch": {
+      "state": "closed"
+    }
+  },
+  "operating-cycle-input-binding": {
+    "patch": {
+      "protocolVersion": "1.4.0"
+    }
+  },
+  "operating-assignment": {
+    "patch": {
+      "assignmentKind": "executor"
+    }
+  },
+  "operating-review": {
+    "patch": {
+      "state": "not-valid"
+    }
+  },
+  "operating-submission": {
+    "patch": {
+      "state": "finalized"
+    }
+  },
+  "operating-artifact": {
+    "patch": {
+      "rawHash": "sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    }
+  },
+  "operating-event": {
+    "patch": {
+      "type": "assignment.executed"
+    }
+  },
+  "operating-runtime-state": {
+    "patch": {
+      "protocolVersion": "1.4.0"
+    }
+  },
+  "operating-checkpoint": {
+    "patch": {
+      "runtimeStateHash": "tampered"
+    }
+  },
+  "operate-allowed-action": {
+    "patch": {
+      "tool": "operate.assignment.finalize"
+    }
+  },
+  "operate-api-envelope": {
+    "patchError": {
+      "code": "INTERNAL_ERROR"
+    }
+  },
+  "operate-tool-call": {
+    "patch": {
+      "operation": "operate.cycle.schedule"
+    }
+  },
+  "operate-domain-registration": {
+    "patch": {
+      "protocolVersion": "1.4.0"
+    }
+  },
+  "operating-evidence-candidate": {
+    "patch": {
+      "evidenceKind": "database"
+    }
+  },
+  "operating-evidence-ref": {
+    "patch": {
+      "evidenceArtifactId": "citation:legacy"
+    }
+  },
+  "operating-evidence-resolution": {
+    "patch": {
+      "outcome": "rejected",
+      "evidenceRefId": "evr_00000001",
+      "evidenceArtifactId": "art_00000003",
+      "error": null
+    }
+  },
+  "operate-evidence-provider-registration": {
+    "patch": {
+      "implementation": {
+        "kind": "module",
+        "path": "./resolver.mjs"
+      }
+    }
+  },
+  "operate-evidence-resolver-registration": {
+    "patch": {
+      "errorCodes": [
+        "EVIDENCE_RESOLUTION_FAILED"
+      ]
+    }
+  },
+  "operating-evidence-edge": {
+    "patch": {
+      "relation": "becauseOf"
+    }
+  },
+  "operating-evidence-graph": {
+    "patch": {
+      "claims": []
+    }
+  },
+  "agent-runtime-manifest": {
+    "patch": {
+      "protocolVersion": "1.4.0"
+    }
+  },
+  "operating-finding": {
+    "patch": {
+      "title": " "
+    }
+  },
+  "operating-decision": {
+    "patch": {
+      "title": " "
+    }
+  },
+  "operating-action": {
+    "patch": {
+      "title": " "
+    }
+  },
+  "operating-work-change-set": {
+    "patch": {
+      "protocolVersion": "1.4.0"
+    }
+  },
+  "operating-work-ledger": {
+    "patch": {
+      "protocolVersion": "1.4.0"
+    }
+  },
+  "operating-model-state": {
+    "patch": {
+      "runtimeHash": "unverified"
+    }
+  },
+  "operating-snapshot": {
+    "patch": {
+      "runtimeHash": "unverified"
+    }
+  },
+  "operating-objective": {
+    "patch": {
+      "status": "executing"
+    }
+  },
+  "operating-metric": {
+    "patch": {
+      "aggregation": "total"
+    }
+  },
+  "operating-metric-observation": {
+    "patch": {
+      "value": "0.82"
+    }
+  },
+  "operating-risk": {
+    "patch": {
+      "exposure": 2
+    }
+  },
+  "operating-assumption": {
+    "patch": {
+      "confidence": 2
+    }
+  },
+  "operating-claim": {
+    "patch": {
+      "epistemicStatus": "certain"
+    }
+  },
+  "operating-domain-projection": {
+    "patch": {
+      "derivedAt": "not-a-date"
+    }
+  },
+  "business-operating-snapshot-projection": {
+    "patch": {
+      "domainContract": {
+        "apiDomainId": "business",
+        "id": "business-domain",
+        "version": "2.0.0"
+      }
+    }
+  },
+  "software-operating-snapshot-projection": {
+    "patch": {
+      "domainId": "business"
+    }
+  },
+  "operating-delta": {
+    "patch": {
+      "priorSnapshotId": "snapshot-legacy"
+    }
+  },
+  "operating-intelligence-plan": {
+    "patch": {
+      "selectedRoles": []
+    }
+  },
+  "operating-decision-ledger": {
+    "patch": {
+      "kind": "operating-advisor-result"
+    }
+  },
+  "operating-advisor-result": {
+    "patch": {
+      "uncertainty": ""
+    }
+  },
+  "operating-challenger-review": {
+    "patch": {
+      "kind": "operating-advisor-result"
+    }
+  },
+  "operating-context-capture": {
+    "patch": {
+      "contextKind": "advisor"
+    }
+  },
+  "operating-action-verification-plan": {
+    "patch": {
+      "observationRequest": {
+        "kind": "execute",
+        "reason": "Not allowed."
+      }
+    }
+  },
+  "operating-outcome": {
+    "patch": {
+      "status": "executed"
+    }
+  },
+  "operating-learning": {
+    "patch": {
+      "statement": " "
+    }
+  },
+  "operating-scenario": {
+    "patch": {
+      "base": {
+        "statement": "",
+        "assumptionIds": [],
+        "evidenceRefIds": []
+      }
+    }
+  },
+  "operating-event-trigger": {
+    "patch": {
+      "requestedWork": "execute"
+    }
+  },
+  "operate-snapshot-provider-registration": {
+    "patch": {
+      "implementation": {
+        "kind": "module",
+        "path": "./provider.mjs"
+      }
+    }
+  },
+  "operate-metric-provider-registration": {
+    "patch": {
+      "returnSemantics": "effect"
+    }
+  },
+  "operate-verification-provider-registration": {
+    "patch": {
+      "returnSemantics": "effect"
+    }
+  },
+  "operating-action-policy": {
+    "patch": {
+      "decisionMode": "owner-decides"
+    }
+  },
+  "operating-policy-evaluation": {
+    "patch": {
+      "outcome": "allow"
+    }
+  },
+  "operating-approval-requirement": {
+    "patch": {
+      "threshold": 0
+    }
+  },
+  "operating-approval-record": {
+    "patch": {
+      "grantId": "cgr_caller_supplied"
+    }
+  },
+  "operating-capability-availability": {
+    "patch": {
+      "effectCeiling": "destructive"
+    }
+  },
+  "operating-capability-grant": {
+    "patch": {
+      "useLimit": 2
+    }
+  },
+  "operating-governed-operation": {
+    "patch": {
+      "idempotencyKey": "caller-key"
+    }
+  },
+  "operating-execution-result": {
+    "patch": {
+      "connectorCredentials": "secret"
+    }
+  },
+  "operating-rollback-plan": {
+    "patch": {
+      "modulePath": "./rollback.mjs"
+    }
+  },
+  "operating-rollback-result": {
+    "patch": {
+      "protocolVersion": "1.0.0"
+    }
+  },
+  "operate-capability-provider-registration": {
+    "patch": {
+      "credential": "secret"
+    }
+  },
+  "operate-policy-provider-registration": {
+    "patch": {
+      "policyDecision": "approved"
+    }
+  },
+  "operate-executor-registration": {
+    "patch": {
+      "effectCeiling": "destructive"
+    }
+  },
+  "operating-intelligence-input-bundle": {
+    "patch": {
+      "bundleId": "caller-authored"
+    }
+  },
+  "operating-review-read": {
+    "patch": {
+      "dispositionChoices": []
+    }
+  },
+  "operating-review-receipt": {
+    "patch": {
+      "receiptId": "caller-authored"
+    }
+  },
+  "operating-trace-matrix": {
+    "patch": {
+      "matrixHash": "tampered"
+    }
+  },
+  "operating-executive-board": {
+    "patch": {
+      "authoritativeForMutation": true
+    }
+  }
+}

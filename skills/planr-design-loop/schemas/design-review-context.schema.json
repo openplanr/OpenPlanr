@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.10.0/design-review-context.schema.json",
+  "x-openplanr-contract": {
+    "id": "design-review-context",
+    "version": "1.10.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "openplanr-design-review-context"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "designId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "brief": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "maxLength": 16384
+        },
+        "requests": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "string",
+            "maxLength": 16384
+          }
+        },
+        "audience": {
+          "type": "string",
+          "maxLength": 16384
+        }
+      },
+      "required": [
+        "purpose",
+        "requests"
+      ]
+    },
+    "revisionSummary": {
+      "type": "string",
+      "maxLength": 16384
+    },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tokens": {
+          "type": "array",
+          "maxItems": 512,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "value": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 16384
+              }
+            },
+            "required": [
+              "name",
+              "value"
+            ]
+          }
+        },
+        "components": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "screenIds": {
+                "type": "array",
+                "maxItems": 256,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "anchorIds": {
+                "type": "array",
+                "maxItems": 256,
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "states": {
+                "type": "array",
+                "maxItems": 256,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "description": {
+                      "type": "string",
+                      "maxLength": 16384
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "description"
+                  ]
+                }
+              },
+              "notes": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "responsive": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "accessibility": {
+                "type": "string",
+                "maxLength": 16384
+              }
+            },
+            "required": [
+              "id",
+              "name"
+            ]
+          }
+        },
+        "responsive": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "string",
+            "maxLength": 16384
+          }
+        },
+        "accessibility": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "type": "string",
+            "maxLength": 16384
+          }
+        }
+      },
+      "required": [
+        "tokens",
+        "components",
+        "responsive",
+        "accessibility"
+      ]
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "designId",
+    "brief",
+    "implementation"
+  ]
+}

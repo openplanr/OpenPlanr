@@ -1,0 +1,58 @@
+:root {
+  --op-font-display:
+    "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --op-font-ui: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --op-font-technical:
+    "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --op-type-display-size: 40px;
+  --op-type-display-leading: 44px;
+  --op-type-display-weight: 720;
+  --op-type-page-size: 32px;
+  --op-type-page-leading: 40px;
+  --op-type-page-weight: 700;
+  --op-type-section-size: 18px;
+  --op-type-section-leading: 26px;
+  --op-type-section-weight: 680;
+  --op-type-body-size: 16px;
+  --op-type-body-leading: 24px;
+  --op-type-body-weight: 450;
+  --op-type-control-size: 14px;
+  --op-type-control-leading: 20px;
+  --op-type-control-weight: 650;
+  --op-type-eyebrow-size: 11px;
+  --op-type-eyebrow-leading: 16px;
+  --op-type-eyebrow-weight: 680;
+  --op-type-technical-size: 12px;
+  --op-type-technical-leading: 18px;
+  --op-type-technical-weight: 560;
+  --op-tracking-display: -0.035em;
+  --op-tracking-eyebrow: 0.08em;
+}
+
+html {
+  font-family: var(--op-font-ui);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-size: var(--op-type-body-size);
+  font-weight: var(--op-type-body-weight);
+  line-height: var(--op-type-body-leading);
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--op-font-technical);
+}
+
+@media (max-width: 640px) {
+  :root {
+    --op-type-display-size: 32px;
+    --op-type-display-leading: 38px;
+    --op-type-page-size: 28px;
+    --op-type-page-leading: 34px;
+  }
+}

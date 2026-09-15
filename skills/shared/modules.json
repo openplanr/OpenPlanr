@@ -1,0 +1,38 @@
+{
+  "modules": [
+    {
+      "moduleId": "operate-advisor-contract",
+      "moduleVersion": "2.0.0",
+      "moduleKind": "shared",
+      "description": "Shared decision-useful context, grounding, method, and output contract for Operate advisors.",
+      "source": "modules/operate-advisor-contract.md",
+      "appliesWhen": "When an executive Operate advisor produces its lens note.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read"
+        ],
+        "allowedTools": [
+          "read",
+          "shell"
+        ],
+        "allowedOperations": [
+          "operate",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      }
+    }
+  ]
+}

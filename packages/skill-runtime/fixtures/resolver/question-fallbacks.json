@@ -1,0 +1,51 @@
+{
+  "materialChoice": {
+    "kind": "guided-question",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.2.0",
+    "questionId": "release-channel",
+    "questionVersion": "1.0.0",
+    "type": "single-select",
+    "label": "Which release channel should this use?",
+    "explanation": "The answer changes the generated release configuration.",
+    "required": true,
+    "sensitivity": "public",
+    "persistence": "session",
+    "valueSemantics": "none",
+    "choices": [
+      { "id": "stable", "label": "Stable" },
+      { "id": "preview", "label": "Preview" }
+    ]
+  },
+  "safeDefault": {
+    "kind": "guided-question",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.2.0",
+    "questionId": "include-drafts",
+    "questionVersion": "1.0.0",
+    "type": "confirmation",
+    "label": "Include draft entries?",
+    "explanation": "Draft entries are optional and excluded by default.",
+    "required": true,
+    "sensitivity": "internal",
+    "persistence": "session",
+    "valueSemantics": "default",
+    "defaultValue": false,
+    "defaultReason": "Excluding drafts is the non-destructive project default."
+  },
+  "repositoryName": {
+    "kind": "guided-question",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.2.0",
+    "questionId": "project-name",
+    "questionVersion": "1.0.0",
+    "type": "text",
+    "label": "What is the project name?",
+    "explanation": "The project name labels generated local output.",
+    "required": true,
+    "sensitivity": "internal",
+    "persistence": "session",
+    "valueSemantics": "none",
+    "validation": { "minLength": 1, "maxLength": 120 }
+  }
+}

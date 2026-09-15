@@ -1,0 +1,44 @@
+{
+  "kind": "evaluation-scenario",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.4.0",
+  "scenarioId": "esc_385a0def069052fe4cf8520c3eb5cbb8c9683986df88147f79af03e6be4aaaa4",
+  "scenarioDigest": "sha256:385a0def069052fe4cf8520c3eb5cbb8c9683986df88147f79af03e6be4aaaa4",
+  "title": "planr-plan-review positive journey on cursor",
+  "intent": "A prompt that states the declared trigger directly must invoke the skill rather than answer inline.",
+  "skill": {
+    "id": "planr-plan-review",
+    "version": "1.0.0"
+  },
+  "hostProfileRef": {
+    "hostProfileId": "ehp_7fa4ce3e06316fe557b9a0c2d623fdcc",
+    "hostProfileDigest": "sha256:7fa4ce3e06316fe557b9a0c2d623fdcc353344154b441d6b7ade15827ef9001b"
+  },
+  "promptClass": "positive",
+  "expectedTrigger": {
+    "outcome": "invoke",
+    "rationale": "The prompt names the declared work directly, so declining or clarifying is a recall miss."
+  },
+  "declaredPermissions": [
+    {
+      "capability": "file-read",
+      "decision": "granted"
+    },
+    {
+      "capability": "network",
+      "decision": "denied"
+    }
+  ],
+  "riskClass": "read-only",
+  "fixtureRefs": [
+    {
+      "fixtureId": "efx_63f39f7bf3a123b9a8f5117a9ab04aee3f781c66bab69f10b0fe14fba21cf337",
+      "contentDigest": "sha256:3e35ad7b0d59a43aa757e15892892b06afd303001e404fa956032b93d829be91",
+      "role": "prompt"
+    }
+  ],
+  "budgetRef": {
+    "budgetId": "ebg_ab599b6434d21be4ca9100655147859e",
+    "budgetDigest": "sha256:ab599b6434d21be4ca9100655147859ea7d7015710797231fb73c48af8b02dee"
+  }
+}

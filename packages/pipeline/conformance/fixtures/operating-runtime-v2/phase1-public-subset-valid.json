@@ -1,0 +1,9 @@
+{
+  "cycleStates": ["created", "observing", "advising", "synthesizing", "awaiting_review", "blocked", "failed", "cancelled"],
+  "assignmentKinds": ["advisor", "challenger", "chair"],
+  "assignmentStates": ["pending", "available", "claimed", "running", "submitted", "validated", "rejected", "abandoned", "failed"],
+  "triggers": [{ "kind": "manual" }],
+  "toolNames": ["operate.cycle.start", "operate.cycle.get", "operate.cycle.resume", "operate.assignment.claim", "operate.assignment.submit", "operate.artifact.get"],
+  "effects": ["read-only", "machine-local-write", "project-write"],
+  "errorCodes": ["CYCLE_NOT_FOUND", "CYCLE_TERMINAL", "ASSIGNMENT_NOT_AVAILABLE", "ASSIGNMENT_ALREADY_CLAIMED", "ASSIGNMENT_ALREADY_SUBMITTED", "RESULT_CONTRACT_INVALID", "SUBMISSION_ID_CONFLICT", "CAPABILITY_DENIED", "STATE_TRANSITION_INVALID", "ARTIFACT_NOT_FOUND", "CONTRACT_VERSION_UNSUPPORTED", "CONCURRENT_MODIFICATION", "OPERATING_SCOPE_INVALID", "DOMAIN_CONTRACT_UNSUPPORTED"]
+}

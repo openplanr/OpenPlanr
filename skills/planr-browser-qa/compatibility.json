@@ -1,0 +1,11 @@
+{
+  "kind": "openplanr-skill-migration-declaration",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-browser-qa",
+  "baseline": "SKILL.md",
+  "successor": "skill.json",
+  "classification": "intentional",
+  "intendedChanges": [
+    "Removed SHIP-run, trusted-adapter, attestation, and evidence prerequisites; browser QA now runs directly with concise results."
+  ]
+}

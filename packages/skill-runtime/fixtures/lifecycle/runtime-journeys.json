@@ -1,0 +1,28 @@
+{
+  "skillId": "planr-plan",
+  "projectIdentity": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "firstRunAt": "2026-08-31T08:00:00.000Z",
+  "resumeAt": "2026-08-31T08:30:00.000Z",
+  "expiredAt": "2026-08-31T10:30:00.000Z",
+  "sessionId": "GIS-runtimejourney01",
+  "context": {
+    "repository": "module-events",
+    "task": "SPEC-002/T-005",
+    "sourceVersion": "1.0.0"
+  },
+  "safeState": {
+    "activeStep": "implementation",
+    "completedSteps": [
+      "context",
+      "configuration"
+    ]
+  },
+  "defaults": {
+    "learning": false,
+    "history": false,
+    "telemetry": false,
+    "sync": false,
+    "updates": false,
+    "externalData": false
+  }
+}

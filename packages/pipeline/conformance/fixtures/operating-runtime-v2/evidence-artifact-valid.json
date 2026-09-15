@@ -1,0 +1,28 @@
+{
+  "scope": { "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0" },
+  "acceptedArtifact": {
+    "accepted": true,
+    "access": { "requiredCapabilities": ["evidence.operate-artifact.read"] },
+    "artifact": {
+      "kind": "operating-artifact", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0",
+      "artifactId": "art_00000002", "artifactType": "advisor-result", "assignmentId": "asg_00000001", "cycleId": "cyc_00000001",
+      "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0",
+      "schemaId": "advisor-result", "artifactSchemaVersion": "1.0.0", "mediaType": "application/json", "encoding": "utf-8",
+      "rawHash": "sha256:c078e2f30413472ac0c00648474fd9d12c192d895860972a60629a715d5c72d5", "canonicalHash": null,
+      "sizeBytes": 21, "storageClass": "machine-local", "sensitivity": "internal", "retentionClass": "project",
+      "producer": { "actorId": "agent-001", "roleId": "strategy-finance", "runtime": "codex" },
+      "inputArtifactIds": ["art_00000001"], "createdAt": "2026-08-08T08:02:00Z"
+    }
+  },
+  "candidate": {
+    "kind": "operating-evidence-candidate", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0",
+    "candidateId": "evc_artifact_001", "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0", "sourceArtifactId": "art_00000001",
+    "evidenceKind": "operate-artifact",
+    "locator": {
+      "artifactId": "art_00000002", "expectedArtifactType": "advisor-result", "expectedSchemaId": "advisor-result", "expectedSchemaVersion": "1.0.0",
+      "expectedRawHash": "sha256:c078e2f30413472ac0c00648474fd9d12c192d895860972a60629a715d5c72d5"
+    },
+    "provider": { "id": "local-operate-artifact-evidence-provider", "version": "2.0.0" },
+    "resolver": { "id": "local-operate-artifact-evidence-resolver", "version": "2.0.0" }
+  }
+}

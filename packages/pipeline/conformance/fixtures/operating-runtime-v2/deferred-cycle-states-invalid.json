@@ -1,0 +1,3 @@
+{
+  "states": ["challenging", "changes_requested", "approved", "executing", "verifying", "closed"]
+}

@@ -1,0 +1,100 @@
+{
+  "cliEnvelopes": [
+    {
+      "name": "typed refusal carries a code a caller can branch on",
+      "record": {
+        "ok": false,
+        "code": "E_BROWSER_QA_TRUSTED_HOST_REQUIRED",
+        "problem": "Browser QA preparation requires a registered trusted runtime host adapter.",
+        "fix": "Invoke the skill through a registered browser runtime adapter."
+      }
+    },
+    {
+      "name": "typed success needs no refusal code",
+      "record": { "ok": true }
+    }
+  ],
+  "ownerRoster": ["openplanr.release.owner"],
+  "gateBoundaries": [
+    {
+      "name": "every gate exactly at its stated threshold certifies",
+      "measured": {
+        "rates": { "triggerPrecision": 9500, "triggerRecall": 9500, "journeyCompletion": 9000, "schemaValidity": 10000, "assetParity": 10000, "exportParity": 10000, "packageParity": 10000 },
+        "findingCounts": { "p0": 0, "p1": 0, "p2": 7, "p3": 3 },
+        "budget": { "latencyRegression": 2000, "costRegression": 2000 }
+      },
+      "expectedResult": "release-ready",
+      "expectedBlocking": []
+    },
+    {
+      "name": "one basis point under the trigger precision threshold blocks",
+      "measured": {
+        "rates": { "triggerPrecision": 9499, "triggerRecall": 9500, "journeyCompletion": 9000, "schemaValidity": 10000, "assetParity": 10000, "exportParity": 10000, "packageParity": 10000 },
+        "findingCounts": { "p0": 0, "p1": 0, "p2": 0, "p3": 0 },
+        "budget": { "latencyRegression": 0, "costRegression": 0 }
+      },
+      "expectedResult": "blocked",
+      "expectedBlocking": ["trigger-precision"]
+    },
+    {
+      "name": "one basis point under the journey completion threshold blocks",
+      "measured": {
+        "rates": { "triggerPrecision": 10000, "triggerRecall": 10000, "journeyCompletion": 8999, "schemaValidity": 10000, "assetParity": 10000, "exportParity": 10000, "packageParity": 10000 },
+        "findingCounts": { "p0": 0, "p1": 0, "p2": 0, "p3": 0 },
+        "budget": { "latencyRegression": 0, "costRegression": 0 }
+      },
+      "expectedResult": "blocked",
+      "expectedBlocking": ["journey-completion"]
+    },
+    {
+      "name": "one basis point under total schema validity blocks and cannot be waived",
+      "measured": {
+        "rates": { "triggerPrecision": 10000, "triggerRecall": 10000, "journeyCompletion": 10000, "schemaValidity": 9999, "assetParity": 10000, "exportParity": 10000, "packageParity": 10000 },
+        "findingCounts": { "p0": 0, "p1": 0, "p2": 0, "p3": 0 },
+        "budget": { "latencyRegression": 0, "costRegression": 0 }
+      },
+      "expectedResult": "blocked",
+      "expectedBlocking": ["schema-validity"]
+    },
+    {
+      "name": "one basis point under total package parity blocks and cannot be waived",
+      "measured": {
+        "rates": { "triggerPrecision": 10000, "triggerRecall": 10000, "journeyCompletion": 10000, "schemaValidity": 10000, "assetParity": 10000, "exportParity": 10000, "packageParity": 9999 },
+        "findingCounts": { "p0": 0, "p1": 0, "p2": 0, "p3": 0 },
+        "budget": { "latencyRegression": 0, "costRegression": 0 }
+      },
+      "expectedResult": "blocked",
+      "expectedBlocking": ["package-parity"]
+    },
+    {
+      "name": "one basis point past the regression allowance blocks both budget gates",
+      "measured": {
+        "rates": { "triggerPrecision": 10000, "triggerRecall": 10000, "journeyCompletion": 10000, "schemaValidity": 10000, "assetParity": 10000, "exportParity": 10000, "packageParity": 10000 },
+        "findingCounts": { "p0": 0, "p1": 0, "p2": 0, "p3": 0 },
+        "budget": { "latencyRegression": 2001, "costRegression": 2001 }
+      },
+      "expectedResult": "blocked",
+      "expectedBlocking": ["cost-regression", "latency-regression"]
+    },
+    {
+      "name": "a single P1 finding blocks with no waiver path",
+      "measured": {
+        "rates": { "triggerPrecision": 10000, "triggerRecall": 10000, "journeyCompletion": 10000, "schemaValidity": 10000, "assetParity": 10000, "exportParity": 10000, "packageParity": 10000 },
+        "findingCounts": { "p0": 0, "p1": 1, "p2": 0, "p3": 0 },
+        "budget": { "latencyRegression": 0, "costRegression": 0 }
+      },
+      "expectedResult": "blocked",
+      "expectedBlocking": ["finding-severity-p1"]
+    }
+  ],
+  "waivedBoundary": {
+    "name": "a latency regression past the allowance is admissible under an owner-signed waiver",
+    "measured": {
+      "rates": { "triggerPrecision": 10000, "triggerRecall": 10000, "journeyCompletion": 10000, "schemaValidity": 10000, "assetParity": 10000, "exportParity": 10000, "packageParity": 10000 },
+      "findingCounts": { "p0": 0, "p1": 0, "p2": 0, "p3": 0 },
+      "budget": { "latencyRegression": 3500, "costRegression": 0 }
+    },
+    "expectedResult": "release-ready",
+    "expectedWaivedMetric": "latency-regression"
+  }
+}

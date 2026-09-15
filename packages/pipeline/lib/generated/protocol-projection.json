@@ -1,0 +1,613 @@
+{
+  "kind": "openplanr-protocol-projection",
+  "schemaVersion": "1.0.0",
+  "generator": "scripts/protocol/project-protocol.mjs",
+  "entries": [
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/canonical-json.mjs",
+      "target": "lib/protocol/canonical-json.mjs",
+      "sha256": "81b581518afffa6a94787f2c0cd305f9385b2ef56378db6d53e600d41e288cbd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
+      "target": "lib/protocol/contracts.mjs",
+      "sha256": "5186d032a8a6ed4e9240bd0c8769ff4e31089657c736b73100e8e5dba3638726",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/design-contracts.mjs",
+      "target": "lib/protocol/design-contracts.mjs",
+      "sha256": "ba92096c260c86f38038a5a700fc091428b1474d608f69c573dfedc1bb5902c2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/design-publication-contracts.d.mts",
+      "target": "lib/protocol/design-publication-contracts.d.mts",
+      "sha256": "e17dd1da4e0ac71a7317a229efdd72cdbee7053ec5b1a21d3640498e90c4e8f9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/design-publication-contracts.mjs",
+      "target": "lib/protocol/design-publication-contracts.mjs",
+      "sha256": "e73315930334297ee26021cba3c3bfaa5337ccd85c4467c060be47eeabe5aff3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-contracts.mjs",
+      "target": "lib/protocol/diagram-contracts.mjs",
+      "sha256": "eea3366cd885643e8f17958df543f862f10bdc8929874436e6dccaaa4a728d0d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contracts.d.mts",
+      "target": "lib/protocol/enterprise-contracts.d.mts",
+      "sha256": "8fcd853d2d4c292cd1b22054f3e79d27314b7662ccebba048637f607e9ce5572",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/enterprise-contracts.mjs",
+      "target": "lib/protocol/enterprise-contracts.mjs",
+      "sha256": "578f85fba66471bfd743af7525814585e5cdc7f768b0decfdef39b74e456dd6e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/errors.mjs",
+      "target": "lib/protocol/errors.mjs",
+      "sha256": "e64c0be848759a0e916c209e0f1175d0f09d37e2d9315b8ec57c047add221020",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/generated/contract-catalog-v2.mjs",
+      "target": "lib/protocol/generated/contract-catalog-v2.mjs",
+      "sha256": "781b988d3d796e3a959452738d91eb6745a3df274ccfc7c18563e1ce3042ab17",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/generated/diagram-registries.mjs",
+      "target": "lib/protocol/generated/diagram-registries.mjs",
+      "sha256": "89aca6f22b129272178345e45f51577b0e7e7af45df205de602b14b1541dc31a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/jcs.mjs",
+      "target": "lib/protocol/jcs.mjs",
+      "sha256": "81b581518afffa6a94787f2c0cd305f9385b2ef56378db6d53e600d41e288cbd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/json-schema.mjs",
+      "target": "lib/protocol/json-schema.mjs",
+      "sha256": "faaf6ba2ab151f27fb22780a6d944e14186518cd5450529ca8bd59113a75c249",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/live-evidence-v2.mjs",
+      "target": "lib/protocol/live-evidence-v2.mjs",
+      "sha256": "33df6b2770eee033291fa21f470fb1f1f6bf67c8bcbc1aa2dd7c1961c6e69835",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/operate-experience-live-patch.mjs",
+      "target": "lib/protocol/operate-experience-live-patch.mjs",
+      "sha256": "d22620311cc6c24d9c5ac157dbe515bd5a938e5b158eff3419a651e545bcea51",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/operating-planning-contracts.mjs",
+      "target": "lib/protocol/operating-planning-contracts.mjs",
+      "sha256": "91ec7c5687da8a4cdcd5a6262aeae4fd4598a24542698640d5b6bd6e33426bfe",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/planning-contracts.mjs",
+      "target": "lib/protocol/planning-contracts.mjs",
+      "sha256": "5316642a94f148ad3f1d8cdc8a898b5b9c462b3d45f992786af697632c60e2b9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/review-experience-contracts.mjs",
+      "target": "lib/protocol/review-experience-contracts.mjs",
+      "sha256": "4fc4ee1736853fd35262dc5d4549a2614a4e96b717365f67a8feeadcaa941f59",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/skill-source-contracts.mjs",
+      "target": "lib/protocol/skill-source-contracts.mjs",
+      "sha256": "2193d046a300a9192ca5aab887998ba44e2384e20fc8027901af49aabaa62428",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/workspace-contracts.mjs",
+      "target": "lib/protocol/workspace-contracts.mjs",
+      "sha256": "a9a27863ccab51dd7c5b7f2824cf60fc38a064c225f9ff59f10418927f5a631d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/commands.json",
+      "target": "registry/v1.5.0/commands.json",
+      "sha256": "68739441bd2987882b8a4f2a8d23bf2e1247731aca866319660adcace1b65240",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/output-paths.json",
+      "target": "registry/v1.5.0/output-paths.json",
+      "sha256": "19513acdf5c718c8ca6f35f271313ec40f6e2d9eac69d39bfb2058a3c1eacfa1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/outputs.json",
+      "target": "registry/v1.5.0/outputs.json",
+      "sha256": "3fe574b6957cda821b1bc8255168445be8b0a123669d76e556576dda4604454b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/roles.json",
+      "target": "registry/v1.5.0/roles.json",
+      "sha256": "e135a1dc550dc8ec9bd6ed00cf7560603c25f5ea3b910ede14fe219a185b15b2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/rules.json",
+      "target": "registry/v1.5.0/rules.json",
+      "sha256": "91c1d7aef6a0bd0c44224ff84d43cacedb916f2dc353af0505ccf252dbf5aa7a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/skills.json",
+      "target": "registry/v1.5.0/skills.json",
+      "sha256": "9cb2bf73b536b6a6e862b8e188bd79a90aba0829d040960fc5685f494f1d3419",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/task-kinds.json",
+      "target": "registry/v1.5.0/task-kinds.json",
+      "sha256": "123ceaeeadb2c3c1dfabf0b47c06ec67ace8a3d8a30289798903be43180eb49a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/diagram-grammars.json",
+      "target": "registry/v1.6.0/diagram-grammars.json",
+      "sha256": "ed1d99d00b9e5a8cff32053fc61da7f9c658221a059251508ec2884931bb5f7e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/diagram-semantic-patterns.json",
+      "target": "registry/v1.6.0/diagram-semantic-patterns.json",
+      "sha256": "f2dcc38d54bfc3a6a7fe081a18dc06bc32a0bba9d8738fc6cd111d8a60d18c2a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/skill-host-profiles.json",
+      "target": "registry/v1.7.0/skill-host-profiles.json",
+      "sha256": "2fef204e93e2d3eede2f9cc16df8842717af39d574d32ba6feda860d57d60b2c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/skill-modules.json",
+      "target": "registry/v1.7.0/skill-modules.json",
+      "sha256": "48f52ac02b4cc5cf89826ae8a49de814b03141a4d765454abf32c9c425054a45",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/skill-routing.json",
+      "target": "registry/v1.7.0/skill-routing.json",
+      "sha256": "bd1d286e32d07fee32b09ea52ae9c5db5f5002741e703e9791516be3cdea1882",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.10.0/design-review-bundle.schema.json",
+      "target": "schemas/v1.10.0/design-review-bundle.schema.json",
+      "sha256": "f7f4c559ac9f394ffbba3dd8b7854ff5c0e5abac9b608dfa62188b7a04ae6767",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.10.0/design-review-context.schema.json",
+      "target": "schemas/v1.10.0/design-review-context.schema.json",
+      "sha256": "7a3ac0281880b6226faf52533032471d2bf5384f6f8aa639a12851c529caa78e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.10.0/design-review-handoff.schema.json",
+      "target": "schemas/v1.10.0/design-review-handoff.schema.json",
+      "sha256": "402b25238f93f8269b98697bf77fa11dda1fd284f44e41d73cdb813f5244a4e0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.10.0/design-review-metadata-payload.schema.json",
+      "target": "schemas/v1.10.0/design-review-metadata-payload.schema.json",
+      "sha256": "ba8ac124e47e8f8310214445b1752cc6706d3a7265a87c9f9685a7e9df84f0b1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json",
+      "target": "schemas/v1.11.0/design-review-metadata-payload.schema.json",
+      "sha256": "2339f1babeef83bb7a19d53232a12ac432652a4da7e49c8a5417ff795a0265ed",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.12.0/enterprise-access-context.schema.json",
+      "target": "schemas/v1.12.0/enterprise-access-context.schema.json",
+      "sha256": "fb27064fd80c5e065816e3c1a4f05c7ecdd320d782c20a0581fa94a4fcf1f793",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.12.0/enterprise-agent-handoff.schema.json",
+      "target": "schemas/v1.12.0/enterprise-agent-handoff.schema.json",
+      "sha256": "072157824d9078e1cb9c82106f4d7fb41801a153cf41866905cfa700e501664a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.12.0/enterprise-artifact-revision.schema.json",
+      "target": "schemas/v1.12.0/enterprise-artifact-revision.schema.json",
+      "sha256": "05eaa70dbba22bce048fba6a5b4a7b6c58c6608f7038773699559bea911add2c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.12.0/enterprise-change-proposal.schema.json",
+      "target": "schemas/v1.12.0/enterprise-change-proposal.schema.json",
+      "sha256": "726ea43d86e35e3fb0472ea2ae2b0df0f8b66e99f440f072bcee64e965267438",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.12.0/enterprise-evidence-reference.schema.json",
+      "target": "schemas/v1.12.0/enterprise-evidence-reference.schema.json",
+      "sha256": "faeaf15189df0eb7c41de00bb4af55bed05bbb19863df3604d5a0acaa828b8fb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.12.0/enterprise-review-thread.schema.json",
+      "target": "schemas/v1.12.0/enterprise-review-thread.schema.json",
+      "sha256": "1c226ebab52cf21088eae1b6f5d505c239788cf43a67163c01447ae53bb2e556",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.12.0/enterprise-sync-state.schema.json",
+      "target": "schemas/v1.12.0/enterprise-sync-state.schema.json",
+      "sha256": "c5b41d49118b888a2138940b885d653d8affe432c8a94e6e3f772b055bf32f02",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/command-catalog.schema.json",
+      "target": "schemas/v1.5.0/command-catalog.schema.json",
+      "sha256": "faa5a72e3e0a3a0afe8688f6df46b383be1ef82a09ca1d3a635f4eabb9952bec",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/common.schema.json",
+      "target": "schemas/v1.5.0/common.schema.json",
+      "sha256": "7dd1889dfad51115d43244a765c64f0c98c8f47e07a201eae1438fe22f93b151",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/generated-asset-manifest.schema.json",
+      "target": "schemas/v1.5.0/generated-asset-manifest.schema.json",
+      "sha256": "37c4a2c0d157dcdde5aed9613f1b1945cf0db9fc76f1882f38b30aaa674fcc66",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/implementation-result.schema.json",
+      "target": "schemas/v1.5.0/implementation-result.schema.json",
+      "sha256": "2efba9f3c79976783d1c867f8e8d91ae47d50846f1b92e8a8ea5a0ced5ab02c5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/migration-preservation-manifest.schema.json",
+      "target": "schemas/v1.5.0/migration-preservation-manifest.schema.json",
+      "sha256": "ae069a7651a67db155f46f861d51541cd69fd5be1829495f3586c8fc7bf5cca7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/output-catalog.schema.json",
+      "target": "schemas/v1.5.0/output-catalog.schema.json",
+      "sha256": "fb791aecac6b1311125bf7c874d7d773a67ec19fe18170e4bd0b475e72e72cdc",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/output-path-catalog.schema.json",
+      "target": "schemas/v1.5.0/output-path-catalog.schema.json",
+      "sha256": "a0a06f35f7e6cc23332fbee6f433b89d3adc0ebf7cd7846a0f902b41e1ea56ca",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/role-registry.schema.json",
+      "target": "schemas/v1.5.0/role-registry.schema.json",
+      "sha256": "dacd0f4c52554f5dff2c36cedc91291a8d5b873ac4c1bb0762b6954235d2ab11",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/rule-catalog.schema.json",
+      "target": "schemas/v1.5.0/rule-catalog.schema.json",
+      "sha256": "aa4c72d0b9b5226d1b47085da94e290eb1c7f49d41effdc817a3d96c088e7f87",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/skill-catalog.schema.json",
+      "target": "schemas/v1.5.0/skill-catalog.schema.json",
+      "sha256": "95537ebe06acd2e1d489fd1134d5ed59642104ac7e54dc1d3d15ec4483b9b5c8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/task-kind-registry.schema.json",
+      "target": "schemas/v1.5.0/task-kind-registry.schema.json",
+      "sha256": "e0c796937ad02ba00b6dcbe38779b3d667818ffe9a0184c4d7de44ec8e7548f5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/task-manifest.schema.json",
+      "target": "schemas/v1.5.0/task-manifest.schema.json",
+      "sha256": "fa7bfb734576cc111672db7760535a1b78af39fdf0279411bd7eb5c6de9b9d86",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.5.0/task-output-manifest.schema.json",
+      "target": "schemas/v1.5.0/task-output-manifest.schema.json",
+      "sha256": "f0d665d969575c0e87fd701d0b625560e0df040126b0d91d82e5689b4020b2ed",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/common.schema.json",
+      "target": "schemas/v1.6.0/common.schema.json",
+      "sha256": "89dad16f50b06d8e0f4363f8a3417c0551206db778a8717f49ee0df9941aa445",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/diagram-consumer-reference.schema.json",
+      "target": "schemas/v1.6.0/diagram-consumer-reference.schema.json",
+      "sha256": "1ca00d884b168fb56470b9c6df15c0ef08a77f6aff0ea06a34648ba8e1b35000",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/diagram-document.schema.json",
+      "target": "schemas/v1.6.0/diagram-document.schema.json",
+      "sha256": "1dab7374840ecfb367810b518374d5b80d072e6a22e395f6b3f4df06f5c88f67",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/diagram-fidelity-report.schema.json",
+      "target": "schemas/v1.6.0/diagram-fidelity-report.schema.json",
+      "sha256": "c562440eafff129010c366362d60c52364ab74cb1d97c28314b5164e38dcdf76",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/diagram-manifest.schema.json",
+      "target": "schemas/v1.6.0/diagram-manifest.schema.json",
+      "sha256": "639cca0e297507782baaeffcb12bfb6ae983577aafaa073d504a7c300900b325",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/diagram-quality-report.schema.json",
+      "target": "schemas/v1.6.0/diagram-quality-report.schema.json",
+      "sha256": "ae233fc376bfcda94a274049ce40a39397f063f8b7b48e2c764ec1167254a93b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/diagram-review-binding.schema.json",
+      "target": "schemas/v1.6.0/diagram-review-binding.schema.json",
+      "sha256": "eb9d5e3f58f4fdd993823db675a78c80d2a748c7e3ecb3ca4aefb97583ce31db",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/diagram-semantic-pattern-registry.schema.json",
+      "target": "schemas/v1.6.0/diagram-semantic-pattern-registry.schema.json",
+      "sha256": "4a61d6b72d048e42649113f91beeb6a3ee8868fda3d4709c63dc1599eb8cc764",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/diagram-type-registry.schema.json",
+      "target": "schemas/v1.6.0/diagram-type-registry.schema.json",
+      "sha256": "521e83a06989c93264409b9347f6111fd50c8e577f8039131a7ee4f4845aea7a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/generated-asset-manifest.schema.json",
+      "target": "schemas/v1.6.0/generated-asset-manifest.schema.json",
+      "sha256": "15ad2c14245997ef6f82ad1ce65cec0d23feb60de46ef8fc738bfa9bdfaeb6bf",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/skill-catalog.schema.json",
+      "target": "schemas/v1.6.0/skill-catalog.schema.json",
+      "sha256": "4dc8bc7d73f8770a8116fc33b10d2f2a4c0bb4ad4ff3c8308d439891ce7f5a10",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/skill-completion-receipt.schema.json",
+      "target": "schemas/v1.6.0/skill-completion-receipt.schema.json",
+      "sha256": "8894077511fa0caae6cc30c31321617b586164def10f8c7d10f1d5ebe03da388",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/skill-consent-record.schema.json",
+      "target": "schemas/v1.6.0/skill-consent-record.schema.json",
+      "sha256": "8552168137ef43ce04a8ade2418e7aae320f3d1296fb6e56dae15935798b3580",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/skill-host-profile-registry.schema.json",
+      "target": "schemas/v1.6.0/skill-host-profile-registry.schema.json",
+      "sha256": "aa6bac84239b0409842a3f1537c099bb7a781b00d8e1c223595db40cb7692f3f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/skill-learning-record.schema.json",
+      "target": "schemas/v1.6.0/skill-learning-record.schema.json",
+      "sha256": "3e5fc47dbb81a2c18dcb92897cbb9ecb6fd98b6e306cad4c3885ae5ec1c4a2b3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/skill-module-registry.schema.json",
+      "target": "schemas/v1.6.0/skill-module-registry.schema.json",
+      "sha256": "9a333fe260033ecf7268a8e86365de0dba0f3c1f385c09ce570395da4d2867cf",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/skill-routing-registry.schema.json",
+      "target": "schemas/v1.6.0/skill-routing-registry.schema.json",
+      "sha256": "6ee3e94622e30563e78649840cf20d41184dcabdbb88747d4ff82d747e5884e8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/skill-session.schema.json",
+      "target": "schemas/v1.6.0/skill-session.schema.json",
+      "sha256": "8c734d6a14b3209511271510c87f065eb7dc2b65780b1214ea1a791f806cddc4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.6.0/skill-source.schema.json",
+      "target": "schemas/v1.6.0/skill-source.schema.json",
+      "sha256": "d5645f455b72a4d5e9735d877c807a25f7708abf8b4a5627abf418a3b94108f1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/common.schema.json",
+      "target": "schemas/v1.7.0/common.schema.json",
+      "sha256": "e866de7a527b4d55faf77f1264136b67f4e4166600155816d9a450bf6fb9c918",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/generated-asset-manifest.schema.json",
+      "target": "schemas/v1.7.0/generated-asset-manifest.schema.json",
+      "sha256": "64d3b1e5bb95833b867ead496ac3224413590206b1620c2d828bbc06387872eb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/planning-id-sequence.schema.json",
+      "target": "schemas/v1.7.0/planning-id-sequence.schema.json",
+      "sha256": "0af8589ecf046cf03f5f189b9a294141d707043187aaed09e74727d72d2544f8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/request-authority.schema.json",
+      "target": "schemas/v1.7.0/request-authority.schema.json",
+      "sha256": "9fb98277f231e34fa1a3bca4f2fb2dccfd839f9a668b9c012c7b49a107be4af7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/skill-catalog.schema.json",
+      "target": "schemas/v1.7.0/skill-catalog.schema.json",
+      "sha256": "316b8f6e809e28d1967ffd9d4352e7f04366add435045bc40ea08d0ac337677b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/skill-completion-receipt.schema.json",
+      "target": "schemas/v1.7.0/skill-completion-receipt.schema.json",
+      "sha256": "012e2dce81fc7c969306415aa23d0627bc27c42cf040ee0063df47d8b6a23e46",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/skill-consent-record.schema.json",
+      "target": "schemas/v1.7.0/skill-consent-record.schema.json",
+      "sha256": "8ab936a1f1eb28de4e6476468795a891f7a42bf1d33bfc2dddb612978e6d9595",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/skill-host-profile-registry.schema.json",
+      "target": "schemas/v1.7.0/skill-host-profile-registry.schema.json",
+      "sha256": "afe6016dede633922dc3bbeb9610561587bdaaedca8d0166f41e29dd83ea22a6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/skill-learning-record.schema.json",
+      "target": "schemas/v1.7.0/skill-learning-record.schema.json",
+      "sha256": "38c94253a42d27f26f7318bc2d3dfc1eedf5f53c03753544db3683dadf840aa8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/skill-module-registry.schema.json",
+      "target": "schemas/v1.7.0/skill-module-registry.schema.json",
+      "sha256": "7c42d9b76cfd429067da4522a4297390cffa930ed3bcf87e809b7b969b307a0b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/skill-routing-registry.schema.json",
+      "target": "schemas/v1.7.0/skill-routing-registry.schema.json",
+      "sha256": "2ac4487f7386c14aff831ff4855301c1919edac396ef6fa312faef1c69ed00aa",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/skill-session.schema.json",
+      "target": "schemas/v1.7.0/skill-session.schema.json",
+      "sha256": "fd42557d6bb19bb8c5138df64524c2712b9832723f2d884a25bb87bfe5968e54",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/skill-source.schema.json",
+      "target": "schemas/v1.7.0/skill-source.schema.json",
+      "sha256": "1c7eacb4caf00dc73f60da787aef5ea89f9ed8d67f072ddd2ebed7334aa12d26",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/spec.schema.json",
+      "target": "schemas/v1.7.0/spec.schema.json",
+      "sha256": "5c0ae53b641577802874e49072f59b6472b76324958e81f928be7b611e49a6a3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/story.schema.json",
+      "target": "schemas/v1.7.0/story.schema.json",
+      "sha256": "6770fdf32ff656519b9d24cbba8e9287dd423c37920877cc50e91063b58682cb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.7.0/task.schema.json",
+      "target": "schemas/v1.7.0/task.schema.json",
+      "sha256": "f52f1fb247e3a55fee832650bdf54194ed61ded306029db0cc625b59bf725edb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.8.0/common.schema.json",
+      "target": "schemas/v1.8.0/common.schema.json",
+      "sha256": "1fc3e8ddc78116143668217aefae8a8be8f94e82ccd17ecc0c7b18297154786f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.8.0/skill-package.schema.json",
+      "target": "schemas/v1.8.0/skill-package.schema.json",
+      "sha256": "e8bb9decb48a1493b39d26e9c79bf217a52879574ab804836feb6fbb8c8989b7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.8.0/utility-command-catalog.schema.json",
+      "target": "schemas/v1.8.0/utility-command-catalog.schema.json",
+      "sha256": "4900671e1ceb52c11b4c1f1cfa20dcba572273aafbe97f149c7010db46497e05",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.9.0/design-document.schema.json",
+      "target": "schemas/v1.9.0/design-document.schema.json",
+      "sha256": "bd84d34b42f9451f9ff836105a7a6c92b2d74209aa82f6a0dd973532edf99422",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.9.0/design-review-bundle.schema.json",
+      "target": "schemas/v1.9.0/design-review-bundle.schema.json",
+      "sha256": "560bbc0f147f20f5b3d65a36b10ae1c4209fd5d9ec0a199f0d23f818684dcba8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.9.0/design-review-workspace.schema.json",
+      "target": "schemas/v1.9.0/design-review-workspace.schema.json",
+      "sha256": "e09129fd8428c62285a308f23fda8235636d0c0061730761a94eecf7622a580f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.9.0/design-workspace-create.schema.json",
+      "target": "schemas/v1.9.0/design-workspace-create.schema.json",
+      "sha256": "d385984298db9fd130735ad5a4d59b80f7a4e70818276c0060b86c38fa1d339c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.9.0/design-workspace-event.schema.json",
+      "target": "schemas/v1.9.0/design-workspace-event.schema.json",
+      "sha256": "3fa3a0e578a54060a7a279de6190afbb77d39d1f04cb1ad2d5f33a6ad76932c4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.9.0/design-workspace-revision.schema.json",
+      "target": "schemas/v1.9.0/design-workspace-revision.schema.json",
+      "sha256": "9cb7cea43bad0b3a51d608e1e5645539ad7e8a4473b036d288cc8f4996b2a04a",
+      "mode": "644"
+    }
+  ]
+}

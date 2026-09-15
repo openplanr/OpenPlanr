@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operate-live-evidence-provider-registry.schema.json",
+  "x-openplanr-contract": { "id": "operate-live-evidence-provider-registry", "version": "2.0.0" },
+  "title": "Operate Live Evidence Provider Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "registryVersion", "providers", "registryHash"],
+  "properties": {
+    "kind": { "const": "operate-live-evidence-provider-registry" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "registryVersion": { "const": "1.0.0" },
+    "providers": { "type": "array", "maxItems": 32, "items": { "$ref": "./operate-live-evidence-provider-registration.schema.json" } },
+    "registryHash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}

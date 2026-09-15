@@ -1,0 +1,749 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.5.0/migration-preservation-manifest.schema.json",
+  "x-openplanr-contract": {
+    "id": "migration-preservation-manifest",
+    "version": "1.5.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "migrationId",
+    "destination",
+    "sources",
+    "tagMappings",
+    "pathMappings",
+    "catalogBindings",
+    "coverage",
+    "historyProof",
+    "verificationGates",
+    "sourceUnchangedProof"
+  ],
+  "properties": {
+    "kind": {
+      "const": "migration-preservation-manifest"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.5.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "migrationId": {
+      "type": "string",
+      "pattern": "^mig_[0-9a-f]{32}$"
+    },
+    "destination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "integrationVersion",
+        "commit"
+      ],
+      "properties": {
+        "repository": {
+          "const": "AsemDevs/openplanr"
+        },
+        "integrationVersion": {
+          "const": "0.1.0"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceId",
+          "cutoffCommit",
+          "branch",
+          "includedState",
+          "trackedPatchDigest",
+          "untrackedInventoryDigest",
+          "refsDigest",
+          "fileInventoryDigest",
+          "licenseRefs",
+          "custodyArtifacts"
+        ],
+        "properties": {
+          "sourceId": {
+            "enum": [
+              "openplanr-cli",
+              "planr-pipeline",
+              "skills",
+              "marketplace",
+              "openplanr-web"
+            ]
+          },
+          "cutoffCommit": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "branch": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "includedState": {
+            "enum": [
+              "clean",
+              "tracked-dirty",
+              "tracked-and-untracked-dirty",
+              "external-reference"
+            ]
+          },
+          "trackedPatchDigest": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "untrackedInventoryDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "refsDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "fileInventoryDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "licenseRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/relativePath"
+            },
+            "minItems": 1,
+            "maxItems": 16,
+            "uniqueItems": true
+          },
+          "custodyArtifacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "byteLength",
+                "digest"
+              ],
+              "properties": {
+                "name": {
+                  "$ref": "common.schema.json#/$defs/relativePath"
+                },
+                "byteLength": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "digest": {
+                  "$ref": "common.schema.json#/$defs/digest"
+                }
+              }
+            },
+            "minItems": 1,
+            "maxItems": 64
+          }
+        }
+      },
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "tagMappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceId",
+          "originalRef",
+          "tagObjectId",
+          "peeledCommitId",
+          "destinationRef"
+        ],
+        "properties": {
+          "sourceId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "originalRef": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "tagObjectId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "peeledCommitId": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "destinationRef": {
+            "type": "string",
+            "pattern": "^source/[a-z0-9-]+/.+$"
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 4096
+    },
+    "pathMappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mappingId",
+          "sources",
+          "destinations",
+          "disposition",
+          "owner",
+          "reasonCode",
+          "contractRefs",
+          "verificationRefs"
+        ],
+        "properties": {
+          "mappingId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "sourceId",
+                "path",
+                "cutoffPresent",
+                "currentPresent",
+                "mode",
+                "digest",
+                "state"
+              ],
+              "properties": {
+                "sourceId": {
+                  "$ref": "common.schema.json#/$defs/identifier"
+                },
+                "path": {
+                  "$ref": "common.schema.json#/$defs/relativePath"
+                },
+                "cutoffPresent": {
+                  "type": "boolean"
+                },
+                "currentPresent": {
+                  "type": "boolean"
+                },
+                "mode": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^(?:100644|100755|120000)$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "digest": {
+                  "anyOf": [
+                    {
+                      "$ref": "common.schema.json#/$defs/digest"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "state": {
+                  "enum": [
+                    "tracked",
+                    "untracked",
+                    "deleted"
+                  ]
+                }
+              }
+            },
+            "minItems": 1,
+            "maxItems": 32
+          },
+          "destinations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "mode",
+                "digest"
+              ],
+              "properties": {
+                "path": {
+                  "$ref": "common.schema.json#/$defs/relativePath"
+                },
+                "mode": {
+                  "enum": [
+                    "100644",
+                    "100755"
+                  ]
+                },
+                "digest": {
+                  "$ref": "common.schema.json#/$defs/digest"
+                }
+              }
+            },
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "disposition": {
+            "enum": [
+              "exact",
+              "moved",
+              "merged",
+              "regenerated",
+              "retired",
+              "external",
+              "excluded"
+            ]
+          },
+          "owner": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "reasonCode": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "contractRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/contractRef"
+            },
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "verificationRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/relativePath"
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 131072
+    },
+    "catalogBindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roles",
+        "taskKinds",
+        "rules",
+        "commands",
+        "skills",
+        "outputs",
+        "exports",
+        "generators",
+        "generatedAssets"
+      ],
+      "properties": {
+        "roles": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "taskKinds": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "rules": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "commands": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "skills": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "outputs": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "exports": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "generators": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "generatedAssets": {
+          "$ref": "common.schema.json#/$defs/digest"
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "originalSchemas",
+        "originalRegistries",
+        "canonicalRoles",
+        "canonicalSkills",
+        "cliRootCommands",
+        "pipelineExportKeys",
+        "pipelineRootSymbols",
+        "sourcePaths"
+      ],
+      "properties": {
+        "originalSchemas": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expected",
+            "mapped",
+            "unmapped"
+          ],
+          "properties": {
+            "expected": {
+              "const": 180
+            },
+            "mapped": {
+              "const": 180
+            },
+            "unmapped": {
+              "const": 0
+            }
+          }
+        },
+        "originalRegistries": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expected",
+            "mapped",
+            "unmapped"
+          ],
+          "properties": {
+            "expected": {
+              "const": 12
+            },
+            "mapped": {
+              "const": 12
+            },
+            "unmapped": {
+              "const": 0
+            }
+          }
+        },
+        "canonicalRoles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expected",
+            "mapped",
+            "unmapped"
+          ],
+          "properties": {
+            "expected": {
+              "const": 9
+            },
+            "mapped": {
+              "const": 9
+            },
+            "unmapped": {
+              "const": 0
+            }
+          }
+        },
+        "canonicalSkills": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expected",
+            "mapped",
+            "unmapped"
+          ],
+          "properties": {
+            "expected": {
+              "const": 23
+            },
+            "mapped": {
+              "const": 23
+            },
+            "unmapped": {
+              "const": 0
+            }
+          }
+        },
+        "cliRootCommands": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expected",
+            "mapped",
+            "unmapped"
+          ],
+          "properties": {
+            "expected": {
+              "const": 38
+            },
+            "mapped": {
+              "const": 38
+            },
+            "unmapped": {
+              "const": 0
+            }
+          }
+        },
+        "pipelineExportKeys": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expected",
+            "mapped",
+            "unmapped"
+          ],
+          "properties": {
+            "expected": {
+              "const": 37
+            },
+            "mapped": {
+              "const": 37
+            },
+            "unmapped": {
+              "const": 0
+            }
+          }
+        },
+        "pipelineRootSymbols": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expected",
+            "mapped",
+            "unmapped"
+          ],
+          "properties": {
+            "expected": {
+              "const": 229
+            },
+            "mapped": {
+              "const": 229
+            },
+            "unmapped": {
+              "const": 0
+            }
+          }
+        },
+        "sourcePaths": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expected",
+            "mapped",
+            "unmapped"
+          ],
+          "properties": {
+            "expected": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "mapped": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "unmapped": {
+              "const": 0
+            }
+          }
+        }
+      }
+    },
+    "historyProof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "firstParentSeed",
+        "importedSourceCommits",
+        "subtreeMergeCommits",
+        "preservedAuthorsDigest",
+        "absentCommits"
+      ],
+      "properties": {
+        "firstParentSeed": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "importedSourceCommits": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "minItems": 4,
+          "maxItems": 16,
+          "uniqueItems": true
+        },
+        "subtreeMergeCommits": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}$"
+          },
+          "minItems": 3,
+          "maxItems": 16,
+          "uniqueItems": true
+        },
+        "preservedAuthorsDigest": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "absentCommits": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "0a4f3b2",
+              "7ad18f4",
+              "2c22a45"
+            ]
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true
+        }
+      }
+    },
+    "verificationGates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "gateId",
+          "status",
+          "commandRef",
+          "reportDigest",
+          "evidenceDigest"
+        ],
+        "properties": {
+          "gateId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "failed",
+              "blocked"
+            ]
+          },
+          "commandRef": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "reportDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "evidenceDigest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 256
+    },
+    "sourceUnchangedProof": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sourceId",
+          "pre",
+          "post"
+        ],
+        "properties": {
+          "sourceId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "pre": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "head",
+              "refsDigest",
+              "trackedPatchDigest",
+              "untrackedManifestDigest",
+              "statusDigest"
+            ],
+            "properties": {
+              "head": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$"
+              },
+              "refsDigest": {
+                "$ref": "common.schema.json#/$defs/digest"
+              },
+              "trackedPatchDigest": {
+                "$ref": "common.schema.json#/$defs/digest"
+              },
+              "untrackedManifestDigest": {
+                "$ref": "common.schema.json#/$defs/digest"
+              },
+              "statusDigest": {
+                "$ref": "common.schema.json#/$defs/digest"
+              }
+            }
+          },
+          "post": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "head",
+              "refsDigest",
+              "trackedPatchDigest",
+              "untrackedManifestDigest",
+              "statusDigest"
+            ],
+            "properties": {
+              "head": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{40}$"
+              },
+              "refsDigest": {
+                "$ref": "common.schema.json#/$defs/digest"
+              },
+              "trackedPatchDigest": {
+                "$ref": "common.schema.json#/$defs/digest"
+              },
+              "untrackedManifestDigest": {
+                "$ref": "common.schema.json#/$defs/digest"
+              },
+              "statusDigest": {
+                "$ref": "common.schema.json#/$defs/digest"
+              }
+            }
+          }
+        }
+      },
+      "minItems": 5,
+      "maxItems": 5
+    }
+  }
+}

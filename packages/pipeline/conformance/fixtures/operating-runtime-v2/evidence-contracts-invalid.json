@@ -1,0 +1,9 @@
+{
+  "operating-evidence-candidate": { "patch": { "evidenceKind": "database" } },
+  "operating-evidence-ref": { "patch": { "evidenceArtifactId": "citation:legacy" } },
+  "operating-evidence-resolution": { "patch": { "outcome": "resolved", "error": { "code": "SOURCE_NOT_FOUND", "retryable": false, "context": {} } } },
+  "operate-evidence-provider-registration": { "patch": { "implementation": { "kind": "module", "path": "./resolver.mjs" } } },
+  "operate-evidence-resolver-registration": { "patch": { "supportedEvidenceKinds": ["external-system"] } },
+  "operating-evidence-edge": { "patch": { "relation": "becauseOf" } },
+  "operating-evidence-graph": { "patch": { "claims": [] } }
+}

@@ -1,0 +1,42 @@
+{
+  "modules": [
+    {
+      "moduleId": "hello-intro",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "shared",
+      "description": "Shared preamble inlined into the composed skill body.",
+      "source": "modules/hello-intro.md",
+      "appliesWhen": "Always, as the composed skill preamble.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": ["read"],
+        "allowedTools": ["read"],
+        "allowedOperations": ["render"],
+        "allowedOutputClasses": ["A"],
+        "forbiddenEffects": ["network-write", "external-publish"]
+      }
+    },
+    {
+      "moduleId": "hello-reference",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "context",
+      "description": "Progressive-disclosure reference kept as a routed support asset.",
+      "source": "modules/hello-reference.md",
+      "appliesWhen": "Only when a decision needs the deeper reference.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "none",
+        "externalDataAccess": "none",
+        "allowedCapabilities": ["read"],
+        "allowedTools": ["read"],
+        "allowedOperations": ["render"],
+        "allowedOutputClasses": ["A"],
+        "forbiddenEffects": ["network-write", "external-publish"]
+      }
+    }
+  ]
+}

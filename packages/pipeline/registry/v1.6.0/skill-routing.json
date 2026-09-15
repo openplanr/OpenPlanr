@@ -1,0 +1,389 @@
+{
+  "kind": "skill-routing-registry",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "policies": [
+    {
+      "routingPolicyId": "planr-artifact-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-artifact.",
+      "includeModules": [
+        {
+          "moduleId": "planr-artifact-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:18600eb8a0efeaf5a1bcf6d3cbc9880e78064c8e2e750773338fd28bb406356b"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-browser-qa-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-browser-qa.",
+      "includeModules": [
+        {
+          "moduleId": "planr-browser-qa-workflow",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:5abb433de919ff56d780fc27bc9bb7ccee1a072ab0ad01e6bbc5e2518668765d"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-ceo-review-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-ceo-review.",
+      "includeModules": [
+        {
+          "moduleId": "operate-advisor-contract",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:a25ef38b78f40da1bc29de6939e7ceaa2e36238b8584014c93d6e2d4e4c94462"
+        },
+        {
+          "moduleId": "planr-ceo-review-workflow",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:5e5e6f2b4932c1dfcc806fc479f9c66177ebf0d5a20213d1c260c142ee8d79aa"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-chair-review-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-chair-review.",
+      "includeModules": [
+        {
+          "moduleId": "planr-chair-review-workflow",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:0b0b5158cec94da221850e31b3255364f0db82f4c1eee8244aa0c5e37631b5d7"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-challenger-review-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-challenger-review.",
+      "includeModules": [
+        {
+          "moduleId": "planr-challenger-review-workflow",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:d14a092e4eeaf20c1ff705ca58d0e688c2dd5aa07d4556d47ca1aa9b6716d7b4"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-cmo-review-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-cmo-review.",
+      "includeModules": [
+        {
+          "moduleId": "operate-advisor-contract",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:a25ef38b78f40da1bc29de6939e7ceaa2e36238b8584014c93d6e2d4e4c94462"
+        },
+        {
+          "moduleId": "planr-cmo-review-workflow",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:f903d15a1a3a7468c6ff3f01ec0c96c255a9b598d0e8ca9dc5830916ba812b08"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-coo-review-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-coo-review.",
+      "includeModules": [
+        {
+          "moduleId": "operate-advisor-contract",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:a25ef38b78f40da1bc29de6939e7ceaa2e36238b8584014c93d6e2d4e4c94462"
+        },
+        {
+          "moduleId": "planr-coo-review-workflow",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:bb3d82531506000fa617b2da3e8a38c95d5d5cd2983c83bbb495f31236932ec8"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-cpo-review-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-cpo-review.",
+      "includeModules": [
+        {
+          "moduleId": "operate-advisor-contract",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:a25ef38b78f40da1bc29de6939e7ceaa2e36238b8584014c93d6e2d4e4c94462"
+        },
+        {
+          "moduleId": "planr-cpo-review-workflow",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:deaf1ec09e56913ae1dac6349805e8299f3acd350dea4927e9cc3949a39985fd"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-cto-review-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-cto-review.",
+      "includeModules": [
+        {
+          "moduleId": "operate-advisor-contract",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:a25ef38b78f40da1bc29de6939e7ceaa2e36238b8584014c93d6e2d4e4c94462"
+        },
+        {
+          "moduleId": "planr-cto-review-workflow",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:aaa082b00f55f713619792c540c11a52bd755a9142411f4db5b47da1a3471cb5"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-dashboard-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-dashboard.",
+      "includeModules": [
+        {
+          "moduleId": "planr-dashboard-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:36f61ef1bc39de4f1324669515bda083d0af1fcd0e5e3eefcf3ded8aeef50ab3"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-design-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-design.",
+      "includeModules": [
+        {
+          "moduleId": "planr-design-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:3852eb864adfc60af3503bf8467b302cac943392ef96341694a3a5c404977c6a"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-design-loop-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-design-loop.",
+      "includeModules": [
+        {
+          "moduleId": "planr-design-loop-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:03812120fd19f36884f31315f532efc3ac3d29ae2223c087141135a0e4d83e8e"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-design-review-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-design-review.",
+      "includeModules": [
+        {
+          "moduleId": "planr-design-review-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:937191660107db0cfb8cd3672cffacc2583641b92ea02ed6d3e855b8c05ff772"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-diagram-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-diagram.",
+      "includeModules": [
+        {
+          "moduleId": "planr-diagram-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:6a65d3b265f5b5b30ece99455097e105983ffd9472ede4f85a76c180af769e5f"
+        }
+      ],
+      "references": [
+        {
+          "moduleId": "diagram-fidelity",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:3eadcce2990f6d74a0eb96e26b78ecd7e493322ae6a8aee3cdcecc66ca3d75bd"
+        },
+        {
+          "moduleId": "diagram-intent-to-ir",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:ce7d0107b02067c0d9fac6abe8e6a6ce8cb3f23aabcab801c6bb5a3824555c2e"
+        }
+      ],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-doctor-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-doctor.",
+      "includeModules": [
+        {
+          "moduleId": "planr-doctor-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:c268e43097b9e6ac07b6cd1aff9a4268239c3d4cda5c6d26e7126b5dc6d2b902"
+        }
+      ],
+      "references": [
+        {
+          "moduleId": "upgrade",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:268f5ac3374bb3a7bdfe1a70949fa49817eccf3f76e4f57d706acecec9eac1a1"
+        }
+      ],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-investigate-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-investigate.",
+      "includeModules": [
+        {
+          "moduleId": "planr-investigate-workflow",
+          "moduleVersion": "2.0.0",
+          "digest": "sha256:ef5ad969a3d0604a4b1f42f49eb76c51452daf3d29a3dcbf5ff170dcbc00363e"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-land-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-land.",
+      "includeModules": [
+        {
+          "moduleId": "planr-land-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:252dc17a8aa6285eeccce0595ec55390b7e254059ca6582f78606b80f9a79c76"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-operate-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-operate.",
+      "includeModules": [
+        {
+          "moduleId": "planr-operate-workflow",
+          "moduleVersion": "2.1.0",
+          "digest": "sha256:5e9c6fc1f1e636b5a7a0799a9d6f7e6388ef61e4e2dbe89e1c053206565d7c00"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-plan-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-plan.",
+      "includeModules": [
+        {
+          "moduleId": "planr-plan-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:36229a96d1a6404d1807d46fb988f7a62d022976562f5f1b4d85245093d93a58"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-plan-review-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-plan-review.",
+      "includeModules": [
+        {
+          "moduleId": "planr-plan-review-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:87adb04f6f9cc785f935c004c7067548e332265e34038a826d8e5485f961a5cf"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-ship-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-ship.",
+      "includeModules": [
+        {
+          "moduleId": "planr-ship-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:db16e1b86e6f32342433adb91640b21b20ca2fa3cae44c4022ab91116d7f4f93"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-spec-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-spec.",
+      "includeModules": [
+        {
+          "moduleId": "planr-spec-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:cda3788a031eebc51e95bbd30e5f96499647f7a097b2898d0f19fcdffad180b2"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-status-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-status.",
+      "includeModules": [
+        {
+          "moduleId": "planr-status-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:0d589938aa0b63a82cbce45d7a487a51f22c56e39504220ba0a6bd9eb908f0c5"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    },
+    {
+      "routingPolicyId": "planr-sync-routing",
+      "routingPolicyVersion": "1.0.0",
+      "description": "Composition policy for planr-sync.",
+      "includeModules": [
+        {
+          "moduleId": "planr-sync-workflow",
+          "moduleVersion": "1.0.0",
+          "digest": "sha256:c95e77a4d5167720fe62c274f67670249213467954dd6aeeb2a9909bdeeb7fde"
+        }
+      ],
+      "references": [],
+      "order": "topological"
+    }
+  ],
+  "documentDigest": "sha256:12a14b881d025ba521678b81b18d8d3275ce6cddce1ffc94a556df04ff98dfcc"
+}

@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-chair-review",
+  "family": "operate-synthesis",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-chair-review/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-chair-review/skill.json",
+    "version": "2.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Clarified that the chair skill is selected after specialist reviews for one coherent leadership brief."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:878f6bc77daebc1d6f70a4407035fe1d9a957129371a4daba6179ea86d962ccf",
+      "successorDigest": "sha256:fd31aa1779efa753d8ad406e3e4c50c558e3849ff4ee919587fa8c9f2f703f64"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:cb8892b5bb2c4d5c73ba5946b54d0f2f7627dd0fc30e3d7ec99dc8355eeb20e8",
+      "successorDigest": "sha256:e2623896e4de9191516f928577f02d7dbbc9283899ff26880bdd4b58a99d81ed"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:e295d5902f95d422db2e94a594c01fb833622bd2642e4f090d2f73cc1894fa9a",
+      "successorDigest": "sha256:66dbc568ba2fc5f9c8969181d6f9207324517fc4d48d88b0b5f9cd5f640da78f"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:878f6bc77daebc1d6f70a4407035fe1d9a957129371a4daba6179ea86d962ccf",
+      "successorDigest": "sha256:fd31aa1779efa753d8ad406e3e4c50c558e3849ff4ee919587fa8c9f2f703f64"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "scope": { "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0" },
+  "project": {
+    "projectId": "project-default",
+    "maxBytes": 1024,
+    "classification": "internal",
+    "scope": { "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0" },
+    "artifacts": [{
+      "artifactId": "SPEC-016",
+      "artifactType": "specification",
+      "path": ".planr/specs/SPEC-016-evidence.md",
+      "contentHash": "sha256:0cdad130dea4eb666dfe282a276d0ff239ae5cd4934ee4fc4f67051497ddec33"
+    }]
+  },
+  "candidate": {
+    "kind": "operating-evidence-candidate", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0",
+    "candidateId": "evc_planr_valid_001", "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0", "sourceArtifactId": "art_00000001",
+    "evidenceKind": "planr",
+    "locator": {
+      "projectId": "project-default", "artifactId": "SPEC-016", "artifactType": "specification",
+      "path": ".planr/specs/SPEC-016-evidence.md", "contentHash": "sha256:0cdad130dea4eb666dfe282a276d0ff239ae5cd4934ee4fc4f67051497ddec33"
+    },
+    "provider": { "id": "local-planr-evidence-provider", "version": "2.0.0" },
+    "resolver": { "id": "local-planr-evidence-resolver", "version": "2.0.0" }
+  }
+}

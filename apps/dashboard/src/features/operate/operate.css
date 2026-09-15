@@ -1,0 +1,158 @@
+/* Planr Console scope for the Operate surfaces. Consumes the shared --pc-* tokens
+   and the pc-* component classes; adds only the operate-specific layout helpers. */
+
+.pc-operate {
+  display: grid;
+  gap: 20px;
+  font-family: var(--pc-font-sans);
+  color: var(--pc-text-primary);
+}
+
+/* degraded / projection notice line, matching the planning notice tone */
+.pc-operate__notice {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--pc-border-subtle);
+  border-radius: var(--pc-radius-md);
+  background: var(--pc-surface-sunken);
+  font-size: var(--pc-text-sm);
+  color: var(--pc-text-secondary);
+}
+.pc-operate__notice[data-tone="verified"] {
+  border-color: var(--pc-status-done-border);
+  background: var(--pc-status-done-bg);
+  color: var(--pc-status-done-fg);
+}
+.pc-operate__notice[data-tone="attention"] {
+  border-color: var(--pc-status-outstanding-border);
+  background: var(--pc-status-outstanding-bg);
+  color: var(--pc-status-outstanding-fg);
+}
+.pc-operate__notice[data-tone="refusal"] {
+  border-color: var(--pc-status-blocked-border);
+  background: var(--pc-status-blocked-bg);
+  color: var(--pc-status-blocked-fg);
+}
+
+/* subsection wrapper */
+.pc-operate__section {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+/* responsive two-column split (proven / unknown, wide / narrow) */
+.pc-operate__split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 12px;
+}
+.pc-operate__panel {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--pc-surface-card);
+  border: 1px solid var(--pc-border-default);
+  border-radius: var(--pc-radius-md);
+}
+.pc-operate__panel h2,
+.pc-operate__panel h3 {
+  margin: 0;
+  font-size: var(--pc-text-2xs);
+  font-weight: var(--pc-weight-medium);
+  letter-spacing: var(--pc-tracking-wide);
+  text-transform: uppercase;
+  color: var(--pc-text-tertiary);
+}
+.pc-operate__panel p {
+  margin: 0;
+  font-size: var(--pc-text-sm);
+  color: var(--pc-text-primary);
+}
+
+/* audit / history record cards */
+.pc-operate__records {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pc-operate__record {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--pc-surface-card);
+  border: 1px solid var(--pc-border-default);
+  border-radius: var(--pc-radius-md);
+}
+.pc-operate__record-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pc-operate__record-title {
+  margin: 0;
+  font-size: var(--pc-text-md);
+  font-weight: var(--pc-weight-medium);
+  color: var(--pc-text-primary);
+  overflow-wrap: anywhere;
+}
+.pc-operate__record-index {
+  font-family: var(--pc-font-mono);
+  font-size: var(--pc-text-2xs);
+  color: var(--pc-text-tertiary);
+}
+.pc-operate__record-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+}
+.pc-operate__record-facts > div {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.pc-operate__record-facts dt {
+  font-size: var(--pc-text-2xs);
+  letter-spacing: var(--pc-tracking-wide);
+  text-transform: uppercase;
+  color: var(--pc-text-tertiary);
+}
+.pc-operate__record-facts dd {
+  margin: 0;
+  font-size: var(--pc-text-xs);
+  color: var(--pc-text-secondary);
+}
+
+/* collapsible technical detail block */
+.pc-operate__technical {
+  font-size: var(--pc-text-xs);
+  color: var(--pc-text-tertiary);
+}
+.pc-operate__technical > summary {
+  cursor: pointer;
+  font-family: var(--pc-font-mono);
+  font-size: var(--pc-text-2xs);
+  letter-spacing: var(--pc-tracking-wide);
+  color: var(--pc-text-tertiary);
+}
+.pc-operate__technical code {
+  font-family: var(--pc-font-mono);
+  font-size: var(--pc-text-xs);
+  color: var(--pc-text-secondary);
+  word-break: break-all;
+}
+
+/* inline control row (governed buttons, links) */
+.pc-operate__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}

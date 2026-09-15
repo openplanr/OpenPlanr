@@ -1,0 +1,138 @@
+name: Publish reviewed public package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        type: choice
+        required: true
+        options: ['@openplanr/protocol', 'planr-pipeline', 'openplanr']
+      version:
+        description: Exact reviewed package version
+        type: string
+        required: true
+      tag:
+        description: Approved npm distribution tag
+        type: choice
+        required: true
+        default: next
+        options: [next, latest]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-release-${{ inputs.package }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.repository == 'openplanr/OpenPlanr' && github.ref == 'refs/heads/main' && vars.NPM_PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm run generate && npm run build
+      - run: npm run lint && npm test && npm run verify
+      - run: git diff --exit-code HEAD --
+      - name: Pack the exact reviewed package
+        env:
+          RELEASE_PACKAGE: ${{ inputs.package }}
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: node scripts/prepare-publication.mjs "$RUNNER_TEMP/openplanr-npm"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-public-package
+          path: ${{ runner.temp }}/openplanr-npm/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-public-package
+          path: release
+      - name: Verify archive and publish through npm trusted publishing
+        env:
+          RELEASE_PACKAGE: ${{ inputs.package }}
+          RELEASE_VERSION: ${{ inputs.version }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import { execFileSync, spawnSync } from 'node:child_process';
+          const proof = JSON.parse(readFileSync('release/publication.json', 'utf8'));
+          const expected = process.env;
+          const names = ['@openplanr/protocol', 'planr-pipeline', 'openplanr'];
+          if (!names.includes(proof.name) || proof.name !== expected.RELEASE_PACKAGE ||
+              proof.version !== expected.RELEASE_VERSION || proof.commit !== expected.GITHUB_SHA ||
+              !/^[a-zA-Z0-9._-]+\.tgz$/.test(proof.filename) ||
+              !['next', 'latest'].includes(expected.RELEASE_TAG)) throw new Error('Publication identity mismatch');
+          const archive = `release/${proof.filename}`;
+          if (createHash('sha256').update(readFileSync(archive)).digest('hex') !== proof.sha256) throw new Error('Archive digest mismatch');
+          const npmVersion = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim().split('.').map(Number);
+          if (npmVersion[0] < 11 || (npmVersion[0] === 11 && (npmVersion[1] < 5 || (npmVersion[1] === 5 && npmVersion[2] < 1)))) throw new Error('npm >=11.5.1 is required');
+          for (const [name, version] of Object.entries(proof.publicDependencies)) {
+            const found = JSON.parse(execFileSync('npm', ['view', `${name}@${version}`, 'version', '--json'], { encoding: 'utf8' }));
+            if (found !== version) throw new Error(`Publish ${name}@${version} before this package`);
+          }
+          const candidateIntegrity = `sha512-${createHash('sha512').update(readFileSync(archive)).digest('base64')}`;
+          const registryIntegrity = () => {
+            const result = spawnSync('npm', ['view', `${proof.name}@${proof.version}`, 'dist.integrity', '--json'], {
+              encoding: 'utf8',
+              stdio: ['ignore', 'pipe', 'pipe'],
+            });
+            if (result.status !== 0) return null;
+            const integrity = JSON.parse(result.stdout);
+            if (typeof integrity !== 'string' || !/^sha512-[A-Za-z0-9+/]+={0,2}$/.test(integrity)) {
+              throw new Error('Registry returned invalid integrity for an existing package');
+            }
+            return integrity;
+          };
+          const assertPublishable = () => {
+            const integrity = registryIntegrity();
+            if (integrity === null) return 'absent';
+            if (integrity === candidateIntegrity) return 'identical';
+            throw new Error(`${proof.name}@${proof.version} already exists with different bytes`);
+          };
+          if (assertPublishable() === 'identical') {
+            console.log(`${proof.name}@${proof.version} already has the reviewed bytes; skipping publish`);
+            process.exit(0);
+          }
+          const publish = spawnSync(
+            'npm',
+            ['publish', archive, '--ignore-scripts', '--access', 'public', '--provenance', '--tag', expected.RELEASE_TAG],
+            { stdio: 'inherit' },
+          );
+          for (let attempt = 0; attempt < 5; attempt += 1) {
+            if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 2_000));
+            if (assertPublishable() === 'identical') {
+              console.log(`${proof.name}@${proof.version} has the reviewed bytes after publish`);
+              process.exit(0);
+            }
+          }
+          if (publish.status === 0) {
+            throw new Error(`${proof.name}@${proof.version} publish succeeded but npm did not expose the reviewed bytes`);
+          }
+          process.exit(publish.status ?? 1);
+          NODE

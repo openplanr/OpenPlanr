@@ -1,0 +1,39 @@
+{
+  "imports": [],
+  "modules": [
+    {
+      "moduleId": "planr-plan-review-workflow",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "context",
+      "description": "Task-specific planr-plan-review workflow guidance.",
+      "source": "modules/workflow.md",
+      "appliesWhen": "Whenever planr-plan-review is selected.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read"
+        ],
+        "allowedTools": [
+          "read",
+          "shell"
+        ],
+        "allowedOperations": [
+          "compile",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      }
+    }
+  ]
+}

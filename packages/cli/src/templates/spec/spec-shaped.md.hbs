@@ -1,0 +1,133 @@
+---
+id: "{{id}}"
+title: "{{title}}"
+slug: "{{slug}}"
+schemaVersion: "{{schemaVersion}}"
+specificationContract: "{{specificationContract}}"
+status: "shaped"
+priority: "{{priority}}"
+{{#if milestone}}milestone: "{{milestone}}"{{/if}}
+{{#if po}}po: "{{po}}"{{/if}}
+created: "{{created}}"
+updated: "{{date}}"
+{{#if uiFiles.length}}
+ui_files:
+{{#each uiFiles}}
+  - "{{this}}"
+{{/each}}
+{{else}}
+ui_files: []
+{{/if}}
+tech_dependencies: []
+---
+
+# {{id}}: {{title}}
+
+## Context & Goal
+
+{{context}}
+
+## Audience
+
+**Primary:** {{audience.primary}}
+
+**Affected:**
+{{#each audience.affected}}
+- {{this}}
+{{/each}}
+
+## Outcome & Measurement
+
+**Statement:** {{outcome.statement}}
+
+**Measure:** {{outcome.measure}}
+
+**Target:** {{outcome.target}}
+
+**Timeframe:** {{outcome.timeframe}}
+
+## Functional Requirements
+
+{{#if functionalRequirements.length}}
+{{#each functionalRequirements}}
+- {{this}}
+{{/each}}
+{{else}}
+- _No functional requirements captured. Re-run `planr spec shape {{id}}` to add them._
+{{/if}}
+
+## Business Rules
+
+{{#if businessRules.length}}
+{{#each businessRules}}
+- {{this}}
+{{/each}}
+{{else}}
+_None specified._
+{{/if}}
+
+## Constraints
+
+{{#each constraints}}
+- {{this}}
+{{/each}}
+
+## Evidence Expectations
+
+{{#each evidenceExpectations}}
+- {{this}}
+{{/each}}
+
+## Failure Modes
+
+{{#each failureModes}}
+- {{this}}
+{{/each}}
+
+## Rollback
+
+{{rollback}}
+
+## Scope Boundaries
+
+### In Scope
+
+{{#each scope.inScope}}
+- {{this}}
+{{/each}}
+
+### Out of Scope
+
+{{#each scope.outOfScope}}
+- {{this}}
+{{/each}}
+
+## Acceptance Criteria
+
+{{#each acceptanceCriteria}}
+- [ ] {{this}}
+{{/each}}
+
+## Declared Risk Specialists
+
+{{#if declaredSpecialists.length}}
+{{#each declaredSpecialists}}
+- {{this}}
+{{/each}}
+{{else}}
+_No risk specialist was explicitly declared; deterministic classification still applies before review._
+{{/if}}
+
+## Notes for Decomposition
+
+{{#if decompositionNotes}}
+{{decompositionNotes}}
+{{else}}
+_Optional hints for the host-native `planr-plan` skill. Not business requirements._
+{{/if}}
+
+---
+
+> Shaped as `{{specificationContract}}` on {{date}}. Continue with
+> Invoke `$planr:plan {{id}}` in Codex/ChatGPT or `/planr:plan {{id}}` in Claude Code.
+> when implementation tasks are needed.

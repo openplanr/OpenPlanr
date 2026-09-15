@@ -1,0 +1,213 @@
+{
+  "release-ledger": [
+    {
+      "name": "an unknown field",
+      "code": "E_RELEASE_LEDGER_CONTRACT_INVALID",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/publishedBy",
+          "value": "release-train"
+        }
+      ]
+    },
+    {
+      "name": "an unsupported contract version",
+      "code": "E_RELEASE_LEDGER_CONTRACT_INVALID",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/schemaVersion",
+          "value": "1.2.0"
+        }
+      ]
+    },
+    {
+      "name": "a foreign repository key",
+      "code": "E_RELEASE_LEDGER_FOREIGN_REPOSITORY",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/rows/1/repositoryKey",
+          "value": "docs"
+        }
+      ]
+    },
+    {
+      "name": "a duplicate repository row",
+      "code": "E_RELEASE_LEDGER_DUPLICATE_ROW",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/rows/1/repositoryKey",
+          "value": "pipeline"
+        }
+      ]
+    },
+    {
+      "name": "a missing terminal receipt",
+      "code": "E_RELEASE_LEDGER_ROW_INVALID",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "remove",
+          "path": "/rows/0/terminalReceipt"
+        }
+      ]
+    },
+    {
+      "name": "a non-terminal receipt",
+      "code": "E_RELEASE_LEDGER_RECEIPT_FOREIGN",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/rows/0/terminalReceipt/state",
+          "value": "in-progress"
+        }
+      ]
+    },
+    {
+      "name": "a receipt bound to another candidate",
+      "code": "E_RELEASE_LEDGER_RECEIPT_FOREIGN",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/rows/0/terminalReceipt/boundPayloadDigest",
+          "value": "sha256:9bff4e394f6fb7233992db27f87ebbfba50e26012f8b65546ce65105e6784325"
+        }
+      ]
+    },
+    {
+      "name": "a dirty baseline",
+      "code": "E_RELEASE_LEDGER_ROW_INVALID",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/rows/0/clean",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "a version label edited without repacking",
+      "code": "E_RELEASE_LEDGER_DIGEST_MISMATCH",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/rows/0/declaredVersion",
+          "value": "9.9.9"
+        }
+      ]
+    },
+    {
+      "name": "a foreign ledger identity",
+      "code": "E_RELEASE_LEDGER_IDENTITY_FOREIGN",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/ledgerId",
+          "value": "rlg_00000000000000000000000000000000"
+        }
+      ]
+    },
+    {
+      "name": "a manifest revision this contract does not close over",
+      "code": "E_RELEASE_LEDGER_MANIFEST_DRIFT",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/manifestBinding/manifestSchemaVersion",
+          "value": "1.0.0"
+        }
+      ]
+    }
+  ],
+  "release-ledger-receipt": [
+    {
+      "name": "an unknown field",
+      "code": "E_RELEASE_LEDGER_CONTRACT_INVALID",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/approvedBy",
+          "value": "release-train"
+        }
+      ]
+    },
+    {
+      "name": "a claimed authority",
+      "code": "E_RELEASE_LEDGER_CONTRACT_INVALID",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/authority",
+          "value": "release"
+        }
+      ]
+    },
+    {
+      "name": "a verified outcome carrying a refusal",
+      "code": "E_RELEASE_LEDGER_CONTRACT_INVALID",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "append",
+          "path": "/refusals",
+          "value": {
+            "code": "E_RELEASE_LEDGER_CLAIM_DRIFT",
+            "repositoryKey": "skills",
+            "reason": "rendered range does not derive"
+          }
+        }
+      ]
+    },
+    {
+      "name": "a receipt bound to another ledger",
+      "code": "E_RELEASE_LEDGER_CLAIM_UNBOUND",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/ledgerDigest",
+          "value": "sha256:9bff4e394f6fb7233992db27f87ebbfba50e26012f8b65546ce65105e6784325"
+        }
+      ]
+    },
+    {
+      "name": "a receipt bound to another claim set",
+      "code": "E_RELEASE_LEDGER_CLAIM_UNBOUND",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/claimSetDigest",
+          "value": "sha256:9bff4e394f6fb7233992db27f87ebbfba50e26012f8b65546ce65105e6784325"
+        }
+      ]
+    },
+    {
+      "name": "an unrecomputed receipt digest",
+      "code": "E_RELEASE_LEDGER_DIGEST_MISMATCH",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/receiptDigest",
+          "value": "sha256:9bff4e394f6fb7233992db27f87ebbfba50e26012f8b65546ce65105e6784325"
+        }
+      ]
+    }
+  ]
+}

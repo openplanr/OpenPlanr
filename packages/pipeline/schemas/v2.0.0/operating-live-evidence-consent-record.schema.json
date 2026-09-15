@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-live-evidence-consent-record.schema.json",
+  "x-openplanr-contract": { "id": "operating-live-evidence-consent-record", "version": "2.0.0" },
+  "title": "Operating Live Evidence Consent Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "consentRecordId", "authority", "decision", "docket", "docketHash", "actor", "provider", "adapterVersion", "accountIdentityHash", "selectors", "scopes", "queryHash", "window", "ceilings", "classification", "purpose", "issuedAt", "expiresAt", "consentHash"],
+  "properties": {
+    "kind": { "const": "operating-live-evidence-consent-record" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "consentRecordId": { "type": "string", "pattern": "^lcon_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "authority": { "const": "none" },
+    "decision": { "const": "approved" },
+    "docket": { "$ref": "#/$defs/docket" },
+    "docketHash": { "$ref": "#/$defs/hash" },
+    "actor": { "type": "object", "additionalProperties": false, "required": ["actorId", "kind"], "properties": { "actorId": { "$ref": "#/$defs/textId" }, "kind": { "const": "human" } } },
+    "provider": { "$ref": "#/$defs/versionedId" },
+    "adapterVersion": { "$ref": "#/$defs/version" },
+    "accountIdentityHash": { "$ref": "#/$defs/hash" },
+    "selectors": { "type": "array", "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/textId" } },
+    "scopes": { "type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/textId" } },
+    "queryHash": { "$ref": "#/$defs/hash" },
+    "window": { "type": "object", "additionalProperties": false, "required": ["from", "to"], "properties": { "from": { "type": "string", "format": "date-time" }, "to": { "type": "string", "format": "date-time" } } },
+    "ceilings": { "$ref": "#/$defs/bounds" },
+    "classification": { "enum": ["public", "internal", "confidential", "restricted"] },
+    "purpose": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "consentHash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "textId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "versionedId": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "$ref": "#/$defs/id" }, "version": { "$ref": "#/$defs/version" } } },
+    "bounds": { "type": "object", "additionalProperties": false, "required": ["maxCalls", "maxPages", "maxRecords", "maxBytes"], "properties": { "maxCalls": { "type": "integer", "minimum": 1, "maximum": 100 }, "maxPages": { "type": "integer", "minimum": 1, "maximum": 100 }, "maxRecords": { "type": "integer", "minimum": 1, "maximum": 10000 }, "maxBytes": { "type": "integer", "minimum": 1, "maximum": 10485760 } } },
+    "docket": { "type": "object", "additionalProperties": false, "required": ["provider", "adapterVersion", "accountIdentityHash", "selectors", "effect", "scopes", "queryHash", "window", "ceilings", "classification", "sensitivity", "purpose", "expiresAt", "changedRecordDiffHash", "consequences", "authorityBoundary", "choices", "defaultChoice", "cancelEffect"], "properties": { "provider": { "$ref": "#/$defs/versionedId" }, "adapterVersion": { "$ref": "#/$defs/version" }, "accountIdentityHash": { "$ref": "#/$defs/hash" }, "selectors": { "type": "array", "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/textId" } }, "effect": { "const": "provider-call" }, "scopes": { "type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/textId" } }, "queryHash": { "$ref": "#/$defs/hash" }, "window": { "type": "object", "additionalProperties": false, "required": ["from", "to"], "properties": { "from": { "type": "string", "format": "date-time" }, "to": { "type": "string", "format": "date-time" } } }, "ceilings": { "$ref": "#/$defs/bounds" }, "classification": { "enum": ["public", "internal", "confidential", "restricted"] }, "sensitivity": { "enum": ["public", "internal", "confidential", "restricted"] }, "purpose": { "type": "string", "minLength": 1, "maxLength": 512 }, "expiresAt": { "type": "string", "format": "date-time" }, "changedRecordDiffHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }, "consequences": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string", "minLength": 1, "maxLength": 512 } }, "authorityBoundary": { "const": "consent-is-not-access-authority" }, "choices": { "type": "array", "minItems": 2, "maxItems": 2, "prefixItems": [{ "const": "approve" }, { "const": "cancel" }], "items": false }, "defaultChoice": { "const": null }, "cancelEffect": { "const": "none" } } }
+  }
+}

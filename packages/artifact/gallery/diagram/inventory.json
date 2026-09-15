@@ -1,0 +1,743 @@
+{
+  "kind": "openplanr-diagram-gallery-inventory",
+  "schemaVersion": "1.0.0",
+  "grammarCount": 39,
+  "primitiveCount": 10,
+  "grammars": [
+    {
+      "grammarId": "architecture",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/architecture.planr-diagram.json",
+        "digest": "sha256:2bdb8fc82f8c2724f4c9fdfe5f5a2524304263c0918eed70efb24ee04f63ffd3"
+      },
+      "reference": {
+        "path": "references/diagram/architecture.md",
+        "digest": "sha256:034adb3e48dd55dbae904853fb63c49d16cf23a5bac6f7d460c771dbc4bae290"
+      },
+      "rendererContract": {
+        "layoutFamily": "graph",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-architecture"
+    },
+    {
+      "grammarId": "it-current-state",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/it-current-state.planr-diagram.json",
+        "digest": "sha256:95cb11ceea7cc4f93596d775d071467ef45e1cb8a2007dddff2f2185af39ba55"
+      },
+      "reference": {
+        "path": "references/diagram/it-current-state.md",
+        "digest": "sha256:0deac357ea6efeabbb958590f583da9a1f985d5c1b3aa2c3d60cb6779f575021"
+      },
+      "rendererContract": {
+        "layoutFamily": "graph",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-it-current-state"
+    },
+    {
+      "grammarId": "flowchart",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/flowchart.planr-diagram.json",
+        "digest": "sha256:606c5b274eba96becb5ece7e7c838b92e6aa753ddf5fac5c190e17764e075d1f"
+      },
+      "reference": {
+        "path": "references/diagram/flowchart.md",
+        "digest": "sha256:37c677dcab021a015b0d7a41fcff98143b939b75a7a14542027e0253c7778291"
+      },
+      "rendererContract": {
+        "layoutFamily": "graph",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-flowchart"
+    },
+    {
+      "grammarId": "sequence",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/sequence.planr-diagram.json",
+        "digest": "sha256:e6bc120555aac7150524f8e8939b47b213b1407c0da1cb0d278f35e7bba77e53"
+      },
+      "reference": {
+        "path": "references/diagram/sequence.md",
+        "digest": "sha256:a96520bdc5121b43d4d88a142d4e404ec5dd2499ec8deeea604cff2f70693ad1"
+      },
+      "rendererContract": {
+        "layoutFamily": "chronology",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-sequence"
+    },
+    {
+      "grammarId": "state-machine",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/state-machine.planr-diagram.json",
+        "digest": "sha256:e216cf8730afdd9d8778cbc2389471b0f5ddd2644c6bbefe8c70c2a4f53f24d0"
+      },
+      "reference": {
+        "path": "references/diagram/state-machine.md",
+        "digest": "sha256:721dff9f0c5a3fb61a01083c6483a8d1c5b283bbf9749b39a4777fd0aa998786"
+      },
+      "rendererContract": {
+        "layoutFamily": "graph",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-state-machine"
+    },
+    {
+      "grammarId": "er-data-model",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/er-data-model.planr-diagram.json",
+        "digest": "sha256:e9325124a8a92bbe07e3c700344c83f9654ecb1b3ce7ec7d5bbb71a96cecf84a"
+      },
+      "reference": {
+        "path": "references/diagram/er-data-model.md",
+        "digest": "sha256:ee9b9455c089ebeaaba45f53e90fd9e0dcff4bdf60847aae3716841fbdb20ebd"
+      },
+      "rendererContract": {
+        "layoutFamily": "entity",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-er-data-model"
+    },
+    {
+      "grammarId": "timeline",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/timeline.planr-diagram.json",
+        "digest": "sha256:f223933e462b3f548e01f1b5e225f5ea6506abadb9a68f871ec4783fe6c450cb"
+      },
+      "reference": {
+        "path": "references/diagram/timeline.md",
+        "digest": "sha256:3b3783315e92491ffb77c1be0fcca0f54e6c077298f8a6992d1f4e5ab3914473"
+      },
+      "rendererContract": {
+        "layoutFamily": "chronology",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-timeline"
+    },
+    {
+      "grammarId": "swimlane",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/swimlane.planr-diagram.json",
+        "digest": "sha256:3266dbf7a415e54fea0dab9d6bf9354147fdc29b00a0a647cec5c64a8e39702e"
+      },
+      "reference": {
+        "path": "references/diagram/swimlane.md",
+        "digest": "sha256:aa0ab22b052b805743b28b9826fdabb25da262b116ae3905f8ca162c865b5ad5"
+      },
+      "rendererContract": {
+        "layoutFamily": "lanes",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-swimlane"
+    },
+    {
+      "grammarId": "quadrant",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/quadrant.planr-diagram.json",
+        "digest": "sha256:2fe9a0ef51d8f02e966dfbc57788b6c8b29ef447e8e43ec28c53b61c1b44b38d"
+      },
+      "reference": {
+        "path": "references/diagram/quadrant.md",
+        "digest": "sha256:be36a2220d6835cef8f5e0e10059285ef0c8ddc1c61b6aabe05df6c4e54115a1"
+      },
+      "rendererContract": {
+        "layoutFamily": "chart",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-quadrant"
+    },
+    {
+      "grammarId": "radar",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/radar.planr-diagram.json",
+        "digest": "sha256:2f0c12dc514269edd02e74561432369cc966e33fa10f9817fed23bad064d9cb0"
+      },
+      "reference": {
+        "path": "references/diagram/radar.md",
+        "digest": "sha256:c8a5d51a0a4c40c7b37f864a99f346574bf23ef1ae2503aa3d165c20b8604b12"
+      },
+      "rendererContract": {
+        "layoutFamily": "chart",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-radar"
+    },
+    {
+      "grammarId": "polar",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/polar.planr-diagram.json",
+        "digest": "sha256:77f3eb5f1fcf43f342af02969a732987e08690cf05ff67546d6e1afb2a959757"
+      },
+      "reference": {
+        "path": "references/diagram/polar.md",
+        "digest": "sha256:419278767dd04635cf3b28347871b047086fea07ef86365ba3f27a352a1e831f"
+      },
+      "rendererContract": {
+        "layoutFamily": "chart",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-polar"
+    },
+    {
+      "grammarId": "loop-flywheel",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/loop-flywheel.planr-diagram.json",
+        "digest": "sha256:9030fdeb5bcdf581c7103531755076992ce4e112b8b0b489fbbb01333492bdde"
+      },
+      "reference": {
+        "path": "references/diagram/loop-flywheel.md",
+        "digest": "sha256:9ce75f88aab96fc522adbf935cbc4c7093f2b42b40cba9edc691ab77b892b2cf"
+      },
+      "rendererContract": {
+        "layoutFamily": "graph",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-loop-flywheel"
+    },
+    {
+      "grammarId": "nested",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/nested.planr-diagram.json",
+        "digest": "sha256:e8ded9bd9bac2df052acb4dd1a4b175395a25cbc86f1c14b2a042629dd509609"
+      },
+      "reference": {
+        "path": "references/diagram/nested.md",
+        "digest": "sha256:1db15cd84fb9146e2813cbb333cfa1a96f537dedf32b44371eda3f56be0f005f"
+      },
+      "rendererContract": {
+        "layoutFamily": "containment",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-nested"
+    },
+    {
+      "grammarId": "tree",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/tree.planr-diagram.json",
+        "digest": "sha256:175cd801837bd5e96016374bb12ed1c8241ad253660f9d613c99bd63bb3a505d"
+      },
+      "reference": {
+        "path": "references/diagram/tree.md",
+        "digest": "sha256:823fd93c143f635dcfd1a0925cfa205f61b616df57b6add517bea2950553aae5"
+      },
+      "rendererContract": {
+        "layoutFamily": "hierarchy",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-tree"
+    },
+    {
+      "grammarId": "org-chart",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/org-chart.planr-diagram.json",
+        "digest": "sha256:db54d20c13fd6f84aa83732ff996791202615f7d3528075b8dac3f2b6dcb8961"
+      },
+      "reference": {
+        "path": "references/diagram/org-chart.md",
+        "digest": "sha256:008e6c07773d9b78af23122a476ea8a92a09df5614c906a277c00438c351829f"
+      },
+      "rendererContract": {
+        "layoutFamily": "hierarchy",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-org-chart"
+    },
+    {
+      "grammarId": "layer-stack",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/layer-stack.planr-diagram.json",
+        "digest": "sha256:008f4dbd148ac28ffb2c8ff42ffcdf77c6d6fe57b37696b905044810cb40c6c9"
+      },
+      "reference": {
+        "path": "references/diagram/layer-stack.md",
+        "digest": "sha256:85f3ac9d37fb87c79cffe796f72771539e27eed171d5bd0a448fff6b88f974a7"
+      },
+      "rendererContract": {
+        "layoutFamily": "hierarchy",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-layer-stack"
+    },
+    {
+      "grammarId": "venn",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/venn.planr-diagram.json",
+        "digest": "sha256:6564a2276209356af0fc01b59494115b8b82a0ad4b9fd34bb219807f203a569a"
+      },
+      "reference": {
+        "path": "references/diagram/venn.md",
+        "digest": "sha256:b148e9acd422f43cedd3c13c6b9385ce2d5cc0f2ce3c5c88ea8529beb70bb538"
+      },
+      "rendererContract": {
+        "layoutFamily": "containment",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-venn"
+    },
+    {
+      "grammarId": "pyramid-funnel",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/pyramid-funnel.planr-diagram.json",
+        "digest": "sha256:ffb4a02f6e89aca4d89716a2438e0fcce3ad2b8c987cc96e623613f4f6ddee4c"
+      },
+      "reference": {
+        "path": "references/diagram/pyramid-funnel.md",
+        "digest": "sha256:490a9fde108319623e6d7724f8107119b3953984990bcbd1a89faa76d174339a"
+      },
+      "rendererContract": {
+        "layoutFamily": "hierarchy",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-pyramid-funnel"
+    },
+    {
+      "grammarId": "bar",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/bar.planr-diagram.json",
+        "digest": "sha256:18c0be3867520115cf7baaf310a5a4a3d73801792cc886a9db1117072419eb5e"
+      },
+      "reference": {
+        "path": "references/diagram/bar.md",
+        "digest": "sha256:3eab1ab786e891361f36ad1b73f03931d30ede3187c9e762ba6c253400c03a46"
+      },
+      "rendererContract": {
+        "layoutFamily": "chart",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-bar"
+    },
+    {
+      "grammarId": "treemap",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/treemap.planr-diagram.json",
+        "digest": "sha256:f76290f3ae146c63df275a4e73012c13ae4013d21c6a71a9877d4e3fe66d78f2"
+      },
+      "reference": {
+        "path": "references/diagram/treemap.md",
+        "digest": "sha256:07b232fceef8e8f6e67a8f69117f9141eb3336a81369d2aaa5ff77cc39ce72f6"
+      },
+      "rendererContract": {
+        "layoutFamily": "containment",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-treemap"
+    },
+    {
+      "grammarId": "line",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/line.planr-diagram.json",
+        "digest": "sha256:dd79a916212d532bbc974567ce5ca37feb834d5884559e3c5ebe31a86e73b67d"
+      },
+      "reference": {
+        "path": "references/diagram/line.md",
+        "digest": "sha256:ff2e5d3273c4f0bc91bde2d1015b9502d26339d79e46b1e290e9e67ea3fa384a"
+      },
+      "rendererContract": {
+        "layoutFamily": "chart",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-line"
+    },
+    {
+      "grammarId": "gantt",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/gantt.planr-diagram.json",
+        "digest": "sha256:3be3d4fa28467da14718fedae66b3bc7b0ad75cefa73c781be4249b2925410c3"
+      },
+      "reference": {
+        "path": "references/diagram/gantt.md",
+        "digest": "sha256:5f9c193cafbdf01da9a64235348950375d0af51999b785c19c60bb8e889e9c02"
+      },
+      "rendererContract": {
+        "layoutFamily": "chronology",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-gantt"
+    },
+    {
+      "grammarId": "scatter",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/scatter.planr-diagram.json",
+        "digest": "sha256:d05238445b95b5c6f175ce2017fffdf8707ad97fcf45dfc1d3cb78d47f9d8f8c"
+      },
+      "reference": {
+        "path": "references/diagram/scatter.md",
+        "digest": "sha256:16ffd416c56aaa0d1baa48d73716e60ef9582ce213e5dd40523992d74995ed64"
+      },
+      "rendererContract": {
+        "layoutFamily": "chart",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-scatter"
+    },
+    {
+      "grammarId": "high-level",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/high-level.planr-diagram.json",
+        "digest": "sha256:4056945f2fe29b4a3a09c1afe864c5df4e4d41022802c2e77f1eb6c2a79994b7"
+      },
+      "reference": {
+        "path": "references/diagram/high-level.md",
+        "digest": "sha256:1686ffa684b741afcde867dece67a2c74e32977df5c2bf7e0aaac1c15e85449d"
+      },
+      "rendererContract": {
+        "layoutFamily": "graph",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-high-level"
+    },
+    {
+      "grammarId": "process",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/process.planr-diagram.json",
+        "digest": "sha256:986257314048fa36a24ce718d3961f0349fb5b57be28322494dffbf534cc8084"
+      },
+      "reference": {
+        "path": "references/diagram/process.md",
+        "digest": "sha256:b182bfa757a663c39692d0f8581adf8f8f5a95336bdfa336c32ff2f45ec4612e"
+      },
+      "rendererContract": {
+        "layoutFamily": "lanes",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-process"
+    },
+    {
+      "grammarId": "medallion",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/medallion.planr-diagram.json",
+        "digest": "sha256:5b6e00a5aaf0be9fc25e3a74f5f6ab8a7bb473d18e938a04db57a298e3304428"
+      },
+      "reference": {
+        "path": "references/diagram/medallion.md",
+        "digest": "sha256:e8e8e381879e2eff522a0252629ad378005e6e95594a2fbe5d392e5f3adc2ff4"
+      },
+      "rendererContract": {
+        "layoutFamily": "hierarchy",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-medallion"
+    },
+    {
+      "grammarId": "data-flow",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/data-flow.planr-diagram.json",
+        "digest": "sha256:cf4243cc1dcda6830a5cbdb967e1a8d8fada263aac142e0275c07c29e2667f39"
+      },
+      "reference": {
+        "path": "references/diagram/data-flow.md",
+        "digest": "sha256:3e0bff0492b53b89095ffb41ce7959139cf71f6c699e51e617025ff93bf51e1c"
+      },
+      "rendererContract": {
+        "layoutFamily": "graph",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-data-flow"
+    },
+    {
+      "grammarId": "dp-integration",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/dp-integration.planr-diagram.json",
+        "digest": "sha256:17697390d1b2a3f0188a33c5f67568e8a31478cb1047f22243656fc02188ca02"
+      },
+      "reference": {
+        "path": "references/diagram/dp-integration.md",
+        "digest": "sha256:22de5a3c853718e4a4e3e409684defd52b9badd694529aafd397075c757dd156"
+      },
+      "rendererContract": {
+        "layoutFamily": "graph",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-dp-integration"
+    },
+    {
+      "grammarId": "dp-security-matrix",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/dp-security-matrix.planr-diagram.json",
+        "digest": "sha256:23eb42d787abfd7f0a99e1bd7bc2557053e13ae7eb2db4c24a3ccbec5b635aa7"
+      },
+      "reference": {
+        "path": "references/diagram/dp-security-matrix.md",
+        "digest": "sha256:dba45b315ec8ede74f87d5703552267d825e13380365237ebab98718f4ba8308"
+      },
+      "rendererContract": {
+        "layoutFamily": "lanes",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-dp-security-matrix"
+    },
+    {
+      "grammarId": "sankey",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/sankey.planr-diagram.json",
+        "digest": "sha256:5d774f8a9f71d8ed02cd3c715a431b6ae4f69d9a57942e3fa095171eb779e9d8"
+      },
+      "reference": {
+        "path": "references/diagram/sankey.md",
+        "digest": "sha256:5d142922417867cce76003da041a065ef79e73dc460233ef622f7fa0cbde0ff6"
+      },
+      "rendererContract": {
+        "layoutFamily": "sankey",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-sankey"
+    },
+    {
+      "grammarId": "fishbone",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/fishbone.planr-diagram.json",
+        "digest": "sha256:144f1a39a4bb1ff677bde0a1cfea485192d2669e891463783ac95af7acd6026b"
+      },
+      "reference": {
+        "path": "references/diagram/fishbone.md",
+        "digest": "sha256:e402210242cc220daab60e36b2ba3c843df972ad450470193fbb8f79392a94ce"
+      },
+      "rendererContract": {
+        "layoutFamily": "cause-effect",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-fishbone"
+    },
+    {
+      "grammarId": "wardley",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/wardley.planr-diagram.json",
+        "digest": "sha256:020346b6fb87209ad1e7caebc82bf57ff411449c6ffcf46babec14958ac292f1"
+      },
+      "reference": {
+        "path": "references/diagram/wardley.md",
+        "digest": "sha256:8d49bfd03c98839b8e96e355478b9dfff919479b1c69d024c3da5d1a17ad642c"
+      },
+      "rendererContract": {
+        "layoutFamily": "wardley",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-wardley"
+    },
+    {
+      "grammarId": "kanban",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/kanban.planr-diagram.json",
+        "digest": "sha256:75c7028dc8e2ade1c33fc8aa891da281e88b84ba66dd7a0625f7f9122d383bcb"
+      },
+      "reference": {
+        "path": "references/diagram/kanban.md",
+        "digest": "sha256:f7ca871e783a1f2f58482e6d4cf3b0a97c36d53aba8042c04939a1bbfb2f85ba"
+      },
+      "rendererContract": {
+        "layoutFamily": "lanes",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-kanban"
+    },
+    {
+      "grammarId": "user-journey",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/user-journey.planr-diagram.json",
+        "digest": "sha256:e6ef2d6bfcd209b922cd759302eb7fc1f5204076a3e4f47212e13787b4cb7db0"
+      },
+      "reference": {
+        "path": "references/diagram/user-journey.md",
+        "digest": "sha256:e3e71fc464a17a154bdea32658834ddd9b6593250b46f3f517354151dc8e1da7"
+      },
+      "rendererContract": {
+        "layoutFamily": "lanes",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-user-journey"
+    },
+    {
+      "grammarId": "deployment",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/deployment.planr-diagram.json",
+        "digest": "sha256:1a6ae944c125d12fe508e5a09e23497085ed610dba156e18e13086932b32a3c2"
+      },
+      "reference": {
+        "path": "references/diagram/deployment.md",
+        "digest": "sha256:71b34dc5ab37ef9ccd2247c27d363f9840e0b6f18c97e6e6b041c3e0e41c2482"
+      },
+      "rendererContract": {
+        "layoutFamily": "containment",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-deployment"
+    },
+    {
+      "grammarId": "dependency-graph",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/dependency-graph.planr-diagram.json",
+        "digest": "sha256:2e20b2bc62f33324c16cd01af7d808e6c35a25ec676d8bb31731ca90c6e4fdc1"
+      },
+      "reference": {
+        "path": "references/diagram/dependency-graph.md",
+        "digest": "sha256:9cf88ca6c950aa6a04f41061dcc37fa55040d652176513fa4295e49440bff338"
+      },
+      "rendererContract": {
+        "layoutFamily": "graph",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-dependency-graph"
+    },
+    {
+      "grammarId": "uml-class",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/uml-class.planr-diagram.json",
+        "digest": "sha256:d80be73799fe13f60d55ed3194f7b4411463c223424566083d3504ef2f01102f"
+      },
+      "reference": {
+        "path": "references/diagram/uml-class.md",
+        "digest": "sha256:e9e4c4937f1d2f874347cd4280dd6a8bbcb320e0be9eab00d95369311079c25b"
+      },
+      "rendererContract": {
+        "layoutFamily": "entity",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-uml-class"
+    },
+    {
+      "grammarId": "story-map",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/story-map.planr-diagram.json",
+        "digest": "sha256:a374522ce5a3d83e33eb122dc8e5f7b8246fe06991373f8ec65bc0df5ebca147"
+      },
+      "reference": {
+        "path": "references/diagram/story-map.md",
+        "digest": "sha256:928c63b4dc79716f1459cb2d62c54c75faa41d6fc04f7c3fc2c711c414891d45"
+      },
+      "rendererContract": {
+        "layoutFamily": "lanes",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-story-map"
+    },
+    {
+      "grammarId": "database-schema",
+      "fixture": {
+        "path": "fixtures/diagram/grammars/database-schema.planr-diagram.json",
+        "digest": "sha256:0cf44f760dba59cc4650fdfb972bdcd73c3b00e1ea9f5d0f62206600b7799e8d"
+      },
+      "reference": {
+        "path": "references/diagram/database-schema.md",
+        "digest": "sha256:b11ddff4fd62bb56ecc8b9cda94b1e9ce3f413dbda93a5d1e6e66022820e0fb8"
+      },
+      "rendererContract": {
+        "layoutFamily": "entity",
+        "contractVersion": "1.0.0",
+        "staticByDefault": true
+      },
+      "galleryCardId": "grammar-database-schema"
+    }
+  ],
+  "primitives": [
+    {
+      "primitive": "node",
+      "grammarId": "flowchart",
+      "path": "fixtures/diagram/primitives/node.json",
+      "digest": "sha256:1739040191cfe7d81943da184e70d3a5c278a34a2560942ac04e9cd043289fff",
+      "galleryCardId": "primitive-node"
+    },
+    {
+      "primitive": "relation",
+      "grammarId": "flowchart",
+      "path": "fixtures/diagram/primitives/relation.json",
+      "digest": "sha256:daa4bd9ca827158d8d8d669492f101a462f8770f622ffa3c9d0ee99be9d33624",
+      "galleryCardId": "primitive-relation"
+    },
+    {
+      "primitive": "group",
+      "grammarId": "nested",
+      "path": "fixtures/diagram/primitives/group.json",
+      "digest": "sha256:d47e47d653137286b447a08a0815259fa85bdafccc897562fecf05d49f3c9fdc",
+      "galleryCardId": "primitive-group"
+    },
+    {
+      "primitive": "lane",
+      "grammarId": "swimlane",
+      "path": "fixtures/diagram/primitives/lane.json",
+      "digest": "sha256:1264e7ee8f461acb2229ba03dc8d865db50a799a6aedce999c92260f8231fd8f",
+      "galleryCardId": "primitive-lane"
+    },
+    {
+      "primitive": "event",
+      "grammarId": "timeline",
+      "path": "fixtures/diagram/primitives/event.json",
+      "digest": "sha256:b6c29aaec8a87f32abf747bbaa615996fd3eedda9e96b25732dbd94a96d8af87",
+      "galleryCardId": "primitive-event"
+    },
+    {
+      "primitive": "series",
+      "grammarId": "bar",
+      "path": "fixtures/diagram/primitives/series.json",
+      "digest": "sha256:9d28accbf388ecca63b3c014f2b2c7255b8af47ce8d84bafc6f3a3783ece42c2",
+      "galleryCardId": "primitive-series"
+    },
+    {
+      "primitive": "axis",
+      "grammarId": "bar",
+      "path": "fixtures/diagram/primitives/axis.json",
+      "digest": "sha256:254053128bbd2851a243d2ebedb2179ce32428c39d7e1ccd1835457dde6feb15",
+      "galleryCardId": "primitive-axis"
+    },
+    {
+      "primitive": "set",
+      "grammarId": "venn",
+      "path": "fixtures/diagram/primitives/set.json",
+      "digest": "sha256:474e5a38e942c9952bcd3ce4893a1c31102b18fe752de5fa0fcb0d78727f985c",
+      "galleryCardId": "primitive-set"
+    },
+    {
+      "primitive": "annotation",
+      "grammarId": "architecture",
+      "path": "fixtures/diagram/primitives/annotation.json",
+      "digest": "sha256:a5e5c07d53edc58d1f3cc7385773e11b265b0546ec4849e645f353a2e5b6a53a",
+      "galleryCardId": "primitive-annotation"
+    },
+    {
+      "primitive": "emphasis",
+      "grammarId": "architecture",
+      "path": "fixtures/diagram/primitives/emphasis.json",
+      "digest": "sha256:df216f7cad6ccd15937f795547711b17c01b2bb181f12f36dcce3376d8bff8b3",
+      "galleryCardId": "primitive-emphasis"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "kind": "openplanr-contribution-manifest",
+  "schemaVersion": "1.0.0",
+  "id": "planr-example",
+  "version": "0.1.0",
+  "owner": "packages/skill-runtime",
+  "protocolContracts": [],
+  "generatedTargets": [],
+  "preservationClass": "generated"
+}

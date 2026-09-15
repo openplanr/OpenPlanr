@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.6.0/diagram-quality-report.schema.json",
+  "x-openplanr-contract": {
+    "id": "diagram-quality-report",
+    "version": "1.6.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "diagramId",
+    "status",
+    "checks",
+    "splitPlan"
+  ],
+  "properties": {
+    "kind": {
+      "const": "diagram-quality-report"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.6.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "diagramId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "maxLength": 128
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "warning",
+        "split-required",
+        "invalid"
+      ]
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "status",
+          "message"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "status": {
+            "enum": [
+              "pass",
+              "warning",
+              "fail"
+            ]
+          },
+          "message": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 128
+    },
+    "splitPlan": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "strategy",
+            "panels"
+          ],
+          "properties": {
+            "strategy": {
+              "enum": [
+                "by-group",
+                "by-lane",
+                "by-sequence",
+                "by-subgraph"
+              ]
+            },
+            "panels": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "title",
+                  "itemIds"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                    "maxLength": 128
+                  },
+                  "title": {
+                    "$ref": "common.schema.json#/$defs/nonBlankText"
+                  },
+                  "itemIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                      "maxLength": 128
+                    },
+                    "minItems": 1,
+                    "maxItems": 256,
+                    "uniqueItems": true
+                  }
+                }
+              },
+              "minItems": 2,
+              "maxItems": 32
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,59 @@
+/* Planning · List: toolbar, then the table; rows open the global inspector. */
+
+.op-planning.pc-list {
+  gap: 0;
+}
+
+.pc-list .pc-toolbar-bar {
+  margin: 0;
+}
+
+.pc-list__surface {
+  display: grid;
+  gap: var(--pc-space-2);
+  margin-top: var(--pc-space-3);
+  padding: var(--pc-space-2);
+  overflow: hidden;
+  background: var(--pc-surface-panel);
+  border: 1px solid var(--pc-border-default);
+  border-radius: var(--pc-radius-md);
+}
+
+.pc-list__note {
+  font: var(--pc-type-mono-sm);
+  color: var(--pc-text-tertiary);
+}
+
+.pc-list__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pc-space-3);
+  min-height: 44px;
+  padding: var(--pc-space-2) var(--pc-space-3);
+  background: var(--pc-surface-card);
+  border: 1px solid var(--pc-border-default);
+  border-radius: var(--pc-radius-sm);
+}
+
+.pc-list__page-status {
+  font: var(--pc-type-body-sm);
+  color: var(--pc-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pc-list__page-actions {
+  display: flex;
+  gap: var(--pc-space-2);
+}
+
+@media (max-width: 560px) {
+  .pc-list__pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pc-list__page-actions {
+    justify-content: space-between;
+  }
+}

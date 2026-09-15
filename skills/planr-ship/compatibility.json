@@ -1,0 +1,11 @@
+{
+  "kind": "openplanr-skill-migration-declaration",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-ship",
+  "baseline": "SKILL.md",
+  "successor": "skill.json",
+  "classification": "intentional",
+  "intendedChanges": [
+    "Define local implementation completion, deterministic verification discovery, risk-directed checks, overlap-safe execution, concise rendering, and the Planr Land transition."
+  ]
+}

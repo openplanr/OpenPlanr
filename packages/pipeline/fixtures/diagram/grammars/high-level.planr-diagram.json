@@ -1,0 +1,63 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "high-level-fixture",
+  "title": "High-level system view fixture",
+  "summary": "Canonical semantic fixture for the high-level system view grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "high-level",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "High-level system view A",
+      "kind": "primary-item",
+      "description": "First semantic item in the high-level system view fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "High-level system view B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the high-level system view fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [],
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "High-level system view fixture",
+    "description": "A compact high-level system view example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:35bdfa4d649f016a27f9d06852ca80f7215d3c27cf66d60d5b02121a71b22996"
+}

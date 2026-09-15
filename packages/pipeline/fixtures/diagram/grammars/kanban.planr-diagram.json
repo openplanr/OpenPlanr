@@ -1,0 +1,72 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "kanban-fixture",
+  "title": "Kanban fixture",
+  "summary": "Canonical semantic fixture for the kanban grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "kanban",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Kanban A",
+      "kind": "primary-item",
+      "description": "First semantic item in the kanban fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "Kanban B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the kanban fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [],
+  "groups": [],
+  "lanes": [
+    {
+      "id": "lane-main",
+      "label": "Primary lane",
+      "members": [
+        "item-a",
+        "item-b"
+      ]
+    }
+  ],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Kanban fixture",
+    "description": "A compact kanban example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:816b83d10b1740cc39b0b26cbaebc574d0201695205aabe748d3e37c4f60fc56"
+}

@@ -1,0 +1,11 @@
+{
+  "kind": "openplanr-skill-migration-declaration",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-status",
+  "baseline": "SKILL.md",
+  "successor": "skill.json",
+  "classification": "intentional",
+  "intendedChanges": [
+    "Clarified status selection for done, pending, blocked, and next-work questions."
+  ]
+}

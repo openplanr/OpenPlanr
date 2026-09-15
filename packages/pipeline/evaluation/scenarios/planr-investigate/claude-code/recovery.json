@@ -1,0 +1,52 @@
+{
+  "kind": "evaluation-scenario",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.4.0",
+  "scenarioId": "esc_29553d1a726112bacf31de0d5a6bb63aa63cedc9e008093e109029ff71d16853",
+  "scenarioDigest": "sha256:29553d1a726112bacf31de0d5a6bb63aa63cedc9e008093e109029ff71d16853",
+  "title": "planr-investigate recovery journey on claude-code",
+  "intent": "The skill must invoke and resume from durable state after stale input, a conflicting identity, and a restart.",
+  "skill": {
+    "id": "planr-investigate",
+    "version": "1.0.0"
+  },
+  "hostProfileRef": {
+    "hostProfileId": "ehp_926364f7fe15acefa31b8273fd9bcad3",
+    "hostProfileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0"
+  },
+  "promptClass": "positive",
+  "expectedTrigger": {
+    "outcome": "invoke",
+    "rationale": "The prompt names the declared work and adds durable resumption, so the skill still invokes."
+  },
+  "declaredPermissions": [
+    {
+      "capability": "file-read",
+      "decision": "granted"
+    },
+    {
+      "capability": "file-write",
+      "decision": "granted"
+    },
+    {
+      "capability": "command-execute",
+      "decision": "granted"
+    },
+    {
+      "capability": "network",
+      "decision": "denied"
+    }
+  ],
+  "riskClass": "local-write",
+  "fixtureRefs": [
+    {
+      "fixtureId": "efx_8f96be6d2d5e01407fe8533709ddb69e955f8eebd6d78f6a83fdad29cf095081",
+      "contentDigest": "sha256:f48e65c89494bd90ecfa511d01f446f8e716d38c45b40531a64d7016e5de52c4",
+      "role": "prompt"
+    }
+  ],
+  "budgetRef": {
+    "budgetId": "ebg_ab599b6434d21be4ca9100655147859e",
+    "budgetDigest": "sha256:ab599b6434d21be4ca9100655147859ea7d7015710797231fb73c48af8b02dee"
+  }
+}

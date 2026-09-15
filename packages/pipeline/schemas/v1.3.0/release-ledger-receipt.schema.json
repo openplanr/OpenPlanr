@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.3.0/release-ledger-receipt.schema.json",
+  "title": "OpenPlanr release ledger verification receipt",
+  "x-openplanr-contract": { "id": "release-ledger-receipt", "version": "1.3.0" },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "recordType", "authority", "issuedAt", "ledgerDigest", "claimSetDigest", "result", "refusals", "receiptId", "receiptDigest"],
+  "properties": {
+    "kind": { "const": "release-ledger-receipt" },
+    "schemaVersion": { "const": "1.3.0" },
+    "recordType": { "const": "verification" },
+    "authority": { "const": "none" },
+    "issuedAt": { "type": "string", "format": "date-time" },
+    "ledgerDigest": { "$ref": "#/$defs/digest" },
+    "claimSetDigest": { "$ref": "#/$defs/digest" },
+    "result": { "enum": ["verified", "refused"] },
+    "refusals": { "type": "array", "maxItems": 64, "uniqueItems": true, "items": { "$ref": "#/$defs/refusal" } },
+    "receiptId": { "type": "string", "pattern": "^rlr_[a-f0-9]{32}$" },
+    "receiptDigest": { "$ref": "#/$defs/digest" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "result": { "const": "verified" } }, "required": ["result"] },
+      "then": { "properties": { "refusals": { "maxItems": 0 } } }
+    },
+    {
+      "if": { "properties": { "result": { "const": "refused" } }, "required": ["result"] },
+      "then": { "properties": { "refusals": { "minItems": 1 } } }
+    }
+  ],
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "refusal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "repositoryKey", "reason"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^E_RELEASE_LEDGER_[A-Z_]+$" },
+        "repositoryKey": { "oneOf": [{ "const": null }, { "enum": ["pipeline", "web", "cli", "skills", "marketplace"] }] },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 512 }
+      }
+    }
+  }
+}

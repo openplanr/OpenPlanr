@@ -1,0 +1,72 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "swimlane-fixture",
+  "title": "Swimlane fixture",
+  "summary": "Canonical semantic fixture for the swimlane grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "swimlane",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Swimlane A",
+      "kind": "primary-item",
+      "description": "First semantic item in the swimlane fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "Swimlane B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the swimlane fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [],
+  "groups": [],
+  "lanes": [
+    {
+      "id": "lane-main",
+      "label": "Primary lane",
+      "members": [
+        "item-a",
+        "item-b"
+      ]
+    }
+  ],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Swimlane fixture",
+    "description": "A compact swimlane example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:b4f35c71bd1748a482a8e536089c71acb25e4d71b36e5ff61667d5d9bce25d42"
+}

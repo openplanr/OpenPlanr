@@ -1,0 +1,193 @@
+{
+  "operate-experience-view": {
+    "kind": "operate-experience-view", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0", "viewId": "xview_00000001",
+    "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0", "actorId": "owner-001", "accessLevel": "internal",
+    "generatedAt": "2026-08-11T08:00:00Z", "eventHead": { "sequence": 1, "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+    "sourceStateHash": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "status": "ready",
+    "attention": [], "domainMetrics": [], "cycles": [], "inbox": [], "actions": [], "evidence": [], "claims": [], "rationale": [], "outcomes": [], "learnings": [], "history": [],
+    "replay": { "checkpoint": null, "tail": { "startSequence": 1, "endSequence": 1, "eventCount": 1, "eventReplayIndexHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333" }, "finalHead": { "sequence": 1, "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" }, "liveAccessUsed": false, "parityProof": { "sourceStateHash": "sha256:2222222222222222222222222222222222222222222222222222222222222222", "eventReplayIndexHash": "sha256:3333333333333333333333333333333333333333333333333333333333333333", "checkpointVerified": false, "finalEventHashMatches": true, "stateParityVerified": false }, "filterDimensions": ["cycle", "action", "decision", "actor", "operation", "result", "event-type", "date"], "redactions": [] },
+    "allowedActions": [], "omissions": [],
+    "export": { "formats": ["json", "html"], "accessSafe": true, "redactionCount": 0 },
+    "viewHash": "sha256:c04a3b2fb75c3ccfdb1ac3d9932003b45612f0eee3060b23aa3b0d41118849ff"
+  },
+  "operate-review-display-workspace": {
+    "kind": "operate-review-display-workspace",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "payload": {
+      "ok": true,
+      "kind": "operate-review-workspace",
+      "schemaVersion": "1.0.0",
+      "protocolVersion": "2.0.0",
+      "readOnly": true,
+      "mutationEnabled": false,
+      "scopeId": "scope-acme",
+      "domainId": "business",
+      "domainVersion": "1.0.0",
+      "cycleId": "cyc_00000001",
+      "reviewId": "rev_00000001",
+      "actorId": "owner-001",
+      "accessLevel": "internal",
+      "generatedAt": "2026-08-11T08:02:00Z",
+      "sourceArtifactKind": "operating-review-receipt",
+      "sourceArtifactHash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "sourceEventHead": { "sequence": 2, "hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222" },
+      "sourceReadEventHead": { "sequence": 1, "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+      "sourceViewHash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "status": "terminal",
+      "reasonCodes": ["REVIEW_TERMINAL"],
+      "data": {
+        "review": {
+          "kind": "operating-review", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0",
+          "reviewId": "rev_00000001", "cycleId": "cyc_00000001", "ownerActorId": "owner-001",
+          "state": "approved", "disposition": "approved", "workDispositions": [],
+          "createdAt": "2026-08-11T08:00:00Z", "updatedAt": "2026-08-11T08:02:00Z"
+        },
+        "policyBinding": {
+          "sourceContract": { "id": "operating-review", "version": "2.0.0" },
+          "ownerActorId": "owner-001", "actorMatchesOwner": true,
+          "authorityBoundary": "review-only", "externalEffectsAuthorized": false
+        },
+        "executiveSummary": {
+          "text": "The exact advertised approval disposition was committed.",
+          "decisionCount": 0, "actionCount": 0, "findingCount": 0, "dissentCount": 0,
+          "gapCount": 0, "uncertaintyCount": 0
+        },
+        "recommendation": {
+          "status": "absent", "items": [],
+          "absence": { "code": "REVIEW_RECOMMENDATION_ABSENT", "message": "No Chair recommendation is available." }
+        },
+        "choices": [], "findings": [], "dissent": [], "uncertainty": [], "gaps": [],
+		"claims": [], "evidence": [], "omissions": [], "traceMatrix": null,
+        "truthSummary": {
+          "kind": "operate-shared-truth-summary", "schemaVersion": "1.0.0",
+          "sourceEventHead": { "sequence": 2, "hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222" },
+          "sourceViewHash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "stages": {
+            "cycles": 0, "total": 0, "complete": 0, "current": 0, "available": 0,
+            "waiting": 0, "blocked": 0, "failed": 0, "skipped": 0, "uncertain": 0, "revisited": 0,
+            "byStage": [
+              { "id": "observe", "complete": 0, "current": 0, "available": 0, "waiting": 0, "blocked": 0, "failed": 0, "skipped": 0, "uncertain": 0, "revisited": 0 },
+              { "id": "understand", "complete": 0, "current": 0, "available": 0, "waiting": 0, "blocked": 0, "failed": 0, "skipped": 0, "uncertain": 0, "revisited": 0 },
+              { "id": "decide", "complete": 0, "current": 0, "available": 0, "waiting": 0, "blocked": 0, "failed": 0, "skipped": 0, "uncertain": 0, "revisited": 0 },
+              { "id": "govern", "complete": 0, "current": 0, "available": 0, "waiting": 0, "blocked": 0, "failed": 0, "skipped": 0, "uncertain": 0, "revisited": 0 },
+              { "id": "act", "complete": 0, "current": 0, "available": 0, "waiting": 0, "blocked": 0, "failed": 0, "skipped": 0, "uncertain": 0, "revisited": 0 },
+              { "id": "verify", "complete": 0, "current": 0, "available": 0, "waiting": 0, "blocked": 0, "failed": 0, "skipped": 0, "uncertain": 0, "revisited": 0 },
+              { "id": "learn", "complete": 0, "current": 0, "available": 0, "waiting": 0, "blocked": 0, "failed": 0, "skipped": 0, "uncertain": 0, "revisited": 0 }
+            ]
+          },
+          "proof": { "status": "not-required", "linkedEvidence": 0, "restrictedEvidence": 0, "resolvedClaims": 0, "unresolvedClaims": 0, "verifiedOutcomes": 0, "unverifiedOutcomes": 0, "reasonCodes": [] },
+          "seats": { "total": 0, "terminal": 0, "validated": 0, "rejected": 0, "failed": 0, "abandoned": 0, "active": 0, "pending": 0, "typedAbsences": 0 },
+          "evidence": { "total": 0, "available": 0, "restricted": 0, "current": 0, "historical": 0, "stale": 0, "linked": 0, "omitted": 0 },
+          "claims": { "total": 0, "supported": 0, "contradicted": 0, "uncertain": 0, "unknown": 0, "restricted": 0 },
+          "verification": { "total": 0, "verified": 0, "unverified": 0, "notRequired": 0, "insufficientEvidence": 0 },
+          "attention": { "total": 0, "blocking": 0, "actionable": 0, "unavailable": 0 },
+          "omissions": { "total": 0, "restricted": 0, "absent": 0, "reasonCodes": [] }
+        },
+        "terminalDisposition": {
+          "receiptId": "rrc_00000001", "decision": "approved",
+          "appliedChoiceId": "rch_00000001",
+          "appliedChoiceHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "appliedWorkDispositions": [],
+          "readEventHead": { "sequence": 1, "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+          "eventHead": { "sequence": 2, "hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222" },
+          "committedAt": "2026-08-11T08:02:00Z"
+        },
+        "capability": {
+          "available": false, "actions": [],
+          "reason": { "code": "REVIEW_TERMINAL", "message": "This Review is terminal." }
+        }
+      }
+    },
+    "integrity": {
+      "algorithm": "sha-256-jcs",
+      "domain": "openplanr:operate-review-display-workspace:1.0.0",
+      "sourceArtifactKind": "operating-review-receipt",
+      "sourceViewHash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "sourceArtifactHash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "contentHash": "sha256:a540a050de25bad0439decf4367466fd6d9ceafe6450dc893507c51089864b16"
+    }
+  },
+  "operate-review-bound-submission": {
+    "kind": "operate-review-bound-submission",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "expectedReadEventHead": { "sequence": 1, "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+    "choiceId": "rch_3dce60de5c58064233d03ab9",
+    "choiceHash": "sha256:3dce60de5c58064233d03ab9de5558730b38d88f745679054db00e4eec8cc1f3",
+    "submitArguments": {
+      "reviewId": "rev_00000001", "cycleId": "cyc_00000001",
+      "actor": { "actorId": "owner-001", "kind": "human", "runtime": "portable" },
+      "scope": { "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0" },
+      "disposition": "approved", "workDispositions": []
+    },
+    "note": null,
+    "boundSubmissionHash": "sha256:462119a09faa5af6d2ed46dd27bc86e1f3d8ac5d58b86c0d138509d72052ff3b"
+  },
+  "operate-experience-live-patch": {
+    "kind": "operate-experience-live-patch", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0", "patchId": "xpatch_00000001",
+    "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0", "actorId": "owner-001",
+    "fromEventHead": { "sequence": 1, "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+    "toEventHead": { "sequence": 2, "hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222" },
+    "fromViewHash": "sha256:fab5c0d4847ab71cb37b11931d83ee981fbb75f1b350e67aa8d1d94084c643b2", "toViewHash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "operations": [], "createdAt": "2026-08-11T08:01:00Z", "patchHash": "sha256:25fdebf07a4f821a23691a51421e1f7ef8fbebbf48edb72be7c37e1949c4e724"
+  },
+  "operate-experience-preview": {
+    "kind": "operate-experience-preview", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0", "previewId": "xprv_00000001",
+    "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0", "actorId": "owner-001",
+    "subject": { "kind": "cycle", "id": "cyc_00000001", "revision": null, "hash": "sha256:1818181818181818181818181818181818181818181818181818181818181818" },
+    "eventHead": { "sequence": 1, "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+    "sourceViewHash": "sha256:c04a3b2fb75c3ccfdb1ac3d9932003b45612f0eee3060b23aa3b0d41118849ff",
+    "actionDigest": "sha256:06b14bf0d465ad4136a87b32a4f69fb57a032d7732b8d486ded7d0fe73b1b95e",
+    "allowedAction": { "tool": "operate.cycle.get", "arguments": { "cycleId": "cyc_00000001" }, "label": "Inspect the cycle", "effect": "read-only" },
+    "authority": "read-only", "consequence": "No project or external state changes.", "reasonCodes": ["READ_ONLY"],
+    "transition": { "kind": "execution", "targets": [{ "kind": "cycle", "id": "cyc_00000001", "revision": null, "hash": "sha256:1818181818181818181818181818181818181818181818181818181818181818", "disposition": "dispatching" }], "reversible": false, "nextState": "dispatching", "threshold": null },
+    "issuedAt": "2026-08-11T08:00:00Z", "expiresAt": "2026-08-11T08:05:00Z", "previewHash": "sha256:86eab2b7d5990a10aad0b6a79e59c941144d0596129317f7b17ae84e7587ea33"
+  },
+  "operating-delivery-route": {
+    "kind": "operating-delivery-route", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0", "routeId": "droute_00000001",
+    "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0",
+    "action": { "actionId": "act_00000001", "revision": 1, "actionHash": "sha256:7777777777777777777777777777777777777777777777777777777777777777" },
+    "eventHead": { "sequence": 1, "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+    "route": "planning-work", "rationale": "The approved Action requires repository Planning work.", "createdAt": "2026-08-11T08:00:00Z", "routeHash": "sha256:a42a311157e14e503ae653ae751bc9fa654e52c1cc1f372c5b8a9d904839d4d9"
+  },
+  "operating-planning-proposal": {
+    "kind": "operating-planning-proposal", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0", "proposalId": "oprop_00000001", "correlationId": "corr-001", "revision": 1, "predecessorProposalHash": null, "state": "review-required", "confirmation": null,
+    "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0", "cycleId": "cyc_00000001",
+    "eventHead": { "sequence": 1, "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+    "decision": { "decisionId": "dec_00000001", "revision": 1, "decisionHash": "sha256:9999999999999999999999999999999999999999999999999999999999999999", "sourceArtifactId": "art_00000001", "title": "Improve retention", "outcome": "Invest in the retention workflow.", "rationale": "Accepted evidence supports the priority.", "confidence": 0.8, "evidenceRefIds": ["evr_00000001"] },
+    "action": { "actionId": "act_00000001", "revision": 1, "actionHash": "sha256:7777777777777777777777777777777777777777777777777777777777777777", "sourceArtifactId": "art_00000001", "title": "Build retention workflow", "expectedResult": "Retention reaches the target.", "metricId": "met_00000001", "verificationPlanId": "vfy_00000001" },
+    "deliveryRoute": { "kind": "operating-delivery-route", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0", "routeId": "droute_00000001", "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0", "action": { "actionId": "act_00000001", "revision": 1, "actionHash": "sha256:7777777777777777777777777777777777777777777777777777777777777777" }, "eventHead": { "sequence": 1, "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" }, "route": "planning-work", "rationale": "The approved Action requires repository Planning work.", "createdAt": "2026-08-11T08:00:00Z", "routeHash": "sha256:a42a311157e14e503ae653ae751bc9fa654e52c1cc1f372c5b8a9d904839d4d9" },
+    "acceptedPerspectiveSummaries": [
+      { "roleId": "strategy-finance", "roleVersion": "2.0.0", "roleKind": "advisor", "artifactId": "art_00000003", "artifactHash": "sha256:2323232323232323232323232323232323232323232323232323232323232323", "accessClassification": "internal", "disposition": "accepted", "normative": false, "stance": "support", "summary": "Finance supports a bounded retention workflow.", "constraints": [], "uncertainties": [] },
+      { "roleId": "challenger", "roleVersion": "2.0.0", "roleKind": "challenger", "artifactId": "art_00000004", "artifactHash": "sha256:2424242424242424242424242424242424242424242424242424242424242424", "accessClassification": "internal", "disposition": "accepted", "normative": false, "stance": "object", "summary": "Challenge retention assumptions before delivery.", "constraints": [], "uncertainties": [] },
+      { "roleId": "chair", "roleVersion": "2.0.0", "roleKind": "chair", "artifactId": "art_00000001", "artifactHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "accessClassification": "internal", "disposition": "accepted", "normative": true, "stance": "synthesis", "summary": "Accepted evidence supports the priority.", "constraints": ["Preserve rollback."], "uncertainties": ["Measure adoption."] }
+    ],
+    "evidence": [{ "evidenceRefId": "evr_00000001", "artifactId": "art_00000002", "artifactHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "classification": "internal", "accessState": "available", "relation": "support", "freshness": "current", "confidence": 0.8, "summary": "Retention declined.", "limitations": ["One cohort only."] }],
+    "omissions": [{ "classification": "restricted", "count": 1, "reason": "hidden-reasoning-excluded" }],
+    "framing": { "title": "Retention workflow", "slug": "retention-workflow", "problem": "Retention is below target.", "objective": "Improve verified retention.", "users": ["Operators"], "scope": ["Repository workflow"], "nonScope": ["Production deployment"], "risks": ["Adoption"], "constraints": ["Reversible changes"], "requirements": ["Create typed workflow"], "acceptanceOutcomes": ["Metric reaches target"] },
+    "metric": { "metricId": "met_00000001", "metricHash": "sha256:1919191919191919191919191919191919191919191919191919191919191919" },
+    "verification": { "verificationPlanId": "vfy_00000001", "verificationPlanHash": "sha256:2020202020202020202020202020202020202020202020202020202020202020", "metricId": "met_00000001", "metricHash": "sha256:1919191919191919191919191919191919191919191919191919191919191919", "baseline": 0.6, "target": 0.8, "window": "30d", "method": "Compare accepted observations.", "revisitConditions": ["Target is missed."] },
+    "actor": { "actorId": "owner-001", "kind": "human" }, "preview": { "digest": "sha256:56ccb45f611b5b63626b2b79c8e22c7a3cdee197da6e147acaf90f81f6be83fb", "issuedAt": "2026-08-11T08:00:00Z", "expiresAt": "2026-08-11T08:05:00Z" },
+    "planningCommand": "planr operate planning create-spec", "createdAt": "2026-08-11T08:00:00Z", "proposalHash": "sha256:c6937017ed28448b29c440814ec106181b9215f17b1ceb5688e691f66a3999a8"
+  },
+  "operating-origin": {
+    "kind": "operating-origin", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0", "correlationId": "corr-001", "proposalId": "oprop_00000001", "proposalRevision": 2, "proposalHash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0", "cycleId": "cyc_00000001", "eventHead": { "sequence": 1, "hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+    "decision": { "id": "dec_00000001", "revision": 1, "hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999" }, "action": { "id": "act_00000001", "revision": 1, "hash": "sha256:7777777777777777777777777777777777777777777777777777777777777777" },
+    "metric": { "metricId": "met_00000001", "metricHash": "sha256:1919191919191919191919191919191919191919191919191919191919191919" }, "verification": { "verificationPlanId": "vfy_00000001", "verificationPlanHash": "sha256:2020202020202020202020202020202020202020202020202020202020202020", "metricId": "met_00000001", "metricHash": "sha256:1919191919191919191919191919191919191919191919191919191919191919", "window": "30d" },
+    "evidence": [{ "evidenceRefId": "evr_00000001", "artifactId": "art_00000002", "artifactHash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "classification": "internal", "accessState": "available" }],
+    "spec": { "specId": "SPEC-020", "slug": "retention-workflow", "contentHash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "status": "shaping" },
+    "actor": { "actorId": "owner-001", "kind": "human" }, "transaction": { "transactionId": "txn-001", "receiptHash": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "planningProvenanceEventId": "prv-001" },
+    "createdAt": "2026-08-11T08:10:00Z", "originHash": "sha256:de185e2d0519ceeca498ca7061ab82e055eaf5237f3fef610b6e53631a36d6a0"
+  },
+  "operating-delivery-evidence": {
+    "kind": "operating-delivery-evidence", "schemaVersion": "1.0.0", "protocolVersion": "2.0.0", "deliveryEvidenceId": "dlev_00000001", "correlationId": "corr-001", "proposalId": "oprop_00000001", "proposalRevision": 2, "scopeId": "scope-acme", "domainId": "business", "domainVersion": "1.0.0",
+    "decision": { "id": "dec_00000001", "revision": 1, "hash": "sha256:9999999999999999999999999999999999999999999999999999999999999999" }, "action": { "id": "act_00000001", "revision": 1, "hash": "sha256:7777777777777777777777777777777777777777777777777777777777777777" }, "metric": { "metricId": "met_00000001", "metricHash": "sha256:1919191919191919191919191919191919191919191919191919191919191919" }, "verification": { "verificationPlanId": "vfy_00000001", "verificationPlanHash": "sha256:2020202020202020202020202020202020202020202020202020202020202020", "metricId": "met_00000001", "metricHash": "sha256:1919191919191919191919191919191919191919191919191919191919191919", "window": "30d" },
+    "spec": { "specId": "SPEC-020", "contentHash": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "originHash": "sha256:de185e2d0519ceeca498ca7061ab82e055eaf5237f3fef610b6e53631a36d6a0" },
+    "planRun": { "runId": "run-plan-001", "runtime": "codex", "packageVersion": "0.42.0", "provenanceEventId": "event-plan-001", "provenanceEventHash": "sha256:1212121212121212121212121212121212121212121212121212121212121212", "status": "succeeded" },
+    "shipRun": { "runId": "run-ship-001", "runtime": "codex", "packageVersion": "0.42.0", "manifestHash": "sha256:1414141414141414141414141414141414141414141414141414141414141414", "provenanceEventId": "event-ship-001", "provenanceEventHash": "sha256:1515151515151515151515151515151515151515151515151515151515151515", "status": "succeeded" },
+    "tasks": [{ "taskId": "T-001", "status": "done", "artifactHash": "sha256:1515151515151515151515151515151515151515151515151515151515151515" }], "changedSurfaces": ["lib/retention.mjs"],
+    "qa": { "status": "passed", "reportHash": "sha256:1616161616161616161616161616161616161616161616161616161616161616", "summary": "All bounded checks passed." }, "limitations": ["Business outcome remains unverified."], "artifacts": [], "classification": "internal", "summary": "Planning and SHIP completed with verification pending.", "deliveryStatus": "succeeded", "rollback": null, "outcomeStatus": "verification-required", "createdAt": "2026-08-11T10:00:00Z", "deliveryEvidenceHash": "sha256:8877984db7aaa05b149f67b555f4d7fb65393e4963af99ae917bd14f7177ab18"
+  }
+}

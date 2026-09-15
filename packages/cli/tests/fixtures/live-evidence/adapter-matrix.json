@@ -1,0 +1,113 @@
+{
+  "schemaVersion": "1.0.0",
+  "cases": [
+    {
+      "id": "github-materialized",
+      "providerId": "github-delivery",
+      "category": "delivery",
+      "operation": "checks",
+      "collection": "checks",
+      "sourceContractId": "ci-test-evidence",
+      "status": "materialized"
+    },
+    {
+      "id": "github-absent",
+      "providerId": "github-delivery",
+      "category": "delivery",
+      "operation": "checks",
+      "collection": "checks",
+      "sourceContractId": "ci-test-evidence",
+      "status": "absent"
+    },
+    {
+      "id": "linear-jira-materialized",
+      "providerId": "linear-jira-work",
+      "category": "work",
+      "operation": "linear-issues",
+      "collection": "linearIssues",
+      "sourceContractId": "planning-acceptance",
+      "status": "materialized"
+    },
+    {
+      "id": "linear-jira-absent",
+      "providerId": "linear-jira-work",
+      "category": "work",
+      "operation": "linear-issues",
+      "collection": "linearIssues",
+      "sourceContractId": "planning-acceptance",
+      "status": "absent"
+    },
+    {
+      "id": "sentry-materialized",
+      "providerId": "sentry-error",
+      "category": "error",
+      "operation": "issues",
+      "collection": "issues",
+      "sourceContractId": "incident-history",
+      "status": "materialized"
+    },
+    {
+      "id": "sentry-absent",
+      "providerId": "sentry-error",
+      "category": "error",
+      "operation": "issues",
+      "collection": "issues",
+      "sourceContractId": "incident-history",
+      "status": "absent"
+    },
+    {
+      "id": "posthog-materialized",
+      "providerId": "posthog-product",
+      "category": "product",
+      "operation": "events",
+      "collection": "events",
+      "sourceContractId": "product-activation",
+      "status": "materialized"
+    },
+    {
+      "id": "posthog-absent",
+      "providerId": "posthog-product",
+      "category": "product",
+      "operation": "events",
+      "collection": "events",
+      "sourceContractId": "product-activation",
+      "status": "absent"
+    },
+    {
+      "id": "deployment-materialized",
+      "providerId": "deployment-health",
+      "category": "deployment",
+      "operation": "health",
+      "collection": "health",
+      "sourceContractId": "operations-customer-health",
+      "status": "materialized"
+    },
+    {
+      "id": "deployment-absent",
+      "providerId": "deployment-health",
+      "category": "deployment",
+      "operation": "health",
+      "collection": "health",
+      "sourceContractId": "operations-customer-health",
+      "status": "absent"
+    },
+    {
+      "id": "business-metrics-materialized",
+      "providerId": "business-metrics",
+      "category": "business-metrics",
+      "operation": "http",
+      "collection": "httpRecords",
+      "sourceContractId": "objective-metrics",
+      "status": "materialized"
+    },
+    {
+      "id": "business-metrics-absent",
+      "providerId": "business-metrics",
+      "category": "business-metrics",
+      "operation": "http",
+      "collection": "httpRecords",
+      "sourceContractId": "objective-metrics",
+      "status": "absent"
+    }
+  ]
+}

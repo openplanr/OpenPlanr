@@ -1,0 +1,14 @@
+{
+  "id": "SPEC-007",
+  "title": "Tier 1 fixtures",
+  "slug": "fixtures",
+  "schemaVersion": "1.0.0",
+  "status": "ready-for-pipeline",
+  "priority": "P1",
+  "created": "2026-05-03",
+  "updated": "2026-08-02",
+  "ui_files": [],
+  "tech_dependencies": [],
+  "kanbanosId": "ckb1x9q2w0000qzrm5h8j3f7a",
+  "contentHash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+}

@@ -1,0 +1,44 @@
+{
+  "kind": "evaluation-scenario",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.4.0",
+  "scenarioId": "esc_bb1d98fb1a03276eef692acbafd98ed4cbd6d17dc3a23e22285a19ce5b5faf0f",
+  "scenarioDigest": "sha256:bb1d98fb1a03276eef692acbafd98ed4cbd6d17dc3a23e22285a19ce5b5faf0f",
+  "title": "planr-spec negative journey on claude-code",
+  "intent": "A prompt the skill explicitly excludes must decline and route elsewhere; invoking here is a precision failure.",
+  "skill": {
+    "id": "planr-spec",
+    "version": "1.0.0"
+  },
+  "hostProfileRef": {
+    "hostProfileId": "ehp_926364f7fe15acefa31b8273fd9bcad3",
+    "hostProfileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0"
+  },
+  "promptClass": "negative",
+  "expectedTrigger": {
+    "outcome": "decline",
+    "rationale": "The prompt matches a declared exclusion, so invoking it is a precision failure."
+  },
+  "declaredPermissions": [
+    {
+      "capability": "file-read",
+      "decision": "granted"
+    },
+    {
+      "capability": "network",
+      "decision": "denied"
+    }
+  ],
+  "riskClass": "read-only",
+  "fixtureRefs": [
+    {
+      "fixtureId": "efx_b1a21ea69ff43858b084da84a2cd431c37d084fda449bb6255bfbd2b2f4b0be0",
+      "contentDigest": "sha256:8f73dba825355445cc26c8ba933a0ec84aaf9cd84a71faba6db5c3260f61c65d",
+      "role": "prompt"
+    }
+  ],
+  "budgetRef": {
+    "budgetId": "ebg_ab599b6434d21be4ca9100655147859e",
+    "budgetDigest": "sha256:ab599b6434d21be4ca9100655147859ea7d7015710797231fb73c48af8b02dee"
+  }
+}

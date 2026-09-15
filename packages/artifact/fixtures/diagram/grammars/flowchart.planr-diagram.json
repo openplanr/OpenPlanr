@@ -1,0 +1,63 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "flowchart-fixture",
+  "title": "Flowchart fixture",
+  "summary": "Canonical semantic fixture for the flowchart grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "flowchart",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Flowchart A",
+      "kind": "primary-item",
+      "description": "First semantic item in the flowchart fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "Flowchart B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the flowchart fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [],
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Flowchart fixture",
+    "description": "A compact flowchart example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:22764a544da2b0fb88ed9a43bb376e1491c673f26c322983852fc6a70901adff"
+}

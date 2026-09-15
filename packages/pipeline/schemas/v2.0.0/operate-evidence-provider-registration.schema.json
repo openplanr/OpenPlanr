@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operate-evidence-provider-registration.schema.json",
+  "x-openplanr-contract": { "id": "operate-evidence-provider-registration", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 evidence provider registration",
+  "description": "A declaration for one explicit local evidence provider. Registration is data, not a code-loading or authority grant.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "providerId", "providerVersion", "supportedEvidenceKinds", "inputContract", "outputContract", "effectClass", "requiredCapabilities", "classificationCeiling", "retentionClass", "provenance", "conformanceDigest", "implementation", "fallback"],
+  "properties": {
+    "kind": { "const": "operate-evidence-provider-registration" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "providerId": { "$ref": "#/$defs/identifier" },
+    "providerVersion": { "$ref": "#/$defs/version" },
+    "supportedEvidenceKinds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceKind" } },
+    "inputContract": { "$ref": "#/$defs/candidateContract" },
+    "outputContract": { "$ref": "#/$defs/resolutionContract" },
+    "effectClass": { "const": "local-read-only" },
+    "requiredCapabilities": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/capability" } },
+    "classificationCeiling": { "enum": ["public", "internal", "confidential", "restricted"] },
+    "retentionClass": { "enum": ["ephemeral", "project", "restricted-machine-local"] },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "conformanceDigest": { "$ref": "#/$defs/digest" },
+    "implementation": { "$ref": "#/$defs/builtInImplementation" },
+    "fallback": { "$ref": "#/$defs/unavailableFallback" }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "evidenceKind": { "enum": ["git", "filesystem", "planr", "operate-artifact"] },
+    "capability": { "enum": ["evidence.git.read", "evidence.filesystem.read", "evidence.planr.read", "evidence.operate-artifact.read"] },
+    "candidateContract": {
+      "type": "object", "additionalProperties": false, "required": ["schemaId", "schemaVersion"],
+      "properties": { "schemaId": { "const": "operating-evidence-candidate" }, "schemaVersion": { "const": "2.0.0" } }
+    },
+    "resolutionContract": {
+      "type": "object", "additionalProperties": false, "required": ["schemaId", "schemaVersion"],
+      "properties": { "schemaId": { "const": "operating-evidence-resolution" }, "schemaVersion": { "const": "2.0.0" } }
+    },
+    "provenance": {
+      "type": "object", "additionalProperties": false, "required": ["packageName", "packageVersion", "integrity"],
+      "properties": { "packageName": { "$ref": "#/$defs/identifier" }, "packageVersion": { "$ref": "#/$defs/version" }, "integrity": { "$ref": "#/$defs/digest" } }
+    },
+    "builtInImplementation": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "id"],
+      "properties": { "kind": { "const": "built-in" }, "id": { "$ref": "#/$defs/identifier" } }
+    },
+    "unavailableFallback": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "errorCode"],
+      "properties": { "kind": { "const": "unavailable" }, "errorCode": { "const": "EVIDENCE_PROVIDER_UNAVAILABLE" } }
+    }
+  }
+}

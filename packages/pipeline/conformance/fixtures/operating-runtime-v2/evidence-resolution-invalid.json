@@ -1,0 +1,17 @@
+{
+  "foreignClaimLink": {
+    "sourceArtifactId": "art_foreign_001",
+    "localClaimId": "local-claim-resolution-001",
+    "relation": "supportedBy",
+    "confidence": 0.8
+  },
+  "illegalRelation": {
+    "sourceArtifactId": "art_source_001",
+    "localClaimId": "local-claim-resolution-001",
+    "relation": "derivedFrom",
+    "confidence": 0.8
+  },
+  "reusedIdentity": {
+    "eventId": "evt-evidence-resolution-conflict-001"
+  }
+}

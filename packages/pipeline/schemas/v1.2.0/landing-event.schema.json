@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/landing-event.schema.json",
+  "title": "Protocol 1.2 Landing Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "eventId", "sequence", "runId", "type", "fromState", "toState", "actor", "planHash", "requestHash", "operationId", "confirmationHash", "targetStateHash", "trafficStateHash", "residualStateHash", "previousEventHash", "timestamp", "eventHash"],
+  "properties": {
+    "kind": { "const": "landing-event" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "1.2.0" }, "eventId": { "type": "string", "pattern": "^levt_[a-f0-9]{32}$" }, "sequence": { "type": "integer", "minimum": 1 }, "runId": { "type": "string", "pattern": "^lrun_[a-f0-9]{32}$" }, "type": { "enum": ["plan.created", "phase.intent-recorded", "phase.dispatching", "phase.succeeded", "phase.failed", "phase.blocked", "phase.uncertain", "containment.applied", "recovery.required", "recovery.confirmed", "recovery.succeeded", "recovery.failed", "landing.completed", "landing.blocked"] }, "fromState": { "$ref": "#/$defs/state" }, "toState": { "$ref": "#/$defs/state" }, "actor": { "type": "object", "additionalProperties": false, "required": ["kind", "id"], "properties": { "kind": { "enum": ["human", "engine", "runtime"] }, "id": { "type": "string", "minLength": 1, "maxLength": 128 } } }, "planHash": { "$ref": "#/$defs/hash" }, "requestHash": { "$ref": "#/$defs/hash" }, "operationId": { "type": ["string", "null"], "pattern": "^lop_[a-f0-9]{32}$" }, "confirmationHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }, "targetStateHash": { "$ref": "#/$defs/hash" }, "trafficStateHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }, "residualStateHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }, "previousEventHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }, "timestamp": { "type": "string", "format": "date-time" }, "eventHash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": { "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }, "state": { "enum": ["planned", "awaiting-confirmation", "intent-recorded", "dispatching", "verifying", "recovery_required", "completed", "blocked", "uncertain"] } }
+}

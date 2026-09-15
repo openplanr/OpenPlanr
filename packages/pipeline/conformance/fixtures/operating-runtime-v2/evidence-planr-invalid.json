@@ -1,0 +1,9 @@
+{
+  "missingProject": "SOURCE_NOT_FOUND",
+  "scopeMismatch": "EVIDENCE_SOURCE_SCOPE_MISMATCH",
+  "missingArtifact": "ARTIFACT_NOT_FOUND",
+  "wrongPath": "PATH_NOT_FOUND",
+  "wrongHash": "ARTIFACT_HASH_MISMATCH",
+  "denied": "CAPABILITY_DENIED",
+  "kindMismatch": "UNSUPPORTED_EVIDENCE_KIND"
+}

@@ -1,0 +1,16 @@
+{
+  "kind": "operate-domain-registration",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "2.0.0",
+  "domainId": "business",
+  "domainVersion": "1.0.0",
+  "domainContract": { "apiDomainId": "business", "id": "software-domain", "version": "1.0.0" },
+  "provenance": { "packageName": "planr-pipeline", "packageVersion": "0.42.0", "integrity": "sha256:1111111111111111111111111111111111111111111111111111111111111111" },
+  "roles": [],
+  "vocabulary": [],
+  "projectionContracts": [{ "schemaId": "software-operating-snapshot-projection", "schemaVersion": "1.0.0" }],
+  "actionKinds": [],
+  "requestedCapabilities": [],
+  "policyRequirements": [{ "actionKind": { "id": "undeclared-action", "version": "1.0.0" }, "capability": { "id": "bounded-project-write", "version": "1.0.0" }, "policy": { "id": "bounded-project-write-policy", "version": "1.0.0" } }],
+  "requirements": []
+}

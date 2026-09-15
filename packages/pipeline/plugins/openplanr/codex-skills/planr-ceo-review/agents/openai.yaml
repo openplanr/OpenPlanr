@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Ceo Review"
+  short_description: "Produce a grounded strategy and finance review for an Operate…"
+  default_prompt: "Use $planr-ceo-review to produce a grounded strategy and finance review for an Operate cycle. Use when direction, runway, margin, investment, or cost of delay needs a CEO lens."
+policy:
+  allow_implicit_invocation: true

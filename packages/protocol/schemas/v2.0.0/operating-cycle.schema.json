@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-cycle.schema.json",
+  "x-openplanr-contract": { "id": "operating-cycle", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 Phase 1 operating cycle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "cycleId", "scopeId", "domainId", "domainVersion", "state", "inputBindingId", "contractVersions", "trigger", "focus", "health", "activeReviewId", "createdAt", "updatedAt"],
+  "properties": {
+    "kind": { "const": "operating-cycle" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "cycleId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "scopeId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "domainId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "domainVersion": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "state": { "type": "string", "enum": ["created", "observing", "advising", "challenging", "synthesizing", "awaiting_review", "approved", "executing", "verifying", "closed", "blocked", "failed", "cancelled"] },
+    "inputBindingId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "contractVersions": { "type": "object", "additionalProperties": { "type": "string", "minLength": 1 } },
+    "trigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": { "kind": { "const": "manual" } }
+    },
+    "focus": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 128 } },
+    "health": { "type": "string", "enum": ["normal", "quiet", "partial", "blocked"] },
+    "activeReviewId": { "type": ["string", "null"], "pattern": "^rev_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "closedAt": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "state": { "const": "closed" } } },
+      "then": {
+        "required": ["closedAt"],
+        "properties": { "activeReviewId": { "const": null }, "closedAt": { "type": "string", "format": "date-time" } }
+      }
+    }
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.4.0/evaluation-aggregate-report.schema.json",
+  "title": "OpenPlanr Protocol v1.4 skill evaluation aggregate report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "reportId", "generatedAt", "redaction", "inputs", "counters", "rates", "budget", "absences", "skills", "scenarios", "reportDigest"],
+  "properties": {
+    "kind": { "const": "evaluation-aggregate-report" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.4.0" },
+    "reportId": { "type": "string", "pattern": "^ear_[a-f0-9]{32}$" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "redaction": {
+      "type": "object", "additionalProperties": false,
+      "required": ["policyVersion", "rawPromptsExcluded", "tracesExcluded", "screenshotsExcluded", "modelOutputExcluded", "absolutePathsExcluded", "credentialMaterialExcluded"],
+      "properties": {
+        "policyVersion": { "const": "1.0.0" },
+        "rawPromptsExcluded": { "const": true },
+        "tracesExcluded": { "const": true },
+        "screenshotsExcluded": { "const": true },
+        "modelOutputExcluded": { "const": true },
+        "absolutePathsExcluded": { "const": true },
+        "credentialMaterialExcluded": { "const": true }
+      }
+    },
+    "inputs": {
+      "type": "object", "additionalProperties": false,
+      "required": ["corpusDigest", "graderRegistryDigest", "hostProfileRegistryDigest", "gatePolicyDigest", "budgetBaselineDigest", "hostProfileDigests", "runResultDigests"],
+      "properties": {
+        "corpusDigest": { "$ref": "#/$defs/digest" },
+        "graderRegistryDigest": { "$ref": "#/$defs/digest" },
+        "hostProfileRegistryDigest": { "$ref": "#/$defs/digest" },
+        "gatePolicyDigest": { "$ref": "#/$defs/digest" },
+        "budgetBaselineDigest": { "$ref": "#/$defs/digest" },
+        "hostProfileDigests": { "type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": { "$ref": "#/$defs/digest" } },
+        "runResultDigests": { "type": "array", "minItems": 1, "maxItems": 256, "uniqueItems": true, "items": { "$ref": "#/$defs/digest" } }
+      }
+    },
+    "counters": {
+      "type": "object", "additionalProperties": false,
+      "required": ["scenariosTotal", "scenariosPassed", "scenariosFailed", "scenariosBlocked", "scenariosAbsent", "scenariosWaived", "triggerTruePositives", "triggerFalsePositives", "triggerFalseNegatives", "journeysAttempted", "journeysCompleted", "outputsValidated", "outputsSchemaValid", "assetsDeclared", "assetsPresent", "exportsDeclared", "exportsPresent", "packageMembersDeclared", "packageMembersPresent", "permissionPrompts", "retries", "findingsP0", "findingsP1", "findingsP2", "findingsP3"],
+      "properties": {
+        "scenariosTotal": { "$ref": "#/$defs/counter" },
+        "scenariosPassed": { "$ref": "#/$defs/counter" },
+        "scenariosFailed": { "$ref": "#/$defs/counter" },
+        "scenariosBlocked": { "$ref": "#/$defs/counter" },
+        "scenariosAbsent": { "$ref": "#/$defs/counter" },
+        "scenariosWaived": { "$ref": "#/$defs/counter" },
+        "triggerTruePositives": { "$ref": "#/$defs/counter" },
+        "triggerFalsePositives": { "$ref": "#/$defs/counter" },
+        "triggerFalseNegatives": { "$ref": "#/$defs/counter" },
+        "journeysAttempted": { "$ref": "#/$defs/counter" },
+        "journeysCompleted": { "$ref": "#/$defs/counter" },
+        "outputsValidated": { "$ref": "#/$defs/counter" },
+        "outputsSchemaValid": { "$ref": "#/$defs/counter" },
+        "assetsDeclared": { "$ref": "#/$defs/counter" },
+        "assetsPresent": { "$ref": "#/$defs/counter" },
+        "exportsDeclared": { "$ref": "#/$defs/counter" },
+        "exportsPresent": { "$ref": "#/$defs/counter" },
+        "packageMembersDeclared": { "$ref": "#/$defs/counter" },
+        "packageMembersPresent": { "$ref": "#/$defs/counter" },
+        "permissionPrompts": { "$ref": "#/$defs/counter" },
+        "retries": { "$ref": "#/$defs/counter" },
+        "findingsP0": { "$ref": "#/$defs/counter" },
+        "findingsP1": { "$ref": "#/$defs/counter" },
+        "findingsP2": { "$ref": "#/$defs/counter" },
+        "findingsP3": { "$ref": "#/$defs/counter" }
+      }
+    },
+    "rates": {
+      "type": "object", "additionalProperties": false,
+      "required": ["triggerPrecision", "triggerRecall", "journeyCompletion", "schemaValidity", "assetParity", "exportParity", "packageParity"],
+      "properties": {
+        "triggerPrecision": { "$ref": "#/$defs/rateBasisPoints" },
+        "triggerRecall": { "$ref": "#/$defs/rateBasisPoints" },
+        "journeyCompletion": { "$ref": "#/$defs/rateBasisPoints" },
+        "schemaValidity": { "$ref": "#/$defs/rateBasisPoints" },
+        "assetParity": { "$ref": "#/$defs/rateBasisPoints" },
+        "exportParity": { "$ref": "#/$defs/rateBasisPoints" },
+        "packageParity": { "$ref": "#/$defs/rateBasisPoints" }
+      }
+    },
+    "budget": {
+      "type": "object", "additionalProperties": false,
+      "required": ["baselineDigest", "latencyMsBaseline", "latencyMsObserved", "latencyRegression", "costEstimateMicrosBaseline", "costEstimateMicrosObserved", "costRegression", "permissionPromptCeiling", "retryCeiling"],
+      "properties": {
+        "baselineDigest": { "$ref": "#/$defs/digest" },
+        "latencyMsBaseline": { "$ref": "#/$defs/durationMs" },
+        "latencyMsObserved": { "$ref": "#/$defs/durationMs" },
+        "latencyRegression": { "$ref": "#/$defs/regressionBasisPoints" },
+        "costEstimateMicrosBaseline": { "$ref": "#/$defs/costMicros" },
+        "costEstimateMicrosObserved": { "$ref": "#/$defs/costMicros" },
+        "costRegression": { "$ref": "#/$defs/regressionBasisPoints" },
+        "permissionPromptCeiling": { "$ref": "#/$defs/counter" },
+        "retryCeiling": { "$ref": "#/$defs/counter" }
+      }
+    },
+    "absences": {
+      "type": "object", "additionalProperties": false,
+      "required": ["graderMissing", "graderErrored", "graderUnavailable", "hostUnavailable", "fixtureUnavailable", "budgetExceeded", "notRun"],
+      "properties": {
+        "graderMissing": { "$ref": "#/$defs/counter" },
+        "graderErrored": { "$ref": "#/$defs/counter" },
+        "graderUnavailable": { "$ref": "#/$defs/counter" },
+        "hostUnavailable": { "$ref": "#/$defs/counter" },
+        "fixtureUnavailable": { "$ref": "#/$defs/counter" },
+        "budgetExceeded": { "$ref": "#/$defs/counter" },
+        "notRun": { "$ref": "#/$defs/counter" }
+      }
+    },
+    "skills": { "type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/skillSummary" } },
+    "scenarios": { "type": "array", "maxItems": 2048, "uniqueItems": true, "items": { "$ref": "#/$defs/scenarioSummary" } },
+    "reportDigest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "counter": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+    "rateBasisPoints": { "type": "integer", "minimum": 0, "maximum": 10000 },
+    "regressionBasisPoints": { "type": "integer", "minimum": -10000, "maximum": 1000000 },
+    "durationMs": { "type": "integer", "minimum": 0, "maximum": 86400000 },
+    "costMicros": { "type": "integer", "minimum": 0, "maximum": 1000000000000 },
+    "skillId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" },
+    "skillVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$" },
+    "promptClass": { "enum": ["positive", "negative", "ambiguous", "permission-denied"] },
+    "scenarioStatus": { "enum": ["passed", "failed", "blocked", "absent", "waived"] },
+    "absenceReason": { "enum": ["grader-missing", "grader-errored", "grader-unavailable", "host-unavailable", "fixture-unavailable", "budget-exceeded", "not-run"] },
+    "skillSummary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["skillId", "skillVersion", "scenariosTotal", "scenariosPassed", "scenariosFailed", "scenariosBlocked", "scenariosAbsent", "scenariosWaived"],
+      "properties": {
+        "skillId": { "$ref": "#/$defs/skillId" },
+        "skillVersion": { "$ref": "#/$defs/skillVersion" },
+        "scenariosTotal": { "$ref": "#/$defs/counter" },
+        "scenariosPassed": { "$ref": "#/$defs/counter" },
+        "scenariosFailed": { "$ref": "#/$defs/counter" },
+        "scenariosBlocked": { "$ref": "#/$defs/counter" },
+        "scenariosAbsent": { "$ref": "#/$defs/counter" },
+        "scenariosWaived": { "$ref": "#/$defs/counter" }
+      }
+    },
+    "scenarioSummary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["scenarioDigest", "skillId", "hostProfileDigest", "graderRegistrationDigest", "fixtureSetDigest", "promptClass", "status", "absenceReason", "waiverDigest", "observations", "latencyMs"],
+      "properties": {
+        "scenarioDigest": { "$ref": "#/$defs/digest" },
+        "skillId": { "$ref": "#/$defs/skillId" },
+        "hostProfileDigest": { "$ref": "#/$defs/digest" },
+        "graderRegistrationDigest": { "$ref": "#/$defs/digest" },
+        "fixtureSetDigest": { "$ref": "#/$defs/digest" },
+        "promptClass": { "$ref": "#/$defs/promptClass" },
+        "status": { "$ref": "#/$defs/scenarioStatus" },
+        "absenceReason": { "oneOf": [{ "const": null }, { "$ref": "#/$defs/absenceReason" }] },
+        "waiverDigest": { "oneOf": [{ "const": null }, { "$ref": "#/$defs/digest" }] },
+        "observations": { "type": "integer", "minimum": 0, "maximum": 64 },
+        "latencyMs": { "$ref": "#/$defs/durationMs" }
+      },
+      "allOf": [
+        { "if": { "properties": { "status": { "const": "absent" } }, "required": ["status"] }, "then": { "properties": { "absenceReason": { "$ref": "#/$defs/absenceReason" } } } },
+        { "if": { "properties": { "status": { "enum": ["passed", "failed", "blocked", "waived"] } }, "required": ["status"] }, "then": { "properties": { "absenceReason": { "const": null } } } },
+        { "if": { "properties": { "status": { "const": "waived" } }, "required": ["status"] }, "then": { "properties": { "waiverDigest": { "$ref": "#/$defs/digest" } } } },
+        { "if": { "properties": { "status": { "enum": ["passed", "failed", "blocked", "absent"] } }, "required": ["status"] }, "then": { "properties": { "waiverDigest": { "const": null } } } }
+      ]
+    }
+  }
+}

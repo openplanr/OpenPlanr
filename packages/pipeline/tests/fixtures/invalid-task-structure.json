@@ -1,0 +1,13 @@
+{
+  "id": "T-007",
+  "title": "Mismatched type and agent",
+  "storyId": "US-001",
+  "specId": "SPEC-007",
+  "slug": "bad-correlation",
+  "schemaVersion": "1.0.0",
+  "type": "UI",
+  "agent": "backend-agent",
+  "status": "pending",
+  "created": "2026-05-03",
+  "updated": "2026-05-03"
+}

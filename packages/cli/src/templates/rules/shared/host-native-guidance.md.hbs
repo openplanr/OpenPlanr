@@ -1,0 +1,12 @@
+## OpenPlanr host-native workflows
+
+OpenPlanr semantic work runs in the active coding session. It does not launch a
+second model or require provider API keys.
+
+- `{{specInvocation}} <intent-or-SPEC>` shapes product intent into a specification.
+- `{{planInvocation}} <SPEC>` authors implementation-ready stories and tasks directly.
+- `{{shipInvocation}} <task-or-request>` implements and verifies local repository work.
+
+Use the host's native structured question surface when a material decision cannot
+be inferred. Use `planr` only for deterministic storage, inspection, validation,
+rendering, serving, setup, and synchronization utilities.

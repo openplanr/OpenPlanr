@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-evidence-candidate.schema.json",
+  "x-openplanr-contract": { "id": "operating-evidence-candidate", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 evidence candidate",
+  "description": "An untrusted, source-Artifact-local request that only the runtime may resolve. It is not evidence, an Artifact, an Event, or a durable Claim.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "candidateId", "scopeId", "domainId", "domainVersion", "sourceArtifactId", "evidenceKind", "locator", "provider", "resolver"],
+  "properties": {
+    "kind": { "const": "operating-evidence-candidate" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "candidateId": { "$ref": "#/$defs/candidateId" },
+    "scopeId": { "$ref": "#/$defs/identifier" },
+    "domainId": { "$ref": "#/$defs/identifier" },
+    "domainVersion": { "$ref": "#/$defs/version" },
+    "sourceArtifactId": { "$ref": "#/$defs/artifactId" },
+    "evidenceKind": { "$ref": "#/$defs/evidenceKind" },
+    "locator": {},
+    "provider": { "$ref": "#/$defs/implementationRef" },
+    "resolver": { "$ref": "#/$defs/implementationRef" }
+  },
+  "allOf": [
+    { "if": { "properties": { "evidenceKind": { "const": "git" } } }, "then": { "properties": { "locator": { "$ref": "#/$defs/gitLocator" } } } },
+    { "if": { "properties": { "evidenceKind": { "const": "filesystem" } } }, "then": { "properties": { "locator": { "$ref": "#/$defs/filesystemLocator" } } } },
+    { "if": { "properties": { "evidenceKind": { "const": "planr" } } }, "then": { "properties": { "locator": { "$ref": "#/$defs/planrLocator" } } } },
+    { "if": { "properties": { "evidenceKind": { "const": "operate-artifact" } } }, "then": { "properties": { "locator": { "$ref": "#/$defs/operateArtifactLocator" } } } }
+  ],
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "candidateId": { "type": "string", "pattern": "^evc_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "safeRelativePath": { "type": "string", "minLength": 1, "maxLength": 1024, "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9.][A-Za-z0-9._/-]*$" },
+    "evidenceKind": { "enum": ["git", "filesystem", "planr", "operate-artifact"] },
+    "implementationRef": {
+      "type": "object", "additionalProperties": false, "required": ["id", "version"],
+      "properties": { "id": { "$ref": "#/$defs/identifier" }, "version": { "$ref": "#/$defs/version" } }
+    },
+    "gitLocator": {
+      "type": "object", "additionalProperties": false, "required": ["repositoryId", "revision"],
+      "properties": {
+        "repositoryId": { "$ref": "#/$defs/identifier" },
+        "revision": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@+-]*$" },
+        "objectType": { "enum": ["commit", "tree", "blob", "tag"] },
+        "path": { "$ref": "#/$defs/safeRelativePath" },
+        "lines": {
+          "type": "object", "additionalProperties": false, "required": ["start", "end"],
+          "properties": { "start": { "type": "integer", "minimum": 1 }, "end": { "type": "integer", "minimum": 1 } }
+        },
+        "ancestry": {
+          "type": "object", "additionalProperties": false, "required": ["ancestorRevision"],
+          "properties": { "ancestorRevision": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^[A-Za-z0-9][A-Za-z0-9._/@+-]*$" } }
+        }
+      },
+      "allOf": [
+        { "if": { "required": ["lines"] }, "then": { "required": ["path"] } }
+      ]
+    },
+    "filesystemLocator": {
+      "type": "object", "additionalProperties": false, "required": ["sourceRootId", "path"],
+      "properties": { "sourceRootId": { "$ref": "#/$defs/identifier" }, "path": { "$ref": "#/$defs/safeRelativePath" } }
+    },
+    "planrLocator": {
+      "type": "object", "additionalProperties": false, "required": ["projectId", "artifactId", "artifactType"],
+      "properties": {
+        "projectId": { "$ref": "#/$defs/identifier" },
+        "artifactId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z][A-Za-z0-9._-]*$" },
+        "artifactType": { "$ref": "#/$defs/identifier" },
+        "path": { "$ref": "#/$defs/safeRelativePath" },
+        "contentHash": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "operateArtifactLocator": {
+      "type": "object", "additionalProperties": false, "required": ["artifactId", "expectedArtifactType", "expectedSchemaId", "expectedSchemaVersion"],
+      "properties": {
+        "artifactId": { "$ref": "#/$defs/artifactId" },
+        "expectedArtifactType": { "$ref": "#/$defs/identifier" },
+        "expectedSchemaId": { "$ref": "#/$defs/identifier" },
+        "expectedSchemaVersion": { "$ref": "#/$defs/version" },
+        "expectedRawHash": { "$ref": "#/$defs/digest" },
+        "expectedCanonicalHash": { "$ref": "#/$defs/digest" }
+      }
+    }
+  }
+}

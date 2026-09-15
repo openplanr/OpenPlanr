@@ -1,0 +1,35 @@
+{
+  "skillId": "planr-plan",
+  "now": "2026-08-30T12:00:00.000Z",
+  "sessionId": "GIS-lifecyclefixture01",
+  "context": {
+    "repository": "module-events",
+    "task": "SPEC-002/T-005",
+    "sourceVersion": "1.0.0"
+  },
+  "safeState": {
+    "activeTask": "T-005",
+    "completedSteps": [
+      "context"
+    ]
+  },
+  "defaults": {
+    "learning": false,
+    "history": false,
+    "telemetry": false,
+    "sync": false,
+    "updates": false,
+    "externalData": false
+  },
+  "safeLearning": {
+    "learningId": "learning-lifecycle01",
+    "category": "diagnostic",
+    "note": "Prefer a native question when one material decision remains."
+  },
+  "privateLearning": {
+    "learningId": "learning-lifecycle02",
+    "category": "diagnostic",
+    "note": "api_key=private-value should never be retained",
+    "rawPrompt": "Do not persist this prompt."
+  }
+}

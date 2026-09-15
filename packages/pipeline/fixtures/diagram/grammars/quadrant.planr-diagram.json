@@ -1,0 +1,82 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "quadrant-fixture",
+  "title": "Quadrant fixture",
+  "summary": "Canonical semantic fixture for the quadrant grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "quadrant",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "radial",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Quadrant A",
+      "kind": "primary-item",
+      "description": "First semantic item in the quadrant fixture.",
+      "semanticPosition": {
+        "horizontal": 0.25,
+        "vertical": 0.7,
+        "meaning": "Semantic placement on the declared axes."
+      }
+    },
+    {
+      "id": "item-b",
+      "label": "Quadrant B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the quadrant fixture.",
+      "semanticPosition": {
+        "horizontal": 0.75,
+        "vertical": 0.3,
+        "meaning": "Semantic placement on the declared axes."
+      }
+    }
+  ],
+  "relations": [],
+  "groups": [],
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [
+    {
+      "id": "axis-horizontal",
+      "label": "Horizontal meaning",
+      "scale": "linear"
+    },
+    {
+      "id": "axis-vertical",
+      "label": "Vertical meaning",
+      "scale": "linear"
+    }
+  ],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Quadrant fixture",
+    "description": "A compact quadrant example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:cdb6282e8be04d845f57faeeee9a7a6fa53c462694923897c593802c3d520048"
+}

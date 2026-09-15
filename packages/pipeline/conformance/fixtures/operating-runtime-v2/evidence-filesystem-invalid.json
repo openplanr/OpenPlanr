@@ -1,0 +1,10 @@
+{
+  "missingSource": "SOURCE_NOT_FOUND",
+  "absolutePath": "EVIDENCE_LOCATOR_INVALID",
+  "traversal": "EVIDENCE_LOCATOR_INVALID",
+  "missingPath": "PATH_NOT_FOUND",
+  "symlinkEscape": "SENSITIVITY_BLOCKED",
+  "denied": "CAPABILITY_DENIED",
+  "oversized": "SENSITIVITY_BLOCKED",
+  "secret": "SECRET_DETECTED"
+}

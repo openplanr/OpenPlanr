@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-action-policy.schema.json",
+  "x-openplanr-contract": { "id": "operating-action-policy", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 action policy",
+  "type": "object", "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "policyId", "policyVersion", "domainId", "actionKind", "capability", "effectClasses", "targetKinds", "decisionMode", "approvalRequirementIds", "rollbackRequired", "verificationRequired", "tier", "precedence", "narrowingOnly", "provenance", "policyHash"],
+  "properties": {
+    "kind": { "const": "operating-action-policy" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "2.0.0" },
+    "policyId": { "$ref": "#/$defs/id" }, "policyVersion": { "$ref": "#/$defs/version" }, "domainId": { "$ref": "#/$defs/id" }, "actionKind": { "$ref": "#/$defs/versionedId" }, "capability": { "$ref": "#/$defs/versionedId" },
+    "effectClasses": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/effect" } },
+    "targetKinds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } },
+    "decisionMode": { "enum": ["automatic", "named-single-party", "named-multi-party", "threshold", "deferred", "rejected", "prohibited"] },
+    "approvalRequirementIds": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/approvalRequirementId" } },
+    "rollbackRequired": { "type": "boolean" }, "verificationRequired": { "type": "boolean" },
+    "tier": { "enum": ["core", "project", "domain"] }, "precedence": { "enum": [100, 200, 300] }, "narrowingOnly": { "type": "boolean" },
+    "provenance": { "$ref": "#/$defs/provenance" }, "policyHash": { "$ref": "#/$defs/hash" }
+  },
+  "allOf": [
+    { "if": { "properties": { "tier": { "const": "core" } } }, "then": { "properties": { "precedence": { "const": 300 }, "narrowingOnly": { "const": false } } } },
+    { "if": { "properties": { "tier": { "const": "project" } } }, "then": { "properties": { "precedence": { "const": 200 }, "narrowingOnly": { "const": true } } } },
+    { "if": { "properties": { "tier": { "const": "domain" } } }, "then": { "properties": { "precedence": { "const": 100 }, "narrowingOnly": { "const": true } } } }
+  ],
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" }, "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "versionedId": { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "$ref": "#/$defs/id" }, "version": { "$ref": "#/$defs/version" } } },
+    "effect": { "enum": ["read-only", "machine-local-write", "project-write", "provider-call", "external-effect", "destructive"] },
+    "approvalRequirementId": { "type": "string", "pattern": "^aprq_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "provenance": { "type": "object", "additionalProperties": false, "required": ["providerId", "providerVersion", "sourceHash"], "properties": { "providerId": { "$ref": "#/$defs/id" }, "providerVersion": { "$ref": "#/$defs/version" }, "sourceHash": { "$ref": "#/$defs/hash" } } }
+  }
+}

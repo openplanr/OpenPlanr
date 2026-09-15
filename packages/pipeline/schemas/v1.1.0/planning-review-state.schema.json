@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/planning-review-state.schema.json",
+  "title": "OpenPlanr Protocol 1.1 active planning review",
+  "allOf": [
+    { "$ref": "https://openplanr.dev/schemas/v1.1.0/planning-review-record.schema.json" },
+    {
+      "type": "object",
+      "required": ["recordType", "state", "ownerDecision", "terminal", "receiptHash"],
+      "properties": {
+        "recordType": { "const": "active" },
+        "state": { "type": "string", "enum": ["reviewing_initial", "correction_required", "reviewing_targeted", "awaiting_owner"] },
+        "ownerDecision": { "type": "null" },
+        "terminal": { "type": "null" },
+        "receiptHash": { "type": "null" }
+      }
+    }
+  ]
+}

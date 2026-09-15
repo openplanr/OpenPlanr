@@ -1,78 +1,304 @@
-name: CI
+name: Workspace CI
 
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: ['**']
+
+concurrency:
+  group: workspace-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    env:
-      OPENPLANR_PIPELINE_ROOT: ${{ github.workspace }}/.ci/planr-pipeline
+  quality:
+    name: Node 24 generated, boundary, lint, and build verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Install Chromium for local studio tests
+        run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
+      - name: Generate local distributions and verify tracked outputs
+        run: |
+          npm run generate
+          git diff --exit-code HEAD --
+      - name: Verify generated custody
+        run: npm run check:generated
+      - name: Verify package and composition boundaries
+        run: npm run check:boundaries
+      - name: Verify migration preservation coverage
+        run: npm run check:preservation
+      - name: Lint every participating workspace
+        run: npm run lint
+      - name: Build in dependency order without tracked drift
+        run: |
+          npm run build
+          git diff --exit-code HEAD --
+      - name: Run focused integration tests
+        run: npm run test:focused
 
+  supporting-package-tests:
+    name: Node 24 supporting package tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Prepare generated runtime
+        run: |
+          npm run generate
+          npm run build
+      - name: Test protocol, operate, artifact, integrations, skill runtime, and dashboard
+        run: |
+          npm test --workspace=@openplanr/protocol
+          npm test --workspace=@openplanr/operate
+          npm test --workspace=@openplanr/artifact
+          npm test --workspace=@openplanr/integrations
+          npm test --workspace=@openplanr/skill-runtime
+          npm test --workspace=@openplanr/dashboard-app
+
+  design-tests:
+    name: Node 24 design package tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Prepare generated runtime
+        run: |
+          npm run generate
+          npm run build
+      - name: Install Chromium for design tests
+        run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
+      - name: Test the design package
+        run: npm test --workspace=@openplanr/design
+
+  pipeline-tests:
+    name: Node 24 pipeline ${{ matrix.suite }} tests
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        node-version: [20, 22]
-
+        include:
+          - suite: surface
+            script: test:surface
+          - suite: runtime orchestration
+            script: test:orchestration:runtime
+          - suite: ecosystem orchestration
+            script: test:orchestration:ecosystem
+          - suite: pipeline orchestration
+            script: test:orchestration:pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Checkout released pipeline fixture
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          repository: openplanr/planr-pipeline
-          ref: v0.42.0
-          path: .ci/planr-pipeline
-
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 24
           cache: npm
-
-      - name: Install dependencies
+      - name: Install the root lockfile
         run: npm ci
+      - name: Prepare generated runtime
+        run: |
+          npm run generate
+          npm run build
+      - name: Run pipeline suite
+        run: npm run ${{ matrix.script }} --workspace=planr-pipeline
 
-      - name: Lint & format check
-        run: npm run lint
-
-      - name: Build
-        run: npm run build
-
-      - name: Run tests
-        run: npm test
-
-      # Coverage is a property of the code, not of the host, so it is measured
-      # once rather than on every matrix leg. Instrumenting the whole suite is
-      # expensive, and doing it on Windows — already the slowest platform for
-      # this I/O-bound suite — pushed integration tests past their budget for
-      # no additional signal.
-      - name: Run coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.node-version == 22
-        run: npm run test:coverage
-
-      - name: Upload coverage report
-        if: matrix.os == 'ubuntu-latest' && matrix.node-version == 22
-        uses: actions/upload-artifact@v7
+  cli-tests:
+    name: Node 24 CLI tests (shard ${{ matrix.shard }}/6)
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          name: coverage-report-${{ matrix.os }}-node-${{ matrix.node-version }}
-          path: coverage/
-          retention-days: 14
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Prepare generated runtime
+        run: |
+          npm run generate
+          npm run build
+      - name: Run CLI test shard
+        working-directory: packages/cli
+        run: npx --no-install vitest run --shard=${{ matrix.shard }}/6 --maxWorkers=1 --exclude tests/integration/operate-lifecycle.test.ts --exclude tests/integration/dashboard-operate-cycles.test.ts --exclude tests/integration/operate-command-gateway.test.ts --exclude tests/integration/operate-planning-bridge.test.ts --exclude tests/unit/runtime-manager-service.test.ts
 
-      - name: Verify CLI runs
-        run: node dist/cli/index.js --version
+  cli-heavy-tests:
+    name: Node 24 CLI heavy tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Prepare generated runtime
+        run: |
+          npm run generate
+          npm run build
+      - name: Run CLI heavy tests
+        working-directory: packages/cli
+        run: |
+          npm run test:heavy
+          npx --no-install vitest run tests/integration/operate-lifecycle.test.ts tests/integration/dashboard-operate-cycles.test.ts --maxWorkers=1 --testTimeout=600000
 
-      - name: Packed artifact smoke test
-        run: npm pack --dry-run
+  cli-operate-boundary-tests:
+    name: Node 24 CLI Operate boundary (${{ matrix.suite }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: command gateway
+            file: tests/integration/operate-command-gateway.test.ts
+          - suite: planning bridge
+            file: tests/integration/operate-planning-bridge.test.ts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Prepare generated runtime
+        run: |
+          npm run generate
+          npm run build
+      - name: Run the Operate boundary suite in a fresh process
+        working-directory: packages/cli
+        run: npx --no-install vitest run ${{ matrix.file }} --maxWorkers=1 --testTimeout=90000
 
-      - name: POSIX installer syntax
-        if: runner.os != 'Windows'
-        run: sh -n install.sh
+  cli-runtime-integrity-tests:
+    name: Node 24 runtime integrity tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Prepare generated runtime
+        run: |
+          npm run generate
+          npm run build
+      - name: Run runtime integrity tests in a fresh process
+        working-directory: packages/cli
+        run: npx --no-install vitest run tests/unit/runtime-manager-service.test.ts --maxWorkers=1
 
-      - name: PowerShell installer syntax
-        shell: pwsh
-        run: "[scriptblock]::Create((Get-Content -Raw install.ps1)) | Out-Null"
+  verify:
+    name: Node 24 full workspace verification
+    needs:
+      - quality
+      - supporting-package-tests
+      - design-tests
+      - pipeline-tests
+      - cli-tests
+      - cli-heavy-tests
+      - cli-operate-boundary-tests
+      - cli-runtime-integrity-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Confirm every Node 24 verification suite passed
+        run: echo "All Node 24 workspace verification suites passed."
+
+  compatibility:
+    name: Node ${{ matrix.node }} supported-runtime verification
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Install Chromium for local studio tests
+        run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
+      - name: Generate local distributions and verify tracked outputs
+        run: |
+          npm run generate
+          git diff --exit-code HEAD --
+      - name: Verify generated custody
+        run: npm run check:generated
+      - name: Verify package and composition boundaries
+        run: npm run check:boundaries
+      - name: Verify migration preservation coverage
+        run: npm run check:preservation
+      - name: Lint every participating workspace
+        run: npm run lint
+      - name: Build in dependency order without tracked drift
+        run: |
+          npm run build
+          git diff --exit-code HEAD --
+      - name: Run focused compatibility tests
+        run: npm run test:focused
+
+  packed-public-packages:
+    name: Node ${{ matrix.node }} packed public-package proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Install Chromium for packed Protocol browser verification
+        run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
+      - name: Generate local distributions and verify tracked outputs
+        run: |
+          npm run generate
+          git diff --exit-code HEAD --
+      - name: Build in dependency order without tracked drift
+        run: |
+          npm run build
+          git diff --exit-code HEAD --
+      - name: Verify generated custody
+        run: npm run check:generated
+      - name: Pack and install only public compatibility packages
+        run: npm run verify:packed:strict

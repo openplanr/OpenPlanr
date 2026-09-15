@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-evidence-ref.schema.json",
+  "x-openplanr-contract": { "id": "operating-evidence-ref", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 resolved evidence reference",
+  "description": "Runtime-issued, immutable evidence identity. Its sourceContract is asserted by the selected registered resolver after validating the captured bytes; an untrusted candidate or locator cannot author it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "evidenceRefId", "candidateId", "scopeId", "domainId", "domainVersion", "sourceArtifactId", "evidenceKind", "sourceContract", "locator", "provider", "resolver", "classification", "freshness", "evidenceArtifactId", "evidenceArtifactRawHash", "evidenceArtifactCanonicalHash", "resolvedAt"],
+  "properties": {
+    "kind": { "const": "operating-evidence-ref" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "evidenceRefId": { "$ref": "#/$defs/evidenceRefId" },
+    "candidateId": { "$ref": "#/$defs/candidateId" },
+    "scopeId": { "$ref": "#/$defs/identifier" },
+    "domainId": { "$ref": "#/$defs/identifier" },
+    "domainVersion": { "$ref": "#/$defs/version" },
+    "sourceArtifactId": { "$ref": "#/$defs/artifactId" },
+    "evidenceKind": { "$ref": "#/$defs/evidenceKind" },
+    "sourceContract": { "$ref": "#/$defs/sourceContract" },
+    "locator": {},
+    "provider": { "$ref": "operating-evidence-candidate.schema.json#/$defs/implementationRef" },
+    "resolver": { "$ref": "operating-evidence-candidate.schema.json#/$defs/implementationRef" },
+    "classification": { "enum": ["public", "internal", "confidential", "restricted"] },
+    "freshness": { "enum": ["current", "historical", "stale"] },
+    "evidenceArtifactId": { "$ref": "#/$defs/artifactId" },
+    "evidenceArtifactRawHash": { "$ref": "#/$defs/digest" },
+    "evidenceArtifactCanonicalHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" },
+    "resolvedAt": { "type": "string", "format": "date-time" }
+  },
+  "allOf": [
+    { "if": { "properties": { "evidenceKind": { "const": "git" } } }, "then": { "properties": { "locator": { "$ref": "operating-evidence-candidate.schema.json#/$defs/gitLocator" } } } },
+    { "if": { "properties": { "evidenceKind": { "const": "filesystem" } } }, "then": { "properties": { "locator": { "$ref": "operating-evidence-candidate.schema.json#/$defs/filesystemLocator" } } } },
+    { "if": { "properties": { "evidenceKind": { "const": "planr" } } }, "then": { "properties": { "locator": { "$ref": "operating-evidence-candidate.schema.json#/$defs/planrLocator" } } } },
+    { "if": { "properties": { "evidenceKind": { "const": "operate-artifact" } } }, "then": { "properties": { "locator": { "$ref": "operating-evidence-candidate.schema.json#/$defs/operateArtifactLocator" } } } }
+  ],
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "candidateId": { "type": "string", "pattern": "^evc_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "evidenceRefId": { "type": "string", "pattern": "^evr_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "evidenceKind": { "enum": ["git", "filesystem", "planr", "operate-artifact"] },
+    "sourceContract": {
+      "type": "object", "additionalProperties": false, "required": ["id", "version"],
+      "properties": { "id": { "$ref": "#/$defs/identifier" }, "version": { "$ref": "#/$defs/version" } }
+    }
+  }
+}

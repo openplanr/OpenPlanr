@@ -1,0 +1,24 @@
+{
+  "missingRoleVersion": { "roleId": "advisor" },
+  "unknownRole": { "roleId": "unknown", "roleVersion": "2.0.0" },
+  "mixedOutputVersion": {
+    "roleId": "advisor",
+    "roleVersion": "2.0.0",
+    "output": {
+      "schemaId": "operating-artifact",
+      "schemaVersion": "1.4.0",
+      "mediaType": "application/json",
+      "maxBytes": 262144
+    }
+  },
+  "changedMaximum": {
+    "roleId": "chair",
+    "roleVersion": "2.0.0",
+    "output": {
+      "schemaId": "operating-artifact",
+      "schemaVersion": "2.0.0",
+      "mediaType": "application/json",
+      "maxBytes": 262145
+    }
+  }
+}

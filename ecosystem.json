@@ -1,0 +1,428 @@
+{
+  "kind": "openplanr-ecosystem",
+  "schemaVersion": "1.0.0",
+  "releaseState": "local-candidate",
+  "repositoryIntent": "openplanr/OpenPlanr",
+  "remoteState": "not-queried",
+  "workspace": {
+    "package": "openplanr-workspace",
+    "version": "0.1.0",
+    "private": true,
+    "workspaces": [
+      "packages/cli",
+      "packages/pipeline",
+      "packages/protocol",
+      "packages/operate",
+      "packages/artifact",
+      "packages/design",
+      "packages/skill-runtime",
+      "packages/integrations",
+      "apps/dashboard"
+    ],
+    "manifestDigest": "sha256:6030b328d6d826493436992e27bbc8f3ee35c490a425b9d57da2f08afa529f53"
+  },
+  "protocol": {
+    "current": "1.8.0",
+    "additiveVersions": [
+      "1.5.0",
+      "1.6.0",
+      "1.7.0",
+      "1.8.0"
+    ],
+    "supportedReaders": [
+      "1.0.x",
+      "1.1.x",
+      "1.2.x",
+      "1.3.x",
+      "1.4.x",
+      "1.5.x",
+      "1.6.x",
+      "1.7.x",
+      "1.8.x",
+      "2.0.x"
+    ]
+  },
+  "components": {
+    "cli": {
+      "package": "openplanr",
+      "version": "1.25.3",
+      "path": "packages/cli",
+      "publication": "public",
+      "manifestDigest": "sha256:95fed48f225c69e2e8722a99299420efaebaac52958022072a9b9efd5064a5f8"
+    },
+    "pipeline": {
+      "package": "planr-pipeline",
+      "version": "0.44.0",
+      "path": "packages/pipeline",
+      "publication": "public",
+      "manifestDigest": "sha256:483f2cc352f085223a3143e1d031e3fa98c43251385ef7605dc50f01e72936ec"
+    },
+    "protocol": {
+      "package": "@openplanr/protocol",
+      "version": "0.1.0",
+      "path": "packages/protocol",
+      "publication": "public",
+      "manifestDigest": "sha256:f8bd998d28d1c8a4cda38d0c02d18173bfd4689c20ec3e4f3f2d2ca787c5c9d8"
+    },
+    "operate": {
+      "package": "@openplanr/operate",
+      "version": "0.1.0",
+      "path": "packages/operate",
+      "publication": "private",
+      "manifestDigest": "sha256:9e80d9287bf4573213461e0ca96c27d2a8f24b02f49620aee4cb60e4a6660d14"
+    },
+    "artifact": {
+      "package": "@openplanr/artifact",
+      "version": "0.1.0",
+      "path": "packages/artifact",
+      "publication": "private",
+      "manifestDigest": "sha256:fd5e76bcbea21c3099b5d6098fac0fba7f70519190a0cb88da05038ced88a06c"
+    },
+    "design": {
+      "package": "@openplanr/design",
+      "version": "0.1.0",
+      "path": "packages/design",
+      "publication": "private",
+      "manifestDigest": "sha256:695d90fe7834b4cc8962a6a6c1f25da75bdd49b27ee5725cb6685368cbeda9cf"
+    },
+    "skillRuntime": {
+      "package": "@openplanr/skill-runtime",
+      "version": "0.1.0",
+      "path": "packages/skill-runtime",
+      "publication": "private",
+      "manifestDigest": "sha256:66562cb4b71589ca8ecc813b5461fe1a021553755935e0c5f98738bf6424bb7b"
+    },
+    "integrations": {
+      "package": "@openplanr/integrations",
+      "version": "0.1.0",
+      "path": "packages/integrations",
+      "publication": "private",
+      "manifestDigest": "sha256:4ffd8249731ab6f6f668fa2d145d6298807af3ee29ebfc0c7cda46c32b9c3397"
+    },
+    "dashboard": {
+      "package": "@openplanr/dashboard-app",
+      "version": "0.1.0",
+      "path": "apps/dashboard",
+      "publication": "private",
+      "manifestDigest": "sha256:b323a02cf30da98cee0699b3950d69a28576c509b36fab4cd663870b51b471a8"
+    }
+  },
+  "compatibility": {
+    "cliOptionalPipeline": {
+      "package": "planr-pipeline",
+      "version": "0.44.0",
+      "exact": true
+    },
+    "publicArtifacts": {
+      "selfContained": true,
+      "privateWorkspaceDependenciesAllowed": false
+    }
+  },
+  "binaries": {
+    "cli": {
+      "planr": "./bin/planr.js",
+      "openplanr": "./bin/planr.js",
+      "opr": "./bin/planr.js"
+    },
+    "pipeline": {
+      "planr-pipeline": "bin/planr-pipeline.mjs"
+    }
+  },
+  "publicCompatibility": {
+    "pipelineExportKeys": 37,
+    "pipelineRootSymbols": 229
+  },
+  "catalogs": {
+    "commands": {
+      "path": "packages/protocol/registries/commands.json",
+      "digest": "sha256:68739441bd2987882b8a4f2a8d23bf2e1247731aca866319660adcace1b65240",
+      "rootCommands": 39,
+      "pipelineMachineLeaves": 31,
+      "frozenClaudeDocuments": 8,
+      "negativeContracts": [
+        {
+          "negativeContractId": "retired-pipeline-operate",
+          "forbiddenArgvPrefix": [
+            "pipeline",
+            "operate"
+          ],
+          "forbiddenPaths": [
+            "packages/pipeline/commands/operate.md",
+            "packages/pipeline/skills/planr-operate/SKILL.md"
+          ],
+          "reason": "Operate remains a CLI-owned planr operate facade; pipeline-owned Operate grammar and plugin assets are retired.",
+          "testRefs": [
+            "tests/protocol/command-catalog.test.mjs",
+            "tests/ecosystem/operate-v2-clean-boundary-absence.test.mjs"
+          ]
+        },
+        {
+          "negativeContractId": "retired-semantic-cli-estimate",
+          "forbiddenArgvPrefix": [
+            "estimate"
+          ],
+          "forbiddenPaths": [
+            "packages/cli/src/cli/commands/estimate.ts"
+          ],
+          "reason": "Semantic estimate work belongs to the active host agent under Protocol 1.8.",
+          "testRefs": [
+            "packages/cli/tests/unit/command-registration-parity.test.ts"
+          ]
+        },
+        {
+          "negativeContractId": "retired-semantic-cli-evidence",
+          "forbiddenArgvPrefix": [
+            "evidence"
+          ],
+          "forbiddenPaths": [
+            "packages/cli/src/cli/commands/evidence.ts"
+          ],
+          "reason": "Semantic evidence work belongs to the active host agent under Protocol 1.8.",
+          "testRefs": [
+            "packages/cli/tests/unit/command-registration-parity.test.ts"
+          ]
+        },
+        {
+          "negativeContractId": "retired-semantic-cli-pipeline",
+          "forbiddenArgvPrefix": [
+            "pipeline"
+          ],
+          "forbiddenPaths": [
+            "packages/cli/src/cli/commands/pipeline.ts"
+          ],
+          "reason": "Semantic pipeline work belongs to the active host agent under Protocol 1.8.",
+          "testRefs": [
+            "packages/cli/tests/unit/command-registration-parity.test.ts"
+          ]
+        },
+        {
+          "negativeContractId": "retired-semantic-cli-plan",
+          "forbiddenArgvPrefix": [
+            "plan"
+          ],
+          "forbiddenPaths": [
+            "packages/cli/src/cli/commands/plan.ts"
+          ],
+          "reason": "Semantic plan work belongs to the active host agent under Protocol 1.8.",
+          "testRefs": [
+            "packages/cli/tests/unit/command-registration-parity.test.ts"
+          ]
+        },
+        {
+          "negativeContractId": "retired-semantic-cli-refine",
+          "forbiddenArgvPrefix": [
+            "refine"
+          ],
+          "forbiddenPaths": [
+            "packages/cli/src/cli/commands/refine.ts"
+          ],
+          "reason": "Semantic refine work belongs to the active host agent under Protocol 1.8.",
+          "testRefs": [
+            "packages/cli/tests/unit/command-registration-parity.test.ts"
+          ]
+        },
+        {
+          "negativeContractId": "retired-semantic-cli-revise",
+          "forbiddenArgvPrefix": [
+            "revise"
+          ],
+          "forbiddenPaths": [
+            "packages/cli/src/cli/commands/revise.ts"
+          ],
+          "reason": "Semantic revise work belongs to the active host agent under Protocol 1.8.",
+          "testRefs": [
+            "packages/cli/tests/unit/command-registration-parity.test.ts"
+          ]
+        }
+      ]
+    },
+    "skills": {
+      "path": "packages/protocol/registries/skills.json",
+      "digest": "sha256:9cb2bf73b536b6a6e862b8e188bd79a90aba0829d040960fc5685f494f1d3419",
+      "count": 25,
+      "ids": [
+        "planr-artifact",
+        "planr-browser-qa",
+        "planr-ceo-review",
+        "planr-chair-review",
+        "planr-challenger-review",
+        "planr-cmo-review",
+        "planr-coo-review",
+        "planr-cpo-review",
+        "planr-cto-review",
+        "planr-dashboard",
+        "planr-design",
+        "planr-design-loop",
+        "planr-design-review",
+        "planr-diagram",
+        "planr-doctor",
+        "planr-investigate",
+        "planr-land",
+        "planr-operate",
+        "planr-plan",
+        "planr-plan-review",
+        "planr-release",
+        "planr-ship",
+        "planr-spec",
+        "planr-status",
+        "planr-sync"
+      ],
+      "aliases": [],
+      "membershipDigest": "sha256:86d9ac3bd3d6c7a4d523aefef850fba5013d097bd1f01356e9d0a1adb3c9e693"
+    },
+    "roles": {
+      "path": "packages/protocol/registries/roles.json",
+      "digest": "sha256:e135a1dc550dc8ec9bd6ed00cf7560603c25f5ea3b910ede14fe219a185b15b2",
+      "count": 9,
+      "ids": [
+        "planr-backend",
+        "planr-database",
+        "planr-designer",
+        "planr-devops",
+        "planr-documentation",
+        "planr-entity-scaffold",
+        "planr-frontend",
+        "planr-qa",
+        "planr-specification"
+      ],
+      "aliases": []
+    },
+    "rules": {
+      "path": "packages/protocol/registries/rules.json",
+      "digest": "sha256:91c1d7aef6a0bd0c44224ff84d43cacedb916f2dc353af0505ccf252dbf5aa7a",
+      "count": 10
+    },
+    "taskKinds": {
+      "path": "packages/protocol/registries/task-kinds.json",
+      "digest": "sha256:123ceaeeadb2c3c1dfabf0b47c06ec67ace8a3d8a30289798903be43180eb49a",
+      "count": 7
+    },
+    "outputs": {
+      "path": "packages/protocol/registries/outputs.json",
+      "digest": "sha256:3fe574b6957cda821b1bc8255168445be8b0a123669d76e556576dda4604454b",
+      "count": 23
+    },
+    "outputPaths": {
+      "path": "packages/protocol/registries/output-paths.json",
+      "digest": "sha256:19513acdf5c718c8ca6f35f271313ec40f6e2d9eac69d39bfb2058a3c1eacfa1",
+      "count": 4,
+      "outputCatalogDigest": "sha256:9bf43cfd7e82d1cbc97e0dcb940be2a58c7289eacc435b7c7918f79b8af007b9"
+    }
+  },
+  "adapters": {
+    "registry": {
+      "path": "packages/protocol/registry/adapters.json",
+      "digest": "sha256:4f5c47977aac550ddfc2fc87b8cbaa8258ca96b61b66cd745d466c3f993c8d94"
+    },
+    "hosts": [
+      {
+        "id": "claude-code",
+        "version": "0.44.0",
+        "capabilityLevel": "product"
+      },
+      {
+        "id": "codex",
+        "version": "0.44.0",
+        "capabilityLevel": "workflow"
+      },
+      {
+        "id": "cursor",
+        "version": "0.44.0",
+        "capabilityLevel": "workflow"
+      }
+    ],
+    "generatedAssets": {
+      "path": "adapters/manifests/generated-assets.json",
+      "digest": "sha256:9ab792cd52a705b56dcda7ae2a40624796a6dec1183210ceb4126b7788a31089",
+      "count": 1630
+    }
+  },
+  "schemas": {
+    "preserved": {
+      "count": 180,
+      "distribution": {
+        "v1.0.0": 12,
+        "v1.1.0": 34,
+        "v1.2.0": 25,
+        "v1.3.0": 5,
+        "v1.4.0": 15,
+        "v2.0.0": 89
+      }
+    },
+    "successors": {
+      "protocolVersion": "1.8.0",
+      "count": 3
+    },
+    "additive": {
+      "count": 51,
+      "byVersion": {
+        "v1.5.0": 13,
+        "v1.6.0": 19,
+        "v1.7.0": 16,
+        "v1.8.0": 3
+      }
+    },
+    "total": 249
+  },
+  "registries": {
+    "preserved": {
+      "count": 12,
+      "path": "packages/protocol/registry"
+    },
+    "canonicalCatalogs": {
+      "count": 12,
+      "path": "packages/protocol/registries"
+    },
+    "protocol15Catalogs": {
+      "count": 7,
+      "path": "packages/protocol/registries"
+    },
+    "protocol16Catalogs": {
+      "count": 2,
+      "path": "packages/protocol/registries"
+    },
+    "protocol17Catalogs": {
+      "count": 3,
+      "path": "packages/protocol/registries"
+    },
+    "capturedEvaluationContracts": {
+      "lifecycle": "byte-preserved",
+      "hostProfiles": {
+        "path": "packages/protocol/registry/evaluation-host-profiles.json",
+        "digest": "sha256:125e755d4c09d9e8949f5bf727a7a69669b4991d2d94d6b36a87eff71d310552",
+        "registryId": "ehpr_e41d66f0c65f915b3f53bb62ace0e32f",
+        "count": 3
+      },
+      "graders": {
+        "path": "packages/protocol/registry/evaluation-graders.json",
+        "digest": "sha256:aae843fe55fa84b1a04e02fef3ed8bbeafe0d8a65b071922013368b7c987a68e",
+        "registryId": "egrr_0a168a9a8d592b0ec4762c5820ee657a",
+        "count": 6
+      }
+    }
+  },
+  "generatedSurfaces": {
+    "artifactShell": {
+      "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
+      "digest": "sha256:6dc59c57862ff224e654e2589263925abdccdacd423dc5ac0595ccce6a5d6e9e",
+      "shellVersion": "1.2.1",
+      "assetCount": 6
+    },
+    "landingWorkflow": {
+      "catalog": {
+        "path": "packages/protocol/registry/landing-workflows.json",
+        "digest": "sha256:7bff6d6150b6cef7d46603216d4225bc9000f9f286a203c65e668a077b3ead80",
+        "workflowId": "planr-land",
+        "workflowVersion": "1.0.0",
+        "catalogHash": "sha256:6f76d7e2416ca7919ac5bbeb01cc2a045582fb9a94e0bdad064dd91b0e798c81",
+        "authority": "none"
+      },
+      "generatedAssets": {
+        "path": "packages/pipeline/conformance/fixtures/landing-workflow/generated-assets.json",
+        "digest": "sha256:a79dfa600b923b436b64ae277af068402e589416c580a7798f0d19110df8249f",
+        "assetCount": 4,
+        "workflowCatalogDigest": "sha256:7bff6d6150b6cef7d46603216d4225bc9000f9f286a203c65e668a077b3ead80"
+      }
+    }
+  }
+}

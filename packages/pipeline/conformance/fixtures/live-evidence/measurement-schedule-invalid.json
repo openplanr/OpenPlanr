@@ -1,0 +1,157 @@
+{
+  "enabled at generation zero": {
+    "kind": "operating-measurement-schedule",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "scheduleId": "msch_reference0001",
+    "generation": 0,
+    "measurementPlanId": "mpln_reference0001",
+    "planHash": "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+    "ownerActorId": "owner.reference",
+    "consentRecordHashes": [
+      "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+    ],
+    "ceilingsHash": "sha256:1313131313131313131313131313131313131313131313131313131313131313",
+    "recurrence": {
+      "kind": "interval",
+      "intervalSeconds": 3600,
+      "timeZone": "Europe/Istanbul"
+    },
+    "startsAt": "2026-08-24T12:00:00Z",
+    "endsAt": "2026-08-25T12:00:00Z",
+    "maxRuns": 24,
+    "misfirePolicy": "run-once",
+    "dstPolicy": "elapsed-time",
+    "state": "enabled",
+    "runCount": 0,
+    "nextEventIdentity": null,
+    "nextDueAt": null,
+    "lastReceiptId": null,
+    "lastTransitionHash": null,
+    "scheduleHash": "sha256:0be833f10354fa624a6fd63bf4b27b3586fe672a52841fa0c97edb9f82c32266"
+  },
+  "inactive schedule retaining a due identity": {
+    "kind": "operating-measurement-schedule",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "scheduleId": "msch_reference0001",
+    "generation": 0,
+    "measurementPlanId": "mpln_reference0001",
+    "planHash": "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+    "ownerActorId": "owner.reference",
+    "consentRecordHashes": [
+      "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+    ],
+    "ceilingsHash": "sha256:1313131313131313131313131313131313131313131313131313131313131313",
+    "recurrence": {
+      "kind": "interval",
+      "intervalSeconds": 3600,
+      "timeZone": "Europe/Istanbul"
+    },
+    "startsAt": "2026-08-24T12:00:00Z",
+    "endsAt": "2026-08-25T12:00:00Z",
+    "maxRuns": 24,
+    "misfirePolicy": "run-once",
+    "dstPolicy": "elapsed-time",
+    "state": "disabled",
+    "runCount": 0,
+    "nextEventIdentity": "mevt_enable000001",
+    "nextDueAt": "2026-08-24T13:00:00Z",
+    "lastReceiptId": null,
+    "lastTransitionHash": null,
+    "scheduleHash": "sha256:0be833f10354fa624a6fd63bf4b27b3586fe672a52841fa0c97edb9f82c32266"
+  },
+  "interval recurrence without an interval": {
+    "kind": "operating-measurement-schedule",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "scheduleId": "msch_reference0001",
+    "generation": 0,
+    "measurementPlanId": "mpln_reference0001",
+    "planHash": "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+    "ownerActorId": "owner.reference",
+    "consentRecordHashes": [
+      "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+    ],
+    "ceilingsHash": "sha256:1313131313131313131313131313131313131313131313131313131313131313",
+    "recurrence": {
+      "kind": "interval",
+      "intervalSeconds": null,
+      "timeZone": "Europe/Istanbul"
+    },
+    "startsAt": "2026-08-24T12:00:00Z",
+    "endsAt": "2026-08-25T12:00:00Z",
+    "maxRuns": 24,
+    "misfirePolicy": "run-once",
+    "dstPolicy": "elapsed-time",
+    "state": "disabled",
+    "runCount": 0,
+    "nextEventIdentity": null,
+    "nextDueAt": null,
+    "lastReceiptId": null,
+    "lastTransitionHash": null,
+    "scheduleHash": "sha256:0be833f10354fa624a6fd63bf4b27b3586fe672a52841fa0c97edb9f82c32266"
+  },
+  "one-time recurrence carrying an interval": {
+    "kind": "operating-measurement-schedule",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "scheduleId": "msch_reference0001",
+    "generation": 0,
+    "measurementPlanId": "mpln_reference0001",
+    "planHash": "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+    "ownerActorId": "owner.reference",
+    "consentRecordHashes": [
+      "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+    ],
+    "ceilingsHash": "sha256:1313131313131313131313131313131313131313131313131313131313131313",
+    "recurrence": {
+      "kind": "once",
+      "intervalSeconds": 3600,
+      "timeZone": "Europe/Istanbul"
+    },
+    "startsAt": "2026-08-24T12:00:00Z",
+    "endsAt": "2026-08-25T12:00:00Z",
+    "maxRuns": 24,
+    "misfirePolicy": "run-once",
+    "dstPolicy": "elapsed-time",
+    "state": "disabled",
+    "runCount": 0,
+    "nextEventIdentity": null,
+    "nextDueAt": null,
+    "lastReceiptId": null,
+    "lastTransitionHash": null,
+    "scheduleHash": "sha256:0be833f10354fa624a6fd63bf4b27b3586fe672a52841fa0c97edb9f82c32266"
+  },
+  "run count beyond the declared ceiling": {
+    "kind": "operating-measurement-schedule",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "scheduleId": "msch_reference0001",
+    "generation": 0,
+    "measurementPlanId": "mpln_reference0001",
+    "planHash": "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+    "ownerActorId": "owner.reference",
+    "consentRecordHashes": [
+      "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+    ],
+    "ceilingsHash": "sha256:1313131313131313131313131313131313131313131313131313131313131313",
+    "recurrence": {
+      "kind": "interval",
+      "intervalSeconds": 3600,
+      "timeZone": "Europe/Istanbul"
+    },
+    "startsAt": "2026-08-24T12:00:00Z",
+    "endsAt": "2026-08-25T12:00:00Z",
+    "maxRuns": 24,
+    "misfirePolicy": "run-once",
+    "dstPolicy": "elapsed-time",
+    "state": "disabled",
+    "runCount": 25,
+    "nextEventIdentity": null,
+    "nextDueAt": null,
+    "lastReceiptId": null,
+    "lastTransitionHash": null,
+    "scheduleHash": "sha256:0be833f10354fa624a6fd63bf4b27b3586fe672a52841fa0c97edb9f82c32266"
+  }
+}

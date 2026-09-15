@@ -1,0 +1,39 @@
+{
+  "imports": [],
+  "modules": [
+    {
+      "moduleId": "planr-browser-qa-workflow",
+      "moduleVersion": "2.0.0",
+      "moduleKind": "shared",
+      "description": "Task-specific planr-browser-qa workflow guidance.",
+      "source": "modules/workflow.md",
+      "appliesWhen": "Whenever planr-browser-qa is selected.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "read-only",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read"
+        ],
+        "allowedTools": [
+          "read",
+          "shell"
+        ],
+        "allowedOperations": [
+          "compile",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      }
+    }
+  ]
+}

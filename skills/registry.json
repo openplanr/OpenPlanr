@@ -1,0 +1,1173 @@
+{
+  "kind": "openplanr-skill-source-registry",
+  "schemaVersion": "1.0.0",
+  "sourceFormat": "package-v1",
+  "aliases": [],
+  "skills": [
+    {
+      "skillId": "planr-artifact",
+      "family": "artifact",
+      "contribution": "workflows",
+      "skillVersion": "1.0.0",
+      "description": "Open, share, import, or export an OpenPlanr HTML artifact review. Use when feedback must move between a local artifact and its review board.",
+      "lifecycle": "active",
+      "authorityClass": "read-only-view",
+      "source": "skills/planr-artifact/openplanr.skill.json",
+      "baseline": "skills/planr-artifact/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Open or share an HTML artifact review",
+          "Import artifact feedback and export the reviewed artifact"
+        ],
+        "exclude": [
+          "Review source code changes",
+          "Create a product interface design"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "artifact-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-artifact.json",
+        "matchingFamily": "artifact"
+      },
+      "utilityRequirements": [
+        {
+          "commandId": "cli-artifact",
+          "argv": [
+            "artifact"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "skillId": "planr-browser-qa",
+      "family": "quality",
+      "contribution": "professional",
+      "skillVersion": "2.0.0",
+      "description": "Run practical browser-backed QA against real routes, forms, viewports, accessibility, console, and network behavior. Use for UI, authentication, session, navigation, or browser-network changes.",
+      "lifecycle": "active",
+      "authorityClass": "review-evidence",
+      "source": "skills/planr-browser-qa/openplanr.skill.json",
+      "baseline": "skills/planr-browser-qa/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Test this page or application in a real browser",
+          "Check routes, forms, mobile viewports, accessibility, console, and network behavior"
+        ],
+        "exclude": [
+          "Run backend unit tests only",
+          "Review a plan without exercising a browser"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "browser-qa-result",
+            "version": "2.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-browser-qa.json",
+        "matchingFamily": "quality"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-ceo-review",
+      "family": "operate-advisor",
+      "contribution": "operate",
+      "skillVersion": "2.0.0",
+      "description": "Produce a grounded strategy and finance review for an Operate cycle. Use when direction, runway, margin, investment, or cost of delay needs a CEO lens.",
+      "lifecycle": "active",
+      "authorityClass": "review-evidence",
+      "source": "skills/planr-ceo-review/openplanr.skill.json",
+      "baseline": "skills/planr-ceo-review/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Run a CEO strategy and finance review",
+          "Assess direction, runway, margin, investment, or cost of delay"
+        ],
+        "exclude": [
+          "Review implementation details",
+          "Assess only product usability"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "ceo-review-result",
+            "version": "2.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-ceo-review.json",
+        "matchingFamily": "operate-advisor"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-chair-review",
+      "family": "operate-synthesis",
+      "contribution": "operate",
+      "skillVersion": "2.0.0",
+      "description": "Synthesize an Operate cycle into a prioritized decision queue and action plan. Use after specialist reviews when leadership needs one coherent brief.",
+      "lifecycle": "active",
+      "authorityClass": "review-evidence",
+      "source": "skills/planr-chair-review/openplanr.skill.json",
+      "baseline": "skills/planr-chair-review/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Synthesize executive reviews into a decision queue",
+          "Turn operating-review findings into prioritized decisions and actions"
+        ],
+        "exclude": [
+          "Produce an independent specialist review",
+          "Implement the recommended actions"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "chair-review-result",
+            "version": "2.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-chair-review.json",
+        "matchingFamily": "operate-synthesis"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-challenger-review",
+      "family": "operate-synthesis",
+      "contribution": "operate",
+      "skillVersion": "2.0.0",
+      "description": "Challenge an Operate cycle's claims, alternatives, downside, and confidence. Use when assumptions or executive consensus need an independent stress test.",
+      "lifecycle": "active",
+      "authorityClass": "review-evidence",
+      "source": "skills/planr-challenger-review/openplanr.skill.json",
+      "baseline": "skills/planr-challenger-review/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Challenge operating-review assumptions and downside",
+          "Test material claims, alternatives, confidence, and dissent"
+        ],
+        "exclude": [
+          "Summarize reviews without challenging them",
+          "Implement a proposed decision"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "challenger-review-result",
+            "version": "2.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-challenger-review.json",
+        "matchingFamily": "operate-synthesis"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-cmo-review",
+      "family": "operate-advisor",
+      "contribution": "operate",
+      "skillVersion": "2.0.0",
+      "description": "Produce a grounded market and growth review for an Operate cycle. Use when acquisition, positioning, demand, retention, or missing measurement needs a CMO lens.",
+      "lifecycle": "active",
+      "authorityClass": "review-evidence",
+      "source": "skills/planr-cmo-review/openplanr.skill.json",
+      "baseline": "skills/planr-cmo-review/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Run a market and growth review",
+          "Assess acquisition, positioning, demand, channels, or growth measurement"
+        ],
+        "exclude": [
+          "Review backend architecture",
+          "Assess internal delivery mechanics only"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "cmo-review-result",
+            "version": "2.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-cmo-review.json",
+        "matchingFamily": "operate-advisor"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-coo-review",
+      "family": "operate-advisor",
+      "contribution": "operate",
+      "skillVersion": "2.0.0",
+      "description": "Produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens.",
+      "lifecycle": "active",
+      "authorityClass": "review-evidence",
+      "source": "skills/planr-coo-review/openplanr.skill.json",
+      "baseline": "skills/planr-coo-review/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Run an operations and customer-health review",
+          "Assess readiness, support, reliability, process, or customer operations"
+        ],
+        "exclude": [
+          "Review company strategy only",
+          "Design a product interface"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "coo-review-result",
+            "version": "2.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-coo-review.json",
+        "matchingFamily": "operate-advisor"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-cpo-review",
+      "family": "operate-advisor",
+      "contribution": "operate",
+      "skillVersion": "2.0.0",
+      "description": "Produce a grounded product and activation review for an Operate cycle. Use when customer value, activation, prioritization, or adoption needs a CPO lens.",
+      "lifecycle": "active",
+      "authorityClass": "review-evidence",
+      "source": "skills/planr-cpo-review/openplanr.skill.json",
+      "baseline": "skills/planr-cpo-review/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Run a product and activation review",
+          "Assess customer value, adoption, activation, retention, or product outcomes"
+        ],
+        "exclude": [
+          "Review infrastructure only",
+          "Assess financial runway only"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "cpo-review-result",
+            "version": "2.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-cpo-review.json",
+        "matchingFamily": "operate-advisor"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-cto-review",
+      "family": "operate-advisor",
+      "contribution": "operate",
+      "skillVersion": "2.0.0",
+      "description": "Produce a grounded technology and delivery-risk review for an Operate cycle. Use when architecture, reliability, security, or execution risk needs a CTO lens.",
+      "lifecycle": "active",
+      "authorityClass": "review-evidence",
+      "source": "skills/planr-cto-review/openplanr.skill.json",
+      "baseline": "skills/planr-cto-review/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Run a technology and delivery-risk review",
+          "Assess architecture, security, reliability, technical debt, or delivery risk"
+        ],
+        "exclude": [
+          "Review marketing channels",
+          "Assess financial runway only"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "cto-review-result",
+            "version": "2.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-cto-review.json",
+        "matchingFamily": "operate-advisor"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-dashboard",
+      "family": "planning-tools",
+      "contribution": "workflows",
+      "skillVersion": "1.0.0",
+      "description": "Start or inspect the loopback-only OpenPlanr planning dashboard. Use when the user wants to view local planning or Operate state in the browser.",
+      "lifecycle": "active",
+      "authorityClass": "read-only-view",
+      "source": "skills/planr-dashboard/openplanr.skill.json",
+      "baseline": "skills/planr-dashboard/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Open or inspect the local OpenPlanr dashboard",
+          "Show planning and Operate workspaces visually"
+        ],
+        "exclude": [
+          "Return a short text delivery status",
+          "Create a product dashboard design"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "dashboard-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-dashboard.json",
+        "matchingFamily": "planning-tools"
+      },
+      "utilityRequirements": [
+        {
+          "commandId": "cli-dashboard",
+          "argv": [
+            "dashboard"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "skillId": "planr-design",
+      "family": "design",
+      "contribution": "workflows",
+      "skillVersion": "2.0.0",
+      "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
+      "lifecycle": "active",
+      "authorityClass": "planning-write",
+      "source": "skills/planr-design/openplanr.skill.json",
+      "baseline": "skills/planr-design/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Create an initial product design direction",
+          "Start the OpenPlanr design workflow for a feature"
+        ],
+        "exclude": [
+          "Review an existing completed design",
+          "Explore several competing design variants"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "design-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-design.json",
+        "matchingFamily": "design"
+      },
+      "utilityRequirements": [
+        {
+          "commandId": "cli-artifact",
+          "argv": [
+            "artifact"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "skillId": "planr-design-loop",
+      "family": "design",
+      "contribution": "workflows",
+      "skillVersion": "2.0.0",
+      "description": "Compare three materially different product design directions in a live review studio, collect pins and ratings, and develop the selected direction. Use for visual alternatives, comparison or a remix.",
+      "lifecycle": "active",
+      "authorityClass": "planning-write",
+      "source": "skills/planr-design-loop/openplanr.skill.json",
+      "baseline": "skills/planr-design-loop/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Explore multiple design directions or variants",
+          "Iterate a design using pinned board feedback"
+        ],
+        "exclude": [
+          "Create only one initial design",
+          "Review an existing design without generating variants"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "design-loop-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-design-loop.json",
+        "matchingFamily": "design"
+      },
+      "utilityRequirements": [
+        {
+          "commandId": "cli-artifact",
+          "argv": [
+            "artifact"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "skillId": "planr-design-review",
+      "family": "design",
+      "contribution": "workflows",
+      "skillVersion": "2.0.0",
+      "description": "Review and revise an existing product design using stable board pins and scoped browser-verified changes. Use for focused improvements while preserving unrelated screens and feedback.",
+      "lifecycle": "active",
+      "authorityClass": "review-evidence",
+      "source": "skills/planr-design-review/openplanr.skill.json",
+      "baseline": "skills/planr-design-review/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Review or critique an existing OpenPlanr design",
+          "Apply pinned feedback to affected design regions"
+        ],
+        "exclude": [
+          "Create an initial design from scratch",
+          "Implement backend code"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "design-review-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-design-review.json",
+        "matchingFamily": "design"
+      },
+      "utilityRequirements": [
+        {
+          "commandId": "cli-artifact",
+          "argv": [
+            "artifact"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "skillId": "planr-diagram",
+      "family": "diagram",
+      "contribution": "workflows",
+      "skillVersion": "1.0.0",
+      "description": "Create, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.",
+      "lifecycle": "active",
+      "authorityClass": "artifact-authoring",
+      "source": "skills/planr-diagram/openplanr.skill.json",
+      "baseline": "skills/planr-diagram/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Create a professional diagram from English intent or Mermaid",
+          "Inspect, verify, preview, or rerender an OpenPlanr diagram set"
+        ],
+        "exclude": [
+          "Create a product interface design",
+          "Open a generic artifact that is not a diagram"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [
+          {
+            "id": "diagram-document",
+            "version": "1.0.0"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "diagram-manifest",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-diagram.json",
+        "matchingFamily": "diagram"
+      },
+      "utilityRequirements": [
+        {
+          "commandId": "cli-diagram",
+          "argv": [
+            "diagram"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "skillId": "planr-doctor",
+      "family": "diagnostics",
+      "contribution": "workflows",
+      "skillVersion": "1.0.0",
+      "description": "Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, and lock health. Use when setup, discovery, versions, generated assets, or runtime behavior seems wrong.",
+      "lifecycle": "active",
+      "authorityClass": "diagnostic",
+      "source": "skills/planr-doctor/openplanr.skill.json",
+      "baseline": "skills/planr-doctor/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Diagnose OpenPlanr installation, runtime, adapter, version, or lock health",
+          "Check why planr setup or upgrade is unhealthy"
+        ],
+        "exclude": [
+          "Diagnose an application bug",
+          "Implement a feature"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "doctor-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-doctor.json",
+        "matchingFamily": "diagnostics"
+      },
+      "utilityRequirements": [
+        {
+          "commandId": "cli-doctor",
+          "argv": [
+            "doctor"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        },
+        {
+          "commandId": "cli-upgrade",
+          "argv": [
+            "upgrade"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "skillId": "planr-investigate",
+      "family": "diagnostics",
+      "contribution": "professional",
+      "skillVersion": "2.0.0",
+      "description": "Diagnose a bug, regression, error, or unexplained behavior and optionally implement a bounded fix. Use for root-cause investigation, not planned feature delivery.",
+      "lifecycle": "active",
+      "authorityClass": "diagnostic",
+      "source": "skills/planr-investigate/openplanr.skill.json",
+      "baseline": "skills/planr-investigate/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Investigate a bug, regression, error, or unexplained behavior",
+          "Reproduce a defect, establish its root cause, or apply a bounded fix",
+          "Investigate why this fails"
+        ],
+        "exclude": [
+          "Plan a new feature",
+          "Run a broad product review"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "investigate-result",
+            "version": "2.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-investigate.json",
+        "matchingFamily": "diagnostics"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-land",
+      "family": "release",
+      "contribution": "release",
+      "skillVersion": "1.0.0",
+      "description": "Assess release readiness and prepare or inspect an OpenPlanr landing sequence. Use after implementation and checks are complete, before merge, publication, or deployment.",
+      "lifecycle": "active",
+      "authorityClass": "release-preparation",
+      "source": "skills/planr-land/openplanr.skill.json",
+      "baseline": "skills/planr-land/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Prepare or inspect a landing and release plan",
+          "Check whether reviewed work is ready to land without deploying it"
+        ],
+        "exclude": [
+          "Build a new application feature",
+          "Deploy or publish immediately"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "land-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-land.json",
+        "matchingFamily": "release"
+      },
+      "utilityRequirements": [
+        {
+          "commandId": "cli-land",
+          "argv": [
+            "land"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "skillId": "planr-operate",
+      "family": "operate",
+      "contribution": "operate",
+      "skillVersion": "2.1.0",
+      "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
+      "lifecycle": "active",
+      "authorityClass": "operate-orchestration",
+      "source": "skills/planr-operate/openplanr.skill.json",
+      "baseline": "skills/planr-operate/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Run an executive operating review across product, technology, growth, operations, and strategy",
+          "Produce a decision and action brief for the product or company"
+        ],
+        "exclude": [
+          "Review only a code diff",
+          "Implement the resulting actions"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "operate-result",
+            "version": "2.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-operate.json",
+        "matchingFamily": "operate"
+      },
+      "utilityRequirements": [
+        {
+          "commandId": "cli-operate",
+          "argv": [
+            "operate"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "skillId": "planr-plan",
+      "family": "planning",
+      "contribution": "workflows",
+      "skillVersion": "1.1.1",
+      "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
+      "lifecycle": "active",
+      "authorityClass": "planning-write",
+      "source": "skills/planr-plan/openplanr.skill.json",
+      "baseline": "skills/planr-plan/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Decompose a specification into user stories and implementation tasks",
+          "Create an implementation plan from product intent"
+        ],
+        "exclude": [
+          "Implement the plan",
+          "Review an already written plan"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "plan-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R3"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-plan.json",
+        "matchingFamily": "planning"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-plan-review",
+      "family": "planning",
+      "contribution": "professional",
+      "skillVersion": "1.0.0",
+      "description": "Review an OpenPlanr plan for product, engineering, design, and developer-experience problems. Use after planning and before implementation to improve the plan.",
+      "lifecycle": "active",
+      "authorityClass": "review-evidence",
+      "source": "skills/planr-plan-review/openplanr.skill.json",
+      "baseline": "skills/planr-plan-review/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Review an implementation plan for product, engineering, design, and developer-experience problems",
+          "Challenge a plan before implementation"
+        ],
+        "exclude": [
+          "Implement the plan",
+          "Write a new specification from vague intent"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "plan-review-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R3"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-plan-review.json",
+        "matchingFamily": "planning"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-release",
+      "family": "release",
+      "contribution": "release",
+      "skillVersion": "1.0.0",
+      "description": "Choose and maintain a product's versioning scheme, classify shipped changes, and write user-facing changelogs or release notes. Use for SemVer or CalVer decisions, version bumps, release cadence, and preparing a versioned release after landing.",
+      "lifecycle": "active",
+      "authorityClass": "release-preparation",
+      "source": "skills/planr-release/openplanr.skill.json",
+      "baseline": "skills/planr-release/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Choose the next SemVer or CalVer version and write user-facing release notes",
+          "Set up or maintain a changelog, versioning scheme, and release cadence"
+        ],
+        "exclude": [
+          "Check whether unmerged work is ready to land without choosing a version",
+          "Implement product code before release preparation"
+        ],
+        "deferTo": [
+          "planr-land",
+          "planr-ship"
+        ]
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "release-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-release.json",
+        "matchingFamily": "release"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-ship",
+      "family": "implementation",
+      "contribution": "workflows",
+      "skillVersion": "1.1.0",
+      "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
+      "lifecycle": "active",
+      "authorityClass": "implementation",
+      "source": "skills/planr-ship/openplanr.skill.json",
+      "baseline": "skills/planr-ship/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Implement a plan, specification, task, fix, or clearly stated local request",
+          "Build and verify the requested repository change",
+          "Ship this",
+          "Ship task",
+          "Implement this task"
+        ],
+        "exclude": [
+          "Only plan the work",
+          "Prepare a release without changing code"
+        ],
+        "deferTo": [
+          "planr-land"
+        ]
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "implementation-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R3",
+        "R5"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-ship.json",
+        "matchingFamily": "implementation"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-spec",
+      "family": "planning",
+      "contribution": "professional",
+      "skillVersion": "1.0.0",
+      "description": "Shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation.",
+      "lifecycle": "active",
+      "authorityClass": "planning-write",
+      "source": "skills/planr-spec/openplanr.skill.json",
+      "baseline": "skills/planr-spec/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Turn vague product or engineering intent into a precise specification",
+          "Clarify requirements and acceptance criteria before planning"
+        ],
+        "exclude": [
+          "Implement an existing specification",
+          "Return project status"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "spec-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R3"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-spec.json",
+        "matchingFamily": "planning"
+      },
+      "utilityRequirements": []
+    },
+    {
+      "skillId": "planr-status",
+      "family": "planning-tools",
+      "contribution": "workflows",
+      "skillVersion": "1.0.0",
+      "description": "Inspect project delivery or one feature's pipeline status without changing state. Use when the user asks what is done, pending, blocked, or next.",
+      "lifecycle": "active",
+      "authorityClass": "read-only-view",
+      "source": "skills/planr-status/openplanr.skill.json",
+      "baseline": "skills/planr-status/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Report current OpenPlanr delivery status or outstanding work",
+          "Show progress for one feature or the whole project"
+        ],
+        "exclude": [
+          "Open the visual dashboard",
+          "Modify planning state"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "status-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-status.json",
+        "matchingFamily": "planning-tools"
+      },
+      "utilityRequirements": [
+        {
+          "commandId": "cli-status",
+          "argv": [
+            "status"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
+      "skillId": "planr-sync",
+      "family": "planning-tools",
+      "contribution": "workflows",
+      "skillVersion": "1.0.0",
+      "description": "Audit OpenPlanr planning artifacts for graph and protocol drift. Use when statuses, references, schemas, or generated planning views may be inconsistent.",
+      "lifecycle": "active",
+      "authorityClass": "planning-write",
+      "source": "skills/planr-sync/openplanr.skill.json",
+      "baseline": "skills/planr-sync/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Audit planning artifacts for graph, schema, or protocol drift",
+          "Check whether stories, tasks, and generated planning state are synchronized"
+        ],
+        "exclude": [
+          "Synchronize external cloud data",
+          "Implement feature code"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "sync-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-sync.json",
+        "matchingFamily": "planning-tools"
+      },
+      "utilityRequirements": [
+        {
+          "commandId": "cli-sync",
+          "argv": [
+            "sync"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    }
+  ],
+  "protocolVersion": "1.8.0"
+}

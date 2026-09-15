@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/investigation-request.schema.json",
+  "title": "OpenPlanr Protocol 1.1 investigation request",
+  "oneOf": [
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "schemaVersion", "protocolVersion", "mode", "feature", "question", "targetScope", "reproduction"],
+      "properties": {
+        "kind": { "const": "investigation-request" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "1.1.0" }, "mode": { "const": "diagnose" },
+        "feature": { "$ref": "#/$defs/feature" }, "question": { "$ref": "#/$defs/text" }, "targetScope": { "$ref": "#/$defs/scope" }, "reproduction": { "$ref": "#/$defs/readCommand" }
+      }
+    },
+    {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "schemaVersion", "protocolVersion", "mode", "feature", "diagnosisReceiptHash", "authority", "regression", "relevantSuite"],
+      "properties": {
+        "kind": { "const": "investigation-request" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "1.1.0" }, "mode": { "const": "fix" },
+        "feature": { "$ref": "#/$defs/feature" }, "diagnosisReceiptHash": { "$ref": "#/$defs/digest" }, "authority": { "$ref": "#/$defs/authority" },
+        "regression": { "$ref": "#/$defs/readCommand" }, "relevantSuite": { "$ref": "#/$defs/readCommand" }
+      }
+    }
+  ],
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$", "maxLength": 160 },
+    "feature": { "type": "object", "additionalProperties": false, "required": ["mode", "featureId", "slug"], "properties": { "mode": { "enum": ["spec-driven", "default"] }, "featureId": { "type": "string", "pattern": "^(?:SPEC|FEAT)-[0-9]{3}$" }, "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "maxLength": 160 } } },
+    "boundary": { "type": "object", "additionalProperties": false, "required": ["repositoryKey", "path"], "properties": { "repositoryKey": { "$ref": "#/$defs/identifier" }, "path": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.{1,2}(?:/|$))[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*$", "maxLength": 512 } } },
+    "scope": { "type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/boundary" } },
+    "readCommand": { "type": "object", "additionalProperties": false, "required": ["id", "repositoryKey", "argv", "inputPaths", "expectedExitCodes", "effect"], "properties": { "id": { "$ref": "#/$defs/identifier" }, "repositoryKey": { "$ref": "#/$defs/identifier" }, "argv": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "type": "string", "minLength": 1, "maxLength": 512 } }, "inputPaths": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "type": "string", "minLength": 1, "maxLength": 512 } }, "expectedExitCodes": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": { "type": "integer", "minimum": 0, "maximum": 255 } }, "effect": { "const": "read-only" } } },
+    "authority": { "type": "object", "additionalProperties": false, "required": ["kind", "schemaVersion", "authorityId", "actorId", "reason", "diagnosisReceiptHash", "targetBaselineDigest", "scope", "issuedAt", "expiresAt", "digest"], "properties": { "kind": { "const": "investigation-fix-authority" }, "schemaVersion": { "const": "1.0.0" }, "authorityId": { "type": "string", "pattern": "^auth_[a-f0-9]{32}$" }, "actorId": { "$ref": "#/$defs/identifier" }, "reason": { "$ref": "#/$defs/text" }, "diagnosisReceiptHash": { "$ref": "#/$defs/digest" }, "targetBaselineDigest": { "$ref": "#/$defs/digest" }, "scope": { "$ref": "#/$defs/scope" }, "issuedAt": { "type": "string", "format": "date-time" }, "expiresAt": { "type": ["string", "null"], "format": "date-time" }, "digest": { "$ref": "#/$defs/digest" } } }
+  }
+}

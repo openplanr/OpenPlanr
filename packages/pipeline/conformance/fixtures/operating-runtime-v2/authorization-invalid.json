@@ -1,0 +1,33 @@
+{
+  "vectors": [
+    { "name": "agent cannot execute", "field": "actor.kind", "value": "agent", "code": "CAPABILITY_DENIED" },
+    { "name": "stale Action revision", "field": "request.action.revision", "value": 2, "code": "ACTION_REVISION_MISMATCH" },
+    { "name": "stale target revision", "field": "target.revision", "value": "rev-0002", "code": "CAPABILITY_GRANT_INVALID" },
+    { "name": "wrong scope", "field": "scope.scopeId", "value": "scope-other", "code": "OPERATING_SCOPE_INVALID" },
+    { "name": "rejected policy", "field": "policyEvaluation.outcome", "value": "rejected", "code": "POLICY_EVALUATION_REJECTED" },
+    { "name": "expired approval", "field": "approvals.0.expiresAt", "value": "2026-08-10T08:02:00Z", "code": "APPROVAL_EXPIRED" },
+    { "name": "consumed approval", "field": "approvals.0.consumedByOperationId", "value": "op_00000001", "code": "APPROVAL_INVALID" },
+    { "name": "unavailable capability", "field": "capabilityAvailability.status", "value": "unavailable", "code": "CAPABILITY_UNAVAILABLE" },
+    { "name": "expired grant", "field": "grant.expiresAt", "value": "2026-08-10T08:02:00Z", "code": "CAPABILITY_GRANT_INVALID" },
+    { "name": "consumed grant", "field": "grant.consumedAt", "value": "2026-08-10T08:02:00Z", "code": "CAPABILITY_GRANT_CONSUMED" },
+    { "name": "stale precondition", "field": "currentPreconditionArtifactIds.0", "value": "art_00000003", "code": "CAPABILITY_GRANT_INVALID" },
+    { "name": "executor ceiling too narrow", "field": "executor.effectCeiling", "value": "machine-local-write", "code": "EXECUTOR_UNAVAILABLE" },
+    { "name": "divergent operation history", "field": "operationHistory.0.requestFingerprint", "value": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", "code": "OPERATION_CONFLICT" },
+    { "name": "wildcard tool capability", "field": "capabilities.0", "value": "*", "code": "CAPABILITY_DENIED" },
+    { "name": "unversioned actor capability", "field": "actor.capabilities.0", "value": "bounded-project-write", "code": "CAPABILITY_DENIED" },
+    { "name": "non-applicable action policy", "field": "actionPolicy.domainId", "value": "business", "code": "POLICY_EVALUATION_REJECTED" },
+    { "name": "alien applied policy", "field": "policyEvaluation.appliedPolicyRefs.0.policyId", "value": "alien-policy", "code": "POLICY_EVALUATION_REJECTED" },
+    { "name": "future policy evaluation", "field": "policyEvaluation.evaluatedAt", "value": "2026-08-10T08:04:00Z", "code": "POLICY_EVALUATION_REJECTED" },
+    { "name": "undeclared approval party", "field": "approvals.0.partyId", "value": "alien-party", "code": "APPROVAL_INVALID" },
+    { "name": "anonymous named-single party", "field": "approvalRequirements.0.parties.0.actorId", "value": null, "code": "APPROVAL_INVALID" },
+    { "name": "future approval", "field": "approvals.0.issuedAt", "value": "2026-08-10T08:04:00Z", "code": "APPROVAL_INVALID" },
+    { "name": "substituted grant issuer", "field": "grant.issuer.id", "value": "another-runtime", "code": "CAPABILITY_GRANT_INVALID" },
+    { "name": "future grant", "field": "grant.issuedAt", "value": "2026-08-10T08:04:00Z", "code": "CAPABILITY_GRANT_INVALID" },
+    { "name": "future capability check", "field": "capabilityAvailability.checkedAt", "value": "2026-08-10T08:04:00Z", "code": "CAPABILITY_UNAVAILABLE" },
+    { "name": "unregistered connector", "field": "operation.connector", "value": { "id": "unknown-connector", "version": "1.0.0" }, "code": "OPERATION_CONFLICT" },
+    { "name": "undeclared operation input", "field": "operation.inputArtifactIds.0", "value": "art_00000009", "code": "OPERATION_CONFLICT" },
+    { "name": "rollback classification mismatch", "field": "operation.rollbackClass", "value": "not-applicable", "code": "OPERATION_CONFLICT" },
+    { "name": "future executor health check", "field": "executor.health.checkedAt", "value": "2026-08-10T08:04:00Z", "code": "EXECUTOR_UNAVAILABLE" },
+    { "name": "future operation", "field": "operation.createdAt", "value": "2026-08-10T08:04:00Z", "code": "OPERATION_CONFLICT" }
+  ]
+}

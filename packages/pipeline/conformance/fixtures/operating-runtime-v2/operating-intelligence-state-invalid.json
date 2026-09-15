@@ -1,0 +1,25 @@
+{
+  "snapshotId": "snp_intelligence_001",
+  "claims": [{
+    "kind": "operating-claim",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "claimId": "clm_intelligence_invalid_001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "statement": "This claim is incorrectly asserted without typed evidence.",
+    "epistemicStatus": "strongly-supported",
+    "confidence": 0.8,
+    "supportingEvidenceRefIds": [],
+    "contradictingEvidenceRefIds": [],
+    "assumptionIds": [],
+    "changeCondition": "Evidence changes.",
+    "sourceArtifactId": "art_intelligence_001",
+    "createdAt": "2026-08-09T12:00:00.000Z"
+  }],
+  "metricObservations": [],
+  "risks": [],
+  "assumptions": [],
+  "decisionRevisions": []
+}

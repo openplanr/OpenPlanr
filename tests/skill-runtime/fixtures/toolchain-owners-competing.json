@@ -1,0 +1,34 @@
+{
+  "kind": "openplanr-skill-toolchain-owners",
+  "schemaVersion": "1.0.0",
+  "owners": [
+    {
+      "role": "prompt-writer",
+      "ownerId": "canonical-skill-generator",
+      "path": "scripts/skills/generate-v18.mjs",
+      "implementationPaths": [
+        "scripts/skills/generate-v18.mjs",
+        "packages/pipeline/scripts/generate-guided-adapters.mjs"
+      ],
+      "controls": ["workspace-host-adapters"]
+    },
+    {
+      "role": "prompt-writer",
+      "ownerId": "competing-prompt-writer",
+      "path": "scripts/skills/generate-composed.mjs",
+      "implementationPaths": [
+        "scripts/skills/generate-composed.mjs"
+      ],
+      "controls": ["workspace-host-adapters"]
+    },
+    {
+      "role": "runtime-installer",
+      "ownerId": "cli-runtime-manager",
+      "path": "packages/cli/src/services/runtime-manager-service.ts",
+      "implementationPaths": [
+        "packages/cli/src/services/runtime-manager-service.ts"
+      ],
+      "controls": ["project-runtime-adapters"]
+    }
+  ]
+}

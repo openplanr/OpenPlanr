@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.2.0/ecosystem-release-operation.schema.json",
+  "title": "OpenPlanr reconciled cross-repository release operation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "operationId", "operationDigest", "specId", "specDigest", "state", "recoveryMode", "createdAt", "updatedAt", "participants", "nextSafeAction"],
+  "properties": {
+    "kind": { "const": "ecosystem-release-operation" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.2.0" },
+    "operationId": { "type": "string", "pattern": "^[A-Z][A-Z0-9-]+$" },
+    "operationDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "specId": { "type": "string", "pattern": "^SPEC-[0-9]{3,}$" },
+    "specDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "state": { "type": "string", "enum": ["drafted", "preparing", "prepared", "promoting", "verified", "completed", "blocked", "compensating", "forward-fix"] },
+    "recoveryMode": { "type": "string", "enum": ["compensation-available", "forward-fix-only"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "participants": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "repository", "repoLocalSpecId", "state", "sourceVersion", "targetVersion", "targetBranch", "commit", "pullRequest", "tag", "checks", "approvals", "package", "nextSafeAction"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+          "repository": { "type": "string", "minLength": 1 },
+          "repoLocalSpecId": { "type": "string", "minLength": 1 },
+          "state": { "type": "string", "enum": ["pending", "preparing", "prepared", "promoting", "verified", "completed", "blocked", "compensated", "forward-fix"] },
+          "sourceVersion": { "type": ["string", "null"] },
+          "targetVersion": { "type": ["string", "null"] },
+          "targetBranch": { "type": ["string", "null"] },
+          "commit": { "type": ["string", "null"], "pattern": "^[a-f0-9]{7,64}$" },
+          "pullRequest": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["number", "url", "state"],
+            "properties": {
+              "number": { "type": ["integer", "null"], "minimum": 1 },
+              "url": { "type": ["string", "null"] },
+              "state": { "type": "string", "enum": ["none", "draft", "open", "merged", "closed"] }
+            }
+          },
+          "tag": { "type": ["string", "null"] },
+          "checks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["name", "state"],
+              "properties": {
+                "name": { "type": "string", "minLength": 1 },
+                "state": { "type": "string", "enum": ["unknown", "pending", "passed", "failed"] }
+              }
+            }
+          },
+          "approvals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["gate", "state"],
+              "properties": {
+                "gate": { "type": "string", "minLength": 1 },
+                "state": { "type": "string", "enum": ["not-required", "pending", "approved", "rejected"] }
+              }
+            }
+          },
+          "package": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "version", "published", "tarballDigest"],
+            "properties": {
+              "name": { "type": ["string", "null"] },
+              "version": { "type": ["string", "null"] },
+              "published": { "type": "boolean" },
+              "tarballDigest": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }
+            }
+          },
+          "nextSafeAction": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "nextSafeAction": { "type": "string", "minLength": 1 },
+    "blockedReason": { "type": "string", "minLength": 1 }
+  }
+}

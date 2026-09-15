@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-dashboard",
+  "family": "planning-tools",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-dashboard/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-dashboard/skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Removed an unresolved packaged procedure dependency and made the public dashboard command the executable owner."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:0bdf1adf6ec201e4e6da6b6c3d4c51fa57642256df3884df34c1407ac7410506",
+      "successorDigest": "sha256:63a4c3bbe2355491b674a356caddc76ecf78d0834f013a2bd4d55444046721ad"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:0bdf1adf6ec201e4e6da6b6c3d4c51fa57642256df3884df34c1407ac7410506",
+      "successorDigest": "sha256:63a4c3bbe2355491b674a356caddc76ecf78d0834f013a2bd4d55444046721ad"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:29466a5cdf98834dd11fd3802b68d7a66642bac0ebca1b8c45166aba874f3347",
+      "successorDigest": "sha256:2b35f797ce6cfc2493a4f2e5bf097af674e2cd831e188548a90b8cb2977010ca"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:0bdf1adf6ec201e4e6da6b6c3d4c51fa57642256df3884df34c1407ac7410506",
+      "successorDigest": "sha256:63a4c3bbe2355491b674a356caddc76ecf78d0834f013a2bd4d55444046721ad"
+    }
+  ]
+}

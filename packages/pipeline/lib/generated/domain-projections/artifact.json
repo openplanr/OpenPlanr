@@ -1,0 +1,1028 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "openplanr-domain-projection",
+  "domain": "artifact",
+  "generator": "scripts/domains/project-domains.mjs",
+  "entries": [
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/architecture.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/architecture.planr-diagram.json",
+      "sha256": "2bdb8fc82f8c2724f4c9fdfe5f5a2524304263c0918eed70efb24ee04f63ffd3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/bar.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/bar.planr-diagram.json",
+      "sha256": "18c0be3867520115cf7baaf310a5a4a3d73801792cc886a9db1117072419eb5e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/data-flow.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/data-flow.planr-diagram.json",
+      "sha256": "cf4243cc1dcda6830a5cbdb967e1a8d8fada263aac142e0275c07c29e2667f39",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/database-schema.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/database-schema.planr-diagram.json",
+      "sha256": "0cf44f760dba59cc4650fdfb972bdcd73c3b00e1ea9f5d0f62206600b7799e8d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/dependency-graph.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/dependency-graph.planr-diagram.json",
+      "sha256": "2e20b2bc62f33324c16cd01af7d808e6c35a25ec676d8bb31731ca90c6e4fdc1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/deployment.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/deployment.planr-diagram.json",
+      "sha256": "1a6ae944c125d12fe508e5a09e23497085ed610dba156e18e13086932b32a3c2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/dp-integration.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/dp-integration.planr-diagram.json",
+      "sha256": "17697390d1b2a3f0188a33c5f67568e8a31478cb1047f22243656fc02188ca02",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/dp-security-matrix.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/dp-security-matrix.planr-diagram.json",
+      "sha256": "23eb42d787abfd7f0a99e1bd7bc2557053e13ae7eb2db4c24a3ccbec5b635aa7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/er-data-model.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/er-data-model.planr-diagram.json",
+      "sha256": "e9325124a8a92bbe07e3c700344c83f9654ecb1b3ce7ec7d5bbb71a96cecf84a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/fishbone.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/fishbone.planr-diagram.json",
+      "sha256": "144f1a39a4bb1ff677bde0a1cfea485192d2669e891463783ac95af7acd6026b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/flowchart.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/flowchart.planr-diagram.json",
+      "sha256": "606c5b274eba96becb5ece7e7c838b92e6aa753ddf5fac5c190e17764e075d1f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/gantt.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/gantt.planr-diagram.json",
+      "sha256": "3be3d4fa28467da14718fedae66b3bc7b0ad75cefa73c781be4249b2925410c3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/high-level.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/high-level.planr-diagram.json",
+      "sha256": "4056945f2fe29b4a3a09c1afe864c5df4e4d41022802c2e77f1eb6c2a79994b7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/it-current-state.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/it-current-state.planr-diagram.json",
+      "sha256": "95cb11ceea7cc4f93596d775d071467ef45e1cb8a2007dddff2f2185af39ba55",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/kanban.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/kanban.planr-diagram.json",
+      "sha256": "75c7028dc8e2ade1c33fc8aa891da281e88b84ba66dd7a0625f7f9122d383bcb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/layer-stack.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/layer-stack.planr-diagram.json",
+      "sha256": "008f4dbd148ac28ffb2c8ff42ffcdf77c6d6fe57b37696b905044810cb40c6c9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/line.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/line.planr-diagram.json",
+      "sha256": "dd79a916212d532bbc974567ce5ca37feb834d5884559e3c5ebe31a86e73b67d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/loop-flywheel.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/loop-flywheel.planr-diagram.json",
+      "sha256": "9030fdeb5bcdf581c7103531755076992ce4e112b8b0b489fbbb01333492bdde",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/medallion.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/medallion.planr-diagram.json",
+      "sha256": "5b6e00a5aaf0be9fc25e3a74f5f6ab8a7bb473d18e938a04db57a298e3304428",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/nested.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/nested.planr-diagram.json",
+      "sha256": "e8ded9bd9bac2df052acb4dd1a4b175395a25cbc86f1c14b2a042629dd509609",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/org-chart.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/org-chart.planr-diagram.json",
+      "sha256": "db54d20c13fd6f84aa83732ff996791202615f7d3528075b8dac3f2b6dcb8961",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/polar.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/polar.planr-diagram.json",
+      "sha256": "77f3eb5f1fcf43f342af02969a732987e08690cf05ff67546d6e1afb2a959757",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/process.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/process.planr-diagram.json",
+      "sha256": "986257314048fa36a24ce718d3961f0349fb5b57be28322494dffbf534cc8084",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/pyramid-funnel.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/pyramid-funnel.planr-diagram.json",
+      "sha256": "ffb4a02f6e89aca4d89716a2438e0fcce3ad2b8c987cc96e623613f4f6ddee4c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/quadrant.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/quadrant.planr-diagram.json",
+      "sha256": "2fe9a0ef51d8f02e966dfbc57788b6c8b29ef447e8e43ec28c53b61c1b44b38d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/radar.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/radar.planr-diagram.json",
+      "sha256": "2f0c12dc514269edd02e74561432369cc966e33fa10f9817fed23bad064d9cb0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/sankey.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/sankey.planr-diagram.json",
+      "sha256": "5d774f8a9f71d8ed02cd3c715a431b6ae4f69d9a57942e3fa095171eb779e9d8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/scatter.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/scatter.planr-diagram.json",
+      "sha256": "d05238445b95b5c6f175ce2017fffdf8707ad97fcf45dfc1d3cb78d47f9d8f8c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/sequence.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/sequence.planr-diagram.json",
+      "sha256": "e6bc120555aac7150524f8e8939b47b213b1407c0da1cb0d278f35e7bba77e53",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/state-machine.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/state-machine.planr-diagram.json",
+      "sha256": "e216cf8730afdd9d8778cbc2389471b0f5ddd2644c6bbefe8c70c2a4f53f24d0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/story-map.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/story-map.planr-diagram.json",
+      "sha256": "a374522ce5a3d83e33eb122dc8e5f7b8246fe06991373f8ec65bc0df5ebca147",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/swimlane.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/swimlane.planr-diagram.json",
+      "sha256": "3266dbf7a415e54fea0dab9d6bf9354147fdc29b00a0a647cec5c64a8e39702e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/timeline.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/timeline.planr-diagram.json",
+      "sha256": "f223933e462b3f548e01f1b5e225f5ea6506abadb9a68f871ec4783fe6c450cb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/tree.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/tree.planr-diagram.json",
+      "sha256": "175cd801837bd5e96016374bb12ed1c8241ad253660f9d613c99bd63bb3a505d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/treemap.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/treemap.planr-diagram.json",
+      "sha256": "f76290f3ae146c63df275a4e73012c13ae4013d21c6a71a9877d4e3fe66d78f2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/uml-class.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/uml-class.planr-diagram.json",
+      "sha256": "d80be73799fe13f60d55ed3194f7b4411463c223424566083d3504ef2f01102f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/user-journey.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/user-journey.planr-diagram.json",
+      "sha256": "e6ef2d6bfcd209b922cd759302eb7fc1f5204076a3e4f47212e13787b4cb7db0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/venn.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/venn.planr-diagram.json",
+      "sha256": "6564a2276209356af0fc01b59494115b8b82a0ad4b9fd34bb219807f203a569a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/grammars/wardley.planr-diagram.json",
+      "target": "fixtures/diagram/grammars/wardley.planr-diagram.json",
+      "sha256": "020346b6fb87209ad1e7caebc82bf57ff411449c6ffcf46babec14958ac292f1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/integration/consumers.json",
+      "target": "fixtures/diagram/integration/consumers.json",
+      "sha256": "aab1a37c8abae70220af2a4136b7d9780277fc28c3adb690c7417d489bdf75cd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/integration/review-pin.json",
+      "target": "fixtures/diagram/integration/review-pin.json",
+      "sha256": "37efdf67ae01f555324a1d6ce7c7a74323d0df4e542fe14f82acb840f4c3d063",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/primitives/annotation.json",
+      "target": "fixtures/diagram/primitives/annotation.json",
+      "sha256": "a5e5c07d53edc58d1f3cc7385773e11b265b0546ec4849e645f353a2e5b6a53a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/primitives/axis.json",
+      "target": "fixtures/diagram/primitives/axis.json",
+      "sha256": "254053128bbd2851a243d2ebedb2179ce32428c39d7e1ccd1835457dde6feb15",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/primitives/emphasis.json",
+      "target": "fixtures/diagram/primitives/emphasis.json",
+      "sha256": "df216f7cad6ccd15937f795547711b17c01b2bb181f12f36dcce3376d8bff8b3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/primitives/event.json",
+      "target": "fixtures/diagram/primitives/event.json",
+      "sha256": "b6c29aaec8a87f32abf747bbaa615996fd3eedda9e96b25732dbd94a96d8af87",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/primitives/group.json",
+      "target": "fixtures/diagram/primitives/group.json",
+      "sha256": "d47e47d653137286b447a08a0815259fa85bdafccc897562fecf05d49f3c9fdc",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/primitives/lane.json",
+      "target": "fixtures/diagram/primitives/lane.json",
+      "sha256": "1264e7ee8f461acb2229ba03dc8d865db50a799a6aedce999c92260f8231fd8f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/primitives/node.json",
+      "target": "fixtures/diagram/primitives/node.json",
+      "sha256": "1739040191cfe7d81943da184e70d3a5c278a34a2560942ac04e9cd043289fff",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/primitives/relation.json",
+      "target": "fixtures/diagram/primitives/relation.json",
+      "sha256": "daa4bd9ca827158d8d8d669492f101a462f8770f622ffa3c9d0ee99be9d33624",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/primitives/series.json",
+      "target": "fixtures/diagram/primitives/series.json",
+      "sha256": "9d28accbf388ecca63b3c014f2b2c7255b8af47ce8d84bafc6f3a3783ece42c2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/primitives/set.json",
+      "target": "fixtures/diagram/primitives/set.json",
+      "sha256": "474e5a38e942c9952bcd3ce4893a1c31102b18fe752de5fa0fcb0d78727f985c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/regressions/parallel-opposing.planr-diagram.json",
+      "target": "fixtures/diagram/regressions/parallel-opposing.planr-diagram.json",
+      "sha256": "8136830cc3742e7b11e3e40e876c5441701d9c2e42afb9135471f9c916730035",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/gallery/diagram/inventory.json",
+      "target": "gallery/diagram/inventory.json",
+      "sha256": "8b2f3f3dcc731e9edaafefba075ab3dafa24a9a551f3fd7b14fb8aeb216c85be",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/gallery/diagram/primitives.html",
+      "target": "gallery/diagram/primitives.html",
+      "sha256": "de0594e0fe0999bfaeef401bdee8b75785152de31e739fb6dac0b19bcff3cd1e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/gallery/diagram/types.html",
+      "target": "gallery/diagram/types.html",
+      "sha256": "7d826a477ed8e588e75d70ff91e395dcda32efc038981b0b0d0ea9e110b23989",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/bridge.mjs",
+      "target": "lib/artifact/bridge.mjs",
+      "sha256": "60324c945a940d257d2d74f09c432099ddc83016e0065ce8c63cfbffffbb1e1a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/bundle.mjs",
+      "target": "lib/artifact/bundle.mjs",
+      "sha256": "257b34293e67351f4130935112df1100be32f6f2521a3c8d31051b04da4fa04a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/codec.mjs",
+      "target": "lib/artifact/codec.mjs",
+      "sha256": "4754014063617f8a236df5e72ed07e5673d8f44d74ea6a16a2294a15044f57fa",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/crypto.mjs",
+      "target": "lib/artifact/crypto.mjs",
+      "sha256": "a9f8ad5d44af03be47c24466ec655f58f8751ea49511280658b9bd39790c5460",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram-review.mjs",
+      "target": "lib/artifact/diagram-review.mjs",
+      "sha256": "c8c6b6c9f4bd99b70edf97b0d0f7af099102edfcfee7d14e4f18495cc6b62c64",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/accessibility.mjs",
+      "target": "lib/artifact/diagram/accessibility.mjs",
+      "sha256": "aed26d8906dcc5586a9f95e77a9fe7ec36ad7641a9796ff749cc257fac8d53f8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/custody/bytes.mjs",
+      "target": "lib/artifact/diagram/custody/bytes.mjs",
+      "sha256": "1f515b2c7be5b030e73385e73aa7a89ee36e17758ece1749ce2dc226fa513933",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/custody/index.mjs",
+      "target": "lib/artifact/diagram/custody/index.mjs",
+      "sha256": "997c640089291a72021085c825ee8dd5cdda7a9d1c94a97c996c4d49493358f0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/custody/lock.mjs",
+      "target": "lib/artifact/diagram/custody/lock.mjs",
+      "sha256": "f7f6e27b0e42cb7008139b9f7362e206ff15d2ec412997fb4712e443d74d2357",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/custody/manifest.mjs",
+      "target": "lib/artifact/diagram/custody/manifest.mjs",
+      "sha256": "a4d3d356e7c2c3b1a6bf9b7ad4d3a7d8a35a1065658174eab4cc0043dda6d277",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/custody/paths.mjs",
+      "target": "lib/artifact/diagram/custody/paths.mjs",
+      "sha256": "d4f8c0e798f88facce41bb3fe9495f59a25fc0129302e7912cef2f66c514ef6c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/custody/workspace.mjs",
+      "target": "lib/artifact/diagram/custody/workspace.mjs",
+      "sha256": "9be1a78c71ef8225c37f6799065b094bb77fc0630b9fa9791b41a4435a13ae56",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/errors.mjs",
+      "target": "lib/artifact/diagram/errors.mjs",
+      "sha256": "b0d58ab59bf57d6283aab3c97d9034d39e8aa3269d56f7a1f380279906cd96c3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/index.d.mts",
+      "target": "lib/artifact/diagram/index.d.mts",
+      "sha256": "7fdf078f7ce335dcf248d21d3ad233603f2166bae129ba3edac55ce50f156df6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/index.mjs",
+      "target": "lib/artifact/diagram/index.mjs",
+      "sha256": "6f7dd1a21df351be8310643d458b8eb88e6763784945a2d3ce596a158c24578c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/integration.mjs",
+      "target": "lib/artifact/diagram/integration.mjs",
+      "sha256": "345efa3e7cce143ccb691c8b1244209a64281ffdf6213f7f33b0d5a93e802cd2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/mermaid.mjs",
+      "target": "lib/artifact/diagram/mermaid.mjs",
+      "sha256": "8c173e6003059f0f9433b908a5daf6fe99f9bce23925ee518011195761ad40be",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/model.mjs",
+      "target": "lib/artifact/diagram/model.mjs",
+      "sha256": "68d70692265571bf8e7121a385a696214dd8c52c1e647060244014797ecd897d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/projection/excalidraw.mjs",
+      "target": "lib/artifact/diagram/projection/excalidraw.mjs",
+      "sha256": "1b285afa79f536002ec66aa97bd792067017eba91e96ec0fc9dfba330dedac42",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/projection/index.mjs",
+      "target": "lib/artifact/diagram/projection/index.mjs",
+      "sha256": "1fc440be84fe3937a74c33e8d4c359223a496605043d34e7af2e19d9f1678a49",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/projection/mermaid.mjs",
+      "target": "lib/artifact/diagram/projection/mermaid.mjs",
+      "sha256": "2e19fb3ccfc3cb3f7b47da842a61f09e4304fbf37c08ce106f06d1e289b9a000",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/readability.mjs",
+      "target": "lib/artifact/diagram/readability.mjs",
+      "sha256": "ff61b1ef362230ace9426199c86661581fdc953f72f770018bed6d8a89344ba5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/references.mjs",
+      "target": "lib/artifact/diagram/references.mjs",
+      "sha256": "3ff8640d57d3dd6efd5249c43e64b6485d22fb5cd1a0f65bbfeee914f910f800",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/registry.mjs",
+      "target": "lib/artifact/diagram/registry.mjs",
+      "sha256": "870adf2900bb5f0e7dd5dd1361e3efd243a6800b0ea3e724021eece068ab413b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/rendering/html.mjs",
+      "target": "lib/artifact/diagram/rendering/html.mjs",
+      "sha256": "2d994fb7bc4ab2a3c567dbcb10e11dde95096d7f4fb453aac5385b63e41ea11d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/rendering/index.mjs",
+      "target": "lib/artifact/diagram/rendering/index.mjs",
+      "sha256": "ef358a142d2ce1b01fa1b15af02110114dcb608bea681f05546bd570daff24ee",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/rendering/layout.mjs",
+      "target": "lib/artifact/diagram/rendering/layout.mjs",
+      "sha256": "9f7b7b6131a79b8b95ccbc7294c1447bc13ab1cd3a2a55bef696f5fde23e37cb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/rendering/png.mjs",
+      "target": "lib/artifact/diagram/rendering/png.mjs",
+      "sha256": "4e729f821ac76b51e23afe448329501365f4fe41f0a132c73fd38a6d7d4ffb25",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/rendering/reports.mjs",
+      "target": "lib/artifact/diagram/rendering/reports.mjs",
+      "sha256": "1fae0846da57dfa50efcd56ca5563af1728306d5c5b8ff094284d9fe0e937cdb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/rendering/svg.mjs",
+      "target": "lib/artifact/diagram/rendering/svg.mjs",
+      "sha256": "0388b401ebde2158855a764eb53125ec996d5de7281246495d34bc1e357b36f7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/rendering/theme.mjs",
+      "target": "lib/artifact/diagram/rendering/theme.mjs",
+      "sha256": "910e14c7dce9c39304c36e3d554b345692ece9c458cd339f4fff804480e784f6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/router.mjs",
+      "target": "lib/artifact/diagram/router.mjs",
+      "sha256": "b341a78a2a523b181a00c7a0e466ebad441137ae40023551d9fb004102da2c23",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/runtime.mjs",
+      "target": "lib/artifact/diagram/runtime.mjs",
+      "sha256": "de9d893fdae71021d79a1a5704c1c39768e5dd83b6f8dcd0de4ce4779b22332b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/envelope.mjs",
+      "target": "lib/artifact/envelope.mjs",
+      "sha256": "deaf458ca87adb1d863121a4b1ab6435ea2adec59f4b28352c28ef0100adecc2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/import.mjs",
+      "target": "lib/artifact/import.mjs",
+      "sha256": "ad1dd97ead42f2dcfaa33fbba790f11350d2adec9f9f8418e6b179463ea56b39",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/index.mjs",
+      "target": "lib/artifact/index.mjs",
+      "sha256": "14aa8decfcc25f2f2ad4d4dc915d08e24a0dee281f5d530a8c1d89e6695a5c00",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/internal/board-adapter.mjs",
+      "target": "lib/artifact/internal/board-adapter.mjs",
+      "sha256": "5c8c1fa8b23b5eda6d1dd060e14f4f27454d17b92e9d594a9260d42370352956",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/internal/board-token.mjs",
+      "target": "lib/artifact/internal/board-token.mjs",
+      "sha256": "de33d3c0f69b5ef9ac596bc8f45aac66a3f9576763aa2b3048851424d16b5635",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/internal/contrast.mjs",
+      "target": "lib/artifact/internal/contrast.mjs",
+      "sha256": "7c9781678a65617a6642709121824122ebd1c90119e4eb4107d13b427d368a5e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/internal/escape.mjs",
+      "target": "lib/artifact/internal/escape.mjs",
+      "sha256": "42cd713d2c25054589f07943425b144a69184afd98416344e7608f1c306d6fef",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/internal/feedback.mjs",
+      "target": "lib/artifact/internal/feedback.mjs",
+      "sha256": "3aad1fbf94894e8a0f7f0d2bc9bb5d3d613d119c365bd83621c2074de7d9869e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/internal/path-util.mjs",
+      "target": "lib/artifact/internal/path-util.mjs",
+      "sha256": "70cfbe8bc62187e73da502c1e6b5e4e686fb4333f44f7f5866402fb7e2944b88",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/internal/paths.mjs",
+      "target": "lib/artifact/internal/paths.mjs",
+      "sha256": "ed6f6d4ebee5761b6ac4d8c2c9fc5b14956b10d2d1dd29485660ae15bd1d9f41",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/internal/schema-loader.mjs",
+      "target": "lib/artifact/internal/schema-loader.mjs",
+      "sha256": "9b1d29ebdbee577c120ad8b3f152fba7b5d6c5d5e842d180e3f60d6ce1f58277",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/internal/server-util.mjs",
+      "target": "lib/artifact/internal/server-util.mjs",
+      "sha256": "00254e3f41b2f238c80b7140b7e8b4eb275bc3a44a6d7af01e4f693bebbe6b8b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/live-room-integrity.mjs",
+      "target": "lib/artifact/live-room-integrity.mjs",
+      "sha256": "f22bbbca82f62d598bbc997b4931942f4b1ba4d3dce791762775f8500656988e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/live-room.mjs",
+      "target": "lib/artifact/live-room.mjs",
+      "sha256": "4100c01b525cf9d82a8787f2f0e45db4db867ab625c038645128ff145643ef54",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/local-document.mjs",
+      "target": "lib/artifact/local-document.mjs",
+      "sha256": "83eb8261da5430c4564887f98e821ce0b3b2b96531365542781c61083f761221",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/merge.mjs",
+      "target": "lib/artifact/merge.mjs",
+      "sha256": "bca52da783786497daa039d9202cadccff4afd9aaa7c75c266275fc3a7abcdd7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/review-server.mjs",
+      "target": "lib/artifact/review-server.mjs",
+      "sha256": "afee4c3592449381e7f585f19c25205db0f992a8ee2f5ecd278eb479e0907189",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/review.mjs",
+      "target": "lib/artifact/review.mjs",
+      "sha256": "5f9ab145d85b6c01df9e717f52c061e9c3ca20ca3e4386126e4d205c16a67681",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/share-client.mjs",
+      "target": "lib/artifact/share-client.mjs",
+      "sha256": "0708d0f059c46bc48d7f4697cdf8fcf0320512a87453aacb394800204663f41f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/annotations.mjs",
+      "target": "lib/artifact/ui/annotations.mjs",
+      "sha256": "eccce747fcd98a1dc883bbb72be435956fa91c5858a7e0b34fc7c4426a52429e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/bridge-tools.mjs",
+      "target": "lib/artifact/ui/bridge-tools.mjs",
+      "sha256": "cb8fe2cca42e5bdb9acb00bd123b6e4e2a2b374ac09e4dd27c9cf7042e816347",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/diagram-studio.css",
+      "target": "lib/artifact/ui/diagram-studio.css",
+      "sha256": "25b40e7fc0f8dac08ffcc41fa68578ce6798cb3d76aae88f16e2392488f632ae",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/diagram-studio.mjs",
+      "target": "lib/artifact/ui/diagram-studio.mjs",
+      "sha256": "372749c5c48fb632178e98166054c5d682cfc9ad31286a51f7ab78d1c8b247ac",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/diagram-svg.mjs",
+      "target": "lib/artifact/ui/diagram-svg.mjs",
+      "sha256": "83cbf85fdebd5200a7fb51e1506e3334c0299a92191dac5cbd3dad5b20c676bf",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/feedback-rail.mjs",
+      "target": "lib/artifact/ui/feedback-rail.mjs",
+      "sha256": "76061de86123307d43dfc3c5b714650d5365dd237423d749648bdaa1e61604f7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
+      "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
+      "sha256": "6dc59c57862ff224e654e2589263925abdccdacd423dc5ac0595ccce6a5d6e9e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/generated/artifact-theme.css",
+      "target": "lib/artifact/ui/generated/artifact-theme.css",
+      "sha256": "4e53d421dcb37532eeb6373b1d86babb9afe7e43bd988c7c930e5b7fdb794514",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/generated/artifact-theme.json",
+      "target": "lib/artifact/ui/generated/artifact-theme.json",
+      "sha256": "c3c79c71d5e594bd1c18647f85a1482b3fa805fc7cb76c8b86da6fc28fa45693",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/hosted-viewer.mjs",
+      "target": "lib/artifact/ui/hosted-viewer.mjs",
+      "sha256": "ddf438b98e6492a2f290877fb587bcdfdedf32e897f658a223b5f7c12b103bc0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/renderers.mjs",
+      "target": "lib/artifact/ui/renderers.mjs",
+      "sha256": "2f3257af03e402182cb6214c7255c4194af474b82191543b0a185b67be53a62f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/share-dialog.mjs",
+      "target": "lib/artifact/ui/share-dialog.mjs",
+      "sha256": "b47058fddfef9670c450df57666c477167bec74a4895dac8beb3177e7ed8a07a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/shell.mjs",
+      "target": "lib/artifact/ui/shell.mjs",
+      "sha256": "34ea2531179ae08def34d08204d25697f06a1012a56fb0fb59ed55ea94b0c7a6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/stage-payload.mjs",
+      "target": "lib/artifact/ui/stage-payload.mjs",
+      "sha256": "750fa26b3ca4062f7ecbb2b0f1630f51008c6952f7927a2f3c5b0c54c00af1dc",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/stage.mjs",
+      "target": "lib/artifact/ui/stage.mjs",
+      "sha256": "ad8b27f68d0ccd22d24aa02eb11ab983baeadcdaeac2f4c0fb43c3314bf87498",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/ui/tokens.mjs",
+      "target": "lib/artifact/ui/tokens.mjs",
+      "sha256": "d9db618333cb472c61e113d1bfb0aa20abf8c8b30a474c901f36601973de1cda",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/architecture.md",
+      "target": "references/diagram/architecture.md",
+      "sha256": "034adb3e48dd55dbae904853fb63c49d16cf23a5bac6f7d460c771dbc4bae290",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/bar.md",
+      "target": "references/diagram/bar.md",
+      "sha256": "3eab1ab786e891361f36ad1b73f03931d30ede3187c9e762ba6c253400c03a46",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/data-flow.md",
+      "target": "references/diagram/data-flow.md",
+      "sha256": "3e0bff0492b53b89095ffb41ce7959139cf71f6c699e51e617025ff93bf51e1c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/database-schema.md",
+      "target": "references/diagram/database-schema.md",
+      "sha256": "b11ddff4fd62bb56ecc8b9cda94b1e9ce3f413dbda93a5d1e6e66022820e0fb8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/dependency-graph.md",
+      "target": "references/diagram/dependency-graph.md",
+      "sha256": "9cf88ca6c950aa6a04f41061dcc37fa55040d652176513fa4295e49440bff338",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/deployment.md",
+      "target": "references/diagram/deployment.md",
+      "sha256": "71b34dc5ab37ef9ccd2247c27d363f9840e0b6f18c97e6e6b041c3e0e41c2482",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/dp-integration.md",
+      "target": "references/diagram/dp-integration.md",
+      "sha256": "22de5a3c853718e4a4e3e409684defd52b9badd694529aafd397075c757dd156",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/dp-security-matrix.md",
+      "target": "references/diagram/dp-security-matrix.md",
+      "sha256": "dba45b315ec8ede74f87d5703552267d825e13380365237ebab98718f4ba8308",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/er-data-model.md",
+      "target": "references/diagram/er-data-model.md",
+      "sha256": "ee9b9455c089ebeaaba45f53e90fd9e0dcff4bdf60847aae3716841fbdb20ebd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/fishbone.md",
+      "target": "references/diagram/fishbone.md",
+      "sha256": "e402210242cc220daab60e36b2ba3c843df972ad450470193fbb8f79392a94ce",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/flowchart.md",
+      "target": "references/diagram/flowchart.md",
+      "sha256": "37c677dcab021a015b0d7a41fcff98143b939b75a7a14542027e0253c7778291",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/gantt.md",
+      "target": "references/diagram/gantt.md",
+      "sha256": "5f9c193cafbdf01da9a64235348950375d0af51999b785c19c60bb8e889e9c02",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/high-level.md",
+      "target": "references/diagram/high-level.md",
+      "sha256": "1686ffa684b741afcde867dece67a2c74e32977df5c2bf7e0aaac1c15e85449d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/it-current-state.md",
+      "target": "references/diagram/it-current-state.md",
+      "sha256": "0deac357ea6efeabbb958590f583da9a1f985d5c1b3aa2c3d60cb6779f575021",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/kanban.md",
+      "target": "references/diagram/kanban.md",
+      "sha256": "f7ca871e783a1f2f58482e6d4cf3b0a97c36d53aba8042c04939a1bbfb2f85ba",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/layer-stack.md",
+      "target": "references/diagram/layer-stack.md",
+      "sha256": "85f3ac9d37fb87c79cffe796f72771539e27eed171d5bd0a448fff6b88f974a7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/line.md",
+      "target": "references/diagram/line.md",
+      "sha256": "ff2e5d3273c4f0bc91bde2d1015b9502d26339d79e46b1e290e9e67ea3fa384a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/loop-flywheel.md",
+      "target": "references/diagram/loop-flywheel.md",
+      "sha256": "9ce75f88aab96fc522adbf935cbc4c7093f2b42b40cba9edc691ab77b892b2cf",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/medallion.md",
+      "target": "references/diagram/medallion.md",
+      "sha256": "e8e8e381879e2eff522a0252629ad378005e6e95594a2fbe5d392e5f3adc2ff4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/nested.md",
+      "target": "references/diagram/nested.md",
+      "sha256": "1db15cd84fb9146e2813cbb333cfa1a96f537dedf32b44371eda3f56be0f005f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/org-chart.md",
+      "target": "references/diagram/org-chart.md",
+      "sha256": "008e6c07773d9b78af23122a476ea8a92a09df5614c906a277c00438c351829f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/polar.md",
+      "target": "references/diagram/polar.md",
+      "sha256": "419278767dd04635cf3b28347871b047086fea07ef86365ba3f27a352a1e831f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/process.md",
+      "target": "references/diagram/process.md",
+      "sha256": "b182bfa757a663c39692d0f8581adf8f8f5a95336bdfa336c32ff2f45ec4612e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/pyramid-funnel.md",
+      "target": "references/diagram/pyramid-funnel.md",
+      "sha256": "490a9fde108319623e6d7724f8107119b3953984990bcbd1a89faa76d174339a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/quadrant.md",
+      "target": "references/diagram/quadrant.md",
+      "sha256": "be36a2220d6835cef8f5e0e10059285ef0c8ddc1c61b6aabe05df6c4e54115a1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/radar.md",
+      "target": "references/diagram/radar.md",
+      "sha256": "c8a5d51a0a4c40c7b37f864a99f346574bf23ef1ae2503aa3d165c20b8604b12",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/sankey.md",
+      "target": "references/diagram/sankey.md",
+      "sha256": "5d142922417867cce76003da041a065ef79e73dc460233ef622f7fa0cbde0ff6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/scatter.md",
+      "target": "references/diagram/scatter.md",
+      "sha256": "16ffd416c56aaa0d1baa48d73716e60ef9582ce213e5dd40523992d74995ed64",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/sequence.md",
+      "target": "references/diagram/sequence.md",
+      "sha256": "a96520bdc5121b43d4d88a142d4e404ec5dd2499ec8deeea604cff2f70693ad1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/shared.md",
+      "target": "references/diagram/shared.md",
+      "sha256": "f8889a2f6b9e0fcabd2a4f0b317e8061e7fb6353488ea7d8949c213de9de66a1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/state-machine.md",
+      "target": "references/diagram/state-machine.md",
+      "sha256": "721dff9f0c5a3fb61a01083c6483a8d1c5b283bbf9749b39a4777fd0aa998786",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/story-map.md",
+      "target": "references/diagram/story-map.md",
+      "sha256": "928c63b4dc79716f1459cb2d62c54c75faa41d6fc04f7c3fc2c711c414891d45",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/swimlane.md",
+      "target": "references/diagram/swimlane.md",
+      "sha256": "aa0ab22b052b805743b28b9826fdabb25da262b116ae3905f8ca162c865b5ad5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/timeline.md",
+      "target": "references/diagram/timeline.md",
+      "sha256": "3b3783315e92491ffb77c1be0fcca0f54e6c077298f8a6992d1f4e5ab3914473",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/tree.md",
+      "target": "references/diagram/tree.md",
+      "sha256": "823fd93c143f635dcfd1a0925cfa205f61b616df57b6add517bea2950553aae5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/treemap.md",
+      "target": "references/diagram/treemap.md",
+      "sha256": "07b232fceef8e8f6e67a8f69117f9141eb3336a81369d2aaa5ff77cc39ce72f6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/uml-class.md",
+      "target": "references/diagram/uml-class.md",
+      "sha256": "e9e4c4937f1d2f874347cd4280dd6a8bbcb320e0be9eab00d95369311079c25b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/user-journey.md",
+      "target": "references/diagram/user-journey.md",
+      "sha256": "e3e71fc464a17a154bdea32658834ddd9b6593250b46f3f517354151dc8e1da7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/venn.md",
+      "target": "references/diagram/venn.md",
+      "sha256": "b148e9acd422f43cedd3c13c6b9385ce2d5cc0f2ce3c5c88ea8529beb70bb538",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/references/diagram/wardley.md",
+      "target": "references/diagram/wardley.md",
+      "sha256": "8d49bfd03c98839b8e96e355478b9dfff919479b1c69d024c3da5d1a17ad642c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/scripts/generate-artifact-shell.mjs",
+      "target": "scripts/generate-artifact-shell.mjs",
+      "sha256": "d00b85be50348b607e9ce23a926d1b62e9573d506d4589e8c1ef20a395127bba",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/templates/artifact-review-preview.html",
+      "target": "templates/artifact-review-preview.html",
+      "sha256": "5a322d8237f5806f3fe1dcdedb4a373c00c289604916527bece1f6240c4b6be4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/templates/artifact-review-shell.html",
+      "target": "templates/artifact-review-shell.html",
+      "sha256": "b26e0e163d72ab0bf51a9e815a2ec573190075e9fd79401fd687eea8b5f47811",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/templates/artifact-review-stage.js",
+      "target": "templates/artifact-review-stage.js",
+      "sha256": "c9c0c6ae5421a30a75a0f351060a4ac9422edf824d704d55ad491402f33418a5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/templates/design/design-board-adapter.js",
+      "target": "templates/design/design-board-adapter.js",
+      "sha256": "1fac4eb949f9e7079feb29d225b0a270db479e7c961cd8879e0da2f882b4e9dc",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/templates/diagram-studio.js",
+      "target": "templates/diagram-studio.js",
+      "sha256": "8c2eadd6593af67d411f6d914382f9b4b160c063c5ff165b42620ea36b38c26d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/THIRD_PARTY_NOTICES.md",
+      "target": "THIRD_PARTY-DIAGRAM-NOTICES.md",
+      "sha256": "17352f9868f5992aae8e3663d148eb697a0795e13c82eb535725a15e5d5f516d",
+      "mode": "644"
+    }
+  ]
+}

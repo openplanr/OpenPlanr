@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.5.0/generated-asset-manifest.schema.json",
+  "x-openplanr-contract": {
+    "id": "generated-asset-manifest",
+    "version": "1.5.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "assetSetId",
+    "generator",
+    "sourceEpoch",
+    "inputs",
+    "assets",
+    "compatibility",
+    "purity",
+    "custody"
+  ],
+  "properties": {
+    "kind": {
+      "const": "generated-asset-manifest"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.5.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "assetSetId": {
+      "type": "string",
+      "pattern": "^gas_[0-9a-f]{32}$"
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version",
+        "sourceDigest",
+        "commandId"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        },
+        "version": {
+          "$ref": "common.schema.json#/$defs/semver"
+        },
+        "sourceDigest": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "commandId": {
+          "$ref": "common.schema.json#/$defs/identifier"
+        }
+      }
+    },
+    "sourceEpoch": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "inputKind",
+          "path",
+          "version",
+          "digest"
+        ],
+        "properties": {
+          "inputKind": {
+            "enum": [
+              "canonical-source",
+              "schema",
+              "registry",
+              "template",
+              "overlay",
+              "contribution"
+            ]
+          },
+          "path": {
+            "$ref": "common.schema.json#/$defs/relativePath"
+          },
+          "version": {
+            "$ref": "common.schema.json#/$defs/semver"
+          },
+          "digest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 4096
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "assetKind",
+          "host",
+          "mediaType",
+          "byteLength",
+          "mode",
+          "digest",
+          "outputId",
+          "sourceMap"
+        ],
+        "properties": {
+          "path": {
+            "$ref": "common.schema.json#/$defs/relativePath"
+          },
+          "assetKind": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "host": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "claude-code",
+                  "codex",
+                  "cursor"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mediaType": {
+            "type": "string",
+            "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$"
+          },
+          "byteLength": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "mode": {
+            "enum": [
+              "100644",
+              "100755"
+            ]
+          },
+          "digest": {
+            "$ref": "common.schema.json#/$defs/digest"
+          },
+          "outputId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "sourceMap": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "digest",
+                "moduleVersion",
+                "sectionIds"
+              ],
+              "properties": {
+                "path": {
+                  "$ref": "common.schema.json#/$defs/relativePath"
+                },
+                "digest": {
+                  "$ref": "common.schema.json#/$defs/digest"
+                },
+                "moduleVersion": {
+                  "$ref": "common.schema.json#/$defs/semver"
+                },
+                "sectionIds": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "common.schema.json#/$defs/identifier"
+                  },
+                  "minItems": 1,
+                  "maxItems": 256,
+                  "uniqueItems": true
+                }
+              }
+            },
+            "minItems": 1,
+            "maxItems": 256
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 32768
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocolVersions",
+        "packageVersions",
+        "adapterProfiles",
+        "hostProfiles"
+      ],
+      "properties": {
+        "protocolVersions": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/semver"
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "packageVersions": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true
+        },
+        "adapterProfiles": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        },
+        "hostProfiles": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true
+        }
+      }
+    },
+    "purity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checkerVersion",
+        "checkerDigest",
+        "violations"
+      ],
+      "properties": {
+        "checkerVersion": {
+          "$ref": "common.schema.json#/$defs/semver"
+        },
+        "checkerDigest": {
+          "$ref": "common.schema.json#/$defs/digest"
+        },
+        "violations": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/diagnostic"
+          },
+          "minItems": 0,
+          "maxItems": 0
+        }
+      }
+    },
+    "custody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ownerPackage",
+        "distributionPackage",
+        "editPolicy",
+        "includedInPublicPackage"
+      ],
+      "properties": {
+        "ownerPackage": {
+          "$ref": "common.schema.json#/$defs/nonBlankText"
+        },
+        "distributionPackage": {
+          "$ref": "common.schema.json#/$defs/nonBlankText"
+        },
+        "editPolicy": {
+          "const": "generated-do-not-edit"
+        },
+        "includedInPublicPackage": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

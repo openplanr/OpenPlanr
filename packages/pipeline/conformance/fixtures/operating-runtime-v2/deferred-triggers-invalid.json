@@ -1,0 +1,3 @@
+{
+  "triggers": ["scheduled", "threshold", "event", "review-only"]
+}

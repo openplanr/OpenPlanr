@@ -1,0 +1,61 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "timeline-fixture",
+  "title": "Timeline fixture",
+  "summary": "Canonical semantic fixture for the timeline grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "timeline",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [],
+  "relations": [],
+  "groups": [],
+  "lanes": [],
+  "events": [
+    {
+      "id": "event-start",
+      "label": "Start",
+      "order": 0,
+      "at": null
+    },
+    {
+      "id": "event-finish",
+      "label": "Finish",
+      "order": 1,
+      "at": null
+    }
+  ],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Timeline fixture",
+    "description": "A compact timeline example with semantic reading order.",
+    "readingOrder": [
+      "event-start",
+      "event-finish"
+    ]
+  },
+  "documentDigest": "sha256:2f8989c783e65563d856af2956495b5bc1bb2afa3fdabc8f88153065d9d1f0c6"
+}

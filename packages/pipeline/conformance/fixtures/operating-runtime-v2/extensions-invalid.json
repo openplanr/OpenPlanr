@@ -1,0 +1,13 @@
+{
+  "duplicateDomain": "domainRegistrations",
+  "duplicateRuntime": "agentRuntimeManifests",
+  "nonPortablePath": { "target": "domainRegistrations.0.provenance.packageName", "value": "../incompatible-registration" },
+  "unsupportedContract": { "target": "agentRuntimeManifests.0.supportedContracts.0.schemaVersion", "value": "1.4.0" },
+  "authorityField": { "target": "domainRegistrations.0.roles.0.effect", "value": "project-write" },
+  "unavailableFallback": { "target": "agentRuntimeManifests.0.implementation.availability", "value": "unavailable" },
+  "capabilityProviderCredential": { "target": "governedExecutionRegistrations.capabilityProviders.0.credential", "value": "secret" },
+  "policyProviderDecision": { "target": "governedExecutionRegistrations.policyProviders.0.policyDecision", "value": "approved" },
+  "executorEffectWidening": { "target": "governedExecutionRegistrations.executors.0.effectCeiling", "value": "destructive" },
+  "executorConnector": { "target": "governedExecutionRegistrations.executors.0.connector", "value": { "id": "untrusted", "version": "1.0.0" } },
+  "executorFallbackSubstitution": { "target": "governedExecutionRegistrations.executors.0.fallback", "value": { "kind": "executor", "executorId": "substitute", "executorVersion": "1.0.0" } }
+}

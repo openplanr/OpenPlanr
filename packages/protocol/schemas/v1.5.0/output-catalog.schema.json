@@ -1,0 +1,210 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.5.0/output-catalog.schema.json",
+  "x-openplanr-contract": {
+    "id": "output-catalog",
+    "version": "1.5.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "outputs"
+  ],
+  "properties": {
+    "kind": {
+      "const": "output-catalog"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.5.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "outputId",
+          "title",
+          "outputClass",
+          "ownerPackage",
+          "pathFunctionId",
+          "pathTemplate",
+          "sourceOfTruth",
+          "schemaRef",
+          "manifestRef",
+          "generator",
+          "validator",
+          "compatibilityReaders",
+          "retentionPolicy",
+          "cleanupPolicy",
+          "mediaTypes",
+          "testRefs"
+        ],
+        "properties": {
+          "outputId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "title": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "outputClass": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D"
+            ]
+          },
+          "ownerPackage": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "pathFunctionId": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "pathTemplate": {
+            "$ref": "common.schema.json#/$defs/relativePath"
+          },
+          "sourceOfTruth": {
+            "type": "boolean"
+          },
+          "schemaRef": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/contractRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manifestRef": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/contractRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generator": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "version",
+              "sourceDigest"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/identifier"
+              },
+              "version": {
+                "$ref": "common.schema.json#/$defs/semver"
+              },
+              "sourceDigest": {
+                "$ref": "common.schema.json#/$defs/digest"
+              }
+            }
+          },
+          "validator": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "version"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "common.schema.json#/$defs/identifier"
+              },
+              "version": {
+                "$ref": "common.schema.json#/$defs/semver"
+              }
+            }
+          },
+          "compatibilityReaders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "package",
+                "entrypoint"
+              ],
+              "properties": {
+                "package": {
+                  "$ref": "common.schema.json#/$defs/nonBlankText"
+                },
+                "entrypoint": {
+                  "$ref": "common.schema.json#/$defs/nonBlankText"
+                }
+              }
+            },
+            "minItems": 1,
+            "maxItems": 32
+          },
+          "retentionPolicy": {
+            "enum": [
+              "project",
+              "run",
+              "release",
+              "ephemeral"
+            ]
+          },
+          "cleanupPolicy": {
+            "enum": [
+              "never",
+              "on-success",
+              "bounded-expiry",
+              "explicit-owner"
+            ]
+          },
+          "mediaTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$"
+            },
+            "minItems": 1,
+            "maxItems": 16,
+            "uniqueItems": true
+          },
+          "testRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/relativePath"
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 512
+    }
+  }
+}

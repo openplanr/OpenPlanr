@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-review-read.schema.json",
+  "x-openplanr-contract": { "id": "operating-review-read", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 owner-bound review read",
+  "description": "Runtime-projected pre-commit Review data for the exact immutable human owner. The runtime owns readAt.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind", "schemaVersion", "protocolVersion", "cycleId", "eventHead", "scope", "reader",
+    "review", "seatStatus", "decisions", "actions", "findings", "dissent", "gaps",
+    "dispositionChoices", "readAt"
+  ],
+  "properties": {
+    "kind": { "const": "operating-review-read" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "cycleId": { "$ref": "#/$defs/cycleId" },
+    "eventHead": { "$ref": "#/$defs/eventHead" },
+    "scope": { "$ref": "#/$defs/scope" },
+    "reader": { "$ref": "#/$defs/humanActor" },
+    "review": { "$ref": "operating-review.schema.json" },
+    "seatStatus": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/seatStatus" } },
+    "decisions": { "type": "array", "maxItems": 256, "items": { "$ref": "#/$defs/decisionSummary" } },
+    "actions": { "type": "array", "maxItems": 512, "items": { "$ref": "#/$defs/actionSummary" } },
+    "findings": { "type": "array", "maxItems": 256, "items": { "$ref": "#/$defs/findingSummary" } },
+    "dissent": { "type": "array", "maxItems": 256, "items": { "$ref": "#/$defs/dissentSummary" } },
+    "gaps": { "type": "array", "maxItems": 2048, "items": { "$ref": "#/$defs/gapSummary" } },
+    "dispositionChoices": { "type": "array", "minItems": 1, "maxItems": 128, "items": { "$ref": "#/$defs/dispositionChoice" } },
+    "readAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "cycleId": { "type": "string", "pattern": "^cyc_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "artifactId": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "assignmentId": { "type": "string", "pattern": "^asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "evidenceRefId": { "type": "string", "pattern": "^evr_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "absenceId": { "type": "string", "pattern": "^abs_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^\\S(?:[\\s\\S]*\\S)?$" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 4096, "pattern": "^[\\s\\S]*\\S[\\s\\S]*$" },
+    "eventHead": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["sequence", "hash"], "properties": { "sequence": { "const": 0 }, "hash": { "const": null } } },
+        { "type": "object", "additionalProperties": false, "required": ["sequence", "hash"], "properties": { "sequence": { "type": "integer", "minimum": 1 }, "hash": { "$ref": "#/$defs/hash" } } }
+      ]
+    },
+    "scope": {
+      "type": "object", "additionalProperties": false, "required": ["scopeId", "domainId", "domainVersion"],
+      "properties": { "scopeId": { "$ref": "#/$defs/id" }, "domainId": { "$ref": "#/$defs/identifier" }, "domainVersion": { "$ref": "#/$defs/version" } }
+    },
+    "humanActor": {
+      "type": "object", "additionalProperties": false, "required": ["actorId", "kind", "runtime"],
+      "properties": { "actorId": { "$ref": "#/$defs/id" }, "kind": { "const": "human" }, "runtime": { "$ref": "#/$defs/id" } }
+    },
+    "seatStatus": {
+      "type": "object", "additionalProperties": false,
+      "required": ["roleId", "roleKind", "roleVersion", "state", "artifactId", "absenceIds"],
+      "properties": {
+        "roleId": { "$ref": "#/$defs/identifier" }, "roleKind": { "enum": ["advisor", "challenger", "chair"] },
+        "roleVersion": { "$ref": "#/$defs/version" },
+        "state": { "enum": ["pending", "available", "running", "validated", "rejected", "abandoned", "failed"] },
+        "artifactId": { "type": ["string", "null"], "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "absenceIds": { "type": "array", "maxItems": 2048, "uniqueItems": true, "items": { "$ref": "#/$defs/absenceId" } }
+      }
+    },
+    "decisionSummary": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "origin", "decisionId", "title", "question", "outcome", "rationale", "confidence", "ownerActorId",
+        "expectedUpside", "expectedDownside", "revisitConditions", "dissent", "evidenceRefIds"
+      ],
+      "properties": {
+        "origin": { "enum": ["persistent-work", "operating-intelligence"] },
+        "decisionId": { "type": "string", "pattern": "^dec_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "title": { "$ref": "#/$defs/title" }, "question": { "$ref": "#/$defs/text" },
+        "outcome": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/text" }] }, "rationale": { "$ref": "#/$defs/text" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }, "ownerActorId": { "$ref": "#/$defs/id" },
+        "expectedUpside": { "$ref": "#/$defs/text" }, "expectedDownside": { "$ref": "#/$defs/text" },
+        "uncertainty": { "$ref": "#/$defs/text" }, "reversibility": { "$ref": "#/$defs/text" },
+        "revisitConditions": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "$ref": "#/$defs/text" } },
+        "dissentIds": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "type": "string", "pattern": "^dissent:asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}:[1-9][0-9]*$" } },
+        "dissent": { "type": "array", "maxItems": 128, "items": { "$ref": "#/$defs/text" } },
+        "evidenceRefIds": { "type": "array", "minItems": 1, "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRefId" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "origin": { "const": "persistent-work" } }, "required": ["origin"] },
+          "then": { "not": { "anyOf": [{ "required": ["uncertainty"] }, { "required": ["reversibility"] }, { "required": ["dissentIds"] }] } }
+        },
+        {
+          "if": { "properties": { "origin": { "const": "operating-intelligence" } }, "required": ["origin"] },
+          "then": { "required": ["uncertainty", "reversibility", "dissentIds"] }
+        }
+      ]
+    },
+    "actionSummary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["actionId", "title", "state", "ownerActorId", "sourceDecisionId", "expectedResult", "metricId", "baseline", "target", "verificationWindow", "verificationMethod"],
+      "properties": {
+        "actionId": { "type": "string", "pattern": "^act_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "title": { "$ref": "#/$defs/title" },
+        "state": { "enum": ["proposed", "approved", "queued", "in_progress", "completed", "blocked", "rejected", "deferred", "cancelled"] },
+        "ownerActorId": { "type": ["string", "null"], "minLength": 1, "maxLength": 128 },
+        "sourceDecisionId": { "type": ["string", "null"], "pattern": "^dec_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "expectedResult": { "$ref": "#/$defs/text" },
+        "metricId": { "type": ["string", "null"], "pattern": "^met_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "baseline": { "type": ["number", "null"] }, "target": { "type": ["number", "null"] },
+        "verificationWindow": { "$ref": "#/$defs/text" }, "verificationMethod": { "$ref": "#/$defs/text" }
+      }
+    },
+    "findingSummary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["origin", "findingId", "title", "statement", "state", "ownerActorId", "revisitAt"],
+      "properties": {
+        "origin": { "enum": ["persistent-work", "operating-intelligence"] },
+        "findingId": { "type": "string", "pattern": "^fnd_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "title": { "$ref": "#/$defs/title" }, "statement": { "$ref": "#/$defs/text" },
+        "findingType": { "enum": ["unsupported", "contradicted", "correlated-reasoning", "missing-alternative", "unpriced-downside", "irreversibility-mismatch", "overconfidence", "scope-violation"] },
+        "severity": { "enum": ["low", "medium", "high", "critical"] }, "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "state": { "enum": ["open", "accepted", "resolved", "rejected", "deferred", "superseded"] },
+        "ownerActorId": { "type": ["string", "null"], "minLength": 1, "maxLength": 128 },
+        "revisitAt": { "type": ["string", "null"], "format": "date-time" },
+        "supportingEvidenceRefIds": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRefId" } },
+        "contradictingEvidenceRefIds": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRefId" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "origin": { "const": "persistent-work" } }, "required": ["origin"] },
+          "then": {
+            "not": {
+              "anyOf": [
+                { "required": ["findingType"] }, { "required": ["severity"] }, { "required": ["confidence"] },
+                { "required": ["supportingEvidenceRefIds"] }, { "required": ["contradictingEvidenceRefIds"] }
+              ]
+            }
+          }
+        },
+        {
+          "if": { "properties": { "origin": { "const": "operating-intelligence" } }, "required": ["origin"] },
+          "then": { "required": ["findingType", "severity", "confidence", "supportingEvidenceRefIds", "contradictingEvidenceRefIds"] }
+        }
+      ]
+    },
+    "dissentSummary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sourceArtifactId", "localDissentId", "statement", "resolutionCondition"],
+      "properties": {
+        "sourceArtifactId": { "$ref": "#/$defs/artifactId" },
+        "localDissentId": { "type": "string", "pattern": "^dissent:asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}:[1-9][0-9]*$" },
+        "statement": { "$ref": "#/$defs/text" }, "resolutionCondition": { "$ref": "#/$defs/text" }
+      }
+    },
+    "gapSummary": {
+      "oneOf": [
+        { "$ref": "#/$defs/roleGapSummary" },
+        { "$ref": "#/$defs/evidenceGapSummary" }
+      ]
+    },
+    "roleGapSummary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["absenceId", "kind", "roleId", "roleKind", "roleVersion", "sourceAssignmentId", "reason", "recoveryDisposition"],
+      "properties": {
+        "absenceId": { "$ref": "#/$defs/absenceId" },
+        "kind": { "const": "role" },
+        "roleId": { "$ref": "operating-assignment.schema.json#/$defs/roleInputAbsence/properties/roleId" },
+        "roleKind": { "enum": ["advisor", "challenger", "chair"] },
+        "roleVersion": { "$ref": "#/$defs/version" },
+        "sourceAssignmentId": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/assignmentId" }] },
+        "reason": { "$ref": "operating-assignment.schema.json#/$defs/roleInputAbsence/properties/reason" },
+        "recoveryDisposition": { "$ref": "operating-assignment.schema.json#/$defs/roleInputAbsence/properties/recoveryDisposition" }
+      }
+    },
+    "evidenceGapSummary": {
+      "type": "object", "additionalProperties": false,
+      "required": ["absenceId", "kind", "requirementId", "sourceContracts", "reason", "recoveryDisposition"],
+      "properties": {
+        "absenceId": { "$ref": "#/$defs/absenceId" },
+        "kind": { "const": "evidence" },
+        "requirementId": { "$ref": "#/$defs/identifier" },
+        "sourceContracts": {
+          "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["id", "version"],
+            "properties": { "id": { "$ref": "#/$defs/identifier" }, "version": { "$ref": "#/$defs/version" } }
+          }
+        },
+        "reason": { "$ref": "operating-assignment.schema.json#/$defs/evidenceInputAbsence/properties/reason" },
+        "recoveryDisposition": { "$ref": "operating-assignment.schema.json#/$defs/evidenceInputAbsence/properties/recoveryDisposition" }
+      }
+    },
+    "dispositionChoice": {
+      "type": "object", "additionalProperties": false,
+      "required": ["choiceId", "choiceHash", "label", "submitArguments"],
+      "properties": {
+        "choiceId": { "type": "string", "pattern": "^rch_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "choiceHash": { "$ref": "#/$defs/hash" },
+        "label": { "$ref": "#/$defs/title" },
+        "submitArguments": { "$ref": "#/$defs/reviewSubmitArguments" }
+      }
+    },
+    "reviewSubmitArguments": {
+      "type": "object", "additionalProperties": false,
+      "required": ["reviewId", "cycleId", "actor", "scope", "disposition", "workDispositions"],
+      "properties": {
+        "reviewId": { "type": "string", "pattern": "^rev_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+        "cycleId": { "$ref": "#/$defs/cycleId" },
+        "actor": { "$ref": "#/$defs/humanActor" },
+        "scope": { "$ref": "#/$defs/scope" },
+        "disposition": { "enum": ["approved", "changes_requested", "rejected", "cancelled"] },
+        "workDispositions": { "type": "array", "maxItems": 1024, "uniqueItems": true, "items": { "$ref": "operating-review.schema.json#/$defs/workDisposition" } }
+      }
+    }
+  }
+}

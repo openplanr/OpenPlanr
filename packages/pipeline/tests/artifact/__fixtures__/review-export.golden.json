@@ -1,0 +1,60 @@
+{
+  "artifactId": "checkout",
+  "currentReviewOf": "b301c97031f0821146798461beee0145c148ac847759eefb34264c38bc0c8503",
+  "kind": "artifact-review-state",
+  "reviews": [
+    {
+      "review": {
+        "createdAt": "2026-07-14T09:00:00.000Z",
+        "decision": "changes_requested",
+        "overall": "Resolve delivery timing before approval.",
+        "pins": [
+          {
+            "anchor": {
+              "planrId": "delivery",
+              "screen": "checkout"
+            },
+            "artifactId": "checkout",
+            "author": {
+              "id": "reviewer-1",
+              "name": "Asem"
+            },
+            "comment": "Clarify the delivery timing.",
+            "createdAt": "2026-07-14T10:00:00.000Z",
+            "id": "pin-1",
+            "intent": "fix",
+            "region": {
+              "h": 0.1,
+              "w": 0.2,
+              "x": 0.25,
+              "y": 0.5
+            },
+            "replies": [
+              {
+                "author": {
+                  "name": "Sam"
+                },
+                "comment": "Agreed.",
+                "createdAt": "2026-07-14T10:05:00.000Z",
+                "id": "reply-1"
+              }
+            ],
+            "status": "open",
+            "updatedAt": "2026-07-14T10:00:00.000Z",
+            "variant": "desktop",
+            "viewport": {
+              "height": 900,
+              "width": 1440
+            }
+          }
+        ],
+        "reviewId": "review-1",
+        "reviewOf": "b301c97031f0821146798461beee0145c148ac847759eefb34264c38bc0c8503",
+        "schemaVersion": "1.0.0",
+        "updatedAt": "2026-07-14T10:10:00.000Z"
+      },
+      "stale": false
+    }
+  ],
+  "schemaVersion": "1.0.0"
+}

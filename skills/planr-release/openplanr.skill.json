@@ -1,0 +1,92 @@
+{
+  "kind": "openplanr-skill-package",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.8.0",
+  "skillId": "planr-release",
+  "skillVersion": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "hosts": [
+    "claude-code",
+    "codex",
+    "chatgpt",
+    "cursor"
+  ],
+  "execution": "host-agent",
+  "resources": [
+    {
+      "path": "agents/openai.yaml",
+      "kind": "agent-metadata",
+      "hosts": [
+        "codex",
+        "chatgpt"
+      ],
+      "executable": false
+    },
+    {
+      "path": "references/schemes.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
+      "path": "references/release-notes.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
+      "path": "references/cadence.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
+      "path": "assets/profile-template.md",
+      "kind": "asset",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
+      "path": "assets/changelog-template.md",
+      "kind": "asset",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
+      "path": "scripts/collect_changes.sh",
+      "kind": "script",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": true
+    }
+  ]
+}

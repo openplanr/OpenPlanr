@@ -1,0 +1,287 @@
+{
+  "operating-evidence-candidate": {
+    "kind": "operating-evidence-candidate",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "candidateId": "evc_00000001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "sourceArtifactId": "art_00000002",
+    "evidenceKind": "git",
+    "locator": {
+      "repositoryId": "repo-control",
+      "revision": "852aea6",
+      "objectType": "blob",
+      "path": "lib/operate/runtime-foundation.mjs",
+      "lines": {
+        "start": 1,
+        "end": 40
+      },
+      "ancestry": {
+        "ancestorRevision": "852aea6"
+      }
+    },
+    "provider": {
+      "id": "local-git-provider",
+      "version": "2.0.0"
+    },
+    "resolver": {
+      "id": "local-git-resolver",
+      "version": "2.0.0"
+    }
+  },
+  "operating-evidence-ref": {
+    "kind": "operating-evidence-ref",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "evidenceRefId": "evr_00000001",
+    "candidateId": "evc_00000001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "sourceArtifactId": "art_00000002",
+    "evidenceKind": "git",
+    "locator": {
+      "repositoryId": "repo-control",
+      "revision": "852aea6",
+      "objectType": "blob",
+      "path": "lib/operate/runtime-foundation.mjs",
+      "lines": {
+        "start": 1,
+        "end": 40
+      },
+      "ancestry": {
+        "ancestorRevision": "852aea6"
+      }
+    },
+    "provider": {
+      "id": "local-git-provider",
+      "version": "2.0.0"
+    },
+    "resolver": {
+      "id": "local-git-resolver",
+      "version": "2.0.0"
+    },
+    "classification": "internal",
+    "freshness": "current",
+    "evidenceArtifactId": "art_00000003",
+    "evidenceArtifactRawHash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "evidenceArtifactCanonicalHash": null,
+    "resolvedAt": "2026-08-09T08:00:00Z",
+    "sourceContract": {
+      "id": "context-manifest",
+      "version": "1.0.0"
+    }
+  },
+  "operating-evidence-resolution": {
+    "kind": "operating-evidence-resolution",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "resolutionId": "evs_00000001",
+    "candidateId": "evc_00000001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "sourceArtifactId": "art_00000002",
+    "evidenceKind": "git",
+    "provider": {
+      "id": "local-git-provider",
+      "version": "2.0.0"
+    },
+    "resolver": {
+      "id": "local-git-resolver",
+      "version": "2.0.0"
+    },
+    "outcome": "resolved",
+    "evidenceRefId": "evr_00000001",
+    "evidenceArtifactId": "art_00000003",
+    "error": null,
+    "resolvedAt": "2026-08-09T08:00:00Z",
+    "sourceContract": {
+      "id": "context-manifest",
+      "version": "1.0.0"
+    }
+  },
+  "operate-evidence-provider-registration": {
+    "kind": "operate-evidence-provider-registration",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "providerId": "local-git-provider",
+    "providerVersion": "2.0.0",
+    "supportedEvidenceKinds": [
+      "git"
+    ],
+    "inputContract": {
+      "schemaId": "operating-evidence-candidate",
+      "schemaVersion": "2.0.0"
+    },
+    "outputContract": {
+      "schemaId": "operating-evidence-resolution",
+      "schemaVersion": "2.0.0"
+    },
+    "effectClass": "local-read-only",
+    "requiredCapabilities": [
+      "evidence.git.read"
+    ],
+    "classificationCeiling": "restricted",
+    "retentionClass": "project",
+    "provenance": {
+      "packageName": "planr-pipeline",
+      "packageVersion": "0.42.0",
+      "integrity": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "conformanceDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "implementation": {
+      "kind": "built-in",
+      "id": "local-git-provider"
+    },
+    "fallback": {
+      "kind": "unavailable",
+      "errorCode": "EVIDENCE_PROVIDER_UNAVAILABLE"
+    }
+  },
+  "operate-evidence-resolver-registration": {
+    "kind": "operate-evidence-resolver-registration",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "resolverId": "local-git-resolver",
+    "resolverVersion": "2.0.0",
+    "supportedEvidenceKinds": [
+      "git"
+    ],
+    "inputContract": {
+      "schemaId": "operating-evidence-candidate",
+      "schemaVersion": "2.0.0"
+    },
+    "outputContract": {
+      "schemaId": "operating-evidence-resolution",
+      "schemaVersion": "2.0.0"
+    },
+    "evidenceRefContract": {
+      "schemaId": "operating-evidence-ref",
+      "schemaVersion": "2.0.0"
+    },
+    "effectClass": "local-read-only",
+    "requiredCapabilities": [
+      "evidence.git.read"
+    ],
+    "classificationCeiling": "restricted",
+    "retentionClass": "project",
+    "errorCodes": [
+      "REVISION_NOT_FOUND",
+      "PATH_NOT_FOUND"
+    ],
+    "provenance": {
+      "packageName": "planr-pipeline",
+      "packageVersion": "0.42.0",
+      "integrity": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "conformanceDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "implementation": {
+      "kind": "built-in",
+      "id": "local-git-resolver"
+    },
+    "fallback": {
+      "kind": "unavailable",
+      "errorCode": "EVIDENCE_RESOLVER_UNAVAILABLE"
+    },
+    "supportedSourceContracts": [
+      {
+        "id": "capacity-throughput",
+        "version": "1.0.0"
+      },
+      {
+        "id": "channel-economics",
+        "version": "1.0.0"
+      },
+      {
+        "id": "ci-test-evidence",
+        "version": "1.0.0"
+      },
+      {
+        "id": "competitor-positioning",
+        "version": "1.0.0"
+      },
+      {
+        "id": "context-manifest",
+        "version": "1.0.0"
+      },
+      {
+        "id": "demand-market",
+        "version": "1.0.0"
+      },
+      {
+        "id": "finance-metrics",
+        "version": "1.0.0"
+      },
+      {
+        "id": "incident-history",
+        "version": "1.0.0"
+      },
+      {
+        "id": "objective-metrics",
+        "version": "1.0.0"
+      },
+      {
+        "id": "operations-customer-health",
+        "version": "1.0.0"
+      },
+      {
+        "id": "planning-acceptance",
+        "version": "1.0.0"
+      },
+      {
+        "id": "prior-decisions",
+        "version": "1.0.0"
+      },
+      {
+        "id": "product-activation",
+        "version": "1.0.0"
+      },
+      {
+        "id": "repository-architecture",
+        "version": "1.0.0"
+      },
+      {
+        "id": "retention-discovery",
+        "version": "1.0.0"
+      },
+      {
+        "id": "support-incidents",
+        "version": "1.0.0"
+      }
+    ]
+  },
+  "operating-evidence-edge": {
+    "kind": "operating-evidence-edge",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "edgeId": "eve_00000001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "sourceArtifactId": "art_00000002",
+    "localClaimId": "local-claim-001",
+    "relation": "supportedBy",
+    "evidenceRefId": "evr_00000001",
+    "createdBy": {
+      "kind": "runtime",
+      "id": "openplanr"
+    },
+    "createdAt": "2026-08-09T08:00:00Z",
+    "confidence": 0.9,
+    "classification": "internal"
+  },
+  "operating-evidence-graph": {
+    "kind": "operating-evidence-graph",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "generatedAt": "2026-08-09T08:00:00Z",
+    "evidenceRefs": [],
+    "edges": []
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "operate-live-evidence-provider-registration": [
+    { "name": "unknown field", "operation": "add", "path": "/credential", "value": "must-never-be-portable", "expectedLayer": "schema" },
+    { "name": "provider-call authority widening", "operation": "replace", "path": "/effects/0", "value": "external-effect", "expectedLayer": "schema" },
+    { "name": "registration identity replayed over different bytes", "operation": "replace", "path": "/supportedDomains/0", "value": "finance", "expectedLayer": "replay-conflict" }
+  ],
+  "operate-live-evidence-provider-registry": [
+    { "name": "unknown field", "operation": "add", "path": "/networkAuthority", "value": true, "expectedLayer": "schema" },
+    { "name": "unsupported registry version", "operation": "replace", "path": "/registryVersion", "value": "2.0.0", "expectedLayer": "schema" }
+  ],
+  "operating-live-evidence-consent-record": [
+    { "name": "unknown field", "operation": "add", "path": "/credentialValue", "value": "secret", "expectedLayer": "schema" },
+    { "name": "consent widened into authority", "operation": "replace", "path": "/authority", "value": "provider-call", "expectedLayer": "schema" },
+    { "name": "missing current consent docket", "operation": "remove", "path": "/docket", "expectedLayer": "schema" },
+    { "name": "caller capability substituted into consent", "operation": "add", "path": "/runtimeCapabilityHash", "value": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "expectedLayer": "schema" }
+  ],
+  "operating-connector-checkpoint": [
+    { "name": "unknown field", "operation": "add", "path": "/providerCursor", "value": "opaque-provider-cursor", "expectedLayer": "schema" },
+    { "name": "provider-call authority widening", "operation": "replace", "path": "/effect", "value": "external-effect", "expectedLayer": "schema" },
+    { "name": "requesting checkpoint missing current consent", "operation": "replace", "path": "/consentRecordId", "value": null, "expectedLayer": "schema" },
+    { "name": "requesting checkpoint missing runtime capability", "operation": "replace", "path": "/runtimeCapabilityHash", "value": null, "expectedLayer": "schema" },
+    { "name": "invalid checkpoint generation", "operation": "replace", "path": "/generation", "value": -1, "expectedLayer": "schema" }
+  ],
+  "operating-live-evidence-ingestion": [
+    { "name": "unknown field", "operation": "add", "path": "/rawProviderPayload", "value": "restricted bytes", "expectedLayer": "schema" },
+    { "name": "direct Artifact bridge", "operation": "replace", "path": "/submission/operation", "value": "operate.artifact.write", "expectedLayer": "schema" },
+    { "name": "direct Event bridge", "operation": "add", "path": "/submission/eventPayload", "value": { "type": "artifact.created" }, "expectedLayer": "schema" },
+    { "name": "bypasses issued Assignment", "operation": "remove", "path": "/assignment", "expectedLayer": "schema" },
+    { "name": "materialized ingestion over degraded health", "operation": "replace", "path": "/health/status", "value": "degraded", "expectedLayer": "schema" },
+    { "name": "materialized ingestion without evidence candidates", "operation": "replace", "path": "/evidenceCandidates", "value": [], "expectedLayer": "schema" },
+    { "name": "candidate changes source Artifact custody", "operation": "replace", "path": "/evidenceCandidates/0/sourceArtifactId", "value": "art_foreign0001", "expectedLayer": "bridge-conflict" }
+  ],
+  "operating-measurement-plan": [
+    { "name": "unknown field", "operation": "add", "path": "/providerApproval", "value": true, "expectedLayer": "schema" },
+    { "name": "missing minimum evidence", "operation": "replace", "path": "/minimumEvidence", "value": 0, "expectedLayer": "schema" },
+    { "name": "implicit future protocol", "operation": "replace", "path": "/protocolVersion", "value": "2.1.0", "expectedLayer": "schema" }
+  ],
+  "operating-measurement-schedule": [
+    { "name": "unknown field", "operation": "add", "path": "/credentialRef", "value": "OPENPLANR_TOKEN", "expectedLayer": "schema" },
+    { "name": "schedule custody substitution", "operation": "replace", "path": "/consentRecordHashes/0", "value": "foreign-consent", "expectedLayer": "schema" },
+    { "name": "caller-selected next event identity", "operation": "replace", "path": "/nextEventIdentity", "value": "caller-key", "expectedLayer": "schema" },
+    { "name": "invalid schedule generation", "operation": "replace", "path": "/generation", "value": -1, "expectedLayer": "schema" },
+    { "name": "schedule substitutes prior receipt custody", "operation": "replace", "path": "/lastReceiptId", "value": "foreign-receipt", "expectedLayer": "schema" }
+  ],
+  "operating-measurement-schedule-receipt": [
+    { "name": "unknown field", "operation": "add", "path": "/runtimeTimerHandle", "value": "timer-1", "expectedLayer": "schema" },
+    { "name": "schedule receipt claims authority", "operation": "replace", "path": "/authority", "value": "provider-call", "expectedLayer": "schema" },
+    { "name": "schedule plan custody substitution", "operation": "replace", "path": "/planHash", "value": "foreign-plan", "expectedLayer": "schema" },
+    { "name": "caller-selected receipt event identity", "operation": "replace", "path": "/eventId", "value": "caller-key", "expectedLayer": "schema" },
+    { "name": "schedule result custody substitution", "operation": "replace", "path": "/resultingScheduleHash", "value": "foreign-schedule", "expectedLayer": "schema" },
+    { "name": "missing runtime clock custody", "operation": "remove", "path": "/clockHash", "expectedLayer": "schema" }
+  ],
+  "operating-evidence-observation": [
+    { "name": "unknown field", "operation": "add", "path": "/providerSaysTrue", "value": true, "expectedLayer": "schema" },
+    { "name": "observation changes metric identity", "operation": "replace", "path": "/metricId", "value": "met_foreign0001", "expectedLayer": "binding-conflict" },
+    { "name": "observed status over typed absence", "operation": "add", "path": "/absences/0", "value": { "kind": "missing-consent", "reasonCode": "MISSING_CONSENT", "detailsHash": "sha256:2525252525252525252525252525252525252525252525252525252525252525" }, "expectedLayer": "schema" },
+    { "name": "direct Event truth bridge", "operation": "add", "path": "/eventId", "value": "evt_reference0003", "expectedLayer": "schema" },
+    { "name": "observed status without value", "operation": "replace", "path": "/value", "value": null, "expectedLayer": "schema" }
+  ],
+  "operating-outcome-evaluation": [
+    { "name": "unknown field", "operation": "add", "path": "/providerVerdict", "value": "passed", "expectedLayer": "schema" },
+    { "name": "false PASS over typed absence", "operation": "add", "path": "/absences/0", "value": "sha256:2525252525252525252525252525252525252525252525252525252525252525", "expectedLayer": "schema" },
+    { "name": "false PASS over contradiction", "operation": "add", "path": "/contradictions/0", "value": "sha256:2626262626262626262626262626262626262626262626262626262626262626", "expectedLayer": "schema" },
+    { "name": "parallel Outcome truth", "operation": "add", "path": "/outcome/value", "value": 46, "expectedLayer": "schema" }
+  ],
+  "operating-learning-receipt": [
+    { "name": "unknown field", "operation": "add", "path": "/rewritesSourceEvidence", "value": true, "expectedLayer": "schema" },
+    { "name": "parallel Learning truth", "operation": "add", "path": "/learning/statement", "value": "Unbound mutable text", "expectedLayer": "schema" },
+    { "name": "unbound evaluation", "operation": "remove", "path": "/evaluation/evaluationHash", "expectedLayer": "schema" }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "kind": "evaluation-scenario",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.4.0",
+  "scenarioId": "esc_de02e31d024f9013a3f05ec392e43fd4b092cfc431a27263c2db0d6f20c8a229",
+  "scenarioDigest": "sha256:de02e31d024f9013a3f05ec392e43fd4b092cfc431a27263c2db0d6f20c8a229",
+  "title": "planr-spec packed-install journey on claude-code",
+  "intent": "The skill must invoke from the bytes installed by the packed archive, never from the working tree.",
+  "skill": {
+    "id": "planr-spec",
+    "version": "1.0.0"
+  },
+  "hostProfileRef": {
+    "hostProfileId": "ehp_926364f7fe15acefa31b8273fd9bcad3",
+    "hostProfileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0"
+  },
+  "promptClass": "positive",
+  "expectedTrigger": {
+    "outcome": "invoke",
+    "rationale": "The prompt names the declared work against installed bytes, so the skill still invokes."
+  },
+  "declaredPermissions": [
+    {
+      "capability": "file-read",
+      "decision": "granted"
+    },
+    {
+      "capability": "file-write",
+      "decision": "granted"
+    },
+    {
+      "capability": "network",
+      "decision": "denied"
+    }
+  ],
+  "riskClass": "local-write",
+  "fixtureRefs": [
+    {
+      "fixtureId": "efx_e76436e63e564ddd9412cc7b2e1796b441abc78ea4d4f2b91b0fd29983a8ed0e",
+      "contentDigest": "sha256:eac0c854e852621d8d53f53e06060d0d8eaf4426b58d4027a0ffeac9d595e7a1",
+      "role": "prompt"
+    }
+  ],
+  "budgetRef": {
+    "budgetId": "ebg_ab599b6434d21be4ca9100655147859e",
+    "budgetDigest": "sha256:ab599b6434d21be4ca9100655147859ea7d7015710797231fb73c48af8b02dee"
+  }
+}

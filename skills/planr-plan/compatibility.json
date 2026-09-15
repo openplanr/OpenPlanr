@@ -1,0 +1,11 @@
+{
+  "kind": "openplanr-skill-migration-declaration",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-plan",
+  "baseline": "SKILL.md",
+  "successor": "skill.json",
+  "classification": "intentional",
+  "intendedChanges": [
+    "Adopt Protocol 1.7 global IDs, acceptance mappings, risk/browser metadata, preview and replacement guidance, and an exact Plan-to-Ship handoff."
+  ]
+}

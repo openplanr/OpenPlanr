@@ -1,0 +1,136 @@
+{
+  "release-compatibility-claim": [
+    {
+      "name": "an unknown field",
+      "code": "E_RELEASE_LEDGER_CONTRACT_INVALID",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/note",
+          "value": "hand-written range"
+        }
+      ]
+    },
+    {
+      "name": "an unsupported contract version",
+      "code": "E_RELEASE_LEDGER_CONTRACT_INVALID",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/schemaVersion",
+          "value": "1.1.0"
+        }
+      ]
+    },
+    {
+      "name": "a foreign repository key",
+      "code": "E_RELEASE_LEDGER_FOREIGN_REPOSITORY",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/consumer/repositoryKey",
+          "value": "docs"
+        }
+      ]
+    },
+    {
+      "name": "a repository claiming compatibility with itself",
+      "code": "E_RELEASE_LEDGER_CONTRACT_INVALID",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/consumer/repositoryKey",
+          "value": "pipeline"
+        }
+      ]
+    },
+    {
+      "name": "an unsupported derivation",
+      "code": "E_RELEASE_LEDGER_CONTRACT_INVALID",
+      "refusedBy": "schema",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/derivation",
+          "value": "range-from-changelog"
+        }
+      ]
+    },
+    {
+      "name": "a claim bound to another ledger",
+      "code": "E_RELEASE_LEDGER_CLAIM_UNBOUND",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/ledgerDigest",
+          "value": "sha256:9bff4e394f6fb7233992db27f87ebbfba50e26012f8b65546ce65105e6784325"
+        }
+      ]
+    },
+    {
+      "name": "a claim bound to payload bytes the ledger does not carry",
+      "code": "E_RELEASE_LEDGER_CLAIM_UNBOUND",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/producer/payloadDigest",
+          "value": "sha256:9bff4e394f6fb7233992db27f87ebbfba50e26012f8b65546ce65105e6784325"
+        }
+      ]
+    },
+    {
+      "name": "a claim citing a receipt that certified nothing here",
+      "code": "E_RELEASE_LEDGER_RECEIPT_FOREIGN",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/producer/terminalReceiptDigest",
+          "value": "sha256:9bff4e394f6fb7233992db27f87ebbfba50e26012f8b65546ce65105e6784325"
+        }
+      ]
+    },
+    {
+      "name": "a version label edited without repacking",
+      "code": "E_RELEASE_LEDGER_CLAIM_DRIFT",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/producer/declaredVersion",
+          "value": "9.9.9"
+        }
+      ]
+    },
+    {
+      "name": "a hand-edited rendered range",
+      "code": "E_RELEASE_LEDGER_CLAIM_DRIFT",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/display",
+          "value": "^9.9.9"
+        }
+      ]
+    },
+    {
+      "name": "an unrecomputed claim digest",
+      "code": "E_RELEASE_LEDGER_DIGEST_MISMATCH",
+      "refusedBy": "contract",
+      "operations": [
+        {
+          "op": "set",
+          "path": "/claimDigest",
+          "value": "sha256:9bff4e394f6fb7233992db27f87ebbfba50e26012f8b65546ce65105e6784325"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,362 @@
+{
+  "publishableReport": {
+    "kind": "evaluation-aggregate-report",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "reportId": "ear_5a86da36b7afcbe37fa710828b074a76",
+    "reportDigest": "sha256:5a86da36b7afcbe37fa710828b074a764e1acfe41c1374a047e46b116a5c4624",
+    "generatedAt": "2026-08-25T09:15:00.000Z",
+    "redaction": {
+      "policyVersion": "1.0.0",
+      "rawPromptsExcluded": true,
+      "tracesExcluded": true,
+      "screenshotsExcluded": true,
+      "modelOutputExcluded": true,
+      "absolutePathsExcluded": true,
+      "credentialMaterialExcluded": true
+    },
+    "inputs": {
+      "corpusDigest": "sha256:9388e0879ea692e3e2470c385be1fb3da3c7ab4a820410c92b3c5e0bd858fd89",
+      "graderRegistryDigest": "sha256:0a168a9a8d592b0ec4762c5820ee657a796804989575c1136fae1de9d43bdec0",
+      "hostProfileRegistryDigest": "sha256:e41d66f0c65f915b3f53bb62ace0e32f619c3bcaaad537421139e0b447dd6cf3",
+      "gatePolicyDigest": "sha256:66d04d7270993de3571b14d0c2d8a2bc4909c3e951c3294ae851fbfb7810bfc8",
+      "budgetBaselineDigest": "sha256:efb7be8b1fdeffa018b751f070f8ff34c4e3284ed6fac2e2ea67467200831f86",
+      "hostProfileDigests": [
+        "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0"
+      ],
+      "runResultDigests": [
+        "sha256:590c2503788be746b8a913a98f95737036f6f8c2f72965e683d7647c3f137417"
+      ]
+    },
+    "counters": {
+      "scenariosTotal": 2,
+      "scenariosPassed": 1,
+      "scenariosFailed": 0,
+      "scenariosBlocked": 0,
+      "scenariosAbsent": 1,
+      "scenariosWaived": 0,
+      "triggerTruePositives": 1,
+      "triggerFalsePositives": 0,
+      "triggerFalseNegatives": 0,
+      "journeysAttempted": 1,
+      "journeysCompleted": 1,
+      "outputsValidated": 1,
+      "outputsSchemaValid": 1,
+      "assetsDeclared": 3,
+      "assetsPresent": 3,
+      "exportsDeclared": 2,
+      "exportsPresent": 2,
+      "packageMembersDeclared": 5,
+      "packageMembersPresent": 5,
+      "permissionPrompts": 1,
+      "retries": 0,
+      "findingsP0": 0,
+      "findingsP1": 0,
+      "findingsP2": 1,
+      "findingsP3": 2
+    },
+    "rates": {
+      "triggerPrecision": 10000,
+      "triggerRecall": 10000,
+      "journeyCompletion": 10000,
+      "schemaValidity": 10000,
+      "assetParity": 10000,
+      "exportParity": 10000,
+      "packageParity": 10000
+    },
+    "budget": {
+      "baselineDigest": "sha256:efb7be8b1fdeffa018b751f070f8ff34c4e3284ed6fac2e2ea67467200831f86",
+      "latencyMsBaseline": 30000,
+      "latencyMsObserved": 31500,
+      "latencyRegression": 500,
+      "costEstimateMicrosBaseline": 180000,
+      "costEstimateMicrosObserved": 189000,
+      "costRegression": 500,
+      "permissionPromptCeiling": 4,
+      "retryCeiling": 1
+    },
+    "absences": {
+      "graderMissing": 0,
+      "graderErrored": 0,
+      "graderUnavailable": 1,
+      "hostUnavailable": 0,
+      "fixtureUnavailable": 0,
+      "budgetExceeded": 0,
+      "notRun": 0
+    },
+    "skills": [
+      {
+        "skillId": "planr-plan",
+        "skillVersion": "1.0.0",
+        "scenariosTotal": 2,
+        "scenariosPassed": 1,
+        "scenariosFailed": 0,
+        "scenariosBlocked": 0,
+        "scenariosAbsent": 1,
+        "scenariosWaived": 0
+      }
+    ],
+    "scenarios": [
+      {
+        "scenarioDigest": "sha256:f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5",
+        "skillId": "planr-plan",
+        "hostProfileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0",
+        "graderRegistrationDigest": "sha256:04614ba9b65552ae5e5d30ddf8c6595d23b27021bf7a0f197a2e15963f87b5c0",
+        "fixtureSetDigest": "sha256:13875140e48ac8c4d80df722542a7861ff7cacba7d01e103a77ba78e65bb8584",
+        "promptClass": "positive",
+        "status": "passed",
+        "absenceReason": null,
+        "waiverDigest": null,
+        "observations": 1,
+        "latencyMs": 31500
+      },
+      {
+        "scenarioDigest": "sha256:0704528772a30306b1330da97d3f16f65963ff121d83e3a0ca3153973e98efb8",
+        "skillId": "planr-plan",
+        "hostProfileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0",
+        "graderRegistrationDigest": "sha256:04614ba9b65552ae5e5d30ddf8c6595d23b27021bf7a0f197a2e15963f87b5c0",
+        "fixtureSetDigest": "sha256:13875140e48ac8c4d80df722542a7861ff7cacba7d01e103a77ba78e65bb8584",
+        "promptClass": "negative",
+        "status": "absent",
+        "absenceReason": "grader-unavailable",
+        "waiverDigest": null,
+        "observations": 0,
+        "latencyMs": 0
+      }
+    ]
+  },
+  "unsafeReport": {
+    "kind": "evaluation-aggregate-report",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "1.4.0",
+    "reportId": "ear_5a86da36b7afcbe37fa710828b074a76",
+    "reportDigest": "sha256:5a86da36b7afcbe37fa710828b074a764e1acfe41c1374a047e46b116a5c4624",
+    "generatedAt": "2026-08-25T09:15:00.000Z",
+    "redaction": {
+      "policyVersion": "1.0.0",
+      "rawPromptsExcluded": true,
+      "tracesExcluded": true,
+      "screenshotsExcluded": true,
+      "modelOutputExcluded": true,
+      "absolutePathsExcluded": true,
+      "credentialMaterialExcluded": true
+    },
+    "inputs": {
+      "corpusDigest": "sha256:9388e0879ea692e3e2470c385be1fb3da3c7ab4a820410c92b3c5e0bd858fd89",
+      "graderRegistryDigest": "sha256:0a168a9a8d592b0ec4762c5820ee657a796804989575c1136fae1de9d43bdec0",
+      "hostProfileRegistryDigest": "sha256:e41d66f0c65f915b3f53bb62ace0e32f619c3bcaaad537421139e0b447dd6cf3",
+      "gatePolicyDigest": "sha256:66d04d7270993de3571b14d0c2d8a2bc4909c3e951c3294ae851fbfb7810bfc8",
+      "budgetBaselineDigest": "sha256:efb7be8b1fdeffa018b751f070f8ff34c4e3284ed6fac2e2ea67467200831f86",
+      "hostProfileDigests": [
+        "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0"
+      ],
+      "runResultDigests": [
+        "sha256:590c2503788be746b8a913a98f95737036f6f8c2f72965e683d7647c3f137417"
+      ]
+    },
+    "counters": {
+      "scenariosTotal": 2,
+      "scenariosPassed": 1,
+      "scenariosFailed": 0,
+      "scenariosBlocked": 0,
+      "scenariosAbsent": 1,
+      "scenariosWaived": 0,
+      "triggerTruePositives": 1,
+      "triggerFalsePositives": 0,
+      "triggerFalseNegatives": 0,
+      "journeysAttempted": 1,
+      "journeysCompleted": 1,
+      "outputsValidated": 1,
+      "outputsSchemaValid": 1,
+      "assetsDeclared": 3,
+      "assetsPresent": 3,
+      "exportsDeclared": 2,
+      "exportsPresent": 2,
+      "packageMembersDeclared": 5,
+      "packageMembersPresent": 5,
+      "permissionPrompts": 1,
+      "retries": 0,
+      "findingsP0": 0,
+      "findingsP1": 0,
+      "findingsP2": 1,
+      "findingsP3": 2
+    },
+    "rates": {
+      "triggerPrecision": 10000,
+      "triggerRecall": 10000,
+      "journeyCompletion": 10000,
+      "schemaValidity": 10000,
+      "assetParity": 10000,
+      "exportParity": 10000,
+      "packageParity": 10000
+    },
+    "budget": {
+      "baselineDigest": "sha256:efb7be8b1fdeffa018b751f070f8ff34c4e3284ed6fac2e2ea67467200831f86",
+      "latencyMsBaseline": 30000,
+      "latencyMsObserved": 31500,
+      "latencyRegression": 500,
+      "costEstimateMicrosBaseline": 180000,
+      "costEstimateMicrosObserved": 189000,
+      "costRegression": 500,
+      "permissionPromptCeiling": 4,
+      "retryCeiling": 1
+    },
+    "absences": {
+      "graderMissing": 0,
+      "graderErrored": 0,
+      "graderUnavailable": 1,
+      "hostUnavailable": 0,
+      "fixtureUnavailable": 0,
+      "budgetExceeded": 0,
+      "notRun": 0
+    },
+    "skills": [
+      {
+        "skillId": "planr-plan",
+        "skillVersion": "1.0.0",
+        "scenariosTotal": 2,
+        "scenariosPassed": 1,
+        "scenariosFailed": 0,
+        "scenariosBlocked": 0,
+        "scenariosAbsent": 1,
+        "scenariosWaived": 0
+      }
+    ],
+    "scenarios": [
+      {
+        "scenarioDigest": "sha256:f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5",
+        "skillId": "planr-plan",
+        "hostProfileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0",
+        "graderRegistrationDigest": "sha256:04614ba9b65552ae5e5d30ddf8c6595d23b27021bf7a0f197a2e15963f87b5c0",
+        "fixtureSetDigest": "sha256:13875140e48ac8c4d80df722542a7861ff7cacba7d01e103a77ba78e65bb8584",
+        "promptClass": "positive",
+        "status": "passed",
+        "absenceReason": null,
+        "waiverDigest": null,
+        "observations": 1,
+        "latencyMs": 31500,
+        "prompt": "Plan the checkout revamp for me."
+      },
+      {
+        "scenarioDigest": "sha256:0704528772a30306b1330da97d3f16f65963ff121d83e3a0ca3153973e98efb8",
+        "skillId": "planr-plan",
+        "hostProfileDigest": "sha256:926364f7fe15acefa31b8273fd9bcad31b74dd66a62657f17e452a5d3f0d64f0",
+        "graderRegistrationDigest": "sha256:04614ba9b65552ae5e5d30ddf8c6595d23b27021bf7a0f197a2e15963f87b5c0",
+        "fixtureSetDigest": "sha256:13875140e48ac8c4d80df722542a7861ff7cacba7d01e103a77ba78e65bb8584",
+        "promptClass": "negative",
+        "status": "absent",
+        "absenceReason": "grader-unavailable",
+        "waiverDigest": null,
+        "observations": 0,
+        "latencyMs": 0
+      }
+    ],
+    "evidence": {
+      "rawPrompt": "Plan the checkout revamp for me.",
+      "fixturePath": "/Users/user/corpora/planr-plan/fixtures/plan-request-prompt.txt",
+      "apiKey": "api_key: REDACTED-EXAMPLE-VALUE"
+    }
+  },
+  "injections": [
+    {
+      "name": "raw prompt text under an innocuous field name",
+      "class": "raw-prompt",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/scenarios/0/summary",
+          "value": "Plan the checkout revamp for me and write the tasks."
+        }
+      ]
+    },
+    {
+      "name": "prompt field name even with a digest value",
+      "class": "raw-prompt",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/scenarios/0/promptText",
+          "value": "sha256:3f9d62e170e797ac209c5ba6715197d8e3b779c137dd023c126a8a4cdb1c423a"
+        }
+      ]
+    },
+    {
+      "name": "absolute filesystem path",
+      "class": "absolute-path",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/scenarios/0/origin",
+          "value": "/Users/user/corpora/planr-plan/scenarios/plan-request-positive.json"
+        }
+      ]
+    },
+    {
+      "name": "credential material",
+      "class": "credential",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/skills/0/detail",
+          "value": "api_key: REDACTED-EXAMPLE-VALUE"
+        }
+      ]
+    },
+    {
+      "name": "model output",
+      "class": "model-output",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/modelOutput",
+          "value": "sha256:c9bf55d292f8f2da35f2dc35ccc660d114961010c90141214b1da645519c4902"
+        }
+      ]
+    },
+    {
+      "name": "screenshot bytes",
+      "class": "screenshot",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/screenshots",
+          "value": [
+            "sha256:6c043a95dd43f123ccc16ed42802fff8fa70fd20b0c49f77c814a44a1e2f3549"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "run trace",
+      "class": "trace",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/trace",
+          "value": "sha256:356ae840c282c590802de5959c81f8e91d2c959c68de113dbf1f4b1fdd0c3f4c"
+        }
+      ]
+    },
+    {
+      "name": "redaction declaration withdrawn",
+      "class": "declaration",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/redaction/rawPromptsExcluded",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "implicit redaction policy version",
+      "class": "declaration",
+      "operations": [
+        {
+          "op": "remove",
+          "path": "/redaction/policyVersion"
+        }
+      ]
+    }
+  ]
+}

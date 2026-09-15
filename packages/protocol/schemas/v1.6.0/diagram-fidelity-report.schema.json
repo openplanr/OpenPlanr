@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.6.0/diagram-fidelity-report.schema.json",
+  "x-openplanr-contract": {
+    "id": "diagram-fidelity-report",
+    "version": "1.6.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "diagramId",
+    "sourceFormat",
+    "targetFormat",
+    "status",
+    "interpreted",
+    "omitted",
+    "notes"
+  ],
+  "properties": {
+    "kind": {
+      "const": "diagram-fidelity-report"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.6.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "diagramId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "maxLength": 128
+    },
+    "sourceFormat": {
+      "enum": [
+        "english",
+        "mermaid",
+        "excalidraw",
+        "planr-diagram"
+      ]
+    },
+    "targetFormat": {
+      "enum": [
+        "planr-diagram",
+        "mermaid",
+        "excalidraw",
+        "svg",
+        "html",
+        "png"
+      ]
+    },
+    "status": {
+      "enum": [
+        "editable",
+        "render-only",
+        "partial",
+        "lossy",
+        "unsupported"
+      ]
+    },
+    "interpreted": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "targetId",
+          "construct"
+        ],
+        "properties": {
+          "source": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "targetId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+            "maxLength": 128
+          },
+          "construct": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 8192
+    },
+    "omitted": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "reason"
+        ],
+        "properties": {
+          "source": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "reason": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 8192
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/nonBlankText"
+      },
+      "minItems": 0,
+      "maxItems": 256
+    }
+  }
+}

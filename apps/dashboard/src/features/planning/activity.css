@@ -1,0 +1,12 @@
+.pc-activity__aid {
+  display: grid;
+  gap: 10px;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0 16px 16px;
+}
+
+.pc-activity__code {
+  font-family: var(--pc-font-mono);
+  font-size: var(--pc-text-xs);
+}

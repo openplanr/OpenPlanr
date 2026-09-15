@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.5.0/role-registry.schema.json",
+  "x-openplanr-contract": {
+    "id": "role-registry",
+    "version": "1.5.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "roles"
+  ],
+  "properties": {
+    "kind": {
+      "const": "role-registry"
+    },
+    "schemaVersion": {
+      "const": "1.1.0"
+    },
+    "protocolVersion": {
+      "const": "1.5.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "roleId",
+          "roleVersion",
+          "displayName",
+          "description",
+          "legacyAliases",
+          "phase",
+          "activation",
+          "capabilityTier",
+          "authorityClass",
+          "writeBoundary",
+          "source",
+          "taskKinds",
+          "outputContracts",
+          "ruleIds",
+          "adapterMappings",
+          "qaCoverage"
+        ],
+        "properties": {
+          "roleId": {
+            "$ref": "common.schema.json#/$defs/roleId"
+          },
+          "roleVersion": {
+            "$ref": "common.schema.json#/$defs/semver"
+          },
+          "displayName": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "description": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "legacyAliases": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "status",
+                "since",
+                "removalVersion"
+              ],
+              "properties": {
+                "id": {
+                  "$ref": "common.schema.json#/$defs/identifier"
+                },
+                "status": {
+                  "const": "compatibility"
+                },
+                "since": {
+                  "$ref": "common.schema.json#/$defs/semver"
+                },
+                "removalVersion": {
+                  "anyOf": [
+                    {
+                      "$ref": "common.schema.json#/$defs/semver"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            },
+            "minItems": 0,
+            "maxItems": 16
+          },
+          "phase": {
+            "enum": [
+              "po-preflight",
+              "po",
+              "dev",
+              "qa",
+              "post-build"
+            ]
+          },
+          "activation": {
+            "enum": [
+              "always",
+              "conditional",
+              "manual"
+            ]
+          },
+          "capabilityTier": {
+            "enum": [
+              "analysis-high",
+              "implementation-high",
+              "read-only-qa"
+            ]
+          },
+          "authorityClass": {
+            "$ref": "common.schema.json#/$defs/identifier"
+          },
+          "writeBoundary": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "repositoryAccess",
+              "externalDataAccess",
+              "allowedOutputClasses",
+              "forbiddenEffects"
+            ],
+            "properties": {
+              "repositoryAccess": {
+                "enum": [
+                  "none",
+                  "read-only",
+                  "declared-paths"
+                ]
+              },
+              "externalDataAccess": {
+                "enum": [
+                  "none",
+                  "read-only"
+                ]
+              },
+              "allowedOutputClasses": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "A",
+                    "B",
+                    "C",
+                    "D"
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 4,
+                "uniqueItems": true
+              },
+              "forbiddenEffects": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.schema.json#/$defs/identifier"
+                },
+                "minItems": 1,
+                "maxItems": 32,
+                "uniqueItems": true
+              }
+            }
+          },
+          "source": {
+            "$ref": "common.schema.json#/$defs/sourceRef"
+          },
+          "taskKinds": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/identifier"
+            },
+            "minItems": 0,
+            "maxItems": 32,
+            "uniqueItems": true
+          },
+          "outputContracts": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/contractRef"
+            },
+            "minItems": 1,
+            "maxItems": 32
+          },
+          "ruleIds": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/ruleId"
+            },
+            "minItems": 1,
+            "maxItems": 10,
+            "uniqueItems": true
+          },
+          "adapterMappings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "host",
+                "nativeId",
+                "generatedPath"
+              ],
+              "properties": {
+                "host": {
+                  "enum": [
+                    "claude-code",
+                    "codex",
+                    "cursor"
+                  ]
+                },
+                "nativeId": {
+                  "$ref": "common.schema.json#/$defs/identifier"
+                },
+                "generatedPath": {
+                  "$ref": "common.schema.json#/$defs/relativePath"
+                }
+              }
+            },
+            "minItems": 1,
+            "maxItems": 8
+          },
+          "qaCoverage": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/relativePath"
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 128
+    }
+  }
+}

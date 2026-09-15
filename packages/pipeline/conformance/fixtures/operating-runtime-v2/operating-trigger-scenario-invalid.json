@@ -1,0 +1,17 @@
+{
+  "trigger": {
+    "kind": "operating-event-trigger",
+    "schemaVersion": "1.0.0",
+    "protocolVersion": "2.0.0",
+    "triggerId": "trg_trigger_invalid_001",
+    "scopeId": "scope-acme",
+    "domainId": "business",
+    "domainVersion": "1.0.0",
+    "snapshotId": "snp_trigger_valid_001",
+    "condition": "Approve execution when the metric changes.",
+    "evidenceRefIds": [],
+    "requestedWork": "execute",
+    "sourceArtifactId": "art_trigger_valid_001",
+    "createdAt": "2026-08-09T12:00:00.000Z"
+  }
+}

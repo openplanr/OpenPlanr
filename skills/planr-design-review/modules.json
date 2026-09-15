@@ -1,0 +1,40 @@
+{
+  "imports": [],
+  "modules": [
+    {
+      "moduleId": "planr-design-review-workflow",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "shared",
+      "description": "Task-specific planr-design-review workflow guidance.",
+      "source": "modules/workflow.md",
+      "appliesWhen": "Whenever planr-design-review is selected.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": [
+          "context-gathering",
+          "read"
+        ],
+        "allowedTools": [
+          "read",
+          "shell"
+        ],
+        "allowedOperations": [
+          "compile",
+          "pipeline",
+          "render"
+        ],
+        "allowedOutputClasses": [
+          "A",
+          "B"
+        ],
+        "forbiddenEffects": [
+          "external-publish",
+          "remote-deploy"
+        ]
+      }
+    }
+  ]
+}

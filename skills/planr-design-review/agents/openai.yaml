@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Design Review"
+  short_description: "Review and revise an existing product design using stable board…"
+  default_prompt: "Use $planr-design-review to review and revise an existing product design using stable board pins and scoped browser-verified changes. Use for focused improvements while preserving unrelated screens and feedback."
+policy:
+  allow_implicit_invocation: true

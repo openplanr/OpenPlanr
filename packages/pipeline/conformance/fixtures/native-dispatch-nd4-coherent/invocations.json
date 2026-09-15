@@ -1,0 +1,29 @@
+[
+  {
+    "name": "codex-native-subagents",
+    "runtime": "codex",
+    "mode": "native-subagents",
+    "selected_task": null,
+    "expected_invocations": 1,
+    "expected_agent_calls": 2,
+    "expected_completed_tasks": ["T-001", "T-002"]
+  },
+  {
+    "name": "cursor-sequential-fallback",
+    "runtime": "cursor",
+    "mode": "sequential-fallback",
+    "selected_task": null,
+    "expected_invocations": 1,
+    "expected_agent_calls": 2,
+    "expected_completed_tasks": ["T-001", "T-002"]
+  },
+  {
+    "name": "explicit-task-selector",
+    "runtime": "claude-code",
+    "mode": "single-task",
+    "selected_task": "T-002",
+    "expected_invocations": 1,
+    "expected_agent_calls": 1,
+    "expected_completed_tasks": ["T-002"]
+  }
+]

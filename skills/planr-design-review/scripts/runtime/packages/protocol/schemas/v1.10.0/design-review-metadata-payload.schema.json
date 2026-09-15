@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.10.0/design-review-metadata-payload.schema.json",
+  "x-openplanr-contract": {
+    "id": "design-review-metadata-payload",
+    "version": "1.10.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "kind": {
+      "enum": [
+        "category",
+        "disposition"
+      ]
+    },
+    "author": {
+      "type": "string",
+      "maxLength": 160,
+      "minLength": 1
+    },
+    "reviewOf": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "pinId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "category": {
+      "enum": [
+        "question",
+        "suggestion",
+        "blocker"
+      ]
+    },
+    "disposition": {
+      "enum": [
+        "accepted",
+        "deferred",
+        "rejected"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 16384
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "kind",
+    "author",
+    "reviewOf",
+    "pinId",
+    "updatedAt"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "category"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "category"
+        ],
+        "not": {
+          "required": [
+            "disposition"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "disposition"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "disposition",
+          "reason"
+        ],
+        "not": {
+          "required": [
+            "category"
+          ]
+        }
+      }
+    }
+  ]
+}

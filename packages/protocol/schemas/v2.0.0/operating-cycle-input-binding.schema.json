@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-cycle-input-binding.schema.json",
+  "x-openplanr-contract": { "id": "operating-cycle-input-binding", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 cycle input binding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "inputBindingId", "cycleId", "scopeId", "domainId", "domainVersion", "sourceArtifactIds", "runtimeBinding", "capturedAt"],
+  "properties": {
+    "kind": { "const": "operating-cycle-input-binding" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "inputBindingId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "cycleId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "scopeId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "domainId": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "domainVersion": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "sourceArtifactIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^art_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" } },
+    "runtimeBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "adapterVersion"],
+      "properties": {
+        "runtime": { "type": "string", "enum": ["codex", "claude-code", "cursor"] },
+        "adapterVersion": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "capturedAt": { "type": "string", "format": "date-time" }
+  }
+}

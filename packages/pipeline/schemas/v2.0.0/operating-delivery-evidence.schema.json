@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-delivery-evidence.schema.json",
+  "x-openplanr-contract": { "id": "operating-delivery-evidence", "version": "1.0.0" },
+  "title": "OpenPlanr Planning delivery evidence for Operate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "deliveryEvidenceId", "correlationId", "proposalId", "proposalRevision", "scopeId", "domainId", "domainVersion", "decision", "action", "metric", "verification", "spec", "planRun", "shipRun", "tasks", "changedSurfaces", "qa", "limitations", "artifacts", "classification", "summary", "deliveryStatus", "rollback", "outcomeStatus", "createdAt", "deliveryEvidenceHash"],
+  "properties": {
+    "kind": { "const": "operating-delivery-evidence" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "2.0.0" },
+    "deliveryEvidenceId": { "type": "string", "pattern": "^dlev_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "correlationId": { "$ref": "#/$defs/id" }, "proposalId": { "$ref": "#/$defs/id" }, "proposalRevision": { "const": 2 },
+    "scopeId": { "$ref": "#/$defs/id" }, "domainId": { "$ref": "#/$defs/id" }, "domainVersion": { "$ref": "#/$defs/version" },
+    "decision": { "$ref": "#/$defs/source" }, "action": { "$ref": "#/$defs/source" }, "metric": { "$ref": "#/$defs/metric" }, "verification": { "$ref": "#/$defs/verification" },
+    "spec": { "type": "object", "additionalProperties": false, "required": ["specId", "contentHash", "originHash"], "properties": { "specId": { "type": "string", "pattern": "^SPEC-[0-9]{3,}$" }, "contentHash": { "$ref": "#/$defs/hash" }, "originHash": { "$ref": "#/$defs/hash" } } },
+    "planRun": { "$ref": "#/$defs/planRun" }, "shipRun": { "$ref": "#/$defs/shipRun" },
+    "tasks": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["taskId", "status", "artifactHash"], "properties": { "taskId": { "$ref": "#/$defs/id" }, "status": { "enum": ["done", "blocked", "failed", "skipped"] }, "artifactHash": { "$ref": "#/$defs/hash" } } } },
+    "changedSurfaces": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/text" } },
+    "qa": { "type": "object", "additionalProperties": false, "required": ["status", "reportHash", "summary"], "properties": { "status": { "enum": ["passed", "failed", "skipped"] }, "reportHash": { "type": ["string", "null"], "pattern": "^sha256:[a-f0-9]{64}$" }, "summary": { "$ref": "#/$defs/text" } } },
+    "limitations": { "type": "array", "items": { "$ref": "#/$defs/text" } },
+    "artifacts": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["artifactId", "hash", "classification"], "properties": { "artifactId": { "$ref": "#/$defs/id" }, "hash": { "$ref": "#/$defs/hash" }, "classification": { "enum": ["public", "internal", "confidential", "restricted"] } } } },
+    "classification": { "enum": ["public", "internal", "confidential", "restricted"] }, "summary": { "$ref": "#/$defs/text" },
+    "deliveryStatus": { "enum": ["succeeded", "blocked", "failed", "rolled-back"] },
+    "rollback": { "oneOf": [
+      { "type": "null" },
+      { "type": "object", "additionalProperties": false, "required": ["rollbackPlanId", "rollbackPlanArtifactId", "rollbackPlanHash", "rollbackResultId", "rollbackResultArtifactId", "rollbackResultHash", "rollbackReceiptId", "rollbackReceiptArtifactId", "rollbackReceiptHash", "rollbackProvenanceEventId", "originalShipRunId", "rollbackRunId", "targetBeforeHash", "targetAfterHash", "status", "completedAt"], "properties": {
+        "rollbackPlanId": { "$ref": "#/$defs/id" }, "rollbackPlanArtifactId": { "$ref": "#/$defs/id" }, "rollbackPlanHash": { "$ref": "#/$defs/hash" },
+        "rollbackResultId": { "$ref": "#/$defs/id" }, "rollbackResultArtifactId": { "$ref": "#/$defs/id" }, "rollbackResultHash": { "$ref": "#/$defs/hash" },
+        "rollbackReceiptId": { "$ref": "#/$defs/id" }, "rollbackReceiptArtifactId": { "$ref": "#/$defs/id" }, "rollbackReceiptHash": { "$ref": "#/$defs/hash" }, "rollbackProvenanceEventId": { "$ref": "#/$defs/id" },
+        "originalShipRunId": { "$ref": "#/$defs/id" }, "rollbackRunId": { "$ref": "#/$defs/id" },
+        "targetBeforeHash": { "$ref": "#/$defs/hash" }, "targetAfterHash": { "$ref": "#/$defs/hash" },
+        "status": { "const": "succeeded" }, "completedAt": { "type": "string", "format": "date-time" }
+      } }
+    ] },
+    "outcomeStatus": { "const": "verification-required" },
+    "createdAt": { "type": "string", "format": "date-time" }, "deliveryEvidenceHash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128 }, "version": { "type": "string", "minLength": 1, "maxLength": 64 }, "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }, "text": { "type": "string", "minLength": 1, "maxLength": 4096, "pattern": "^.*\\S.*$" },
+    "source": { "type": "object", "additionalProperties": false, "required": ["id", "revision", "hash"], "properties": { "id": { "$ref": "#/$defs/id" }, "revision": { "type": "integer", "minimum": 1 }, "hash": { "$ref": "#/$defs/hash" } } },
+    "metric": { "type": "object", "additionalProperties": false, "required": ["metricId", "metricHash"], "properties": { "metricId": { "$ref": "#/$defs/id" }, "metricHash": { "$ref": "#/$defs/hash" } } },
+    "verification": { "type": "object", "additionalProperties": false, "required": ["verificationPlanId", "verificationPlanHash", "metricId", "metricHash", "window"], "properties": { "verificationPlanId": { "$ref": "#/$defs/id" }, "verificationPlanHash": { "$ref": "#/$defs/hash" }, "metricId": { "$ref": "#/$defs/id" }, "metricHash": { "$ref": "#/$defs/hash" }, "window": { "type": "string", "minLength": 1, "maxLength": 4096, "pattern": "^.*\\S.*$" } } },
+    "runBase": { "type": "object", "additionalProperties": false, "required": ["runId", "runtime", "packageVersion", "status"], "properties": { "runId": { "$ref": "#/$defs/id" }, "runtime": { "$ref": "#/$defs/id" }, "packageVersion": { "$ref": "#/$defs/version" }, "status": { "enum": ["succeeded", "blocked", "failed", "skipped"] } } },
+    "planRun": { "type": "object", "additionalProperties": false, "required": ["runId", "runtime", "packageVersion", "provenanceEventId", "provenanceEventHash", "status"], "properties": { "runId": { "$ref": "#/$defs/id" }, "runtime": { "$ref": "#/$defs/id" }, "packageVersion": { "$ref": "#/$defs/version" }, "provenanceEventId": { "$ref": "#/$defs/id" }, "provenanceEventHash": { "$ref": "#/$defs/hash" }, "status": { "enum": ["succeeded", "blocked", "failed", "skipped"] } } },
+    "shipRun": { "type": "object", "additionalProperties": false, "required": ["runId", "runtime", "packageVersion", "manifestHash", "provenanceEventId", "provenanceEventHash", "status"], "properties": { "runId": { "$ref": "#/$defs/id" }, "runtime": { "$ref": "#/$defs/id" }, "packageVersion": { "$ref": "#/$defs/version" }, "manifestHash": { "$ref": "#/$defs/hash" }, "provenanceEventId": { "$ref": "#/$defs/id" }, "provenanceEventHash": { "$ref": "#/$defs/hash" }, "status": { "enum": ["succeeded", "blocked", "failed", "skipped"] } } }
+  }
+}

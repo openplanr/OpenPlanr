@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.12.0/enterprise-review-thread.schema.json",
+  "x-openplanr-contract": {
+    "id": "enterprise-review-thread",
+    "version": "1.12.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "openplanr-enterprise-review-thread"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}(?![\\s\\S])"
+    },
+    "organizationId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}(?![\\s\\S])"
+    },
+    "projectId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}(?![\\s\\S])"
+    },
+    "artifactId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}(?![\\s\\S])"
+    },
+    "anchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "revisionId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}(?![\\s\\S])"
+        },
+        "elementId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "screenId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "frameId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[^\\s\\u0000-\\u001f\\u007f]+$"
+        },
+        "x": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "y": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "revisionId"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "elementId"
+          ]
+        },
+        {
+          "required": [
+            "screenId",
+            "frameId"
+          ]
+        },
+        {
+          "required": [
+            "x",
+            "y"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "x"
+            ]
+          },
+          "then": {
+            "required": [
+              "y"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "y"
+            ]
+          },
+          "then": {
+            "required": [
+              "x"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "frameId"
+            ]
+          },
+          "then": {
+            "required": [
+              "screenId"
+            ]
+          }
+        }
+      ]
+    },
+    "category": {
+      "enum": [
+        "question",
+        "suggestion",
+        "change-request",
+        "blocker"
+      ]
+    },
+    "status": {
+      "enum": [
+        "open",
+        "addressed",
+        "resolved"
+      ]
+    },
+    "authorId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}(?![\\s\\S])"
+    },
+    "body": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16384
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+    },
+    "replies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}(?![\\s\\S])"
+          },
+          "authorId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}(?![\\s\\S])"
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+          }
+        },
+        "required": [
+          "id",
+          "authorId",
+          "body",
+          "createdAt"
+        ]
+      },
+      "maxItems": 10000
+    },
+    "assigneeId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}(?![\\s\\S])"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "addressedRevisionId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}(?![\\s\\S])"
+    },
+    "resolvedAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$"
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "id",
+    "organizationId",
+    "projectId",
+    "artifactId",
+    "anchor",
+    "category",
+    "status",
+    "authorId",
+    "body",
+    "createdAt",
+    "updatedAt",
+    "replies"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "addressed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "addressedRevisionId"
+        ],
+        "not": {
+          "required": [
+            "resolvedAt"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "resolved"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "resolvedAt"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "resolvedAt"
+          ]
+        }
+      }
+    }
+  ]
+}

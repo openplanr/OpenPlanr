@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.5.0/rule-catalog.schema.json",
+  "x-openplanr-contract": {
+    "id": "rule-catalog",
+    "version": "1.5.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "documentVersion",
+    "digestAlgorithm",
+    "canonicalization",
+    "documentDigest",
+    "rules"
+  ],
+  "properties": {
+    "kind": {
+      "const": "rule-catalog"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.5.0"
+    },
+    "documentVersion": {
+      "$ref": "common.schema.json#/$defs/semver"
+    },
+    "digestAlgorithm": {
+      "const": "sha256"
+    },
+    "canonicalization": {
+      "const": "rfc8785"
+    },
+    "documentDigest": {
+      "$ref": "common.schema.json#/$defs/digest"
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ruleId",
+          "ruleVersion",
+          "title",
+          "status",
+          "normativeText",
+          "enforcementPoints",
+          "testRefs",
+          "citedBy",
+          "source"
+        ],
+        "properties": {
+          "ruleId": {
+            "$ref": "common.schema.json#/$defs/ruleId"
+          },
+          "ruleVersion": {
+            "$ref": "common.schema.json#/$defs/semver"
+          },
+          "title": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "deprecated",
+              "retired"
+            ]
+          },
+          "normativeText": {
+            "$ref": "common.schema.json#/$defs/nonBlankText"
+          },
+          "enforcementPoints": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "package",
+                "path",
+                "symbol"
+              ],
+              "properties": {
+                "package": {
+                  "$ref": "common.schema.json#/$defs/nonBlankText"
+                },
+                "path": {
+                  "$ref": "common.schema.json#/$defs/relativePath"
+                },
+                "symbol": {
+                  "$ref": "common.schema.json#/$defs/nonBlankText"
+                }
+              }
+            },
+            "minItems": 1,
+            "maxItems": 64
+          },
+          "testRefs": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/relativePath"
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true
+          },
+          "citedBy": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/relativePath"
+            },
+            "minItems": 1,
+            "maxItems": 256,
+            "uniqueItems": true
+          },
+          "source": {
+            "$ref": "common.schema.json#/$defs/sourceRef"
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 100
+    }
+  }
+}

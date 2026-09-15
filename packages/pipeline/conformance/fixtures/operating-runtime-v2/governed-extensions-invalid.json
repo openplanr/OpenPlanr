@@ -1,0 +1,30 @@
+{
+  "vectors": [
+    { "name": "unknown exact version", "kind": "executor-selection", "field": "executorVersion", "value": "1.0.1", "reasonCode": "registration-not-found" },
+    { "name": "incompatible runtime", "kind": "executor-selection", "field": "runtimeVersion", "value": "0.41.9", "reasonCode": "runtime-version-incompatible" },
+    { "name": "expired health", "kind": "executor-selection", "field": "now", "value": "2027-08-12T00:00:00Z", "reasonCode": "health-expired" },
+    { "name": "capability ceiling widening", "kind": "executor-selection", "field": "capability", "value": { "id": "release-deploy", "version": "1.0.0" }, "reasonCode": "declared-ceiling-insufficient" },
+    { "name": "effect ceiling widening", "kind": "executor-selection", "field": "effectClass", "value": "production-delivery", "reasonCode": "declared-ceiling-insufficient" },
+    { "name": "fallback substitution", "kind": "registration", "collection": "executors", "field": "fallback", "value": { "kind": "executor", "executorId": "other", "executorVersion": "1.0.0" }, "errorCode": "E_EXTENSION_REGISTRATION_INVALID" },
+    { "name": "untrusted connector", "kind": "registration", "collection": "executors", "field": "connector", "value": { "id": "foreign", "version": "1.0.0" }, "errorCode": "E_EXTENSION_REGISTRATION_INVALID" },
+    { "name": "dynamic loader", "kind": "registration", "collection": "executors", "field": "loader", "value": "dynamic-import", "errorCode": "E_EXTENSION_REGISTRATION_INVALID" },
+    { "name": "private path", "kind": "registration", "collection": "executors", "field": "module", "value": "../internal-consumer/executor.mjs", "errorCode": "E_EXTENSION_REGISTRATION_INVALID" },
+    { "name": "prohibited operation", "kind": "registration", "collection": "executors", "field": "supportedTargetKinds", "value": ["customer-contact"], "errorCode": "E_EXTENSION_REGISTRATION_INVALID" },
+    { "name": "reserved executor package substitution", "kind": "reserved-registration", "errorCode": "E_EXTENSION_REGISTRATION_CONFLICT" },
+    { "name": "reserved provider health renewal", "kind": "reserved-registration", "errorCode": "E_EXTENSION_REGISTRATION_CONFLICT" },
+    { "name": "caller-constructed host", "kind": "connector-host", "errorCode": "EXECUTOR_UNAVAILABLE" },
+    { "name": "connector URL extension", "kind": "connector-host", "errorCode": "EXECUTOR_UNAVAILABLE" },
+    { "name": "same-kind target substitution", "kind": "target-binding", "errorCode": "OPERATION_CONFLICT" },
+    { "name": "target revision substitution", "kind": "target-binding", "errorCode": "OPERATION_CONFLICT" },
+    { "name": "availability exceeds provider health", "kind": "health-window", "errorCode": "OPERATING_PROVIDER_INPUT_INVALID" },
+    { "name": "payload differs from request fingerprint", "kind": "executor-envelope", "errorCode": "OPERATION_CONFLICT" },
+    { "name": "rollback baseline differs from request fingerprint", "kind": "executor-envelope", "errorCode": "OPERATION_CONFLICT" },
+    { "name": "custom-prototype registry", "kind": "plain-data", "errorCode": "E_EXTENSION_REGISTRATION_INVALID" },
+    { "name": "normalized core-prohibited key or value", "kind": "core-prohibition", "errorCode": "CAPABILITY_DENIED" },
+    { "name": "reserved executor ID under a different version", "kind": "reserved-version", "errorCode": "E_EXTENSION_REGISTRATION_CONFLICT" },
+    { "name": "prototype effect rank", "kind": "effect-rank", "values": ["toString", "constructor", "__proto__", "arbitrary-effect"], "reasonCode": "declared-ceiling-insufficient" },
+    { "name": "normalized reordered registration identifiers", "kind": "registration-semantics", "values": ["contact-customer", "payment-send", "deploy-production", "merge-production", "transfer-funds", "publish-now", "delete-record", "rotate-secret", "change-credential", "release-public", "release", "remove-record", "erase-record", "wipe-record", "remit-funds", "pay-send", "transfer-pay", "money-transfer", "ship-production", "deliver-production", "delivery-production", "message-customer", "email-customer", "reachout-customer"], "errorCode": "E_EXTENSION_REGISTRATION_INVALID" },
+    { "name": "reconcile request fingerprint substitution", "kind": "reconcile-fingerprint", "errorCode": "OPERATION_CONFLICT" },
+    { "name": "rollback parent receipt fingerprint substitution", "kind": "rollback-parent-fingerprint", "errorCode": "OPERATION_CONFLICT" }
+  ]
+}

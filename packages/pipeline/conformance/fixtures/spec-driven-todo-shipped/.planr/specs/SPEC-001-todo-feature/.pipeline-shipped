@@ -1,0 +1,16 @@
+shipped_at: "2026-05-03T18:05:31Z"
+pipeline_version: "0.7.3"
+runtime: cursor
+mode: spec-driven
+feature: todo-feature
+tasks_executed: 1
+tasks_failed: 0
+qa_gate_status: passed
+duration_seconds: 60
+agents_invoked:
+  - backend-agent
+  - qa-agent
+devops_status: skipped
+docs_status: skipped
+snapshot_status: skipped
+error_reports: []

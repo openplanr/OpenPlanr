@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.7.0/task.schema.json",
+  "x-openplanr-contract": {
+    "id": "task",
+    "version": "1.7.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "storyId",
+    "slug",
+    "schemaVersion",
+    "type",
+    "agent",
+    "status",
+    "created",
+    "updated",
+    "dependsOn",
+    "preserve",
+    "reviewRisks",
+    "browserSurfaces",
+    "acceptanceRefs"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^T-\\d{3,}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "schemaVersion": {
+      "const": "1.7.0"
+    },
+    "status": {
+      "enum": [
+        "pending",
+        "implementing",
+        "in-progress",
+        "done",
+        "blocked"
+      ]
+    },
+    "created": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "storyId": {
+      "type": "string",
+      "pattern": "^US-\\d{3,}$"
+    },
+    "specId": {
+      "type": "string",
+      "pattern": "^SPEC-\\d{3,}$"
+    },
+    "featureSlug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "type": {
+      "enum": [
+        "UI",
+        "Tech"
+      ]
+    },
+    "agent": {
+      "enum": [
+        "frontend-agent",
+        "backend-agent",
+        "db-agent"
+      ]
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dependsOn": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^T-\\d{3,}$"
+      },
+      "uniqueItems": true
+    },
+    "preserve": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "repositoryKey",
+          "path"
+        ],
+        "properties": {
+          "repositoryKey": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "uniqueItems": true
+    },
+    "reviewRisks": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "security",
+          "performance",
+          "migration",
+          "api-contract",
+          "data-integrity"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "browserSurfaces": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "ui",
+          "authentication",
+          "session",
+          "navigation",
+          "network"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "acceptanceRefs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^AC-\\d{3,}$"
+      },
+      "uniqueItems": true
+    }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "required": [
+            "specId"
+          ],
+          "not": {
+            "required": [
+              "featureSlug"
+            ]
+          }
+        },
+        {
+          "required": [
+            "featureSlug"
+          ],
+          "not": {
+            "required": [
+              "specId"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "type": {
+              "const": "UI"
+            },
+            "agent": {
+              "const": "frontend-agent"
+            }
+          },
+          "required": [
+            "type",
+            "agent"
+          ]
+        },
+        {
+          "properties": {
+            "type": {
+              "const": "Tech"
+            },
+            "agent": {
+              "enum": [
+                "backend-agent",
+                "db-agent"
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "agent"
+          ]
+        }
+      ]
+    }
+  ]
+}

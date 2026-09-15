@@ -1,0 +1,12 @@
+{
+  "kind": "openplanr-skill-migration-declaration",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-doctor",
+  "baseline": "SKILL.md",
+  "successor": "skill.json",
+  "classification": "intentional",
+  "intendedChanges": [
+    "Moved the upgrade walkthrough to a routed progressive reference.",
+    "Changed the upgrade reference from an opaque inline path to a navigable packaged Markdown link."
+  ]
+}

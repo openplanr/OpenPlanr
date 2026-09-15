@@ -1,48 +1,65 @@
-# Dependencies
 node_modules/
-
-# Build output
 dist/
-*.tsbuildinfo
-
-# Test & coverage
+packages/cli/lib/host-packages/
 coverage/
-
-# Environment and secrets
+.cache/
+.vite/
+.turbo/
+.ci/
+.gstack/
+.DS_Store
+*.log
+*.tgz
+release/
 .env
 .env.*
 !.env.example
 
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# Migration custody remains outside the active repository.
+.migration/
 
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE / editors
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
-
+# Runtime and private planning state are never repository inputs.
+.planr/runtime/
+.planr/operate/
+.planr/artifacts/
 .planr/
-!tests/fixtures/graph-project/
-!tests/fixtures/graph-project/.planr/
-!tests/fixtures/graph-project/.planr/**
-.claude/
 .cursor/
+AGENTS.md
+CLAUDE.md
 
-# Debug / misc
-.cache/
+# Local design previews, revision history, review state, and development caches.
+.design/
+.artifact-review/
+.wrangler/
+.local/
 
-# CI checks the sibling pipeline out here so the packed-install e2e can pack
-# it. It lives inside the workspace, so without this the release automation
-# sweeps it into a commit as a broken gitlink.
-.ci/
+# Internal product showcases stay on disk, including their editable sources.
+# Public, validated examples under examples/skills remain versioned.
+/examples/design/
+
+# Internal evaluation runs; reusable scenarios and test fixtures remain versioned.
+/evaluation/skills/design-workflow-evidence/
+/evaluation/skills/design-workflow-results.json
+/evaluation/skills/design-workflow-results.md
+
+# Internal product planning and staging verification records.
+/docs/research/branded-review-studio.md
+/docs/research/design-workflow-restoration.md
+/docs/research/permanent-design-review-verification.md
+/docs/research/team-review-studio-evidence.json
+/docs/research/team-review-studio-verification.md
+
+# Private repository preparation and historical verification evidence.
+/.claude/
+/docs/verification/
+/docs/research/
+/docs/diagrams/verification.md
+/docs/migration/source-custody-ledger.json
+/docs/migration/verification-report.json
+/conformance/migration/tag-map.json
+/conformance/migration/import-parity-report.json
+/conformance/migration/integration-change-inventory.json
+/conformance/migration/lockfile-custody.json
+
+# Local planning context; packaged technical-stack fixtures remain versioned.
+/input/tech/stack.md

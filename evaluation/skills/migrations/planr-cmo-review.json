@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-cmo-review",
+  "family": "operate-advisor",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-cmo-review/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-cmo-review/skill.json",
+    "version": "2.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Replaced governance-oriented evidence wording with concise grounded-review language."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:79e44f96af0547f4855d2c888839b5d7829c4de8e1b8f3e972bd0a32cd659970",
+      "successorDigest": "sha256:45981fc66d4b2bfbdcc94e35438c3b03413526be7908dcc08595e08b0f8533b2"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:66c0d35c4758b8e0c0e7338c6117a74a8d8393921e07499228d077362b5b5dc8",
+      "successorDigest": "sha256:89fe68eb31a61421b7053ebf680a9374fcffffba63603fdf2ce769c6613c8aaf"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:d1b723bb184ec62c27de48b9e28893edd03e1a9ff9e2d92a454394d70dea0ad1",
+      "successorDigest": "sha256:b83951716ada706f90281940f2f6d2e13d2a37f3b225fdfe4adb0f69e5d19bce"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:79e44f96af0547f4855d2c888839b5d7829c4de8e1b8f3e972bd0a32cd659970",
+      "successorDigest": "sha256:45981fc66d4b2bfbdcc94e35438c3b03413526be7908dcc08595e08b0f8533b2"
+    }
+  ]
+}

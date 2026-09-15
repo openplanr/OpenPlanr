@@ -1,0 +1,86 @@
+{
+  "cliEnvelopes": [
+    {
+      "name": "a bare string is not a typed answer",
+      "record": "E_BROWSER_QA_TRUSTED_HOST_REQUIRED",
+      "expectedCode": "E_EVALUATION_CLI_ENVELOPE_INVALID"
+    },
+    {
+      "name": "a refusal with no typed code leaves only the exit status",
+      "record": { "ok": false, "problem": "something went wrong" },
+      "expectedCode": "E_EVALUATION_CLI_ENVELOPE_INVALID"
+    },
+    {
+      "name": "a refusal whose code is free text is not a typed code",
+      "record": { "ok": false, "code": "browser qa needs a host", "problem": "unavailable" },
+      "expectedCode": "E_EVALUATION_CLI_ENVELOPE_INVALID"
+    },
+    {
+      "name": "an implicit outcome is refused rather than defaulted",
+      "record": { "code": "E_BROWSER_QA_TRUSTED_HOST_REQUIRED", "problem": "unavailable" },
+      "expectedCode": "E_EVALUATION_CLI_ENVELOPE_INVALID"
+    },
+    {
+      "name": "an unknown field is refused, never ignored",
+      "record": { "ok": false, "code": "E_BROWSER_QA_TRUSTED_HOST_REQUIRED", "problem": "unavailable", "certified": true },
+      "expectedCode": "E_EVALUATION_CLI_ENVELOPE_INVALID"
+    }
+  ],
+  "loopbackSurfaces": [
+    {
+      "name": "an implicit surface version is refused",
+      "record": { "kind": "evaluation-loopback-surface", "schemaVersion": "1.1.0", "routes": [], "viewports": [], "forms": [] },
+      "expectedCode": "E_EVALUATION_LOOPBACK_INVALID"
+    },
+    {
+      "name": "a surface with no route exercises nothing",
+      "record": { "kind": "evaluation-loopback-surface", "schemaVersion": "1.0.0", "routes": [], "viewports": [], "forms": [] },
+      "expectedCode": "E_EVALUATION_LOOPBACK_INVALID"
+    },
+    {
+      "name": "a traversal route is refused",
+      "record": {
+        "kind": "evaluation-loopback-surface",
+        "schemaVersion": "1.0.0",
+        "routes": [{ "path": "/../etc/passwd", "status": 200, "contentType": "text/html", "document": "<html></html>" }],
+        "viewports": [],
+        "forms": []
+      },
+      "expectedCode": "E_EVALUATION_LOOPBACK_INVALID"
+    },
+    {
+      "name": "an unknown surface field is refused",
+      "record": {
+        "kind": "evaluation-loopback-surface",
+        "schemaVersion": "1.0.0",
+        "routes": [{ "path": "/", "status": 200, "contentType": "text/html", "document": "<html></html>" }],
+        "viewports": [],
+        "forms": [],
+        "certified": true
+      },
+      "expectedCode": "E_EVALUATION_LOOPBACK_INVALID"
+    }
+  ],
+  "baselines": [
+    {
+      "name": "an unfrozen baseline cannot anchor a regression",
+      "record": { "kind": "evaluation-baseline", "schemaVersion": "1.0.0", "frozen": false, "scope": "planr.professional.skills", "capturedAt": "2026-08-25T00:00:00.000Z", "latencyMsP50": 1000, "latencyMsP95": 1500, "costEstimateCurrency": "USD", "costEstimateMicros": 21141 },
+      "expectedCode": "E_EVALUATION_BASELINE_INVALID"
+    },
+    {
+      "name": "a p95 below its own p50 is not one sample",
+      "record": { "kind": "evaluation-baseline", "schemaVersion": "1.0.0", "frozen": true, "scope": "planr.professional.skills", "capturedAt": "2026-08-25T00:00:00.000Z", "latencyMsP50": 1500, "latencyMsP95": 1000, "costEstimateCurrency": "USD", "costEstimateMicros": 21141 },
+      "expectedCode": "E_EVALUATION_BASELINE_INVALID"
+    },
+    {
+      "name": "an unknown baseline field is refused",
+      "record": { "kind": "evaluation-baseline", "schemaVersion": "1.0.0", "frozen": true, "scope": "planr.professional.skills", "capturedAt": "2026-08-25T00:00:00.000Z", "latencyMsP50": 1000, "latencyMsP95": 1500, "costEstimateCurrency": "USD", "costEstimateMicros": 21141, "verdict": "release-ready" },
+      "expectedCode": "E_EVALUATION_BASELINE_INVALID"
+    },
+    {
+      "name": "an implicit baseline version is refused",
+      "record": { "kind": "evaluation-baseline", "schemaVersion": "2.0.0", "frozen": true, "scope": "planr.professional.skills", "capturedAt": "2026-08-25T00:00:00.000Z", "latencyMsP50": 1000, "latencyMsP95": 1500, "costEstimateCurrency": "USD", "costEstimateMicros": 21141 },
+      "expectedCode": "E_EVALUATION_BASELINE_INVALID"
+    }
+  ]
+}

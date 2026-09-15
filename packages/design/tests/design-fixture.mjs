@@ -1,0 +1,16 @@
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+export function designFixture(root, { count = 2, variants = 1, source = 'describe', frames = [{ id: 'desktop', label: 'Desktop', width: 1440, height: 1024 }, { id: 'mobile', label: 'Mobile', width: 390, height: 844 }] } = {}) {
+  mkdirSync(join(root, 'source'), { recursive: true });
+  writeFileSync(join(root, 'source/style.css'), `:root{--ink:#17211f;--surface:#faf9f6;--accent:#275c46}*{box-sizing:border-box}body{margin:0;padding:24px;background:var(--surface);color:var(--ink);font:16px/1.5 system-ui}main{display:grid;gap:24px}button,input{font:inherit;padding:8px 16px;border:1px solid currentColor;border-radius:4px}button{background:var(--accent);color:#fff;cursor:pointer}button:focus-visible,input:focus-visible{outline:2px solid #275c46;outline-offset:4px}.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}article{padding:24px;border:1px solid #ddd}@media(max-width:700px){.cards{grid-template-columns:1fr}}`);
+  const screens = Array.from({ length: count }, (_, i) => ({ id: `screen-${i + 1}`, title: i === 0 ? 'Workspace overview' : `Step ${i + 1}`, description: `Review the workspace and continue to step ${Math.min(count, i + 2)}.`, source: { html: `source/screen-${i + 1}.html`, styles: ['source/style.css'] }, anchors: [`action-${i + 1}`] }));
+  for (let index = 0; index < count; index++) {
+    writeFileSync(join(root, screens[index].source.html), `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${screens[index].title}</title></head><body><main><p>OPENPLANR / OPERATIONS</p><h1>${screens[index].title}</h1><p>Keep the team focused on work that is ready to move.</p><div class="cards"><article><h2>In progress</h2><p>12 active tasks</p></article><article><h2>Ready for review</h2><p>4 completed tasks</p></article><article><h2>This week</h2><p>8 planned releases</p></article></div><label>Workspace name <input aria-label="Workspace name" value="Product team"></label><button data-planr-id="action-${index + 1}" data-design-navigate="screen-${index + 1 === count ? 1 : index + 2}">Continue</button><button onclick="this.textContent='Saved'">Save workspace</button></main></body></html>`);
+  }
+  const document = { kind: 'openplanr-design-document', schemaVersion: '1.0.0', id: 'operations', title: 'Operations workspace', brief: { text: 'A calm, grounded operations workspace for a product team.', source, provenance: 'inferred' }, frames, screens, screenOrder: screens.map(({ id }) => id), variants: Array.from({ length: variants }, (_, i) => ({ id: String.fromCharCode(65 + i), label: `Direction ${String.fromCharCode(65 + i)}`, status: 'ready' })), selectedVariant: 'A', defaultView: 'canvas' };
+  const headings = ['Color Palette', 'Typography', 'Spacing & Layout', 'Components Inventory', 'Navigation & Layout Patterns', 'Iconography', 'Motion & Interaction Hints', 'Component Overrides', 'Screen Inventory', 'Open Questions'];
+  writeFileSync(join(root, 'design-spec.md'), headings.map((heading, i) => `## ${i + 1}. ${heading}\n\n${i === 9 ? 'None.' : 'Use the authored workspace source and project tokens.'}\n`).join('\n'));
+  const file = join(root, 'design-document.json'); writeFileSync(file, `${JSON.stringify(document, null, 2)}\n`);
+  return { file, document };
+}

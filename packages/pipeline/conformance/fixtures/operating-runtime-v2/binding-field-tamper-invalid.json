@@ -1,0 +1,16 @@
+{
+  "cycle.inputBindingId": { "target": "inputBinding.inputBindingId", "value": "inb_other001" },
+  "cycle.cycleId": { "target": "inputBinding.cycleId", "value": "cyc_other001" },
+  "cycle.scopeId": { "target": "inputBinding.scopeId", "value": "scope-other" },
+  "cycle.domainId": { "target": "inputBinding.domainId", "value": "other-domain" },
+  "cycle.domainVersion": { "target": "inputBinding.domainVersion", "value": "9.9.9" },
+  "assignment.cycleId": { "target": "assignment.cycleId", "value": "cyc_other001" },
+  "submission.assignmentId": { "target": "submission.assignmentId", "value": "asg_other0001" },
+  "submission.cycleId": { "target": "submission.cycleId", "value": "cyc_other001" },
+  "runtime.runtime": { "target": "inputBinding.runtimeBinding.runtime", "value": "cursor" },
+  "runtime.adapterVersion": { "target": "inputBinding.runtimeBinding.adapterVersion", "value": "9.9.9" },
+  "contractVersions.advisor-result": { "target": "cycle.contractVersions.advisor-result", "value": "9.9.9" },
+  "eventHead.sequence": { "target": "runtimeState.eventHead.sequence", "value": 2 },
+  "eventHead.hash": { "target": "runtimeState.eventHead.hash", "value": "sha256:9999999999999999999999999999999999999999999999999999999999999999" },
+  "eventReplayIndexHash": { "target": "checkpoint.eventReplayIndexHash", "value": "sha256:9999999999999999999999999999999999999999999999999999999999999999" }
+}

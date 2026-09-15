@@ -1,0 +1,21 @@
+{
+  "kind": "operating-intelligence-plan",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "2.0.0",
+  "planId": "ipl_intelligence_plan_001",
+  "scopeId": "scope-acme",
+  "domainId": "business",
+  "domainVersion": "1.0.0",
+  "snapshotId": "snp_00000001",
+  "deltaId": "dlt_00000001",
+  "selectedRoles": [],
+  "omittedRoles": [],
+  "challengerRequired": true,
+  "scenarioRequest": {
+    "requested": false,
+    "reason": ""
+  },
+  "sourceArtifactId": "art_00000002",
+  "decisionOwnerActorId": "owner-intelligence-plan-001",
+  "createdAt": "2026-08-09T08:00:00Z"
+}

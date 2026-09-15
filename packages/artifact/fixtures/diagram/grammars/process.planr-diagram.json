@@ -1,0 +1,81 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "process-fixture",
+  "title": "Process fixture",
+  "summary": "Canonical semantic fixture for the process grammar.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "process",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "simplified"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "item-a",
+      "label": "Process A",
+      "kind": "primary-item",
+      "description": "First semantic item in the process fixture.",
+      "semanticPosition": null
+    },
+    {
+      "id": "item-b",
+      "label": "Process B",
+      "kind": "secondary-item",
+      "description": "Second semantic item in the process fixture.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [
+    {
+      "id": "relation-a-b",
+      "from": "item-a",
+      "to": "item-b",
+      "kind": "flow",
+      "label": "continues",
+      "weight": null
+    }
+  ],
+  "groups": [],
+  "lanes": [
+    {
+      "id": "lane-main",
+      "label": "Primary lane",
+      "members": [
+        "item-a",
+        "item-b"
+      ]
+    }
+  ],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [],
+  "accessibility": {
+    "title": "Process fixture",
+    "description": "A compact process example with semantic reading order.",
+    "readingOrder": [
+      "item-a",
+      "item-b"
+    ]
+  },
+  "documentDigest": "sha256:df1b133cd1395e1d9ebf8b0ca8d6c2411bab9fe551bdb7bdf99c80a6c05fc34c"
+}

@@ -1,0 +1,394 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-advisor-result.schema.json",
+  "x-openplanr-contract": { "id": "operating-advisor-result", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 advisor result",
+  "description": "A closed, evidence-linked professional analysis produced by one exact Advisor Assignment.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind", "schemaVersion", "protocolVersion", "assignmentId", "roleId", "roleVersion",
+    "analysisProfile", "intelligencePlanId", "snapshotId", "scopeId", "domainId", "domainVersion",
+    "outcome", "summary", "analysisMarkdown", "inputAbsenceIds", "analysis", "claims",
+    "measurements", "risks", "alternatives", "gaps", "recommendation"
+  ],
+  "properties": {
+    "kind": { "const": "operating-advisor-result" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "assignmentId": { "$ref": "#/$defs/assignmentId" },
+    "roleId": { "$ref": "#/$defs/identifier" },
+    "roleVersion": { "$ref": "#/$defs/version" },
+    "analysisProfile": { "$ref": "#/$defs/analysisProfile" },
+    "intelligencePlanId": { "$ref": "#/$defs/planId" },
+    "snapshotId": { "$ref": "#/$defs/snapshotId" },
+    "scopeId": { "$ref": "#/$defs/id" },
+    "domainId": { "$ref": "#/$defs/identifier" },
+    "domainVersion": { "$ref": "#/$defs/version" },
+    "outcome": { "enum": ["recommendation", "partial", "quiet"] },
+    "summary": { "$ref": "#/$defs/text" },
+    "analysisMarkdown": { "$ref": "#/$defs/analysisMarkdown" },
+    "inputAbsenceIds": { "$ref": "#/$defs/absenceIds" },
+    "analysis": { "$ref": "#/$defs/profileAnalysis" },
+    "claims": { "type": "array", "maxItems": 128, "items": { "$ref": "#/$defs/claim" } },
+    "measurements": { "type": "array", "maxItems": 128, "items": { "$ref": "#/$defs/measurement" } },
+    "risks": { "type": "array", "maxItems": 128, "items": { "$ref": "#/$defs/risk" } },
+    "alternatives": { "type": "array", "maxItems": 64, "items": { "$ref": "#/$defs/alternative" } },
+    "gaps": { "type": "array", "maxItems": 128, "items": { "$ref": "#/$defs/gap" } },
+    "recommendation": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/recommendation" }] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "outcome": { "const": "recommendation" } }, "required": ["outcome"] },
+      "then": { "properties": { "claims": { "minItems": 1 }, "recommendation": { "$ref": "#/$defs/recommendation" } } }
+    },
+    {
+      "if": { "properties": { "outcome": { "enum": ["partial", "quiet"] } }, "required": ["outcome"] },
+      "then": { "properties": { "recommendation": { "type": "null" } } }
+    },
+    {
+      "if": { "properties": { "analysisProfile": { "properties": { "id": { "const": "strategy-finance" } }, "required": ["id"] } }, "required": ["analysisProfile"] },
+      "then": { "properties": { "analysis": { "$ref": "#/$defs/strategyFinanceAnalysis" } } }
+    },
+    {
+      "if": { "properties": { "analysisProfile": { "properties": { "id": { "const": "technology-risk" } }, "required": ["id"] } }, "required": ["analysisProfile"] },
+      "then": { "properties": { "analysis": { "$ref": "#/$defs/technologyRiskAnalysis" } } }
+    },
+    {
+      "if": { "properties": { "analysisProfile": { "properties": { "id": { "const": "product-activation" } }, "required": ["id"] } }, "required": ["analysisProfile"] },
+      "then": { "properties": { "analysis": { "$ref": "#/$defs/productActivationAnalysis" } } }
+    },
+    {
+      "if": { "properties": { "analysisProfile": { "properties": { "id": { "const": "growth-market" } }, "required": ["id"] } }, "required": ["analysisProfile"] },
+      "then": { "properties": { "analysis": { "$ref": "#/$defs/growthMarketAnalysis" } } }
+    },
+    {
+      "if": { "properties": { "analysisProfile": { "properties": { "id": { "const": "operations-customer" } }, "required": ["id"] } }, "required": ["analysisProfile"] },
+      "then": { "properties": { "analysis": { "$ref": "#/$defs/operationsCustomerAnalysis" } } }
+    },
+    {
+      "if": { "properties": { "analysisProfile": { "properties": { "id": { "const": "software-delivery" } }, "required": ["id"] } }, "required": ["analysisProfile"] },
+      "then": { "properties": { "analysis": { "$ref": "#/$defs/softwareDeliveryAnalysis" } } }
+    }
+  ],
+  "$defs": {
+    "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" },
+    "assignmentId": { "type": "string", "pattern": "^asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "planId": { "type": "string", "pattern": "^ipl_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "snapshotId": { "type": "string", "pattern": "^snp_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "evidenceRefId": { "type": "string", "pattern": "^evr_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "assumptionId": { "type": "string", "pattern": "^asm_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "absenceId": { "type": "string", "pattern": "^abs_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" },
+    "claimId": { "type": "string", "pattern": "^claim:asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}:[1-9][0-9]*$" },
+    "measurementId": { "type": "string", "pattern": "^measurement:asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}:[1-9][0-9]*$" },
+    "analysisId": { "type": "string", "pattern": "^analysis:asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}:[1-9][0-9]*$" },
+    "riskId": { "type": "string", "pattern": "^risk:asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}:[1-9][0-9]*$" },
+    "alternativeId": { "type": "string", "pattern": "^alternative:asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}:[1-9][0-9]*$" },
+    "gapId": { "type": "string", "pattern": "^gap:asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}:[1-9][0-9]*$" },
+    "recommendationId": { "type": "string", "pattern": "^recommendation:asg_[A-Za-z0-9][A-Za-z0-9._-]{7,127}:1$" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 4096, "pattern": "^[\\s\\S]*\\S[\\s\\S]*$" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 256, "pattern": "^\\S(?:[\\s\\S]*\\S)?$", "not": { "pattern": "(?:<[^>]+>|\\{\\{[^}]+\\}\\})" } },
+    "analysisMarkdown": { "type": "string", "minLength": 1, "maxLength": 32768, "pattern": "^[\\s\\S]*\\S[\\s\\S]*$" },
+    "evidenceRefIds": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/evidenceRefId" } },
+    "assumptionIds": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/assumptionId" } },
+    "absenceIds": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/absenceId" } },
+    "claimIds": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/claimId" } },
+    "measurementIds": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/measurementId" } },
+    "riskIds": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "$ref": "#/$defs/riskId" } },
+    "alternativeIds": { "type": "array", "maxItems": 64, "uniqueItems": true, "items": { "$ref": "#/$defs/alternativeId" } },
+    "analysisProfile": {
+      "type": "object", "additionalProperties": false, "required": ["id", "version", "questionIds"],
+      "properties": {
+        "id": { "enum": ["strategy-finance", "technology-risk", "product-activation", "growth-market", "operations-customer", "software-delivery"] },
+        "version": { "const": "1.0.0" },
+        "questionIds": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }
+      }
+    },
+    "questionAnswer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["questionId", "answer", "claimIds", "measurementIds", "riskIds", "evidenceRefIds", "absenceIds"],
+      "properties": {
+        "questionId": { "$ref": "#/$defs/identifier" },
+        "answer": { "$ref": "#/$defs/text" },
+        "claimIds": { "$ref": "#/$defs/claimIds" },
+        "measurementIds": { "$ref": "#/$defs/measurementIds" },
+        "riskIds": { "$ref": "#/$defs/riskIds" },
+        "evidenceRefIds": { "$ref": "#/$defs/evidenceRefIds" },
+        "absenceIds": { "$ref": "#/$defs/absenceIds" }
+      },
+      "anyOf": [
+        { "properties": { "claimIds": { "minItems": 1 } } },
+        { "properties": { "measurementIds": { "minItems": 1 } } },
+        { "properties": { "riskIds": { "minItems": 1 } } },
+        { "properties": { "evidenceRefIds": { "minItems": 1 } } },
+        { "properties": { "absenceIds": { "minItems": 1 } } }
+      ]
+    },
+    "profileInsight": {
+      "type": "object", "additionalProperties": false,
+      "required": ["localAnalysisId", "title", "statement", "claimIds", "measurementIds", "riskIds", "alternativeIds", "evidenceRefIds", "absenceIds"],
+      "properties": {
+        "localAnalysisId": { "$ref": "#/$defs/analysisId" },
+        "title": { "$ref": "#/$defs/title" },
+        "statement": { "$ref": "#/$defs/text" },
+        "claimIds": { "$ref": "#/$defs/claimIds" },
+        "measurementIds": { "$ref": "#/$defs/measurementIds" },
+        "riskIds": { "$ref": "#/$defs/riskIds" },
+        "alternativeIds": { "$ref": "#/$defs/alternativeIds" },
+        "evidenceRefIds": { "$ref": "#/$defs/evidenceRefIds" },
+        "absenceIds": { "$ref": "#/$defs/absenceIds" }
+      },
+      "anyOf": [
+        { "properties": { "claimIds": { "minItems": 1 } } },
+        { "properties": { "measurementIds": { "minItems": 1 } } },
+        { "properties": { "riskIds": { "minItems": 1 } } },
+        { "properties": { "alternativeIds": { "minItems": 1 } } },
+        { "properties": { "evidenceRefIds": { "minItems": 1 } } },
+        { "properties": { "absenceIds": { "minItems": 1 } } }
+      ]
+    },
+    "profileInsightList": { "type": "array", "maxItems": 32, "items": { "$ref": "#/$defs/profileInsight" } },
+    "questionAnswers": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "$ref": "#/$defs/questionAnswer" } },
+    "strategyFinanceAnalysis": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profileId", "executiveQuestionAnswers", "directionChanges", "capitalAllocations", "financialScenarios", "costOfDelay"],
+      "properties": {
+        "profileId": { "const": "strategy-finance" },
+        "executiveQuestionAnswers": { "$ref": "#/$defs/questionAnswers" },
+        "directionChanges": { "$ref": "#/$defs/profileInsightList" },
+        "capitalAllocations": { "$ref": "#/$defs/profileInsightList" },
+        "financialScenarios": { "$ref": "#/$defs/profileInsightList" },
+        "costOfDelay": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/profileInsight" }] }
+      }
+    },
+    "technologyRiskAnalysis": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profileId", "executiveQuestionAnswers", "objectiveConstraints", "riskPortfolio", "implicitArchitectureDecisions", "riskiestChange"],
+      "properties": {
+        "profileId": { "const": "technology-risk" },
+        "executiveQuestionAnswers": { "$ref": "#/$defs/questionAnswers" },
+        "objectiveConstraints": { "$ref": "#/$defs/profileInsightList" },
+        "riskPortfolio": { "$ref": "#/$defs/profileInsightList" },
+        "implicitArchitectureDecisions": { "$ref": "#/$defs/profileInsightList" },
+        "riskiestChange": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/profileInsight" }] }
+      }
+    },
+    "productActivationAnalysis": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profileId", "executiveQuestionAnswers", "activationGaps", "unvalidatedBets", "orderedCuts", "acceptanceCriteriaFindings"],
+      "properties": {
+        "profileId": { "const": "product-activation" },
+        "executiveQuestionAnswers": { "$ref": "#/$defs/questionAnswers" },
+        "activationGaps": { "$ref": "#/$defs/profileInsightList" },
+        "unvalidatedBets": { "$ref": "#/$defs/profileInsightList" },
+        "orderedCuts": { "$ref": "#/$defs/profileInsightList" },
+        "acceptanceCriteriaFindings": { "$ref": "#/$defs/profileInsightList" }
+      }
+    },
+    "growthMarketAnalysis": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profileId", "executiveQuestionAnswers", "demandChanges", "channelEconomics", "positioningClaims", "growthLoops"],
+      "properties": {
+        "profileId": { "const": "growth-market" },
+        "executiveQuestionAnswers": { "$ref": "#/$defs/questionAnswers" },
+        "demandChanges": { "$ref": "#/$defs/profileInsightList" },
+        "channelEconomics": { "$ref": "#/$defs/profileInsightList" },
+        "positioningClaims": { "$ref": "#/$defs/profileInsightList" },
+        "growthLoops": { "$ref": "#/$defs/profileInsightList" }
+      }
+    },
+    "operationsCustomerAnalysis": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profileId", "executiveQuestionAnswers", "deliveryCapacity", "customerHealth", "singlePointsOfFailure", "renegotiations"],
+      "properties": {
+        "profileId": { "const": "operations-customer" },
+        "executiveQuestionAnswers": { "$ref": "#/$defs/questionAnswers" },
+        "deliveryCapacity": { "$ref": "#/$defs/profileInsightList" },
+        "customerHealth": { "$ref": "#/$defs/profileInsightList" },
+        "singlePointsOfFailure": { "$ref": "#/$defs/profileInsightList" },
+        "renegotiations": { "$ref": "#/$defs/profileInsightList" }
+      }
+    },
+    "softwareDeliveryAnalysis": {
+      "type": "object", "additionalProperties": false,
+      "required": ["profileId", "executiveQuestionAnswers", "changeSurface", "implementationRisks", "implementationAlternatives", "verificationGaps"],
+      "properties": {
+        "profileId": { "const": "software-delivery" },
+        "executiveQuestionAnswers": { "$ref": "#/$defs/questionAnswers" },
+        "changeSurface": { "$ref": "#/$defs/profileInsightList" },
+        "implementationRisks": { "$ref": "#/$defs/profileInsightList" },
+        "implementationAlternatives": { "$ref": "#/$defs/profileInsightList" },
+        "verificationGaps": { "$ref": "#/$defs/profileInsightList" }
+      }
+    },
+    "profileAnalysis": {
+      "oneOf": [
+        { "$ref": "#/$defs/strategyFinanceAnalysis" },
+        { "$ref": "#/$defs/technologyRiskAnalysis" },
+        { "$ref": "#/$defs/productActivationAnalysis" },
+        { "$ref": "#/$defs/growthMarketAnalysis" },
+        { "$ref": "#/$defs/operationsCustomerAnalysis" },
+        { "$ref": "#/$defs/softwareDeliveryAnalysis" }
+      ]
+    },
+    "claim": {
+      "type": "object", "additionalProperties": false,
+      "required": ["localClaimId", "statement", "epistemicStatus", "confidence", "supportingEvidenceRefIds", "contradictingEvidenceRefIds", "assumptionIds", "changeCondition"],
+      "properties": {
+        "localClaimId": { "$ref": "#/$defs/claimId" }, "statement": { "$ref": "#/$defs/text" },
+        "epistemicStatus": { "enum": ["known", "strongly-supported", "probable", "speculative", "unknown"] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "supportingEvidenceRefIds": { "$ref": "#/$defs/evidenceRefIds" },
+        "contradictingEvidenceRefIds": { "$ref": "#/$defs/evidenceRefIds" },
+        "assumptionIds": { "$ref": "#/$defs/assumptionIds" }, "changeCondition": { "$ref": "#/$defs/text" }
+      },
+      "allOf": [
+        {
+          "anyOf": [
+            { "properties": { "supportingEvidenceRefIds": { "minItems": 1 } } },
+            { "properties": { "contradictingEvidenceRefIds": { "minItems": 1 } } },
+            { "properties": { "assumptionIds": { "minItems": 1 } } }
+          ]
+        },
+        {
+          "if": { "properties": { "epistemicStatus": { "enum": ["known", "strongly-supported", "probable"] } }, "required": ["epistemicStatus"] },
+          "then": { "anyOf": [{ "properties": { "supportingEvidenceRefIds": { "minItems": 1 } } }, { "properties": { "contradictingEvidenceRefIds": { "minItems": 1 } } }] }
+        }
+      ]
+    },
+    "measurementBase": {
+      "type": "object",
+      "required": ["localMeasurementId", "kind", "name", "period", "evidenceRefIds", "interpretation", "confidence"],
+      "properties": {
+        "localMeasurementId": { "$ref": "#/$defs/measurementId" },
+        "kind": { "enum": ["runway", "margin", "funnel", "channel-economics", "capacity", "throughput", "exposure", "scenario", "metric-trend"] },
+        "name": { "$ref": "#/$defs/title" },
+        "period": { "$ref": "#/$defs/text" },
+        "evidenceRefIds": { "allOf": [{ "$ref": "#/$defs/evidenceRefIds" }, { "minItems": 1 }] },
+        "interpretation": { "$ref": "#/$defs/text" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "runwayMeasurement": {
+      "allOf": [
+        { "$ref": "#/$defs/measurementBase" },
+        { "type": "object", "required": ["currency", "cashBalance", "netBurnPerPeriod", "runwayPeriods"], "properties": { "kind": { "const": "runway" }, "currency": { "$ref": "#/$defs/id" }, "cashBalance": { "type": "number" }, "netBurnPerPeriod": { "type": "number", "exclusiveMinimum": 0 }, "runwayPeriods": { "type": "number", "minimum": 0 } } }
+      ],
+      "unevaluatedProperties": false
+    },
+    "marginMeasurement": {
+      "allOf": [
+        { "$ref": "#/$defs/measurementBase" },
+        { "type": "object", "required": ["currency", "revenue", "cost", "marginAmount", "marginRate"], "properties": { "kind": { "const": "margin" }, "currency": { "$ref": "#/$defs/id" }, "revenue": { "type": "number" }, "cost": { "type": "number" }, "marginAmount": { "type": "number" }, "marginRate": { "type": "number", "minimum": -1, "maximum": 1 } } }
+      ],
+      "unevaluatedProperties": false
+    },
+    "funnelMeasurement": {
+      "allOf": [
+        { "$ref": "#/$defs/measurementBase" },
+        { "type": "object", "required": ["stages"], "properties": { "kind": { "const": "funnel" }, "stages": { "type": "array", "minItems": 2, "maxItems": 32, "items": { "type": "object", "additionalProperties": false, "required": ["stage", "entered", "advanced", "conversionRate"], "properties": { "stage": { "$ref": "#/$defs/title" }, "entered": { "type": "number", "minimum": 0 }, "advanced": { "type": "number", "minimum": 0 }, "conversionRate": { "type": "number", "minimum": 0, "maximum": 1 } } } } } }
+      ],
+      "unevaluatedProperties": false
+    },
+    "channelEconomicsMeasurement": {
+      "allOf": [
+        { "$ref": "#/$defs/measurementBase" },
+        { "type": "object", "required": ["channel", "currency", "spend", "acquiredCustomers", "customerAcquisitionCost", "attributedRevenue", "paybackPeriods"], "properties": { "kind": { "const": "channel-economics" }, "channel": { "$ref": "#/$defs/title" }, "currency": { "$ref": "#/$defs/id" }, "spend": { "type": "number", "minimum": 0 }, "acquiredCustomers": { "type": "number", "minimum": 0 }, "customerAcquisitionCost": { "type": ["number", "null"], "minimum": 0 }, "attributedRevenue": { "type": "number" }, "paybackPeriods": { "type": ["number", "null"], "minimum": 0 } } }
+      ],
+      "unevaluatedProperties": false
+    },
+    "capacityMeasurement": {
+      "allOf": [
+        { "$ref": "#/$defs/measurementBase" },
+        { "type": "object", "required": ["unit", "available", "committed", "utilizationRate"], "properties": { "kind": { "const": "capacity" }, "unit": { "$ref": "#/$defs/id" }, "available": { "type": "number", "minimum": 0 }, "committed": { "type": "number", "minimum": 0 }, "utilizationRate": { "type": "number", "minimum": 0 } } }
+      ],
+      "unevaluatedProperties": false
+    },
+    "throughputMeasurement": {
+      "allOf": [
+        { "$ref": "#/$defs/measurementBase" },
+        { "type": "object", "required": ["unit", "completed", "leadTimeP50", "leadTimeP95"], "properties": { "kind": { "const": "throughput" }, "unit": { "$ref": "#/$defs/id" }, "completed": { "type": "number", "minimum": 0 }, "leadTimeP50": { "type": ["number", "null"], "minimum": 0 }, "leadTimeP95": { "type": ["number", "null"], "minimum": 0 } } }
+      ],
+      "unevaluatedProperties": false
+    },
+    "exposureMeasurement": {
+      "allOf": [
+        { "$ref": "#/$defs/measurementBase" },
+        { "type": "object", "required": ["surface", "likelihood", "impactScore", "exposureScore", "reversibility"], "properties": { "kind": { "const": "exposure" }, "surface": { "$ref": "#/$defs/title" }, "likelihood": { "type": "number", "minimum": 0, "maximum": 1 }, "impactScore": { "type": "number", "minimum": 0, "maximum": 1 }, "exposureScore": { "type": "number", "minimum": 0, "maximum": 1 }, "reversibility": { "$ref": "#/$defs/text" } } }
+      ],
+      "unevaluatedProperties": false
+    },
+    "scenarioMeasurement": {
+      "allOf": [
+        { "$ref": "#/$defs/measurementBase" },
+        { "type": "object", "required": ["scenario", "assumptions", "metric", "baseline", "projected", "unit"], "properties": { "kind": { "const": "scenario" }, "scenario": { "$ref": "#/$defs/title" }, "assumptions": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "$ref": "#/$defs/text" } }, "metric": { "$ref": "#/$defs/title" }, "baseline": { "type": "number" }, "projected": { "type": "number" }, "unit": { "$ref": "#/$defs/id" } } }
+      ],
+      "unevaluatedProperties": false
+    },
+    "metricTrendMeasurement": {
+      "allOf": [
+        { "$ref": "#/$defs/measurementBase" },
+        { "type": "object", "required": ["metricId", "direction", "current", "previous", "unit"], "properties": { "kind": { "const": "metric-trend" }, "metricId": { "type": ["string", "null"], "pattern": "^met_[A-Za-z0-9][A-Za-z0-9._-]{7,127}$" }, "direction": { "enum": ["improving", "stable", "degrading", "unknown"] }, "current": { "type": "number" }, "previous": { "type": ["number", "null"] }, "unit": { "$ref": "#/$defs/id" } } }
+      ],
+      "unevaluatedProperties": false
+    },
+    "measurement": {
+      "oneOf": [
+        { "$ref": "#/$defs/runwayMeasurement" },
+        { "$ref": "#/$defs/marginMeasurement" },
+        { "$ref": "#/$defs/funnelMeasurement" },
+        { "$ref": "#/$defs/channelEconomicsMeasurement" },
+        { "$ref": "#/$defs/capacityMeasurement" },
+        { "$ref": "#/$defs/throughputMeasurement" },
+        { "$ref": "#/$defs/exposureMeasurement" },
+        { "$ref": "#/$defs/scenarioMeasurement" },
+        { "$ref": "#/$defs/metricTrendMeasurement" }
+      ]
+    },
+    "risk": {
+      "type": "object", "additionalProperties": false,
+      "required": ["localRiskId", "title", "statement", "likelihood", "impact", "exposure", "exposedSurfaces", "claimIds", "evidenceRefIds", "mitigation", "reversibility"],
+      "properties": {
+        "localRiskId": { "$ref": "#/$defs/riskId" }, "title": { "$ref": "#/$defs/title" }, "statement": { "$ref": "#/$defs/text" },
+        "likelihood": { "type": "number", "minimum": 0, "maximum": 1 }, "impact": { "enum": ["low", "medium", "high", "critical"] },
+        "exposure": { "$ref": "#/$defs/text" }, "exposedSurfaces": { "type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": { "$ref": "#/$defs/title" } },
+        "claimIds": { "allOf": [{ "$ref": "#/$defs/claimIds" }, { "minItems": 1 }] },
+        "evidenceRefIds": { "$ref": "#/$defs/evidenceRefIds" }, "mitigation": { "$ref": "#/$defs/text" }, "reversibility": { "$ref": "#/$defs/text" }
+      }
+    },
+    "alternative": {
+      "type": "object", "additionalProperties": false,
+      "required": ["localAlternativeId", "title", "description", "supportingClaimIds", "evidenceRefIds", "tradeoffs", "costOfDelay", "reversibility"],
+      "properties": {
+        "localAlternativeId": { "$ref": "#/$defs/alternativeId" }, "title": { "$ref": "#/$defs/title" }, "description": { "$ref": "#/$defs/text" },
+        "supportingClaimIds": { "$ref": "#/$defs/claimIds" },
+        "evidenceRefIds": { "$ref": "#/$defs/evidenceRefIds" }, "tradeoffs": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "$ref": "#/$defs/text" } },
+        "costOfDelay": { "$ref": "#/$defs/text" }, "reversibility": { "$ref": "#/$defs/text" }
+      },
+      "anyOf": [
+        { "properties": { "supportingClaimIds": { "minItems": 1 } } },
+        { "properties": { "evidenceRefIds": { "minItems": 1 } } }
+      ]
+    },
+    "gap": {
+      "type": "object", "additionalProperties": false, "required": ["localGapId", "inputAbsenceId", "requirementId", "impact", "recoveryPath"],
+      "properties": { "localGapId": { "$ref": "#/$defs/gapId" }, "inputAbsenceId": { "$ref": "#/$defs/absenceId" }, "requirementId": { "$ref": "#/$defs/identifier" }, "impact": { "$ref": "#/$defs/text" }, "recoveryPath": { "$ref": "#/$defs/text" } }
+    },
+    "recommendation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["localRecommendationId", "title", "proposal", "rationaleClaimIds", "alternativeIds", "riskIds", "confidence", "expectedUpside", "expectedDownside", "uncertainty", "reversibility", "successMeasurementIds", "revisitConditions"],
+      "properties": {
+        "localRecommendationId": { "$ref": "#/$defs/recommendationId" }, "title": { "$ref": "#/$defs/title" }, "proposal": { "$ref": "#/$defs/text" },
+        "rationaleClaimIds": { "allOf": [{ "$ref": "#/$defs/claimIds" }, { "minItems": 1 }] },
+        "alternativeIds": { "$ref": "#/$defs/alternativeIds" },
+        "riskIds": { "$ref": "#/$defs/riskIds" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }, "expectedUpside": { "$ref": "#/$defs/text" },
+        "expectedDownside": { "$ref": "#/$defs/text" }, "uncertainty": { "$ref": "#/$defs/text" }, "reversibility": { "$ref": "#/$defs/text" },
+        "successMeasurementIds": { "$ref": "#/$defs/measurementIds" },
+        "revisitConditions": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "$ref": "#/$defs/text" } }
+      }
+    }
+  }
+}

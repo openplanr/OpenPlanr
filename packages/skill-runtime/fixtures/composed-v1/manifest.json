@@ -1,0 +1,160 @@
+{
+  "note": "Minimal synthetic composed-v1 fixture. Source paths are relative to this directory; digests are computed by the test loader so the fixture never carries stale hashes. Exercises one inline shared module, one transitive inline dependency proving topological order, one routed reference kept as a separate support asset, three legally narrowing host profiles, and one illegally widening host profile that must fail generation before any byte is written.",
+  "skill": {
+    "skillId": "planr-demo-compose",
+    "skillVersion": "1.0.0",
+    "template": "template.tmpl",
+    "authorityCeiling": {
+      "repositoryAccess": "declared-paths",
+      "externalDataAccess": "read-only",
+      "allowedCapabilities": ["read", "write"],
+      "allowedTools": ["read", "edit"],
+      "allowedOperations": ["compile", "render"],
+      "allowedOutputClasses": ["A", "B"],
+      "forbiddenEffects": ["network-write"]
+    },
+    "modules": [
+      { "moduleId": "lifecycle-core", "moduleVersion": "1.0.0" },
+      { "moduleId": "shared-intro", "moduleVersion": "1.0.0" }
+    ],
+    "references": [
+      { "moduleId": "deep-reference", "moduleVersion": "1.0.0" }
+    ],
+    "hostProfiles": [
+      { "id": "demo-claude-code", "version": "1.0.0" },
+      { "id": "demo-codex", "version": "1.0.0" },
+      { "id": "demo-cursor", "version": "1.0.0" }
+    ]
+  },
+  "modules": [
+    {
+      "moduleId": "shared-intro",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "shared",
+      "description": "Shared task intro contributed inline.",
+      "source": "modules/shared-intro.md",
+      "appliesWhen": "Always, as the composed skill preamble.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": ["read"],
+        "allowedTools": ["read"],
+        "allowedOperations": ["render"],
+        "allowedOutputClasses": ["A"],
+        "forbiddenEffects": ["network-write", "external-publish"]
+      }
+    },
+    {
+      "moduleId": "lifecycle-core",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "lifecycle",
+      "description": "Lifecycle core steps that depend on the shared intro.",
+      "source": "modules/lifecycle-core.md",
+      "appliesWhen": "When the skill extends the shared lifecycle.",
+      "dependsOn": [
+        { "moduleId": "shared-intro", "moduleVersion": "1.0.0" }
+      ],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "read-only",
+        "allowedCapabilities": ["read", "write"],
+        "allowedTools": ["read", "edit"],
+        "allowedOperations": ["compile", "render"],
+        "allowedOutputClasses": ["A", "B"],
+        "forbiddenEffects": ["network-write"]
+      }
+    },
+    {
+      "moduleId": "deep-reference",
+      "moduleVersion": "1.0.0",
+      "moduleKind": "context",
+      "description": "Progressive-disclosure reference kept as a routed support asset.",
+      "source": "modules/deep-reference.md",
+      "appliesWhen": "Only when a decision needs the deeper reference.",
+      "dependsOn": [],
+      "references": [],
+      "authorityCeiling": {
+        "repositoryAccess": "none",
+        "externalDataAccess": "none",
+        "allowedCapabilities": ["read"],
+        "allowedTools": ["read"],
+        "allowedOperations": ["render"],
+        "allowedOutputClasses": ["A"],
+        "forbiddenEffects": ["network-write", "external-publish"]
+      }
+    }
+  ],
+  "hostProfiles": [
+    {
+      "hostProfileId": "demo-claude-code",
+      "hostProfileVersion": "1.0.0",
+      "host": "claude-code",
+      "description": "Demo Claude Code overlay that narrows repository access.",
+      "source": "profiles/demo-claude-code.md",
+      "overlayModules": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": ["read"],
+        "allowedTools": ["read"],
+        "allowedOperations": ["render"],
+        "allowedOutputClasses": ["A"],
+        "forbiddenEffects": ["network-write", "external-publish"]
+      }
+    },
+    {
+      "hostProfileId": "demo-codex",
+      "hostProfileVersion": "1.0.0",
+      "host": "codex",
+      "description": "Demo Codex overlay that narrows repository access.",
+      "source": "profiles/demo-codex.md",
+      "overlayModules": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": ["read"],
+        "allowedTools": ["read"],
+        "allowedOperations": ["render"],
+        "allowedOutputClasses": ["A"],
+        "forbiddenEffects": ["network-write", "external-publish"]
+      }
+    },
+    {
+      "hostProfileId": "demo-cursor",
+      "hostProfileVersion": "1.0.0",
+      "host": "cursor",
+      "description": "Demo Cursor overlay that narrows repository access.",
+      "source": "profiles/demo-cursor.md",
+      "overlayModules": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": ["read"],
+        "allowedTools": ["read"],
+        "allowedOperations": ["render"],
+        "allowedOutputClasses": ["A"],
+        "forbiddenEffects": ["network-write", "external-publish"]
+      }
+    },
+    {
+      "hostProfileId": "demo-widen",
+      "hostProfileVersion": "1.0.0",
+      "host": "claude-code",
+      "description": "Invalid overlay that re-grants a shell tool outside the skill ceiling.",
+      "source": "profiles/demo-widen.md",
+      "overlayModules": [],
+      "authorityCeiling": {
+        "repositoryAccess": "read-only",
+        "externalDataAccess": "none",
+        "allowedCapabilities": ["read"],
+        "allowedTools": ["read", "edit", "shell"],
+        "allowedOperations": ["render"],
+        "allowedOutputClasses": ["A"],
+        "forbiddenEffects": ["network-write", "external-publish"]
+      }
+    }
+  ]
+}

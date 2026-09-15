@@ -1,0 +1,15 @@
+{
+  "reviewSubmit": {
+    "reviewId": "rev_00000001",
+    "disposition": "approved",
+    "workDispositions": [
+      { "entityType": "operating-finding", "entityId": "fnd_00000001", "disposition": "deferred" },
+      { "entityType": "operating-action", "entityId": "act_00000001", "disposition": "deferred" }
+    ]
+  },
+  "expected": {
+    "cycleState": "closed",
+    "findingState": "deferred",
+    "actionState": "deferred"
+  }
+}

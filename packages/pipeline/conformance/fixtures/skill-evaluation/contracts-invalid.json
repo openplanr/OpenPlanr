@@ -1,0 +1,923 @@
+{
+  "evaluation-scenario": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/reviewNote",
+          "value": "looks fine"
+        }
+      ]
+    },
+    {
+      "name": "implicit contract version",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_VERSION_UNSUPPORTED",
+      "operations": [
+        {
+          "op": "remove",
+          "path": "/protocolVersion"
+        }
+      ]
+    },
+    {
+      "name": "one changed byte keeps the old identity",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_DIGEST_MISMATCH",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/title",
+          "value": "A direct planning request invokes the planning skill."
+        }
+      ]
+    },
+    {
+      "name": "expected outcome contradicts the prompt class",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/promptClass",
+          "value": "negative"
+        }
+      ]
+    },
+    {
+      "name": "read-only scenario granting an effectful capability",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/declaredPermissions/1",
+          "value": {
+            "capability": "network",
+            "decision": "granted"
+          }
+        }
+      ]
+    },
+    {
+      "name": "intent carrying an absolute filesystem path",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_PUBLISH_UNSAFE",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/intent",
+          "value": "Reproduce with the corpus at /Users/user/corpora/planr-plan and compare."
+        }
+      ]
+    }
+  ],
+  "evaluation-corpus": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/owner",
+          "value": "platform"
+        }
+      ]
+    },
+    {
+      "name": "member digest no longer matches its scenario source bytes",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_DIGEST_MISMATCH",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/members/0/scenarioId",
+          "value": "esc_3c02daa46d5799a1d197be396b16d6eaada01b79d9bb287e9aac087e4ed3dc01"
+        },
+        {
+          "op": "replace",
+          "path": "/members/0/scenarioDigest",
+          "value": "sha256:3c02daa46d5799a1d197be396b16d6eaada01b79d9bb287e9aac087e4ed3dc01"
+        }
+      ]
+    },
+    {
+      "name": "duplicate scenario identity under a second source path",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "append",
+          "path": "/members",
+          "value": {
+            "scenarioId": "esc_f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5",
+            "scenarioDigest": "sha256:f723de4c1cdfd1638d19c8cc462164124289ba15e964835d9be7bf55ef86c3f5",
+            "sourcePath": "corpora/planr-plan/scenarios/plan-request-positive-copy.json"
+          }
+        }
+      ]
+    },
+    {
+      "name": "member identity foreign to its own digest",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_IDENTITY_FOREIGN",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/members/0/scenarioId",
+          "value": "esc_5843f45387781fcde4be7e47d3f9590574df84375dd0f96ffc70074fbc8ef40f"
+        }
+      ]
+    }
+  ],
+  "evaluation-fixture": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/note",
+          "value": "prompt fixture"
+        }
+      ]
+    },
+    {
+      "name": "fixture admitting credential material",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/containsCredentialMaterial",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "retention widened beyond local-only",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/retention",
+          "value": "publishable"
+        }
+      ]
+    },
+    {
+      "name": "absolute source path",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/sourcePath",
+          "value": "/Users/user/corpora/planr-plan/prompt.txt"
+        }
+      ]
+    }
+  ],
+  "evaluation-host-profile": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/notes",
+          "value": "reference host"
+        }
+      ]
+    },
+    {
+      "name": "permission escalation permitted",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/permissionModel/escalation",
+          "value": "allowed"
+        }
+      ]
+    },
+    {
+      "name": "certified full pipeline runtime with no adapter binding",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/certifiedFullPipelineRuntime",
+          "value": true
+        },
+        {
+          "op": "replace",
+          "path": "/adapterBinding",
+          "value": null
+        }
+      ]
+    }
+  ],
+  "evaluation-host-profile-registry": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/owner",
+          "value": "platform"
+        }
+      ]
+    },
+    {
+      "name": "members out of canonical order",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_MEMBER_ORDER",
+      "operations": [
+        {
+          "op": "append",
+          "path": "/profiles",
+          "value": {
+            "kind": "evaluation-host-profile",
+            "schemaVersion": "1.0.0",
+            "protocolVersion": "1.4.0",
+            "hostProfileId": "ehp_f94a196eb1d526c9ec2a31cdcbc98189",
+            "host": "codex",
+            "profileVersion": "2.0.0",
+            "runtime": "cli",
+            "platform": "darwin",
+            "capabilityTier": "workflow",
+            "permissionModel": {
+              "mode": "prompted",
+              "promptSurface": "terminal",
+              "toolIsolation": "advisory",
+              "escalation": "refused"
+            },
+            "outputModes": [
+              "file",
+              "json",
+              "markdown",
+              "text"
+            ],
+            "skillHostSupport": true,
+            "certifiedFullPipelineRuntime": false,
+            "adapterBinding": {
+              "contractId": "adapter-registry",
+              "schemaVersion": "1.1.0",
+              "protocolVersion": "1.4.0",
+              "adapterId": "codex",
+              "adapterVersion": "0.42.0",
+              "recordDigest": "sha256:24d7765f8e68de7724f03c739502aac77c7898184044caf68d35ecdb76d1854c"
+            },
+            "provenance": {
+              "packageName": "planr-pipeline",
+              "packageVersion": "0.42.0",
+              "sourceDigest": "sha256:5f0278bd5fd020c14b3c8b074c3a7743ec9a5035959bc256f9be21fdd87e683b"
+            },
+            "profileDigest": "sha256:f94a196eb1d526c9ec2a31cdcbc981899604e07ac7c2a6b1fb40cdd17d1ba981"
+          }
+        }
+      ]
+    },
+    {
+      "name": "registered profile that does not bind its own bytes",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_DIGEST_MISMATCH",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/profiles/0/capabilityTier",
+          "value": "workflow"
+        }
+      ]
+    }
+  ],
+  "evaluation-grader-registration": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/maintainer",
+          "value": "platform"
+        }
+      ]
+    },
+    {
+      "name": "deterministic grader declaring a model call",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_GRADER_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/determinism/modelCall",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "deterministic grader declaring network access",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_GRADER_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/determinism/network",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "deterministic grader carrying a credential reference",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_GRADER_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/credentialReference",
+          "value": {
+            "refKind": "environment-name",
+            "refName": "JUDGE_MODEL_KEY",
+            "custody": "host-owned"
+          }
+        }
+      ]
+    },
+    {
+      "name": "grader that blocks contract validation",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/blocksContractValidation",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "grader declaring telemetry",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/telemetry",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable grader falling back to a pass",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/unavailableBehavior",
+          "value": "pass"
+        }
+      ]
+    }
+  ],
+  "evaluation-grader-registry": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/owner",
+          "value": "platform"
+        }
+      ]
+    },
+    {
+      "name": "registered grader declaring a model call",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_GRADER_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/graders/0/determinism/modelCall",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "canonicalization other than the frozen one",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/canonicalization",
+          "value": "sorted-keys"
+        }
+      ]
+    }
+  ],
+  "evaluation-budget": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/owner",
+          "value": "platform"
+        }
+      ]
+    },
+    {
+      "name": "budget carrying a measurement",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/carriesMeasurement",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "unfrozen regression baseline",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/baseline/frozen",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "p95 ceiling tighter than its own p50 ceiling",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/ceilings/latencyMsP95Ceiling",
+          "value": 1000
+        }
+      ]
+    }
+  ],
+  "evaluation-gate-policy": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/owner",
+          "value": "platform"
+        }
+      ]
+    },
+    {
+      "name": "trigger precision threshold lowered",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_GATE_POLICY_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/gates/trigger-precision/threshold",
+          "value": 9000
+        }
+      ]
+    },
+    {
+      "name": "unwaivable package parity marked waivable",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_GATE_POLICY_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/gates/package-parity/waivable",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "P0 finding ceiling raised",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_GATE_POLICY_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/gates/finding-severity-p0/threshold",
+          "value": 1
+        }
+      ]
+    }
+  ],
+  "evaluation-observation": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/reviewer",
+          "value": "platform"
+        }
+      ]
+    },
+    {
+      "name": "typed absence read as a pass",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_ABSENCE_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/outcome",
+          "value": "absent"
+        },
+        {
+          "op": "replace",
+          "path": "/graderOutputDigest",
+          "value": null
+        },
+        {
+          "op": "replace",
+          "path": "/absence",
+          "value": {
+            "code": "grader-unavailable",
+            "reason": "The registered grader did not run on this host.",
+            "treatedAsPass": true,
+            "recoveryDisposition": "rerun"
+          }
+        }
+      ]
+    },
+    {
+      "name": "absence recorded beside a passing outcome",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_ABSENCE_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/absence",
+          "value": {
+            "code": "not-run",
+            "reason": "The registered grader did not run on this host.",
+            "treatedAsPass": false,
+            "recoveryDisposition": "rerun"
+          }
+        }
+      ]
+    },
+    {
+      "name": "foreign scenario identity",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_IDENTITY_FOREIGN",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/scenario/scenarioId",
+          "value": "esc_5843f45387781fcde4be7e47d3f9590574df84375dd0f96ffc70074fbc8ef40f"
+        }
+      ]
+    }
+  ],
+  "evaluation-run-result": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/reviewer",
+          "value": "platform"
+        }
+      ]
+    },
+    {
+      "name": "run result declared publishable",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/publishable",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "run result visibility widened",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/visibility",
+          "value": "shared"
+        }
+      ]
+    },
+    {
+      "name": "raw evidence carried beside its digest",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/rawEvidence/0/text",
+          "value": "Plan the checkout revamp for me."
+        }
+      ]
+    },
+    {
+      "name": "evidence transported as anything but a digest",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/evidenceTransport",
+          "value": "inline"
+        }
+      ]
+    }
+  ],
+  "evaluation-aggregate-report": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/reviewer",
+          "value": "platform"
+        }
+      ]
+    },
+    {
+      "name": "outcome buckets do not sum to the scenario total",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/counters/scenariosPassed",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "typed absence dropped from the absence breakdown",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/absences/graderUnavailable",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "scenario waived with no waiver bound",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/scenarios/0/status",
+          "value": "waived"
+        }
+      ]
+    },
+    {
+      "name": "absence reason attached to a passing scenario",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_ABSENCE_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/scenarios/0/absenceReason",
+          "value": "not-run"
+        }
+      ]
+    },
+    {
+      "name": "regression measured against a foreign baseline",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/budget/baselineDigest",
+          "value": "sha256:88b4d6463c7af3e0861b04ae86903cbf05a0e5ae9c08ca0149852fbd2faa535f"
+        }
+      ]
+    }
+  ],
+  "evaluation-waiver": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/approver",
+          "value": "platform"
+        }
+      ]
+    },
+    {
+      "name": "waiver targeting a P0 finding",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_WAIVER_REFUSED",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/metric",
+          "value": "finding-severity-p0"
+        }
+      ]
+    },
+    {
+      "name": "waiver targeting schema validity",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_WAIVER_REFUSED",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/metric",
+          "value": "schema-validity"
+        }
+      ]
+    },
+    {
+      "name": "waiver with no expiry",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "remove",
+          "path": "/expiresAt"
+        }
+      ]
+    },
+    {
+      "name": "waiver whose horizon is a permanent exemption",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_WAIVER_REFUSED",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/expiresAt",
+          "value": "2030-01-01T00:00:00.000Z"
+        }
+      ]
+    },
+    {
+      "name": "scope-free waiver",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_WAIVER_REFUSED",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/scope",
+          "value": {
+            "kind": "global"
+          }
+        }
+      ]
+    }
+  ],
+  "skill-certification-receipt": [
+    {
+      "name": "unknown field",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/reviewer",
+          "value": "platform"
+        }
+      ]
+    },
+    {
+      "name": "receipt carrying release authority",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_RECEIPT_AUTHORITY_CLAIM",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/releaseAuthority",
+          "value": "granted"
+        }
+      ]
+    },
+    {
+      "name": "receipt granting publish capability inside its subject",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_RECEIPT_AUTHORITY_CLAIM",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/subject/publishAuthority",
+          "value": "marketplace"
+        }
+      ]
+    },
+    {
+      "name": "receipt promoted from readiness to a release record",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/recordType",
+          "value": "release"
+        }
+      ]
+    },
+    {
+      "name": "unwaivable package parity waived",
+      "refusedBy": "schema",
+      "code": "E_EVALUATION_WAIVER_REFUSED",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/gateEvaluation/6",
+          "value": {
+            "metric": "package-parity",
+            "waivable": true,
+            "status": "waived",
+            "waiverDigest": "sha256:3f130615ad4e9f3ee92c4b3f6555a73f39ebae38888d72a979456793c3491ea2"
+          }
+        }
+      ]
+    },
+    {
+      "name": "readiness reported while a gate is not met",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_CONTRACT_INVALID",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/gateEvaluation/1",
+          "value": {
+            "metric": "trigger-recall",
+            "waivable": true,
+            "status": "not-met",
+            "waiverDigest": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "receipt reporting on a foreign aggregate report",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_DIGEST_MISMATCH",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/inputs/aggregateReportDigest",
+          "value": "sha256:dbcbf8db4180f60c9185c8d2fb939a62a4be36be926763189fb403e2a4153509"
+        }
+      ]
+    },
+    {
+      "name": "expired waiver counted toward readiness",
+      "refusedBy": "contract",
+      "code": "E_EVALUATION_WAIVER_REFUSED",
+      "operations": [
+        {
+          "op": "replace",
+          "path": "/appliedWaivers/0/expiresAt",
+          "value": "2026-08-02T00:00:00.000Z"
+        }
+      ]
+    }
+  ]
+}

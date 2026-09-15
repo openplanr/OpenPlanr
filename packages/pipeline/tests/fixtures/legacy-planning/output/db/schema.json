@@ -1,0 +1,8 @@
+{
+  "tables": [
+    {
+      "name": "context_items",
+      "columns": ["id", "task_id", "content"]
+    }
+  ]
+}

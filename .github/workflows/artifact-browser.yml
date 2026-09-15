@@ -1,0 +1,41 @@
+name: Artifact Browser Certification
+
+on:
+  pull_request:
+    paths:
+      - 'packages/artifact/**'
+      - 'packages/pipeline/lib/artifact/**'
+      - 'packages/pipeline/tests/artifact/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/artifact-browser.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  hostile-sandbox:
+    name: ${{ matrix.browser }} hostile sandbox
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Install the selected browser
+        run: npm exec --workspace=planr-pipeline -- playwright install --with-deps ${{ matrix.browser }}
+      - name: Run hostile sandbox certification
+        run: node --test packages/pipeline/tests/artifact/sandbox-hostile.test.mjs
+        env:
+          PLANR_BROWSER_TESTS: '1'
+          PLANR_REQUIRE_BROWSER: '1'
+          PLANR_BROWSER_ENGINE: ${{ matrix.browser }}

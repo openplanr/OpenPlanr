@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v2.0.0/operating-evidence-graph.schema.json",
+  "x-openplanr-contract": { "id": "operating-evidence-graph", "version": "2.0.0" },
+  "title": "OpenPlanr Operate 2.0 rebuildable evidence graph",
+  "description": "A read-only scope/domain projection containing resolved EvidenceRefs and source-Artifact-local support or contradiction edges only.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "scopeId", "domainId", "domainVersion", "generatedAt", "evidenceRefs", "edges"],
+  "properties": {
+    "kind": { "const": "operating-evidence-graph" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "2.0.0" },
+    "scopeId": { "$ref": "#/$defs/identifier" },
+    "domainId": { "$ref": "#/$defs/identifier" },
+    "domainVersion": { "$ref": "#/$defs/version" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "evidenceRefs": { "type": "array", "uniqueItems": true, "items": { "$ref": "operating-evidence-ref.schema.json" } },
+    "edges": { "type": "array", "uniqueItems": true, "items": { "$ref": "operating-evidence-edge.schema.json" } }
+  },
+  "$defs": {
+    "identifier": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$" }
+  }
+}

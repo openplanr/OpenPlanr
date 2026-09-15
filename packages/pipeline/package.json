@@ -1,0 +1,302 @@
+{
+  "name": "planr-pipeline",
+  "version": "0.44.0",
+  "private": false,
+  "type": "module",
+  "description": "OpenPlanr complete PO, Design, DEV, QA, and delivery pipeline",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openplanr/OpenPlanr.git",
+    "directory": "packages/pipeline"
+  },
+  "bugs": {
+    "url": "https://github.com/openplanr/OpenPlanr/issues"
+  },
+  "homepage": "https://github.com/openplanr/OpenPlanr/tree/main/packages/pipeline#readme",
+  "main": "./lib/pipeline/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./lib/pipeline/index.d.mts",
+      "import": "./lib/pipeline/index.mjs",
+      "default": "./lib/pipeline/index.mjs"
+    },
+    "./package.json": "./package.json",
+    "./professional-skills": {
+      "types": "./lib/pipeline/professional-skills.d.mts",
+      "import": "./lib/pipeline/professional-skills.mjs"
+    },
+    "./protocol": {
+      "types": "./lib/protocol/index.d.ts",
+      "import": "./lib/protocol/loader.mjs"
+    },
+    "./dashboard/operate-experience-reader": {
+      "types": "./lib/dashboard/operate-experience-reader.d.mts",
+      "import": "./lib/dashboard/operate-experience-reader.mjs"
+    },
+    "./dashboard/operate-review-display-workspace-contract": {
+      "types": "./lib/dashboard/operate-review-display-workspace-contract.d.mts",
+      "import": "./lib/dashboard/operate-review-display-workspace-contract.mjs"
+    },
+    "./dashboard/operate-review-contract": {
+      "types": "./lib/dashboard/operate-review-contract.d.mts",
+      "import": "./lib/dashboard/operate-review-contract.mjs"
+    },
+    "./dashboard/operate-experience-audit-display-contract": {
+      "types": "./lib/dashboard/operate-experience-audit-display-contract.d.mts",
+      "import": "./lib/dashboard/operate-experience-audit-display-contract.mjs"
+    },
+    "./dashboard/verified-json": {
+      "types": "./lib/dashboard/verified-json.d.mts",
+      "import": "./lib/dashboard/verified-json.mjs"
+    },
+    "./dashboard/resolve-packaged-dashboard-root": {
+      "import": "./lib/dashboard/resolve-packaged-dashboard-root.mjs"
+    },
+    "./operate/runtime-v2": {
+      "types": "./lib/operate/runtime-foundation.d.mts",
+      "import": "./lib/operate/runtime-foundation.mjs"
+    },
+    "./operate/result-packet-v2": {
+      "types": "./lib/operate/result-packet-v2.d.mts",
+      "import": "./lib/operate/result-packet-v2.mjs"
+    },
+    "./operate/authorization-v2": {
+      "types": "./lib/operate/authorization-v2.d.mts",
+      "import": "./lib/operate/authorization-v2.mjs"
+    },
+    "./operate/policy-v2": {
+      "types": "./lib/operate/policy-v2.d.mts",
+      "import": "./lib/operate/policy-v2.mjs"
+    },
+    "./operate/approvals-v2": {
+      "types": "./lib/operate/approvals-v2.d.mts",
+      "import": "./lib/operate/approvals-v2.mjs"
+    },
+    "./operate/governed-extensions-v2": {
+      "types": "./lib/operate/governed-extensions-v2.d.mts",
+      "import": "./lib/operate/governed-extensions-v2.mjs"
+    },
+    "./operate/reference-governed-executors-v2": {
+      "types": "./lib/operate/reference-governed-executors-v2.d.mts",
+      "import": "./lib/operate/reference-governed-executors-v2.mjs"
+    },
+    "./operate/governed-execution-v2": {
+      "types": "./lib/operate/governed-execution-v2.d.mts",
+      "import": "./lib/operate/governed-execution-v2.mjs"
+    },
+    "./operate/governed-recovery-v2": {
+      "types": "./lib/operate/governed-recovery-v2.d.mts",
+      "import": "./lib/operate/governed-recovery-v2.mjs"
+    },
+    "./operate/experience-projection-v2": {
+      "types": "./lib/operate/experience-projection-v2.d.mts",
+      "import": "./lib/operate/experience-projection-v2.mjs"
+    },
+    "./operate/review-workspace-projection-v2": {
+      "types": "./lib/dashboard/operate-review-workspace-projection-v2.d.mts",
+      "import": "./lib/dashboard/operate-review-workspace-projection-v2.mjs"
+    },
+    "./operate/trace-matrix-v2": {
+      "types": "./lib/operate/trace-matrix-v2.d.mts",
+      "import": "./lib/operate/trace-matrix-v2.mjs"
+    },
+    "./operate/executive-board-materialization-v2": {
+      "types": "./lib/operate/executive-board-materialization-v2.d.mts",
+      "import": "./lib/operate/executive-board-materialization-v2.mjs"
+    },
+    "./operate/planning-bridge-v2": {
+      "types": "./lib/operate/planning-bridge-v2.d.mts",
+      "import": "./lib/operate/planning-bridge-v2.mjs"
+    },
+    "./operate/execution-verification-v2": {
+      "types": "./lib/operate/execution-verification-v2.d.mts",
+      "import": "./lib/operate/execution-verification-v2.mjs"
+    },
+    "./operate/intelligence-router-v2": {
+      "types": "./lib/operate/intelligence-router-v2.d.mts",
+      "import": "./lib/operate/intelligence-router-v2.mjs"
+    },
+    "./operate/operating-domains-v2": {
+      "types": "./lib/operate/operating-domains-v2.d.mts",
+      "import": "./lib/operate/operating-domains-v2.mjs"
+    },
+    "./operate/operating-signal-providers-v2": {
+      "types": "./lib/operate/operating-signal-providers-v2.d.mts",
+      "import": "./lib/operate/operating-signal-providers-v2.mjs"
+    },
+    "./operate/persistent-work-v2": {
+      "types": "./lib/operate/persistent-work-v2.d.mts",
+      "import": "./lib/operate/persistent-work-v2.mjs"
+    },
+    "./operate/persistent-work-projections-v2": {
+      "types": "./lib/operate/persistent-work-projections-v2.d.mts",
+      "import": "./lib/operate/persistent-work-projections-v2.mjs"
+    },
+    "./operate/scheduler-v2": {
+      "types": "./lib/operate/scheduler-v2.d.mts",
+      "import": "./lib/operate/scheduler-v2.mjs"
+    },
+    "./operate/extensions-v2": {
+      "types": "./lib/operate/extensions-v2.d.mts",
+      "import": "./lib/operate/extensions-v2.mjs"
+    },
+    "./operate/evidence-v2": {
+      "types": "./lib/operate/evidence-v2.d.mts",
+      "import": "./lib/operate/evidence-v2.mjs"
+    },
+    "./operate/evidence-materialization-v2": {
+      "types": "./lib/operate/evidence-materialization-v2.d.mts",
+      "import": "./lib/operate/evidence-materialization-v2.mjs"
+    },
+    "./operate/evidence-projections-v2": {
+      "types": "./lib/operate/evidence-projections-v2.d.mts",
+      "import": "./lib/operate/evidence-projections-v2.mjs"
+    },
+    "./schemas/*": "./schemas/*",
+    "./registry/*": "./registry/*"
+  },
+  "bin": {
+    "planr-pipeline": "bin/planr-pipeline.mjs"
+  },
+  "files": [
+    "bin/",
+    "conformance/",
+    "docs/artifact-review.md",
+    "docs/compatibility-matrix.md",
+    "docs/doctor.md",
+    "docs/ecosystem-guide.md",
+    "docs/generated/",
+    "docs/ownership-map.md",
+    "docs/release-checklist.md",
+    "docs/release-ledger.md",
+    "docs/rules.md",
+    "docs/runtime-guided-interactions.md",
+    "docs/skill-evaluation.md",
+    "docs/unified-dashboard-migration.md",
+    "docs/protocol/",
+    "fixtures/",
+    "gallery/",
+    "lib/",
+    "lib/protocol/planning-contracts.mjs",
+    "procedures/",
+    "references/",
+    "registry/",
+    "registry/v1.7.0/",
+    "schemas/",
+    "schemas/v1.7.0/",
+    "scripts/doctor.mjs",
+    "scripts/generate-artifact-shell.mjs",
+    "scripts/generate-landing-workflow-assets.mjs",
+    "scripts/generate-operate-contracts.mjs",
+    "scripts/check-operate-runtime-purity.mjs",
+    "scripts/discover-verification.mjs",
+    "scripts/verify-release-package.mjs",
+    "stacks/",
+    "templates/",
+    "THIRD_PARTY-DIAGRAM-NOTICES.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@noble/hashes": "1.8.0",
+    "esbuild": "0.28.1",
+    "pako": "2.1.0",
+    "parse5": "8.0.1"
+  },
+  "optionalDependencies": {
+    "@expo-google-fonts/inter": "0.4.2",
+    "@resvg/resvg-js": "2.6.2"
+  },
+  "devDependencies": {
+    "pixelmatch": "7.2.0",
+    "playwright": "1.61.1",
+    "pngjs": "7.0.0"
+  },
+  "scripts": {
+    "test": "npm run test:orchestration && npm run test:surface",
+    "test:surface": "npm run test:schema && npm run test:docs && npm run test:design && npm run test:design-engine && npm run test:artifact && npm run test:dashboard && npm run test:evaluation && npm run check:operate-contracts && npm run conformance:operate && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard && npm run conformance:unified-dashboard-absence && npm run conformance:skill-evaluation",
+    "generate:artifact-shell": "node scripts/generate-artifact-shell.mjs",
+    "check:artifact-shell": "node scripts/generate-artifact-shell.mjs --check",
+    "generate:operate-contracts": "node scripts/generate-operate-contracts.mjs --write",
+    "check:operate-contracts": "node scripts/generate-operate-contracts.mjs --check",
+    "test:operate-contracts": "node --test tests/schema/operate-contract-compiler.test.mjs tests/schema/operate-contract-drift-v2.test.mjs tests/schema/operate-persistent-work-contracts-v2.test.mjs tests/schema/operate-evidence-contracts-v2.test.mjs tests/schema/operate-operating-intelligence-contracts-v2.test.mjs tests/schema/operate-governed-execution-contracts-v2.test.mjs tests/schema/operating-schemas-v2.test.mjs",
+    "test:operate-governed-execution-contracts": "node --test tests/schema/operate-governed-execution-contracts-v2.test.mjs",
+    "test:operate-authorization": "node --test tests/orchestration/operate-authorization-v2.test.mjs tests/orchestration/operate-authorization-v2-property.test.mjs",
+    "test:operate-governed-extensions": "node --test tests/orchestration/operate-governed-extensions-v2.test.mjs tests/orchestration/operate-governed-extensions-v2-property.test.mjs tests/orchestration/operate-executor-containment-v2.test.mjs",
+    "test:operate-governed-execution-runtime": "node --test tests/orchestration/operate-governed-execution-v2.test.mjs tests/orchestration/operate-governed-execution-v2-property.test.mjs tests/orchestration/operate-governed-execution-v2-restart.test.mjs tests/orchestration/operate-governed-execution-v2-concurrency.test.mjs",
+    "test:operate-governed-recovery": "node --test tests/orchestration/operate-governed-recovery-v2.test.mjs tests/orchestration/operate-governed-recovery-v2-property.test.mjs tests/orchestration/operate-governed-rollback-v2.test.mjs tests/orchestration/operate-governed-rollback-v2-property.test.mjs",
+    "test:operate-operating-intelligence-contracts": "node --test tests/schema/operate-operating-intelligence-contracts-v2.test.mjs",
+    "test:operate-evidence-contracts": "node --test tests/schema/operate-evidence-contracts-v2.test.mjs",
+    "test:operate-evidence-registry": "node --test tests/orchestration/operate-evidence-registry-v2.test.mjs tests/orchestration/operate-evidence-registry-v2-property.test.mjs",
+    "test:operate-evidence-resolvers": "node --test tests/orchestration/operate-evidence-git-v2.test.mjs tests/orchestration/operate-evidence-git-v2-property.test.mjs tests/orchestration/operate-evidence-filesystem-v2.test.mjs tests/orchestration/operate-evidence-filesystem-v2-property.test.mjs tests/orchestration/operate-evidence-planr-v2.test.mjs tests/orchestration/operate-evidence-artifact-v2.test.mjs",
+    "test:operate-evidence-materialization": "node --test tests/orchestration/operate-evidence-materialization-v2.test.mjs tests/orchestration/operate-evidence-materialization-v2-property.test.mjs tests/orchestration/operate-evidence-projections-v2.test.mjs",
+    "test:operate-operating-state": "node --test tests/orchestration/operate-operating-state-v2.test.mjs tests/orchestration/operate-operating-state-v2-property.test.mjs tests/orchestration/operate-operating-snapshots-v2.test.mjs",
+    "test:operate-scheduler": "node --test tests/orchestration/operate-scheduler-v2.test.mjs",
+    "test:operate-extensions": "node --test tests/schema/operate-extension-registry-v2.test.mjs",
+    "test:operate-persistent-work": "node --test tests/orchestration/operate-persistent-work-v2.test.mjs tests/orchestration/operate-persistent-work-v2-property.test.mjs",
+    "test:operate-cycle-closure": "node --test tests/orchestration/operate-cycle-closure-v2.test.mjs tests/orchestration/operate-cycle-closure-v2-property.test.mjs tests/orchestration/operate-review-actions-v2.test.mjs",
+    "test:operate-execution-verification": "node --test tests/orchestration/operate-execution-verification-v2.test.mjs tests/orchestration/operate-execution-verification-v2-property.test.mjs tests/orchestration/operate-execution-lifecycle-v2.test.mjs tests/orchestration/operate-execution-lifecycle-v2-property.test.mjs",
+    "test:operate-projections": "node --test tests/orchestration/operate-persistent-work-projections-v2.test.mjs tests/ecosystem/operate-v2-persistent-work-boundary.test.mjs",
+    "test:artifact": "node scripts/run-test-group.mjs tests/artifact",
+    "test:artifact:browser": "node --test tests/artifact/local-shell.test.mjs tests/artifact/review-interactions.test.mjs tests/artifact/share-ui.test.mjs tests/artifact/sandbox-hostile.test.mjs tests/artifact/design-board-integration.test.mjs",
+    "test:artifact:contracts": "node --test tests/artifact/bundle.test.mjs tests/artifact/schemas-envelope.test.mjs",
+    "test:artifact:share": "node --test tests/artifact/codec.test.mjs tests/artifact/crypto-share.test.mjs",
+    "test:artifact:exports": "node --test tests/pipeline/artifact-exports.test.mjs",
+    "test:artifact:packed": "node --test tests/pipeline/artifact-packed-install.test.mjs",
+    "test:design-engine": "node scripts/run-test-group.mjs tests/design-engine tests/collab-review-board.test.mjs",
+    "test:dashboard": "node scripts/run-dashboard-tests.mjs",
+    "test:unified-dashboard": "npm run test:unified-dashboard:paired",
+    "test:unified-dashboard:paired": "node scripts/run-unified-dashboard-paired-tests.mjs",
+    "test:dashboard:static-root": "node --test tests/dashboard/dashboard-static-root.test.mjs",
+    "test:docs": "node scripts/run-test-group.mjs tests/docs",
+    "doctor": "node scripts/doctor.mjs",
+    "doctor:versions": "node scripts/doctor.mjs --versions-only",
+    "verify:release-package": "node scripts/verify-release-package.mjs",
+    "verify:release-ledger": "node scripts/verify-release-ledger.mjs",
+    "ecosystem:conformance": "node scripts/ecosystem-conformance.mjs",
+    "canary:artifact-release": "node scripts/artifact-release-canary.mjs",
+    "conformance:native-dispatch": "node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd1-parallel && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd2-advisory-locklist && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd3-dependson && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd4-coherent",
+    "conformance:check": "npm run conformance:native-dispatch && npm run conformance:operate && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard && npm run conformance:unified-dashboard-absence && npm run conformance:governed-landing && npm run conformance:skill-evaluation && npm run conformance:release-ledger && npm run verify:release-ledger",
+    "conformance:operate": "npm run conformance:operate-v2",
+    "conformance:operate-v2": "node conformance/verify-operating-runtime-v2.mjs && node conformance/verify-operate-v2-persistent-work.mjs && node conformance/verify-operate-v2-evidence.mjs && node conformance/verify-operate-v2-operating-intelligence.mjs && node conformance/verify-operate-v2-governed-execution.mjs && node conformance/verify-operate-v2-product-experience.mjs && node conformance/verify-operate-v2-live-evidence.mjs",
+    "conformance:operate-v2-persistent-work": "node conformance/verify-operate-v2-persistent-work.mjs",
+    "conformance:operate-v2-evidence": "node conformance/verify-operate-v2-evidence.mjs",
+    "conformance:operate-v2-operating-intelligence": "node conformance/verify-operate-v2-operating-intelligence.mjs",
+    "conformance:operate-v2-governed-execution": "node conformance/verify-operate-v2-governed-execution.mjs",
+    "conformance:operate-v2-live-evidence": "node conformance/verify-operate-v2-live-evidence.mjs",
+    "conformance:governed-landing": "node conformance/verify-governed-landing.mjs",
+    "conformance:skill-evaluation": "node conformance/verify-skill-evaluation-contracts.mjs && node conformance/verify-skill-evaluation.mjs",
+    "conformance:release-ledger": "node conformance/verify-release-ledger.mjs",
+    "conformance:operate-v2-contract-compilation": "node conformance/verify-operate-v2-contract-compilation.mjs",
+    "conformance:artifact": "npm run conformance:artifact-review",
+    "conformance:artifact-review": "node conformance/verify-artifact-review.mjs",
+    "conformance:design-loop": "node conformance/verify-design-loop.mjs",
+    "conformance:dashboard": "node conformance/verify-dashboard.mjs",
+    "conformance:unified-dashboard-absence": "node conformance/verify-unified-dashboard-absence.mjs",
+    "test:schema": "node scripts/run-test-group.mjs tests/schema",
+    "test:evaluation": "node scripts/run-test-group.mjs tests/evaluation",
+    "evaluate:skills": "node scripts/run-evaluation.mjs",
+    "test:orchestration": "npm run test:orchestration:runtime && npm run test:orchestration:ecosystem && npm run test:orchestration:pipeline",
+    "test:orchestration:runtime": "node scripts/run-test-group.mjs tests/orchestration",
+    "test:orchestration:ecosystem": "node --expose-gc --test tests/ecosystem/operate-v2-product-performance.test.mjs && node scripts/run-test-group.mjs tests/ecosystem --exclude tests/ecosystem/operate-v2-product-performance.test.mjs --exclude tests/ecosystem/unified-dashboard-consumer-install.test.mjs --exclude tests/ecosystem/unified-dashboard-package.test.mjs",
+    "test:orchestration:pipeline": "node scripts/run-test-group.mjs tests/pipeline",
+    "test:operate-v2-development": "node --test tests/ecosystem/operate-v2-development-package.test.mjs",
+    "test:operate-v2-phase2-package": "node --test tests/ecosystem/operate-v2-phase2-package.test.mjs",
+    "test:operate-v2-phase3-package": "node --test tests/ecosystem/operate-v2-phase3-package.test.mjs",
+    "test:operate-v2-phase5-package": "node --test tests/ecosystem/operate-v2-phase5-package.test.mjs tests/ecosystem/operate-v2-phase5-dogfood.test.mjs",
+    "test:operate-v2-phase6-package": "node --test tests/ecosystem/operate-v2-phase6-package.test.mjs tests/ecosystem/operate-v2-phase6-dogfood.test.mjs",
+    "test:operate-v2-product": "node --expose-gc --test tests/ecosystem/operate-v2-product-package.test.mjs tests/ecosystem/operate-v2-product-dogfood.test.mjs tests/ecosystem/operate-v2-product-performance.test.mjs",
+    "inventory:operate-surfaces": "node scripts/inventory-operate-surfaces.mjs --check",
+    "test:guided-contracts": "node --test tests/schema/guided-interaction-schemas.test.mjs tests/orchestration/guided-interaction-contracts.test.mjs",
+    "test:design": "node scripts/run-test-group.mjs tests/design",
+    "conformance:design": "node conformance/verify-design-assets.mjs"
+  }
+}

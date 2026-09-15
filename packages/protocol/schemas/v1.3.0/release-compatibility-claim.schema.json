@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.3.0/release-compatibility-claim.schema.json",
+  "title": "OpenPlanr digest-bound release compatibility claim",
+  "x-openplanr-contract": { "id": "release-compatibility-claim", "version": "1.3.0" },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "ledgerDigest", "consumer", "producer", "derivation", "display", "claimId", "claimDigest"],
+  "properties": {
+    "kind": { "const": "release-compatibility-claim" },
+    "schemaVersion": { "const": "1.3.0" },
+    "ledgerDigest": { "$ref": "#/$defs/digest" },
+    "consumer": { "$ref": "#/$defs/side" },
+    "producer": { "$ref": "#/$defs/producer" },
+    "derivation": { "enum": ["caret-range-from-producer-declared-version", "exact-producer-declared-version"] },
+    "display": { "type": "string", "pattern": "^\\^?[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$" },
+    "claimId": { "type": "string", "pattern": "^rcc_[a-f0-9]{32}$" },
+    "claimDigest": { "$ref": "#/$defs/digest" }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "repositoryKey": { "enum": ["pipeline", "web", "cli", "skills", "marketplace"] },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$" },
+    "side": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repositoryKey", "payloadDigest", "terminalReceiptDigest"],
+      "properties": {
+        "repositoryKey": { "$ref": "#/$defs/repositoryKey" },
+        "payloadDigest": { "$ref": "#/$defs/digest" },
+        "terminalReceiptDigest": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repositoryKey", "payloadDigest", "terminalReceiptDigest", "declaredVersion"],
+      "properties": {
+        "repositoryKey": { "$ref": "#/$defs/repositoryKey" },
+        "payloadDigest": { "$ref": "#/$defs/digest" },
+        "terminalReceiptDigest": { "$ref": "#/$defs/digest" },
+        "declaredVersion": { "$ref": "#/$defs/version" }
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-land",
+  "family": "release",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-land/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-land/skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Replaced receipt, digest, authorization, and release-owner governance language with a guidance-first readiness workflow and actionable output contract."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:6dfa4bb90334bfbce73348e82b7941b456f8529dc1901c390bbb890c13a92fc0",
+      "successorDigest": "sha256:14221e78138ce7ac8ead6e2044a783ea9cc058b78cebbb49aef3407784ede5fc"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:6dfa4bb90334bfbce73348e82b7941b456f8529dc1901c390bbb890c13a92fc0",
+      "successorDigest": "sha256:14221e78138ce7ac8ead6e2044a783ea9cc058b78cebbb49aef3407784ede5fc"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:0b36043a05563efffe5e68ca532a68ec3a0bf964c8cbbfe3fcc551177c123cd5",
+      "successorDigest": "sha256:d61ea867ab3778efc4abf2bd2d27d8e454f7acf6d5f0effb9289ee73ed5a8dc5"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:6dfa4bb90334bfbce73348e82b7941b456f8529dc1901c390bbb890c13a92fc0",
+      "successorDigest": "sha256:14221e78138ce7ac8ead6e2044a783ea9cc058b78cebbb49aef3407784ede5fc"
+    }
+  ]
+}

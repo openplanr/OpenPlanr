@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.1.0/specialist-review-result.schema.json",
+  "type": "object", "additionalProperties": false,
+  "required": ["kind", "schemaVersion", "protocolVersion", "specialistId", "candidateDigest", "classificationDigest", "summary", "findingIds", "evidenceDigest", "authority"],
+  "properties": {
+    "kind": { "const": "specialist-review-result" },
+    "schemaVersion": { "const": "1.0.0" },
+    "protocolVersion": { "const": "1.1.0" },
+    "specialistId": { "enum": ["security", "performance", "migration", "api-contract", "data-integrity"] },
+    "candidateDigest": { "$ref": "#/$defs/digest" },
+    "classificationDigest": { "$ref": "#/$defs/digest" },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 4096 },
+    "findingIds": { "type": "array", "maxItems": 128, "uniqueItems": true, "items": { "type": "string", "pattern": "^fnd_[a-f0-9]{32}$" } },
+    "evidenceDigest": { "$ref": "#/$defs/digest" },
+    "authority": { "const": "contribution-only" }
+  },
+  "$defs": { "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } }
+}

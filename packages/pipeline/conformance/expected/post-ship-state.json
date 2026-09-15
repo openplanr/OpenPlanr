@@ -1,0 +1,80 @@
+{
+  "_comment": "Expected post-DEV state for the feat-todo fixture. Asserted by runner.mjs --verify-ship.",
+  "_protocolVersion": "1.0.0",
+
+  "sourceFileWritten": {
+    "_description": "backend-agent should produce the function under src/.",
+    "path": "src/todo.ts",
+    "mustContainAny": ["addTodo", "export"]
+  },
+
+  "testFileWritten": {
+    "_description": "backend-agent should produce a Vitest test file.",
+    "globPattern": "tests/todo.test.ts",
+    "expectedCount": 1
+  },
+
+  "buildPasses": {
+    "_description": "npx tsc --noEmit must exit 0 (acceptance criterion #4).",
+    "command": "npx tsc --noEmit",
+    "expectedExitCode": 0
+  },
+
+  "testsPass": {
+    "_description": "npx vitest run must exit 0 with all tests green (acceptance criterion #5).",
+    "command": "npx vitest run",
+    "expectedExitCode": 0
+  },
+
+  "shipMarkerExists": {
+    "_description": "The .pipeline-shipped YAML marker must exist at the spec dir root.",
+    "path": ".planr/specs/SPEC-001-todo-feature/.pipeline-shipped"
+  },
+
+  "shipMarkerSchema": {
+    "_description": "The marker YAML must include all required v1.0.0 fields with valid values.",
+    "path": ".planr/specs/SPEC-001-todo-feature/.pipeline-shipped",
+    "yamlFieldsRequired": [
+      "shipped_at",
+      "pipeline_version",
+      "runtime",
+      "mode",
+      "feature",
+      "tasks_executed",
+      "tasks_failed",
+      "qa_gate_status",
+      "agents_invoked"
+    ],
+    "yamlFieldsMustMatch": {
+      "mode": "spec-driven",
+      "feature": "todo-feature",
+      "tasks_executed": 1,
+      "tasks_failed": 0,
+      "qa_gate_status": "passed"
+    },
+    "yamlFieldsMustBeOneOf": {
+      "runtime": ["claude-code", "cursor", "codex"]
+    }
+  },
+
+  "qaReportExists": {
+    "_description": "qa-agent should produce a qa-report.md.",
+    "path": ".planr/specs/SPEC-001-todo-feature/qa-report.md"
+  },
+
+  "noErrorReports": {
+    "_description": "Happy-path fixture — no task should hit the 3-iteration correction limit.",
+    "pathMustNotExist": ".planr/specs/SPEC-001-todo-feature/tasks/error-report.md"
+  },
+
+  "preserveListIntegrity": {
+    "_description": "Files in the task's Preserve list MUST NOT have been modified. Runner reads each task's Preserve section and asserts `git diff --name-only` returns no overlap.",
+    "anti_check": "preserve_violation"
+  },
+
+  "claudePluginRootSubstitutionLeak": {
+    "_description": "Anti-assertion (Cursor/Codex only): no ${CLAUDE_PLUGIN_ROOT} token must leak into generated rule files. Skipped on claude-code runtime.",
+    "anti_check": "substitution_leak",
+    "appliesToRuntimes": ["cursor", "codex"]
+  }
+}

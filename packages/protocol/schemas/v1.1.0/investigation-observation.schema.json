@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://openplanr.dev/schemas/v1.1.0/investigation-observation.schema.json",
+  "title": "OpenPlanr Protocol 1.1 investigation observation", "type": "object", "additionalProperties": false,
+  "required": ["id", "source", "fact", "evidenceDigest"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^obs_[a-f0-9]{32}$" },
+    "source": { "type": "object", "additionalProperties": false, "required": ["kind", "id"], "properties": { "kind": { "enum": ["reproduction", "experiment"] }, "id": { "type": "string", "minLength": 1, "maxLength": 96 } } },
+    "fact": { "type": "string", "minLength": 1, "maxLength": 4000 }, "evidenceDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  }
+}
