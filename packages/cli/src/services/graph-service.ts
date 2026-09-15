@@ -219,9 +219,7 @@ function buildNode(absPath: string, planrDir: string, includeBody: boolean): Gra
   const id = scope && type !== 'spec' ? `${scope}/${localId}` : localId;
   const authoredTitle = frontmatter.title ?? frontmatter.name;
   const title =
-    authoredTitle != null && String(authoredTitle).trim() !== ''
-      ? String(authoredTitle)
-      : localId;
+    authoredTitle != null && String(authoredTitle).trim() !== '' ? String(authoredTitle) : localId;
 
   frontmatter.id = localId;
   if (scope) frontmatter.specScope = scope;
