@@ -124,10 +124,10 @@
     "pathRecords": 2100,
     "dispositionCounts": {
       "regenerated": 205,
-      "merged": 545,
+      "merged": 551,
       "moved": 268,
       "retired": 57,
-      "exact": 1006,
+      "exact": 1000,
       "excluded": 19
     },
     "unmappedPaths": 0
@@ -25229,8 +25229,8 @@
         "mode": "100644",
         "sha256": "292e5992bbcc2e4bc25e49a4843f932eda5da40c09e9bdf16a71038e3eba4cab"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/conformance/fixtures/default-mode-shipped/package-lock.json",
@@ -25239,10 +25239,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "292e5992bbcc2e4bc25e49a4843f932eda5da40c09e9bdf16a71038e3eba4cab",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -25260,8 +25258,8 @@
         "mode": "100644",
         "sha256": "4981747a353134fbb158e0a8af965e0f89ba064b225776467f155c8ca56f09f3"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/conformance/fixtures/default-mode-shipped/package.json",
@@ -25270,10 +25268,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "4981747a353134fbb158e0a8af965e0f89ba064b225776467f155c8ca56f09f3",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -29809,8 +29805,8 @@
         "mode": "100644",
         "sha256": "292e5992bbcc2e4bc25e49a4843f932eda5da40c09e9bdf16a71038e3eba4cab"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/conformance/fixtures/spec-driven-todo-shipped/package-lock.json",
@@ -29819,10 +29815,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "292e5992bbcc2e4bc25e49a4843f932eda5da40c09e9bdf16a71038e3eba4cab",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -29840,8 +29834,8 @@
         "mode": "100644",
         "sha256": "4981747a353134fbb158e0a8af965e0f89ba064b225776467f155c8ca56f09f3"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/conformance/fixtures/spec-driven-todo-shipped/package.json",
@@ -29850,10 +29844,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "4981747a353134fbb158e0a8af965e0f89ba064b225776467f155c8ca56f09f3",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -30274,8 +30266,8 @@
         "mode": "100644",
         "sha256": "292e5992bbcc2e4bc25e49a4843f932eda5da40c09e9bdf16a71038e3eba4cab"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/conformance/fixtures/spec-driven-todo/package-lock.json",
@@ -30284,10 +30276,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "292e5992bbcc2e4bc25e49a4843f932eda5da40c09e9bdf16a71038e3eba4cab",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -30305,8 +30295,8 @@
         "mode": "100644",
         "sha256": "4981747a353134fbb158e0a8af965e0f89ba064b225776467f155c8ca56f09f3"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/conformance/fixtures/spec-driven-todo/package.json",
@@ -30315,10 +30305,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "4981747a353134fbb158e0a8af965e0f89ba064b225776467f155c8ca56f09f3",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -67038,5 +67026,5 @@
       }
     }
   ],
-  "documentDigest": "sha256:1a79b45df7b13c7a59cb2a6bfc9ef5cd7366a2c3ad05ed7f82e732a60db10e42"
+  "documentDigest": "sha256:55f932446432baa5c2cd94167ef35e6d4020fa19552d3acbdfe7bc2f8a47b11f"
 }

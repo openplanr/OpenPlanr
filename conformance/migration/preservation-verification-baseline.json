@@ -2,8 +2,8 @@
   "kind": "openplanr-preservation-verification-baseline",
   "schemaVersion": "1.0.0",
   "migrationId": "openplanr-monorepo",
-  "inventoryDigest": "sha256:1a79b45df7b13c7a59cb2a6bfc9ef5cd7366a2c3ad05ed7f82e732a60db10e42",
-  "surfaceCatalogDigest": "sha256:3f6ca559b8ba207f9774182fdfa652e36f6a67be05b96e39f59ee34b7c691501",
+  "inventoryDigest": "sha256:55f932446432baa5c2cd94167ef35e6d4020fa19552d3acbdfe7bc2f8a47b11f",
+  "surfaceCatalogDigest": "sha256:3ef30ccb9d4c8fbe29fbe5c793306d37b4fc49d9497c02d11a938b5de34bd9b3",
   "coverage": {
     "cutoffTrackedPaths": 1987,
     "includedOpenPlanrOverlayPaths": 618,
@@ -32,5 +32,5 @@
       "D"
     ]
   },
-  "documentDigest": "sha256:81ae2b48c12e81f84de2a96b4c0aa28c67436194bf2a0bfacb792c49b3f28239"
+  "documentDigest": "sha256:c2f943a61c415aaa312cbd68f80f6356f7121523613cf2fde60c3e5c742374b1"
 }
