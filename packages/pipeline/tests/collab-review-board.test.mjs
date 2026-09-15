@@ -268,11 +268,13 @@ async function startBoard() {
   const base = `http://127.0.0.1:${port}`;
   const id = `collab--${'a'.repeat(24)}`;
 
-  const reg = await fetch(`${base}/api/boards`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', ...daemonControlHeaders({ PLANR_HOME: home }) },
-    body: JSON.stringify({ id, dir: boardDir }),
-  });
+  const registerBoard = () =>
+    fetch(`${base}/api/boards`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...daemonControlHeaders({ PLANR_HOME: home }) },
+      body: JSON.stringify({ id, dir: boardDir }),
+    });
+  const reg = await registerBoard();
   assert.equal(reg.status, 200, 'board registers');
 
   const cleanup = async () => {
@@ -280,7 +282,7 @@ async function startBoard() {
     rmSync(home, { recursive: true, force: true });
     rmSync(boardDir, { recursive: true, force: true });
   };
-  return { base, id, boardDir, cleanup };
+  return { base, id, boardDir, registerBoard, cleanup };
 }
 
 /** A complete, schema-valid feedback contribution for one author's single pin. */
@@ -387,7 +389,7 @@ test('daemon: async-parallel POSTs (Promise.all) do not corrupt the file or drop
 });
 
 test('daemon: a "pending" round is reconciled into the durable store, never destructively deleted', async () => {
-  const { base, id, boardDir, cleanup } = await startBoard();
+  const { base, id, boardDir, registerBoard, cleanup } = await startBoard();
   try {
     // Seed a durable record + a leftover pending round on disk, then re-register the board
     // (which triggers reconcilePending). The pending pin must be merged in, not dropped.
@@ -396,11 +398,7 @@ test('daemon: a "pending" round is reconciled into the durable store, never dest
     const pending = contributionFor('Author B', 'pending pin', { intent: 'question' });
     writeFileSync(join(boardDir, 'feedback-pending.json'), `${JSON.stringify(pending, null, 2)}\n`);
 
-    const reg = await fetch(`${base}/api/boards`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id, dir: boardDir }),
-    });
+    const reg = await registerBoard();
     assert.equal(reg.status, 200);
     // Reconciliation is mutex-serialized + fire-and-forget on register; poll the durable
     // record until the pending author has been folded in (bounded — fails loudly otherwise).
@@ -573,7 +571,7 @@ test('a dropped pin POSTed to /api/feedback is returned by a subsequent GET with
 });
 
 test('a pin persists across a refresh and a board re-serve (load on open never starts empty)', async () => {
-  const { base, id, boardDir, cleanup } = await startBoard();
+  const { base, id, boardDir, registerBoard, cleanup } = await startBoard();
   try {
     const item = droppedItem('Dana Reviewer', 'persist me across refresh');
     const res = await postFeedback(base, id, droppedPinContribution('Dana Reviewer', item));
@@ -587,11 +585,7 @@ test('a pin persists across a refresh and a board re-serve (load on open never s
     );
 
     // "Re-serve the board" = re-register the same dir (a new daemon would read the same file).
-    const reg = await fetch(`${base}/api/boards`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id, dir: boardDir }),
-    });
+    const reg = await registerBoard();
     assert.equal(reg.status, 200, 'board re-registers');
     const afterReserve = await getFeedback(base, id);
     assert.ok(
