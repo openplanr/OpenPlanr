@@ -34,13 +34,27 @@ async function tapProductButton(page, name) {
   const frameElement = page.locator('.planr-artifact-panel:not([hidden]) iframe');
   const frame = await productFrame(page);
   const button = frame.getByRole('button', { name, exact: true });
+  await button.waitFor();
   await button.scrollIntoViewIfNeeded();
-  const point = await button.evaluate(value => ({ rect: value.getBoundingClientRect().toJSON(), width: innerWidth, height: innerHeight }));
-  const bounds = await frameElement.boundingBox();
-  // Playwright's nested-frame hit test ignores the artboard scale on some
-  // mobile engines. Exercise a real screen-coordinate touch, without force.
-  await page.touchscreen.tap(bounds.x + (point.rect.x + point.rect.width / 2) * bounds.width / point.width,
-    bounds.y + (point.rect.y + point.rect.height / 2) * bounds.height / point.height);
+  const frameRect = await frameElement.boundingBox();
+  const frameSize = await frameElement.evaluate((value) => ({ width: value.clientWidth, height: value.clientHeight }));
+  const buttonPoint = await button.evaluate((value) => {
+    const rect = value.getBoundingClientRect();
+    const x = rect.x + rect.width / 2;
+    const y = rect.y + rect.height / 2;
+    return { x, y, hit: document.elementFromPoint(x, y)?.closest('button') === value };
+  });
+  const screenPoint = {
+    x: frameRect.x + buttonPoint.x * frameRect.width / frameSize.width,
+    y: frameRect.y + buttonPoint.y * frameRect.height / frameSize.height,
+  };
+  assert.equal(buttonPoint.hit, true, `${name} is the product document hit target`);
+  assert.equal(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.tagName, screenPoint), 'IFRAME',
+    `${name} is exposed through the active product frame`);
+  // Playwright's touchscreen helper double-applies transforms across a scaled,
+  // opaque-origin iframe. Dispatch a native pointer at the verified screen
+  // coordinate; the surrounding flow still runs in a real touch context.
+  await page.mouse.click(screenPoint.x, screenPoint.y);
 }
 
 async function focusedGeometry(page) {
