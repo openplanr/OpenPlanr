@@ -1276,11 +1276,9 @@ describe('OpenPlanr governed local command gateway', () => {
     }
   }, 180_000);
 
-  it.each([
-    ['approved', 'Approve'],
-    ['changes_requested', 'Request changes'],
-    ['rejected', 'Reject'],
-  ] as const)(
+  // The production-entrypoint case above covers a real approved Review. Protocol contract suites
+  // exhaust every disposition; retain one non-approval at this costly storage/gateway boundary.
+  it.each([['rejected', 'Reject']] as const)(
     'commits the disposable %s Review choice through the bound dashboard gateway',
     async (disposition, label) => {
       const fixture = await createTestProject(`operate-review-${disposition}`);
