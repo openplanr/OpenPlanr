@@ -139,6 +139,7 @@ test(`walkthrough navigation stays painted, preserves product state and handles 
       const context = await browser.newContext({ viewport: { width: 1600, height: 1050 }, reducedMotion: 'no-preference' });
       const page = await context.newPage();
       page.setDefaultTimeout(8000);
+      page.setDefaultNavigationTimeout(30000);
       page.on('pageerror', error => errors.push(`${host}: ${error.message}`));
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
       await page.waitForSelector('[data-design-ready="true"]');

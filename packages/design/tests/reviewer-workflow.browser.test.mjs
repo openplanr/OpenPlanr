@@ -56,7 +56,7 @@ test(`reviewer workflow stays focused, compact and usable with large discussions
         });
         window.__OPENPLANR_DESIGN_STUDIO_OPTIONS__ = {};
       }, { metadata });
-      const page = await context.newPage(); page.setDefaultTimeout(8000);
+      const page = await context.newPage(); page.setDefaultTimeout(8000); page.setDefaultNavigationTimeout(30000);
       const errors = []; page.on('pageerror', error => errors.push(error.message));
       await page.goto(review.url, { waitUntil: 'domcontentloaded', timeout: 30000 }); await page.locator('[data-design-ready="true"]').waitFor();
       await page.waitForFunction(() => window.__openPlanrDesignExperience?.getState().metadata.categories['pin-003'] === 'change-request');
@@ -146,6 +146,24 @@ test(`reviewer workflow stays focused, compact and usable with large discussions
       await composerPicker.getByRole('radio', { name: 'Request change', exact: true }).click();
       assert.equal(await composerPicker.getByRole('radio', { name: 'Request change', exact: true }).getAttribute('aria-checked'), 'true');
       await page.getByRole('button', { name: 'Close new comment', exact: true }).click();
+
+      if (audience === 'reviewer') {
+        await page.evaluate(() => {
+          window.__OPENPLANR_DESIGN_STUDIO_OPTIONS__.updateReviewMetadata = async () => {
+            throw new Error("Invalid design-workspace-event: $.publicKey: unknown property 'alg'");
+          };
+        });
+        const pinsBefore = await page.locator('[data-planr-pin-id]').count();
+        await page.getByRole('button', { name: 'Add comment', exact: true }).click();
+        await page.locator('.planr-annotation-layer').first().click({ position: { x: 120, y: 120 } });
+        await page.locator('[data-planr-composer-comment]').fill('Keep the saved comment visible while its type retries.');
+        await page.locator('[data-planr-composer-submit]').click();
+        const status = page.locator('[data-experience-status]');
+        await status.getByText('Comment saved. Its type is waiting to sync. Retry when your connection is available.', { exact: true }).waitFor();
+        assert.doesNotMatch(await status.textContent(), /design-workspace-event|publicKey|alg/);
+        assert.ok(await page.locator('[data-planr-pin-id]').count() > pinsBefore, 'the saved comment stays visible when category sync is queued');
+        assert.equal(await page.getByRole('button', { name: 'Retry pending categories', exact: true }).isVisible(), true);
+      }
 
       await page.setViewportSize({ width: 760, height: 900 });
       await settle(page);

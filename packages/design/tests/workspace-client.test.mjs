@@ -5,7 +5,8 @@ import { DESIGN_REVIEW_BUNDLE_SCHEMA, DESIGN_WORKSPACE_EVENT_SCHEMA, assertWorks
 import {
   prepareWorkspace, commitWorkspace, deriveWorkspaceAuthentication, workspaceReviewUrl,
   getWorkspace, decryptWorkspaceRevision, verifyWorkspaceSignature, prepareWorkspaceMutation,
-  commitWorkspaceMutation, prepareWorkspaceEvent, readWorkspaceEvents, workspaceEnvelopeDigest,
+  canonicalWorkspacePublicKey, commitWorkspaceMutation, createWorkspaceSigner, prepareWorkspaceEvent,
+  readWorkspaceEvents, workspaceEnvelopeDigest,
 } from '../lib/design/workspace-client.mjs';
 
 const bundle = () => ({
@@ -121,6 +122,23 @@ test('feedback is encrypted, signed, author-required, revision-bound and survive
   const tampered = { ...event, revisionId: custody.id };
   const page = await readWorkspaceEvents(custody, { fetchImpl: async () => Response.json({ events: [{ ...tampered, sequence: 1 }, { ...event, sequence: 2 }], cursor: 2, hasMore: false }) });
   assert.equal(page.events.length, 1); assert.equal(page.issues.length, 1); assert.equal(page.cursor, 2);
+});
+
+test('feedback signs the exact protocol public-key shape across browser JWK variants', async () => {
+  const custody = await prepareWorkspace(bundle());
+  await commitWorkspace(custody, service(custody));
+  const signer = await createWorkspaceSigner();
+  const browserKey = { ...signer.publicKey, alg: 'ES256', ext: true, key_ops: ['verify'], kid: 'browser-generated', use: 'sig' };
+  const event = await prepareWorkspaceEvent(custody, {
+    kind: 'review',
+    author: 'Reviewer',
+    reviewOf: workspaceEnvelopeDigest(bundle().envelope),
+    review: { comment: 'Visible after reload' },
+  }, { signer: { ...signer, publicKey: browserKey } });
+  assert.deepEqual(event.publicKey, canonicalWorkspacePublicKey(browserKey));
+  assert.deepEqual(Object.keys(event.publicKey), ['kty', 'crv', 'x', 'y']);
+  assert.equal(await verifyWorkspaceSignature(event, event.publicKey), true);
+  assert.throws(() => canonicalWorkspacePublicKey({ ...browserKey, d: 'A'.repeat(43) }), /public key/);
 });
 
 test('signed change-request metadata round-trips alongside older categories without transport changes', async () => {

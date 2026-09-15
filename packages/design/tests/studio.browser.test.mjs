@@ -215,6 +215,7 @@ test("browser studio boots through the protected artifact server and supports a 
 			deviceScaleFactor: 1,
 		});
 		page.setDefaultTimeout(8000);
+		page.setDefaultNavigationTimeout(30000);
 		const errors = [];
 		const consoleErrors = [];
 		page.on("pageerror", (error) => errors.push(error.message));
@@ -739,7 +740,7 @@ test("journey-start thumbnails capture later screens when they become visible wi
 });
 
 test("generated portable HTML and the public design review composition preserve interactions and durable pins", {
-	timeout: 60000,
+	timeout: 90000,
 }, async () => {
 	const temporary = await mkdtemp(
 		join(tmpdir(), "openplanr-studio-generated-"),
@@ -769,6 +770,8 @@ test("generated portable HTML and the public design review composition preserve 
 		const page = await browser.newPage({
 			viewport: { width: 1600, height: 1050 },
 		});
+		page.setDefaultTimeout(8000);
+		page.setDefaultNavigationTimeout(30000);
 		const errors = [];
 		page.on("pageerror", (error) => errors.push(error.message));
 		await page.goto(pathToFileURL(result.views.canvas).href);

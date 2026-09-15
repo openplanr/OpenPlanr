@@ -32,6 +32,7 @@ const steps = Object.freeze([
       'packages/design/tests/document.test.mjs',
       'packages/design/tests/publication.test.mjs',
       'packages/design/tests/review.test.mjs',
+      'packages/design/tests/workspace-client.test.mjs',
       'packages/design/tests/studio.test.mjs',
       'packages/design/tests/studio.browser.test.mjs',
       'packages/design/tests/walkthrough-transitions.browser.test.mjs',

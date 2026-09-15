@@ -51,9 +51,15 @@ async function tokenMaterial(token, id, purpose) {
 export async function deriveWorkspaceAuthentication(token, id) {
   return encodeWorkspaceBytes(await tokenMaterial(token, id, 'reviewer-auth'));
 }
+export function canonicalWorkspacePublicKey(value) {
+  if (!value || value.kty !== 'EC' || value.crv !== 'P-256' || !tokenPattern.test(value.x ?? '') || !tokenPattern.test(value.y ?? '') || 'd' in value) {
+    throw new TypeError('Invalid design workspace public key.');
+  }
+  return { kty: 'EC', crv: 'P-256', x: value.x, y: value.y };
+}
 export async function createWorkspaceSigner() {
   const pair = await crypto.subtle.generateKey(ec, true, ['sign', 'verify']);
-  return { privateKey: encodeWorkspaceBytes(new Uint8Array(await crypto.subtle.exportKey('pkcs8', pair.privateKey))), publicKey: await crypto.subtle.exportKey('jwk', pair.publicKey) };
+  return { privateKey: encodeWorkspaceBytes(new Uint8Array(await crypto.subtle.exportKey('pkcs8', pair.privateKey))), publicKey: canonicalWorkspacePublicKey(await crypto.subtle.exportKey('jwk', pair.publicKey)) };
 }
 export async function signWorkspaceValue(value, privateKey) {
   const key = await crypto.subtle.importKey('pkcs8', decodeWorkspaceBytes(privateKey), ec, false, ['sign']);
@@ -227,8 +233,9 @@ export async function prepareWorkspaceEvent(access, payload, { revisionId = acce
   if (!['review', 'direction', 'category', 'disposition'].includes(payload.kind)) throw new TypeError('Unknown design feedback kind.');
   if (typeof payload.author !== 'string' || !payload.author.trim() || payload.author.length > 160) throw new TypeError('Enter your name before leaving feedback.');
   const identity = signer ?? await createWorkspaceSigner();
+  const publicKey = canonicalWorkspacePublicKey(identity.publicKey);
   const header = { id: newWorkspaceId(), revisionId, reviewOf, epoch: access.epoch };
-  const event = await signWorkspaceValue({ ...header, ...await seal(payload, decodeWorkspaceBytes(access.keys[access.epoch]), eventContext(access.id, header), DESIGN_WORKSPACE_MAX_EVENT_BYTES), publicKey: identity.publicKey }, identity.privateKey);
+  const event = await signWorkspaceValue({ ...header, ...await seal(payload, decodeWorkspaceBytes(access.keys[access.epoch]), eventContext(access.id, header), DESIGN_WORKSPACE_MAX_EVENT_BYTES), publicKey }, identity.privateKey);
   return assertWorkspaceContract(event, DESIGN_WORKSPACE_EVENT_SCHEMA);
 }
 export async function appendWorkspaceEvent(access, payload, { preparedEvent, signer, revisionId, reviewOf, ...options } = {}) {

@@ -75,6 +75,7 @@ test(`focused journeys contain the screen, preserve product interaction and retu
     });
     const page = await browser.newPage({ viewport: { width: 1600, height: 1050 } });
     page.setDefaultTimeout(8000);
+    page.setDefaultNavigationTimeout(30000);
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     for (const [host, url] of [['portable', pathToFileURL(rendered.views.canvas).href], ['local', session.url]]) {

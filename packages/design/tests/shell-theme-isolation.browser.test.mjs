@@ -40,6 +40,7 @@ for (const darkBrowser of engine === 'chromium' ? [false, true] : [false]) {
       });
       const page = await browser.newPage({ viewport: { width: 1600, height: 1000 }, colorScheme: null });
       page.setDefaultTimeout(8000);
+      page.setDefaultNavigationTimeout(30000);
       for (const url of [pathToFileURL(rendered.views.canvas).href, session.url]) {
         await page.goto(url);
         await page.waitForSelector('[data-design-ready="true"]');

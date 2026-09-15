@@ -259,7 +259,7 @@
     {
       "source": "packages/design/lib/design/workspace-client.mjs",
       "target": "lib/design/workspace-client.mjs",
-      "sha256": "0c00460dc3bc1d4bc269a4317a84c6a9c522b34649734eaeffe072f4f1d6a342",
+      "sha256": "b021fbbdbe1ddc07d042cb707e97457d2e38748667777ec25c531a3ec63384b4",
       "mode": "644"
     },
     {
@@ -337,7 +337,7 @@
     {
       "source": "packages/design/templates/studio/enhancements.js",
       "target": "templates/studio/enhancements.js",
-      "sha256": "482167abecf8276c6a167872a17e22431102bf5e7459cd228cf4cf55b2a2491f",
+      "sha256": "8f2eea1ed15762799c999745ccfd8f340183ddb12c91fc8224e09ce7ca7e2c97",
       "mode": "644"
     },
     {

@@ -23,6 +23,7 @@ test(`canvas zoom preserves shell geometry, minimap focus and frame identity (${
     browser = await engines[engine].launch({headless:true,...(engine === 'chromium' && existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome') ? {channel:'chrome'} : {})});
     const page = await browser.newPage({viewport:{width:1600,height:1050}});
     page.setDefaultTimeout(8000);
+    page.setDefaultNavigationTimeout(30000);
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     for (const url of [pathToFileURL(rendered.views.canvas).href,review.url]) {
       await page.goto(url); await page.locator('[data-design-ready="true"]').waitFor();

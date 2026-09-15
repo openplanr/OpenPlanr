@@ -345,7 +345,7 @@
           metadata = result.metadata || { ...metadata, categories: { ...metadata.categories, [pinId]: category } };
           delete outbox[pinId]; write(`categories.${revision()}`, outbox); updateFilters();
         }
-      } catch (error) { announce(`Comment saved; its category is pending. ${error.message}`, true); }
+      } catch { announce('Comment saved. Its type is waiting to sync. Retry when your connection is available.', true); }
       finally { saving = false; if (retry) retry.hidden = !Object.keys(outbox).length; }
     };
     on(root, 'planr:artifact-annotation-draft', () => {

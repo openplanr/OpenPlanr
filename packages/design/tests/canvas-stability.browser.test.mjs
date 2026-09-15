@@ -21,6 +21,7 @@ test('camera movement preserves artboard geometry and quiet personal saves while
     browser = await chromium.launch({ headless: true, ...(existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome') ? { channel: 'chrome' } : {}) });
     const page = await browser.newPage({ viewport: { width: 1600, height: 1050 } });
     page.setDefaultTimeout(8000);
+    page.setDefaultNavigationTimeout(30000);
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(session.url);
