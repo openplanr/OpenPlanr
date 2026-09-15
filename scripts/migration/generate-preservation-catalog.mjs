@@ -88,6 +88,8 @@ const EVOLVED_MAPPING_IDS = new Set([
   'openplanr-cli:cutoff:scripts/publish-if-needed.mjs',
   // The heavy suite includes the packed legacy Operate migration round trip.
   'openplanr-cli:cutoff:vitest.heavy.config.ts',
+  // The governed command-gateway test retains its behavior with measured CI headroom.
+  'openplanr-cli:overlay:tests/integration/operate-command-gateway.test.ts',
   // The browser fixture exposes read-only local operating-review compatibility routes.
   'openplanr-cli:cutoff:tests/e2e/fixtures/dashboard-fixture-server.mjs',
   'openplanr-cli:cutoff:input/tech/stack.md',

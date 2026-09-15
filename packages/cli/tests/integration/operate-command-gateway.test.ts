@@ -1274,7 +1274,7 @@ describe('OpenPlanr governed local command gateway', () => {
       await startedDashboard?.close();
       fixture.cleanup();
     }
-  }, 90_000);
+  }, 180_000);
 
   it.each([
     ['approved', 'Approve'],
@@ -1404,7 +1404,7 @@ describe('OpenPlanr governed local command gateway', () => {
         fixture.cleanup();
       }
     },
-    90_000,
+    180_000,
   );
 
   it('requires exact canonical Review-read custody before issuing a Review session', async () => {

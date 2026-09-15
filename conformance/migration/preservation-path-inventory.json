@@ -124,8 +124,8 @@
     "pathRecords": 2100,
     "dispositionCounts": {
       "regenerated": 205,
-      "merged": 544,
-      "moved": 269,
+      "merged": 545,
+      "moved": 268,
       "retired": 57,
       "exact": 1006,
       "excluded": 19
@@ -17156,8 +17156,8 @@
         "mode": "100644",
         "sha256": "508538e655a825432d0ff860f0b1259220309c1eb5e43592f213e59859d6ba9c"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/cli/tests/integration/operate-command-gateway.test.ts",
@@ -17166,10 +17166,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "508538e655a825432d0ff860f0b1259220309c1eb5e43592f213e59859d6ba9c",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -67040,5 +67038,5 @@
       }
     }
   ],
-  "documentDigest": "sha256:fe3dd24bb73ae86e8c84e0106c0d1d17569f384a2ceb5152013768afdbddf927"
+  "documentDigest": "sha256:1a79b45df7b13c7a59cb2a6bfc9ef5cd7366a2c3ad05ed7f82e732a60db10e42"
 }

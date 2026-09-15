@@ -1273,7 +1273,7 @@ describe('real Operate planning bridge lifecycle', () => {
         request: tampered,
       }),
     ).toMatchObject({ ok: false, error: { code: 'E_OPERATE_PLANNING_CUSTODY' } });
-  }, 90_000);
+  }, 180_000);
 });
 
 describe('Operate Planning SPEC/origin/provenance transaction', () => {

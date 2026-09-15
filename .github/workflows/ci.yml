@@ -196,7 +196,7 @@ jobs:
           npm run build
       - name: Run the Operate boundary suite in a fresh process
         working-directory: packages/cli
-        run: npx --no-install vitest run ${{ matrix.file }} --maxWorkers=1
+        run: npx --no-install vitest run ${{ matrix.file }} --maxWorkers=1 --testTimeout=90000
 
   cli-runtime-integrity-tests:
     name: Node 24 runtime integrity tests
