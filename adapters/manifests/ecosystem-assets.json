@@ -10,7 +10,7 @@
     },
     {
       "path": "apps/dashboard/package.json",
-      "digest": "sha256:880471e9b43c26c4793f16f0474d2ed641363a4e5ae5a73b684ba125a1bf4edf"
+      "digest": "sha256:b323a02cf30da98cee0699b3950d69a28576c509b36fab4cd663870b51b471a8"
     },
     {
       "path": "package.json",
@@ -128,7 +128,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:968c72d19ba5fda516cb4167e49601aa4da981640ad76743858a12e38d126704"
+      "digest": "sha256:4e816039cedb90fbe6163f2c4eb804df388352a8ed20e746ee17705ed5437652"
     }
   ]
 }

@@ -194,7 +194,7 @@ async function attachScreenshot(
 }
 
 async function expectGoldenScreenshot(page: Page, name: string) {
-  await expect(page).toHaveScreenshot(name, {
+  await expect(page).toHaveScreenshot([process.platform, name], {
     animations: 'disabled',
     caret: 'hide',
     fullPage: true,

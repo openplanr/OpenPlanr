@@ -1,7 +1,9 @@
 :root {
-  --op-font-display: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --op-font-ui: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --op-font-technical: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --op-font-display:
+    "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --op-font-ui: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --op-font-technical:
+    "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --op-type-display-size: 40px;
   --op-type-display-leading: 44px;
   --op-type-display-weight: 720;

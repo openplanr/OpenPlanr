@@ -2,8 +2,7 @@
  * Planr Console design tokens (Planning console vertical slice).
  * Namespaced --pc-* so they never collide with the legacy --op-* system or
  * Tailwind v4's @theme vars. Warm ink neutrals + an acid-lime signal.
- * Geist is declared as a font stack only (no CDN); it falls back to system-ui
- * until the family is self-hosted.
+ * Geist and Geist Mono are self-hosted through exact pinned Fontsource packages.
  */
 :root {
   /* raw ramp — warm ink (brown-black), acid lime, and semantic hues */
@@ -47,8 +46,8 @@
   --pc-indigo-700: #2c3a93;
 
   /* type + geometry */
-  --pc-font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --pc-font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --pc-font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --pc-font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --pc-text-2xs: 11px;
   --pc-text-xs: 12px;
   --pc-text-sm: 13px;
