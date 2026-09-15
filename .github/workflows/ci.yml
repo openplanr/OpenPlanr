@@ -218,23 +218,6 @@ jobs:
         working-directory: packages/cli
         run: npx --no-install vitest run tests/unit/runtime-manager-service.test.ts --maxWorkers=1
 
-  verify:
-    name: Node 24 full workspace verification
-    needs:
-      - quality
-      - supporting-package-tests
-      - design-tests
-      - pipeline-tests
-      - cli-tests
-      - cli-heavy-tests
-      - cli-operate-boundary-tests
-      - cli-runtime-integrity-tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Confirm every Node 24 verification suite passed
-        run: echo "All Node 24 workspace verification suites passed."
-
   compatibility:
     name: Node ${{ matrix.node }} supported-runtime verification
     strategy:
