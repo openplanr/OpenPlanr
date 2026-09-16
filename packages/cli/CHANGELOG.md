@@ -1,5 +1,75 @@
 # Changelog
 
+## 2.0.0
+### Major Changes
+
+- 622ce31: Move semantic planning and implementation into the active coding agent. This is a
+  breaking CLI change: `planr plan`, `planr spec decompose`, and the model-backed
+  pipeline, estimate, refine, revise, and evidence command roots are retired. The
+  CLI no longer accepts AI-provider configuration or calls model providers.
+  
+  Use the installed Plan, Spec, Ship, and review skills for semantic work, with the
+  current repository context and the host's own models and tools. Existing manual
+  artifact CRUD, document readers, integration commands, rendering, local studios,
+  dashboard, setup, and diagnostics remain available. Existing `planr`,
+  `openplanr`, and `opr` binary names still use the same parser.
+
+### Minor Changes
+
+- 622ce31: Add the portable company-workspace contracts and CLI workflow for public-client
+  sign-in, scoped publication previews, resumable synchronization, review handoffs,
+  typed change proposals, conflict detection, and explicit local application. Keep
+  repository files authoritative and require the hosted service to enforce every
+  organization, project, and artifact permission server-side.
+- 622ce31: Consolidate the portable OpenPlanr product into one reproducible monorepo with
+  explicit package ownership, generated host adapters, preserved compatibility
+  lineages, and isolated packed-package verification. Keep the CLI and pipeline
+  self-contained for consumers without sibling repositories or private workspace
+  dependencies.
+- 622ce31: Add permanent encrypted design reviews with separately entered access tokens,
+  explicit revision publishing, private local owner custody, and synchronized
+  revision-bound feedback. Fix Notes dismissal and unavailable sharing controls.
+- 622ce31: Restore professional Design, Design Loop and Design Review workflows with
+  adaptive consultation, portable host-native skills, and a shared authored design
+  document. Render canvas, interactive prototype and walkthrough views in one
+  review studio with durable feedback, scoped revision recovery, responsive
+  previews and offline exports. Use a standard 1440 × 1024 desktop frame, compact
+  independently collapsible navigation and review rails, and an encrypted company
+  review Share flow. Add an unbounded persisted camera, direct artboard movement,
+  trackpad/Space/middle-button panning, cursor-centered zoom and per-view positions.
+  Keep implementation guidance in compact markers and an external Notes accordion
+  so product artboards remain development-ready interfaces. Open design documents
+  through `planr artifact` and preserve the authored design specification in the
+  separate Plan handoff.
+  
+  Stabilize the mobile shell around keyboard and browser-chrome changes. Use
+  readable touch-sized fields, accessible action targets and a bounded welcome
+  dialog without altering authored product screens or restricting browser zoom.
+- 622ce31: Render sequence diagrams as readable time-ordered conversations with participant
+  headers, lifelines, phases, distinct message rows, annotations, and emphasis.
+  Detect overlapping rendered labels, support sequence Mermaid and Excalidraw
+  round trips, and open verified diagram manifests in the native Diagram
+  studio after rendering. Use one SVG camera with outline/search, fit controls,
+  compact persisted comments, and verified drawing and agent review exports;
+  avoid fixed document frames and nested scrolling.
+- 622ce31: Shorten unified-plugin invocations to `planr:<verb>` across Codex and Claude
+  Code while preserving canonical `planr-*` skill identities and Cursor rules.
+  Migrate managed local installations from the former `openplanr` plugin
+  namespace after the replacement package is installed.
+- 622ce31: Complete the design studio's team review flow with reviewer orientation, adjustable panels, thumbnails, organized feedback, revision comparison, canvas navigation, and a read-only implementation inspector. Add revision-bound owner dispositions and explicit review handoff drafts and approvals. Preserve existing design documents and shared URLs, and package the same deterministic tools for standalone skills and hosted reviews.
+  
+  Bound live previews on touch devices, load the opening screen first, and release older previews while preserving review drafts. Navigation waits for an authenticated destination frame before revealing it; failed previews can be retried. Desktop canvases retain their existing loading behavior.
+
+### Patch Changes
+
+- 6dbc8b8: Use the branded OpenPlanr company API by default so hosted customers can sign in and publish without copying an infrastructure URL. Keep `--api-url` as an optional development and self-hosted override.
+- 528ff85: Make the local planning console easier to operate on real projects: stage dependency graphs by delivery order, contain board scrolling within each status column, present readable inspector metadata with route feedback, and turn sprint records into delivery workspaces that include scope, blockers, and current Operate context.
+- 622ce31: Update the bundled dashboard to React Router 7.18.3, closing the current
+  production security advisories while preserving the existing routing contract.
+- 746e568: Turn completed local Operate reviews into a structured, read-only operating
+  console with distinct decision, action, lens, evidence, outcome, history, and
+  recovery views. Keep the board report available as the durable audit record.
+
 ## 1.25.3
 
 ### Patch Changes
