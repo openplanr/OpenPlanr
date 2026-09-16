@@ -103,6 +103,7 @@ jobs:
           import { readFileSync } from 'node:fs';
           import { createHash } from 'node:crypto';
           import { execFileSync, spawnSync } from 'node:child_process';
+          import { resolve } from 'node:path';
           const proof = JSON.parse(readFileSync('release/publication.json', 'utf8'));
           const expected = process.env;
           const names = ['@openplanr/protocol', 'planr-pipeline', 'openplanr'];
@@ -110,7 +111,7 @@ jobs:
               proof.version !== expected.RELEASE_VERSION || proof.commit !== expected.GITHUB_SHA ||
               !/^[a-zA-Z0-9._-]+\.tgz$/.test(proof.filename) ||
               !['next', 'latest'].includes(expected.RELEASE_TAG)) throw new Error('Publication identity mismatch');
-          const archive = `release/${proof.filename}`;
+          const archive = resolve('release', proof.filename);
           if (createHash('sha256').update(readFileSync(archive)).digest('hex') !== proof.sha256) throw new Error('Archive digest mismatch');
           const npmVersion = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim().split('.').map(Number);
           if (npmVersion[0] < 11 || (npmVersion[0] === 11 && (npmVersion[1] < 5 || (npmVersion[1] === 5 && npmVersion[2] < 1)))) throw new Error('npm >=11.5.1 is required');
