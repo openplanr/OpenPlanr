@@ -9,7 +9,6 @@ import {
   type CompanyPreview,
   companyApi,
   companyBindingStatus,
-  normalizeCompanyOrigin,
   previewCompanyProposal,
   previewCompanyPublication,
   previewCompanyPull,
@@ -17,6 +16,7 @@ import {
   publishCompanyPreview,
   pullCompanyBinding,
   pushCompanyBinding,
+  resolveCompanyOrigin,
 } from '../../services/company-sync-service.js';
 
 function print(value: unknown) {
@@ -58,12 +58,12 @@ export function registerCompanyCommand(program: Command) {
   const root = () => program.opts().projectDir as string;
   company
     .command('login')
-    .requiredOption('--api-url <origin>', 'company API HTTPS origin')
+    .option('--api-url <origin>', 'company API HTTPS origin override')
     .option('--no-open', 'print the authorization URL without opening a browser')
     .option('--timeout <seconds>', 'time allowed to complete browser sign-in', '300')
     .option('--json', 'structured result')
     .description('Sign in through the browser with renewable, organization-scoped authorization')
-    .action(async (options: { apiUrl: string; open: boolean; timeout: string }) => {
+    .action(async (options: { apiUrl?: string; open: boolean; timeout: string }) => {
       const timeout = Number(options.timeout);
       if (!Number.isInteger(timeout) || timeout < 1 || timeout > 600)
         throw new Error('Sign-in timeout must be between 1 and 600 seconds.');
@@ -73,7 +73,7 @@ export function registerCompanyCommand(program: Command) {
       process.once('SIGTERM', cancel);
       try {
         print(
-          await loginCompany(options.apiUrl, {
+          await loginCompany(resolveCompanyOrigin(options.apiUrl), {
             open: options.open,
             timeoutMs: timeout * 1000,
             signal: controller.signal,
@@ -89,25 +89,29 @@ export function registerCompanyCommand(program: Command) {
     });
   company
     .command('logout')
-    .requiredOption('--api-url <origin>', 'company API HTTPS origin')
+    .option('--api-url <origin>', 'company API HTTPS origin override')
     .option('--local-only', 'forget local sign-in without requesting remote token revocation')
     .option('--json', 'structured result')
     .description('Revoke saved OAuth tokens and remove local company sign-in')
-    .action(async (options: { apiUrl: string; localOnly?: boolean }) =>
-      print(await logoutCompany(options.apiUrl, { localOnly: options.localOnly })),
+    .action(async (options: { apiUrl?: string; localOnly?: boolean }) =>
+      print(
+        await logoutCompany(resolveCompanyOrigin(options.apiUrl), {
+          localOnly: options.localOnly,
+        }),
+      ),
     );
   company
     .command('connect')
     .description(
       'Developer fallback: store a manually supplied scoped token without automatic renewal',
     )
-    .requiredOption('--api-url <origin>', 'company API HTTPS origin')
+    .option('--api-url <origin>', 'company API HTTPS origin override')
     .requiredOption(
       '--token-stdin',
       'read a current scoped session token from stdin, never arguments',
     )
     .option('--json', 'structured output')
-    .action(async (options: { apiUrl: string }) => {
+    .action(async (options: { apiUrl?: string }) => {
       if (process.stdin.isTTY)
         throw new Error(
           'Pipe the scoped session token on stdin; it is never accepted as a command argument.',
@@ -119,7 +123,7 @@ export function registerCompanyCommand(program: Command) {
       }
       token = token.trim();
       if (!token) throw new Error('A scoped session token is required.');
-      const origin = normalizeCompanyOrigin(options.apiUrl);
+      const origin = resolveCompanyOrigin(options.apiUrl);
       await companyApi(origin, '/v1/projects', { token });
       const source = await storeCompanyManualToken(origin, token);
       print({
@@ -132,10 +136,10 @@ export function registerCompanyCommand(program: Command) {
     });
   company
     .command('projects')
-    .requiredOption('--api-url <origin>', 'company API HTTPS origin')
+    .option('--api-url <origin>', 'company API HTTPS origin override')
     .option('--json', 'structured output')
-    .action(async (options: { apiUrl: string }) =>
-      print(await companyApi(options.apiUrl, '/v1/projects')),
+    .action(async (options: { apiUrl?: string }) =>
+      print(await companyApi(resolveCompanyOrigin(options.apiUrl), '/v1/projects')),
     );
   company
     .command('preview')
@@ -143,7 +147,7 @@ export function registerCompanyCommand(program: Command) {
       '<file>',
       'repository-relative artifact; --kind design bundles an authored design document and its references',
     )
-    .requiredOption('--api-url <origin>', 'company API HTTPS origin')
+    .option('--api-url <origin>', 'company API HTTPS origin override')
     .requiredOption('--project <id>', 'company project ID')
     .option('--title <title>', 'artifact title')
     .option('--kind <kind>', 'diagram, design, plan, or document', 'document')
@@ -152,7 +156,7 @@ export function registerCompanyCommand(program: Command) {
       async (
         filePath: string,
         options: {
-          apiUrl: string;
+          apiUrl?: string;
           project: string;
           title?: string;
           kind: CompanyPreview['kind'];
@@ -162,7 +166,7 @@ export function registerCompanyCommand(program: Command) {
         printPublicationPreview(
           await previewCompanyPublication(root(), {
             filePath,
-            apiUrl: options.apiUrl,
+            apiUrl: resolveCompanyOrigin(options.apiUrl),
             projectId: options.project,
             title: options.title,
             kind: options.kind,

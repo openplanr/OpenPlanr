@@ -8,6 +8,7 @@ export class CompanySyncError extends Error {
     this.name = 'CompanySyncError';
   }
 }
+export const DEFAULT_COMPANY_API_ORIGIN = 'https://api.openplanr.dev';
 const fail = (code: string, message: string, cause?: unknown): never => {
   throw new CompanySyncError(code, message, cause === undefined ? undefined : { cause });
 };
@@ -32,4 +33,9 @@ export function normalizeCompanyOrigin(value: string): string {
       'Supply an HTTPS company API origin without credentials, path, or query.',
     );
   return url.origin;
+}
+
+/** Resolve the hosted OpenPlanr service unless an explicit development or self-hosted origin is supplied. */
+export function resolveCompanyOrigin(value?: string): string {
+  return normalizeCompanyOrigin(value ?? DEFAULT_COMPANY_API_ORIGIN);
 }

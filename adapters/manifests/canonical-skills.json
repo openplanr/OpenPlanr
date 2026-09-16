@@ -62,7 +62,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:e4691221d9790ec34c96c8ac33e9be543c8779b21f2926921907e809d48839c8"
+          "digest": "sha256:168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257"
         },
         {
           "path": "agents/openai.yaml",

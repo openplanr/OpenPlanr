@@ -9,6 +9,7 @@ import {
   applyCompanyProposal,
   companyApi,
   companyBindingStatus,
+  DEFAULT_COMPANY_API_ORIGIN,
   normalizeCompanyOrigin,
   previewCompanyProposal,
   previewCompanyPublication,
@@ -17,6 +18,7 @@ import {
   publishCompanyPreview,
   pullCompanyBinding,
   pushCompanyBinding,
+  resolveCompanyOrigin,
 } from '../../src/services/company-sync-service.js';
 import { resolvePipelinePackage } from '../../src/services/pipeline-package-service.js';
 
@@ -191,6 +193,11 @@ describe('selective company publication', () => {
         'utf8',
       ),
     ).not.toContain('scoped-token');
+  });
+  it('uses the branded hosted service by default and preserves explicit development overrides', () => {
+    expect(resolveCompanyOrigin()).toBe(DEFAULT_COMPANY_API_ORIGIN);
+    expect(DEFAULT_COMPANY_API_ORIGIN).toBe('https://api.openplanr.dev');
+    expect(resolveCompanyOrigin('http://127.0.0.1:8788')).toBe('http://127.0.0.1:8788');
   });
   it('rejects unsafe origins, secret files and symlink traversal', async () => {
     for (const origin of [
@@ -1250,8 +1257,6 @@ describe('company CLI command integration', () => {
     const previewed = await run([
       'preview',
       'diagram.json',
-      '--api-url',
-      'https://api.example.com',
       '--project',
       'p1',
       '--kind',
@@ -1259,6 +1264,7 @@ describe('company CLI command integration', () => {
       '--json',
     ]);
     expect(previewed.selectedFiles).toEqual(['diagram.json']);
+    expect(previewed.preview.apiUrl).toBe('https://api.openplanr.dev');
     const fetcher = vi
       .fn()
       .mockResolvedValueOnce(json({ artifact }))
