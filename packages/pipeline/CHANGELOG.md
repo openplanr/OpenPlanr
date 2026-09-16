@@ -1,5 +1,70 @@
 # Changelog
 
+## 0.45.0
+### Minor Changes
+
+- 622ce31: Add the portable company-workspace contracts and CLI workflow for public-client
+  sign-in, scoped publication previews, resumable synchronization, review handoffs,
+  typed change proposals, conflict detection, and explicit local application. Keep
+  repository files authoritative and require the hosted service to enforce every
+  organization, project, and artifact permission server-side.
+- 622ce31: Consolidate the portable OpenPlanr product into one reproducible monorepo with
+  explicit package ownership, generated host adapters, preserved compatibility
+  lineages, and isolated packed-package verification. Keep the CLI and pipeline
+  self-contained for consumers without sibling repositories or private workspace
+  dependencies.
+- 622ce31: Add permanent encrypted design reviews with separately entered access tokens,
+  explicit revision publishing, private local owner custody, and synchronized
+  revision-bound feedback. Fix Notes dismissal and unavailable sharing controls.
+- 622ce31: Restore professional Design, Design Loop and Design Review workflows with
+  adaptive consultation, portable host-native skills, and a shared authored design
+  document. Render canvas, interactive prototype and walkthrough views in one
+  review studio with durable feedback, scoped revision recovery, responsive
+  previews and offline exports. Use a standard 1440 × 1024 desktop frame, compact
+  independently collapsible navigation and review rails, and an encrypted company
+  review Share flow. Add an unbounded persisted camera, direct artboard movement,
+  trackpad/Space/middle-button panning, cursor-centered zoom and per-view positions.
+  Keep implementation guidance in compact markers and an external Notes accordion
+  so product artboards remain development-ready interfaces. Open design documents
+  through `planr artifact` and preserve the authored design specification in the
+  separate Plan handoff.
+  
+  Stabilize the mobile shell around keyboard and browser-chrome changes. Use
+  readable touch-sized fields, accessible action targets and a bounded welcome
+  dialog without altering authored product screens or restricting browser zoom.
+- 622ce31: Render sequence diagrams as readable time-ordered conversations with participant
+  headers, lifelines, phases, distinct message rows, annotations, and emphasis.
+  Detect overlapping rendered labels, support sequence Mermaid and Excalidraw
+  round trips, and open verified diagram manifests in the native Diagram
+  studio after rendering. Use one SVG camera with outline/search, fit controls,
+  compact persisted comments, and verified drawing and agent review exports;
+  avoid fixed document frames and nested scrolling.
+- 622ce31: Shorten unified-plugin invocations to `planr:<verb>` across Codex and Claude
+  Code while preserving canonical `planr-*` skill identities and Cursor rules.
+  Migrate managed local installations from the former `openplanr` plugin
+  namespace after the replacement package is installed.
+- 622ce31: Complete the design studio's team review flow with reviewer orientation, adjustable panels, thumbnails, organized feedback, revision comparison, canvas navigation, and a read-only implementation inspector. Add revision-bound owner dispositions and explicit review handoff drafts and approvals. Preserve existing design documents and shared URLs, and package the same deterministic tools for standalone skills and hosted reviews.
+  
+  Bound live previews on touch devices, load the opening screen first, and release older previews while preserving review drafts. Navigation waits for an authenticated destination frame before revealing it; failed previews can be retried. Desktop canvases retain their existing loading behavior.
+
+### Patch Changes
+
+- 56c4b4b: Keep long layered graph diagrams renderable. Layer sequences that outgrow a
+  readable flow axis, including large cycles and other strongly connected
+  components, now wrap into balanced bands with band-aware relation routing, so a
+  500-node ring renders as a compact scene instead of a 154,000-unit strip that
+  viewers reject. Every node, relation, direction, and label is preserved. Split
+  plans for large documents now satisfy the Protocol panel bounds while keeping
+  every primary item exactly once, and any scene wider or taller than the new
+  `MAX_DIAGRAM_SCENE_EXTENT` (16,384 units) fails early with
+  `E_DIAGRAM_RESOURCE_BUDGET_EXCEEDED` and a split repair. The diagram renderer
+  version is now 1.2.0; small diagrams render byte-identically.
+- 528ff85: Make the local planning console easier to operate on real projects: stage dependency graphs by delivery order, contain board scrolling within each status column, present readable inspector metadata with route feedback, and turn sprint records into delivery workspaces that include scope, blockers, and current Operate context.
+- a2dca23: Keep release diagnostics valid after package version updates. Runtime adapter version projections now follow the declared pipeline package version, while preserved adapter contracts and document schema versions remain unchanged. Doctor validates package identity and canonical schema ownership without requiring package version numbers in documentation prose.
+- 746e568: Turn completed local Operate reviews into a structured, read-only operating
+  console with distinct decision, action, lens, evidence, outcome, history, and
+  recovery views. Keep the board report available as the durable audit record.
+
 All notable changes to this plugin are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/) — with the caveat that pre-1.0 releases may contain breaking changes in minor bumps.
 
 > **Note:** Plugin renamed from `openplanr-pipeline` to `planr-pipeline` in v0.7.0 (brand convergence on the `planr` CLI binary). Entries from v0.6.0 and earlier reference the old name verbatim.
