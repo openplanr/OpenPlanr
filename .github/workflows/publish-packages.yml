@@ -19,6 +19,7 @@ on:
         options: [next, latest]
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -31,17 +32,38 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - name: Require the successful exact-commit main verification
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const response = await github.rest.actions.listWorkflowRuns({
+              owner,
+              repo,
+              workflow_id: 'ci.yml',
+              branch: 'main',
+              event: 'push',
+              head_sha: context.sha,
+              per_page: 20,
+            });
+            const verified = response.data.workflow_runs.find(
+              (run) => run.status === 'completed' && run.conclusion === 'success',
+            );
+            if (!verified) {
+              core.setFailed(`Workspace CI has not passed for exact main commit ${context.sha}`);
+              return;
+            }
+            core.notice(`Reusing Workspace CI evidence from ${verified.html_url}`);
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
+          cache: npm
       - run: npm ci
-      - run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
       - run: npm audit --omit=dev --audit-level=high
       - run: npm run generate && npm run build
-      - run: npm run lint && npm test && npm run verify
       - run: git diff --exit-code HEAD --
       - name: Pack the exact reviewed package
         env:

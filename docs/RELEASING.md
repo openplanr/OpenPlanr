@@ -76,6 +76,11 @@ production or publication credentials. See [npm trusted publishing](https://docs
 
 Each dispatch names one package, exact version and distribution tag. Verify first,
 then publish the verified archive with provenance and lifecycle scripts disabled.
+The publication workflow requires the successful `Workspace CI` push run for the
+exact `main` commit being released, then independently installs, audits, rebuilds,
+checks for tracked drift and packs that package. It does not repeat the complete
+monorepo test matrix for every package; the exact-commit CI run is the reusable
+test and packed-package evidence. Wait for that run to finish before dispatching.
 Publish Protocol and pipeline before a CLI requiring those registry versions.
 Never silently replace an existing version. Use an explicitly approved prerelease
 distribution tag for limited testing before promoting `latest`. Tagging, dist-tag
