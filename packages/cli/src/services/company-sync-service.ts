@@ -16,7 +16,12 @@ import { resolveCompanyAccessToken } from './company-auth-service.js';
 import { CompanySyncError, normalizeCompanyOrigin } from './company-common.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 
-export { CompanySyncError, normalizeCompanyOrigin } from './company-common.js';
+export {
+  CompanySyncError,
+  DEFAULT_COMPANY_API_ORIGIN,
+  normalizeCompanyOrigin,
+  resolveCompanyOrigin,
+} from './company-common.js';
 
 const fail = (code: string, message: string, cause?: unknown): never => {
   throw new CompanySyncError(code, message, cause === undefined ? undefined : { cause });
@@ -668,7 +673,7 @@ async function companyResponse(
   if (!token)
     return fail(
       'E_COMPANY_AUTH',
-      'Sign in using company login --api-url <origin>. Developer token overrides remain available.',
+      'Sign in using `planr company login`. Developer endpoint and token overrides remain available.',
     );
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,

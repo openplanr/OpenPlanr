@@ -59,11 +59,13 @@ These options apply to **all** commands:
 The company route connects an explicitly configured workspace to selected local artifacts. Existing encrypted token shares remain separate. Sign in through the browser and choose the organization in the identity provider's consent screen:
 
 ```bash
-planr company login --api-url https://api.example.com --json
+planr company login --json
 # Print the browser URL instead of launching it; open it on this same computer
-planr company login --api-url https://api.example.com --no-open --timeout 300 --json
-planr company logout --api-url https://api.example.com --json
+planr company login --no-open --timeout 300 --json
+planr company logout --json
 ```
+
+Hosted commands use `https://api.openplanr.dev` by default. `--api-url <origin>` is an advanced override for local development, staging, and self-hosted testing; customers do not need to copy a service URL.
 
 The API advertises its configured public OAuth client through `/.well-known/openplanr-company-auth`. The CLI uses authorization-code/S256 PKCE, a temporary `127.0.0.1` callback, issuer/state validation and discovered same-origin token endpoints. A client secret is never required. This follows [Clerk's CLI pattern](https://clerk.com/blog/adding-clerk-auth-to-your-cli) and [OAuth configuration contract](https://clerk.com/docs/guides/configure/auth-strategies/oauth/how-clerk-implements-oauth). Public-client registration and live acceptance are deployment setup; the command never registers clients automatically.
 
@@ -76,7 +78,7 @@ Publication selects one repository-relative JSON, Markdown, SVG or HTML file, up
 ```bash
 planr company preview .planr/designs/checkout/design-document.json \
   --kind design --title "Checkout experience" \
-  --api-url https://api.example.com --project <project-id>
+  --project <project-id>
 planr company publish <preview-id> --json
 ```
 

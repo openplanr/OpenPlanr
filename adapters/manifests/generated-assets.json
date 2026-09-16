@@ -6,7 +6,7 @@
   "assets": [
     {
       "path": "adapters/manifests/canonical-skills.json",
-      "digest": "sha256:784d80c72a227e5e9012ef95d171ec1f7c523dab9fd7ccc3d7287bb770ca51a3",
+      "digest": "sha256:cb8f1fa4e697b5466dd6ac08dbeba94f4bbecdb826f8faf45b308dd2cdd18698",
       "generated": false
     },
     {
@@ -26,7 +26,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:9ee6c5e629faad543593def87095b560ec0203ccef41a705f35e058146386457",
+      "digest": "sha256:2219af4e1eabbc34d74eaace088bbf7e9b86bc7d66cbe806cf1e393dde9818d5",
       "generated": true
     },
     {
@@ -211,7 +211,7 @@
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/artifact/references/company-review.md",
-      "digest": "sha256:e4691221d9790ec34c96c8ac33e9be543c8779b21f2926921907e809d48839c8",
+      "digest": "sha256:168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257",
       "generated": true
     },
     {
@@ -1486,7 +1486,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:4b9498cc8e3f2c940501ea1a3a291a0be7b0f75e44b2ffbee0e4767e26010cfb",
+      "digest": "sha256:8db3e60aac1996d97387bf2c4aa03b916b6dd7067ae86cb718c7fd600782a6fc",
       "generated": true
     },
     {
@@ -1501,7 +1501,7 @@
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-artifact/references/company-review.md",
-      "digest": "sha256:e4691221d9790ec34c96c8ac33e9be543c8779b21f2926921907e809d48839c8",
+      "digest": "sha256:168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257",
       "generated": true
     },
     {
@@ -2661,7 +2661,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:3abb866c7bf0ee2b35f7e500432e1bab5da87f4bf6303627deae58313d1c3c40",
+      "digest": "sha256:772695368021ed210f4818d5cbd50f878e24365b9789d179b4dc0af29d9932ed",
       "generated": true
     },
     {
@@ -2676,7 +2676,7 @@
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/artifact/references/company-review.md",
-      "digest": "sha256:e4691221d9790ec34c96c8ac33e9be543c8779b21f2926921907e809d48839c8",
+      "digest": "sha256:168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257",
       "generated": true
     },
     {
@@ -4086,7 +4086,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/.openplanr-content.json",
-      "digest": "sha256:9ee6c5e629faad543593def87095b560ec0203ccef41a705f35e058146386457",
+      "digest": "sha256:2219af4e1eabbc34d74eaace088bbf7e9b86bc7d66cbe806cf1e393dde9818d5",
       "generated": true
     },
     {
@@ -4271,7 +4271,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/artifact/references/company-review.md",
-      "digest": "sha256:e4691221d9790ec34c96c8ac33e9be543c8779b21f2926921907e809d48839c8",
+      "digest": "sha256:168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257",
       "generated": true
     },
     {
@@ -5546,7 +5546,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/.openplanr-content.json",
-      "digest": "sha256:4b9498cc8e3f2c940501ea1a3a291a0be7b0f75e44b2ffbee0e4767e26010cfb",
+      "digest": "sha256:8db3e60aac1996d97387bf2c4aa03b916b6dd7067ae86cb718c7fd600782a6fc",
       "generated": true
     },
     {
@@ -5561,7 +5561,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-artifact/references/company-review.md",
-      "digest": "sha256:e4691221d9790ec34c96c8ac33e9be543c8779b21f2926921907e809d48839c8",
+      "digest": "sha256:168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257",
       "generated": true
     },
     {
@@ -6721,7 +6721,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/.openplanr-content.json",
-      "digest": "sha256:3abb866c7bf0ee2b35f7e500432e1bab5da87f4bf6303627deae58313d1c3c40",
+      "digest": "sha256:772695368021ed210f4818d5cbd50f878e24365b9789d179b4dc0af29d9932ed",
       "generated": true
     },
     {
@@ -6736,7 +6736,7 @@
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/artifact/references/company-review.md",
-      "digest": "sha256:e4691221d9790ec34c96c8ac33e9be543c8779b21f2926921907e809d48839c8",
+      "digest": "sha256:168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257",
       "generated": true
     },
     {
