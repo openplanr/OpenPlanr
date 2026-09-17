@@ -22,7 +22,7 @@
     },
     {
       "path": "packages/cli/package.json",
-      "digest": "sha256:5a8ccc93746f5d1115ea80e82f3cfd78af8e4b1d24fe264a31d2cd096fefc282"
+      "digest": "sha256:7950a7a1e6a0675106b1576c9956fa86035e20d23ab90320fb22b5d98a8c597c"
     },
     {
       "path": "packages/design/package.json",
@@ -120,7 +120,7 @@
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:a39874f1f749694a8f780462876d06647e8535905e4f124bfd7eba0a642ab4c8"
+      "digest": "sha256:1e6172250ce27575fb3a6e13fff00ea63d2d1dd743d6bdcb1e9bcbdd1eaeea47"
     },
     {
       "path": "docs/generated/skills.md",
@@ -128,7 +128,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:0c8bd7e1a32b1c6f2a9ca569c3e0b5a0a5c95c31b47cb8a3f5f87c6a04d27e83"
+      "digest": "sha256:01fba48f0e2f9102875cd521f9dd0048b6359cc6b1e35f328fb0bf72ce1e053a"
     }
   ]
 }
