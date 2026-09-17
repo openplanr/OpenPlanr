@@ -46,7 +46,7 @@
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:68739441bd2987882b8a4f2a8d23bf2e1247731aca866319660adcace1b65240"
+      "digest": "sha256:a68f0259af40e6fcc7be395a306ca44f56c90a366cc492ec75370d86580f1d5e"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -128,7 +128,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:5a36dc256fbeb1be1e13800122bddb36b4ba9b0639a933fd1251da6e8bc2abb0"
+      "digest": "sha256:b3d41eabff561c680a7fe12eddb4224de6eaf797263f0a0fb7bad5f596fb886e"
     }
   ]
 }

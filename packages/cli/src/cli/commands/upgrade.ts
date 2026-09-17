@@ -36,8 +36,12 @@ export function registerUpgradeCommand(program: Command, _cliVersion: string) {
         display.keyValue('Reconciliation', result.status);
         display.keyValue('Manifest source', result.ecosystemSource);
         display.keyValue('Installed CLI', result.installed.cli);
-        display.keyValue('Installed skills plugin', result.installed.skills ?? 'not installed');
+        display.keyValue('Bundled pipeline', result.bundledPipeline ?? 'not resolved');
+        display.keyValue('Installed host plugin', result.installed.skills ?? 'not installed');
         display.keyValue('Installed pipeline plugin', result.installed.pipeline ?? 'not installed');
+        if (result.legacyPlugins && result.legacyPlugins.length > 0) {
+          display.keyValue('Legacy plugins', result.legacyPlugins.join(', '));
+        }
         if (result.published) {
           display.keyValue('Published CLI', result.published.cli.version);
           display.keyValue('Published skills', result.published.skills.version);

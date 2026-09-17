@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -9,6 +9,7 @@ import type {
   ClaudePluginOperation,
 } from '../../src/services/claude-plugin-service.js';
 import {
+  DEFAULT_ECOSYSTEM_SOURCE,
   type EcosystemComponents,
   executeCliHalfUpgrade,
   type NpmCommandResult,
@@ -720,4 +721,127 @@ process.exit(0);
     expect(refreshAt).toBeLessThan(pipelineAt);
     expect(refreshAt).toBeLessThan(skillsAt);
   }, 30_000);
+});
+
+describe('reconcileInstalledTuple against the npm registry document (BL-026)', () => {
+  const pipelinePin = JSON.parse(readFileSync(resolve('package.json'), 'utf8'))
+    .optionalDependencies['planr-pipeline'] as string;
+
+  function registryFetch(document: Record<string, unknown>): typeof fetch {
+    return (async () =>
+      new Response(JSON.stringify(document), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })) as typeof fetch;
+  }
+
+  function registryDocument(version: string, pin = pipelinePin): Record<string, unknown> {
+    return { name: 'openplanr', version, optionalDependencies: { 'planr-pipeline': pin } };
+  }
+
+  /**
+   * A `claude` runner whose marketplace already targets the unified `planr` plugin,
+   * with the given plugins installed at user scope.
+   */
+  function makeUnifiedRunner(
+    installed: Array<{ id: string; version: string }>,
+    targetVersion: string,
+  ): ClaudeCommandRunner {
+    const marketplaceDir = join(root, 'marketplace');
+    mkdirSync(join(marketplaceDir, '.claude-plugin'), { recursive: true });
+    writeFileSync(
+      join(marketplaceDir, '.claude-plugin', 'marketplace.json'),
+      JSON.stringify({ plugins: [{ name: 'planr', version: targetVersion }] }),
+    );
+    return (args) => {
+      const key = args.join(' ');
+      if (key === '--version') return { status: 0, stdout: '1.0.0', stderr: '' };
+      if (key === 'plugin marketplace list --json') {
+        return {
+          status: 0,
+          stdout: JSON.stringify([
+            { name: 'openplanr', repo: 'openplanr/marketplace', installLocation: marketplaceDir },
+          ]),
+          stderr: '',
+        };
+      }
+      if (key === 'plugin list --json') {
+        return {
+          status: 0,
+          stdout: JSON.stringify(
+            installed.map((plugin) => ({ ...plugin, scope: 'user', enabled: true })),
+          ),
+          stderr: '',
+        };
+      }
+      return { status: 0, stdout: '[]', stderr: '' };
+    };
+  }
+
+  it('defaults to the registry document of the published CLI, not a repository manifest', () => {
+    expect(DEFAULT_ECOSYSTEM_SOURCE).toBe('https://registry.npmjs.org/openplanr/latest');
+  });
+
+  it('reports aligned when the CLI is current and its bundled pipeline matches the published pin', async () => {
+    const result = await reconcileInstalledTuple('/tmp/project', {
+      claudeCommandRunner: makeRunner({ available: false }),
+      fetchImpl: registryFetch(registryDocument(cliVersion)),
+    });
+    expect(result.status).toBe('aligned');
+    expect(result.published?.shape).toBe('registry');
+    expect(result.published?.pipeline.version).toBe(pipelinePin);
+    expect(result.published?.skills.version).toBe(cliVersion);
+    expect(result.bundledPipeline).toBe(pipelinePin);
+    expect(result.installed).toEqual({ cli: cliVersion, skills: null, pipeline: null });
+    expect(result.legacyPlugins).toEqual([]);
+  });
+
+  it('reports upgrade-available when the registry serves a newer CLI', async () => {
+    const result = await reconcileInstalledTuple('/tmp/project', {
+      claudeCommandRunner: makeRunner({ available: false }),
+      fetchImpl: registryFetch(registryDocument(higherCli)),
+    });
+    expect(result.status).toBe('upgrade-available');
+    expect(result.published?.cli.version).toBe(higherCli);
+  });
+
+  it('reports incompatible when the unified host plugin trails its marketplace target (the plugin half must move)', async () => {
+    const result = await reconcileInstalledTuple('/tmp/project', {
+      claudeCommandRunner: makeUnifiedRunner(
+        [{ id: 'planr@openplanr', version: '1.0.0' }],
+        cliVersion,
+      ),
+      fetchImpl: registryFetch(registryDocument(cliVersion)),
+    });
+    expect(result.installed.skills).toBe('1.0.0');
+    expect(result.legacyPlugins).toEqual([]);
+    // A current CLI cannot fix a trailing plugin; doctor's classification makes that a
+    // failure so `upgrade apply` prints the plugin-half prescription instead of reinstalling.
+    expect(result.status).toBe('incompatible');
+    expect(planCliUpgrade(result).proceed).toBe(false);
+  });
+
+  it('reports incompatible only when a legacy plugin remains beside the unified plugin', async () => {
+    const result = await reconcileInstalledTuple('/tmp/project', {
+      claudeCommandRunner: makeUnifiedRunner(
+        [
+          { id: 'planr@openplanr', version: cliVersion },
+          { id: 'openplanr@openplanr', version: '1.26.2' },
+        ],
+        cliVersion,
+      ),
+      fetchImpl: registryFetch(registryDocument(cliVersion)),
+    });
+    expect(result.legacyPlugins).toEqual(['openplanr@openplanr']);
+    expect(result.status).toBe('incompatible');
+  });
+
+  it('ignores a registry document without a parseable pipeline pin', async () => {
+    const result = await reconcileInstalledTuple('/tmp/project', {
+      claudeCommandRunner: makeRunner({ available: false }),
+      fetchImpl: registryFetch({ name: 'openplanr', version: cliVersion }),
+    });
+    expect(result.status).toBe('unknown');
+    expect(result.ecosystemSource).toBe('unavailable');
+  });
 });
