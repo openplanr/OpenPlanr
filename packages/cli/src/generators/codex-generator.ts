@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { ArtifactCollection, GeneratedFile } from '../models/types.js';
 import { renderTemplate } from '../services/template-service.js';
 import { BaseGenerator } from './base-generator.js';
+import { renderCapabilityMap } from './claude-generator.js';
 
 export class CodexGenerator extends BaseGenerator {
   getTargetName(): string {
@@ -37,7 +38,16 @@ export class CodexGenerator extends BaseGenerator {
         },
         this.config.templateOverrides,
       );
-      files.push({ path: targetPath, content, markerName: 'pipeline' });
+      const capabilityMap = await renderCapabilityMap(
+        '$planr:',
+        false,
+        this.config.templateOverrides,
+      );
+      files.push({
+        path: targetPath,
+        content: capabilityMap ? `${content.trimEnd()}\n\n${capabilityMap}` : content,
+        markerName: 'pipeline',
+      });
     }
 
     return files;

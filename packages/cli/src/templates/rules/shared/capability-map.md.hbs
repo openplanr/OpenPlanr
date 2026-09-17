@@ -1,0 +1,23 @@
+## OpenPlanr capabilities
+
+Every skill below is model-invoked: reach for it as soon as a request matches,
+without waiting to be asked by name. When no single skill clearly fits, start
+with `{{prefix}}openplanr`, which routes to the best one. PLAN and SHIP stay
+separate user-invoked workflows.
+{{#each families}}
+
+### {{{this.title}}}
+
+{{#each this.skills}}
+- `{{@root.prefix}}{{this.name}}` — {{{this.lead}}} Use when: {{{this.useWhen}}}.{{#if this.notFor}} Not for: {{{this.notFor}}}.{{/if}}
+{{/each}}
+{{/each}}
+{{#if agents}}
+
+### Delegated agents
+
+The Ship workflow dispatches these subagents itself; do not start them by hand.
+{{#each agents}}
+- `{{this.id}}` — {{{this.summary}}}
+{{/each}}
+{{/if}}

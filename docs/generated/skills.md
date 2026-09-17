@@ -190,6 +190,17 @@ Assess release readiness and prepare or inspect an OpenPlanr landing sequence. U
 - Aliases: none.
 - Packaged support: none; the skill is intentionally single-file.
 
+## `planr-openplanr`
+
+Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.
+
+- Select for: Choose which OpenPlanr skill should handle a request; Route a mixed or unclear planning, delivery, design, or operating request.
+- Defer for: Perform the routed work itself; Answer a question unrelated to OpenPlanr workflows.
+- Invocation from the plugin: `$planr:openplanr` in Codex/ChatGPT; `/planr:openplanr` in Claude Code.
+- Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
+- Aliases: none.
+- Packaged support: none; the skill is intentionally single-file.
+
 ## `planr-operate`
 
 Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.

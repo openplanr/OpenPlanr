@@ -1,0 +1,52 @@
+{
+  "kind": "openplanr-skill-migration-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-openplanr",
+  "family": "planning-tools",
+  "baseline": {
+    "sourceFormat": "markdown-v1",
+    "path": "skills/planr-openplanr/SKILL.md"
+  },
+  "successor": {
+    "sourceFormat": "composed-v1",
+    "path": "skills/planr-openplanr/skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "intentional",
+  "intendedChanges": [
+    "Introduced the routing skill that selects the best OpenPlanr skill for a request; no earlier baseline existed."
+  ],
+  "facets": {
+    "triggers": "registry-owned",
+    "authority": "preserved",
+    "cli": "reconciled-with-root-catalog",
+    "outputs": "preserved",
+    "aliases": "generated-router"
+  },
+  "hosts": [
+    {
+      "host": "claude-code",
+      "status": "intentional",
+      "baselineDigest": "sha256:84ad4750b4e48a99761bc8ab812caa7267d445b7b1165bff6eb60dedc42aaf14",
+      "successorDigest": "sha256:0796e0cce4d8fdf6f5b8cca86ef7c96fd02150493b609d08e74bb78045fcb2dd"
+    },
+    {
+      "host": "codex",
+      "status": "intentional",
+      "baselineDigest": "sha256:84ad4750b4e48a99761bc8ab812caa7267d445b7b1165bff6eb60dedc42aaf14",
+      "successorDigest": "sha256:0796e0cce4d8fdf6f5b8cca86ef7c96fd02150493b609d08e74bb78045fcb2dd"
+    },
+    {
+      "host": "cursor",
+      "status": "intentional",
+      "baselineDigest": "sha256:84ad4750b4e48a99761bc8ab812caa7267d445b7b1165bff6eb60dedc42aaf14",
+      "successorDigest": "sha256:bf88b2c937e39ab2436786abaeb2dfe58d90832f12afb496f1100845a94d8719"
+    },
+    {
+      "host": "pipeline",
+      "status": "intentional",
+      "baselineDigest": "sha256:84ad4750b4e48a99761bc8ab812caa7267d445b7b1165bff6eb60dedc42aaf14",
+      "successorDigest": "sha256:0796e0cce4d8fdf6f5b8cca86ef7c96fd02150493b609d08e74bb78045fcb2dd"
+    }
+  ]
+}

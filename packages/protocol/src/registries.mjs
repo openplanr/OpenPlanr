@@ -42,7 +42,8 @@ const EXPECTED_TASK_KINDS = Object.freeze({
 const EXPECTED_SKILLS = Object.freeze([
   'planr-artifact', 'planr-browser-qa', 'planr-ceo-review', 'planr-chair-review', 'planr-challenger-review', 'planr-cmo-review',
   'planr-coo-review', 'planr-cpo-review', 'planr-cto-review', 'planr-dashboard', 'planr-design', 'planr-design-loop',
-  'planr-design-review', 'planr-diagram', 'planr-doctor', 'planr-investigate', 'planr-land', 'planr-operate', 'planr-plan',
+  'planr-design-review', 'planr-diagram', 'planr-doctor', 'planr-investigate', 'planr-land', 'planr-openplanr', 'planr-operate',
+  'planr-plan',
   'planr-plan-review', 'planr-release', 'planr-ship', 'planr-spec', 'planr-status', 'planr-sync',
 ]);
 

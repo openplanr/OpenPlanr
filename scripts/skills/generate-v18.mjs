@@ -380,6 +380,48 @@ for (const [host, prefix] of [
   }));
 }
 
+const CAPABILITY_FAMILY_TITLES = new Map([
+  ['planning', 'Plan and specify'],
+  ['implementation', 'Implement'],
+  ['quality', 'Review and QA'],
+  ['design', 'Design'],
+  ['diagram', 'Diagrams'],
+  ['artifact', 'Artifact reviews'],
+  ['release', 'Land and release'],
+  ['diagnostics', 'Setup and diagnostics'],
+  ['planning-tools', 'Status, routing and sync'],
+  ['operate', 'Operate'],
+  ['operate-advisor', 'Operate advisors'],
+  ['operate-synthesis', 'Operate synthesis'],
+]);
+const roleDescriptions = new Map(roleRows.map(({ id, source }) => [
+  id,
+  /^description:\s*([^\n]+)$/mu.exec(read(source))?.[1]?.replace(/["']/gu, '').trim() ?? '',
+]));
+// The compact inventory the CLI renders into CLAUDE.md and AGENTS.md so a host agent
+// sees every skill and agent, not only the three workflow entry points.
+add('packages/cli/lib/host-packages/capability-map.json', json({
+  kind: 'openplanr-capability-map',
+  schemaVersion: '1.0.0',
+  pluginVersion,
+  families: [...CAPABILITY_FAMILY_TITLES].map(([id, title]) => ({ id, title })),
+  skills: registry.skills.map((row) => {
+    if (!CAPABILITY_FAMILY_TITLES.has(row.family)) {
+      throw new Error(`No capability family title for ${row.skillId} (${row.family}).`);
+    }
+    return {
+      id: row.skillId,
+      name: projectedSkillName(row.skillId),
+      family: row.family,
+      description: row.description,
+      useWhen: row.triggerPolicy.include,
+      notFor: row.triggerPolicy.exclude,
+      deferTo: row.triggerPolicy.deferTo,
+    };
+  }),
+  agents: roleRows.map(({ id }) => ({ id, description: roleDescriptions.get(id) })),
+}));
+
 add('packages/cli/lib/host-packages/adapter-registry.json', json({
   kind: 'host-native-adapter-registry',
   schemaVersion: '1.0.0',

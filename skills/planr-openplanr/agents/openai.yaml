@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Openplanr"
+  short_description: "Route a planning, specification, delivery, design, review…"
+  default_prompt: "Use $planr-openplanr to route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several."
+policy:
+  allow_implicit_invocation: true

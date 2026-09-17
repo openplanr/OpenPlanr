@@ -648,6 +648,12 @@ planr sync                          # fix broken cross-references
 planr sync --dry-run                # preview changes without writing
 ```
 
+With the pipeline scope, `CLAUDE.md` and `AGENTS.md` also receive a generated
+`## OpenPlanr capabilities` section listing every skill (with its triggers) and,
+for Claude Code, the delegated agents, read from the shipped capability map.
+Start with `/planr:openplanr` (`$planr:openplanr` in Codex) when the right
+skill is unclear.
+
 | Option      | Description                                  | Default |
 | ----------- | -------------------------------------------- | ------- |
 | `--dry-run` | Show what would change without writing files | `false` |

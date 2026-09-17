@@ -1,8 +1,24 @@
 import path from 'node:path';
 import type { ArtifactCollection, GeneratedFile } from '../models/types.js';
 import { listArtifacts } from '../services/artifact-service.js';
+import { capabilityMapContext, readCapabilityMap } from '../services/capability-map-service.js';
 import { renderTemplate } from '../services/template-service.js';
 import { BaseGenerator } from './base-generator.js';
+
+/** The generated skill and agent inventory, or an empty string on a checkout built without host packages. */
+export async function renderCapabilityMap(
+  prefix: string,
+  includeAgents: boolean,
+  templateOverrides: string | undefined,
+): Promise<string> {
+  const map = readCapabilityMap();
+  if (!map) return '';
+  return renderTemplate(
+    'rules/shared/capability-map.md.hbs',
+    { ...capabilityMapContext(map, { prefix, includeAgents }) },
+    templateOverrides,
+  );
+}
 
 export class ClaudeGenerator extends BaseGenerator {
   getTargetName(): string {
@@ -27,6 +43,9 @@ export class ClaudeGenerator extends BaseGenerator {
           this.config.templateOverrides,
         )
       : '';
+    const capabilityMap = this.includesPipeline()
+      ? await renderCapabilityMap('/planr:', true, this.config.templateOverrides)
+      : '';
     const files: GeneratedFile[] = [];
 
     // CLAUDE.md is planr-managed as a whole — splice via marker so
@@ -42,6 +61,7 @@ export class ClaudeGenerator extends BaseGenerator {
         pipelineScope: this.includesPipeline(),
         implementationGuidance,
         hostNativeGuidance,
+        capabilityMap,
       },
       this.config.templateOverrides,
     );

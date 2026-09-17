@@ -118,6 +118,12 @@
       ]
     },
     {
+      "id": "planr-openplanr",
+      "source": "skills/planr-openplanr/openplanr.skill.json",
+      "authorityClass": "read-only-view",
+      "utilityRequirements": []
+    },
+    {
       "id": "planr-plan",
       "source": "skills/planr-plan/openplanr.skill.json",
       "authorityClass": "planning-write",

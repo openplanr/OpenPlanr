@@ -805,6 +805,48 @@
       ]
     },
     {
+      "skillId": "planr-openplanr",
+      "family": "planning-tools",
+      "contribution": "workflows",
+      "skillVersion": "1.0.0",
+      "description": "Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
+      "lifecycle": "active",
+      "authorityClass": "read-only-view",
+      "source": "skills/planr-openplanr/openplanr.skill.json",
+      "baseline": "skills/planr-openplanr/SKILL.md",
+      "triggerPolicy": {
+        "include": [
+          "Choose which OpenPlanr skill should handle a request",
+          "Route a mixed or unclear planning, delivery, design, or operating request"
+        ],
+        "exclude": [
+          "Perform the routed work itself",
+          "Answer a question unrelated to OpenPlanr workflows"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "routing-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "certification": {
+        "migration": "evaluation/skills/migrations/planr-openplanr.json",
+        "matchingFamily": "planning-tools"
+      },
+      "utilityRequirements": []
+    },
+    {
       "skillId": "planr-operate",
       "family": "operate",
       "contribution": "operate",

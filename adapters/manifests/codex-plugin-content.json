@@ -5,10 +5,10 @@
   "plugin": "planr",
   "version": "0.1.0",
   "skillRoot": "./skills/",
-  "canonicalSkillCount": 25,
+  "canonicalSkillCount": 26,
   "compatibilityAliasCount": 0,
-  "skillCount": 25,
-  "assetCount": 281,
+  "skillCount": 26,
+  "assetCount": 284,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -1000,6 +1000,27 @@
         {
           "path": "skills/land/agents/openai.yaml",
           "digest": "sha256:3a30b73673281589d34c299a2e688a675f3c7065457f4203b54b82182c79c304"
+        }
+      ]
+    },
+    {
+      "skillId": "planr-openplanr",
+      "projectedName": "openplanr",
+      "invocation": "$planr:openplanr",
+      "description": "Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
+      "entrypoint": "skills/openplanr/SKILL.md",
+      "assets": [
+        {
+          "path": "skills/openplanr/SKILL.md",
+          "digest": "sha256:0796e0cce4d8fdf6f5b8cca86ef7c96fd02150493b609d08e74bb78045fcb2dd"
+        },
+        {
+          "path": "skills/openplanr/openplanr.skill.json",
+          "digest": "sha256:f14e20b843f7f51688ded299fbeb773eab1d244429e7baaaff5a14713bde72be"
+        },
+        {
+          "path": "skills/openplanr/agents/openai.yaml",
+          "digest": "sha256:d52298b62edcbdaac5c48b7ced2ab5e21c999552e1734fd2a5f3fb3ba0ab66c1"
         }
       ]
     },
