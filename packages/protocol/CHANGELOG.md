@@ -1,5 +1,10 @@
 # @openplanr/protocol
 
+## 0.3.0
+### Minor Changes
+
+- 7c0e86d: Recognize `planr-openplanr`, the routing skill, as a canonical skill in the Protocol skill catalog.
+
 ## 0.2.0
 ### Minor Changes
 

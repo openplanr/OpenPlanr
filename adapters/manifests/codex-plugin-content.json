@@ -461,7 +461,7 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:b4b9cdd63c56723fa0c64cae1ce50776bf1f221d56e345672803974e70781567"
+          "digest": "sha256:9a11f3b5e52bb2bd3f2310a9cbc1276b62b1b08e401279769228d5bfd8567995"
         },
         {
           "path": "skills/design/scripts/runtime/packages/protocol/registry/artifact-theme.json",
@@ -642,7 +642,7 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:b4b9cdd63c56723fa0c64cae1ce50776bf1f221d56e345672803974e70781567"
+          "digest": "sha256:9a11f3b5e52bb2bd3f2310a9cbc1276b62b1b08e401279769228d5bfd8567995"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/protocol/registry/artifact-theme.json",
@@ -823,7 +823,7 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:b4b9cdd63c56723fa0c64cae1ce50776bf1f221d56e345672803974e70781567"
+          "digest": "sha256:9a11f3b5e52bb2bd3f2310a9cbc1276b62b1b08e401279769228d5bfd8567995"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/protocol/registry/artifact-theme.json",
@@ -1134,7 +1134,7 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:b4b9cdd63c56723fa0c64cae1ce50776bf1f221d56e345672803974e70781567"
+          "digest": "sha256:9a11f3b5e52bb2bd3f2310a9cbc1276b62b1b08e401279769228d5bfd8567995"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/protocol/registry/artifact-theme.json",

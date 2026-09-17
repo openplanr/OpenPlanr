@@ -124,10 +124,10 @@
     "pathRecords": 2100,
     "dispositionCounts": {
       "regenerated": 205,
-      "merged": 553,
+      "merged": 554,
       "moved": 266,
       "retired": 57,
-      "exact": 1000,
+      "exact": 999,
       "excluded": 19
     },
     "unmappedPaths": 0
@@ -20960,8 +20960,8 @@
         "mode": "100644",
         "sha256": "42c6c811a30b643c7c8166b130d3080e7eddc19f15794d91c8ecff8f6ac99373"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/.claude-plugin/plugin.json",
@@ -20970,10 +20970,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "42c6c811a30b643c7c8166b130d3080e7eddc19f15794d91c8ecff8f6ac99373",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -67022,5 +67020,5 @@
       }
     }
   ],
-  "documentDigest": "sha256:3ea8cae6eaf30910bf5f8b5d944ad90e90548a7013e39c31787e1fc9e0b16d57"
+  "documentDigest": "sha256:f9119a7c110fcf975d305e12023f5cea1d49e9c7aaf67070af2ca1617fc1ddf4"
 }
