@@ -238,8 +238,8 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:9cb2bf73b536b6a6e862b8e188bd79a90aba0829d040960fc5685f494f1d3419",
-      "count": 25,
+      "digest": "sha256:48c0be32d55a91a190427dd8ff448c6afb29259256b7a4bfa2db079ee3b4be06",
+      "count": 26,
       "ids": [
         "planr-artifact",
         "planr-browser-qa",
@@ -258,6 +258,7 @@
         "planr-doctor",
         "planr-investigate",
         "planr-land",
+        "planr-openplanr",
         "planr-operate",
         "planr-plan",
         "planr-plan-review",
@@ -268,7 +269,7 @@
         "planr-sync"
       ],
       "aliases": [],
-      "membershipDigest": "sha256:86d9ac3bd3d6c7a4d523aefef850fba5013d097bd1f01356e9d0a1adb3c9e693"
+      "membershipDigest": "sha256:f8ce7f502995d7cf0e24145df9d1ea2e9c1bb6f05a891140bbe1e993270f4a6a"
     },
     "roles": {
       "path": "packages/protocol/registries/roles.json",
@@ -333,8 +334,8 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:9a725ef57a90c5b58eb2d23e0c6e93077c7a452e6f33b3e27872ebe4c4dce061",
-      "count": 1630
+      "digest": "sha256:cc6ee5a463f3412718b5b9d531e4f22b719e77d92bed362b00b0262582d3fe89",
+      "count": 1643
     }
   },
   "schemas": {

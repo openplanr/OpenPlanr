@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:9a725ef57a90c5b58eb2d23e0c6e93077c7a452e6f33b3e27872ebe4c4dce061"
+      "digest": "sha256:cc6ee5a463f3412718b5b9d531e4f22b719e77d92bed362b00b0262582d3fe89"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -66,7 +66,7 @@
     },
     {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:9cb2bf73b536b6a6e862b8e188bd79a90aba0829d040960fc5685f494f1d3419"
+      "digest": "sha256:48c0be32d55a91a190427dd8ff448c6afb29259256b7a4bfa2db079ee3b4be06"
     },
     {
       "path": "packages/protocol/registries/task-kinds.json",
@@ -112,23 +112,23 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:a95ad331bfdfa918bfed2f8948b90b2bc14141e4079da77795c473d2a4fe8a88"
+      "digest": "sha256:3582173c0024b80ea2b50d1a4d2376fa7dda3cae4c53722d142d47ca39258109"
     },
     {
       "path": "docs/generated/adapters.md",
-      "digest": "sha256:b05f4ea208da233745ff9879ada9bf13402a091649110eb45fd8d2379dec48ec"
+      "digest": "sha256:b316f793ff11477a88e4d82ee2dfcfe3654d398f9d20c71716ff257bacd90fed"
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:d323b326b5db0c8169511b64bfabe05685a2715bf35f23401d23bd2c466b4ca3"
+      "digest": "sha256:4af11f094b57199613db723b1c9fbf9d70a526fa1ba6ae604c1d5d6a5f78ecfa"
     },
     {
       "path": "docs/generated/skills.md",
-      "digest": "sha256:56ed7af99a4d8486a785eb039c16fb0ba1e47dd9be2178a851fd880e05839e73"
+      "digest": "sha256:1f265687bf522bce25eb66bdb6f7031eae68daa6afae7f13cb5817fec35e1e42"
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:b3d41eabff561c680a7fe12eddb4224de6eaf797263f0a0fb7bad5f596fb886e"
+      "digest": "sha256:8db5c81d6e254ae3879af77edbe43cfc0dcd3ff0e5a846e2f9e68429e2467ba9"
     }
   ]
 }

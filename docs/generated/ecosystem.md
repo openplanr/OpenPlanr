@@ -20,6 +20,6 @@ Compatibility invariants:
 - `openplanr` uses the exact optional `planr-pipeline@0.45.0` dependency.
 - The public pipeline retains 37 export keys and 229 root symbols.
 - 180 historical schemas and 12 registries remain accounted for; Protocol 1.8.0 adds 3 successor schemas.
-- 39 root commands, 25 canonical skills, 9 canonical roles, and 23 output contracts are catalog-bound.
+- 39 root commands, 26 canonical skills, 9 canonical roles, and 23 output contracts are catalog-bound.
 - `planr`, `openplanr`, and deprecated `opr` resolve to one CLI parser.
 - `planr operate ...` remains supported; `planr pipeline operate ...` and pipeline plugin Operate assets remain retired.

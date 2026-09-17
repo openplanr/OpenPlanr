@@ -21,6 +21,7 @@
     "planr-doctor",
     "planr-investigate",
     "planr-land",
+    "planr-openplanr",
     "planr-operate",
     "planr-plan",
     "planr-plan-review",
@@ -2655,6 +2656,43 @@
       ]
     },
     {
+      "id": "planr-openplanr",
+      "version": "1.0.0",
+      "source": "skills/planr-openplanr/openplanr.skill.json",
+      "entrypoint": "skills/planr-openplanr/SKILL.md",
+      "description": "Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
+      "sourceDigest": "sha256:84ad4750b4e48a99761bc8ab812caa7267d445b7b1165bff6eb60dedc42aaf14",
+      "resources": [
+        {
+          "path": "agents/openai.yaml",
+          "kind": "agent-metadata",
+          "hosts": [
+            "codex",
+            "chatgpt"
+          ],
+          "executable": false,
+          "digest": "sha256:fe6b691415f300f1ad4a56d69e69dd98f7a8b1488b7887fe2dd1e4537ae896a7"
+        }
+      ],
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "routing-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "contribution": "workflows",
+      "authorityClass": "read-only-view",
+      "utilityRequirements": []
+    },
+    {
       "id": "planr-operate",
       "version": "2.1.0",
       "source": "skills/planr-operate/openplanr.skill.json",
@@ -3535,5 +3573,5 @@
       ]
     }
   ],
-  "membershipDigest": "sha256:86d9ac3bd3d6c7a4d523aefef850fba5013d097bd1f01356e9d0a1adb3c9e693"
+  "membershipDigest": "sha256:f8ce7f502995d7cf0e24145df9d1ea2e9c1bb6f05a891140bbe1e993270f4a6a"
 }

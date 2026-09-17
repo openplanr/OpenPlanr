@@ -165,6 +165,10 @@ describe('rules generate --scope pipeline', () => {
       expect(content).toContain('##planr-pipeline:begin##');
       expect(content).toContain('$planr:plan <SPEC>');
       expect(content).toMatch(/does not launch a\s+second model/u);
+      expect(content).toContain('## OpenPlanr capabilities');
+      expect(content).toContain('`$planr:spec`');
+      expect(content).toContain('`$planr:openplanr`');
+      expect(content).not.toContain('Delegated agents');
     },
     TIMEOUT_MS,
   );
@@ -194,6 +198,11 @@ describe('rules generate --scope pipeline', () => {
       expect(claude).toContain('OpenPlanr host-native workflows');
       expect(claude).toContain('/planr:plan <SPEC>');
       expect(claude).toMatch(/does not launch a\s+second model/u);
+      expect(claude).toContain('## OpenPlanr capabilities');
+      expect(claude).toContain('`/planr:spec`');
+      expect(claude).toContain('`/planr:openplanr`');
+      expect(claude).toContain('### Delegated agents');
+      expect(claude).toContain('`planr-qa`');
       expect(existsSync(join(dir, 'planr-pipeline.md'))).toBe(false);
     },
     TIMEOUT_MS,
@@ -209,6 +218,7 @@ describe('rules generate --scope pipeline', () => {
       expect(existsSync(join(dir, 'planr-pipeline.md'))).toBe(false);
       const claude = readFileSync(join(dir, 'CLAUDE.md'), 'utf-8');
       expect(claude).not.toContain('OpenPlanr host-native workflows');
+      expect(claude).not.toContain('OpenPlanr capabilities');
     },
     TIMEOUT_MS,
   );

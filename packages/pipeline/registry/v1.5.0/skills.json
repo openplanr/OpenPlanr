@@ -1051,6 +1051,67 @@
       ]
     },
     {
+      "skillId": "planr-openplanr",
+      "skillVersion": "1.0.0",
+      "description": "Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
+      "lifecycle": "active",
+      "authorityClass": "read-only-view",
+      "source": "skills/planr-openplanr/openplanr.skill.json",
+      "sourceDigest": "sha256:f14e20b843f7f51688ded299fbeb773eab1d244429e7baaaff5a14713bde72be",
+      "triggerPolicy": {
+        "include": [
+          "Choose which OpenPlanr skill should handle a request",
+          "Route a mixed or unclear planning, delivery, design, or operating request"
+        ],
+        "exclude": [
+          "Perform the routed work itself",
+          "Answer a question unrelated to OpenPlanr workflows"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "routing-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R5",
+        "R7"
+      ],
+      "contributionManifestRefs": [
+        "packages/skill-runtime/contributions/workflows.json"
+      ],
+      "hosts": [
+        {
+          "host": "claude-code",
+          "entrypoint": "/planr:openplanr",
+          "path": "dist/plugins/claude/openplanr/skills/openplanr/SKILL.md"
+        },
+        {
+          "host": "codex",
+          "entrypoint": "$planr:openplanr",
+          "path": "dist/plugins/openai/openplanr/skills/openplanr/SKILL.md"
+        },
+        {
+          "host": "cursor",
+          "entrypoint": "planr-openplanr",
+          "path": "dist/plugins/cursor/openplanr/rules/planr-openplanr.mdc"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/skill-catalog.test.mjs"
+      ],
+      "certificationRefs": [
+        "evaluation/skills/migrations/planr-openplanr.json"
+      ]
+    },
+    {
       "skillId": "planr-operate",
       "skillVersion": "2.1.0",
       "description": "Run a focused operating review across seven executive lenses and produce a decision and action brief. Use for periodic product or company-level leadership review.",
@@ -1541,5 +1602,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:2cc6e0ebc21a0129a346828b9661fc7918cdc776dd6a902de895e185a72710f8"
+  "documentDigest": "sha256:7a069d3f8aa02af2a988b90e142b23e359b261800b0549fdb9a38bb2bfb7e968"
 }
