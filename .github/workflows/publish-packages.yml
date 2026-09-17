@@ -147,8 +147,13 @@ jobs:
             ['publish', archive, '--ignore-scripts', '--access', 'public', '--provenance', '--tag', expected.RELEASE_TAG],
             { stdio: 'inherit' },
           );
-          for (let attempt = 0; attempt < 5; attempt += 1) {
-            if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 2_000));
+          // npm can accept and sign a publication before its public index exposes
+          // the new version. Allow the documented processing window after a
+          // successful publish, while keeping failed publishes on a short retry.
+          const propagationAttempts = publish.status === 0 ? 31 : 6;
+          const propagationDelayMs = publish.status === 0 ? 10_000 : 2_000;
+          for (let attempt = 0; attempt < propagationAttempts; attempt += 1) {
+            if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, propagationDelayMs));
             if (assertPublishable() === 'identical') {
               console.log(`${proof.name}@${proof.version} has the reviewed bytes after publish`);
               process.exit(0);
