@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1
+### Patch Changes
+
+- 17bcd1d: Present `planr company login` as the standard hosted sign-in command, with structured output and endpoint overrides documented only for automation and advanced environments.
+
 ## 2.0.0
 ### Major Changes
 

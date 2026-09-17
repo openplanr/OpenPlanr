@@ -1,6 +1,6 @@
 {
   "name": "openplanr",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Deterministic OpenPlanr utilities for planning storage, validation, rendering, setup, diagnostics, and GitHub/Linear synchronization",
   "type": "module",
   "main": "./dist/cli/index.js",
