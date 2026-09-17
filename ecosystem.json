@@ -45,10 +45,10 @@
   "components": {
     "cli": {
       "package": "openplanr",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:45866296e4684003ea2e954eaed45f1c6a745a75efb5acf967dcdc1cef8a6747"
+      "manifestDigest": "sha256:4d3043bb7e0d9d48fee4ae48e84ced9e731944c3ba9b89d459e6f0bb7f23c109"
     },
     "pipeline": {
       "package": "planr-pipeline",

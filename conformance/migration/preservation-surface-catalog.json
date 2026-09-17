@@ -4020,7 +4020,7 @@
       "path": "adapters/manifests/ecosystem-assets.json",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "manifest",
-      "sha256": "c27da2aeeaf09f89b9a836317c1570f38482929b82e9355b0fedc0506b64d67e"
+      "sha256": "6ab3bcc04e9f9353672ed05d471ac5c00deab9cf7e51331079f70c2930f24589"
     },
     {
       "path": "adapters/manifests/generated-assets.json",
@@ -8910,7 +8910,7 @@
       "path": "docs/generated/ecosystem.md",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "ecosystem-generated",
-      "sha256": "3d6fccbb6528df743cc61aab3348dc141025a3c0b5f2c219da0c7e70649b5110"
+      "sha256": "d323b326b5db0c8169511b64bfabe05685a2715bf35f23401d23bd2c466b4ca3"
     },
     {
       "path": "docs/generated/skills.md",
@@ -8922,7 +8922,7 @@
       "path": "ecosystem.json",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "ecosystem-generated",
-      "sha256": "d9ea9838768f937e000a9c1741f5b36d0bf9c7fb58d0db132636fd793e1aa46a"
+      "sha256": "5a36dc256fbeb1be1e13800122bddb36b4ba9b0639a933fd1251da6e8bc2abb0"
     },
     {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
@@ -18036,5 +18036,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:ea1616bff878efeabe43f7a69a08507d5580fd09230ce1a48e4e1e4e15867e61"
+  "documentDigest": "sha256:84195282f939f8eafbf520476e41d28562d3541e6c543d0fe1ef76059b52f3eb"
 }
