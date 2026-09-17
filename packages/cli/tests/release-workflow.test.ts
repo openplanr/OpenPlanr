@@ -110,7 +110,15 @@ describe('root release proof and public package artifacts', () => {
     expect(publishPackagesWorkflow).toContain(
       'publish succeeded but npm did not expose the reviewed bytes',
     );
-    expect(publishPackagesWorkflow).toContain('for (let attempt = 0; attempt < 5; attempt += 1)');
+    expect(publishPackagesWorkflow).toContain(
+      'const propagationAttempts = publish.status === 0 ? 31 : 6',
+    );
+    expect(publishPackagesWorkflow).toContain(
+      'const propagationDelayMs = publish.status === 0 ? 10_000 : 2_000',
+    );
+    expect(publishPackagesWorkflow).toContain(
+      'for (let attempt = 0; attempt < propagationAttempts; attempt += 1)',
+    );
     expect(publishPackagesWorkflow).not.toContain("execFileSync('npm', ['publish'");
     expect(publishIfNeeded).toContain("['pack', '--json', '--ignore-scripts'");
     expect(publishIfNeeded).toContain("['publish', candidate.archive, '--ignore-scripts'");
