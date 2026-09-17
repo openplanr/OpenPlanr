@@ -57,7 +57,8 @@ minutes to expose the version; the bytes were verified against the registry once
 Because all three payloads match `74c45e2`, the package-qualified tags `openplanr@2.0.0`,
 `planr-pipeline@0.45.0` and `@openplanr/protocol@0.2.0` should point at that commit, and
 `openplanr@2.0.1` at `80456b17757221b952a394e4fe1987376774e468`, whose rebuilt archive matched the
-registry file for file. None of them exists yet; tag creation is a separately approved action.
+registry file for file. These four annotated tags and their GitHub releases were created on
+2026-09-17 after that verification.
 
 `planr-pipeline` versions `0.43.0` and `0.44.0` were internal release candidates that were never
 published; the registry history runs `0.42.0` → `0.45.0`.
