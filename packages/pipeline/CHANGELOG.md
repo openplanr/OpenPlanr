@@ -1,6 +1,10 @@
 # Changelog
 
 ## 0.45.0
+
+Versions 0.43.0 and 0.44.0 were internal release candidates and were never published; the
+previous registry release is 0.42.0.
+
 ### Minor Changes
 
 - 622ce31: Add the portable company-workspace contracts and CLI workflow for public-client

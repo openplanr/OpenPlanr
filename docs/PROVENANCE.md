@@ -29,6 +29,35 @@ The public packages `openplanr`, `planr-pipeline` and `@openplanr/protocol` use
 independent Changesets versions; consolidation does not reset existing lineages. The hosted web application is maintained separately in
 [openplanr/openplanr-web](https://github.com/openplanr/openplanr-web).
 
+## Publication provenance
+
+The first releases from this repository were versioned by commit
+`74c45e2a683a4b7e96cb6472ed71e03099b9c35e` (`chore(release): version public packages`, #250).
+Each published archive was rebuilt from that commit with `npm pack --ignore-scripts` and
+compared file by file against the archive served by the registry; every file's SHA-256 matched.
+The payload digest below is the SHA-256 of the sorted per-file SHA-256 list. Published versions are
+immutable and are never republished; a correction is a new version.
+
+| Package | Version | Published (UTC) | Channel | Build commit in attestation | Payload SHA-256 | Registry integrity |
+| --- | --- | --- | --- | --- | --- | --- |
+| `@openplanr/protocol` | `0.2.0` | 2026-09-17 00:09:37 | Outside `publish-packages.yml`; registry signature, no SLSA attestation | none | `908514e543aac2e65a017686f46806e89902243ae4b37235fc20c5dc09d0fad5` | `sha512-qaEB3Pyms/1qlepqKn2QdgUeKVlwGGCob4Tcd5ZlSxFGHAiIZKAfQLabnyMrUnmNT7PnWs8IjNWfOzNrK43bvw==` |
+| `planr-pipeline` | `0.45.0` | 2026-09-17 00:17:51 | `publish-packages.yml` run 35165636890; SLSA v1 attestation | `8c05a49f5814dbac7d46e3e813e025e0d789b9f6` | `8af0841ca59f7e7d06d7971b1afc4b46f5d2bf12d65091a49c2f9390bd17b8a3` | `sha512-wxRiboEopbLrZxrIA5t4iAOw8k1lu/XVZZ3Uw37ppHhhnv3HP056RCqga7lbqntUL08MUMoMihJud7TD/i8P+w==` |
+| `openplanr` | `2.0.0` | 2026-09-17 00:43:07 | `publish-packages.yml` run 35167294414; SLSA v1 attestation | `0bd38b4eeaa64f7a48a647611f859b2f408b6f22` | `69b80ada4072d2f73788b3ce587fd337eda7645601a6fcc68b76e9bf7e7376ad` | `sha512-C00jRt0+6Kpk5DHhmoFzuCiGF7MSJEEzUloGSEPVheMgESHLjjzY6UIwJMyEaKDrmyLteflDtW1XY+sYHf7iKw==` |
+
+`@openplanr/protocol@0.2.0` reached the registry thirty seconds before its workflow dispatch
+(run 35165457743) reached the publish step; the workflow found identical bytes and skipped. Its
+bytes are proven against `74c45e2`, but it carries no build attestation. Every later version of
+every package is published only through `publish-packages.yml`. The pipeline dispatch that
+published `0.45.0` failed after publication in its registry-propagation check; #255 corrected
+that check, and the re-dispatch (run 35167179994) confirmed identical bytes.
+
+Because all three payloads match `74c45e2`, the package-qualified tags `openplanr@2.0.0`,
+`planr-pipeline@0.45.0` and `@openplanr/protocol@0.2.0` should point at that commit. None of
+them exists yet; tag creation is a separately approved action.
+
+`planr-pipeline` versions `0.43.0` and `0.44.0` were internal release candidates that were never
+published; the registry history runs `0.42.0` → `0.45.0`.
+
 ## License and attribution
 
 OpenPlanr is founded and maintained by
