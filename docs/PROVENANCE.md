@@ -43,17 +43,21 @@ immutable and are never republished; a correction is a new version.
 | `@openplanr/protocol` | `0.2.0` | 2026-09-17 00:09:37 | Outside `publish-packages.yml`; registry signature, no SLSA attestation | none | `908514e543aac2e65a017686f46806e89902243ae4b37235fc20c5dc09d0fad5` | `sha512-qaEB3Pyms/1qlepqKn2QdgUeKVlwGGCob4Tcd5ZlSxFGHAiIZKAfQLabnyMrUnmNT7PnWs8IjNWfOzNrK43bvw==` |
 | `planr-pipeline` | `0.45.0` | 2026-09-17 00:17:51 | `publish-packages.yml` run 35165636890; SLSA v1 attestation | `8c05a49f5814dbac7d46e3e813e025e0d789b9f6` | `8af0841ca59f7e7d06d7971b1afc4b46f5d2bf12d65091a49c2f9390bd17b8a3` | `sha512-wxRiboEopbLrZxrIA5t4iAOw8k1lu/XVZZ3Uw37ppHhhnv3HP056RCqga7lbqntUL08MUMoMihJud7TD/i8P+w==` |
 | `openplanr` | `2.0.0` | 2026-09-17 00:43:07 | `publish-packages.yml` run 35167294414; SLSA v1 attestation | `0bd38b4eeaa64f7a48a647611f859b2f408b6f22` | `69b80ada4072d2f73788b3ce587fd337eda7645601a6fcc68b76e9bf7e7376ad` | `sha512-C00jRt0+6Kpk5DHhmoFzuCiGF7MSJEEzUloGSEPVheMgESHLjjzY6UIwJMyEaKDrmyLteflDtW1XY+sYHf7iKw==` |
+| `openplanr` | `2.0.1` | 2026-09-17 17:19:34 | `publish-packages.yml` run 35244051006; SLSA v1 attestation | `80456b17757221b952a394e4fe1987376774e468` | `3c4c730975a1785693ac90ecfc86ec26dc71c3badab556a9ef75c32c3bb2cd5d` | `sha512-FLt7nIEKhn2df0rCJh2Cl8LkKbrUmjPlCygcJTq/MZAhctEr0v1qR9KGLlJ66ELpIx3+fNYE9ZC9tmQYo2PZVw==` |
 
 `@openplanr/protocol@0.2.0` reached the registry thirty seconds before its workflow dispatch
 (run 35165457743) reached the publish step; the workflow found identical bytes and skipped. Its
 bytes are proven against `74c45e2`, but it carries no build attestation. Every later version of
 every package is published only through `publish-packages.yml`. The pipeline dispatch that
 published `0.45.0` failed after publication in its registry-propagation check; #255 corrected
-that check, and the re-dispatch (run 35167179994) confirmed identical bytes.
+that check, and the re-dispatch (run 35167179994) confirmed identical bytes. The `openplanr@2.0.1`
+run published successfully and then failed the same check because the registry took about eight
+minutes to expose the version; the bytes were verified against the registry once visible.
 
 Because all three payloads match `74c45e2`, the package-qualified tags `openplanr@2.0.0`,
-`planr-pipeline@0.45.0` and `@openplanr/protocol@0.2.0` should point at that commit. None of
-them exists yet; tag creation is a separately approved action.
+`planr-pipeline@0.45.0` and `@openplanr/protocol@0.2.0` should point at that commit, and
+`openplanr@2.0.1` at `80456b17757221b952a394e4fe1987376774e468`, whose rebuilt archive matched the
+registry file for file. None of them exists yet; tag creation is a separately approved action.
 
 `planr-pipeline` versions `0.43.0` and `0.44.0` were internal release candidates that were never
 published; the registry history runs `0.42.0` → `0.45.0`.
