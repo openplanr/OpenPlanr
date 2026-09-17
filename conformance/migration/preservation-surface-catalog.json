@@ -3556,7 +3556,7 @@
       {
         "registryId": "commands",
         "destinationPath": "packages/protocol/registries/commands.json",
-        "destinationSha256": "68739441bd2987882b8a4f2a8d23bf2e1247731aca866319660adcace1b65240"
+        "destinationSha256": "a68f0259af40e6fcc7be395a306ca44f56c90a366cc492ec75370d86580f1d5e"
       },
       {
         "registryId": "diagram-grammars",
@@ -3973,7 +3973,7 @@
     {
       "generatorId": "scripts-migration-generate-preservation-catalog",
       "sourcePath": "scripts/migration/generate-preservation-catalog.mjs",
-      "sourceSha256": "06a3b45056a09aaeae32374c2823825d8959ca636df4af957244461aa512c198"
+      "sourceSha256": "6e19f97d61d605a29574c5a73632dbbb246d6315db2b30185261a9038901d386"
     },
     {
       "generatorId": "scripts-protocol-project-protocol",
@@ -4020,7 +4020,7 @@
       "path": "adapters/manifests/ecosystem-assets.json",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "manifest",
-      "sha256": "6ab3bcc04e9f9353672ed05d471ac5c00deab9cf7e51331079f70c2930f24589"
+      "sha256": "ed917558f25c50241e263db61a9f146830db724378dfada4f32517c892e1574c"
     },
     {
       "path": "adapters/manifests/generated-assets.json",
@@ -8922,7 +8922,7 @@
       "path": "ecosystem.json",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "ecosystem-generated",
-      "sha256": "5a36dc256fbeb1be1e13800122bddb36b4ba9b0639a933fd1251da6e8bc2abb0"
+      "sha256": "b3d41eabff561c680a7fe12eddb4224de6eaf797263f0a0fb7bad5f596fb886e"
     },
     {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
@@ -15084,7 +15084,7 @@
       "path": "packages/pipeline/lib/generated/protocol-projection.json",
       "generatorId": "scripts-protocol-project-protocol",
       "custody": "manifest",
-      "sha256": "20bae8de71a87d59a88f9653cc0101c8806ae4e85eb125a9ad7efe398200953c"
+      "sha256": "ca9ad37fe3811d253698d9c2a3841f1391def25abe59d711f494f99c4bf586ae"
     },
     {
       "path": "packages/pipeline/lib/operate/action-verification-v2.d.mts",
@@ -15984,7 +15984,7 @@
       "path": "packages/pipeline/registry/v1.5.0/commands.json",
       "generatorId": "scripts-protocol-project-protocol",
       "custody": "public-package-projection",
-      "sha256": "68739441bd2987882b8a4f2a8d23bf2e1247731aca866319660adcace1b65240"
+      "sha256": "a68f0259af40e6fcc7be395a306ca44f56c90a366cc492ec75370d86580f1d5e"
     },
     {
       "path": "packages/pipeline/registry/v1.5.0/output-paths.json",
@@ -16776,7 +16776,7 @@
       "path": "packages/protocol/registries/commands.json",
       "generatorId": "packages-protocol-scripts-generate-protocol-assets",
       "custody": "protocol-generated",
-      "sha256": "68739441bd2987882b8a4f2a8d23bf2e1247731aca866319660adcace1b65240"
+      "sha256": "a68f0259af40e6fcc7be395a306ca44f56c90a366cc492ec75370d86580f1d5e"
     },
     {
       "path": "packages/protocol/registries/diagram-grammars.json",
@@ -17136,7 +17136,7 @@
       "path": "packages/protocol/src/generated/canonical-registries.mjs",
       "generatorId": "packages-protocol-scripts-generate-protocol-assets",
       "custody": "protocol-generated",
-      "sha256": "690a3b6ab4fef167219a40d0abc47e1f379a9500a8323a62d5e4a33e0aba4aac"
+      "sha256": "34db3b67fc9484e6a11f61f26162c878c14635bdab9751eed56b78b6cc5109b9"
     },
     {
       "path": "packages/protocol/src/generated/contract-catalog-v2.mjs",
@@ -18036,5 +18036,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:84195282f939f8eafbf520476e41d28562d3541e6c543d0fe1ef76059b52f3eb"
+  "documentDigest": "sha256:c98991b49e82f5091ff5ab2660f746037aaeed58f1109f3117914653284a5888"
 }

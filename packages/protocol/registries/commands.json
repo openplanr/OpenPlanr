@@ -965,7 +965,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "packages/cli/src/cli/commands/upgrade.ts",
-        "digest": "sha256:19a69560cae6ad55a484954ce4e4bc0763fb81ec6d518583e77dd7f381aebfc5"
+        "digest": "sha256:5f559c4d6bf7a1b31477f71c195d086021a8f4b8bc62ba78e6eeb6b5f1b1ac5c"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:8794b9b12d8e654540b57c233cb4ea9994072e0d06adfdd187ea5707b1ab39b4"
+  "documentDigest": "sha256:702b18ea8264beaa8a0c3886e1bf9eae8cdd4ea00140e84ea8ae994e7d0c1c39"
 }

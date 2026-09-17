@@ -8,7 +8,7 @@ import {
   type ClaudePluginOperation,
   formatClaudePluginOperationCommand,
   inspectClaudePluginIntegration,
-  OPENPLANR_CLAUDE_MARKETPLACE_SOURCE,
+  OPENPLANR_CLAUDE_PLUGIN,
 } from './claude-plugin-service.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 import { readOpenPlanrVersion } from './provenance-service.js';
@@ -30,6 +30,12 @@ export interface EcosystemComponents {
   pipeline: EcosystemComponent;
   skills: EcosystemComponent;
   marketplace?: EcosystemComponent;
+  /**
+   * `registry` when derived from the npm registry document for the CLI (the
+   * pipeline is its exact bundled pin and the host plugin ships with it);
+   * `manifest` for the legacy `components` tuple manifest with explicit ranges.
+   */
+  shape?: 'registry' | 'manifest';
 }
 
 /**
@@ -47,6 +53,10 @@ export interface UpgradeReconciliation {
   installed: { cli: string; skills: string | null; pipeline: string | null };
   published: EcosystemComponents | null;
   ecosystemSource: EcosystemSource;
+  /** The pipeline package this CLI bundles; the pipeline half when no pipeline plugin exists. */
+  bundledPipeline?: string | null;
+  /** Legacy host plugins still installed beside the unified plugin the marketplace now targets. */
+  legacyPlugins?: string[];
 }
 
 export interface ReconcileOptions {
@@ -61,13 +71,15 @@ export interface ReconcileOptions {
 }
 
 /**
- * The published manifest lives at `main` HEAD of the marketplace repository,
- * whose closeout sequence guarantees HEAD only reflects a finalized operation.
- * `OPENPLANR_ECOSYSTEM_SOURCE` overrides it with an `http(s)` URL (a local stub
- * server) or a filesystem path (a fixture), which the packed e2e test uses to
- * avoid any real network.
+ * The published compatible set is the npm registry's `latest` document for the
+ * CLI: its version is what a global install lands, and its exact `planr-pipeline`
+ * pin is the pipeline it bundles. The unified host plugin ships with the CLI, so
+ * no separate manifest describes it. `OPENPLANR_ECOSYSTEM_SOURCE` overrides the
+ * location with an `http(s)` URL (a local stub server) or a filesystem path (a
+ * fixture); either the registry document or the legacy `components` manifest is
+ * accepted there.
  */
-const DEFAULT_ECOSYSTEM_URL = `https://raw.githubusercontent.com/${OPENPLANR_CLAUDE_MARKETPLACE_SOURCE}/main/ecosystem.json`;
+export const DEFAULT_ECOSYSTEM_SOURCE = 'https://registry.npmjs.org/openplanr/latest';
 
 /**
  * Within the TTL the cached manifest is trusted without a network round-trip.
@@ -84,39 +96,69 @@ const CACHE_TTL_MS = 15 * 60 * 1000;
 const DEFAULT_FETCH_TIMEOUT_MS = 2_000;
 
 function ecosystemSourceLocation(): string {
-  return process.env.OPENPLANR_ECOSYSTEM_SOURCE?.trim() || DEFAULT_ECOSYSTEM_URL;
+  return process.env.OPENPLANR_ECOSYSTEM_SOURCE?.trim() || DEFAULT_ECOSYSTEM_SOURCE;
 }
 
 function ecosystemCachePath(): string {
   return path.join(runtimeRoot(), 'ecosystem-cache.json');
 }
 
-/** Narrow the raw manifest JSON to the compatibility components we reconcile. */
+interface RawPublishedDocument {
+  components?: {
+    cli?: EcosystemComponent;
+    pipeline?: EcosystemComponent;
+    skills?: EcosystemComponent;
+    marketplace?: EcosystemComponent;
+  };
+  name?: string;
+  version?: string;
+  optionalDependencies?: Record<string, string>;
+  dependencies?: Record<string, string>;
+}
+
+/** Narrow the raw published JSON to the compatibility components we reconcile. */
 function parseComponents(text: string): EcosystemComponents | null {
   try {
-    const data = JSON.parse(text) as {
-      components?: {
-        cli?: EcosystemComponent;
-        pipeline?: EcosystemComponent;
-        skills?: EcosystemComponent;
-        marketplace?: EcosystemComponent;
-      };
-    };
-    const components = data.components;
-    if (!components?.cli?.version || !components.pipeline?.version || !components.skills?.version) {
-      return null;
-    }
-    return {
-      cli: { version: components.cli.version, ...pickRange(components.cli) },
-      pipeline: { version: components.pipeline.version, ...pickRange(components.pipeline) },
-      skills: { version: components.skills.version, ...pickRange(components.skills) },
-      ...(components.marketplace?.version
-        ? { marketplace: { version: components.marketplace.version } }
-        : {}),
-    };
+    const data = JSON.parse(text) as RawPublishedDocument;
+    return parseTupleManifest(data) ?? parseRegistryDocument(data);
   } catch {
     return null;
   }
+}
+
+/** The legacy tuple manifest: three versioned components with explicit mutual ranges. */
+function parseTupleManifest(data: RawPublishedDocument): EcosystemComponents | null {
+  const components = data.components;
+  if (!components?.cli?.version || !components.pipeline?.version || !components.skills?.version) {
+    return null;
+  }
+  return {
+    cli: { version: components.cli.version, ...pickRange(components.cli) },
+    pipeline: { version: components.pipeline.version, ...pickRange(components.pipeline) },
+    skills: { version: components.skills.version, ...pickRange(components.skills) },
+    ...(components.marketplace?.version
+      ? { marketplace: { version: components.marketplace.version } }
+      : {}),
+    shape: 'manifest',
+  };
+}
+
+/**
+ * The npm registry document for the CLI. The pipeline component is the exact
+ * `planr-pipeline` pin the published CLI bundles; the skills component is the
+ * host plugin generated from that same CLI version.
+ */
+function parseRegistryDocument(data: RawPublishedDocument): EcosystemComponents | null {
+  if (data.name !== 'openplanr' || typeof data.version !== 'string') return null;
+  const pin =
+    data.optionalDependencies?.['planr-pipeline'] ?? data.dependencies?.['planr-pipeline'];
+  if (typeof pin !== 'string' || !stableVersionParts(pin)) return null;
+  return {
+    cli: { version: data.version },
+    pipeline: { version: pin },
+    skills: { version: data.version },
+    shape: 'registry',
+  };
 }
 
 function pickRange(component: EcosystemComponent): {
@@ -289,37 +331,64 @@ export async function reconcileInstalledTuple(
   options: ReconcileOptions = {},
 ): Promise<UpgradeReconciliation> {
   const cliVersion = readOpenPlanrVersion();
-  const pipelinePackageVersion = resolvePipelinePackage(false)?.version ?? cliVersion;
+  const bundledPipeline = resolvePipelinePackage(false)?.version ?? null;
   const inspection = inspectClaudePluginIntegration(
-    pipelinePackageVersion,
+    bundledPipeline ?? cliVersion,
     options.claudeCommandRunner,
   );
-  const skillsInstalled =
-    inspection.plugins.find((plugin) => plugin.name === 'openplanr')?.installedVersion ?? null;
-  const pipelineInstalled =
-    inspection.plugins.find((plugin) => plugin.name === 'planr-pipeline')?.installedVersion ?? null;
-  const installed = { cli: cliVersion, skills: skillsInstalled, pipeline: pipelineInstalled };
+  const pluginVersion = (name: string): string | null =>
+    inspection.plugins.find((plugin) => plugin.name === name)?.installedVersion ?? null;
+  const installed = {
+    cli: cliVersion,
+    skills: pluginVersion(OPENPLANR_CLAUDE_PLUGIN) ?? pluginVersion('openplanr'),
+    pipeline: pluginVersion('planr-pipeline'),
+  };
+  const legacyPlugins = inspection.legacyPluginIds;
 
   const { components: published, source: ecosystemSource } = await loadEcosystem(options);
   if (!published) {
-    return { status: 'unknown', installed, published: null, ecosystemSource };
+    return {
+      status: 'unknown',
+      installed,
+      published: null,
+      ecosystemSource,
+      bundledPipeline,
+      legacyPlugins,
+    };
   }
 
   // "Behind", not "different". `classifyComponentDrift` documents `cliDrift` as "a CLI
   // that merely trails an upgrade", so a direction check is what that input was always
   // meant to carry — an installed component ahead of the registry has nothing to upgrade.
   const cliDrift = isBehind(installed.cli, published.cli.version);
-  const componentDrift =
-    cliDrift ||
-    isBehind(installed.skills, published.skills.version) ||
-    isBehind(installed.pipeline, published.pipeline.version);
-  // A real mutual-compatibility violation: an installed component sits outside
-  // the range its published sibling declares. Absent (uninstalled) plugins are
-  // not violations — that is a different condition from incompatibility.
-  const incompatibleDrift =
-    violatesRange(installed.pipeline, published.cli.pipelineRange) ||
-    violatesRange(installed.cli, published.skills.cliRange) ||
-    violatesRange(installed.cli, published.pipeline.cliRange);
+  let componentDrift: boolean;
+  let incompatibleDrift: boolean;
+  if (published.shape === 'registry') {
+    // The host plugin is judged against the marketplace target the inspection already
+    // resolved, and the pipeline against the pin the published CLI bundles. The only
+    // incompatibility a registry-described set can have is a leftover legacy plugin.
+    const pluginTrailing = inspection.plugins.some(
+      (plugin) =>
+        plugin.installed && isBehind(plugin.installedVersion ?? null, plugin.expectedVersion),
+    );
+    componentDrift =
+      cliDrift ||
+      pluginTrailing ||
+      isBehind(installed.pipeline ?? bundledPipeline, published.pipeline.version);
+    incompatibleDrift = legacyPlugins.length > 0;
+  } else {
+    componentDrift =
+      cliDrift ||
+      isBehind(installed.skills, published.skills.version) ||
+      isBehind(installed.pipeline, published.pipeline.version);
+    // A real mutual-compatibility violation: an installed component sits outside
+    // the range its published sibling declares. Absent (uninstalled) plugins are
+    // not violations — that is a different condition from incompatibility.
+    incompatibleDrift =
+      violatesRange(installed.pipeline, published.cli.pipelineRange) ||
+      violatesRange(installed.cli, published.skills.cliRange) ||
+      violatesRange(installed.cli, published.pipeline.cliRange);
+  }
 
   const classification = classifyComponentDrift({ cliDrift, componentDrift, incompatibleDrift });
   const status =
@@ -329,7 +398,7 @@ export async function reconcileInstalledTuple(
         ? 'upgrade-available'
         : 'incompatible';
 
-  return { status, installed, published, ecosystemSource };
+  return { status, installed, published, ecosystemSource, bundledPipeline, legacyPlugins };
 }
 
 // ===========================================================================

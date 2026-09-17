@@ -553,7 +553,9 @@ Failures from packet commands are bounded in both human and `--json` output;
 machine output contains `ok`, `code`, and `problem` without stack traces or host
 paths. For setup or command parity failures, run `planr doctor --strict --json`.
 Use `planr upgrade status`, then `planr upgrade apply` when doctor reports an
-incompatible installed CLI.
+incompatible installed CLI. The published compatible set is read from the npm
+registry's `latest` CLI document (its version and the exact `planr-pipeline` it
+bundles); `OPENPLANR_ECOSYSTEM_SOURCE` points the check at another URL or file.
 
 ### `planr artifact`
 

@@ -1,32 +1,30 @@
 #!/usr/bin/env node
 
-import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { excludePrivateDecisionRecords } from './private-decision-records.mjs';
-import { preserveReleaseChangelogHistory } from './release-changelog-history.mjs';
-import { excludeArchivedDashboardRecords } from './archived-dashboard-records.mjs';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-
 import { DIAGRAM_V16_REGISTRIES, PROTOCOL_V17_REGISTRIES } from '../../packages/protocol/src/skill-source-contracts.mjs';
+import { excludeArchivedDashboardRecords } from './archived-dashboard-records.mjs';
 import {
+  assert,
   BASELINE_PATH,
   DOCUMENTATION_PATH,
+  documentDigest,
   EXPECTED_SOURCES,
   FEATURES,
-  INVENTORY_PATH,
-  REPOSITORY_ROOT,
-  SURFACE_PATH,
-  assert,
-  documentDigest,
   fileSha256,
+  INVENTORY_PATH,
   inferFeatureId,
   normalizeRelativePath,
   pathKind,
   prettyJson,
+  REPOSITORY_ROOT,
   readJson,
+  SURFACE_PATH,
   sealDocument,
-  sha256,
   sortedUnique,
 } from './preservation-lib.mjs';
+import { excludePrivateDecisionRecords } from './private-decision-records.mjs';
+import { preserveReleaseChangelogHistory } from './release-changelog-history.mjs';
 
 const argv = process.argv.slice(2);
 const writeMode = argv.includes('--write');
@@ -40,6 +38,10 @@ const ROOT_WORKFLOW_CONTRACT_PATHS = new Set([
   'tests/unit/pipeline-pin-parity.test.ts',
 ]);
 const EVOLVED_MAPPING_IDS = new Set([
+  // The upgrade check reconciles against the npm registry document instead of the retired marketplace manifest.
+  'openplanr-cli:cutoff:src/cli/commands/upgrade.ts',
+  'openplanr-cli:cutoff:src/services/upgrade-service.ts',
+  'openplanr-cli:cutoff:tests/unit/upgrade-service.test.ts',
   // Current documentation no longer links to retired SPEC-016 planning records.
   'planr-pipeline:cutoff:docs/dashboard.md',
   'planr-pipeline:cutoff:docs/operate/DASHBOARD.md',
