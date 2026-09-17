@@ -59,9 +59,21 @@ These options apply to **all** commands:
 The company route connects an explicitly configured workspace to selected local artifacts. Existing encrypted token shares remain separate. Sign in through the browser and choose the organization in the identity provider's consent screen:
 
 ```bash
-planr company login --json
+planr company login
+```
+
+The normal customer flow needs no service URL or output flag. For a remote or
+headless session, print the authorization URL instead of launching it:
+
+```bash
 # Print the browser URL instead of launching it; open it on this same computer
-planr company login --no-open --timeout 300 --json
+planr company login --no-open --timeout 300
+```
+
+Structured output is available for automation:
+
+```bash
+planr company login --json
 planr company logout --json
 ```
 

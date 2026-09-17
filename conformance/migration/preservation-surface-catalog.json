@@ -4008,25 +4008,25 @@
       "path": "adapters/manifests/canonical-skills.json",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "620889787a9a23467936586be89d11f9ac24923ec58ef6bad435f8169b3a7d09"
+      "sha256": "d5dd0ccb98a30f6d819ee07f73adeb065af5e6fba02bedcfbcd1aa31318cadc3"
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "ecosystem-generated",
-      "sha256": "9d1af6cde6cb6fd37a493442fb0b8e1763075eba7e84a1f02bd37e9caf4b07a6"
+      "sha256": "a95ad331bfdfa918bfed2f8948b90b2bc14141e4079da77795c473d2a4fe8a88"
     },
     {
       "path": "adapters/manifests/ecosystem-assets.json",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "manifest",
-      "sha256": "8275617a1c37a1c2abbd6711c455263f41593b58089ed2a39ecb9623b587dfb1"
+      "sha256": "c27da2aeeaf09f89b9a836317c1570f38482929b82e9355b0fedc0506b64d67e"
     },
     {
       "path": "adapters/manifests/generated-assets.json",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "manifest",
-      "sha256": "438c3399ac496835cf992f05a752dfd5088eb493d270a7fdf72f004f12a2e666"
+      "sha256": "9a725ef57a90c5b58eb2d23e0c6e93077c7a452e6f33b3e27872ebe4c4dce061"
     },
     {
       "path": "adapters/manifests/role-assets.json",
@@ -4050,7 +4050,7 @@
       "path": "dist/plugins/claude/openplanr/.openplanr-content.json",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "f12d3d65681f1734da4598195c83dff7725af7a41c417d65522ba46693aa16cb"
+      "sha256": "b40a294cfa8769a2515cf1a9b3d92302097a7fdee932f0a309c73216d5686f31"
     },
     {
       "path": "dist/plugins/claude/openplanr/agents/planr-backend.md",
@@ -4272,7 +4272,7 @@
       "path": "dist/plugins/claude/openplanr/skills/artifact/references/company-review.md",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257"
+      "sha256": "b31bb74501fd24ae388294a4ccf2b9161b128f0288b2fb03c99a762595e0eaba"
     },
     {
       "path": "dist/plugins/claude/openplanr/skills/artifact/references/design-sharing.md",
@@ -5802,7 +5802,7 @@
       "path": "dist/plugins/cursor/openplanr/.openplanr-content.json",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "6b816509ad86126346b7b2cc2e0628f6d3330376769547202bfadb619808e01b"
+      "sha256": "65167e822984f89ac948ba487d1d7f4ab9a9a6cfc155b18bfd4f677a201c2c05"
     },
     {
       "path": "dist/plugins/cursor/openplanr/manifest.json",
@@ -5820,7 +5820,7 @@
       "path": "dist/plugins/cursor/openplanr/rules/planr-artifact/references/company-review.md",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257"
+      "sha256": "b31bb74501fd24ae388294a4ccf2b9161b128f0288b2fb03c99a762595e0eaba"
     },
     {
       "path": "dist/plugins/cursor/openplanr/rules/planr-artifact/references/design-sharing.md",
@@ -7212,7 +7212,7 @@
       "path": "dist/plugins/openai/openplanr/.openplanr-content.json",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "d5f5a81e8043b792021140e47cfba39238045457452b3730efb776ff6dacd4ab"
+      "sha256": "510b0efdf7b4902ecaaa7729fb01df2e8215241f23181c387b9ff59f627aea47"
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/artifact/agents/openai.yaml",
@@ -7230,7 +7230,7 @@
       "path": "dist/plugins/openai/openplanr/skills/artifact/references/company-review.md",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257"
+      "sha256": "b31bb74501fd24ae388294a4ccf2b9161b128f0288b2fb03c99a762595e0eaba"
     },
     {
       "path": "dist/plugins/openai/openplanr/skills/artifact/references/design-sharing.md",
@@ -8922,7 +8922,7 @@
       "path": "ecosystem.json",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "ecosystem-generated",
-      "sha256": "676d96cabf5c50cad59410dc12e3b30756377825f1841a5bc032e1a5fff2bf07"
+      "sha256": "d9ea9838768f937e000a9c1741f5b36d0bf9c7fb58d0db132636fd793e1aa46a"
     },
     {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
@@ -8952,7 +8952,7 @@
       "path": "packages/cli/lib/host-packages/claude/openplanr/.openplanr-content.json",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "f12d3d65681f1734da4598195c83dff7725af7a41c417d65522ba46693aa16cb"
+      "sha256": "b40a294cfa8769a2515cf1a9b3d92302097a7fdee932f0a309c73216d5686f31"
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/agents/planr-backend.md",
@@ -9174,7 +9174,7 @@
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/artifact/references/company-review.md",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257"
+      "sha256": "b31bb74501fd24ae388294a4ccf2b9161b128f0288b2fb03c99a762595e0eaba"
     },
     {
       "path": "packages/cli/lib/host-packages/claude/openplanr/skills/artifact/references/design-sharing.md",
@@ -10704,7 +10704,7 @@
       "path": "packages/cli/lib/host-packages/cursor/openplanr/.openplanr-content.json",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "6b816509ad86126346b7b2cc2e0628f6d3330376769547202bfadb619808e01b"
+      "sha256": "65167e822984f89ac948ba487d1d7f4ab9a9a6cfc155b18bfd4f677a201c2c05"
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/manifest.json",
@@ -10722,7 +10722,7 @@
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-artifact/references/company-review.md",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257"
+      "sha256": "b31bb74501fd24ae388294a4ccf2b9161b128f0288b2fb03c99a762595e0eaba"
     },
     {
       "path": "packages/cli/lib/host-packages/cursor/openplanr/rules/planr-artifact/references/design-sharing.md",
@@ -12114,7 +12114,7 @@
       "path": "packages/cli/lib/host-packages/openai/openplanr/.openplanr-content.json",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "d5f5a81e8043b792021140e47cfba39238045457452b3730efb776ff6dacd4ab"
+      "sha256": "510b0efdf7b4902ecaaa7729fb01df2e8215241f23181c387b9ff59f627aea47"
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/artifact/agents/openai.yaml",
@@ -12132,7 +12132,7 @@
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/artifact/references/company-review.md",
       "generatorId": "scripts-skills-generate-v18",
       "custody": "generated",
-      "sha256": "168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257"
+      "sha256": "b31bb74501fd24ae388294a4ccf2b9161b128f0288b2fb03c99a762595e0eaba"
     },
     {
       "path": "packages/cli/lib/host-packages/openai/openplanr/skills/artifact/references/design-sharing.md",
@@ -18036,5 +18036,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:a728a040cc25ba414dfd822718a03136aee7d0812bf1c5e6df5ae5208842c832"
+  "documentDigest": "sha256:ea1616bff878efeabe43f7a69a08507d5580fd09230ce1a48e4e1e4e15867e61"
 }

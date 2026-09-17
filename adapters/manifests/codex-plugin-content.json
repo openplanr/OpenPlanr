@@ -31,7 +31,7 @@
         },
         {
           "path": "skills/artifact/references/company-review.md",
-          "digest": "sha256:168066d3539dab064adeaaf0e4187df8b779d53476be17283b4a62d4bb136257"
+          "digest": "sha256:b31bb74501fd24ae388294a4ccf2b9161b128f0288b2fb03c99a762595e0eaba"
         },
         {
           "path": "skills/artifact/agents/openai.yaml",
