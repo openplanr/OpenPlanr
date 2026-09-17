@@ -47,6 +47,7 @@ immutable and are never republished; a correction is a new version.
 | `@openplanr/protocol` | `0.3.0` | 2026-09-17 20:10:48 | `publish-packages.yml` run 35268793491; SLSA v1 attestation | `745c3320ea8c26d52e786a11b891e7323f65809e` | `09ad63da2fe386f907419ec1ce0f4daef73123b1b7fa997455f70fd2d7a7b0e9` | `sha512-zz1KWf+6aOHSNGzinaiU1HsJIKKEPNxUQlLUKIn7EleIOJ7z3MOW7Aej7qMuZCHrBr0/HGkGn1cnWV1xOOLRBg==` |
 | `planr-pipeline` | `0.45.1` | 2026-09-17 20:18:33 | `publish-packages.yml` run 35269463777; SLSA v1 attestation | `745c3320ea8c26d52e786a11b891e7323f65809e` | `5547524816047bf48f46e79db5e35dfe1ed63077f417f450afacf9ff7cb561b2` | `sha512-Gr4kPwseyIlPYYO2XaWofepOuUYJWHYpLJdZxKPGnSYmuBOAdLeeEhmAqBPTJEBq210rG4wp2otwGbK4GbUuOA==` |
 | `openplanr` | `2.1.0` | 2026-09-17 20:25:46 | `publish-packages.yml` run 35270101679; SLSA v1 attestation | `745c3320ea8c26d52e786a11b891e7323f65809e` | `5585526e4ee8b51c3579bfb8a0288dcc8ec439da424f48dd7e85bb4587537b22` | `sha512-O5sdDMNJu4iTykfYG75xJTtDuoCxkS/wkP2aqcHIwdWQXGUsPbauP+we10NAG9avgYF5sIWPBIMs/z7sj7e54w==` |
+| `openplanr` | `2.1.1` | 2026-09-17 21:20:10 | `publish-packages.yml` run 35275009599; SLSA v1 attestation | `b357aa171395d076312a8ce64c817cde2e99e137` | `d968d3ff3e059da523c22c54e69ad97f85a48ace00d0d7ace3cdc7aa6c77a60b` | `sha512-IRFpAMmMCIQg/TVzmJ+p/u8aD7rEg/YsHY7SIGpv36pEGdA+JAnbLNcBrtHqgQjs8nsTlsi9o21mmJG/b6v6Xw==` |
 
 `@openplanr/protocol@0.2.0` reached the registry thirty seconds before its workflow dispatch
 (run 35165457743) reached the publish step; the workflow found identical bytes and skipped. Its
@@ -64,7 +65,8 @@ registry file for file. These four annotated tags and their GitHub releases were
 2026-09-17 after that verification. The second release cycle — `@openplanr/protocol@0.3.0`,
 `planr-pipeline@0.45.1` and `openplanr@2.1.0` — was versioned by `745c3320ea8c26d52e786a11b891e7323f65809e`
 (#262), published in dependency order from that commit, rebuilt and compared file by file, and tagged
-at that commit the same day; each run's registry-propagation check passed.
+at that commit the same day; each run's registry-propagation check passed. `openplanr@2.1.1` was
+versioned by `b357aa171395d076312a8ce64c817cde2e99e137` (#265), verified the same way and tagged there.
 
 `planr-pipeline` versions `0.43.0` and `0.44.0` were internal release candidates that were never
 published; the registry history runs `0.42.0` → `0.45.0`.
