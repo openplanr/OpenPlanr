@@ -1,5 +1,12 @@
 # @openplanr/design
 
+## 0.2.1
+### Patch Changes
+
+- Updated dependencies [7c0e86d]
+  - @openplanr/protocol@0.3.0
+  - @openplanr/artifact@0.2.1
+
 ## 0.2.0
 ### Minor Changes
 

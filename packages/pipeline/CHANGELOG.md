@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.45.1
+### Patch Changes
+
+- 7c0e86d: Regenerate the Protocol projections and skill assets for the `planr-openplanr` routing skill.
+
 ## 0.45.0
 
 Versions 0.43.0 and 0.44.0 were internal release candidates and were never published; the

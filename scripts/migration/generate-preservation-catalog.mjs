@@ -38,6 +38,8 @@ const ROOT_WORKFLOW_CONTRACT_PATHS = new Set([
   'tests/unit/pipeline-pin-parity.test.ts',
 ]);
 const EVOLVED_MAPPING_IDS = new Set([
+  // The pipeline plugin manifest carries the published package version.
+  'planr-pipeline:cutoff:.claude-plugin/plugin.json',
   // The upgrade check reconciles against the npm registry document instead of the retired marketplace manifest.
   'openplanr-cli:cutoff:src/cli/commands/upgrade.ts',
   'openplanr-cli:cutoff:src/services/upgrade-service.ts',

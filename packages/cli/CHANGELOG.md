@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.0
+### Minor Changes
+
+- 7c0e86d: Generate an `## OpenPlanr capabilities` section into `CLAUDE.md` and `AGENTS.md` listing every skill with its triggers (and the delegated agents for Claude Code), and add the `planr-openplanr` router skill that picks the best OpenPlanr skill for a request.
+
+### Patch Changes
+
+- ef21a24: Reconcile `planr upgrade status` against the npm registry's published CLI and the pipeline it bundles instead of the retired marketplace manifest, and report a leftover legacy host plugin as the incompatibility.
+
 ## 2.0.1
 ### Patch Changes
 
