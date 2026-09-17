@@ -19,11 +19,12 @@ import type { ArtifactType, OpenPlanrConfig } from '../models/types.js';
 import { logger } from '../utils/logger.js';
 import { listArtifacts, readArtifact, readArtifactRaw } from './artifact-service.js';
 import { listSpecs } from './spec-service.js';
+import { type ActiveSprintSummary, findActiveSprint } from './sprint-refinement-service.js';
 
 export interface DeliveryItem {
   id: string;
   title: string;
-  type: 'spec' | 'epic' | 'feature' | 'story' | 'task' | 'quick' | 'backlog';
+  type: 'spec' | 'epic' | 'feature' | 'story' | 'task' | 'quick' | 'backlog' | 'sprint';
   status: string;
   done: boolean;
   /**
@@ -35,6 +36,8 @@ export interface DeliveryItem {
   /** subtask completion, when the artifact is a checklist */
   progress?: { done: number; total: number };
   priority?: string;
+  /** The release cut an active sprint feeds. */
+  releaseCut?: string;
   linear?: { identifier: string; url?: string; state?: string };
   github?: { issue?: number; issueState?: string; pr?: { number: number; merged: boolean } };
 }
@@ -48,6 +51,8 @@ export interface DeliveryStatus {
   /** Items that are neither done nor addressed — the real open work. */
   outstanding: DeliveryItem[];
   warnings: string[];
+  /** The active sprint, when one exists. */
+  sprint?: ActiveSprintSummary;
 }
 
 export interface CollectOptions {
@@ -60,6 +65,7 @@ export interface CollectOptions {
 function isDone(type: DeliveryItem['type'], status: string): boolean {
   const s = (status || '').toLowerCase();
   if (type === 'backlog') return s === 'closed' || s === 'done';
+  if (type === 'sprint') return s === 'closed';
   return s === 'done' || s === 'completed' || s === 'shipped' || s === 'released';
 }
 
@@ -145,6 +151,22 @@ export async function collectDeliveryStatus(
     order.push(label);
   };
 
+  const sprint = await findActiveSprint(projectDir, config);
+  if (sprint) {
+    add('Sprint', [
+      {
+        id: sprint.id,
+        title: sprint.name,
+        type: 'sprint',
+        status: sprint.status,
+        done: isDone('sprint', sprint.status),
+        addressed: isAddressed(sprint.status),
+        progress: sprint.progress.total > 0 ? sprint.progress : undefined,
+        releaseCut: sprint.releaseCut,
+      },
+    ]);
+  }
+
   if (mode === 'spec-driven') {
     add(
       'Specs',
@@ -199,7 +221,16 @@ export async function collectDeliveryStatus(
   }));
   const outstanding = allItems.filter((i) => !i.done && !i.addressed);
 
-  return { projectName: config.projectName, mode, groups, order, summary, outstanding, warnings };
+  return {
+    projectName: config.projectName,
+    mode,
+    groups,
+    order,
+    summary,
+    outstanding,
+    warnings,
+    ...(sprint ? { sprint } : {}),
+  };
 }
 
 /** --linear: resolve live issue state for items carrying a Linear UUID. */

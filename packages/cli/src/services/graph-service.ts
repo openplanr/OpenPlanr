@@ -44,6 +44,8 @@ export interface ReadGraphOptions {
 }
 
 const AGILE_DIRS = ['epics', 'features', 'stories', 'tasks', 'backlog', 'quick', 'sprints', 'adrs'];
+/** `sprints/SPRINT-NNN/` holds refinement notes, not artifacts. */
+const SPRINT_NOTES_DIR = /^SPRINT-\d+/u;
 const PARENT_FIELDS = ['epicId', 'featureId', 'storyId', 'specId'] as const;
 const DONE_STATES = new Set(['done', 'closed', 'completed', 'shipped', 'released']);
 const ADDRESSED_STATES = new Set(['promoted', 'superseded']);
@@ -76,7 +78,8 @@ function walkAgileDir(dir: string, acc: string[]): string[] {
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (!entry.name.startsWith('.')) walkAgileDir(fullPath, acc);
+      if (!entry.name.startsWith('.') && !SPRINT_NOTES_DIR.test(entry.name))
+        walkAgileDir(fullPath, acc);
     } else if (entry.isFile() && isArtifactFile(entry.name)) {
       acc.push(fullPath);
     }

@@ -39,4 +39,24 @@ describe('sprint graph projection', () => {
     });
     expect(sprint?.frontmatter.taskIds).toEqual(['QT-071']);
   });
+
+  it('ignores refinement notes stored under sprints/SPRINT-NNN/', () => {
+    const root = mkdtempSync(join(tmpdir(), 'openplanr-cli-sprint-'));
+    temporaryRoots.push(root);
+    const sprintDir = join(root, 'sprints');
+    mkdirSync(join(sprintDir, 'SPRINT-041'), { recursive: true });
+    writeFileSync(
+      join(sprintDir, 'SPRINT-041-crm-recovery.md'),
+      ['---', 'id: "SPRINT-041"', 'name: "CRM recovery"', 'status: "active"', '---'].join('\n'),
+      'utf8',
+    );
+    writeFileSync(
+      join(sprintDir, 'SPRINT-041', 'refinement.md'),
+      '# SPRINT-041 refinement\n',
+      'utf8',
+    );
+    writeFileSync(join(sprintDir, 'SPRINT-041', 'refinement.json'), '{}\n', 'utf8');
+
+    expect(readGraph(root).nodes.map((node) => node.id)).toEqual(['SPRINT-041']);
+  });
 });

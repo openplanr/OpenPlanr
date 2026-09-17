@@ -166,3 +166,54 @@ export async function checkoutPaths(projectDir: string, relativePaths: string[])
     maxBuffer: GIT_MAX_BUFFER,
   });
 }
+
+export type GitCommitResult =
+  | { committed: true; sha: string; paths: string[] }
+  | { committed: false; reason: string };
+
+/** Thrown when git cannot run or `projectDir` is not inside a repository. */
+export class GitUnavailableError extends Error {
+  readonly kind: 'not-a-repo' | 'git-missing';
+  constructor(kind: 'not-a-repo' | 'git-missing', reason: string) {
+    super(reason);
+    this.name = 'GitUnavailableError';
+    this.kind = kind;
+  }
+}
+
+/**
+ * Stage and commit exactly `relativePaths` with `message`, leaving any other
+ * staged or unstaged work untouched. Returns `committed: false` when none of
+ * the paths changed. Hooks run as usual.
+ */
+export async function commitPaths(
+  projectDir: string,
+  relativePaths: string[],
+  message: string,
+): Promise<GitCommitResult> {
+  if (relativePaths.length === 0) return { committed: false, reason: 'no paths to commit' };
+  for (const relativePath of relativePaths) {
+    if (relativePath.startsWith('/') || relativePath.split(/[\\/]/u).includes('..')) {
+      throw new Error(`Refusing to commit a path outside the project: ${relativePath}`);
+    }
+  }
+  const run = (args: string[]) =>
+    execFileAsync('git', args, { cwd: projectDir, maxBuffer: GIT_MAX_BUFFER });
+
+  try {
+    await run(['rev-parse', '--is-inside-work-tree']);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    if (/ENOENT|git: not found|command not found/i.test(reason)) {
+      throw new GitUnavailableError('git-missing', reason);
+    }
+    throw new GitUnavailableError('not-a-repo', reason);
+  }
+
+  await run(['add', '--', ...relativePaths]);
+  const { stdout } = await run(['status', '--porcelain', '--', ...relativePaths]);
+  if (stdout.trim().length === 0) return { committed: false, reason: 'nothing changed' };
+  await run(['commit', '-q', '-m', message, '--', ...relativePaths]);
+  const { stdout: head } = await run(['rev-parse', 'HEAD']);
+  return { committed: true, sha: head.trim(), paths: [...relativePaths] };
+}

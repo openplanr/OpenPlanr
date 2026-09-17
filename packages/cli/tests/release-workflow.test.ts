@@ -223,7 +223,6 @@ describe('root release proof and public package artifacts', () => {
       'planr backlog close',
       'planr sprint add',
       'planr sprint status',
-      'planr sprint close',
       'planr sprint history',
       'planr quick promote',
       'planr story create --epic',

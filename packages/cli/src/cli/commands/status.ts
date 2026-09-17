@@ -106,7 +106,8 @@ export function renderMarkdown(s: DeliveryStatus): string {
     L.push('| ID | Status | Title | Progress | PR | Linear |');
     L.push('|----|--------|-------|----------|----|--------|');
     for (const i of items) {
-      const title = i.title.replace(/\|/g, '\\|');
+      const cut = i.releaseCut ? ` · cut ${i.releaseCut}` : '';
+      const title = `${i.title}${cut}`.replace(/\|/g, '\\|');
       L.push(
         `| ${i.id} | ${mdIcon(i.status)} ${i.status} | ${title} | ${progCell(i)} | ${ghCell(i)} | ${linCell(i)} |`,
       );
@@ -149,7 +150,8 @@ function renderTerminal(
       const prog = progCell(i) ? chalk.dim(` ${progCell(i)}`) : '';
       const gh = i.github?.pr || i.github?.issue ? chalk.cyan(`  ${ghCell(i)}`) : '';
       const lin = i.linear ? chalk.magenta(`  ${linCell(i)}`) : '';
-      display.line(`    ${i.id}  ${i.title}  ${st}${prog}${gh}${lin}`);
+      const cut = i.releaseCut ? chalk.cyan(`  cut ${i.releaseCut}`) : '';
+      display.line(`    ${i.id}  ${i.title}  ${st}${prog}${cut}${gh}${lin}`);
     }
     if (!ctx.showAll && items.length > 12)
       display.line(chalk.dim(`    … and ${items.length - 12} more (use --all)`));

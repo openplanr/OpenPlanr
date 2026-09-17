@@ -1,0 +1,94 @@
+# {{sprintId}} refinement · {{refinedAt}}
+
+## Inputs
+
+- **Capacity:** {{inputs.capacity}}
+- **Release cut:** {{inputs.releaseCut}}
+- **Git revision:** {{inputs.gitRevision}}
+- **Previous sprint:** {{inputs.previousSprintId}}
+- **Operate cycle:** {{inputs.operateCycleId}}
+- **Sources:** {{inputs.sources}}
+- **Defaulted:** {{inputs.defaulted}}
+{{#if inputs.notes}}
+- **Notes:** {{inputs.notes}}
+{{/if}}
+
+## Items
+
+| ID | Score | Evidence date | Stale? | Blocked by | Effort | Bucket |
+| --- | --- | --- | --- | --- | --- | --- |
+{{#each items}}
+| {{id}} | {{score}} | {{evidenceDate}} | {{stale}} | {{blockedBy}} | {{effort}} | {{bucket}} |
+{{/each}}
+
+## Refuter verdicts
+
+{{#if refuted}}
+{{#each refuted}}
+- **{{itemId}}** · {{lens}} · {{change}}
+{{/each}}
+{{else}}
+_No pick was changed by a refuter._
+{{/if}}
+
+## In progress
+{{#if batches}}
+{{#each batches}}
+
+### {{title}}{{#if effortDays}} · {{effortDays}}d{{/if}}
+
+{{#each rows}}
+- {{this}}
+{{/each}}
+{{/each}}
+{{else}}
+
+_Nothing selected._
+{{/if}}
+
+## Plan next
+
+{{#if planNext}}
+{{#each planNext}}
+- {{this}}
+{{/each}}
+{{else}}
+_None._
+{{/if}}
+
+## Blocked
+
+{{#if blocked}}
+{{#each blocked}}
+- {{this}}
+{{/each}}
+{{else}}
+_None._
+{{/if}}
+
+## Close or demote
+
+{{#if closeOrDemote}}
+{{#each closeOrDemote}}
+- {{this}}
+{{/each}}
+{{else}}
+_None._
+{{/if}}
+{{#if leftovers}}
+
+## Leftovers
+
+{{#each leftovers}}
+- {{this}}
+{{/each}}
+{{/if}}
+{{#if applied}}
+
+## Applied
+
+- **At:** {{applied.at}}
+{{#each applied.updates}}
+- {{this}}
+{{/each}}
+{{/if}}

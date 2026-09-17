@@ -1528,7 +1528,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "docs/generated/utility-command-catalog.json",
-          "digest": "sha256:76f00eb4f83477363167f69264eab955b8b22aff137961b742d56e75dc28fbcb"
+          "digest": "sha256:3ef32f1b1c3b37ae665bb0328b736cafcc1ad40a158875a8c7f32a7de1da1f54"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1717,7 +1717,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "docs/generated/utility-command-catalog.json",
-          "digest": "sha256:76f00eb4f83477363167f69264eab955b8b22aff137961b742d56e75dc28fbcb"
+          "digest": "sha256:3ef32f1b1c3b37ae665bb0328b736cafcc1ad40a158875a8c7f32a7de1da1f54"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -1990,7 +1990,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "packages/cli/src/cli/commands/status.ts",
-          "digest": "sha256:789fd8b1e904388a2fb157527fb12b5776a54235b7a59d134409e649580fb219"
+          "digest": "sha256:34b909c5a2c9134b61804dd4664400fe3f4e7739f3e15fb58c03f16b93429272"
         },
         "authorityClass": "workflow",
         "machineJson": true,
@@ -2095,7 +2095,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "packages/cli/src/cli/commands/update.ts",
-          "digest": "sha256:647805ffca7cfe0275163cbe6701fb370660ed3d02497d340ae5c3ca38e1a079"
+          "digest": "sha256:90edb8dd8c54864352ce66d02395eddba6f9f4fac7bbd5dcef92c64b1aa19c26"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:702b18ea8264beaa8a0c3886e1bf9eae8cdd4ea00140e84ea8ae994e7d0c1c39"
+    "documentDigest": "sha256:7ffb9b909de9618cbace6cfad748408d97e773dd20e0b439f2795da99c985ace"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -4582,6 +4582,68 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       },
       {
+        "skillId": "planr-sprint",
+        "skillVersion": "1.0.0",
+        "description": "Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.",
+        "lifecycle": "active",
+        "authorityClass": "planning-write",
+        "source": "skills/planr-sprint/openplanr.skill.json",
+        "sourceDigest": "sha256:8083ebeb2c89a73d127b99fc299e6ee4d2891b56740c4e266b52450f55a01794",
+        "triggerPolicy": {
+          "include": [
+            "Refine the open backlog and select what fits the next sprint or release cut",
+            "Judge which backlog items are stale, blocked, or ready and fit the sprint to capacity",
+            "Decide which open backlog items move to in progress before the release cut and which are dead"
+          ],
+          "exclude": [
+            "Decompose one specification into stories and tasks",
+            "Report delivery status without judging or selecting work"
+          ],
+          "deferTo": []
+        },
+        "contracts": {
+          "inputs": [],
+          "outputs": [
+            {
+              "id": "sprint-result",
+              "version": "1.0.0"
+            }
+          ]
+        },
+        "cliRequirements": [],
+        "ruleIds": [
+          "R1",
+          "R6",
+          "R7"
+        ],
+        "contributionManifestRefs": [
+          "packages/skill-runtime/contributions/workflows.json"
+        ],
+        "hosts": [
+          {
+            "host": "claude-code",
+            "entrypoint": "/planr:sprint",
+            "path": "dist/plugins/claude/openplanr/skills/sprint/SKILL.md"
+          },
+          {
+            "host": "codex",
+            "entrypoint": "$planr:sprint",
+            "path": "dist/plugins/openai/openplanr/skills/sprint/SKILL.md"
+          },
+          {
+            "host": "cursor",
+            "entrypoint": "planr-sprint",
+            "path": "dist/plugins/cursor/openplanr/rules/planr-sprint.mdc"
+          }
+        ],
+        "testRefs": [
+          "tests/protocol/skill-catalog.test.mjs"
+        ],
+        "certificationRefs": [
+          "evaluation/skills/migrations/planr-sprint.json"
+        ]
+      },
+      {
         "skillId": "planr-status",
         "skillVersion": "1.0.0",
         "description": "Inspect project delivery or one feature's pipeline status without changing state. Use when the user asks what is done, pending, blocked, or next.",
@@ -4705,7 +4767,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:7a069d3f8aa02af2a988b90e142b23e359b261800b0549fdb9a38bb2bfb7e968"
+    "documentDigest": "sha256:f4110fb706b84192deaef1ee5238cc10477b1d91f0003040a33221e490312cc7"
   },
   "outputs.json": {
     "kind": "output-catalog",

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Planr Sprint"
+  short_description: "Refine every open backlog item against the code and the…"
+  default_prompt: "Use $planr-sprint to refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status."
+policy:
+  allow_implicit_invocation: true

@@ -254,7 +254,8 @@ function walkAgileDir(dir, acc) {
   for (const ent of entries) {
     const full = join(dir, ent.name);
     if (ent.isDirectory()) {
-      if (ent.name.startsWith('.')) continue;
+      // `sprints/SPRINT-NNN/` holds refinement notes, not artifacts.
+      if (ent.name.startsWith('.') || /^SPRINT-\d+/u.test(ent.name)) continue;
       walkAgileDir(full, acc);
     } else if (ent.isFile() && isArtifactFile(ent.name)) {
       acc.push(full);

@@ -27,6 +27,7 @@ Claude Code and `$planr:plan` in Codex). Do not perform the routed work here.
 | Create or check an architecture, process, sequence, or data diagram | `planr-diagram` |
 | Share, import, or export an HTML artifact review | `planr-artifact` |
 | Know what is done, pending, blocked, or next | `planr-status` |
+| Refine the open backlog and select the sprint for the next release cut | `planr-sprint` |
 | See planning or Operate state in the browser | `planr-dashboard` |
 | Check artifacts for graph, status, or schema drift | `planr-sync` |
 | Judge release readiness or prepare a landing sequence | `planr-land` |

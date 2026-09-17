@@ -144,7 +144,7 @@ Every planning type provides `list`, `show <id>`, and `update <id>`. Creation ac
 | Task | A title and exactly one of `--story <id>` or `--feature <id>` |
 | Quick task | A description or input file; optional `--epic <id>` |
 | Backlog item | A description; optional priority, tags, and epic |
-| Sprint | A title; duration defaults to `2w` |
+| Sprint | A title; duration defaults to `2w`; JSON may add `status` (`planned`/`active`), `startDate`, `endDate`, `releaseCut`, `capacityDays`, `refinedAt` and `batches` |
 
 Use deterministic JSON when an agent or integration supplies complete fields:
 
@@ -155,6 +155,28 @@ planr task create --data - --json < task.json
 ```
 
 `planr update <ids...>` supports bulk status changes. `--all-done` and `--all-pending` also update canonical task checkboxes for task and quick-task artifacts. Use each command's `--help` output for its exact options.
+
+### `planr sprint` refinement
+
+The `planr:sprint` skill judges every open item and selects a sprint; these commands store what it decides. Sprint statuses are `planned`, `active` and `closed`.
+
+```bash
+planr sprint create --data sprint.json --json            # name, releaseCut, capacityDays, optional batches
+planr sprint refinement SPRINT-004 --data refinement.json # validate, store, fill the sprint body
+planr sprint diff SPRINT-003 SPRINT-004                   # what moved between two runs
+planr sprint apply SPRINT-004 --dry-run                   # preview the status write-back
+planr sprint apply SPRINT-004 --yes --commit              # write it as one commit
+planr sprint close SPRINT-004                             # record leftovers for the next run
+```
+
+| Command | Behaviour |
+| --- | --- |
+| `refinement <id> --data <path\|->` | Validates the refinement document (`schemaVersion: 1`, `sprintId`, `refinedAt`, `inputs`, `items[]`, `buckets{inProgress, planNext, blocked, closeOrDemote}`, `batches[]`, `refuted[]`), writes `.planr/sprints/<id>/refinement.json` and `refinement.md`, and rewrites the sprint's `## Tasks` as one checkbox per in-progress item grouped by batch (`- [ ] **BL-012** title · effort · [view](../backlog/…)`), keeping boxes that were already checked. Sets `taskIds`, `refinedAt`, `capacityDays` and `releaseCut` on the sprint. Refuses closed sprints. |
+| `diff <from> <to>` | Compares two stored documents: bucket moves with score changes, added and removed items. |
+| `apply <id>` | Writes each item's `targetStatus` and `targetPriority` (backlog only) and the `blockedBy` note of blocked items to the artifacts. Statuses must belong to the type's vocabulary unless `--force`. Needs `--yes` (or `--dry-run`); with `--commit` the touched files are committed as `chore(planr): refine backlog for <id>`. |
+| `close <id>` | Sets `status: closed` and `closedAt`, and records `leftovers[]` (unchecked or unfinished `taskIds`) in `refinement.json` for the next run. |
+
+Every command accepts `--json`. Failures use bounded codes such as `E_SPRINT_NOT_FOUND`, `E_SPRINT_REFINEMENT_INVALID` (with `$`-rooted diagnostics), `E_SPRINT_REFINEMENT_MISSING`, `E_SPRINT_APPLY_CONFIRMATION_REQUIRED`, `E_SPRINT_APPLY_STATUS_INVALID`, `E_SPRINT_CLOSED` and `E_SPRINT_ALREADY_CLOSED`. `planr status` lists the active sprint first with its release cut and checkbox progress, and `planr status --json` exposes it as `sprint`.
 
 
 ### `planr spec`
@@ -1182,7 +1204,9 @@ planr backlog update BL-001 --status closed
 planr sprint create "Sprint 1" --duration 2w
 planr sprint list
 planr sprint show SPRINT-001
-planr sprint update SPRINT-001 --status closed
+planr sprint refinement SPRINT-001 --data refinement.json
+planr sprint apply SPRINT-001 --yes --commit
+planr sprint close SPRINT-001
 
 planr sync
 planr status

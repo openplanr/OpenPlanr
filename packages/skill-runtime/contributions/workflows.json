@@ -136,6 +136,21 @@
       "utilityRequirements": []
     },
     {
+      "id": "planr-sprint",
+      "source": "skills/planr-sprint/openplanr.skill.json",
+      "authorityClass": "planning-write",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-sprint",
+          "argv": [
+            "sprint"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
       "id": "planr-status",
       "source": "skills/planr-status/openplanr.skill.json",
       "authorityClass": "read-only-view",

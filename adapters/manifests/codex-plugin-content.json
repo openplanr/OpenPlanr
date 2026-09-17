@@ -5,10 +5,10 @@
   "plugin": "planr",
   "version": "0.1.0",
   "skillRoot": "./skills/",
-  "canonicalSkillCount": 26,
+  "canonicalSkillCount": 27,
   "compatibilityAliasCount": 0,
-  "skillCount": 26,
-  "assetCount": 284,
+  "skillCount": 27,
+  "assetCount": 290,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -1012,7 +1012,7 @@
       "assets": [
         {
           "path": "skills/openplanr/SKILL.md",
-          "digest": "sha256:0796e0cce4d8fdf6f5b8cca86ef7c96fd02150493b609d08e74bb78045fcb2dd"
+          "digest": "sha256:f1e2daabc532519e6e9b83e49bddae8948d234bdf1be0e858528c2d0ecf65bc5"
         },
         {
           "path": "skills/openplanr/openplanr.skill.json",
@@ -1331,6 +1331,39 @@
         {
           "path": "skills/spec/references/specification-contract.md",
           "digest": "sha256:c64ae73e88eff2cd2456b418add6de2658a10ec3230e99f37e298386cb8bba4b"
+        }
+      ]
+    },
+    {
+      "skillId": "planr-sprint",
+      "projectedName": "sprint",
+      "invocation": "$planr:sprint",
+      "description": "Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.",
+      "entrypoint": "skills/sprint/SKILL.md",
+      "assets": [
+        {
+          "path": "skills/sprint/SKILL.md",
+          "digest": "sha256:8ffa44b0f3ce532cada1841ad781294c5b6c9c84c87caa9e4c8aa9f259946c9f"
+        },
+        {
+          "path": "skills/sprint/openplanr.skill.json",
+          "digest": "sha256:8083ebeb2c89a73d127b99fc299e6ee4d2891b56740c4e266b52450f55a01794"
+        },
+        {
+          "path": "skills/sprint/agents/openai.yaml",
+          "digest": "sha256:37d78cf09ed49e07dc2246f17d3a4aab61979d073735e7c36efa52460ca94fe1"
+        },
+        {
+          "path": "skills/sprint/references/refinement-contract.md",
+          "digest": "sha256:0e2e621c0aa735b756187f28310f265be6a0330c790ecf71e27c527bad13cdcd"
+        },
+        {
+          "path": "skills/sprint/references/sprint-formats.md",
+          "digest": "sha256:fc9620515dd2cfa1ecf9319c949bc491c620de9450e33f4e2ce08483023333c2"
+        },
+        {
+          "path": "skills/sprint/schemas/refinement.schema.json",
+          "digest": "sha256:591bcd9bb94bbcbae0e3494f2e7f42a7ea953c90076254c1b290fa399901b690"
         }
       ]
     },

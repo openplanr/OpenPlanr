@@ -1,0 +1,59 @@
+{
+  "kind": "openplanr-skill-package",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.8.0",
+  "skillId": "planr-sprint",
+  "skillVersion": "1.0.0",
+  "entrypoint": "SKILL.md",
+  "hosts": [
+    "claude-code",
+    "codex",
+    "chatgpt",
+    "cursor"
+  ],
+  "execution": "host-agent",
+  "resources": [
+    {
+      "path": "agents/openai.yaml",
+      "kind": "agent-metadata",
+      "hosts": [
+        "codex",
+        "chatgpt"
+      ],
+      "executable": false
+    },
+    {
+      "path": "references/refinement-contract.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
+      "path": "references/sprint-formats.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
+      "path": "schemas/refinement.schema.json",
+      "kind": "schema",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    }
+  ]
+}

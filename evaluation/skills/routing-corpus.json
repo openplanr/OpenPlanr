@@ -397,6 +397,31 @@
       "kind": "collision",
       "input": "Route this mixed and unclear OpenPlanr request to the right skill instead of doing the work",
       "expectedSkillId": "planr-openplanr"
+    },
+    {
+      "id": "sprint-refine",
+      "kind": "positive",
+      "input": "Refine the open backlog and select the sprint for the next release cut",
+      "expectedSkillId": "planr-sprint"
+    },
+    {
+      "id": "sprint-stale-blocked",
+      "kind": "positive",
+      "input": "Judge which backlog items are stale, blocked, or ready and fit the sprint to our capacity",
+      "expectedSkillId": "planr-sprint"
+    },
+    {
+      "id": "sprint-cut-selection",
+      "kind": "collision",
+      "input": "Which open backlog items should move to in progress before the 25 September cut, and which are dead?",
+      "expectedSkillId": "planr-sprint"
+    },
+    {
+      "id": "alias-planr-sprint",
+      "kind": "alias",
+      "input": "Use $planr-sprint before the cut",
+      "expectedSkillId": "planr-sprint",
+      "expectedReason": "explicit-name"
     }
   ]
 }

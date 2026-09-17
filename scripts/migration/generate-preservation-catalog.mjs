@@ -75,6 +75,14 @@ const EVOLVED_MAPPING_IDS = new Set([
   'openplanr-cli:cutoff:tests/unit/credential-backends.test.ts',
   // Sprint projections retain authored names and normalize the established active state.
   'openplanr-cli:cutoff:src/services/graph-service.ts',
+  // Sprint refinement: batched sprint bodies, refinement notes, close/apply write-back, status roll-up.
+  'openplanr-cli:cutoff:src/templates/sprints/sprint.md.hbs',
+  'openplanr-cli:cutoff:src/cli/commands/update.ts',
+  'openplanr-cli:cutoff:src/cli/commands/status.ts',
+  'openplanr-cli:cutoff:src/services/delivery-status-service.ts',
+  'openplanr-cli:cutoff:src/services/git-service.ts',
+  'openplanr-cli:cutoff:tests/delivery-status-service.test.ts',
+  'openplanr-cli:cutoff:tests/unit/git-service.test.ts',
   // Public snapshot removes internal issue narration; behavior and original cutoffs remain preserved.
   'openplanr-cli:cutoff:src/cli/helpers/bulk-checkbox-update.ts',
   'openplanr-cli:cutoff:src/services/linear/task-status-aggregation.ts',
