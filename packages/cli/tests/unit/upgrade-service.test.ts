@@ -821,7 +821,7 @@ describe('reconcileInstalledTuple against the npm registry document (BL-026)', (
     expect(planCliUpgrade(result).proceed).toBe(false);
   });
 
-  it('reports incompatible only when a legacy plugin remains beside the unified plugin', async () => {
+  it('lists a plugin outside the expected marketplace ids without judging the tuple incompatible', async () => {
     const result = await reconcileInstalledTuple('/tmp/project', {
       claudeCommandRunner: makeUnifiedRunner(
         [
@@ -833,7 +833,38 @@ describe('reconcileInstalledTuple against the npm registry document (BL-026)', (
       fetchImpl: registryFetch(registryDocument(cliVersion)),
     });
     expect(result.legacyPlugins).toEqual(['openplanr@openplanr']);
-    expect(result.status).toBe('incompatible');
+    // Doctor classifies a leftover plugin as a warning; the upgrade verdict must agree.
+    expect(result.status).toBe('aligned');
+  });
+
+  it('stays aligned when the plugin comes from a local marketplace and no openplanr marketplace exists', async () => {
+    const localOnlyRunner: ClaudeCommandRunner = (args) => {
+      const key = args.join(' ');
+      if (key === '--version') return { status: 0, stdout: '1.0.0', stderr: '' };
+      if (key === 'plugin marketplace list --json') {
+        return {
+          status: 0,
+          stdout: JSON.stringify([{ name: 'openplanr-local', source: 'directory' }]),
+          stderr: '',
+        };
+      }
+      if (key === 'plugin list --json') {
+        return {
+          status: 0,
+          stdout: JSON.stringify([
+            { id: 'planr@openplanr-local', version: '0.1.0', scope: 'user', enabled: true },
+          ]),
+          stderr: '',
+        };
+      }
+      return { status: 0, stdout: '[]', stderr: '' };
+    };
+    const result = await reconcileInstalledTuple('/tmp/project', {
+      claudeCommandRunner: localOnlyRunner,
+      fetchImpl: registryFetch(registryDocument(cliVersion)),
+    });
+    expect(result.legacyPlugins).toEqual(['planr@openplanr-local']);
+    expect(result.status).toBe('aligned');
   });
 
   it('ignores a registry document without a parseable pipeline pin', async () => {

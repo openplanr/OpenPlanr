@@ -55,7 +55,7 @@ export interface UpgradeReconciliation {
   ecosystemSource: EcosystemSource;
   /** The pipeline package this CLI bundles; the pipeline half when no pipeline plugin exists. */
   bundledPipeline?: string | null;
-  /** Legacy host plugins still installed beside the unified plugin the marketplace now targets. */
+  /** Host plugins outside the marketplace's expected ids; informational, doctor warns about them. */
   legacyPlugins?: string[];
 }
 
@@ -365,8 +365,9 @@ export async function reconcileInstalledTuple(
   let incompatibleDrift: boolean;
   if (published.shape === 'registry') {
     // The host plugin is judged against the marketplace target the inspection already
-    // resolved, and the pipeline against the pin the published CLI bundles. The only
-    // incompatibility a registry-described set can have is a leftover legacy plugin.
+    // resolved, and the pipeline against the pin the published CLI bundles. A
+    // registry-described set declares no mutual ranges, so it cannot be incompatible;
+    // leftover legacy plugins are reported for doctor's warning, not judged here.
     const pluginTrailing = inspection.plugins.some(
       (plugin) =>
         plugin.installed && isBehind(plugin.installedVersion ?? null, plugin.expectedVersion),
@@ -375,7 +376,7 @@ export async function reconcileInstalledTuple(
       cliDrift ||
       pluginTrailing ||
       isBehind(installed.pipeline ?? bundledPipeline, published.pipeline.version);
-    incompatibleDrift = legacyPlugins.length > 0;
+    incompatibleDrift = false;
   } else {
     componentDrift =
       cliDrift ||
