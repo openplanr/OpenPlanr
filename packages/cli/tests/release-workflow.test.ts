@@ -14,7 +14,7 @@ const workflowRoot = join(workspaceRoot, '.github', 'workflows');
 const releaseProofWorkflow = readFileSync(join(workflowRoot, 'release-proof.yml'), 'utf8');
 const publishPackagesWorkflow = readFileSync(join(workflowRoot, 'publish-packages.yml'), 'utf8');
 const publishArchives = readFileSync(
-  join(workflowRoot, '..', '..', 'scripts', 'release', 'publish-archives.mjs'),
+  join(workflowRoot, '..', '..', 'scripts', 'release-train', 'publish-archives.mjs'),
   'utf8',
 );
 const publishIfNeeded = readFileSync(join(cliRoot, 'scripts', 'publish-if-needed.mjs'), 'utf8');
@@ -109,7 +109,7 @@ describe('root release proof and public package artifacts', () => {
   it('publishes reviewed archives idempotently and rejects same-version byte conflicts', () => {
     expect(publishPackagesWorkflow).toContain('environment: npm-release');
     expect(publishPackagesWorkflow).toContain(
-      'node scripts/release/publish-archives.mjs --bundles release --tag "$RELEASE_TAG" --commit "$RELEASE_COMMIT"',
+      'node scripts/release-train/publish-archives.mjs --bundles release --tag "$RELEASE_TAG" --commit "$RELEASE_COMMIT"',
     );
     expect(publishPackagesWorkflow).toContain("workflows: ['Workspace CI']");
     expect(publishPackagesWorkflow).not.toContain('npm publish');

@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { planRelease } from '../../scripts/release/lib/plan.mjs';
+import { planRelease } from '../../scripts/release-train/lib/plan.mjs';
 
 function workspace({ changesets = [] } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'openplanr-release-plan-'));

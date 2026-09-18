@@ -4,7 +4,7 @@ import {
   renderMarketplaceManifest,
   renderPluginTable,
   replacePluginTable,
-} from '../../scripts/release/lib/marketplace.mjs';
+} from '../../scripts/release-train/lib/marketplace.mjs';
 
 test('the public marketplace serves one planr plugin at the CLI version', () => {
   const manifest = renderMarketplaceManifest({

@@ -68,9 +68,9 @@ jobs:
           RELEASE_VERSION: ${{ github.event.inputs.version }}
         run: |
           if [ "$RELEASE_PACKAGE" = "all-pending" ]; then
-            node scripts/release/plan-release.mjs --github-output
+            node scripts/release-train/plan-release.mjs --github-output
           else
-            node scripts/release/plan-release.mjs --github-output --package "$RELEASE_PACKAGE" --version "$RELEASE_VERSION"
+            node scripts/release-train/plan-release.mjs --github-output --package "$RELEASE_PACKAGE" --version "$RELEASE_VERSION"
           fi
 
   verify:
@@ -118,7 +118,7 @@ jobs:
       - name: Pack the pending packages with their publication proofs
         env:
           RELEASE_PENDING: ${{ needs.plan.outputs.pending }}
-        run: node scripts/release/prepare-bundles.mjs "$RUNNER_TEMP/openplanr-npm" --pending "$RELEASE_PENDING"
+        run: node scripts/release-train/prepare-bundles.mjs "$RUNNER_TEMP/openplanr-npm" --pending "$RELEASE_PENDING"
       - uses: actions/upload-artifact@v4
         with:
           name: verified-public-packages
@@ -156,11 +156,11 @@ jobs:
         env:
           RELEASE_TAG: ${{ needs.plan.outputs.tag }}
           RELEASE_COMMIT: ${{ needs.plan.outputs.commit }}
-        run: node scripts/release/publish-archives.mjs --bundles release --tag "$RELEASE_TAG" --commit "$RELEASE_COMMIT"
+        run: node scripts/release-train/publish-archives.mjs --bundles release --tag "$RELEASE_TAG" --commit "$RELEASE_COMMIT"
       - name: Create package-qualified tags and GitHub releases
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/release/tag-and-release.mjs --bundles release --repo "$GITHUB_REPOSITORY" --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+        run: node scripts/release-train/tag-and-release.mjs --bundles release --repo "$GITHUB_REPOSITORY" --run-url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
       - uses: actions/upload-artifact@v4
         with:
           name: publication-record
@@ -195,7 +195,7 @@ jobs:
           name: publication-record
           path: release
       - name: Record the publication rows
-        run: node scripts/release/record-provenance.mjs --bundles release --run-id "$GITHUB_RUN_ID"
+        run: node scripts/release-train/record-provenance.mjs --bundles release --run-id "$GITHUB_RUN_ID"
       - name: Open the provenance PR and queue it
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
@@ -245,7 +245,7 @@ jobs:
           name: claude-plugin
           path: plugin
       - name: Project the Claude plugin into the marketplace checkout
-        run: node scripts/release/publish-marketplace.mjs --plugin plugin --marketplace marketplace
+        run: node scripts/release-train/publish-marketplace.mjs --plugin plugin --marketplace marketplace
       - name: Publish the marketplace change
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}

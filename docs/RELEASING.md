@@ -101,13 +101,13 @@ version PR and approving the `npm-release` environment once per release.
    release GitHub App, so Workspace CI runs on it. Merging it is the release decision.
 2. **Publish.** `publish-packages.yml` runs after every green Workspace CI push run on
    `main`. Its `plan` job lists the public package versions that commit declares but npm
-   does not have (`scripts/release/plan-release.mjs`); with nothing pending it ends
+   does not have (`scripts/release-train/plan-release.mjs`); with nothing pending it ends
    there. Otherwise `verify` rebuilds the exact commit, checks for tracked drift and packs
    every pending package with its publication proof; `publish` waits for the one
    `npm-release` approval, then publishes in dependency order (Protocol → pipeline →
    CLI) through npm trusted publishing, refusing any existing version with different
    bytes and waiting for each publication to be visible before its dependents
-   (`scripts/release/publish-archives.mjs`). The same job creates the package-qualified
+   (`scripts/release-train/publish-archives.mjs`). The same job creates the package-qualified
    annotated tags and GitHub releases (changelog section plus the publication evidence;
    only the CLI release is marked Latest).
 3. **Provenance and marketplace.** `provenance` appends the rows to

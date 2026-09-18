@@ -10,7 +10,7 @@ import {
   payloadDigest,
   renderProvenanceRow,
   renderReleaseNotes,
-} from '../../scripts/release/lib/notes.mjs';
+} from '../../scripts/release-train/lib/notes.mjs';
 
 const CHANGELOG =
   '# Changelog\n\n## 2.2.1\n### Patch Changes\n\n- abc1234: Stamp manifests.\n\n## 2.2.0\n### Minor Changes\n\n- f93a973: Sprint.\n';
