@@ -33,8 +33,8 @@
     },
     {
       "path": "templates/artifact-review-shell.html",
-      "bytes": 56966,
-      "sha256": "b26e0e163d72ab0bf51a9e815a2ec573190075e9fd79401fd687eea8b5f47811"
+      "bytes": 56871,
+      "sha256": "e3d4096921c3c00d1de2f711b0b6864e39aca02fda46d86282a4000b8382abb5"
     },
     {
       "path": "templates/artifact-review-stage.js",
@@ -48,8 +48,8 @@
     },
     {
       "path": "templates/diagram-studio.js",
-      "bytes": 112562,
-      "sha256": "8c2eadd6593af67d411f6d914382f9b4b160c063c5ff165b42620ea36b38c26d"
+      "bytes": 112950,
+      "sha256": "9b21e5928cda5c93a247f5fe48e9ce1f8a2c55f55fc0103e917c96df3287da6b"
     }
   ]
 }

@@ -46,7 +46,8 @@
 }
 .design-toolbar-leading, .design-toolbar-trailing { display:flex; align-items:center; gap:10px; min-width:0; }
 .design-toolbar-trailing { justify-content:flex-end; }
-.design-toolbar .planr-brand { display:grid; gap:3px; }
+.design-toolbar .planr-brand { display:grid; grid-template-columns:auto minmax(0,1fr); grid-template-rows:auto auto; column-gap:8px; row-gap:1px; align-items:center; }
+.design-toolbar .planr-brand .planr-mark { grid-row:1 / span 2; }
 .design-wordmark { font: 800 18px/1 var(--planr-font-display); letter-spacing:-.045em; white-space:nowrap; }
 .design-wordmark > span { color:var(--planr-color-primary); }
 .design-toolbar .planr-title-block strong { max-width: min(22vw, 270px); color:var(--planr-color-text-muted); font:400 10px/1.3 var(--planr-font-body); }

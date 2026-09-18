@@ -69,28 +69,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   background: color-mix(in srgb, var(--planr-color-chrome) 96%, transparent);
 }
 .planr-brand { min-width: 0; display: flex; align-items: center; gap: 9px; }
-.planr-mark {
-  position: relative;
-  width: 20px;
-  height: 20px;
-  flex: none;
-  rotate: 45deg;
-  border: 1px solid color-mix(in srgb, var(--planr-color-primary) 70%, var(--planr-color-rule));
-  border-radius: var(--planr-radius-small);
-}
-.planr-mark::before, .planr-mark::after {
-  content: "";
-  position: absolute;
-  border-radius: 2px;
-  background: var(--planr-color-primary);
-}
-.planr-mark::before {
-  width: 4px;
-  height: 4px;
-  inset: 3px auto auto 3px;
-  box-shadow: 8px 8px 0 var(--planr-color-warning);
-}
-.planr-mark::after { width: 8px; height: 2px; inset: 9px auto auto 6px; rotate: -45deg; }
+.planr-mark { display: inline-grid; place-items: center; width: 22px; height: 22px; flex: none; color: var(--planr-color-primary); contain: paint; }
+.planr-mark svg { display: block; width: 100%; height: 100%; }
 .planr-title-block { min-width: 0; display: flex; align-items: baseline; gap: 8px; }
 .planr-title-block strong {
   max-width: 260px;
@@ -849,7 +829,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   text-align: center;
   box-shadow: 0 18px 60px color-mix(in srgb, var(--planr-color-background) 50%, transparent);
 }
-.planr-hosted-viewer .planr-mark { display: inline-block; margin-bottom: 20px; }
+.planr-hosted-viewer .planr-mark { width: 40px; height: 40px; margin-bottom: 20px; }
 .planr-hosted-viewer strong { display: block; margin-bottom: 7px; font: 650 19px/1.2 var(--planr-font-display); }
 .planr-hosted-viewer p { margin: 0; color: var(--planr-color-text-muted); }
 .planr-hosted-viewer button { margin-top: 16px; border-color: var(--planr-color-primary); color: var(--planr-color-primary); }

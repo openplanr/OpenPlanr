@@ -229,7 +229,7 @@
     {
       "source": "packages/design/lib/design/studio-render.mjs",
       "target": "lib/design/studio-render.mjs",
-      "sha256": "6a7c2542625d27d7c9191f9161f0d01911fb1567ff50b13ca2dd3062d93fd1a0",
+      "sha256": "27172c16e6709b50d509c628f27048a49ed18207e93b5dd1ffeaf9b5c413cfc4",
       "mode": "644"
     },
     {
@@ -355,7 +355,7 @@
     {
       "source": "packages/design/templates/studio/studio.css",
       "target": "templates/studio/studio.css",
-      "sha256": "8310b73b821764f5b1fc0fc9e0eda86f461f14ac89c683209b50b85a83f004d5",
+      "sha256": "c7c58b1602368d8a27872c7618714b9246a6bc24fb1cb513aa6ae917c2858d1e",
       "mode": "644"
     },
     {

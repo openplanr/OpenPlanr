@@ -1,3 +1,4 @@
+import { renderPlanrMark } from "../artifact/ui/renderers.mjs";
 import { embedJson, escapeHtml } from "./escape.mjs";
 
 export const DESIGN_STUDIO_VERSION = "1.8.5";
@@ -66,7 +67,7 @@ function toolbar(document) {
   return `<header class="planr-toolbar design-toolbar">
   <div class="design-toolbar-leading">
     ${iconButton("Screens", "left", 'data-design-toggle-nav aria-controls="design-navigator" aria-expanded="true"', "planr-toolbar-action design-panel-toggle")}
-    <div class="planr-brand"><span class="design-wordmark" aria-label="OpenPlanr">Open<span>Planr</span></span><span class="planr-title-block"><strong title="${escapeHtml(document.title)}">${escapeHtml(document.title)}</strong></span></div>
+    <div class="planr-brand">${renderPlanrMark()}<span class="design-wordmark" aria-label="OpenPlanr">Open<span>Planr</span></span><span class="planr-title-block"><strong title="${escapeHtml(document.title)}">${escapeHtml(document.title)}</strong></span></div>
   </div>
   <div class="planr-segment design-view-picker" role="group" aria-label="Design view">${["canvas", "prototype", "walkthrough"].map((view) => iconButton(view[0].toUpperCase() + view.slice(1), view, `data-design-view="${view}" aria-pressed="${document.defaultView === view}"`)).join("")}</div>
   <div class="design-toolbar-trailing">
