@@ -386,7 +386,7 @@ async function buildOutputs() {
   const plugin = {
     '$schema': 'https://json.schemastore.org/claude-code-plugin.json',
     name: 'planr',
-    version: workspace.version,
+    version: components.cli.version,
     description: 'Host-native OpenPlanr planning, delivery, review, design, and operating skills.',
     author: { name: 'AsemDevs' },
     license: 'MIT',
@@ -396,13 +396,13 @@ async function buildOutputs() {
     name: 'openplanr',
     owner: { name: 'AsemDevs' },
     metadata: {
-      version: workspace.version,
+      version: components.cli.version,
       description: 'Local-only OpenPlanr integration marketplace. Generate host packages before installation.',
     },
     plugins: [{
       name: 'planr',
       source: './dist/plugins/claude/openplanr',
-      version: workspace.version,
+      version: components.cli.version,
       description: plugin.description,
       strict: true,
     }],
@@ -412,9 +412,12 @@ async function buildOutputs() {
   const adapterDoc = renderAdapterDoc(ecosystem);
   const ecosystemDoc = renderEcosystemDoc(ecosystem);
   const skillCatalogDoc = renderSkillCatalog(sourceSkillRegistry, codexPluginContent);
+  // The pipeline plugin manifest keeps its hand-maintained metadata; only its version is derived.
+  const pipelinePlugin = { ...readJson('packages/pipeline/.claude-plugin/plugin.json'), version: components.pipeline.version };
   const outputsMap = new Map([
     ['ecosystem.json', stableJson(ecosystem)],
     ['.claude-plugin/plugin.json', stableJson(plugin)],
+    ['packages/pipeline/.claude-plugin/plugin.json', stableJson(pipelinePlugin)],
     ['.claude-plugin/marketplace.json', stableJson(marketplace)],
     ['adapters/manifests/codex-plugin-content.json', stableJson(codexPluginContent)],
     ['docs/generated/adapters.md', adapterDoc],
