@@ -96,8 +96,10 @@ version PR and approving the `npm-release` environment once per release.
 1. **Version PR.** `version-pr.yml` runs on every push to `main`. When changesets are
    pending it opens or refreshes `chore(release): version packages` (branch
    `changeset-release/main`) with `npm run version-packages:ci`: `changeset version`,
-   a lockfile refresh on Linux, and `npm run generate` so the Protocol projections,
-   plugin manifests and preservation catalog are inside the PR. The PR is opened by the
+   `scripts/release-train/sync-lockfile.mjs` (which copies the new workspace versions and
+   internal ranges into `package-lock.json` without re-resolving third-party packages, so
+   `npm ci` still accepts it on every supported Node line), and `npm run generate` so the
+   Protocol projections, plugin manifests and preservation catalog are inside the PR. The PR is opened by the
    release GitHub App, so Workspace CI runs on it. Merging it is the release decision.
 2. **Publish.** `publish-packages.yml` runs after every green Workspace CI push run on
    `main`. Its `plan` job lists the public package versions that commit declares but npm

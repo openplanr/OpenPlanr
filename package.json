@@ -53,7 +53,7 @@
     "verify:ci": "node scripts/run-ci-parity.mjs",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "version-packages:ci": "changeset version && npm install --package-lock-only --ignore-scripts --no-audit --no-fund && npm run generate"
+    "version-packages:ci": "changeset version && node scripts/release-train/sync-lockfile.mjs && npm run generate"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
