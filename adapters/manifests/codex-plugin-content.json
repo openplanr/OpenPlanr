@@ -417,7 +417,7 @@
         },
         {
           "path": "skills/design/scripts/design.mjs",
-          "digest": "sha256:c3973bd11ff96580c0e45dce24e10638f1a37590fdcfc618b21f3a4db813ec7d"
+          "digest": "sha256:159012cae538612641c4d142ec2fb5054278e5a17cdadf5decf33becf78533d1"
         },
         {
           "path": "skills/design/schemas/design-document.schema.json",
@@ -453,7 +453,7 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/studio.css",
-          "digest": "sha256:8310b73b821764f5b1fc0fc9e0eda86f461f14ac89c683209b50b85a83f004d5"
+          "digest": "sha256:c7c58b1602368d8a27872c7618714b9246a6bc24fb1cb513aa6ae917c2858d1e"
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/studio.js",
@@ -598,7 +598,7 @@
         },
         {
           "path": "skills/design-loop/scripts/design.mjs",
-          "digest": "sha256:c3973bd11ff96580c0e45dce24e10638f1a37590fdcfc618b21f3a4db813ec7d"
+          "digest": "sha256:159012cae538612641c4d142ec2fb5054278e5a17cdadf5decf33becf78533d1"
         },
         {
           "path": "skills/design-loop/schemas/design-document.schema.json",
@@ -634,7 +634,7 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/studio.css",
-          "digest": "sha256:8310b73b821764f5b1fc0fc9e0eda86f461f14ac89c683209b50b85a83f004d5"
+          "digest": "sha256:c7c58b1602368d8a27872c7618714b9246a6bc24fb1cb513aa6ae917c2858d1e"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/studio.js",
@@ -779,7 +779,7 @@
         },
         {
           "path": "skills/design-review/scripts/design.mjs",
-          "digest": "sha256:c3973bd11ff96580c0e45dce24e10638f1a37590fdcfc618b21f3a4db813ec7d"
+          "digest": "sha256:159012cae538612641c4d142ec2fb5054278e5a17cdadf5decf33becf78533d1"
         },
         {
           "path": "skills/design-review/schemas/design-document.schema.json",
@@ -815,7 +815,7 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/studio.css",
-          "digest": "sha256:8310b73b821764f5b1fc0fc9e0eda86f461f14ac89c683209b50b85a83f004d5"
+          "digest": "sha256:c7c58b1602368d8a27872c7618714b9246a6bc24fb1cb513aa6ae917c2858d1e"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/studio.js",
@@ -1090,7 +1090,7 @@
         },
         {
           "path": "skills/plan/scripts/design.mjs",
-          "digest": "sha256:c3973bd11ff96580c0e45dce24e10638f1a37590fdcfc618b21f3a4db813ec7d"
+          "digest": "sha256:159012cae538612641c4d142ec2fb5054278e5a17cdadf5decf33becf78533d1"
         },
         {
           "path": "skills/plan/schemas/design-document.schema.json",
@@ -1126,7 +1126,7 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/studio.css",
-          "digest": "sha256:8310b73b821764f5b1fc0fc9e0eda86f461f14ac89c683209b50b85a83f004d5"
+          "digest": "sha256:c7c58b1602368d8a27872c7618714b9246a6bc24fb1cb513aa6ae917c2858d1e"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/studio.js",

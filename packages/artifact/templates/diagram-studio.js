@@ -1932,6 +1932,12 @@
     const paint = () => {
       if (!paintId) paintId = window.requestAnimationFrame(draw);
     };
+    function initialFit() {
+      const availableWidth = Math.max(1, canvas.clientWidth - 48);
+      const availableHeight = Math.max(1, canvas.clientHeight - 116);
+      const whole = Math.min(availableWidth / width, availableHeight / height);
+      return whole < 0.6 && availableWidth / width > whole * 1.5 ? "width" : "all";
+    }
     function fit(mode = "all") {
       camera.fit = mode;
       const availableWidth = Math.max(1, canvas.clientWidth - 48);
@@ -2083,7 +2089,7 @@
         }
       }
       saving = false;
-      if (!failed) saveState.textContent = "All comments saved";
+      if (!failed) saveState.textContent = "Comments saved on this computer";
     }
     listen(root, "planr:artifact-review-change", (event) => {
       pendingReview = event.detail;
@@ -2351,7 +2357,7 @@
         event.preventDefault();
         space = true;
       }
-      const keys = { f: "fit", "0": "fit", w: "width", "1": "actual", "+": "zoom-in", "=": "zoom-in", "-": "zoom-out", c: "comment", v: "pan" };
+      const keys = { f: "fit", "0": "fit", w: "width", "1": "actual", "+": "zoom-in", "=": "zoom-in", "-": "zoom-out", c: "comment", v: "pan", n: "outline", p: "present" };
       if (keys[key]) {
         event.preventDefault();
         actions[keys[key]]();
@@ -2387,7 +2393,7 @@
     });
     resize.observe(canvas);
     setOutline(window.innerWidth > 700);
-    fit();
+    fit(initialFit());
     draw();
     const api = { camera, fit, focusPoint, feedback, annotations, chapters, collapsedGroups, destroy() {
       resize.disconnect();

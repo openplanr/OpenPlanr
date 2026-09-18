@@ -160,11 +160,16 @@ function activeMetadata(model) {
   return `${artifact.kind.toUpperCase()} · ${artifact.viewport.width}×${artifact.viewport.height}`;
 }
 
+/** The Open Decision mark: an open planning orbit resolving into a diamond decision. */
+export function renderPlanrMark() {
+  return '<span class="planr-mark" aria-hidden="true"><svg viewBox="0 0 160 160" focusable="false"><g transform="rotate(-45 80 80)"><path d="M125 50A52 52 0 1 0 125 110" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><rect x="127" y="71" width="18" height="18" rx="3" fill="currentColor"/></g></svg></span>';
+}
+
 export function renderArtifactToolbar(model) {
   const interact = model.reviewMode === 'interact';
   const canvas = model.presentation === 'canvas';
   return `<header class="planr-toolbar">
-  <div class="planr-brand" aria-label="OpenPlanr"><span class="planr-mark" aria-hidden="true"></span><span class="planr-title-block"><strong>${escapeHtml(model.title)}</strong>${canvas ? `<span>${escapeHtml(activeMetadata(model))}</span>` : ''}</span></div>
+  <div class="planr-brand" aria-label="OpenPlanr">${renderPlanrMark()}<span class="planr-title-block"><strong>${escapeHtml(model.title)}</strong>${canvas ? `<span>${escapeHtml(activeMetadata(model))}</span>` : ''}</span></div>
   <span class="planr-privacy" data-privacy="${escapeHtml(model.privacy)}">${escapeHtml(model.privacyLabel)}</span>
 ${canvas ? '  <span class="planr-domain-toolbar" data-planr-slot="domain-toolbar" aria-label="Artifact workflow controls"></span>\n' : ''}  <span class="planr-toolbar-spacer" aria-hidden="true"></span>
 ${canvas ? `  <div class="planr-segment" role="group" aria-label="Viewport controls"><button type="button" data-planr-action="zoom-out" aria-label="Zoom out">−</button><button type="button" data-planr-action="zoom-reset" aria-label="Reset zoom">${model.zoom}%</button><button type="button" data-planr-action="zoom-in" aria-label="Zoom in">+</button></div>\n` : ''}  <div class="planr-segment" role="group" aria-label="Review mode"><button type="button" data-planr-mode="interact" data-planr-short-label="I" aria-pressed="${interact}">Interact</button><button type="button" data-planr-mode="comment" data-planr-short-label="C" aria-pressed="${!interact}">Comment</button></div>
@@ -314,7 +319,7 @@ export function renderArtifactShareDialog() {
 
 export function renderHostedArtifactViewerSlot() {
   return `<section class="planr-hosted-viewer" data-planr-hosted-viewer data-planr-hosted-state="idle" role="status" aria-live="polite" aria-atomic="true" hidden>
-  <div><span class="planr-mark" aria-hidden="true"></span><strong data-planr-hosted-title></strong><p data-planr-hosted-detail></p><button type="button" data-planr-hosted-retry hidden></button></div>
+  <div>${renderPlanrMark()}<strong data-planr-hosted-title></strong><p data-planr-hosted-detail></p><button type="button" data-planr-hosted-retry hidden></button></div>
 </section>`;
 }
 

@@ -89,6 +89,15 @@ export function mountDiagramStudio(document = globalThis.document) {
     root.querySelector('[data-zoom]').textContent = `${Math.round(camera.scale * 100)}%`;
   }
   const paint = () => { if (!paintId) paintId = window.requestAnimationFrame(draw); };
+  // A scene that would shrink below readable size to fit its height starts at
+  // fit-width instead; the reader scrolls a legible drawing rather than squinting
+  // at a complete one.
+  function initialFit() {
+    const availableWidth = Math.max(1, canvas.clientWidth - 48);
+    const availableHeight = Math.max(1, canvas.clientHeight - 116);
+    const whole = Math.min(availableWidth / width, availableHeight / height);
+    return whole < 0.6 && availableWidth / width > whole * 1.5 ? 'width' : 'all';
+  }
   function fit(mode = 'all') {
     camera.fit = mode;
     const availableWidth = Math.max(1, canvas.clientWidth - 48);
@@ -200,7 +209,7 @@ export function mountDiagramStudio(document = globalThis.document) {
       }
     }
     saving = false;
-    if (!failed) saveState.textContent = 'All comments saved';
+    if (!failed) saveState.textContent = 'Comments saved on this computer';
   }
   listen(root, 'planr:artifact-review-change', event => {
     pendingReview = event.detail;
@@ -366,7 +375,7 @@ export function mountDiagramStudio(document = globalThis.document) {
       if (chapterKey !== undefined) { event.preventDefault(); showChapter(chapterKey); return; }
     }
     if (key === ' ' && !event.target.closest('button,a,summary,[role=button]')) { event.preventDefault(); space = true; }
-    const keys = { f: 'fit', '0': 'fit', w: 'width', '1': 'actual', '+': 'zoom-in', '=': 'zoom-in', '-': 'zoom-out', c: 'comment', v: 'pan' };
+    const keys = { f: 'fit', '0': 'fit', w: 'width', '1': 'actual', '+': 'zoom-in', '=': 'zoom-in', '-': 'zoom-out', c: 'comment', v: 'pan', n: 'outline', p: 'present' };
     if (keys[key]) { event.preventDefault(); actions[keys[key]](); }
     if (key === 'escape') { resetGesture(); setMode('interact'); root.querySelector('.diagram-export').open = false; if (root.dataset.present === 'true') void present(); }
     if (document.activeElement === canvas && key.startsWith('arrow')) { event.preventDefault(); camera.fit = null; camera.x += key === 'arrowleft' ? 60 : key === 'arrowright' ? -60 : 0; camera.y += key === 'arrowup' ? 60 : key === 'arrowdown' ? -60 : 0; paint(); }
@@ -380,7 +389,7 @@ export function mountDiagramStudio(document = globalThis.document) {
     lastWidth = w; lastHeight = h;
   });
   resize.observe(canvas);
-  setOutline(window.innerWidth > 700); fit(); draw();
+  setOutline(window.innerWidth > 700); fit(initialFit()); draw();
   const api = { camera, fit, focusPoint, feedback, annotations, chapters, collapsedGroups, destroy() { resize.disconnect(); window.cancelAnimationFrame(paintId); annotations.destroy(); feedback.destroy(); cleanup.splice(0).forEach(remove => remove()); } };
   window.__openPlanrDiagramStudio = api;
   root.dataset.ready = 'true';

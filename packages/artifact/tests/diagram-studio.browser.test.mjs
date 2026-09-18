@@ -153,7 +153,7 @@ test('comments persist in diagram coordinates and exports retain source custody'
   await page.mouse.click(g.scene.x+g.scene.width*.55,g.scene.y+g.scene.height*.32);
   await page.locator('[data-planr-composer-comment]').fill('Clarify this message');
   await page.locator('[data-planr-composer-submit]').click();
-  await page.getByText('All comments saved',{exact:true}).waitFor();
+  await page.getByText('Comments saved on this computer',{exact:true}).waitFor();
   const left=await page.locator('.planr-pin').evaluate(el=>el.style.left);
   await page.locator('[data-action=zoom-in]').click(); await settled(page);
   assert.equal(await page.locator('.planr-pin').evaluate(el=>el.style.left),left);
@@ -198,7 +198,7 @@ test('semantic selection, connection focus and anchored feedback share one stabl
   await page.locator('[data-planr-composer-identity]').fill('Engineering reviewer');
   await page.locator('[data-planr-composer-comment]').fill('Document this actor responsibility.');
   await page.locator('[data-planr-composer-submit]').click();
-  await page.getByText('All comments saved',{exact:true}).waitFor();
+  await page.getByText('Comments saved on this computer',{exact:true}).waitFor();
   await page.locator('.planr-pin[data-planr-anchor-status=resolved]').waitFor();
   const handoff=await (await fetch(`${session.url}api/diagram-feedback`)).json();
   assert.equal(handoff.requests[0].target.elementId,'actor-0');
