@@ -88,6 +88,52 @@ promotion, branch pushing, PR creation, merging and deployment remain separate
 reviewed actions. Preserve historical `v*` tags; new package tags are qualified by
 package name so independent releases cannot collide.
 
+## Release train
+
+Publication is automated from `main`; the only hand-turned steps are merging the
+version PR and approving the `npm-release` environment once per release.
+
+1. **Version PR.** `version-pr.yml` runs on every push to `main`. When changesets are
+   pending it opens or refreshes `chore(release): version packages` (branch
+   `changeset-release/main`) with `npm run version-packages:ci`: `changeset version`,
+   a lockfile refresh on Linux, and `npm run generate` so the Protocol projections,
+   plugin manifests and preservation catalog are inside the PR. The PR is opened by the
+   release GitHub App, so Workspace CI runs on it. Merging it is the release decision.
+2. **Publish.** `publish-packages.yml` runs after every green Workspace CI push run on
+   `main`. Its `plan` job lists the public package versions that commit declares but npm
+   does not have (`scripts/release-train/plan-release.mjs`); with nothing pending it ends
+   there. Otherwise `verify` rebuilds the exact commit, checks for tracked drift and packs
+   every pending package with its publication proof; `publish` waits for the one
+   `npm-release` approval, then publishes in dependency order (Protocol → pipeline →
+   CLI) through npm trusted publishing, refusing any existing version with different
+   bytes and waiting for each publication to be visible before its dependents
+   (`scripts/release-train/publish-archives.mjs`). The same job creates the package-qualified
+   annotated tags and GitHub releases (changelog section plus the publication evidence;
+   only the CLI release is marked Latest).
+3. **Provenance and marketplace.** `provenance` appends the rows to
+   `docs/PROVENANCE.md` and opens an auto-merging docs PR through the merge queue.
+   `marketplace` projects the generated Claude plugin into `openplanr/marketplace`
+   (`plugins/planr/`, `.claude-plugin/marketplace.json`, the README plugin table) and
+   opens a PR there, or pushes to its `main` when the repository variable
+   `MARKETPLACE_DIRECT_PUSH` is `true`.
+4. **Fallback.** `workflow_dispatch` on `publish-packages.yml` publishes all pending
+   packages or one named package and version, with the same gates.
+
+Settings the train depends on: the `npm-release` environment with its required
+reviewer; the npm trusted publishers for `publish-packages.yml` and that environment;
+repository variable `NPM_PUBLISH_ENABLED=true`; a GitHub App installed on
+`openplanr/OpenPlanr` and `openplanr/marketplace` with Contents and Pull requests
+write access, recorded as variable `RELEASE_APP_ID` and secret
+`RELEASE_APP_PRIVATE_KEY`; "Allow auto-merge" and the `main` merge queue. Without the
+App variable the version PR and the provenance/marketplace jobs skip themselves; the
+publish and tag steps still run.
+
+Verification per release stays what it was: registry integrity matches the packed
+archive, the SLSA attestation names the released commit and workflow run, and the
+archive is the one packed from that commit in the same run. Re-verify by hand only when
+the run itself is in doubt (`npm audit signatures` in a clean install, a rebuild from the
+tagged commit).
+
 ## Hosted promotion and rollback
 
 Keep the private web's digest-verified vendors until replacement packages exist in

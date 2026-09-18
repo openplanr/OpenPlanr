@@ -10,8 +10,10 @@ Several changesets can ship from one branch or consolidation commit. Release not
 must explain behavior and migration steps, not just file moves. Breaking supported
 commands or imports requires a breaking-change note and appropriate version.
 
-Run `npm run changeset -- status` to inspect pending changes and
-`npm run version-packages` in a disposable checkout to rehearse versioning.
-Changesets consumes the notes, updates versions and generates package changelogs.
-Refresh the root lockfile and generated projections, then rerun release checks.
-See [Releasing](../docs/RELEASING.md). Publication is a separate authorized action.
+Run `npm run changeset -- status` to inspect pending changes. Once a changeset lands
+on `main`, the `Version packages` workflow opens or refreshes the version PR with
+`npm run version-packages:ci` (versions, changelogs, lockfile, generated projections);
+merging that PR is the release decision and `publish-packages.yml` publishes what it
+declares behind the `npm-release` approval. Rehearse locally with
+`npm run version-packages` in a disposable checkout. See
+[Releasing](../docs/RELEASING.md).

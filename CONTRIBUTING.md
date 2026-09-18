@@ -92,6 +92,12 @@ under `.github/workflows/` define their additional runtime and browser coverage.
 Record failed or unavailable checks honestly. Do not update fixtures simply to
 hide a regression, or make an unsupported compatibility claim from one local run.
 
+Before pushing a branch that touches several packages, `npm run verify:ci` runs the
+same commands as the Workspace CI jobs, in order, on your Node version (`--only` and
+`--skip` take job ids from `--list`). It is slower than `npm run verify` and catches
+the suites `verify` does not run: workspace lint, the full CLI test tree, the heavy and
+Operate suites, and the package tests of every workspace.
+
 ## Review and release
 
 Maintainers review changes for correctness, compatibility, usability, and clear

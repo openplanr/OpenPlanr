@@ -50,8 +50,10 @@
     "verify:packed": "node scripts/verify-packed-workspace.mjs",
     "verify:packed:strict": "node scripts/verify-packed-workspace-strict.mjs",
     "verify": "npm run check:generated && npm run check:boundaries && npm run check:preservation && npm run test:focused && npm run verify:packed:strict",
+    "verify:ci": "node scripts/run-ci-parity.mjs",
     "changeset": "changeset",
-    "version-packages": "changeset version"
+    "version-packages": "changeset version",
+    "version-packages:ci": "changeset version && npm install --package-lock-only --ignore-scripts --no-audit --no-fund && npm run generate"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",

@@ -13,6 +13,10 @@ const workspaceRoot = resolve(cliRoot, '..', '..');
 const workflowRoot = join(workspaceRoot, '.github', 'workflows');
 const releaseProofWorkflow = readFileSync(join(workflowRoot, 'release-proof.yml'), 'utf8');
 const publishPackagesWorkflow = readFileSync(join(workflowRoot, 'publish-packages.yml'), 'utf8');
+const publishArchives = readFileSync(
+  join(workflowRoot, '..', '..', 'scripts', 'release-train', 'publish-archives.mjs'),
+  'utf8',
+);
 const publishIfNeeded = readFileSync(join(cliRoot, 'scripts', 'publish-if-needed.mjs'), 'utf8');
 const releaseArtifactVerifier = readFileSync(
   join(cliRoot, 'scripts', 'verify-release-artifact.mjs'),
@@ -103,23 +107,24 @@ describe('root release proof and public package artifacts', () => {
   });
 
   it('publishes reviewed archives idempotently and rejects same-version byte conflicts', () => {
-    expect(publishPackagesWorkflow).toContain("'dist.integrity'");
-    expect(publishPackagesWorkflow).toContain('candidateIntegrity');
-    expect(publishPackagesWorkflow).toContain("return 'identical'");
-    expect(publishPackagesWorkflow).toContain('already exists with different bytes');
+    expect(publishPackagesWorkflow).toContain('environment: npm-release');
     expect(publishPackagesWorkflow).toContain(
+      'node scripts/release-train/publish-archives.mjs --bundles release --tag "$RELEASE_TAG" --commit "$RELEASE_COMMIT"',
+    );
+    expect(publishPackagesWorkflow).toContain("workflows: ['Workspace CI']");
+    expect(publishPackagesWorkflow).not.toContain('npm publish');
+    expect(publishArchives).toContain("'dist.integrity'");
+    expect(publishArchives).toContain('candidateIntegrity');
+    expect(publishArchives).toContain("return 'identical'");
+    expect(publishArchives).toContain('already exists with different bytes');
+    expect(publishArchives).toContain(
       'publish succeeded but npm did not expose the reviewed bytes',
     );
-    expect(publishPackagesWorkflow).toContain(
-      'const propagationAttempts = publish.status === 0 ? 31 : 6',
+    expect(publishArchives).toContain('await waitForDependency(dependency, version)');
+    expect(publishArchives).toContain(
+      "['publish', archive, '--ignore-scripts', '--access', 'public', '--provenance', '--tag', tag]",
     );
-    expect(publishPackagesWorkflow).toContain(
-      'const propagationDelayMs = publish.status === 0 ? 10_000 : 2_000',
-    );
-    expect(publishPackagesWorkflow).toContain(
-      'for (let attempt = 0; attempt < propagationAttempts; attempt += 1)',
-    );
-    expect(publishPackagesWorkflow).not.toContain("execFileSync('npm', ['publish'");
+    expect(publishArchives).not.toContain("execFileSync('npm', ['publish'");
     expect(publishIfNeeded).toContain("['pack', '--json', '--ignore-scripts'");
     expect(publishIfNeeded).toContain("['publish', candidate.archive, '--ignore-scripts'");
     expect(publishIfNeeded).toContain('await reconcilePublication(publish.status)');
