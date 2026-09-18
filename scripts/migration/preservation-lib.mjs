@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { access, readFile, stat } from 'node:fs/promises';
+import { access, lstat, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -210,4 +210,42 @@ export function inferFeatureId(surface, argv) {
   if (head === 'pipeline') return 'pipeline-state-and-provenance';
   if (surface === 'frozen-host-alias') return 'host-adapter-generation';
   return 'agile-planning-crud';
+}
+
+/**
+ * Reclassify cutoff mappings as `excluded` once their original bytes are held in
+ * private custody. Each record names the mapping and where its archive copy lives
+ * relative to `custodyRoot`; already-excluded mappings are left as they are.
+ */
+export async function excludeCustodyRecords(source, records, { reason, flag, custodyRoot, label }) {
+  const inventory = structuredClone(source);
+  for (const { mappingId, archivePath } of records) {
+    const mapping = inventory.pathMappings.find((entry) => entry.mappingId === mappingId);
+    assert(mapping, `${label} is missing from source custody: ${mappingId}`);
+    if (mapping.disposition === 'excluded' && mapping.reasonCode === reason) {
+      assert(
+        mapping.destinations.length === 0 && mapping.verification.policy === 'declared-absence',
+        `Invalid ${label.toLowerCase()} disposition: ${mappingId}`,
+      );
+      continue;
+    }
+    assert(custodyRoot, `Reclassifying ${mappingId} requires ${flag} with the verified archive directory.`);
+    const archived = path.resolve(custodyRoot, archivePath);
+    const stats = await lstat(archived);
+    assert(stats.isFile() && !stats.isSymbolicLink(), `Archived custody must be a regular file: ${mappingId}`);
+    const bytes = await readFile(archived);
+    assert(sha256(bytes) === mapping.included.sha256, `Archived custody bytes differ for ${mappingId}.`);
+    assert(Boolean(stats.mode & 0o111) === (mapping.included.mode === '100755'), `Archived custody mode differs for ${mappingId}.`);
+    mapping.disposition = 'excluded';
+    mapping.reasonCode = reason;
+    mapping.destinations = [];
+    mapping.verification = { policy: 'declared-absence' };
+  }
+  inventory.coverage.dispositionCounts = {};
+  for (const mapping of inventory.pathMappings) {
+    inventory.coverage.dispositionCounts[mapping.disposition] =
+      (inventory.coverage.dispositionCounts[mapping.disposition] ?? 0) + 1;
+  }
+  delete inventory.documentDigest;
+  return sealDocument(inventory);
 }

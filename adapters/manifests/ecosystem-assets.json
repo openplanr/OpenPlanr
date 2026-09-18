@@ -46,7 +46,7 @@
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:4189b084987a9a051cc88719111f875e5c52fefc004099fff60774d4b5dcdac7"
+      "digest": "sha256:59935d48aba3786764791239ef6f804c0c6e8a96cc901c37b7c1cc07b9c54684"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -128,7 +128,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:f59991985a330fc2fb0a0722e2ad69bc5a3cfb826a488fe47981a3555c636e08"
+      "digest": "sha256:80311386bf8ee996d0dec28e065ef6256fe49c4f1ab38ce16e417bba989d95cc"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

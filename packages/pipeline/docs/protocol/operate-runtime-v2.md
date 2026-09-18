@@ -6,10 +6,9 @@
 > Contract owner: `planr-pipeline`
 
 This is the technical protocol reference, not the single source for product
-vision, dashboard completion, or handoff status. In a source checkout, start at
-the canonical `docs/operate/README.md` handoff hub, then follow the authority
-precedence in the Operate 2.0 constitution. The current local branch is
-unreleased; this document makes no installed-release claim.
+vision or dashboard completion. Follow the authority precedence in the Operate
+2.0 constitution. The current local branch is unreleased; this document makes
+no installed-release claim.
 
 Operate Runtime Protocol 2.0 is the portable boundary between OpenPlanr's
 deterministic governance kernel and a selected agent runtime. It defines the
@@ -1658,8 +1657,7 @@ surface-specific request. The browser validates the envelope and its exact
 current query identity before creating any model or DOM. A structural
 look-alike, content mutation, stale/foreign binding, or unverified legacy view
 refuses the whole affected surface; browser code never reconstructs owner
-selection, evidence privacy, lifecycle, or graph authority. In a source
-checkout, see `docs/operate/DASHBOARD.md` for implementation status.
+selection, evidence privacy, lifecycle, or graph authority.
 
 Pure consumers use `buildOperateExperienceViewV2`,
 `createOperateExperiencePreviewV1`, and the live-patch functions from

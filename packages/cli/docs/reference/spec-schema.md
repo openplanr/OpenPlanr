@@ -300,6 +300,5 @@ npm i -g openplanr@latest
 
 - [planr CLI README](../../README.md)
 - [planr CLI command reference](../CLI.md)
-- [Spec-driven mode design proposal](../proposals/spec-driven-mode.md)
 - [planr-pipeline plugin docs](https://github.com/openplanr/planr-pipeline)
 - [planr-pipeline rules.md (R1-R6)](https://github.com/openplanr/planr-pipeline/blob/main/docs/rules.md)

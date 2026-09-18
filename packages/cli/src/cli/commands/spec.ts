@@ -8,8 +8,6 @@
  * with build/test commands). Pairs with the pipeline plugin via shared
  * schema — no conversion layer ever.
  *
- * See `docs/proposals/spec-driven-mode.md` for the full design.
- *
  * Subcommands:
  *   - planr spec init                    Activate spec-driven mode
  *   - planr spec create <title>          Create a new SPEC artifact (self-contained dir)

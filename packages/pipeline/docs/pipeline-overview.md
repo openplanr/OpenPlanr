@@ -213,4 +213,4 @@ hosts without isolated subagents work sequentially. The runtime owns execution
 and reports verified outcomes directly. Planr does not add a second task queue,
 prompt-authored manifest, or resume loop around the agent.
 
-*See: `docs/rules.md` · `docs/agent-model-map.md` · `docs/task-anatomy.md` · `docs/feat-parallel-dispatch/`*
+*See: `docs/rules.md` · `docs/task-anatomy.md`*

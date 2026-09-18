@@ -124,11 +124,11 @@
     "pathRecords": 2100,
     "dispositionCounts": {
       "regenerated": 205,
-      "merged": 561,
-      "moved": 259,
-      "retired": 57,
-      "exact": 999,
-      "excluded": 19
+      "merged": 560,
+      "moved": 256,
+      "excluded": 40,
+      "retired": 60,
+      "exact": 979
     },
     "unmappedPaths": 0
   },
@@ -1473,20 +1473,11 @@
         "mode": "100644",
         "sha256": "e9c3afa49e6455a0f41c7387f898e06c4ac82cd49f0a91117c63bf2f99537478"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/cli/docs/ARCHITECTURE.md",
-          "custody": "public-package",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "e9c3afa49e6455a0f41c7387f898e06c4ac82cd49f0a91117c63bf2f99537478",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -1593,20 +1584,11 @@
         "mode": "100644",
         "sha256": "7e25772d89e28fde81f7a7af9a6948ae86acff3431837e2f642c1f08923138bc"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/cli/docs/proposals/spec-driven-mode.md",
-          "custody": "public-package",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "7e25772d89e28fde81f7a7af9a6948ae86acff3431837e2f642c1f08923138bc",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -1624,23 +1606,11 @@
         "mode": "100644",
         "sha256": "4ec444161c677340133665d87ba03cb71e73d7ee06aba578129b17888c490edf"
       },
-      "disposition": "merged",
-      "reasonCode": "destination-content-integrated",
-      "destinations": [
-        {
-          "path": "packages/cli/docs/qa/dashboard-accessibility-evidence.md",
-          "custody": "public-package",
-          "kind": "file"
-        },
-        {
-          "path": "packages/cli",
-          "custody": "public-package",
-          "kind": "directory"
-        }
-      ],
+      "disposition": "retired",
+      "reasonCode": "retired-internal-planning-record",
+      "destinations": [],
       "verification": {
-        "policy": "destination-exists",
-        "requirement": "any"
+        "policy": "declared-absence"
       }
     },
     {
@@ -1658,8 +1628,8 @@
         "mode": "100644",
         "sha256": "5f0770cf466858e8a519db966ff2961916ee2564ac3cccf0c2907ea38dc0150d"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/cli/docs/reference/spec-schema.md",
@@ -1668,10 +1638,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "5f0770cf466858e8a519db966ff2961916ee2564ac3cccf0c2907ea38dc0150d",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -31301,20 +31269,11 @@
         "mode": "100644",
         "sha256": "8b94b06db3893e866b8925a2ba15e8d723d1edc5bf50ba84c50666ee7ba8ec4a"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/artifact-review-approval.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "8b94b06db3893e866b8925a2ba15e8d723d1edc5bf50ba84c50666ee7ba8ec4a",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -31390,20 +31349,11 @@
         "mode": "100644",
         "sha256": "6f51954016ff270062509932aac64f808cfcc45682a7bd7d67d8e99966f04661"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/dashboard-prd.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "6f51954016ff270062509932aac64f808cfcc45682a7bd7d67d8e99966f04661",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -31450,20 +31400,11 @@
         "mode": "100644",
         "sha256": "19944f37be8893bfa8b2ae77b49adb8f84cc16124cb45128f695e1fdb997d7c9"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/design-command-plan.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "19944f37be8893bfa8b2ae77b49adb8f84cc16124cb45128f695e1fdb997d7c9",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -31865,20 +31806,11 @@
         "mode": "100644",
         "sha256": "1f7ab522f3630e40d58b2064f4f51397c5de4209e15946a07e00fe41dd2ae2fd"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/feat-native-parallel-dispatch/architecture.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "1f7ab522f3630e40d58b2064f4f51397c5de4209e15946a07e00fe41dd2ae2fd",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -31896,20 +31828,11 @@
         "mode": "100644",
         "sha256": "28b489a496bd7ab5a553c10a40cdc77ecab3e8bfbe4f42c592fb518b545cfd60"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/feat-native-parallel-dispatch/how-to-dispatch.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "28b489a496bd7ab5a553c10a40cdc77ecab3e8bfbe4f42c592fb518b545cfd60",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -31927,20 +31850,11 @@
         "mode": "100644",
         "sha256": "9f62a6a9978cb49183d636290cee67cd0e968c555063dd2a530ca9838f82127e"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/feat-native-parallel-dispatch/README.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "9f62a6a9978cb49183d636290cee67cd0e968c555063dd2a530ca9838f82127e",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -31958,20 +31872,11 @@
         "mode": "100644",
         "sha256": "a3e811d38512b655ab0428ff3940b1507aacc136a34541fd0fd51e759c52457c"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/feat-native-parallel-dispatch/us-001-remove-worktree-isolation.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "a3e811d38512b655ab0428ff3940b1507aacc136a34541fd0fd51e759c52457c",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -31989,20 +31894,11 @@
         "mode": "100644",
         "sha256": "668531fbfa164b8db82aa8fce6bb98205686aed6edc37cacea3bd8bcfff47b44"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/feat-native-parallel-dispatch/us-002-remove-dag-wave-scheduler.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "668531fbfa164b8db82aa8fce6bb98205686aed6edc37cacea3bd8bcfff47b44",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -32020,20 +31916,11 @@
         "mode": "100644",
         "sha256": "b9813eb317218ed6f895ca002f6f2f04e36c8b5c086a02d230bdc7ca150bcaf5"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/feat-native-parallel-dispatch/us-003-native-parallel-dispatch.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "b9813eb317218ed6f895ca002f6f2f04e36c8b5c086a02d230bdc7ca150bcaf5",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -32051,20 +31938,11 @@
         "mode": "100644",
         "sha256": "0a7d89c53cf03b4904e6f9cfa7f17663d865a1fd5b86f65165461f87996580da"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/feat-native-parallel-dispatch/us-004-conformance-ci-docs-version.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "0a7d89c53cf03b4904e6f9cfa7f17663d865a1fd5b86f65165461f87996580da",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -32082,20 +31960,11 @@
         "mode": "100644",
         "sha256": "ee9cbe10fcafd28e0f4600704d702d721b0749aba7ce93697b23e1c7f22646a1"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/feat-parallel-dispatch/api.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "ee9cbe10fcafd28e0f4600704d702d721b0749aba7ce93697b23e1c7f22646a1",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -32113,20 +31982,11 @@
         "mode": "100644",
         "sha256": "f7b2ffe672f8804ab8b31bc26f971aa8cf470f9329a2ed778cc215457327eed1"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/feat-parallel-dispatch/architecture.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "f7b2ffe672f8804ab8b31bc26f971aa8cf470f9329a2ed778cc215457327eed1",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -32144,20 +32004,11 @@
         "mode": "100644",
         "sha256": "66cfe4cfcef8d4880142271a5733e677b69e59991873562ddaf753fb8016bb2e"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/feat-parallel-dispatch/conformance.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "66cfe4cfcef8d4880142271a5733e677b69e59991873562ddaf753fb8016bb2e",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -32175,20 +32026,11 @@
         "mode": "100644",
         "sha256": "d95df18cb713b26ab0b2289b3ac33dd431b88f3627eb64f07fc892aad5f4369e"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/feat-parallel-dispatch/README.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "d95df18cb713b26ab0b2289b3ac33dd431b88f3627eb64f07fc892aad5f4369e",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -32206,20 +32048,11 @@
         "mode": "100644",
         "sha256": "3a654c25687aa388192f185db0624589899ef0bed06640dab78a90b9e7058b9f"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/feat-parallel-dispatch/us-001-native-dispatch-core.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "3a654c25687aa388192f185db0624589899ef0bed06640dab78a90b9e7058b9f",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -32299,20 +32132,11 @@
         "mode": "100644",
         "sha256": "6b0af90f8d7037daf644b983f5261ecd7f971de8b52c5cafe01b62f576ad9c2e"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/operate/AGENTIC_EXECUTIVE_BOARD.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "6b0af90f8d7037daf644b983f5261ecd7f971de8b52c5cafe01b62f576ad9c2e",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -32330,20 +32154,11 @@
         "mode": "100644",
         "sha256": "a4fbc2c43102361bca8a1be0e827019a5ff773d419d3380b8aa859fbb54e1c8c"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/operate/CONTINUATION_PLAN.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "a4fbc2c43102361bca8a1be0e827019a5ff773d419d3380b8aa859fbb54e1c8c",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -32361,18 +32176,11 @@
         "mode": "100644",
         "sha256": "2788a25865331b3b5328baee2ae3e1de402db72fdca8cafbb9e1c2d524ea3c68"
       },
-      "disposition": "merged",
-      "reasonCode": "post-integration-destination-evolution",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/operate/DASHBOARD.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "retired",
+      "reasonCode": "retired-internal-planning-record",
+      "destinations": [],
       "verification": {
-        "policy": "destination-exists",
-        "requirement": "any"
+        "policy": "declared-absence"
       }
     },
     {
@@ -32390,20 +32198,11 @@
         "mode": "100644",
         "sha256": "b1b467dc848cd8493243f512eab2a99f7e7f441116452b6af95d09c78e9a907d"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/operate/README.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "b1b467dc848cd8493243f512eab2a99f7e7f441116452b6af95d09c78e9a907d",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -32570,8 +32369,8 @@
         "mode": "100644",
         "sha256": "56708540bf9fe6517c0d342925120ab6d6c8d053233cae5466e0ef6cb81974a0"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/docs/protocol/operate-runtime-v2.md",
@@ -32580,10 +32379,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "56708540bf9fe6517c0d342925120ab6d6c8d053233cae5466e0ef6cb81974a0",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -32746,20 +32543,11 @@
         "mode": "100644",
         "sha256": "611bbb90da4b545f7108071d8625a60be09e97ead178a7085cbe38c040c4b11b"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
-      "destinations": [
-        {
-          "path": "packages/pipeline/docs/reviews/SPEC-003-security-review.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "excluded",
+      "reasonCode": "retired-internal-planning-retained-in-verified-custody",
+      "destinations": [],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "611bbb90da4b545f7108071d8625a60be09e97ead178a7085cbe38c040c4b11b",
-        "executable": false
+        "policy": "declared-absence"
       }
     },
     {
@@ -45673,18 +45461,11 @@
         "mode": "100644",
         "sha256": "c096af2f5874f779b135563d3954155a93ae0b5c171100f58b005f8139f8a91d"
       },
-      "disposition": "merged",
-      "reasonCode": "post-integration-destination-evolution",
-      "destinations": [
-        {
-          "path": "packages/pipeline/planr-pipeline.md",
-          "custody": "public-package-projection",
-          "kind": "file"
-        }
-      ],
+      "disposition": "retired",
+      "reasonCode": "retired-legacy-reference-card",
+      "destinations": [],
       "verification": {
-        "policy": "destination-exists",
-        "requirement": "any"
+        "policy": "declared-absence"
       }
     },
     {
@@ -67006,5 +66787,5 @@
       }
     }
   ],
-  "documentDigest": "sha256:14d57bf5d12f71cf87c90c614a1bbf549cbd39768de8b34d8800cf5cae4fbbe2"
+  "documentDigest": "sha256:83572fad20fe954f9be494568d8bdfda3d8cca8a3fe65503711ff7ad4fa0d093"
 }

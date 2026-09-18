@@ -47,7 +47,6 @@ workspace. Their public package identities remain independent. The deployed
 `openplanr-web` service remains an external repository with a separate custody
 check. For the operating model, see:
 
-- In a source checkout, `docs/operate/README.md` — canonical Operate handoff, executive-board continuity, dashboard truth, and unreleased continuation plan.
 - [`docs/ecosystem-guide.md`](docs/ecosystem-guide.md) — which surface plans, ships, routes, and installs.
 - [`docs/ownership-map.md`](docs/ownership-map.md) — which repo owns each contract.
 - [`docs/doctor.md`](docs/doctor.md) — `npm run doctor`, strict mode, JSON output, and release checks.
@@ -241,8 +240,6 @@ When a project uses planr's **spec-driven mode** (the third planning posture, se
 - Both append `.planr/provenance.jsonl`; do not run both decomposers on one populated spec without explicit reconciliation.
 
 The pipeline auto-detects spec mode by looking for `.planr/config.json` with `idPrefix.spec` set. If absent, it falls back to the default `output/feats/feat-{name}/` layout — existing pipeline-only workflows are unchanged.
-
-See [planr's spec-driven proposal](https://github.com/openplanr/OpenPlanr/blob/main/docs/proposals/spec-driven-mode.md) for the design.
 
 ---
 
