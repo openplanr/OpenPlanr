@@ -1,5 +1,10 @@
 # @openplanr/protocol
 
+## 0.4.0
+### Minor Changes
+
+- f93a973: Recognize `planr-sprint`, the backlog refinement and sprint selection skill, as a canonical skill, and regenerate the command registry for the `planr sprint refinement|diff|close|apply` subcommands and the changed `status` and `update` command sources.
+
 ## 0.3.0
 ### Minor Changes
 
