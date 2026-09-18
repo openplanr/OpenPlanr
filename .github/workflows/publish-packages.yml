@@ -2,8 +2,8 @@ name: Publish public packages
 
 # Runs after every green Workspace CI push run on main and publishes whatever public
 # package versions that commit declares but npm does not have yet, in dependency
-# order, behind the single npm-release approval. It then tags, releases, records
-# provenance and projects the Claude plugin into the public marketplace.
+# order, behind the single npm-release approval. It then tags, releases, and projects
+# the Claude plugin into the public marketplace.
 # workflow_dispatch keeps the manual path for one package or for all pending ones.
 on:
   workflow_run:
@@ -169,53 +169,6 @@ jobs:
           path: release/published.json
           if-no-files-found: error
           retention-days: 90
-
-  provenance:
-    needs: [plan, publish]
-    if: vars.RELEASE_APP_ID != ''
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/create-github-app-token@v2
-        id: app
-        with:
-          app-id: ${{ vars.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-      - uses: actions/checkout@v5
-        with:
-          ref: main
-          token: ${{ steps.app.outputs.token }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-      - uses: actions/download-artifact@v4
-        with:
-          name: verified-public-packages
-          path: release
-      - uses: actions/download-artifact@v4
-        with:
-          name: publication-record
-          path: release
-      - name: Record the publication rows
-        run: node scripts/release-train/record-provenance.mjs --bundles release --run-id "$GITHUB_RUN_ID"
-      - name: Open the provenance PR and queue it
-        env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
-        run: |
-          if git diff --quiet -- docs/PROVENANCE.md; then
-            echo "Provenance rows already recorded"
-            exit 0
-          fi
-          git config user.name "openplanr-release[bot]"
-          git config user.email "openplanr-release[bot]@users.noreply.github.com"
-          branch="docs/provenance-$GITHUB_RUN_ID"
-          git checkout -b "$branch"
-          git commit -am "docs(release): record publication provenance for run $GITHUB_RUN_ID"
-          git push -u origin "$branch"
-          url=$(gh pr create --base main --head "$branch" \
-            --title "docs(release): record publication provenance for run $GITHUB_RUN_ID" \
-            --body "Publication rows for the packages published by [run $GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID): registry integrity, attested build commit and payload digest, computed from the same archives that were published.")
-          gh pr merge --squash --auto "$url"
 
   marketplace:
     needs: [plan, publish]

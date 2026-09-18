@@ -84,8 +84,8 @@ The CLI and pipeline distributions keep self-contained compatibility projections
 package versions stay independent of schema and document versions. `conformance/`
 verifies the public contracts without being imported by runtime code, and
 `npm run check:preservation` verifies from committed data that every compatibility path
-still has an explicit disposition. [Release provenance](../PROVENANCE.md) records the
-integrity proof of every published version.
+still has an explicit disposition. [Verifying a release](../PROVENANCE.md) explains how to
+check a published version's signature and attestation.
 
 ## Service boundary
 

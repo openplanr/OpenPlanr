@@ -71,9 +71,7 @@ version PR and approving the `npm-release` environment once per release.
    (`scripts/release-train/publish-archives.mjs`). The same job creates the package-qualified
    annotated tags and GitHub releases (changelog section plus the publication evidence;
    only the CLI release is marked Latest).
-3. **Provenance and marketplace.** `provenance` appends the rows to
-   `docs/PROVENANCE.md` and opens an auto-merging docs PR through the merge queue.
-   `marketplace` projects the generated Claude plugin into `openplanr/marketplace`
+3. **Marketplace.** `marketplace` projects the generated Claude plugin into `openplanr/marketplace`
    (`plugins/planr/`, `.claude-plugin/marketplace.json`, the README plugin table) and
    opens a PR there, or pushes to its `main` when the repository variable
    `MARKETPLACE_DIRECT_PUSH` is `true`.
@@ -84,9 +82,10 @@ version PR and approving the `npm-release` environment once per release.
 
 Every release proves three things: the registry integrity matches the packed archive,
 the SLSA attestation names the released commit and workflow run, and the archive is the
-one packed from that commit in the same run. [PROVENANCE.md](PROVENANCE.md) records the
-integrity, the attested build commit, and the payload digest of each published version.
-Re-verify by hand only when a run is in doubt: `npm audit signatures` in a clean install,
-or a rebuild from the tagged commit compared file by file. Historical `v*` tags are
+one packed from that commit in the same run. That evidence lives in the npm provenance
+attestation and in each GitHub release, not in a tracked file;
+[verifying a release](PROVENANCE.md) explains how to check it. Re-verify by hand only
+when a run is in doubt: `npm audit signatures` in a clean install, or a rebuild from the
+tagged commit compared file by file. Historical `v*` tags are
 preserved; new tags are package-qualified (`openplanr@2.2.1`) so independent releases
 never collide.

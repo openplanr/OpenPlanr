@@ -225,7 +225,7 @@ generation time. See the [architecture guide](docs/architecture/README.md).
 [Pipeline package](packages/pipeline/README.md) ·
 [Host matrix](docs/skills/host-matrix.md) ·
 [Skill versioning](docs/skills/versioning-and-impact.md) ·
-[Release provenance](docs/PROVENANCE.md)
+[Verifying a release](docs/PROVENANCE.md)
 
 ## Community and license
 

@@ -98,7 +98,7 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:48fe0fcd81cb5a667a336cbb8653b52857e0a6204a5a2d8773d00ffcb0063993"
+      "digest": "sha256:7aa51ea4d20b51a4b74aafb5c4cd09dca2b17e5b0371713ef1c11bfeb8039fd2"
     }
   ],
   "outputs": [
@@ -124,7 +124,7 @@
     },
     {
       "path": "docs/generated/skills.md",
-      "digest": "sha256:2134f8b5b220020307b2627b98b781365f5050a49b757559c02da48cfa80cb0f"
+      "digest": "sha256:d94c4509f53b68be5a937fbc5f660558e4dc00bb8e8b682efa12e065c7417ee2"
     },
     {
       "path": "ecosystem.json",

@@ -22,7 +22,7 @@
 - [`@openplanr/protocol`](../packages/protocol/README.md): schemas, registries, and validation.
 - [`planr-pipeline`](../packages/pipeline/README.md): the delivery pipeline package and its protocol documents.
 - [Generated catalogs](generated/): skills, adapters, ecosystem, and the utility command catalog.
-- [Release provenance](PROVENANCE.md): integrity proofs for every published version.
+- [Verifying a release](PROVENANCE.md): how to check the signature, attestation, and bytes of a published version.
 - [Brand assets](assets/brand/README.md): logo files and usage rules.
 
 ## Moved pages
@@ -31,7 +31,7 @@
 | --- | --- |
 | `docs/skills/installation.md`, `docs/skills/local-dogfooding.md`, `docs/skills/troubleshooting.md` | [Working from a checkout](contributing/dogfooding.md) |
 | `docs/skills/release.md` | [Releasing](RELEASING.md) |
-| `docs/migration/README.md` | [Architecture](architecture/README.md) and [Provenance](PROVENANCE.md) |
+| `docs/migration/README.md` | [Architecture](architecture/README.md) |
 | `docs/enterprise/company-workspaces.md` | [COMMERCIAL.md](../COMMERCIAL.md) |
 | `packages/cli/docs/ARCHITECTURE.md` | [Architecture](architecture/README.md) |
 | `packages/pipeline/docs/operate/*` | [Operate runtime protocol](../packages/pipeline/docs/protocol/operate-runtime-v2.md) |

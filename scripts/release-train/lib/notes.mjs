@@ -45,7 +45,7 @@ export function renderReleaseNotes({
   ].join('\n');
 }
 
-/** SHA-256 of the sorted per-file SHA-256 list of an archive, the digest `docs/PROVENANCE.md` records. */
+/** SHA-256 of the sorted per-file SHA-256 list of an archive. */
 export function payloadDigest(archivePath) {
   const dir = mkdtempSync(join(tmpdir(), 'openplanr-payload-'));
   try {
@@ -78,38 +78,4 @@ export function payloadDigest(archivePath) {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
-}
-
-/** One `docs/PROVENANCE.md` publication row. */
-export function renderProvenanceRow({
-  name,
-  version,
-  publishedAt,
-  runId,
-  commit,
-  payloadSha256,
-  integrity,
-}) {
-  return `| \`${name}\` | \`${version}\` | ${formatUtc(publishedAt)} | \`publish-packages.yml\` run ${runId}; SLSA v1 attestation | \`${commit}\` | \`${payloadSha256}\` | \`${integrity}\` |`;
-}
-
-/** Insert rows after the last row of the publication provenance table; a package version is recorded once. */
-export function appendProvenanceRows(document, rows) {
-  const lines = document.split('\n');
-  const header = lines.findIndex((line) =>
-    line.startsWith('| Package | Version | Published (UTC) |'),
-  );
-  if (header === -1) throw new Error('docs/PROVENANCE.md has no publication provenance table');
-  let end = header + 1;
-  while (end < lines.length && lines[end].startsWith('|')) end += 1;
-  const identity = (row) =>
-    row
-      .split('|')
-      .slice(1, 3)
-      .map((cell) => cell.trim())
-      .join(' ');
-  const recorded = new Set(lines.slice(header + 2, end).map(identity));
-  const fresh = rows.filter((row) => !recorded.has(identity(row)));
-  lines.splice(end, 0, ...fresh);
-  return { document: lines.join('\n'), added: fresh.length };
 }
