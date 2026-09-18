@@ -432,7 +432,7 @@ test('a 500-node directed ring wraps into bands inside the viewport boundary wit
 test('a small cycle keeps its single-band layout and layered graphs that cannot fit refuse with the budget error', () => {
   const rendered = renderDiagramOutputs(directedRing(8));
   assert.equal(rendered.quality.status, 'pass');
-  assert.equal(rendered.scene.width, 2504);
+  assert.equal(rendered.scene.width, 2672);
   assert.equal(rendered.scene.height, 448);
   assert.equal(new Set(rendered.scene.boxes.map(({ y }) => y)).size, 1);
   const leaves = Array.from({ length: 120 }, (_, index) => ({

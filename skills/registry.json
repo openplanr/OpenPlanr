@@ -599,7 +599,7 @@
       "skillId": "planr-diagram",
       "family": "diagram",
       "contribution": "workflows",
-      "skillVersion": "1.0.0",
+      "skillVersion": "1.1.0",
       "description": "Create, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.",
       "lifecycle": "active",
       "authorityClass": "artifact-authoring",

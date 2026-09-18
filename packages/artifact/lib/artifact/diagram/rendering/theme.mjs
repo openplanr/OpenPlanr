@@ -1,6 +1,6 @@
 export const DIAGRAM_RENDERER = Object.freeze({
   id: 'openplanr-semantic-svg-resvg',
-  version: '1.2.0',
+  version: '1.3.0',
 });
 
 export const DIAGRAM_THEME = Object.freeze({
@@ -15,6 +15,17 @@ export const DIAGRAM_THEME = Object.freeze({
   fontFamily: 'Inter',
   fontSize: 16,
 });
+
+/**
+ * Relation kinds drawn dashed. Flow, message and transition are the primary
+ * paths of a diagram and stay solid; dependency and association are the
+ * secondary, "uses" relations that every mainstream notation draws dashed.
+ */
+export const DASHED_RELATION_KINDS = Object.freeze(new Set(['dependency', 'association']));
+
+export function isDashedRelation(kind) {
+  return DASHED_RELATION_KINDS.has(kind);
+}
 
 export const RASTER_SCALE = 2;
 export const MAX_VISIBLE_LABEL_CHARACTERS = 2_048;

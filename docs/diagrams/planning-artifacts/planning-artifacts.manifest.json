@@ -18,7 +18,7 @@
   },
   "renderer": {
     "id": "openplanr-semantic-svg-resvg",
-    "version": "1.2.0"
+    "version": "1.3.0"
   },
   "theme": {
     "id": "openplanr-default",
@@ -28,7 +28,7 @@
     {
       "path": "diagrams/planning-artifacts/planning-artifacts.assets.json",
       "mediaType": "application/vnd.openplanr.diagram-assets+json",
-      "digest": "sha256:03ef7e2af10785a5ae9fabfeb490a095a38d04629e95534f8c00774a94605372",
+      "digest": "sha256:3cd34a2d7757bf0ee7db0308d7351ce35a441f1377b6a93befd243e10aebcfd6",
       "fidelity": "render-only"
     },
     {
@@ -46,7 +46,7 @@
     {
       "path": "diagrams/planning-artifacts/planning-artifacts.html",
       "mediaType": "text/html; charset=utf-8",
-      "digest": "sha256:8e7c7ab4df7334ffb939ba5c59a4371f7e7af89a4dc9d4732281cb9da8f96a10",
+      "digest": "sha256:26f4e79db933a1f3586e253849e24a9a2f6545d380e37c9bc4f973951799fb98",
       "fidelity": "render-only"
     },
     {
@@ -58,21 +58,21 @@
     {
       "path": "diagrams/planning-artifacts/planning-artifacts.png",
       "mediaType": "image/png",
-      "digest": "sha256:be6c0a1e6cd71a7fc0cba7e7462454d9a8007997cef4c97c627f123b65806342",
+      "digest": "sha256:e249b98bdd89018de7f227dad07a53ce0a67c3daae85d59410777bb3889457a9",
       "fidelity": "render-only"
     },
     {
       "path": "diagrams/planning-artifacts/planning-artifacts.quality.json",
       "mediaType": "application/vnd.openplanr.diagram-quality+json",
-      "digest": "sha256:700f915870294ced170ba706667d9328952b8c585ce114b31f512fb3c29f7d90",
+      "digest": "sha256:3006a90c1d56978e36eb2cb5e6e43d91fe6cd26dc2c92ab04529b862117709a5",
       "fidelity": "render-only"
     },
     {
       "path": "diagrams/planning-artifacts/planning-artifacts.svg",
       "mediaType": "image/svg+xml; charset=utf-8",
-      "digest": "sha256:bdc6ee53d4332e86a93ff096100d5f6b1a28e2e3feb6c1c6f8d20dafdee6b6c0",
+      "digest": "sha256:76d3a73867f9bb9d4bfa274ae94e883ef06b751efbce6aec981f0faf325bcca6",
       "fidelity": "render-only"
     }
   ],
-  "documentDigest": "sha256:1c84c12e7538b20ea62575c5df738265b6e8f960690bdda0fd8ce27c7a8d27bf"
+  "documentDigest": "sha256:023379e5693a5842db2dbc8c6e75ccd2fcd6201589dbe6310831f184e8d69474"
 }

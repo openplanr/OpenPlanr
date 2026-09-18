@@ -445,7 +445,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/projection/excalidraw.mjs",
       "target": "lib/artifact/diagram/projection/excalidraw.mjs",
-      "sha256": "1b285afa79f536002ec66aa97bd792067017eba91e96ec0fc9dfba330dedac42",
+      "sha256": "d64c47892fc0e62e5e8f857c34f3620ec9795da28dad4b8e215de88c0045bcf1",
       "mode": "644"
     },
     {
@@ -493,7 +493,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layout.mjs",
       "target": "lib/artifact/diagram/rendering/layout.mjs",
-      "sha256": "300723ef241a4bd5d2ebd7312620ed8279ffe9f4de76816667cae25031b7a083",
+      "sha256": "2492ff5084eb0b8890aacd5ecfb9f989976e7943627fc612bd9b68fc9ff93fa7",
       "mode": "644"
     },
     {
@@ -505,19 +505,19 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/reports.mjs",
       "target": "lib/artifact/diagram/rendering/reports.mjs",
-      "sha256": "1fae0846da57dfa50efcd56ca5563af1728306d5c5b8ff094284d9fe0e937cdb",
+      "sha256": "713196b32771ca15d1f543d9a3b7e57e586a2dd6be92211e2806591a6de41c16",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/svg.mjs",
       "target": "lib/artifact/diagram/rendering/svg.mjs",
-      "sha256": "0388b401ebde2158855a764eb53125ec996d5de7281246495d34bc1e357b36f7",
+      "sha256": "a9496f8604305671c424ce9e6b46dc8bde1029c9780925b03222f4e7dc784183",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/theme.mjs",
       "target": "lib/artifact/diagram/rendering/theme.mjs",
-      "sha256": "02e010a57811968546ee3e39ff6c9f2a9ff45970f3408526aed4df3b7057eb0b",
+      "sha256": "8adeb07b58750ca7675c2b21e9990dd5d5c80b16bbab31109ff04f675d005288",
       "mode": "644"
     },
     {
