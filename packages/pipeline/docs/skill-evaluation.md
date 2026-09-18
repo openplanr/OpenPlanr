@@ -178,11 +178,11 @@ rewritten.
 
 ## Supersession boundary
 
-This laboratory supersedes SPEC-021's ad-hoc skill/host/canary checking **for
+This laboratory supersedes the frozen catalog record's ad-hoc skill/host/canary checking **for
 measurement and certification only**: what a skill-host pair must demonstrate,
 how it is measured, and what verdict that produces now come from here.
 
-SPEC-021 remains authoritative and unchanged for everything else — the frozen
+The frozen catalog record remains authoritative and unchanged for everything else — the frozen
 catalog membership, the canonical skill sources and generated host assets, the
 command grammar, and the specialist roster. The laboratory consumes those
 through their existing public interfaces and never forks, edits, or reinterprets

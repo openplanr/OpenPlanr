@@ -37,7 +37,7 @@ OpenPlanr ships across multiple workspace domains and three first-class AI codin
 | `@openplanr/protocol` | Schemas, registries, and portable contracts | `packages/protocol` |
 | runtime skills | Reusable planning and delivery workflows | `skills/` and `agents/` |
 | marketplace | Generated Claude metadata and resolved compatibility manifest | `.claude-plugin/` and `ecosystem.json` |
-| hosted web | Independently deployed artifact and room transport | external `openplanr-web` repository |
+| hosted web | Independently deployed artifact and room transport | separate hosted-service repository |
 
 The same workflow runs on **Claude Code** through native plugin assets, **Cursor**
 through portable rules and handoff, and **Codex** through installed skills plus

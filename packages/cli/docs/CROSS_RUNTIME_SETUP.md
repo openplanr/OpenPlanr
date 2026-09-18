@@ -8,9 +8,9 @@ curl -fsSL https://openplanr.dev/install.sh | sh
 irm https://openplanr.dev/install.ps1 | iex
 ```
 
-The installer requires Node.js 20+ and never installs or upgrades Node silently.
-It installs the CLI without changing the current directory. Then change into a
-project and run guided setup:
+The installer requires Node.js 20 or later and never installs or upgrades Node
+silently. `npm install -g openplanr` is equivalent. Then change into a project and
+run guided setup:
 
 ```bash
 cd my-project
@@ -40,12 +40,12 @@ every target. Existing files are copied byte-for-byte to
 `~/.planr/backups/` with hashes and a migration manifest. Only managed marker
 blocks are replaced; content outside those blocks is preserved.
 
-When Claude Code is selected at user scope, the same preview includes the
-official marketplace and plugin operations. Confirmed setup refreshes
-`openplanr/marketplace`, installs missing OpenPlanr plugins, and updates stale
-ones to the compatibility versions recorded by the CLI. This is intentionally
-not performed by the piped web installer. Restart Claude Code when setup says a
-plugin changed.
+When Claude Code is selected at user scope, the preview includes the marketplace
+and plugin operations. Confirmed setup writes a generated local marketplace
+(`openplanr-local`) from the installed package and installs or updates the unified
+`planr` plugin from it, so the plugin always matches the CLI version. The piped
+installer never does this on its own. Restart Claude Code when setup says a plugin
+changed.
 
 For CI and provisioning, supply choices explicitly:
 
@@ -67,21 +67,28 @@ adapter and preserves each adapter's existing scope. For example, adding Codex
 at user scope does not widen an existing project-only Cursor installation.
 
 Full setup installs the portable planning and pipeline assets for the selected
-runtime. `planr doctor` reports managed-file drift and runtime availability
-without calling a provider.
+runtime. `planr doctor` reports managed-file drift and runtime availability.
 
-## Codex Operate bundle and first Cycle
+## Codex skill modes
 
-Full Codex setup installs every canonical, manifest-owned `planr-*` skill in the
-Protocol registry as one global user bundle. The Operate set is `planr-operate` plus
-the seven `planr-{ceo,cto,cpo,cmo,coo,challenger,chair}-review` executors. Every
-asset is digest-verified. Software remains a registered Operate domain, but no
-generic software executor skill is installed or advertised.
+Codex has three delivery modes, chosen with `--skill-mode`:
 
-Invoke `$planr-operate` directly for the guided local review. It uses sensible
-current-snapshot defaults, asks through the host's native question surface only
-for consequential ambiguity, and keeps missing lens output as a visible issue
-instead of blocking the rest of the report.
+- `unified-plugin` (recommended): one `planr` plugin registered through Codex's plugin
+  marketplace; skills are invoked as `$planr:<skill>`.
+- `direct`: every skill installed separately under `~/.codex/skills/<name>/` and invoked
+  by its bare name, for example `$spec`.
+- `project-rule`: skills installed into the current project only.
+
+Every installed asset is digest-verified. Switching modes previews the managed
+retirements; add `--replace-managed` only after reviewing them.
+
+## Operate cycles
+
+The Operate set is `operate` plus the seven `ceo`, `cto`, `cpo`, `cmo`, `coo`,
+`challenger`, and `chair` reviews. Invoke `$planr:operate` (Codex) or `/planr:operate`
+(Claude Code) for the guided local review. It uses current-snapshot defaults, asks
+through the host's native question surface only for consequential ambiguity, and
+reports a missing lens as a visible issue instead of blocking the rest of the report.
 
 The validator is optional editing help for any generated note:
 
@@ -136,10 +143,10 @@ planr upgrade apply
 
 ## Offline, remote, and SSH use
 
-After npm packages and runtime assets are installed, planning artifacts,
-runtime routing, status, sync audit, dashboard, design boards, and doctor work
-without fetching OpenPlanr sources. Provider-backed generation still requires
-the selected provider or a local model runtime.
+After the package and runtime assets are installed, planning artifacts, runtime
+routing, status, sync audit, dashboard, design boards, diagrams, and doctor work
+without network access. Only tracker sync (GitHub, Linear) and company workspaces
+reach the network.
 
 On remote/SSH machines use `--scope user` for reusable skills and `--scope project`
 for repository policy. Forward a loopback port explicitly through SSH when a
@@ -147,7 +154,7 @@ local artifact-review browser runs elsewhere.
 
 ## Windows
 
-The PowerShell installer and CLI support Node 20/22 on Windows. Project paths in
+The PowerShell installer and the CLI support Node.js 20 or later on Windows. Project paths in
 committed locks and generated rules are repository-relative. Machine-specific
 absolute paths remain in the user runtime state and backups.
 

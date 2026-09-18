@@ -106,5 +106,5 @@ export work offline after installation. Creating or opening a remote review
 link requires network access.
 
 The shell assets and Protocol v1.1 schemas are shipped by `planr-pipeline`.
-Self-hosters may deploy the static viewer and Worker implementation from
-`openplanr/openplanr-web`, then set `OPENPLANR_SHARE_BASE` to their HTTPS origin.
+Self-hosters can point `OPENPLANR_SHARE_BASE` at their own HTTPS origin serving the
+static viewer and share Worker.

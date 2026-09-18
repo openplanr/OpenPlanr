@@ -35,12 +35,12 @@ The verifier selects one of two explicit policies:
 | Layout | Package proof boundary | Other domains |
 |---|---|---|
 | Legacy multi-repository | `pipeline`, `web`, `cli`, `skills`, and `marketplace` | Every frozen repository remains a ledger row |
-| Consolidated monorepo | `pipeline` and `cli` | `skills` and `marketplace` are generated root catalogs; `openplanr-web` is external |
+| Consolidated monorepo | `pipeline` and `cli` | `skills` and `marketplace` are generated root catalogs; the hosted service is external |
 
 The consolidated policy never invents package identities for the root
 `skills/` or marketplace metadata. Their generated manifests remain covered by
 the workspace generation and conformance checks. The separately deployed
-`openplanr-web` repository is not a prerequisite for local strict verification.
+hosted-service repository is not a prerequisite for local strict verification.
 
 The closed `release-ledger@1.3.0` schema remains readable and unchanged. It
 still requires all five legacy rows. A consolidated run therefore reports the

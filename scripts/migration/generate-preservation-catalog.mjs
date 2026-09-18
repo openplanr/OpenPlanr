@@ -48,6 +48,7 @@ const EVOLVED_MAPPING_IDS = new Set([
   // Current documentation no longer links to retired SPEC-016 planning records.
   'planr-pipeline:cutoff:docs/dashboard.md',
   // Public reference docs drop retired commands, private planning links and personal contacts.
+  'openplanr-cli:cutoff:docs/ARTIFACT_REVIEW.md',
   'openplanr-cli:cutoff:docs/reference/spec-schema.md',
   'planr-pipeline:cutoff:docs/protocol/operate-runtime-v2.md',
   // Conformance fixtures track supported test toolchains after consolidation.
@@ -60,6 +61,12 @@ const EVOLVED_MAPPING_IDS = new Set([
   // Release proofs follow declared package versions across Changesets updates.
   'planr-pipeline:cutoff:tests/ecosystem/operate-v2-product-package.test.mjs',
   'planr-pipeline:cutoff:tests/pipeline/doctor-release-changelog.test.mjs',
+  // Shipped pipeline docs drop retired invocation names, private repository names and roadmap ids.
+  'planr-pipeline:cutoff:docs/design-loop.md',
+  'planr-pipeline:cutoff:docs/design-review.md',
+  'planr-pipeline:cutoff:docs/skill-evaluation.md',
+  'planr-pipeline:cutoff:docs/unified-dashboard-migration.md',
+  'planr-pipeline:cutoff:docs/us-anatomy.md',
   // Public docs retain normative rules after private ADR links are removed.
   // The legacy canary is explicitly identified as a manual consumer audit.
   'planr-pipeline:cutoff:docs/artifact-review.md',

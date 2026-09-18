@@ -15,7 +15,7 @@ projection.
 | `packages/artifact` and `packages/design` | Artifact review and design runtimes | Pipeline, CLI, and dashboard projections |
 | `skills/`, `agents/`, `packages/skill-runtime` | Canonical workflows, roles, and composition | `adapters/` and pipeline compatibility assets |
 | `.claude-plugin/` and `ecosystem.json` | Generated workspace distribution metadata | Local and future published host manifests |
-| external `openplanr-web` | Independently deployed web property and hosted transport | Canonical artifact and transport contracts |
+| external hosted service | Independently deployed web property and hosted transport | Canonical artifact and transport contracts |
 
 ## Canonical Contracts
 
@@ -26,7 +26,7 @@ projection.
 | Operate event/replay/checkpoint contracts (Protocol 2.0) | `packages/protocol` and `packages/operate` | Operate conformance |
 | Guided question, answer, session, action, and diagnostic contracts | `packages/protocol` | guided-contract and Operate conformance tests |
 | Guided question wording, validation, sessions, confirmations, and mutations | `packages/cli` | focused CLI interaction tests |
-| Hosted artifact and live-room transport | `openplanr-web` | `npm test`, `npm run share:check`, and `npm run build` |
+| Hosted artifact and live-room transport | hosted service | its own test, share-check, and build commands |
 | Ecosystem release operation | root scripts plus public packages | saga and release-operation tests |
 | Public package proof and strict consumption | root workspace | `npm run verify:packed:strict` |
 | Runtime lock and migration | `packages/cli` | setup/idempotency/rollback tests |
@@ -41,12 +41,12 @@ projection.
 
 ## Skill Certification Boundary
 
-The skill evaluation laboratory (`docs/skill-evaluation.md`) supersedes SPEC-021's
+The skill evaluation laboratory (`docs/skill-evaluation.md`) supersedes the frozen catalog record's
 ad-hoc skill, host, and canary checking **for measurement and certification
 only**. What a skill-host pair must demonstrate, how it is measured, and what
 verdict that produces are owned here.
 
-SPEC-021 stays authoritative and byte-unchanged for what it has always owned:
+The frozen catalog record stays authoritative and byte-unchanged for what it has always owned:
 the frozen professional-skill catalog membership and its bundle digests, the
 canonical skill sources and generated host assets, the frozen command grammar,
 and the specialist roster. The laboratory reads all of them through their

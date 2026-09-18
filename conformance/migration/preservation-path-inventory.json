@@ -124,11 +124,11 @@
     "pathRecords": 2100,
     "dispositionCounts": {
       "regenerated": 205,
-      "merged": 560,
-      "moved": 256,
+      "merged": 566,
+      "moved": 255,
       "excluded": 40,
       "retired": 60,
-      "exact": 979
+      "exact": 974
     },
     "unmappedPaths": 0
   },
@@ -1495,8 +1495,8 @@
         "mode": "100644",
         "sha256": "3bb4aceedf8bd02259953f329d9143feac333215afb1dcef3ee0bf6c5471e65f"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/cli/docs/ARTIFACT_REVIEW.md",
@@ -1505,10 +1505,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "3bb4aceedf8bd02259953f329d9143feac333215afb1dcef3ee0bf6c5471e65f",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -31422,8 +31420,8 @@
         "mode": "100644",
         "sha256": "07032043551ab8c77ebd486f0cd0b435ce949b67eeed146efa9356082af349bd"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/docs/design-loop.md",
@@ -31432,10 +31430,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "07032043551ab8c77ebd486f0cd0b435ce949b67eeed146efa9356082af349bd",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -31453,8 +31449,8 @@
         "mode": "100644",
         "sha256": "499c2d84539f18880f5b556966ad195bc796fbd778ab216bb672f170bf71e9a6"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/docs/design-review.md",
@@ -31463,10 +31459,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "499c2d84539f18880f5b556966ad195bc796fbd778ab216bb672f170bf71e9a6",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -32623,8 +32617,8 @@
         "mode": "100644",
         "sha256": "ccc69b674658bf03fc842f4c4fdaea6576f91e8761409faed63c22f03d8a6cb4"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/docs/skill-evaluation.md",
@@ -32633,10 +32627,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "ccc69b674658bf03fc842f4c4fdaea6576f91e8761409faed63c22f03d8a6cb4",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -32714,8 +32706,8 @@
         "mode": "100644",
         "sha256": "bd0dc32f353809e4f02b7a30257427db204ae04f99a1f6c11010c8179b611614"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/docs/unified-dashboard-migration.md",
@@ -32724,10 +32716,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "bd0dc32f353809e4f02b7a30257427db204ae04f99a1f6c11010c8179b611614",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -32745,8 +32735,8 @@
         "mode": "100644",
         "sha256": "cc55b211c7e058137af31624e1f56c106fe26e60b668ee1be3746f6563179d16"
       },
-      "disposition": "exact",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/pipeline/docs/us-anatomy.md",
@@ -32755,10 +32745,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "cc55b211c7e058137af31624e1f56c106fe26e60b668ee1be3746f6563179d16",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -66787,5 +66775,5 @@
       }
     }
   ],
-  "documentDigest": "sha256:83572fad20fe954f9be494568d8bdfda3d8cca8a3fe65503711ff7ad4fa0d093"
+  "documentDigest": "sha256:91543f52c378ffad486a5121321264089edfd79fd24c48712c967639ebae7c64"
 }

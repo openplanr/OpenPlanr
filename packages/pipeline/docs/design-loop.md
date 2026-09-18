@@ -1,7 +1,7 @@
 # The Design Loop Engine
 
-> `/planr-pipeline:design-loop` (exploration for any target) and
-> `/planr-pipeline:design-review` (pin-review of an existing artifact) share one engine:
+> `/planr:design-loop` (exploration for any target) and
+> `/planr:design-review` (pin-review of an existing artifact) share one engine:
 > `lib/design-engine/` — providers, sessions, a board daemon, a file-handshake feedback
 > protocol, and taste memory. Zero npm dependencies; everything is plain Node ESM.
 

@@ -6,10 +6,10 @@ development and verification do not publish packages or deploy services.
 ## Release Order
 
 The source workspace is consolidated, while public packages and
-`openplanr-web` keep independent release identities:
+the hosted service keep independent release identities:
 
 1. Verify the complete OpenPlanr workspace and pack both public packages.
-2. Deploy a backward-compatible `openplanr-web` change when the external service changed.
+2. Deploy a backward-compatible hosted-service change when the service changed.
 3. Publish `planr-pipeline` when its packed artifact changed.
 4. Publish `openplanr` when its packed artifact changed.
 5. Update generated host-distribution metadata in the OpenPlanr repository.
@@ -17,7 +17,7 @@ The source workspace is consolidated, while public packages and
 Enable v2-only room creation only after compatible clients are available.
 
 Patch releases can skip unchanged artifacts. The final audit still reports
-whether the independent `openplanr-web` checkout was present and healthy.
+whether the separate hosted-service checkout was present and healthy.
 
 ## Before Opening PRs
 
@@ -36,7 +36,7 @@ planr doctor --strict --json
 git diff --check
 ```
 
-Run in `openplanr-web` when hosted service or generated share bytes change:
+Run in the hosted-service repository when the service or generated share bytes change:
 
 ```bash
 npm test
@@ -67,7 +67,7 @@ The release audit checks:
 
 - `planr-pipeline` package, plugin manifest, stack metadata, protocol docs, and
   compatibility matrix agree.
-- `openplanr-web` retains its independent package identity and required build,
+- The hosted service retains its independent package identity and required build,
   test, and hosted-service drift checks.
 - root marketplace metadata and `ecosystem.json` match the workspace packages and canonical skills.
 - `openplanr` and `planr-pipeline` keep their independent public versions.

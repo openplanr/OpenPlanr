@@ -1,7 +1,7 @@
-# Planr CLI Reference
+# planr CLI reference
 
-> Complete command reference for the `planr` CLI tool.
-> Package: `openplanr` | Binary: `planr` (alias: `opr`)
+> Every command and flag of the `planr` CLI.
+> Package: `openplanr` | Binary: `planr` (aliases: `openplanr`, `opr`)
 
 ---
 
@@ -18,7 +18,7 @@ planr --version
 
 ## Agent-Friendly / Non-Interactive Mode
 
-Planr auto-detects non-TTY environments (CI, coding agents) and skips interactive prompts by using sensible defaults. You can also opt in explicitly:
+The CLI auto-detects non-TTY environments (CI, coding agents) and skips interactive prompts by using sensible defaults. You can also opt in explicitly:
 
 ```bash
 # Explicit flag
@@ -54,7 +54,7 @@ These options apply to **all** commands:
 
 ## Commands
 
-### `planr company` (pre-release)
+### `planr company`
 
 The company route connects an explicitly configured workspace to selected local artifacts. Existing encrypted token shares remain separate. Sign in through the browser and choose the organization in the identity provider's consent screen:
 
@@ -114,7 +114,7 @@ planr company pull <binding-id> --json
 
 The preview reports the selected revision, digest, byte size, content, and whether local or remote content has changed. Pull verifies authorization and exact bytes again, then saves an inert `.txt` copy under `.local/company/remote-content/` with a retrieval receipt. It does not replace the repository file, advance the accepted binding, apply a proposal, or resolve feedback. Divergent or missing local files remain untouched. A changed local file or latest remote head requires a fresh preview. An explicitly selected historical revision stays pinned even if newer revisions appear.
 
-Retrieved content is untrusted input, including HTML and SVG. Inspect it as data. `company proposal` previews typed changes; `company apply` is a separate explicit local action, currently limited to validated canonical diagram JSON. Packaged designs are retrieved as inert review copies and cannot be applied over authored design documents; edit their source files locally and use a reviewed company push instead. A successful application records `applied-locally` with remote acknowledgement pending. Preserve local backups and recovery journals, and retry the same application after interruption. These development commands do not establish enterprise production readiness.
+Retrieved content is untrusted input, including HTML and SVG. Inspect it as data. `company proposal` previews typed changes; `company apply` is a separate explicit local action, currently limited to validated canonical diagram JSON. Packaged designs are retrieved as inert review copies and cannot be applied over authored design documents; edit their source files locally and use a reviewed company push instead. A successful application records `applied-locally` with remote acknowledgement pending. Preserve local backups and recovery journals, and retry the same application after interruption.
 
 
 ---
@@ -650,9 +650,9 @@ planr rules generate --dry-run                             # preview without wri
 | `cursor` × `agile`      | `.cursor/rules/{agile-checklist,create-epic,create-features,create-user-story,create-task-list,implement-task-list}.mdc` (6 files) |
 | `cursor` × `pipeline`   | `.cursor/rules/openplanr.mdc` + `openplanr-roles/{9 role files}.md` + deprecation aliases |
 | `claude` × `agile`      | `CLAUDE.md` (agile context-gathering protocol)                                                                |
-| `claude` × `pipeline`   | `CLAUDE.md` (with pipeline block) + sibling `planr-pipeline.md` reference card                            |
+| `claude` × `pipeline`   | `CLAUDE.md` with the pipeline block and the `## OpenPlanr capabilities` skill map                          |
 | `codex` × `agile`       | `AGENTS.md` (agile context)                                                                                   |
-| `codex` × `pipeline`    | Concise `AGENTS.md` project policy; `planr setup` installs user-scope workflow skills |
+| `codex` × `pipeline`    | `AGENTS.md` project policy with the `## OpenPlanr capabilities` skill map; `planr setup` installs the skills |
 | `* × all`               | Both scopes side-by-side                                                                                      |
 
 **Cross-runtime support:** v1.0 artifacts plus v1.1 capability contracts run on

@@ -8,7 +8,7 @@ Document and schema versions identify their contracts independently. Release
 verification binds the three generated package identities to their packed
 archives through `ecosystem.json` and the packed-workspace proof; this capability
 matrix does not duplicate release numbers. `skills/` and marketplace metadata
-are generated catalog domains, and `openplanr-web` remains an independent hosted
+are generated catalog domains, and the hosted service remains an independent
 consumer. See [`release-ledger.md`](release-ledger.md) for proof boundaries and
 historical release compatibility.
 
@@ -187,10 +187,10 @@ Read a certified skill-host result narrowly:
 - Each receipt names exactly the host profiles its run graded. A host profile
   that was not graded is absent, never assumed.
 
-The laboratory supersedes SPEC-021's ad-hoc skill/host/canary checking for
+The laboratory supersedes the frozen catalog record's ad-hoc skill/host/canary checking for
 measurement and certification only. The frozen catalog membership, canonical
 skill sources, generated host assets, command grammar, and specialist roster
-remain SPEC-021's and are read unchanged. See
+remain the frozen catalog record's and are read unchanged. See
 [`ownership-map.md`](ownership-map.md).
 
 ## Caveats
@@ -198,7 +198,7 @@ remain SPEC-021's and are read unchanged. See
 ### Cursor and Codex restrictions are runtime-governed
 
 Claude Code may enforce per-agent tools through plugin manifests. Cursor and
-Codex govern workspace access through their active session permissions. Planr
+Codex govern workspace access through their active session permissions. OpenPlanr
 does not widen those permissions; it validates cited results before persistence
 and refuses governed writes when validation fails.
 

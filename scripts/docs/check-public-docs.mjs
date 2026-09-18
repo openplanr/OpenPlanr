@@ -38,11 +38,11 @@ const RULES = [
   {
     id: 'retired-repository',
     message: 'retired or private repository; link into openplanr/OpenPlanr instead',
-    pattern: /github\.com\/openplanr\/(?:planr-pipeline|skills)\b|openplanr-web|openplanr-company/gu,
+    pattern: /github\.com\/openplanr\/(?:planr-pipeline|skills)\b|openplanr-web\b|openplanr-company(?![\w-])/gu,
   },
   {
     id: 'model-provider',
-    message: 'the 2.x CLI has no model provider; remove provider keys and provider language',
+    message: 'the planr CLI and the skills have no model provider; remove provider keys and provider language',
     pattern: /OPENAI_API_KEY|ANTHROPIC_API_KEY|OLLAMA_HOST|\bAI provider\b|--provider\b/gu,
   },
   {
@@ -53,9 +53,10 @@ const RULES = [
   {
     id: 'internal-identifier',
     message: 'internal planning identifier; public docs describe released behavior only',
-    // SPEC-001, SPEC-002, and SPEC-900 are the documented format examples; higher bare
-    // numbers are roadmap references.
-    pattern: /\b(?:BL|ADR)-\d{3}\b|\bSPEC-0(?:0[3-9]|[1-8]\d)(?![\w-])/gu,
+    // Identifiers inside code are format examples. In prose, 001, 002, and 900 are the
+    // documented example numbers; other bare numbers are roadmap references.
+    pattern: /\b(?:BL|ADR|SPEC)-0(?:0[3-9]|[1-8]\d)(?![\w-])/gu,
+    prose: true,
   },
   {
     id: 'node-version',
@@ -99,15 +100,28 @@ function listFiles(root) {
   return out;
 }
 
+/** Blank out fenced code blocks and inline code spans, keeping line numbers stable. */
+function withoutCode(lines) {
+  let fenced = false;
+  return lines.map((line) => {
+    if (/^\s*(?:```|~~~)/u.test(line)) {
+      fenced = !fenced;
+      return '';
+    }
+    return fenced ? '' : line.replace(/`[^`]*`/gu, '');
+  });
+}
+
 const files = [...new Set(ROOTS.flatMap(listFiles))].sort();
 const findings = [];
 for (const file of files) {
   const text = readFileSync(path.join(repoRoot, file), 'utf8');
   const lines = text.split('\n');
+  const proseLines = withoutCode(lines);
   for (const rule of RULES) {
     const allowed = allowlist[rule.id] ?? [];
     if (allowed.includes(file)) continue;
-    lines.forEach((line, index) => {
+    (rule.prose ? proseLines : lines).forEach((line, index) => {
       for (const match of line.matchAll(rule.pattern)) {
         if (rule.ignore?.test(match[0])) continue;
         if (rule.accept?.(match)) continue;
@@ -123,6 +137,7 @@ if (!new RegExp(`\\b${skillCount} skills\\b`, 'u').test(readme)) {
 }
 
 for (const [ruleId, entries] of Object.entries(allowlist)) {
+  if (ruleId.startsWith('_')) continue;
   if (!RULES.some((rule) => rule.id === ruleId)) findings.push(`public-docs-allowlist.json: unknown rule ${ruleId}`);
   for (const entry of entries) {
     if (!files.includes(entry)) findings.push(`public-docs-allowlist.json: ${entry} is not a linted file (rule ${ruleId})`);

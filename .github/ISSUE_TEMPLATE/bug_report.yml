@@ -1,0 +1,81 @@
+name: Bug report
+description: Something in the planr CLI or an installed skill does not behave as documented.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Run `planr doctor --json` first; it explains most installation problems and its output is the fastest way for us to help.
+  - type: dropdown
+    id: host
+    attributes:
+      label: Coding agent
+      options:
+        - Claude Code
+        - Codex
+        - Cursor
+        - None (CLI only)
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Install scope
+      options:
+        - user
+        - project
+        - both
+        - not installed
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: planr --version
+      placeholder: "2.2.1"
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: planr doctor --json
+      description: Paste the output. Doctor redacts secrets; check it anyway.
+      render: json
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The exact commands or skill invocations, in order.
+      placeholder: |
+        1. planr setup --runtime claude --scope user
+        2. /planr:spec "…"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the full output or error text.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and Node.js version
+      placeholder: "macOS 15.6, Node.js 24.8.0"
+    validations:
+      required: true
+  - type: checkboxes
+    id: secrets
+    attributes:
+      label: Privacy
+      options:
+        - label: The pasted output contains no credentials, tokens, or private customer content.
+          required: true

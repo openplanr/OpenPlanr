@@ -12,7 +12,7 @@ OpenPlanr is organized as focused domains in one npm workspace:
   Generated runtime projections live under `adapters/` and the pipeline package.
 - **Root marketplace metadata publishes generated host compatibility.** It is
   a workspace projection, not a separate source repository.
-- **openplanr-web is the independently deployed hosted surface.** It owns the
+- **The hosted service is the independently deployed surface.** It owns the
   public web property plus opaque share/live-room transport while mirroring the
   pipeline's canonical artifact and cryptographic contracts.
 
@@ -25,11 +25,11 @@ adapter projections. Generate it from the repository root and use
 | User intent | Surface |
 |---|---|
 | Create epics, features, stories, tasks, sprints, or backlog | `OpenPlanr` CLI |
-| Shape or decompose a spec for agent execution | `OpenPlanr` CLI or `/planr-pipeline:plan` |
+| Shape or decompose a spec for agent execution | `OpenPlanr` CLI or `/planr:plan` |
 | Move a feature through PO, Design, DEV, and QA | `planr pipeline ...` |
-| Review local project state | `/planr-pipeline:dashboard` |
-| Generate or review design artifacts | `/planr-pipeline:design`, `/planr-pipeline:design-loop`, `/planr-pipeline:design-review` |
-| Serve a hosted review shell or opaque encrypted room transport | `openplanr-web` |
+| Review local project state | `/planr:dashboard` |
+| Generate or review design artifacts | `/planr:design`, `/planr:design-loop`, `/planr:design-review` |
+| Serve a hosted review shell or opaque encrypted room transport | hosted service |
 | Decide which OpenPlanr tool to use | `openplanr` skill |
 | Install or migrate certified runtimes | `planr setup` |
 
