@@ -2,6 +2,8 @@ name: Dependency review
 
 on:
   pull_request:
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
@@ -11,7 +13,10 @@ jobs:
     name: Review dependency changes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
+      # The review already ran on the pull request; the merge queue only needs the required check to report.
+      - if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+      - if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high

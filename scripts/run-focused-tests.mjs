@@ -14,7 +14,7 @@ const vitestManifest = JSON.parse(readFileSync(vitestManifestPath, 'utf8'));
 const vitestBin = typeof vitestManifest.bin === 'string' ? vitestManifest.bin : vitestManifest.bin.vitest;
 
 const steps = Object.freeze([
-  { id: 'release-versioning-and-publication-boundaries', cwd: root, args: ['--test', 'tests/ecosystem-root/release-versioning.test.mjs', 'tests/ecosystem-root/plugin-manifest-versions.test.mjs', 'tests/ecosystem-root/publication-custody.test.mjs', 'conformance/migration/private-decisions.test.mjs', 'conformance/migration/archived-dashboard.test.mjs', 'conformance/migration/preservation-catalog.test.mjs'] },
+  { id: 'release-versioning-and-publication-boundaries', cwd: root, args: ['--test', 'tests/ecosystem-root/release-versioning.test.mjs', 'tests/ecosystem-root/plugin-manifest-versions.test.mjs', 'tests/release/plan.test.mjs', 'tests/release/notes.test.mjs', 'tests/release/marketplace.test.mjs', 'tests/ecosystem-root/publication-custody.test.mjs', 'conformance/migration/private-decisions.test.mjs', 'conformance/migration/archived-dashboard.test.mjs', 'conformance/migration/preservation-catalog.test.mjs'] },
   { id: 'host-adapter-generation-check', cwd: root, args: ['scripts/skills/generate-v18.mjs', '--check'] },
   { id: 'guided-host-package-tests', cwd: root, args: ['--test', 'tests/skill-runtime/generation.test.mjs'] },
   { id: 'host-adapter-parity', cwd: root, args: ['scripts/skills/check-host-parity.mjs'] },

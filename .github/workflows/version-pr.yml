@@ -1,0 +1,45 @@
+name: Version packages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: version-packages
+  cancel-in-progress: false
+
+jobs:
+  version:
+    # Opens or refreshes the "chore(release): version packages" PR whenever pending
+    # changesets reach main. Needs the release GitHub App so the PR triggers CI.
+    if: github.repository == 'openplanr/OpenPlanr' && vars.RELEASE_APP_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: app
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ steps.app.outputs.token }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install the root lockfile
+        run: npm ci
+      - name: Open or update the version PR
+        uses: changesets/action@v1
+        with:
+          version: npm run version-packages:ci
+          commit: 'chore(release): version packages'
+          title: 'chore(release): version packages'
+          createGithubReleases: false
+        env:
+          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
