@@ -117,7 +117,9 @@ describe('root release proof and public package artifacts', () => {
     expect(publishArchives).toContain('candidateIntegrity');
     expect(publishArchives).toContain("return 'identical'");
     expect(publishArchives).toContain('already exists with different bytes');
-    expect(publishArchives).toContain('publish succeeded but npm did not expose the reviewed bytes');
+    expect(publishArchives).toContain(
+      'publish succeeded but npm did not expose the reviewed bytes',
+    );
     expect(publishArchives).toContain('await waitForDependency(dependency, version)');
     expect(publishArchives).toContain(
       "['publish', archive, '--ignore-scripts', '--access', 'public', '--provenance', '--tag', tag]",
