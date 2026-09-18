@@ -48,6 +48,9 @@ immutable and are never republished; a correction is a new version.
 | `planr-pipeline` | `0.45.1` | 2026-09-17 20:18:33 | `publish-packages.yml` run 35269463777; SLSA v1 attestation | `745c3320ea8c26d52e786a11b891e7323f65809e` | `5547524816047bf48f46e79db5e35dfe1ed63077f417f450afacf9ff7cb561b2` | `sha512-Gr4kPwseyIlPYYO2XaWofepOuUYJWHYpLJdZxKPGnSYmuBOAdLeeEhmAqBPTJEBq210rG4wp2otwGbK4GbUuOA==` |
 | `openplanr` | `2.1.0` | 2026-09-17 20:25:46 | `publish-packages.yml` run 35270101679; SLSA v1 attestation | `745c3320ea8c26d52e786a11b891e7323f65809e` | `5585526e4ee8b51c3579bfb8a0288dcc8ec439da424f48dd7e85bb4587537b22` | `sha512-O5sdDMNJu4iTykfYG75xJTtDuoCxkS/wkP2aqcHIwdWQXGUsPbauP+we10NAG9avgYF5sIWPBIMs/z7sj7e54w==` |
 | `openplanr` | `2.1.1` | 2026-09-17 21:20:10 | `publish-packages.yml` run 35275009599; SLSA v1 attestation | `b357aa171395d076312a8ce64c817cde2e99e137` | `d968d3ff3e059da523c22c54e69ad97f85a48ace00d0d7ace3cdc7aa6c77a60b` | `sha512-IRFpAMmMCIQg/TVzmJ+p/u8aD7rEg/YsHY7SIGpv36pEGdA+JAnbLNcBrtHqgQjs8nsTlsi9o21mmJG/b6v6Xw==` |
+| `@openplanr/protocol` | `0.4.0` | 2026-09-18 01:29:32 | `publish-packages.yml` run 35293885133; SLSA v1 attestation | `d99190b91fc0dc7632201747d1c76fbb6cc1654b` | `c18b4d237146ddffa834d9a42e58837c8a061a6cca1a9c1df3931e7e402cb017` | `sha512-VpwVfQH1n+irBpgSLBPd5dt6kIYRZv+x6kKqOKpLTMqpbd2PvE9xIi6rWbZFsjbT+A0pcY+6fkuNi8W92wPuBA==` |
+| `planr-pipeline` | `0.45.2` | 2026-09-18 01:49:39 | `publish-packages.yml` run 35295582718; SLSA v1 attestation | `d99190b91fc0dc7632201747d1c76fbb6cc1654b` | `a12bb5ea5767cae2d319e676bbea369a5d634e504b6d2c6bcd8876865c1eab7a` | `sha512-nvgasarrI/ek5gJR2xwnGbIj8QwNc3kAioeNuW0WMacuEYgtlIJPeJgTwMmY+mirpmyta2p56gEtZOxle8hO6Q==` |
+| `openplanr` | `2.2.0` | 2026-09-18 02:04:45 | `publish-packages.yml` run 35296907004; SLSA v1 attestation | `d99190b91fc0dc7632201747d1c76fbb6cc1654b` | `a08108c84fccc49ecfb3410d2ca71de587fe2edc00752503bd8268cf319005c6` | `sha512-8ATEljC7k4P6ufYUcad8q6q+nogZnhoLXjyFSQtx6cMhoHuso9JlBcgBrm9Tqv467g+OBxQEXjN1kJ6vGSV5eQ==` |
 
 `@openplanr/protocol@0.2.0` reached the registry thirty seconds before its workflow dispatch
 (run 35165457743) reached the publish step; the workflow found identical bytes and skipped. Its
@@ -67,6 +70,10 @@ registry file for file. These four annotated tags and their GitHub releases were
 (#262), published in dependency order from that commit, rebuilt and compared file by file, and tagged
 at that commit the same day; each run's registry-propagation check passed. `openplanr@2.1.1` was
 versioned by `b357aa171395d076312a8ce64c817cde2e99e137` (#265), verified the same way and tagged there.
+The third cycle — `@openplanr/protocol@0.4.0`, `planr-pipeline@0.45.2` and `openplanr@2.2.0` — was
+versioned by `d99190b91fc0dc7632201747d1c76fbb6cc1654b` (#268), published in dependency order from that
+commit on 2026-09-18, rebuilt and compared file by file (334, 1,050 and 1,750 files), and tagged at that
+commit the same day; each run's registry-propagation check passed.
 
 `planr-pipeline` versions `0.43.0` and `0.44.0` were internal release candidates that were never
 published; the registry history runs `0.42.0` → `0.45.0`.
