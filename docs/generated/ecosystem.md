@@ -5,8 +5,8 @@ This is the deterministic local-candidate ledger for OpenPlanr 0.1.0. It reads o
 
 | Package | Version | Path | Publication |
 |---|---:|---|---|
-| `openplanr` | 2.2.2 | `packages/cli` | public |
-| `planr-pipeline` | 0.45.4 | `packages/pipeline` | public |
+| `openplanr` | 2.3.0 | `packages/cli` | public |
+| `planr-pipeline` | 0.46.0 | `packages/pipeline` | public |
 | `@openplanr/protocol` | 0.4.0 | `packages/protocol` | public |
 | `@openplanr/operate` | 0.1.3 | `packages/operate` | private |
 | `@openplanr/artifact` | 0.2.2 | `packages/artifact` | private |
@@ -17,7 +17,7 @@ This is the deterministic local-candidate ledger for OpenPlanr 0.1.0. It reads o
 
 Compatibility invariants:
 
-- `openplanr` uses the exact optional `planr-pipeline@0.45.4` dependency.
+- `openplanr` uses the exact optional `planr-pipeline@0.46.0` dependency.
 - The public pipeline retains 37 export keys and 229 root symbols.
 - 180 historical schemas and 12 registries remain accounted for; Protocol 1.8.0 adds 3 successor schemas.
 - 39 root commands, 27 canonical skills, 9 canonical roles, and 23 output contracts are catalog-bound.

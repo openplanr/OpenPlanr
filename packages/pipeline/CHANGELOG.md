@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.46.0
+### Minor Changes
+
+- 43825ac: Diagram engine: relation labels now sit on the segment that belongs to their own relation (above the arrowhead into the target, or on the source's drop for a fan-in) instead of at a lane midpoint that could land under an unrelated node; inter-layer edges follow the flow axis and prefer a single turn; words are no longer split mid-glyph; flow, message and transition relations render solid and dependency and association dashed, matching common notation; routing lanes clear group frames; and the quality report gains a `label-foreign-node` warning for labels that read as another node's caption.
+- f282b4e: Diagram Studio now runs on the shared OpenPlanr shell: the orbit mark and one 48px toolbar carry the title, grammar, item and connection counts, the presentation switch, the local save state and the Present, Comments and Export actions; the shell follows the system theme with a light and dark override; the navigator groups items, connections and reading guidance into collapsible sections; the canvas fits the whole diagram on open and on resize; and `n`/`p` step through the presentation. The design studio header gains the same mark.
+
 ## 0.45.4
 ### Patch Changes
 
