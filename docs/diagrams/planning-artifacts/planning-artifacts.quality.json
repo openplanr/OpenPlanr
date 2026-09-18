@@ -64,6 +64,11 @@
       "message": "Measured relation labels do not obscure semantic nodes."
     },
     {
+      "id": "label-foreign-node",
+      "status": "pass",
+      "message": "Every relation label keeps clear of nodes it does not connect."
+    },
+    {
       "id": "edge-node-overlap",
       "status": "pass",
       "message": "Connection paths remain outside semantic node interiors."
@@ -81,7 +86,7 @@
     {
       "id": "png-decoded",
       "status": "pass",
-      "message": "PNG decoded at 1636×466 (36166 bytes)."
+      "message": "PNG decoded at 1732×546 (38596 bytes)."
     },
     {
       "id": "offline-runtime",
@@ -90,5 +95,5 @@
     }
   ],
   "splitPlan": null,
-  "documentDigest": "sha256:77226ee0b8e08b8b6518debd83a484c21c650519111174e21631eb19b4d3f493"
+  "documentDigest": "sha256:16d0565cb8eaa9de370835c470943ec7643052892b1e6d1ce75f09ee9b1ddd75"
 }

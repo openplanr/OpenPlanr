@@ -38,6 +38,20 @@ function nodeOverlapCount(scene) {
   return count;
 }
 
+// A label this close to a node it does not connect reads as that node's caption.
+const FOREIGN_LABEL_MARGIN = 12;
+
+function foreignLabelCount(scene) {
+  const edges = new Map((scene.edges ?? []).map((edge) => [edge.id, edge]));
+  return (scene.labelBounds ?? []).filter((label) => {
+    const edge = edges.get(label.id);
+    if (!edge) return false;
+    const halo = { x: label.x - FOREIGN_LABEL_MARGIN, y: label.y - FOREIGN_LABEL_MARGIN,
+      width: label.width + 2 * FOREIGN_LABEL_MARGIN, height: label.height + 2 * FOREIGN_LABEL_MARGIN };
+    return (scene.boxes ?? []).some((box) => box.id !== edge.from && box.id !== edge.to && overlaps(halo, box));
+  }).length;
+}
+
 function edgePoints(edge) {
   return edge.routePoints ?? (Array.isArray(edge.points)
     ? edge.points.map(([x, y]) => [edge.x + x, edge.y + y])
@@ -102,6 +116,7 @@ export function createRenderQualityReport(document, { scene, png, svgValidation 
   const measuredLabels = Boolean(scene.kind) && document.relations.filter(({ label }) => label)
     .every(({ id }) => measuredIds.has(id));
   const labelNodeCount = (scene.labelBounds ?? []).filter(label => scene.boxes.some(box => overlaps(label, box))).length;
+  const foreignLabels = foreignLabelCount(scene);
   const edgeNodeCount = scene.edges.filter(edge => {
     const points = edgePoints(edge);
     return points.slice(1).some((point, index) => scene.boxes.some(box => segmentEntersBox(points[index], point, box)));
@@ -113,6 +128,7 @@ export function createRenderQualityReport(document, { scene, png, svgValidation 
     { id: 'node-overlap', status: nodeOverlap > 0 ? 'fail' : 'pass', message: nodeOverlap > 0 ? `${nodeOverlap} semantic node collision${nodeOverlap === 1 ? '' : 's'} detected.` : 'Semantic nodes do not overlap.' },
     { id: 'label-overlap', status: overlapCount > 0 ? 'fail' : measuredLabels ? 'pass' : 'warning', message: overlapCount > 0 ? `${overlapCount} rendered label collision${overlapCount === 1 ? '' : 's'} detected.` : !measuredLabels ? 'Complete relation label bounds are unavailable; label overlap has not been fully verified.' : 'Rendered relation labels do not overlap within the measured layout bounds.' },
     { id: 'label-node-overlap', status: labelNodeCount ? 'fail' : measuredLabels ? 'pass' : 'warning', message: labelNodeCount ? `${labelNodeCount} relation labels overlap semantic nodes.` : measuredLabels ? 'Measured relation labels do not obscure semantic nodes.' : 'Complete relation label bounds are unavailable; node obstruction has not been fully verified.' },
+    { id: 'label-foreign-node', status: foreignLabels ? 'warning' : 'pass', message: foreignLabels ? `${foreignLabels} relation label${foreignLabels === 1 ? ' sits' : 's sit'} within ${FOREIGN_LABEL_MARGIN}px of a node the relation does not connect; readers will attach the label to the wrong node.` : 'Every relation label keeps clear of nodes it does not connect.' },
     { id: 'edge-node-overlap', status: edgeNodeCount ? 'fail' : 'pass', message: edgeNodeCount ? `${edgeNodeCount} connection paths enter semantic nodes; routing needs adjustment.` : 'Connection paths remain outside semantic node interiors.' },
     { id: 'rendered-clipping', status: clipped ? 'fail' : 'pass', message: clipped ? 'Rendered geometry extends beyond the scene or contains invalid coordinates.' : 'Measured scene geometry fits the exported viewport.' },
     semanticCoverage(document, scene),

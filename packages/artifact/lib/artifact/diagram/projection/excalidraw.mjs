@@ -5,7 +5,7 @@ import { DIAGRAM_ERROR_CODES, diagramFail } from '../errors.mjs';
 import { layoutDiagram } from '../rendering/layout.mjs';
 import { createFidelityReport } from '../rendering/reports.mjs';
 import { escapeXml } from '../rendering/svg.mjs';
-import { DIAGRAM_THEME } from '../rendering/theme.mjs';
+import { DIAGRAM_THEME, isDashedRelation } from '../rendering/theme.mjs';
 
 const MAX_SCENE_ELEMENTS = 5_000;
 const MAX_SCENE_BYTES = 5 * 1024 * 1024;
@@ -163,7 +163,7 @@ export function exportDiagramExcalidraw(document) {
       }),
       strokeColor: emphasized.has(edge.id) ? DIAGRAM_THEME.accent : DIAGRAM_THEME.border,
       strokeWidth: emphasized.get(edge.id) === 'primary' ? 3 : 2,
-      strokeStyle: edge.kind === 'flow' ? 'dashed' : 'solid',
+      strokeStyle: isDashedRelation(edge.kind) ? 'dashed' : 'solid',
     };
   });
   const edgeTexts = layout.edges.flatMap((edge) => {

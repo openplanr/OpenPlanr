@@ -1,6 +1,6 @@
 import { assertDiagramSvg } from '../accessibility.mjs';
 import { layoutDiagram } from './layout.mjs';
-import { DIAGRAM_THEME } from './theme.mjs';
+import { DIAGRAM_THEME, isDashedRelation } from './theme.mjs';
 
 export function escapeXml(value) {
   return String(value)
@@ -21,7 +21,7 @@ function renderEdge(edge, theme) {
     ? `${bounds ? `<rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}" rx="8" fill="${theme.background}"/>` : ''}<text x="${labelX}" y="${firstBaseline}" text-anchor="middle" font-family="${theme.fontFamily}" font-size="14" fill="${theme.muted}">${lines.map((line, index) => `<tspan x="${labelX}" y="${firstBaseline + index * 18}">${escapeXml(line)}</tspan>`).join('')}</text>`
     : '';
   const stroke = edge.emphasis === 'primary' ? theme.accent : theme.border;
-  const dash = edge.kind === 'flow' ? ' stroke-dasharray="7 5"' : '';
+  const dash = isDashedRelation(edge.kind) ? ' stroke-dasharray="7 5"' : '';
   const path = (edge.routePoints ?? [[edge.x1, edge.y1], [edge.x2, edge.y2]])
     .map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x} ${y}`).join(' ');
   return `<g data-relation-id="${escapeXml(edge.id)}"><path d="${path}" fill="none" stroke="${stroke}" stroke-width="${edge.emphasis === 'primary' ? 3 : 2}"${dash} marker-end="url(#diagram-arrow)"/>${label}</g>`;

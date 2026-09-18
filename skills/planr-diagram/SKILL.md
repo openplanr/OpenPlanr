@@ -50,6 +50,17 @@ a source branch of an existing generated set; rerender its manifest with
   [fidelity guide](references/diagram-fidelity.md) when choosing an editable
   projection or explaining an omitted one.
 
+## Look before you hand over
+
+A `pass` quality status is necessary, not sufficient. After every render, open
+the PNG or SVG the command lists and check four signatures: a label that reads as
+another node's caption, rectangles that overlap, a connector crossing the whole
+canvas, and a node drawn below a step it precedes. Any `warning` check, in
+particular `label-foreign-node`, names the first of these. When one appears,
+restructure using the [layout heuristics](references/diagram-intent-to-ir.md)
+(fewer relations per node, no back edge, no groups, shorter labels) and render
+again before starting the studio. Report which signatures you checked.
+
 After a successful render or rerender, run the returned `nextAction` to start
 the native diagram studio (one SVG canvas, outline, pan/zoom, comments, and
 exports). Keep that process alive, wait for its startup
