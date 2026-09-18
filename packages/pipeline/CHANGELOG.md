@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.45.4
+### Patch Changes
+
+- 81e1a1d: Rewrite the package README for integrators (who installs it, what it exports, how it relates to the skills) and update the shipped documentation to current skill invocations, without private repository names or internal planning identifiers.
+
 ## 0.45.3
 ### Patch Changes
 
