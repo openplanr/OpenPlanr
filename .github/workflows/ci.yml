@@ -40,12 +40,16 @@ jobs:
         run: npm run check:boundaries
       - name: Verify migration preservation coverage
         run: npm run check:preservation
+      - name: Lint the public documentation
+        run: npm run check:docs
       - name: Lint every participating workspace
         run: npm run lint
       - name: Build in dependency order without tracked drift
         run: |
           npm run build
           git diff --exit-code HEAD --
+      - name: Verify the committed documentation diagram sets
+        run: npm run check:diagrams
       - name: Run focused integration tests
         run: npm run test:focused
 

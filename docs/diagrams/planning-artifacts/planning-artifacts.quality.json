@@ -1,0 +1,94 @@
+{
+  "kind": "diagram-quality-report",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "planning-artifacts",
+  "status": "pass",
+  "checks": [
+    {
+      "id": "item-budget",
+      "status": "pass",
+      "message": "9 primary items; 12 allowed for balanced."
+    },
+    {
+      "id": "label-length",
+      "status": "pass",
+      "message": "Longest label is 13 characters."
+    },
+    {
+      "id": "crossings",
+      "status": "pass",
+      "message": "0 estimated crossings; 12 allowed."
+    },
+    {
+      "id": "fan-in",
+      "status": "pass",
+      "message": "Maximum fan-in is 3; 6 allowed."
+    },
+    {
+      "id": "contrast",
+      "status": "pass",
+      "message": "Contrast ratio is 18.88:1."
+    },
+    {
+      "id": "clipping",
+      "status": "pass",
+      "message": "No clipping reported."
+    },
+    {
+      "id": "svg-validated",
+      "status": "pass",
+      "message": "SVG structure and accessibility validate."
+    },
+    {
+      "id": "geometry-present",
+      "status": "pass",
+      "message": "9 semantic boxes and 7 relations rendered."
+    },
+    {
+      "id": "node-overlap",
+      "status": "pass",
+      "message": "Semantic nodes do not overlap."
+    },
+    {
+      "id": "label-overlap",
+      "status": "pass",
+      "message": "Rendered relation labels do not overlap within the measured layout bounds."
+    },
+    {
+      "id": "label-node-overlap",
+      "status": "pass",
+      "message": "Measured relation labels do not obscure semantic nodes."
+    },
+    {
+      "id": "edge-node-overlap",
+      "status": "pass",
+      "message": "Connection paths remain outside semantic node interiors."
+    },
+    {
+      "id": "rendered-clipping",
+      "status": "pass",
+      "message": "Measured scene geometry fits the exported viewport."
+    },
+    {
+      "id": "semantic-coverage",
+      "status": "pass",
+      "message": "All declared semantic elements are represented in the scene."
+    },
+    {
+      "id": "png-decoded",
+      "status": "pass",
+      "message": "PNG decoded at 1636×466 (36166 bytes)."
+    },
+    {
+      "id": "offline-runtime",
+      "status": "pass",
+      "message": "Renderer uses packaged code and font bytes without browser or network access."
+    }
+  ],
+  "splitPlan": null,
+  "documentDigest": "sha256:77226ee0b8e08b8b6518debd83a484c21c650519111174e21631eb19b4d3f493"
+}

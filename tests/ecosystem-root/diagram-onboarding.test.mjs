@@ -54,9 +54,13 @@ test('the documented planr-diagram lint, preview, and evaluation journey passes'
   }
 });
 
-test('workspace onboarding recommends Node 26 and keeps Node 20 and 22 compatibility explicit', () => {
-  const readme = read('README.md');
-  assert.match(readme, /Node\.js 26 for day-to-day contributor work/u);
-  assert.match(readme, /verified with Node\.js 20 and 22/u);
-  assert.match(readme, /docs\/diagrams\/authoring\.md/u);
+test('public onboarding states the supported Node.js line once and links the diagram guide', () => {
+  const statement = /OpenPlanr requires Node\.js 20 or later\. CI verifies Node\.js 20, 22, and 24;\s+contributors\s+use Node\.js 24 \(`\.nvmrc`\)\./u;
+  assert.match(read('README.md'), /OpenPlanr requires Node\.js 20 or later\./u);
+  assert.match(read('README.md'), /docs\/diagrams\/authoring\.md/u);
+  assert.match(read('README.md'), /docs\/diagrams\/planning-artifacts\/planning-artifacts\.svg/u);
+  for (const path of ['CONTRIBUTING.md', 'docs/contributing/dogfooding.md', 'docs/diagrams/authoring.md']) {
+    assert.match(read(path), statement, path);
+  }
+  assert.equal(read('.nvmrc').trim(), '24');
 });

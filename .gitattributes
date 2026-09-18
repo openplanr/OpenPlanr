@@ -15,3 +15,11 @@ packages/cli/.gitattributes whitespace=-blank-at-eof
 packages/pipeline/lib/dashboard/generated/*.mjs linguist-generated=true whitespace=-blank-at-eof
 packages/pipeline/lib/dashboard/operate-review-display-workspace-contract.d.mts whitespace=-blank-at-eof
 packages/pipeline/lib/protocol/index.d.ts linguist-generated=true whitespace=-blank-at-eof
+
+# Brand rasters and rendered diagram outputs.
+*.png binary
+*.ico binary
+docs/diagrams/**/*.svg linguist-generated=true
+docs/diagrams/**/*.png linguist-generated=true
+docs/diagrams/**/*.html linguist-generated=true
+docs/diagrams/**/*.manifest.json linguist-generated=true

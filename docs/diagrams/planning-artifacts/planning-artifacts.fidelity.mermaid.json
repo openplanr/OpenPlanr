@@ -1,0 +1,23 @@
+{
+  "kind": "diagram-fidelity-report",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "planning-artifacts",
+  "sourceFormat": "planr-diagram",
+  "targetFormat": "mermaid",
+  "status": "partial",
+  "interpreted": [],
+  "omitted": [
+    {
+      "source": "architecture",
+      "reason": "Production export is not implemented for the architecture semantic grammar; registry capability is partial."
+    }
+  ],
+  "notes": [
+    "SVG, HTML, and PNG remain the canonical render projections."
+  ],
+  "documentDigest": "sha256:f1258962f8e8998c837c1df4337f6e1892da7a97c82d5f1970c85eb251708ef4"
+}

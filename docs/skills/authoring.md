@@ -35,10 +35,9 @@ make a product decision.
 
 ## Semantic boundary
 
-Plan, Spec, Ship, Operate, Design, and review reasoning runs inside the active
-Claude, Codex, or ChatGPT session. A semantic skill must not execute `planr
-plan`, `planr spec decompose`, `planr-pipeline`, a provider SDK, or a second
-model. Helpers are appropriate for deterministic work such as ID inspection,
+Plan, spec, ship, Operate, design, and review reasoning runs inside the active
+coding agent. A semantic skill never launches a planning CLI, a provider SDK, or a
+second model. Helpers are appropriate for deterministic work such as ID inspection,
 schema validation, verification discovery, rendering, and sync.
 
 The optional `planr` CLI remains the terminal surface for deterministic project

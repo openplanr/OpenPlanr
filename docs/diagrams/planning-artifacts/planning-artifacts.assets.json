@@ -1,0 +1,40 @@
+{
+  "kind": "openplanr-diagram-render-assets",
+  "schemaVersion": "1.0.0",
+  "renderer": {
+    "id": "openplanr-semantic-svg-resvg",
+    "version": "1.2.0",
+    "digest": "sha256:fbc173e8f7b70f4ca9e08b9fb82671a2ca4e05ad112d200fbb93b7260a0cd85e"
+  },
+  "rasterizer": {
+    "package": "@resvg/resvg-js",
+    "packageVersion": "2.6.2",
+    "license": "MPL-2.0",
+    "digest": "sha256:a9b7f8103ce7b967b667a3c1a9d3197d5003d576c635209068327c1ced14165b"
+  },
+  "font": {
+    "family": "Inter",
+    "package": "@expo-google-fonts/inter",
+    "packageVersion": "0.4.2",
+    "license": "OFL-1.1",
+    "asset": "400Regular/Inter_400Regular.ttf",
+    "digest": "sha256:a414b48aa577ef2c62ebb135341ddeef33ee26a4f5dc9f787f93c1aab08ebb50"
+  },
+  "theme": {
+    "id": "openplanr-default",
+    "version": "1.0.0",
+    "background": "#ffffff",
+    "surface": "#f8fafc",
+    "foreground": "#0f172a",
+    "border": "#475569",
+    "accent": "#2563eb",
+    "muted": "#64748b",
+    "fontFamily": "Inter",
+    "fontSize": 16,
+    "digest": "sha256:1e695825c95bea59b6d38d91c87a74a69cf4abd6683e9ef7ca69b9675c7bfb28"
+  },
+  "registry": {
+    "path": "registry/v1.6.0/diagram-grammars.json",
+    "digest": "sha256:f78d668b7cf01ba9c0dacbe64b6e7a1b19c6dc7e5855c9861594beb3d6984653"
+  }
+}

@@ -1,46 +1,96 @@
 # OpenPlanr architecture
 
-The public MIT monorepo separates canonical domains from self-contained CLI and pipeline compatibility packages. Protocol is also independently publishable. Other workspaces are npm-private MIT source; their implementations can be projected into public packages at generation time. Public tarballs do not resolve unpublished workspaces at runtime.
+One repository holds every OpenPlanr component. Three workspaces publish to npm;
+the rest are private MIT source whose implementations are projected into the public
+packages at generation time, so a published tarball never resolves an unpublished
+workspace at runtime.
 
-```text
-packages/operate       -> packages/protocol
-packages/artifact      -> packages/protocol
-packages/design        -> packages/artifact + packages/protocol
-packages/pipeline      -> self-contained projections of protocol, operate, artifact, and design
-packages/skill-runtime -> packages/protocol + declarative contribution manifests
-apps/dashboard         -> browser-safe packages/protocol contracts
-packages/cli           -> exact optional planr-pipeline dependency
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"DM Sans, ui-sans-serif, system-ui, sans-serif","fontSize":"14px","primaryColor":"#5EEAD4","primaryTextColor":"#08080C","primaryBorderColor":"#237A72","secondaryColor":"#F5F7F7","secondaryTextColor":"#08080C","secondaryBorderColor":"#237A72","tertiaryColor":"#F5F7F7","tertiaryTextColor":"#08080C","tertiaryBorderColor":"#237A72","lineColor":"#237A72","textColor":"#08080C","edgeLabelBackground":"#F5F7F7","clusterBkg":"#F5F7F7","clusterBorder":"#237A72","noteBkgColor":"#F5F7F7","noteTextColor":"#08080C","noteBorderColor":"#237A72"}}}%%
+flowchart TB
+    subgraph public["Published to npm"]
+        direction LR
+        cli["openplanr<br/>packages/cli"]
+        pipeline["planr-pipeline<br/>packages/pipeline"]
+        protocol["@openplanr/protocol<br/>packages/protocol"]
+    end
+    subgraph internal["Private workspaces, projected into planr-pipeline by npm run generate"]
+        direction LR
+        operate["operate"]
+        artifact["artifact"]
+        design["design"]
+        runtime["skill-runtime"]
+        dashboard["apps/dashboard"]
+    end
+    operate --> protocol
+    artifact --> protocol
+    design --> artifact
+    design --> protocol
+    runtime --> protocol
+    dashboard --> protocol
+    pipeline -. exact optional dependency .-> cli
 ```
 
-Binding constraints are executable in `scripts/check-workspace-boundaries.mjs`: runtime code cannot import conformance, internal packages cannot depend on the CLI, Operate cannot import runtime implementations, artifact cannot depend back on design, and no public package may require a private package or local source path.
+| Workspace | Owns |
+| --- | --- |
+| `packages/protocol` | Schemas, registries, catalogs, browser-safe contracts, canonical JSON, validation, shared typed errors |
+| `packages/pipeline` | The delivery pipeline and self-contained projections of Protocol, Operate, artifact, and design |
+| `packages/cli` | The `planr` command, host packages, setup and diagnostics, GitHub and Linear sync, a digest-verified copy of the dashboard |
+| `packages/operate`, `packages/artifact`, `packages/design` | Their runtimes, in that dependency order |
+| `packages/skill-runtime` | Skill composition and host generation over declarative contribution manifests |
+| `packages/integrations` | Portable integration behavior |
+| `apps/dashboard` | Browser code for the local planning and Operate dashboard |
+| `skills/planr-*`, `agents/{po,dev,qa,post-build}` | Canonical skill sources and role definitions |
+| `adapters/`, `conformance/` | Generated host projections; contract verification that runtime code never imports |
+| `evaluation/`, `templates/`, `examples/` | Evaluation custody, shared authoring conventions, Protocol usage examples |
 
-Composition boundaries use explicit domain facades rather than leaf-import walls. The CLI root composes five named command groups, dashboard composition roots consume explicit runtime/route registries, and pipeline internals expose eight phase/domain facades. `scripts/check-composition-boundaries.mjs` enforces bounded fan-in and rejects wildcard barrels at these boundaries; cohesive leaf modules remain free to import the dependencies needed by their own implementation.
+## Dependency rules
 
-## Ownership depth
+`scripts/check-workspace-boundaries.mjs` enforces the graph above: runtime code cannot
+import `conformance/`, internal packages cannot depend on the CLI, Operate cannot import
+runtime implementations, artifact cannot depend back on design, and no public package
+may require a private package or a local source path.
 
-- `skills/planr-*` contains canonical skill sources; generated host assets live under `adapters/`.
-- `agents/{po,dev,qa,post-build}/` contains phase- and task-kind-specific canonical role definitions.
-- `packages/protocol/` owns schemas, registries, catalogs, browser-safe contracts, canonical JSON, validation, and shared typed errors.
-- `packages/operate/`, `packages/artifact/`, and `packages/design/` own their runtimes in dependency order.
-- `packages/pipeline/lib/{po,dev,ship,roles,guided,investigate,release,state}/` provides explicit internal domain facades over preserved public modules. `lib/domain-ownership.json` is the machine-readable map.
-- `apps/dashboard/` owns browser code; the CLI contains only its digest-verified compiled copy and Node-side readers.
-- `conformance/` evaluates public contracts without being imported by runtime code.
-- `evaluation/`, `templates/`, and `examples/` are root-level entry points for evaluation custody, shared authoring conventions, and protocol usage.
+`scripts/check-composition-boundaries.mjs` enforces the composition seams. The CLI root
+composes five named command groups (foundation, planning, delivery, operations,
+intelligence); dashboard composition roots consume explicit runtime and route
+registries; pipeline internals expose eight phase and domain facades under
+`packages/pipeline/lib/{po,dev,ship,roles,guided,investigate,release,state}/`, with
+`lib/domain-ownership.json` as the machine-readable map. Fan-in is bounded and wildcard
+barrels are rejected at these boundaries; cohesive leaf modules import what they need.
 
-## Skill source and generation workflow
+## Generation graph
 
-- Edit task-specific behavior only in `skills/planr-*/SKILL.md`; edit reusable policy only in a declared file under `skills/shared/`.
-- Run `npm run generate` from the workspace root. `scripts/skills/generate-v18.mjs` is the sole host-package generator; canonical skills stay under `skills/` and ignored installable packages are emitted to `dist/plugins/`.
-- Treat `packages/pipeline/registry/generated-skill-assets.json` as package custody, not an authoring surface. The guided-adapter generator verifies that inventory and writes no prompt files.
-- Run `npm run check:generated` before review. It rejects stale projections, duplicate writers, unsafe or cyclic shared includes, digest drift, and undeclared package assets.
-- Closed registries containing historical prompt snapshots remain compatibility evidence. They are readable but do not override the canonical root source.
+`npm run generate` runs twelve ordered steps (`scripts/generate-all.mjs`): Protocol
+catalogs, dashboard contracts, the artifact shell, diagram assets, the Protocol and
+domain projections into the pipeline package, Operate contracts, landing-workflow
+assets, skill and role host adapters, dashboard package assets, the ecosystem
+marketplace metadata, and finally the preservation catalog. `npm run check:generated`
+replays every step in check mode and rejects stale projections, duplicate writers,
+unsafe or cyclic shared includes, digest drift, and undeclared package assets.
 
-The v0.1 architecture is deliberately additive around compatibility. Later 0.x milestones may physically collapse additional compatibility projections once package consumers have migrated.
+- Edit task-specific behavior only in `skills/planr-*/SKILL.md`; edit reusable policy only
+  in a declared file under `skills/shared/`.
+- `scripts/skills/generate-v18.mjs` is the sole host-package generator. Canonical skills
+  stay under `skills/`; installable packages are emitted to the ignored `dist/plugins/`.
+- Treat `packages/pipeline/registry/generated-skill-assets.json` as package custody, not
+  an authoring surface.
+- Closed registries with historical prompt snapshots are compatibility evidence. They are
+  readable but never override the canonical root source.
 
-## Distribution and service boundary
+## Compatibility
 
-This repository owns the MIT-licensed portable product. The separate hosted
-service owns tenant storage, authorization, billing, enterprise administration,
-provider credentials, and deployment operations. Public clients and Protocol
-contracts may describe those capabilities, but every hosted resource permission
-is enforced server-side. See the [commercial boundary](../../COMMERCIAL.md).
+The CLI and pipeline distributions keep self-contained compatibility projections, and
+package versions stay independent of schema and document versions. `conformance/`
+verifies the public contracts without being imported by runtime code, and
+`npm run check:preservation` verifies from committed data that every compatibility path
+still has an explicit disposition. [Release provenance](../PROVENANCE.md) records the
+integrity proof of every published version.
+
+## Service boundary
+
+This repository owns the MIT-licensed portable product. The separately operated hosted
+service owns tenant storage, authorization, billing, enterprise administration, and
+deployment operations. Public clients and Protocol contracts may describe those
+capabilities; every hosted permission is enforced server-side. See
+[COMMERCIAL.md](../../COMMERCIAL.md).

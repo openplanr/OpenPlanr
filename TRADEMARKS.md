@@ -16,6 +16,9 @@ Do not use confusingly similar branding or imply sponsorship, endorsement, or
 official status when none exists.
 
 Forks may describe their origin factually, but should use a distinct product name
-and visual identity. This policy does not limit uses permitted by applicable law.
+and visual identity. The logo files under `docs/assets/brand/` are published so that
+documentation and integrations can refer to OpenPlanr accurately; they remain subject
+to this policy and are not licensed under the MIT License. This policy does not limit
+uses permitted by applicable law.
 Contact the primary maintainer through
 [AsemDevs on GitHub](https://github.com/AsemDevs) for permission questions.
