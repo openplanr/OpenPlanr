@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.45.3
+### Patch Changes
+
+- bfb0d6a: Generate the plugin manifest version from the package version so the shipped `.claude-plugin/plugin.json` can no longer lag behind the published release.
+
 ## 0.45.2
 ### Patch Changes
 
