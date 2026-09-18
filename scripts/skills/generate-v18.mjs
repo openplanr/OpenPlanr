@@ -38,7 +38,8 @@ if (!['--write', '--check'].includes(option) || process.argv.length !== 3) {
   process.exit(2);
 }
 const mode = option.slice(2);
-const pluginVersion = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).version;
+// Host packages ship inside the CLI package, so their manifests carry its version.
+const pluginVersion = JSON.parse(readFileSync(resolve(root, 'packages/cli/package.json'), 'utf8')).version;
 const registry = readSkillSourceRegistry({ repoRoot: root });
 const skillIds = registry.skills.map(({ skillId }) => skillId);
 const outputs = new Map();

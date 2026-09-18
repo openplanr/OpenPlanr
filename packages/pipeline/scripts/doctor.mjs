@@ -516,25 +516,26 @@ function runConsolidatedWorkspaceChecks(pkg) {
     );
   }
 
+  // The marketplace's `planr` plugin is the CLI's generated host package, so it carries the CLI version.
   const marketplacePath = join(workspaceRoot, '.claude-plugin', 'marketplace.json');
   const marketplace = readOptionalJsonFile(marketplacePath);
   const workspacePlugin = (marketplace?.plugins ?? []).find((plugin) => plugin.name === 'planr');
   if (
     ecosystem.repositories.marketplace?.path === workspaceRoot
     && marketplace?.name === 'openplanr'
-    && workspacePlugin?.version === workspacePackage?.version
+    && workspacePlugin?.version === cliPackage?.version
   ) {
     ok(
       'ecosystem.marketplace-present',
       'Ecosystem',
-      `workspace marketplace projects the local integration version ${workspacePackage.version}`,
+      `workspace marketplace projects the planr plugin at the CLI version ${cliPackage.version}`,
     );
   } else {
     fail(
       'ecosystem.marketplace-present',
       'Ecosystem',
-      'workspace marketplace does not match the consolidated integration package',
-      'Align .claude-plugin/marketplace.json with the root workspace version.',
+      'workspace marketplace plugin version does not match the CLI package version',
+      'Run npm run generate so .claude-plugin/marketplace.json follows packages/cli/package.json.',
     );
   }
 

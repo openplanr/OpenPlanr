@@ -3,7 +3,7 @@
   "schemaVersion": "2.0.0",
   "protocolVersion": "1.8.0",
   "plugin": "planr",
-  "version": "0.1.0",
+  "version": "2.2.0",
   "skillRoot": "./skills/",
   "canonicalSkillCount": 27,
   "compatibilityAliasCount": 0,
