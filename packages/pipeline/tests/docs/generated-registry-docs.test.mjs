@@ -26,15 +26,30 @@ test('generated adapter documentation describes the Protocol 1.8 host packages',
   assert.match(document, /Semantic workflows execute in the active host agent/u);
 });
 
-test('generated skill documentation covers every canonical skill and packaged resource', () => {
+test('generated skill documentation covers every canonical skill and its references', () => {
   const catalog = JSON.parse(readWorkspace('adapters/manifests/canonical-skills.json'));
   const document = readWorkspace('docs/generated/skills.md');
   for (const skill of catalog.skills) {
     assert.match(document, new RegExp(`^## ${'`'}${skill.id}${'`'}$`, 'mu'), skill.id);
     const section = document.split(`## ${'`'}${skill.id}${'`'}\n`)[1].split('\n## ')[0];
     assert.ok(section.includes(skill.description), `${skill.id}: description`);
-    for (const resource of skill.resources.filter(({ kind }) => kind !== 'agent-metadata')) {
+    // The catalog lists the references a reader opens; the complete packaged inventory
+    // stays in adapters/manifests/generated-assets.json.
+    const resources = skill.resources.filter(({ kind }) => kind !== 'agent-metadata');
+    const references = resources.filter(({ path }) => path.startsWith('references/'));
+    for (const resource of references) {
       assert.ok(section.includes(`\`${resource.path}\``), `${skill.id}: ${resource.path}`);
+    }
+    const remaining = resources.length - references.length;
+    if (remaining > 0) {
+      assert.match(
+        section,
+        new RegExp(`${remaining} packaged (?:schema, script, and runtime )?resources`, 'u'),
+        `${skill.id}: ${remaining} unlisted resources`,
+      );
+    }
+    if (resources.length === 0) {
+      assert.match(section, /Packaged support: none; the skill is intentionally single-file/u, skill.id);
     }
   }
   assert.match(document, /Aliases: none/u);
