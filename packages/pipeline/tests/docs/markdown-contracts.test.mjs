@@ -117,7 +117,7 @@ test('ownership map names every consolidated domain and the external web boundar
   ]) {
     assert.match(ownership, new RegExp(domain.replace('/', '\\/'), 'u'));
   }
-  assert.match(ownership, /external `openplanr-web`/u);
+  assert.match(ownership, /external hosted service/u);
   assert.doesNotMatch(ownership, /five OpenPlanr repositories/u);
 });
 
@@ -139,5 +139,5 @@ test('doctor and ecosystem docs describe the prompt-free consolidated boundary',
   assert.match(doctor, /prompt-free runtime package/u);
   assert.match(guide, /`packages\/pipeline` is the public delivery package/u);
   assert.match(guide, /`skills\/`, `agents\/`, and `packages\/skill-runtime` own workflow sources/u);
-  assert.match(guide, /openplanr-web is the independently deployed hosted surface/u);
+  assert.match(guide, /The hosted service is the independently deployed surface/u);
 });

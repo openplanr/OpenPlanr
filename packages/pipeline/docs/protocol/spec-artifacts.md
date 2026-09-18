@@ -38,7 +38,7 @@ parent SPEC; child frontmatter cannot duplicate or override it.
 ## SPEC frontmatter
 
 Identifies the functional spec and carries the fields used by `planr spec shape`,
-`planr spec decompose`, and the planr-pipeline specification-agent.
+the `planr-plan` skill, and the pipeline specification-agent.
 
 **Canonical schema:** [`spec.schema.json`](../../schemas/v1.0.0/spec.schema.json)
 
@@ -53,7 +53,7 @@ schemaVersion: "1.0.0"
 status: "pending"
 priority: "P0"
 milestone: "v1.0"
-po: "asem@techarc.io"
+po: "product-owner"
 created: "2026-04-29"
 updated: "2026-04-29"
 ui_files: []
@@ -63,7 +63,7 @@ tech_dependencies: []
 
 ## SPEC body sections (in order)
 
-The spec body uses these H2 sections. `planr spec shape` writes them from interactive Q&A; `planr spec decompose` and the pipeline's specification-agent both read them.
+The spec body uses these H2 sections. `planr spec shape` writes them from interactive questions; the `planr-plan` skill and the pipeline's specification-agent both read them.
 
 1. **`## Context & Goal`** — user need and intended outcome
 2. **`## Audience`** — primary and affected users

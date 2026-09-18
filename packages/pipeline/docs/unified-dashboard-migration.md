@@ -1,6 +1,6 @@
 # Unified dashboard migration
 
-> SPEC-020 atomic cutover — legacy standalone dashboard retirement
+> Atomic cutover — legacy standalone dashboard retirement
 
 ## What changed
 

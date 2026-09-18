@@ -48,7 +48,7 @@ Auto-scaffolding and auto-healing produce no AI calls and no decomposition — t
 2. **designer-agent** (conditional) — if PNGs resolve via:
    - **Default mode:** `UIFiles:` block in spec → `input/ui/feat-{feature}/*.png` → `input/ui/*.png`
    - **Spec-driven mode:** `<SPEC_DIR>/design/*.png`
-3. **specification-agent** (always, with spec-mode skip optimization) — if spec-driven mode AND stories already exist (i.e. `planr spec decompose` has run), skip; otherwise decompose.
+3. **specification-agent** (always, with spec-mode skip optimization) — if spec-driven mode AND stories already exist (the `planr-plan` skill has already decomposed it), skip; otherwise decompose.
 
 ### Output
 
@@ -92,7 +92,7 @@ into implementation for an implementation request.
 1. Read the request, repository instructions, relevant code and tests, and any
    useful plan, specification, story, or task.
 2. Let the coding runtime choose tools, subagents, edit order, debugging method,
-   and dependency waves. Planr supplies context; it does not supervise the
+   and dependency waves. OpenPlanr supplies context; it does not supervise the
    agent through a parallel state machine.
 3. Verify in proportion to risk and acceptance criteria. Fix relevant failures
    directly while the observed results support meaningful progress.
@@ -144,7 +144,7 @@ by normal Plan or Ship skills and do not govern ordinary coding.
 
 | Runtime | PLAN invocation | SHIP invocation | STATUS invocation |
 |---|---|---|---|
-| **Claude Code (canonical)** | `/planr-pipeline:plan {feature}` | `/planr-pipeline:ship {feature}` | `/planr-pipeline:status {feature}` |
+| **Claude Code (canonical)** | `/planr:plan {feature}` | `/planr:ship {feature}` | `/planr:status {feature}` |
 | **Cursor** | User says `plan {feature}` (or "decompose {feature}") and the canonical generated rule routes PLAN | User says `ship {feature}` and the generated Ship rule provides context | User says `status {feature}` |
 | **Codex** | `$planr-plan` or router | `$planr-ship` or router | Skills call the portable engine and use native subagents when available |
 

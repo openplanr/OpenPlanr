@@ -5,7 +5,7 @@ OpenPlanr skills provide portable context and workflow guidance. The active codi
 agent owns reasoning and conversation, using its native structured question UI
 when a consequential decision needs user input and a concise chat question when
 that UI is unavailable. Spec, Plan, Plan Review, and ordinary Ship do not require
-a Planr lifecycle command before the agent can do the requested local work.
+an OpenPlanr lifecycle command before the agent can do the requested local work.
 
 ## Certified presentation paths
 

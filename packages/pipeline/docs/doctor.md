@@ -28,7 +28,7 @@ npm run doctor --workspace=planr-pipeline -- --fix --json
 | `--versions-only` | Runs the version/protocol/ecosystem subset used by `npm run doctor:versions`. |
 | `--repair-preview` | Reports safe Planr-owned stale-daemon repairs without changing files. |
 | `--fix` | Rechecks daemon health and removes only stale Planr-owned daemon state. |
-| `--workspace-root <path>` | Explicit directory used to locate the independent `openplanr-web` checkout or a legacy multi-repository layout. |
+| `--workspace-root <path>` | Explicit directory used to locate the separate hosted-service checkout or a legacy multi-repository layout. |
 
 ## Ecosystem Discovery
 
@@ -44,7 +44,7 @@ In the consolidated workspace, Doctor checks `packages/cli`,
 `ecosystem.json` in place. It does not ask for retired sibling skills,
 marketplace, or CLI checkouts.
 
-`openplanr-web` intentionally remains external. When its checkout is available,
+The hosted service intentionally remains a separate repository. When its checkout is available,
 Doctor verifies its independent package name plus `build`, `test`, and
 `share:check` gates; otherwise the consolidated workspace reports its external
 disposition as an informational passing check. That absence stays healthy under
@@ -82,7 +82,7 @@ them.
 |---|---|
 | Versions | Correct the package identity in `package.json` and regenerate workspace metadata. Package releases do not require version edits in prose or stack documents; host plugin versions are owned by the workspace. |
 | Protocol | Restore the self-contained schema projection from `packages/protocol/schemas/`. Keep stack `schemaVersion` aligned with its schema and use `qa_gate_status` values `passed`, `failed`, `skipped`. |
-| Ecosystem | Regenerate workspace metadata after internal domain changes; point Doctor at `openplanr-web` only when checking that external service. |
+| Ecosystem | Regenerate workspace metadata after internal domain changes; point Doctor at the hosted-service checkout only when checking that service. |
 | Daemons | Run `planr doctor --fix`; it previews, confirms, rechecks, and removes only stale Planr-owned daemon state. |
 | Credentials | Keep project `.env` files with `OPENAI_API_KEY` ignored, or move the key to user-level credentials. |
 | Releases | Add the `## [<version>]` section to `CHANGELOG.md`, create the missing tag or GitHub release, then rerun `npm run doctor -- --release --strict`. |

@@ -1,4 +1,4 @@
-# `/planr-pipeline:dashboard`
+# `/planr:dashboard`
 
 > This document describes the current unified OpenPlanr React dashboard and its
 > loopback-only planr-pipeline server contract.
@@ -10,7 +10,7 @@
 ## Synopsis
 
 ```
-/planr-pipeline:dashboard [--port N] [--open] [--no-watch] [--view graph|board|list]
+/planr:dashboard [--port N] [--open] [--no-watch] [--view graph|board|list]
 ```
 
 The command starts (or reuses) a **persistent localhost HTTP server** for the
@@ -47,9 +47,9 @@ first-class; the dashboard reads whichever is present. The graph carries both th
 agile model (`epic` / `feature` / `story` / `task`) and the spec model (`spec` /
 `story` / `task`) node types.
 
-**Graph sourcing — delegate-or-fallback (same engine as `/planr-pipeline:status`).**
+**Graph sourcing — delegate-or-fallback (same engine as `/planr:status`).**
 The graph data path is `lib/dashboard/graph-engine.mjs`, which mirrors the
-`/planr-pipeline:status` A.1/A.2 contract so the two surfaces can never drift
+`/planr:status` A.1/A.2 contract so the two surfaces can never drift
 ("one engine, one truth"):
 
 - **A.1 — delegate:** when the planr CLI is installed AND new enough, the engine
@@ -90,10 +90,10 @@ DASHBOARD_URL: http://localhost:<port>/
 When `--view` is supplied, `?view=<value>` is appended. The command is complete
 the moment that line is printed.
 
-## Relationship to `/planr-pipeline:status`
+## Relationship to `/planr:status`
 
-The dashboard and `/planr-pipeline:status` use the **same data path** and the
-**same classification rules**. `/planr-pipeline:status` (see `commands/status.md`,
+The dashboard and `/planr:status` use the **same data path** and the
+**same classification rules**. `/planr:status` (see `commands/status.md`,
 sections A.1/A.2) composes a text report; the dashboard is the **live visual
 projection** of that same graph. Status classification — `done`
 (`done|closed|completed|shipped|released`), `addressed` (`promoted|superseded`),
@@ -221,7 +221,7 @@ project-local state and replay results.
 A fresh project with no specs/stories/tasks yields an empty graph
 (`{ nodes: [], edges: [] }`). The dashboard renders an honest **empty state** —
 a brand mark, a short message, and a command chip pointing at the next step
-(`/planr-pipeline:plan`) — rather than a blank canvas or an error.
+(`/planr:plan`) — rather than a blank canvas or an error.
 
 ## Live sync
 
@@ -243,7 +243,7 @@ is a read action — it never writes back into `.planr/`.
 
 ## Operate target product certification
 
-The release target is certification against the 13 approved SPEC-019 screens,
+The release target is certification against the 13 approved dashboard screens,
 not a separate demo. The final real Chromium matrix must cover Start, Today in
 both domains, Cycles, Decision and Approval Inbox, governed Action preview and
 recovery, Evidence, Outcomes/Learnings, History, Planning handoff and origin,
@@ -259,4 +259,4 @@ evidence/Outcome understanding, domain parity, navigation, support, and the
 less-than-one-page instruction target. Their machine-readable inventory is in
 `tests/dashboard/operate-product-usability-fixtures.mjs`; final dashboard
 conformance must require the exact approved screen order and released source
-ownership. SPEC-020 task frontmatter is the current implementation status.
+ownership.

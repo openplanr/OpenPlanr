@@ -8,8 +8,8 @@
 
 ### R1 — Match the Requested Workflow
 
-`/planr-pipeline:plan` prepares planning context and
-`/planr-pipeline:ship` implements a prepared task or clear local request. Return
+`/planr:plan` prepares planning context and
+`/planr:ship` implements a prepared task or clear local request. Return
 the plan for a planning request and implement the work for an implementation
 request. Ask a concise question only when missing product information would
 materially change the result.
@@ -17,7 +17,7 @@ materially change the result.
 Release/package certification is separate. Run the auditable candidate-closure
 workflow only for `--release-candidate` or an equivalent release action.
 
-**Design sub-phase corollary:** `/planr-pipeline:design` is an optional source of
+**Design sub-phase corollary:** `/planr:design` is an optional source of
 product/design context. It may be invoked before planning, and `/plan` may suggest
 it when UI intent has no design context. `--dry-run` and CI remain non-interactive.
 
@@ -35,7 +35,7 @@ persisted to the project
 ### R2 — Task Count Per US
 ```
 IF a design exists for the feature — a design-spec.md (authored by
-/planr-pipeline:design, or extracted by designer-agent) OR input/ui/*.png:
+/planr:design, or extracted by designer-agent) OR input/ui/*.png:
   tasks_per_us = 2
   task-1 = UI task → Frontend Agent
   task-2 = Tech task → Backend Agent
@@ -51,7 +51,7 @@ Rationale: More than 2 tasks per US creates coordination complexity and ambiguou
 The trigger is **design intent existing**, not specifically a PNG. `design-spec.md` is the
 canonical signal — `specification-agent` already keys its `has_design` branch on it, so
 keying R2 on the same artifact keeps the rule and the agent consistent. This is what lets
-`/planr-pipeline:design` close the loop: generate a design → `design-spec.md` exists → the
+`/planr:design` close the loop: generate a design → `design-spec.md` exists → the
 UI task is born, instead of degrading to a Tech-only ship. (Without this, a generated design
 with no PNG would still yield `tasks_per_us = 1` and no UI task.)
 
@@ -197,7 +197,7 @@ Avoid: 1 mega-US (too broad) or 10+ micro-US (too fragmented)
 ### G2 — Spec Quality Before Running
 ```
 A spec that is vague or incomplete will produce poor decomposition.
-Use `planr spec create + shape` (planr CLI) to guide POs through writing complete specs, or fill in the placeholder body the pipeline auto-scaffolds on the first `/planr-pipeline:plan` invocation.
+Use `planr spec create + shape` (planr CLI) to guide POs through writing complete specs, or fill in the placeholder body the pipeline auto-scaffolds on the first `/planr:plan` invocation.
 The Specification Agent's output quality is directly proportional
 to the input spec quality.
 ```

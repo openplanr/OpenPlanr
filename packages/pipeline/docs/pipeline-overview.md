@@ -25,14 +25,14 @@ checks.
 
 ---
 
-## Optional Design Sub-Phase (`/planr-pipeline:design`, before PO)
+## Optional Design Sub-Phase (`/planr:design`, before PO)
 
 A feature can carry **design intent** into the PO Phase so it decomposes real UI tasks
 instead of degrading to a Tech-only ship. Two ways intent arrives:
 
 - **Mockups** — drop `*.png` and `designer-agent` extracts a `design-spec.md` during `/plan`
   (the original path; unchanged).
-- **Generation** — run `/planr-pipeline:design {slug}` **before** `/plan`. It generates a
+- **Generation** — run `/planr:design {slug}` **before** `/plan`. It generates a
   visual artifact in one of three formats and authors `design-spec.md` directly:
 
   | Format | Output | Substrate |
@@ -87,7 +87,7 @@ rule, manifest); conformance in `conformance/verify-design-assets.mjs` + `tests/
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  STEP 1 — PO PHASE (Functional → Technical Decomposition)                   │
 │                                                                             │
-│  Trigger: /planr-pipeline:plan {name}                                │
+│  Trigger: /planr:plan {name}                                │
 │                                                                             │
 │  Chain (in order):                                                          │
 │  ① DB Agent (Sonnet 5) — conditional: DatabaseType set, no fresh schema  │
@@ -132,7 +132,7 @@ rule, manifest); conformance in `conformance/verify-design-assets.mjs` + `tests/
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  STEP 3 — GUIDANCE-FIRST IMPLEMENTATION                                     │
 │                                                                             │
-│  Trigger: /planr-pipeline:ship {name}                               │
+│  Trigger: /planr:ship {name}                               │
 │                                                                             │
 │  The coding runtime owns tools, subagents, edit order, and debugging.        │
 │                                                                             │
@@ -210,7 +210,7 @@ the separate release product.
 
 The coding runtime may use native subagents and dependency waves when useful;
 hosts without isolated subagents work sequentially. The runtime owns execution
-and reports verified outcomes directly. Planr does not add a second task queue,
+and reports verified outcomes directly. OpenPlanr does not add a second task queue,
 prompt-authored manifest, or resume loop around the agent.
 
 *See: `docs/rules.md` · `docs/task-anatomy.md`*

@@ -1,0 +1,76 @@
+name: Skill behavior
+description: A skill produced the wrong plan, files, or decision inside the coding agent.
+title: "skill: "
+labels: [skill]
+body:
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Skill
+      options:
+        - spec
+        - plan
+        - plan-review
+        - sprint
+        - ship
+        - browser-qa
+        - design
+        - design-loop
+        - design-review
+        - diagram
+        - artifact
+        - land
+        - release
+        - doctor
+        - investigate
+        - status
+        - sync
+        - dashboard
+        - openplanr (router)
+        - operate or one of its reviews
+    validations:
+      required: true
+  - type: dropdown
+    id: host
+    attributes:
+      label: Coding agent
+      options:
+        - Claude Code
+        - Codex
+        - Cursor
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: planr --version
+    validations:
+      required: true
+  - type: textarea
+    id: request
+    attributes:
+      label: What you asked
+      description: The invocation and the request, as typed.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: What the skill produced
+      description: Which files under `.planr/` it wrote or changed, and the relevant part of its response.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before filing
+      options:
+        - label: I re-ran `planr setup` for this host and restarted it.
+        - label: The pasted content contains no credentials or private customer content.
+          required: true

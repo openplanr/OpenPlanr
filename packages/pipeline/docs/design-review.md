@@ -1,8 +1,8 @@
 # The Collaborative Review Board
 
-> The review board (`/planr-pipeline:design-review`, served by `lib/design-engine/`) is a live
+> The review board (`/planr:design-review`, served by `lib/design-engine/`) is a live
 > review canvas where reviewers pin comments, rate, and leave feedback on a generated design. This
-> document covers the **collaboration + persistence layer** (SPEC-017): how feedback is stored,
+> document covers the **collaboration + persistence layer**: how feedback is stored,
 > merged, attributed, live-synced, and how older feedback files stay compatible. For the engine
 > internals (daemon protocol, providers, sessions, taste) see `docs/design-loop.md` — both the
 > `design-loop` (variant authoring) and `design-review` (pin-review of an existing artifact) modes

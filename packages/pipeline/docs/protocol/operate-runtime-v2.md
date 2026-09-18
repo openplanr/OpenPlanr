@@ -2,7 +2,7 @@
 
 > Package: local `planr-pipeline@0.44.0` development baseline
 > Protocol: `2.0.0`
-> Status: unpublished development work; no release claim
+> Status: development baseline
 > Contract owner: `planr-pipeline`
 
 This is the technical protocol reference, not the single source for product
@@ -470,7 +470,7 @@ requires exact provider/resolver versions, validates their contract/effect/
 classification/retention/provenance/fallback fields, and checks the caller's
 scope binding plus required local read capability before dispatch. Registration
 data cannot name a function, path, module, URL, plugin, external service, or
-non-public implementation. The dispatch table is closed: Git, filesystem, Planr,
+non-public implementation. The dispatch table is closed: Git, filesystem, OpenPlanr planning,
 and Operate Artifact have only their static, local, read-only resolver paths.
 An absent registered source configuration returns its declared structured
 unavailable result; there is no discovery, code loading, authority grant,
@@ -600,7 +600,7 @@ An `operating-evidence-ref` binds to exactly one immutable
 `evidence-snapshot` Artifact identity and its raw/canonical hash metadata.
 `operating-evidence-resolution` reports either that ref or a finite, safe
 error reason. The reasons distinguish source, revision, object type, path,
-range, ancestry, hash, untracked Planr content, freshness, capability,
+range, ancestry, hash, untracked planning content, freshness, capability,
 consent, sensitivity, secret, unsupported-kind, resolver, scope, and locator
 failures without exposing raw bytes, secrets, or machine paths.
 
@@ -632,12 +632,12 @@ or safe error context. Metadata-only Operate Artifact references reuse the
 already accepted Artifact's exact stored bytes under the snapshot identity
 without opening a second acceptance route.
 
-### Planr and accepted Artifact resolver semantics
+### Planning and accepted Artifact resolver semantics
 
-The Planr resolver reads only a configured project root, declared `.planr/`
+The planning resolver reads only a configured project root, declared `.planr/`
 artifact identity/type/location, matching scope binding, and exact declared
-SHA-256. It does not call Git. A valid untracked Planr artifact therefore
-remains Planr evidence; an attempt to dispatch it through a Git provider or
+SHA-256. It does not call Git. A valid untracked planning artifact therefore
+remains planning evidence; an attempt to dispatch it through a Git provider or
 resolver fails as a kind mismatch rather than inventing a tracked source path.
 
 The Operate Artifact resolver reads no Artifact bytes. It accepts only a
@@ -1728,7 +1728,7 @@ replay, and bounded heap. The fixture requires initial construction within two
 seconds and uses the median of loaded selector calls for the 200 ms route bound,
 so unrelated parallel test scheduling is not misreported as selector latency.
 It does not measure browser render, interaction readiness, or real-user
-usability; those require the separate real-browser SPEC-020 gates.
+usability; those require the separate real-browser dashboard gates.
 
 OpenPlanr owns project-local `.planr/operate/` storage and recovery. Its private
 `state/`, `packets/`, and `archive/` trees reject symlinks and traversal, use

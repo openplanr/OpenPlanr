@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://github.com/openplanr/OpenPlanr/discussions/categories/q-a
+    about: Setup and usage questions, before opening a bug.
+  - name: Report a security vulnerability
+    url: https://github.com/openplanr/OpenPlanr/blob/main/SECURITY.md
+    about: Please do not report vulnerabilities in public issues.
+  - name: Company workspaces and commercial questions
+    url: https://github.com/openplanr/OpenPlanr/blob/main/COMMERCIAL.md
+    about: The boundary between the open-source product and the hosted service.

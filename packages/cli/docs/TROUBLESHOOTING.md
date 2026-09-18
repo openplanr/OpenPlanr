@@ -9,8 +9,8 @@ planr doctor --json
 planr setup --dry-run
 ```
 
-`doctor --fix` previews owned generated-file repairs and stale Planr daemon
-state. It asks once, rechecks daemon health, and removes only Planr-owned state;
+`doctor --fix` previews owned generated-file repairs and stale OpenPlanr daemon
+state. It asks once, rechecks daemon health, and removes only OpenPlanr-owned state;
 it never kills a process. Package installation, version changes, provenance
 recovery, credential changes, and unrelated deletion remain explicit gates.
 
@@ -40,10 +40,11 @@ manifest identity does not match the compatible release. Run:
 planr runtime update claude --scope user
 ```
 
-Review and confirm the listed marketplace/plugin operations, then restart
-Claude Code. A legacy `openplanr@openplanr-skills` installation is reported
-separately and is never silently removed; verify `openplanr@openplanr` first,
-then remove the legacy plugin from Claude Code.
+Review and confirm the listed marketplace and plugin operations, then restart
+Claude Code. Setup serves the unified `planr` plugin from a generated local
+marketplace (`openplanr-local`). Older `openplanr` or `planr-pipeline` plugins from
+the public marketplace are reported as legacy and never removed silently; confirm
+the unified plugin works, then remove them from Claude Code.
 
 Setup backups live under `~/.planr/backups/<project-hash>/<timestamp>/`. Machine
 state and paths live under `~/.planr/runtime/state.json`; the committed project
@@ -56,9 +57,35 @@ are removed; user-scope adapters and hand-written content are retained.
 
 ---
 
+## Skills
+
+### A skill is not found in the host
+
+Confirm setup targeted that host and scope (`planr doctor --json` lists every
+managed installation), then restart the host so it reloads its skills. Codex uses
+one install mode at a time; preview with `planr setup --runtime codex --dry-run`
+before switching modes.
+
+### A skill asks for an API key or runs a planning command
+
+That is an old projection. Current skills reason inside the coding agent and call
+only deterministic `planr` utilities. Run `planr setup` again, restart the host, and
+check `planr upgrade status`.
+
+### The agent does not pick the right skill
+
+Generate the host guidance so the agent sees every skill and its triggers:
+
+```bash
+planr rules generate --target claude   # or codex, cursor, all
+```
+
+Then ask for `/planr:openplanr` (Claude Code) or `$planr:openplanr` (Codex), which
+routes a request to the best skill.
+
 ## "No .planr/config.json found"
 
-You need to initialize Planr in your project first:
+Initialize OpenPlanr in the project first:
 
 ```bash
 planr init
@@ -176,7 +203,7 @@ git remote add origin https://github.com/your-org/your-repo.git
 
 ### "Could not resolve to an issue"
 
-The linked GitHub issue was deleted. Planr handles this gracefully — it will create a new issue on the next push. If you see this error during sync, re-push the artifact:
+The linked GitHub issue was deleted. The CLI creates a new issue on the next push. If you see this error during sync, re-push the artifact:
 
 ```bash
 planr github push EPIC-001
@@ -188,40 +215,19 @@ Each artifact stores its linked issue number in frontmatter (`githubIssue: 123`)
 
 ---
 
-## Build and development issues
+## Working from a source checkout
 
-### "Cannot find module" errors after changes
-
-Rebuild the project:
-
-```bash
-npm run build
-```
-
-Templates are copied during build. If you modified templates in `src/templates/`, they won't take effect until you rebuild.
-
-### Tests failing locally
-
-Make sure you have the correct Node.js version:
-
-```bash
-node --version    # should be >= 20.0.0
-```
-
-Install dependencies and run tests:
-
-```bash
-npm ci
-npm test
-```
+Build and test failures inside the repository are covered by the contributor guide,
+[Working from a checkout](https://github.com/openplanr/OpenPlanr/blob/main/docs/contributing/dogfooding.md).
 
 ---
 
 ## Still stuck?
 
-Open an issue at [github.com/openplanr/OpenPlanr/issues](https://github.com/openplanr/OpenPlanr/issues) with:
+Ask in [Discussions](https://github.com/openplanr/OpenPlanr/discussions) or open an
+issue through the [issue forms](https://github.com/openplanr/OpenPlanr/issues/new/choose)
+with:
 
-- The command you ran
-- The full error output
-- Your Node.js version (`node --version`)
-- Your OS
+- the command or skill invocation and the full output
+- `planr --version` and `planr doctor --json` (doctor redacts secrets; check anyway)
+- the host and its version, your operating system, and `node --version`

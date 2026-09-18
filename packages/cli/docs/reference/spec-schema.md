@@ -1,19 +1,18 @@
-# Spec Schema Reference (v1.0.0)
+# Spec-driven planning files (schema 1.0.0)
 
-This document is the CLI-facing reference for spec-driven mode artifacts. For
-this cleanup cycle, the canonical OpenPlanr Protocol JSON Schemas live in
-[`openplanr/planr-pipeline/schemas/v1.0.0`](https://github.com/openplanr/planr-pipeline/tree/main/schemas/v1.0.0).
-Both **planr CLI** and the portable **planr-pipeline** workflow use this
-artifact contract — no conversion adapter, no glue scripts.
+This is the file-level reference for spec-driven mode: what the `planr-spec`,
+`planr-plan`, and `planr-ship` skills write under `.planr/specs/`, and what the
+`planr spec` commands validate. The canonical JSON Schemas live in
+[`packages/protocol/schemas/v1.0.0`](https://github.com/openplanr/OpenPlanr/tree/main/packages/protocol/schemas/v1.0.0);
+the CLI and the `planr-pipeline` package read the same contract with no
+conversion layer.
 
-When hand-authoring spec artifacts (e.g. AI is unavailable), use the templates
-below verbatim.
+When authoring these files by hand, use the templates below verbatim.
 
 > **Schema version:** `1.0.0`
 > **Pinning rule:** the `schemaVersion` field on every artifact MUST match the
-> reader's expected version. Both planr CLI and planr-pipeline currently
-> require `1.0.0`. Breaking changes start in the pipeline-owned schema source
-> and must be mirrored here before release.
+> reader's expected version. Breaking changes start in the Protocol schema source
+> and are mirrored here before release.
 
 ---
 
@@ -26,14 +25,14 @@ Every spec is a self-contained directory under `.planr/specs/`:
 ├── SPEC-NNN-{slug}.md            # the functional spec (one per directory)
 ├── design/                       # optional — UI mockups + design-spec
 │   ├── *.png                     # PNG mockups attached via `planr spec attach-design`
-│   └── design-spec.md            # written by planr-pipeline's designer-agent
+│   └── design-spec.md            # written by the designer agent
 ├── stories/
 │   └── US-NNN-{slug}.md          # user stories scoped to this spec
 ├── tasks/
 │   └── T-NNN-{slug}.md           # tasks scoped to this spec
-├── qa-report.md                  # written by qa-agent after /planr-pipeline:ship
+├── qa-report.md                  # written by the QA agent after planr-ship
 ├── error-report.md               # written if a task fails 3 iterations
-└── .pipeline-shipped             # written by /planr-pipeline:ship — proof of execution
+└── .pipeline-shipped             # written by planr-ship — proof of execution
 ```
 
 **ID scoping rule:** in spec-driven mode, `US-NNN` and `T-NNN` are scoped to
@@ -53,7 +52,7 @@ schemaVersion: "1.0.0"            # required · pinned to reader version
 status: "pending"                 # required · pending | shaping | shaped | decomposing | decomposed | in-pipeline | done
 priority: "P0"                    # required · P0 | P1 | P2 | P3
 milestone: "v1.0"                 # optional · links to a milestone or release
-po: "asem@techarc.io"             # optional · spec owner (Product Owner)
+po: "product-owner"               # optional · spec owner (Product Owner)
 created: "2026-04-26"             # required · ISO date (YYYY-MM-DD)
 updated: "2026-04-26"             # required · ISO date, bumped on edit
 ui_files: []                      # required · array of PNG paths under design/ (empty if none)
@@ -67,21 +66,20 @@ tech_dependencies: []             # required · array of strings; informational 
 |---|---|---|
 | `id` | string | Project-globally unique. Format `SPEC-NNN` (3-digit). The directory MUST be `SPEC-NNN-{slug}/`. |
 | `title` | string | Display title. Human-readable. |
-| `slug` | string | URL-safe lowercase. Used in path, in `/planr-pipeline:plan {slug}`, and in story/task slugs. |
+| `slug` | string | URL-safe lowercase. Used in the directory name and in story and task slugs. |
 | `schemaVersion` | string | Pinned schema version. `1.0.0` currently. Readers MUST refuse mismatched versions. |
-| `status` | enum | Lifecycle marker: `pending` (just created) → `shaping` (Q&A in progress) → `shaped` (body authored) → `decomposing` (AI in progress) → `decomposed` (US/T files written) → `in-pipeline` (ship in progress) → `done` (shipped). |
+| `status` | enum | Lifecycle marker: `pending` (just created) → `shaping` (questions in progress) → `shaped` (body authored) → `decomposing` (planning in progress) → `decomposed` (stories and tasks written) → `in-pipeline` (ship in progress) → `done` (shipped). |
 | `priority` | enum | `P0` (must) / `P1` (should) / `P2` (nice) / `P3` (defer). |
 | `milestone` | string? | Optional release/milestone tag. |
 | `po` | string? | Optional Product Owner identifier (email or username). |
 | `created` / `updated` | string | ISO 8601 date. Bumped automatically by `planr spec` commands. |
-| `ui_files` | array | List of PNG file paths under `design/`. Triggers the pipeline's designer-agent if non-empty. |
+| `ui_files` | array | List of PNG file paths under `design/`. Non-empty lists route the designer agent. |
 | `tech_dependencies` | array | Free-form list of upstream tech dependencies. Informational; not consumed automatically. |
 
 ### SPEC body sections (in order)
 
 The spec body uses the following H2 sections. `planr spec shape` writes them
-from interactive Q&A; `planr spec decompose` and the pipeline's
-specification-agent both read them.
+from interactive questions; the `planr-plan` skill reads them.
 
 1. **`## Context & Goal`** — 2-5 sentences on the user need + outcome
 2. **`## Functional Requirements`** — bullet list, action verbs
@@ -89,12 +87,11 @@ specification-agent both read them.
 4. **`## User Flows`** — numbered step-by-step flows
 5. **`## Out of Scope`** — explicit non-goals
 6. **`## Acceptance Criteria`** — Given/When/Then bullets
-7. **`## Notes for Decomposition`** *(optional)* — hints for `decompose`, NOT requirements
+7. **`## Notes for Decomposition`** *(optional)* — hints for planning, NOT requirements
 
 The `## Notes for Decomposition` section is freeform prose hinting at the
-intended US split, special attention areas, or files to preserve. Both
-`planr spec decompose` and the pipeline's `specification-agent` read it
-to bias their output. Example:
+intended story split, special attention areas, or files to preserve. The
+`planr-plan` skill reads it to bias its output. Example:
 
 ```markdown
 - Suggested US split: auth flow (UI), session management (Tech)
@@ -173,7 +170,7 @@ updated: "2026-04-26"             # required
 | `UI` | `frontend-agent` | UI-focused work: components, pages, styles |
 | `Tech` | `backend-agent` | Backend, services, controllers, DTOs, migrations |
 
-The pipeline's `frontend-agent` reads tasks where `type: UI`; the
+The `frontend-agent` reads tasks where `type: UI`; the
 `backend-agent` reads tasks where `type: Tech`. Setting `agent` to a different
 value (e.g. a custom subagent name) overrides the default routing.
 
@@ -185,7 +182,7 @@ value (e.g. a custom subagent name) overrides the default routing.
 > **User Story:** US-001
 > **Spec:** SPEC-001
 > **Type:** UI
-> **Agent:** `frontend-agent` (Opus 4.8)
+> **Agent:** `frontend-agent`
 
 ## Objective
 <1-2 sentences: what does this task accomplish?>
@@ -205,7 +202,7 @@ value (e.g. a custom subagent name) overrides the default routing.
 
 ## Technical Spec
 <Implementation detail: libraries, patterns, integration points.
-The pipeline's frontend-agent / backend-agent reads this verbatim.>
+The frontend or backend agent reads this verbatim.>
 
 ## Test Requirements
 <Build / test commands and DoD checks. The qa-agent reads this to
@@ -228,9 +225,9 @@ A task that touches files outside these lists fails QA.
 
 ## `.pipeline-shipped` marker
 
-Written by `/planr-pipeline:ship` at the end of a successful (or
-partially-successful) run. This is the canonical proof that the pipeline
-executed — not a hand-authored markdown file.
+Written by the `planr-ship` skill at the end of a successful (or
+partially successful) run. This is the canonical proof that the work was
+shipped through the workflow, not a hand-authored Markdown file.
 
 ```yaml
 shipped_at: "2026-04-26T22:30:00Z"
@@ -253,9 +250,8 @@ snapshot_status: "refreshed"
 error_reports: []
 ```
 
-If the marker is absent, the work was NOT shipped via the pipeline. Marketing
-posts and audit trails should reference this file by path:
-`.planr/specs/SPEC-NNN-{slug}/.pipeline-shipped`.
+If the marker is absent, the work was not shipped through the workflow. Audit
+trails reference this file by path: `.planr/specs/SPEC-NNN-{slug}/.pipeline-shipped`.
 
 ---
 
@@ -272,33 +268,29 @@ pending → shaping → shaped → decomposing → decomposed → in-pipeline �
 | `pending` | `planr spec create` | Spec directory exists; body is the empty template |
 | `shaping` | `planr spec shape` (in progress) | Q&A flow active |
 | `shaped` | `planr spec shape` (complete) | Spec body has Context/FRs/Rules/AC sections filled |
-| `decomposing` | `planr spec decompose` (in progress) OR pipeline's specification-agent | AI is generating US + tasks |
-| `decomposed` | `planr spec decompose` (complete) | stories/ and tasks/ are populated |
-| `in-pipeline` | `/planr-pipeline:ship` (in progress) | Pipeline DEV phase running |
-| `done` | `/planr-pipeline:ship` (complete) | Tasks executed, QA passed, marker written |
-
-The pipeline can ingest a `shaped` spec and decompose it itself; in that case
-the spec moves directly from `shaped` to `decomposed` without going through
-`planr spec decompose`.
+| `decomposing` | `planr-plan` skill (in progress) | Stories and tasks are being written |
+| `decomposed` | `planr-plan` skill (complete) | `stories/` and `tasks/` are populated |
+| `in-pipeline` | `planr-ship` skill (in progress) | Implementation running |
+| `done` | `planr-ship` skill (complete) | Tasks executed, QA passed, marker written |
 
 ---
 
 ## Schema version compatibility
 
-Both planr CLI and planr-pipeline produce and consume schema `1.0.0`.
-Future breaking changes will bump `schemaVersion` in lockstep across both
-products. Keep them aligned via:
+The CLI, the skills, and the `planr-pipeline` package produce and consume schema
+`1.0.0`. Breaking changes bump `schemaVersion` in lockstep. Keep them aligned:
 
-```
-/plugin marketplace update openplanr
-npm i -g openplanr@latest
+```bash
+npm install -g openplanr@latest
+planr setup
+planr upgrade status
 ```
 
 ---
 
 ## See also
 
-- [planr CLI README](../../README.md)
-- [planr CLI command reference](../CLI.md)
-- [planr-pipeline plugin docs](https://github.com/openplanr/planr-pipeline)
-- [planr-pipeline rules.md (R1-R6)](https://github.com/openplanr/planr-pipeline/blob/main/docs/rules.md)
+- [`openplanr` package README](../../README.md)
+- [CLI reference](../CLI.md)
+- [`planr-pipeline` package](https://github.com/openplanr/OpenPlanr/tree/main/packages/pipeline)
+- [Pipeline rules](https://github.com/openplanr/OpenPlanr/blob/main/packages/pipeline/docs/rules.md)
