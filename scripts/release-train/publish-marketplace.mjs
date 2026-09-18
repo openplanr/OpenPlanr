@@ -19,7 +19,13 @@ const marketplaceDir = resolve(flag('--marketplace') ?? '');
 if (!flag('--plugin') || !flag('--marketplace'))
   throw new Error('Usage: publish-marketplace.mjs --plugin <dir> --marketplace <checkout>');
 
-const manifest = JSON.parse(readFileSync(join(pluginDir, '.claude-plugin/plugin.json'), 'utf8'));
+const manifestPath = join(pluginDir, '.claude-plugin/plugin.json');
+if (!existsSync(manifestPath)) {
+  throw new Error(
+    `${manifestPath} is missing. The generated plugin keeps its manifest in .claude-plugin/, so an artifact carrying it must be uploaded with include-hidden-files: true.`,
+  );
+}
+const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 if (manifest.name !== 'planr' || !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(manifest.version)) {
   throw new Error('The plugin manifest must be the generated planr plugin with a release version');
 }
