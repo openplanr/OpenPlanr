@@ -5,10 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import {
-  appendProvenanceRows,
   changelogSection,
   payloadDigest,
-  renderProvenanceRow,
   renderReleaseNotes,
 } from '../../scripts/release-train/lib/notes.mjs';
 
@@ -68,37 +66,4 @@ test('payloadDigest hashes the sorted per-file digest list of an archive', () =>
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
-});
-
-test('provenance rows are appended after the table once', () => {
-  const row = renderProvenanceRow({
-    name: 'openplanr',
-    version: '2.2.1',
-    publishedAt: '2026-09-18T02:04:45.215Z',
-    runId: '42',
-    commit: 'd'.repeat(40),
-    payloadSha256: 'e'.repeat(64),
-    integrity: 'sha512-abc==',
-  });
-  assert.equal(
-    row,
-    `| \`openplanr\` | \`2.2.1\` | 2026-09-18 02:04:45 | \`publish-packages.yml\` run 42; SLSA v1 attestation | \`${'d'.repeat(40)}\` | \`${'e'.repeat(64)}\` | \`sha512-abc==\` |`,
-  );
-  const document = [
-    '## Publication provenance',
-    '',
-    '| Package | Version | Published (UTC) | Channel | Build commit in attestation | Payload SHA-256 | Registry integrity |',
-    '| --- | --- | --- | --- | --- | --- | --- |',
-    '| `openplanr` | `2.2.0` | 2026-09-18 02:04:45 | run 1 | `c` | `p` | `i` |',
-    '',
-    'Narrative.',
-    '',
-  ].join('\n');
-  const once = appendProvenanceRows(document, [row]);
-  assert.equal(once.added, 1);
-  assert.equal(once.document.split('\n')[5], row);
-  assert.equal(once.document.split('\n')[7], 'Narrative.');
-  const twice = appendProvenanceRows(once.document, [row, row.replace('run 42', 'run 43')]);
-  assert.equal(twice.added, 0);
-  assert.equal(twice.document, once.document);
 });

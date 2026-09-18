@@ -34,7 +34,7 @@ Produce a grounded strategy and finance review for an Operate cycle. Use when di
 - Invocation from the plugin: `$planr:ceo-review` in Codex/ChatGPT; `/planr:ceo-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/operate-advisor-contract.md`, `scripts/validate-note.mjs`, `scripts/operate-review-note.mjs`, `scripts/operate-review-contract.mjs`, `scripts/errors.mjs`.
+- Packaged support: `references/operate-advisor-contract.md`, and 4 packaged schema, script, and runtime resources.
 
 ## `planr-chair-review`
 
@@ -45,7 +45,7 @@ Synthesize an Operate cycle into a prioritized decision queue and action plan. U
 - Invocation from the plugin: `$planr:chair-review` in Codex/ChatGPT; `/planr:chair-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `scripts/validate-note.mjs`, `scripts/operate-review-note.mjs`, `scripts/operate-review-contract.mjs`, `scripts/errors.mjs`.
+- Packaged support: 4 packaged resources.
 
 ## `planr-challenger-review`
 
@@ -56,7 +56,7 @@ Challenge an Operate cycle's claims, alternatives, downside, and confidence. Use
 - Invocation from the plugin: `$planr:challenger-review` in Codex/ChatGPT; `/planr:challenger-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `scripts/validate-note.mjs`, `scripts/operate-review-note.mjs`, `scripts/operate-review-contract.mjs`, `scripts/errors.mjs`.
+- Packaged support: 4 packaged resources.
 
 ## `planr-cmo-review`
 
@@ -67,7 +67,7 @@ Produce a grounded market and growth review for an Operate cycle. Use when acqui
 - Invocation from the plugin: `$planr:cmo-review` in Codex/ChatGPT; `/planr:cmo-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/operate-advisor-contract.md`, `scripts/validate-note.mjs`, `scripts/operate-review-note.mjs`, `scripts/operate-review-contract.mjs`, `scripts/errors.mjs`.
+- Packaged support: `references/operate-advisor-contract.md`, and 4 packaged schema, script, and runtime resources.
 
 ## `planr-coo-review`
 
@@ -78,7 +78,7 @@ Produce a grounded operations and customer-health review for an Operate cycle. U
 - Invocation from the plugin: `$planr:coo-review` in Codex/ChatGPT; `/planr:coo-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/operate-advisor-contract.md`, `scripts/validate-note.mjs`, `scripts/operate-review-note.mjs`, `scripts/operate-review-contract.mjs`, `scripts/errors.mjs`.
+- Packaged support: `references/operate-advisor-contract.md`, and 4 packaged schema, script, and runtime resources.
 
 ## `planr-cpo-review`
 
@@ -89,7 +89,7 @@ Produce a grounded product and activation review for an Operate cycle. Use when 
 - Invocation from the plugin: `$planr:cpo-review` in Codex/ChatGPT; `/planr:cpo-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/operate-advisor-contract.md`, `scripts/validate-note.mjs`, `scripts/operate-review-note.mjs`, `scripts/operate-review-contract.mjs`, `scripts/errors.mjs`.
+- Packaged support: `references/operate-advisor-contract.md`, and 4 packaged schema, script, and runtime resources.
 
 ## `planr-cto-review`
 
@@ -100,7 +100,7 @@ Produce a grounded technology and delivery-risk review for an Operate cycle. Use
 - Invocation from the plugin: `$planr:cto-review` in Codex/ChatGPT; `/planr:cto-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/operate-advisor-contract.md`, `scripts/validate-note.mjs`, `scripts/operate-review-note.mjs`, `scripts/operate-review-contract.mjs`, `scripts/errors.mjs`.
+- Packaged support: `references/operate-advisor-contract.md`, and 4 packaged schema, script, and runtime resources.
 
 ## `planr-dashboard`
 
@@ -122,7 +122,7 @@ Design a polished product interface through adaptive consultation, a shared canv
 - Invocation from the plugin: `$planr:design` in Codex/ChatGPT; `/planr:design` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, `scripts/design.mjs`, `schemas/design-document.schema.json`, `schemas/design-review-context.schema.json`, `schemas/design-review-handoff.schema.json`, `scripts/runtime/packages/artifact/templates/artifact-review-stage.js`, `scripts/runtime/packages/design/templates/studio/enhancements.css`, `scripts/runtime/packages/design/templates/studio/enhancements.js`, `scripts/runtime/packages/design/templates/studio/share.css`, `scripts/runtime/packages/design/templates/studio/share.js`, `scripts/runtime/packages/design/templates/studio/studio.css`, `scripts/runtime/packages/design/templates/studio/studio.js`, `scripts/runtime/packages/protocol/package.json`, `scripts/runtime/packages/protocol/registry/artifact-theme.json`, `scripts/runtime/packages/protocol/schemas/v1.0.0/design-manifest.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-envelope.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-paste.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-review.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-theme.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-bundle.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-context.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-handoff.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-metadata-payload.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-document.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-review-bundle.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-review-workspace.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-workspace-create.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-workspace-event.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-workspace-revision.schema.json`, `scripts/runtime/notices/entities.txt`, `scripts/runtime/notices/parse5.txt`.
+- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, and 31 packaged schema, script, and runtime resources.
 
 ## `planr-design-loop`
 
@@ -133,7 +133,7 @@ Compare three materially different product design directions in a live review st
 - Invocation from the plugin: `$planr:design-loop` in Codex/ChatGPT; `/planr:design-loop` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, `scripts/design.mjs`, `schemas/design-document.schema.json`, `schemas/design-review-context.schema.json`, `schemas/design-review-handoff.schema.json`, `scripts/runtime/packages/artifact/templates/artifact-review-stage.js`, `scripts/runtime/packages/design/templates/studio/enhancements.css`, `scripts/runtime/packages/design/templates/studio/enhancements.js`, `scripts/runtime/packages/design/templates/studio/share.css`, `scripts/runtime/packages/design/templates/studio/share.js`, `scripts/runtime/packages/design/templates/studio/studio.css`, `scripts/runtime/packages/design/templates/studio/studio.js`, `scripts/runtime/packages/protocol/package.json`, `scripts/runtime/packages/protocol/registry/artifact-theme.json`, `scripts/runtime/packages/protocol/schemas/v1.0.0/design-manifest.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-envelope.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-paste.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-review.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-theme.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-bundle.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-context.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-handoff.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-metadata-payload.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-document.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-review-bundle.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-review-workspace.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-workspace-create.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-workspace-event.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-workspace-revision.schema.json`, `scripts/runtime/notices/entities.txt`, `scripts/runtime/notices/parse5.txt`.
+- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, and 31 packaged schema, script, and runtime resources.
 
 ## `planr-design-review`
 
@@ -144,7 +144,7 @@ Review and revise an existing product design using stable board pins and scoped 
 - Invocation from the plugin: `$planr:design-review` in Codex/ChatGPT; `/planr:design-review` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, `scripts/design.mjs`, `schemas/design-document.schema.json`, `schemas/design-review-context.schema.json`, `schemas/design-review-handoff.schema.json`, `scripts/runtime/packages/artifact/templates/artifact-review-stage.js`, `scripts/runtime/packages/design/templates/studio/enhancements.css`, `scripts/runtime/packages/design/templates/studio/enhancements.js`, `scripts/runtime/packages/design/templates/studio/share.css`, `scripts/runtime/packages/design/templates/studio/share.js`, `scripts/runtime/packages/design/templates/studio/studio.css`, `scripts/runtime/packages/design/templates/studio/studio.js`, `scripts/runtime/packages/protocol/package.json`, `scripts/runtime/packages/protocol/registry/artifact-theme.json`, `scripts/runtime/packages/protocol/schemas/v1.0.0/design-manifest.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-envelope.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-paste.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-review.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-theme.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-bundle.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-context.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-handoff.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-metadata-payload.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-document.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-review-bundle.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-review-workspace.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-workspace-create.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-workspace-event.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-workspace-revision.schema.json`, `scripts/runtime/notices/entities.txt`, `scripts/runtime/notices/parse5.txt`.
+- Packaged support: `references/craft.md`, `references/design-spec-template.md`, `references/design-system.md`, `references/discovery.md`, `references/generation.md`, `references/handoff.md`, `references/review.md`, `references/utilities.md`, `references/team-review.md`, and 31 packaged schema, script, and runtime resources.
 
 ## `planr-diagram`
 
@@ -210,7 +210,7 @@ Run a focused operating review across seven executive lenses and produce a decis
 - Invocation from the plugin: `$planr:operate` in Codex/ChatGPT; `/planr:operate` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `scripts/validate-note.mjs`, `scripts/operate-review-note.mjs`, `scripts/operate-review-contract.mjs`, `scripts/errors.mjs`.
+- Packaged support: 4 packaged resources.
 
 ## `planr-plan`
 
@@ -221,7 +221,7 @@ Turn a Protocol-compatible specification or product intent into schema-compatibl
 - Invocation from the plugin: `$planr:plan` in Codex/ChatGPT; `/planr:plan` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/artifact-contract.md`, `scripts/planning-ids.mjs`, `scripts/design.mjs`, `schemas/design-document.schema.json`, `schemas/design-review-context.schema.json`, `schemas/design-review-handoff.schema.json`, `scripts/runtime/packages/artifact/templates/artifact-review-stage.js`, `scripts/runtime/packages/design/templates/studio/enhancements.css`, `scripts/runtime/packages/design/templates/studio/enhancements.js`, `scripts/runtime/packages/design/templates/studio/share.css`, `scripts/runtime/packages/design/templates/studio/share.js`, `scripts/runtime/packages/design/templates/studio/studio.css`, `scripts/runtime/packages/design/templates/studio/studio.js`, `scripts/runtime/packages/protocol/package.json`, `scripts/runtime/packages/protocol/registry/artifact-theme.json`, `scripts/runtime/packages/protocol/schemas/v1.0.0/design-manifest.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-envelope.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-paste.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-review.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.1.0/artifact-theme.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-bundle.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-context.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-handoff.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-metadata-payload.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-document.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-review-bundle.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-review-workspace.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-workspace-create.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-workspace-event.schema.json`, `scripts/runtime/packages/protocol/schemas/v1.9.0/design-workspace-revision.schema.json`, `scripts/runtime/notices/entities.txt`, `scripts/runtime/notices/parse5.txt`.
+- Packaged support: `references/artifact-contract.md`, and 32 packaged schema, script, and runtime resources.
 
 ## `planr-plan-review`
 
@@ -243,7 +243,7 @@ Choose and maintain a product's versioning scheme, classify shipped changes, and
 - Invocation from the plugin: `$planr:release` in Codex/ChatGPT; `/planr:release` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/schemes.md`, `references/release-notes.md`, `references/cadence.md`, `assets/profile-template.md`, `assets/changelog-template.md`, `scripts/collect_changes.sh`.
+- Packaged support: `references/schemes.md`, `references/release-notes.md`, `references/cadence.md`, and 3 packaged schema, script, and runtime resources.
 
 ## `planr-ship`
 
@@ -254,7 +254,7 @@ Implement an OpenPlanr plan, specification, task, or clearly stated request end 
 - Invocation from the plugin: `$planr:ship` in Codex/ChatGPT; `/planr:ship` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/result-contract.md`, `scripts/discover-verification.mjs`.
+- Packaged support: `references/result-contract.md`, and 1 packaged schema, script, and runtime resources.
 
 ## `planr-spec`
 
@@ -276,7 +276,7 @@ Refine every open backlog item against the code and the calendar, refute the pic
 - Invocation from the plugin: `$planr:sprint` in Codex/ChatGPT; `/planr:sprint` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/refinement-contract.md`, `references/sprint-formats.md`, `schemas/refinement.schema.json`.
+- Packaged support: `references/refinement-contract.md`, `references/sprint-formats.md`, and 1 packaged schema, script, and runtime resources.
 
 ## `planr-status`
 
@@ -298,4 +298,4 @@ Audit OpenPlanr planning artifacts for graph and protocol drift. Use when status
 - Invocation from the plugin: `$planr:sync` in Codex/ChatGPT; `/planr:sync` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `scripts/sync.mjs`.
+- Packaged support: 1 packaged resources.

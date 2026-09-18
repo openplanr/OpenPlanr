@@ -3992,7 +3992,7 @@
     {
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "sourcePath": "scripts/marketplace/generate-ecosystem.mjs",
-      "sourceSha256": "48fe0fcd81cb5a667a336cbb8653b52857e0a6204a5a2d8773d00ffcb0063993"
+      "sourceSha256": "7aa51ea4d20b51a4b74aafb5c4cd09dca2b17e5b0371713ef1c11bfeb8039fd2"
     },
     {
       "generatorId": "scripts-migration-generate-preservation-catalog",
@@ -4044,7 +4044,7 @@
       "path": "adapters/manifests/ecosystem-assets.json",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "manifest",
-      "sha256": "f37764520953faeb5aabb729af4a5effe1f81f2de8ec75de6db061d85085d934"
+      "sha256": "ee1dda9a19534ec0d81fe28f3ed23e0802783edb1b8b5a5f23e82347d5f4bb82"
     },
     {
       "path": "adapters/manifests/generated-assets.json",
@@ -9066,7 +9066,7 @@
       "path": "docs/generated/skills.md",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "ecosystem-generated",
-      "sha256": "2134f8b5b220020307b2627b98b781365f5050a49b757559c02da48cfa80cb0f"
+      "sha256": "d94c4509f53b68be5a937fbc5f660558e4dc00bb8e8b682efa12e065c7417ee2"
     },
     {
       "path": "ecosystem.json",
@@ -18324,5 +18324,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:1fc4be4466dd5b20ad71594a51afba85ac30afb696bc74bfc294439f01ec3d52"
+  "documentDigest": "sha256:76a9200bb6bfbd273b76149f4b6e69e83042d98efed4a57bedb3a028cce9275d"
 }

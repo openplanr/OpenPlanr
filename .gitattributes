@@ -23,3 +23,27 @@ docs/diagrams/**/*.svg linguist-generated=true
 docs/diagrams/**/*.png linguist-generated=true
 docs/diagrams/**/*.html linguist-generated=true
 docs/diagrams/**/*.manifest.json linguist-generated=true
+
+# Self-contained projections written by `npm run generate` into the public pipeline
+# package. Their canonical sources live in packages/{protocol,operate,artifact,design}.
+packages/pipeline/schemas/** linguist-generated=true
+packages/pipeline/registry/** linguist-generated=true
+packages/pipeline/lib/protocol/** linguist-generated=true
+packages/pipeline/lib/operate/** linguist-generated=true
+packages/pipeline/lib/artifact/** linguist-generated=true
+packages/pipeline/lib/design/** linguist-generated=true
+packages/pipeline/lib/design-engine/** linguist-generated=true
+packages/pipeline/lib/dashboard/generated/** linguist-generated=true
+packages/pipeline/fixtures/diagram/** linguist-generated=true
+packages/pipeline/gallery/** linguist-generated=true
+packages/pipeline/references/diagram/** linguist-generated=true
+packages/pipeline/templates/** linguist-generated=true
+packages/pipeline/plugins/** linguist-generated=true
+packages/pipeline/agents/** linguist-generated=true
+packages/pipeline/commands/** linguist-generated=true
+packages/pipeline/docs/generated/** linguist-generated=true
+packages/pipeline/THIRD_PARTY-DIAGRAM-NOTICES.md linguist-generated=true
+packages/cli/lib/host-packages/** linguist-generated=true
+docs/generated/** linguist-generated=true
+conformance/migration/*.json linguist-generated=true
+ecosystem.json linguist-generated=true
