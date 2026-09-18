@@ -62,8 +62,14 @@ export const VALID_STATUSES: Partial<Record<ArtifactType, readonly string[]>> = 
   task: ['pending', 'in-progress', 'done'],
   quick: ['pending', 'in-progress', 'done'],
   backlog: ['open', 'closed', 'promoted'],
-  sprint: ['planning', 'active', 'completed'],
+  sprint: ['planned', 'active', 'closed'],
 };
+
+/** True when `status` is allowed for `type`, or when the type has no enforced vocabulary. */
+export function isValidStatus(type: ArtifactType, status: string): boolean {
+  const allowed = VALID_STATUSES[type];
+  return !allowed || allowed.includes(status);
+}
 
 /**
  * Spec-driven mode (third planning posture) uses a richer status lifecycle

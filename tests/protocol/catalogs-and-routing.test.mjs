@@ -70,7 +70,7 @@ test('catalog floors classify commands, skills, rules, and Class A-D outputs', (
   assert.ok(!commands.commands.some(({ argv }) => argv[0] === 'pipeline' && argv[1] === 'operate'));
 
   const skills = CANONICAL_REGISTRIES['skills.json'];
-  assert.equal(skills.skills.length, 26);
+  assert.equal(skills.skills.length, 27);
   assert.ok(skills.skills.some(({ skillId }) => skillId === 'planr-status'));
   assert.ok(skills.skills.some(({ skillId }) => skillId === 'planr-openplanr'));
   assert.ok(skills.skills.some(({ skillId }) => skillId === 'planr-design-loop'));

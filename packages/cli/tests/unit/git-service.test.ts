@@ -4,7 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { checkCleanTree, inspectGitTree } from '../../src/services/git-service.js';
+import {
+  checkCleanTree,
+  commitPaths,
+  GitUnavailableError,
+  inspectGitTree,
+} from '../../src/services/git-service.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -108,6 +113,61 @@ describe('git-service', () => {
       expect(result.message).toContain('disabled');
     } finally {
       rmSync(bare, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
+  it('commitPaths commits only the listed paths and leaves other staged work staged', async () => {
+    writeFileSync(join(repo, 'ours.md'), 'sprint note');
+    writeFileSync(join(repo, 'theirs.txt'), 'someone else');
+    await execFileAsync('git', ['add', 'theirs.txt'], { cwd: repo });
+
+    const result = await commitPaths(
+      repo,
+      ['ours.md'],
+      'chore(planr): refine backlog for SPRINT-001',
+    );
+    expect(result.committed).toBe(true);
+    if (result.committed) expect(result.sha).toMatch(/^[0-9a-f]{40}$/);
+    const { stdout: subject } = await execFileAsync('git', ['log', '--format=%s', '-1'], {
+      cwd: repo,
+    });
+    expect(subject.trim()).toBe('chore(planr): refine backlog for SPRINT-001');
+    const { stdout: files } = await execFileAsync(
+      'git',
+      ['show', '--name-only', '--format=', 'HEAD'],
+      {
+        cwd: repo,
+      },
+    );
+    expect(files.trim()).toBe('ours.md');
+    const { stdout: porcelain } = await execFileAsync('git', ['status', '--porcelain'], {
+      cwd: repo,
+    });
+    expect(porcelain.trim()).toBe('A  theirs.txt');
+
+    // Reset so later tests see a clean tree again
+    await execFileAsync('git', ['reset', '-q', 'HEAD', 'theirs.txt'], { cwd: repo });
+    rmSync(join(repo, 'theirs.txt'));
+  });
+
+  it('commitPaths reports nothing to commit when the paths are unchanged', async () => {
+    expect(await commitPaths(repo, ['ours.md'], 'noop')).toEqual({
+      committed: false,
+      reason: 'nothing changed',
+    });
+    expect(await commitPaths(repo, [], 'noop')).toEqual({
+      committed: false,
+      reason: 'no paths to commit',
+    });
+  });
+
+  it('commitPaths refuses paths outside the project and fails typed outside a repository', async () => {
+    await expect(commitPaths(repo, ['../escape.md'], 'x')).rejects.toThrow(/outside the project/);
+    const plain = mkdtempSync(join(tmpdir(), 'planr-nogit-'));
+    try {
+      await expect(commitPaths(plain, ['a.md'], 'x')).rejects.toBeInstanceOf(GitUnavailableError);
+    } finally {
+      rmSync(plain, { recursive: true, force: true });
     }
   });
 });

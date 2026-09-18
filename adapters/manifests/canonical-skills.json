@@ -28,6 +28,7 @@
     "planr-release",
     "planr-ship",
     "planr-spec",
+    "planr-sprint",
     "planr-status",
     "planr-sync"
   ],
@@ -2661,7 +2662,7 @@
       "source": "skills/planr-openplanr/openplanr.skill.json",
       "entrypoint": "skills/planr-openplanr/SKILL.md",
       "description": "Route a planning, specification, delivery, design, review, diagram, release, or operating request to the best OpenPlanr skill. Use when the right skill is unclear or the request spans several.",
-      "sourceDigest": "sha256:84ad4750b4e48a99761bc8ab812caa7267d445b7b1165bff6eb60dedc42aaf14",
+      "sourceDigest": "sha256:fe7904747aedfd992fa35330109585228fbbc0fb3c8ff6dbed3b3509d5d7665b",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -3469,6 +3470,88 @@
       "utilityRequirements": []
     },
     {
+      "id": "planr-sprint",
+      "version": "1.0.0",
+      "source": "skills/planr-sprint/openplanr.skill.json",
+      "entrypoint": "skills/planr-sprint/SKILL.md",
+      "description": "Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.",
+      "sourceDigest": "sha256:c37b13626a03721223646948ee0cd19a288768b5de7a1e73c4144c193362d40e",
+      "resources": [
+        {
+          "path": "agents/openai.yaml",
+          "kind": "agent-metadata",
+          "hosts": [
+            "codex",
+            "chatgpt"
+          ],
+          "executable": false,
+          "digest": "sha256:c93b319cbf650ff571031e8ab7117b593afca7e516519eed1449115971c1e1b2"
+        },
+        {
+          "path": "references/refinement-contract.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:0e2e621c0aa735b756187f28310f265be6a0330c790ecf71e27c527bad13cdcd"
+        },
+        {
+          "path": "references/sprint-formats.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:fc9620515dd2cfa1ecf9319c949bc491c620de9450e33f4e2ce08483023333c2"
+        },
+        {
+          "path": "schemas/refinement.schema.json",
+          "kind": "schema",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:591bcd9bb94bbcbae0e3494f2e7f42a7ea953c90076254c1b290fa399901b690"
+        }
+      ],
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "sprint-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "ruleIds": [
+        "R1",
+        "R6",
+        "R7"
+      ],
+      "contribution": "workflows",
+      "authorityClass": "planning-write",
+      "utilityRequirements": [
+        {
+          "commandId": "cli-sprint",
+          "argv": [
+            "sprint"
+          ],
+          "requiredOptions": [],
+          "optional": true
+        }
+      ]
+    },
+    {
       "id": "planr-status",
       "version": "1.0.0",
       "source": "skills/planr-status/openplanr.skill.json",
@@ -3573,5 +3656,5 @@
       ]
     }
   ],
-  "membershipDigest": "sha256:f8ce7f502995d7cf0e24145df9d1ea2e9c1bb6f05a891140bbe1e993270f4a6a"
+  "membershipDigest": "sha256:aa63fe0371528151b33947cb90c1bffc171ced22a956b836b104dabae387d816"
 }

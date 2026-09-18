@@ -339,6 +339,14 @@ export interface Sprint extends BaseArtifact {
   goals: string[];
   taskIds: string[];
   retrospective?: string;
+  /** The release cut this sprint feeds (ISO date); absent when no release profile exists. */
+  releaseCut?: string;
+  /** Engineer-days the selection was fitted to. */
+  capacityDays?: number;
+  /** ISO date of the last backlog refinement that produced the buckets. */
+  refinedAt?: string;
+  /** ISO date set by `planr sprint close`. */
+  closedAt?: string;
 }
 
 export interface ArtifactCollection {

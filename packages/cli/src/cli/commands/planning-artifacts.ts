@@ -13,11 +13,13 @@ import {
   updateArtifactFields,
 } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
+import { prepareSprintCreation } from '../../services/sprint-refinement-service.js';
 import { renderTemplate } from '../../services/template-service.js';
 import { writeFile } from '../../utils/fs.js';
 import { display, logger } from '../../utils/logger.js';
 import { parseMarkdown } from '../../utils/markdown.js';
 import { CliBoundaryError } from '../error-boundary.js';
+import { registerSprintRefinementCommands } from './sprint-refinement.js';
 
 type PlanningType = Extract<
   ArtifactType,
@@ -253,22 +255,12 @@ async function creationData(
       description: input.description ?? title,
       epicId: options.epic ?? input.epicId,
     };
-  const duration = String(options.duration ?? input.duration ?? '2w');
-  const weeks = /^(\d+)w$/u.exec(duration);
-  if (!weeks) throw new Error('Sprint duration must use the form 1w, 2w, and so on.');
-  const start = new Date();
-  const end = new Date(start);
-  end.setUTCDate(end.getUTCDate() + Number(weeks[1]) * 7);
-  return {
-    ...base,
-    name: title,
-    duration,
-    status: 'active',
-    startDate: start.toISOString().slice(0, 10),
-    endDate: end.toISOString().slice(0, 10),
-    goals: strings(input.goals),
-    taskIds: strings(input.taskIds),
-  };
+  return prepareSprintCreation(
+    projectDir,
+    config,
+    { ...base, goals: strings(input.goals), taskIds: strings(input.taskIds) },
+    options.duration,
+  );
 }
 
 async function create(type: PlanningType, program: Command, options: Record<string, unknown>) {
@@ -345,7 +337,7 @@ function registerCommon(
   program: Command,
   type: PlanningType,
   configureCreate?: (command: Command) => Command,
-) {
+): Command {
   const root = program.command(type).description(`Manage ${type} artifacts deterministically`);
   let createCommand = root
     .command(type === 'backlog' ? 'add' : 'create')
@@ -434,6 +426,7 @@ function registerCommon(
       await updateArtifactFields(projectDir, await loadConfig(projectDir), type, id, fields);
       logger.success(`Updated ${id}.`);
     });
+  return root;
 }
 
 export function registerEpicCommand(program: Command) {
@@ -466,9 +459,10 @@ export function registerBacklogCommand(program: Command) {
   );
 }
 export function registerSprintCommand(program: Command) {
-  registerCommon(program, 'sprint', (command) =>
+  const root = registerCommon(program, 'sprint', (command) =>
     command.option('-d, --duration <duration>', 'sprint duration', '2w'),
   );
+  registerSprintRefinementCommands(program, root, (source) => readInputData('sprint', source));
 }
 
 export function extractBacklogSpec(

@@ -124,8 +124,8 @@
     "pathRecords": 2100,
     "dispositionCounts": {
       "regenerated": 205,
-      "merged": 554,
-      "moved": 266,
+      "merged": 561,
+      "moved": 259,
       "retired": 57,
       "exact": 999,
       "excluded": 19
@@ -4155,8 +4155,8 @@
         "mode": "100644",
         "sha256": "789fd8b1e904388a2fb157527fb12b5776a54235b7a59d134409e649580fb219"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/cli/src/cli/commands/status.ts",
@@ -4165,10 +4165,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "789fd8b1e904388a2fb157527fb12b5776a54235b7a59d134409e649580fb219",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -4311,8 +4309,8 @@
         "mode": "100644",
         "sha256": "647805ffca7cfe0275163cbe6701fb370660ed3d02497d340ae5c3ca38e1a079"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/cli/src/cli/commands/update.ts",
@@ -4321,10 +4319,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "647805ffca7cfe0275163cbe6701fb370660ed3d02497d340ae5c3ca38e1a079",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -9498,8 +9494,8 @@
         "mode": "100644",
         "sha256": "0e7224e895d83b6de712535c3750f08ae518c7dce516bab580210ed745289476"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/cli/src/services/delivery-status-service.ts",
@@ -9508,10 +9504,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "0e7224e895d83b6de712535c3750f08ae518c7dce516bab580210ed745289476",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -9715,8 +9709,8 @@
         "mode": "100644",
         "sha256": "6205f9c3db2c8ff7661b811c6bd0903c12782f352e8c8cc7e7180c4fe77a0135"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/cli/src/services/git-service.ts",
@@ -9725,10 +9719,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "6205f9c3db2c8ff7661b811c6bd0903c12782f352e8c8cc7e7180c4fe77a0135",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -13508,8 +13500,8 @@
         "mode": "100644",
         "sha256": "83ca0cb78318588135f79cad699df1c9e408f598e66bf0a3748ab99c51a99005"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/cli/src/templates/sprints/sprint.md.hbs",
@@ -13518,10 +13510,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "83ca0cb78318588135f79cad699df1c9e408f598e66bf0a3748ab99c51a99005",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -15076,8 +15066,8 @@
         "mode": "100644",
         "sha256": "3aff071e250fe947096d098b4b825b7f9466ccc70da89f59c4e8cd1fd569b429"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/cli/tests/delivery-status-service.test.ts",
@@ -15086,10 +15076,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "3aff071e250fe947096d098b4b825b7f9466ccc70da89f59c4e8cd1fd569b429",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -19104,8 +19092,8 @@
         "mode": "100644",
         "sha256": "73fe047c60dc1f7d4b4494a04aed0f05fd9bb087a158d9540b953d8248ddfdd1"
       },
-      "disposition": "moved",
-      "reasonCode": "byte-preserved-destination",
+      "disposition": "merged",
+      "reasonCode": "post-integration-destination-evolution",
       "destinations": [
         {
           "path": "packages/cli/tests/unit/git-service.test.ts",
@@ -19114,10 +19102,8 @@
         }
       ],
       "verification": {
-        "policy": "byte-bound",
-        "requirement": "any",
-        "sha256": "73fe047c60dc1f7d4b4494a04aed0f05fd9bb087a158d9540b953d8248ddfdd1",
-        "executable": false
+        "policy": "destination-exists",
+        "requirement": "any"
       }
     },
     {
@@ -67020,5 +67006,5 @@
       }
     }
   ],
-  "documentDigest": "sha256:f9119a7c110fcf975d305e12023f5cea1d49e9c7aaf67070af2ca1617fc1ddf4"
+  "documentDigest": "sha256:14d57bf5d12f71cf87c90c614a1bbf549cbd39768de8b34d8800cf5cae4fbbe2"
 }

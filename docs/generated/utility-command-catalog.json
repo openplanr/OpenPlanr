@@ -646,6 +646,22 @@
       "classification": "deterministic-preserved"
     },
     {
+      "path": "sprint refinement",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "sprint diff",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "sprint close",
+      "classification": "deterministic-preserved"
+    },
+    {
+      "path": "sprint apply",
+      "classification": "deterministic-preserved"
+    },
+    {
       "path": "sync",
       "classification": "deterministic-preserved"
     },

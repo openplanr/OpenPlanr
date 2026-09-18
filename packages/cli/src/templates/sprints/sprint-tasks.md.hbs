@@ -1,0 +1,16 @@
+{{#if batches}}
+{{#each batches}}
+### {{title}}{{#if effortDays}} · {{effortDays}}d{{/if}}
+
+{{#each items}}
+- [{{#if checked}}x{{else}} {{/if}}] **{{id}}** {{title}}{{#if effort}} · {{effort}}{{/if}}{{#if link}} · [view]({{link}}){{/if}}
+{{/each}}
+
+{{/each}}
+{{else if taskIds}}
+{{#each taskIds}}
+- [ ] **{{this}}**
+{{/each}}
+{{else}}
+_No items selected yet. Run `planr sprint refinement <id> --data <refinement.json>` to fill the sprint._
+{{/if}}

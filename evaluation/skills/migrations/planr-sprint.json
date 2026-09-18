@@ -1,0 +1,23 @@
+{
+  "kind": "openplanr-skill-adoption-report",
+  "schemaVersion": "1.0.0",
+  "skillId": "planr-sprint",
+  "family": "planning",
+  "source": {
+    "format": "standard-skill-bundle",
+    "entrypoint": "skills/planr-sprint/SKILL.md",
+    "supportFiles": 3
+  },
+  "successor": {
+    "sourceFormat": "package-v1",
+    "path": "skills/planr-sprint/openplanr.skill.json",
+    "version": "1.0.0"
+  },
+  "classification": "adapted",
+  "intendedChanges": [
+    "Namespaced backlog refinement and sprint selection as planr-sprint.",
+    "Separated judging and selecting open work from planr-plan decomposition, planr-status reporting, and planr-operate decision queues.",
+    "Kept the reasoning in the host session and made the planr sprint refinement, diff, close, and apply utilities optional storage.",
+    "Required the structured question surface for framing and approval, with defaults named in Issues when it is unavailable."
+  ]
+}

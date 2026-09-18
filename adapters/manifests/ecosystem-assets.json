@@ -6,7 +6,7 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:0fac8ec7eb80e5e9466d25a5c4f0ba473c815d934395f133ed4f2889971d42cc"
+      "digest": "sha256:5040d42fd5908e96b5be1eb8a39dfb6bae2eca5f6011520dfaf5d524a86b3f2d"
     },
     {
       "path": "apps/dashboard/package.json",
@@ -46,7 +46,7 @@
     },
     {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:a68f0259af40e6fcc7be395a306ca44f56c90a366cc492ec75370d86580f1d5e"
+      "digest": "sha256:4189b084987a9a051cc88719111f875e5c52fefc004099fff60774d4b5dcdac7"
     },
     {
       "path": "packages/protocol/registries/output-paths.json",
@@ -66,7 +66,7 @@
     },
     {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:48c0be32d55a91a190427dd8ff448c6afb29259256b7a4bfa2db079ee3b4be06"
+      "digest": "sha256:a24abd7a2b255d94a2782b391cf91d38730925e1fc4a0c146ec9fe5d44a92ff8"
     },
     {
       "path": "packages/protocol/registries/task-kinds.json",
@@ -112,23 +112,23 @@
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:85811a137cf99ff8e87c5cbafcfd3f2f81bdba0ee734409d2059a508943cd5f4"
+      "digest": "sha256:eabffe9e6af8d98a03ece99c401e9754186fe159b7f358d619ce3eef53a8fc10"
     },
     {
       "path": "docs/generated/adapters.md",
-      "digest": "sha256:3fd29e0a04d75ab6c4a60c52fd234f090f6efc416209b06213e3fb7f3c68d7a3"
+      "digest": "sha256:546f1e2f5f0baee84e77ef4db905db7d3d04920478f7c0d3a5c0462712101091"
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:1e6172250ce27575fb3a6e13fff00ea63d2d1dd743d6bdcb1e9bcbdd1eaeea47"
+      "digest": "sha256:db7a64da34f186e04c4f073a364f12b943dd1e6d9fc7d5eac1509047dcb87b82"
     },
     {
       "path": "docs/generated/skills.md",
-      "digest": "sha256:1f265687bf522bce25eb66bdb6f7031eae68daa6afae7f13cb5817fec35e1e42"
+      "digest": "sha256:2134f8b5b220020307b2627b98b781365f5050a49b757559c02da48cfa80cb0f"
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:01fba48f0e2f9102875cd521f9dd0048b6359cc6b1e35f328fb0bf72ce1e053a"
+      "digest": "sha256:6d3d4f8778cac34c247b710d21ccf6be6c2786aab43e45006d72a3fc763435cf"
     }
   ]
 }

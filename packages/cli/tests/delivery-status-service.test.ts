@@ -49,7 +49,8 @@ describe('collectDeliveryStatus', () => {
   it('rolls up specs + quick + backlog in spec-driven mode (offline, no network)', async () => {
     const s = await collectDeliveryStatus(dir, config, {});
     expect(s.mode).toBe('spec-driven');
-    expect(s.order).toEqual(expect.arrayContaining(['Specs', 'Backlog', 'Quick Tasks']));
+    expect(s.sprint).toBeUndefined();
+    expect(s.order).toEqual(['Specs', 'Backlog', 'Quick Tasks']);
     expect(s.groups.Specs.map((i) => i.id)).toContain('SPEC-001');
     expect(s.groups['Quick Tasks'][0].linear?.identifier).toBe('MOD-114');
     expect(s.groups['Quick Tasks'][0].progress).toEqual({ done: 2, total: 2 });
@@ -101,5 +102,59 @@ describe('renderMarkdown', () => {
     expect(md).toContain('MOD-114');
     expect(md).toContain('## Outstanding work');
     expect(md).toContain('BL-001'); // the open item appears in Outstanding
+  });
+
+  it('reports the active sprint first with its cut and checkbox progress', async () => {
+    await ensureDir(join(dir, '.planr/sprints/SPRINT-004'));
+    await writeFile(
+      join(dir, '.planr/sprints/SPRINT-004-cut-25-sep.md'),
+      [
+        '---',
+        'id: "SPRINT-004"',
+        'name: "Cut 25 Sep 2026"',
+        'status: "active"',
+        'releaseCut: "2026-09-25"',
+        'capacityDays: 6',
+        'taskIds: ["BL-001", "QT-001"]',
+        '---',
+        '',
+        '## Tasks',
+        '',
+        '- [x] **BL-001** Baz item · hours',
+        '- [ ] **QT-001** Bar task · day',
+        '',
+      ].join('\n'),
+    );
+    await writeFile(join(dir, '.planr/sprints/SPRINT-004/refinement.md'), '# note\n');
+    await writeFile(
+      join(dir, '.planr/sprints/SPRINT-003-old.md'),
+      '---\nid: "SPRINT-003"\nname: "Old"\nstatus: "closed"\ntaskIds: []\n---\n',
+    );
+
+    const s = await collectDeliveryStatus(dir, config, {});
+    expect(s.order[0]).toBe('Sprint');
+    expect(s.groups.Sprint).toEqual([
+      expect.objectContaining({
+        id: 'SPRINT-004',
+        title: 'Cut 25 Sep 2026',
+        type: 'sprint',
+        status: 'active',
+        done: false,
+        addressed: false,
+        progress: { done: 1, total: 2 },
+        releaseCut: '2026-09-25',
+      }),
+    ]);
+    expect(s.sprint).toMatchObject({
+      id: 'SPRINT-004',
+      releaseCut: '2026-09-25',
+      capacityDays: 6,
+      taskIds: ['BL-001', 'QT-001'],
+      progress: { done: 1, total: 2 },
+    });
+    expect(s.outstanding.map((i) => i.id)).toContain('SPRINT-004');
+    expect(renderMarkdown(s)).toContain(
+      '| SPRINT-004 | • active | Cut 25 Sep 2026 · cut 2026-09-25 | 1/2 |',
+    );
   });
 });

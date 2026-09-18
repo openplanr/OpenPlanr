@@ -8,7 +8,7 @@
 import type { Command } from 'commander';
 import { findArtifactTypeById, updateArtifactFields } from '../../services/artifact-service.js';
 import { loadConfig } from '../../services/config-service.js';
-import { VALID_STATUSES } from '../../utils/constants.js';
+import { isValidStatus, VALID_STATUSES } from '../../utils/constants.js';
 import { logger } from '../../utils/logger.js';
 import { applyBulkCheckboxes, resolveBulkStatusIntent } from '../helpers/bulk-checkbox-update.js';
 
@@ -108,15 +108,12 @@ export function registerUpdateCommand(program: Command) {
           }
 
           // Validate status
-          if (opts.status && !opts.force) {
-            const allowed = VALID_STATUSES[type];
-            if (allowed && !allowed.includes(opts.status as string)) {
-              logger.error(
-                `Invalid status "${opts.status}" for ${type}. Valid: ${allowed.join(', ')}. Use --force to override.`,
-              );
-              hasError = true;
-              continue;
-            }
+          if (opts.status && !opts.force && !isValidStatus(type, opts.status as string)) {
+            logger.error(
+              `Invalid status "${opts.status}" for ${type}. Valid: ${VALID_STATUSES[type]?.join(', ')}. Use --force to override.`,
+            );
+            hasError = true;
+            continue;
           }
 
           // Build fields object

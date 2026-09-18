@@ -1479,6 +1479,68 @@
       ]
     },
     {
+      "skillId": "planr-sprint",
+      "skillVersion": "1.0.0",
+      "description": "Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.",
+      "lifecycle": "active",
+      "authorityClass": "planning-write",
+      "source": "skills/planr-sprint/openplanr.skill.json",
+      "sourceDigest": "sha256:8083ebeb2c89a73d127b99fc299e6ee4d2891b56740c4e266b52450f55a01794",
+      "triggerPolicy": {
+        "include": [
+          "Refine the open backlog and select what fits the next sprint or release cut",
+          "Judge which backlog items are stale, blocked, or ready and fit the sprint to capacity",
+          "Decide which open backlog items move to in progress before the release cut and which are dead"
+        ],
+        "exclude": [
+          "Decompose one specification into stories and tasks",
+          "Report delivery status without judging or selecting work"
+        ],
+        "deferTo": []
+      },
+      "contracts": {
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "sprint-result",
+            "version": "1.0.0"
+          }
+        ]
+      },
+      "cliRequirements": [],
+      "ruleIds": [
+        "R1",
+        "R6",
+        "R7"
+      ],
+      "contributionManifestRefs": [
+        "packages/skill-runtime/contributions/workflows.json"
+      ],
+      "hosts": [
+        {
+          "host": "claude-code",
+          "entrypoint": "/planr:sprint",
+          "path": "dist/plugins/claude/openplanr/skills/sprint/SKILL.md"
+        },
+        {
+          "host": "codex",
+          "entrypoint": "$planr:sprint",
+          "path": "dist/plugins/openai/openplanr/skills/sprint/SKILL.md"
+        },
+        {
+          "host": "cursor",
+          "entrypoint": "planr-sprint",
+          "path": "dist/plugins/cursor/openplanr/rules/planr-sprint.mdc"
+        }
+      ],
+      "testRefs": [
+        "tests/protocol/skill-catalog.test.mjs"
+      ],
+      "certificationRefs": [
+        "evaluation/skills/migrations/planr-sprint.json"
+      ]
+    },
+    {
       "skillId": "planr-status",
       "skillVersion": "1.0.0",
       "description": "Inspect project delivery or one feature's pipeline status without changing state. Use when the user asks what is done, pending, blocked, or next.",
@@ -1602,5 +1664,5 @@
     }
   ],
   "compatibilityAliases": [],
-  "documentDigest": "sha256:7a069d3f8aa02af2a988b90e142b23e359b261800b0549fdb9a38bb2bfb7e968"
+  "documentDigest": "sha256:f4110fb706b84192deaef1ee5238cc10477b1d91f0003040a33221e490312cc7"
 }

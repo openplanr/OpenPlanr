@@ -267,6 +267,17 @@ Shape vague product or engineering intent into a clear, measurable Protocol-comp
 - Aliases: none.
 - Packaged support: `references/specification-contract.md`.
 
+## `planr-sprint`
+
+Refine every open backlog item against the code and the calendar, refute the picks, and select a sprint that fits capacity and the release cut. Use before a cut or sprint; not for decomposing one specification or reporting status.
+
+- Select for: Refine the open backlog and select what fits the next sprint or release cut; Judge which backlog items are stale, blocked, or ready and fit the sprint to capacity; Decide which open backlog items move to in progress before the release cut and which are dead.
+- Defer for: Decompose one specification into stories and tasks; Report delivery status without judging or selecting work.
+- Invocation from the plugin: `$planr:sprint` in Codex/ChatGPT; `/planr:sprint` in Claude Code.
+- Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
+- Aliases: none.
+- Packaged support: `references/refinement-contract.md`, `references/sprint-formats.md`, `schemas/refinement.schema.json`.
+
 ## `planr-status`
 
 Inspect project delivery or one feature's pipeline status without changing state. Use when the user asks what is done, pending, blocked, or next.

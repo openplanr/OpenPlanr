@@ -44,7 +44,7 @@ const EXPECTED_SKILLS = Object.freeze([
   'planr-coo-review', 'planr-cpo-review', 'planr-cto-review', 'planr-dashboard', 'planr-design', 'planr-design-loop',
   'planr-design-review', 'planr-diagram', 'planr-doctor', 'planr-investigate', 'planr-land', 'planr-openplanr', 'planr-operate',
   'planr-plan',
-  'planr-plan-review', 'planr-release', 'planr-ship', 'planr-spec', 'planr-status', 'planr-sync',
+  'planr-plan-review', 'planr-release', 'planr-ship', 'planr-spec', 'planr-sprint', 'planr-status', 'planr-sync',
 ]);
 
 export function validateCanonicalRegistries(registries = CANONICAL_REGISTRIES) {

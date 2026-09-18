@@ -5,6 +5,15 @@ startDate: "{{startDate}}"
 endDate: "{{endDate}}"
 duration: "{{duration}}"
 status: "{{status}}"
+{{#if releaseCut}}
+releaseCut: "{{releaseCut}}"
+{{/if}}
+{{#if capacityDays}}
+capacityDays: {{capacityDays}}
+{{/if}}
+{{#if refinedAt}}
+refinedAt: "{{refinedAt}}"
+{{/if}}
 created: "{{date}}"
 updated: "{{date}}"
 taskIds: [{{#each taskIds}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
@@ -18,6 +27,12 @@ taskIds: [{{#each taskIds}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
 - **Start:** {{startDate}}
 - **End:** {{endDate}}
 - **Status:** {{uppercase status}}
+{{#if releaseCut}}
+- **Release cut:** {{releaseCut}}
+{{/if}}
+{{#if capacityDays}}
+- **Capacity:** {{capacityDays}} engineer-days
+{{/if}}
 
 {{#if goals}}
 ## Goals
@@ -29,17 +44,7 @@ taskIds: [{{#each taskIds}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}]
 
 ## Tasks
 
-{{#if taskIds}}
-{{#each taskIds}}
-- [ ] {{this}}
-{{/each}}
-{{else}}
-_No tasks assigned yet. Run `planr sprint add <taskId>` to assign tasks._
-{{/if}}
+{{tasksSection}}
 
 ## Retrospective
-_Complete this section when closing the sprint with `planr sprint close`._
-
----
-_View progress: `planr sprint status`_
-_Close sprint: `planr sprint close`_
+_Complete this section when closing the sprint with `planr sprint close {{id}}`._
