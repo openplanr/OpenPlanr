@@ -129,6 +129,8 @@ jobs:
         with:
           name: claude-plugin
           path: dist/plugins/claude/openplanr/
+          # The plugin manifest lives in .claude-plugin/, which the action drops by default.
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
 
