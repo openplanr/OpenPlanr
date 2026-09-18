@@ -1,42 +1,24 @@
-# Source provenance
+# Release provenance
 
-The OpenPlanr monorepo is introduced by a normal consolidation commit descended
-from the existing public CLI history. That commit imports a reviewed source
-snapshot; it does not claim that all included code was newly authored at once
-or by the consolidation author. Existing public releases, tags and attribution
-remain intact. The earlier local root snapshot stays in recovery custody.
+Every OpenPlanr package version is published by the release workflow from a reviewed
+commit on `main`, with an npm provenance attestation, and is never republished: a
+correction is always a new version. This page records the proof for each version so
+anyone can check that what the registry serves is what the repository built.
 
-The following repositories and exact Git cutoffs identify the four source
-lineages at consolidation. Versions describe those captured components, not a
-new publication from this repository.
+For each version, the release train compares the published archive file by file with
+the archive packed from the build commit, records the registry integrity string and the
+attested build commit, and creates a package-qualified tag (`<package>@<version>`) plus a
+GitHub release carrying the same evidence. The payload digest is the SHA-256 of the
+sorted per-file SHA-256 list of the archive.
 
-| Source repository | Captured component version | Git cutoff |
-| --- | --- | --- |
-| [openplanr](https://github.com/openplanr/OpenPlanr) | `1.25.3` | `a74466666d7550c1d5acc2baf8591da298c57991` |
-| [planr-pipeline](https://github.com/openplanr/planr-pipeline) | `0.44.0` | `fa591a7e7157b47e10d33e4c30997925779c692e` |
-| [@openplanr/skills](https://github.com/openplanr/skills) | `1.26.2` | `d052f6e2c78714d2092d78bd7f6dd7730b050938` |
-| [openplanr-marketplace](https://github.com/openplanr/marketplace) | `1.14.0` | `c7ffa4de90d7bced11ba7bc21a8ce91ab379171e` |
+To verify a version yourself:
 
-The original repositories identify the detailed development and release histories.
-Complete source and consolidation histories are also retained in private recovery
-archives. The consolidation branch retains the existing public OpenPlanr ancestry and
-tags. It does not import other source repositories’ private integration branches,
-custody refs or planning records. A source cutoff describes the starting lineage; subsequent
-integration changes are part of the snapshot.
+```bash
+npm install openplanr@<version> --ignore-scripts
+npm audit signatures
+```
 
-Captured versions above identify source cutoffs, not future release targets.
-The public packages `openplanr`, `planr-pipeline` and `@openplanr/protocol` use
-independent Changesets versions; consolidation does not reset existing lineages. The hosted web application is maintained separately in
-[openplanr/openplanr-web](https://github.com/openplanr/openplanr-web).
-
-## Publication provenance
-
-The first releases from this repository were versioned by commit
-`74c45e2a683a4b7e96cb6472ed71e03099b9c35e` (`chore(release): version public packages`, #250).
-Each published archive was rebuilt from that commit with `npm pack --ignore-scripts` and
-compared file by file against the archive served by the registry; every file's SHA-256 matched.
-The payload digest below is the SHA-256 of the sorted per-file SHA-256 list. Published versions are
-immutable and are never republished; a correction is a new version.
+## Published versions
 
 | Package | Version | Published (UTC) | Channel | Build commit in attestation | Payload SHA-256 | Registry integrity |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -54,51 +36,13 @@ immutable and are never republished; a correction is a new version.
 | `planr-pipeline` | `0.45.3` | 2026-09-18 15:39:16 | `publish-packages.yml` run 35363181266; SLSA v1 attestation | `1746c7fbaf57dae9096a1d48e945ac48f96bf3c3` | `fcb5cd79007027c0b3f6c6aebb3841fd269f8440182784007f7aed3cc3e0b110` | `sha512-T5dpryI7Bu7GBJgnwY4ZyzBtqQzX6VXxKzihdttEw2GtgWMl+JZYcR0iNsUUgR9zY3deSKciO3vw8mmtb/t/Xw==` |
 | `openplanr` | `2.2.1` | 2026-09-18 15:42:11 | `publish-packages.yml` run 35363181266; SLSA v1 attestation | `1746c7fbaf57dae9096a1d48e945ac48f96bf3c3` | `729bf07eba79fc7817c9d5667e9d7603d07f86aa02a0063d2f08d0111e496342` | `sha512-wLewqIiUyuTj957IKmIrYB9U+xHUjMhHCpJKM+G78R8CqACK2Pb6ail3rw7i1ELRHhXADMCuvbkmNKv/coTUcA==` |
 
-`@openplanr/protocol@0.2.0` reached the registry thirty seconds before its workflow dispatch
-(run 35165457743) reached the publish step; the workflow found identical bytes and skipped. Its
-bytes are proven against `74c45e2`, but it carries no build attestation. Every later version of
-every package is published only through `publish-packages.yml`. The pipeline dispatch that
-published `0.45.0` failed after publication in its registry-propagation check; #255 corrected
-that check, and the re-dispatch (run 35167179994) confirmed identical bytes. The `openplanr@2.0.1`
-run published successfully and then failed the same check because the registry took about eight
-minutes to expose the version; the bytes were verified against the registry once visible.
+`@openplanr/protocol@0.2.0` was published by hand moments before its workflow run and
+therefore carries a registry signature but no build attestation; every later version of
+every package was published by the workflow.
 
-Because all three payloads match `74c45e2`, the package-qualified tags `openplanr@2.0.0`,
-`planr-pipeline@0.45.0` and `@openplanr/protocol@0.2.0` should point at that commit, and
-`openplanr@2.0.1` at `80456b17757221b952a394e4fe1987376774e468`, whose rebuilt archive matched the
-registry file for file. These four annotated tags and their GitHub releases were created on
-2026-09-17 after that verification. The second release cycle — `@openplanr/protocol@0.3.0`,
-`planr-pipeline@0.45.1` and `openplanr@2.1.0` — was versioned by `745c3320ea8c26d52e786a11b891e7323f65809e`
-(#262), published in dependency order from that commit, rebuilt and compared file by file, and tagged
-at that commit the same day; each run's registry-propagation check passed. `openplanr@2.1.1` was
-versioned by `b357aa171395d076312a8ce64c817cde2e99e137` (#265), verified the same way and tagged there.
-The third cycle — `@openplanr/protocol@0.4.0`, `planr-pipeline@0.45.2` and `openplanr@2.2.0` — was
-versioned by `d99190b91fc0dc7632201747d1c76fbb6cc1654b` (#268), published in dependency order from that
-commit on 2026-09-18, rebuilt and compared file by file (334, 1,050 and 1,750 files), and tagged at that
-commit the same day; each run's registry-propagation check passed.
+## License
 
-`planr-pipeline` versions `0.43.0` and `0.44.0` were internal release candidates that were never
-published; the registry history runs `0.42.0` → `0.45.0`.
-
-## License and attribution
-
-OpenPlanr is founded and maintained by
-[Asem Abdo](https://github.com/AsemDevs). Historical authorship remains attributable
-to the source histories and retained notices. The root and captured source
-licenses are MIT; the skills repository's captured manifest omitted a license
-field, but its source includes an MIT `LICENSE` file. Existing component copyright
-notices and license text are preserved, including notices naming OpenPlanr and
-OpenPlanr Contributors. Third-party dependencies retain their respective licenses.
-
-Refer to [LICENSE](../LICENSE), [CLI license](../packages/cli/LICENSE), and
-[pipeline license](../packages/pipeline/LICENSE). Consolidation does not
-replace or remove these obligations.
-
-## Retained compatibility identifiers
-
-Backlog and specification identifiers in CLI examples and synthetic fixtures are
-part of the supported planning format. Historical component changelogs retain
-their original release references. The closed Protocol 1.5 migration-manifest
-schema retains its original repository constant for existing readers; it is not
-the current repository destination. These compatibility records do not import
-internal project plans or Git history.
+OpenPlanr is [MIT licensed](../LICENSE); see also the [CLI](../packages/cli/LICENSE) and
+[pipeline](../packages/pipeline/LICENSE) license files and
+[THIRD_PARTY-DIAGRAM-NOTICES.md](../packages/pipeline/THIRD_PARTY-DIAGRAM-NOTICES.md).
+Third-party dependencies retain their own licenses.

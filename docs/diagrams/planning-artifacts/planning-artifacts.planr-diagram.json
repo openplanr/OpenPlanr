@@ -1,0 +1,208 @@
+{
+  "kind": "planr-diagram",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "planning-artifacts",
+  "title": "OpenPlanr planning artifacts",
+  "summary": "Which skill writes each planning file under .planr/, and where the deterministic planr CLI validates and syncs them.",
+  "audience": "mixed",
+  "grammar": {
+    "id": "architecture",
+    "version": "1.0.0"
+  },
+  "layout": {
+    "direction": "top-down",
+    "detailTier": "balanced"
+  },
+  "theme": {
+    "themeId": "openplanr-default",
+    "mode": "auto"
+  },
+  "source": {
+    "format": "english",
+    "path": null,
+    "digest": null
+  },
+  "nodes": [
+    {
+      "id": "spec-skill",
+      "label": "planr-spec",
+      "kind": "secondary-item",
+      "description": "Shapes intent into a measurable specification.",
+      "semanticPosition": null
+    },
+    {
+      "id": "plan-skill",
+      "label": "planr-plan",
+      "kind": "secondary-item",
+      "description": "Decomposes the specification into user stories and tasks.",
+      "semanticPosition": null
+    },
+    {
+      "id": "ship-skill",
+      "label": "planr-ship",
+      "kind": "secondary-item",
+      "description": "Implements one task and appends provenance.",
+      "semanticPosition": null
+    },
+    {
+      "id": "spec",
+      "label": "Specification",
+      "kind": "primary-item",
+      "description": "SPEC-001: goals, scope, acceptance criteria.",
+      "semanticPosition": null
+    },
+    {
+      "id": "stories",
+      "label": "User stories",
+      "kind": "primary-item",
+      "description": "US-001…: user value with acceptance criteria and Gherkin sidecars.",
+      "semanticPosition": null
+    },
+    {
+      "id": "tasks",
+      "label": "Tasks",
+      "kind": "primary-item",
+      "description": "T-001…: Create/Modify/Preserve file lists and a definition of done.",
+      "semanticPosition": null
+    },
+    {
+      "id": "cli",
+      "label": "planr CLI",
+      "kind": "primary-item",
+      "description": "Validates, renders, and syncs planning files; never calls a model.",
+      "semanticPosition": null
+    },
+    {
+      "id": "github",
+      "label": "GitHub Issues",
+      "kind": "secondary-item",
+      "description": "Optional two-way sync target.",
+      "semanticPosition": null
+    },
+    {
+      "id": "linear",
+      "label": "Linear",
+      "kind": "secondary-item",
+      "description": "Optional two-way sync target.",
+      "semanticPosition": null
+    }
+  ],
+  "relations": [
+    {
+      "id": "r1",
+      "from": "spec-skill",
+      "to": "spec",
+      "kind": "flow",
+      "label": "writes",
+      "weight": null
+    },
+    {
+      "id": "r2",
+      "from": "plan-skill",
+      "to": "stories",
+      "kind": "flow",
+      "label": "writes",
+      "weight": null
+    },
+    {
+      "id": "r3",
+      "from": "plan-skill",
+      "to": "tasks",
+      "kind": "flow",
+      "label": "writes",
+      "weight": null
+    },
+    {
+      "id": "r4",
+      "from": "ship-skill",
+      "to": "tasks",
+      "kind": "dependency",
+      "label": "reads",
+      "weight": null
+    },
+    {
+      "id": "r5",
+      "from": "cli",
+      "to": "tasks",
+      "kind": "dependency",
+      "label": "validates",
+      "weight": null
+    },
+    {
+      "id": "r6",
+      "from": "cli",
+      "to": "github",
+      "kind": "flow",
+      "label": "syncs",
+      "weight": null
+    },
+    {
+      "id": "r7",
+      "from": "cli",
+      "to": "linear",
+      "kind": "flow",
+      "label": "syncs",
+      "weight": null
+    }
+  ],
+  "groups": [
+    {
+      "id": "agent",
+      "label": "Skills in your coding agent",
+      "members": [
+        "spec-skill",
+        "plan-skill",
+        "ship-skill"
+      ]
+    },
+    {
+      "id": "repo",
+      "label": ".planr/ in your repository",
+      "members": [
+        "spec",
+        "stories",
+        "tasks"
+      ]
+    },
+    {
+      "id": "trackers",
+      "label": "Optional trackers",
+      "members": [
+        "github",
+        "linear"
+      ]
+    }
+  ],
+  "lanes": [],
+  "events": [],
+  "series": [],
+  "axes": [],
+  "sets": [],
+  "annotations": [],
+  "emphasis": [
+    {
+      "targetId": "tasks",
+      "level": "primary"
+    }
+  ],
+  "accessibility": {
+    "title": "OpenPlanr planning artifacts",
+    "description": "The planr-spec, planr-plan, and planr-ship skills run inside the coding agent and write the specification, user stories, and tasks under .planr/ in the repository. The planr CLI validates those files and syncs them with GitHub Issues or Linear.",
+    "readingOrder": [
+      "spec-skill",
+      "plan-skill",
+      "ship-skill",
+      "spec",
+      "stories",
+      "tasks",
+      "cli",
+      "github",
+      "linear"
+    ]
+  },
+  "documentDigest": "sha256:467f71dbc42804d5ac1169acbc69e66c32b7ebd77c9f29b74eeda812b1cfe475"
+}

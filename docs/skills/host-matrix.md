@@ -6,7 +6,7 @@ host-native projections. Generated files are outputs, not alternate sources.
 | Capability | Claude Code | Codex | Cursor | Pipeline compatibility |
 |---|---|---|---|---|
 | Primary unit | Claude skill/plugin | Codex plugin skill | `.mdc` rule | packed skill asset |
-| Explicit invocation | `/planr:*` | `$planr:*` in the plugin; `$planr-*` in direct mode | Composer mention | adapter dispatch |
+| Explicit invocation | `/planr:*` | `$planr:*` in the plugin; the bare skill name (`$spec`) in direct mode | Composer mention of the `planr-*` rule | adapter dispatch |
 | Automatic matching | description metadata | description metadata with implicit invocation | rule description | registry routing |
 | Structured questions | native question when available | native composer question when available | Composer chat | terminal/headless resolver |
 | On-demand content | relative packaged references | relative packaged references | generated rule references | package-relative references |

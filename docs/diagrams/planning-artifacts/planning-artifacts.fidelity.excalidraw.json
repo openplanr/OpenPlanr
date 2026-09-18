@@ -1,0 +1,23 @@
+{
+  "kind": "diagram-fidelity-report",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.6.0",
+  "documentVersion": "1.0.0",
+  "digestAlgorithm": "sha256",
+  "canonicalization": "rfc8785",
+  "diagramId": "planning-artifacts",
+  "sourceFormat": "planr-diagram",
+  "targetFormat": "excalidraw",
+  "status": "unsupported",
+  "interpreted": [],
+  "omitted": [
+    {
+      "source": "architecture",
+      "reason": "No production editable-scene projection is certified for the architecture grammar."
+    }
+  ],
+  "notes": [
+    "No editable file was emitted; canonical SVG, HTML, and PNG remain available."
+  ],
+  "documentDigest": "sha256:a664957c183a4513afa75138edb152d9310f29d18b3824c0827483da746d219b"
+}

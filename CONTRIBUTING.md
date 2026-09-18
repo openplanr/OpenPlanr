@@ -1,14 +1,15 @@
 # Contributing to OpenPlanr
 
-Use an issue or pull request in [openplanr/OpenPlanr](https://github.com/openplanr/OpenPlanr)
-to explain the problem and proposed behavior. Report vulnerabilities privately as
-specified in [SECURITY.md](SECURITY.md). Participation follows our
+Open an issue through the [issue forms](https://github.com/openplanr/OpenPlanr/issues/new/choose)
+or start a [discussion](https://github.com/openplanr/OpenPlanr/discussions) to describe
+the problem and the behavior you propose before a large change. Report vulnerabilities
+privately as described in [SECURITY.md](SECURITY.md). Participation follows the
 [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Development setup
 
-Use Node.js 24 for contributor work, Git, and npm. Runtime compatibility checks
-also cover Node.js 20 and 22. Run these commands from the repository root:
+OpenPlanr requires Node.js 20 or later. CI verifies Node.js 20, 22, and 24; contributors
+use Node.js 24 (`.nvmrc`). Run these commands from the repository root:
 
 ```bash
 npm ci
@@ -29,7 +30,9 @@ so the CLI's compiled exports exist.
 
 ## Make a focused change
 
-1. Read the related code, tests, and public [architecture guide](docs/architecture/README.md). Local ADRs and planning records stay in ignored `.planr/` and are not required by contributor CI.
+1. Read the related code, tests, and the [architecture guide](docs/architecture/README.md).
+   [Working from a checkout](docs/contributing/dogfooding.md) explains how to install
+   your build into your own coding agent.
 2. Change the canonical owner first: Protocol contracts, then domain code, then
    downstream CLI, host adapters, and documentation as needed.
 3. Add regression coverage for changed behavior and update user-facing guidance.
@@ -37,8 +40,11 @@ so the CLI's compiled exports exist.
 5. Describe the concrete behavior change, validation results, and limitations.
 
 Use product-oriented branch names such as `fix/diagram-labels` or
-`feat/review-navigation`, and concise commits describing the change. Keep private
-planning, credentials, local runtime state, and customer examples out of commits.
+`feat/review-navigation`, Conventional Commit subjects, and a changeset
+(`npm run changeset`) for every change that alters a published package. Keep private
+planning, credentials, local runtime state, and customer examples out of commits;
+`npm run check:docs` rejects internal identifiers, retired commands, and contact details
+in public documentation.
 
 By submitting a contribution, you agree to license it under the license that
 applies to the files you modify, and you represent that you have the right to do
@@ -84,8 +90,8 @@ generation and after the build. Ignored local distributions may be created, but
 tracked files must reproduce without changes. During development, review and
 commit intentional source and generated-output changes before applying this gate.
 
-`npm run verify` checks generated assets, boundaries, preservation records,
-focused tests, and isolated packed-package behavior. It does not replace the full
+`npm run verify` checks generated assets, boundaries, preservation records, the committed
+documentation diagram sets, focused tests, and isolated packed-package behavior. It does not replace the full
 workspace test command or manual/browser checks for UI changes. The CI workflows
 under `.github/workflows/` define their additional runtime and browser coverage.
 
@@ -101,6 +107,6 @@ Operate suites, and the package tests of every workspace.
 ## Review and release
 
 Maintainers review changes for correctness, compatibility, usability, and clear
-ownership. A merge or successful CI run does not itself authorize a deployment,
-package publication, or repository-history cutover. See
-[Releasing](docs/RELEASING.md) for the release process.
+ownership. Merging to `main` publishes nothing by itself: pending changesets open a
+version PR, and merging that PR is the release decision. See
+[Releasing](docs/RELEASING.md).

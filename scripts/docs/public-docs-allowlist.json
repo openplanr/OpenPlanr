@@ -1,0 +1,61 @@
+{
+  "email-address": [
+    "packages/cli/docs/reference/spec-schema.md",
+    "packages/pipeline/docs/protocol/spec-artifacts.md"
+  ],
+  "hedging-boilerplate": [
+    "packages/pipeline/docs/protocol/operate-runtime-v2.md"
+  ],
+  "internal-identifier": [
+    "packages/cli/README.md",
+    "packages/cli/docs/CLI.md",
+    "packages/pipeline/docs/compatibility-matrix.md",
+    "packages/pipeline/docs/dashboard.md",
+    "packages/pipeline/docs/design-review.md",
+    "packages/pipeline/docs/ownership-map.md",
+    "packages/pipeline/docs/protocol/operate-runtime-v2.md",
+    "packages/pipeline/docs/skill-evaluation.md",
+    "packages/pipeline/docs/unified-dashboard-migration.md"
+  ],
+  "model-provider": [
+    ".github/ISSUE_TEMPLATE/bug_report.md",
+    "packages/pipeline/docs/design-loop.md",
+    "packages/pipeline/docs/doctor.md"
+  ],
+  "product-name-casing": [
+    "packages/cli/docs/CLI.md",
+    "packages/cli/docs/TROUBLESHOOTING.md",
+    "packages/pipeline/docs/compatibility-matrix.md",
+    "packages/pipeline/docs/pipeline-overview.md",
+    "packages/pipeline/docs/protocol/commands.md",
+    "packages/pipeline/docs/protocol/operate-runtime-v2.md",
+    "packages/pipeline/docs/runtime-guided-interactions.md"
+  ],
+  "retired-command": [
+    "packages/cli/docs/reference/spec-schema.md",
+    "packages/pipeline/README.md",
+    "packages/pipeline/docs/dashboard.md",
+    "packages/pipeline/docs/design-loop.md",
+    "packages/pipeline/docs/design-review.md",
+    "packages/pipeline/docs/ecosystem-guide.md",
+    "packages/pipeline/docs/pipeline-overview.md",
+    "packages/pipeline/docs/protocol/commands.md",
+    "packages/pipeline/docs/protocol/spec-artifacts.md",
+    "packages/pipeline/docs/rules.md",
+    "packages/pipeline/docs/us-anatomy.md"
+  ],
+  "retired-repository": [
+    "packages/cli/README.md",
+    "packages/cli/docs/ARTIFACT_REVIEW.md",
+    "packages/cli/docs/CLI.md",
+    "packages/cli/docs/reference/spec-schema.md",
+    "packages/pipeline/README.md",
+    "packages/pipeline/docs/compatibility-matrix.md",
+    "packages/pipeline/docs/doctor.md",
+    "packages/pipeline/docs/ecosystem-guide.md",
+    "packages/pipeline/docs/ownership-map.md",
+    "packages/pipeline/docs/protocol/README.md",
+    "packages/pipeline/docs/release-checklist.md",
+    "packages/pipeline/docs/release-ledger.md"
+  ]
+}
