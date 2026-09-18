@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.2
+### Patch Changes
+
+- 81e1a1d: Rewrite the package README and shipped guides around the product as it ships today: install and quick start for Claude Code, Codex, and Cursor, the command groups, the skills each host installs, and current troubleshooting. Retired commands, plugin identities, and provider language are removed.
+
 ## 2.2.1
 ### Patch Changes
 
