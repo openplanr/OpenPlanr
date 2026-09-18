@@ -137,7 +137,7 @@ MustPreserve:
   - "agents/*.md YAML frontmatter `tools:` field — manifest-enforced security boundary"
   - "schemas/v1.0.0/ as the self-contained projection of packages/protocol/schemas/v1.0.0/"
   - "conformance/expected/*.json fixture goldens"
-  - "registry/artifact-theme.json and docs/artifact-review-approval.md as established design artifacts"
+  - "registry/artifact-theme.json as the established artifact design token source"
   - "Protocol v1.0 planning schemas while adding optional v1.1 artifact contracts"
 ```
 

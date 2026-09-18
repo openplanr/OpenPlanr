@@ -3580,7 +3580,7 @@
       {
         "registryId": "commands",
         "destinationPath": "packages/protocol/registries/commands.json",
-        "destinationSha256": "4189b084987a9a051cc88719111f875e5c52fefc004099fff60774d4b5dcdac7"
+        "destinationSha256": "59935d48aba3786764791239ef6f804c0c6e8a96cc901c37b7c1cc07b9c54684"
       },
       {
         "registryId": "diagram-grammars",
@@ -3997,7 +3997,7 @@
     {
       "generatorId": "scripts-migration-generate-preservation-catalog",
       "sourcePath": "scripts/migration/generate-preservation-catalog.mjs",
-      "sourceSha256": "5c988bd674b88d09800f85b81a8deadbe1d32b3392ac26466f52eddcb177489b"
+      "sourceSha256": "c22eb76a1498c5d8ca88eb6dc28614f559823a874535e0f982686b0177b7e2f0"
     },
     {
       "generatorId": "scripts-protocol-project-protocol",
@@ -4044,7 +4044,7 @@
       "path": "adapters/manifests/ecosystem-assets.json",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "manifest",
-      "sha256": "da628c4d8857b773d2c9bce3f6bc4bc9361d505f14445570ffddb550d266b2d8"
+      "sha256": "9c4624065a38ba98b121cead1c84f42abba93d2469ed250f161aeefd93e8b3ae"
     },
     {
       "path": "adapters/manifests/generated-assets.json",
@@ -9072,7 +9072,7 @@
       "path": "ecosystem.json",
       "generatorId": "scripts-marketplace-generate-ecosystem",
       "custody": "ecosystem-generated",
-      "sha256": "f59991985a330fc2fb0a0722e2ad69bc5a3cfb826a488fe47981a3555c636e08"
+      "sha256": "80311386bf8ee996d0dec28e065ef6256fe49c4f1ab38ce16e417bba989d95cc"
     },
     {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
@@ -15372,7 +15372,7 @@
       "path": "packages/pipeline/lib/generated/protocol-projection.json",
       "generatorId": "scripts-protocol-project-protocol",
       "custody": "manifest",
-      "sha256": "8bd694cb369e752ec496852868aab56bbd237e31aecb85d6f82d5c57b001103d"
+      "sha256": "902684b16138a68c49169f98a59cfa134dfd1f966d493ac8f958ef8e4551a13a"
     },
     {
       "path": "packages/pipeline/lib/operate/action-verification-v2.d.mts",
@@ -16272,7 +16272,7 @@
       "path": "packages/pipeline/registry/v1.5.0/commands.json",
       "generatorId": "scripts-protocol-project-protocol",
       "custody": "public-package-projection",
-      "sha256": "4189b084987a9a051cc88719111f875e5c52fefc004099fff60774d4b5dcdac7"
+      "sha256": "59935d48aba3786764791239ef6f804c0c6e8a96cc901c37b7c1cc07b9c54684"
     },
     {
       "path": "packages/pipeline/registry/v1.5.0/output-paths.json",
@@ -17064,7 +17064,7 @@
       "path": "packages/protocol/registries/commands.json",
       "generatorId": "packages-protocol-scripts-generate-protocol-assets",
       "custody": "protocol-generated",
-      "sha256": "4189b084987a9a051cc88719111f875e5c52fefc004099fff60774d4b5dcdac7"
+      "sha256": "59935d48aba3786764791239ef6f804c0c6e8a96cc901c37b7c1cc07b9c54684"
     },
     {
       "path": "packages/protocol/registries/diagram-grammars.json",
@@ -17424,7 +17424,7 @@
       "path": "packages/protocol/src/generated/canonical-registries.mjs",
       "generatorId": "packages-protocol-scripts-generate-protocol-assets",
       "custody": "protocol-generated",
-      "sha256": "ab038bd20183db85ce636de1a95886b58e0bba4e67c3d6fcceec5409dddc73a7"
+      "sha256": "7cbe1bd468ecfd25e8eb685a434de5a9886609870dd4e2e0221d643b2198ee8a"
     },
     {
       "path": "packages/protocol/src/generated/contract-catalog-v2.mjs",
@@ -18324,5 +18324,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:3f81a9ba3b113ad2415a9214d3218c0fc1c3792c3fe86cd8a997d23bcfea576c"
+  "documentDigest": "sha256:fbdb33d1c20e2a0f91f0e6eb4fd930a132d21d72157bc64f0809768850525244"
 }

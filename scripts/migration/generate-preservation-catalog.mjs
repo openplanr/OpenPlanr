@@ -4,6 +4,7 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { DIAGRAM_V16_REGISTRIES, PROTOCOL_V17_REGISTRIES } from '../../packages/protocol/src/skill-source-contracts.mjs';
 import { excludeArchivedDashboardRecords } from './archived-dashboard-records.mjs';
+import { excludeArchivedPlanningRecords } from './archived-planning-records.mjs';
 import {
   assert,
   BASELINE_PATH,
@@ -46,7 +47,9 @@ const EVOLVED_MAPPING_IDS = new Set([
   'openplanr-cli:cutoff:tests/unit/upgrade-service.test.ts',
   // Current documentation no longer links to retired SPEC-016 planning records.
   'planr-pipeline:cutoff:docs/dashboard.md',
-  'planr-pipeline:cutoff:docs/operate/DASHBOARD.md',
+  // Public reference docs drop retired commands, private planning links and personal contacts.
+  'openplanr-cli:cutoff:docs/reference/spec-schema.md',
+  'planr-pipeline:cutoff:docs/protocol/operate-runtime-v2.md',
   // Conformance fixtures track supported test toolchains after consolidation.
   'planr-pipeline:cutoff:conformance/fixtures/default-mode-shipped/package.json',
   'planr-pipeline:cutoff:conformance/fixtures/default-mode-shipped/package-lock.json',
@@ -218,7 +221,6 @@ const EVOLVED_MAPPING_IDS = new Set([
   'planr-pipeline:cutoff:lib/pipeline/runtime.mjs',
   'planr-pipeline:cutoff:lib/pipeline/ship-context.d.mts',
   'planr-pipeline:cutoff:lib/pipeline/ship-context.mjs',
-  'planr-pipeline:cutoff:planr-pipeline.md',
   'planr-pipeline:cutoff:README.md',
   'planr-pipeline:cutoff:scripts/check-workflow-alias-parity.mjs',
   'planr-pipeline:cutoff:scripts/generate-guided-adapters.mjs',
@@ -379,6 +381,11 @@ const POST_CONSOLIDATION_RETIRED_MAPPING_IDS = new Map([
     'openplanr-cli:overlay:scripts/create-pinned-legacy-operate-replay-proof.mjs',
     'bundled-operate-compatibility-reader-replaces-external-verifier',
   ],
+  // Internal planning documents that had already evolved after integration are
+  // retired from the public tree; their archive copies live outside Git.
+  ['planr-pipeline:cutoff:docs/operate/DASHBOARD.md', 'retired-internal-planning-record'],
+  ['planr-pipeline:cutoff:planr-pipeline.md', 'retired-legacy-reference-card'],
+  ['openplanr-cli:cutoff:docs/qa/dashboard-accessibility-evidence.md', 'retired-internal-planning-record'],
 ]);
 
 const evidence = evidencePath ? JSON.parse(await readFile(path.resolve(evidencePath), 'utf8')) : null;
@@ -400,7 +407,10 @@ const evolvedPathInventory = evidence
 const decisionPathInventory = await excludePrivateDecisionRecords(evolvedPathInventory, { custodyRoot: privateDecisionCustodyRoot });
 const archivedDashboardFlag = argv.indexOf('--archived-dashboard-custody');
 const archivedDashboardCustodyRoot = archivedDashboardFlag >= 0 ? argv[archivedDashboardFlag + 1] : undefined;
-const archivedPathInventory = await excludeArchivedDashboardRecords(decisionPathInventory, { custodyRoot: archivedDashboardCustodyRoot });
+const archivedDashboardInventory = await excludeArchivedDashboardRecords(decisionPathInventory, { custodyRoot: archivedDashboardCustodyRoot });
+const archivedPlanningFlag = argv.indexOf('--archived-planning-custody');
+const archivedPlanningCustodyRoot = archivedPlanningFlag >= 0 ? argv[archivedPlanningFlag + 1] : undefined;
+const archivedPathInventory = await excludeArchivedPlanningRecords(archivedDashboardInventory, { custodyRoot: archivedPlanningCustodyRoot });
 const changelogCustodyFlag = argv.indexOf('--release-changelog-custody');
 const changelogCustodyRoot = changelogCustodyFlag >= 0 ? argv[changelogCustodyFlag + 1] : undefined;
 const pathInventory = await preserveReleaseChangelogHistory(archivedPathInventory, { custodyRoot: changelogCustodyRoot });
@@ -1364,7 +1374,7 @@ node --test conformance/migration/preservation-catalog.test.mjs
 
 \`--check\` is mutation-free. Clean-clone \`--write\` refreshes derived surfaces, generator/asset custody, the sealed baseline, and this documentation while retaining the committed source path floor. Reclassifying a source path still requires the original custody evidence.
 
-Private decision-record exclusion is an explicit reviewed classification. Its first application requires \`--private-decision-custody <restored-snapshot>\` and compares each original source hash before recording the public exclusion. Subsequent clean-clone checks use the sealed redacted inventory. Retired dashboard planning records likewise require \`--archived-dashboard-custody <archive-directory>\` on initial exclusion, preserving their original hashes and executable modes. Subsequent checks need no private archive. This Markdown report is private and is produced only in write mode.
+Private decision-record exclusion is an explicit reviewed classification. Its first application requires \`--private-decision-custody <restored-snapshot>\` and compares each original source hash before recording the public exclusion. Subsequent clean-clone checks use the sealed redacted inventory. Retired dashboard planning records likewise require \`--archived-dashboard-custody <archive-directory>\` on initial exclusion, and retired internal planning documents require \`--archived-planning-custody <archive-directory>\`, preserving their original hashes and executable modes. Subsequent checks need no private archive. This Markdown report is private and is produced only in write mode.
 
 Current seals: path inventory \`${inventory.documentDigest}\`; surface catalog \`${surface.documentDigest}\`; baseline \`${baseline.documentDigest}\`.
 `;

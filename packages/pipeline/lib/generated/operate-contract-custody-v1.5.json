@@ -10,7 +10,7 @@
       "path": "docs/protocol/operate-runtime-v2.md",
       "kind": "documentation",
       "legacySha256": "f9c28442b15f5e0c42958fd022a0d38fa0975205c239e53d44067ec66f6d272c",
-      "sha256": "56708540bf9fe6517c0d342925120ab6d6c8d053233cae5466e0ef6cb81974a0",
+      "sha256": "5afb3629d4ed28ae7c4aa540946913e635646556589ac42b188d8abb6cdc41ed",
       "custody": "captured-development-overlay",
       "source": "packages/pipeline/docs/protocol/operate-runtime-v2.md"
     },
