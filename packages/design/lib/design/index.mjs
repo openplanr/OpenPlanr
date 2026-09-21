@@ -49,6 +49,21 @@ export {
   writeImplementationHandoffDraft,
 } from './implementation-handoff.mjs';
 export {
+  approveImplementationHandoff,
+  compareImplementationHandoffVersions,
+  IMPLEMENTATION_HANDOFF_APPROVE_CAPABILITY,
+  IMPLEMENTATION_HANDOFF_REVOKE_CAPABILITY,
+  implementationHandoffApprovalPaths,
+  listImplementationHandoffHistory,
+  previewImplementationHandoffApproval,
+  readImplementationHandoffLifecycle,
+  readImplementationHandoffVersion,
+  recoverImplementationHandoffApproval,
+  regenerateImplementationHandoffDraft,
+  revokeImplementationHandoff,
+  supersedeImplementationHandoff,
+} from './implementation-handoff-approval.mjs';
+export {
   designSystemStatus, resolveDesignSystem, summarizeDesignSystem, DS_PACKAGE_FILES,
 } from './designSystem.mjs';
 export {

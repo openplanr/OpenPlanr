@@ -2,8 +2,8 @@
 
 // packages/design/lib/design/utility.mjs
 import { spawn } from "node:child_process";
-import { existsSync as existsSync11, mkdirSync as mkdirSync8, readFileSync as readFileSync16, realpathSync as realpathSync7, writeFileSync as writeFileSync8 } from "node:fs";
-import { dirname as dirname13, join as join12, resolve as resolve7 } from "node:path";
+import { existsSync as existsSync12, mkdirSync as mkdirSync9, readFileSync as readFileSync17, realpathSync as realpathSync7, writeFileSync as writeFileSync9 } from "node:fs";
+import { dirname as dirname14, join as join13, resolve as resolve7 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // packages/design/lib/design/document.mjs
@@ -346,9 +346,9 @@ function createArtifactBridgeTools(document2, window2) {
           if (source.nodeType !== 1 || source.tagName !== "TEXTAREA") for (let child = source.firstChild; child; child = child.nextSibling) append.call(target, cloneStyled(child));
           return target;
         };
-        const clone5 = cloneStyled(document2.documentElement);
-        setAttribute.call(clone5, "xmlns", "http://www.w3.org/1999/xhtml");
-        const markup = serialize3.call(new Serializer(), clone5);
+        const clone6 = cloneStyled(document2.documentElement);
+        setAttribute.call(clone6, "xmlns", "http://www.w3.org/1999/xhtml");
+        const markup = serialize3.call(new Serializer(), clone6);
         if (markup.length > 4 * 1024 * 1024) throw new Error("Thumbnail markup limit exceeded.");
         const scale = Math.min(1, ARTIFACT_THUMBNAIL_MAX_EDGE / Math.max(width, height));
         const outputWidth = Math.max(1, Math.round(width * scale)), outputHeight = Math.max(1, Math.round(height * scale));
@@ -13299,7 +13299,7 @@ function reviewExportTools() {
   const localPath = /(?:file:\/\/|\/(?:Users|home|private|tmp|var|etc|opt|Volumes)\/|[A-Za-z]:\\|\\\\)/u;
   const field = (value) => typeof value === "string" && value.length <= 1024 && !localPath.test(value) ? value : null;
   const digest4 = (value) => typeof value === "string" && /^[a-f0-9]{64}$/u.test(value) ? value : null;
-  const timestamp2 = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/u.test(value) && Number.isFinite(Date.parse(value)) ? value : null;
+  const timestamp3 = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/u.test(value) && Number.isFinite(Date.parse(value)) ? value : null;
   const quote = (value) => {
     if (typeof value !== "string" || value.length > 16384) throw new TypeError("Review text must be a string of at most 16384 characters.");
     return value;
@@ -13391,12 +13391,12 @@ function reviewExportTools() {
         stale: staleReasons.length > 0,
         staleReasons,
         author: identity(pin.author),
-        createdAt: timestamp2(pin.createdAt),
-        updatedAt: timestamp2(pin.updatedAt),
+        createdAt: timestamp3(pin.createdAt),
+        updatedAt: timestamp3(pin.updatedAt),
         comment: quote(pin.comment),
         location: location(pin),
-        disposition: field(decision.disposition) ? { value: field(decision.disposition), explanation: quote(decision.reason ?? ""), author: typeof decision.author === "string" ? { id: null, name: quote(decision.author) } : identity(decision.author), updatedAt: timestamp2(decision.updatedAt) } : null,
-        replies: [...replies].sort(order).map((reply) => ({ id: field(reply.id), author: identity(reply.author), createdAt: timestamp2(reply.createdAt), comment: quote(reply.comment) }))
+        disposition: field(decision.disposition) ? { value: field(decision.disposition), explanation: quote(decision.reason ?? ""), author: typeof decision.author === "string" ? { id: null, name: quote(decision.author) } : identity(decision.author), updatedAt: timestamp3(decision.updatedAt) } : null,
+        replies: [...replies].sort(order).map((reply) => ({ id: field(reply.id), author: identity(reply.author), createdAt: timestamp3(reply.createdAt), comment: quote(reply.comment) }))
       };
       const groupKey = JSON.stringify([sourceRevisionId, reviewId, reviewOf, refs.screen, refs.direction, refs.frame, pin.artifactId]);
       if (!groups.has(groupKey)) groups.set(groupKey, {
@@ -13422,7 +13422,7 @@ function reviewExportTools() {
       design: { id: field(design.id), title: field(design.title) ?? "Design review" },
       currentRevisionId: current.revisionId,
       currentArtifactDigest: current.reviewOf,
-      ...timestamp2(input.generatedAt) ? { generatedAt: timestamp2(input.generatedAt) } : {},
+      ...timestamp3(input.generatedAt) ? { generatedAt: timestamp3(input.generatedAt) } : {},
       completeness: { historyComplete: input.historyComplete === true, olderPagesLoading: input.olderPagesLoading === true, includesUnsentLocalChanges: input.includesUnsentLocalChanges === true },
       summary: { threads: threads.length, replies: threads.reduce((count, thread) => count + thread.replies.length, 0), open: threads.filter((thread) => !thread.resolved).length, resolved: threads.filter((thread) => thread.resolved).length, stale: threads.filter((thread) => thread.stale).length },
       resolutionGuidance: [
@@ -13993,8 +13993,8 @@ ${errors.join("\n")}`);
 }
 
 // packages/design/lib/design/review.mjs
-import { existsSync as existsSync10, readFileSync as readFileSync15 } from "node:fs";
-import { dirname as dirname12, join as join11 } from "node:path";
+import { existsSync as existsSync11, readFileSync as readFileSync16 } from "node:fs";
+import { dirname as dirname13, join as join12 } from "node:path";
 
 // packages/artifact/lib/artifact/import.mjs
 import {
@@ -15574,11 +15574,11 @@ function enumValue(value, values, label) {
   return value;
 }
 function isoTimestamp(value, label) {
-  const timestamp2 = value instanceof Date ? value.toISOString() : value;
-  if (typeof timestamp2 !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp2) || !Number.isFinite(Date.parse(timestamp2))) {
+  const timestamp3 = value instanceof Date ? value.toISOString() : value;
+  if (typeof timestamp3 !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp3) || !Number.isFinite(Date.parse(timestamp3))) {
     invalid2(`${label} must be an ISO-8601 date-time.`);
   }
-  return timestamp2;
+  return timestamp3;
 }
 function normalizeArtifactReviewIdentity(value, { allowEmpty = false } = {}) {
   if (value === null || value === void 0 || value === "") {
@@ -17722,6 +17722,425 @@ function importImplementationHandoffPackage(input, { resolveSource } = {}) {
   return value;
 }
 
+// packages/design/lib/design/implementation-handoff-approval.mjs
+import { createHash as createHash7, randomUUID as randomUUID4 } from "node:crypto";
+import {
+  existsSync as existsSync10,
+  mkdirSync as mkdirSync8,
+  readFileSync as readFileSync15,
+  readdirSync as readdirSync4,
+  renameSync as renameSync7,
+  rmSync as rmSync7,
+  writeFileSync as writeFileSync8
+} from "node:fs";
+import { dirname as dirname12, join as join11 } from "node:path";
+var DIGEST2 = /^sha256:[a-f0-9]{64}$/u;
+var ID = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/u;
+var APPROVE_CAPABILITY = "design:implementation-handoff:approve";
+var REVOKE_CAPABILITY = "design:implementation-handoff:revoke";
+var MAX_REASON_BYTES = 16 * 1024;
+var clone5 = (value) => JSON.parse(canonicalizeJson(value));
+var jsonBytes2 = (value) => `${JSON.stringify(value, null, 2)}
+`;
+var requestKey = (requestId) => createHash7("sha256").update(requestId).digest("hex");
+var packageKey = (value) => {
+  const identity = createHash7("sha256").update(value.id).digest("hex").slice(0, 16);
+  return `${identity}-v${value.version}-${value.contentDigest.slice(7, 23)}`;
+};
+function atomicText2(path, value) {
+  mkdirSync8(dirname12(path), { recursive: true });
+  const temporary = `${path}.${randomUUID4()}.tmp`;
+  try {
+    writeFileSync8(temporary, value, { flag: "wx", mode: 384 });
+    renameSync7(temporary, path);
+  } finally {
+    rmSync7(temporary, { force: true });
+  }
+}
+function immutableText(path, value) {
+  mkdirSync8(dirname12(path), { recursive: true });
+  try {
+    writeFileSync8(path, value, { flag: "wx", mode: 384 });
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+    if (readFileSync15(path, "utf8") !== value)
+      throw lifecycleConflict("Immutable implementation handoff history conflicts with this operation.");
+  }
+}
+function lifecycleConflict(message2) {
+  return Object.assign(new Error(message2), { code: "E_IMPLEMENTATION_HANDOFF_CONFLICT", statusCode: 409 });
+}
+function lifecycleForbidden(message2) {
+  return Object.assign(new Error(message2), { code: "E_IMPLEMENTATION_HANDOFF_FORBIDDEN", statusCode: 403 });
+}
+function normalizeId(value, label) {
+  if (typeof value !== "string" || value.length > 160 || !ID.test(value))
+    throw new TypeError(`${label} is invalid.`);
+  return value;
+}
+function normalizeRequestId(value) {
+  return normalizeId(value, "Implementation handoff request identity");
+}
+function timestamp2(clock) {
+  const candidate = typeof clock === "function" ? clock() : /* @__PURE__ */ new Date();
+  const value = candidate instanceof Date ? candidate : new Date(candidate);
+  if (!Number.isFinite(value.getTime())) throw new TypeError("The approval clock returned an invalid timestamp.");
+  return value.toISOString();
+}
+function authorizeActor(actor, capability, at) {
+  if (!actor || typeof actor !== "object" || Array.isArray(actor))
+    throw lifecycleForbidden("Implementation handoff approval requires an owner identity.");
+  const actorId = normalizeId(actor.id, "Implementation handoff actor identity");
+  if (!["owner", "maintainer"].includes(actor.role))
+    throw lifecycleForbidden("Only an owner or maintainer can change implementation handoff approval.");
+  if (!Array.isArray(actor.capabilities) || !actor.capabilities.includes(capability))
+    throw lifecycleForbidden("The actor lacks the required implementation handoff capability.");
+  if (actor.sessionExpiresAt === void 0) {
+    if (actorId !== "local-owner")
+      throw lifecycleForbidden("Hosted implementation handoff approval requires a bounded session.");
+  } else {
+    const expiry = new Date(actor.sessionExpiresAt);
+    if (!Number.isFinite(expiry.getTime()) || expiry.getTime() <= new Date(at).getTime())
+      throw lifecycleForbidden("The implementation handoff approval session has expired.");
+  }
+  return Object.freeze({ actorId, role: actor.role, capability });
+}
+function implementationHandoffApprovalPaths(root) {
+  const base = implementationHandoffPaths(root);
+  return Object.freeze({
+    ...base,
+    events: join11(base.directory, "events"),
+    journal: join11(base.directory, "lifecycle-publication.json")
+  });
+}
+function archivePaths(root, value) {
+  const directory = join11(implementationHandoffPaths(root).history, packageKey(value));
+  return { directory, json: join11(directory, "handoff.json"), markdown: join11(directory, "handoff.md") };
+}
+function eventPath(root, requestId) {
+  return join11(implementationHandoffApprovalPaths(root).events, `${requestKey(requestId)}.json`);
+}
+function readJson3(path, fallback = void 0) {
+  try {
+    return JSON.parse(readFileSync15(path, "utf8"));
+  } catch (error) {
+    if (error.code === "ENOENT" && fallback !== void 0) return fallback;
+    throw error;
+  }
+}
+function readExistingRequest(root, signature2) {
+  const existing = readJson3(eventPath(root, signature2.requestId), null);
+  if (!existing) return null;
+  if (canonicalizeJson(existing.signature) !== canonicalizeJson(signature2))
+    throw lifecycleConflict("This implementation handoff request identity was already used for different input.");
+  return existing;
+}
+function pointerFor(value, status, eventId, extra = {}) {
+  return {
+    kind: "openplanr-design-implementation-handoff-current",
+    schemaVersion: "1.0.0",
+    id: value.id,
+    version: value.version,
+    contentDigest: value.contentDigest,
+    status,
+    authority: "prepare-plan",
+    eventId,
+    ...extra
+  };
+}
+function writeLifecycleJournal(root, journal) {
+  const paths = implementationHandoffApprovalPaths(root);
+  if (existsSync10(paths.journal)) recoverImplementationHandoffApproval(root);
+  atomicText2(paths.journal, jsonBytes2(journal));
+  return recoverImplementationHandoffApproval(root);
+}
+function recoverImplementationHandoffApproval(root) {
+  const paths = implementationHandoffApprovalPaths(root);
+  if (!existsSync10(paths.journal)) return false;
+  const journal = readJson3(paths.journal);
+  if (journal.kind !== "openplanr-design-implementation-handoff-lifecycle-publication" || journal.schemaVersion !== "1.0.0")
+    throw new TypeError("The implementation handoff lifecycle journal is invalid.");
+  if (journal.archive) {
+    const value = assertImplementationHandoffProjection(journal.archive);
+    if (value.status !== "approved") throw new TypeError("Only approved packages belong in immutable history.");
+    const archive = archivePaths(root, value);
+    immutableText(archive.json, jsonBytes2(value));
+    immutableText(archive.markdown, value.markdown);
+  }
+  immutableText(eventPath(root, journal.event.requestId), jsonBytes2(journal.event));
+  atomicText2(paths.current, jsonBytes2(journal.pointer));
+  rmSync7(paths.journal, { force: true });
+  return true;
+}
+function readImplementationHandoffVersion(root, identity) {
+  recoverImplementationHandoffApproval(root);
+  const matches = listImplementationHandoffHistory(root).filter((value) => value.id === identity.id && value.version === identity.version && (identity.contentDigest === void 0 || value.contentDigest === identity.contentDigest));
+  if (matches.length !== 1)
+    throw lifecycleConflict(matches.length ? "Implementation handoff version identity is ambiguous." : "Implementation handoff version was not found.");
+  return matches[0];
+}
+function listImplementationHandoffHistory(root) {
+  recoverImplementationHandoffApproval(root);
+  const directory = implementationHandoffPaths(root).history;
+  if (!existsSync10(directory)) return [];
+  return readdirSync4(directory, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => assertImplementationHandoffProjection(readJson3(join11(directory, entry.name, "handoff.json")))).sort((left, right) => left.version - right.version || left.id.localeCompare(right.id));
+}
+function readImplementationHandoffLifecycle(root) {
+  recoverImplementationHandoffApproval(root);
+  const paths = implementationHandoffApprovalPaths(root);
+  const current = readJson3(paths.current, null);
+  const events = existsSync10(paths.events) ? readdirSync4(paths.events).filter((name) => name.endsWith(".json")).map((name) => readJson3(join11(paths.events, name))).sort((left, right) => left.at.localeCompare(right.at) || left.eventId.localeCompare(right.eventId)) : [];
+  return Object.freeze({ current, history: listImplementationHandoffHistory(root), events });
+}
+function previewImplementationHandoffApproval(root) {
+  const draft = readImplementationHandoffDraft(root);
+  const lifecycle = readImplementationHandoffLifecycle(root);
+  if (!draft) return Object.freeze({ available: false, summary: null, approvalRequest: null });
+  const alreadyCurrent = lifecycle.current?.status === "approved" && lifecycle.current.id === draft.id && lifecycle.current.version === draft.version && lifecycle.current.contentDigest === draft.contentDigest;
+  return Object.freeze({
+    available: draft.basis.readiness.status === "ready" && !alreadyCurrent,
+    summary: {
+      title: draft.title,
+      packageVersion: draft.version,
+      selectedVariant: draft.basis.selectedVariant,
+      requirementCount: draft.requirements.length,
+      unresolvedNonblockingItems: 0,
+      effect: "Prepare Plan",
+      description: "Approve this reviewed design context for a later, separate Plan invocation."
+    },
+    approvalRequest: {
+      expectedVersion: draft.version,
+      expectedContentDigest: draft.contentDigest
+    }
+  });
+}
+function assertExpectedDraft(draft, request2, currentBasis) {
+  if (!Number.isInteger(request2.expectedVersion) || request2.expectedVersion < 1 || !DIGEST2.test(request2.expectedContentDigest ?? ""))
+    throw new TypeError("Approval requires the expected draft version and content identity.");
+  if (draft.version !== request2.expectedVersion || draft.contentDigest !== request2.expectedContentDigest)
+    throw lifecycleConflict("The implementation package changed after it was loaded. Refresh before approving.");
+  if (currentBasis && canonicalizeJson(draft.basis) !== canonicalizeJson(currentBasis))
+    throw lifecycleConflict("The design basis changed after this implementation package was composed.");
+  if (draft.basis.readiness.status !== "ready")
+    throw lifecycleConflict("Only a ready implementation package can be approved.");
+}
+function assertUniqueVersion(root, value) {
+  const existing = listImplementationHandoffHistory(root).find((item2) => item2.id === value.id && item2.version === value.version);
+  if (existing && existing.contentDigest !== value.contentDigest)
+    throw lifecycleConflict("This implementation handoff version already identifies different content.");
+  return existing;
+}
+function approveImplementationHandoff(root, request2, options = {}) {
+  const requestId = normalizeRequestId(request2?.requestId);
+  const at = timestamp2(options.clock);
+  const actor = authorizeActor(options.actor, APPROVE_CAPABILITY, at);
+  const signature2 = {
+    operation: "approve",
+    requestId,
+    expectedVersion: request2.expectedVersion,
+    expectedContentDigest: request2.expectedContentDigest,
+    actor
+  };
+  const repeated = readExistingRequest(root, signature2);
+  if (repeated) {
+    return {
+      package: readImplementationHandoffVersion(root, repeated.package),
+      current: readImplementationHandoffLifecycle(root).current,
+      event: repeated,
+      repeated: true
+    };
+  }
+  const draft = readImplementationHandoffDraft(root, { allowMissing: false });
+  assertExpectedDraft(draft, request2, options.currentBasis);
+  if (options.resolveSource) verifyImplementationHandoffSources(draft, options.resolveSource);
+  const approved = assertImplementationHandoffProjection({
+    ...clone5(draft),
+    status: "approved",
+    approval: {
+      actorId: actor.actorId,
+      approvedAt: at,
+      contentDigest: draft.contentDigest,
+      authority: "prepare-plan"
+    }
+  });
+  const existing = assertUniqueVersion(root, approved);
+  if (existing) {
+    const lifecycle = readImplementationHandoffLifecycle(root);
+    if (lifecycle.current?.status === "approved" && lifecycle.current.id === approved.id && lifecycle.current.version === approved.version && lifecycle.current.contentDigest === approved.contentDigest)
+      return { package: existing, current: lifecycle.current, event: lifecycle.events.find((item2) => item2.type === "approved" && item2.package.contentDigest === approved.contentDigest) ?? null, repeated: true };
+    throw lifecycleConflict("This immutable implementation handoff version already exists outside the current approval.");
+  }
+  const eventId = `handoff-approved-${requestKey(requestId).slice(0, 24)}`;
+  const event = {
+    kind: "openplanr-design-implementation-handoff-event",
+    schemaVersion: "1.0.0",
+    eventId,
+    type: "approved",
+    requestId,
+    signature: signature2,
+    package: { id: approved.id, version: approved.version, contentDigest: approved.contentDigest },
+    actor,
+    at,
+    authority: "prepare-plan"
+  };
+  const pointer = pointerFor(approved, "approved", eventId, { updatedAt: at });
+  writeLifecycleJournal(root, {
+    kind: "openplanr-design-implementation-handoff-lifecycle-publication",
+    schemaVersion: "1.0.0",
+    archive: approved,
+    event,
+    pointer
+  });
+  return { package: approved, current: pointer, event, repeated: false };
+}
+function supersedeImplementationHandoff(root, replacement, request2, options = {}) {
+  const checked2 = assertImplementationHandoffProjection(clone5(replacement));
+  if (checked2.status !== "draft") throw new TypeError("A superseding package must still be a draft.");
+  const requestId = normalizeRequestId(request2?.requestId);
+  const at = timestamp2(options.clock);
+  const actor = authorizeActor(options.actor, APPROVE_CAPABILITY, at);
+  const lifecycle = readImplementationHandoffLifecycle(root);
+  const currentIdentity = lifecycle.current && {
+    id: lifecycle.current.id,
+    version: lifecycle.current.version,
+    contentDigest: lifecycle.current.contentDigest
+  };
+  const signature2 = {
+    operation: "supersede",
+    requestId,
+    current: currentIdentity,
+    replacement: { id: checked2.id, version: checked2.version, contentDigest: checked2.contentDigest },
+    actor
+  };
+  const repeated = readExistingRequest(root, signature2);
+  if (repeated) return { current: readImplementationHandoffLifecycle(root).current, event: repeated, repeated: true };
+  if (!lifecycle.current || lifecycle.current.status !== "approved") return null;
+  if (lifecycle.current.id === checked2.id && lifecycle.current.version === checked2.version && lifecycle.current.contentDigest === checked2.contentDigest) return null;
+  if (checked2.version <= lifecycle.current.version)
+    throw lifecycleConflict("A regenerated implementation package must use a newer version.");
+  const eventId = `handoff-superseded-${requestKey(requestId).slice(0, 24)}`;
+  const event = {
+    kind: "openplanr-design-implementation-handoff-event",
+    schemaVersion: "1.0.0",
+    eventId,
+    type: "superseded",
+    requestId,
+    signature: signature2,
+    package: signature2.current,
+    supersededBy: signature2.replacement,
+    actor,
+    at,
+    authority: "prepare-plan"
+  };
+  const prior = readImplementationHandoffVersion(root, signature2.current);
+  const pointer = pointerFor(prior, "superseded", eventId, { supersededBy: signature2.replacement, updatedAt: at });
+  writeLifecycleJournal(root, {
+    kind: "openplanr-design-implementation-handoff-lifecycle-publication",
+    schemaVersion: "1.0.0",
+    event,
+    pointer
+  });
+  return { current: pointer, event, repeated: false };
+}
+function regenerateImplementationHandoffDraft(root, input, request2, options = {}) {
+  const requestId = normalizeRequestId(request2?.requestId);
+  const existingEvent = readJson3(eventPath(root, requestId), null);
+  if (existingEvent) {
+    const at = timestamp2(options.clock);
+    const actor = authorizeActor(options.actor, APPROVE_CAPABILITY, at);
+    if (existingEvent.type !== "superseded" || existingEvent.requestId !== requestId || canonicalizeJson(existingEvent.actor) !== canonicalizeJson(actor))
+      throw lifecycleConflict("This implementation handoff request identity was already used for a different operation.");
+    const candidate = composeImplementationHandoff({ ...input, version: existingEvent.supersededBy.version });
+    if (options.resolveSource) verifyImplementationHandoffSources(candidate, options.resolveSource);
+    if (candidate.id !== existingEvent.supersededBy.id || candidate.contentDigest !== existingEvent.supersededBy.contentDigest)
+      throw lifecycleConflict("This regeneration request identity was already used for different package content.");
+    const draft2 = readImplementationHandoffDraft(root, { allowMissing: false });
+    if (draft2.id !== candidate.id || draft2.version !== candidate.version || draft2.contentDigest !== candidate.contentDigest)
+      throw lifecycleConflict("The regenerated draft no longer matches this completed request.");
+    return {
+      draft: draft2,
+      supersession: { current: readImplementationHandoffLifecycle(root).current, event: existingEvent, repeated: true }
+    };
+  }
+  const lifecycle = readImplementationHandoffLifecycle(root);
+  const currentDraft = readImplementationHandoffDraft(root);
+  const maximum = Math.max(0, currentDraft?.version ?? 0, ...lifecycle.history.map((item2) => item2.version));
+  const draft = writeImplementationHandoffDraft(root, { ...input, version: maximum + 1 }, { resolveSource: options.resolveSource });
+  const supersession = supersedeImplementationHandoff(root, draft, { requestId }, options);
+  return { draft, supersession };
+}
+function revokeImplementationHandoff(root, request2, options = {}) {
+  const requestId = normalizeRequestId(request2.requestId);
+  const reason = typeof request2.reason === "string" ? request2.reason.trim() : "";
+  if (!reason || Buffer.byteLength(reason) > MAX_REASON_BYTES)
+    throw new TypeError("Revocation requires a concise reason.");
+  const at = timestamp2(options.clock);
+  const actor = authorizeActor(options.actor, REVOKE_CAPABILITY, at);
+  const signature2 = {
+    operation: "revoke",
+    requestId,
+    expectedVersion: request2.expectedVersion,
+    expectedContentDigest: request2.expectedContentDigest,
+    reason,
+    actor
+  };
+  const repeated = readExistingRequest(root, signature2);
+  if (repeated) return { current: readImplementationHandoffLifecycle(root).current, event: repeated, repeated: true };
+  const lifecycle = readImplementationHandoffLifecycle(root);
+  if (!lifecycle.current || lifecycle.current.status !== "approved")
+    throw lifecycleConflict("There is no current approved implementation package to revoke.");
+  if (request2?.expectedVersion !== lifecycle.current.version || request2?.expectedContentDigest !== lifecycle.current.contentDigest)
+    throw lifecycleConflict("The current implementation package changed before revocation.");
+  const approved = readImplementationHandoffVersion(root, lifecycle.current);
+  const eventId = `handoff-revoked-${requestKey(requestId).slice(0, 24)}`;
+  const event = {
+    kind: "openplanr-design-implementation-handoff-event",
+    schemaVersion: "1.0.0",
+    eventId,
+    type: "revoked",
+    requestId,
+    signature: signature2,
+    package: { id: approved.id, version: approved.version, contentDigest: approved.contentDigest },
+    actor,
+    at,
+    reason,
+    authority: "prepare-plan"
+  };
+  const pointer = pointerFor(approved, "revoked", eventId, {
+    revocation: { actorId: actor.actorId, revokedAt: at, reason },
+    updatedAt: at
+  });
+  writeLifecycleJournal(root, {
+    kind: "openplanr-design-implementation-handoff-lifecycle-publication",
+    schemaVersion: "1.0.0",
+    event,
+    pointer
+  });
+  return { current: pointer, event, repeated: false };
+}
+function compareImplementationHandoffVersions(root, leftIdentity, rightIdentity) {
+  const resolveValue = (identity) => identity === "draft" ? readImplementationHandoffDraft(root, { allowMissing: false }) : readImplementationHandoffVersion(root, identity);
+  const left = resolveValue(leftIdentity);
+  const right = resolveValue(rightIdentity);
+  const sourceIds = (value) => new Set(value.sources.map((item2) => item2.id));
+  const requirementIds = (value) => new Set(value.requirements.map((item2) => item2.id));
+  const difference = (before, after) => ({
+    added: [...after].filter((id4) => !before.has(id4)).sort(),
+    removed: [...before].filter((id4) => !after.has(id4)).sort()
+  });
+  return Object.freeze({
+    left: { id: left.id, version: left.version, contentDigest: left.contentDigest },
+    right: { id: right.id, version: right.version, contentDigest: right.contentDigest },
+    changed: left.contentDigest !== right.contentDigest,
+    basisChanged: canonicalizeJson(left.basis) !== canonicalizeJson(right.basis),
+    titleChanged: left.title !== right.title,
+    sources: difference(sourceIds(left), sourceIds(right)),
+    requirements: difference(requirementIds(left), requirementIds(right))
+  });
+}
+var IMPLEMENTATION_HANDOFF_APPROVE_CAPABILITY = APPROVE_CAPABILITY;
+var IMPLEMENTATION_HANDOFF_REVOKE_CAPABILITY = REVOKE_CAPABILITY;
+
 // packages/design/lib/design/review.mjs
 var VERSION = "1.3.0";
 var designReviewKey = (document2) => `design-${hash(document2.id).slice(0, 24)}`;
@@ -17760,12 +18179,12 @@ function readDesignFeedback(file, env = process.env) {
     revision: current.revision,
     reviewPath: designReviewPath(file, env),
     pins,
-    state: readJson2(join11(current.root, ".design/studio-state.json"), {
+    state: readJson2(join12(current.root, ".design/studio-state.json"), {
       state: {},
       stateVersion: 0
     }).state,
     ledger,
-    shared: readJson2(join11(current.root, ".design/shared-feedback.json"), null)
+    shared: readJson2(join12(current.root, ".design/shared-feedback.json"), null)
   };
 }
 function exportDesignReview(file, { scope = "all", env = process.env } = {}) {
@@ -17886,9 +18305,9 @@ function validateState(value, current) {
 function projectRoot(root) {
   let candidate = root;
   while (true) {
-    if (existsSync10(join11(candidate, ".planr")) || existsSync10(join11(candidate, ".git")))
+    if (existsSync11(join12(candidate, ".planr")) || existsSync11(join12(candidate, ".git")))
       return candidate;
-    const parent = dirname12(candidate);
+    const parent = dirname13(candidate);
     if (parent === candidate) return root;
     candidate = parent;
   }
@@ -17921,7 +18340,7 @@ function currentImplementationBasis(file, env) {
   };
 }
 async function persistDesignTaste(current, state) {
-  const path = join11(
+  const path = join12(
     projectRoot(current.root),
     ".planr/design-system/taste.json"
   );
@@ -17970,7 +18389,7 @@ async function saveDesignState(file, { state, revision, stateVersion }) {
       new Error("The design changed. Reload before saving feedback."),
       { statusCode: 409 }
     );
-  const path = join11(current.root, ".design/studio-state.json");
+  const path = join12(current.root, ".design/studio-state.json");
   const release = await acquireStartLock(`${path}.lock`);
   try {
     current = currentDesign(file);
@@ -18015,7 +18434,7 @@ var readImplementationBody = async (req) => JSON.parse(
 );
 async function startDesignReview(file, options = {}) {
   const { root } = currentDesign(file);
-  const release = await acquireStartLock(join11(root, ".design/start.lock"));
+  const release = await acquireStartLock(join12(root, ".design/start.lock"));
   try {
     return await startDesignReviewUnlocked(file, options);
   } finally {
@@ -18028,11 +18447,12 @@ async function startDesignReviewUnlocked(file, {
   noOpen = true,
   view,
   openUrl,
-  fetchImpl = fetch
+  fetchImpl = fetch,
+  clock = () => /* @__PURE__ */ new Date()
 } = {}) {
   let current = currentDesign(file);
   if (view !== void 0) {
-    const saved = readJson2(join11(current.root, ".design/studio-state.json"), {
+    const saved = readJson2(join12(current.root, ".design/studio-state.json"), {
       state: {},
       stateVersion: 0
     });
@@ -18042,7 +18462,7 @@ async function startDesignReviewUnlocked(file, {
       state: { ...saved.state, view }
     });
   }
-  const stateFile = join11(current.root, ".design/server.json");
+  const stateFile = join12(current.root, ".design/server.json");
   const old = readJson2(stateFile, null);
   if (old?.version === VERSION && old.url && /^http:\/\/127\.0\.0\.1:\d+\/r\//u.test(old.url)) {
     try {
@@ -18090,7 +18510,7 @@ async function startDesignReviewUnlocked(file, {
       session.designRevision = current.revision;
     },
     renderDocument({ model, base }) {
-      const state = readJson2(join11(current.root, ".design/studio-state.json"), {
+      const state = readJson2(join12(current.root, ".design/studio-state.json"), {
         state: {}
       }).state;
       const stalePins = readDesignFeedback(file, env).pins.filter(
@@ -18099,7 +18519,7 @@ async function startDesignReviewUnlocked(file, {
       return renderDesignStudio(
         { ...current, envelope: model.envelope, state, stalePins },
         { stageRuntimeUrl: `${base}runtime.js` }
-      ).replace("</head>", `<style>${readFileSync15(new URL("../../templates/studio/share.css", new URL("./runtime/packages/design/lib/design/review.mjs", import.meta.url).href), "utf8")}</style></head>`);
+      ).replace("</head>", `<style>${readFileSync16(new URL("../../templates/studio/share.css", new URL("./runtime/packages/design/lib/design/review.mjs", import.meta.url).href), "utf8")}</style></head>`);
     },
     renderRuntime({ options, base }) {
       const settings = {
@@ -18122,6 +18542,14 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
         return false;
       try {
         const route = segments[4];
+        const localImplementationActor = {
+          id: "local-owner",
+          role: "owner",
+          capabilities: [
+            IMPLEMENTATION_HANDOFF_APPROVE_CAPABILITY,
+            IMPLEMENTATION_HANDOFF_REVOKE_CAPABILITY
+          ]
+        };
         if (route === "design-experience" && req.method === "GET") {
           respond(res, 200, readDesignExperience(file, { env }));
         } else if (route === "design-handoff-readiness" && req.method === "GET") {
@@ -18129,8 +18557,14 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
         } else if (route === "design-handoff" && req.method === "GET") {
           respond(res, 200, readDesignHandoff(file, { env }));
         } else if (route === "design-implementation-handoff" && req.method === "GET") {
-          const root = dirname12(designSpecPath(currentDesign(file).root));
-          respond(res, 200, { ok: true, draft: readImplementationHandoffDraft(root) });
+          const design = currentDesign(file);
+          const unlock = await acquireStartLock(join12(design.root, ".design/render.lock"));
+          try {
+            const root = dirname13(designSpecPath(design.root));
+            respond(res, 200, { ok: true, draft: readImplementationHandoffDraft(root), ...readImplementationHandoffLifecycle(root), approvalPreview: previewImplementationHandoffApproval(root) });
+          } finally {
+            unlock();
+          }
         } else if (route === "design-revisions" && req.method === "GET") {
           respond(res, 200, listDesignRevisions(file));
         } else if (["design-handoff", "design-implementation-handoff", "design-revisions", "design-feedback-export"].includes(route) && req.method === "POST") {
@@ -18138,27 +18572,55 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
           const input = route === "design-implementation-handoff" ? await readImplementationBody(req) : await readBody(req);
           if (route === "design-handoff") respond(res, 200, await updateDesignHandoff(file, input, { env, fetchImpl }));
           else if (route === "design-implementation-handoff") {
-            if (!input || typeof input !== "object" || Array.isArray(input) || !["draft", "regenerate", "export", "import"].includes(input.action)) throw new Error("Unknown implementation package action.");
+            if (!input || typeof input !== "object" || Array.isArray(input) || !["draft", "regenerate", "export", "import", "approve", "revoke", "compare"].includes(input.action)) throw new Error("Unknown implementation package action.");
             const initial = currentDesign(file);
-            const unlock = await acquireStartLock(join11(initial.root, ".design/render.lock"));
+            const unlock = await acquireStartLock(join12(initial.root, ".design/render.lock"));
             try {
               const design = currentDesign(file);
-              const root = dirname12(designSpecPath(design.root));
+              const root = dirname13(designSpecPath(design.root));
               const resolver = createRepositorySourceResolver(projectRoot(design.root));
-              if (["draft", "regenerate"].includes(input.action)) {
+              const approvalOptions = {
+                actor: localImplementationActor,
+                clock,
+                resolveSource: resolver,
+                ...["draft", "regenerate", "import", "approve"].includes(input.action) ? { currentBasis: currentImplementationBasis(file, env) } : {}
+              };
+              if (input.action === "draft") {
                 if (!input.package || input.package.kind)
                   throw new Error("Draft composition requires editable package fields, not a lifecycle record.");
+                if (readImplementationHandoffLifecycle(root).history.length)
+                  throw Object.assign(new Error("Use regenerate to create a new version after approval."), { statusCode: 409 });
                 const draft = writeImplementationHandoffDraft(root, {
                   ...input.package,
-                  basis: currentImplementationBasis(file, env)
+                  version: 1,
+                  basis: approvalOptions.currentBasis
                 }, { resolveSource: resolver });
                 respond(res, 200, { ok: true, draft });
+              } else if (input.action === "regenerate") {
+                if (!input.package || input.package.kind)
+                  throw new Error("Regeneration requires editable package fields, not a lifecycle record.");
+                const value = regenerateImplementationHandoffDraft(root, {
+                  ...input.package,
+                  basis: approvalOptions.currentBasis
+                }, { requestId: input.requestId }, approvalOptions);
+                respond(res, 200, { ok: true, ...value });
               } else if (input.action === "import") {
                 const draft = importImplementationHandoffPackage(input.package, { resolveSource: resolver });
-                if (reviewDigest(draft.basis) !== reviewDigest(currentImplementationBasis(file, env)))
+                if (reviewDigest(draft.basis) !== reviewDigest(approvalOptions.currentBasis))
                   throw Object.assign(new Error("The imported implementation package belongs to a different or earlier design basis."), { statusCode: 409 });
+                const maximumVersion = Math.max(0, ...readImplementationHandoffLifecycle(root).history.map((item2) => item2.version));
+                if (draft.version <= maximumVersion)
+                  throw Object.assign(new Error("Imported implementation packages cannot replace immutable version history."), { statusCode: 409 });
                 writeImplementationHandoffDraft(root, draft, { resolveSource: resolver });
                 respond(res, 200, { ok: true, draft });
+              } else if (input.action === "approve") {
+                const value = approveImplementationHandoff(root, input, approvalOptions);
+                respond(res, 200, { ok: true, ...value });
+              } else if (input.action === "revoke") {
+                const value = revokeImplementationHandoff(root, input, approvalOptions);
+                respond(res, 200, { ok: true, ...value });
+              } else if (input.action === "compare") {
+                respond(res, 200, { ok: true, comparison: compareImplementationHandoffVersions(root, input.left, input.right) });
               } else {
                 const draft = readImplementationHandoffDraft(root, { allowMissing: false });
                 respond(res, 200, { ok: true, package: exportImplementationHandoffPackage(draft) });
@@ -18177,7 +18639,7 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
           }
         } else if (route === "design-share-runtime" && req.method === "GET") {
           res.writeHead(200, { "content-type": "application/javascript; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" });
-          res.end(readFileSync15(new URL("../../templates/studio/share.js", new URL("./runtime/packages/design/lib/design/review.mjs", import.meta.url).href), "utf8"));
+          res.end(readFileSync16(new URL("../../templates/studio/share.js", new URL("./runtime/packages/design/lib/design/review.mjs", import.meta.url).href), "utf8"));
         } else if (route === "design-share" && req.method === "GET") {
           respond(res, 200, getDesignShareStatus(file, { env }));
         } else if (route === "design-share" && req.method === "POST") {
@@ -18190,12 +18652,12 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
           if (action3 === "create") result = await shareDesign(file, options);
           else if (action3 === "publish") result = await publishDesignShare(file, options);
           else if (action3 === "sync") result = await syncDesignShare(file, options);
-          else if (action3 === "recovery") result = await exportDesignShareRecovery(file, { ...options, output: join11(env.HOME ?? process.env.HOME, "Downloads", `openplanr-design-recovery-${Date.now()}.json`) });
+          else if (action3 === "recovery") result = await exportDesignShareRecovery(file, { ...options, output: join12(env.HOME ?? process.env.HOME, "Downloads", `openplanr-design-recovery-${Date.now()}.json`) });
           else result = await manageDesignShare(file, action3, options);
           respond(res, 200, result);
         } else if (route === "design-status" && req.method === "GET") {
           const ready = readJson2(
-            join11(current.root, ".design/browser-ready.json"),
+            join12(current.root, ".design/browser-ready.json"),
             null
           );
           respond(res, 200, {
@@ -18207,7 +18669,7 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
           });
         } else if (route === "design-state" && req.method === "GET") {
           respond(res, 200, {
-            ...readJson2(join11(current.root, ".design/studio-state.json"), {
+            ...readJson2(join12(current.root, ".design/studio-state.json"), {
               state: {},
               stateVersion: 0
             }),
@@ -18223,7 +18685,7 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
             throw new Error(
               "Browser readiness does not cover every expected design artboard."
             );
-          atomicJson(join11(current.root, ".design/browser-ready.json"), {
+          atomicJson(join12(current.root, ".design/browser-ready.json"), {
             status: "ready",
             revision: current.revision,
             checkedAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -18231,7 +18693,7 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
           respond(res, 200, { ok: true });
         } else if (route === "design-export" && req.method === "GET") {
           const state = readJson2(
-            join11(current.root, ".design/studio-state.json"),
+            join12(current.root, ".design/studio-state.json"),
             { state: {} }
           ).state;
           res.writeHead(200, {
@@ -18361,10 +18823,10 @@ async function resolveDesignPins(file, { pinIds, summary, env = process.env }) {
       createReviewLedger({ ...ledger, reviews: revisions })
     );
     const history = readJson2(
-      join11(current.root, ".design/review-history.json"),
+      join12(current.root, ".design/review-history.json"),
       []
     );
-    atomicJson(join11(current.root, ".design/review-history.json"), [
+    atomicJson(join12(current.root, ".design/review-history.json"), [
       ...history,
       {
         revision: current.revision,
@@ -18574,7 +19036,7 @@ function verifyDesignDocument(file, report) {
   const images = (Array.isArray(report.screenshots) ? report.screenshots : []).filter((item2) => {
     const path = typeof item2 === "string" ? item2 : item2?.path;
     try {
-      return typeof path === "string" && isPng(readFileSync16(resolve7(path)));
+      return typeof path === "string" && isPng(readFileSync17(resolve7(path)));
     } catch {
       return false;
     }
@@ -18583,7 +19045,7 @@ function verifyDesignDocument(file, report) {
   const issues = [...Array.isArray(report.issues) ? report.issues : [], ...screenEvidence.flatMap((item2) => Array.isArray(item2?.issues) ? item2.issues : [])];
   const status = issues.some((item2) => item2?.severity === "error") || report.status === "failed" ? "failed" : coverage && images.length > 0 && journeys && report.status !== "unverified" ? "verified" : "unverified";
   const saved = { ...report, issues, schemaVersion: "1.0.0", revision: current.revision, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), coverage, screenshotCount: images.length, primaryJourneysChecked: Boolean(journeys) };
-  atomicJson(join12(current.root, ".design/verification", `${current.revision}.json`), saved);
+  atomicJson(join13(current.root, ".design/verification", `${current.revision}.json`), saved);
   return saved;
 }
 async function designUtility(argv, { stdout = (value) => process.stdout.write(`${JSON.stringify(value)}
@@ -18643,12 +19105,12 @@ async function designUtility(argv, { stdout = (value) => process.stdout.write(`$
   }
   if (command === "export") {
     const current = currentDesign(file), view = flags.view ?? current.document.defaultView;
-    const state = readJson2(join12(current.root, ".design/studio-state.json"), { state: {} }).state;
+    const state = readJson2(join13(current.root, ".design/studio-state.json"), { state: {} }).state;
     if (flags.format && flags.format !== "html") throw new Error("Portable export supports HTML. Use the studio PNG action for browser-rendered captures.");
-    const output = resolve7(flags.output ?? join12(current.root, `${view}-export.html`));
-    if (existsSync11(output)) throw new Error(`Export already exists: ${output}. Choose a new --output path.`);
-    mkdirSync8(dirname13(output), { recursive: true });
-    writeFileSync8(output, standaloneDesignHtml({ ...current, state }, view), { flag: "wx" });
+    const output = resolve7(flags.output ?? join13(current.root, `${view}-export.html`));
+    if (existsSync12(output)) throw new Error(`Export already exists: ${output}. Choose a new --output path.`);
+    mkdirSync9(dirname14(output), { recursive: true });
+    writeFileSync9(output, standaloneDesignHtml({ ...current, state }, view), { flag: "wx" });
     result = { ok: true, output, view, revision: current.revision };
   }
   if (command === "verify") {
@@ -18665,14 +19127,14 @@ async function designUtility(argv, { stdout = (value) => process.stdout.write(`$
       if (!["current", "all"].includes(scope)) throw new Error("Feedback export scope must be current or all.");
       if (!flags.output) throw new Error("Feedback export requires --output <path>.");
       const output = resolve7(flags.output);
-      if (existsSync11(output)) throw new Error("Feedback export already exists. Choose a new --output path.");
+      if (existsSync12(output)) throw new Error("Feedback export already exists. Choose a new --output path.");
       const snapshot2 = exportDesignReview(file, { scope, env });
-      mkdirSync8(dirname13(output), { recursive: true });
-      writeFileSync8(output, serializeDesignReviewExport(snapshot2, format), { flag: "wx", mode: 384 });
+      mkdirSync9(dirname14(output), { recursive: true });
+      writeFileSync9(output, serializeDesignReviewExport(snapshot2, format), { flag: "wx", mode: 384 });
       result = { ok: true, output, format, scope, revision: snapshot2.currentRevisionId, summary: snapshot2.summary };
     } else if (action3 === "resolve") result = await resolveDesignPins(file, { pinIds: flags.pins?.split(",").filter(Boolean), summary: flags.summary, env });
     else if (action3 === "select") {
-      const current = currentDesign(file), saved = readJson2(join12(current.root, ".design/studio-state.json"), { state: {}, stateVersion: 0 });
+      const current = currentDesign(file), saved = readJson2(join13(current.root, ".design/studio-state.json"), { state: {}, stateVersion: 0 });
       const variant = flags.variant ?? saved.state.selectedVariant;
       if (!current.document.variants.some((item2) => item2.id === variant && item2.status === "ready")) throw new Error("Select a ready variant with --variant.");
       const selected = [variant], rejected = (saved.state.preferences?.rejected ?? []).filter((id4) => id4 !== variant);

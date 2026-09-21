@@ -46,6 +46,16 @@ import {
 	readImplementationHandoffDraft,
 	writeImplementationHandoffDraft,
 } from "./implementation-handoff.mjs";
+import {
+	approveImplementationHandoff,
+	compareImplementationHandoffVersions,
+	IMPLEMENTATION_HANDOFF_APPROVE_CAPABILITY,
+	IMPLEMENTATION_HANDOFF_REVOKE_CAPABILITY,
+	previewImplementationHandoffApproval,
+	readImplementationHandoffLifecycle,
+	regenerateImplementationHandoffDraft,
+	revokeImplementationHandoff,
+} from "./implementation-handoff-approval.mjs";
 import { listDesignRevisions, readDesignRevision, reviewDigest } from "./context.mjs";
 import { createDesignReviewExport } from "./review-export.mjs";
 
@@ -425,6 +435,7 @@ async function startDesignReviewUnlocked(
 		view,
 		openUrl,
 		fetchImpl = fetch,
+		clock = () => new Date(),
 	} = {},
 ) {
 	let current = currentDesign(file);
@@ -534,6 +545,14 @@ async function startDesignReviewUnlocked(
 				return false;
 			try {
 				const route = segments[4];
+				const localImplementationActor = {
+					id: "local-owner",
+					role: "owner",
+					capabilities: [
+						IMPLEMENTATION_HANDOFF_APPROVE_CAPABILITY,
+						IMPLEMENTATION_HANDOFF_REVOKE_CAPABILITY,
+					],
+				};
                 if (route === "design-experience" && req.method === "GET") {
                   respond(res, 200, readDesignExperience(file, { env }));
                 } else if (route === "design-handoff-readiness" && req.method === "GET") {
@@ -541,8 +560,14 @@ async function startDesignReviewUnlocked(
                 } else if (route === "design-handoff" && req.method === "GET") {
                   respond(res, 200, readDesignHandoff(file, { env }));
                 } else if (route === "design-implementation-handoff" && req.method === "GET") {
-                  const root = dirname(designSpecPath(currentDesign(file).root));
-                  respond(res, 200, { ok: true, draft: readImplementationHandoffDraft(root) });
+					const design = currentDesign(file);
+					const unlock = await acquireStartLock(join(design.root, ".design/render.lock"));
+					try {
+						const root = dirname(designSpecPath(design.root));
+						respond(res, 200, { ok: true, draft: readImplementationHandoffDraft(root), ...readImplementationHandoffLifecycle(root), approvalPreview: previewImplementationHandoffApproval(root) });
+					} finally {
+						unlock();
+					}
                 } else if (route === "design-revisions" && req.method === "GET") {
                   respond(res, 200, listDesignRevisions(file));
                 } else if (["design-handoff", "design-implementation-handoff", "design-revisions", "design-feedback-export"].includes(route) && req.method === "POST") {
@@ -550,27 +575,57 @@ async function startDesignReviewUnlocked(
                   const input = route === "design-implementation-handoff" ? await readImplementationBody(req) : await readBody(req);
                   if (route === "design-handoff") respond(res, 200, await updateDesignHandoff(file, input, { env, fetchImpl }));
                   else if (route === "design-implementation-handoff") {
-                    if (!input || typeof input !== "object" || Array.isArray(input) || !["draft", "regenerate", "export", "import"].includes(input.action)) throw new Error("Unknown implementation package action.");
+					if (!input || typeof input !== "object" || Array.isArray(input) || !["draft", "regenerate", "export", "import", "approve", "revoke", "compare"].includes(input.action)) throw new Error("Unknown implementation package action.");
 					const initial = currentDesign(file);
 					const unlock = await acquireStartLock(join(initial.root, ".design/render.lock"));
 					try {
 						const design = currentDesign(file);
 						const root = dirname(designSpecPath(design.root));
 						const resolver = createRepositorySourceResolver(projectRoot(design.root));
-						if (["draft", "regenerate"].includes(input.action)) {
+						const approvalOptions = {
+							actor: localImplementationActor,
+							clock,
+							resolveSource: resolver,
+							...(["draft", "regenerate", "import", "approve"].includes(input.action)
+								? { currentBasis: currentImplementationBasis(file, env) }
+								: {}),
+						};
+						if (input.action === "draft") {
 							if (!input.package || input.package.kind)
 								throw new Error("Draft composition requires editable package fields, not a lifecycle record.");
+							if (readImplementationHandoffLifecycle(root).history.length)
+								throw Object.assign(new Error("Use regenerate to create a new version after approval."), { statusCode: 409 });
 							const draft = writeImplementationHandoffDraft(root, {
 								...input.package,
-								basis: currentImplementationBasis(file, env),
+								version: 1,
+								basis: approvalOptions.currentBasis,
 							}, { resolveSource: resolver });
 							respond(res, 200, { ok: true, draft });
+						} else if (input.action === "regenerate") {
+							if (!input.package || input.package.kind)
+								throw new Error("Regeneration requires editable package fields, not a lifecycle record.");
+							const value = regenerateImplementationHandoffDraft(root, {
+								...input.package,
+								basis: approvalOptions.currentBasis,
+							}, { requestId: input.requestId }, approvalOptions);
+							respond(res, 200, { ok: true, ...value });
 						} else if (input.action === "import") {
 							const draft = importImplementationHandoffPackage(input.package, { resolveSource: resolver });
-							if (reviewDigest(draft.basis) !== reviewDigest(currentImplementationBasis(file, env)))
+							if (reviewDigest(draft.basis) !== reviewDigest(approvalOptions.currentBasis))
 								throw Object.assign(new Error("The imported implementation package belongs to a different or earlier design basis."), { statusCode: 409 });
+							const maximumVersion = Math.max(0, ...readImplementationHandoffLifecycle(root).history.map((item) => item.version));
+							if (draft.version <= maximumVersion)
+								throw Object.assign(new Error("Imported implementation packages cannot replace immutable version history."), { statusCode: 409 });
 							writeImplementationHandoffDraft(root, draft, { resolveSource: resolver });
 							respond(res, 200, { ok: true, draft });
+						} else if (input.action === "approve") {
+							const value = approveImplementationHandoff(root, input, approvalOptions);
+							respond(res, 200, { ok: true, ...value });
+						} else if (input.action === "revoke") {
+							const value = revokeImplementationHandoff(root, input, approvalOptions);
+							respond(res, 200, { ok: true, ...value });
+						} else if (input.action === "compare") {
+							respond(res, 200, { ok: true, comparison: compareImplementationHandoffVersions(root, input.left, input.right) });
 						} else {
 							const draft = readImplementationHandoffDraft(root, { allowMissing: false });
 							respond(res, 200, { ok: true, package: exportImplementationHandoffPackage(draft) });
