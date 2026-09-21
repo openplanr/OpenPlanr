@@ -131,6 +131,30 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/delivery-status.d.mts",
+      "target": "lib/design/delivery-status.d.mts",
+      "sha256": "ac2bdb97ebe80b3e83aea2bcdd1f779e3a6761da8023b01e56129d589b4029d1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/delivery-status.mjs",
+      "target": "lib/design/delivery-status.mjs",
+      "sha256": "7a75e91868fbd673a60e9331795fcdeac8a46bdcd0f76baba112d3bd74558756",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/design-plan-handoff.d.mts",
+      "target": "lib/design/design-plan-handoff.d.mts",
+      "sha256": "4018bed7e6ed8175b514c7879bcd8e7d8f5750dda9ca3af2cb85a6cd95f88afc",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/design-plan-handoff.mjs",
+      "target": "lib/design/design-plan-handoff.mjs",
+      "sha256": "10cc1ef46818f51844bd6ad4e2c4dc935696213084faa9bb49c583ea3d1c3752",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/designSystem.mjs",
       "target": "lib/design/designSystem.mjs",
       "sha256": "fa14389d297755c2164c63e07c4e195f7cf043677af18a7e887c30e338e5f722",
@@ -211,7 +235,7 @@
     {
       "source": "packages/design/lib/design/index.mjs",
       "target": "lib/design/index.mjs",
-      "sha256": "8be832b0e8699be0dbc9e6f3cba9acbc9864f61418e389f6ac759cc77260698b",
+      "sha256": "f875e042b0e623fd4190bd0a14fc9fc4c2bde417d0a4bb586c24eae496b83dc6",
       "mode": "644"
     },
     {
@@ -259,7 +283,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "3e0d4e7b51d3117176f0eac8bdab53ed3983a6f2e7ed8f9a1fbb6fe548653d91",
+      "sha256": "58dca35c25b150d02f342fc0d4a381b98aeff5e6dfb7b20af74f4e6f032fa1a5",
       "mode": "644"
     },
     {

@@ -347,7 +347,7 @@ function assertPackageProof(proof, custody, packageCustody) {
   if (
     pipeline?.name !== custody.pipeline.manifest.name
     || pipeline?.version !== custody.pipeline.manifest.version
-    || pipeline?.exportKeys !== 37
+    || pipeline?.exportKeys !== custody.ecosystem.publicCompatibility?.pipelineExportKeys
     || pipeline?.generatedSkillPortability?.skills !== PACKED_WORKSPACE_GENERATED_SKILL_COUNT
     || pipeline?.generatedSkillPortability?.violations !== 0
   ) {
@@ -392,7 +392,7 @@ function assertInstalledSurface(proof, custody) {
     fail('E_PACKED_WORKSPACE_PROOF_INSTALL', 'Packed Protocol Node/browser/Workers consumer proof is incomplete.');
   }
   if (
-    full?.exportKeys !== 37
+    full?.exportKeys !== custody.ecosystem.publicCompatibility?.pipelineExportKeys
     || full?.rootSymbols !== 229
     || full?.diagram?.galleryCount !== PACKED_WORKSPACE_DIAGRAM_GRAMMAR_COUNT
     || full?.diagram?.renderValidation !== 'passed'

@@ -8,7 +8,7 @@
   "canonicalSkillCount": 27,
   "compatibilityAliasCount": 0,
   "skillCount": 27,
-  "assetCount": 302,
+  "assetCount": 304,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -369,11 +369,11 @@
       "assets": [
         {
           "path": "skills/design/SKILL.md",
-          "digest": "sha256:0ba7b0388e7acc4f9111a5cc69f8d55a1dc2ba54ab20e8274ff7384f4410c9ec"
+          "digest": "sha256:3265e760e594a16eadc88d46045a3c80546797fcc5cd11985b9c7ccfd89df014"
         },
         {
           "path": "skills/design/openplanr.skill.json",
-          "digest": "sha256:a39f6512ab6fba355f6d020ee3e4ec1ae34ac54cc8732e681370ee89c40a78ac"
+          "digest": "sha256:83457207042925d16148dd28054ef69f00c4358136da7eaadc286f01bc6a0797"
         },
         {
           "path": "skills/design/agents/openai.yaml",
@@ -417,7 +417,7 @@
         },
         {
           "path": "skills/design/scripts/design.mjs",
-          "digest": "sha256:a5a9a2ea5b9ed3d629609ee77743cd97302e96e21eb43a52747e0ae771a5b32c"
+          "digest": "sha256:4374afc1003a4869cc423a093950b5d192a63df314329ee0e30ea423d163560b"
         },
         {
           "path": "skills/design/schemas/design-document.schema.json",
@@ -610,7 +610,7 @@
         },
         {
           "path": "skills/design-loop/scripts/design.mjs",
-          "digest": "sha256:a5a9a2ea5b9ed3d629609ee77743cd97302e96e21eb43a52747e0ae771a5b32c"
+          "digest": "sha256:4374afc1003a4869cc423a093950b5d192a63df314329ee0e30ea423d163560b"
         },
         {
           "path": "skills/design-loop/schemas/design-document.schema.json",
@@ -755,11 +755,11 @@
       "assets": [
         {
           "path": "skills/design-review/SKILL.md",
-          "digest": "sha256:2ef0b93b8132f4c84982b8e94ce58c4ef5c10642df9f9e63148fa3aa23b0d15e"
+          "digest": "sha256:1abdbeffe66b6afadb51d3719486665ee374f8aba9bf17ddf54ac4e1f185dc23"
         },
         {
           "path": "skills/design-review/openplanr.skill.json",
-          "digest": "sha256:837ace6e8c09347b3ed9ba287b901523229a94fad46be2785a56f73306486036"
+          "digest": "sha256:6ac49ca8fd2f709aff25f192f55e9c530b95715a626af01afef2ed1d2170e340"
         },
         {
           "path": "skills/design-review/agents/openai.yaml",
@@ -803,7 +803,7 @@
         },
         {
           "path": "skills/design-review/scripts/design.mjs",
-          "digest": "sha256:a5a9a2ea5b9ed3d629609ee77743cd97302e96e21eb43a52747e0ae771a5b32c"
+          "digest": "sha256:4374afc1003a4869cc423a093950b5d192a63df314329ee0e30ea423d163560b"
         },
         {
           "path": "skills/design-review/schemas/design-document.schema.json",
@@ -1106,11 +1106,11 @@
       "assets": [
         {
           "path": "skills/plan/SKILL.md",
-          "digest": "sha256:6cf56b17592d6dc12527582e9a9656025b603c2a8d03bccf838466e3f8dcb4a6"
+          "digest": "sha256:9bffae95a3a760daa58dbfdf5d6e4ae6b9015549a0fea4dab754b7f05ca7355e"
         },
         {
           "path": "skills/plan/openplanr.skill.json",
-          "digest": "sha256:5c808343a096a083ddde166f50668162a00f6cadc1acc5e3c737ba761ae7923c"
+          "digest": "sha256:a1e090540db3a4edc2694e1a24c6fc0af85838eb7ee3138cdc53f4be69803479"
         },
         {
           "path": "skills/plan/agents/openai.yaml",
@@ -1121,12 +1121,16 @@
           "digest": "sha256:b120b3f0380776db2a126cb05e2cd917710389bdd665574fe014aa5d6222914e"
         },
         {
+          "path": "skills/plan/references/design-handoff.md",
+          "digest": "sha256:b918cc16855412a75028e1a014832c2ced59b0349461a24d9e1fdcfc336b9f5f"
+        },
+        {
           "path": "skills/plan/scripts/planning-ids.mjs",
           "digest": "sha256:5962fb674a45ce1c67c0fd7aa3085151ff1c817f4004baaa865acbdff5757adb"
         },
         {
           "path": "skills/plan/scripts/design.mjs",
-          "digest": "sha256:a5a9a2ea5b9ed3d629609ee77743cd97302e96e21eb43a52747e0ae771a5b32c"
+          "digest": "sha256:4374afc1003a4869cc423a093950b5d192a63df314329ee0e30ea423d163560b"
         },
         {
           "path": "skills/plan/schemas/design-document.schema.json",
@@ -1337,11 +1341,11 @@
       "assets": [
         {
           "path": "skills/ship/SKILL.md",
-          "digest": "sha256:487b0a3fa73c319292a407cc2e6e5a2e65bd657ff21c9615b0d61c3b755fe012"
+          "digest": "sha256:fdf8113b3f5564d5ddd5a4d93d47ec2994c3e8fefa94fa37bc1e5efbe6798c9c"
         },
         {
           "path": "skills/ship/openplanr.skill.json",
-          "digest": "sha256:1a2c6b2f7c69b364bbf6f2e7cc90abfcf75eaac4e8d10f4d4fd60af7d101e3a8"
+          "digest": "sha256:4ad07e8b30a574bd7f12f87fe3852103c20241dd1e73dfcdb25e250c6b7d28f4"
         },
         {
           "path": "skills/ship/agents/openai.yaml",
@@ -1350,6 +1354,10 @@
         {
           "path": "skills/ship/references/result-contract.md",
           "digest": "sha256:89da8867331e54a4b7474072450039c32614afdecd84108afd46acdd0cc4436a"
+        },
+        {
+          "path": "skills/ship/references/design-lineage.md",
+          "digest": "sha256:0cf8cce235b6e258c066e65dcc25480f10aca6f0c3200de332fc278e3b7975a9"
         },
         {
           "path": "skills/ship/scripts/discover-verification.mjs",

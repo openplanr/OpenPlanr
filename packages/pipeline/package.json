@@ -26,6 +26,18 @@
       "types": "./lib/pipeline/professional-skills.d.mts",
       "import": "./lib/pipeline/professional-skills.mjs"
     },
+    "./design-lineage": {
+      "types": "./lib/pipeline/design-lineage.d.mts",
+      "import": "./lib/pipeline/design-lineage.mjs"
+    },
+    "./design-plan-handoff": {
+      "types": "./lib/design/design-plan-handoff.d.mts",
+      "import": "./lib/design/design-plan-handoff.mjs"
+    },
+    "./design-delivery-status": {
+      "types": "./lib/design/delivery-status.d.mts",
+      "import": "./lib/design/delivery-status.mjs"
+    },
     "./protocol": {
       "types": "./lib/protocol/index.d.ts",
       "import": "./lib/protocol/loader.mjs"

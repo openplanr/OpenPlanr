@@ -19,6 +19,11 @@ when present, and specification. Also read repository instructions, ADRs,
 planning rules, applicable stack guidance, relevant design/database context,
 implementation code, tests, and interfaces produced by declared dependencies.
 
+Read [the design lineage contract](references/design-lineage.md). If the selected
+planning root contains `design-lineage.json`, load only the selected task's mapped
+requirements and source references, and report whether the exact approved package
+is current or stale. Its absence leaves the ordinary task context unchanged.
+
 Only `dependsOn` defines semantic ordering. When a dependency has not produced
 the interface this task consumes, report that concrete gap. Never infer a
 dependency from order or overlapping paths. Isolate independent executions when
@@ -62,6 +67,10 @@ reason to invent or skip all verification.
 Run the strongest applicable focused checks while working, then the relevant
 regression checks. Fix failures caused by the change and rerun affected checks.
 Read [the result contract](references/result-contract.md) before reporting.
+
+Do not write progress into an approved design package. The studio derives
+approved, planned, implementing, and verified state from canonical planning and
+Ship artifacts after this separate invocation.
 
 ## Return
 

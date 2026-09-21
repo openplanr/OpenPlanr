@@ -3,7 +3,7 @@
   "schemaVersion": "1.0.0",
   "protocolVersion": "1.8.0",
   "skillId": "planr-ship",
-  "skillVersion": "1.1.0",
+  "skillVersion": "1.2.0",
   "entrypoint": "SKILL.md",
   "hosts": [
     "claude-code",
@@ -24,6 +24,17 @@
     },
     {
       "path": "references/result-contract.md",
+      "kind": "reference",
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ],
+      "executable": false
+    },
+    {
+      "path": "references/design-lineage.md",
       "kind": "reference",
       "hosts": [
         "claude-code",

@@ -1038,9 +1038,9 @@ function main() {
     pass(report, 'environment.node');
 
     const preservationCatalog = readJson(preservationCatalogPath);
-    const expectedExportKeys = [...preservationCatalog.packageSurface.baselineExportKeys].sort();
+    const baselineExportKeys = [...preservationCatalog.packageSurface.baselineExportKeys].sort();
     const expectedRootSymbols = [...preservationCatalog.packageSurface.baselineRootSymbols].sort();
-    if (expectedExportKeys.length !== 37 || expectedRootSymbols.length !== 229) {
+    if (baselineExportKeys.length !== 37 || expectedRootSymbols.length !== 229) {
       throw new ProofFailure('E_PRESERVATION_BASELINE_INVALID', 'Public package preservation baseline drifted.');
     }
     pass(report, 'baseline.public-surface', { exportKeys: 37, rootSymbols: 229 });
@@ -1081,6 +1081,10 @@ function main() {
     const pipelineInventory = inventoryTree(pipelinePackageRoot);
     const cliProof = packageProof(cliPackageRoot, cliInventory, 'openplanr');
     const pipelineProof = packageProof(pipelinePackageRoot, pipelineInventory, 'planr-pipeline');
+    const expectedExportKeys = Object.keys(pipelineProof.manifest.exports ?? {}).sort();
+    if (baselineExportKeys.some((key) => !expectedExportKeys.includes(key))) {
+      throw new ProofFailure('E_PIPELINE_EXPORT_BASELINE_MISSING', 'Packed pipeline removed a preserved export key.');
+    }
     const protocolAssets = countProtocolAssets(pipelineInventory, preservationCatalog);
     if (Object.entries(PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS)
       .some(([key, count]) => protocolAssets[key] !== count)) {

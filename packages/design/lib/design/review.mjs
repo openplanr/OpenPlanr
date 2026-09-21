@@ -53,9 +53,11 @@ import {
 	IMPLEMENTATION_HANDOFF_REVOKE_CAPABILITY,
 	previewImplementationHandoffApproval,
 	readImplementationHandoffLifecycle,
+	readImplementationHandoffVersion,
 	regenerateImplementationHandoffDraft,
 	revokeImplementationHandoff,
 } from "./implementation-handoff-approval.mjs";
+import { prepareDesignPlanHandoff } from "./design-plan-handoff.mjs";
 import { listDesignRevisions, readDesignRevision, reviewDigest } from "./context.mjs";
 import { createDesignReviewExport } from "./review-export.mjs";
 
@@ -575,7 +577,7 @@ async function startDesignReviewUnlocked(
                   const input = route === "design-implementation-handoff" ? await readImplementationBody(req) : await readBody(req);
                   if (route === "design-handoff") respond(res, 200, await updateDesignHandoff(file, input, { env, fetchImpl }));
                   else if (route === "design-implementation-handoff") {
-					if (!input || typeof input !== "object" || Array.isArray(input) || !["draft", "regenerate", "export", "import", "approve", "revoke", "compare"].includes(input.action)) throw new Error("Unknown implementation package action.");
+					if (!input || typeof input !== "object" || Array.isArray(input) || !["draft", "regenerate", "export", "import", "approve", "revoke", "compare", "continue-to-plan"].includes(input.action)) throw new Error("Unknown implementation package action.");
 					const initial = currentDesign(file);
 					const unlock = await acquireStartLock(join(initial.root, ".design/render.lock"));
 					try {
@@ -626,6 +628,12 @@ async function startDesignReviewUnlocked(
 							respond(res, 200, { ok: true, ...value });
 						} else if (input.action === "compare") {
 							respond(res, 200, { ok: true, comparison: compareImplementationHandoffVersions(root, input.left, input.right) });
+						} else if (input.action === "continue-to-plan") {
+							const lifecycle = readImplementationHandoffLifecycle(root);
+							if (!lifecycle.current || lifecycle.current.status !== "approved")
+								throw Object.assign(new Error("Continue to Plan requires a current approved implementation package."), { statusCode: 409 });
+							const approved = readImplementationHandoffVersion(root, lifecycle.current);
+							respond(res, 200, { ok: true, handoff: prepareDesignPlanHandoff(approved, { subject: input.subject }) });
 						} else {
 							const draft = readImplementationHandoffDraft(root, { allowMissing: false });
 							respond(res, 200, { ok: true, package: exportImplementationHandoffPackage(draft) });

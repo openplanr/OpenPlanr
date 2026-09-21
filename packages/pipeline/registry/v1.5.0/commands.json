@@ -356,7 +356,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-plan/SKILL.md",
-        "digest": "sha256:7cfff1b795f68e07c2fcd852c2acea0956aa4bef0d96e15a6a595aeb030cbe30"
+        "digest": "sha256:eb92df1829191cc3423bf6063f36247126838f7098ccc593ddae20692651e94d"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -587,7 +587,7 @@
       "ownerPackage": "openplanr",
       "source": {
         "path": "skills/planr-plan/SKILL.md",
-        "digest": "sha256:7cfff1b795f68e07c2fcd852c2acea0956aa4bef0d96e15a6a595aeb030cbe30"
+        "digest": "sha256:eb92df1829191cc3423bf6063f36247126838f7098ccc593ddae20692651e94d"
       },
       "authorityClass": "workflow",
       "machineJson": false,
@@ -1028,7 +1028,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-design/SKILL.md",
-        "digest": "sha256:e21e82a8f216c3a06a938965cdbeac5786e3b74776e821260b2630919106ae4d"
+        "digest": "sha256:a8554f6ac7fcbe6760153f34ab18d533ff4ff36d3556dad55687b3c3b6d33aab"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1070,7 +1070,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-design-review/SKILL.md",
-        "digest": "sha256:a018e9a80e104cd444a6475514e7ac4231ca460d7a1ecbec604b0e173de608d0"
+        "digest": "sha256:1c4e6e8dcb750bb20c04b2b05fb433fe6866bc4fb5554cb82fa357077d27c242"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1091,7 +1091,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-plan/SKILL.md",
-        "digest": "sha256:7cfff1b795f68e07c2fcd852c2acea0956aa4bef0d96e15a6a595aeb030cbe30"
+        "digest": "sha256:eb92df1829191cc3423bf6063f36247126838f7098ccc593ddae20692651e94d"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1112,7 +1112,7 @@
       "ownerPackage": "planr-pipeline",
       "source": {
         "path": "skills/planr-ship/SKILL.md",
-        "digest": "sha256:b0b1dcedcfa936432c5c4dcb672310ecbaa8d958159b6fcb81586692500bbb3d"
+        "digest": "sha256:649272ea8cad3096012acaa9ec16a3ce6288f557e404fedbe9646aefb3b2c8ba"
       },
       "authorityClass": "compatibility-router",
       "machineJson": false,
@@ -1948,5 +1948,5 @@
       ]
     }
   ],
-  "documentDigest": "sha256:f31703d9e3e8bade41919c989456dfbf41446163f084a03d8fbb16e924b5ca42"
+  "documentDigest": "sha256:ae3955232bf3a97fd1cae7ca01deec957232a64c0c2c3c2fb25a14963c93e310"
 }

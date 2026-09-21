@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -7,6 +8,7 @@ import { after, test } from 'node:test';
 
 import { assertContextEnvelope } from '../../lib/pipeline/context-envelope.mjs';
 import { materializeLegacyPlanningFixture } from '../helpers/legacy-planning-fixture.mjs';
+import { designImplementationHandoffDigest } from '../../lib/protocol/design-handoff-contracts.mjs';
 
 import {
   buildPlanContext,
@@ -196,6 +198,62 @@ test('PLAN reads authored tasks directly, before any SHIP boundary', () => {
   const plan = buildPlanContext(request);
   assert.ok(plan.startingPoints.some((entry) => /Tasks in scope: T-001/u.test(entry)));
   assert.match(renderPlanContext(request), /## Dependencies/u);
+});
+
+test('SHIP adds only selected current design lineage while ordinary Plan remains unchanged', () => {
+  const root = materializeLegacyPlanningFixture();
+  const featureRoot = join(root, '.planr', 'specs', 'SPEC-001-legacy-plan');
+  const fixed = (value) => `sha256:${value.repeat(64)}`;
+  const handoff = {
+    kind: 'openplanr-design-implementation-handoff', schemaVersion: '1.0.0', id: 'legacy-design', version: 1,
+    status: 'approved', authority: 'prepare-plan', title: 'Legacy design',
+    basis: { designId: 'legacy-design', sourceRevision: fixed('a'), selectedVariant: 'one', readiness: { status: 'ready', digest: fixed('b') }, reviewHandoff: { version: 1, contentDigest: fixed('c') } },
+    sources: [
+      { id: 'selected-screen', kind: 'screen', path: 'design/selected.json', digest: fixed('d') },
+      { id: 'other-screen', kind: 'screen', path: 'design/other.json', digest: fixed('e') },
+    ],
+    requirements: [
+      { id: 'REQ-001', kind: 'behavior', statement: 'Render the selected context.', sourceRefs: ['selected-screen'], verification: ['Selected context is visible.'] },
+      { id: 'REQ-002', kind: 'behavior', statement: 'Render unrelated context.', sourceRefs: ['other-screen'], verification: ['Other context is visible.'] },
+    ],
+    contentDigest: fixed('0'), markdown: '# Legacy design\n',
+  };
+  handoff.contentDigest = designImplementationHandoffDigest(handoff);
+  handoff.approval = { actorId: 'owner', approvedAt: '2026-09-21T12:00:00.000Z', contentDigest: handoff.contentDigest, authority: 'prepare-plan' };
+  const lineage = {
+    kind: 'openplanr-design-planning-lineage', schemaVersion: '1.0.0',
+    handoff: { id: handoff.id, version: handoff.version, contentDigest: handoff.contentDigest }, specId: 'SPEC-014',
+    mappings: [
+      { requirementId: 'REQ-001', acceptanceRefs: [{ storyId: 'US-001', acceptanceId: 'AC-001' }], taskIds: ['T-001'] },
+      { requirementId: 'REQ-002', acceptanceRefs: [{ storyId: 'US-001', acceptanceId: 'AC-002' }], taskIds: ['T-003'] },
+    ],
+  };
+  writeFileSync(join(featureRoot, 'design-lineage.json'), JSON.stringify(lineage));
+  const key = `${createHash('sha256').update(handoff.id).digest('hex').slice(0, 16)}-v1-${handoff.contentDigest.slice(7, 23)}`;
+  const versionRoot = join(featureRoot, 'design/implementation-handoff/versions', key);
+  mkdirSync(versionRoot, { recursive: true });
+  writeFileSync(join(versionRoot, 'handoff.json'), JSON.stringify(handoff));
+  mkdirSync(join(featureRoot, 'design/implementation-handoff'), { recursive: true });
+  writeFileSync(join(featureRoot, 'design/implementation-handoff/current.json'), JSON.stringify({
+    id: handoff.id, version: 1, contentDigest: handoff.contentDigest, status: 'approved',
+  }));
+  execFileSync('git', ['init', '-q'], { cwd: root });
+  execFileSync('git', ['add', '-A'], { cwd: root });
+  execFileSync('git', ['-c', 'user.email=fixture@example.invalid', '-c', 'user.name=Fixture', 'commit', '-qm', 'fixture'], { cwd: root });
+  try {
+    const ship = buildShipContext({ projectRoot: root, feature: 'legacy-plan', taskId: 'T-001' });
+    assert.match(ship.requirements.join('\n'), /Design REQ-001: Render the selected context/u);
+    assert.doesNotMatch(ship.requirements.join('\n'), /REQ-002|unrelated context/u);
+    assert.match(ship.architecture.join('\n'), /Design source selected-screen/u);
+    assert.doesNotMatch(ship.architecture.join('\n'), /other-screen/u);
+    assert.match(ship.startingPoints.join('\n'), /Design lineage .* current/u);
+
+    rmSync(join(featureRoot, 'design-lineage.json'));
+    const withoutLineage = buildShipContext({ projectRoot: root, feature: 'legacy-plan', taskId: 'T-001' });
+    assert.doesNotMatch(JSON.stringify(withoutLineage), /Design lineage|Design REQ-/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('the plan context carries dependencies without schedule boilerplate', () => {

@@ -3,6 +3,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { buildContextEnvelope, renderContextEnvelope } from './context-envelope.mjs';
+import { resolveDesignPlanningLineage } from './design-lineage.mjs';
 import { PipelineError } from './errors.mjs';
 import { preparePlan, prepareShipContext } from './engine.mjs';
 
@@ -409,6 +410,33 @@ function supplementalContext({ projectRoot, root, mode, readFile }) {
   return { architecture, startingPoints };
 }
 
+function designLineageContext({ projectRoot, root, tasks, readFile }) {
+  const path = join(root, 'design-lineage.json');
+  const bytes = readOptional(path, readFile);
+  if (bytes === null) return null;
+  let resolved;
+  try {
+    resolved = resolveDesignPlanningLineage({
+      root,
+      lineage: JSON.parse(bytes),
+      taskIds: tasks.map(({ id }) => id),
+      readFile,
+    });
+  } catch (error) {
+    return {
+      status: 'stale',
+      reason: 'invalid-lineage',
+      requirements: [],
+      sources: [],
+      startingPoint: `Design lineage (${displayPath(projectRoot, path)}): stale — ${error.message}`,
+    };
+  }
+  return {
+    ...resolved,
+    startingPoint: `Design lineage (${displayPath(projectRoot, path)}): ${resolved.status} — ${resolved.reason}.`,
+  };
+}
+
 /**
  * Maps planning artifacts and repository conventions into bounded working context.
  */
@@ -424,6 +452,7 @@ function buildFromArtifacts({
   mode,
   runtime,
   readFile,
+  lineageContext = null,
 }) {
   const summary = frontmatterTitle(markdown) || String(feature);
   const userValue =
@@ -476,6 +505,21 @@ function buildFromArtifacts({
   architecture.push(...supplemental.architecture);
   startingPoints.push(...supplemental.startingPoints);
 
+  if (lineageContext) {
+    startingPoints.push(lineageContext.startingPoint);
+    if (lineageContext.status === 'current') {
+      for (const requirement of lineageContext.requirements) {
+        requirements.push(`Design ${requirement.id}: ${requirement.statement}`);
+        acceptanceCriteria.push(...requirement.verification.map((entry) => `Design ${requirement.id}: ${entry}`));
+      }
+      for (const source of lineageContext.sources) {
+        architecture.push(`Design source ${source.id} (${source.kind}): ${source.path}`);
+      }
+    } else {
+      architecture.push(`Design lineage is ${lineageContext.status}: ${lineageContext.reason}. Treat it as evidence, not current approved scope.`);
+    }
+  }
+
   const doNotChange = [
     ...new Set(
       tasks.flatMap((task) =>
@@ -525,6 +569,7 @@ export function buildShipContext({ projectRoot, feature, taskId, runtime, readFi
     ...(prepared.diagnostics ?? []),
     ...(spec.diagnostic ? [spec.diagnostic] : []),
   ];
+  const lineageContext = designLineageContext({ projectRoot, root: prepared.root, tasks, readFile });
   return buildFromArtifacts({
     markdown: spec.markdown,
     specPath: spec.path,
@@ -536,6 +581,7 @@ export function buildShipContext({ projectRoot, feature, taskId, runtime, readFi
     runtime,
     readFile,
     diagnostics,
+    lineageContext,
     repositories: (prepared.repositoryDescriptors ?? []).map(({ repositoryKey, path }) => ({
       name: repositoryKey,
       role: `checked out at ${path}`,

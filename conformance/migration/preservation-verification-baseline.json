@@ -3,7 +3,7 @@
   "schemaVersion": "1.0.0",
   "migrationId": "openplanr-monorepo",
   "inventoryDigest": "sha256:91543f52c378ffad486a5121321264089edfd79fd24c48712c967639ebae7c64",
-  "surfaceCatalogDigest": "sha256:c0c98e3779eb723a1b42bcd3127f34a2776199c6563b8048b772b7c6ea0077bc",
+  "surfaceCatalogDigest": "sha256:f20685cc49a3b88c8a3850a4d1b4e0d77302202744b7f56a2710eb639a60a410",
   "coverage": {
     "cutoffTrackedPaths": 1987,
     "includedOpenPlanrOverlayPaths": 618,
@@ -23,7 +23,7 @@
     "baselinePackageExports": 37,
     "baselineRootSymbols": 229,
     "generators": 19,
-    "generatedAssets": 2330,
+    "generatedAssets": 2346,
     "outputContracts": 23,
     "outputClasses": [
       "A",
@@ -32,5 +32,5 @@
       "D"
     ]
   },
-  "documentDigest": "sha256:51837e342eb4a0fa3d7335dbe86dd54aa88907f9d1eceecf2f49c7d1bacd9445"
+  "documentDigest": "sha256:b14b9376a3fe4d57621abb9743980f8bbd08490eea07185262af054ffc2bdbe2"
 }

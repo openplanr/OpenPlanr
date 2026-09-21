@@ -63,6 +63,8 @@ export {
   revokeImplementationHandoff,
   supersedeImplementationHandoff,
 } from './implementation-handoff-approval.mjs';
+export { prepareDesignPlanHandoff } from './design-plan-handoff.mjs';
+export { projectDesignDeliveryStatus } from './delivery-status.mjs';
 export {
   designSystemStatus, resolveDesignSystem, summarizeDesignSystem, DS_PACKAGE_FILES,
 } from './designSystem.mjs';

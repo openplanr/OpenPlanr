@@ -844,11 +844,11 @@
     },
     {
       "id": "planr-design",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "source": "skills/planr-design/openplanr.skill.json",
       "entrypoint": "skills/planr-design/SKILL.md",
       "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
-      "sourceDigest": "sha256:e21e82a8f216c3a06a938965cdbeac5786e3b74776e821260b2630919106ae4d",
+      "sourceDigest": "sha256:a8554f6ac7fcbe6760153f34ab18d533ff4ff36d3556dad55687b3c3b6d33aab",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -978,7 +978,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:a5a9a2ea5b9ed3d629609ee77743cd97302e96e21eb43a52747e0ae771a5b32c"
+          "digest": "sha256:4374afc1003a4869cc423a093950b5d192a63df314329ee0e30ea423d163560b"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -1540,7 +1540,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:a5a9a2ea5b9ed3d629609ee77743cd97302e96e21eb43a52747e0ae771a5b32c"
+          "digest": "sha256:4374afc1003a4869cc423a093950b5d192a63df314329ee0e30ea423d163560b"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -1968,11 +1968,11 @@
     },
     {
       "id": "planr-design-review",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "source": "skills/planr-design-review/openplanr.skill.json",
       "entrypoint": "skills/planr-design-review/SKILL.md",
       "description": "Review and revise an existing product design using stable board pins and scoped browser-verified changes. Use for focused improvements while preserving unrelated screens and feedback.",
-      "sourceDigest": "sha256:a018e9a80e104cd444a6475514e7ac4231ca460d7a1ecbec604b0e173de608d0",
+      "sourceDigest": "sha256:1c4e6e8dcb750bb20c04b2b05fb433fe6866bc4fb5554cb82fa357077d27c242",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2102,7 +2102,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:a5a9a2ea5b9ed3d629609ee77743cd97302e96e21eb43a52747e0ae771a5b32c"
+          "digest": "sha256:4374afc1003a4869cc423a093950b5d192a63df314329ee0e30ea423d163560b"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2897,11 +2897,11 @@
     },
     {
       "id": "planr-plan",
-      "version": "1.1.1",
+      "version": "1.2.0",
       "source": "skills/planr-plan/openplanr.skill.json",
       "entrypoint": "skills/planr-plan/SKILL.md",
       "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
-      "sourceDigest": "sha256:7cfff1b795f68e07c2fcd852c2acea0956aa4bef0d96e15a6a595aeb030cbe30",
+      "sourceDigest": "sha256:eb92df1829191cc3423bf6063f36247126838f7098ccc593ddae20692651e94d",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2926,6 +2926,18 @@
           "digest": "sha256:b120b3f0380776db2a126cb05e2cd917710389bdd665574fe014aa5d6222914e"
         },
         {
+          "path": "references/design-handoff.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:b918cc16855412a75028e1a014832c2ced59b0349461a24d9e1fdcfc336b9f5f"
+        },
+        {
           "path": "scripts/planning-ids.mjs",
           "kind": "script",
           "hosts": [
@@ -2947,7 +2959,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:a5a9a2ea5b9ed3d629609ee77743cd97302e96e21eb43a52747e0ae771a5b32c"
+          "digest": "sha256:4374afc1003a4869cc423a093950b5d192a63df314329ee0e30ea423d163560b"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -3508,11 +3520,11 @@
     },
     {
       "id": "planr-ship",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "skills/planr-ship/openplanr.skill.json",
       "entrypoint": "skills/planr-ship/SKILL.md",
       "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
-      "sourceDigest": "sha256:b0b1dcedcfa936432c5c4dcb672310ecbaa8d958159b6fcb81586692500bbb3d",
+      "sourceDigest": "sha256:649272ea8cad3096012acaa9ec16a3ce6288f557e404fedbe9646aefb3b2c8ba",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -3535,6 +3547,18 @@
           ],
           "executable": false,
           "digest": "sha256:89da8867331e54a4b7474072450039c32614afdecd84108afd46acdd0cc4436a"
+        },
+        {
+          "path": "references/design-lineage.md",
+          "kind": "reference",
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "executable": false,
+          "digest": "sha256:0cf8cce235b6e258c066e65dcc25480f10aca6f0c3200de332fc278e3b7975a9"
         },
         {
           "path": "scripts/discover-verification.mjs",

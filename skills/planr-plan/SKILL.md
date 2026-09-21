@@ -50,6 +50,11 @@ report the changed inputs and obtain the missing decision only when it affects t
 requested plan. Never silently substitute a newer draft for an approved snapshot.
 A missing review handoff does not block ordinary planning from a clear specification.
 
+When the request carries an approved implementation package, read
+[the design handoff contract](references/design-handoff.md). Validate that the
+package is still the current approved version before treating its numbered
+requirements as scope. A missing package leaves ordinary Plan unchanged.
+
 For a consequential unresolved choice, use the host's structured question
 interface. Ask at most three short, mutually exclusive questions at once. If the
 host has no structured question interface, ask one concise chat question.
@@ -88,6 +93,13 @@ Write stories and tasks directly in the repository's active planning mode.
 Validate all frontmatter and acceptance coverage before finishing. If a helper
 is unavailable, inspect existing IDs and validate the same invariants directly;
 do not route semantic work to a CLI fallback.
+
+For approved design input, author the complete story and task bytes before
+touching target paths, then commit those bytes and the sibling
+`design-lineage.json` through the public atomic planning-lineage helper described
+in the reference. A failed requirement-to-acceptance-to-task mapping writes
+nothing. This deterministic commit validates content; it does not generate the
+plan or invoke another phase.
 
 ## Return
 

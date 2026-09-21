@@ -71,3 +71,6 @@ Review for focused iteration on an existing direction.
 For company reviews and implementation handoff, follow
 [team-review.md](references/team-review.md). Keep review guidance outside product
 screens, preserve reviewer intent, and let the owner approve the refined handoff.
+After approval, **Continue to Plan** is one explicit owner action that returns a
+host-native `/planr:plan` or `$planr:plan` invocation bound to the exact package.
+It does not write planning files, dispatch an agent, change Git, or start Ship.

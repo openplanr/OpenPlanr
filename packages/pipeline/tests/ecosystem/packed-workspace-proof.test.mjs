@@ -81,7 +81,7 @@ function fixture() {
         exact: true,
       },
     },
-    publicCompatibility: { pipelineExportKeys: 37, pipelineRootSymbols: 229 },
+    publicCompatibility: { pipelineExportKeys: 40, pipelineRootSymbols: 229 },
   });
 
   const packageCustody = {
@@ -110,7 +110,7 @@ function fixture() {
       pipeline: {
         name: manifests.pipeline.name,
         version: manifests.pipeline.version,
-        exportKeys: 37,
+        exportKeys: 40,
         generatedSkillPortability: {
           skills: PACKED_WORKSPACE_GENERATED_SKILL_COUNT,
           violations: 0,
@@ -127,7 +127,7 @@ function fixture() {
           renderValidation: 'passed',
           checkValidation: 'passed',
         },
-        exportKeys: 37,
+        exportKeys: 40,
         rootSymbols: 229,
         retiredPipelineOperate: { absenceContracts: 80, removedPaths: 34 },
       },
