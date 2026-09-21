@@ -175,13 +175,31 @@
     {
       "source": "packages/design/lib/design/handoff.mjs",
       "target": "lib/design/handoff.mjs",
-      "sha256": "4402a0c9d5e69d152fe4a20a4b6adc45c45c7ac29144194a6bece8d04f4522e2",
+      "sha256": "612510b64dca00188d0678eb85e7fc5b07877dc6c3ff9de76c443de7f59e3f68",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/implementation-handoff-markdown.mjs",
+      "target": "lib/design/implementation-handoff-markdown.mjs",
+      "sha256": "3e41afba7c80faf5e5436f9992b5026d2b5c03109b6ce473964551180eed5a5b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/implementation-handoff.d.mts",
+      "target": "lib/design/implementation-handoff.d.mts",
+      "sha256": "b7b815deef1880c330439a35bde7a786794ddb8c8072cddbae82a27259a97eeb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/implementation-handoff.mjs",
+      "target": "lib/design/implementation-handoff.mjs",
+      "sha256": "8ad67f8d7c81a0515e4f86499d39e9c4b19d732337f1316f6bf354db6a90ee56",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/index.mjs",
       "target": "lib/design/index.mjs",
-      "sha256": "b3e5090ffbf3fa89c96a77fbc98d9cac3800c28c1085eeefd0924fc2927071de",
+      "sha256": "aafb609d8281af24251d58c4595da6d8ae1ec67adc12d0c5564f8b4cc256a7fe",
       "mode": "644"
     },
     {
@@ -229,7 +247,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "62f20a4f87f48fdefe17cd38f83d339950bdfa831b01e1c7e20ecfd8e9c39334",
+      "sha256": "cf558389f799aa1d5619811497e50a8668409d0665708dbfff5e33a950f55f67",
       "mode": "644"
     },
     {

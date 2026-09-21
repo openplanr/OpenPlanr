@@ -135,6 +135,9 @@ test('the private Design package packs the readiness runtime and declaration beh
     assert.ok(files.has('lib/design/handoff-readiness.d.mts'));
     assert.ok(files.has('lib/design/handoff-resolution.mjs'));
     assert.ok(files.has('lib/design/handoff-resolution.d.mts'));
+    assert.ok(files.has('lib/design/implementation-handoff.mjs'));
+    assert.ok(files.has('lib/design/implementation-handoff.d.mts'));
+    assert.ok(files.has('lib/design/implementation-handoff-markdown.mjs'));
     assert.ok(files.has('lib/design/index.mjs'));
     assert.ok(files.has('package.json'));
   } finally {

@@ -25,6 +25,7 @@ import {
 import {
 	atomicJson,
 	currentDesign,
+	designSpecPath,
 	hash,
 	readJson,
 	standaloneDesignHtml,
@@ -32,8 +33,20 @@ import {
 import { renderDesignStudio } from "./studio.mjs";
 import { getDesignShareStatus, shareDesign, publishDesignShare, syncDesignShare, manageDesignShare, exportDesignShareRecovery } from "./share.mjs";
 
-import { readDesignExperience, readDesignHandoff, updateDesignHandoff } from "./handoff.mjs";
-import { listDesignRevisions, readDesignRevision } from "./context.mjs";
+import {
+	readDesignExperience,
+	readDesignHandoff,
+	readDesignHandoffReadiness,
+	updateDesignHandoff,
+} from "./handoff.mjs";
+import {
+	createRepositorySourceResolver,
+	exportImplementationHandoffPackage,
+	importImplementationHandoffPackage,
+	readImplementationHandoffDraft,
+	writeImplementationHandoffDraft,
+} from "./implementation-handoff.mjs";
+import { listDesignRevisions, readDesignRevision, reviewDigest } from "./context.mjs";
 import { createDesignReviewExport } from "./review-export.mjs";
 
 const VERSION = "1.3.0";
@@ -262,6 +275,34 @@ function projectRoot(root) {
 	}
 }
 
+function currentImplementationBasis(file, env) {
+	const handoff = readDesignHandoff(file, { env });
+	const readiness = readDesignHandoffReadiness(file, { env });
+	if (!handoff.draft || handoff.draft.status !== "approved" || !handoff.current)
+		throw Object.assign(
+			new Error("Approve the current review handoff before composing the implementation package."),
+			{ statusCode: 409 },
+		);
+	if (readiness.readiness.status !== "ready")
+		throw Object.assign(
+			new Error("Resolve the remaining design readiness checks before composing the implementation package."),
+			{ statusCode: 409 },
+		);
+	return {
+		designId: handoff.basis.designId,
+		sourceRevision: `sha256:${handoff.basis.sourceRevision}`,
+		selectedVariant: handoff.basis.selectedVariant,
+		readiness: {
+			status: readiness.readiness.status,
+			digest: readiness.digest,
+		},
+		reviewHandoff: {
+			version: handoff.draft.version,
+			contentDigest: `sha256:${handoff.draft.contentHash}`,
+		},
+	};
+}
+
 async function persistDesignTaste(current, state) {
 	const path = join(
 		projectRoot(current.root),
@@ -358,6 +399,10 @@ function respond(res, status, value) {
 const readBody = async (req) =>
 	JSON.parse(
 		await readRequestBody(req, { maxBytes: 128 * 1024, encoding: "utf8" }),
+	);
+const readImplementationBody = async (req) =>
+	JSON.parse(
+		await readRequestBody(req, { maxBytes: 5 * 1024 * 1024, encoding: "utf8" }),
 	);
 
 /** Same artifact server and ledger in both CLI and installed-skill entrypoints. */
@@ -472,11 +517,13 @@ async function startDesignReviewUnlocked(
 				readyUrl: `${base}api/design-ready`,
                 shareUrl: `${base}api/design-share`,
                 experienceUrl: `${base}api/design-experience`,
+                readinessUrl: `${base}api/design-handoff-readiness`,
                 handoffUrl: `${base}api/design-handoff`,
+                implementationHandoffUrl: `${base}api/design-implementation-handoff`,
                 revisionsUrl: `${base}api/design-revisions`,
                 reviewExportUrl: `${base}api/design-feedback-export`,
 			};
-			return `globalThis.__OPENPLANR_DESIGN_STUDIO_OPTIONS__={...${JSON.stringify(settings)},loadReviewExport:async({scope="all"}={})=>{const r=await fetch(${JSON.stringify(`${base}api/design-feedback-export`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify({scope})});const value=await r.json();if(!r.ok)throw new Error(value.error||"Review export unavailable");return value},loadExperience:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-experience`)});if(!r.ok)throw new Error("Review context unavailable");return r.json()},loadHandoff:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff`)});if(!r.ok)throw new Error("Handoff unavailable");return r.json()},updateHandoff:async(input)=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify(input)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Could not update handoff");return value},listRevisions:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-revisions`)});if(!r.ok)throw new Error("Revision history unavailable");return r.json()},loadRevision:async(revision)=>{const r=await fetch(${JSON.stringify(`${base}api/design-revisions`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify({revision})});if(!r.ok)throw new Error("Revision unavailable");return r.json()},exportHtml:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-export`)});if(!r.ok)throw new Error('Export failed');return r.text()}};\n${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/design-share-runtime` })}`;
+			return `globalThis.__OPENPLANR_DESIGN_STUDIO_OPTIONS__={...${JSON.stringify(settings)},loadReviewExport:async({scope="all"}={})=>{const r=await fetch(${JSON.stringify(`${base}api/design-feedback-export`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify({scope})});const value=await r.json();if(!r.ok)throw new Error(value.error||"Review export unavailable");return value},loadExperience:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-experience`)});if(!r.ok)throw new Error("Review context unavailable");return r.json()},loadReadiness:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff-readiness`)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Handoff readiness unavailable");return value},loadHandoff:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff`)});if(!r.ok)throw new Error("Handoff unavailable");return r.json()},updateHandoff:async(input)=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify(input)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Could not update handoff");return value},loadImplementationHandoff:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-implementation-handoff`)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Implementation package unavailable");return value},updateImplementationHandoff:async(input)=>{const r=await fetch(${JSON.stringify(`${base}api/design-implementation-handoff`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify(input)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Could not update implementation package");return value},listRevisions:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-revisions`)});if(!r.ok)throw new Error("Revision history unavailable");return r.json()},loadRevision:async(revision)=>{const r=await fetch(${JSON.stringify(`${base}api/design-revisions`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify({revision})});if(!r.ok)throw new Error("Revision unavailable");return r.json()},exportHtml:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-export`)});if(!r.ok)throw new Error('Export failed');return r.text()}};\n${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/design-share-runtime` })}`;
 		},
 		async handleSessionRequest({ req, res, segments }) {
 			if (
@@ -489,14 +536,49 @@ async function startDesignReviewUnlocked(
 				const route = segments[4];
                 if (route === "design-experience" && req.method === "GET") {
                   respond(res, 200, readDesignExperience(file, { env }));
+                } else if (route === "design-handoff-readiness" && req.method === "GET") {
+                  respond(res, 200, readDesignHandoffReadiness(file, { env }));
                 } else if (route === "design-handoff" && req.method === "GET") {
                   respond(res, 200, readDesignHandoff(file, { env }));
+                } else if (route === "design-implementation-handoff" && req.method === "GET") {
+                  const root = dirname(designSpecPath(currentDesign(file).root));
+                  respond(res, 200, { ok: true, draft: readImplementationHandoffDraft(root) });
                 } else if (route === "design-revisions" && req.method === "GET") {
                   respond(res, 200, listDesignRevisions(file));
-                } else if (["design-handoff", "design-revisions", "design-feedback-export"].includes(route) && req.method === "POST") {
+                } else if (["design-handoff", "design-implementation-handoff", "design-revisions", "design-feedback-export"].includes(route) && req.method === "POST") {
                   if (req.headers["x-openplanr-design"] !== "1" || !String(req.headers["content-type"] ?? "").startsWith("application/json") || (req.headers.origin && req.headers.origin !== `http://127.0.0.1:${server.port}`)) throw Object.assign(new Error("Owner actions require a same-origin studio request."), { statusCode: 403 });
-                  const input = await readBody(req);
+                  const input = route === "design-implementation-handoff" ? await readImplementationBody(req) : await readBody(req);
                   if (route === "design-handoff") respond(res, 200, await updateDesignHandoff(file, input, { env, fetchImpl }));
+                  else if (route === "design-implementation-handoff") {
+                    if (!input || typeof input !== "object" || Array.isArray(input) || !["draft", "regenerate", "export", "import"].includes(input.action)) throw new Error("Unknown implementation package action.");
+					const initial = currentDesign(file);
+					const unlock = await acquireStartLock(join(initial.root, ".design/render.lock"));
+					try {
+						const design = currentDesign(file);
+						const root = dirname(designSpecPath(design.root));
+						const resolver = createRepositorySourceResolver(projectRoot(design.root));
+						if (["draft", "regenerate"].includes(input.action)) {
+							if (!input.package || input.package.kind)
+								throw new Error("Draft composition requires editable package fields, not a lifecycle record.");
+							const draft = writeImplementationHandoffDraft(root, {
+								...input.package,
+								basis: currentImplementationBasis(file, env),
+							}, { resolveSource: resolver });
+							respond(res, 200, { ok: true, draft });
+						} else if (input.action === "import") {
+							const draft = importImplementationHandoffPackage(input.package, { resolveSource: resolver });
+							if (reviewDigest(draft.basis) !== reviewDigest(currentImplementationBasis(file, env)))
+								throw Object.assign(new Error("The imported implementation package belongs to a different or earlier design basis."), { statusCode: 409 });
+							writeImplementationHandoffDraft(root, draft, { resolveSource: resolver });
+							respond(res, 200, { ok: true, draft });
+						} else {
+							const draft = readImplementationHandoffDraft(root, { allowMissing: false });
+							respond(res, 200, { ok: true, package: exportImplementationHandoffPackage(draft) });
+						}
+					} finally {
+						unlock();
+					}
+                  }
                   else if (route === "design-feedback-export") {
                     if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).some(key => key !== "scope") || (input.scope !== undefined && !["all", "current"].includes(input.scope))) throw new Error("Review export requires scope current or all.");
                     await syncDesignShare(file, { env, fetchImpl });

@@ -40,6 +40,30 @@ Generated previews and copied runtimes are separate from authored source. Follow
 the project's tracking conventions; never discard editable source or the prior
 working revision merely to clean generated output.
 
+## Implementation package custody
+
+After review feedback has explicit owner decisions and the current review handoff
+is approved, the owner may prepare an implementation package. The package is a
+compact navigation and acceptance aid; it never replaces the design document,
+screen sources, `design-spec.md`, verification record, review ledger or approved
+review handoff.
+
+- Keep source references repository-relative and bind them to their exact revision
+  and integrity value. A screen, component, state, flow, token, review decision or
+  element anchor must resolve exactly once inside the repository.
+- Keep canonical bodies in their owning files. Do not embed whole HTML documents,
+  screenshots, design documents, review ledgers or source code in the package.
+- Give every implementation requirement observable verification and one or more
+  stable source references. Requirement IDs derive from canonical requirement
+  content and ordered references; do not renumber them for presentation.
+- Treat `implementation-handoff/draft.json` as the machine record and
+  `implementation-handoff/draft.md` as its generated human projection. Never edit
+  the Markdown independently. Portable import validates JSON first and then exact
+  Markdown parity; optional source verification can run fully offline.
+- Drafting, regeneration, export and import grant no Plan, Ship, Git, release,
+  publication or deployment authority. Package approval and immutable history are
+  separate owner actions.
+
 Return concise links to the studio, document/source, specification and quality
 result. State the selected direction and any decisions still open. Plan can read
 the specification and selected sources to create UI tasks; it must not re-extract

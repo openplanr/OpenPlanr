@@ -5,11 +5,15 @@ import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { withArtifactReviewLock } from '@openplanr/artifact/review.mjs';
 import { assertReviewExperience, DESIGN_HANDOFF_SCHEMA, DESIGN_HANDOFF_CONTENT_SCHEMA } from '@openplanr/protocol/review-experience-contracts';
-import { atomicJson, currentDesign, designSpecPath, readJson } from './document.mjs';
+import { atomicJson, currentDesign, designSpecPath, hash, readJson } from './document.mjs';
 import { emptyReviewContext, reviewDigest } from './context.mjs';
 import { readDesignFeedback, designReviewPath } from './review.mjs';
 import { getDesignShareStatus, publishDesignReviewMetadata } from './share.mjs';
 import { canApproveDesignHandoffResolution, compileDesignHandoffResolution } from './handoff-resolution.mjs';
+import {
+  compileDesignHandoffReadiness,
+  designHandoffReadinessDigest,
+} from './handoff-readiness.mjs';
 
 const conflict = message => Object.assign(new Error(message), { statusCode: 409 });
 const sections = ['agreedChanges', 'openQuestions', 'deferred', 'rejected'];
@@ -97,6 +101,54 @@ export function readDesignHandoff(file, { env = process.env, ...shareOptions } =
     if (!existsSync(markdownPath) || readFileSync(markdownPath, 'utf8') !== draft.markdown) throw new Error('The handoff Markdown differs from its approved JSON. Rebuild the handoff projection before using it in Plan.');
   }
   return { ok: true, path, revision: value.current.revision, draft, current: Boolean(draft && reviewDigest(draft.basis) === reviewDigest(value.basis)), metadata: value.metadata, feedback: { pins: value.feedback.pins }, basis: value.basis, resolution: value.resolution };
+}
+export function readDesignHandoffReadiness(file, { env = process.env, ...shareOptions } = {}) {
+  const value = snapshot(file, env, shareOptions);
+  const path = join(dirname(designSpecPath(value.current.root)), 'review-handoff.json');
+  const handoff = readJson(path, null);
+  if (handoff) assertDraft(handoff);
+  const outcomes = new Map(value.resolution.items.map(item => [item.id, item]));
+  const pins = value.feedback.pins.map(pin => {
+    const resolved = outcomes.get(pinKey(pin));
+    const disposition = resolved?.outcome === 'accepted' ? 'accepted'
+      : resolved?.outcome === 'deferred' ? 'deferred'
+      : resolved?.outcome === 'declined' ? 'rejected' : undefined;
+    return {
+      id: pin.id,
+      ...(pin.screenId ? { screenId: pin.screenId } : {}),
+      ...(pin.anchor?.planrId ? { elementId: pin.anchor.planrId } : {}),
+      category: resolved?.category,
+      ...(disposition ? { disposition } : {}),
+      stale: Boolean(pin.stale),
+    };
+  });
+  const specificationPath = designSpecPath(value.current.root);
+  const specification = existsSync(specificationPath)
+    ? { path: 'design-spec.md', revision: value.current.revision, digest: `sha256:${hash(readFileSync(specificationPath))}`, complete: true }
+    : undefined;
+  const studioState = readJson(join(value.current.root, '.design/studio-state.json'), { state: {} }).state;
+  const readiness = compileDesignHandoffReadiness({
+    document: value.current.document,
+    documentPath: 'design-document.json',
+    sourceRevision: value.current.revision,
+    studioState,
+    studioStatePath: '.design/studio-state.json',
+    specification,
+    verification: { path: '.design/verification/current.json', ...value.current.verification },
+    review: {
+      path: '.design/review.json',
+      revision: value.current.revision,
+      current: pins.every(pin => !pin.stale),
+      pins,
+    },
+    reviewHandoff: handoff ? {
+      ...handoff,
+      path: 'review-handoff.json',
+      digest: `sha256:${handoff.contentHash}`,
+      current: reviewDigest(handoff.basis) === reviewDigest(value.basis),
+    } : undefined,
+  });
+  return { ok: true, readiness, digest: designHandoffReadinessDigest(readiness) };
 }
 function assertDraft(draft) {
   assertReviewExperience(draft, DESIGN_HANDOFF_SCHEMA);

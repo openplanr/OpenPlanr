@@ -930,7 +930,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:dddc50fe5167884b38523fcbcb99cb3525fd28a5ccf7999409212f52845e9219"
+          "digest": "sha256:f11877d33c5d3f6042bded510742eca2b7bf73a0f777c2c534f1e57367f68e67"
         },
         {
           "path": "references/review.md",
@@ -978,7 +978,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8320a7b207eebdaef009fbf549e52c16758dac956cd9e835835a6efe8f4ee7e4"
+          "digest": "sha256:40274eab108c240ad4a4e1fd426d7418e7d097c6b8bf3501449666318c472a00"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -1492,7 +1492,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:dddc50fe5167884b38523fcbcb99cb3525fd28a5ccf7999409212f52845e9219"
+          "digest": "sha256:f11877d33c5d3f6042bded510742eca2b7bf73a0f777c2c534f1e57367f68e67"
         },
         {
           "path": "references/review.md",
@@ -1540,7 +1540,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8320a7b207eebdaef009fbf549e52c16758dac956cd9e835835a6efe8f4ee7e4"
+          "digest": "sha256:40274eab108c240ad4a4e1fd426d7418e7d097c6b8bf3501449666318c472a00"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2054,7 +2054,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:dddc50fe5167884b38523fcbcb99cb3525fd28a5ccf7999409212f52845e9219"
+          "digest": "sha256:f11877d33c5d3f6042bded510742eca2b7bf73a0f777c2c534f1e57367f68e67"
         },
         {
           "path": "references/review.md",
@@ -2102,7 +2102,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8320a7b207eebdaef009fbf549e52c16758dac956cd9e835835a6efe8f4ee7e4"
+          "digest": "sha256:40274eab108c240ad4a4e1fd426d7418e7d097c6b8bf3501449666318c472a00"
         },
         {
           "path": "schemas/design-document.schema.json",
@@ -2947,7 +2947,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:8320a7b207eebdaef009fbf549e52c16758dac956cd9e835835a6efe8f4ee7e4"
+          "digest": "sha256:40274eab108c240ad4a4e1fd426d7418e7d097c6b8bf3501449666318c472a00"
         },
         {
           "path": "schemas/design-document.schema.json",

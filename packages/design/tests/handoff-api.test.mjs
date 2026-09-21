@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -47,7 +48,7 @@ test('handoff HTTP endpoints require the local owner capability plus same-origin
   assert.equal(studioResponse.status, 200);
   assert.match(studioResponse.headers.get('permissions-policy'), /(?:^|,\s*)fullscreen=\(self\)(?:,|$)/, 'Only the trusted top-level studio may present fullscreen');
   await studioResponse.arrayBuffer();
-  for (const route of ['design-experience', 'design-handoff', 'design-revisions']) {
+  for (const route of ['design-experience', 'design-handoff-readiness', 'design-handoff', 'design-implementation-handoff', 'design-revisions']) {
     const url = new URL(`api/${route}`, f.server.url);
     const segments = url.pathname.split('/'); segments[3] = 'A'.repeat(43); url.pathname = segments.join('/');
     const denied = await fetch(url); assert.equal(denied.status, 404);
@@ -108,4 +109,36 @@ test('authenticated history returns allowlisted immutable bundles and isolated c
   for (const revision of ['../current', '../unrelated-owner-material.txt', 'not-a-revision']) {
     const invalid = await f.request('design-revisions', { revision }); assert.equal(invalid.status, 400); assert.doesNotMatch(invalid.raw, /UNRELATED_PRIVATE_MATERIAL/);
   }
+});
+
+test('implementation handoff endpoints compose, export, and import one exact portable package', async (t) => {
+  const f = await fixture(t), current = currentDesign(f.file);
+  const sourcePath = 'source/screen-1.html', source = readFileSync(join(f.root, sourcePath));
+  const sha = value => `sha256:${createHash('sha256').update(value).digest('hex')}`;
+  writeFileSync(join(f.root, 'design-spec.md'), '# Complete design specification\n');
+  atomicJson(join(f.root, '.design/verification', `${current.revision}.json`), { status: 'verified', revision: current.revision });
+  let review = await f.request('design-handoff', { action: 'draft', revision: current.revision, version: 0 });
+  const reviewContent = structuredClone(review.value.draft.content); reviewContent.summary = 'The current design is ready for implementation planning.';
+  review = await f.request('design-handoff', { action: 'update', revision: current.revision, version: review.value.draft.version, content: reviewContent });
+  review = await f.request('design-handoff', { action: 'approve', revision: current.revision, version: review.value.draft.version, contentHash: review.value.draft.contentHash });
+  assert.equal(review.status, 200, JSON.stringify(review.value));
+  const readiness = await f.request('design-handoff-readiness');
+  assert.equal(readiness.status, 200, JSON.stringify(readiness.value)); assert.equal(readiness.value.readiness.status, 'ready');
+  const packageInput = {
+    id: 'operations-implementation', version: 1, title: 'Operations implementation package',
+    sources: [{ id: 'screen-one', kind: 'screen', path: sourcePath, revision: `sha256:${current.revision}`, digest: sha(source) }],
+    requirements: [{ kind: 'behavior', statement: 'Keep the operations summary visible.', sourceRefs: ['screen-one'], verification: ['The summary is visible at the desktop frame.'] }],
+  };
+  const initial = await f.request('design-implementation-handoff');
+  assert.equal(initial.status, 200, JSON.stringify(initial.value)); assert.equal(initial.value.draft, null);
+  assert.equal((await f.request('design-implementation-handoff', { action: 'draft', package: packageInput }, { headers: { 'content-type': 'application/json', origin: f.origin } })).status, 403);
+  let result = await f.request('design-implementation-handoff', { action: 'draft', package: packageInput });
+  assert.equal(result.status, 200); assert.equal(result.value.draft.status, 'draft');
+  const requirementId = result.value.draft.requirements[0].id;
+  assert.match(requirementId, /^REQ-[0-9]{3,}$/u);
+  assert.equal((await f.request('design-implementation-handoff')).value.draft.requirements[0].id, requirementId);
+  result = await f.request('design-implementation-handoff', { action: 'export' });
+  assert.equal(result.status, 200); assert.match(result.value.package.markdown, new RegExp(requirementId, 'u'));
+  const imported = await f.request('design-implementation-handoff', { action: 'import', package: result.value.package });
+  assert.equal(imported.status, 200); assert.equal(imported.value.draft.contentDigest, JSON.parse(result.value.package.json).contentDigest);
 });
