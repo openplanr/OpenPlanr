@@ -23,6 +23,14 @@
       "types": "./lib/design/implementation-handoff-approval.d.mts",
       "import": "./lib/design/implementation-handoff-approval.mjs"
     },
+    "./design-plan-handoff": {
+      "types": "./lib/design/design-plan-handoff.d.mts",
+      "import": "./lib/design/design-plan-handoff.mjs"
+    },
+    "./delivery-status": {
+      "types": "./lib/design/delivery-status.d.mts",
+      "import": "./lib/design/delivery-status.mjs"
+    },
     "./package.json": "./package.json",
     "./design/*": "./lib/design/*",
     "./engine/*": "./lib/design-engine/*"

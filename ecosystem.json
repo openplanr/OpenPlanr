@@ -55,7 +55,7 @@
       "version": "0.47.0",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:effaed3d1fc276d598243361b0f2c8199a078f054a2f593df7e12a335e7b08e9"
+      "manifestDigest": "sha256:6aa32ae9db891f193edfc006ade42f6138a7879025b4026f86ac2e5e79e02276"
     },
     "protocol": {
       "package": "@openplanr/protocol",
@@ -83,7 +83,7 @@
       "version": "0.2.2",
       "path": "packages/design",
       "publication": "private",
-      "manifestDigest": "sha256:2e4e1bcbbe49d0e25b9a10b213bf6851528d9640ae27796cb600fb0c7869c4d8"
+      "manifestDigest": "sha256:820eb612a1296e75e150eb8dbc34a08648c1f0f9d76141852fa02195c6e00ccb"
     },
     "skillRuntime": {
       "package": "@openplanr/skill-runtime",
@@ -129,13 +129,13 @@
     }
   },
   "publicCompatibility": {
-    "pipelineExportKeys": 37,
+    "pipelineExportKeys": 40,
     "pipelineRootSymbols": 229
   },
   "catalogs": {
     "commands": {
       "path": "packages/protocol/registries/commands.json",
-      "digest": "sha256:59935d48aba3786764791239ef6f804c0c6e8a96cc901c37b7c1cc07b9c54684",
+      "digest": "sha256:65a0195b1116e8ec2380cdbb21178688b8d59865dc6f30f89468fce1a22d8440",
       "rootCommands": 39,
       "pipelineMachineLeaves": 31,
       "frozenClaudeDocuments": 8,
@@ -238,7 +238,7 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:30265c649e3dc73b3b8d5e63676d8b25f83f42dc67d00d3f317c1f47c11234dd",
+      "digest": "sha256:051d74215a15c3d3ebd3e87f42c29516d6a0a246530f4e3464cc3b1490822e57",
       "count": 27,
       "ids": [
         "planr-artifact",
@@ -335,8 +335,8 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:bd639b7e1372e41d490acc113d096e8ac272cdc3bf6ea7cfcf7ae28c17539b32",
-      "count": 1745
+      "digest": "sha256:362e9b33687879b3e20aa43811bc6d45940a9f95d72878a4391bf086db4bd989",
+      "count": 1757
     }
   },
   "schemas": {

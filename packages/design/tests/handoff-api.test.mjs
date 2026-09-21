@@ -153,6 +153,10 @@ test('implementation handoff endpoints compose, approve, version, compare, revok
   assert.ok(approvals.some(value => value.value.repeated === true));
   let lifecycle = await f.request('design-implementation-handoff');
   assert.equal(lifecycle.value.history.length, 1); assert.equal(lifecycle.value.events.length, 1); assert.equal(lifecycle.value.current.status, 'approved');
+  const continuation = await f.request('design-implementation-handoff', { action: 'continue-to-plan', subject: 'SPEC-014' });
+  assert.equal(continuation.status, 200); assert.equal(continuation.value.handoff.invocations.codex, '$planr:plan SPEC-014');
+  assert.equal(continuation.value.handoff.invocations.claudeCode, '/planr:plan SPEC-014');
+  assert.deepEqual(continuation.value.handoff.effects, { planningFilesWritten: false, agentDispatched: false, shipStarted: false, gitChanged: false });
   assert.equal((await f.request('design-implementation-handoff', { ...approveRequest, requestId: 'stale-second-tab', expectedContentDigest: sha('stale') })).status, 409);
 
   const regeneratedInput = structuredClone(packageInput);
@@ -171,4 +175,5 @@ test('implementation handoff endpoints compose, approve, version, compare, revok
   assert.equal(revoked.status, 200); assert.equal(revoked.value.current.status, 'revoked');
   lifecycle = await f.request('design-implementation-handoff');
   assert.equal(lifecycle.value.history.length, 2); assert.equal(lifecycle.value.current.status, 'revoked');
+  assert.equal((await f.request('design-implementation-handoff', { action: 'continue-to-plan', subject: 'SPEC-014' })).status, 409);
 });

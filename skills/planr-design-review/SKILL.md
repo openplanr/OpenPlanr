@@ -52,3 +52,6 @@ the studio's encrypted Share flow. Preserve reviewer attribution.
 For company reviews and implementation handoff, follow
 [team-review.md](references/team-review.md). Keep review guidance outside product
 screens, preserve reviewer intent, and let the owner approve the refined handoff.
+Only an explicit **Continue to Plan** action may return the host-native Plan
+invocation for the current approved package. Preparing or approving a package
+does not write planning files, dispatch an agent, change Git, or start Ship.

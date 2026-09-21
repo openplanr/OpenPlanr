@@ -1507,7 +1507,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:7cfff1b795f68e07c2fcd852c2acea0956aa4bef0d96e15a6a595aeb030cbe30"
+          "digest": "sha256:eb92df1829191cc3423bf6063f36247126838f7098ccc593ddae20692651e94d"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -1738,7 +1738,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "openplanr",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:7cfff1b795f68e07c2fcd852c2acea0956aa4bef0d96e15a6a595aeb030cbe30"
+          "digest": "sha256:eb92df1829191cc3423bf6063f36247126838f7098ccc593ddae20692651e94d"
         },
         "authorityClass": "workflow",
         "machineJson": false,
@@ -2179,7 +2179,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-design/SKILL.md",
-          "digest": "sha256:e21e82a8f216c3a06a938965cdbeac5786e3b74776e821260b2630919106ae4d"
+          "digest": "sha256:a8554f6ac7fcbe6760153f34ab18d533ff4ff36d3556dad55687b3c3b6d33aab"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -2221,7 +2221,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-design-review/SKILL.md",
-          "digest": "sha256:a018e9a80e104cd444a6475514e7ac4231ca460d7a1ecbec604b0e173de608d0"
+          "digest": "sha256:1c4e6e8dcb750bb20c04b2b05fb433fe6866bc4fb5554cb82fa357077d27c242"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -2242,7 +2242,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-plan/SKILL.md",
-          "digest": "sha256:7cfff1b795f68e07c2fcd852c2acea0956aa4bef0d96e15a6a595aeb030cbe30"
+          "digest": "sha256:eb92df1829191cc3423bf6063f36247126838f7098ccc593ddae20692651e94d"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -2263,7 +2263,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         "ownerPackage": "planr-pipeline",
         "source": {
           "path": "skills/planr-ship/SKILL.md",
-          "digest": "sha256:b0b1dcedcfa936432c5c4dcb672310ecbaa8d958159b6fcb81586692500bbb3d"
+          "digest": "sha256:649272ea8cad3096012acaa9ec16a3ce6288f557e404fedbe9646aefb3b2c8ba"
         },
         "authorityClass": "compatibility-router",
         "machineJson": false,
@@ -3099,7 +3099,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
         ]
       }
     ],
-    "documentDigest": "sha256:f31703d9e3e8bade41919c989456dfbf41446163f084a03d8fbb16e924b5ca42"
+    "documentDigest": "sha256:ae3955232bf3a97fd1cae7ca01deec957232a64c0c2c3c2fb25a14963c93e310"
   },
   "skills.json": {
     "kind": "skill-catalog",
@@ -3722,12 +3722,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-design",
-        "skillVersion": "2.0.0",
+        "skillVersion": "2.1.0",
         "description": "Design a polished product interface through adaptive consultation, a shared canvas/prototype/walkthrough studio, and an implementation-ready specification. Use for a new design or an existing interface that needs a coherent direction.",
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-design/openplanr.skill.json",
-        "sourceDigest": "sha256:a39f6512ab6fba355f6d020ee3e4ec1ae34ac54cc8732e681370ee89c40a78ac",
+        "sourceDigest": "sha256:83457207042925d16148dd28054ef69f00c4358136da7eaadc286f01bc6a0797",
         "triggerPolicy": {
           "include": [
             "Create an initial product design direction",
@@ -3844,12 +3844,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-design-review",
-        "skillVersion": "2.0.0",
+        "skillVersion": "2.1.0",
         "description": "Review and revise an existing product design using stable board pins and scoped browser-verified changes. Use for focused improvements while preserving unrelated screens and feedback.",
         "lifecycle": "active",
         "authorityClass": "review-evidence",
         "source": "skills/planr-design-review/openplanr.skill.json",
-        "sourceDigest": "sha256:837ace6e8c09347b3ed9ba287b901523229a94fad46be2785a56f73306486036",
+        "sourceDigest": "sha256:6ac49ca8fd2f709aff25f192f55e9c530b95715a626af01afef2ed1d2170e340",
         "triggerPolicy": {
           "include": [
             "Review or critique an existing OpenPlanr design",
@@ -4277,12 +4277,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-plan",
-        "skillVersion": "1.1.1",
+        "skillVersion": "1.2.0",
         "description": "Turn a Protocol-compatible specification or product intent into schema-compatible OpenPlanr stories and implementation tasks. Use for planning and decomposition, not implementation.",
         "lifecycle": "active",
         "authorityClass": "planning-write",
         "source": "skills/planr-plan/openplanr.skill.json",
-        "sourceDigest": "sha256:5c808343a096a083ddde166f50668162a00f6cadc1acc5e3c737ba761ae7923c",
+        "sourceDigest": "sha256:a1e090540db3a4edc2694e1a24c6fc0af85838eb7ee3138cdc53f4be69803479",
         "triggerPolicy": {
           "include": [
             "Decompose a specification into user stories and implementation tasks",
@@ -4459,12 +4459,12 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       },
       {
         "skillId": "planr-ship",
-        "skillVersion": "1.1.0",
+        "skillVersion": "1.2.0",
         "description": "Implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work.",
         "lifecycle": "active",
         "authorityClass": "implementation",
         "source": "skills/planr-ship/openplanr.skill.json",
-        "sourceDigest": "sha256:1a2c6b2f7c69b364bbf6f2e7cc90abfcf75eaac4e8d10f4d4fd60af7d101e3a8",
+        "sourceDigest": "sha256:4ad07e8b30a574bd7f12f87fe3852103c20241dd1e73dfcdb25e250c6b7d28f4",
         "triggerPolicy": {
           "include": [
             "Implement a plan, specification, task, fix, or clearly stated local request",
@@ -4767,7 +4767,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:de197501ddd75bb2f0042c047aa1b8067862d0ecbbf50835ddfc13aed6623507"
+    "documentDigest": "sha256:afe78935afba9b34e9a5cfe15f4821a424334c90213292252b1b068ba66db958"
   },
   "outputs.json": {
     "kind": "output-catalog",

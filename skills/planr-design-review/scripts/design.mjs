@@ -346,9 +346,9 @@ function createArtifactBridgeTools(document2, window2) {
           if (source.nodeType !== 1 || source.tagName !== "TEXTAREA") for (let child = source.firstChild; child; child = child.nextSibling) append.call(target, cloneStyled(child));
           return target;
         };
-        const clone6 = cloneStyled(document2.documentElement);
-        setAttribute.call(clone6, "xmlns", "http://www.w3.org/1999/xhtml");
-        const markup = serialize3.call(new Serializer(), clone6);
+        const clone7 = cloneStyled(document2.documentElement);
+        setAttribute.call(clone7, "xmlns", "http://www.w3.org/1999/xhtml");
+        const markup = serialize3.call(new Serializer(), clone7);
         if (markup.length > 4 * 1024 * 1024) throw new Error("Thumbnail markup limit exceeded.");
         const scale = Math.min(1, ARTIFACT_THUMBNAIL_MAX_EDGE / Math.max(width, height));
         const outputWidth = Math.max(1, Math.round(width * scale)), outputHeight = Math.max(1, Math.round(height * scale));
@@ -18141,6 +18141,30 @@ function compareImplementationHandoffVersions(root, leftIdentity, rightIdentity)
 var IMPLEMENTATION_HANDOFF_APPROVE_CAPABILITY = APPROVE_CAPABILITY;
 var IMPLEMENTATION_HANDOFF_REVOKE_CAPABILITY = REVOKE_CAPABILITY;
 
+// packages/design/lib/design/design-plan-handoff.mjs
+var clone6 = (value) => JSON.parse(canonicalizeJson(value));
+function prepareDesignPlanHandoff(handoff, { subject } = {}) {
+  assertDesignImplementationHandoff(handoff);
+  if (handoff.status !== "approved") throw new TypeError("Continue to Plan requires an approved implementation handoff.");
+  const target = String(subject ?? handoff.basis.designId).trim();
+  if (!target || /[\r\n]/u.test(target)) throw new TypeError("Plan subject must be one non-empty line.");
+  return Object.freeze({
+    kind: "openplanr-design-plan-handoff",
+    schemaVersion: "1.0.0",
+    authority: "prepare-plan",
+    handoff: clone6({ id: handoff.id, version: handoff.version, contentDigest: handoff.contentDigest }),
+    subject: target,
+    invocations: Object.freeze({
+      claudeCode: `/planr:plan ${target}`,
+      codex: `$planr:plan ${target}`,
+      chatgpt: `$planr:plan ${target}`,
+      cursor: `$planr:plan ${target}`,
+      fallback: `$planr:plan ${target}`
+    }),
+    effects: Object.freeze({ planningFilesWritten: false, agentDispatched: false, shipStarted: false, gitChanged: false })
+  });
+}
+
 // packages/design/lib/design/review.mjs
 var VERSION = "1.3.0";
 var designReviewKey = (document2) => `design-${hash(document2.id).slice(0, 24)}`;
@@ -18572,7 +18596,7 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
           const input = route === "design-implementation-handoff" ? await readImplementationBody(req) : await readBody(req);
           if (route === "design-handoff") respond(res, 200, await updateDesignHandoff(file, input, { env, fetchImpl }));
           else if (route === "design-implementation-handoff") {
-            if (!input || typeof input !== "object" || Array.isArray(input) || !["draft", "regenerate", "export", "import", "approve", "revoke", "compare"].includes(input.action)) throw new Error("Unknown implementation package action.");
+            if (!input || typeof input !== "object" || Array.isArray(input) || !["draft", "regenerate", "export", "import", "approve", "revoke", "compare", "continue-to-plan"].includes(input.action)) throw new Error("Unknown implementation package action.");
             const initial = currentDesign(file);
             const unlock = await acquireStartLock(join12(initial.root, ".design/render.lock"));
             try {
@@ -18621,6 +18645,12 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
                 respond(res, 200, { ok: true, ...value });
               } else if (input.action === "compare") {
                 respond(res, 200, { ok: true, comparison: compareImplementationHandoffVersions(root, input.left, input.right) });
+              } else if (input.action === "continue-to-plan") {
+                const lifecycle = readImplementationHandoffLifecycle(root);
+                if (!lifecycle.current || lifecycle.current.status !== "approved")
+                  throw Object.assign(new Error("Continue to Plan requires a current approved implementation package."), { statusCode: 409 });
+                const approved = readImplementationHandoffVersion(root, lifecycle.current);
+                respond(res, 200, { ok: true, handoff: prepareDesignPlanHandoff(approved, { subject: input.subject }) });
               } else {
                 const draft = readImplementationHandoffDraft(root, { allowMissing: false });
                 respond(res, 200, { ok: true, package: exportImplementationHandoffPackage(draft) });

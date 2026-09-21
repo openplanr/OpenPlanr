@@ -221,7 +221,7 @@ Turn a Protocol-compatible specification or product intent into schema-compatibl
 - Invocation from the plugin: `$planr:plan` in Codex/ChatGPT; `/planr:plan` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/artifact-contract.md`, and 35 packaged schema, script, and runtime resources.
+- Packaged support: `references/artifact-contract.md`, `references/design-handoff.md`, and 35 packaged schema, script, and runtime resources.
 
 ## `planr-plan-review`
 
@@ -254,7 +254,7 @@ Implement an OpenPlanr plan, specification, task, or clearly stated request end 
 - Invocation from the plugin: `$planr:ship` in Codex/ChatGPT; `/planr:ship` in Claude Code.
 - Hosts: Claude Code, Codex, ChatGPT, and Cursor where supported by the package manifest.
 - Aliases: none.
-- Packaged support: `references/result-contract.md`, and 1 packaged schema, script, and runtime resources.
+- Packaged support: `references/result-contract.md`, `references/design-lineage.md`, and 1 packaged schema, script, and runtime resources.
 
 ## `planr-spec`
 
