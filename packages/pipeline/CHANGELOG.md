@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.48.0
+### Minor Changes
+
+- 6508d23: Add Protocol 1.11 contracts for design handoff readiness, implementation packages, and planning lineage. Design now exposes a deterministic fail-closed readiness compiler, while pipeline and installed OpenPlanr skill packages carry the exact generated contracts for offline validation. The new records authorize only an explicit continuation to Plan; they do not invoke Plan, Ship, Git, release, publication, or deployment actions.
+
+### Patch Changes
+
+- 14e2294: Reconcile every design review comment into one deterministic, revision-bound owner-decision projection. Keep resolved comments visible, block stale accepted work and unresolved blockers, normalize unambiguous legacy metadata, and verify hosted feedback replay, ordering, and receipts before reporting synchronization success.
+- 0ddbd82: Bind Design implementation approval to the exact reviewed package and preserve immutable version history. Add auditable supersession and revocation, deterministic comparison, idempotent retries, crash recovery, authorization checks, and owner-only daemon actions that grant only preparation for Plan.
+- d47a458: Compose compact design implementation packages from exact repository-relative references and stable numbered requirements. Add byte-stable JSON and Markdown projections, offline import/export, source verification, crash recovery, and owner-only Design Studio daemon operations without copying canonical design bodies or invoking Plan or Ship.
+- 8adfbbf: Connect approved Design implementation packages to explicit host-native Plan handoffs, atomic requirement-to-acceptance-to-task lineage, task-scoped Ship context, and read-only delivery status. Preserve ordinary no-design Plan and Ship behavior while reporting stale package context honestly across generated Claude Code, Codex, ChatGPT, and Cursor skills.
+
 ## 0.47.0
 ### Minor Changes
 
