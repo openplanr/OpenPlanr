@@ -19,6 +19,10 @@
       "types": "./lib/design/implementation-handoff.d.mts",
       "import": "./lib/design/implementation-handoff.mjs"
     },
+    "./implementation-handoff-approval": {
+      "types": "./lib/design/implementation-handoff-approval.d.mts",
+      "import": "./lib/design/implementation-handoff-approval.mjs"
+    },
     "./package.json": "./package.json",
     "./design/*": "./lib/design/*",
     "./engine/*": "./lib/design-engine/*"

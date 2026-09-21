@@ -22,7 +22,7 @@ async function fixture(t) {
   atomicJson(join(root, 'review-context.json'), context);
   const env = { ...process.env, PLANR_HOME: join(root, 'private-test-home') };
   await renderDesignDocument(file);
-  const server = await startDesignReview(file, { env, noOpen: true });
+  const server = await startDesignReview(file, { env, noOpen: true, clock: () => new Date('2026-09-21T12:00:00.000Z') });
   t.after(async () => { await server.close(); rmSync(root, { recursive: true, force: true }); });
   const origin = new URL(server.url).origin;
   const headers = { 'content-type': 'application/json', 'x-openplanr-design': '1', origin };
@@ -111,7 +111,7 @@ test('authenticated history returns allowlisted immutable bundles and isolated c
   }
 });
 
-test('implementation handoff endpoints compose, export, and import one exact portable package', async (t) => {
+test('implementation handoff endpoints compose, approve, version, compare, revoke, export, and import one exact portable package', async (t) => {
   const f = await fixture(t), current = currentDesign(f.file);
   const sourcePath = 'source/screen-1.html', source = readFileSync(join(f.root, sourcePath));
   const sha = value => `sha256:${createHash('sha256').update(value).digest('hex')}`;
@@ -130,15 +130,45 @@ test('implementation handoff endpoints compose, export, and import one exact por
     requirements: [{ kind: 'behavior', statement: 'Keep the operations summary visible.', sourceRefs: ['screen-one'], verification: ['The summary is visible at the desktop frame.'] }],
   };
   const initial = await f.request('design-implementation-handoff');
-  assert.equal(initial.status, 200, JSON.stringify(initial.value)); assert.equal(initial.value.draft, null);
+  assert.equal(initial.status, 200, JSON.stringify(initial.value)); assert.equal(initial.value.draft, null); assert.equal(initial.value.approvalPreview.available, false);
   assert.equal((await f.request('design-implementation-handoff', { action: 'draft', package: packageInput }, { headers: { 'content-type': 'application/json', origin: f.origin } })).status, 403);
   let result = await f.request('design-implementation-handoff', { action: 'draft', package: packageInput });
   assert.equal(result.status, 200); assert.equal(result.value.draft.status, 'draft');
   const requirementId = result.value.draft.requirements[0].id;
   assert.match(requirementId, /^REQ-[0-9]{3,}$/u);
   assert.equal((await f.request('design-implementation-handoff')).value.draft.requirements[0].id, requirementId);
+  const preview = (await f.request('design-implementation-handoff')).value.approvalPreview;
+  assert.equal(preview.available, true); assert.equal(preview.summary.effect, 'Prepare Plan'); assert.equal(preview.summary.requirementCount, 1); assert.doesNotMatch(JSON.stringify(preview.summary), /sha256:|contentDigest/u);
   result = await f.request('design-implementation-handoff', { action: 'export' });
   assert.equal(result.status, 200); assert.match(result.value.package.markdown, new RegExp(requirementId, 'u'));
   const imported = await f.request('design-implementation-handoff', { action: 'import', package: result.value.package });
   assert.equal(imported.status, 200); assert.equal(imported.value.draft.contentDigest, JSON.parse(result.value.package.json).contentDigest);
+  const approveRequest = { action: 'approve', requestId: 'approve-operations-v1', expectedVersion: imported.value.draft.version, expectedContentDigest: imported.value.draft.contentDigest };
+  const approvals = await Promise.all([f.request('design-implementation-handoff', approveRequest), f.request('design-implementation-handoff', approveRequest)]);
+  assert.deepEqual(approvals.map(value => value.status), [200, 200]);
+  assert.equal(approvals[0].value.package.status, 'approved');
+  assert.equal(approvals[0].value.package.approval.actorId, 'local-owner');
+  assert.equal(approvals[0].value.package.approval.approvedAt, '2026-09-21T12:00:00.000Z');
+  assert.equal(approvals[0].value.package.approval.authority, 'prepare-plan');
+  assert.ok(approvals.some(value => value.value.repeated === true));
+  let lifecycle = await f.request('design-implementation-handoff');
+  assert.equal(lifecycle.value.history.length, 1); assert.equal(lifecycle.value.events.length, 1); assert.equal(lifecycle.value.current.status, 'approved');
+  assert.equal((await f.request('design-implementation-handoff', { ...approveRequest, requestId: 'stale-second-tab', expectedContentDigest: sha('stale') })).status, 409);
+
+  const regeneratedInput = structuredClone(packageInput);
+  regeneratedInput.requirements[0].statement = 'Keep the operations summary and pending count visible.';
+  const regenerated = await f.request('design-implementation-handoff', { action: 'regenerate', requestId: 'regenerate-operations-v2', package: regeneratedInput });
+  assert.equal(regenerated.status, 200, JSON.stringify(regenerated.value)); assert.equal(regenerated.value.draft.version, 2); assert.equal(regenerated.value.supersession.current.status, 'superseded');
+  const comparison = await f.request('design-implementation-handoff', {
+    action: 'compare',
+    left: { id: approvals[0].value.package.id, version: 1, contentDigest: approvals[0].value.package.contentDigest },
+    right: 'draft',
+  });
+  assert.equal(comparison.status, 200); assert.equal(comparison.value.comparison.changed, true);
+  const approvedV2 = await f.request('design-implementation-handoff', { action: 'approve', requestId: 'approve-operations-v2', expectedVersion: 2, expectedContentDigest: regenerated.value.draft.contentDigest });
+  assert.equal(approvedV2.status, 200); assert.equal(approvedV2.value.current.version, 2);
+  const revoked = await f.request('design-implementation-handoff', { action: 'revoke', requestId: 'revoke-operations-v2', expectedVersion: 2, expectedContentDigest: approvedV2.value.package.contentDigest, reason: 'The implementation scope changed.' });
+  assert.equal(revoked.status, 200); assert.equal(revoked.value.current.status, 'revoked');
+  lifecycle = await f.request('design-implementation-handoff');
+  assert.equal(lifecycle.value.history.length, 2); assert.equal(lifecycle.value.current.status, 'revoked');
 });

@@ -63,6 +63,17 @@ review handoff.
 - Drafting, regeneration, export and import grant no Plan, Ship, Git, release,
   publication or deployment authority. Package approval and immutable history are
   separate owner actions.
+- Approval binds the exact draft version and internal content identity loaded by
+  the owner. The confirmation describes the title, revision, requirement count,
+  unresolved nonblocking items and `Prepare Plan` effect; integrity values stay
+  out of the decision copy.
+- Approved packages live below `implementation-handoff/versions/` and never
+  change. `implementation-handoff/current.json` is a small lifecycle pointer;
+  supersession and revocation append auditable events without rewriting history.
+  Regeneration always creates a newer draft version. Exact request retries reuse
+  their completed result, while reused request IDs with different input conflict.
+- Approval authorizes only preparation for a later Plan invocation. It never
+  starts Plan, Ship, an agent, a Git write, publication, release or deployment.
 
 Return concise links to the studio, document/source, specification and quality
 result. State the selected direction and any decisions still open. Plan can read
