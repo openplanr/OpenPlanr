@@ -64,7 +64,7 @@
     {
       "path": "diagrams/planning-artifacts/planning-artifacts.quality.json",
       "mediaType": "application/vnd.openplanr.diagram-quality+json",
-      "digest": "sha256:3006a90c1d56978e36eb2cb5e6e43d91fe6cd26dc2c92ab04529b862117709a5",
+      "digest": "sha256:3898abf9d4ec767cb272f8bc6481ce658c417ea0d49bf63c7e2a125bbf246298",
       "fidelity": "render-only"
     },
     {
@@ -74,5 +74,5 @@
       "fidelity": "render-only"
     }
   ],
-  "documentDigest": "sha256:023379e5693a5842db2dbc8c6e75ccd2fcd6201589dbe6310831f184e8d69474"
+  "documentDigest": "sha256:aa0304c1d354325c8d70f47abcbd8ab85ac3b3f52f5ab3675b1a2c7c8a3feeb6"
 }

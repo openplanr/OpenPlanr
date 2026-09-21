@@ -29,6 +29,12 @@ question UI. Write one digestless Protocol 1.6 diagram draft from the bundled
 contract, then run the command below. The CLI validates it and adds the
 canonical digest; the skill must not calculate that digest itself.
 
+For "who does what, and when" between actors, use a lane grammar (`swimlane`
+or `process`): one lane per actor with its `members`, `left-right` so lanes
+read as rows, and relations for the handoffs. For a board (`kanban`,
+`story-map`), use `top-down` so lanes read as columns and leave `relations`
+empty; members stack in declared order.
+
 ```sh
 planr diagram render <file>.planr-diagram.json --json
 ```
@@ -51,6 +57,12 @@ a source branch of an existing generated set; rerender its manifest with
   projection or explaining an omitted one.
 
 ## Look before you hand over
+
+Every manifest result carries a `quality` object — `status`, `failedChecks`,
+`warningChecks`. Treat anything other than `pass` as unfinished work. An
+`invalid` set returns no `nextAction`: restructure and render again rather than
+opening the studio. A missing `quality` object means the report could not be
+read, which `warnings` explains; that set is unverified, not verified.
 
 A `pass` quality status is necessary, not sufficient. After every render, open
 the PNG or SVG the command lists and check four signatures: a label that reads as

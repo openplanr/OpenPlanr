@@ -138,6 +138,33 @@ function directedRing(size, direction = 'left-right') {
   });
 }
 
+function releaseHandoff(direction = 'left-right') {
+  const node = (id, label) => ({ id, label, kind: 'primary-item', description: null, semanticPosition: null });
+  const flow = (id, from, to, label) => ({ id, from, to, kind: 'flow', label, weight: null });
+  return createDiagramDocument({
+    diagramId: 'release-handoff',
+    title: 'Release handoff',
+    summary: 'Who does what when a change moves from request to release.',
+    audience: 'mixed',
+    grammar: { id: 'swimlane', version: '1.0.0' },
+    layout: { direction, detailTier: 'balanced' },
+    theme: { themeId: 'openplanr-default', mode: 'auto' },
+    source: { format: 'english', path: null, digest: null },
+    nodes: [node('request', 'Change request'), node('review', 'Review the plan'), node('build', 'Implement'),
+      node('verify', 'Verify'), node('approve', 'Approve release'), node('publish', 'Publish'), node('note', 'Release note')],
+    relations: [flow('r1', 'request', 'review', 'scope'), flow('r2', 'review', 'build', 'approved'),
+      flow('r3', 'build', 'verify', 'diff'), flow('r4', 'verify', 'approve', 'evidence'), flow('r5', 'approve', 'publish', 'release')],
+    lanes: [
+      { id: 'owner', label: 'Product owner', members: ['request', 'review', 'approve'] },
+      { id: 'agent', label: 'Host agent', members: ['build'] },
+      { id: 'cli', label: 'planr CLI', members: ['verify', 'publish'] },
+    ],
+    emphasis: [{ targetId: 'agent', level: 'primary' }],
+    accessibility: { title: 'Release handoff', description: 'A request crosses three lanes to publication.',
+      readingOrder: ['request', 'review', 'build', 'verify', 'approve', 'publish', 'note'] },
+  });
+}
+
 function muviSequence(diagramId = 'muvi-apply-crm-flow') {
   const participants = [
     ['applicant', 'Applicant'],
@@ -466,6 +493,87 @@ test('large split plans stay within the Protocol panel bounds and keep every pri
   const rendered = renderDiagramOutputs(directedRing(40));
   assert.equal(rendered.quality.status, 'split-required');
   assert.equal(rendered.quality.splitPlan.panels.length, 4);
+});
+
+test('lanes render as titled bands that hold their members and line handoffs up by rank', () => {
+  for (const direction of ['left-right', 'top-down', 'right-left', 'bottom-up']) {
+    const document = releaseHandoff(direction);
+    const rendered = renderDiagramOutputs(document);
+    const { scene } = rendered;
+    assert.equal(rendered.quality.status, 'pass', `${direction}: ${JSON.stringify(rendered.quality.checks.filter(c => c.status !== 'pass'))}`);
+    assert.equal(scene.lanes.length, 3, direction);
+    assert.equal(scene.lanes.find(({ id }) => id === 'agent').emphasis, 'primary');
+    const inside = (box, lane) => box.x >= lane.x && box.y >= lane.y
+      && box.x + box.width <= lane.x + lane.width && box.y + box.height <= lane.y + lane.height;
+    for (const lane of document.lanes) {
+      const band = scene.lanes.find(({ id }) => id === lane.id);
+      for (const member of lane.members) {
+        assert.ok(inside(scene.boxes.find(({ id }) => id === member), band), `${direction}: ${member} sits in ${lane.id}`);
+      }
+    }
+    // A node outside every lane still renders, outside every band.
+    const loose = scene.boxes.find(({ id }) => id === 'note');
+    assert.ok(loose && scene.lanes.every((band) => !inside(loose, band)), `${direction}: loose node stays outside the bands`);
+    // Each step along the flow axis owns one slot, so a handoff lines up across lanes.
+    const horizontal = ['left-right', 'right-left'].includes(direction);
+    const flowPosition = (id) => { const box = scene.boxes.find((value) => value.id === id); return horizontal ? box.x : box.y; };
+    const order = ['request', 'review', 'build', 'verify', 'approve', 'publish'].map(flowPosition);
+    const sorted = [...order].sort((left, right) => (['right-left', 'bottom-up'].includes(direction) ? right - left : left - right));
+    assert.deepEqual(order, sorted, `${direction}: steps advance along the flow axis`);
+    assert.match(rendered.svg, /data-lane-id="owner"/);
+    assert.match(rendered.svg, /Product owner/);
+  }
+});
+
+test('a board without relations packs each column and still passes quality', () => {
+  const document = createDiagramDocument({
+    ...fixture('kanban'),
+    diagramId: 'board',
+    nodes: ['a', 'b', 'c', 'd'].map((id) => ({ id, label: `Card ${id}`, kind: 'secondary-item', description: null, semanticPosition: null })),
+    lanes: [{ id: 'todo', label: 'Todo', members: ['a', 'b'] }, { id: 'done', label: 'Done', members: ['c', 'd'] }],
+    relations: [],
+    emphasis: [],
+    accessibility: { title: 'Board', description: 'Two columns.', readingOrder: ['a', 'b', 'c', 'd'] },
+  });
+  const rendered = renderDiagramOutputs(document);
+  assert.equal(rendered.quality.status, 'pass');
+  const [a, b] = ['a', 'b'].map((id) => rendered.scene.boxes.find((box) => box.id === id));
+  assert.equal(a.x, b.x, 'cards in one column share its x');
+  assert.ok(b.y - (a.y + a.height) < 60, 'cards in a column pack without a routing gap');
+});
+
+test('quality flags a label away from its path, unrelated merged runs, and a label on a container title', () => {
+  const document = connectedFlowchart();
+  const rendered = renderDiagramOutputs(document);
+  const report = (scene) => createRenderQualityReport(document, { scene, png: rendered.png, svgValidation: { ok: true, contrastRatio: 21 } });
+  const check = (result, id) => result.checks.find((value) => value.id === id).status;
+  assert.equal(check(rendered.quality, 'label-edge-distance'), 'pass');
+  assert.equal(check(rendered.quality, 'edge-merge'), 'pass');
+  assert.equal(check(rendered.quality, 'label-cluster-overlap'), 'pass');
+
+  const label = rendered.scene.labelBounds[0];
+  // Pushed far down the scene, still inside it: only its distance to its path changes.
+  const detached = report({ ...rendered.scene, height: rendered.scene.height + 400,
+    labelBounds: rendered.scene.labelBounds.map((value) => value.id === label.id ? { ...value, y: value.y + 400 } : value) });
+  assert.equal(check(detached, 'label-edge-distance'), 'warning');
+  assert.equal(detached.status, 'warning');
+
+  const [first, second] = rendered.scene.edges;
+  const shared = [[10, 10], [10, 300], [400, 300]];
+  const merged = report({ ...rendered.scene, edges: [
+    { ...first, from: 'p', to: 'q', routePoints: shared },
+    { ...second, from: 'r', to: 's', routePoints: [[20, 10], [10, 10], [10, 300], [400, 300], [400, 320]] },
+  ] });
+  assert.equal(check(merged, 'edge-merge'), 'warning');
+  const fanOut = report({ ...rendered.scene, edges: [
+    { ...first, from: 'p', to: 'q', routePoints: shared },
+    { ...second, from: 'p', to: 's', routePoints: [[10, 10], [10, 300], [400, 300], [400, 320]] },
+  ] });
+  assert.equal(check(fanOut, 'edge-merge'), 'pass', 'a fan-out from one source may share its first run');
+
+  const framed = report({ ...rendered.scene, groups: [{ id: 'frame', label: 'Frame', x: label.x - 10, y: label.y - 10, width: 400, height: 200, emphasis: null }] });
+  assert.equal(check(framed, 'label-cluster-overlap'), 'fail');
+  assert.equal(framed.status, 'invalid');
 });
 
 test('graph quality rejects clipped route bends, partial label measurements, and labels or paths through nodes', () => {

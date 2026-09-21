@@ -41,6 +41,11 @@ function renderGroup(group, theme) {
   return `<g data-group-id="${escapeXml(group.id)}"><rect x="${group.x}" y="${group.y}" width="${group.width}" height="${group.height}" rx="18" fill="none" stroke="${stroke}" stroke-width="${group.emphasis === 'primary' ? 3 : 1.5}" stroke-dasharray="8 6"/><text x="${group.x + 18}" y="${group.y + 27}" font-family="${theme.fontFamily}" font-size="13" font-weight="700" letter-spacing="0.8" fill="${stroke}">${escapeXml(group.label)}</text></g>`;
 }
 
+function renderLane(lane, theme) {
+  const stroke = lane.emphasis ? theme.accent : theme.border;
+  return `<g data-lane-id="${escapeXml(lane.id)}"><rect x="${lane.x}" y="${lane.y}" width="${lane.width}" height="${lane.height}" rx="16" fill="${theme.surface}" fill-opacity="0.45" stroke="${stroke}" stroke-width="${lane.emphasis === 'primary' ? 3 : 1.5}"/><text x="${lane.x + 20}" y="${lane.y + 30}" font-family="${theme.fontFamily}" font-size="13" font-weight="700" letter-spacing="0.8" fill="${stroke}">${escapeXml(lane.label)}</text></g>`;
+}
+
 function renderPhase(phase, theme) {
   return `<g data-phase-id="${escapeXml(phase.id)}"><text x="${phase.x1}" y="${phase.y - 10}" font-family="${theme.fontFamily}" font-size="13" font-weight="700" letter-spacing="1.2" fill="${theme.accent}">${escapeXml(phase.label.toUpperCase())}</text><line x1="${phase.x1}" y1="${phase.y}" x2="${phase.x2}" y2="${phase.y}" stroke="${theme.border}" stroke-width="1" opacity="0.28"/></g>`;
 }
@@ -69,6 +74,7 @@ export function renderDiagramSvg(document, { theme = DIAGRAM_THEME } = {}) {
     `<desc id="${descriptionId}">${escapeXml(document.accessibility.description)}</desc>`,
     `<defs><marker id="diagram-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="${theme.border}"/></marker></defs>`,
     `<rect width="${scene.width}" height="${scene.height}" fill="${theme.background}"/>`,
+    ...scene.lanes.map((lane) => renderLane(lane, theme)),
     ...scene.groups.map((group) => renderGroup(group, theme)),
     ...scene.phases.map((phase) => renderPhase(phase, theme)),
     ...scene.lifelines.map((lifeline) => renderLifeline(lifeline, theme)),

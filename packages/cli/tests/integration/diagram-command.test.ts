@@ -14,6 +14,12 @@ const fixture = fileURLToPath(
     import.meta.url,
   ),
 );
+const swimlaneFixture = fileURLToPath(
+  new URL(
+    '../../../artifact/fixtures/diagram/grammars/swimlane.planr-diagram.json',
+    import.meta.url,
+  ),
+);
 const temporaryRoots: string[] = [];
 
 function temporary(): string {
@@ -84,6 +90,7 @@ describe('planr diagram public machine surface', () => {
     expect(value.nextAction).toContain('planr artifact');
     expect(value.nextAction).toContain('flowchart-fixture.manifest.json');
     expect(value.nextAction).not.toContain('flowchart-fixture.html');
+    expect(value.quality).toMatchObject({ status: 'pass', failedChecks: [], warningChecks: [] });
 
     for (const operation of ['inspect', 'check']) {
       const result = run(project, ['diagram', operation, value.manifest.path, '--json']);
@@ -92,7 +99,90 @@ describe('planr diagram public machine surface', () => {
         ok: true,
         action: `diagram.${operation === 'check' ? 'checked' : 'inspected'}`,
         validation: { status: 'passed', changes: [] },
+        quality: { status: 'pass', failedChecks: [], warningChecks: [] },
       });
+    }
+  });
+
+  it('renders lane grammars as bands and passes their quality checks', () => {
+    const project = temporary();
+    const input = path.join(project, 'swimlane.planr-diagram.json');
+    writeFileSync(input, readFileSync(swimlaneFixture));
+
+    const rendered = run(project, ['diagram', 'render', input, '--output', '.', '--json']);
+
+    expect(rendered.status, rendered.stderr).toBe(0);
+    const value = JSON.parse(rendered.stdout);
+    expect(value).toMatchObject({ ok: true, action: 'diagram.rendered' });
+    expect(value.quality).toMatchObject({ status: 'pass', failedChecks: [] });
+    expect(value.nextAction).toContain('planr artifact');
+    const svg = readFileSync(
+      value.artifacts.find((artifact: { path: string }) => artifact.path.endsWith('.svg')).path,
+      'utf8',
+    );
+    expect(svg).toContain('data-lane-id="lane-main"');
+    expect(svg).toContain('Primary lane');
+  });
+
+  it('surfaces an invalid quality report in the envelope and withholds the handover action', () => {
+    const project = temporary();
+    const input = path.join(project, 'flowchart-fixture.planr-diagram.json');
+    writeFileSync(input, readFileSync(fixture));
+    const rendered = run(project, ['diagram', 'render', input, '--output', '.', '--json']);
+    expect(rendered.status, rendered.stderr).toBe(0);
+    const manifest = JSON.parse(rendered.stdout).manifest.path;
+    const report = path.join(project, 'diagrams/flowchart-fixture/flowchart-fixture.quality.json');
+    writeFileSync(
+      report,
+      JSON.stringify({
+        status: 'invalid',
+        checks: [
+          {
+            id: 'semantic-coverage',
+            status: 'fail',
+            message: '1 semantic element was not rendered: lane-main.',
+          },
+        ],
+      }),
+    );
+
+    const inspected = run(project, ['diagram', 'inspect', manifest, '--json']);
+
+    expect(inspected.status, inspected.stderr).toBe(0);
+    const value = JSON.parse(inspected.stdout);
+    expect(value.ok).toBe(true);
+    expect(value.quality).toEqual({
+      status: 'invalid',
+      failedChecks: ['semantic-coverage'],
+      warningChecks: [],
+    });
+    expect(value.warnings.join('\n')).toContain('Quality fail semantic-coverage');
+    expect(value.nextAction).toBeNull();
+  });
+
+  it('reports an unusable quality report as a warning instead of a summary or a crash', () => {
+    const project = temporary();
+    const input = path.join(project, 'flowchart-fixture.planr-diagram.json');
+    writeFileSync(input, readFileSync(fixture));
+    const rendered = run(project, ['diagram', 'render', input, '--output', '.', '--json']);
+    expect(rendered.status, rendered.stderr).toBe(0);
+    const manifest = JSON.parse(rendered.stdout).manifest.path;
+    const report = path.join(project, 'diagrams/flowchart-fixture/flowchart-fixture.quality.json');
+
+    // `check` and `rerender` are not exercised here: rewriting the report breaks manifest
+    // custody, which they report first and for their own reasons.
+    for (const [detail, content] of [
+      ['truncated', '{"status":"pass"'],
+      ['unknown status', '{"status":"degraded","checks":[]}'],
+    ]) {
+      writeFileSync(report, content);
+      const inspected = run(project, ['diagram', 'inspect', manifest, '--json']);
+
+      expect(inspected.status, `${detail}: ${inspected.stderr}`).toBe(0);
+      const value = JSON.parse(inspected.stdout);
+      expect(value.ok).toBe(true);
+      expect(value.quality).toBeUndefined();
+      expect(value.warnings.join('\n')).toContain('Quality report is unusable');
     }
   });
 

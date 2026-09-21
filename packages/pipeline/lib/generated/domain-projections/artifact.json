@@ -493,7 +493,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/layout.mjs",
       "target": "lib/artifact/diagram/rendering/layout.mjs",
-      "sha256": "2492ff5084eb0b8890aacd5ecfb9f989976e7943627fc612bd9b68fc9ff93fa7",
+      "sha256": "9154233983a317546ad9bd50fb9bce3588c7373d59365f1661f25851e51a9058",
       "mode": "644"
     },
     {
@@ -505,13 +505,13 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/reports.mjs",
       "target": "lib/artifact/diagram/rendering/reports.mjs",
-      "sha256": "713196b32771ca15d1f543d9a3b7e57e586a2dd6be92211e2806591a6de41c16",
+      "sha256": "c41958631f121244a4933b961690e11e56d5e8ef4fbb597196bc38cff4b78403",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/rendering/svg.mjs",
       "target": "lib/artifact/diagram/rendering/svg.mjs",
-      "sha256": "a9496f8604305671c424ce9e6b46dc8bde1029c9780925b03222f4e7dc784183",
+      "sha256": "77144402be94fce4c8a27c39fdd645555e9360e90a353f25d5b0c829a1096b68",
       "mode": "644"
     },
     {
@@ -667,13 +667,13 @@
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-studio.mjs",
       "target": "lib/artifact/ui/diagram-studio.mjs",
-      "sha256": "7fdf89ef8c928abc27566ca99a00ba14ea1d748a927178242c8793f88920669c",
+      "sha256": "30d273472bc4369c60b1e7342745a4a20c9e78855f08966ad7b78d84631c30f1",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/ui/diagram-svg.mjs",
       "target": "lib/artifact/ui/diagram-svg.mjs",
-      "sha256": "83cbf85fdebd5200a7fb51e1506e3334c0299a92191dac5cbd3dad5b20c676bf",
+      "sha256": "b8cb15f588932f1a412f94d3ff04c8567d5add26937861fb009c4bf9a64c7095",
       "mode": "644"
     },
     {
@@ -685,7 +685,7 @@
     {
       "source": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
       "target": "lib/artifact/ui/generated/artifact-shell-assets.json",
-      "sha256": "6653d38e1d7799ad3ae0b448b005834a16b60e09766a15cda829bca0b955e67f",
+      "sha256": "ef3e76f1526ca019f6e356309cf5fda6d57e1b62c8e32a0868ee81750937b378",
       "mode": "644"
     },
     {
@@ -1015,7 +1015,7 @@
     {
       "source": "packages/artifact/templates/diagram-studio.js",
       "target": "templates/diagram-studio.js",
-      "sha256": "9b21e5928cda5c93a247f5fe48e9ce1f8a2c55f55fc0103e917c96df3287da6b",
+      "sha256": "6b89d5bd66288c9e9efba2ce22adc95b8499eade4bea2bc0178e67d76fcf5fe4",
       "mode": "644"
     },
     {

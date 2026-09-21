@@ -75,12 +75,19 @@ export interface DiagramSuccessEnvelope {
   manifest?: { path: string; digest: string };
   artifacts: Array<{ path: string; mediaType: string; digest: string; fidelity: string }>;
   validation: { status: 'passed' | 'changed'; changes: Array<Record<string, unknown>> };
+  quality?: DiagramQualitySummary;
   editability: Record<string, string>;
   fidelity: Record<string, string>;
   omissions: Array<{ format: string; reason: string }>;
   warnings: string[];
   nextAction: string | null;
   [key: string]: unknown;
+}
+
+export interface DiagramQualitySummary {
+  status: 'pass' | 'warning' | 'invalid';
+  failedChecks: string[];
+  warningChecks: string[];
 }
 
 export class DiagramCommandError extends Error {
@@ -242,6 +249,49 @@ function projectionSummary(
   };
 }
 
+interface QualityReportCheck {
+  id: string;
+  status: string;
+  message?: string;
+}
+
+/**
+ * Summarizes a rendered set's quality report.
+ * An unusable report is reported as a warning with no summary, so `inspect` still explains a
+ * set whose outputs are damaged.
+ */
+function readQuality(artifacts: Array<{ path: string }>): {
+  summary: DiagramQualitySummary | null;
+  warnings: string[];
+} {
+  const file = artifacts.find(({ path: value }) => value.endsWith('.quality.json'));
+  if (!file) return { summary: null, warnings: [] };
+  const unusable = (detail: string) => ({
+    summary: null,
+    warnings: [`Quality report is unusable and was not summarized: ${file.path}: ${detail}`],
+  });
+  let report: { status?: unknown; checks?: unknown };
+  try {
+    report = JSON.parse(readFileSync(file.path, 'utf8')) as { status?: unknown; checks?: unknown };
+  } catch (error) {
+    return unusable(`unreadable: ${(error as Error).message}`);
+  }
+  if (report.status !== 'pass' && report.status !== 'warning' && report.status !== 'invalid') {
+    return unusable(`unknown status ${JSON.stringify(report.status)}`);
+  }
+  const checks = (Array.isArray(report.checks) ? report.checks : []) as QualityReportCheck[];
+  return {
+    summary: {
+      status: report.status,
+      failedChecks: checks.filter(({ status }) => status === 'fail').map(({ id }) => id),
+      warningChecks: checks.filter(({ status }) => status === 'warning').map(({ id }) => id),
+    },
+    warnings: checks
+      .filter(({ status }) => status === 'fail' || status === 'warning')
+      .map(({ id, status, message }) => `Quality ${status} ${id}: ${message ?? 'no detail.'}`),
+  };
+}
+
 function manifestEnvelope(
   api: DiagramRuntimeApi,
   action: string,
@@ -260,6 +310,7 @@ function manifestEnvelope(
   const changes = [...(result.sourceChanges ?? []), ...(result.generatedChanges ?? [])];
   const validation = result.validation ?? (changes.length > 0 ? 'changed' : 'passed');
   const projection = projectionSummary(api, result.manifest, artifacts);
+  const quality = readQuality(artifacts);
   const html = artifacts.find(({ path: value }) => value.endsWith('.html'));
   const manifestPath = path.join(result.directory, `${result.manifest.diagramId}.manifest.json`);
   return {
@@ -275,9 +326,17 @@ function manifestEnvelope(
     },
     artifacts,
     validation: { status: validation, changes },
+    ...(quality.summary ? { quality: quality.summary } : {}),
     ...projection,
-    warnings: changes.length > 0 ? ['Diagram files differ from the recorded manifest.'] : [],
-    nextAction: html ? `planr artifact open ${JSON.stringify(manifestPath)} --json` : null,
+    warnings: [
+      ...(changes.length > 0 ? ['Diagram files differ from the recorded manifest.'] : []),
+      ...quality.warnings,
+    ],
+    // An invalid set is not reviewable, so it gets no handover action.
+    nextAction:
+      html && quality.summary?.status !== 'invalid'
+        ? `planr artifact open ${JSON.stringify(manifestPath)} --json`
+        : null,
   };
 }
 
