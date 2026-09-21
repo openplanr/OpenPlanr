@@ -57,6 +57,7 @@ const PROTOCOL_TARGETS = Object.freeze({
   'design-publication-contracts': 'lib/protocol/design-publication-contracts.mjs',
   'workspace-contracts': 'lib/protocol/workspace-contracts.mjs',
   'review-experience-contracts': 'lib/protocol/review-experience-contracts.mjs',
+  'design-handoff-contracts': 'lib/protocol/design-handoff-contracts.mjs',
   'operate-contract-catalog-v2': 'lib/protocol/generated/contract-catalog-v2.mjs',
   'operate-experience-live-patch': 'lib/protocol/operate-experience-live-patch.mjs',
   'live-evidence-v2': 'lib/protocol/live-evidence-v2.mjs',

@@ -8,7 +8,7 @@
   "canonicalSkillCount": 27,
   "compatibilityAliasCount": 0,
   "skillCount": 27,
-  "assetCount": 290,
+  "assetCount": 302,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -373,7 +373,7 @@
         },
         {
           "path": "skills/design/openplanr.skill.json",
-          "digest": "sha256:208206addf0dc8337f1914256ba6b655edf570d7cdfb7ebd62c73b29299fba95"
+          "digest": "sha256:a39f6512ab6fba355f6d020ee3e4ec1ae34ac54cc8732e681370ee89c40a78ac"
         },
         {
           "path": "skills/design/agents/openai.yaml",
@@ -461,7 +461,7 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:d3a009b9b304680df08d3ec30bccea5b0baf7444fee4f65e90708125535d8773"
+          "digest": "sha256:70c009b580513ddd25424d86b787ab9e1052eed23df74f9e5607e23a8e767d7c"
         },
         {
           "path": "skills/design/scripts/runtime/packages/protocol/registry/artifact-theme.json",
@@ -502,6 +502,18 @@
         {
           "path": "skills/design/scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-metadata-payload.schema.json",
           "digest": "sha256:ba8ac124e47e8f8310214445b1752cc6706d3a7265a87c9f9685a7e9df84f0b1"
+        },
+        {
+          "path": "skills/design/scripts/runtime/packages/protocol/schemas/v1.11.0/design-handoff-readiness.schema.json",
+          "digest": "sha256:51277b0c353989c7166535b6b8c752226fd436b735e451940c79a3f6a9c8eb12"
+        },
+        {
+          "path": "skills/design/scripts/runtime/packages/protocol/schemas/v1.11.0/design-implementation-handoff.schema.json",
+          "digest": "sha256:706227c6663dce427f724584bd2d6cb4c65123171ec6540c3ec30e6a36b4d68b"
+        },
+        {
+          "path": "skills/design/scripts/runtime/packages/protocol/schemas/v1.11.0/design-planning-lineage.schema.json",
+          "digest": "sha256:e54a4026444de9cd6092aae4b3bfe7f527254941c07fb29253ea8bb6f2ee8486"
         },
         {
           "path": "skills/design/scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json",
@@ -554,7 +566,7 @@
         },
         {
           "path": "skills/design-loop/openplanr.skill.json",
-          "digest": "sha256:8e4eeb36590194963d6e8f6448e8d991658bf93a2070b0cb446b45ad793e3a49"
+          "digest": "sha256:cecdbd16879f58de70d1158b776fb47ac5520e22c2d6c0d01b3c6b8c4c843ced"
         },
         {
           "path": "skills/design-loop/agents/openai.yaml",
@@ -642,7 +654,7 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:d3a009b9b304680df08d3ec30bccea5b0baf7444fee4f65e90708125535d8773"
+          "digest": "sha256:70c009b580513ddd25424d86b787ab9e1052eed23df74f9e5607e23a8e767d7c"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/protocol/registry/artifact-theme.json",
@@ -683,6 +695,18 @@
         {
           "path": "skills/design-loop/scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-metadata-payload.schema.json",
           "digest": "sha256:ba8ac124e47e8f8310214445b1752cc6706d3a7265a87c9f9685a7e9df84f0b1"
+        },
+        {
+          "path": "skills/design-loop/scripts/runtime/packages/protocol/schemas/v1.11.0/design-handoff-readiness.schema.json",
+          "digest": "sha256:51277b0c353989c7166535b6b8c752226fd436b735e451940c79a3f6a9c8eb12"
+        },
+        {
+          "path": "skills/design-loop/scripts/runtime/packages/protocol/schemas/v1.11.0/design-implementation-handoff.schema.json",
+          "digest": "sha256:706227c6663dce427f724584bd2d6cb4c65123171ec6540c3ec30e6a36b4d68b"
+        },
+        {
+          "path": "skills/design-loop/scripts/runtime/packages/protocol/schemas/v1.11.0/design-planning-lineage.schema.json",
+          "digest": "sha256:e54a4026444de9cd6092aae4b3bfe7f527254941c07fb29253ea8bb6f2ee8486"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json",
@@ -735,7 +759,7 @@
         },
         {
           "path": "skills/design-review/openplanr.skill.json",
-          "digest": "sha256:11c7f60feaba70cb6bc439244164ec946ae76c68c4bf46bd4d1d8c916d80ee90"
+          "digest": "sha256:837ace6e8c09347b3ed9ba287b901523229a94fad46be2785a56f73306486036"
         },
         {
           "path": "skills/design-review/agents/openai.yaml",
@@ -823,7 +847,7 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:d3a009b9b304680df08d3ec30bccea5b0baf7444fee4f65e90708125535d8773"
+          "digest": "sha256:70c009b580513ddd25424d86b787ab9e1052eed23df74f9e5607e23a8e767d7c"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/protocol/registry/artifact-theme.json",
@@ -864,6 +888,18 @@
         {
           "path": "skills/design-review/scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-metadata-payload.schema.json",
           "digest": "sha256:ba8ac124e47e8f8310214445b1752cc6706d3a7265a87c9f9685a7e9df84f0b1"
+        },
+        {
+          "path": "skills/design-review/scripts/runtime/packages/protocol/schemas/v1.11.0/design-handoff-readiness.schema.json",
+          "digest": "sha256:51277b0c353989c7166535b6b8c752226fd436b735e451940c79a3f6a9c8eb12"
+        },
+        {
+          "path": "skills/design-review/scripts/runtime/packages/protocol/schemas/v1.11.0/design-implementation-handoff.schema.json",
+          "digest": "sha256:706227c6663dce427f724584bd2d6cb4c65123171ec6540c3ec30e6a36b4d68b"
+        },
+        {
+          "path": "skills/design-review/scripts/runtime/packages/protocol/schemas/v1.11.0/design-planning-lineage.schema.json",
+          "digest": "sha256:e54a4026444de9cd6092aae4b3bfe7f527254941c07fb29253ea8bb6f2ee8486"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json",
@@ -1074,7 +1110,7 @@
         },
         {
           "path": "skills/plan/openplanr.skill.json",
-          "digest": "sha256:18ed9de64dccee4d48bb9e94074cade3c6cda46e3c5eb9957eb96f4d319695a8"
+          "digest": "sha256:5c808343a096a083ddde166f50668162a00f6cadc1acc5e3c737ba761ae7923c"
         },
         {
           "path": "skills/plan/agents/openai.yaml",
@@ -1134,7 +1170,7 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/protocol/package.json",
-          "digest": "sha256:d3a009b9b304680df08d3ec30bccea5b0baf7444fee4f65e90708125535d8773"
+          "digest": "sha256:70c009b580513ddd25424d86b787ab9e1052eed23df74f9e5607e23a8e767d7c"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/protocol/registry/artifact-theme.json",
@@ -1175,6 +1211,18 @@
         {
           "path": "skills/plan/scripts/runtime/packages/protocol/schemas/v1.10.0/design-review-metadata-payload.schema.json",
           "digest": "sha256:ba8ac124e47e8f8310214445b1752cc6706d3a7265a87c9f9685a7e9df84f0b1"
+        },
+        {
+          "path": "skills/plan/scripts/runtime/packages/protocol/schemas/v1.11.0/design-handoff-readiness.schema.json",
+          "digest": "sha256:51277b0c353989c7166535b6b8c752226fd436b735e451940c79a3f6a9c8eb12"
+        },
+        {
+          "path": "skills/plan/scripts/runtime/packages/protocol/schemas/v1.11.0/design-implementation-handoff.schema.json",
+          "digest": "sha256:706227c6663dce427f724584bd2d6cb4c65123171ec6540c3ec30e6a36b4d68b"
+        },
+        {
+          "path": "skills/plan/scripts/runtime/packages/protocol/schemas/v1.11.0/design-planning-lineage.schema.json",
+          "digest": "sha256:e54a4026444de9cd6092aae4b3bfe7f527254941c07fb29253ea8bb6f2ee8486"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json",

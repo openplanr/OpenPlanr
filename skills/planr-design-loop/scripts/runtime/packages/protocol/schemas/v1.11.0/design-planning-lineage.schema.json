@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.11.0/design-planning-lineage.schema.json",
+  "x-openplanr-contract": {
+    "id": "design-planning-lineage",
+    "version": "1.11.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "openplanr-design-planning-lineage"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "contentDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "contentDigest"
+      ]
+    },
+    "specId": {
+      "type": "string",
+      "pattern": "^SPEC-[0-9]{3,}$"
+    },
+    "mappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "requirementId": {
+            "type": "string",
+            "pattern": "^REQ-[0-9]{3,}$"
+          },
+          "acceptanceRefs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "storyId": {
+                  "type": "string",
+                  "pattern": "^US-[0-9]{3,}$"
+                },
+                "acceptanceId": {
+                  "type": "string",
+                  "pattern": "^AC-[0-9]{3,}$"
+                }
+              },
+              "required": [
+                "storyId",
+                "acceptanceId"
+              ]
+            },
+            "maxItems": 256,
+            "minItems": 1
+          },
+          "taskIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^T-[0-9]{3,}$"
+            },
+            "maxItems": 256,
+            "minItems": 1
+          }
+        },
+        "required": [
+          "requirementId",
+          "acceptanceRefs",
+          "taskIds"
+        ]
+      },
+      "maxItems": 10000,
+      "minItems": 1
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "handoff",
+    "specId",
+    "mappings"
+  ]
+}

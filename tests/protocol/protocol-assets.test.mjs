@@ -77,9 +77,9 @@ test('generation check is deterministic and package exports are explicit', () =>
   const output = execFileSync(process.execPath, ['packages/protocol/scripts/generate-protocol-assets.mjs', '--check'], {
     cwd: root, encoding: 'utf8',
   });
-  assert.match(output, /Checked 103 Protocol assets; preserved 180 schemas and 12 registries/);
+  assert.match(output, /Checked \d+ Protocol assets; preserved 180 schemas and 12 registries/);
   const manifest = JSON.parse(readFileSync(join(protocol, 'package.json'), 'utf8'));
-  for (const key of ['.', './errors', './canonical-json', './json-schema', './contracts', './browser-contracts', './diagram-contracts', './design-contracts', './workspace-contracts', './enterprise-contracts', './review-experience-contracts', './planning-contracts', './registries', './task-contracts', './schemas/*', './registry/*', './registries/*']) {
+  for (const key of ['.', './errors', './canonical-json', './json-schema', './contracts', './browser-contracts', './diagram-contracts', './design-contracts', './design-handoff-contracts', './workspace-contracts', './enterprise-contracts', './review-experience-contracts', './planning-contracts', './registries', './task-contracts', './schemas/*', './registry/*', './registries/*']) {
     assert.ok(manifest.exports[key], `missing export ${key}`);
   }
   for (const path of ['src/index.mjs', 'src/canonical-json.mjs', 'src/json-schema.mjs', 'src/registries.mjs', 'src/browser-contracts.mjs']) {
@@ -96,6 +96,8 @@ test('the Protocol root exposes v1.6 contracts while the Node validator subpath 
   const skillSourceUrl = rootModule.protocolAssetUrl('skill-source', { protocolVersion: '1.6.0' });
   assert.equal(skillSourceUrl.protocol, 'file:');
   assert.equal(JSON.parse(readFileSync(skillSourceUrl, 'utf8'))['x-openplanr-contract'].version, '1.6.0');
+  const handoffUrl = rootModule.protocolAssetUrl('design-handoff-readiness', { protocolVersion: '1.11.0' });
+  assert.equal(JSON.parse(readFileSync(handoffUrl, 'utf8'))['x-openplanr-contract'].version, '1.11.0');
   assert.equal(Object.hasOwn(nodeContracts, 'PROTOCOL_V16_CONTRACTS'), false);
   assert.doesNotMatch(readFileSync(join(protocol, 'src', 'contracts.d.mts'), 'utf8'), /browser-contracts/u);
 

@@ -55,14 +55,14 @@
       "version": "0.47.0",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:d0460107bab8fba0134dd843b66b8f2b555a3bab75fde1b7e3763cc166d3cdca"
+      "manifestDigest": "sha256:effaed3d1fc276d598243361b0f2c8199a078f054a2f593df7e12a335e7b08e9"
     },
     "protocol": {
       "package": "@openplanr/protocol",
       "version": "0.4.0",
       "path": "packages/protocol",
       "publication": "public",
-      "manifestDigest": "sha256:d3a009b9b304680df08d3ec30bccea5b0baf7444fee4f65e90708125535d8773"
+      "manifestDigest": "sha256:70c009b580513ddd25424d86b787ab9e1052eed23df74f9e5607e23a8e767d7c"
     },
     "operate": {
       "package": "@openplanr/operate",
@@ -83,7 +83,7 @@
       "version": "0.2.2",
       "path": "packages/design",
       "publication": "private",
-      "manifestDigest": "sha256:29d272df136922a47c698e542d1df7e0792eb6542160a359275ae1b36fceea46"
+      "manifestDigest": "sha256:c8a89624d773dcc203e8c5aa8c7cb23604339d0443f2b5d72a8e9d87d9c56ebf"
     },
     "skillRuntime": {
       "package": "@openplanr/skill-runtime",
@@ -238,7 +238,7 @@
     },
     "skills": {
       "path": "packages/protocol/registries/skills.json",
-      "digest": "sha256:22b7761e47cb0390543fded22402e98f2f086881148a3c3d9be74d14b78d8ee8",
+      "digest": "sha256:30265c649e3dc73b3b8d5e63676d8b25f83f42dc67d00d3f317c1f47c11234dd",
       "count": 27,
       "ids": [
         "planr-artifact",
@@ -335,8 +335,8 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:8742127890e681b6f1e31159f67fc6329d429fd4462998509bab51603a8daa8b",
-      "count": 1673
+      "digest": "sha256:9853b558c810d513c0a167e97515ec7a817b8d966e096f0870b9b00ca819b455",
+      "count": 1745
     }
   },
   "schemas": {
@@ -364,7 +364,7 @@
         "v1.8.0": 3
       }
     },
-    "total": 249
+    "total": 252
   },
   "registries": {
     "preserved": {

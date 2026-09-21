@@ -15,6 +15,7 @@ import { DESIGN_DOCUMENT_SCHEMA } from '../src/design-contracts.mjs';
 import { REVIEW_EXPERIENCE_SCHEMAS, DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA } from '../src/review-experience-contracts.mjs';
 import { DESIGN_WORKSPACE_SCHEMAS } from '../src/workspace-contracts.mjs';
 import { ENTERPRISE_SCHEMAS } from '../src/enterprise-contracts.mjs';
+import { DESIGN_HANDOFF_SCHEMAS } from '../src/design-handoff-contracts.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const workspaceRoot = resolve(packageRoot, '..', '..');
@@ -41,6 +42,7 @@ for (const [name, value] of Object.entries(DESIGN_WORKSPACE_SCHEMAS)) expected.s
 
 for (const [name, value] of Object.entries(REVIEW_EXPERIENCE_SCHEMAS)) expected.set(`schemas/v1.10.0/${name}.schema.json`, json(value));
 expected.set('schemas/v1.11.0/design-review-metadata-payload.schema.json', json(DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA));
+for (const [name, value] of Object.entries(DESIGN_HANDOFF_SCHEMAS)) expected.set(`schemas/v1.11.0/${name}.schema.json`, json(value));
 
 for (const [name, value] of Object.entries(ENTERPRISE_SCHEMAS)) expected.set(`schemas/v1.12.0/${name}.schema.json`, json(value));
 
@@ -89,6 +91,8 @@ const projectionFiles = new Map([
   ['design-contracts.mjs', read('src/design-contracts.mjs')],
   ['design-publication-contracts.mjs', read('src/design-publication-contracts.mjs')],
   ['design-publication-contracts.d.mts', read('src/design-publication-contracts.d.mts')],
+  ['design-handoff-contracts.mjs', read('src/design-handoff-contracts.mjs')],
+  ['design-handoff-contracts.d.mts', read('src/design-handoff-contracts.d.mts')],
   ['workspace-contracts.mjs', read('src/workspace-contracts.mjs')],
   ['enterprise-contracts.mjs', read('src/enterprise-contracts.mjs')],
   ['enterprise-contracts.d.mts', read('src/enterprise-contracts.d.mts')],

@@ -149,6 +149,18 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/handoff-readiness.d.mts",
+      "target": "lib/design/handoff-readiness.d.mts",
+      "sha256": "1156326fca79b8bba2ca440e4be8eff1e0df8917f2523b7f99fbb5c7c5f192f4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/handoff-readiness.mjs",
+      "target": "lib/design/handoff-readiness.mjs",
+      "sha256": "322553ab860c21c5327fc898ca3b9f6dc1757dab9b059301f6480ef673f7cc5b",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/handoff.mjs",
       "target": "lib/design/handoff.mjs",
       "sha256": "4fe304f52013458364c8a7a0e09f40bc4e3b525dc5bc920e566ae47cbf4a3371",
@@ -157,7 +169,7 @@
     {
       "source": "packages/design/lib/design/index.mjs",
       "target": "lib/design/index.mjs",
-      "sha256": "2472d6e2fb0822f1d8614db04ed434394bab69a28cd18e63778b0914f73626e0",
+      "sha256": "9744c6e09b0cbfaf10f6efbb74727c3729700965d46744874b37277cf071b604",
       "mode": "644"
     },
     {

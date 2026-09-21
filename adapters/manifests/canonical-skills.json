@@ -1110,7 +1110,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:d3a009b9b304680df08d3ec30bccea5b0baf7444fee4f65e90708125535d8773"
+          "digest": "sha256:70c009b580513ddd25424d86b787ab9e1052eed23df74f9e5607e23a8e767d7c"
         },
         {
           "path": "scripts/runtime/packages/protocol/registry/artifact-theme.json",
@@ -1231,6 +1231,42 @@
             "cursor"
           ],
           "digest": "sha256:ba8ac124e47e8f8310214445b1752cc6706d3a7265a87c9f9685a7e9df84f0b1"
+        },
+        {
+          "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-handoff-readiness.schema.json",
+          "kind": "schema",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:51277b0c353989c7166535b6b8c752226fd436b735e451940c79a3f6a9c8eb12"
+        },
+        {
+          "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-implementation-handoff.schema.json",
+          "kind": "schema",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:706227c6663dce427f724584bd2d6cb4c65123171ec6540c3ec30e6a36b4d68b"
+        },
+        {
+          "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-planning-lineage.schema.json",
+          "kind": "schema",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:e54a4026444de9cd6092aae4b3bfe7f527254941c07fb29253ea8bb6f2ee8486"
         },
         {
           "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json",
@@ -1636,7 +1672,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:d3a009b9b304680df08d3ec30bccea5b0baf7444fee4f65e90708125535d8773"
+          "digest": "sha256:70c009b580513ddd25424d86b787ab9e1052eed23df74f9e5607e23a8e767d7c"
         },
         {
           "path": "scripts/runtime/packages/protocol/registry/artifact-theme.json",
@@ -1757,6 +1793,42 @@
             "cursor"
           ],
           "digest": "sha256:ba8ac124e47e8f8310214445b1752cc6706d3a7265a87c9f9685a7e9df84f0b1"
+        },
+        {
+          "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-handoff-readiness.schema.json",
+          "kind": "schema",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:51277b0c353989c7166535b6b8c752226fd436b735e451940c79a3f6a9c8eb12"
+        },
+        {
+          "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-implementation-handoff.schema.json",
+          "kind": "schema",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:706227c6663dce427f724584bd2d6cb4c65123171ec6540c3ec30e6a36b4d68b"
+        },
+        {
+          "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-planning-lineage.schema.json",
+          "kind": "schema",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:e54a4026444de9cd6092aae4b3bfe7f527254941c07fb29253ea8bb6f2ee8486"
         },
         {
           "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json",
@@ -2162,7 +2234,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:d3a009b9b304680df08d3ec30bccea5b0baf7444fee4f65e90708125535d8773"
+          "digest": "sha256:70c009b580513ddd25424d86b787ab9e1052eed23df74f9e5607e23a8e767d7c"
         },
         {
           "path": "scripts/runtime/packages/protocol/registry/artifact-theme.json",
@@ -2283,6 +2355,42 @@
             "cursor"
           ],
           "digest": "sha256:ba8ac124e47e8f8310214445b1752cc6706d3a7265a87c9f9685a7e9df84f0b1"
+        },
+        {
+          "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-handoff-readiness.schema.json",
+          "kind": "schema",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:51277b0c353989c7166535b6b8c752226fd436b735e451940c79a3f6a9c8eb12"
+        },
+        {
+          "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-implementation-handoff.schema.json",
+          "kind": "schema",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:706227c6663dce427f724584bd2d6cb4c65123171ec6540c3ec30e6a36b4d68b"
+        },
+        {
+          "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-planning-lineage.schema.json",
+          "kind": "schema",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:e54a4026444de9cd6092aae4b3bfe7f527254941c07fb29253ea8bb6f2ee8486"
         },
         {
           "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json",
@@ -2971,7 +3079,7 @@
             "chatgpt",
             "cursor"
           ],
-          "digest": "sha256:d3a009b9b304680df08d3ec30bccea5b0baf7444fee4f65e90708125535d8773"
+          "digest": "sha256:70c009b580513ddd25424d86b787ab9e1052eed23df74f9e5607e23a8e767d7c"
         },
         {
           "path": "scripts/runtime/packages/protocol/registry/artifact-theme.json",
@@ -3092,6 +3200,42 @@
             "cursor"
           ],
           "digest": "sha256:ba8ac124e47e8f8310214445b1752cc6706d3a7265a87c9f9685a7e9df84f0b1"
+        },
+        {
+          "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-handoff-readiness.schema.json",
+          "kind": "schema",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:51277b0c353989c7166535b6b8c752226fd436b735e451940c79a3f6a9c8eb12"
+        },
+        {
+          "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-implementation-handoff.schema.json",
+          "kind": "schema",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:706227c6663dce427f724584bd2d6cb4c65123171ec6540c3ec30e6a36b4d68b"
+        },
+        {
+          "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-planning-lineage.schema.json",
+          "kind": "schema",
+          "executable": false,
+          "hosts": [
+            "claude-code",
+            "codex",
+            "chatgpt",
+            "cursor"
+          ],
+          "digest": "sha256:e54a4026444de9cd6092aae4b3bfe7f527254941c07fb29253ea8bb6f2ee8486"
         },
         {
           "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json",

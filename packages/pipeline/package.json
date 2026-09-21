@@ -264,7 +264,7 @@
     "ecosystem:conformance": "node scripts/ecosystem-conformance.mjs",
     "canary:artifact-release": "node scripts/artifact-release-canary.mjs",
     "conformance:native-dispatch": "node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd1-parallel && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd2-advisory-locklist && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd3-dependson && node conformance/runner.mjs --runtime claude-code --verify-ship --dir conformance/fixtures/native-dispatch-nd4-coherent",
-    "conformance:check": "npm run conformance:native-dispatch && npm run conformance:operate && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard && npm run conformance:unified-dashboard-absence && npm run conformance:governed-landing && npm run conformance:skill-evaluation && npm run conformance:release-ledger && npm run verify:release-ledger",
+    "conformance:check": "npm run conformance:native-dispatch && npm run conformance:operate && npm run conformance:design && npm run conformance:design-handoff && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard && npm run conformance:unified-dashboard-absence && npm run conformance:governed-landing && npm run conformance:skill-evaluation && npm run conformance:release-ledger && npm run verify:release-ledger",
     "conformance:operate": "npm run conformance:operate-v2",
     "conformance:operate-v2": "node conformance/verify-operating-runtime-v2.mjs && node conformance/verify-operate-v2-persistent-work.mjs && node conformance/verify-operate-v2-evidence.mjs && node conformance/verify-operate-v2-operating-intelligence.mjs && node conformance/verify-operate-v2-governed-execution.mjs && node conformance/verify-operate-v2-product-experience.mjs && node conformance/verify-operate-v2-live-evidence.mjs",
     "conformance:operate-v2-persistent-work": "node conformance/verify-operate-v2-persistent-work.mjs",
@@ -297,6 +297,7 @@
     "inventory:operate-surfaces": "node scripts/inventory-operate-surfaces.mjs --check",
     "test:guided-contracts": "node --test tests/schema/guided-interaction-schemas.test.mjs tests/orchestration/guided-interaction-contracts.test.mjs",
     "test:design": "node scripts/run-test-group.mjs tests/design",
-    "conformance:design": "node conformance/verify-design-assets.mjs"
+    "conformance:design": "node conformance/verify-design-assets.mjs",
+    "conformance:design-handoff": "node conformance/verify-design-handoff-contracts.mjs"
   }
 }
