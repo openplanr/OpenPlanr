@@ -1,0 +1,81 @@
+.design-handoff-center {
+  position:absolute; z-index:42; inset:var(--planr-toolbar-height) 0 0 auto;
+  display:grid; grid-template-rows:auto auto minmax(0,1fr) auto;
+  box-sizing:border-box; width:var(--planr-review-rail-width); max-width:calc(100% - 16px);
+  border-left:1px solid var(--planr-color-rule); background:var(--planr-color-chrome);
+  color:var(--planr-color-text); box-shadow:-12px 0 32px #0004;
+  font:400 var(--design-type-body,14px)/1.5 var(--planr-font-body);
+}
+.design-handoff-center > header { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:64px; padding:12px 14px; border-bottom:1px solid var(--planr-color-rule); }
+.design-handoff-center h2,.design-handoff-center h3,.design-handoff-center h4 { margin:0; font-family:var(--planr-font-display); }
+.design-handoff-center h2 { font-size:18px; }
+.design-handoff-center h3 { font-size:20px; letter-spacing:-.02em; }
+.design-handoff-center h4 { font-size:14px; }
+.design-handoff-center p { margin:0; overflow-wrap:anywhere; }
+.design-handoff-eyebrow { display:block; color:var(--planr-color-primary); font-size:10px; font-weight:650; letter-spacing:.1em; text-transform:uppercase; }
+.design-handoff-center button,.design-handoff-center input,.design-handoff-center textarea { box-sizing:border-box; font:inherit; }
+.design-handoff-center button { min-height:36px; border:1px solid var(--planr-color-rule); border-radius:6px; padding:8px 10px; color:var(--planr-color-text); background:var(--planr-color-panel); cursor:pointer; }
+.design-handoff-center button:disabled { cursor:wait; opacity:.55; }
+.design-handoff-center button:focus-visible,.design-handoff-center input:focus-visible,.design-handoff-center textarea:focus-visible,.design-handoff-center summary:focus-visible { outline:2px solid var(--planr-color-primary); outline-offset:2px; }
+.design-handoff-center .design-primary { width:100%; min-height:44px; color:var(--planr-color-background); background:var(--planr-color-primary); border-color:transparent; font-weight:650; }
+.design-handoff-center .design-danger { width:100%; color:var(--planr-color-danger); }
+.design-handoff-close { width:44px; height:44px; padding:0!important; background:transparent!important; font-size:22px!important; }
+.design-handoff-progress { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:2px; padding:8px; border-bottom:1px solid var(--planr-color-rule); overflow-x:auto; }
+.design-handoff-step { display:grid; justify-items:center; gap:3px; min-width:52px; min-height:58px!important; padding:6px 3px!important; border-color:transparent!important; background:transparent!important; color:var(--planr-color-text-muted)!important; font-size:9px!important; line-height:1.2!important; text-align:center; }
+.design-handoff-step > span:first-child { font:650 11px/1 var(--planr-font-body); }
+.design-handoff-step[aria-current="step"] { color:var(--planr-color-text)!important; background:var(--planr-color-raised)!important; border-color:var(--planr-color-rule)!important; }
+.design-handoff-badge { display:inline-flex; align-items:center; gap:4px; width:max-content; max-width:100%; border:1px solid var(--planr-color-rule); border-radius:999px; padding:2px 7px; color:var(--planr-color-text-muted); font-size:10px; font-weight:650; line-height:1.4; }
+.design-handoff-badge::before { content:""; flex:none; width:6px; height:6px; border-radius:50%; background:currentColor; }
+.design-handoff-badge[data-status="ready"],.design-handoff-badge[data-status="pass"],.design-handoff-badge[data-status="approved"] { color:var(--planr-color-primary); }
+.design-handoff-badge[data-status="blocked"],.design-handoff-badge[data-status="revoked"] { color:var(--planr-color-danger); }
+.design-handoff-badge[data-status="attention"],.design-handoff-badge[data-status="stale"],.design-handoff-badge[data-status="superseded"] { color:#d89a39; }
+.design-handoff-step .design-handoff-badge { max-width:44px; overflow:hidden; padding:0; border:0; color:inherit; text-indent:-999px; }
+.design-handoff-step .design-handoff-badge::before { width:7px; height:7px; }
+.design-handoff-content { min-width:0; overflow:auto; overscroll-behavior:contain; padding:18px 14px 28px; }
+.design-handoff-step-header { display:grid; gap:6px; margin-bottom:18px; }
+.design-handoff-step-header p,.design-handoff-content .design-muted { color:var(--planr-color-text-muted); font-size:12px; }
+.design-handoff-summary { display:grid; gap:10px; margin-bottom:16px; padding:12px; border:1px solid var(--planr-color-rule); border-radius:8px; background:var(--planr-color-raised); }
+.design-handoff-summary strong { font-size:13px; line-height:1.45; }
+.design-handoff-empty { display:grid; gap:7px; margin:12px 0 18px; padding:18px 14px; border:1px dashed var(--planr-color-rule); border-radius:8px; }
+.design-handoff-empty p { color:var(--planr-color-text-muted); font-size:12px; }
+.design-handoff-checks,.design-handoff-requirement-list { display:grid; gap:8px; margin:0 0 18px; padding:0; list-style:none; }
+.design-handoff-checks li,.design-handoff-requirement-list li { display:grid; gap:8px; padding:10px; border:1px solid var(--planr-color-rule); border-radius:7px; }
+.design-handoff-checks li > div { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+.design-handoff-checks strong,.design-handoff-requirement-list strong { font-size:12px; line-height:1.45; }
+.design-handoff-link { min-height:32px!important; padding:4px 0!important; border:0!important; background:transparent!important; color:var(--planr-color-primary)!important; text-align:left; }
+.design-handoff-review-groups { display:grid; gap:10px; margin-bottom:18px; }
+.design-handoff-review-group { display:grid; gap:7px; }
+.design-handoff-review-group article { display:grid; gap:4px; padding:9px 10px; border-left:2px solid var(--planr-color-rule); background:var(--planr-color-panel); font-size:12px; }
+.design-handoff-refinement { color:var(--planr-color-text-muted); }
+.design-handoff-package-editor,.design-handoff-requirements,.design-handoff-package-editor fieldset { display:grid; gap:12px; min-width:0; }
+.design-handoff-package-editor > label,.design-handoff-package-editor fieldset label,.design-handoff-content > label { display:grid; gap:6px; margin-bottom:14px; color:var(--planr-color-text-muted); font-size:12px; }
+.design-handoff-package-editor input,.design-handoff-package-editor textarea,.design-handoff-content > label input,.design-handoff-plan-result textarea { width:100%; min-height:44px; border:1px solid var(--planr-color-rule); border-radius:6px; padding:9px 10px; color:var(--planr-color-text); background:var(--planr-color-panel); }
+.design-handoff-package-editor textarea { min-height:82px; resize:vertical; }
+.design-handoff-package-editor fieldset { margin:0; border:1px solid var(--planr-color-rule); border-radius:7px; padding:10px; }
+.design-handoff-package-editor legend { padding:0 5px; color:var(--planr-color-text); font-size:11px; text-transform:capitalize; }
+.design-handoff-content details { margin:14px 0; border-top:1px solid var(--planr-color-rule); padding-top:12px; }
+.design-handoff-content summary { min-height:36px; cursor:pointer; color:var(--planr-color-text-muted); font-size:12px; }
+.design-handoff-approval-card { display:grid; gap:9px; margin-bottom:18px; padding:16px; border:1px solid var(--planr-color-rule); border-radius:8px; background:var(--planr-color-raised); }
+.design-handoff-plan-result { display:grid; gap:10px; margin-top:14px; }
+.design-handoff-plan-result code { display:block; overflow:auto; border:1px solid var(--planr-color-rule); border-radius:6px; padding:10px; background:var(--planr-color-background); font-size:11px; white-space:pre; }
+.design-handoff-copy { width:100%; }
+.design-handoff-center > footer { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:50px; padding:8px 12px; border-top:1px solid var(--planr-color-rule); background:var(--planr-color-chrome); }
+.design-handoff-center > footer p { flex:1; color:var(--planr-color-text-muted); font-size:10px; }
+.design-handoff-center > footer p[data-error="true"] { color:var(--planr-color-danger); }
+.design-handoff-center > footer button { flex:none; }
+.planr-shell[data-design-handoff-open="true"] .planr-review-rail { visibility:hidden; pointer-events:none; }
+@media (max-width:960px) {
+  .design-handoff-center { position:absolute; width:min(380px,calc(100% - 16px)); }
+}
+@media (max-width:680px) {
+  .design-handoff-center { inset:var(--planr-toolbar-height) 0 0; width:100%; max-width:none; border-left:0; }
+  .design-handoff-center button,.design-handoff-center input,.design-handoff-center textarea,.design-handoff-center summary { min-height:44px; }
+  .design-handoff-center input,.design-handoff-center textarea { font-size:16px; }
+  .design-handoff-progress { position:sticky; z-index:2; top:0; background:var(--planr-color-chrome); }
+  .design-handoff-content { padding-inline:16px; }
+}
+@media (prefers-reduced-motion:reduce) { .design-handoff-center * { scroll-behavior:auto!important; transition:none!important; animation:none!important; } }
+@media (forced-colors:active) {
+  .design-handoff-center,.design-handoff-summary,.design-handoff-empty,.design-handoff-checks li,.design-handoff-requirement-list li { border-color:CanvasText; }
+  .design-handoff-badge::before { forced-color-adjust:none; background:currentColor; }
+}
