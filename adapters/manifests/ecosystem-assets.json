@@ -6,11 +6,11 @@
   "inputs": [
     {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:362e9b33687879b3e20aa43811bc6d45940a9f95d72878a4391bf086db4bd989"
+      "digest": "sha256:0dfafd4ef73f9adb240ae73724beac24959175533f8634fea3fe2c6494e85ceb"
     },
     {
       "path": "apps/dashboard/package.json",
-      "digest": "sha256:d31cd98a8bce615de4946562bcbad504266ccdea2d06bea9fb75f364522ec7e1"
+      "digest": "sha256:b9a4f6d7e38fb3ba1a076b94cd15aba4ab1fde7369a6c09fdda972f5e0164ac0"
     },
     {
       "path": "package.json",
@@ -18,15 +18,15 @@
     },
     {
       "path": "packages/artifact/package.json",
-      "digest": "sha256:68ba58f3f0d4b8420c1b832921946d33a9321619029b3c1fc82b343147919c50"
+      "digest": "sha256:b8c533a331ed22bb2ad1207825f4296d1e07af413b9d3ec125e0d784a5d26ac3"
     },
     {
       "path": "packages/cli/package.json",
-      "digest": "sha256:2dd6642c5692c76f5587d58ba0f45236b75d7cae811bb98444b4d971748bb130"
+      "digest": "sha256:e518123e8d2478dd975877c6c3117a2964bc9c467bab1b108ac4a971c9266b63"
     },
     {
       "path": "packages/design/package.json",
-      "digest": "sha256:820eb612a1296e75e150eb8dbc34a08648c1f0f9d76141852fa02195c6e00ccb"
+      "digest": "sha256:7f2bf20df03b774a21b33c81a0bb4604baebf5315f8ac432915e93675c80ecb7"
     },
     {
       "path": "packages/integrations/package.json",
@@ -34,15 +34,15 @@
     },
     {
       "path": "packages/operate/package.json",
-      "digest": "sha256:8da2998baa343a01f995413d125ca6206f96f976d46b04b80724b60e58171fa7"
+      "digest": "sha256:89dfa3e5a43ff4917129d726e958605e3b58c73a56cdbeea787c83a45d587608"
     },
     {
       "path": "packages/pipeline/package.json",
-      "digest": "sha256:6aa32ae9db891f193edfc006ade42f6138a7879025b4026f86ac2e5e79e02276"
+      "digest": "sha256:b811e81ae447949ce0dee037415d5c11c52cf057566f3223128a928453c8a3c2"
     },
     {
       "path": "packages/protocol/package.json",
-      "digest": "sha256:70c009b580513ddd25424d86b787ab9e1052eed23df74f9e5607e23a8e767d7c"
+      "digest": "sha256:005fd84b459d0673203781da7693ffb28b379ef73096213fd6df5c2606617730"
     },
     {
       "path": "packages/protocol/registries/commands.json",
@@ -90,7 +90,7 @@
     },
     {
       "path": "packages/skill-runtime/package.json",
-      "digest": "sha256:52689c0a397ec64e3500d58c3b59959179983043b357eee873570105654300e8"
+      "digest": "sha256:bb282b87c36bca95c58aa19081823c67306d4ed148af7b9da35211bcf705df43"
     },
     {
       "path": "scripts/lib/workspace-release-policy.mjs",
@@ -104,23 +104,23 @@
   "outputs": [
     {
       "path": ".claude-plugin/marketplace.json",
-      "digest": "sha256:2d8dafcc6e496a496304c9ce9fe9c28553b9d6208efce3fd3200a42ee2891f62"
+      "digest": "sha256:f3195af1154fa5afbfbf756d49ce2be4ae6824fe573e667696bef8b163bb506f"
     },
     {
       "path": ".claude-plugin/plugin.json",
-      "digest": "sha256:499ce87b1ad7bfb7eee80d80d2b6abb64ec9aa01b3ab419916c48cdf6c2977b0"
+      "digest": "sha256:72f4a894f63195f2e62ba9eff25ad2a7fb00f8e2650e8b9e35a883e388f436d8"
     },
     {
       "path": "adapters/manifests/codex-plugin-content.json",
-      "digest": "sha256:4c90e2e1d1d30df2956b292d1df1cfbb8a27c35be57852eb58d2ca9386108a8f"
+      "digest": "sha256:fbab8dd079147507198434f1383ddc555a3aa3589d0ec09632511d4b98cc7dae"
     },
     {
       "path": "docs/generated/adapters.md",
-      "digest": "sha256:d8f2e809ba0bc09c4400ae8436acf7cd11d0cdd4d7ff8c3d0390074b193adfec"
+      "digest": "sha256:36c708373b780e984f2ee7d89fc12b2d439836bcb4cef9e7d141cbb9c6b79471"
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:90d7bfe100b7134ac164d25c38fc95ff98d3252c920961df4b951864deabcb45"
+      "digest": "sha256:b5fd3ac61e7180718fb87d1644d585d98c235a5ce91826ad705fb6cd36c83fb9"
     },
     {
       "path": "docs/generated/skills.md",
@@ -128,11 +128,11 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:f426db032808b139a945b6b0625f279f0c4257a09d879efd176869c82308df0b"
+      "digest": "sha256:accc7b5c43bb9cdf1a34fa12afbeec70a003176a1f9f377a799b4ca71b407026"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",
-      "digest": "sha256:baa88d7371c86c9c4999f7501bc6ab48797e6cb2523ef0e11bccacf2d6175616"
+      "digest": "sha256:74e598bbe70cac91ba6068bdf4e532e8c32fbfc9fac8b18f4bfbfa6d12727357"
     }
   ]
 }

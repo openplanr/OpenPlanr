@@ -1,6 +1,6 @@
 {
   "name": "@openplanr/design",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "type": "module",
   "description": "Canonical OpenPlanr design helpers and design-loop engine",
@@ -46,8 +46,8 @@
     "node": ">=20"
   },
   "dependencies": {
-    "@openplanr/artifact": "0.2.2",
-    "@openplanr/protocol": "0.4.0"
+    "@openplanr/artifact": "0.2.3",
+    "@openplanr/protocol": "0.5.0"
   },
   "scripts": {
     "test": "node --test --test-concurrency=2 tests/*.test.mjs",

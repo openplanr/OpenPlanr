@@ -1,6 +1,6 @@
 {
   "name": "@openplanr/skill-runtime",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "type": "module",
   "engines": {
@@ -71,7 +71,7 @@
     "templates/"
   ],
   "dependencies": {
-    "@openplanr/protocol": "0.4.0"
+    "@openplanr/protocol": "0.5.0"
   },
   "scripts": {
     "generate": "node ../../scripts/skills/generate-v18.mjs --write",
