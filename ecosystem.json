@@ -45,17 +45,17 @@
   "components": {
     "cli": {
       "package": "openplanr",
-      "version": "2.3.0",
+      "version": "2.4.0",
       "path": "packages/cli",
       "publication": "public",
-      "manifestDigest": "sha256:0d98f09feff0c695add8a588e58533457a4df165e5fef71a16854790cd856880"
+      "manifestDigest": "sha256:2dd6642c5692c76f5587d58ba0f45236b75d7cae811bb98444b4d971748bb130"
     },
     "pipeline": {
       "package": "planr-pipeline",
-      "version": "0.46.0",
+      "version": "0.47.0",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:8ef68d3985c57a64a7ae7097c97b1b7a4f391288a66c3ea4734f2a3e02a1f0f8"
+      "manifestDigest": "sha256:d0460107bab8fba0134dd843b66b8f2b555a3bab75fde1b7e3763cc166d3cdca"
     },
     "protocol": {
       "package": "@openplanr/protocol",
@@ -110,7 +110,7 @@
   "compatibility": {
     "cliOptionalPipeline": {
       "package": "planr-pipeline",
-      "version": "0.46.0",
+      "version": "0.47.0",
       "exact": true
     },
     "publicArtifacts": {
@@ -319,23 +319,23 @@
     "hosts": [
       {
         "id": "claude-code",
-        "version": "0.46.0",
+        "version": "0.47.0",
         "capabilityLevel": "product"
       },
       {
         "id": "codex",
-        "version": "0.46.0",
+        "version": "0.47.0",
         "capabilityLevel": "workflow"
       },
       {
         "id": "cursor",
-        "version": "0.46.0",
+        "version": "0.47.0",
         "capabilityLevel": "workflow"
       }
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:638b859b1c49d1ad4f2734d24da771a1efa7282cfbbc171c886a433f76da20e4",
+      "digest": "sha256:8742127890e681b6f1e31159f67fc6329d429fd4462998509bab51603a8daa8b",
       "count": 1673
     }
   },
