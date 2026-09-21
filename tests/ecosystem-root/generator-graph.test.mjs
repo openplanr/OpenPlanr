@@ -4,6 +4,7 @@ import test from 'node:test';
 import { GENERATOR_STEPS, resolveGeneratorPlan } from '../../scripts/generate-all.mjs';
 
 const expectedOrder = [
+  'skill-role-host-adapters',
   'protocol-catalogs',
   'dashboard-contracts',
   'artifact-shell',
@@ -12,7 +13,6 @@ const expectedOrder = [
   'operate-artifact-design-public-projections',
   'operate-contracts-and-custody',
   'landing-workflow-custody',
-  'skill-role-host-adapters',
   'dashboard-package-assets',
   'ecosystem-marketplace',
   'preservation-catalog',

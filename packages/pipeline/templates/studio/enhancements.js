@@ -736,7 +736,7 @@
       await loadPair();
     } catch (error) { status.textContent = error.message; content.append(button('Retry comparison', () => compareRevisions(beforeId, afterId))); }
   }
-  async function handoff() {
+  async function reviewHandoff() {
     const { content, status } = modal('Review handoff', 'design-handoff'); status.textContent = 'Loading review decisions…'; let response;
     const render = () => {
       content.replaceChildren(); const draft = response.draft;
@@ -766,7 +766,11 @@
       catch (error) { status.textContent = error.message; for (const [value,disabled] of previousDisabled) if (value.isConnected) value.disabled = disabled; }
     };
     try { response = await request('loadHandoff', 'handoffUrl'); if (response.metadata) metadata = response.metadata; render(); status.textContent = ''; }
-    catch (error) { status.textContent = error.message; content.append(button('Retry', handoff)); }
+    catch (error) { status.textContent = error.message; content.append(button('Retry', reviewHandoff)); }
+  }
+  function handoff() {
+    if (window.__openPlanrDesignHandoffCenter?.open) return window.__openPlanrDesignHandoffCenter.open();
+    return reviewHandoff();
   }
   async function refreshExperience() {
     const previousContext = JSON.stringify(experience?.reviewContext || payload.reviewContext);
@@ -797,6 +801,19 @@
     on(document, 'openplanr:design-experience-changed', () => { void refreshExperience(); });
     const dispose = () => { disposed = true; activeDialog?.dismiss(); for (const remove of destroyers.splice(0)) remove(); clearTimeout(toastTimer); };
     on(window, 'pagehide', dispose); on(root, 'planr:design-destroy', dispose);
+    window.__openPlanrDesignHandoffBridge = Object.freeze({
+      owner,
+      revision,
+      announce,
+      openReviewHandoff: reviewHandoff,
+      loadReadiness: () => request('loadReadiness', 'readinessUrl'),
+      loadReviewHandoff: () => request('loadHandoff', 'handoffUrl'),
+      updateReviewHandoff: input => request('updateHandoff', 'handoffUrl', { ...input, revision: revision() }),
+      loadImplementationHandoff: () => request('loadImplementationHandoff', 'implementationHandoffUrl'),
+      updateImplementationHandoff: input => request('updateImplementationHandoff', 'implementationHandoffUrl', input),
+      continueToActiveHost: typeof options().continueToPlan === 'function' ? handoff => options().continueToPlan(handoff) : null,
+      context: () => ({ designId: design.id, title: design.title, revision: revision(), host: options().activeHost || options().host || '' }),
+    });
     window.__openPlanrDesignExperience = Object.freeze({ about, profile:editProfile, setTheme, history, compare: compareRevisions, handoff, refresh: refreshExperience, getState: () => ({ railTab, inspectorEnabled, profile:{...profile}, theme:themePreference, metadata: structuredClone(metadata) }) });
   }
   const started = Date.now();

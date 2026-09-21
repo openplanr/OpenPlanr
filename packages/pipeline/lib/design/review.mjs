@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import {
 	prepareArtifactDocument,
 	createArtifactBridgeNonce,
@@ -315,6 +315,60 @@ function currentImplementationBasis(file, env) {
 	};
 }
 
+/** Editable owner projection. Exact source identities are derived on the server. */
+function proposeImplementationPackage(file, env) {
+	const current = currentDesign(file);
+	const basis = currentImplementationBasis(file, env);
+	const repository = projectRoot(current.root);
+	const paths = [...new Set([
+		designSpecPath(current.root),
+		...(current.sourceFiles ?? []).map((path) => resolve(current.root, path)),
+	])].filter((path) => existsSync(path));
+	const sources = paths.map((path, index) => {
+		const logicalPath = relative(repository, path).replaceAll("\\", "/");
+		const extension = logicalPath.split(".").pop()?.toLowerCase();
+		return {
+			id: `SRC-${String(index + 1).padStart(3, "0")}`,
+			kind: path === designSpecPath(current.root)
+				? "design-specification"
+				: extension === "html"
+					? "screen"
+					: ["css", "json"].includes(extension)
+						? "token"
+						: "component",
+			path: logicalPath,
+			revision: basis.sourceRevision,
+			digest: `sha256:${hash(readFileSync(path))}`,
+		};
+	});
+	const sourceByPath = new Map(sources.map((source) => [source.path, source.id]));
+	const sourceId = (path) => sourceByPath.get(relative(repository, resolve(current.root, path)).replaceAll("\\", "/"));
+	const selected = current.document.variants.find((variant) => variant.id === current.document.selectedVariant);
+	const requirements = current.document.screens.map((screen) => {
+		const authored = selected?.sources?.[screen.id] ?? screen.source;
+		const refs = [authored?.html, ...(authored?.styles ?? []), ...(authored?.scripts ?? [])].map(sourceId).filter(Boolean);
+		return {
+			kind: "behavior",
+			statement: `${screen.title}: ${screen.description || "Implement the approved screen behavior and states."}`,
+			sourceRefs: refs.length ? refs : [sources[0].id],
+			verification: current.document.frames.map((frame) => `${screen.title} matches the approved ${frame.label} frame at ${frame.width} × ${frame.height}.`),
+		};
+	});
+	const allRefs = sources.map((source) => source.id);
+	requirements.push({
+		kind: "accessibility",
+		statement: "Preserve the approved interaction semantics, keyboard path, focus behavior and readable status communication.",
+		sourceRefs: allRefs,
+		verification: ["Keyboard-only use, visible focus, screen-reader labels and status announcements pass on every implemented screen."],
+	});
+	return {
+		id: `${current.document.id}-implementation`,
+		title: `${current.document.title} implementation package`,
+		sources,
+		requirements,
+	};
+}
+
 async function persistDesignTaste(current, state) {
 	const path = join(
 		projectRoot(current.root),
@@ -566,7 +620,9 @@ async function startDesignReviewUnlocked(
 					const unlock = await acquireStartLock(join(design.root, ".design/render.lock"));
 					try {
 						const root = dirname(designSpecPath(design.root));
-						respond(res, 200, { ok: true, draft: readImplementationHandoffDraft(root), ...readImplementationHandoffLifecycle(root), approvalPreview: previewImplementationHandoffApproval(root) });
+						let proposal = null;
+						try { proposal = proposeImplementationPackage(file, env); } catch { /* Readiness explains why a proposal is unavailable. */ }
+						respond(res, 200, { ok: true, draft: readImplementationHandoffDraft(root), ...readImplementationHandoffLifecycle(root), approvalPreview: previewImplementationHandoffApproval(root), proposal });
 					} finally {
 						unlock();
 					}

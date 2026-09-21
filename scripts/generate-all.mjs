@@ -14,6 +14,13 @@ const command = (script, writeArguments, checkArguments = [...writeArguments, '-
 
 export const GENERATOR_STEPS = Object.freeze([
   Object.freeze({
+    id: 'skill-role-host-adapters',
+    required: true,
+    candidates: Object.freeze([
+      command('scripts/skills/generate-v18.mjs', ['--write'], ['--check']),
+    ]),
+  }),
+  Object.freeze({
     id: 'protocol-catalogs',
     required: true,
     candidates: Object.freeze([
@@ -72,13 +79,6 @@ export const GENERATOR_STEPS = Object.freeze([
         ['--write'],
         ['--check'],
       ),
-    ]),
-  }),
-  Object.freeze({
-    id: 'skill-role-host-adapters',
-    required: true,
-    candidates: Object.freeze([
-      command('scripts/skills/generate-v18.mjs', ['--write'], ['--check']),
     ]),
   }),
   Object.freeze({

@@ -3,7 +3,7 @@
 // packages/design/lib/design/utility.mjs
 import { spawn } from "node:child_process";
 import { existsSync as existsSync12, mkdirSync as mkdirSync9, readFileSync as readFileSync17, realpathSync as realpathSync7, writeFileSync as writeFileSync9 } from "node:fs";
-import { dirname as dirname14, join as join13, resolve as resolve7 } from "node:path";
+import { dirname as dirname14, join as join13, resolve as resolve8 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // packages/design/lib/design/document.mjs
@@ -354,11 +354,11 @@ function createArtifactBridgeTools(document2, window2) {
         const outputWidth = Math.max(1, Math.round(width * scale)), outputHeight = Math.max(1, Math.round(height * scale));
         const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + outputWidth + '" height="' + outputHeight + '" viewBox="0 0 ' + width + " " + height + '"><foreignObject width="' + width + '" height="' + height + '">' + markup + "</foreignObject></svg>";
         image = new Image();
-        await new Promise((resolve8, reject) => {
+        await new Promise((resolve9, reject) => {
           const timer = setTimeout(() => reject(new Error("Thumbnail capture timed out.")), Math.max(1, deadline - Date.now()));
           image.onload = () => {
             clearTimeout(timer);
-            resolve8();
+            resolve9();
           };
           image.onerror = () => {
             clearTimeout(timer);
@@ -13081,12 +13081,14 @@ ${shellMarkup}
 }
 
 // packages/design/lib/design/studio-render.mjs
-var DESIGN_STUDIO_VERSION = "1.8.5";
+var DESIGN_STUDIO_VERSION = "1.9.0";
 var DESIGN_STUDIO_ASSETS = Object.freeze({
   style: "templates/studio/studio.css",
   runtime: "templates/studio/studio.js",
   enhancementsStyle: "templates/studio/enhancements.css",
-  enhancementsRuntime: "templates/studio/enhancements.js"
+  enhancementsRuntime: "templates/studio/enhancements.js",
+  handoffCenterStyle: "templates/studio/handoff-center.css",
+  handoffCenterRuntime: "templates/studio/handoff-center.js"
 });
 function applyDesignStudioTheme(preference) {
   if (!preference) {
@@ -13543,8 +13545,8 @@ function renderDesignStudio(input = {}, options = {}) {
   return renderDesignStudioMarkup({ ...input, entries: input.entries ?? createDesignStudioEntries(input.document, input.envelope) }, {
     ...options,
     renderShell: renderArtifactShellDocument,
-    style: ["studio.css", "enhancements.css"].map((file) => readFileSync7(new URL(file, templateRoot), "utf8")).join("\n"),
-    runtime: renderDesignReviewExportSource() + "\n" + ["studio.js", "enhancements.js"].map((file) => readFileSync7(new URL(file, templateRoot), "utf8")).join("\n")
+    style: ["studio.css", "enhancements.css", "handoff-center.css"].map((file) => readFileSync7(new URL(file, templateRoot), "utf8")).join("\n"),
+    runtime: renderDesignReviewExportSource() + "\n" + ["studio.js", "enhancements.js", "handoff-center.js"].map((file) => readFileSync7(new URL(file, templateRoot), "utf8")).join("\n")
   });
 }
 
@@ -13827,7 +13829,7 @@ function designRendererRevision() {
     json({
       version: DESIGN_RENDERER_VERSION,
       stage: hash(stageRuntimeBytes()),
-      assets: ["studio.css", "studio.js", "enhancements.css", "enhancements.js"].filter((name) => existsSync3(new URL(`../../templates/studio/${name}`, new URL("./runtime/packages/design/lib/design/document.mjs", import.meta.url).href))).map(
+      assets: ["studio.css", "studio.js", "enhancements.css", "enhancements.js", "handoff-center.css", "handoff-center.js"].filter((name) => existsSync3(new URL(`../../templates/studio/${name}`, new URL("./runtime/packages/design/lib/design/document.mjs", import.meta.url).href))).map(
         (name) => hash(
           readFileSync8(
             new URL(`../../templates/studio/${name}`, new URL("./runtime/packages/design/lib/design/document.mjs", import.meta.url).href)
@@ -13994,7 +13996,7 @@ ${errors.join("\n")}`);
 
 // packages/design/lib/design/review.mjs
 import { existsSync as existsSync11, readFileSync as readFileSync16 } from "node:fs";
-import { dirname as dirname13, join as join12 } from "node:path";
+import { dirname as dirname13, join as join12, relative as relative4, resolve as resolve7 } from "node:path";
 
 // packages/artifact/lib/artifact/import.mjs
 import {
@@ -18363,6 +18365,52 @@ function currentImplementationBasis(file, env) {
     }
   };
 }
+function proposeImplementationPackage(file, env) {
+  const current = currentDesign(file);
+  const basis = currentImplementationBasis(file, env);
+  const repository = projectRoot(current.root);
+  const paths = [.../* @__PURE__ */ new Set([
+    designSpecPath(current.root),
+    ...(current.sourceFiles ?? []).map((path) => resolve7(current.root, path))
+  ])].filter((path) => existsSync11(path));
+  const sources = paths.map((path, index) => {
+    const logicalPath2 = relative4(repository, path).replaceAll("\\", "/");
+    const extension = logicalPath2.split(".").pop()?.toLowerCase();
+    return {
+      id: `SRC-${String(index + 1).padStart(3, "0")}`,
+      kind: path === designSpecPath(current.root) ? "design-specification" : extension === "html" ? "screen" : ["css", "json"].includes(extension) ? "token" : "component",
+      path: logicalPath2,
+      revision: basis.sourceRevision,
+      digest: `sha256:${hash(readFileSync16(path))}`
+    };
+  });
+  const sourceByPath = new Map(sources.map((source) => [source.path, source.id]));
+  const sourceId = (path) => sourceByPath.get(relative4(repository, resolve7(current.root, path)).replaceAll("\\", "/"));
+  const selected = current.document.variants.find((variant) => variant.id === current.document.selectedVariant);
+  const requirements = current.document.screens.map((screen) => {
+    const authored = selected?.sources?.[screen.id] ?? screen.source;
+    const refs = [authored?.html, ...authored?.styles ?? [], ...authored?.scripts ?? []].map(sourceId).filter(Boolean);
+    return {
+      kind: "behavior",
+      statement: `${screen.title}: ${screen.description || "Implement the approved screen behavior and states."}`,
+      sourceRefs: refs.length ? refs : [sources[0].id],
+      verification: current.document.frames.map((frame) => `${screen.title} matches the approved ${frame.label} frame at ${frame.width} \xD7 ${frame.height}.`)
+    };
+  });
+  const allRefs = sources.map((source) => source.id);
+  requirements.push({
+    kind: "accessibility",
+    statement: "Preserve the approved interaction semantics, keyboard path, focus behavior and readable status communication.",
+    sourceRefs: allRefs,
+    verification: ["Keyboard-only use, visible focus, screen-reader labels and status announcements pass on every implemented screen."]
+  });
+  return {
+    id: `${current.document.id}-implementation`,
+    title: `${current.document.title} implementation package`,
+    sources,
+    requirements
+  };
+}
 async function persistDesignTaste(current, state) {
   const path = join12(
     projectRoot(current.root),
@@ -18585,7 +18633,12 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
           const unlock = await acquireStartLock(join12(design.root, ".design/render.lock"));
           try {
             const root = dirname13(designSpecPath(design.root));
-            respond(res, 200, { ok: true, draft: readImplementationHandoffDraft(root), ...readImplementationHandoffLifecycle(root), approvalPreview: previewImplementationHandoffApproval(root) });
+            let proposal = null;
+            try {
+              proposal = proposeImplementationPackage(file, env);
+            } catch {
+            }
+            respond(res, 200, { ok: true, draft: readImplementationHandoffDraft(root), ...readImplementationHandoffLifecycle(root), approvalPreview: previewImplementationHandoffApproval(root), proposal });
           } finally {
             unlock();
           }
@@ -19066,7 +19119,7 @@ function verifyDesignDocument(file, report) {
   const images = (Array.isArray(report.screenshots) ? report.screenshots : []).filter((item2) => {
     const path = typeof item2 === "string" ? item2 : item2?.path;
     try {
-      return typeof path === "string" && isPng(readFileSync17(resolve7(path)));
+      return typeof path === "string" && isPng(readFileSync17(resolve8(path)));
     } catch {
       return false;
     }
@@ -19095,14 +19148,14 @@ async function designUtility(argv, { stdout = (value) => process.stdout.write(`$
     flags[key] = ["json", "no-open"].includes(key) ? true : args[++i];
   }
   if (flags.view && !["canvas", "prototype", "walkthrough"].includes(flags.view)) throw new Error("View must be canvas, prototype, or walkthrough.");
-  const file = resolve7(input);
+  const file = resolve8(input);
   let result;
   if (command === "handoff") {
     const action3 = flags.action ?? "inspect";
     if (action3 === "inspect") result = readDesignHandoff(file);
     else {
       const snapshot2 = readDesignHandoff(file);
-      const input2 = flags.input ? readJson2(resolve7(flags.input)) : {};
+      const input2 = flags.input ? readJson2(resolve8(flags.input)) : {};
       result = await updateDesignHandoff(file, { ...input2, action: action3, revision: input2.revision ?? snapshot2.revision, version: input2.version ?? (snapshot2.draft?.version ?? 0) });
     }
   }
@@ -19137,7 +19190,7 @@ async function designUtility(argv, { stdout = (value) => process.stdout.write(`$
     const current = currentDesign(file), view = flags.view ?? current.document.defaultView;
     const state = readJson2(join13(current.root, ".design/studio-state.json"), { state: {} }).state;
     if (flags.format && flags.format !== "html") throw new Error("Portable export supports HTML. Use the studio PNG action for browser-rendered captures.");
-    const output = resolve7(flags.output ?? join13(current.root, `${view}-export.html`));
+    const output = resolve8(flags.output ?? join13(current.root, `${view}-export.html`));
     if (existsSync12(output)) throw new Error(`Export already exists: ${output}. Choose a new --output path.`);
     mkdirSync9(dirname14(output), { recursive: true });
     writeFileSync9(output, standaloneDesignHtml({ ...current, state }, view), { flag: "wx" });
@@ -19145,7 +19198,7 @@ async function designUtility(argv, { stdout = (value) => process.stdout.write(`$
   }
   if (command === "verify") {
     if (!flags.report) throw new Error("verify requires --report <browser-report.json>.");
-    result = verifyDesignDocument(file, readJson2(resolve7(flags.report)));
+    result = verifyDesignDocument(file, readJson2(resolve8(flags.report)));
   }
   if (command === "feedback") {
     await syncDesignShare(file, { env, fetchImpl });
@@ -19156,7 +19209,7 @@ async function designUtility(argv, { stdout = (value) => process.stdout.write(`$
       if (!["json", "markdown"].includes(format)) throw new Error("Feedback export format must be json or markdown.");
       if (!["current", "all"].includes(scope)) throw new Error("Feedback export scope must be current or all.");
       if (!flags.output) throw new Error("Feedback export requires --output <path>.");
-      const output = resolve7(flags.output);
+      const output = resolve8(flags.output);
       if (existsSync12(output)) throw new Error("Feedback export already exists. Choose a new --output path.");
       const snapshot2 = exportDesignReview(file, { scope, env });
       mkdirSync9(dirname14(output), { recursive: true });

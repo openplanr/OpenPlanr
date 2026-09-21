@@ -53,7 +53,7 @@ export function renderDesignStudio(input = {}, options = {}) {
   return renderDesignStudioMarkup({...input, entries: input.entries ?? createDesignStudioEntries(input.document, input.envelope)}, {
     ...options,
     renderShell: renderArtifactShellDocument,
-    style: ["studio.css", "enhancements.css"].map(file => readFileSync(new URL(file, templateRoot), "utf8")).join("\n"),
-    runtime: renderDesignReviewExportSource() + "\n" + ["studio.js", "enhancements.js"].map(file => readFileSync(new URL(file, templateRoot), "utf8")).join("\n"),
+    style: ["studio.css", "enhancements.css", "handoff-center.css"].map(file => readFileSync(new URL(file, templateRoot), "utf8")).join("\n"),
+    runtime: renderDesignReviewExportSource() + "\n" + ["studio.js", "enhancements.js", "handoff-center.js"].map(file => readFileSync(new URL(file, templateRoot), "utf8")).join("\n"),
   });
 }

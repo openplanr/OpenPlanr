@@ -1,12 +1,14 @@
 import { renderPlanrMark } from "../artifact/ui/renderers.mjs";
 import { embedJson, escapeHtml } from "./escape.mjs";
 
-export const DESIGN_STUDIO_VERSION = "1.8.5";
+export const DESIGN_STUDIO_VERSION = "1.9.0";
 export const DESIGN_STUDIO_ASSETS = Object.freeze({
 	style: "templates/studio/studio.css",
 	runtime: "templates/studio/studio.js",
 	enhancementsStyle: "templates/studio/enhancements.css",
 	enhancementsRuntime: "templates/studio/enhancements.js",
+	handoffCenterStyle: "templates/studio/handoff-center.css",
+	handoffCenterRuntime: "templates/studio/handoff-center.js",
 });
 
 /** Self-contained so the same preference is applied before local/hosted paint. */

@@ -131,6 +131,11 @@ test('implementation handoff endpoints compose, approve, version, compare, revok
   };
   const initial = await f.request('design-implementation-handoff');
   assert.equal(initial.status, 200, JSON.stringify(initial.value)); assert.equal(initial.value.draft, null); assert.equal(initial.value.approvalPreview.available, false);
+  assert.equal(initial.value.proposal.id, 'operations-implementation');
+  assert.equal(initial.value.proposal.sources.some(source => source.kind === 'design-specification'), true);
+  assert.equal(initial.value.proposal.requirements.some(requirement => requirement.kind === 'accessibility'), true);
+  assert.equal(initial.value.proposal.sources.every(source => !source.path.startsWith('/') && !source.path.includes(f.root)), true);
+  assert.equal(initial.value.proposal.requirements.every(requirement => requirement.sourceRefs.every(reference => initial.value.proposal.sources.some(source => source.id === reference))), true);
   assert.equal((await f.request('design-implementation-handoff', { action: 'draft', package: packageInput }, { headers: { 'content-type': 'application/json', origin: f.origin } })).status, 403);
   let result = await f.request('design-implementation-handoff', { action: 'draft', package: packageInput });
   assert.equal(result.status, 200); assert.equal(result.value.draft.status, 'draft');

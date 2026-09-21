@@ -163,7 +163,7 @@
     {
       "source": "packages/design/lib/design/document.mjs",
       "target": "lib/design/document.mjs",
-      "sha256": "33f1a9fa80ce4e6fc4bcb0ab2035ca56d4df2600371df3cc36c0b15cd1f04ffb",
+      "sha256": "d89a5c020d1dc2b3a65afb1e5cc670e86930a7da316471736b5f7de19476621e",
       "mode": "644"
     },
     {
@@ -283,7 +283,7 @@
     {
       "source": "packages/design/lib/design/review.mjs",
       "target": "lib/design/review.mjs",
-      "sha256": "58dca35c25b150d02f342fc0d4a381b98aeff5e6dfb7b20af74f4e6f032fa1a5",
+      "sha256": "f757b6e38221503924d9fec594caf9eb7df481217da4fe682d97c85890cebec5",
       "mode": "644"
     },
     {
@@ -307,13 +307,13 @@
     {
       "source": "packages/design/lib/design/studio-render.mjs",
       "target": "lib/design/studio-render.mjs",
-      "sha256": "27172c16e6709b50d509c628f27048a49ed18207e93b5dd1ffeaf9b5c413cfc4",
+      "sha256": "17a4819228dd85a0e338fbbd56922b5abcbf12bf26d4f2fc9856ca01f2519fd7",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/studio.mjs",
       "target": "lib/design/studio.mjs",
-      "sha256": "0b296af19c856828aed6eecf4838cf4931f0ffd215b097486af343df8467a0db",
+      "sha256": "fbb65a79fe7265021c88763b2413c9bbede8372acf7cbd1c01186cddc628603a",
       "mode": "644"
     },
     {
@@ -415,7 +415,19 @@
     {
       "source": "packages/design/templates/studio/enhancements.js",
       "target": "templates/studio/enhancements.js",
-      "sha256": "8f2eea1ed15762799c999745ccfd8f340183ddb12c91fc8224e09ce7ca7e2c97",
+      "sha256": "e967e9a622018a3bfdd52751ecfa6e842dbbf1922f573f3395a2bf29ca028589",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/studio/handoff-center.css",
+      "target": "templates/studio/handoff-center.css",
+      "sha256": "2f972f98d16723fd19989df349f6342e6eae951820e53ca84f310b433ef83b48",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/templates/studio/handoff-center.js",
+      "target": "templates/studio/handoff-center.js",
+      "sha256": "012f648cf3936be649ac5f4935412a91489c8f90e076400dc19fbc6ebbf38b21",
       "mode": "644"
     },
     {

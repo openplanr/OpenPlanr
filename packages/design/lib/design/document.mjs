@@ -339,7 +339,7 @@ export function designRendererRevision() {
 		json({
 			version: DESIGN_RENDERER_VERSION,
 			stage: hash(stageRuntimeBytes()),
-			assets: ["studio.css", "studio.js", "enhancements.css", "enhancements.js"].filter(name => existsSync(new URL(`../../templates/studio/${name}`, import.meta.url))).map((name) =>
+			assets: ["studio.css", "studio.js", "enhancements.css", "enhancements.js", "handoff-center.css", "handoff-center.js"].filter(name => existsSync(new URL(`../../templates/studio/${name}`, import.meta.url))).map((name) =>
 				hash(
 					readFileSync(
 						new URL(`../../templates/studio/${name}`, import.meta.url),

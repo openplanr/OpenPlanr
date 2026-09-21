@@ -8,7 +8,7 @@
   "canonicalSkillCount": 27,
   "compatibilityAliasCount": 0,
   "skillCount": 27,
-  "assetCount": 304,
+  "assetCount": 312,
   "skills": [
     {
       "skillId": "planr-artifact",
@@ -373,7 +373,7 @@
         },
         {
           "path": "skills/design/openplanr.skill.json",
-          "digest": "sha256:83457207042925d16148dd28054ef69f00c4358136da7eaadc286f01bc6a0797"
+          "digest": "sha256:b6fb1882f9147414964469f6e3b8089c2ca8d55c0f4a7f92e66b5a107db68051"
         },
         {
           "path": "skills/design/agents/openai.yaml",
@@ -417,7 +417,7 @@
         },
         {
           "path": "skills/design/scripts/design.mjs",
-          "digest": "sha256:4374afc1003a4869cc423a093950b5d192a63df314329ee0e30ea423d163560b"
+          "digest": "sha256:3fec9a1d47bc41c0caf4909a2c4b9d00205da630c015a46f6921caf2a4d7a2d2"
         },
         {
           "path": "skills/design/schemas/design-document.schema.json",
@@ -441,7 +441,15 @@
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/enhancements.js",
-          "digest": "sha256:8f2eea1ed15762799c999745ccfd8f340183ddb12c91fc8224e09ce7ca7e2c97"
+          "digest": "sha256:e967e9a622018a3bfdd52751ecfa6e842dbbf1922f573f3395a2bf29ca028589"
+        },
+        {
+          "path": "skills/design/scripts/runtime/packages/design/templates/studio/handoff-center.css",
+          "digest": "sha256:2f972f98d16723fd19989df349f6342e6eae951820e53ca84f310b433ef83b48"
+        },
+        {
+          "path": "skills/design/scripts/runtime/packages/design/templates/studio/handoff-center.js",
+          "digest": "sha256:012f648cf3936be649ac5f4935412a91489c8f90e076400dc19fbc6ebbf38b21"
         },
         {
           "path": "skills/design/scripts/runtime/packages/design/templates/studio/share.css",
@@ -566,7 +574,7 @@
         },
         {
           "path": "skills/design-loop/openplanr.skill.json",
-          "digest": "sha256:cecdbd16879f58de70d1158b776fb47ac5520e22c2d6c0d01b3c6b8c4c843ced"
+          "digest": "sha256:e74d98bbf31c030727e6cf2bd306b760d1bba2449bbb247148fe6c1dbc684f7b"
         },
         {
           "path": "skills/design-loop/agents/openai.yaml",
@@ -610,7 +618,7 @@
         },
         {
           "path": "skills/design-loop/scripts/design.mjs",
-          "digest": "sha256:4374afc1003a4869cc423a093950b5d192a63df314329ee0e30ea423d163560b"
+          "digest": "sha256:3fec9a1d47bc41c0caf4909a2c4b9d00205da630c015a46f6921caf2a4d7a2d2"
         },
         {
           "path": "skills/design-loop/schemas/design-document.schema.json",
@@ -634,7 +642,15 @@
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/enhancements.js",
-          "digest": "sha256:8f2eea1ed15762799c999745ccfd8f340183ddb12c91fc8224e09ce7ca7e2c97"
+          "digest": "sha256:e967e9a622018a3bfdd52751ecfa6e842dbbf1922f573f3395a2bf29ca028589"
+        },
+        {
+          "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/handoff-center.css",
+          "digest": "sha256:2f972f98d16723fd19989df349f6342e6eae951820e53ca84f310b433ef83b48"
+        },
+        {
+          "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/handoff-center.js",
+          "digest": "sha256:012f648cf3936be649ac5f4935412a91489c8f90e076400dc19fbc6ebbf38b21"
         },
         {
           "path": "skills/design-loop/scripts/runtime/packages/design/templates/studio/share.css",
@@ -759,7 +775,7 @@
         },
         {
           "path": "skills/design-review/openplanr.skill.json",
-          "digest": "sha256:6ac49ca8fd2f709aff25f192f55e9c530b95715a626af01afef2ed1d2170e340"
+          "digest": "sha256:388904d851b0da0e6bc9171db229f80facca68a417bb4e458bf5eebf6cd12be3"
         },
         {
           "path": "skills/design-review/agents/openai.yaml",
@@ -803,7 +819,7 @@
         },
         {
           "path": "skills/design-review/scripts/design.mjs",
-          "digest": "sha256:4374afc1003a4869cc423a093950b5d192a63df314329ee0e30ea423d163560b"
+          "digest": "sha256:3fec9a1d47bc41c0caf4909a2c4b9d00205da630c015a46f6921caf2a4d7a2d2"
         },
         {
           "path": "skills/design-review/schemas/design-document.schema.json",
@@ -827,7 +843,15 @@
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/enhancements.js",
-          "digest": "sha256:8f2eea1ed15762799c999745ccfd8f340183ddb12c91fc8224e09ce7ca7e2c97"
+          "digest": "sha256:e967e9a622018a3bfdd52751ecfa6e842dbbf1922f573f3395a2bf29ca028589"
+        },
+        {
+          "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/handoff-center.css",
+          "digest": "sha256:2f972f98d16723fd19989df349f6342e6eae951820e53ca84f310b433ef83b48"
+        },
+        {
+          "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/handoff-center.js",
+          "digest": "sha256:012f648cf3936be649ac5f4935412a91489c8f90e076400dc19fbc6ebbf38b21"
         },
         {
           "path": "skills/design-review/scripts/runtime/packages/design/templates/studio/share.css",
@@ -1110,7 +1134,7 @@
         },
         {
           "path": "skills/plan/openplanr.skill.json",
-          "digest": "sha256:a1e090540db3a4edc2694e1a24c6fc0af85838eb7ee3138cdc53f4be69803479"
+          "digest": "sha256:e91d221a286bd91b3b7a2343cea8c73564cb3401b968854d38bcf8a9790131f1"
         },
         {
           "path": "skills/plan/agents/openai.yaml",
@@ -1130,7 +1154,7 @@
         },
         {
           "path": "skills/plan/scripts/design.mjs",
-          "digest": "sha256:4374afc1003a4869cc423a093950b5d192a63df314329ee0e30ea423d163560b"
+          "digest": "sha256:3fec9a1d47bc41c0caf4909a2c4b9d00205da630c015a46f6921caf2a4d7a2d2"
         },
         {
           "path": "skills/plan/schemas/design-document.schema.json",
@@ -1154,7 +1178,15 @@
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/enhancements.js",
-          "digest": "sha256:8f2eea1ed15762799c999745ccfd8f340183ddb12c91fc8224e09ce7ca7e2c97"
+          "digest": "sha256:e967e9a622018a3bfdd52751ecfa6e842dbbf1922f573f3395a2bf29ca028589"
+        },
+        {
+          "path": "skills/plan/scripts/runtime/packages/design/templates/studio/handoff-center.css",
+          "digest": "sha256:2f972f98d16723fd19989df349f6342e6eae951820e53ca84f310b433ef83b48"
+        },
+        {
+          "path": "skills/plan/scripts/runtime/packages/design/templates/studio/handoff-center.js",
+          "digest": "sha256:012f648cf3936be649ac5f4935412a91489c8f90e076400dc19fbc6ebbf38b21"
         },
         {
           "path": "skills/plan/scripts/runtime/packages/design/templates/studio/share.css",
