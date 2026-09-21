@@ -37,6 +37,10 @@ reads at a glance.
   and `flowchart` a back edge pushes its target to the bottom of the canvas.
 - Use groups sparingly, at most one level, and never for the whole graph. Use
   at most one annotation; more than that draws connectors across the canvas.
+- Lanes are bands perpendicular to the flow: rows under `left-right`, columns
+  under `top-down`. Put every node in exactly one lane; a node outside all
+  lanes renders in an unbanded strip after the last lane. A step's position
+  along the flow is its relation rank, so a handoff lines up across lanes.
 
 Ask a question only if selecting a different answer would change the grammar,
 meaning, or audience. Infer presentation details from context and let the

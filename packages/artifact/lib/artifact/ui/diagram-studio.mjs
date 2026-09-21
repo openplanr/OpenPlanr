@@ -17,7 +17,7 @@ export function mountDiagramStudio(document = globalThis.document) {
   let paintId = 0, space = false, gesture = null, annotations;
   let selectedIndex = -1, connectionFocus = false, presentationIndex = 0;
   const intentLabels = { fix: 'Change request', improve: 'Suggestion', question: 'Question' };
-  const semanticAttributes = ['data-item-id', 'data-relation-id', 'data-phase-id', 'data-group-id', 'data-annotation-id', 'data-scene-id'];
+  const semanticAttributes = ['data-item-id', 'data-relation-id', 'data-phase-id', 'data-group-id', 'data-lane-id', 'data-annotation-id', 'data-scene-id'];
   const drawingElements = [...drawing.querySelectorAll(semanticAttributes.map(attribute => `[${attribute}]`).join(','))];
   const elementIndex = new Map(drawingElements.map(element => [semanticAttributes.map(attribute => element.getAttribute(attribute)).find(Boolean), element]));
   const itemIndex = new Map(config.items.map((item, index) => [item.id, index]));

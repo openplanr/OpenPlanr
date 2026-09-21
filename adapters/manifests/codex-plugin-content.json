@@ -912,7 +912,7 @@
       "assets": [
         {
           "path": "skills/diagram/SKILL.md",
-          "digest": "sha256:835246d34f87f0746ee927f461ebc32190679094793031a63e6fc29ddafa288d"
+          "digest": "sha256:e18886cf87e504fd6720a3e4c4a9f76f32ae3ff5e11800a5cf690dd6aeebaa16"
         },
         {
           "path": "skills/diagram/openplanr.skill.json",
@@ -924,7 +924,7 @@
         },
         {
           "path": "skills/diagram/references/diagram-document.md",
-          "digest": "sha256:a7e83c660549bc3a37f27f952b1b2d160fb3b39d9952c6dc8bfec7ff73b7761d"
+          "digest": "sha256:4d303f1e333a0e278bbe4a5dcbefd8c578a6cfda27211f9b1f3b687938ff0248"
         },
         {
           "path": "skills/diagram/references/diagram-fidelity.md",
@@ -932,7 +932,7 @@
         },
         {
           "path": "skills/diagram/references/diagram-intent-to-ir.md",
-          "digest": "sha256:6452ff367ad67efa0d6344fe557d3f6b432fcce06326a3dda68fe192a781006c"
+          "digest": "sha256:8f29a9ca6cfa448dcd220228c697e6afa198881e5777df2c48899cab9aa8693d"
         }
       ]
     },

@@ -69,6 +69,21 @@
       "message": "Every relation label keeps clear of nodes it does not connect."
     },
     {
+      "id": "label-edge-distance",
+      "status": "pass",
+      "message": "Every relation label sits on the path it names."
+    },
+    {
+      "id": "edge-merge",
+      "status": "pass",
+      "message": "Unrelated connections do not share a straight run."
+    },
+    {
+      "id": "label-cluster-overlap",
+      "status": "pass",
+      "message": "Relation labels keep clear of group and lane titles."
+    },
+    {
       "id": "edge-node-overlap",
       "status": "pass",
       "message": "Connection paths remain outside semantic node interiors."
@@ -95,5 +110,5 @@
     }
   ],
   "splitPlan": null,
-  "documentDigest": "sha256:16d0565cb8eaa9de370835c470943ec7643052892b1e6d1ce75f09ee9b1ddd75"
+  "documentDigest": "sha256:1c721084baf4ebddc51f05270774e200a25c6748df4a3416a48e45e22fd63c06"
 }

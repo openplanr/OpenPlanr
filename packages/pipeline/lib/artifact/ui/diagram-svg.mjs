@@ -2,7 +2,7 @@ import { parseFragment } from 'parse5';
 import { escapeHtml } from '../internal/escape.mjs';
 
 const TAGS = new Set(['svg', 'g', 'title', 'desc', 'defs', 'marker', 'path', 'rect', 'line', 'text', 'tspan', 'circle', 'ellipse', 'polyline', 'polygon']);
-const ATTRS = new Set(['xmlns', 'id', 'role', 'aria-labelledby', 'aria-label', 'viewBox', 'width', 'height', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'rx', 'ry', 'cx', 'cy', 'r', 'd', 'points', 'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'marker-end', 'markerWidth', 'markerHeight', 'refX', 'refY', 'orient', 'font-family', 'font-size', 'font-weight', 'letter-spacing', 'text-anchor', 'dominant-baseline', 'data-item-id', 'data-relation-id', 'data-phase-id', 'data-lifeline-id', 'data-annotation-id', 'data-target-id', 'data-group-id', 'data-scene-id']);
+const ATTRS = new Set(['xmlns', 'id', 'role', 'aria-labelledby', 'aria-label', 'viewBox', 'width', 'height', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'rx', 'ry', 'cx', 'cy', 'r', 'd', 'points', 'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'marker-end', 'markerWidth', 'markerHeight', 'refX', 'refY', 'orient', 'font-family', 'font-size', 'font-weight', 'letter-spacing', 'text-anchor', 'dominant-baseline', 'fill-opacity', 'data-item-id', 'data-relation-id', 'data-phase-id', 'data-lifeline-id', 'data-annotation-id', 'data-target-id', 'data-group-id', 'data-lane-id', 'data-scene-id']);
 const key = value => `diagram-content-${value}`;
 const fail = () => { throw new Error('Diagram SVG contains unsupported or active markup. Rerender it with OpenPlanr.'); };
 const attrs = node => Object.fromEntries((node.attrs ?? []).map(attr => [attr.name, attr.value]));
@@ -36,7 +36,7 @@ export function prepareDiagramSvg(bytes) {
       }
       return `${attr.name}="${escapeHtml(value)}"`;
     });
-    const identity = ['data-phase-id', 'data-group-id', 'data-item-id', 'data-relation-id', 'data-annotation-id', 'data-scene-id'].find(name => values[name]);
+    const identity = ['data-phase-id', 'data-group-id', 'data-lane-id', 'data-item-id', 'data-relation-id', 'data-annotation-id', 'data-scene-id'].find(name => values[name]);
     const label = text(node).trim().replace(/\s+/g, ' ') || (identity === 'data-relation-id' ? `Connection ${values[identity]}` : '');
     if (identity && label) {
       const shape = (node.childNodes ?? []).find(child => ['rect','line','path'].includes(child.tagName)) ?? node;
@@ -44,7 +44,7 @@ export function prepareDiagramSvg(bytes) {
       const pathPoints = geometry.d?.match(/-?\d+(?:\.\d+)?/g)?.map(Number);
       const x = shape.tagName === 'path' && pathPoints?.length >= 4 ? (pathPoints[0] + pathPoints[2]) / 2 : shape.tagName === 'line' ? (number(geometry.x1) + number(geometry.x2)) / 2 : number(geometry.x) + number(geometry.width) / 2;
       const y = shape.tagName === 'path' && pathPoints?.length >= 4 ? (pathPoints[1] + pathPoints[3]) / 2 : number(geometry.y ?? geometry.y1) + number(geometry.height) / 2;
-      items.push({ id:values[identity], label, kind:identity === 'data-phase-id' ? 'Section' : identity === 'data-group-id' ? 'Group' : identity === 'data-relation-id' ? 'Connection' : identity === 'data-annotation-id' ? 'Note' : 'Item', x, y });
+      items.push({ id:values[identity], label, kind:identity === 'data-phase-id' ? 'Section' : identity === 'data-group-id' ? 'Group' : identity === 'data-lane-id' ? 'Lane' : identity === 'data-relation-id' ? 'Connection' : identity === 'data-annotation-id' ? 'Note' : 'Item', x, y });
     }
     return `<${node.tagName} ${fields.join(' ')}>${(node.childNodes ?? []).map(child => serialize(child, depth + 1)).join('')}</${node.tagName}>`;
   }

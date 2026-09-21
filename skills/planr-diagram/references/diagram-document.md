@@ -76,6 +76,10 @@ messages, and events as named phases. After participant IDs, interleave phase
 event IDs and message relation IDs in `accessibility.readingOrder`. That order
 is the canonical timeline used by the renderer and editable projections.
 
+For a lane grammar, add a `lanes` collection of `{ "id", "label", "members" }`
+entries whose `members` list node IDs. Every member must exist, and the
+renderer draws each lane as a titled band holding those nodes.
+
 Write the draft to `<slug>.planr-diagram.json`, then run:
 
 ```sh
