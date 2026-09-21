@@ -11,6 +11,7 @@ import {
   PROTOCOL_V17_CONTRACT_FILES,
   PROTOCOL_V18_CONTRACT_FILES,
 } from './skill-source-contracts.mjs';
+import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -31,6 +32,7 @@ const foundationPaths = {
   'design-review-context': { '1.10.0': 'schemas/v1.10.0/design-review-context.schema.json' },
   'design-review-handoff': { '1.10.0': 'schemas/v1.10.0/design-review-handoff.schema.json' },
   'design-review-metadata-payload': { '1.10.0': 'schemas/v1.10.0/design-review-metadata-payload.schema.json', '1.11.0': 'schemas/v1.11.0/design-review-metadata-payload.schema.json' },
+  ...Object.fromEntries(Object.keys(DESIGN_HANDOFF_CONTRACT_FILES).map(name => [name, { '1.11.0': `schemas/v1.11.0/${DESIGN_HANDOFF_CONTRACT_FILES[name]}` }])),
 
   spec: { '1.0.0': 'schemas/v1.0.0/spec.schema.json', '1.7.0': v17Schema('spec') },
   story: { '1.0.0': 'schemas/v1.0.0/story.schema.json', '1.7.0': v17Schema('story') },

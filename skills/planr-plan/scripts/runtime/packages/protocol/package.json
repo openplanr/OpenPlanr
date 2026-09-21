@@ -47,6 +47,10 @@
       "types": "./src/design-publication-contracts.d.mts",
       "import": "./src/design-publication-contracts.mjs"
     },
+    "./design-handoff-contracts": {
+      "types": "./src/design-handoff-contracts.d.mts",
+      "import": "./src/design-handoff-contracts.mjs"
+    },
     "./registries": {
       "types": "./src/registries.d.mts",
       "import": "./src/registries.mjs"

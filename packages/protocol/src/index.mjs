@@ -18,6 +18,7 @@ export {
   PROTOCOL_V16_CONTRACTS,
   PROTOCOL_V17_CONTRACTS,
   PROTOCOL_V18_CONTRACTS,
+  PROTOCOL_V111_CONTRACTS,
   protocolAssetUrl,
 } from './browser-contracts.mjs';
 export { normalizePlanningTask, validatePlanningAcceptanceCoverage } from './planning-contracts.mjs';
@@ -38,3 +39,4 @@ export {
 } from './task-contracts.mjs';
 export * from './enterprise-contracts.mjs';
 export * from './design-publication-contracts.mjs';
+export * from './design-handoff-contracts.mjs';

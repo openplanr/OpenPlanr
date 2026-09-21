@@ -12,13 +12,25 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "5186d032a8a6ed4e9240bd0c8769ff4e31089657c736b73100e8e5dba3638726",
+      "sha256": "b2976d8db8a43760bbae7272803175a7b10808299667ef02cb2c085e086a7cb3",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/design-contracts.mjs",
       "target": "lib/protocol/design-contracts.mjs",
       "sha256": "ba92096c260c86f38038a5a700fc091428b1474d608f69c573dfedc1bb5902c2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/design-handoff-contracts.d.mts",
+      "target": "lib/protocol/design-handoff-contracts.d.mts",
+      "sha256": "2a0dee60adda5ba9ccfa51b609ca523b40c1c30241afb464955c6b283d9866b6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/design-handoff-contracts.mjs",
+      "target": "lib/protocol/design-handoff-contracts.mjs",
+      "sha256": "e3791fa7bbfe7969a37cb7f95093a8ba9060fbb6d31565fdac0bcc5f3c72539b",
       "mode": "644"
     },
     {
@@ -156,7 +168,7 @@
     {
       "source": "packages/protocol/registries/skills.json",
       "target": "registry/v1.5.0/skills.json",
-      "sha256": "22b7761e47cb0390543fded22402e98f2f086881148a3c3d9be74d14b78d8ee8",
+      "sha256": "30265c649e3dc73b3b8d5e63676d8b25f83f42dc67d00d3f317c1f47c11234dd",
       "mode": "644"
     },
     {
@@ -217,6 +229,24 @@
       "source": "packages/protocol/schemas/v1.10.0/design-review-metadata-payload.schema.json",
       "target": "schemas/v1.10.0/design-review-metadata-payload.schema.json",
       "sha256": "ba8ac124e47e8f8310214445b1752cc6706d3a7265a87c9f9685a7e9df84f0b1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.11.0/design-handoff-readiness.schema.json",
+      "target": "schemas/v1.11.0/design-handoff-readiness.schema.json",
+      "sha256": "51277b0c353989c7166535b6b8c752226fd436b735e451940c79a3f6a9c8eb12",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.11.0/design-implementation-handoff.schema.json",
+      "target": "schemas/v1.11.0/design-implementation-handoff.schema.json",
+      "sha256": "706227c6663dce427f724584bd2d6cb4c65123171ec6540c3ec30e6a36b4d68b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.11.0/design-planning-lineage.schema.json",
+      "target": "schemas/v1.11.0/design-planning-lineage.schema.json",
+      "sha256": "e54a4026444de9cd6092aae4b3bfe7f527254941c07fb29253ea8bb6f2ee8486",
       "mode": "644"
     },
     {

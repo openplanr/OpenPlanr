@@ -88,7 +88,7 @@ for (const entry of contracts.listProtocolSchemas()) {
   schemas++;
 }
 let assets = 0;
-for (const version of ['1.5.0','1.6.0','1.7.0','1.8.0']) {
+for (const version of ['1.5.0','1.6.0','1.7.0','1.8.0','1.11.0']) {
   for (const kind of Object.keys(modules[0]['PROTOCOL_V' + version.replaceAll('.', '').slice(0,-1) + '_CONTRACTS'])) {
     const url = modules[0].protocolAssetUrl(kind, { protocolVersion: version });
     assert.ok(existsSync(url), String(url));
@@ -117,7 +117,7 @@ async function runBrowser() {
   const runner = `const modules = await Promise.all(${JSON.stringify(portable.map(({ name }) => name))}.map(name => import(name)));
 ${sharedChecks}
 let assets = 0;
-for (const version of ['1.5.0','1.6.0','1.7.0','1.8.0']) {
+for (const version of ['1.5.0','1.6.0','1.7.0','1.8.0','1.11.0']) {
   for (const kind of Object.keys(modules[0]['PROTOCOL_V' + version.replaceAll('.', '').slice(0,-1) + '_CONTRACTS'])) {
     const response = await fetch(modules[0].protocolAssetUrl(kind, { protocolVersion: version }));
     check(response.ok, 'Missing schema asset ' + kind + '@' + version);

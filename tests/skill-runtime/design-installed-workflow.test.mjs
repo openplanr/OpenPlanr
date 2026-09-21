@@ -496,6 +496,16 @@ test("installed review retains pins, selection and arrangement across restart, s
 
 test("design runtime bundling and release archives preserve binary assets without executable dependencies", async () => {
 	const resources = await buildDesignSkillResources({ repoRoot: root });
+	for (const name of [
+		"design-handoff-readiness",
+		"design-implementation-handoff",
+		"design-planning-lineage",
+	]) {
+		assert.ok(
+			resources.some(({ path }) => path === `scripts/runtime/packages/protocol/schemas/v1.11.0/${name}.schema.json`),
+			`portable Design and Plan resources include ${name}`,
+		);
+	}
 	const binary = Buffer.from([0, 255, 128, 13, 10, 193, 240, 159, 255, 0]);
 	const entries = [
 		...resources.map(({ path, bytes }) => ({

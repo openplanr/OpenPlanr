@@ -1,0 +1,398 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.11.0/design-handoff-readiness.schema.json",
+  "x-openplanr-contract": {
+    "id": "design-handoff-readiness",
+    "version": "1.11.0"
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "openplanr-design-handoff-readiness"
+        },
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "scope": {
+          "const": "design-originated"
+        },
+        "authority": {
+          "const": "none"
+        },
+        "designId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+        },
+        "sourceRevision": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "selectedVariant": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "ready",
+            "attention",
+            "blocked",
+            "stale"
+          ]
+        },
+        "continuation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "const": "prepare-plan"
+            },
+            "available": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "action",
+            "available"
+          ]
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "enum": [
+                  "current-revision",
+                  "selected-direction",
+                  "design-specification",
+                  "rendered-verification",
+                  "review-freshness",
+                  "review-dispositions",
+                  "unresolved-blockers",
+                  "approved-review-handoff"
+                ]
+              },
+              "status": {
+                "enum": [
+                  "pass",
+                  "attention",
+                  "blocked",
+                  "stale"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 240
+              },
+              "evidenceRefs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                },
+                "maxItems": 64
+              },
+              "recoveryAction": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 240
+                  }
+                },
+                "required": [
+                  "id",
+                  "label"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "message",
+              "evidenceRefs"
+            ]
+          },
+          "maxItems": 8
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              },
+              "kind": {
+                "enum": [
+                  "design-revision",
+                  "selected-direction",
+                  "design-specification",
+                  "rendered-verification",
+                  "review-context",
+                  "review-feedback",
+                  "review-metadata",
+                  "review-handoff",
+                  "screen",
+                  "frame",
+                  "component",
+                  "state",
+                  "flow",
+                  "token",
+                  "review-decision",
+                  "element-anchor"
+                ]
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              "revision": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$"
+              },
+              "digest": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$"
+              },
+              "anchor": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "section": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160,
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                      }
+                    },
+                    "required": [
+                      "section"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "screenId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160,
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                      }
+                    },
+                    "required": [
+                      "screenId"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "screenId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160,
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                      },
+                      "elementId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160,
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                      }
+                    },
+                    "required": [
+                      "screenId",
+                      "elementId"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "reviewId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160,
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                      },
+                      "pinId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160,
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+                      }
+                    },
+                    "required": [
+                      "reviewId",
+                      "pinId"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "path"
+            ]
+          },
+          "maxItems": 10000
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "current-revision",
+              "selected-direction",
+              "design-specification",
+              "rendered-verification",
+              "review-freshness",
+              "review-dispositions",
+              "unresolved-blockers",
+              "approved-review-handoff"
+            ]
+          },
+          "maxItems": 8
+        },
+        "nextActions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 240
+              }
+            },
+            "required": [
+              "id",
+              "label"
+            ]
+          },
+          "maxItems": 8
+        }
+      },
+      "required": [
+        "kind",
+        "schemaVersion",
+        "scope",
+        "authority",
+        "designId",
+        "sourceRevision",
+        "selectedVariant",
+        "status",
+        "continuation",
+        "checks",
+        "evidence",
+        "blockers",
+        "nextActions"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "openplanr-design-handoff-readiness-absence"
+        },
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "status": {
+          "const": "absent"
+        },
+        "reason": {
+          "enum": [
+            "not-computed",
+            "not-applicable",
+            "unavailable"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "nextAction": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            }
+          },
+          "required": [
+            "id",
+            "label"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "schemaVersion",
+        "status",
+        "reason",
+        "message",
+        "nextAction"
+      ]
+    }
+  ]
+}

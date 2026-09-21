@@ -25,6 +25,12 @@ export {
 export { lintDesign, lintCanvasData } from './lint.mjs';
 export { prepareCompanyDesignPublication } from './company-publication.mjs';
 export {
+  canContinueDesignHandoff,
+  compileDesignHandoffReadiness,
+  designHandoffReadinessAbsence,
+  designHandoffReadinessDigest,
+} from './handoff-readiness.mjs';
+export {
   designSystemStatus, resolveDesignSystem, summarizeDesignSystem, DS_PACKAGE_FILES,
 } from './designSystem.mjs';
 export {

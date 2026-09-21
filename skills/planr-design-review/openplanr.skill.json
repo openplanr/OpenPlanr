@@ -364,6 +364,39 @@
       ]
     },
     {
+      "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-handoff-readiness.schema.json",
+      "kind": "schema",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-implementation-handoff.schema.json",
+      "kind": "schema",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
+      "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-planning-lineage.schema.json",
+      "kind": "schema",
+      "executable": false,
+      "hosts": [
+        "claude-code",
+        "codex",
+        "chatgpt",
+        "cursor"
+      ]
+    },
+    {
       "path": "scripts/runtime/packages/protocol/schemas/v1.11.0/design-review-metadata-payload.schema.json",
       "kind": "schema",
       "executable": false,

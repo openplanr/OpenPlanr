@@ -7,6 +7,10 @@
   "license": "MIT",
   "exports": {
     ".": "./lib/design/index.mjs",
+    "./handoff-readiness": {
+      "types": "./lib/design/handoff-readiness.d.mts",
+      "import": "./lib/design/handoff-readiness.mjs"
+    },
     "./package.json": "./package.json",
     "./design/*": "./lib/design/*",
     "./engine/*": "./lib/design-engine/*"

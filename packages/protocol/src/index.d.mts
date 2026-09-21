@@ -8,3 +8,4 @@ export * from './planning-contracts.mjs';
 export * from './diagram-contracts.mjs';
 export * from './enterprise-contracts.mjs';
 export * from './design-publication-contracts.mjs';
+export * from './design-handoff-contracts.mjs';
