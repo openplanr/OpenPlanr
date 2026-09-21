@@ -36,6 +36,19 @@ export {
   designHandoffResolutionDigest,
 } from './handoff-resolution.mjs';
 export {
+  assertImplementationHandoffProjection,
+  composeImplementationHandoff,
+  createRepositorySourceResolver,
+  deriveImplementationRequirementId,
+  exportImplementationHandoffPackage,
+  implementationHandoffPaths,
+  importImplementationHandoffPackage,
+  readImplementationHandoffDraft,
+  recoverImplementationHandoffDraft,
+  verifyImplementationHandoffSources,
+  writeImplementationHandoffDraft,
+} from './implementation-handoff.mjs';
+export {
   designSystemStatus, resolveDesignSystem, summarizeDesignSystem, DS_PACKAGE_FILES,
 } from './designSystem.mjs';
 export {

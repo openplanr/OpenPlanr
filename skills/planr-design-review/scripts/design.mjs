@@ -2,8 +2,8 @@
 
 // packages/design/lib/design/utility.mjs
 import { spawn } from "node:child_process";
-import { existsSync as existsSync10, mkdirSync as mkdirSync7, readFileSync as readFileSync15, realpathSync as realpathSync6, writeFileSync as writeFileSync7 } from "node:fs";
-import { dirname as dirname12, join as join11, resolve as resolve6 } from "node:path";
+import { existsSync as existsSync11, mkdirSync as mkdirSync8, readFileSync as readFileSync16, realpathSync as realpathSync7, writeFileSync as writeFileSync8 } from "node:fs";
+import { dirname as dirname13, join as join12, resolve as resolve7 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 
 // packages/design/lib/design/document.mjs
@@ -189,7 +189,7 @@ function normalizeArtifactInspection(value, viewport) {
   const exact = (entry, keys) => plain(entry) && Object.keys(entry).length === keys.length && Object.keys(entry).every((key) => keys.includes(key));
   if (!exact(value, ["tagName", "anchor", "rect", "viewport", "styles", "accessibility"])) return null;
   const tagName = own(value, "tagName");
-  const anchor = own(value, "anchor");
+  const anchor2 = own(value, "anchor");
   const rect = own(value, "rect");
   const size = own(value, "viewport");
   const styles = own(value, "styles");
@@ -199,15 +199,15 @@ function normalizeArtifactInspection(value, viewport) {
   if (!["width", "height"].every((key) => Number.isInteger(own(size, key)) && own(size, key) >= 1 && own(size, key) <= 16384 && own(size, key) === viewport?.[key])) return null;
   if (!["x", "y", "width", "height"].every((key) => typeof own(rect, key) === "number" && Number.isFinite(own(rect, key)) && own(rect, key) >= 0)) return null;
   if (rect.x + rect.width > size.width || rect.y + rect.height > size.height) return null;
-  if (anchor !== null && (!exact(anchor, own(anchor, "screen") === void 0 ? ["planrId"] : ["planrId", "screen"]) || typeof own(anchor, "planrId") !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/.test(anchor.planrId) || own(anchor, "screen") !== void 0 && (typeof anchor.screen !== "string" || !/^[^\u0000-\u001f\u007f]{1,128}$/.test(anchor.screen)))) return null;
+  if (anchor2 !== null && (!exact(anchor2, own(anchor2, "screen") === void 0 ? ["planrId"] : ["planrId", "screen"]) || typeof own(anchor2, "planrId") !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/.test(anchor2.planrId) || own(anchor2, "screen") !== void 0 && (typeof anchor2.screen !== "string" || !/^[^\u0000-\u001f\u007f]{1,128}$/.test(anchor2.screen)))) return null;
   if (!exact(styles, ARTIFACT_INSPECTION_PROPERTIES) || !ARTIFACT_INSPECTION_PROPERTIES.every((key) => {
-    const text3 = own(styles, key);
-    return typeof text3 === "string" && text3.length <= 256 && !/[\u0000-\u001f\u007f]/.test(text3) && !/(?:url\s*\(|https?:|file:)/i.test(text3);
+    const text4 = own(styles, key);
+    return typeof text4 === "string" && text4.length <= 256 && !/[\u0000-\u001f\u007f]/.test(text4) && !/(?:url\s*\(|https?:|file:)/i.test(text4);
   })) return null;
   if (!exact(accessibility, ["role", "ariaLabel", "alt", "tabIndex", "disabled"]) || !["role", "ariaLabel", "alt"].every((key) => typeof own(accessibility, key) === "string" && own(accessibility, key).length <= 256 && !/[\u0000-\u001f\u007f]/.test(own(accessibility, key))) || !Number.isInteger(own(accessibility, "tabIndex")) || accessibility.tabIndex < -1 || accessibility.tabIndex > 32767 || typeof own(accessibility, "disabled") !== "boolean") return null;
   return Object.freeze({
     tagName,
-    anchor: anchor === null ? null : Object.freeze({ ...anchor }),
+    anchor: anchor2 === null ? null : Object.freeze({ ...anchor2 }),
     rect: Object.freeze({ ...rect }),
     viewport: Object.freeze({ ...size }),
     styles: Object.freeze({ ...styles }),
@@ -220,19 +220,19 @@ function normalizeArtifactThumbnail(value) {
   if (typeof dataUrl !== "string" || dataUrl.length > ARTIFACT_THUMBNAIL_MAX_DATA_URL || !/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(dataUrl) || !Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || width > ARTIFACT_THUMBNAIL_MAX_EDGE || height > ARTIFACT_THUMBNAIL_MAX_EDGE || typeof label !== "string" || label.length < 1 || label.length > 128) return null;
   return Object.freeze({ dataUrl, width, height, label });
 }
-function normalizeArtifactBridgeToolResult(requestType, message, viewport) {
+function normalizeArtifactBridgeToolResult(requestType, message2, viewport) {
   const base = ["channel", "schemaVersion", "type", "nonce", "artifactId", "requestId"];
-  const exact = (keys) => message && typeof message === "object" && !Array.isArray(message) && Object.keys(message).length === keys.length && Object.keys(message).every((key) => keys.includes(key)) && Object.values(Object.getOwnPropertyDescriptors(message)).every((descriptor) => Object.hasOwn(descriptor, "value"));
+  const exact = (keys) => message2 && typeof message2 === "object" && !Array.isArray(message2) && Object.keys(message2).length === keys.length && Object.keys(message2).every((key) => keys.includes(key)) && Object.values(Object.getOwnPropertyDescriptors(message2)).every((descriptor) => Object.hasOwn(descriptor, "value"));
   if (requestType === "inspect.point" || requestType === "inspect.anchor") {
-    if (exact(base) && message.type === "inspect.miss") return { valid: true, value: null };
-    if (!exact([...base, "inspection"]) || message.type !== "inspect.result") return { valid: false };
-    const value = normalizeArtifactInspection(message.inspection, viewport);
+    if (exact(base) && message2.type === "inspect.miss") return { valid: true, value: null };
+    if (!exact([...base, "inspection"]) || message2.type !== "inspect.result") return { valid: false };
+    const value = normalizeArtifactInspection(message2.inspection, viewport);
     return value ? { valid: true, value } : { valid: false };
   }
   if (requestType === "thumbnail.request") {
-    if (exact([...base, "reason"]) && message.type === "thumbnail.error" && typeof message.reason === "string" && message.reason.length <= 256) return { valid: true, value: null };
-    if (!exact([...base, "dataUrl", "width", "height", "label"]) || message.type !== "thumbnail.result") return { valid: false };
-    const value = normalizeArtifactThumbnail({ dataUrl: message.dataUrl, width: message.width, height: message.height, label: message.label });
+    if (exact([...base, "reason"]) && message2.type === "thumbnail.error" && typeof message2.reason === "string" && message2.reason.length <= 256) return { valid: true, value: null };
+    if (!exact([...base, "dataUrl", "width", "height", "label"]) || message2.type !== "thumbnail.result") return { valid: false };
+    const value = normalizeArtifactThumbnail({ dataUrl: message2.dataUrl, width: message2.width, height: message2.height, label: message2.label });
     return value ? { valid: true, value } : { valid: false };
   }
   return { valid: false };
@@ -253,7 +253,7 @@ function createArtifactBridgeTools(document2, window2) {
   const Serializer = window2.XMLSerializer;
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   const get = (element2, key) => attr2.call(element2, key);
-  const validId = (id3) => typeof id3 === "string" && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/.test(id3);
+  const validId = (id4) => typeof id4 === "string" && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,511}$/.test(id4);
   const screen = (element2) => {
     const owner = closest.call(element2, "[data-planr-screen]");
     const value = owner && get(owner, "data-planr-screen");
@@ -295,12 +295,12 @@ function createArtifactBridgeTools(document2, window2) {
       if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0 || x > window2.innerWidth || y > window2.innerHeight) return null;
       return inspectElement(fromPoint(x, y));
     },
-    inspect(anchor) {
-      if (!anchor || !validId(anchor.planrId) || Object.keys(anchor).some((key) => !["planrId", "screen"].includes(key)) || anchor.screen !== void 0 && (typeof anchor.screen !== "string" || !/^[^\u0000-\u001f\u007f]{1,128}$/.test(anchor.screen))) return null;
+    inspect(anchor2) {
+      if (!anchor2 || !validId(anchor2.planrId) || Object.keys(anchor2).some((key) => !["planrId", "screen"].includes(key)) || anchor2.screen !== void 0 && (typeof anchor2.screen !== "string" || !/^[^\u0000-\u001f\u007f]{1,128}$/.test(anchor2.screen))) return null;
       let count = 0;
       for (const element2 of query("[data-planr-id]")) {
         if (++count > 1e4) return null;
-        if (get(element2, "data-planr-id") === anchor.planrId && (anchor.screen === void 0 || screen(element2) === anchor.screen)) return inspectElement(element2);
+        if (get(element2, "data-planr-id") === anchor2.planrId && (anchor2.screen === void 0 || screen(element2) === anchor2.screen)) return inspectElement(element2);
       }
       return null;
     },
@@ -346,19 +346,19 @@ function createArtifactBridgeTools(document2, window2) {
           if (source.nodeType !== 1 || source.tagName !== "TEXTAREA") for (let child = source.firstChild; child; child = child.nextSibling) append.call(target, cloneStyled(child));
           return target;
         };
-        const clone4 = cloneStyled(document2.documentElement);
-        setAttribute.call(clone4, "xmlns", "http://www.w3.org/1999/xhtml");
-        const markup = serialize3.call(new Serializer(), clone4);
+        const clone5 = cloneStyled(document2.documentElement);
+        setAttribute.call(clone5, "xmlns", "http://www.w3.org/1999/xhtml");
+        const markup = serialize3.call(new Serializer(), clone5);
         if (markup.length > 4 * 1024 * 1024) throw new Error("Thumbnail markup limit exceeded.");
         const scale = Math.min(1, ARTIFACT_THUMBNAIL_MAX_EDGE / Math.max(width, height));
         const outputWidth = Math.max(1, Math.round(width * scale)), outputHeight = Math.max(1, Math.round(height * scale));
         const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + outputWidth + '" height="' + outputHeight + '" viewBox="0 0 ' + width + " " + height + '"><foreignObject width="' + width + '" height="' + height + '">' + markup + "</foreignObject></svg>";
         image = new Image();
-        await new Promise((resolve7, reject) => {
+        await new Promise((resolve8, reject) => {
           const timer = setTimeout(() => reject(new Error("Thumbnail capture timed out.")), Math.max(1, deadline - Date.now()));
           image.onload = () => {
             clearTimeout(timer);
-            resolve7();
+            resolve8();
           };
           image.onerror = () => {
             clearTimeout(timer);
@@ -582,13 +582,13 @@ var Preprocessor = class {
     return this.droppedBufferSize + this.pos;
   }
   getError(code, cpOffset) {
-    const { line, col, offset } = this;
+    const { line: line2, col, offset } = this;
     const startCol = col + cpOffset;
     const startOffset = offset + cpOffset;
     return {
       code,
-      startLine: line,
-      endLine: line,
+      startLine: line2,
+      endLine: line2,
       startCol,
       endCol: startCol,
       startOffset,
@@ -4818,22 +4818,22 @@ var defaultTreeAdapter = {
       node.parentNode = null;
     }
   },
-  insertText(parentNode, text3) {
+  insertText(parentNode, text4) {
     if (parentNode.childNodes.length > 0) {
       const prevNode = parentNode.childNodes[parentNode.childNodes.length - 1];
       if (defaultTreeAdapter.isTextNode(prevNode)) {
-        prevNode.value += text3;
+        prevNode.value += text4;
         return;
       }
     }
-    defaultTreeAdapter.appendChild(parentNode, defaultTreeAdapter.createTextNode(text3));
+    defaultTreeAdapter.appendChild(parentNode, defaultTreeAdapter.createTextNode(text4));
   },
-  insertTextBefore(parentNode, text3, referenceNode) {
+  insertTextBefore(parentNode, text4, referenceNode) {
     const prevNode = parentNode.childNodes[parentNode.childNodes.indexOf(referenceNode) - 1];
     if (prevNode && defaultTreeAdapter.isTextNode(prevNode)) {
-      prevNode.value += text3;
+      prevNode.value += text4;
     } else {
-      defaultTreeAdapter.insertBefore(parentNode, defaultTreeAdapter.createTextNode(text3), referenceNode);
+      defaultTreeAdapter.insertBefore(parentNode, defaultTreeAdapter.createTextNode(text4), referenceNode);
     }
   },
   adoptAttributes(recipient, attrs) {
@@ -5800,9 +5800,9 @@ var Parser = class {
   }
   //Special elements
   /** @protected */
-  _isSpecialElement(element2, id3) {
+  _isSpecialElement(element2, id4) {
     const ns = this.treeAdapter.getNamespaceURI(element2);
-    return SPECIAL_ELEMENTS[ns].has(id3);
+    return SPECIAL_ELEMENTS[ns].has(id4);
   }
   /** @internal */
   onCharacter(token) {
@@ -8534,8 +8534,8 @@ var PROTOCOL_ERROR_CODES = Object.freeze({
   SORT_ORDER_INVALID: "E_PROTOCOL_SORT_ORDER_INVALID"
 });
 var PipelineError = class extends Error {
-  constructor(code, message, fix = "", details = void 0) {
-    super(message);
+  constructor(code, message2, fix = "", details = void 0) {
+    super(message2);
     this.name = "PipelineError";
     this.code = code;
     this.fix = fix;
@@ -8599,8 +8599,8 @@ var URL_ATTRIBUTES = /* @__PURE__ */ new Set([
   "xlink:href"
 ]);
 var REMOTE_URL_RE = /^(?:https?:|file:|ftp:|wss?:|\/\/)/i;
-function pipelineError(code, message, details) {
-  return new PipelineError(code, message, "", details);
+function pipelineError(code, message2, details) {
+  return new PipelineError(code, message2, "", details);
 }
 function getAttr(node, name) {
   return node.attrs?.find((attribute) => attribute.name.toLowerCase() === name)?.value;
@@ -8709,7 +8709,7 @@ function assertSandboxableTree(document2, { allowLocalForms = false } = {}) {
   }
 }
 function artifactGuardAndBridgeSource({ artifactId, nonce, parentOrigin }) {
-  const contract = JSON.stringify({
+  const contract2 = JSON.stringify({
     channel: ARTIFACT_BRIDGE_CHANNEL,
     schemaVersion: ARTIFACT_BRIDGE_VERSION,
     artifactId,
@@ -8746,7 +8746,7 @@ function artifactGuardAndBridgeSource({ artifactId, nonce, parentOrigin }) {
   'use strict';
   const injectedScript=document.currentScript;
   injectedScript?.remove();
-  const contract=${contract};
+  const contract=${contract2};
   ${renderArtifactBridgeToolsSource()}
   const inspectionTools=createArtifactBridgeTools(document,globalThis);
   const postToParent=parent.postMessage.bind(parent);
@@ -9586,8 +9586,8 @@ var MAX_REPLIES = 1e4;
 var MAX_PASTE_BYTES = 5 * 1024 * 1024;
 var ARTIFACT_PRESENTATIONS = Object.freeze(["document", "canvas"]);
 var ARTIFACT_DOCUMENT_MAX_HEIGHT = 262144;
-function invalid(message, details = void 0) {
-  throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, message, "", details);
+function invalid(message2, details = void 0) {
+  throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, message2, "", details);
 }
 function assertBoundedString(value, label, { min = 0, max, pattern } = {}) {
   if (typeof value !== "string" || value.length < min || max !== void 0 && value.length > max || pattern && !pattern.test(value)) {
@@ -9642,46 +9642,46 @@ function normalizeArtifact(artifact) {
   if (!artifact || typeof artifact !== "object") {
     throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, "Each artifact must be an object.");
   }
-  const id3 = artifact.id;
-  const title = artifact.title;
-  if (typeof id3 !== "string" || !ID_RE2.test(id3) || id3.length > 128) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, `Invalid artifact id: ${String(id3)}`);
+  const id4 = artifact.id;
+  const title2 = artifact.title;
+  if (typeof id4 !== "string" || !ID_RE2.test(id4) || id4.length > 128) {
+    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, `Invalid artifact id: ${String(id4)}`);
   }
-  if (typeof title !== "string" || title.length === 0 || title.length > 512) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, `Artifact ${id3} requires a title.`);
+  if (typeof title2 !== "string" || title2.length === 0 || title2.length > 512) {
+    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, `Artifact ${id4} requires a title.`);
   }
   const html = normalizeUtf8Text(artifact.html);
   if (html.length === 0) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, `Artifact ${id3} HTML is empty.`);
+    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, `Artifact ${id4} HTML is empty.`);
   }
   if (Buffer.byteLength(html, "utf8") > MAX_ARTIFACT_HTML_BYTES) {
-    invalid(`Artifact ${id3} exceeds ${MAX_ARTIFACT_HTML_BYTES} UTF-8 bytes.`);
+    invalid(`Artifact ${id4} exceeds ${MAX_ARTIFACT_HTML_BYTES} UTF-8 bytes.`);
   }
-  const sha256 = digestArtifact(html);
-  if (artifact.sha256 !== void 0 && artifact.sha256 !== sha256) {
+  const sha2562 = digestArtifact(html);
+  if (artifact.sha256 !== void 0 && artifact.sha256 !== sha2562) {
     throw new PipelineError(
       ARTIFACT_ERROR_CODES.ENVELOPE_INVALID,
-      `Artifact ${id3} digest does not match its canonical bundled HTML.`,
+      `Artifact ${id4} digest does not match its canonical bundled HTML.`,
       "",
-      { expected: sha256, actual: artifact.sha256 }
+      { expected: sha2562, actual: artifact.sha256 }
     );
   }
   const colorScheme = artifact.colorScheme ?? "light";
   if (!["light", "dark"].includes(colorScheme)) {
-    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, `Artifact ${id3} has an invalid color scheme.`);
+    throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, `Artifact ${id4} has an invalid color scheme.`);
   }
   return {
-    id: id3,
+    id: id4,
     kind: "html",
-    title,
-    sha256,
+    title: title2,
+    sha256: sha2562,
     html,
     viewport: normalizeViewport(artifact.viewport),
     colorScheme
   };
 }
 function normalizeViewer(viewer, artifacts) {
-  const ids = new Set(artifacts.map(({ id: id3 }) => id3));
+  const ids = new Set(artifacts.map(({ id: id4 }) => id4));
   const normalized = {
     mode: viewer?.mode ?? (artifacts.length > 1 ? "variants" : "single"),
     activeArtifactId: viewer?.activeArtifactId ?? artifacts[0].id
@@ -9777,7 +9777,7 @@ function validateArtifactEnvelope(envelope) {
   if (!Array.isArray(envelope.artifacts) || envelope.artifacts.length < 1 || envelope.artifacts.length > MAX_ARTIFACTS) {
     invalid(`Envelope requires 1 through ${MAX_ARTIFACTS} artifacts.`);
   }
-  const ids = envelope.artifacts.map(({ id: id3 }) => id3);
+  const ids = envelope.artifacts.map(({ id: id4 }) => id4);
   if (new Set(ids).size !== ids.length) {
     throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, "Artifact ids must be unique.");
   }
@@ -9830,7 +9830,7 @@ function createArtifactEnvelope({ artifacts, viewer, review } = {}) {
     }
     normalizedArtifacts.push(normalized);
   }
-  if (new Set(normalizedArtifacts.map(({ id: id3 }) => id3)).size !== normalizedArtifacts.length) {
+  if (new Set(normalizedArtifacts.map(({ id: id4 }) => id4)).size !== normalizedArtifacts.length) {
     throw new PipelineError(ARTIFACT_ERROR_CODES.ENVELOPE_INVALID, "Artifact ids must be unique.");
   }
   const envelope = {
@@ -9859,8 +9859,8 @@ import {
 } from "node:fs";
 import { dirname as dirname2, join as join3 } from "node:path";
 var LOOPBACK_HOST = "127.0.0.1";
-function codedError(code, message, details) {
-  const error = new Error(message);
+function codedError(code, message2, details) {
+  const error = new Error(message2);
   error.code = code;
   if (details !== void 0) error.details = details;
   return error;
@@ -10125,10 +10125,10 @@ function bundleLocalDocument({ root: inputRoot, source, sharedStyles = [], scree
   let cssExpansions = 0;
   let bytes = 0;
   function read(path, from = root) {
-    const checked = readSource?.(path, from);
-    const file = checked?.file ?? resolveLocalDocumentFile(root, path, from);
+    const checked2 = readSource?.(path, from);
+    const file = checked2?.file ?? resolveLocalDocumentFile(root, path, from);
     if (!files.has(file)) {
-      const value = checked?.value ?? readFileSync3(file);
+      const value = checked2?.value ?? readFileSync3(file);
       bytes += value.length;
       if (bytes > maxBytes || files.size >= 1e3) throw new Error("Design source exceeds the local asset budget.");
       files.set(file, value);
@@ -10465,25 +10465,25 @@ function validateDesignDocument(value) {
       seen.add(item2.id);
     }
   }
-  const screenIds = new Set(value.screens.map(({ id: id3 }) => id3));
+  const screenIds = new Set(value.screens.map(({ id: id4 }) => id4));
   const orderedIds = new Set(value.screenOrder);
-  for (const id3 of value.screenOrder) {
-    if (!screenIds.has(id3)) errors.push(`$.screenOrder: unknown screen '${id3}'`);
+  for (const id4 of value.screenOrder) {
+    if (!screenIds.has(id4)) errors.push(`$.screenOrder: unknown screen '${id4}'`);
   }
-  for (const id3 of screenIds) {
-    if (!orderedIds.has(id3)) errors.push(`$.screenOrder: missing screen '${id3}'`);
+  for (const id4 of screenIds) {
+    if (!orderedIds.has(id4)) errors.push(`$.screenOrder: missing screen '${id4}'`);
   }
   for (const [index, flow] of (value.flows ?? []).entries()) {
-    for (const id3 of flow.screens) {
-      if (!screenIds.has(id3)) errors.push(`$.flows[${index}].screens: unknown screen '${id3}'`);
+    for (const id4 of flow.screens) {
+      if (!screenIds.has(id4)) errors.push(`$.flows[${index}].screens: unknown screen '${id4}'`);
     }
   }
   for (const [index, variant] of value.variants.entries()) {
-    for (const id3 of Object.keys(variant.sources ?? {})) {
-      if (!screenIds.has(id3)) errors.push(`$.variants[${index}].sources: unknown screen '${id3}'`);
+    for (const id4 of Object.keys(variant.sources ?? {})) {
+      if (!screenIds.has(id4)) errors.push(`$.variants[${index}].sources: unknown screen '${id4}'`);
     }
   }
-  const selected = value.variants.find(({ id: id3 }) => id3 === value.selectedVariant);
+  const selected = value.variants.find(({ id: id4 }) => id4 === value.selectedVariant);
   if (!selected) errors.push(`$.selectedVariant: unknown variant '${value.selectedVariant}'`);
   else if (selected.status !== "ready") errors.push("$.selectedVariant: selected variant must be ready");
   for (const [index, spacing] of (value.designSystem?.spacing ?? []).entries()) {
@@ -10788,9 +10788,9 @@ var DESIGN_REVIEW_BUNDLE_SCHEMA = schema("design-review-bundle", {
   verification: { type: ["object", "null"], additionalProperties: false, properties: { status: { enum: ["verified", "unverified", "failed", "pending"] } } }
 }, ["kind", "schemaVersion", "design", "envelope", "entries", "revision"]);
 DESIGN_REVIEW_BUNDLE_SCHEMA.$defs = structuredClone(DESIGN_DOCUMENT_SCHEMA.$defs);
-function assertWorkspaceContract(value, contract) {
-  const errors = validateJson(value, contract);
-  if (errors.length) throw new TypeError(`Invalid ${contract["x-openplanr-contract"].id}: ${errors.slice(0, 5).map(({ path, detail }) => `${path}: ${detail}`).join("; ")}`);
+function assertWorkspaceContract(value, contract2) {
+  const errors = validateJson(value, contract2);
+  if (errors.length) throw new TypeError(`Invalid ${contract2["x-openplanr-contract"].id}: ${errors.slice(0, 5).map(({ path, detail }) => `${path}: ${detail}`).join("; ")}`);
   return value;
 }
 var DESIGN_WORKSPACE_SCHEMAS = Object.freeze({
@@ -10881,9 +10881,9 @@ Object.assign(DESIGN_REVIEW_METADATA_PAYLOAD_V11_SCHEMA.properties, {
   schemaVersion: { const: "1.1.0" },
   category: { enum: ["question", "suggestion", "change-request", "blocker"] }
 });
-function assertReviewExperience(value, contract) {
-  const errors = validateJson(value, contract);
-  if (errors.length) throw new TypeError(`Invalid ${contract["x-openplanr-contract"]?.id ?? "review data"}: ${errors.slice(0, 4).map((item2) => `${item2.path} ${item2.detail}`).join("; ")}`);
+function assertReviewExperience(value, contract2) {
+  const errors = validateJson(value, contract2);
+  if (errors.length) throw new TypeError(`Invalid ${contract2["x-openplanr-contract"]?.id ?? "review data"}: ${errors.slice(0, 4).map((item2) => `${item2.path} ${item2.detail}`).join("; ")}`);
   return value;
 }
 function assertDesignReviewMetadata(value) {
@@ -10933,7 +10933,7 @@ function loadReviewContext(root, document2, { readSource } = {}) {
   for (const component of context.implementation.components) {
     if (ids.has(component.id)) throw new Error("Review component identities must be unique.");
     ids.add(component.id);
-    if (component.screenIds?.some((id3) => !screens.has(id3))) throw new Error(`Component ${component.id} references an unknown screen.`);
+    if (component.screenIds?.some((id4) => !screens.has(id4))) throw new Error(`Component ${component.id} references an unknown screen.`);
   }
   if (/(?:file:\/\/|\/(?:Users|home|private|tmp|var|etc|opt|Volumes)\/|[A-Za-z]:\\\\|\\\\\\\\)/u.test(JSON.stringify(context))) throw new Error("Review context contains a local filesystem path. Use share-safe implementation guidance.");
   return context;
@@ -11452,8 +11452,8 @@ var ARTIFACT_THEME_ERROR_CODES = Object.freeze({
   CONTRAST: "E_ARTIFACT_THEME_CONTRAST"
 });
 var ArtifactThemeError = class extends Error {
-  constructor(code, message, details = {}) {
-    super(message);
+  constructor(code, message2, details = {}) {
+    super(message2);
     this.name = "ArtifactThemeError";
     this.code = code;
     this.details = details;
@@ -11596,8 +11596,8 @@ function assertContrast(themes) {
   }
 }
 function validateArtifactTheme(theme, { schema: schema3 } = {}) {
-  const contract = schema3 ?? readJson(ARTIFACT_THEME_SCHEMA_PATH, "artifact theme schema");
-  assertSchema(theme, contract);
+  const contract2 = schema3 ?? readJson(ARTIFACT_THEME_SCHEMA_PATH, "artifact theme schema");
+  assertSchema(theme, contract2);
   assertLayout(theme.layout);
   assertMotion(theme.layout);
   assertContrast(theme.themes);
@@ -11772,9 +11772,9 @@ function resolveArtifactPresentation(value, { mode = "single", artifactCount = 1
 }
 function normalizeArtifact2(value, index) {
   const artifact = value && typeof value === "object" ? value : {};
-  const id3 = plainText(artifact.id, `artifact-${index + 1}`) || `artifact-${index + 1}`;
+  const id4 = plainText(artifact.id, `artifact-${index + 1}`) || `artifact-${index + 1}`;
   return Object.freeze({
-    id: id3,
+    id: id4,
     domId: `planr-artifact-${index + 1}`,
     title: plainText(artifact.title, `Artifact ${index + 1}`) || `Artifact ${index + 1}`,
     kind: plainText(artifact.kind, "html") || "html",
@@ -11938,8 +11938,8 @@ ${model.presentation === "canvas" ? `  <div class="planr-stage-heading"><span>AR
 </main>`;
 }
 function renderArtifactRail(model) {
-  const closed2 = !model.railOpen;
-  return `<aside class="planr-review-rail" id="planr-review-rail" aria-label="Review comments"${closed2 ? ' inert aria-hidden="true"' : ""}>
+  const closed3 = !model.railOpen;
+  return `<aside class="planr-review-rail" id="planr-review-rail" aria-label="Review comments"${closed3 ? ' inert aria-hidden="true"' : ""}>
   <header><h2>Review comments</h2><div class="planr-review-header-actions"><div class="planr-review-metrics" aria-label="Review metrics"><span data-planr-metric="open">0 open</span><span class="planr-count" data-planr-metric="total" aria-label="${commentsLabel(model.feedbackCount)}">${model.feedbackCount}</span></div><button class="planr-rail-close" type="button" data-planr-close-feedback aria-label="Close comments">\xD7</button></div></header>
   <section class="planr-identity" aria-label="Reviewer identity"><label for="planr-reviewer-name">Your name<input id="planr-reviewer-name" type="text" maxlength="256" autocomplete="name" aria-describedby="planr-identity-status planr-review-error" data-planr-reviewer-name></label><p class="planr-identity-status" id="planr-identity-status" aria-live="polite" data-planr-identity-status>Used to sign your comments.</p><p class="planr-field-error" id="planr-review-error" role="alert" hidden></p></section>
   <div class="planr-feedback-slot" data-planr-slot="feedback-rail" role="region" aria-label="Comment threads"><p data-planr-empty-feedback>No comments yet. Choose Add comment, then click or drag on the artifact.</p><div class="planr-thread-list" data-planr-thread-list></div></div>
@@ -12028,7 +12028,7 @@ function requestedArtifactId(value) {
   return typeof value?.id === "string" ? value.id : "";
 }
 function availableId(artifacts, requested, fallback = "") {
-  return artifacts.some(({ id: id3 }) => id3 === requested) ? requested : fallback;
+  return artifacts.some(({ id: id4 }) => id4 === requested) ? requested : fallback;
 }
 function normalizeViewMode(value, artifactCount) {
   if (artifactCount < 2) return "single";
@@ -13048,7 +13048,7 @@ function renderArtifactShellDocument(input = DEFAULT_ARTIFACT_SHELL_INPUT, { the
   const stagePayload = createArtifactStagePayload(input.envelope, {
     viewer: input.viewer ?? input.envelope?.viewer
   });
-  const reviewState = Object.freeze({
+  const reviewState2 = Object.freeze({
     schemaVersion: "1.0.0",
     reviewOf: digestArtifactEnvelope({
       schemaVersion: input.envelope?.schemaVersion ?? "1.0.0",
@@ -13073,7 +13073,7 @@ ${themeCss}${ARTIFACT_SHELL_CSS}</style>
 ${shellMarkup}
 <script type="application/json" id="planr-artifact-shell-model">${modelData}</script>
 <script type="application/json" id="planr-artifact-stage-payload">${embedJson(stagePayload)}</script>
-<script type="application/json" id="planr-artifact-review-state">${embedJson(reviewState)}</script>
+<script type="application/json" id="planr-artifact-review-state">${embedJson(reviewState2)}</script>
 <script src="${escapeHtml(stageRuntimeUrl)}" defer></script>
 </body>
 </html>
@@ -13162,7 +13162,7 @@ function navigator(document2) {
   <label class="design-field" for="design-variant">Direction<select id="design-variant" data-design-variant>${document2.variants.map((variant) => `<option value="${escapeHtml(variant.id)}"${variant.status !== "ready" ? " disabled" : ""}>${escapeHtml(variant.label)}${variant.status === "failed" ? " \u2014 unavailable" : ""}</option>`).join("")}</select></label>
   ${document2.variants.filter(({ status }) => status === "ready").length > 1 ? `<label class="design-compare"><input type="checkbox" data-design-compare> Compare directions</label>` : ""}
   <div class="design-screen-list">${document2.screenOrder.map((screenId, index) => {
-    const screen = document2.screens.find(({ id: id3 }) => id3 === screenId);
+    const screen = document2.screens.find(({ id: id4 }) => id4 === screenId);
     return `<button type="button" class="design-screen" data-design-screen="${escapeHtml(screen.id)}" aria-current="${index === 0 ? "page" : "false"}" title="${escapeHtml(screen.title)}"><span class="design-screen-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span><span>${escapeHtml(screen.title)}</span></button>`;
   }).join("")}</div>
   <div class="design-nav-footer"><span data-design-verification>Browser inspection pending</span><span class="design-local">Local workspace</span></div>
@@ -13177,7 +13177,7 @@ function designNotes(document2) {
   ).join("")}</div></details>`;
 }
 function stageDetails(document2) {
-  return `<div class="design-stage-context"><div><strong data-design-screen-title>${escapeHtml(document2.screens.find(({ id: id3 }) => id3 === document2.screenOrder[0]).title)}</strong><span data-design-stage-description>Every screen, one connected design</span></div><div class="design-stage-actions">${designNotes(document2)}<label class="design-frame-picker">Frame<select aria-label="Responsive frame" data-design-frame>${document2.frames.map((frame) => `<option value="${escapeHtml(frame.id)}">${escapeHtml(frame.label)} \xB7 ${frame.width} \xD7 ${frame.height}</option>`).join("")}</select></label></div></div>
+  return `<div class="design-stage-context"><div><strong data-design-screen-title>${escapeHtml(document2.screens.find(({ id: id4 }) => id4 === document2.screenOrder[0]).title)}</strong><span data-design-stage-description>Every screen, one connected design</span></div><div class="design-stage-actions">${designNotes(document2)}<label class="design-frame-picker">Frame<select aria-label="Responsive frame" data-design-frame>${document2.frames.map((frame) => `<option value="${escapeHtml(frame.id)}">${escapeHtml(frame.label)} \xB7 ${frame.width} \xD7 ${frame.height}</option>`).join("")}</select></label></div></div>
 	  <div class="design-canvas-tools" role="group" aria-label="Canvas controls"><div class="planr-segment design-interaction-picker" role="group" aria-label="Review mode">${iconButton("Interact", "pointer", 'data-planr-mode="interact" aria-pressed="true" aria-keyshortcuts="I"')}${iconButton("Annotate", "comment", 'data-planr-mode="comment" aria-pressed="false" aria-keyshortcuts="C"')}</div><span></span>${button("\u2212", 'data-design-zoom="out" aria-label="Zoom out"')}${button("100%", 'data-design-zoom="reset" aria-label="Reset zoom"')}${button("+", 'data-design-zoom="in" aria-label="Zoom in"')}<span></span>${button("Fit", 'data-design-fit aria-label="Fit all visible artboards"')}${button("Pan", 'data-design-pan aria-pressed="false" aria-label="Pan canvas" aria-keyshortcuts="H Space" title="Pan canvas (H). Hold Space to pan temporarily; Escape returns to Interact."')}</div>
   <div class="design-walkthrough-caption" hidden><div><span data-design-step></span><h2 data-design-narrative-title></h2><p data-design-narrative></p></div><div>${button("Previous", 'data-design-step-change="-1"')}${button("Next", 'data-design-step-change="1"')}</div></div>
   <div class="design-notice" role="status" aria-live="polite" hidden></div>`;
@@ -13205,11 +13205,11 @@ function renderDesignStudioMarkup({
     throw new TypeError(
       "Design studio requires a design document and artifact envelope."
     );
-  const artifactIds = new Set(envelope.artifacts.map(({ id: id3 }) => id3));
+  const artifactIds = new Set(envelope.artifacts.map(({ id: id4 }) => id4));
   for (const entry of entries) {
-    if (!artifactIds.has(entry.artifactId) || !document2.screens.some(({ id: id3 }) => id3 === entry.screenId) || !document2.variants.some(
-      ({ id: id3, status }) => id3 === entry.variantId && status === "ready"
-    ) || !document2.frames.some(({ id: id3 }) => id3 === entry.frameId)) {
+    if (!artifactIds.has(entry.artifactId) || !document2.screens.some(({ id: id4 }) => id4 === entry.screenId) || !document2.variants.some(
+      ({ id: id4, status }) => id4 === entry.variantId && status === "ready"
+    ) || !document2.frames.some(({ id: id4 }) => id4 === entry.frameId)) {
       throw new TypeError(`Invalid design studio entry: ${entry.artifactId}.`);
     }
   }
@@ -13295,11 +13295,11 @@ function renderDesignStudioMarkup({
 // packages/design/lib/design/review-export.mjs
 function reviewExportTools() {
   const object = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  const list2 = (value) => Array.isArray(value) ? value : [];
+  const list3 = (value) => Array.isArray(value) ? value : [];
   const localPath = /(?:file:\/\/|\/(?:Users|home|private|tmp|var|etc|opt|Volumes)\/|[A-Za-z]:\\|\\\\)/u;
   const field = (value) => typeof value === "string" && value.length <= 1024 && !localPath.test(value) ? value : null;
-  const digest3 = (value) => typeof value === "string" && /^[a-f0-9]{64}$/u.test(value) ? value : null;
-  const timestamp = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/u.test(value) && Number.isFinite(Date.parse(value)) ? value : null;
+  const digest4 = (value) => typeof value === "string" && /^[a-f0-9]{64}$/u.test(value) ? value : null;
+  const timestamp2 = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/u.test(value) && Number.isFinite(Date.parse(value)) ? value : null;
   const quote = (value) => {
     if (typeof value !== "string" || value.length > 16384) throw new TypeError("Review text must be a string of at most 16384 characters.");
     return value;
@@ -13313,14 +13313,14 @@ function reviewExportTools() {
   function location(pin) {
     const region = pin.region;
     if (!region || ["x", "y", "w", "h"].some((key) => !Number.isFinite(region[key]) || region[key] < 0 || region[key] > 1) || region.x + region.w > 1.000001 || region.y + region.h > 1.000001) throw new TypeError("Review pin has an invalid normalized region.");
-    const anchor = field(pin.anchor?.planrId) ? { planrId: field(pin.anchor.planrId), screen: field(pin.anchor.screen) } : null;
+    const anchor2 = field(pin.anchor?.planrId) ? { planrId: field(pin.anchor.planrId), screen: field(pin.anchor.screen) } : null;
     const viewport = dimensions(pin.viewport);
     const normalizedRegion = { x: region.x, y: region.y, w: region.w, h: region.h };
     const point = { x: rounded(region.x + region.w / 2), y: rounded(region.y + region.h / 2) };
     return {
       kind: region.w > 0 || region.h > 0 ? "region" : "point",
       coordinateSpace: pin.anchor ? "anchor-normalized" : "viewport-normalized",
-      anchor,
+      anchor: anchor2,
       region: normalizedRegion,
       point,
       capturedViewport: viewport,
@@ -13329,21 +13329,21 @@ function reviewExportTools() {
   }
   function sourceBundle(value, fallback = {}) {
     const bundle = value?.bundle ?? value;
-    return { bundle: object(bundle), revisionId: field(value?.revisionId ?? fallback.revisionId ?? bundle?.revision), reviewOf: digest3(value?.reviewOf ?? fallback.reviewOf ?? bundle?.reviewOf) };
+    return { bundle: object(bundle), revisionId: field(value?.revisionId ?? fallback.revisionId ?? bundle?.revision), reviewOf: digest4(value?.reviewOf ?? fallback.reviewOf ?? bundle?.reviewOf) };
   }
   function flatten(input) {
     if (Array.isArray(input.feedback?.pins)) return input.feedback.pins;
-    if (input.review) return list2(input.review.pins).map((pin) => ({ ...pin, reviewId: input.review.reviewId, reviewOf: input.review.reviewOf, revisionId: pin.revisionId ?? input.revisionId }));
-    return list2(input.feedback?.ledger?.reviews).flatMap((entry) => list2(entry.review?.pins).map((pin) => ({ ...pin, reviewId: entry.review.reviewId, reviewOf: entry.review.reviewOf, stale: pin.stale || entry.stale })));
+    if (input.review) return list3(input.review.pins).map((pin) => ({ ...pin, reviewId: input.review.reviewId, reviewOf: input.review.reviewOf, revisionId: pin.revisionId ?? input.revisionId }));
+    return list3(input.feedback?.ledger?.reviews).flatMap((entry) => list3(entry.review?.pins).map((pin) => ({ ...pin, reviewId: entry.review.reviewId, reviewOf: entry.review.reviewOf, stale: pin.stale || entry.stale })));
   }
   function revisionFor(pin) {
     return field(pin.revisionId) ?? (pin.reviewId?.startsWith("shared-") ? field(pin.reviewId.slice(7)) : null);
   }
   function resolveSource(pin, sources) {
-    const revisionId = revisionFor(pin), reviewOf = digest3(pin.reviewOf);
+    const revisionId = revisionFor(pin), reviewOf = digest4(pin.reviewOf);
     const matches = sources.filter((source) => revisionId ? source.revisionId === revisionId && (!source.reviewOf || !reviewOf || source.reviewOf === reviewOf) : reviewOf && source.reviewOf === reviewOf);
-    const distinct = matches.filter((item2, index) => matches.findIndex((other) => other.revisionId === item2.revisionId && other.reviewOf === item2.reviewOf) === index);
-    return distinct.length === 1 ? distinct[0] : null;
+    const distinct2 = matches.filter((item2, index) => matches.findIndex((other) => other.revisionId === item2.revisionId && other.reviewOf === item2.reviewOf) === index);
+    return distinct2.length === 1 ? distinct2[0] : null;
   }
   function pinMetadata(metadata2, pin, current) {
     const key = revisionFor(pin) ?? pin.reviewId;
@@ -13352,7 +13352,7 @@ function reviewExportTools() {
   function createDesignReviewExport2(input = {}) {
     const current = sourceBundle(input.bundle ?? {}, { revisionId: input.revisionId, reviewOf: input.reviewOf ?? input.review?.reviewOf });
     const design = current.bundle.design ?? current.bundle.document ?? {};
-    const sources = [current, ...list2(input.revisions).map((value) => sourceBundle(value))];
+    const sources = [current, ...list3(input.revisions).map((value) => sourceBundle(value))];
     const pins = flatten(input);
     if (pins.length > 1e4) throw new TypeError("Review export exceeds 10000 threads.");
     const metadata2 = object(input.metadata ?? input.feedback?.metadata);
@@ -13361,12 +13361,12 @@ function reviewExportTools() {
       if (!field(pin.id) || !field(pin.artifactId)) throw new TypeError("Review pin is missing a share-safe identity.");
       const source = resolveSource(pin, sources), original = source?.bundle;
       const originalDesign = original?.design ?? original?.document;
-      const entry = list2(original?.entries).find((item2) => item2.artifactId === pin.artifactId);
-      const screen = list2(originalDesign?.screens).find((item2) => item2.id === entry?.screenId);
-      const direction = list2(originalDesign?.variants).find((item2) => item2.id === entry?.variantId);
-      const frame = list2(originalDesign?.frames).find((item2) => item2.id === entry?.frameId);
+      const entry = list3(original?.entries).find((item2) => item2.artifactId === pin.artifactId);
+      const screen = list3(originalDesign?.screens).find((item2) => item2.id === entry?.screenId);
+      const direction = list3(originalDesign?.variants).find((item2) => item2.id === entry?.variantId);
+      const frame = list3(originalDesign?.frames).find((item2) => item2.id === entry?.frameId);
       const sourceRevisionId = revisionFor(pin) ?? source?.revisionId ?? null;
-      const reviewId = field(pin.reviewId), reviewOf = digest3(pin.reviewOf);
+      const reviewId = field(pin.reviewId), reviewOf = digest4(pin.reviewOf);
       const threadKey = JSON.stringify([sourceRevisionId, reviewId, reviewOf, pin.id]);
       if (seen.has(threadKey)) throw new TypeError("Review export contains a duplicate thread identity.");
       seen.add(threadKey);
@@ -13379,7 +13379,7 @@ function reviewExportTools() {
       if (!source || !entry) staleReasons.push("Original screen mapping is unavailable; do not relocate this pin.");
       if (pin.anchor?.planrId && screen?.anchors?.length && !screen.anchors.includes(pin.anchor.planrId) && pin.anchor.planrId !== screen.id) staleReasons.push("The stable element anchor is not declared in the original screen.");
       const refs = { revision: sourceRevisionId, review: reviewId, screen: field(entry?.screenId) ?? field(pin.screenId), direction: field(entry?.variantId) ?? field(pin.variantId), frame: field(entry?.frameId) ?? field(pin.frameId), pin: pin.id };
-      const replies = list2(pin.replies);
+      const replies = list3(pin.replies);
       if (replies.length > 1e3) throw new TypeError("Review export exceeds 1000 replies in one thread.");
       const thread = {
         id: pin.id,
@@ -13391,12 +13391,12 @@ function reviewExportTools() {
         stale: staleReasons.length > 0,
         staleReasons,
         author: identity(pin.author),
-        createdAt: timestamp(pin.createdAt),
-        updatedAt: timestamp(pin.updatedAt),
+        createdAt: timestamp2(pin.createdAt),
+        updatedAt: timestamp2(pin.updatedAt),
         comment: quote(pin.comment),
         location: location(pin),
-        disposition: field(decision.disposition) ? { value: field(decision.disposition), explanation: quote(decision.reason ?? ""), author: typeof decision.author === "string" ? { id: null, name: quote(decision.author) } : identity(decision.author), updatedAt: timestamp(decision.updatedAt) } : null,
-        replies: [...replies].sort(order).map((reply) => ({ id: field(reply.id), author: identity(reply.author), createdAt: timestamp(reply.createdAt), comment: quote(reply.comment) }))
+        disposition: field(decision.disposition) ? { value: field(decision.disposition), explanation: quote(decision.reason ?? ""), author: typeof decision.author === "string" ? { id: null, name: quote(decision.author) } : identity(decision.author), updatedAt: timestamp2(decision.updatedAt) } : null,
+        replies: [...replies].sort(order).map((reply) => ({ id: field(reply.id), author: identity(reply.author), createdAt: timestamp2(reply.createdAt), comment: quote(reply.comment) }))
       };
       const groupKey = JSON.stringify([sourceRevisionId, reviewId, reviewOf, refs.screen, refs.direction, refs.frame, pin.artifactId]);
       if (!groups.has(groupKey)) groups.set(groupKey, {
@@ -13414,15 +13414,15 @@ function reviewExportTools() {
     }
     const orderedGroups = [...groups.entries()].sort(([a], [b]) => compare2(a, b)).map(([, value]) => value);
     const threads = orderedGroups.flatMap((group) => group.threads);
-    const reviews = input.review ? [{ review: input.review }] : list2(input.feedback?.ledger?.reviews);
-    const overallNotes = reviews.filter((entry) => entry.review?.overall).map(({ review }) => ({ reviewId: field(review.reviewId), reviewOf: digest3(review.reviewOf), comment: quote(review.overall) })).sort((a, b) => compare2(a.reviewId ?? "", b.reviewId ?? ""));
+    const reviews = input.review ? [{ review: input.review }] : list3(input.feedback?.ledger?.reviews);
+    const overallNotes = reviews.filter((entry) => entry.review?.overall).map(({ review }) => ({ reviewId: field(review.reviewId), reviewOf: digest4(review.reviewOf), comment: quote(review.overall) })).sort((a, b) => compare2(a.reviewId ?? "", b.reviewId ?? ""));
     return {
       kind: "openplanr-design-review-export",
       schemaVersion: "1.0.0",
       design: { id: field(design.id), title: field(design.title) ?? "Design review" },
       currentRevisionId: current.revisionId,
       currentArtifactDigest: current.reviewOf,
-      ...timestamp(input.generatedAt) ? { generatedAt: timestamp(input.generatedAt) } : {},
+      ...timestamp2(input.generatedAt) ? { generatedAt: timestamp2(input.generatedAt) } : {},
       completeness: { historyComplete: input.historyComplete === true, olderPagesLoading: input.olderPagesLoading === true, includesUnsentLocalChanges: input.includesUnsentLocalChanges === true },
       summary: { threads: threads.length, replies: threads.reduce((count, thread) => count + thread.replies.length, 0), open: threads.filter((thread) => !thread.resolved).length, resolved: threads.filter((thread) => thread.resolved).length, stale: threads.filter((thread) => thread.stale).length },
       resolutionGuidance: [
@@ -13505,16 +13505,16 @@ function renderDesignReviewExportSource() {
 // packages/design/lib/design/studio.mjs
 var templateRoot = new URL("../../templates/studio/", new URL("./runtime/packages/design/lib/design/studio.mjs", import.meta.url).href);
 function designStudioArtifactId(variantId, screenId, frameId) {
-  const id3 = [
+  const id4 = [
     "design",
     ...[variantId, screenId, frameId].map(
       (value) => `${value.length}-${value}`
     )
   ].join(".");
-  return id3.length <= 128 ? id3 : `design.${createHash4("sha256").update(JSON.stringify([variantId, screenId, frameId])).digest("hex")}`;
+  return id4.length <= 128 ? id4 : `design.${createHash4("sha256").update(JSON.stringify([variantId, screenId, frameId])).digest("hex")}`;
 }
 function createDesignStudioEntries(document2, envelope) {
-  const ids = new Set(envelope.artifacts.map(({ id: id3 }) => id3));
+  const ids = new Set(envelope.artifacts.map(({ id: id4 }) => id4));
   const entries = [];
   for (const variant of document2.variants.filter(
     ({ status }) => status === "ready"
@@ -13637,9 +13637,9 @@ function recoverDesignPublication(root, { ownsRenderLock = false } = {}) {
   }
 }
 function loadDesignDocument(file, { readSource } = {}) {
-  const checked = readSource?.(file, process.cwd());
-  const path = checked?.file ?? realpathSync3(resolve3(file));
-  const document2 = assertDesignDocument(checked ? JSON.parse(checked.value.toString("utf8")) : readJson2(path));
+  const checked2 = readSource?.(file, process.cwd());
+  const path = checked2?.file ?? realpathSync3(resolve3(file));
+  const document2 = assertDesignDocument(checked2 ? JSON.parse(checked2.value.toString("utf8")) : readJson2(path));
   return { path, root: dirname5(path), document: document2 };
 }
 function designSpecPath(root) {
@@ -13731,10 +13731,10 @@ function prepareDesignDocument(file, { readSource, passive = false, maxBytes } =
         designSystem: document2.designSystem
       });
       lint.push({ variantId: variant.id, screenId, ...report });
-      for (const anchor of screen.anchors ?? []) {
-        if (!bundled.html.includes(`data-planr-id="${anchor}"`) && !bundled.html.includes(`id="${anchor}"`))
+      for (const anchor2 of screen.anchors ?? []) {
+        if (!bundled.html.includes(`data-planr-id="${anchor2}"`) && !bundled.html.includes(`id="${anchor2}"`))
           throw new Error(
-            `Screen ${screenId} is missing its declared anchor ${anchor}.`
+            `Screen ${screenId} is missing its declared anchor ${anchor2}.`
           );
       }
       for (const frame of document2.frames) {
@@ -13913,7 +13913,7 @@ ${errors.join("\n")}`);
       contentProvenance: prepared.document.brief.provenance,
       generatedAt,
       screens: prepared.document.screenOrder.map(
-        (id3) => prepared.document.screens.find((item2) => item2.id === id3).title
+        (id4) => prepared.document.screens.find((item2) => item2.id === id4).title
       ),
       iterations: previous && previous.revision !== prepared.revision ? (previous.iterations ?? 0) + 1 : previous?.iterations ?? 0,
       htmlFile: `.design/revisions/${prepared.revision}/${prepared.document.defaultView}.html`
@@ -13993,8 +13993,8 @@ ${errors.join("\n")}`);
 }
 
 // packages/design/lib/design/review.mjs
-import { existsSync as existsSync9, readFileSync as readFileSync14 } from "node:fs";
-import { dirname as dirname11, join as join10 } from "node:path";
+import { existsSync as existsSync10, readFileSync as readFileSync15 } from "node:fs";
+import { dirname as dirname12, join as join11 } from "node:path";
 
 // packages/artifact/lib/artifact/import.mjs
 import {
@@ -14019,10 +14019,10 @@ var ARTIFACT_REVIEW_STATE_VERSION = "1.0.0";
 var ARTIFACT_REVIEW_STATE_KIND = "artifact-review-state";
 var SHA256_RE2 = /^[a-f0-9]{64}$/;
 var ARTIFACT_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
-function conflict(message, details = void 0) {
+function conflict(message2, details = void 0) {
   throw new PipelineError(
     ARTIFACT_ERROR_CODES.MERGE_CONFLICT,
-    message,
+    message2,
     "Keep both reviews under different stable IDs or resolve the conflicting item explicitly.",
     details
   );
@@ -14364,13 +14364,13 @@ function writeArtifactReviewState(path, ledger, {
   }
   return ledger;
 }
-function withArtifactReviewLock(path, action) {
+function withArtifactReviewLock(path, action3) {
   const previous = reviewPathQueues.get(path) ?? Promise.resolve();
   const run = async () => {
     let release;
     try {
       release = await acquireStartLock(`${path}.lock`, { timeout: 15e3, stale: 3e4 });
-      return await action();
+      return await action3();
     } catch (error) {
       if (error instanceof PipelineError) throw error;
       throw new PipelineError(
@@ -14480,8 +14480,8 @@ ${reviewMarkdown(normalized)}
 
 // packages/artifact/lib/artifact/import.mjs
 var ARTIFACT_ID_RE2 = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
-function pathError(code, message) {
-  throw new PipelineError(code, message, "Choose a real, non-symlinked project or user review destination.");
+function pathError(code, message2) {
+  throw new PipelineError(code, message2, "Choose a real, non-symlinked project or user review destination.");
 }
 function pathEntry(path, fs = { lstatSync: lstatSync3 }) {
   try {
@@ -14679,8 +14679,8 @@ var PERMISSIONS_POLICY = [
   "web-share=()",
   "xr-spatial-tracking=()"
 ].join(", ");
-function artifactError(code, message, fix = "", details) {
-  return new PipelineError(code, message, fix, details);
+function artifactError(code, message2, fix = "", details) {
+  return new PipelineError(code, message2, fix, details);
 }
 function statusForError(error) {
   if (error?.code === "E_REQUEST_BODY_LIMIT" || error?.code === ARTIFACT_ERROR_CODES.REQUEST_LIMIT) return 413;
@@ -14769,9 +14769,9 @@ function normalizeRegistration(value) {
     throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, "Artifact session registration must be an object.");
   }
   const envelope = cloneAndValidateEnvelope(value.envelope);
-  const title = value.title ?? envelope.artifacts[0]?.title ?? "Artifact review";
+  const title2 = value.title ?? envelope.artifacts[0]?.title ?? "Artifact review";
   const theme = value.theme ?? "auto";
-  if (typeof title !== "string" || title.length < 1 || title.length > TITLE_LIMIT) {
+  if (typeof title2 !== "string" || title2.length < 1 || title2.length > TITLE_LIMIT) {
     throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, `Artifact title must be 1 through ${TITLE_LIMIT} characters.`);
   }
   if (!THEME_VALUES.has(theme)) {
@@ -14785,7 +14785,7 @@ function normalizeRegistration(value) {
   if (reviewKey !== void 0 && (typeof reviewKey !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(reviewKey))) {
     throw artifactError(ARTIFACT_ERROR_CODES.REQUEST_INVALID, "Artifact review storage key is invalid.");
   }
-  return { envelope, title, theme, cwd, ...reviewKey ? { reviewKey } : {} };
+  return { envelope, title: title2, theme, cwd, ...reviewKey ? { reviewKey } : {} };
 }
 function assertReviewStateSize(ledger) {
   const bytes = Buffer.byteLength(JSON.stringify(ledger), "utf8");
@@ -14864,7 +14864,7 @@ function safeSessionId(value) {
   return isCapabilityToken(value, { bytes: SESSION_ID_BYTES });
 }
 function artifactFor(session, artifactId) {
-  return session.envelope.artifacts.find(({ id: id3 }) => id3 === artifactId) ?? null;
+  return session.envelope.artifacts.find(({ id: id4 }) => id4 === artifactId) ?? null;
 }
 function publicBase(session) {
   return `/r/${session.id}/${session.capability}/`;
@@ -14978,22 +14978,22 @@ function createArtifactReviewServer({
             if (draining) {
               throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, "Artifact review server is restarting.");
             }
-            const id3 = mintCapabilityToken({ bytes: SESSION_ID_BYTES });
-            const reviewState = await initializeSessionReview(registration, env);
+            const id4 = mintCapabilityToken({ bytes: SESSION_ID_BYTES });
+            const reviewState2 = await initializeSessionReview(registration, env);
             const session2 = {
               ...registration,
-              id: id3,
+              id: id4,
               capability: mintCapabilityToken({ bytes: SESSION_TOKEN_BYTES }),
               bridgeNonce: createArtifactBridgeNonce(),
               createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-              reviewState: reviewState.ledger,
-              reviewPath: reviewState.path,
+              reviewState: reviewState2.ledger,
+              reviewPath: reviewState2.path,
               writeQueue: Promise.resolve()
             };
-            sessions.set(id3, session2);
+            sessions.set(id4, session2);
             sendJson(res, 201, {
               ok: true,
-              sessionId: id3,
+              sessionId: id4,
               capability: session2.capability,
               path: publicBase(session2)
             });
@@ -15081,11 +15081,11 @@ function createArtifactReviewServer({
           }
           const value = JSON.parse(body || "{}");
           const review = value?.review ?? value;
-          const reviewState = await queueSessionReviewWrite(session, review);
+          const reviewState2 = await queueSessionReviewWrite(session, review);
           sendJson(res, 200, {
             ok: true,
             reviewId: review.reviewId,
-            effectiveDecision: effectiveReviewDecision(reviewState)
+            effectiveDecision: effectiveReviewDecision(reviewState2)
           });
           return;
         }
@@ -15272,13 +15272,13 @@ function workspaceReviewUrl(access) {
   if (!idPattern.test(access.id)) throw new TypeError("Invalid design workspace identity.");
   return `${normalizeWorkspaceBase(access.baseUrl)}/d/${access.id}`;
 }
-async function tokenMaterial(token, id3, purpose) {
-  if (!tokenPattern.test(token) || decodeWorkspaceBytes(token).length !== 32 || !idPattern.test(id3)) throw new TypeError("Enter the complete generated access token.");
+async function tokenMaterial(token, id4, purpose) {
+  if (!tokenPattern.test(token) || decodeWorkspaceBytes(token).length !== 32 || !idPattern.test(id4)) throw new TypeError("Enter the complete generated access token.");
   const key = await crypto.subtle.importKey("raw", decodeWorkspaceBytes(token), "HKDF", false, ["deriveBits"]);
-  return new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: encoder.encode(id3), info: encoder.encode(`openplanr-design-workspace/v1/${purpose}`) }, key, 256));
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: encoder.encode(id4), info: encoder.encode(`openplanr-design-workspace/v1/${purpose}`) }, key, 256));
 }
-async function deriveWorkspaceAuthentication(token, id3) {
-  return encodeWorkspaceBytes(await tokenMaterial(token, id3, "reviewer-auth"));
+async function deriveWorkspaceAuthentication(token, id4) {
+  return encodeWorkspaceBytes(await tokenMaterial(token, id4, "reviewer-auth"));
 }
 function canonicalWorkspacePublicKey(value) {
   if (!value || value.kty !== "EC" || value.crv !== "P-256" || !tokenPattern.test(value.x ?? "") || !tokenPattern.test(value.y ?? "") || "d" in value) {
@@ -15318,9 +15318,9 @@ async function unseal(value, rawKey, context, limit = DESIGN_WORKSPACE_MAX_BYTES
   const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv: decodeWorkspaceBytes(value.iv), additionalData: encoder.encode(canonicalizeJson(context)) }, key, bytes);
   return JSON.parse(decoder.decode(plaintext));
 }
-var keyringContext = (id3, epoch2) => ({ type: "keyring", workspaceId: id3, epoch: epoch2 });
-var revisionContext = (id3, revision) => ({ type: "revision", workspaceId: id3, id: revision.id, epoch: revision.epoch, reviewOf: revision.reviewOf });
-var eventContext = (id3, event) => ({ type: "event", workspaceId: id3, id: event.id, epoch: event.epoch, revisionId: event.revisionId, reviewOf: event.reviewOf });
+var keyringContext = (id4, epoch2) => ({ type: "keyring", workspaceId: id4, epoch: epoch2 });
+var revisionContext = (id4, revision) => ({ type: "revision", workspaceId: id4, id: revision.id, epoch: revision.epoch, reviewOf: revision.reviewOf });
+var eventContext = (id4, event) => ({ type: "event", workspaceId: id4, id: event.id, epoch: event.epoch, revisionId: event.revisionId, reviewOf: event.reviewOf });
 function workspaceEnvelopeDigest(envelope) {
   return sha256Hex2(canonicalizeJson({ schemaVersion: envelope.schemaVersion, artifacts: envelope.artifacts, viewer: envelope.viewer }));
 }
@@ -15415,22 +15415,22 @@ async function decryptWorkspaceRevision(access, revisionId = access.currentRevis
   if (workspaceEnvelopeDigest(bundle.envelope) !== revision.reviewOf) throw new Error("Published design content does not match its revision.");
   return { ...bundle, workspaceRevision: revision.id, reviewOf: revision.reviewOf };
 }
-async function prepareWorkspaceMutation(custody, action, payload = void 0) {
+async function prepareWorkspaceMutation(custody, action3, payload = void 0) {
   if (custody.pendingCreate) throw new Error("Finish creating this shared review before changing it.");
   if (custody.pendingMutation) throw new Error("A sharing operation is pending. Retry it before making another change.");
   const body = { operationId: newWorkspaceId(), expectedVersion: custody.version, epoch: custody.epoch };
   let next = {};
-  if (action === "publish") body.revision = await prepareRevision(custody, payload);
-  else if (action === "rotate") {
+  if (action3 === "publish") body.revision = await prepareRevision(custody, payload);
+  else if (action3 === "rotate") {
     const token = newWorkspaceToken();
     const epoch2 = custody.epoch + 1;
     const keys = { ...custody.keys, [epoch2]: newWorkspaceToken() };
     const keyring = await wrapKeyring(custody, token, epoch2, keys);
     Object.assign(body, { epoch: epoch2, reviewerAuthHash: sha256Hex2(await deriveWorkspaceAuthentication(token, custody.id)), keyring });
     next = { token, epoch: epoch2, keys, keyring };
-  } else if (["pause", "resume", "revoke", "delete"].includes(action)) body.action = action;
+  } else if (["pause", "resume", "revoke", "delete"].includes(action3)) body.action = action3;
   else throw new TypeError("Unknown design sharing operation.");
-  custody.pendingMutation = { action, body: await signWorkspaceValue(body, custody.ownerPrivateKey), next };
+  custody.pendingMutation = { action: action3, body: await signWorkspaceValue(body, custody.ownerPrivateKey), next };
   return custody.pendingMutation;
 }
 async function commitWorkspaceMutation(custody, options = {}) {
@@ -15536,14 +15536,14 @@ var ARTIFACT_REVIEW_INTENTS = Object.freeze(["fix", "improve", "question"]);
 var ARTIFACT_REVIEW_STATUSES = Object.freeze(["open", "addressed", "resolved"]);
 var REVIEW_OF_RE = /^[a-f0-9]{64}$/;
 var ArtifactReviewStateError = class extends Error {
-  constructor(code, message) {
-    super(message);
+  constructor(code, message2) {
+    super(message2);
     this.name = "ArtifactReviewStateError";
     this.code = code;
   }
 };
-function invalid2(message) {
-  throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_INVALID", message);
+function invalid2(message2) {
+  throw new ArtifactReviewStateError("E_ARTIFACT_REVIEW_INVALID", message2);
 }
 function identityRequired() {
   throw new ArtifactReviewStateError(
@@ -15574,11 +15574,11 @@ function enumValue(value, values, label) {
   return value;
 }
 function isoTimestamp(value, label) {
-  const timestamp = value instanceof Date ? value.toISOString() : value;
-  if (typeof timestamp !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp) || !Number.isFinite(Date.parse(timestamp))) {
+  const timestamp2 = value instanceof Date ? value.toISOString() : value;
+  if (typeof timestamp2 !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp2) || !Number.isFinite(Date.parse(timestamp2))) {
     invalid2(`${label} must be an ISO-8601 date-time.`);
   }
-  return timestamp;
+  return timestamp2;
 }
 function normalizeArtifactReviewIdentity(value, { allowEmpty = false } = {}) {
   if (value === null || value === void 0 || value === "") {
@@ -15592,12 +15592,12 @@ function normalizeArtifactReviewIdentity(value, { allowEmpty = false } = {}) {
     max: ARTIFACT_REVIEW_LIMITS.authorName,
     trim: true
   });
-  const id3 = optionalString(source.id, "author.id", {
+  const id4 = optionalString(source.id, "author.id", {
     min: 1,
     max: ARTIFACT_REVIEW_LIMITS.id,
     trim: true
   });
-  return deepFreezeArtifactReview(id3 === void 0 ? { name } : { id: id3, name });
+  return deepFreezeArtifactReview(id4 === void 0 ? { name } : { id: id4, name });
 }
 function normalizeRegion(region) {
   if (!region || typeof region !== "object" || Array.isArray(region)) {
@@ -15628,15 +15628,15 @@ function normalizeViewport2(viewport) {
     height: dimension(viewport.height, "pin.viewport.height")
   };
 }
-function normalizeAnchor(anchor) {
-  if (anchor === void 0 || anchor === null) return void 0;
-  if (typeof anchor !== "object" || Array.isArray(anchor)) invalid2("pin.anchor must be an object.");
-  const planrId = boundedString(anchor.planrId, "pin.anchor.planrId", {
+function normalizeAnchor(anchor2) {
+  if (anchor2 === void 0 || anchor2 === null) return void 0;
+  if (typeof anchor2 !== "object" || Array.isArray(anchor2)) invalid2("pin.anchor must be an object.");
+  const planrId = boundedString(anchor2.planrId, "pin.anchor.planrId", {
     min: 1,
     max: ARTIFACT_REVIEW_LIMITS.anchor,
     trim: true
   });
-  const screen = optionalString(anchor.screen, "pin.anchor.screen", {
+  const screen = optionalString(anchor2.screen, "pin.anchor.screen", {
     min: 1,
     max: ARTIFACT_REVIEW_LIMITS.screen,
     trim: true
@@ -15670,7 +15670,7 @@ function normalizePin(pin, label = "pin") {
     invalid2(`${label}.replies must contain no more than ${ARTIFACT_REVIEW_LIMITS.replies} items.`);
   }
   const replies = pin.replies.map((reply, index) => normalizeReply(reply, `${label}.replies[${index}]`));
-  const replyIds = new Set(replies.map(({ id: id3 }) => id3));
+  const replyIds = new Set(replies.map(({ id: id4 }) => id4));
   if (replyIds.size !== replies.length) invalid2(`${label}.replies must have unique ids.`);
   const normalized = {
     id: boundedString(pin.id, `${label}.id`, {
@@ -15702,9 +15702,9 @@ function normalizePin(pin, label = "pin") {
     max: ARTIFACT_REVIEW_LIMITS.variant,
     trim: true
   });
-  const anchor = normalizeAnchor(pin.anchor);
+  const anchor2 = normalizeAnchor(pin.anchor);
   if (variant !== void 0) normalized.variant = variant;
-  if (anchor !== void 0) normalized.anchor = anchor;
+  if (anchor2 !== void 0) normalized.anchor = anchor2;
   return normalized;
 }
 function normalizeArtifactReview2(review) {
@@ -15715,7 +15715,7 @@ function normalizeArtifactReview2(review) {
     invalid2(`review.pins must contain no more than ${ARTIFACT_REVIEW_LIMITS.pins} items.`);
   }
   const pins = review.pins.map((pin, index) => normalizePin(pin, `review.pins[${index}]`));
-  const pinIds = new Set(pins.map(({ id: id3 }) => id3));
+  const pinIds = new Set(pins.map(({ id: id4 }) => id4));
   if (pinIds.size !== pins.length) invalid2("review.pins must have unique ids.");
   const normalized = {
     schemaVersion: enumValue(review.schemaVersion, ["1.0.0"], "review.schemaVersion"),
@@ -15789,11 +15789,11 @@ function mergeWorkspaceFeedback(events, { revisionId, reviewOf, ownerPublicKey }
         for (const value of [payload.ratings ?? {}, payload.remix ?? {}]) if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).length > 256) throw new TypeError("Shared direction feedback is too large or invalid.");
         const ratings = {};
         const remix = {};
-        for (const [id3, rating] of Object.entries(payload.ratings ?? {})) {
-          if (Number.isInteger(rating) && rating >= 1 && rating <= 5) ratings[id3] = rating;
+        for (const [id4, rating] of Object.entries(payload.ratings ?? {})) {
+          if (Number.isInteger(rating) && rating >= 1 && rating <= 5) ratings[id4] = rating;
         }
-        for (const [id3, note] of Object.entries(payload.remix ?? {})) {
-          if (typeof note === "string" && note.length <= 8192) remix[id3] = note;
+        for (const [id4, note] of Object.entries(payload.remix ?? {})) {
+          if (typeof note === "string" && note.length <= 8192) remix[id4] = note;
         }
         directions.set(signerId, { signerId, author: author.name, revisionId, ratings, remix });
         acceptedEventIds.push(event.id);
@@ -15913,13 +15913,13 @@ function writeCustody(path, record) {
     throw error;
   }
 }
-async function withCustody(file, options, action) {
+async function withCustody(file, options, action3) {
   const location = custodyLocation(file, options);
   ensurePrivateDirectory(location.root);
   const unlock = await acquireStartLock(`${location.path}.lock`);
   try {
     let record = readCustody(location.path);
-    return await action({ ...location, record, save(value = record) {
+    return await action3({ ...location, record, save(value = record) {
       record = value;
       writeCustody(location.path, value);
     } });
@@ -16016,25 +16016,25 @@ async function publishDesignShare(file, options = {}) {
     return safeStatus(record, current);
   });
 }
-async function manageDesignShare(file, action, options = {}) {
-  if (!["rotate", "pause", "resume", "revoke", "delete", "access"].includes(action)) throw new Error("Unknown design sharing action.");
+async function manageDesignShare(file, action3, options = {}) {
+  if (!["rotate", "pause", "resume", "revoke", "delete", "access"].includes(action3)) throw new Error("Unknown design sharing action.");
   return withCustody(file, options, async ({ record, current, save }) => {
     if (!record || record.custody.pendingCreate) throw new Error("Create the shared review first.");
-    if (action === "access") {
+    if (action3 === "access") {
       if (record.revoked || record.deleted) throw new Error("This review is no longer accessible.");
       return { ...safeStatus(record, current), token: record.custody.token };
     }
-    if (action === "rotate") await flushOwnerMetadata(record, save, options);
-    if (record.custody.pendingMutation && record.custody.pendingMutation.action !== action) throw new Error(`Retry the pending ${record.custody.pendingMutation.action} operation first.`);
+    if (action3 === "rotate") await flushOwnerMetadata(record, save, options);
+    if (record.custody.pendingMutation && record.custody.pendingMutation.action !== action3) throw new Error(`Retry the pending ${record.custody.pendingMutation.action} operation first.`);
     if (!record.custody.pendingMutation) {
       if (!record.revoked) await getWorkspace(record.custody, { fetchImpl: options.fetchImpl });
-      await prepareWorkspaceMutation(record.custody, action);
+      await prepareWorkspaceMutation(record.custody, action3);
       save(record);
     }
     await commitMutation(record, save, options);
-    if (action === "pause" || action === "resume") record.commentsPaused = action === "pause";
-    if (action === "revoke") record.revoked = true;
-    if (action === "delete") record.deleted = true;
+    if (action3 === "pause" || action3 === "resume") record.commentsPaused = action3 === "pause";
+    if (action3 === "revoke") record.revoked = true;
+    if (action3 === "delete") record.deleted = true;
     save(record);
     return safeStatus(record, current);
   });
@@ -16243,11 +16243,11 @@ var clone3 = (value) => {
   assertPlainData(value);
   return JSON.parse(canonicalizeJson(value));
 };
-function issue(code, severity, message, { pinId, revisionId, recoveryAction } = {}) {
+function issue(code, severity, message2, { pinId, revisionId, recoveryAction } = {}) {
   return {
     code,
     severity,
-    message,
+    message: message2,
     ...revisionId ? { revisionId } : {},
     ...pinId ? { pinId } : {},
     recoveryAction: recoveryAction ?? {
@@ -16367,7 +16367,7 @@ function compileDesignHandoffResolution(input) {
     counts.set(pin.id, (counts.get(pin.id) ?? 0) + 1);
   }
   const duplicatePinIds = new Set(
-    [...counts].filter(([, count]) => count > 1).map(([id3]) => id3)
+    [...counts].filter(([, count]) => count > 1).map(([id4]) => id4)
   );
   const known = /* @__PURE__ */ new Set();
   for (const pin of pins) {
@@ -16520,8 +16520,551 @@ function canApproveDesignHandoffResolution(value) {
   );
 }
 
+// packages/protocol/src/design-handoff-contracts.mjs
+var DESIGN_HANDOFF_PROTOCOL_VERSION = "1.11.0";
+var DESIGN_HANDOFF_CONTRACT_VERSION = "1.0.0";
+var DESIGN_HANDOFF_AUTHORITY = "prepare-plan";
+var DESIGN_HANDOFF_CHECK_IDS = Object.freeze([
+  "current-revision",
+  "selected-direction",
+  "design-specification",
+  "rendered-verification",
+  "review-freshness",
+  "review-dispositions",
+  "unresolved-blockers",
+  "approved-review-handoff"
+]);
+var DESIGN_HANDOFF_SOURCE_KINDS = Object.freeze([
+  "design-revision",
+  "selected-direction",
+  "design-specification",
+  "rendered-verification",
+  "review-context",
+  "review-feedback",
+  "review-metadata",
+  "review-handoff",
+  "screen",
+  "frame",
+  "component",
+  "state",
+  "flow",
+  "token",
+  "review-decision",
+  "element-anchor"
+]);
+var DESIGN_HANDOFF_REQUIREMENT_KINDS = Object.freeze([
+  "behavior",
+  "visual-state",
+  "responsive",
+  "accessibility",
+  "content-data-assumption",
+  "constraint",
+  "verification-intent"
+]);
+var DESIGN_HANDOFF_CONTRACT_FILES = Object.freeze({
+  "design-handoff-readiness": "design-handoff-readiness.schema.json",
+  "design-implementation-handoff": "design-implementation-handoff.schema.json",
+  "design-planning-lineage": "design-planning-lineage.schema.json"
+});
+var text3 = { type: "string", minLength: 1, maxLength: 16384 };
+var title = { ...text3, maxLength: 240 };
+var id3 = { type: "string", minLength: 1, maxLength: 160, pattern: "^[A-Za-z0-9][A-Za-z0-9._:-]*$" };
+var digest3 = { type: "string", pattern: "^sha256:[a-f0-9]{64}$" };
+var relativePath = { type: "string", minLength: 1, maxLength: 4096 };
+var timestamp = { type: "string", format: "date-time" };
+var list2 = (items, maxItems = 1e3) => ({ type: "array", items, maxItems });
+var closed2 = (properties, required = Object.keys(properties)) => ({
+  type: "object",
+  additionalProperties: false,
+  properties,
+  required
+});
+var contract = (name, body) => ({
+  $schema: "https://json-schema.org/draft/2020-12/schema",
+  $id: `https://openplanr.dev/schemas/v1.11.0/${name}.schema.json`,
+  "x-openplanr-contract": { id: name, version: DESIGN_HANDOFF_PROTOCOL_VERSION },
+  ...body
+});
+var action = closed2({ id: id3, label: title });
+var anchor = {
+  oneOf: [
+    closed2({ section: id3 }),
+    closed2({ screenId: id3 }),
+    closed2({ screenId: id3, elementId: id3 }),
+    closed2({ reviewId: id3, pinId: id3 })
+  ]
+};
+var evidenceReference = closed2({
+  id: id3,
+  kind: { enum: DESIGN_HANDOFF_SOURCE_KINDS },
+  path: relativePath,
+  revision: digest3,
+  digest: digest3,
+  anchor
+}, ["id", "kind", "path"]);
+var readinessCheck = closed2({
+  id: { enum: DESIGN_HANDOFF_CHECK_IDS },
+  status: { enum: ["pass", "attention", "blocked", "stale"] },
+  message: title,
+  evidenceRefs: list2(id3, 64),
+  recoveryAction: action
+}, ["id", "status", "message", "evidenceRefs"]);
+var readinessRecord = closed2({
+  kind: { const: "openplanr-design-handoff-readiness" },
+  schemaVersion: { const: DESIGN_HANDOFF_CONTRACT_VERSION },
+  scope: { const: "design-originated" },
+  authority: { const: "none" },
+  designId: id3,
+  sourceRevision: { anyOf: [digest3, { type: "null" }] },
+  selectedVariant: { anyOf: [id3, { type: "null" }] },
+  status: { enum: ["ready", "attention", "blocked", "stale"] },
+  continuation: closed2({ action: { const: DESIGN_HANDOFF_AUTHORITY }, available: { type: "boolean" } }),
+  checks: list2(readinessCheck, DESIGN_HANDOFF_CHECK_IDS.length),
+  evidence: list2(evidenceReference, 1e4),
+  blockers: list2({ enum: DESIGN_HANDOFF_CHECK_IDS }, DESIGN_HANDOFF_CHECK_IDS.length),
+  nextActions: list2(action, DESIGN_HANDOFF_CHECK_IDS.length)
+});
+var readinessAbsence = closed2({
+  kind: { const: "openplanr-design-handoff-readiness-absence" },
+  schemaVersion: { const: DESIGN_HANDOFF_CONTRACT_VERSION },
+  status: { const: "absent" },
+  reason: { enum: ["not-computed", "not-applicable", "unavailable"] },
+  message: title,
+  nextAction: action
+});
+var DESIGN_HANDOFF_READINESS_SCHEMA = contract("design-handoff-readiness", {
+  oneOf: [readinessRecord, readinessAbsence]
+});
+var requirement = closed2({
+  id: { type: "string", pattern: "^REQ-[0-9]{3,}$" },
+  kind: { enum: DESIGN_HANDOFF_REQUIREMENT_KINDS },
+  statement: text3,
+  sourceRefs: { ...list2(id3, 256), minItems: 1 },
+  verification: { ...list2(text3, 256), minItems: 1 }
+});
+var implementationHandoff = closed2({
+  kind: { const: "openplanr-design-implementation-handoff" },
+  schemaVersion: { const: DESIGN_HANDOFF_CONTRACT_VERSION },
+  id: id3,
+  version: { type: "integer", minimum: 1 },
+  status: { enum: ["draft", "approved", "superseded", "revoked"] },
+  authority: { const: DESIGN_HANDOFF_AUTHORITY },
+  title,
+  basis: closed2({
+    designId: id3,
+    sourceRevision: digest3,
+    selectedVariant: id3,
+    readiness: closed2({ status: { enum: ["ready", "attention", "blocked", "stale"] }, digest: digest3 }),
+    reviewHandoff: closed2({ version: { type: "integer", minimum: 1 }, contentDigest: digest3 })
+  }),
+  sources: list2(evidenceReference, 1e4),
+  requirements: { ...list2(requirement, 1e4), minItems: 1 },
+  contentDigest: digest3,
+  markdown: { type: "string", maxLength: 2097152 },
+  approval: closed2({ actorId: id3, approvedAt: timestamp, contentDigest: digest3, authority: { const: DESIGN_HANDOFF_AUTHORITY } }),
+  supersededBy: closed2({ id: id3, version: { type: "integer", minimum: 1 }, contentDigest: digest3 }),
+  revocation: closed2({ actorId: id3, revokedAt: timestamp, reason: text3 })
+}, ["kind", "schemaVersion", "id", "version", "status", "authority", "title", "basis", "sources", "requirements", "contentDigest", "markdown"]);
+implementationHandoff.allOf = [
+  {
+    if: { properties: { status: { const: "approved" } }, required: ["status"] },
+    then: { required: ["approval"], not: { anyOf: [{ required: ["supersededBy"] }, { required: ["revocation"] }] } }
+  },
+  {
+    if: { properties: { status: { const: "superseded" } }, required: ["status"] },
+    then: { required: ["approval", "supersededBy"], not: { required: ["revocation"] } }
+  },
+  {
+    if: { properties: { status: { const: "revoked" } }, required: ["status"] },
+    then: { required: ["approval", "revocation"], not: { required: ["supersededBy"] } }
+  },
+  {
+    if: { properties: { status: { const: "draft" } }, required: ["status"] },
+    then: { not: { anyOf: [{ required: ["approval"] }, { required: ["supersededBy"] }, { required: ["revocation"] }] } }
+  }
+];
+var DESIGN_IMPLEMENTATION_HANDOFF_SCHEMA = contract(
+  "design-implementation-handoff",
+  implementationHandoff
+);
+var lineageMapping = closed2({
+  requirementId: { type: "string", pattern: "^REQ-[0-9]{3,}$" },
+  acceptanceRefs: { ...list2(closed2({
+    storyId: { type: "string", pattern: "^US-[0-9]{3,}$" },
+    acceptanceId: { type: "string", pattern: "^AC-[0-9]{3,}$" }
+  }), 256), minItems: 1 },
+  taskIds: { ...list2({ type: "string", pattern: "^T-[0-9]{3,}$" }, 256), minItems: 1 }
+});
+var DESIGN_PLANNING_LINEAGE_SCHEMA = contract("design-planning-lineage", closed2({
+  kind: { const: "openplanr-design-planning-lineage" },
+  schemaVersion: { const: DESIGN_HANDOFF_CONTRACT_VERSION },
+  handoff: closed2({ id: id3, version: { type: "integer", minimum: 1 }, contentDigest: digest3 }),
+  specId: { type: "string", pattern: "^SPEC-[0-9]{3,}$" },
+  mappings: { ...list2(lineageMapping, 1e4), minItems: 1 }
+}));
+var DESIGN_HANDOFF_SCHEMAS = deepFreeze({
+  "design-handoff-readiness": DESIGN_HANDOFF_READINESS_SCHEMA,
+  "design-implementation-handoff": DESIGN_IMPLEMENTATION_HANDOFF_SCHEMA,
+  "design-planning-lineage": DESIGN_PLANNING_LINEAGE_SCHEMA
+});
+function deepFreeze(value) {
+  if (value && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const nested of Object.values(value)) deepFreeze(nested);
+    Object.freeze(value);
+  }
+  return value;
+}
+function assertPlainData2(value, depth = 0, seen = /* @__PURE__ */ new Set()) {
+  if (depth > 64) throw new TypeError("Design handoff data exceeds the maximum nesting depth.");
+  if (value === null || ["string", "boolean"].includes(typeof value)) return;
+  if (typeof value === "number" && Number.isFinite(value)) return;
+  if (typeof value !== "object" || seen.has(value)) throw new TypeError("Design handoff data must be finite, acyclic JSON.");
+  if (!Array.isArray(value) && ![Object.prototype, null].includes(Object.getPrototypeOf(value))) throw new TypeError("Design handoff data must contain only plain JSON objects.");
+  seen.add(value);
+  for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(value))) {
+    if (["__proto__", "prototype", "constructor"].includes(key) || !Object.hasOwn(descriptor, "value")) throw new TypeError("Design handoff data contains a forbidden property.");
+    assertPlainData2(descriptor.value, depth + 1, seen);
+  }
+  seen.delete(value);
+}
+function distinct(items, select, label) {
+  const values = items.map(select);
+  if (new Set(values).size !== values.length) throw new TypeError(`Duplicate ${label}.`);
+}
+function isDesignHandoffRelativePath(value) {
+  return typeof value === "string" && value.length > 0 && value.length <= 4096 && !/^(?:[A-Za-z]:|\/|[A-Za-z][A-Za-z0-9+.-]*:)|[\\?#%\u0000-\u001f\u007f]/u.test(value) && value.split("/").every((part) => part && part !== "." && part !== ".." && !["__proto__", "prototype", "constructor"].includes(part));
+}
+function assertDesignHandoffContract(value, schemaOrName) {
+  const schema3 = typeof schemaOrName === "string" ? DESIGN_HANDOFF_SCHEMAS[schemaOrName] : schemaOrName;
+  if (!schema3) throw new TypeError("Unknown design handoff contract.");
+  assertPlainData2(value);
+  canonicalizeJson(value);
+  const errors = validateJson(value, schema3);
+  if (errors.length) throw new TypeError(`Invalid ${schema3["x-openplanr-contract"]?.id ?? "design handoff data"}: ${errors.slice(0, 5).map((error) => `${error.path} (${error.rule})`).join("; ")}`);
+  return value;
+}
+function assertEvidenceReferences(evidence2) {
+  distinct(evidence2, (item2) => item2.id, "evidence reference identity");
+  for (const item2 of evidence2) if (!isDesignHandoffRelativePath(item2.path)) throw new TypeError("Design handoff evidence requires a repository-relative logical path.");
+}
+function assertProductCopy(value) {
+  if (/\b(?:hash|digest|checksum|sha[- ]?256|canonical(?:ize|ization)?)\b/iu.test(value)) throw new TypeError("Design readiness guidance must use product language.");
+}
+function assertDesignHandoffReadiness(value) {
+  assertDesignHandoffContract(value, DESIGN_HANDOFF_READINESS_SCHEMA);
+  if (value.kind.endsWith("-absence")) {
+    assertProductCopy(`${value.message} ${value.nextAction.label}`);
+    return value;
+  }
+  assertEvidenceReferences(value.evidence);
+  distinct(value.checks, (item2) => item2.id, "readiness check identity");
+  const expected = DESIGN_HANDOFF_CHECK_IDS.join("\n");
+  if (value.checks.map((item2) => item2.id).join("\n") !== expected) throw new TypeError("Design readiness must contain every stable check in canonical order.");
+  const evidenceIds = new Set(value.evidence.map((item2) => item2.id));
+  for (const check of value.checks) {
+    distinct(check.evidenceRefs, (item2) => item2, "readiness evidence reference");
+    if (check.evidenceRefs.some((reference) => !evidenceIds.has(reference))) throw new TypeError("Design readiness references missing evidence.");
+    assertProductCopy(`${check.message} ${check.recoveryAction?.label ?? ""}`);
+  }
+  const priority2 = { pass: 0, attention: 1, blocked: 2, stale: 3 };
+  const worst = value.checks.reduce((current, check) => priority2[check.status] > priority2[current] ? check.status : current, "pass");
+  const expectedStatus = worst === "pass" ? "ready" : worst;
+  if (value.status !== expectedStatus) throw new TypeError("Design readiness summary does not match its checks.");
+  const blockingIds = value.checks.filter((check) => ["blocked", "stale"].includes(check.status)).map((check) => check.id);
+  if (value.blockers.join("\n") !== blockingIds.join("\n")) throw new TypeError("Design readiness blockers do not match its blocking checks.");
+  const actionable = value.checks.filter((check) => check.status !== "pass");
+  if (value.nextActions.length !== actionable.length || value.nextActions.some((actionValue, index) => {
+    const recoveryAction = actionable[index].recoveryAction;
+    return actionValue.id !== recoveryAction?.id || actionValue.label !== recoveryAction?.label;
+  })) throw new TypeError("Design readiness next actions do not match its checks.");
+  if (value.continuation.available !== ["ready", "attention"].includes(value.status)) throw new TypeError("Design readiness continuation availability does not match its status.");
+  return value;
+}
+function designImplementationHandoffDigest(value) {
+  const projection = {
+    kind: value.kind,
+    schemaVersion: value.schemaVersion,
+    id: value.id,
+    version: value.version,
+    authority: value.authority,
+    title: value.title,
+    basis: value.basis,
+    sources: value.sources,
+    requirements: value.requirements,
+    markdown: value.markdown
+  };
+  return `sha256:${sha256Hex2(canonicalizeJson(projection))}`;
+}
+function assertDesignImplementationHandoff(value) {
+  assertDesignHandoffContract(value, DESIGN_IMPLEMENTATION_HANDOFF_SCHEMA);
+  assertEvidenceReferences(value.sources);
+  distinct(value.requirements, (item2) => item2.id, "implementation requirement identity");
+  const sourceIds = new Set(value.sources.map((item2) => item2.id));
+  for (const item2 of value.requirements) {
+    distinct(item2.sourceRefs, (reference) => reference, "requirement source reference");
+    if (item2.sourceRefs.some((reference) => !sourceIds.has(reference))) throw new TypeError("Implementation requirement references missing evidence.");
+  }
+  if (value.contentDigest !== designImplementationHandoffDigest(value)) throw new TypeError("Implementation handoff content does not match its recorded integrity value.");
+  if (value.approval?.contentDigest !== void 0 && value.approval.contentDigest !== value.contentDigest) throw new TypeError("Implementation handoff approval does not match its content.");
+  if (value.status !== "draft" && value.basis.readiness.status !== "ready") throw new TypeError("Only a ready implementation handoff can be approved or retained as approved history.");
+  if (value.supersededBy && value.supersededBy.id === value.id && value.supersededBy.version <= value.version) throw new TypeError("A superseding handoff must identify a newer package version.");
+  return value;
+}
+
+// packages/design/lib/design/handoff-readiness.mjs
+var CHECKS = Object.freeze([
+  "current-revision",
+  "selected-direction",
+  "design-specification",
+  "rendered-verification",
+  "review-freshness",
+  "review-dispositions",
+  "unresolved-blockers",
+  "approved-review-handoff"
+]);
+var action2 = Object.freeze({
+  "current-revision": Object.freeze({ id: "render-design", label: "Render the current design" }),
+  "selected-direction": Object.freeze({ id: "select-direction", label: "Choose one ready direction" }),
+  "design-specification": Object.freeze({ id: "complete-design-specification", label: "Complete the design specification" }),
+  "rendered-verification": Object.freeze({ id: "verify-rendered-design", label: "Verify the rendered design" }),
+  "review-freshness": Object.freeze({ id: "refresh-review", label: "Refresh review against the current design" }),
+  "review-dispositions": Object.freeze({ id: "resolve-review-decisions", label: "Record the remaining review decisions" }),
+  "unresolved-blockers": Object.freeze({ id: "resolve-review-blockers", label: "Resolve the blocking feedback" }),
+  "approved-review-handoff": Object.freeze({ id: "approve-review-handoff", label: "Prepare and approve the current review handoff" })
+});
+var message = Object.freeze({
+  "current-revision": Object.freeze({
+    pass: "The current design has a completed render.",
+    blocked: "Render the design before preparing work for engineering."
+  }),
+  "selected-direction": Object.freeze({
+    pass: "One ready design direction is selected.",
+    blocked: "Choose one ready design direction before continuing.",
+    stale: "The selected direction changed after the review handoff was prepared."
+  }),
+  "design-specification": Object.freeze({
+    pass: "The design specification is complete for this revision.",
+    blocked: "Complete the design specification before continuing.",
+    stale: "The design specification belongs to an earlier revision."
+  }),
+  "rendered-verification": Object.freeze({
+    pass: "The rendered design is verified for this revision.",
+    blocked: "Complete rendered design verification before continuing.",
+    stale: "Rendered verification belongs to an earlier revision."
+  }),
+  "review-freshness": Object.freeze({
+    pass: "Review feedback is current for this revision.",
+    blocked: "Review feedback contains ambiguous identities or anchors.",
+    stale: "Review feedback belongs to an earlier revision."
+  }),
+  "review-dispositions": Object.freeze({
+    pass: "Every current review comment has a recorded outcome.",
+    attention: "Some non-blocking review comments still need an owner decision.",
+    blocked: "Review decisions are incomplete or ambiguous."
+  }),
+  "unresolved-blockers": Object.freeze({
+    pass: "No blocking feedback remains open.",
+    blocked: "Blocking feedback must be resolved before continuing.",
+    stale: "A prior decision must be reviewed against the current design."
+  }),
+  "approved-review-handoff": Object.freeze({
+    pass: "The current review handoff is approved.",
+    blocked: "Prepare and approve the review handoff before continuing.",
+    stale: "The approved review handoff no longer matches the current design."
+  })
+});
+var priority = Object.freeze({ pass: 0, attention: 1, blocked: 2, stale: 3 });
+var digestPattern2 = /^(?:sha256:)?[a-f0-9]{64}$/u;
+var normalizeDigest = (value, label) => {
+  if (typeof value !== "string" || !digestPattern2.test(value)) throw new TypeError(`${label} must be a lowercase SHA-256 value.`);
+  return value.startsWith("sha256:") ? value : `sha256:${value}`;
+};
+var optionalDigest = (value, label) => value === void 0 || value === null ? void 0 : normalizeDigest(value, label);
+var plainClone = (value) => value === void 0 ? void 0 : JSON.parse(canonicalizeJson(value));
+var logicalPath = (value, fallback, label) => {
+  const result = value ?? fallback;
+  if (!isDesignHandoffRelativePath(result) || /[?#%]/u.test(result)) throw new TypeError(`${label} must be a repository-relative logical path.`);
+  return result;
+};
+var evidenceDigest = (value) => `sha256:${sha256Hex2(canonicalizeJson(value))}`;
+function ensureUnique(items, select, label) {
+  const values = items.map(select);
+  if (new Set(values).size !== values.length) throw new TypeError(`Duplicate ${label}.`);
+}
+function evidence(id4, kind, path, value, { revision, anchor: anchor2 } = {}) {
+  return {
+    id: id4,
+    kind,
+    path,
+    ...revision ? { revision: normalizeDigest(revision, `${id4} revision`) } : {},
+    digest: optionalDigest(value?.digest, `${id4} integrity`) ?? evidenceDigest(value),
+    ...anchor2 ? { anchor: anchor2 } : {}
+  };
+}
+function checked(id4, status, evidenceRefs = []) {
+  return {
+    id: id4,
+    status,
+    message: message[id4][status],
+    evidenceRefs,
+    ...status === "pass" ? {} : { recoveryAction: action2[id4] }
+  };
+}
+function selectedDirection(document2, studioState) {
+  const selected = studioState?.selectedVariant ?? document2?.selectedVariant ?? null;
+  const variants = Array.isArray(document2?.variants) ? document2.variants : [];
+  ensureUnique(variants, (item2) => item2?.id, "design direction identity");
+  const matches = variants.filter((item2) => item2?.id === selected && item2?.status === "ready");
+  return { selected, ready: matches.length === 1 };
+}
+function normalizedPins(review, revision) {
+  const pins = Array.isArray(review?.pins) ? review.pins.map((pin) => ({ ...pin })) : [];
+  ensureUnique(pins, (pin) => `${pin.revisionId ?? pin.reviewId ?? ""}:${pin.id ?? ""}`, "review comment identity");
+  for (const pin of pins) {
+    if (typeof pin.id !== "string" || !pin.id) throw new TypeError("Review comments require stable identities.");
+    if (pin.elementId && !pin.screenId) throw new TypeError("An element review anchor must identify its screen.");
+    if (pin.anchorCount !== void 0 && pin.anchorCount !== 1) throw new TypeError("Review comments must identify exactly one anchor.");
+  }
+  return pins.sort((left, right) => `${left.revisionId ?? left.reviewId}:${left.id}`.localeCompare(`${right.revisionId ?? right.reviewId}:${right.id}`)).map((pin) => ({
+    ...pin,
+    current: !pin.stale && (!revision || !pin.revisionId || normalizeDigest(pin.revisionId, "review revision") === revision)
+  }));
+}
+function reviewState(input, revision) {
+  if (!input) return { pins: [], stale: false, ambiguous: false };
+  const pins = normalizedPins(input, revision);
+  const recordedRevision = optionalDigest(input.revision, "review revision");
+  return {
+    pins,
+    stale: input.current === false || recordedRevision !== void 0 && recordedRevision !== revision || pins.some((pin) => !pin.current),
+    ambiguous: input.ambiguous === true
+  };
+}
+function handoffState(handoff, designId, revision, selectedVariant) {
+  if (!handoff) return "blocked";
+  if (handoff.status !== "approved" || !handoff.approval || handoff.approval.contentHash !== handoff.contentHash) return "blocked";
+  const basisRevision = optionalDigest(handoff.basis?.sourceRevision, "review handoff revision");
+  if (handoff.current === false || handoff.basis?.designId !== designId || basisRevision !== revision || handoff.basis?.selectedVariant !== selectedVariant) return "stale";
+  return "pass";
+}
+function compileDesignHandoffReadiness(input) {
+  if (input === null || input === void 0) return designHandoffReadinessAbsence();
+  const source = plainClone(input);
+  const document2 = source.document;
+  if (!document2 || document2.kind !== "openplanr-design-document" || document2.schemaVersion !== "1.0.0" || typeof document2.id !== "string" || !document2.id) throw new TypeError("Readiness requires one supported design document.");
+  const revision = source.sourceRevision === null || source.sourceRevision === void 0 ? null : normalizeDigest(source.sourceRevision, "design revision");
+  const direction = selectedDirection(document2, source.studioState);
+  const evidenceItems = [];
+  if (revision) evidenceItems.push(evidence("design-revision", "design-revision", logicalPath(source.documentPath, "design-document.json", "design document path"), document2, { revision }));
+  const directionEvidence = direction.selected && revision ? evidence(
+    "selected-direction",
+    "selected-direction",
+    logicalPath(source.studioStatePath, ".design/studio-state.json", "Studio state path"),
+    { selectedVariant: direction.selected },
+    { revision, anchor: { section: direction.selected } }
+  ) : null;
+  if (directionEvidence) evidenceItems.push(directionEvidence);
+  const specification = source.specification;
+  if (specification) evidenceItems.push(evidence(
+    "design-specification",
+    "design-specification",
+    logicalPath(specification.path, "design-spec.md", "design specification path"),
+    specification,
+    { revision: specification.revision }
+  ));
+  const verification = source.verification;
+  if (verification) evidenceItems.push(evidence(
+    "rendered-verification",
+    "rendered-verification",
+    logicalPath(verification.path, ".design/verification/current.json", "verification path"),
+    verification,
+    { revision: verification.revision }
+  ));
+  const review = reviewState(source.review, revision);
+  if (source.review) evidenceItems.push(evidence(
+    "review-feedback",
+    "review-feedback",
+    logicalPath(source.review.path, ".design/review.json", "review feedback path"),
+    source.review,
+    { revision: source.review.revision }
+  ));
+  const handoff = source.reviewHandoff;
+  if (handoff) evidenceItems.push(evidence(
+    "review-handoff",
+    "review-handoff",
+    logicalPath(handoff.path, "review-handoff.json", "review handoff path"),
+    handoff,
+    { revision: handoff.basis?.sourceRevision }
+  ));
+  const checks = [];
+  checks.push(checked("current-revision", revision ? "pass" : "blocked", revision ? ["design-revision"] : []));
+  const handoffDirection = handoff?.basis?.selectedVariant;
+  const directionStatus = !direction.ready ? "blocked" : handoffDirection && handoffDirection !== direction.selected ? "stale" : "pass";
+  checks.push(checked("selected-direction", directionStatus, directionEvidence ? ["selected-direction"] : []));
+  let specificationStatus = "blocked";
+  if (specification?.complete === true) {
+    const specificationRevision = optionalDigest(specification.revision, "design specification revision");
+    specificationStatus = revision && specificationRevision && specificationRevision !== revision ? "stale" : "pass";
+  }
+  checks.push(checked("design-specification", specificationStatus, specification ? ["design-specification"] : []));
+  let verificationStatus = "blocked";
+  if (verification) {
+    const verificationRevision = optionalDigest(verification.revision, "rendered verification revision");
+    if (revision && verificationRevision && verificationRevision !== revision) verificationStatus = "stale";
+    else if (verification.status === "verified") verificationStatus = "pass";
+  }
+  checks.push(checked("rendered-verification", verificationStatus, verification ? ["rendered-verification"] : []));
+  const reviewRefs = source.review ? ["review-feedback"] : [];
+  const freshnessStatus = review.ambiguous ? "blocked" : review.stale ? "stale" : "pass";
+  checks.push(checked("review-freshness", freshnessStatus, reviewRefs));
+  const undecided = review.pins.filter((pin) => pin.current && !["accepted", "deferred", "rejected"].includes(pin.disposition));
+  const invalidDisposition = review.pins.some((pin) => pin.disposition && !["accepted", "deferred", "rejected"].includes(pin.disposition));
+  const dispositionStatus = invalidDisposition || review.ambiguous ? "blocked" : undecided.length ? "attention" : "pass";
+  checks.push(checked("review-dispositions", dispositionStatus, reviewRefs));
+  const openBlockers = review.pins.filter((pin) => pin.current && ["blocker", "change-request"].includes(pin.category) && !["accepted", "deferred", "rejected"].includes(pin.disposition));
+  const staleAccepted = review.pins.some((pin) => !pin.current && pin.disposition === "accepted");
+  const blockerStatus = staleAccepted ? "stale" : openBlockers.length ? "blocked" : "pass";
+  checks.push(checked("unresolved-blockers", blockerStatus, reviewRefs));
+  const approvalStatus = handoffState(handoff, document2.id, revision, direction.selected);
+  checks.push(checked("approved-review-handoff", approvalStatus, handoff ? ["review-handoff"] : []));
+  if (checks.map((item2) => item2.id).join("\n") !== CHECKS.join("\n")) throw new TypeError("Readiness checks are not in canonical order.");
+  const worst = checks.reduce((current, item2) => priority[item2.status] > priority[current] ? item2.status : current, "pass");
+  const status = worst === "pass" ? "ready" : worst;
+  const blockers = checks.filter((item2) => ["blocked", "stale"].includes(item2.status)).map((item2) => item2.id);
+  const nextActions = checks.filter((item2) => item2.status !== "pass").map((item2) => item2.recoveryAction);
+  return assertDesignHandoffReadiness({
+    kind: "openplanr-design-handoff-readiness",
+    schemaVersion: "1.0.0",
+    scope: "design-originated",
+    authority: "none",
+    designId: document2.id,
+    sourceRevision: revision,
+    selectedVariant: direction.selected,
+    status,
+    continuation: { action: "prepare-plan", available: ["ready", "attention"].includes(status) },
+    checks,
+    evidence: evidenceItems.sort((left, right) => left.id.localeCompare(right.id)),
+    blockers,
+    nextActions
+  });
+}
+function designHandoffReadinessAbsence(reason = "not-computed") {
+  return assertDesignHandoffReadiness({
+    kind: "openplanr-design-handoff-readiness-absence",
+    schemaVersion: "1.0.0",
+    status: "absent",
+    reason,
+    message: "No design handoff readiness has been prepared.",
+    nextAction: { id: "inspect-design", label: "Open the design when you want to prepare a handoff" }
+  });
+}
+function designHandoffReadinessDigest(value) {
+  assertDesignHandoffReadiness(value);
+  return `sha256:${sha256Hex2(canonicalizeJson(value))}`;
+}
+
 // packages/design/lib/design/handoff.mjs
-var conflict2 = (message) => Object.assign(new Error(message), { statusCode: 409 });
+var conflict2 = (message2) => Object.assign(new Error(message2), { statusCode: 409 });
 var sections = ["agreedChanges", "openQuestions", "deferred", "rejected"];
 var metadataPath = (current) => join9(current.root, ".design/review-metadata.json");
 var revisionOf2 = (pin) => pin.revisionId ?? pin.reviewId;
@@ -16556,8 +17099,8 @@ function metadata(current, feedback) {
     }
   };
 }
-function findPin(pins, id3, revision) {
-  const candidates = pins.filter((pin) => pin.id === id3 && (!revision || revisionOf2(pin) === revision));
+function findPin(pins, id4, revision) {
+  const candidates = pins.filter((pin) => pin.id === id4 && (!revision || revisionOf2(pin) === revision));
   if (candidates.length !== 1) throw new Error("The comment identity is missing or ambiguous. Include its original revisionId.");
   return candidates[0];
 }
@@ -16620,6 +17163,50 @@ function readDesignHandoff(file, { env = process.env, ...shareOptions } = {}) {
   }
   return { ok: true, path, revision: value.current.revision, draft, current: Boolean(draft && reviewDigest(draft.basis) === reviewDigest(value.basis)), metadata: value.metadata, feedback: { pins: value.feedback.pins }, basis: value.basis, resolution: value.resolution };
 }
+function readDesignHandoffReadiness(file, { env = process.env, ...shareOptions } = {}) {
+  const value = snapshot(file, env, shareOptions);
+  const path = join9(dirname10(designSpecPath(value.current.root)), "review-handoff.json");
+  const handoff = readJson2(path, null);
+  if (handoff) assertDraft(handoff);
+  const outcomes = new Map(value.resolution.items.map((item2) => [item2.id, item2]));
+  const pins = value.feedback.pins.map((pin) => {
+    const resolved = outcomes.get(pinKey(pin));
+    const disposition = resolved?.outcome === "accepted" ? "accepted" : resolved?.outcome === "deferred" ? "deferred" : resolved?.outcome === "declined" ? "rejected" : void 0;
+    return {
+      id: pin.id,
+      ...pin.screenId ? { screenId: pin.screenId } : {},
+      ...pin.anchor?.planrId ? { elementId: pin.anchor.planrId } : {},
+      category: resolved?.category,
+      ...disposition ? { disposition } : {},
+      stale: Boolean(pin.stale)
+    };
+  });
+  const specificationPath = designSpecPath(value.current.root);
+  const specification = existsSync8(specificationPath) ? { path: "design-spec.md", revision: value.current.revision, digest: `sha256:${hash(readFileSync13(specificationPath))}`, complete: true } : void 0;
+  const studioState = readJson2(join9(value.current.root, ".design/studio-state.json"), { state: {} }).state;
+  const readiness = compileDesignHandoffReadiness({
+    document: value.current.document,
+    documentPath: "design-document.json",
+    sourceRevision: value.current.revision,
+    studioState,
+    studioStatePath: ".design/studio-state.json",
+    specification,
+    verification: { path: ".design/verification/current.json", ...value.current.verification },
+    review: {
+      path: ".design/review.json",
+      revision: value.current.revision,
+      current: pins.every((pin) => !pin.stale),
+      pins
+    },
+    reviewHandoff: handoff ? {
+      ...handoff,
+      path: "review-handoff.json",
+      digest: `sha256:${handoff.contentHash}`,
+      current: reviewDigest(handoff.basis) === reviewDigest(value.basis)
+    } : void 0
+  });
+  return { ok: true, readiness, digest: designHandoffReadinessDigest(readiness) };
+}
 function assertDraft(draft) {
   assertReviewExperience(draft, DESIGN_HANDOFF_SCHEMA);
   const expected = reviewDigest({ title: draft.title, reviewNotes: draft.reviewNotes, basis: draft.basis, content: draft.content, affectedScreens: draft.affectedScreens ?? [], verificationGaps: draft.verificationGaps ?? [] });
@@ -16644,9 +17231,9 @@ function contentFromFeedback(value, shareUrl) {
   }
   return content;
 }
-var safeMd = (text3) => String(text3).replaceAll("[", "\\[").replaceAll("]", "\\]").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-function renderMarkdown(draft, title) {
-  const lines = [`# ${safeMd(title)} \u2014 review handoff`, "", `Status: ${draft.status}. Source revision: ${draft.basis.sourceRevision}.`, "", draft.content.summary || "Owner summary has not been written.", ""];
+var safeMd = (text4) => String(text4).replaceAll("[", "\\[").replaceAll("]", "\\]").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+function renderMarkdown(draft, title2) {
+  const lines = [`# ${safeMd(title2)} \u2014 review handoff`, "", `Status: ${draft.status}. Source revision: ${draft.basis.sourceRevision}.`, "", draft.content.summary || "Owner summary has not been written.", ""];
   for (const [key, label] of [["agreedChanges", "Agreed changes"], ["openQuestions", "Open questions"], ["deferred", "Deferred"], ["rejected", "Rejected"]]) {
     lines.push(`## ${label}`, "");
     for (const item2 of draft.content[key]) {
@@ -16692,11 +17279,11 @@ function normalizedLocalMetadata(local, pins) {
   }
   return { version: local.version ?? 0, byRevision };
 }
-async function preserveReviewErrors(path, action) {
+async function preserveReviewErrors(path, action3) {
   let failure, result;
   await withArtifactReviewLock(path, async () => {
     try {
-      result = await action();
+      result = await action3();
     } catch (error) {
       failure = error;
     }
@@ -16765,9 +17352,9 @@ async function updateDesignHandoff(file, input, { env = process.env, fetchImpl =
         const verificationGaps = value.current.verification.status === "verified" ? [] : [`Rendered design verification: ${value.current.verification.status}.`];
         for (const issue2 of value.current.verification.issues ?? []) if (issue2.message && verificationGaps.length < 256) verificationGaps.push(issue2.message);
         const reviewNotes = (value.feedback.ledger?.reviews ?? []).filter((entry) => entry.review.overall?.trim()).map((entry) => ({ reviewId: entry.review.reviewId, text: entry.review.overall }));
-        const title = value.current.document.title;
+        const title2 = value.current.document.title;
         const draft = {
-          title,
+          title: title2,
           reviewNotes,
           kind: "openplanr-design-review-handoff",
           schemaVersion: "1.0.0",
@@ -16777,7 +17364,7 @@ async function updateDesignHandoff(file, input, { env = process.env, fetchImpl =
           content,
           affectedScreens,
           verificationGaps,
-          contentHash: reviewDigest({ title, reviewNotes, basis: value.basis, content, affectedScreens, verificationGaps }),
+          contentHash: reviewDigest({ title: title2, reviewNotes, basis: value.basis, content, affectedScreens, verificationGaps }),
           markdown: ""
         };
         draft.markdown = renderMarkdown(draft, value.current.document.title);
@@ -16802,6 +17389,339 @@ async function updateDesignHandoff(file, input, { env = process.env, fetchImpl =
   return { ...readDesignHandoff(file, { env, ...shareOptions }), ...synchronization ? { synchronization } : {} };
 }
 
+// packages/design/lib/design/implementation-handoff.mjs
+import { createHash as createHash6, randomUUID as randomUUID3 } from "node:crypto";
+import {
+  existsSync as existsSync9,
+  mkdirSync as mkdirSync7,
+  readFileSync as readFileSync14,
+  realpathSync as realpathSync6,
+  renameSync as renameSync6,
+  rmSync as rmSync6,
+  writeFileSync as writeFileSync7
+} from "node:fs";
+import { dirname as dirname11, join as join10, resolve as resolve6, sep } from "node:path";
+
+// packages/design/lib/design/implementation-handoff-markdown.mjs
+var line = (value) => String(value).replaceAll("\r\n", "\n").replaceAll("\r", "\n").trim().replaceAll("\n", " ").replace(/([\\`*_[\]<>#|])/gu, "\\$1");
+var anchorLabel = (anchor2) => {
+  if (!anchor2) return null;
+  if (anchor2.section) return `section ${anchor2.section}`;
+  if (anchor2.reviewId) return `review ${anchor2.reviewId}, comment ${anchor2.pinId}`;
+  if (anchor2.elementId)
+    return `screen ${anchor2.screenId}, element ${anchor2.elementId}`;
+  return `screen ${anchor2.screenId}`;
+};
+function renderImplementationHandoffMarkdown(value) {
+  const lines = [
+    `# ${line(value.title)}`,
+    "",
+    `Design: ${line(value.basis.designId)}`,
+    `Selected direction: ${line(value.basis.selectedVariant)}`,
+    `Authority: Prepare Plan`,
+    "",
+    "## Source references",
+    ""
+  ];
+  for (const source of value.sources) {
+    const anchor2 = anchorLabel(source.anchor);
+    lines.push(
+      `- **${line(source.id)}** \u2014 ${line(source.kind)} \xB7 \`${line(source.path)}\`${anchor2 ? ` \xB7 ${line(anchor2)}` : ""}`
+    );
+  }
+  if (!value.sources.length) lines.push("None recorded.");
+  lines.push("", "## Implementation requirements", "");
+  for (const requirement2 of value.requirements) {
+    lines.push(
+      `### ${line(requirement2.id)} \xB7 ${line(requirement2.kind)}`,
+      "",
+      line(requirement2.statement),
+      "",
+      `Sources: ${requirement2.sourceRefs.map((reference) => `\`${line(reference)}\``).join(", ")}`,
+      "",
+      "Verification:",
+      ...requirement2.verification.map((expectation) => `- ${line(expectation)}`),
+      ""
+    );
+  }
+  lines.push(
+    "This package prepares approved design context for Plan. Plan and Ship remain separate user invocations.",
+    ""
+  );
+  return lines.join("\n");
+}
+
+// packages/design/lib/design/implementation-handoff.mjs
+var MAX_PACKAGE_BYTES = 2 * 1024 * 1024;
+var MAX_SOURCE_BYTES = 16 * 1024 * 1024;
+var DIGEST = /^sha256:[a-f0-9]{64}$/u;
+var REQUIREMENT_KINDS = /* @__PURE__ */ new Set([
+  "behavior",
+  "visual-state",
+  "responsive",
+  "accessibility",
+  "content-data-assumption",
+  "constraint",
+  "verification-intent"
+]);
+var INPUT_FIELDS = /* @__PURE__ */ new Set(["id", "version", "title", "basis", "sources", "requirements"]);
+var REQUIREMENT_FIELDS = /* @__PURE__ */ new Set(["id", "kind", "statement", "sourceRefs", "verification"]);
+var normalizeText = (value, label) => {
+  if (typeof value !== "string") throw new TypeError(`${label} must be text.`);
+  const normalized = value.replaceAll("\r\n", "\n").replaceAll("\r", "\n").trim();
+  if (!normalized) throw new TypeError(`${label} cannot be empty.`);
+  return normalized;
+};
+var clone4 = (value) => JSON.parse(canonicalizeJson(value));
+var sha256 = (value) => `sha256:${createHash6("sha256").update(value).digest("hex")}`;
+var jsonBytes = (value) => `${JSON.stringify(value, null, 2)}
+`;
+var assertKnownKeys = (value, allowed, label) => {
+  if (Object.keys(value).some((key) => !allowed.has(key)))
+    throw new TypeError(`${label} contains unknown fields.`);
+};
+function atomicText(path, value) {
+  mkdirSync7(dirname11(path), { recursive: true });
+  const temporary = `${path}.${randomUUID3()}.tmp`;
+  try {
+    writeFileSync7(temporary, value, { flag: "wx", mode: 384 });
+    renameSync6(temporary, path);
+  } finally {
+    rmSync6(temporary, { force: true });
+  }
+}
+function assertPackageSize(value) {
+  if (Buffer.byteLength(jsonBytes(value)) > MAX_PACKAGE_BYTES)
+    throw new TypeError("The implementation handoff JSON exceeds 2 MB.");
+  if (Buffer.byteLength(value.markdown) > MAX_PACKAGE_BYTES)
+    throw new TypeError("The implementation handoff Markdown exceeds 2 MB.");
+}
+function normalizeSource(source) {
+  if (!source || typeof source !== "object" || Array.isArray(source))
+    throw new TypeError("Implementation sources must be objects.");
+  if (!isDesignHandoffRelativePath(source.path) || /[?#%]/u.test(source.path))
+    throw new TypeError("Implementation sources require repository-relative logical paths.");
+  if (source.path.includes("`"))
+    throw new TypeError("Implementation source paths cannot contain Markdown delimiters.");
+  if (/(?:^|\/)[^/:\s]+:[^/@\s]+@/u.test(source.path))
+    throw new TypeError("Implementation source paths cannot contain credentials.");
+  if (!DIGEST.test(source.revision ?? "") || !DIGEST.test(source.digest ?? ""))
+    throw new TypeError("Implementation sources require exact revision and integrity values.");
+  return clone4(source);
+}
+function requirementFingerprint(requirement2) {
+  return canonicalizeJson({
+    kind: requirement2.kind,
+    statement: normalizeText(requirement2.statement, "Requirement statement"),
+    sourceRefs: requirement2.sourceRefs.map((value) => normalizeText(value, "Source reference")),
+    verification: requirement2.verification.map(
+      (value) => normalizeText(value, "Verification expectation")
+    )
+  });
+}
+function deriveImplementationRequirementId(requirement2) {
+  const hexadecimal = createHash6("sha256").update(requirementFingerprint(requirement2)).digest("hex");
+  const numeric = (BigInt(`0x${hexadecimal}`) % 1000000000000n).toString(10).padStart(12, "0");
+  return `REQ-${numeric}`;
+}
+function normalizeRequirement(requirement2) {
+  if (!requirement2 || typeof requirement2 !== "object" || Array.isArray(requirement2))
+    throw new TypeError("Implementation requirements must be objects.");
+  assertKnownKeys(
+    requirement2,
+    REQUIREMENT_FIELDS,
+    "Implementation requirement"
+  );
+  if (!REQUIREMENT_KINDS.has(requirement2.kind))
+    throw new TypeError("Unknown implementation requirement kind.");
+  if (!Array.isArray(requirement2.sourceRefs) || !requirement2.sourceRefs.length)
+    throw new TypeError("Implementation requirements need source references.");
+  if (new Set(requirement2.sourceRefs).size !== requirement2.sourceRefs.length)
+    throw new TypeError("Implementation requirement source references must be distinct.");
+  if (!Array.isArray(requirement2.verification) || !requirement2.verification.length)
+    throw new TypeError("Implementation requirements need observable verification expectations.");
+  const normalized = {
+    kind: requirement2.kind,
+    statement: normalizeText(requirement2.statement, "Requirement statement"),
+    sourceRefs: requirement2.sourceRefs.map((value) => normalizeText(value, "Source reference")),
+    verification: requirement2.verification.map(
+      (value) => normalizeText(value, "Verification expectation")
+    )
+  };
+  const id4 = deriveImplementationRequirementId(normalized);
+  if (requirement2.id !== void 0 && requirement2.id !== id4)
+    throw new TypeError("The supplied requirement identity does not match its canonical content.");
+  return { id: id4, ...normalized };
+}
+function composeImplementationHandoff(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new TypeError("Implementation handoff input must be an object.");
+  assertKnownKeys(
+    input,
+    INPUT_FIELDS,
+    "Implementation handoff input"
+  );
+  const sources = (input.sources ?? []).map(normalizeSource).sort(
+    (left, right) => left.id.localeCompare(right.id)
+  );
+  if (new Set(sources.map((source) => source.id)).size !== sources.length)
+    throw new TypeError("Duplicate implementation source identity.");
+  const sourceIds = new Set(sources.map((source) => source.id));
+  const requirements = (input.requirements ?? []).map(normalizeRequirement).sort((left, right) => left.id.localeCompare(right.id));
+  if (!requirements.length)
+    throw new TypeError("An implementation handoff needs at least one requirement.");
+  if (new Set(requirements.map((item2) => item2.id)).size !== requirements.length)
+    throw new TypeError("Duplicate or colliding implementation requirement identity.");
+  for (const requirement2 of requirements) {
+    if (requirement2.sourceRefs.some((reference) => !sourceIds.has(reference)))
+      throw new TypeError("Implementation requirement references missing evidence.");
+  }
+  const base = {
+    kind: "openplanr-design-implementation-handoff",
+    schemaVersion: "1.0.0",
+    id: normalizeText(input.id, "Implementation handoff identity"),
+    version: input.version ?? 1,
+    status: "draft",
+    authority: "prepare-plan",
+    title: normalizeText(input.title, "Implementation handoff title"),
+    basis: clone4(input.basis),
+    sources,
+    requirements
+  };
+  const markdown = renderImplementationHandoffMarkdown(base);
+  const value = { ...base, contentDigest: "sha256:" + "0".repeat(64), markdown };
+  value.contentDigest = designImplementationHandoffDigest(value);
+  assertDesignImplementationHandoff(value);
+  assertPackageSize(value);
+  return value;
+}
+function assertImplementationHandoffProjection(value) {
+  assertDesignImplementationHandoff(value);
+  if (value.sources.map((source) => source.id).join("\n") !== [...value.sources].sort((left, right) => left.id.localeCompare(right.id)).map((source) => source.id).join("\n"))
+    throw new TypeError("Implementation handoff sources are not in canonical order.");
+  if (value.requirements.map((item2) => item2.id).join("\n") !== [...value.requirements].sort((left, right) => left.id.localeCompare(right.id)).map((item2) => item2.id).join("\n"))
+    throw new TypeError("Implementation handoff requirements are not in canonical order.");
+  for (const requirement2 of value.requirements)
+    if (requirement2.id !== deriveImplementationRequirementId(requirement2))
+      throw new TypeError("Implementation requirement identity does not match its canonical content.");
+  if (value.markdown !== renderImplementationHandoffMarkdown(value))
+    throw new TypeError("Implementation handoff Markdown differs from its JSON projection.");
+  assertPackageSize(value);
+  return value;
+}
+var resolvedBytes = (resolved) => {
+  const value = resolved?.bytes ?? resolved?.value ?? resolved;
+  if (typeof value === "string" || Buffer.isBuffer(value)) return Buffer.from(value);
+  if (value instanceof Uint8Array) return Buffer.from(value);
+  throw new TypeError("The implementation source resolver must return bytes.");
+};
+function verifyImplementationHandoffSources(value, resolveSource) {
+  assertImplementationHandoffProjection(value);
+  if (typeof resolveSource !== "function")
+    throw new TypeError("Source verification requires an explicit resolver.");
+  for (const source of value.sources) {
+    const resolved = resolveSource(source.path, clone4(source));
+    const bytes = resolvedBytes(resolved);
+    if (bytes.byteLength > MAX_SOURCE_BYTES)
+      throw new TypeError(`Implementation source ${source.id} exceeds 16 MB.`);
+    if (sha256(bytes) !== source.digest)
+      throw new TypeError(`Implementation source ${source.id} no longer matches its reference.`);
+    if (source.anchor) {
+      if (!Array.isArray(resolved?.anchors))
+        throw new TypeError(`Implementation source ${source.id} did not resolve its anchor.`);
+      const expected = canonicalizeJson(source.anchor);
+      if (resolved.anchors.filter((anchor2) => canonicalizeJson(anchor2) === expected).length !== 1)
+        throw new TypeError(`Implementation source ${source.id} has an unresolved or ambiguous anchor.`);
+    }
+  }
+  return value;
+}
+var regexEscape = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+function discoverAnchor(bytes, anchor2) {
+  const text4 = bytes.toString("utf8");
+  const values = anchor2.elementId ? [anchor2.elementId] : anchor2.pinId ? [anchor2.reviewId, anchor2.pinId] : anchor2.section ? [anchor2.section] : [anchor2.screenId];
+  const counts = values.map((value) => (text4.match(new RegExp(regexEscape(value), "gu")) ?? []).length);
+  if (counts.every((count) => count === 1)) return [anchor2];
+  if (counts.some((count) => count === 0)) return [];
+  return [anchor2, anchor2];
+}
+function createRepositorySourceResolver(root) {
+  const canonicalRoot = realpathSync6(resolve6(root));
+  return (path, source) => {
+    if (!isDesignHandoffRelativePath(path))
+      throw new TypeError("Implementation source path is not repository-relative.");
+    const candidate = realpathSync6(resolve6(canonicalRoot, path));
+    if (candidate !== canonicalRoot && !candidate.startsWith(`${canonicalRoot}${sep}`))
+      throw new TypeError("Implementation source resolves outside the repository root.");
+    const bytes = readFileSync14(candidate);
+    return source?.anchor ? { bytes, anchors: discoverAnchor(bytes, source.anchor) } : bytes;
+  };
+}
+function implementationHandoffPaths(root) {
+  const directory = join10(resolve6(root), "implementation-handoff");
+  return Object.freeze({
+    directory,
+    draftJson: join10(directory, "draft.json"),
+    draftMarkdown: join10(directory, "draft.md"),
+    journal: join10(directory, "draft-publication.json"),
+    current: join10(directory, "current.json"),
+    history: join10(directory, "versions")
+  });
+}
+function recoverImplementationHandoffDraft(root) {
+  const paths = implementationHandoffPaths(root);
+  if (!existsSync9(paths.journal)) return false;
+  const journal = JSON.parse(readFileSync14(paths.journal, "utf8"));
+  const value = assertImplementationHandoffProjection(journal.package);
+  if (journal.markdown !== value.markdown)
+    throw new TypeError("Implementation handoff recovery journal is inconsistent.");
+  atomicText(paths.draftJson, jsonBytes(value));
+  atomicText(paths.draftMarkdown, value.markdown);
+  rmSync6(paths.journal, { force: true });
+  return true;
+}
+function readImplementationHandoffDraft(root, { allowMissing = true } = {}) {
+  const paths = implementationHandoffPaths(root);
+  recoverImplementationHandoffDraft(root);
+  if (!existsSync9(paths.draftJson)) {
+    if (allowMissing) return null;
+    throw new Error("No implementation handoff draft exists.");
+  }
+  const value = assertImplementationHandoffProjection(
+    JSON.parse(readFileSync14(paths.draftJson, "utf8"))
+  );
+  if (!existsSync9(paths.draftMarkdown))
+    throw new Error("Implementation handoff Markdown is missing.");
+  if (readFileSync14(paths.draftMarkdown, "utf8") !== value.markdown)
+    throw new Error("Implementation handoff JSON and Markdown projections differ.");
+  return value;
+}
+function writeImplementationHandoffDraft(root, input, { resolveSource } = {}) {
+  const value = input?.kind ? assertImplementationHandoffProjection(clone4(input)) : composeImplementationHandoff(input);
+  if (value.status !== "draft")
+    throw new TypeError("Only editable drafts can be written through the draft composer.");
+  if (resolveSource) verifyImplementationHandoffSources(value, resolveSource);
+  const paths = implementationHandoffPaths(root);
+  atomicText(paths.journal, jsonBytes({ package: value, markdown: value.markdown }));
+  recoverImplementationHandoffDraft(root);
+  return value;
+}
+function exportImplementationHandoffPackage(value) {
+  const checked2 = assertImplementationHandoffProjection(clone4(value));
+  return Object.freeze({ json: jsonBytes(checked2), markdown: checked2.markdown });
+}
+function importImplementationHandoffPackage(input, { resolveSource } = {}) {
+  if (!input || typeof input.json !== "string" || typeof input.markdown !== "string")
+    throw new TypeError("Portable handoff import requires JSON and Markdown text.");
+  if (Buffer.byteLength(input.json) > MAX_PACKAGE_BYTES || Buffer.byteLength(input.markdown) > MAX_PACKAGE_BYTES)
+    throw new TypeError("Portable handoff import exceeds 2 MB.");
+  const value = assertImplementationHandoffProjection(JSON.parse(input.json));
+  if (input.markdown.replaceAll("\r\n", "\n").replaceAll("\r", "\n") !== value.markdown)
+    throw new TypeError("Imported handoff Markdown does not match its JSON projection.");
+  if (resolveSource) verifyImplementationHandoffSources(value, resolveSource);
+  return value;
+}
+
 // packages/design/lib/design/review.mjs
 var VERSION = "1.3.0";
 var designReviewKey = (document2) => `design-${hash(document2.id).slice(0, 24)}`;
@@ -16818,7 +17738,7 @@ function readDesignFeedback(file, env = process.env) {
   const ledger = readArtifactReviewState(designReviewPath(file, env), {
     allowMissing: true
   });
-  const digest3 = digestArtifactEnvelope(current.envelope);
+  const digest4 = digestArtifactEnvelope(current.envelope);
   const pins = (ledger?.reviews ?? []).flatMap(
     (entry) => entry.review.pins.map((pin) => {
       const target = current.entries.find(
@@ -16831,7 +17751,7 @@ function readDesignFeedback(file, env = process.env) {
         reviewId: entry.review.reviewId,
         reviewOf: entry.review.reviewOf,
         ...entry.review.reviewId.startsWith("shared-") ? { revisionId: entry.review.reviewId.slice(7) } : {},
-        stale: entry.stale || entry.review.reviewOf !== digest3 || !target || Boolean(anchorMissing),
+        stale: entry.stale || entry.review.reviewOf !== digest4 || !target || Boolean(anchorMissing),
         ...target ? { screenId: target.screenId, variantId: target.variantId } : {}
       };
     })
@@ -16840,12 +17760,12 @@ function readDesignFeedback(file, env = process.env) {
     revision: current.revision,
     reviewPath: designReviewPath(file, env),
     pins,
-    state: readJson2(join10(current.root, ".design/studio-state.json"), {
+    state: readJson2(join11(current.root, ".design/studio-state.json"), {
       state: {},
       stateVersion: 0
     }).state,
     ledger,
-    shared: readJson2(join10(current.root, ".design/shared-feedback.json"), null)
+    shared: readJson2(join11(current.root, ".design/shared-feedback.json"), null)
   };
 }
 function exportDesignReview(file, { scope = "all", env = process.env } = {}) {
@@ -16955,26 +17875,53 @@ function validateState(value, current) {
     for (const viewport of Object.values(value.viewports))
       validateViewport(viewport);
   }
-  for (const [id3, rating] of Object.entries(value.ratings ?? {}))
-    if (!variants.has(id3) || !Number.isInteger(rating) || rating < 1 || rating > 5)
+  for (const [id4, rating] of Object.entries(value.ratings ?? {}))
+    if (!variants.has(id4) || !Number.isInteger(rating) || rating < 1 || rating > 5)
       throw new Error("Ratings must target available variants and be 1\u20135.");
-  for (const [id3, point] of Object.entries(value.positions ?? {}))
-    if (!current.entries.some((entry) => entry.artifactId === id3) || !Number.isFinite(point.x) || !Number.isFinite(point.y) || Math.abs(point.x) > 1e7 || Math.abs(point.y) > 1e7)
+  for (const [id4, point] of Object.entries(value.positions ?? {}))
+    if (!current.entries.some((entry) => entry.artifactId === id4) || !Number.isFinite(point.x) || !Number.isFinite(point.y) || Math.abs(point.x) > 1e7 || Math.abs(point.y) > 1e7)
       throw new Error("Invalid artboard arrangement.");
   return structuredClone(value);
 }
 function projectRoot(root) {
   let candidate = root;
   while (true) {
-    if (existsSync9(join10(candidate, ".planr")) || existsSync9(join10(candidate, ".git")))
+    if (existsSync10(join11(candidate, ".planr")) || existsSync10(join11(candidate, ".git")))
       return candidate;
-    const parent = dirname11(candidate);
+    const parent = dirname12(candidate);
     if (parent === candidate) return root;
     candidate = parent;
   }
 }
+function currentImplementationBasis(file, env) {
+  const handoff = readDesignHandoff(file, { env });
+  const readiness = readDesignHandoffReadiness(file, { env });
+  if (!handoff.draft || handoff.draft.status !== "approved" || !handoff.current)
+    throw Object.assign(
+      new Error("Approve the current review handoff before composing the implementation package."),
+      { statusCode: 409 }
+    );
+  if (readiness.readiness.status !== "ready")
+    throw Object.assign(
+      new Error("Resolve the remaining design readiness checks before composing the implementation package."),
+      { statusCode: 409 }
+    );
+  return {
+    designId: handoff.basis.designId,
+    sourceRevision: `sha256:${handoff.basis.sourceRevision}`,
+    selectedVariant: handoff.basis.selectedVariant,
+    readiness: {
+      status: readiness.readiness.status,
+      digest: readiness.digest
+    },
+    reviewHandoff: {
+      version: handoff.draft.version,
+      contentDigest: `sha256:${handoff.draft.contentHash}`
+    }
+  };
+}
 async function persistDesignTaste(current, state) {
-  const path = join10(
+  const path = join11(
     projectRoot(current.root),
     ".planr/design-system/taste.json"
   );
@@ -16987,7 +17934,7 @@ async function persistDesignTaste(current, state) {
     );
     const ids = (values) => [
       ...new Set(
-        (Array.isArray(values) ? values : []).filter((id3) => validIds.has(id3))
+        (Array.isArray(values) ? values : []).filter((id4) => validIds.has(id4))
       )
     ];
     const explicitSelected = ids(
@@ -16996,7 +17943,7 @@ async function persistDesignTaste(current, state) {
     const selected = explicitSelected.includes(state.selectedVariant) ? [state.selectedVariant] : explicitSelected;
     const rejected = ids(
       state.preferences?.rejected ?? previous.rejected
-    ).filter((id3) => !selected.includes(id3));
+    ).filter((id4) => !selected.includes(id4));
     atomicJson(path, {
       ...taste,
       designs: {
@@ -17023,7 +17970,7 @@ async function saveDesignState(file, { state, revision, stateVersion }) {
       new Error("The design changed. Reload before saving feedback."),
       { statusCode: 409 }
     );
-  const path = join10(current.root, ".design/studio-state.json");
+  const path = join11(current.root, ".design/studio-state.json");
   const release = await acquireStartLock(`${path}.lock`);
   try {
     current = currentDesign(file);
@@ -17063,9 +18010,12 @@ function respond(res, status, value) {
 var readBody = async (req) => JSON.parse(
   await readRequestBody(req, { maxBytes: 128 * 1024, encoding: "utf8" })
 );
+var readImplementationBody = async (req) => JSON.parse(
+  await readRequestBody(req, { maxBytes: 5 * 1024 * 1024, encoding: "utf8" })
+);
 async function startDesignReview(file, options = {}) {
   const { root } = currentDesign(file);
-  const release = await acquireStartLock(join10(root, ".design/start.lock"));
+  const release = await acquireStartLock(join11(root, ".design/start.lock"));
   try {
     return await startDesignReviewUnlocked(file, options);
   } finally {
@@ -17082,7 +18032,7 @@ async function startDesignReviewUnlocked(file, {
 } = {}) {
   let current = currentDesign(file);
   if (view !== void 0) {
-    const saved = readJson2(join10(current.root, ".design/studio-state.json"), {
+    const saved = readJson2(join11(current.root, ".design/studio-state.json"), {
       state: {},
       stateVersion: 0
     });
@@ -17092,7 +18042,7 @@ async function startDesignReviewUnlocked(file, {
       state: { ...saved.state, view }
     });
   }
-  const stateFile = join10(current.root, ".design/server.json");
+  const stateFile = join11(current.root, ".design/server.json");
   const old = readJson2(stateFile, null);
   if (old?.version === VERSION && old.url && /^http:\/\/127\.0\.0\.1:\d+\/r\//u.test(old.url)) {
     try {
@@ -17123,15 +18073,15 @@ async function startDesignReviewUnlocked(file, {
       current = currentDesign(file);
       if (session.designRevision === current.revision) return;
       await session.writeQueue;
-      const digest3 = digestArtifactEnvelope(current.envelope);
+      const digest4 = digestArtifactEnvelope(current.envelope);
       await withArtifactReviewLock(session.reviewPath, () => {
         const ledger = readArtifactReviewState(session.reviewPath, { allowMissing: true }) ?? session.reviewState;
         session.reviewState = createReviewLedger({
           artifactId: ledger.artifactId,
-          currentReviewOf: digest3,
+          currentReviewOf: digest4,
           reviews: ledger.reviews.map((entry) => ({
             review: entry.review,
-            stale: entry.stale || entry.review.reviewOf !== digest3
+            stale: entry.stale || entry.review.reviewOf !== digest4
           }))
         });
         writeArtifactReviewState(session.reviewPath, session.reviewState);
@@ -17140,7 +18090,7 @@ async function startDesignReviewUnlocked(file, {
       session.designRevision = current.revision;
     },
     renderDocument({ model, base }) {
-      const state = readJson2(join10(current.root, ".design/studio-state.json"), {
+      const state = readJson2(join11(current.root, ".design/studio-state.json"), {
         state: {}
       }).state;
       const stalePins = readDesignFeedback(file, env).pins.filter(
@@ -17149,7 +18099,7 @@ async function startDesignReviewUnlocked(file, {
       return renderDesignStudio(
         { ...current, envelope: model.envelope, state, stalePins },
         { stageRuntimeUrl: `${base}runtime.js` }
-      ).replace("</head>", `<style>${readFileSync14(new URL("../../templates/studio/share.css", new URL("./runtime/packages/design/lib/design/review.mjs", import.meta.url).href), "utf8")}</style></head>`);
+      ).replace("</head>", `<style>${readFileSync15(new URL("../../templates/studio/share.css", new URL("./runtime/packages/design/lib/design/review.mjs", import.meta.url).href), "utf8")}</style></head>`);
     },
     renderRuntime({ options, base }) {
       const settings = {
@@ -17158,11 +18108,13 @@ async function startDesignReviewUnlocked(file, {
         readyUrl: `${base}api/design-ready`,
         shareUrl: `${base}api/design-share`,
         experienceUrl: `${base}api/design-experience`,
+        readinessUrl: `${base}api/design-handoff-readiness`,
         handoffUrl: `${base}api/design-handoff`,
+        implementationHandoffUrl: `${base}api/design-implementation-handoff`,
         revisionsUrl: `${base}api/design-revisions`,
         reviewExportUrl: `${base}api/design-feedback-export`
       };
-      return `globalThis.__OPENPLANR_DESIGN_STUDIO_OPTIONS__={...${JSON.stringify(settings)},loadReviewExport:async({scope="all"}={})=>{const r=await fetch(${JSON.stringify(`${base}api/design-feedback-export`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify({scope})});const value=await r.json();if(!r.ok)throw new Error(value.error||"Review export unavailable");return value},loadExperience:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-experience`)});if(!r.ok)throw new Error("Review context unavailable");return r.json()},loadHandoff:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff`)});if(!r.ok)throw new Error("Handoff unavailable");return r.json()},updateHandoff:async(input)=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify(input)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Could not update handoff");return value},listRevisions:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-revisions`)});if(!r.ok)throw new Error("Revision history unavailable");return r.json()},loadRevision:async(revision)=>{const r=await fetch(${JSON.stringify(`${base}api/design-revisions`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify({revision})});if(!r.ok)throw new Error("Revision unavailable");return r.json()},exportHtml:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-export`)});if(!r.ok)throw new Error('Export failed');return r.text()}};
+      return `globalThis.__OPENPLANR_DESIGN_STUDIO_OPTIONS__={...${JSON.stringify(settings)},loadReviewExport:async({scope="all"}={})=>{const r=await fetch(${JSON.stringify(`${base}api/design-feedback-export`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify({scope})});const value=await r.json();if(!r.ok)throw new Error(value.error||"Review export unavailable");return value},loadExperience:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-experience`)});if(!r.ok)throw new Error("Review context unavailable");return r.json()},loadReadiness:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff-readiness`)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Handoff readiness unavailable");return value},loadHandoff:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff`)});if(!r.ok)throw new Error("Handoff unavailable");return r.json()},updateHandoff:async(input)=>{const r=await fetch(${JSON.stringify(`${base}api/design-handoff`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify(input)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Could not update handoff");return value},loadImplementationHandoff:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-implementation-handoff`)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Implementation package unavailable");return value},updateImplementationHandoff:async(input)=>{const r=await fetch(${JSON.stringify(`${base}api/design-implementation-handoff`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify(input)});const value=await r.json();if(!r.ok)throw new Error(value.error||"Could not update implementation package");return value},listRevisions:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-revisions`)});if(!r.ok)throw new Error("Revision history unavailable");return r.json()},loadRevision:async(revision)=>{const r=await fetch(${JSON.stringify(`${base}api/design-revisions`)},{method:"POST",headers:{"content-type":"application/json","x-openplanr-design":"1"},body:JSON.stringify({revision})});if(!r.ok)throw new Error("Revision unavailable");return r.json()},exportHtml:async()=>{const r=await fetch(${JSON.stringify(`${base}api/design-export`)});if(!r.ok)throw new Error('Export failed');return r.text()}};
 ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/design-share-runtime` })}`;
     },
     async handleSessionRequest({ req, res, segments }) {
@@ -17172,15 +18124,49 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
         const route = segments[4];
         if (route === "design-experience" && req.method === "GET") {
           respond(res, 200, readDesignExperience(file, { env }));
+        } else if (route === "design-handoff-readiness" && req.method === "GET") {
+          respond(res, 200, readDesignHandoffReadiness(file, { env }));
         } else if (route === "design-handoff" && req.method === "GET") {
           respond(res, 200, readDesignHandoff(file, { env }));
+        } else if (route === "design-implementation-handoff" && req.method === "GET") {
+          const root = dirname12(designSpecPath(currentDesign(file).root));
+          respond(res, 200, { ok: true, draft: readImplementationHandoffDraft(root) });
         } else if (route === "design-revisions" && req.method === "GET") {
           respond(res, 200, listDesignRevisions(file));
-        } else if (["design-handoff", "design-revisions", "design-feedback-export"].includes(route) && req.method === "POST") {
+        } else if (["design-handoff", "design-implementation-handoff", "design-revisions", "design-feedback-export"].includes(route) && req.method === "POST") {
           if (req.headers["x-openplanr-design"] !== "1" || !String(req.headers["content-type"] ?? "").startsWith("application/json") || req.headers.origin && req.headers.origin !== `http://127.0.0.1:${server.port}`) throw Object.assign(new Error("Owner actions require a same-origin studio request."), { statusCode: 403 });
-          const input = await readBody(req);
+          const input = route === "design-implementation-handoff" ? await readImplementationBody(req) : await readBody(req);
           if (route === "design-handoff") respond(res, 200, await updateDesignHandoff(file, input, { env, fetchImpl }));
-          else if (route === "design-feedback-export") {
+          else if (route === "design-implementation-handoff") {
+            if (!input || typeof input !== "object" || Array.isArray(input) || !["draft", "regenerate", "export", "import"].includes(input.action)) throw new Error("Unknown implementation package action.");
+            const initial = currentDesign(file);
+            const unlock = await acquireStartLock(join11(initial.root, ".design/render.lock"));
+            try {
+              const design = currentDesign(file);
+              const root = dirname12(designSpecPath(design.root));
+              const resolver = createRepositorySourceResolver(projectRoot(design.root));
+              if (["draft", "regenerate"].includes(input.action)) {
+                if (!input.package || input.package.kind)
+                  throw new Error("Draft composition requires editable package fields, not a lifecycle record.");
+                const draft = writeImplementationHandoffDraft(root, {
+                  ...input.package,
+                  basis: currentImplementationBasis(file, env)
+                }, { resolveSource: resolver });
+                respond(res, 200, { ok: true, draft });
+              } else if (input.action === "import") {
+                const draft = importImplementationHandoffPackage(input.package, { resolveSource: resolver });
+                if (reviewDigest(draft.basis) !== reviewDigest(currentImplementationBasis(file, env)))
+                  throw Object.assign(new Error("The imported implementation package belongs to a different or earlier design basis."), { statusCode: 409 });
+                writeImplementationHandoffDraft(root, draft, { resolveSource: resolver });
+                respond(res, 200, { ok: true, draft });
+              } else {
+                const draft = readImplementationHandoffDraft(root, { allowMissing: false });
+                respond(res, 200, { ok: true, package: exportImplementationHandoffPackage(draft) });
+              }
+            } finally {
+              unlock();
+            }
+          } else if (route === "design-feedback-export") {
             if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).some((key) => key !== "scope") || input.scope !== void 0 && !["all", "current"].includes(input.scope)) throw new Error("Review export requires scope current or all.");
             await syncDesignShare(file, { env, fetchImpl });
             respond(res, 200, exportDesignReview(file, { scope: input.scope ?? "all", env }));
@@ -17191,25 +18177,25 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
           }
         } else if (route === "design-share-runtime" && req.method === "GET") {
           res.writeHead(200, { "content-type": "application/javascript; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" });
-          res.end(readFileSync14(new URL("../../templates/studio/share.js", new URL("./runtime/packages/design/lib/design/review.mjs", import.meta.url).href), "utf8"));
+          res.end(readFileSync15(new URL("../../templates/studio/share.js", new URL("./runtime/packages/design/lib/design/review.mjs", import.meta.url).href), "utf8"));
         } else if (route === "design-share" && req.method === "GET") {
           respond(res, 200, getDesignShareStatus(file, { env }));
         } else if (route === "design-share" && req.method === "POST") {
           if (req.headers["x-openplanr-design"] !== "1" || !String(req.headers["content-type"] ?? "").startsWith("application/json")) throw Object.assign(new Error("Sharing requires a same-origin studio request."), { statusCode: 403 });
           const origin = req.headers.origin;
           if (origin && origin !== `http://127.0.0.1:${server.port}`) throw Object.assign(new Error("Sharing requires a same-origin studio request."), { statusCode: 403 });
-          const { action } = await readBody(req);
+          const { action: action3 } = await readBody(req);
           const options = { env, fetchImpl };
           let result;
-          if (action === "create") result = await shareDesign(file, options);
-          else if (action === "publish") result = await publishDesignShare(file, options);
-          else if (action === "sync") result = await syncDesignShare(file, options);
-          else if (action === "recovery") result = await exportDesignShareRecovery(file, { ...options, output: join10(env.HOME ?? process.env.HOME, "Downloads", `openplanr-design-recovery-${Date.now()}.json`) });
-          else result = await manageDesignShare(file, action, options);
+          if (action3 === "create") result = await shareDesign(file, options);
+          else if (action3 === "publish") result = await publishDesignShare(file, options);
+          else if (action3 === "sync") result = await syncDesignShare(file, options);
+          else if (action3 === "recovery") result = await exportDesignShareRecovery(file, { ...options, output: join11(env.HOME ?? process.env.HOME, "Downloads", `openplanr-design-recovery-${Date.now()}.json`) });
+          else result = await manageDesignShare(file, action3, options);
           respond(res, 200, result);
         } else if (route === "design-status" && req.method === "GET") {
           const ready = readJson2(
-            join10(current.root, ".design/browser-ready.json"),
+            join11(current.root, ".design/browser-ready.json"),
             null
           );
           respond(res, 200, {
@@ -17221,7 +18207,7 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
           });
         } else if (route === "design-state" && req.method === "GET") {
           respond(res, 200, {
-            ...readJson2(join10(current.root, ".design/studio-state.json"), {
+            ...readJson2(join11(current.root, ".design/studio-state.json"), {
               state: {},
               stateVersion: 0
             }),
@@ -17237,7 +18223,7 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
             throw new Error(
               "Browser readiness does not cover every expected design artboard."
             );
-          atomicJson(join10(current.root, ".design/browser-ready.json"), {
+          atomicJson(join11(current.root, ".design/browser-ready.json"), {
             status: "ready",
             revision: current.revision,
             checkedAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -17245,7 +18231,7 @@ ${renderArtifactParentRuntime({ ...options, adapterRuntimeUrl: `${base}api/desig
           respond(res, 200, { ok: true });
         } else if (route === "design-export" && req.method === "GET") {
           const state = readJson2(
-            join10(current.root, ".design/studio-state.json"),
+            join11(current.root, ".design/studio-state.json"),
             { state: {} }
           ).state;
           res.writeHead(200, {
@@ -17375,10 +18361,10 @@ async function resolveDesignPins(file, { pinIds, summary, env = process.env }) {
       createReviewLedger({ ...ledger, reviews: revisions })
     );
     const history = readJson2(
-      join10(current.root, ".design/review-history.json"),
+      join11(current.root, ".design/review-history.json"),
       []
     );
-    atomicJson(join10(current.root, ".design/review-history.json"), [
+    atomicJson(join11(current.root, ".design/review-history.json"), [
       ...history,
       {
         revision: current.revision,
@@ -17394,7 +18380,7 @@ async function resolveDesignPins(file, { pinIds, summary, env = process.env }) {
 // packages/design/lib/design/browser-audit.mjs
 function auditRenderedScreen() {
   const issues = [];
-  const add = (rule, severity, message) => issues.push({ rule, severity, message });
+  const add = (rule, severity, message2) => issues.push({ rule, severity, message: message2 });
   const label = (node) => node.getAttribute("data-planr-id") || node.id || `${node.tagName.toLowerCase()} \u201C${(node.textContent || node.getAttribute("aria-label") || "").trim().replace(/\s+/gu, " ").slice(0, 60)}\u201D`;
   const viewport = { width: window.innerWidth, height: window.innerHeight };
   const screenId = document.body?.getAttribute("data-planr-screen") ?? null;
@@ -17462,7 +18448,7 @@ function auditRenderedScreen() {
     }
     if (node.tabIndex >= 0 && !node.disabled && node.matches('button,a[href],input:not([type="hidden"]),select,textarea,[tabindex],[contenteditable="true"]')) {
       focusTargets.push(node);
-      const name = node.getAttribute("aria-label") || (node.getAttribute("aria-labelledby") || "").split(/\s+/u).map((id3) => document.getElementById(id3)?.textContent || "").join(" ").trim() || [...node.labels || []].map((item2) => item2.textContent).join(" ").trim() || node.getAttribute("title") || (node.matches('input[type="button"],input[type="submit"],input[type="reset"]') ? node.value : node.matches("input,select,textarea") ? "" : node.textContent.trim());
+      const name = node.getAttribute("aria-label") || (node.getAttribute("aria-labelledby") || "").split(/\s+/u).map((id4) => document.getElementById(id4)?.textContent || "").join(" ").trim() || [...node.labels || []].map((item2) => item2.textContent).join(" ").trim() || node.getAttribute("title") || (node.matches('input[type="button"],input[type="submit"],input[type="reset"]') ? node.value : node.matches("input,select,textarea") ? "" : node.textContent.trim());
       if (!name) add("unnamed-control", "error", `${label(node)} has no accessible name.`);
     }
   }
@@ -17501,7 +18487,7 @@ function auditRenderedScreen() {
 async function auditDesignPage(page, { revision, entries = [], screenshotPaths = [], scenarios = [] } = {}) {
   const issues = [], checkedArtifacts = [], screens = [];
   const expected = new Map(entries.map((entry) => [entry.artifactId, entry]));
-  const add = (artifactId, rule, severity, message) => issues.push({ artifactId, rule, severity, message });
+  const add = (artifactId, rule, severity, message2) => issues.push({ artifactId, rule, severity, message: message2 });
   if (!entries.length || expected.size !== entries.length) add("studio", "invalid-audit-scope", "error", "Audit scope must contain every expected artifact exactly once.");
   if (!page || typeof page.frames !== "function") {
     return { schemaVersion: "1.0.0", revision, status: "unverified", checkedArtifacts, issues: [{ artifactId: "studio", rule: "browser-unavailable", severity: "warning", message: "A browser page is required for rendered verification." }], screenshots: screenshotPaths, scenarios, screens };
@@ -17588,7 +18574,7 @@ function verifyDesignDocument(file, report) {
   const images = (Array.isArray(report.screenshots) ? report.screenshots : []).filter((item2) => {
     const path = typeof item2 === "string" ? item2 : item2?.path;
     try {
-      return typeof path === "string" && isPng(readFileSync15(resolve6(path)));
+      return typeof path === "string" && isPng(readFileSync16(resolve7(path)));
     } catch {
       return false;
     }
@@ -17597,7 +18583,7 @@ function verifyDesignDocument(file, report) {
   const issues = [...Array.isArray(report.issues) ? report.issues : [], ...screenEvidence.flatMap((item2) => Array.isArray(item2?.issues) ? item2.issues : [])];
   const status = issues.some((item2) => item2?.severity === "error") || report.status === "failed" ? "failed" : coverage && images.length > 0 && journeys && report.status !== "unverified" ? "verified" : "unverified";
   const saved = { ...report, issues, schemaVersion: "1.0.0", revision: current.revision, status, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), coverage, screenshotCount: images.length, primaryJourneysChecked: Boolean(journeys) };
-  atomicJson(join11(current.root, ".design/verification", `${current.revision}.json`), saved);
+  atomicJson(join12(current.root, ".design/verification", `${current.revision}.json`), saved);
   return saved;
 }
 async function designUtility(argv, { stdout = (value) => process.stdout.write(`${JSON.stringify(value)}
@@ -17617,15 +18603,15 @@ async function designUtility(argv, { stdout = (value) => process.stdout.write(`$
     flags[key] = ["json", "no-open"].includes(key) ? true : args[++i];
   }
   if (flags.view && !["canvas", "prototype", "walkthrough"].includes(flags.view)) throw new Error("View must be canvas, prototype, or walkthrough.");
-  const file = resolve6(input);
+  const file = resolve7(input);
   let result;
   if (command === "handoff") {
-    const action = flags.action ?? "inspect";
-    if (action === "inspect") result = readDesignHandoff(file);
+    const action3 = flags.action ?? "inspect";
+    if (action3 === "inspect") result = readDesignHandoff(file);
     else {
       const snapshot2 = readDesignHandoff(file);
-      const input2 = flags.input ? readJson2(resolve6(flags.input)) : {};
-      result = await updateDesignHandoff(file, { ...input2, action, revision: input2.revision ?? snapshot2.revision, version: input2.version ?? (snapshot2.draft?.version ?? 0) });
+      const input2 = flags.input ? readJson2(resolve7(flags.input)) : {};
+      result = await updateDesignHandoff(file, { ...input2, action: action3, revision: input2.revision ?? snapshot2.revision, version: input2.version ?? (snapshot2.draft?.version ?? 0) });
     }
   }
   if (command === "share") result = await shareDesign(file);
@@ -17657,39 +18643,39 @@ async function designUtility(argv, { stdout = (value) => process.stdout.write(`$
   }
   if (command === "export") {
     const current = currentDesign(file), view = flags.view ?? current.document.defaultView;
-    const state = readJson2(join11(current.root, ".design/studio-state.json"), { state: {} }).state;
+    const state = readJson2(join12(current.root, ".design/studio-state.json"), { state: {} }).state;
     if (flags.format && flags.format !== "html") throw new Error("Portable export supports HTML. Use the studio PNG action for browser-rendered captures.");
-    const output = resolve6(flags.output ?? join11(current.root, `${view}-export.html`));
-    if (existsSync10(output)) throw new Error(`Export already exists: ${output}. Choose a new --output path.`);
-    mkdirSync7(dirname12(output), { recursive: true });
-    writeFileSync7(output, standaloneDesignHtml({ ...current, state }, view), { flag: "wx" });
+    const output = resolve7(flags.output ?? join12(current.root, `${view}-export.html`));
+    if (existsSync11(output)) throw new Error(`Export already exists: ${output}. Choose a new --output path.`);
+    mkdirSync8(dirname13(output), { recursive: true });
+    writeFileSync8(output, standaloneDesignHtml({ ...current, state }, view), { flag: "wx" });
     result = { ok: true, output, view, revision: current.revision };
   }
   if (command === "verify") {
     if (!flags.report) throw new Error("verify requires --report <browser-report.json>.");
-    result = verifyDesignDocument(file, readJson2(resolve6(flags.report)));
+    result = verifyDesignDocument(file, readJson2(resolve7(flags.report)));
   }
   if (command === "feedback") {
     await syncDesignShare(file, { env, fetchImpl });
-    const action = flags.action ?? "inspect";
-    if (action === "inspect") result = readDesignFeedback(file, env);
-    else if (action === "export") {
+    const action3 = flags.action ?? "inspect";
+    if (action3 === "inspect") result = readDesignFeedback(file, env);
+    else if (action3 === "export") {
       const format = flags.format ?? "json", scope = flags.scope ?? "all";
       if (!["json", "markdown"].includes(format)) throw new Error("Feedback export format must be json or markdown.");
       if (!["current", "all"].includes(scope)) throw new Error("Feedback export scope must be current or all.");
       if (!flags.output) throw new Error("Feedback export requires --output <path>.");
-      const output = resolve6(flags.output);
-      if (existsSync10(output)) throw new Error("Feedback export already exists. Choose a new --output path.");
+      const output = resolve7(flags.output);
+      if (existsSync11(output)) throw new Error("Feedback export already exists. Choose a new --output path.");
       const snapshot2 = exportDesignReview(file, { scope, env });
-      mkdirSync7(dirname12(output), { recursive: true });
-      writeFileSync7(output, serializeDesignReviewExport(snapshot2, format), { flag: "wx", mode: 384 });
+      mkdirSync8(dirname13(output), { recursive: true });
+      writeFileSync8(output, serializeDesignReviewExport(snapshot2, format), { flag: "wx", mode: 384 });
       result = { ok: true, output, format, scope, revision: snapshot2.currentRevisionId, summary: snapshot2.summary };
-    } else if (action === "resolve") result = await resolveDesignPins(file, { pinIds: flags.pins?.split(",").filter(Boolean), summary: flags.summary, env });
-    else if (action === "select") {
-      const current = currentDesign(file), saved = readJson2(join11(current.root, ".design/studio-state.json"), { state: {}, stateVersion: 0 });
+    } else if (action3 === "resolve") result = await resolveDesignPins(file, { pinIds: flags.pins?.split(",").filter(Boolean), summary: flags.summary, env });
+    else if (action3 === "select") {
+      const current = currentDesign(file), saved = readJson2(join12(current.root, ".design/studio-state.json"), { state: {}, stateVersion: 0 });
       const variant = flags.variant ?? saved.state.selectedVariant;
       if (!current.document.variants.some((item2) => item2.id === variant && item2.status === "ready")) throw new Error("Select a ready variant with --variant.");
-      const selected = [variant], rejected = (saved.state.preferences?.rejected ?? []).filter((id3) => id3 !== variant);
+      const selected = [variant], rejected = (saved.state.preferences?.rejected ?? []).filter((id4) => id4 !== variant);
       result = await saveDesignState(file, { ...saved, revision: current.revision, state: { ...saved.state, selectedVariant: variant, preferences: { selected, rejected } } });
       result = { ok: true, selectedVariant: variant, tastePath: result.tastePath, revision: current.revision };
     } else throw new Error("Feedback action must be inspect, export, select, or resolve.");
@@ -17697,7 +18683,7 @@ async function designUtility(argv, { stdout = (value) => process.stdout.write(`$
   stdout(result);
   return result;
 }
-var main = process.argv[1] && fileURLToPath3(import.meta.url) === realpathSync6(process.argv[1]);
+var main = process.argv[1] && fileURLToPath3(import.meta.url) === realpathSync7(process.argv[1]);
 if (main) designUtility(process.argv.slice(2), { openUrl: async (url) => {
   const command = process.platform === "darwin" ? "open" : process.platform === "win32" ? "explorer.exe" : "xdg-open";
   const child = spawn(command, [url], { stdio: "ignore" });

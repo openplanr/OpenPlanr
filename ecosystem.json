@@ -83,7 +83,7 @@
       "version": "0.2.2",
       "path": "packages/design",
       "publication": "private",
-      "manifestDigest": "sha256:0f34a895471e37997bdbb9893b79639e9dcafa475ea280acab0a42751bab01fe"
+      "manifestDigest": "sha256:520619c530a5fee835e3d1394f55de57b0591bdfe8216530a8183b57c8ed0f34"
     },
     "skillRuntime": {
       "package": "@openplanr/skill-runtime",
@@ -335,7 +335,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:818fbf958a7e8400eb9a0b06dc665ba206760dda0fb88edf47ddedb98217eb8e",
+      "digest": "sha256:aa91d715ff1a58b6d7ceff8226f26a87c4b9790df70b9558f2378e191236d83a",
       "count": 1745
     }
   },

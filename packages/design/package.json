@@ -15,6 +15,10 @@
       "types": "./lib/design/handoff-resolution.d.mts",
       "import": "./lib/design/handoff-resolution.mjs"
     },
+    "./implementation-handoff": {
+      "types": "./lib/design/implementation-handoff.d.mts",
+      "import": "./lib/design/implementation-handoff.mjs"
+    },
     "./package.json": "./package.json",
     "./design/*": "./lib/design/*",
     "./engine/*": "./lib/design-engine/*"
