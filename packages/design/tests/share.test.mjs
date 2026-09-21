@@ -45,6 +45,7 @@ async function fixture(t) {
       if (init.method === 'POST') {
         let event = state.events.find(event => event.id === body.id);
         if (!event) { event = { ...body, sequence: state.events.length + 1 }; state.events.push(event); }
+        if (state.badEventReceipt) return Response.json({ event: { ...event, id: 'changed-receipt-abcdefghijkl' }, sequence: event.sequence });
         return Response.json({ event, sequence: event.sequence });
       }
       const after = Number(new URL(url).searchParams.get('after')); return Response.json({ events: state.events.filter((item) => item.sequence > after), cursor: state.events.length, hasMore: false });
@@ -138,6 +139,25 @@ test('hosted review remains tied to its original revision and never imports revi
   await renderDesignDocument(file);
   assert.equal(readDesignFeedback(file, options.env).pins[0].stale, true);
   assert.equal(readDesignFeedback(file, options.env).pins[0].id, 'pin-1');
+});
+
+test('a mismatched hosted event receipt retains the exact owner decision for retry', async (t) => {
+  const { file, options, state, record } = await fixture(t);
+  await shareDesign(file, options);
+  const custody = record().custody;
+  const bundle = await decryptWorkspaceRevision(custody, custody.currentRevision, options);
+  state.badEventReceipt = true;
+  const first = await publishDesignReviewMetadata(file, {
+    schemaVersion: '1.0.0', kind: 'disposition', author: 'Design owner', reviewOf: bundle.reviewOf,
+    pinId: 'pin-1', disposition: 'accepted', reason: 'Preserve intent', updatedAt: '2026-09-10T10:00:00Z',
+  }, { ...options, revisionId: custody.currentRevision });
+  assert.equal(first.pending, true);
+  const saved = record().pendingReviewMetadata[0];
+  state.badEventReceipt = false;
+  await syncDesignShare(file, options);
+  assert.equal(record().pendingReviewMetadata.length, 0);
+  const sent = state.requests.filter(({ url, init }) => url.endsWith('/events') && init.method === 'POST').map(({ init }) => JSON.parse(init.body));
+  assert.deepEqual(sent, [saved, saved]);
 });
 
 test('unsafe custody permissions are rejected rather than loaded', async (t) => {

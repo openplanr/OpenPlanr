@@ -133,6 +133,8 @@ test('the private Design package packs the readiness runtime and declaration beh
     const files = new Set(report.files.map(({ path }) => path));
     assert.ok(files.has('lib/design/handoff-readiness.mjs'));
     assert.ok(files.has('lib/design/handoff-readiness.d.mts'));
+    assert.ok(files.has('lib/design/handoff-resolution.mjs'));
+    assert.ok(files.has('lib/design/handoff-resolution.d.mts'));
     assert.ok(files.has('lib/design/index.mjs'));
     assert.ok(files.has('package.json'));
   } finally {

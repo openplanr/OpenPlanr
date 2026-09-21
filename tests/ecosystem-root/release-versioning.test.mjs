@@ -11,6 +11,26 @@ import { PUBLIC_PACKAGE_PATHS, WORKSPACE_IDENTITIES, validateWorkspaceManifests 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 const readManifests = (directory = root) => new Map(Object.keys(WORKSPACE_IDENTITIES).map(path => [path, readJson(join(directory, path, 'package.json'))]));
+const releaseFixtureEnv = () => ({
+  ...process.env,
+  PATH: [dirname(process.execPath), process.env.PATH ?? ''].join(delimiter),
+  CI: '1',
+  NO_COLOR: '1',
+  GIT_CONFIG_NOSYSTEM: '1',
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  // A release fixture can contain enough objects for Git to launch detached
+  // maintenance. Keep the fixture synchronous so cleanup cannot race a child
+  // process recreating .git directories after the test has removed them.
+  GIT_CONFIG_COUNT: '4',
+  GIT_CONFIG_KEY_0: 'gc.auto',
+  GIT_CONFIG_VALUE_0: '0',
+  GIT_CONFIG_KEY_1: 'gc.autoDetach',
+  GIT_CONFIG_VALUE_1: 'false',
+  GIT_CONFIG_KEY_2: 'maintenance.auto',
+  GIT_CONFIG_VALUE_2: 'false',
+  GIT_CONFIG_KEY_3: 'maintenance.autoDetach',
+  GIT_CONFIG_VALUE_3: 'false',
+});
 const fixtureManifests = () => {
   const manifests = readManifests();
   // A future, coherent package set must pass without rewriting the release gate.
@@ -59,7 +79,7 @@ test('new versions do not permit publishing private workspaces or introducing fo
 
 test('Changesets versions the actual pending notes, updates exact pins, and generates readable changelogs without publishing', () => {
   const directory = mkdtempSync(join(tmpdir(), 'openplanr-release-versioning-'));
-  const env = { ...process.env, PATH: [dirname(process.execPath), process.env.PATH ?? ''].join(delimiter), CI: '1', NO_COLOR: '1', GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' };
+  const env = releaseFixtureEnv();
   const run = (command, args) => {
     const result = spawnSync(command, args, { cwd: directory, env, encoding: 'utf8', timeout: 60_000 });
     assert.equal(result.status, 0, `${command} ${args.join(' ')}\n${result.stdout}\n${result.stderr}`);
@@ -118,7 +138,7 @@ test('Changesets versions the actual pending notes, updates exact pins, and gene
 
 test('a real package version operation regenerates current runtime projections without changing document contracts', { timeout: 120_000 }, () => {
   const directory = mkdtempSync(join(tmpdir(), 'openplanr-release-generation-'));
-  const env = { ...process.env, PATH: [dirname(process.execPath), process.env.PATH ?? ''].join(delimiter), CI: '1', NO_COLOR: '1', GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' };
+  const env = releaseFixtureEnv();
   const run = (command, args, cwd = directory) => {
     const result = spawnSync(command, args, { cwd, env, encoding: 'utf8', timeout: 60_000, maxBuffer: 16 * 1024 * 1024 });
     assert.equal(result.status, 0, `${command} ${args.join(' ')}\n${result.stdout}\n${result.stderr}`);

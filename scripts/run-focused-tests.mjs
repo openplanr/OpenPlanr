@@ -32,6 +32,7 @@ const steps = Object.freeze([
       'packages/artifact/tests/pin-stability.browser.test.mjs',
       'packages/design/tests/document.test.mjs',
       'packages/design/tests/handoff-readiness.test.mjs',
+      'packages/design/tests/handoff-resolution.test.mjs',
       'packages/design/tests/publication.test.mjs',
       'packages/design/tests/review.test.mjs',
       'packages/design/tests/workspace-client.test.mjs',

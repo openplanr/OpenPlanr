@@ -7,6 +7,7 @@ import {
   getWorkspace, decryptWorkspaceRevision, verifyWorkspaceSignature, prepareWorkspaceMutation,
   canonicalWorkspacePublicKey, commitWorkspaceMutation, createWorkspaceSigner, prepareWorkspaceEvent,
   readWorkspaceEvents, workspaceEnvelopeDigest,
+  appendWorkspaceEvent,
 } from '../lib/design/workspace-client.mjs';
 
 const bundle = () => ({
@@ -119,7 +120,7 @@ test('feedback is encrypted, signed, author-required, revision-bound and survive
   assert.ok(!JSON.stringify(event).includes('Private comment'));
   const options = { fetchImpl: async () => Response.json({ events: [{ ...event, sequence: 1 }], cursor: 1, hasMore: false }) };
   assert.equal((await readWorkspaceEvents(custody, options)).events[0].payload.review.comment, 'Private comment');
-  const tampered = { ...event, revisionId: custody.id };
+  const tampered = { ...event, id: 'tampered-event-abcdefghijkl', revisionId: custody.id };
   const page = await readWorkspaceEvents(custody, { fetchImpl: async () => Response.json({ events: [{ ...tampered, sequence: 1 }, { ...event, sequence: 2 }], cursor: 2, hasMore: false }) });
   assert.equal(page.events.length, 1); assert.equal(page.issues.length, 1); assert.equal(page.cursor, 2);
 });
@@ -166,4 +167,14 @@ test('unverifiable successful responses retain pending operations for safe retry
   const token = custody.token;
   await assert.rejects(commitWorkspaceMutation(custody, { fetchImpl: async () => Response.json({ ...server.meta, version: 999 }) }), /receipt/);
   assert.equal(custody.token, token); assert.ok(custody.pendingMutation);
+});
+
+test('event append verifies the exact receipt and event pages require strict ordering', async () => {
+  const custody = await prepareWorkspace(bundle()); const server = service(custody); await commitWorkspace(custody, server);
+  const event = await prepareWorkspaceEvent(custody, { kind: 'review', author: 'Reviewer', reviewOf: workspaceEnvelopeDigest(bundle().envelope), review: { comment: 'Receipt bound' } });
+  const receipt = await appendWorkspaceEvent(custody, null, { preparedEvent: event, fetchImpl: async () => Response.json({ event: { ...event, sequence: 7 }, sequence: 7 }) });
+  assert.equal(receipt.sequence, 7);
+  await assert.rejects(appendWorkspaceEvent(custody, null, { preparedEvent: event, fetchImpl: async () => Response.json({ event: { ...event, id: 'changed', sequence: 7 }, sequence: 7 }) }), /does not match/);
+  await assert.rejects(readWorkspaceEvents(custody, { after: 0, fetchImpl: async () => Response.json({ events: [{ ...event, sequence: 2 }, { ...event, id: 'other', sequence: 1 }], cursor: 2, hasMore: false }) }), /sequence/);
+  await assert.rejects(readWorkspaceEvents(custody, { after: 0, fetchImpl: async () => Response.json({ events: [{ ...event, sequence: 1 }, { ...event, sequence: 2 }], cursor: 2, hasMore: false }) }), /event identity/);
 });

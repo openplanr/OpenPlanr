@@ -161,15 +161,27 @@
       "mode": "644"
     },
     {
+      "source": "packages/design/lib/design/handoff-resolution.d.mts",
+      "target": "lib/design/handoff-resolution.d.mts",
+      "sha256": "ffd6a8df53888f6133da9f77b7280618a9da79971eded151b0e85425d9f3986d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/design/lib/design/handoff-resolution.mjs",
+      "target": "lib/design/handoff-resolution.mjs",
+      "sha256": "23bdd853e8d8c554666302219867dc582f11d81d5ac59ee4c21fc7cfe30d9c23",
+      "mode": "644"
+    },
+    {
       "source": "packages/design/lib/design/handoff.mjs",
       "target": "lib/design/handoff.mjs",
-      "sha256": "4fe304f52013458364c8a7a0e09f40bc4e3b525dc5bc920e566ae47cbf4a3371",
+      "sha256": "4402a0c9d5e69d152fe4a20a4b6adc45c45c7ac29144194a6bece8d04f4522e2",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/index.mjs",
       "target": "lib/design/index.mjs",
-      "sha256": "9744c6e09b0cbfaf10f6efbb74727c3729700965d46744874b37277cf071b604",
+      "sha256": "b3e5090ffbf3fa89c96a77fbc98d9cac3800c28c1085eeefd0924fc2927071de",
       "mode": "644"
     },
     {
@@ -235,7 +247,7 @@
     {
       "source": "packages/design/lib/design/share.mjs",
       "target": "lib/design/share.mjs",
-      "sha256": "430c2ff881139feda8b4964384faaf7a2f8e7e6428483906590b5d845aadee0b",
+      "sha256": "0a280b18a95f8cd2ab2ee36336d86a8aae85a85d81450c80d503e94281d97871",
       "mode": "644"
     },
     {
@@ -271,13 +283,13 @@
     {
       "source": "packages/design/lib/design/workspace-client.mjs",
       "target": "lib/design/workspace-client.mjs",
-      "sha256": "b021fbbdbe1ddc07d042cb707e97457d2e38748667777ec25c531a3ec63384b4",
+      "sha256": "bdd9d88504eaafe68ba6bd1ee86fe6aa3f47e290e936dbbaff7e63bda42c01bd",
       "mode": "644"
     },
     {
       "source": "packages/design/lib/design/workspace-feedback.mjs",
       "target": "lib/design/workspace-feedback.mjs",
-      "sha256": "8d50380433f7571e7aa940dd96502c4794933427998e7c14c851f38e0fec0bc1",
+      "sha256": "b1728a0153698906936aaae9f74ad533c36bbe4a54c99226e1a8b0b1b11c20d5",
       "mode": "644"
     },
     {

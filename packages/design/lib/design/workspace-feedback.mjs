@@ -16,22 +16,27 @@ export function mergeWorkspaceFeedback(events, { revisionId, reviewOf, ownerPubl
   const overall = new Map();
   const directions = new Map();
   const seen = new Map();
+  const revisionBases = new Map();
   const acceptedEventIds = [];
   const issues = [];
   const categories = {}, dispositions = {};
   for (const event of [...events].sort((a, b) => a.sequence - b.sequence)) {
-    if (event.revisionId !== revisionId) continue;
     try {
-    if (event.reviewOf !== reviewOf || !event.publicKey?.x || !event.publicKey?.y || !Number.isSafeInteger(event.sequence) || event.sequence < 1) throw new TypeError('Shared feedback has an invalid revision or signer.');
-    const signerId = workspaceReviewerId(event.publicKey);
-    const payload = event.payload;
-    if (!payload || typeof payload.author !== 'string' || !payload.author.trim() || payload.author.length > 160 || payload.reviewOf !== reviewOf) throw new TypeError('Shared feedback has an invalid author or digest.');
+    if (!event || typeof event.id !== 'string' || !event.id || typeof event.revisionId !== 'string' || !/^[a-f0-9]{64}$/u.test(event.reviewOf ?? '') || !Number.isSafeInteger(event.sequence) || event.sequence < 1) throw new TypeError('Shared feedback has an invalid event identity or revision.');
     const eventHash = sha256Hex(canonicalizeJson(event));
     if (seen.has(event.id)) {
-      if (seen.get(event.id) !== eventHash) throw new TypeError('Shared feedback reuses an event identity.');
+      if (seen.get(event.id) !== eventHash) throw new TypeError('Shared feedback reuses an event identity with changed bytes.');
       continue;
     }
     seen.set(event.id, eventHash);
+    const boundReviewOf = revisionBases.get(event.revisionId);
+    if (boundReviewOf && boundReviewOf !== event.reviewOf) throw new TypeError('A shared revision identity is bound to conflicting design content.');
+    revisionBases.set(event.revisionId, event.reviewOf);
+    if (event.revisionId !== revisionId) continue;
+    if (event.reviewOf !== reviewOf || !event.publicKey?.x || !event.publicKey?.y) throw new TypeError('Shared feedback has an invalid revision or signer.');
+    const signerId = workspaceReviewerId(event.publicKey);
+    const payload = event.payload;
+    if (!payload || typeof payload.author !== 'string' || !payload.author.trim() || payload.author.length > 160 || payload.reviewOf !== reviewOf) throw new TypeError('Shared feedback has an invalid author or digest.');
     const author = { id: signerId, name: payload.author.trim() };
     if (['category', 'disposition'].includes(payload.kind)) {
       assertDesignReviewMetadata(payload);
