@@ -62,3 +62,16 @@ test('change request metadata preserves original pins, independent legacy intent
  assert.deepEqual(result.acceptedEventIds,['event-1','event-2']);
  assert.equal(result.issues.length,2);
 });
+
+test('exact event replay is idempotent while changed bytes and revision rebinding are quarantined', () => {
+ const first=event(1,'Alice',[pin()]);
+ const exact=structuredClone(first);
+ const changed={...structuredClone(first),sequence:2,payload:{...structuredClone(first.payload),author:'Mallory'}};
+ const rebound={...event(3,'Bob',[pin('other')]),reviewOf:'b'.repeat(64),payload:{...event(3,'Bob',[pin('other')]).payload,reviewOf:'b'.repeat(64),review:{...event(3,'Bob',[pin('other')]).payload.review,reviewOf:'b'.repeat(64)}}};
+ const result=mergeWorkspaceFeedback([first,exact,changed,rebound],{revisionId,reviewOf:digest});
+ assert.deepEqual(result.acceptedEventIds,['event-1']);
+ assert.equal(result.review.pins.length,1);
+ assert.equal(result.issues.length,2);
+ assert.match(result.issues[0].reason,/changed bytes/);
+ assert.match(result.issues[1].reason,/conflicting design content/);
+});

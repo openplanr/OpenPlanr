@@ -9,6 +9,7 @@ import { atomicJson, currentDesign, designSpecPath, readJson } from './document.
 import { emptyReviewContext, reviewDigest } from './context.mjs';
 import { readDesignFeedback, designReviewPath } from './review.mjs';
 import { getDesignShareStatus, publishDesignReviewMetadata } from './share.mjs';
+import { canApproveDesignHandoffResolution, compileDesignHandoffResolution } from './handoff-resolution.mjs';
 
 const conflict = message => Object.assign(new Error(message), { statusCode: 409 });
 const sections = ['agreedChanges', 'openQuestions', 'deferred', 'rejected'];
@@ -32,34 +33,62 @@ function metadata(current, feedback) {
       if (Object.hasOwn(value.categories ?? {}, pin.id)) Object.defineProperty(categories, pin.id, { value: value.categories[pin.id], enumerable: true });
       if (Object.hasOwn(value.dispositions ?? {}, pin.id)) Object.defineProperty(dispositions, pin.id, { value: value.dispositions[pin.id], enumerable: true });
     }
+    if (counts.get(pin.id) === 1 && !Object.hasOwn(categories, pin.id) && Object.hasOwn(local.categories ?? {}, pin.id)) Object.defineProperty(categories, pin.id, { value: local.categories[pin.id], enumerable: true });
+    if (counts.get(pin.id) === 1 && !Object.hasOwn(dispositions, pin.id) && Object.hasOwn(local.dispositions ?? {}, pin.id)) Object.defineProperty(dispositions, pin.id, { value: local.dispositions[pin.id], enumerable: true });
   }
-  return { version: local.version, categories, dispositions, byRevision };
+  return {
+    version: local.version,
+    categories,
+    dispositions,
+    byRevision,
+    legacy: {
+      categories: structuredClone(local.categories ?? {}),
+      dispositions: structuredClone(local.dispositions ?? {}),
+    },
+  };
 }
-const dispositionOf = (metadata, pin) => metadata.byRevision[revisionOf(pin)]?.dispositions?.[pin.id]?.disposition;
 function findPin(pins, id, revision) {
   const candidates = pins.filter(pin => pin.id === id && (!revision || revisionOf(pin) === revision));
   if (candidates.length !== 1) throw new Error('The comment identity is missing or ambiguous. Include its original revisionId.');
   return candidates[0];
 }
 
-function snapshot(file, env) {
+function resolutionFor(value, shareStatus) {
+  return compileDesignHandoffResolution({
+    currentReviewOf: value.basis.reviewOf,
+    pins: value.feedback.pins,
+    metadata: {
+      byRevision: value.metadata.byRevision,
+      categories: value.metadata.legacy.categories,
+      dispositions: value.metadata.legacy.dispositions,
+    },
+    historyComplete: !(value.feedback.shared?.issues?.length),
+    synchronizationPending: Boolean(shareStatus?.pendingReviewMetadata),
+    synchronizationIssues: value.feedback.shared?.issues ?? [],
+  });
+}
+
+function snapshot(file, env, shareOptions = {}) {
   const current = currentDesign(file), feedback = readDesignFeedback(file, env), meta = metadata(current, feedback);
   const reviewContext = current.reviewContext ?? emptyReviewContext(current.document);
   const basis = { designId: current.document.id, sourceRevision: current.revision, contextDigest: current.contextDigest ?? reviewDigest(reviewContext),
     reviewOf: digestArtifactEnvelope(current.envelope), selectedVariant: feedback.state.selectedVariant ?? current.document.selectedVariant,
-    feedbackDigest: reviewDigest({ pins: feedback.pins, metadata: meta.byRevision, overall: (feedback.ledger?.reviews ?? []).map(entry => ({reviewId:entry.review.reviewId,reviewOf:entry.review.reviewOf,overall:entry.review.overall})), directions: feedback.shared?.directions ?? [] }),
+    feedbackDigest: reviewDigest({ pins: feedback.pins, metadata: { byRevision: meta.byRevision, categories: meta.categories, dispositions: meta.dispositions }, overall: (feedback.ledger?.reviews ?? []).map(entry => ({reviewId:entry.review.reviewId,reviewOf:entry.review.reviewOf,overall:entry.review.overall})), directions: feedback.shared?.directions ?? [] }),
     verificationDigest: reviewDigest(current.verification),
     feedbackWatermark: Math.max(0, ...(feedback.shared?.events ?? []).map(event => event.sequence ?? 0)),
   };
-  return { current, feedback, metadata: meta, reviewContext, basis };
+  let shareStatus = null;
+  try { shareStatus = getDesignShareStatus(file, { env, ...shareOptions }); } catch { /* Local-only review. */ }
+  const value = { current, feedback, metadata: meta, reviewContext, basis };
+  return { ...value, resolution: resolutionFor(value, shareStatus), shareStatus };
 }
 export function readDesignExperience(file, { env = process.env } = {}) {
   const value = snapshot(file, env);
   return { ok: true, capabilities: { owner: true, revisions: true, handoff: true }, revision: value.current.revision,
     reviewContext: value.reviewContext, contextDigest: value.basis.contextDigest, fingerprints: value.current.fingerprints ?? [], metadata: value.metadata, loadingHistory: false };
 }
-export function readDesignHandoff(file, { env = process.env } = {}) {
-  const value = snapshot(file, env);
+export function readDesignHandoff(file, { env = process.env, ...shareOptions } = {}) {
+  const value = snapshot(file, env, shareOptions);
   const path = join(dirname(designSpecPath(value.current.root)), 'review-handoff.json');
   const draft = readJson(path, null);
   if (draft) {
@@ -67,7 +96,7 @@ export function readDesignHandoff(file, { env = process.env } = {}) {
     const markdownPath = path.replace(/\.json$/u, '.md');
     if (!existsSync(markdownPath) || readFileSync(markdownPath, 'utf8') !== draft.markdown) throw new Error('The handoff Markdown differs from its approved JSON. Rebuild the handoff projection before using it in Plan.');
   }
-  return { ok: true, path, revision: value.current.revision, draft, current: Boolean(draft && reviewDigest(draft.basis) === reviewDigest(value.basis)), metadata: value.metadata, feedback: { pins: value.feedback.pins }, basis: value.basis };
+  return { ok: true, path, revision: value.current.revision, draft, current: Boolean(draft && reviewDigest(draft.basis) === reviewDigest(value.basis)), metadata: value.metadata, feedback: { pins: value.feedback.pins }, basis: value.basis, resolution: value.resolution };
 }
 function assertDraft(draft) {
   assertReviewExperience(draft, DESIGN_HANDOFF_SCHEMA);
@@ -82,13 +111,14 @@ function sourceItem(pin, shareUrl) {
 }
 function contentFromFeedback(value, shareUrl) {
   const content = { summary: '', agreedChanges: [], openQuestions: [], deferred: [], rejected: [] };
-  for (const pin of value.feedback.pins) {
-    const disposition = dispositionOf(value.metadata, pin);
+  const pins = new Map(value.feedback.pins.map(pin => [pinKey(pin), pin]));
+  for (const resolved of value.resolution.items) {
+    const pin = pins.get(resolved.id);
     const item = sourceItem(pin, shareUrl);
-    if (disposition === 'accepted') content.agreedChanges.push(item);
-    else if (disposition === 'deferred') content.deferred.push(item);
-    else if (disposition === 'rejected') content.rejected.push(item);
-    else if (pin.status !== 'resolved') content.openQuestions.push(item);
+    if (resolved.outcome === 'accepted') content.agreedChanges.push(item);
+    else if (resolved.outcome === 'deferred') content.deferred.push(item);
+    else if (resolved.outcome === 'declined') content.rejected.push(item);
+    else content.openQuestions.push(item);
   }
   return content;
 }
@@ -116,14 +146,31 @@ function enrichContent(content, value, shareUrl) {
     const pin = findPin(value.feedback.pins, item.pinId, item.revisionId ?? item.reviewId);
     if (seen.has(pinKey(pin))) throw new Error('Handoff items must cite distinct recorded comments.');
     seen.add(pinKey(pin));
-    const expected = key === 'agreedChanges' ? 'accepted' : key === 'deferred' ? 'deferred' : key === 'rejected' ? 'rejected' : undefined;
-    if (expected && dispositionOf(value.metadata, pin) !== expected) throw new Error('Record the owner disposition before moving a comment into this handoff section.');
+    const resolved = value.resolution.items.find(itemValue => itemValue.id === pinKey(pin));
+    const expected = key === 'agreedChanges' ? ['accepted'] : key === 'deferred' ? ['deferred'] : key === 'rejected' ? ['declined'] : ['open', 'blocking'];
+    if (!resolved || !expected.includes(resolved.outcome)) throw new Error('Record the owner disposition before moving a comment into this handoff section.');
     const refinement = item.refinement ?? (item.text !== pin.comment ? item.text : undefined);
     return { ...sourceItem(pin, shareUrl), ...(refinement !== undefined ? { refinement } : {}) };
   });
-  // An agent may refine text, but may not quietly omit unresolved recorded comments.
-  for (const pin of value.feedback.pins) if (pin.status !== 'resolved' && !seen.has(pinKey(pin))) throw new Error('Keep every unresolved review comment in the handoff.');
+  // An agent may refine text, but may not quietly omit any recorded comment.
+  for (const pin of value.feedback.pins) if (!seen.has(pinKey(pin))) throw new Error(`Keep every recorded review comment in the handoff; ${pinKey(pin)} is missing.`);
   return enriched;
+}
+
+function normalizedLocalMetadata(local, pins) {
+  const byRevision = structuredClone(local.byRevision ?? {});
+  const counts = new Map();
+  for (const pin of pins) counts.set(pin.id, (counts.get(pin.id) ?? 0) + 1);
+  for (const field of ['categories', 'dispositions']) {
+    for (const [pinId, item] of Object.entries(local[field] ?? {})) {
+      if (counts.get(pinId) !== 1) continue;
+      const pin = pins.find(value => value.id === pinId);
+      const revision = revisionOf(pin);
+      const scoped = byRevision[revision] ?? { categories: {}, dispositions: {} };
+      byRevision[revision] = { ...scoped, [field]: { ...scoped[field], [pinId]: item } };
+    }
+  }
+  return { version: local.version ?? 0, byRevision };
 }
 async function preserveReviewErrors(path, action) {
   let failure, result;
@@ -142,7 +189,7 @@ export async function updateDesignHandoff(file, input, { env = process.env, fetc
     const unlock = await acquireStartLock(join(initial.root, '.design/handoff.lock'));
     try {
       await preserveReviewErrors(designReviewPath(file, env), async () => {
-        const value = snapshot(file, env);
+        const value = snapshot(file, env, shareOptions);
         if (input.revision !== value.current.revision) throw conflict('The design changed. Refresh the review before updating its handoff.');
         if (['category', 'disposition'].includes(input.action)) {
           if (input.version !== value.metadata.version) throw conflict('Review organization changed in another window. Reload before saving.');
@@ -152,7 +199,7 @@ export async function updateDesignHandoff(file, input, { env = process.env, fetc
           if (!choices.includes(input[input.action])) throw new Error(`Invalid ${input.action}.`);
           if (typeof (input.reason ?? '') !== 'string' || (input.reason ?? '').length > 16384) throw new Error('Disposition reason is too long.');
           const updatedAt = new Date().toISOString();
-          const local = readJson(metadataPath(value.current), { version: 0, byRevision: {} });
+          const local = normalizedLocalMetadata(readJson(metadataPath(value.current), { version: 0, byRevision: {} }), value.feedback.pins);
           const revision = revisionOf(pin);
           const scoped = local.byRevision?.[revision] ?? { categories: {}, dispositions: {} };
           const valueForRevision = { ...scoped };
@@ -171,6 +218,10 @@ export async function updateDesignHandoff(file, input, { env = process.env, fetc
         try { shareUrl = getDesignShareStatus(file, { env, ...shareOptions }).url; } catch { /* Local-only review. */ }
         if (input.action === 'approve') {
           if (!previous || input.contentHash !== previous.contentHash || reviewDigest(previous.basis) !== reviewDigest(value.basis)) throw conflict('The handoff is out of date. Rebuild and review the current draft before approving.');
+          if (!canApproveDesignHandoffResolution(value.resolution)) {
+            const diagnostic = value.resolution.diagnostics[0];
+            throw conflict(diagnostic?.message ?? 'Resolve the blocking review decisions before approving this handoff.');
+          }
           if (!previous.content.summary.trim()) throw new Error('Write or refine the handoff summary before approving it.');
           const approved = { ...previous, version: previous.version + 1, status: 'approved', approval: { contentHash: previous.contentHash, at: new Date().toISOString() } };
           approved.markdown = renderMarkdown(approved, value.current.document.title);
@@ -202,5 +253,5 @@ export async function updateDesignHandoff(file, input, { env = process.env, fetc
     try { synchronization = await publishDesignReviewMetadata(file, outgoing.payload, { revisionId: outgoing.revisionId, env, fetchImpl, ...shareOptions }); }
     catch (error) { synchronization = { pending: true, error: error.message }; }
   }
-  return { ...readDesignHandoff(file, { env }), ...(synchronization ? { synchronization } : {}) };
+  return { ...readDesignHandoff(file, { env, ...shareOptions }), ...(synchronization ? { synchronization } : {}) };
 }

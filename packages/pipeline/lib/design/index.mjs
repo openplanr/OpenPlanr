@@ -31,6 +31,11 @@ export {
   designHandoffReadinessDigest,
 } from './handoff-readiness.mjs';
 export {
+  canApproveDesignHandoffResolution,
+  compileDesignHandoffResolution,
+  designHandoffResolutionDigest,
+} from './handoff-resolution.mjs';
+export {
   designSystemStatus, resolveDesignSystem, summarizeDesignSystem, DS_PACKAGE_FILES,
 } from './designSystem.mjs';
 export {

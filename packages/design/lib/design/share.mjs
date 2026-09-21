@@ -3,6 +3,7 @@ import { chmodSync, closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, open
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
+import { canonicalizeJson } from '@openplanr/protocol/canonical-json';
 import { acquireStartLock } from '@openplanr/artifact/internal/server-util.mjs';
 import { digestArtifactEnvelope } from '@openplanr/artifact/envelope.mjs';
 import { createReviewLedger } from '@openplanr/artifact/merge.mjs';
@@ -108,8 +109,9 @@ const safeStatus = (record, current) => ({
     publishedRevision: record.publishedRevision ?? null, hasUpdate: record.publishedRevision !== current.revision || record.publishedPresentation !== presentationFingerprint(current),
     epoch: record.custody.epoch, commentsPaused: Boolean(record.custody.commentsPaused ?? record.commentsPaused),
     revoked: Boolean(record.revoked), deleted: Boolean(record.deleted),
-    pending: Boolean(record.custody.pendingCreate || record.custody.pendingMutation),
-    pendingAction: record.custody.pendingCreate ? 'create' : record.custody.pendingMutation?.action ?? null,
+    pending: Boolean(record.custody.pendingCreate || record.custody.pendingMutation || record.pendingReviewMetadata?.length),
+    pendingAction: record.custody.pendingCreate ? 'create' : record.custody.pendingMutation?.action ?? (record.pendingReviewMetadata?.length ? 'review-metadata' : null),
+    pendingReviewMetadata: Boolean(record.pendingReviewMetadata?.length),
   } : {}),
 });
 
@@ -253,20 +255,36 @@ export async function syncDesignShare(file, options = {}) {
       const page = await workspace.readWorkspaceEvents(record.custody, { after: record.lastEvent ?? 0, fetchImpl: options.fetchImpl });
       const earlier = readJson(ledgerPath, { schemaVersion: '1.0.0', events: [], issues: [], importedReviews: {} });
       const events = [...earlier.events];
-      const ids = new Set(events.map((event) => event.id));
+      const eventBytes = new Map(events.map((event) => [event.id, canonicalizeJson(event)]));
+      const revisionBases = new Map();
+      for (const event of events) {
+        const previous = revisionBases.get(event.revisionId);
+        if (previous && previous !== event.reviewOf) throw new Error('Saved shared feedback binds one revision to conflicting design content.');
+        revisionBases.set(event.revisionId, event.reviewOf);
+      }
       const pageIssues = [...(page.issues ?? [])];
       for (const event of page.events ?? []) {
-        if (ids.has(event.id)) continue;
+        if (eventBytes.has(event.id)) {
+          if (eventBytes.get(event.id) !== canonicalizeJson(event)) pageIssues.push({ id: event.id, sequence: event.sequence, reason: 'Shared feedback reuses an event identity with changed bytes.' });
+          continue;
+        }
         try {
+          const boundReviewOf = revisionBases.get(event.revisionId);
+          if (boundReviewOf && boundReviewOf !== event.reviewOf) throw new Error('A shared revision identity is bound to conflicting design content.');
           const candidate = mergeWorkspaceFeedback([...events, event], { revisionId: event.revisionId, reviewOf: event.reviewOf, ownerPublicKey: record.custody.ownerPublicKey });
           const invalid = candidate.issues?.find((issue) => (issue.id ?? issue.eventId) === event.id);
           if (invalid) throw new Error(invalid.reason);
-          events.push(event); ids.add(event.id); imported++;
+          events.push(event); eventBytes.set(event.id, canonicalizeJson(event)); revisionBases.set(event.revisionId, event.reviewOf); imported++;
         } catch (error) {
           pageIssues.push({ id: event.id, sequence: event.sequence, reason: error.message });
         }
       }
-      const revisions = new Map(events.map((event) => [event.revisionId, event.reviewOf]));
+      const revisions = new Map();
+      for (const event of events) {
+        const previous = revisions.get(event.revisionId);
+        if (previous && previous !== event.reviewOf) throw new Error('Saved shared feedback binds one revision to conflicting design content.');
+        revisions.set(event.revisionId, event.reviewOf);
+      }
       const importedReviews = { ...(earlier.importedReviews ?? {}) }, directions = [], metadataByRevision = {};
       await withArtifactReviewLock(reviewPath, () => {
         const ledger = readArtifactReviewState(reviewPath, { allowMissing: true }) ?? createReviewLedger({ artifactId: reviewKey, currentReviewOf: currentDigest });

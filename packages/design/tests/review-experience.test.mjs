@@ -90,6 +90,48 @@ test('categorizing a requested change preserves the open pin and requires a sepa
   const drafted = await updateDesignHandoff(file, { action: 'draft', revision, version: 0 }, { env });
   assert.equal(drafted.draft.content.agreedChanges.length, 0);
   assert.equal(drafted.draft.content.openQuestions[0].pinId, 'pin-1');
+  await assert.rejects(
+    updateDesignHandoff(file, { action: 'approve', revision, version: 1, contentHash: drafted.draft.contentHash }, { env }),
+    /blocking comment/,
+  );
+});
+test('resolved comments remain explicit and legacy metadata normalizes on the next owner write', async t => {
+  const { root, file, env } = fixture(t);
+  const { revision } = await renderDesignDocument(file); seedReview(file, env);
+  const path = designReviewPath(file, env);
+  const ledger = readArtifactReviewState(path);
+  ledger.reviews[0].review.pins[0].status = 'resolved';
+  writeArtifactReviewState(path, ledger);
+  atomicJson(join(root, '.design/review-metadata.json'), {
+    version: 0,
+    categories: { 'pin-1': 'suggestion' },
+    dispositions: { 'pin-1': { disposition: 'accepted', reason: 'Keep this decision.', updatedAt: '2026-09-10T11:00:00Z', author: 'Design owner' } },
+  });
+  let result = await updateDesignHandoff(file, { action: 'draft', revision, version: 0 }, { env });
+  assert.equal(result.metadata.dispositions['pin-1'].disposition, 'accepted');
+  assert.equal(result.resolution.items.length, 1);
+  assert.equal(result.resolution.items[0].outcome, 'accepted');
+  assert.equal(result.draft.content.agreedChanges[0].pinId, 'pin-1');
+  atomicJson(join(root, '.design/review-metadata.json'), {
+    version: 0,
+    categories: { 'pin-1': 'suggestion' },
+    dispositions: { 'pin-1': { disposition: 'rejected', reason: 'Decision changed.', updatedAt: '2026-09-10T11:01:00Z', author: 'Design owner' } },
+  });
+  await assert.rejects(
+    updateDesignHandoff(file, { action: 'approve', revision, version: 1, contentHash: result.draft.contentHash }, { env }),
+    /out of date/,
+  );
+  atomicJson(join(root, '.design/review-metadata.json'), {
+    version: 0,
+    categories: { 'pin-1': 'suggestion' },
+    dispositions: { 'pin-1': { disposition: 'accepted', reason: 'Keep this decision.', updatedAt: '2026-09-10T11:00:00Z', author: 'Design owner' } },
+  });
+  await updateDesignHandoff(file, { action: 'category', revision, version: 0, pinId: 'pin-1', category: 'question' }, { env });
+  const normalized = JSON.parse(readFileSync(join(root, '.design/review-metadata.json'), 'utf8'));
+  assert.deepEqual(Object.keys(normalized).sort(), ['byRevision', 'version']);
+  assert.equal(normalized.byRevision['local-review'].dispositions['pin-1'].disposition, 'accepted');
+  result = readDesignHandoff(file, { env });
+  assert.equal(result.resolution.items[0].outcome, 'accepted');
 });
 test('owner handoff groups dispositions, binds citations, rejects conflicting writers and invalidates approval on new feedback', async t => {
   const { root, file, env } = fixture(t);

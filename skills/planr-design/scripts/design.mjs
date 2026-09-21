@@ -346,9 +346,9 @@ function createArtifactBridgeTools(document2, window2) {
           if (source.nodeType !== 1 || source.tagName !== "TEXTAREA") for (let child = source.firstChild; child; child = child.nextSibling) append.call(target, cloneStyled(child));
           return target;
         };
-        const clone3 = cloneStyled(document2.documentElement);
-        setAttribute.call(clone3, "xmlns", "http://www.w3.org/1999/xhtml");
-        const markup = serialize3.call(new Serializer(), clone3);
+        const clone4 = cloneStyled(document2.documentElement);
+        setAttribute.call(clone4, "xmlns", "http://www.w3.org/1999/xhtml");
+        const markup = serialize3.call(new Serializer(), clone4);
         if (markup.length > 4 * 1024 * 1024) throw new Error("Thumbnail markup limit exceeded.");
         const scale = Math.min(1, ARTIFACT_THUMBNAIL_MAX_EDGE / Math.max(width, height));
         const outputWidth = Math.max(1, Math.round(width * scale)), outputHeight = Math.max(1, Math.round(height * scale));
@@ -11518,12 +11518,12 @@ function readJson(path, label) {
     );
   }
 }
-function schemaCode(issue) {
-  if (issue.rule === "required") return ARTIFACT_THEME_ERROR_CODES.TOKEN_MISSING;
-  if (issue.rule === "additionalProperties") return ARTIFACT_THEME_ERROR_CODES.TOKEN_UNKNOWN;
-  if (issue.rule === "pattern") return ARTIFACT_THEME_ERROR_CODES.FORMAT;
-  if (issue.path.includes(".layout.motion")) return ARTIFACT_THEME_ERROR_CODES.MOTION;
-  if (issue.path.includes(".layout.")) return ARTIFACT_THEME_ERROR_CODES.LAYOUT;
+function schemaCode(issue2) {
+  if (issue2.rule === "required") return ARTIFACT_THEME_ERROR_CODES.TOKEN_MISSING;
+  if (issue2.rule === "additionalProperties") return ARTIFACT_THEME_ERROR_CODES.TOKEN_UNKNOWN;
+  if (issue2.rule === "pattern") return ARTIFACT_THEME_ERROR_CODES.FORMAT;
+  if (issue2.path.includes(".layout.motion")) return ARTIFACT_THEME_ERROR_CODES.MOTION;
+  if (issue2.path.includes(".layout.")) return ARTIFACT_THEME_ERROR_CODES.LAYOUT;
   return ARTIFACT_THEME_ERROR_CODES.SCHEMA;
 }
 function assertSchema(theme, schema3) {
@@ -13307,8 +13307,8 @@ function reviewExportTools() {
   const identity = (value) => ({ id: field(value?.id), name: typeof value?.name === "string" ? quote(value.name) : "Unknown reviewer" });
   const dimensions = (value) => Number.isInteger(value?.width) && value.width > 0 && value.width <= 16384 && Number.isInteger(value?.height) && value.height > 0 && value.height <= 16384 ? { width: value.width, height: value.height } : null;
   const rounded = (value) => Math.round(value * 1e6) / 1e6;
-  const compare = (a, b) => a < b ? -1 : a > b ? 1 : 0;
-  const order = (a, b) => compare(a.createdAt ?? "", b.createdAt ?? "") || compare(a.id ?? "", b.id ?? "");
+  const compare2 = (a, b) => a < b ? -1 : a > b ? 1 : 0;
+  const order = (a, b) => compare2(a.createdAt ?? "", b.createdAt ?? "") || compare2(a.id ?? "", b.id ?? "");
   const fragment = (values) => "#" + Object.entries(values).filter(([, value]) => value !== null && value !== void 0).map(([key, value]) => `${key}=${encodeURIComponent(value).replace(/[!'()*]/gu, (char) => "%" + char.charCodeAt(0).toString(16).toUpperCase())}`).join("&");
   function location(pin) {
     const region = pin.region;
@@ -13412,10 +13412,10 @@ function reviewExportTools() {
       });
       groups.get(groupKey).threads.push(thread);
     }
-    const orderedGroups = [...groups.entries()].sort(([a], [b]) => compare(a, b)).map(([, value]) => value);
+    const orderedGroups = [...groups.entries()].sort(([a], [b]) => compare2(a, b)).map(([, value]) => value);
     const threads = orderedGroups.flatMap((group) => group.threads);
     const reviews = input.review ? [{ review: input.review }] : list2(input.feedback?.ledger?.reviews);
-    const overallNotes = reviews.filter((entry) => entry.review?.overall).map(({ review }) => ({ reviewId: field(review.reviewId), reviewOf: digest3(review.reviewOf), comment: quote(review.overall) })).sort((a, b) => compare(a.reviewId ?? "", b.reviewId ?? ""));
+    const overallNotes = reviews.filter((entry) => entry.review?.overall).map(({ review }) => ({ reviewId: field(review.reviewId), reviewOf: digest3(review.reviewOf), comment: quote(review.overall) })).sort((a, b) => compare2(a.reviewId ?? "", b.reviewId ?? ""));
     return {
       kind: "openplanr-design-review-export",
       schemaVersion: "1.0.0",
@@ -15465,18 +15465,27 @@ async function prepareWorkspaceEvent(access, payload, { revisionId = access.curr
 }
 async function appendWorkspaceEvent(access, payload, { preparedEvent, signer, revisionId, reviewOf, ...options } = {}) {
   const event = preparedEvent ?? await prepareWorkspaceEvent(access, payload, { signer, revisionId, reviewOf: reviewOf ?? payload.reviewOf });
-  return request(access, "/events", { ...options, method: "POST", body: event });
+  const result = await request(access, "/events", { ...options, method: "POST", body: event });
+  if (!result || typeof result !== "object" || Array.isArray(result) || !Number.isSafeInteger(result.sequence) || result.sequence < 1 || !result.event || typeof result.event !== "object" || Array.isArray(result.event)) throw new Error("The feedback receipt is invalid. Retry the saved operation.");
+  const { sequence: eventSequence, ...received } = result.event;
+  if (eventSequence !== void 0 && eventSequence !== result.sequence || canonicalizeJson(received) !== canonicalizeJson(event)) throw new Error("The feedback receipt does not match the saved event. Retry the saved operation.");
+  return { event: { ...received, sequence: result.sequence }, sequence: result.sequence };
 }
 async function readWorkspaceEvents(access, { after = 0, ...options } = {}) {
   if (!Number.isSafeInteger(after) || after < 0) throw new TypeError("Invalid feedback cursor.");
   if (!access.keys) await getWorkspace(access, options);
   const page = await request(access, `/events?after=${after}`, options);
-  if (!Array.isArray(page.events) || page.events.length > 100 || !Number.isSafeInteger(page.cursor) || page.cursor < after) throw new Error("Invalid shared feedback page.");
+  if (!Array.isArray(page.events) || page.events.length > 100 || !Number.isSafeInteger(page.cursor) || page.cursor < after || typeof page.hasMore !== "boolean") throw new Error("Invalid shared feedback page.");
   const events = [];
   const issues = [];
+  let previousSequence = after;
+  const pageIds = /* @__PURE__ */ new Set();
   for (const item2 of page.events) {
     const { sequence, ...record } = item2?.event ? { ...item2.event, sequence: item2.sequence } : item2 ?? {};
-    if (!Number.isSafeInteger(sequence) || sequence <= after || sequence > page.cursor) throw new Error("Invalid shared feedback sequence.");
+    if (!Number.isSafeInteger(sequence) || sequence <= previousSequence || sequence > page.cursor) throw new Error("Invalid shared feedback sequence.");
+    previousSequence = sequence;
+    if (typeof record.id !== "string" || pageIds.has(record.id)) throw new Error("Invalid shared feedback event identity.");
+    pageIds.add(record.id);
     try {
       assertWorkspaceContract(record, DESIGN_WORKSPACE_EVENT_SCHEMA);
       if (!await verifyWorkspaceSignature(record, record.publicKey)) throw new Error("Signature verification failed.");
@@ -15489,6 +15498,7 @@ async function readWorkspaceEvents(access, { after = 0, ...options } = {}) {
       issues.push({ sequence, id: typeof record.id === "string" && idPattern.test(record.id) ? record.id : null, reason: "Invalid encrypted feedback; not imported." });
     }
   }
+  if (previousSequence > page.cursor) throw new Error("Invalid shared feedback cursor.");
   return { ...page, events, issues };
 }
 
@@ -15742,22 +15752,27 @@ function mergeWorkspaceFeedback(events, { revisionId, reviewOf, ownerPublicKey }
   const overall = /* @__PURE__ */ new Map();
   const directions = /* @__PURE__ */ new Map();
   const seen = /* @__PURE__ */ new Map();
+  const revisionBases = /* @__PURE__ */ new Map();
   const acceptedEventIds = [];
   const issues = [];
   const categories = {}, dispositions = {};
   for (const event of [...events].sort((a, b) => a.sequence - b.sequence)) {
-    if (event.revisionId !== revisionId) continue;
     try {
-      if (event.reviewOf !== reviewOf || !event.publicKey?.x || !event.publicKey?.y || !Number.isSafeInteger(event.sequence) || event.sequence < 1) throw new TypeError("Shared feedback has an invalid revision or signer.");
-      const signerId = workspaceReviewerId(event.publicKey);
-      const payload = event.payload;
-      if (!payload || typeof payload.author !== "string" || !payload.author.trim() || payload.author.length > 160 || payload.reviewOf !== reviewOf) throw new TypeError("Shared feedback has an invalid author or digest.");
+      if (!event || typeof event.id !== "string" || !event.id || typeof event.revisionId !== "string" || !/^[a-f0-9]{64}$/u.test(event.reviewOf ?? "") || !Number.isSafeInteger(event.sequence) || event.sequence < 1) throw new TypeError("Shared feedback has an invalid event identity or revision.");
       const eventHash = sha256Hex2(canonicalizeJson(event));
       if (seen.has(event.id)) {
-        if (seen.get(event.id) !== eventHash) throw new TypeError("Shared feedback reuses an event identity.");
+        if (seen.get(event.id) !== eventHash) throw new TypeError("Shared feedback reuses an event identity with changed bytes.");
         continue;
       }
       seen.set(event.id, eventHash);
+      const boundReviewOf = revisionBases.get(event.revisionId);
+      if (boundReviewOf && boundReviewOf !== event.reviewOf) throw new TypeError("A shared revision identity is bound to conflicting design content.");
+      revisionBases.set(event.revisionId, event.reviewOf);
+      if (event.revisionId !== revisionId) continue;
+      if (event.reviewOf !== reviewOf || !event.publicKey?.x || !event.publicKey?.y) throw new TypeError("Shared feedback has an invalid revision or signer.");
+      const signerId = workspaceReviewerId(event.publicKey);
+      const payload = event.payload;
+      if (!payload || typeof payload.author !== "string" || !payload.author.trim() || payload.author.length > 160 || payload.reviewOf !== reviewOf) throw new TypeError("Shared feedback has an invalid author or digest.");
       const author = { id: signerId, name: payload.author.trim() };
       if (["category", "disposition"].includes(payload.kind)) {
         assertDesignReviewMetadata(payload);
@@ -15952,8 +15967,9 @@ var safeStatus = (record, current) => ({
     commentsPaused: Boolean(record.custody.commentsPaused ?? record.commentsPaused),
     revoked: Boolean(record.revoked),
     deleted: Boolean(record.deleted),
-    pending: Boolean(record.custody.pendingCreate || record.custody.pendingMutation),
-    pendingAction: record.custody.pendingCreate ? "create" : record.custody.pendingMutation?.action ?? null
+    pending: Boolean(record.custody.pendingCreate || record.custody.pendingMutation || record.pendingReviewMetadata?.length),
+    pendingAction: record.custody.pendingCreate ? "create" : record.custody.pendingMutation?.action ?? (record.pendingReviewMetadata?.length ? "review-metadata" : null),
+    pendingReviewMetadata: Boolean(record.pendingReviewMetadata?.length)
   } : {}
 });
 function getDesignShareStatus(file, options = {}) {
@@ -16101,22 +16117,39 @@ async function syncDesignShare(file, options = {}) {
       const page = await readWorkspaceEvents(record.custody, { after: record.lastEvent ?? 0, fetchImpl: options.fetchImpl });
       const earlier = readJson2(ledgerPath, { schemaVersion: "1.0.0", events: [], issues: [], importedReviews: {} });
       const events = [...earlier.events];
-      const ids = new Set(events.map((event) => event.id));
+      const eventBytes = new Map(events.map((event) => [event.id, canonicalizeJson(event)]));
+      const revisionBases = /* @__PURE__ */ new Map();
+      for (const event of events) {
+        const previous = revisionBases.get(event.revisionId);
+        if (previous && previous !== event.reviewOf) throw new Error("Saved shared feedback binds one revision to conflicting design content.");
+        revisionBases.set(event.revisionId, event.reviewOf);
+      }
       const pageIssues = [...page.issues ?? []];
       for (const event of page.events ?? []) {
-        if (ids.has(event.id)) continue;
+        if (eventBytes.has(event.id)) {
+          if (eventBytes.get(event.id) !== canonicalizeJson(event)) pageIssues.push({ id: event.id, sequence: event.sequence, reason: "Shared feedback reuses an event identity with changed bytes." });
+          continue;
+        }
         try {
+          const boundReviewOf = revisionBases.get(event.revisionId);
+          if (boundReviewOf && boundReviewOf !== event.reviewOf) throw new Error("A shared revision identity is bound to conflicting design content.");
           const candidate = mergeWorkspaceFeedback([...events, event], { revisionId: event.revisionId, reviewOf: event.reviewOf, ownerPublicKey: record.custody.ownerPublicKey });
-          const invalid3 = candidate.issues?.find((issue) => (issue.id ?? issue.eventId) === event.id);
+          const invalid3 = candidate.issues?.find((issue2) => (issue2.id ?? issue2.eventId) === event.id);
           if (invalid3) throw new Error(invalid3.reason);
           events.push(event);
-          ids.add(event.id);
+          eventBytes.set(event.id, canonicalizeJson(event));
+          revisionBases.set(event.revisionId, event.reviewOf);
           imported++;
         } catch (error) {
           pageIssues.push({ id: event.id, sequence: event.sequence, reason: error.message });
         }
       }
-      const revisions = new Map(events.map((event) => [event.revisionId, event.reviewOf]));
+      const revisions = /* @__PURE__ */ new Map();
+      for (const event of events) {
+        const previous = revisions.get(event.revisionId);
+        if (previous && previous !== event.reviewOf) throw new Error("Saved shared feedback binds one revision to conflicting design content.");
+        revisions.set(event.revisionId, event.reviewOf);
+      }
       const importedReviews = { ...earlier.importedReviews ?? {} }, directions = [], metadataByRevision = {};
       await withArtifactReviewLock(reviewPath, () => {
         const ledger = readArtifactReviewState(reviewPath, { allowMissing: true }) ?? createReviewLedger({ artifactId: reviewKey, currentReviewOf: currentDigest });
@@ -16145,7 +16178,7 @@ async function syncDesignShare(file, options = {}) {
         }
         writeArtifactReviewState(reviewPath, createReviewLedger({ artifactId: reviewKey, currentReviewOf: currentDigest, reviews: [...entries.values()] }));
       });
-      issues = [...new Map([...earlier.issues ?? [], ...pageIssues].map((issue) => [`${issue.id ?? issue.eventId}:${issue.sequence}`, issue])).values()];
+      issues = [...new Map([...earlier.issues ?? [], ...pageIssues].map((issue2) => [`${issue2.id ?? issue2.eventId}:${issue2.sequence}`, issue2])).values()];
       atomicJson(ledgerPath, { schemaVersion: "1.0.0", workspaceId: record.custody.id, events, issues, directions, metadataByRevision, importedReviews });
       const next = page.cursor;
       hasMore = Boolean(page.hasMore) && next > record.lastEvent;
@@ -16159,11 +16192,340 @@ async function syncDesignShare(file, options = {}) {
 // packages/design/lib/design/handoff.mjs
 import { existsSync as existsSync8, readFileSync as readFileSync13, writeFileSync as writeFileSync6 } from "node:fs";
 import { dirname as dirname10, join as join9 } from "node:path";
+
+// packages/design/lib/design/handoff-resolution.mjs
+var OUTCOMES = /* @__PURE__ */ new Set([
+  "accepted",
+  "open",
+  "blocking",
+  "deferred",
+  "declined"
+]);
+var CATEGORIES = /* @__PURE__ */ new Set([
+  "question",
+  "suggestion",
+  "change-request",
+  "blocker"
+]);
+var DISPOSITIONS = /* @__PURE__ */ new Set(["accepted", "deferred", "rejected", "declined"]);
+var MAX_COMMENTS = 1e4;
+var MAX_ISSUES = 1e4;
+var digestPattern = /^[a-f0-9]{64}$/u;
+var revisionOf = (pin) => pin.revisionId ?? pin.reviewId;
+var keyOf = (pin) => `${revisionOf(pin)}:${pin.id}`;
+var compare = (left, right) => left.localeCompare(right, "en");
+function assertPlainData(value, depth = 0, seen = /* @__PURE__ */ new Set()) {
+  if (depth > 64)
+    throw new TypeError(
+      "Review resolution data exceeds the maximum nesting depth."
+    );
+  if (value === null || ["string", "boolean"].includes(typeof value)) return;
+  if (typeof value === "number" && Number.isFinite(value)) return;
+  if (typeof value !== "object" || seen.has(value))
+    throw new TypeError("Review resolution data must be finite, acyclic JSON.");
+  if (!Array.isArray(value) && ![Object.prototype, null].includes(Object.getPrototypeOf(value)))
+    throw new TypeError(
+      "Review resolution data must contain only plain JSON objects."
+    );
+  seen.add(value);
+  for (const [key, descriptor] of Object.entries(
+    Object.getOwnPropertyDescriptors(value)
+  )) {
+    if (["__proto__", "prototype", "constructor"].includes(key) || !Object.hasOwn(descriptor, "value"))
+      throw new TypeError(
+        "Review resolution data contains a forbidden property."
+      );
+    assertPlainData(descriptor.value, depth + 1, seen);
+  }
+  seen.delete(value);
+}
+var clone3 = (value) => {
+  assertPlainData(value);
+  return JSON.parse(canonicalizeJson(value));
+};
+function issue(code, severity, message, { pinId, revisionId, recoveryAction } = {}) {
+  return {
+    code,
+    severity,
+    message,
+    ...revisionId ? { revisionId } : {},
+    ...pinId ? { pinId } : {},
+    recoveryAction: recoveryAction ?? {
+      id: "refresh-review-resolution",
+      label: "Refresh review decisions"
+    }
+  };
+}
+function validatePin(pin) {
+  if (!pin || typeof pin !== "object" || Array.isArray(pin))
+    throw new TypeError("Every review comment must be an object.");
+  if (typeof pin.id !== "string" || !pin.id || pin.id.length > 160)
+    throw new TypeError("Every review comment requires a stable identity.");
+  const revisionId = revisionOf(pin);
+  if (typeof revisionId !== "string" || !revisionId || revisionId.length > 160)
+    throw new TypeError(
+      "Every review comment requires its original revision identity."
+    );
+  if (typeof pin.reviewOf !== "string" || !digestPattern.test(pin.reviewOf))
+    throw new TypeError(
+      "Every review comment requires its original review basis."
+    );
+  if (pin.screenId !== void 0 && (typeof pin.screenId !== "string" || !pin.screenId))
+    throw new TypeError("Review screen references must be stable identities.");
+  if (pin.elementId !== void 0 && (typeof pin.elementId !== "string" || !pin.elementId || !pin.screenId))
+    throw new TypeError(
+      "Review element references require a stable screen identity."
+    );
+}
+function scopedMetadata(metadata2, pin, duplicatePinIds, diagnostics) {
+  const revisionId = revisionOf(pin);
+  const scoped = metadata2.byRevision?.[revisionId] ?? {};
+  let category = scoped.categories?.[pin.id];
+  let disposition = scoped.dispositions?.[pin.id];
+  if (category === void 0 && Object.hasOwn(metadata2.categories ?? {}, pin.id)) {
+    if (duplicatePinIds.has(pin.id))
+      diagnostics.push(
+        issue(
+          "AMBIGUOUS_LEGACY_CATEGORY",
+          "blocked",
+          "A legacy category cannot be matched to one original revision.",
+          { pinId: pin.id, revisionId }
+        )
+      );
+    else category = metadata2.categories[pin.id];
+  }
+  if (disposition === void 0 && Object.hasOwn(metadata2.dispositions ?? {}, pin.id)) {
+    if (duplicatePinIds.has(pin.id))
+      diagnostics.push(
+        issue(
+          "AMBIGUOUS_LEGACY_DISPOSITION",
+          "blocked",
+          "A legacy owner decision cannot be matched to one original revision.",
+          { pinId: pin.id, revisionId }
+        )
+      );
+    else disposition = metadata2.dispositions[pin.id];
+  }
+  if (category !== void 0 && !CATEGORIES.has(category)) {
+    diagnostics.push(
+      issue(
+        "UNKNOWN_CATEGORY",
+        "blocked",
+        "The comment category is not supported.",
+        { pinId: pin.id, revisionId }
+      )
+    );
+    category = void 0;
+  }
+  const dispositionValue = typeof disposition === "string" ? disposition : disposition?.disposition;
+  if (dispositionValue !== void 0 && !DISPOSITIONS.has(dispositionValue)) {
+    diagnostics.push(
+      issue(
+        "UNKNOWN_DISPOSITION",
+        "blocked",
+        "The owner decision is not supported.",
+        { pinId: pin.id, revisionId }
+      )
+    );
+    disposition = void 0;
+  }
+  return {
+    category,
+    disposition,
+    dispositionValue: typeof disposition === "string" ? disposition : disposition?.disposition
+  };
+}
+function unknownMetadata(metadata2, known, diagnostics) {
+  for (const [revisionId, value] of Object.entries(
+    metadata2.byRevision ?? {}
+  ).sort(([left], [right]) => compare(left, right))) {
+    for (const field of ["categories", "dispositions"]) {
+      for (const pinId of Object.keys(value?.[field] ?? {}).sort(compare)) {
+        if (!known.has(`${revisionId}:${pinId}`))
+          diagnostics.push(
+            issue(
+              "UNKNOWN_COMMENT_METADATA",
+              "blocked",
+              "Review metadata targets a comment that is not present in the recorded review history.",
+              { revisionId, pinId }
+            )
+          );
+      }
+    }
+  }
+}
+function compileDesignHandoffResolution(input) {
+  const source = clone3(input ?? {});
+  const pins = Array.isArray(source.pins) ? source.pins : [];
+  if (pins.length > MAX_COMMENTS)
+    throw new RangeError("Review resolution exceeds the comment limit.");
+  const metadata2 = source.metadata && typeof source.metadata === "object" && !Array.isArray(source.metadata) ? source.metadata : {};
+  const diagnostics = [];
+  const counts = /* @__PURE__ */ new Map();
+  for (const pin of pins) {
+    validatePin(pin);
+    counts.set(pin.id, (counts.get(pin.id) ?? 0) + 1);
+  }
+  const duplicatePinIds = new Set(
+    [...counts].filter(([, count]) => count > 1).map(([id3]) => id3)
+  );
+  const known = /* @__PURE__ */ new Set();
+  for (const pin of pins) {
+    const key = keyOf(pin);
+    if (known.has(key))
+      throw new TypeError(`Duplicate review comment identity: ${key}.`);
+    known.add(key);
+  }
+  unknownMetadata(metadata2, known, diagnostics);
+  const items = [...pins].sort((left, right) => compare(keyOf(left), keyOf(right))).map((pin) => {
+    const revisionId = revisionOf(pin);
+    const current = pin.stale !== true && (!source.currentReviewOf || pin.reviewOf === source.currentReviewOf);
+    const resolved = scopedMetadata(
+      metadata2,
+      pin,
+      duplicatePinIds,
+      diagnostics
+    );
+    let outcome;
+    if (resolved.dispositionValue === "accepted") outcome = "accepted";
+    else if (resolved.dispositionValue === "deferred") outcome = "deferred";
+    else if (["rejected", "declined"].includes(resolved.dispositionValue))
+      outcome = "declined";
+    else if (["blocker", "change-request"].includes(resolved.category))
+      outcome = "blocking";
+    else outcome = "open";
+    if (!OUTCOMES.has(outcome))
+      throw new Error("Review resolution produced an invalid outcome.");
+    if (!current && outcome === "accepted")
+      diagnostics.push(
+        issue(
+          "STALE_ACCEPTED_DECISION",
+          "stale",
+          "An accepted change belongs to an earlier design revision and must be reviewed again.",
+          {
+            pinId: pin.id,
+            revisionId,
+            recoveryAction: {
+              id: "review-stale-decision",
+              label: "Review this decision against the current design"
+            }
+          }
+        )
+      );
+    if (current && outcome === "blocking")
+      diagnostics.push(
+        issue(
+          "UNRESOLVED_BLOCKING_COMMENT",
+          "blocked",
+          "A blocking comment still needs an owner decision.",
+          {
+            pinId: pin.id,
+            revisionId,
+            recoveryAction: {
+              id: "resolve-blocking-comment",
+              label: "Record the owner decision"
+            }
+          }
+        )
+      );
+    return {
+      id: keyOf(pin),
+      pinId: pin.id,
+      reviewId: pin.reviewId,
+      revisionId,
+      reviewOf: pin.reviewOf,
+      current,
+      category: resolved.category ?? "question",
+      outcome,
+      implementationScope: current && outcome === "accepted",
+      anchor: pin.elementId ? { screenId: pin.screenId, elementId: pin.elementId } : pin.screenId ? { screenId: pin.screenId } : pin.anchor?.planrId ? { planrId: pin.anchor.planrId } : { artifactId: pin.artifactId },
+      source: {
+        text: pin.comment,
+        author: clone3(pin.author),
+        status: pin.status,
+        ...resolved.disposition && typeof resolved.disposition === "object" ? { decision: clone3(resolved.disposition) } : {}
+      }
+    };
+  });
+  if (source.historyComplete === false)
+    diagnostics.push(
+      issue(
+        "INCOMPLETE_REVIEW_HISTORY",
+        "blocked",
+        "The complete review history is unavailable.",
+        {
+          recoveryAction: {
+            id: "restore-review-history",
+            label: "Restore the complete review history"
+          }
+        }
+      )
+    );
+  if (source.synchronizationPending === true)
+    diagnostics.push(
+      issue(
+        "SYNCHRONIZATION_PENDING",
+        "blocked",
+        "A review decision is still waiting to synchronize.",
+        {
+          recoveryAction: {
+            id: "retry-review-sync",
+            label: "Retry review synchronization"
+          }
+        }
+      )
+    );
+  for (const value of (source.synchronizationIssues ?? []).slice(0, MAX_ISSUES))
+    diagnostics.push(
+      issue(
+        "UNTRUSTED_HOSTED_FEEDBACK",
+        "blocked",
+        value?.reason || "Hosted feedback could not be validated.",
+        {
+          pinId: value?.pinId,
+          revisionId: value?.revisionId,
+          recoveryAction: {
+            id: "inspect-review-sync",
+            label: "Inspect the rejected hosted feedback"
+          }
+        }
+      )
+    );
+  if ((source.synchronizationIssues ?? []).length > MAX_ISSUES)
+    throw new RangeError(
+      "Review resolution exceeds the synchronization issue limit."
+    );
+  diagnostics.sort(
+    (left, right) => compare(
+      `${left.code}:${left.revisionId ?? ""}:${left.pinId ?? ""}:${left.message}`,
+      `${right.code}:${right.revisionId ?? ""}:${right.pinId ?? ""}:${right.message}`
+    )
+  );
+  const severity = new Set(diagnostics.map((value) => value.severity));
+  const status = severity.has("stale") ? "stale" : severity.has("blocked") ? "blocked" : items.some((item2) => item2.outcome === "open") ? "attention" : "ready";
+  return {
+    kind: "openplanr-design-handoff-resolution",
+    schemaVersion: "1.0.0",
+    currentReviewOf: source.currentReviewOf ?? null,
+    status,
+    complete: source.historyComplete !== false && !["blocked", "stale"].includes(status),
+    items,
+    implementationScope: items.filter((item2) => item2.implementationScope).map((item2) => item2.id),
+    diagnostics
+  };
+}
+function canApproveDesignHandoffResolution(value) {
+  return Boolean(
+    value?.complete && ["ready", "attention"].includes(value.status)
+  );
+}
+
+// packages/design/lib/design/handoff.mjs
 var conflict2 = (message) => Object.assign(new Error(message), { statusCode: 409 });
 var sections = ["agreedChanges", "openQuestions", "deferred", "rejected"];
 var metadataPath = (current) => join9(current.root, ".design/review-metadata.json");
-var revisionOf = (pin) => pin.revisionId ?? pin.reviewId;
-var pinKey = (pin) => `${revisionOf(pin)}:${pin.id}`;
+var revisionOf2 = (pin) => pin.revisionId ?? pin.reviewId;
+var pinKey = (pin) => `${revisionOf2(pin)}:${pin.id}`;
 function metadata(current, feedback) {
   const local = readJson2(metadataPath(current), { version: 0, byRevision: {} });
   const byRevision = structuredClone(feedback.shared?.metadataByRevision ?? {});
@@ -16175,21 +16537,45 @@ function metadata(current, feedback) {
   for (const pin of feedback.pins) counts.set(pin.id, (counts.get(pin.id) ?? 0) + 1);
   const categories = {}, dispositions = {};
   for (const pin of feedback.pins) {
-    const value = byRevision[revisionOf(pin)];
+    const value = byRevision[revisionOf2(pin)];
     if (counts.get(pin.id) === 1 && value) {
       if (Object.hasOwn(value.categories ?? {}, pin.id)) Object.defineProperty(categories, pin.id, { value: value.categories[pin.id], enumerable: true });
       if (Object.hasOwn(value.dispositions ?? {}, pin.id)) Object.defineProperty(dispositions, pin.id, { value: value.dispositions[pin.id], enumerable: true });
     }
+    if (counts.get(pin.id) === 1 && !Object.hasOwn(categories, pin.id) && Object.hasOwn(local.categories ?? {}, pin.id)) Object.defineProperty(categories, pin.id, { value: local.categories[pin.id], enumerable: true });
+    if (counts.get(pin.id) === 1 && !Object.hasOwn(dispositions, pin.id) && Object.hasOwn(local.dispositions ?? {}, pin.id)) Object.defineProperty(dispositions, pin.id, { value: local.dispositions[pin.id], enumerable: true });
   }
-  return { version: local.version, categories, dispositions, byRevision };
+  return {
+    version: local.version,
+    categories,
+    dispositions,
+    byRevision,
+    legacy: {
+      categories: structuredClone(local.categories ?? {}),
+      dispositions: structuredClone(local.dispositions ?? {})
+    }
+  };
 }
-var dispositionOf = (metadata2, pin) => metadata2.byRevision[revisionOf(pin)]?.dispositions?.[pin.id]?.disposition;
 function findPin(pins, id3, revision) {
-  const candidates = pins.filter((pin) => pin.id === id3 && (!revision || revisionOf(pin) === revision));
+  const candidates = pins.filter((pin) => pin.id === id3 && (!revision || revisionOf2(pin) === revision));
   if (candidates.length !== 1) throw new Error("The comment identity is missing or ambiguous. Include its original revisionId.");
   return candidates[0];
 }
-function snapshot(file, env) {
+function resolutionFor(value, shareStatus) {
+  return compileDesignHandoffResolution({
+    currentReviewOf: value.basis.reviewOf,
+    pins: value.feedback.pins,
+    metadata: {
+      byRevision: value.metadata.byRevision,
+      categories: value.metadata.legacy.categories,
+      dispositions: value.metadata.legacy.dispositions
+    },
+    historyComplete: !value.feedback.shared?.issues?.length,
+    synchronizationPending: Boolean(shareStatus?.pendingReviewMetadata),
+    synchronizationIssues: value.feedback.shared?.issues ?? []
+  });
+}
+function snapshot(file, env, shareOptions = {}) {
   const current = currentDesign(file), feedback = readDesignFeedback(file, env), meta = metadata(current, feedback);
   const reviewContext = current.reviewContext ?? emptyReviewContext(current.document);
   const basis = {
@@ -16198,11 +16584,17 @@ function snapshot(file, env) {
     contextDigest: current.contextDigest ?? reviewDigest(reviewContext),
     reviewOf: digestArtifactEnvelope(current.envelope),
     selectedVariant: feedback.state.selectedVariant ?? current.document.selectedVariant,
-    feedbackDigest: reviewDigest({ pins: feedback.pins, metadata: meta.byRevision, overall: (feedback.ledger?.reviews ?? []).map((entry) => ({ reviewId: entry.review.reviewId, reviewOf: entry.review.reviewOf, overall: entry.review.overall })), directions: feedback.shared?.directions ?? [] }),
+    feedbackDigest: reviewDigest({ pins: feedback.pins, metadata: { byRevision: meta.byRevision, categories: meta.categories, dispositions: meta.dispositions }, overall: (feedback.ledger?.reviews ?? []).map((entry) => ({ reviewId: entry.review.reviewId, reviewOf: entry.review.reviewOf, overall: entry.review.overall })), directions: feedback.shared?.directions ?? [] }),
     verificationDigest: reviewDigest(current.verification),
     feedbackWatermark: Math.max(0, ...(feedback.shared?.events ?? []).map((event) => event.sequence ?? 0))
   };
-  return { current, feedback, metadata: meta, reviewContext, basis };
+  let shareStatus = null;
+  try {
+    shareStatus = getDesignShareStatus(file, { env, ...shareOptions });
+  } catch {
+  }
+  const value = { current, feedback, metadata: meta, reviewContext, basis };
+  return { ...value, resolution: resolutionFor(value, shareStatus), shareStatus };
 }
 function readDesignExperience(file, { env = process.env } = {}) {
   const value = snapshot(file, env);
@@ -16217,8 +16609,8 @@ function readDesignExperience(file, { env = process.env } = {}) {
     loadingHistory: false
   };
 }
-function readDesignHandoff(file, { env = process.env } = {}) {
-  const value = snapshot(file, env);
+function readDesignHandoff(file, { env = process.env, ...shareOptions } = {}) {
+  const value = snapshot(file, env, shareOptions);
   const path = join9(dirname10(designSpecPath(value.current.root)), "review-handoff.json");
   const draft = readJson2(path, null);
   if (draft) {
@@ -16226,7 +16618,7 @@ function readDesignHandoff(file, { env = process.env } = {}) {
     const markdownPath = path.replace(/\.json$/u, ".md");
     if (!existsSync8(markdownPath) || readFileSync13(markdownPath, "utf8") !== draft.markdown) throw new Error("The handoff Markdown differs from its approved JSON. Rebuild the handoff projection before using it in Plan.");
   }
-  return { ok: true, path, revision: value.current.revision, draft, current: Boolean(draft && reviewDigest(draft.basis) === reviewDigest(value.basis)), metadata: value.metadata, feedback: { pins: value.feedback.pins }, basis: value.basis };
+  return { ok: true, path, revision: value.current.revision, draft, current: Boolean(draft && reviewDigest(draft.basis) === reviewDigest(value.basis)), metadata: value.metadata, feedback: { pins: value.feedback.pins }, basis: value.basis, resolution: value.resolution };
 }
 function assertDraft(draft) {
   assertReviewExperience(draft, DESIGN_HANDOFF_SCHEMA);
@@ -16241,13 +16633,14 @@ function sourceItem(pin, shareUrl) {
 }
 function contentFromFeedback(value, shareUrl) {
   const content = { summary: "", agreedChanges: [], openQuestions: [], deferred: [], rejected: [] };
-  for (const pin of value.feedback.pins) {
-    const disposition = dispositionOf(value.metadata, pin);
+  const pins = new Map(value.feedback.pins.map((pin) => [pinKey(pin), pin]));
+  for (const resolved of value.resolution.items) {
+    const pin = pins.get(resolved.id);
     const item2 = sourceItem(pin, shareUrl);
-    if (disposition === "accepted") content.agreedChanges.push(item2);
-    else if (disposition === "deferred") content.deferred.push(item2);
-    else if (disposition === "rejected") content.rejected.push(item2);
-    else if (pin.status !== "resolved") content.openQuestions.push(item2);
+    if (resolved.outcome === "accepted") content.agreedChanges.push(item2);
+    else if (resolved.outcome === "deferred") content.deferred.push(item2);
+    else if (resolved.outcome === "declined") content.rejected.push(item2);
+    else content.openQuestions.push(item2);
   }
   return content;
 }
@@ -16275,13 +16668,29 @@ function enrichContent(content, value, shareUrl) {
     const pin = findPin(value.feedback.pins, item2.pinId, item2.revisionId ?? item2.reviewId);
     if (seen.has(pinKey(pin))) throw new Error("Handoff items must cite distinct recorded comments.");
     seen.add(pinKey(pin));
-    const expected = key === "agreedChanges" ? "accepted" : key === "deferred" ? "deferred" : key === "rejected" ? "rejected" : void 0;
-    if (expected && dispositionOf(value.metadata, pin) !== expected) throw new Error("Record the owner disposition before moving a comment into this handoff section.");
+    const resolved = value.resolution.items.find((itemValue) => itemValue.id === pinKey(pin));
+    const expected = key === "agreedChanges" ? ["accepted"] : key === "deferred" ? ["deferred"] : key === "rejected" ? ["declined"] : ["open", "blocking"];
+    if (!resolved || !expected.includes(resolved.outcome)) throw new Error("Record the owner disposition before moving a comment into this handoff section.");
     const refinement = item2.refinement ?? (item2.text !== pin.comment ? item2.text : void 0);
     return { ...sourceItem(pin, shareUrl), ...refinement !== void 0 ? { refinement } : {} };
   });
-  for (const pin of value.feedback.pins) if (pin.status !== "resolved" && !seen.has(pinKey(pin))) throw new Error("Keep every unresolved review comment in the handoff.");
+  for (const pin of value.feedback.pins) if (!seen.has(pinKey(pin))) throw new Error(`Keep every recorded review comment in the handoff; ${pinKey(pin)} is missing.`);
   return enriched;
+}
+function normalizedLocalMetadata(local, pins) {
+  const byRevision = structuredClone(local.byRevision ?? {});
+  const counts = /* @__PURE__ */ new Map();
+  for (const pin of pins) counts.set(pin.id, (counts.get(pin.id) ?? 0) + 1);
+  for (const field of ["categories", "dispositions"]) {
+    for (const [pinId, item2] of Object.entries(local[field] ?? {})) {
+      if (counts.get(pinId) !== 1) continue;
+      const pin = pins.find((value) => value.id === pinId);
+      const revision = revisionOf2(pin);
+      const scoped = byRevision[revision] ?? { categories: {}, dispositions: {} };
+      byRevision[revision] = { ...scoped, [field]: { ...scoped[field], [pinId]: item2 } };
+    }
+  }
+  return { version: local.version ?? 0, byRevision };
 }
 async function preserveReviewErrors(path, action) {
   let failure, result;
@@ -16304,7 +16713,7 @@ async function updateDesignHandoff(file, input, { env = process.env, fetchImpl =
     const unlock = await acquireStartLock(join9(initial.root, ".design/handoff.lock"));
     try {
       await preserveReviewErrors(designReviewPath(file, env), async () => {
-        const value = snapshot(file, env);
+        const value = snapshot(file, env, shareOptions);
         if (input.revision !== value.current.revision) throw conflict2("The design changed. Refresh the review before updating its handoff.");
         if (["category", "disposition"].includes(input.action)) {
           if (input.version !== value.metadata.version) throw conflict2("Review organization changed in another window. Reload before saving.");
@@ -16314,8 +16723,8 @@ async function updateDesignHandoff(file, input, { env = process.env, fetchImpl =
           if (!choices.includes(input[input.action])) throw new Error(`Invalid ${input.action}.`);
           if (typeof (input.reason ?? "") !== "string" || (input.reason ?? "").length > 16384) throw new Error("Disposition reason is too long.");
           const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-          const local = readJson2(metadataPath(value.current), { version: 0, byRevision: {} });
-          const revision = revisionOf(pin);
+          const local = normalizedLocalMetadata(readJson2(metadataPath(value.current), { version: 0, byRevision: {} }), value.feedback.pins);
+          const revision = revisionOf2(pin);
           const scoped = local.byRevision?.[revision] ?? { categories: {}, dispositions: {} };
           const valueForRevision = { ...scoped };
           if (input.action === "category") valueForRevision.categories = { ...scoped.categories, [pin.id]: input.category };
@@ -16336,6 +16745,10 @@ async function updateDesignHandoff(file, input, { env = process.env, fetchImpl =
         }
         if (input.action === "approve") {
           if (!previous || input.contentHash !== previous.contentHash || reviewDigest(previous.basis) !== reviewDigest(value.basis)) throw conflict2("The handoff is out of date. Rebuild and review the current draft before approving.");
+          if (!canApproveDesignHandoffResolution(value.resolution)) {
+            const diagnostic = value.resolution.diagnostics[0];
+            throw conflict2(diagnostic?.message ?? "Resolve the blocking review decisions before approving this handoff.");
+          }
           if (!previous.content.summary.trim()) throw new Error("Write or refine the handoff summary before approving it.");
           const approved = { ...previous, version: previous.version + 1, status: "approved", approval: { contentHash: previous.contentHash, at: (/* @__PURE__ */ new Date()).toISOString() } };
           approved.markdown = renderMarkdown(approved, value.current.document.title);
@@ -16350,7 +16763,7 @@ async function updateDesignHandoff(file, input, { env = process.env, fetchImpl =
         if (input.action === "update" && (!previous || reviewDigest(previous.basis) !== reviewDigest(value.basis))) throw conflict2("The review changed. Rebuild the draft before refining it.");
         const affectedScreens = [...new Set(sections.flatMap((key) => content[key].map((item2) => item2.screenId).filter(Boolean)))];
         const verificationGaps = value.current.verification.status === "verified" ? [] : [`Rendered design verification: ${value.current.verification.status}.`];
-        for (const issue of value.current.verification.issues ?? []) if (issue.message && verificationGaps.length < 256) verificationGaps.push(issue.message);
+        for (const issue2 of value.current.verification.issues ?? []) if (issue2.message && verificationGaps.length < 256) verificationGaps.push(issue2.message);
         const reviewNotes = (value.feedback.ledger?.reviews ?? []).filter((entry) => entry.review.overall?.trim()).map((entry) => ({ reviewId: entry.review.reviewId, text: entry.review.overall }));
         const title = value.current.document.title;
         const draft = {
@@ -16386,7 +16799,7 @@ async function updateDesignHandoff(file, input, { env = process.env, fetchImpl =
       synchronization = { pending: true, error: error.message };
     }
   }
-  return { ...readDesignHandoff(file, { env }), ...synchronization ? { synchronization } : {} };
+  return { ...readDesignHandoff(file, { env, ...shareOptions }), ...synchronization ? { synchronization } : {} };
 }
 
 // packages/design/lib/design/review.mjs
@@ -17122,7 +17535,7 @@ async function auditDesignPage(page, { revision, entries = [], screenshotPaths =
       }
       checkedArtifacts.push(artifactId);
       screens.push({ artifactId, ...result });
-      for (const issue of result.issues) add(artifactId, issue.rule, issue.severity, issue.message);
+      for (const issue2 of result.issues) add(artifactId, issue2.rule, issue2.severity, issue2.message);
     } catch (error) {
       if (artifactId && expected.has(artifactId)) add(artifactId, "frame-load-error", "error", `The rendered frame could not be inspected: ${error.message}`);
     } finally {

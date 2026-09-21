@@ -240,17 +240,26 @@ export async function prepareWorkspaceEvent(access, payload, { revisionId = acce
 }
 export async function appendWorkspaceEvent(access, payload, { preparedEvent, signer, revisionId, reviewOf, ...options } = {}) {
   const event = preparedEvent ?? await prepareWorkspaceEvent(access, payload, { signer, revisionId, reviewOf: reviewOf ?? payload.reviewOf });
-  return request(access, '/events', { ...options, method: 'POST', body: event });
+  const result = await request(access, '/events', { ...options, method: 'POST', body: event });
+  if (!result || typeof result !== 'object' || Array.isArray(result) || !Number.isSafeInteger(result.sequence) || result.sequence < 1 || !result.event || typeof result.event !== 'object' || Array.isArray(result.event)) throw new Error('The feedback receipt is invalid. Retry the saved operation.');
+  const { sequence: eventSequence, ...received } = result.event;
+  if ((eventSequence !== undefined && eventSequence !== result.sequence) || canonicalizeJson(received) !== canonicalizeJson(event)) throw new Error('The feedback receipt does not match the saved event. Retry the saved operation.');
+  return { event: { ...received, sequence: result.sequence }, sequence: result.sequence };
 }
 export async function readWorkspaceEvents(access, { after = 0, ...options } = {}) {
   if (!Number.isSafeInteger(after) || after < 0) throw new TypeError('Invalid feedback cursor.');
   if (!access.keys) await getWorkspace(access, options);
   const page = await request(access, `/events?after=${after}`, options);
-  if (!Array.isArray(page.events) || page.events.length > 100 || !Number.isSafeInteger(page.cursor) || page.cursor < after) throw new Error('Invalid shared feedback page.');
+  if (!Array.isArray(page.events) || page.events.length > 100 || !Number.isSafeInteger(page.cursor) || page.cursor < after || typeof page.hasMore !== 'boolean') throw new Error('Invalid shared feedback page.');
   const events = []; const issues = [];
+  let previousSequence = after;
+  const pageIds = new Set();
   for (const item of page.events) {
     const { sequence, ...record } = item?.event ? { ...item.event, sequence: item.sequence } : item ?? {};
-    if (!Number.isSafeInteger(sequence) || sequence <= after || sequence > page.cursor) throw new Error('Invalid shared feedback sequence.');
+    if (!Number.isSafeInteger(sequence) || sequence <= previousSequence || sequence > page.cursor) throw new Error('Invalid shared feedback sequence.');
+    previousSequence = sequence;
+    if (typeof record.id !== 'string' || pageIds.has(record.id)) throw new Error('Invalid shared feedback event identity.');
+    pageIds.add(record.id);
     try {
       assertWorkspaceContract(record, DESIGN_WORKSPACE_EVENT_SCHEMA);
       if (!await verifyWorkspaceSignature(record, record.publicKey)) throw new Error('Signature verification failed.');
@@ -265,5 +274,6 @@ export async function readWorkspaceEvents(access, { after = 0, ...options } = {}
       issues.push({ sequence, id: typeof record.id === 'string' && idPattern.test(record.id) ? record.id : null, reason: 'Invalid encrypted feedback; not imported.' });
     }
   }
+  if (previousSequence > page.cursor) throw new Error('Invalid shared feedback cursor.');
   return { ...page, events, issues };
 }
