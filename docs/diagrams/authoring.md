@@ -14,6 +14,14 @@ example: the canonical document, the rendered SVG, PNG, and HTML, the quality an
 reports, and the manifest that binds them. `npm run check:diagrams` verifies it in CI, so
 the diagram embedded in the root README can never drift from its source.
 
+## Authored geometry and durable bundles
+
+For applications consuming the new editable bundle APIs, see [saving and rendering
+authored diagrams](authored-storage.md). Those APIs keep persisted placement and
+semantic content together, expose recoverable saves, and create immutable visual
+exports. The CLI commands below continue to use the supported legacy document
+format; opening a legacy diagram does not migrate it.
+
 ## First diagram
 
 Discover the registry-owned grammars, then render a canonical document:

@@ -609,7 +609,7 @@ try {
     ...meta('planr-diagram'), diagramId: 'packed-diagram', title: 'Packed consumer', summary: '', audience: 'engineer',
     grammar: { id: 'flowchart', version: '1.0.0' }, nodes: [], relations: [], groups: [], lanes: [],
     events: [], series: [], axes: [], sets: [], annotations: [], emphasis: [], laneOrder: [],
-    accessibility: { title: 'Packed consumer', description: '', readingOrder: [] }, documentDigest: '',
+    accessibility: { title: 'Packed consumer', description: 'One authored step.', readingOrder: [] }, documentDigest: '',
   };
   document.documentDigest = contracts.diagramDocumentDigest(document);
   const presentation = {
@@ -642,6 +642,29 @@ try {
   if (!undone.ok || undone.bundle.bundleDigest !== authored.bundleDigest || JSON.stringify(authored) !== original) {
     throw new Error('Packed authoring undo did not restore the unchanged input snapshot');
   }
+
+
+  const { createDiagramAuthoringStore, previewLegacyDiagramDocument } = await import('planr-pipeline/diagram-authoring-store');
+  const { exportAuthoredDiagram, verifyAuthoredDiagramExports } = await import('planr-pipeline/diagram-authoring-export');
+  if (typeof previewLegacyDiagramDocument !== 'function') throw new Error('Packed migration export is missing');
+  const authoredRoot = fs.realpathSync(fs.mkdtempSync(path.join(path.dirname(inputPath), 'authored-consumer-')));
+  try {
+    const options = { root: authoredRoot, slug: authored.diagramId };
+    const store = createDiagramAuthoringStore(options);
+    if (!(await store.initialize(authored, { transactionId: 'packed-initialize' })).ok) throw new Error('Packed bundle initialization failed');
+    const saved = await store.commit(created.transaction);
+    if (!saved.ok || saved.status !== 'saved') throw new Error('Packed durable save failed');
+    const restarted = createDiagramAuthoringStore(options);
+    const reopened = await restarted.read();
+    if (reopened.status !== 'ready' || reopened.bundle.bundleDigest !== created.bundle.bundleDigest) throw new Error('Packed durable restart failed');
+    const retry = await restarted.commit(created.transaction);
+    if (!retry.ok || !retry.replayed || retry.receipt.sequence !== saved.receipt.sequence) throw new Error('Packed durable retry duplicated a transaction');
+    const rendered = authoring.renderAuthoredDiagramSvg(reopened.bundle);
+    if (!rendered.ok || rendered.scene.boxes[0]?.bounds.x !== 20 || !rendered.svg.includes('Ready')) throw new Error('Packed authored geometry did not survive save');
+    const exported = await exportAuthoredDiagram(reopened.bundle, options);
+    if (!exported.ok || !(await verifyAuthoredDiagramExports(reopened.bundle, options)).ok) throw new Error('Packed authored export failed: ' + JSON.stringify(exported));
+    if (fs.readFileSync(path.join(exported.directory, 'diagram.png')).byteLength < 32) throw new Error('Packed PNG was not rasterized');
+  } finally { fs.rmSync(authoredRoot, { recursive: true, force: true }); }
 
   const dashboardPath = fs.realpathSync(require.resolve('openplanr/dashboard'));
   const verifierPath = fs.realpathSync(require.resolve('openplanr/dashboard-verifier'));
@@ -715,8 +738,11 @@ function runExportProof({
   const typesPath = path.join(project, 'diagram-authoring-types.mts');
   fs.writeFileSync(typesPath, `import {
   compileDiagramCommand, createConditionalInverse, previewDiagramTransaction, diffDiagramBundles,
+  resolveDiagramScene, renderAuthoredDiagramSvg, previewAutomaticLayout, previewResetRoute,
   type DiagramAuthoringBundle, type DiagramCommand, type DiagramEditPreview,
 } from 'planr-pipeline/diagram-authoring';
+import { createDiagramAuthoringStore, previewLegacyDiagramMigration } from 'planr-pipeline/diagram-authoring-store';
+import { exportAuthoredDiagram, verifyAuthoredDiagramExports } from 'planr-pipeline/diagram-authoring-export';
 declare const bundle: DiagramAuthoringBundle;
 const move: DiagramCommand = { type: 'move', ids: ['step-one'], dx: 20, dy: 0 };
 const result = compileDiagramCommand(bundle, move, { transactionId: 'consumer-move' });
@@ -728,6 +754,24 @@ if (result.ok && result.transaction) {
   if (diff.ok) diff.presentation.map(change => change.path);
 } else if (!result.ok) result.diagnostics.map(diagnostic => diagnostic.rule);
 compileDiagramCommand(bundle, { type: 'cancel' });
+
+const scene = resolveDiagramScene(bundle);
+if (scene.ok) scene.scene.boxes.map(box => box.bounds?.x);
+const rendered = renderAuthoredDiagramSvg(bundle);
+if (rendered.ok) rendered.theme.fontSize.toFixed();
+previewAutomaticLayout(bundle, { targetIds: ['step-one'], transactionId: 'layout' });
+previewResetRoute(bundle, { targetIds: ['edge-one'], transactionId: 'route' });
+const storageOptions = { root: '/workspace', slug: bundle.diagramId };
+const store = createDiagramAuthoringStore(storageOptions);
+await store.initialize(bundle, { transactionId: 'initial' });
+const loaded = await store.read();
+if (loaded.status === 'ready') loaded.bundle.document.nodes.map(node => node.id);
+if (result.ok && result.transaction) await store.commit(result.transaction);
+const outputs = await exportAuthoredDiagram(bundle, storageOptions);
+if (outputs.ok) outputs.scene.boxes.map(box => box.bounds?.x);
+await verifyAuthoredDiagramExports(bundle, storageOptions);
+await previewLegacyDiagramMigration(storageOptions);
+
 // @ts-expect-error Unsupported commands must not become an open record API.
 compileDiagramCommand(bundle, { type: 'evaluate', script: 'arbitrary' }, { transactionId: 'bad-command' });
 // @ts-expect-error Movement takes numeric world-coordinate deltas.

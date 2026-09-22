@@ -26,6 +26,12 @@ test('diagram authoring has a closed browser-safe Artifact and Protocol import g
   const root = resolve(packageRoot, '../..');
   const authoringRoot = resolve(packageRoot, 'lib/artifact/diagram/authoring');
   const protocolRoot = resolve(packageRoot, '../protocol/src');
+  // Shared pure geometry/text helpers are reused; Node adapters remain excluded.
+  const renderingHelpers = new Set([
+    'diagram/rendering/layout.mjs', 'diagram/rendering/svg.mjs',
+    'diagram/rendering/theme.mjs', 'diagram/accessibility.mjs',
+    'diagram/errors.mjs', 'internal/contrast.mjs',
+  ].map(path => resolve(packageRoot, 'lib/artifact', path)));
   const result = await build({
     absWorkingDir: root, entryPoints: [resolve(authoringRoot, 'index.mjs')],
     bundle: true, platform: 'browser', format: 'esm', treeShaking: false,
@@ -35,7 +41,7 @@ test('diagram authoring has a closed browser-safe Artifact and Protocol import g
   assert.ok(inputs.length > 1, 'Inspect the transitive graph, not only the entry module');
   for (const [path, input] of inputs) {
     const absolute = resolve(root, path);
-    assert.ok(absolute.startsWith(`${authoringRoot}${sep}`) || absolute.startsWith(`${protocolRoot}${sep}`),
+    assert.ok(absolute.startsWith(`${authoringRoot}${sep}`) || absolute.startsWith(`${protocolRoot}${sep}`) || renderingHelpers.has(absolute),
       `Unexpected diagram authoring dependency: ${path}`);
     for (const dependency of input.imports) {
       assert.equal(Boolean(dependency.external), false, `Unbundled platform or model dependency: ${dependency.path}`);

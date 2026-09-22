@@ -22,7 +22,7 @@
     },
     {
       "path": "packages/artifact/package.json",
-      "digest": "sha256:1da32de2c55a01afde75a5a87fc8507b35a30d45e69fa7a07db882b0d600c62e"
+      "digest": "sha256:ce5369ff3a27d26e57ebfd2075ab34eae58618ebd18cbe46a876bd53c1faafcb"
     },
     {
       "path": "packages/cli/package.json",
@@ -42,7 +42,7 @@
     },
     {
       "path": "packages/pipeline/package.json",
-      "digest": "sha256:431a0ab56b442f8c5fe3d30dc7114cc0726c3c100d8bafba272a456e7e63b183"
+      "digest": "sha256:1e93aecbac5d81afa267c8d7507a0594794aa6b2c2a6ebaf5675706a9dd17771"
     },
     {
       "path": "packages/protocol/package.json",
@@ -102,7 +102,7 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:c141344ef5fefebb99a35bfa77bb09ec77726e600c693e8b25c0ae9d8fb79d5a"
+      "digest": "sha256:92716db03c9bf30fcfcc6fdecc585d7ddb3352f313509db506c4f7825dd70340"
     }
   ],
   "outputs": [
@@ -124,7 +124,7 @@
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:acde72e3299db6640e4b21bc03081d94d65edec5030e08c7f654c6b23d70d7a0"
+      "digest": "sha256:de0d28956aba91ee9afebd69342c181914c96107cee7d9d2edc4adbda4b31521"
     },
     {
       "path": "docs/generated/skills.md",
@@ -132,7 +132,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:627b50e02caf6efc8f89b879f6b831dcf95cb941ef254b30fb54e5f6e53e5199"
+      "digest": "sha256:4ab47aa63fc18f939d6631c2ef0f60c36291cfc7e3aa8fb132ae0d6e9decf1cb"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

@@ -103,3 +103,7 @@ export declare function diffDiagramBundles(before: DiagramAuthoringBundle, after
 /** Checks current affected fields before constructing a newly based compensating edit. */
 export declare function createConditionalInverse(bundle: DiagramAuthoringBundle, inverse: DiagramConditionalInverse, options: DiagramTransactionIdentity):
   { ok: true; transaction: DiagramEditTransaction } | DiagramKernelFailure;
+
+export { resolveDiagramScene, type DiagramSceneDiagnostic, type DiagramSceneQuality, type DiagramSceneText, type AuthoredDiagramSceneElement, type AuthoredDiagramScene, type DiagramSceneFailure } from './scene.mjs';
+export { renderAuthoredDiagramSvg, type AuthoredDiagramTheme, type AuthoredDiagramSvgResult, type AuthoredDiagramRenderFailure } from './renderer.mjs';
+export * from './layout.mjs';

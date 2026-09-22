@@ -27,6 +27,11 @@ function verifyBehavior(proof) {
   assert.deepEqual(proof.effects, []);
   const actual = JSON.parse(proof.canonical);
   assert.equal(actual.originalUnchanged, true);
+  assert.equal(actual.scene.ok, true);
+  assert.deepEqual(actual.scene.scene.boxes[0].bounds, { x: 90, y: 70, width: 140, height: 70 });
+  assert.equal(actual.rendered.ok, true);
+  assert.match(actual.rendered.svg, /Ready/u);
+  assert.equal(actual.rendered.scene.basis.bundleDigest, actual.scene.scene.basis.bundleDigest);
   assert.equal(actual.getterReads, 0, 'A command getter is rejected without executing it');
   assert.deepEqual(actual.movedAgain, actual.moved, 'Compiling and replaying the same transaction agree');
   assert.deepEqual(actual.moved.bundle.document, actual.initialSemantic, 'Moving a container does not change meaning');
