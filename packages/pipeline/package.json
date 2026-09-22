@@ -38,6 +38,10 @@
       "types": "./lib/design/delivery-status.d.mts",
       "import": "./lib/design/delivery-status.mjs"
     },
+    "./diagram-authoring": {
+      "types": "./lib/artifact/diagram/authoring/index.d.mts",
+      "import": "./lib/artifact/diagram/authoring/index.mjs"
+    },
     "./protocol": {
       "types": "./lib/protocol/index.d.ts",
       "import": "./lib/protocol/loader.mjs"

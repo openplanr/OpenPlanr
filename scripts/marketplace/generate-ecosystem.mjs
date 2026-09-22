@@ -251,8 +251,13 @@ async function buildOutputs() {
   assertEqual(cliManifest.optionalDependencies?.['planr-pipeline'], components.pipeline.version, 'E_ECOSYSTEM_PIPELINE_PIN', 'CLI optional pipeline dependency must be exact and match the in-repo pipeline.');
   assertEqual(cliManifest.bin, { planr: './bin/planr.js', openplanr: './bin/planr.js', opr: './bin/planr.js' }, 'E_ECOSYSTEM_CLI_BINS', 'CLI aliases must resolve to one parser.');
   assertEqual(pipelineManifest.bin, { 'planr-pipeline': 'bin/planr-pipeline.mjs' }, 'E_ECOSYSTEM_PIPELINE_BIN', 'Pipeline binary drifted.');
-  const pipelineExportKeys = Object.keys(pipelineManifest.exports ?? {}).length;
-  assertEqual(pipelineExportKeys, 40, 'E_ECOSYSTEM_PIPELINE_EXPORT_KEYS', 'Public pipeline export-key parity drifted.');
+  const preservedExports = readJson('conformance/packed-surface-baseline.json').baselineExportKeys;
+  const expectedExports = [...preservedExports,
+    './design-lineage', './design-plan-handoff', './design-delivery-status', './diagram-authoring',
+  ].sort();
+  const actualExports = Object.keys(pipelineManifest.exports ?? {}).sort();
+  assertEqual(actualExports, expectedExports, 'E_ECOSYSTEM_PIPELINE_EXPORT_KEYS', 'Public pipeline export-key parity drifted.');
+  const pipelineExportKeys = actualExports.length;
   const rootModule = await import(pathToFileURL(resolve(repoRoot, 'packages/pipeline/lib/pipeline/index.mjs')).href);
   const pipelineRootSymbols = Object.keys(rootModule).length;
   assertEqual(pipelineRootSymbols, 229, 'E_ECOSYSTEM_PIPELINE_ROOT_SYMBOLS', 'Public pipeline root-symbol parity drifted.');
@@ -451,6 +456,7 @@ async function buildOutputs() {
     inputs: [
       'scripts/marketplace/generate-ecosystem.mjs',
       'scripts/lib/workspace-release-policy.mjs',
+      'conformance/packed-surface-baseline.json',
       'packages/protocol/src/semver.mjs',
       'package.json',
       ...Object.values(components).filter(({ manifestDigest }) => manifestDigest).map(({ path }) => `${path}/package.json`),

@@ -11,6 +11,10 @@
       "types": "./lib/artifact/diagram/index.d.mts",
       "import": "./lib/artifact/diagram/index.mjs"
     },
+    "./diagram-authoring": {
+      "types": "./lib/artifact/diagram/authoring/index.d.mts",
+      "import": "./lib/artifact/diagram/authoring/index.mjs"
+    },
     "./package.json": "./package.json",
     "./*": "./lib/artifact/*"
   },

@@ -63,6 +63,8 @@ jobs:
           cache: npm
       - name: Install the root lockfile
         run: npm ci
+      - name: Install Chromium for portable runtime tests
+        run: npm exec --workspace=@openplanr/protocol -- playwright install --with-deps chromium
       - name: Prepare generated runtime
         run: |
           npm run generate

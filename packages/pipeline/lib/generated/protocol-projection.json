@@ -96,13 +96,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.d.mts",
       "target": "lib/protocol/diagram-authoring-contracts.d.mts",
-      "sha256": "dacdd19f8f36dc12fdd5642044e02fd430ed853f63dca8a8fa33819ae08a1818",
+      "sha256": "d9b18069ab061d14adb3ef74f03b9b2d5b22e81f4726bf2e88fb652c32aaa095",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.mjs",
       "target": "lib/protocol/diagram-authoring-contracts.mjs",
-      "sha256": "a0999832e7472b7ca2b6c08d35e54d4005edcddc3a65f0f076337cf797d20572",
+      "sha256": "9aa6dab55cafb2f111e0a76bc760103a7aaf03793e5d660cb647929c1283b08f",
       "mode": "644"
     },
     {
@@ -732,7 +732,7 @@
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-change-proposal.schema.json",
       "target": "schemas/v1.13.0/diagram-change-proposal.schema.json",
-      "sha256": "b651d617461c35db26b90b46faa2f70174a731054cdad3de373d3e3fda1826f6",
+      "sha256": "465d61cf6602dde13ab3974a2ebba1e796492ffe1c3db739c6956f220d57089c",
       "mode": "644"
     },
     {
@@ -744,7 +744,7 @@
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-edit-transaction.schema.json",
       "target": "schemas/v1.13.0/diagram-edit-transaction.schema.json",
-      "sha256": "a3ed4ea35e8005e36824766b6698da9cf57dd02f166bfef11def703bc3819f94",
+      "sha256": "8e0744f6afb5cf0fc115386804d3e93df9e9bc200270e88d908c7631daea912b",
       "mode": "644"
     },
     {

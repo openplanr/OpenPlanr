@@ -118,14 +118,15 @@ const updateSchemas = [
   editableSemanticValue('relations', { from: id, to: id, kind: enumOf(...relationKinds), direction: enumOf('forward', 'both', 'none'), label: nullable(str()), weight: nullable({ type: 'number', minimum: 0, maximum: 1000000 }) }),
   editableSemanticValue('groups', { label: str() }), editableSemanticValue('lanes', { label: str() }),
   editableSemanticValue('annotations', { text: str(), targetId: nullable(id) }),
-  closed({ type: { const: 'update-semantics' }, collection: { const: 'emphasis' }, elementId: id, before: nullable(enumOf('primary', 'secondary', 'muted')), after: nullable(enumOf('primary', 'secondary', 'muted')) }),
+  closed({ type: { const: 'update-semantics' }, collection: { const: 'emphasis' }, elementId: id, before: nullable(enumOf('primary', 'secondary', 'muted')), after: nullable(enumOf('primary', 'secondary', 'muted')), index: { type: 'integer', minimum: 0, maximum: 1024 } }, ['type', 'collection', 'elementId', 'before', 'after']),
   closed({ type: { const: 'update-semantics' }, collection: { const: 'document' }, before: closed({ title: str(), summary: str(), audience: enumOf('engineer', 'executive', 'mixed'), accessibility: documentSchema.properties.accessibility }), after: closed({ title: str(), summary: str(), audience: enumOf('engineer', 'executive', 'mixed'), accessibility: documentSchema.properties.accessibility }) }),
+  closed({ type: { const: 'update-semantics' }, collection: { const: 'source-map' }, before: nullable(sourceMapSchema), after: nullable(sourceMapSchema) }),
 ];
 const membershipState = closed({ groups: arr(closed({ id, members: ids }), 1024), lanes: arr(closed({ id, members: ids }), 256), laneOrder: ids });
 const geometryValue = closed({ bounds: nullable(bounds), route: nullable(route), label: nullable(labelPlacement), zIndex: index });
 const appearanceValue = closed({ appearance, locks });
 const operation = { oneOf: [
-  closed({ type: { const: 'insert-elements' }, elements: arr(semanticEntry, 10000, 1), presentation: arr(placement, 10000, 1) }),
+  closed({ type: { const: 'insert-elements' }, elements: arr(semanticEntry, 10000, 1), presentation: arr(placement, 10000, 1), positions: arr(closed({ elementId: id, semanticIndex: index, presentationIndex: index }), 10000, 1) }, ['type', 'elements', 'presentation']),
   ...updateSchemas,
   closed({ type: { const: 'remove-elements' }, elements: arr(semanticEntry, 10000, 1), presentation: arr(placement, 10000, 1) }),
   closed({ type: { const: 'set-membership-order' }, before: membershipState, after: membershipState }),
@@ -429,6 +430,11 @@ function transactionIssues(value, bundle, path, issues) {
       const presentationIds = op.presentation.map((entry) => entry.elementId);
       if (new Set(entryIds).size !== entryIds.length) issues.push(error(`${location}.elements`, 'duplicate-id', 'Each operation must identify unique semantic elements.'));
       if (!same([...entryIds].sort(), [...presentationIds].sort())) issues.push(error(`${location}.presentation`, 'presentation-coverage', 'Inserted or removed semantic elements require matching presentation entries.'));
+      if (op.type === 'insert-elements' && op.positions) {
+        const positionedIds = op.positions.map((entry) => entry.elementId);
+        if (new Set(positionedIds).size !== positionedIds.length) issues.push(error(`${location}.positions`, 'duplicate-id', 'Insertion positions must identify each element once.'));
+        if (!same([...entryIds].sort(), [...positionedIds].sort())) issues.push(error(`${location}.positions`, 'position-coverage', 'Insertion positions must cover exactly the inserted elements.'));
+      }
       for (const entry of op.elements) {
         if (op.type === 'insert-elements') {
           if (entry.collection === 'lanes' && capability && !capability.primitives.includes('lane')) issues.push(error(`${location}.elements`, 'profile-primitive', 'This authoring profile does not support lanes.'));
@@ -471,8 +477,9 @@ function transactionIssues(value, bundle, path, issues) {
         }
       });
     } else if (op.type === 'update-semantics') {
-      if (op.collection !== 'document' && available && !available.has(op.elementId) && !inserted.has(op.elementId)) issues.push(error(`${location}.elementId`, 'reference', 'Affected semantic element is not in the base or earlier inserts.'));
-      if (!['document', 'emphasis'].includes(op.collection) && collectionById && (collectionById.get(op.elementId) ?? insertedCollections.get(op.elementId)) !== op.collection) issues.push(error(`${location}.collection`, 'element-class', 'An update cannot change the class of its semantic element.'));
+      if (op.collection === 'emphasis' && op.index !== undefined && (op.before !== null || op.after === null)) issues.push(error(`${location}.index`, 'insertion-position', 'An emphasis index is only valid when inserting an emphasis entry.'));
+      if (!['document', 'source-map'].includes(op.collection) && available && !available.has(op.elementId) && !inserted.has(op.elementId)) issues.push(error(`${location}.elementId`, 'reference', 'Affected semantic element is not in the base or earlier inserts.'));
+      if (!['document', 'source-map', 'emphasis'].includes(op.collection) && collectionById && (collectionById.get(op.elementId) ?? insertedCollections.get(op.elementId)) !== op.collection) issues.push(error(`${location}.collection`, 'element-class', 'An update cannot change the class of its semantic element.'));
       if (op.collection === 'relations') for (const side of ['before', 'after']) for (const end of ['from', 'to']) {
         if (collectionById && (collectionById.get(op[side][end]) ?? insertedCollections.get(op[side][end])) !== 'nodes') issues.push(error(`${location}.${side}.${end}`, 'endpoint', 'Relationship endpoints must identify nodes in the base or inserts.'));
       }

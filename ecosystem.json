@@ -57,7 +57,7 @@
       "version": "0.49.1",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:8bf2b2857202761525db7f9c6ae5f78bce43243f5d378ef6bef030d571ba667f"
+      "manifestDigest": "sha256:431a0ab56b442f8c5fe3d30dc7114cc0726c3c100d8bafba272a456e7e63b183"
     },
     "protocol": {
       "package": "@openplanr/protocol",
@@ -78,7 +78,7 @@
       "version": "0.2.3",
       "path": "packages/artifact",
       "publication": "private",
-      "manifestDigest": "sha256:b8c533a331ed22bb2ad1207825f4296d1e07af413b9d3ec125e0d784a5d26ac3"
+      "manifestDigest": "sha256:1da32de2c55a01afde75a5a87fc8507b35a30d45e69fa7a07db882b0d600c62e"
     },
     "design": {
       "package": "@openplanr/design",
@@ -131,7 +131,7 @@
     }
   },
   "publicCompatibility": {
-    "pipelineExportKeys": 40,
+    "pipelineExportKeys": 41,
     "pipelineRootSymbols": 229
   },
   "catalogs": {

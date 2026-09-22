@@ -371,6 +371,48 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/commands.mjs",
+      "target": "lib/artifact/diagram/authoring/commands.mjs",
+      "sha256": "440c1946b52c1e4dfcea6ebd3ede06c80d37f3fdaff98149e4232a58b7bdcaac",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/diff.mjs",
+      "target": "lib/artifact/diagram/authoring/diff.mjs",
+      "sha256": "a5a46feca5d13bf8df13ae7c2f65876a09f3a54433967c01f0fd3e137d2fdf61",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/index.d.mts",
+      "target": "lib/artifact/diagram/authoring/index.d.mts",
+      "sha256": "e66ff283c7c02aab9630a8647a734c54af3097a79b902dcfac57c086f061bf62",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/index.mjs",
+      "target": "lib/artifact/diagram/authoring/index.mjs",
+      "sha256": "fe3d0eeac530e5975ae0914a3303bf9ee558a16c8b115e3082c9988db8952600",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/model.mjs",
+      "target": "lib/artifact/diagram/authoring/model.mjs",
+      "sha256": "61e6ea41aa3d467b04434b1e4f5050cbecbee1835bec035e0462f4be11264dd6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/transactions.mjs",
+      "target": "lib/artifact/diagram/authoring/transactions.mjs",
+      "sha256": "2075d8b0a0496eaf174b04c29f1d7fa51e52a4d04cf9a341f00f63d4dae870d2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/undo.mjs",
+      "target": "lib/artifact/diagram/authoring/undo.mjs",
+      "sha256": "656953810a77d09ccd3f5ba7d1036c4d8fa5cb37abd1e8b7d579cd827fd239b9",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/diagram/custody/bytes.mjs",
       "target": "lib/artifact/diagram/custody/bytes.mjs",
       "sha256": "1f515b2c7be5b030e73385e73aa7a89ee36e17758ece1749ce2dc226fa513933",

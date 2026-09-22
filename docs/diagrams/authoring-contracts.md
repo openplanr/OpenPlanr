@@ -167,6 +167,19 @@ The persisted edit vocabulary is:
 - `set-geometry`
 - `set-appearance-locks`
 
+An insertion may include `positions`, with one `elementId`, `semanticIndex` and
+`presentationIndex` entry per inserted object. Without it, insertion appends; with
+it, the kernel restores precise collection positions for conditional undo. The
+indices describe the completed insertion in each semantic collection and the
+presentation list. Duplicate, missing, occupied or out-of-range positions fail.
+An emphasis insertion may similarly carry an optional `index`; updates and
+removals cannot use it to reorder unrelated emphasis entries.
+
+`update-semantics` also accepts `collection: 'source-map'`, carrying exact nullable
+before/after correspondence maps. This allows removing and restoring mappings
+when an object is deleted and undone. It cannot replace original source bytes;
+the resulting bundle must still satisfy source pairing and reference validation.
+
 Operations expose allowlisted typed fields, not arbitrary JSON patch paths.
 A transaction carries its identity, exact base and optional `undoOf` plus
 preconditions. Those fields describe the edit contract; the mutation engine and

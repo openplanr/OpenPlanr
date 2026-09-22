@@ -53,6 +53,7 @@ const PROTOCOL_TARGETS = Object.freeze({
   'json-schema': 'lib/protocol/json-schema.mjs',
   contracts: 'lib/protocol/contracts.mjs',
   'diagram-contracts': 'lib/protocol/diagram-contracts.mjs',
+  'diagram-authoring-contracts': 'lib/protocol/diagram-authoring-contracts.mjs',
   'design-contracts': 'lib/protocol/design-contracts.mjs',
   'design-publication-contracts': 'lib/protocol/design-publication-contracts.mjs',
   'workspace-contracts': 'lib/protocol/workspace-contracts.mjs',

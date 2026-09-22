@@ -13,12 +13,16 @@
       "digest": "sha256:b9a4f6d7e38fb3ba1a076b94cd15aba4ab1fde7369a6c09fdda972f5e0164ac0"
     },
     {
+      "path": "conformance/packed-surface-baseline.json",
+      "digest": "sha256:1a077033f70bc6d2cfd46ea7b8270a04c952ba1f7150c8fdf48fb4e5896a8ca2"
+    },
+    {
       "path": "package.json",
       "digest": "sha256:980d85bab14db461fc49e91f0d8344f358e7ec275f91d134bcf08b153429278e"
     },
     {
       "path": "packages/artifact/package.json",
-      "digest": "sha256:b8c533a331ed22bb2ad1207825f4296d1e07af413b9d3ec125e0d784a5d26ac3"
+      "digest": "sha256:1da32de2c55a01afde75a5a87fc8507b35a30d45e69fa7a07db882b0d600c62e"
     },
     {
       "path": "packages/cli/package.json",
@@ -38,7 +42,7 @@
     },
     {
       "path": "packages/pipeline/package.json",
-      "digest": "sha256:8bf2b2857202761525db7f9c6ae5f78bce43243f5d378ef6bef030d571ba667f"
+      "digest": "sha256:431a0ab56b442f8c5fe3d30dc7114cc0726c3c100d8bafba272a456e7e63b183"
     },
     {
       "path": "packages/protocol/package.json",
@@ -98,7 +102,7 @@
     },
     {
       "path": "scripts/marketplace/generate-ecosystem.mjs",
-      "digest": "sha256:0de8d4717db64a33f54bc1a36bd8f3c539e7268185b63819a997e6b0e7eaf1d9"
+      "digest": "sha256:c141344ef5fefebb99a35bfa77bb09ec77726e600c693e8b25c0ae9d8fb79d5a"
     }
   ],
   "outputs": [
@@ -120,7 +124,7 @@
     },
     {
       "path": "docs/generated/ecosystem.md",
-      "digest": "sha256:50cd3c10e1eb6883b8a231ac94c97769616f01216ac206c709854741219d3c6b"
+      "digest": "sha256:acde72e3299db6640e4b21bc03081d94d65edec5030e08c7f654c6b23d70d7a0"
     },
     {
       "path": "docs/generated/skills.md",
@@ -128,7 +132,7 @@
     },
     {
       "path": "ecosystem.json",
-      "digest": "sha256:2438adaff5a9d0e6fab37521822cb40794f7f6ce4325e26bc27fec9d73cc43bf"
+      "digest": "sha256:627b50e02caf6efc8f89b879f6b831dcf95cb941ef254b30fb54e5f6e53e5199"
     },
     {
       "path": "packages/pipeline/.claude-plugin/plugin.json",

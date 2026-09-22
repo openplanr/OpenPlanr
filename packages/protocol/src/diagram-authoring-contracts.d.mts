@@ -60,10 +60,12 @@ export type DiagramSemanticUpdate =
   | { type: 'update-semantics'; collection: 'relations'; elementId: string; before: Omit<DiagramAuthoringRelation, 'id'>; after: Omit<DiagramAuthoringRelation, 'id'> }
   | { type: 'update-semantics'; collection: 'groups' | 'lanes'; elementId: string; before: { label: string }; after: { label: string } }
   | { type: 'update-semantics'; collection: 'annotations'; elementId: string; before: Omit<DiagramAuthoringAnnotation, 'id'>; after: Omit<DiagramAuthoringAnnotation, 'id'> }
-  | { type: 'update-semantics'; collection: 'emphasis'; elementId: string; before: 'primary' | 'secondary' | 'muted' | null; after: 'primary' | 'secondary' | 'muted' | null }
-  | { type: 'update-semantics'; collection: 'document'; before: Pick<DiagramAuthoringDocument, 'title' | 'summary' | 'audience' | 'accessibility'>; after: Pick<DiagramAuthoringDocument, 'title' | 'summary' | 'audience' | 'accessibility'> };
+  | { type: 'update-semantics'; collection: 'emphasis'; elementId: string; before: 'primary' | 'secondary' | 'muted' | null; after: 'primary' | 'secondary' | 'muted' | null; index?: number }
+  | { type: 'update-semantics'; collection: 'document'; before: Pick<DiagramAuthoringDocument, 'title' | 'summary' | 'audience' | 'accessibility'>; after: Pick<DiagramAuthoringDocument, 'title' | 'summary' | 'audience' | 'accessibility'> }
+  | { type: 'update-semantics'; collection: 'source-map'; before: DiagramSourceMap | null; after: DiagramSourceMap | null };
 export type DiagramEditOperation =
-  | { type: 'insert-elements' | 'remove-elements'; elements: DiagramSemanticEntry[]; presentation: DiagramPlacement[] }
+  | { type: 'insert-elements'; elements: DiagramSemanticEntry[]; presentation: DiagramPlacement[]; positions?: Array<{ elementId: string; semanticIndex: number; presentationIndex: number }> }
+  | { type: 'remove-elements'; elements: DiagramSemanticEntry[]; presentation: DiagramPlacement[] }
   | DiagramSemanticUpdate
   | { type: 'set-membership-order'; before: DiagramMembershipState; after: DiagramMembershipState }
   | { type: 'set-geometry'; changes: Array<{ elementId: string; before: DiagramGeometry; after: DiagramGeometry }> }

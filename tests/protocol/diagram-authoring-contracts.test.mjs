@@ -143,6 +143,60 @@ test('all six persisted edit classes describe bounded reversible data without ar
   failWith('diagram-edit-transaction', noPlacement, 'presentation-coverage', { baseBundle: bundle });
 });
 
+test('insertion positions preserve reversible collection ordering without an open patch surface', () => {
+  const bundle = makeBundle();
+  const transaction = {
+    ...makeTransaction(bundle),
+    operations: [{
+      type: 'insert-elements',
+      elements: [{ collection: 'nodes', value: { id: 'restored-node', label: 'Restored', kind: 'process', description: null } }],
+      presentation: [placement('restored-node')],
+      positions: [{ elementId: 'restored-node', semanticIndex: 1, presentationIndex: 2 }],
+    }],
+  };
+  assert.deepEqual(validate('diagram-edit-transaction', transaction, { baseBundle: bundle }), []);
+  const append = clone(transaction); delete append.operations[0].positions;
+  assert.deepEqual(validate('diagram-edit-transaction', append, { baseBundle: bundle }), []);
+  const duplicate = clone(transaction); duplicate.operations[0].positions.push(clone(duplicate.operations[0].positions[0]));
+  failWith('diagram-edit-transaction', duplicate, 'duplicate-id', { baseBundle: bundle });
+  const missing = clone(transaction); missing.operations[0].positions[0].elementId = 'other-node';
+  failWith('diagram-edit-transaction', missing, 'position-coverage', { baseBundle: bundle });
+  for (const semanticIndex of [-1, 0.5, 10001]) {
+    const invalid = clone(transaction); invalid.operations[0].positions[0].semanticIndex = semanticIndex;
+    assert.ok(validate('diagram-edit-transaction', invalid, { baseBundle: bundle }).length, String(semanticIndex));
+  }
+});
+
+test('emphasis insertion positions preserve order and cannot be attached to updates or removals', () => {
+  const bundle = makeBundle();
+  const transaction = { ...makeTransaction(bundle), operations: [{ type: 'update-semantics', collection: 'emphasis', elementId: 'node-a', before: null, after: 'primary', index: 0 }] };
+  assert.deepEqual(validate('diagram-edit-transaction', transaction, { baseBundle: bundle }), []);
+  for (const before of ['primary', 'secondary']) {
+    const invalid = clone(transaction); invalid.operations[0].before = before;
+    failWith('diagram-edit-transaction', invalid, 'insertion-position', { baseBundle: bundle });
+  }
+  const removal = clone(transaction); removal.operations[0].after = null;
+  failWith('diagram-edit-transaction', removal, 'insertion-position', { baseBundle: bundle });
+  const outOfBounds = clone(transaction); outOfBounds.operations[0].index = 1025;
+  assert.ok(validate('diagram-edit-transaction', outOfBounds, { baseBundle: bundle }).length);
+});
+
+test('source correspondence updates describe exact before and after maps without touching retained source bytes', () => {
+  const bundle = makeBundle('flowchart', { source: true });
+  const encoded = JSON.stringify(bundle);
+  const after = clone(bundle.sourceMap); after.entries.splice(0, 1);
+  const transaction = {
+    ...makeTransaction(bundle),
+    operations: [{ type: 'update-semantics', collection: 'source-map', before: clone(bundle.sourceMap), after }],
+  };
+  assert.deepEqual(validate('diagram-edit-transaction', transaction, { baseBundle: bundle }), []);
+  const arbitrary = clone(transaction); arbitrary.operations[0].after.originalSource = { text: 'replacement' };
+  assert.ok(validate('diagram-edit-transaction', arbitrary, { baseBundle: bundle }).length);
+  const elementId = clone(transaction); elementId.operations[0].elementId = 'node-a';
+  assert.ok(validate('diagram-edit-transaction', elementId, { baseBundle: bundle }).length);
+  assert.equal(JSON.stringify(bundle), encoded);
+});
+
 test('proposal, report and publication contracts bind exact bases without granting portable authority', () => {
   const bundle = makeBundle('flowchart', { source: true });
   const proposal = makeProposal(bundle);
