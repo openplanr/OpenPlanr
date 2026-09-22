@@ -254,7 +254,7 @@ async function buildOutputs() {
   const preservedExports = readJson('conformance/packed-surface-baseline.json').baselineExportKeys;
   const expectedExports = [...preservedExports,
     './design-lineage', './design-plan-handoff', './design-delivery-status', './diagram-authoring',
-    './diagram-authoring-store', './diagram-authoring-export', './diagram-editor', './diagram-owner',
+    './diagram-authoring-store', './diagram-authoring-export', './diagram-editor', './diagram-editor.css', './diagram-owner',
   ].sort();
   const actualExports = Object.keys(pipelineManifest.exports ?? {}).sort();
   assertEqual(actualExports, expectedExports, 'E_ECOSYSTEM_PIPELINE_EXPORT_KEYS', 'Public pipeline export-key parity drifted.');

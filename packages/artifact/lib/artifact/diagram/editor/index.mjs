@@ -5,3 +5,4 @@ export { createDiagramEditorDraft } from './draft.mjs';
 export { copyDiagramSelection, pasteDiagramSelection } from './clipboard.mjs';
 export { createDiagramLocalOwnerTransport } from './transport.mjs';
 export { bindDiagramEditorCancellation } from './cancellation.mjs';
+export { mountDiagramEditor } from '../../ui/diagram-editor.mjs';

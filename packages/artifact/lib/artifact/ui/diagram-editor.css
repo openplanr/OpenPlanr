@@ -1,0 +1,126 @@
+body.planr-diagram-owner-page { margin:0;width:100%;height:100%;overflow:hidden;color-scheme:light dark;font-family:var(--planr-font-body,"DM Sans",system-ui,-apple-system,sans-serif); }
+body.planr-diagram-owner-page #diagram-owner-editor { height:100dvh;min-height:0; }
+.planr-diagram-editor {
+  --de-bg:var(--planr-color-background,#f6f7f9);
+  --de-chrome:var(--planr-color-chrome,#fff);
+  --de-panel:var(--planr-color-panel,#fbfbfd);
+  --de-raised:var(--planr-color-raised,#f0f2f5);
+  --de-rule:var(--planr-color-rule,#dfe3ea);
+  --de-text:var(--planr-color-text,#171722);
+  --de-muted:var(--planr-color-text-muted,#65657d);
+  --de-primary:var(--planr-color-primary,#087f73);
+  --de-primary-text:var(--planr-color-on-primary,#fff);
+  --de-danger:#c53f4f;
+  height:100%; min-width:0; display:grid; grid-template-rows:56px minmax(0,1fr);
+  color:var(--de-text); background:var(--de-bg); font-family:inherit;font-size:13px;line-height:1.45;
+}
+@media (prefers-color-scheme:dark) {
+ .planr-diagram-editor {
+  --de-bg:var(--planr-color-background,#08080c);--de-chrome:var(--planr-color-chrome,#0e0e14);
+  --de-panel:var(--planr-color-panel,#141420);--de-raised:var(--planr-color-raised,#1a1a2a);
+  --de-rule:var(--planr-color-rule,#222236);--de-text:var(--planr-color-text,#f4f4fa);
+  --de-muted:var(--planr-color-text-muted,#9999b8);--de-primary:var(--planr-color-primary,#5eead4);
+  --de-primary-text:var(--planr-color-on-primary,#08080c);--de-danger:#f87171;
+ }
+}
+.planr-diagram-editor * { box-sizing:border-box; }
+.planr-diagram-editor [hidden] { display:none !important; }
+.planr-diagram-editor button,.planr-diagram-editor input,.planr-diagram-editor select,.planr-diagram-editor textarea { font:inherit; }
+.planr-diagram-editor button { border:1px solid var(--de-rule);border-radius:8px;background:var(--de-raised);color:var(--de-text);padding:7px 10px;cursor:pointer;white-space:nowrap; }
+.planr-diagram-editor button:hover:not(:disabled) { border-color:var(--de-primary); }
+.planr-diagram-editor button:disabled { opacity:.45;cursor:not-allowed; }
+.planr-diagram-editor :focus-visible { outline:2px solid var(--de-primary);outline-offset:3px; }
+.planr-diagram-editor .de-primary { background:var(--de-primary);color:var(--de-primary-text);border-color:var(--de-primary);font-weight:650; }
+.planr-diagram-editor .de-danger { color:#fff;background:var(--de-danger);border-color:var(--de-danger); }
+.planr-diagram-editor .de-bar { min-width:0;display:flex;align-items:center;gap:16px;padding:0 16px;background:var(--de-chrome);border-bottom:1px solid var(--de-rule);z-index:5; }
+.planr-diagram-editor .de-brand { min-width:0;display:flex;align-items:center;gap:9px;flex:1 1 auto; }
+.planr-diagram-editor .de-mark { width:28px;height:28px;display:grid;place-items:center;border-radius:8px;color:var(--de-primary);background:var(--de-raised);font-size:19px; }
+.planr-diagram-editor .de-identity { min-width:0;display:grid; }
+.planr-diagram-editor .de-title { font-size:14px;line-height:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.planr-diagram-editor .de-identity small { color:var(--de-muted);font-size:11px;line-height:15px; }
+.planr-diagram-editor .de-save-state { flex:0 0 auto;border:1px solid var(--de-rule);border-radius:999px;padding:3px 9px;font-size:11px;font-weight:650; }
+.planr-diagram-editor .de-save-state[data-state=saved] { color:var(--de-primary); }
+.planr-diagram-editor .de-save-state[data-state=offline],.planr-diagram-editor .de-save-state[data-state=conflict],.planr-diagram-editor .de-save-state[data-state=access-changed] { color:var(--de-danger); }
+.planr-diagram-editor .de-bar-actions { display:flex;align-items:center;gap:5px;overflow:auto;scrollbar-width:none; }
+.planr-diagram-editor .de-bar-actions button { background:transparent;border-color:transparent; }
+.planr-diagram-editor .de-bar-actions .de-primary { background:var(--de-primary);border-color:var(--de-primary); }
+.planr-diagram-editor .de-work { min-width:0;min-height:0;display:grid;grid-template-columns:224px minmax(0,1fr) 288px; }
+.planr-diagram-editor .de-left,.planr-diagram-editor .de-right { min-height:0;min-width:0;display:flex;flex-direction:column;background:var(--de-panel); }
+.planr-diagram-editor .de-left { border-right:1px solid var(--de-rule); }
+.planr-diagram-editor .de-right { border-left:1px solid var(--de-rule); }
+.planr-diagram-editor[data-left-open=false] .de-work { grid-template-columns:0 minmax(0,1fr) 288px; }
+.planr-diagram-editor[data-right-open=false] .de-work { grid-template-columns:224px minmax(0,1fr) 0; }
+.planr-diagram-editor[data-left-open=false][data-right-open=false] .de-work { grid-template-columns:0 minmax(0,1fr) 0; }
+.planr-diagram-editor[data-left-open=false] .de-left,.planr-diagram-editor[data-right-open=false] .de-right { visibility:hidden;overflow:hidden; }
+.planr-diagram-editor .de-rail-tabs { padding:8px 8px 0;display:flex;gap:4px;border-bottom:1px solid var(--de-rule); }
+.planr-diagram-editor .de-rail-tabs button { flex:1;border:none;border-radius:6px 6px 0 0;background:transparent;padding:9px 5px;color:var(--de-muted); }
+.planr-diagram-editor .de-rail-tabs button[aria-selected=true] { color:var(--de-text);box-shadow:inset 0 -2px var(--de-primary); }
+.planr-diagram-editor .de-left-content,.planr-diagram-editor .de-right-content { min-height:0;overflow:auto;overscroll-behavior:contain;padding:12px; }
+.planr-diagram-editor h2 { margin:0 0 12px;font-size:14px;line-height:20px; }
+.planr-diagram-editor h3 { margin:18px 0 8px;font-size:12px; }
+.planr-diagram-editor p { margin:8px 0; }
+.planr-diagram-editor .de-muted,.planr-diagram-editor .de-reference { color:var(--de-muted);font-size:11px; }
+.planr-diagram-editor .de-reference { overflow-wrap:anywhere; }
+.planr-diagram-editor .de-outline-list { display:grid;gap:3px;margin-top:12px; }
+.planr-diagram-editor .de-outline-item button { width:100%;text-align:left;overflow:hidden;text-overflow:ellipsis;background:transparent;border-color:transparent; }
+.planr-diagram-editor .de-outline-item button[aria-selected=true] { background:var(--de-raised);color:var(--de-primary); }
+.planr-diagram-editor .de-shape-button { display:block;width:100%;text-align:left;margin-top:6px; }
+.planr-diagram-editor .de-stage { display:grid;grid-template-rows:minmax(0,1fr) auto;min-width:0;min-height:0; }
+.planr-diagram-editor .de-canvas { position:relative;min-height:0;min-width:0;overflow:hidden;background-color:var(--de-bg);background-image:radial-gradient(var(--de-rule) 1px,transparent 1px);background-size:24px 24px;touch-action:none;cursor:crosshair; }
+.planr-diagram-editor[data-diagram-theme=paper] .de-canvas { background-color:#ffffff;background-image:radial-gradient(#e2e8f0 1px,transparent 1px); }
+.planr-diagram-editor[data-diagram-theme=slate] .de-canvas { background-color:#17212d; }
+.planr-diagram-editor[data-diagram-theme=midnight] .de-canvas { background-color:#0b1015; }
+.planr-diagram-editor .de-canvas svg { display:block;width:100%;height:100%;user-select:none; }
+.planr-diagram-editor .de-canvas svg [data-element-id] { cursor:move; }
+.planr-diagram-editor .de-canvas svg [data-collection=relations] { cursor:pointer; }
+.planr-diagram-editor .de-canvas svg .de-selected > :is(rect,ellipse,path) { filter:drop-shadow(0 0 4px var(--de-primary)); }
+.planr-diagram-editor .de-selection-box { fill:none;stroke:var(--de-primary);stroke-dasharray:5 4; }
+.planr-diagram-editor .de-resize-handle,.planr-diagram-editor .de-bend-handle { fill:var(--de-primary);stroke:var(--de-bg);stroke-width:1;cursor:nwse-resize; }
+.planr-diagram-editor .de-marquee { fill:color-mix(in srgb,var(--de-primary) 15%,transparent);stroke:var(--de-primary);stroke-dasharray:4 3; }
+.planr-diagram-editor .de-canvas-tools { position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:3px;padding:5px;border:1px solid var(--de-rule);border-radius:11px;background:var(--de-chrome);box-shadow:0 8px 24px #0003;max-width:calc(100% - 20px);overflow:auto; }
+.planr-diagram-editor .de-canvas-tools button { border-color:transparent;background:transparent; }
+.planr-diagram-editor .de-empty { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(320px,calc(100% - 28px));padding:24px;background:var(--de-panel);border:1px solid var(--de-rule);border-radius:12px;box-shadow:0 10px 30px #0002; }
+.planr-diagram-editor .de-empty h2 { font-size:20px;line-height:28px; }
+.planr-diagram-editor .de-empty ol { margin:18px 0 0;padding-left:20px;color:var(--de-muted);font-size:11px; }
+.planr-diagram-editor .de-empty button { margin:8px 5px 0 0; }
+.planr-diagram-editor .de-mobile-message { display:none; }
+.planr-diagram-editor .de-stage-footer { min-height:29px;padding:5px 12px;display:flex;gap:12px;align-items:center;justify-content:space-between;color:var(--de-muted);font-size:11px;background:var(--de-chrome);border-top:1px solid var(--de-rule); }
+.planr-diagram-editor .de-field { display:grid;gap:5px;margin:0 0 12px;color:var(--de-muted);font-size:11px;font-weight:600; }
+.planr-diagram-editor .de-field :is(input,textarea,select) { width:100%;min-width:0;padding:7px 8px;border:1px solid var(--de-rule);border-radius:7px;background:var(--de-chrome);color:var(--de-text);font-size:12px;font-weight:400; }
+.planr-diagram-editor .de-field textarea { min-height:70px;resize:vertical; }
+.planr-diagram-editor .de-field input[type=checkbox] { width:auto;justify-self:start; }
+.planr-diagram-editor .de-field-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 8px; }
+.planr-diagram-editor .de-actions { display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 15px; }
+.planr-diagram-editor .de-properties-form fieldset { margin:8px 0;border:1px solid var(--de-rule);border-radius:8px; }
+.planr-diagram-editor .de-properties-form fieldset legend { font-size:11px;color:var(--de-muted); }
+.planr-diagram-editor .de-properties-form > .de-primary { width:100%; }
+.planr-diagram-editor .de-alert { position:absolute;z-index:12;left:50%;top:66px;transform:translateX(-50%);width:min(640px,calc(100% - 28px));padding:10px 14px;border:1px solid var(--de-danger);border-radius:8px;color:var(--de-text);background:var(--de-panel);box-shadow:0 8px 24px #0005; }
+.planr-diagram-editor .de-announcer { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
+.planr-diagram-editor .de-dialog-layer:not(:empty) { position:absolute;z-index:20;inset:0;display:grid;place-items:center;background:#0009;padding:20px; }
+.planr-diagram-editor .de-dialog { width:min(680px,100%);max-height:min(750px,calc(100dvh - 40px));overflow:auto;padding:24px;border:1px solid var(--de-rule);border-radius:12px;background:var(--de-panel);box-shadow:0 15px 50px #0007; }
+.planr-diagram-editor .de-dialog > button,.planr-diagram-editor .de-dialog > div > button { margin:6px 6px 0 0; }
+.planr-diagram-editor .de-dialog .de-source-view { max-height:55vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--de-raised);padding:12px;border-radius:8px;font-size:11px; }
+.planr-diagram-editor .de-comparison-scroll { max-height:380px;overflow:auto;border:1px solid var(--de-rule); }
+.planr-diagram-editor .de-conflict table { border-collapse:collapse;min-width:600px;font-size:11px; }
+.planr-diagram-editor .de-conflict th,.planr-diagram-editor .de-conflict td { border-bottom:1px solid var(--de-rule);padding:8px;text-align:left;vertical-align:top;min-width:110px;overflow-wrap:anywhere; }
+.planr-diagram-editor .de-conflict td { max-width:190px; }
+@media (max-width:1100px) {
+ .planr-diagram-editor .de-work,.planr-diagram-editor[data-left-open=false] .de-work,.planr-diagram-editor[data-right-open=false] .de-work { display:block;position:relative; }
+ .planr-diagram-editor .de-stage { width:100%;height:100%; }
+ .planr-diagram-editor .de-left,.planr-diagram-editor .de-right { position:absolute;top:0;bottom:0;width:min(288px,calc(100% - 44px));z-index:4;box-shadow:0 8px 24px #0004; }
+ .planr-diagram-editor .de-left { left:0; }.planr-diagram-editor .de-right { right:0; }
+ .planr-diagram-editor[data-left-open=false] .de-left,.planr-diagram-editor[data-right-open=false] .de-right { display:none; }
+}
+@media (max-width:700px) {
+ .planr-diagram-editor .de-bar { padding:0 8px;gap:6px; }
+ .planr-diagram-editor .de-identity small { display:none; }
+ .planr-diagram-editor .de-save-state { max-width:82px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+ .planr-diagram-editor .de-bar-actions button { min-width:44px;min-height:44px; }
+ .planr-diagram-editor .de-bar-actions [data-action=undo],.planr-diagram-editor .de-bar-actions [data-action=redo],.planr-diagram-editor .de-bar-actions [data-action=layout],.planr-diagram-editor .de-bar-actions [data-action=save] { display:none; }
+ .planr-diagram-editor .de-mobile-message { display:block;position:absolute;top:10px;left:10px;right:10px;background:var(--de-panel);border:1px solid var(--de-rule);border-radius:8px;padding:9px;text-align:center;font-size:12px; }
+ .planr-diagram-editor .de-canvas-tools button { min-width:44px;min-height:44px; }
+ .planr-diagram-editor .de-canvas-tools [data-action=select-tool],.planr-diagram-editor .de-canvas-tools [data-action=snap] { display:none; }
+ .planr-diagram-editor .de-empty { display:none; }
+ .planr-diagram-editor .de-field :is(input,textarea,select) { font-size:16px;min-height:44px; }
+}
+@media (prefers-reduced-motion:reduce) { .planr-diagram-editor * { scroll-behavior:auto !important;transition:none !important;animation:none !important; } }

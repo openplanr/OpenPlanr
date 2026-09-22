@@ -29,6 +29,7 @@
       "types": "./lib/artifact/diagram/editor/index.d.mts",
       "import": "./lib/artifact/diagram/editor/index.mjs"
     },
+    "./diagram-editor.css": "./lib/artifact/ui/diagram-editor.css",
     "./diagram-owner": {
       "types": "./lib/artifact/diagram/editor/local-owner.d.mts",
       "import": "./lib/artifact/diagram/editor/local-owner.mjs"

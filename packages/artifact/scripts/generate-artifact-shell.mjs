@@ -144,6 +144,10 @@ export function renderDiagramStudioRuntimeAsset({ projectRoot = root } = {}) {
   return buildSync({ absWorkingDir: projectRoot, entryPoints: ['lib/artifact/ui/diagram-studio.mjs'], bundle: true, charset: 'utf8', format: 'iife', legalComments: 'none', logLevel: 'silent', platform: 'browser', target: ['es2022'], write: false }).outputFiles[0].text;
 }
 
+export function renderDiagramOwnerRuntimeAsset({ projectRoot = root } = {}) {
+  return buildSync({ absWorkingDir: projectRoot, entryPoints: ['lib/artifact/ui/diagram-owner-studio.mjs'], bundle: true, charset: 'utf8', format: 'iife', legalComments: 'none', logLevel: 'silent', platform: 'browser', target: ['es2022'], write: false }).outputFiles[0].text;
+}
+
 /** Render every byte that local and hosted shell consumers synchronize. */
 export function renderArtifactShellAssets({ registryPath, projectRoot = root } = {}) {
   const theme = loadArtifactTheme(registryPath ? { registryPath } : undefined);
@@ -152,6 +156,7 @@ export function renderArtifactShellAssets({ registryPath, projectRoot = root } =
     'lib/artifact/ui/generated/artifact-theme.json': renderArtifactThemeJson(theme),
     [ARTIFACT_SHELL_ASSET_PATHS.stageRuntime]: renderArtifactStageRuntimeAsset({ projectRoot }),
     'templates/diagram-studio.js': renderDiagramStudioRuntimeAsset({ projectRoot }),
+    'templates/diagram-owner.js': renderDiagramOwnerRuntimeAsset({ projectRoot }),
     'templates/design/design-board-adapter.js': renderDesignBoardAdapterAsset({ projectRoot }),
     [ARTIFACT_SHELL_ASSET_PATHS.template]: renderArtifactShellTemplate({ theme }),
   };

@@ -573,6 +573,9 @@ try {
       if (!inside(packageRoot, target)) throw new Error('export escaped package: ' + probe.specifier);
       if (probe.kind === 'type-only') {
         if (fs.readFileSync(target).byteLength === 0) throw new Error('empty declaration: ' + probe.specifier);
+      } else if (probe.kind === 'asset') {
+        const selected = fs.realpathSync(fileURLToPath(import.meta.resolve(probe.specifier)));
+        if (selected !== target || !inside(packageRoot, selected) || fs.readFileSync(selected).byteLength === 0) throw new Error('invalid asset export: ' + probe.specifier);
       } else if (probe.kind === 'json') {
         const resolved = fs.realpathSync(require.resolve(probe.specifier));
         if (resolved !== target || !inside(packageRoot, resolved)) throw new Error('JSON export escaped: ' + probe.specifier);
@@ -592,7 +595,7 @@ try {
         subpath: probe.subpath,
         conditions: probe.conditions,
         kind: probe.kind,
-        status: probe.kind === 'type-only' ? 'validated' : 'loaded',
+        status: probe.kind === 'type-only' || probe.kind === 'asset' ? 'validated' : 'loaded',
       });
     }
   }

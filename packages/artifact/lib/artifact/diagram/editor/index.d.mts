@@ -39,7 +39,7 @@ export interface DiagramEditorState {
   view: DiagramEditorView;
   gesture: { transactionId: string; basis: string; diagnostics: DiagramAuthoringValidationError[]; bundle: DiagramAuthoringBundle | null } | null;
   canUndo: boolean; canRedo: boolean;
-  comparison: { bundle: DiagramAuthoringBundle; diff: DiagramBundleDiff | DiagramEditorFailure } | null;
+  comparison: { base: DiagramAuthoringBundle; bundle: DiagramAuthoringBundle; diff: DiagramBundleDiff | DiagramEditorFailure } | null;
   diagnostics: DiagramAuthoringValidationError[];
   recovery: DiagramEditorRecoveryStatus;
   disposed: boolean;
@@ -120,3 +120,5 @@ export declare function bindDiagramEditorCancellation(session: Pick<DiagramEdito
   addEventListener(type: string, listener: (event: { type: string; key?: string }) => void, capture: boolean): void;
   removeEventListener(type: string, listener: (event: { type: string; key?: string }) => void, capture: boolean): void;
 }): () => void;
+
+export { mountDiagramEditor } from '../../ui/diagram-editor.mjs';

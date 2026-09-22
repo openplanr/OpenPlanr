@@ -57,7 +57,7 @@
       "version": "0.49.1",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:15c13ec586771186243a347ff7d79caede457ac4c2b99c3dd316de171d4103f5"
+      "manifestDigest": "sha256:845613e11c9c86e3ccd628f37ef05a1da5db6b20b0a706cdc2195443fed0f7d6"
     },
     "protocol": {
       "package": "@openplanr/protocol",
@@ -78,7 +78,7 @@
       "version": "0.2.3",
       "path": "packages/artifact",
       "publication": "private",
-      "manifestDigest": "sha256:a47554ad84a0e9e111b041731119382e9778b782b6c79c24bdcdf2b27a2f20cc"
+      "manifestDigest": "sha256:2d1cb4cd707040ab41c1675bb3dce758577ce5328aab2602449e09cda00fbfd7"
     },
     "design": {
       "package": "@openplanr/design",
@@ -131,7 +131,7 @@
     }
   },
   "publicCompatibility": {
-    "pipelineExportKeys": 45,
+    "pipelineExportKeys": 46,
     "pipelineRootSymbols": 229
   },
   "catalogs": {
@@ -337,7 +337,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:b7e16b2499b1f378c4d0888294c92ab1cd62c6a6a217160d39dd85909b35302f",
+      "digest": "sha256:c58fb18dcc31d97313d386dddb607ae6750c7561cee853701d4a958ceeb78c2d",
       "count": 1805
     }
   },
@@ -413,9 +413,9 @@
   "generatedSurfaces": {
     "artifactShell": {
       "path": "packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json",
-      "digest": "sha256:ef3e76f1526ca019f6e356309cf5fda6d57e1b62c8e32a0868ee81750937b378",
+      "digest": "sha256:077af799c94f70c3140ad5c16c91ded13904435d663560c904022255c305b1ac",
       "shellVersion": "1.2.1",
-      "assetCount": 6
+      "assetCount": 7
     },
     "landingWorkflow": {
       "catalog": {

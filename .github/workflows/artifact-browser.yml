@@ -41,3 +41,8 @@ jobs:
           PLANR_BROWSER_TESTS: '1'
           PLANR_REQUIRE_BROWSER: '1'
           PLANR_BROWSER_ENGINE: ${{ matrix.browser }}
+      - name: Verify the shared editor in the selected browser
+        run: node --test --test-concurrency=1 packages/artifact/tests/diagram-editor.browser.test.mjs packages/artifact/tests/diagram-conflicts.browser.test.mjs
+        env:
+          PLANR_BROWSER_TESTS: '1'
+          PLANR_BROWSER_ENGINE: ${{ matrix.browser }}
