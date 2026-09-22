@@ -315,6 +315,7 @@ test('generated public projection matches canonical artifact bytes and digests',
     'templates/artifact-review-shell.html',
     'templates/artifact-review-stage.js',
     'templates/design/design-board-adapter.js',
+    'templates/diagram-owner.js',
     'templates/diagram-studio.js',
   ]);
   for (const record of manifest.assets) {

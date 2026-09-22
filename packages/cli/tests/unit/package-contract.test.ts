@@ -72,9 +72,9 @@ describe('packed package contract', () => {
     expect(probes).toHaveLength(6);
     expect(probes.filter(({ kind }) => kind === 'import')).toHaveLength(2);
     expect(probes.filter(({ kind }) => kind === 'type-only')).toHaveLength(1);
-    expect(probes.filter(({ kind }) => kind === 'asset').map(({ specifier }) => specifier)).toEqual([
-      'fixture-package/editor.css',
-    ]);
+    expect(probes.filter(({ kind }) => kind === 'asset').map(({ specifier }) => specifier)).toEqual(
+      ['fixture-package/editor.css'],
+    );
     expect(probes.filter(({ kind }) => kind === 'json').map(({ specifier }) => specifier)).toEqual([
       'fixture-package/schemas/v1/example.schema.json',
       'fixture-package/schemas/v2/example.schema.json',
