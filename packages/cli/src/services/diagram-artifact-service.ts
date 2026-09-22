@@ -73,6 +73,10 @@ export async function openDiagramArtifact(
 export async function openDiagramOwner(options: {
   root: string;
   slug: string;
+  title?: string;
+  grammar?: string;
+  noOpen?: boolean;
+  openUrl?: (url: string) => void | Promise<void>;
   port?: number;
   env?: Record<string, string | undefined>;
 }): Promise<{
@@ -81,6 +85,8 @@ export async function openDiagramOwner(options: {
   sessionId: string;
   recoveryScope: string;
   baseUrl: string;
+  url: string;
+  launchError?: string;
   apiBase: string;
   capabilities: { read: true; write: true };
   headers: Record<string, string>;

@@ -10,6 +10,11 @@ const palettes = {
   slate: { ...DIAGRAM_THEME, id: 'slate', version: '1.0.0', background: '#17212d', surface: '#233141', foreground: '#f1f5f9', border: '#a9bbcf', accent: '#7dd3fc', muted: '#cbd5e1', success: '#86efac', warning: '#fde68a', danger: '#fca5a5', fills: { surface: '#233141', accent: '#123e55', success: '#164434', warning: '#4a3818', danger: '#54252a', transparent: 'none' } },
   midnight: { ...DIAGRAM_THEME, id: 'midnight', version: '1.0.0', background: '#0b1015', surface: '#151e28', foreground: '#e5edf5', border: '#94a3b8', accent: '#67e8f9', muted: '#b8c7d9', success: '#86efac', warning: '#fcd34d', danger: '#fca5a5', fills: { surface: '#151e28', accent: '#0c3640', success: '#12392d', warning: '#493817', danger: '#4f2529', transparent: 'none' } },
 };
+/** Internal renderer palette shared by static output and the live editor. */
+export function authoredDiagramPalette(themeId = 'paper') {
+  const theme = palettes[themeId] ?? palettes.paper;
+  return { ...theme, fills: { ...theme.fills } };
+}
 const strokeColor = (appearance, theme) => ({ default: theme.border, accent: theme.accent, muted: theme.muted, danger: theme.danger, none: 'none' })[appearance.stroke];
 const svgNumber = value => String(Number(value.toFixed(6)));
 function attributes(element, theme, fill = theme.fills[element.appearance.fill]) {
@@ -39,7 +44,7 @@ function text(element, theme) {
   const background = element.collection === 'relations' ? `<rect x="${svgNumber(bounds.x)}" y="${svgNumber(bounds.y)}" width="${svgNumber(bounds.width)}" height="${svgNumber(bounds.height)}" fill="${theme.background}"/>` : '';
   return `${background}<text aria-label="${escapeXml(element.label)}" text-anchor="${anchor}" font-family="${theme.fontFamily}" font-size="${fontSize}" font-weight="${element.emphasis === 'primary' ? 700 : element.emphasis === 'muted' ? 400 : 500}" fill="${theme.foreground}">${lines.map((line, index) => `<tspan x="${svgNumber(x)}" y="${svgNumber(baseline + index * lineHeight)}">${escapeXml(line)}</tspan>`).join('')}</text>`;
 }
-function renderElement(element, theme, diagramId) {
+export function renderAuthoredSceneElement(element, theme, diagramId) {
   const attributes = `data-element-id="${escapeXml(element.id)}" data-collection="${element.collection}" data-semantic-kind="${escapeXml(element.kind)}" data-shape="${element.appearance.shape}" data-z-index="${element.zIndex}"${element.emphasis ? ` data-emphasis="${element.emphasis}"` : ''}`;
   if (element.collection !== 'relations') return `<g ${attributes}>${shape(element, theme)}${text(element, theme)}</g>`;
   const color = strokeColor(element.appearance, theme);
@@ -69,7 +74,7 @@ export function renderAuthoredDiagramSvg(bundle, options = {}) {
     `<title id="${titleId}">${escapeXml(bundle.document.accessibility.title || bundle.document.title || 'Diagram')}</title>`,
     `<desc id="${descriptionId}">${escapeXml(bundle.document.accessibility.description || bundle.document.summary || 'An authored diagram.')}</desc>`,
     `<rect x="${viewBox.x}" y="${viewBox.y}" width="${viewBox.width}" height="${viewBox.height}" fill="${theme.background}"/>`,
-    ...scene.elements.map(element => renderElement(element, theme, bundle.diagramId)), '</svg>\n',
+    ...scene.elements.map(element => renderAuthoredSceneElement(element, theme, bundle.diagramId)), '</svg>\n',
   ].join('');
   const accessible = validateDiagramSvg(bytes, { foreground: theme.foreground, background: theme.background });
   if (!accessible.ok) return { ok: false, code: 'invalid-geometry', scene, quality, diagnostics: accessible.errors.map(rule => ({ path: '$.svg', rule, detail: 'Rendered SVG did not pass accessibility verification.' })) };

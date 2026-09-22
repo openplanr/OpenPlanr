@@ -48,7 +48,7 @@ describe('packed package contract', () => {
     ]);
   });
 
-  it('materializes every runtime condition, wildcard JSON export, and type-only row', () => {
+  it('materializes runtime, stylesheet, wildcard JSON, and type-only exports', () => {
     const probes = createInstalledExportProbePlan(
       'fixture-package',
       {
@@ -58,18 +58,23 @@ describe('packed package contract', () => {
           default: './dist/index.js',
         },
         './schemas/*': './schemas/*',
+        './editor.css': './dist/editor.css',
       },
       [
         'dist/index.d.ts',
         'dist/index.js',
         'schemas/v1/example.schema.json',
         'schemas/v2/example.schema.json',
+        'dist/editor.css',
       ],
     );
 
-    expect(probes).toHaveLength(5);
+    expect(probes).toHaveLength(6);
     expect(probes.filter(({ kind }) => kind === 'import')).toHaveLength(2);
     expect(probes.filter(({ kind }) => kind === 'type-only')).toHaveLength(1);
+    expect(probes.filter(({ kind }) => kind === 'asset').map(({ specifier }) => specifier)).toEqual([
+      'fixture-package/editor.css',
+    ]);
     expect(probes.filter(({ kind }) => kind === 'json').map(({ specifier }) => specifier)).toEqual([
       'fixture-package/schemas/v1/example.schema.json',
       'fixture-package/schemas/v2/example.schema.json',
