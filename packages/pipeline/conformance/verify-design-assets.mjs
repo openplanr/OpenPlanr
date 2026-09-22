@@ -5,7 +5,7 @@
  * Self-contained and deterministic — no runtime/operator needed (unlike
  * runner.mjs, which drives feat-todo through a live agent). This asserts the
  * SHIPPED design assets are intact and the tested core behaves:
- *   1. command + procedures + shared template + lib helpers present
+ *   1. packaged procedures, templates and renderer helpers present
  *   2. renderer shells present with their GENERATOR markers
  *   3. vendored runtime present; the compiled canvas parses + registers globals
  *   4. the design manifest schema accepts the golden valid fixture, rejects the invalid
@@ -44,15 +44,11 @@ log('OpenPlanr design-asset conformance (SPEC-015)\n');
 // 1 — orchestration files present
 log('orchestration:');
 for (const rel of [
-  'commands/design.md',
   'procedures/design-step0-preflight.md',
   'procedures/design-step1-clarify.md',
   'procedures/design-step2-generate.md',
   'procedures/design-step3-spec-and-handoff.md',
   'procedures/design-detect-nudge.md',
-  'agents/modes/shared/design-spec-template.md',
-  'agents/modes/shared/design-craft-rubric.md',
-  'agents/modes/shared/design-principles.md',
   'lib/design/index.mjs',
   'lib/design/tokens.mjs',
   'lib/design/lint.mjs',
@@ -119,11 +115,12 @@ assert(fileHas(preflight, 'APP_CTX') && fileHas(preflight, 'VIEWPORT_W'),
 const generate = join(root, 'procedures/design-step2-generate.md');
 assert(fileHas(generate, 'VIEWPORT_W'), 'generate C.0/C.4 author at VIEWPORT_W (real desktop width)');
 
-const designCommand = join(root, 'commands/design.md');
+// Host skill guidance is verified by the installed skill workflow tests.
+// This package retains the renderer and explicit artifact handoff procedures.
 const designHandoff = join(root, 'procedures/design-step3-spec-and-handoff.md');
-assert(fileHas(designCommand, 'planr artifact share') && fileHas(designHandoff, 'planr artifact import'),
+assert(fileHas(designHandoff, 'planr artifact share') && fileHas(designHandoff, 'planr artifact import'),
   'design handoff advertises explicit artifact Share + returned-review import');
-assert(fileHas(designCommand, 'never publishes or uploads') && fileHas(designHandoff, 'Do not invoke Share automatically'),
+assert(fileHas(designHandoff, 'never publishes or uploads') && fileHas(designHandoff, 'Do not invoke Share automatically'),
   'design completion never publishes or shares automatically');
 
 // 3c — token scale + deterministic linter (v0.16.0)
@@ -234,7 +231,7 @@ assert(JSON.parse(embedJson({ label: hostile })).label === hostile, 'embedJson p
 // itself never spells a name; extend it the same way when a new one shows up.
 log('\nbrand hygiene (proprietary — tracked sources are codename-free):');
 const FOREIGN_NAMES = ['ome' + 'lette', 'mu' + 'vi', 'gst' + 'ack'];
-const SCAN_ROOTS = ['commands', 'procedures', 'agents', 'lib', 'schemas', 'docs', 'tests', 'templates', 'conformance', 'README.md', 'CHANGELOG.md'];
+const SCAN_ROOTS = ['procedures', 'lib', 'schemas', 'docs', 'tests', 'templates', 'conformance', 'README.md', 'CHANGELOG.md'];
 const SCAN_SKIP = [
   'templates/design/vendor', // attributed third-party runtime (React, the reflow lib)
   'conformance/verify-design-assets.mjs', // this guard (fragment-assembled)

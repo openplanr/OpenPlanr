@@ -9,7 +9,7 @@ import {
   inspectCodexPluginIntegration,
 } from '../../src/services/codex-plugin-service.js';
 
-function pipelineFixture(): string {
+function hostPackageFixture(): string {
   const root = mkdtempSync(path.join(tmpdir(), 'openplanr-codex-marketplace-'));
   mkdirSync(path.join(root, '.claude-plugin'), { recursive: true });
   writeFileSync(
@@ -96,11 +96,67 @@ function runnerState(
     }
     return { status: 0, stdout: '{}', stderr: '' };
   };
-  const fixture = pipelineFixture();
+  const fixture = hostPackageFixture();
   return { runner, calls, fixture };
 }
 
 describe('Codex plugin integration', () => {
+  it('names the CLI host package and setup repair when its marketplace is missing', () => {
+    const hostPackageRoot = mkdtempSync(path.join(tmpdir(), 'openplanr-codex-missing-'));
+    const calls: string[][] = [];
+    const runner: CodexCommandRunner = (args) => {
+      calls.push(args);
+      return { status: 0, stdout: '{}', stderr: '' };
+    };
+    try {
+      const inspection = inspectCodexPluginIntegration(
+        hostPackageRoot,
+        'unified-plugin',
+        undefined,
+        runner,
+      );
+      expect(inspection).toMatchObject({
+        available: false,
+        ready: false,
+        operations: [],
+        error:
+          'The CLI bundled Codex host package is missing its OpenPlanr marketplace. Run planr setup --runtime codex to repair it.',
+      });
+      expect(() => applyCodexPluginIntegration(hostPackageRoot, inspection, runner)).toThrow(
+        'Run planr setup --runtime codex to repair it.',
+      );
+      expect(calls).toEqual([]);
+    } finally {
+      rmSync(hostPackageRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('names the host marketplace when it does not declare the managed plugin', () => {
+    const state = runnerState();
+    writeFileSync(
+      path.join(state.fixture, '.claude-plugin', 'marketplace.json'),
+      JSON.stringify({ name: 'openplanr-pipeline-local', plugins: [] }),
+    );
+    try {
+      const inspection = inspectCodexPluginIntegration(
+        state.fixture,
+        'unified-plugin',
+        undefined,
+        state.runner,
+      );
+      expect(inspection).toMatchObject({
+        available: false,
+        ready: false,
+        operations: [],
+        error:
+          'The CLI bundled Codex host marketplace does not declare planr. Run planr setup --runtime codex to repair it.',
+      });
+      expect(state.calls).toEqual([]);
+    } finally {
+      rmSync(state.fixture, { recursive: true, force: true });
+    }
+  });
+
   it('accepts a marketplace reached through a workspace package link', () => {
     const state = runnerState({ configured: true, installed: true });
     const linkRoot = mkdtempSync(path.join(tmpdir(), 'openplanr-codex-link-'));

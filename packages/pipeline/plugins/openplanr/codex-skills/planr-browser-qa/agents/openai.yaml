@@ -1,6 +1,0 @@
-interface:
-  display_name: "Planr Browser Qa"
-  short_description: "Run practical browser-backed QA against real routes, forms…"
-  default_prompt: "Use $planr-browser-qa to run practical browser-backed QA against real routes, forms, viewports, accessibility, console, and network behavior. Use for UI, authentication, session, navigation, or browser-network changes."
-policy:
-  allow_implicit_invocation: true

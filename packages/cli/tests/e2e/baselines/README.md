@@ -4,6 +4,8 @@ The platform directories contain the active Playwright golden images and are int
 
 - `darwin/` is the local macOS review reference.
 - `linux/` is the canonical CI reference generated with the Playwright image pinned by the browser workflow.
-- Root-level PNGs are immutable migration evidence retained byte-for-byte from the public CLI cutoff. The active screenshot helper does not read them.
+
+The screenshot helper selects `[process.platform, name]`; unscoped historical PNGs
+are retained in Git history rather than this active baseline directory.
 
 Update active snapshots only after reviewing the rendered UI. Use `npm run test:browser --workspace=openplanr -- --update-snapshots=all` on macOS and the pinned Playwright container for Linux. Keep transient actual, diff, trace, and HTML report files in Playwright output directories; they are not source artifacts.

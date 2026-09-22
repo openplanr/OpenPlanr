@@ -1,6 +1,0 @@
-interface:
-  display_name: "Planr Doctor"
-  short_description: "Diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation…"
-  default_prompt: "Use $planr-doctor to diagnose OpenPlanr CLI, pipeline, runtime-adapter, installation, and lock health. Use when setup, discovery, versions, generated assets, or runtime behavior seems wrong."
-policy:
-  allow_implicit_invocation: true

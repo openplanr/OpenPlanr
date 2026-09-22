@@ -178,7 +178,6 @@ test('a real package version operation regenerates current runtime projections w
     for (const [path, bytes] of contracts) assert.deepEqual(readFileSync(join(directory, path)), bytes, path);
     run(process.execPath, ['scripts/generate-all.mjs', '--check']);
     assert.equal(readJson(join(directory, '.changeset/config.json')).prettier, false);
-    run(process.execPath, ['scripts/migration/verify-preservation-catalog.mjs']);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

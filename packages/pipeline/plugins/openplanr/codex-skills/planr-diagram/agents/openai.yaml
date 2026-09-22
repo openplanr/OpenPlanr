@@ -1,6 +1,0 @@
-interface:
-  display_name: "Planr Diagram"
-  short_description: "Create, inspect, verify, or rerender professional offline…"
-  default_prompt: "Use $planr-diagram to create, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source."
-policy:
-  allow_implicit_invocation: true

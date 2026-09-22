@@ -118,7 +118,6 @@ describe('the CLI pipeline pin tracks the pipeline it is released against', () =
     expect(workflow).toContain('run: npm ci');
     expect(workflow).toContain('run: npm run check:generated');
     expect(workflow).toContain('run: npm run check:boundaries');
-    expect(workflow).toContain('run: npm run check:preservation');
     expect(workflow).toContain('run: npm run verify:packed:strict');
     expect(workflow).not.toContain('dashboard-candidate');
     expect(workflow).not.toContain('.ci/planr-pipeline');

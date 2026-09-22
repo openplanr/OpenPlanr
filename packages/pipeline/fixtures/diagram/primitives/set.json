@@ -1,8 +1,0 @@
-{
-  "kind": "diagram-primitive-fixture",
-  "schemaVersion": "1.0.0",
-  "primitive": "set",
-  "grammarId": "venn",
-  "fixture": "fixtures/diagram/grammars/venn.planr-diagram.json",
-  "description": "Canonical set primitive example in the venn grammar."
-}

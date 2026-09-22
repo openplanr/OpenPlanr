@@ -38,8 +38,6 @@ jobs:
         run: npm run check:generated
       - name: Verify package and composition boundaries
         run: npm run check:boundaries
-      - name: Verify migration preservation coverage
-        run: npm run check:preservation
       - name: Lint the public documentation
         run: npm run check:docs
       - name: Lint every participating workspace
@@ -250,8 +248,6 @@ jobs:
         run: npm run check:generated
       - name: Verify package and composition boundaries
         run: npm run check:boundaries
-      - name: Verify migration preservation coverage
-        run: npm run check:preservation
       - name: Lint every participating workspace
         run: npm run lint
       - name: Build in dependency order without tracked drift

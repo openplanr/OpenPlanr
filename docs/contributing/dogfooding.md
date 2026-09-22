@@ -82,7 +82,6 @@ fallback.
 npm run generate && git diff --exit-code HEAD --
 npm run check:generated
 npm run check:boundaries
-npm run check:preservation
 npm run check:diagrams
 npm run lint
 npm run test:focused

@@ -70,12 +70,12 @@ function installedRows(value: unknown): Array<Record<string, unknown>> {
 }
 
 export function inspectCodexPluginIntegration(
-  pipelineRoot: string,
+  hostPackageRoot: string,
   desiredMode: 'direct' | 'unified-plugin' | 'project-rule',
   previousMode: 'direct' | 'unified-plugin' | 'project-rule' | undefined,
   runner: CodexCommandRunner = defaultRunner,
 ): CodexPluginInspection {
-  const marketplacePath = path.join(pipelineRoot, '.claude-plugin', 'marketplace.json');
+  const marketplacePath = path.join(hostPackageRoot, '.claude-plugin', 'marketplace.json');
   if (!existsSync(marketplacePath)) {
     return {
       available: false,
@@ -86,7 +86,8 @@ export function inspectCodexPluginIntegration(
       installedVersion: null,
       duplicates: [],
       operations: [],
-      error: 'The installed pipeline package does not contain its OpenPlanr marketplace.',
+      error:
+        'The CLI bundled Codex host package is missing its OpenPlanr marketplace. Run planr setup --runtime codex to repair it.',
     };
   }
   const marketplace = JSON.parse(readFileSync(marketplacePath, 'utf8')) as {
@@ -106,7 +107,7 @@ export function inspectCodexPluginIntegration(
       installedVersion: null,
       duplicates: [],
       operations: [],
-      error: `The installed pipeline marketplace does not declare ${HOST_PLUGIN_NAME}.`,
+      error: `The CLI bundled Codex host marketplace does not declare ${HOST_PLUGIN_NAME}. Run planr setup --runtime codex to repair it.`,
     };
   const version = runner(['--version']);
   if (version.error || version.status !== 0)
@@ -136,7 +137,7 @@ export function inspectCodexPluginIntegration(
       const configuredRoot = canonicalRoot(
         String(configured.root ?? configured.marketplaceSource?.source ?? ''),
       );
-      const expectedRoot = canonicalRoot(pipelineRoot);
+      const expectedRoot = canonicalRoot(hostPackageRoot);
       if (configuredRoot !== expectedRoot)
         throw new Error(
           `Codex marketplace ${marketplaceName} points to ${configuredRoot}, not ${expectedRoot}.`,
@@ -244,7 +245,7 @@ export function inspectCodexPluginIntegration(
 }
 
 export function applyCodexPluginIntegration(
-  pipelineRoot: string,
+  hostPackageRoot: string,
   inspection: CodexPluginInspection,
   runner: CodexCommandRunner = defaultRunner,
 ): { operations: CodexPluginOperation[]; restartRequired: boolean } {
@@ -253,7 +254,7 @@ export function applyCodexPluginIntegration(
   for (const operation of inspection.operations) {
     const args =
       operation.kind === 'add-marketplace'
-        ? ['plugin', 'marketplace', 'add', pipelineRoot, '--json']
+        ? ['plugin', 'marketplace', 'add', hostPackageRoot, '--json']
         : operation.kind === 'install'
           ? ['plugin', 'add', operation.id, '--json']
           : ['plugin', 'remove', operation.id, '--json'];

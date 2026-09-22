@@ -1,9 +1,9 @@
 // @planr-test-group serial
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -14,12 +14,12 @@ import { EVALUATION_CI_ARTIFACTS, renderJUnit, writeCiReports, writeLocalRun } f
 import { loadEvaluationInputs, runEvaluation } from '../../lib/evaluation/runner.mjs';
 
 const root = dirname(fileURLToPath(new URL('../../package.json', import.meta.url)));
+const sourceRoot = resolve(root, '../..');
 const NOW = '2026-08-25T09:16:00.000Z';
 
 /** Paths this task may never write. A full run leaves each of them byte-identical. */
 const PRESERVED = Object.freeze([
-  'skills',
-  'adapters',
+  '../../skills',
   'registry/professional-skills.json',
   'registry/frozen-commands.json',
   'registry/ship-review-specialists.json',
@@ -48,8 +48,49 @@ function treeDigest(target) {
 }
 
 async function fullRun(options = {}) {
-  return runEvaluation({ repoRoot: root, now: NOW, clock: () => NOW, ...options });
+  return runEvaluation({ repoRoot: root, sourceRoot, now: NOW, clock: () => NOW, ...options });
 }
+
+test('a current-source run requires an explicit source root rather than discovering a checkout', async () => {
+  await assert.rejects(
+    () => runEvaluation({ repoRoot: root, now: NOW }),
+    { code: 'E_PROFESSIONAL_SKILL_SOURCE_REQUIRED' },
+  );
+});
+
+test('a current-source run refuses legacy inputs and mismatched source evidence', async () => {
+  const legacy = loadEvaluationInputs({ repoRoot: root });
+  const active = loadEvaluationInputs({ repoRoot: root, sourceRoot });
+  for (const inputs of [
+    legacy,
+    { ...active, sourceDigest: legacy.sourceDigest },
+    { ...active, manifest: legacy.manifest },
+    { ...active, corpora: legacy.corpora },
+  ]) {
+    await assert.rejects(() => fullRun({ inputs }), { code: 'E_EVALUATION_DIGEST_MISMATCH' });
+  }
+});
+
+test('a changed source rejects preloaded inputs before grading', async () => {
+  const selectedSource = mkdtempSync(join(tmpdir(), 'planr-evaluation-source-'));
+  const active = loadEvaluationInputs({ repoRoot: root, sourceRoot });
+  try {
+    for (const { skillId } of active.catalog.skills) {
+      const directory = join(selectedSource, 'skills', skillId);
+      mkdirSync(directory, { recursive: true });
+      cpSync(join(sourceRoot, 'skills', skillId, 'SKILL.md'), join(directory, 'SKILL.md'));
+    }
+    const inputs = loadEvaluationInputs({ repoRoot: root, sourceRoot: selectedSource });
+    const changedPath = join(selectedSource, 'skills', active.catalog.skills[0].skillId, 'SKILL.md');
+    writeFileSync(changedPath, `${readFileSync(changedPath, 'utf8')}\nA changed source must be graded afresh.\n`);
+    await assert.rejects(
+      () => fullRun({ sourceRoot: selectedSource, inputs }),
+      { code: 'E_EVALUATION_DIGEST_MISMATCH' },
+    );
+  } finally {
+    rmSync(selectedSource, { recursive: true, force: true });
+  }
+});
 
 test('one full run certifies the frozen catalog against every registered host', async () => {
   const outcome = await fullRun();
@@ -129,7 +170,7 @@ test('a certified result covers only the host profiles the run actually graded',
 });
 
 test('a partial catalog is reported rather than quietly shrinking the totals', async () => {
-  const inputs = loadEvaluationInputs({ repoRoot: root });
+  const inputs = loadEvaluationInputs({ repoRoot: root, sourceRoot });
   const dropped = inputs.corpora[0].corpus.skill.id;
   const partial = {
     ...inputs,
@@ -178,11 +219,11 @@ test('a changed host profile source invalidates the registry binding', async () 
     const drifted = JSON.parse(original);
     drifted.profileVersion = '1.0.1';
     writeFileSync(profilePath, `${JSON.stringify(drifted, null, 2)}\n`);
-    assert.throws(() => loadEvaluationInputs({ repoRoot: root }), { code: 'E_EVALUATION_DIGEST_MISMATCH' });
+    assert.throws(() => loadEvaluationInputs({ repoRoot: root, sourceRoot }), { code: 'E_EVALUATION_DIGEST_MISMATCH' });
   } finally {
     writeFileSync(profilePath, original);
   }
-  assert.ok(loadEvaluationInputs({ repoRoot: root }).hostProfileRegistry.profiles.length === 3);
+  assert.ok(loadEvaluationInputs({ repoRoot: root, sourceRoot }).hostProfileRegistry.profiles.length === 3);
 });
 
 test('the aggregate report is the only publishable projection and carries no raw evidence', async () => {
@@ -227,7 +268,7 @@ test('JUnit emission reports absences as skipped rather than passed', async () =
 });
 
 test('the default run registers no live-model grader', async () => {
-  const inputs = loadEvaluationInputs({ repoRoot: root });
+  const inputs = loadEvaluationInputs({ repoRoot: root, sourceRoot });
   assert.ok(inputs.graderRegistry.graders.every((grader) => grader.graderType !== 'live-model-judgement'));
   assert.ok(inputs.graderRegistry.graders.every((grader) => grader.determinism.network === false));
   assert.ok(inputs.graderRegistry.graders.every((grader) => grader.blocksContractValidation === false));

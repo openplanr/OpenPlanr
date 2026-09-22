@@ -59,11 +59,10 @@ const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url))
 const pipelineSourceRoot = path.join(repositoryRoot, 'packages', 'pipeline');
 const cliSourceRoot = path.join(repositoryRoot, 'packages', 'cli');
 const protocolSourceRoot = path.join(repositoryRoot, 'packages', 'protocol');
-const preservationCatalogPath = path.join(
+const packedSurfaceBaselinePath = path.join(
   repositoryRoot,
   'conformance',
-  'migration',
-  'preservation-surface-catalog.json',
+  'packed-surface-baseline.json',
 );
 
 class ProofFailure extends Error {
@@ -600,6 +599,9 @@ try {
 
   const pipeline = await import('planr-pipeline');
   const rootSymbols = Object.keys(pipeline).sort();
+  const { readProfessionalSkillsCatalog } = await import('planr-pipeline/professional-skills');
+  const skillCatalog = readProfessionalSkillsCatalog();
+  if (!skillCatalog.skills.length) throw new Error('Installed professional skill compatibility catalog is empty');
   const dashboardPath = fs.realpathSync(require.resolve('openplanr/dashboard'));
   const verifierPath = fs.realpathSync(require.resolve('openplanr/dashboard-verifier'));
   const openplanrRoot = fs.realpathSync(input.openplanrRoot);
@@ -672,22 +674,41 @@ function runExportProof({
   return readJson(outputPath);
 }
 
-function countProtocolAssets(inventory, preservationCatalog) {
+// This reviewed baseline is intentionally static. Generation must never derive
+// the compatibility floor from the implementation it is intended to verify.
+export function readPackedSurfaceBaseline() {
+  const baseline = readJson(packedSurfaceBaselinePath);
+  const distinctStrings = (values, count) => Array.isArray(values)
+    && values.length === count
+    && values.every((value) => typeof value === 'string' && value.length > 0)
+    && new Set(values).size === count;
+  if (baseline.kind !== 'openplanr-packed-surface-baseline'
+    || baseline.schemaVersion !== '1.0.0'
+    || baseline.package !== 'planr-pipeline'
+    || !distinctStrings(baseline.baselineExportKeys, 37)
+    || !distinctStrings(baseline.baselineRootSymbols, 229)
+    || !distinctStrings(baseline.protocolAssets?.originalRegistryPaths, 12)
+    || !distinctStrings(baseline.protocolAssets?.successorRegistryPaths, 12)
+    || !distinctStrings(baseline.protocolAssets?.successorSchemaPaths, 48)) {
+    throw new ProofFailure('E_PACKED_SURFACE_BASELINE_INVALID', 'The reviewed public package compatibility baseline is invalid.');
+  }
+  return baseline;
+}
+
+export function assertPackedSurfaceCompatibility(baseline, { exportKeys, rootSymbols }) {
+  if (baseline.baselineExportKeys.some((key) => !exportKeys.includes(key))) {
+    throw new ProofFailure('E_PIPELINE_EXPORT_BASELINE_MISSING', 'Packed pipeline removed a supported export key.');
+  }
+  if (rootSymbols && JSON.stringify([...rootSymbols].sort()) !== JSON.stringify([...baseline.baselineRootSymbols].sort())) {
+    throw new ProofFailure('E_PIPELINE_ROOT_SYMBOL_DRIFT', 'Packed pipeline root symbols differ from the supported baseline.');
+  }
+}
+
+export function countProtocolAssets(inventory, baseline) {
   const paths = new Set(inventory.map((entry) => entry.path));
-  const originalRegistryPaths = new Set(
-    preservationCatalog.registries.legacy.map((entry) => entry.sourcePath),
-  );
-  const successorRegistryPaths = new Set(
-    preservationCatalog.registries.canonical.map((entry) => {
-      const registry = readJson(path.join(repositoryRoot, entry.destinationPath));
-      return `registry/v${registry.protocolVersion}/${path.basename(entry.destinationPath)}`;
-    }),
-  );
-  const successorSchemaPaths = new Set(
-    preservationCatalog.schemas.additive.map((entry) => normalizedPath(
-      path.relative(path.join(repositoryRoot, 'packages', 'protocol'), path.join(repositoryRoot, entry.destinationPath)),
-    )),
-  );
+  const originalRegistryPaths = new Set(baseline.protocolAssets.originalRegistryPaths);
+  const successorRegistryPaths = new Set(baseline.protocolAssets.successorRegistryPaths);
+  const successorSchemaPaths = new Set(baseline.protocolAssets.successorSchemaPaths);
   const unclassifiedRootRegistries = [...paths]
     .filter((entry) => /^registry\/[^/]+\.json$/u.test(entry))
     .filter(
@@ -794,9 +815,10 @@ function verifyFullInstall({
   if (JSON.stringify(installedExportKeys) !== JSON.stringify(expectedExportKeys)) {
     throw new ProofFailure('E_PIPELINE_EXPORT_KEY_DRIFT', 'Packed pipeline export keys drifted.');
   }
-  if (JSON.stringify(exportProof.rootSymbols) !== JSON.stringify(expectedRootSymbols)) {
-    throw new ProofFailure('E_PIPELINE_ROOT_SYMBOL_DRIFT', 'Packed pipeline root symbols drifted.');
-  }
+  assertPackedSurfaceCompatibility(
+    { baselineExportKeys: expectedExportKeys, baselineRootSymbols: expectedRootSymbols },
+    { exportKeys: installedExportKeys, rootSymbols: exportProof.rootSymbols },
+  );
   if (
     exportProof.dashboard.ok !== true
     || exportProof.dashboard.kind !== 'openplanr-dashboard-build'
@@ -1037,12 +1059,8 @@ function main() {
     };
     pass(report, 'environment.node');
 
-    const preservationCatalog = readJson(preservationCatalogPath);
-    const baselineExportKeys = [...preservationCatalog.packageSurface.baselineExportKeys].sort();
-    const expectedRootSymbols = [...preservationCatalog.packageSurface.baselineRootSymbols].sort();
-    if (baselineExportKeys.length !== 37 || expectedRootSymbols.length !== 229) {
-      throw new ProofFailure('E_PRESERVATION_BASELINE_INVALID', 'Public package preservation baseline drifted.');
-    }
+    const packedSurfaceBaseline = readPackedSurfaceBaseline();
+    const expectedRootSymbols = [...packedSurfaceBaseline.baselineRootSymbols].sort();
     pass(report, 'baseline.public-surface', { exportKeys: 37, rootSymbols: 229 });
 
     workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'openplanr-packed-proof-'));
@@ -1082,10 +1100,8 @@ function main() {
     const cliProof = packageProof(cliPackageRoot, cliInventory, 'openplanr');
     const pipelineProof = packageProof(pipelinePackageRoot, pipelineInventory, 'planr-pipeline');
     const expectedExportKeys = Object.keys(pipelineProof.manifest.exports ?? {}).sort();
-    if (baselineExportKeys.some((key) => !expectedExportKeys.includes(key))) {
-      throw new ProofFailure('E_PIPELINE_EXPORT_BASELINE_MISSING', 'Packed pipeline removed a preserved export key.');
-    }
-    const protocolAssets = countProtocolAssets(pipelineInventory, preservationCatalog);
+    assertPackedSurfaceCompatibility(packedSurfaceBaseline, { exportKeys: expectedExportKeys });
+    const protocolAssets = countProtocolAssets(pipelineInventory, packedSurfaceBaseline);
     if (Object.entries(PACKED_WORKSPACE_PROTOCOL_ASSET_COUNTS)
       .some(([key, count]) => protocolAssets[key] !== count)) {
       throw new ProofFailure(
@@ -1231,4 +1247,4 @@ function main() {
   process.exitCode = report.ok ? 0 : 1;
 }
 
-main();
+if (path.resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) main();

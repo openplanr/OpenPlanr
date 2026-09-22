@@ -21,7 +21,7 @@ import {
   evaluationEvidenceReuse,
   evaluationScenarioIdentityFromSource,
 } from '../pipeline/evaluation-identity.mjs';
-import { readProfessionalSkillsCatalog, buildProfessionalSkillsManifest } from '../pipeline/professional-skills.mjs';
+import { readProfessionalSkillsCatalog, buildProfessionalSkillsManifest, renderProfessionalSkillAssets } from '../pipeline/professional-skills.mjs';
 import { sha256Jcs } from '../protocol/jcs.mjs';
 import { evaluateGates, countFindings, EVALUATION_RESULT_READY } from './gates.mjs';
 import {
@@ -46,7 +46,7 @@ import {
   triggerRates,
 } from './metrics.mjs';
 import { buildAggregateReport } from './report.mjs';
-import { buildDeclaredArchive, compareGeneratedAssets, comparePackageExports, comparePackedMembership } from './parity.mjs';
+import { compareGeneratedAssets, comparePackageExports, comparePackedMembership } from './parity.mjs';
 
 export const EVALUATION_CORPUS_ROOT = 'evaluation/scenarios';
 export const EVALUATION_HOST_PROFILE_ROOT = 'evaluation/host-profiles';
@@ -108,8 +108,8 @@ function resolveFixture(repoRoot, sourcePath) {
  * A partial catalog is reported, never inferred: a skill with no corpus on disk
  * is enumerated as uncovered rather than silently dropped from the totals.
  */
-export function loadEvaluationInputs({ repoRoot }) {
-  const catalog = readProfessionalSkillsCatalog({ projectRoot: repoRoot });
+export function loadEvaluationInputs({ repoRoot, sourceRoot, view = sourceRoot === undefined ? 'legacy' : 'active' }) {
+  const catalog = readProfessionalSkillsCatalog({ projectRoot: repoRoot, view, sourceRoot });
   const manifest = buildProfessionalSkillsManifest(catalog);
   const hostProfileRegistry = assertEvaluationHostProfileRegistry(readJson(join(repoRoot, 'registry/evaluation-host-profiles.json'), 'host profile registry'));
   const graderRegistry = assertEvaluationGraderRegistry(readJson(join(repoRoot, 'registry/evaluation-graders.json'), 'grader registry'));
@@ -232,16 +232,33 @@ function scenarioEvidenceInputs(entry, { budget, packageDigest, sourceDigest, gr
  */
 export async function runEvaluation({
   repoRoot,
+  sourceRoot,
   now,
   clock = () => now,
   waivers = [],
   owners = [],
   browserAdapter = createLoopbackBrowserAdapter(),
   priorEvidence = null,
-  inputs = loadEvaluationInputs({ repoRoot }),
+  inputs = loadEvaluationInputs({ repoRoot, sourceRoot, view: 'active' }),
 } = {}) {
   const startedAt = now;
   const { catalog, manifest, hostProfileRegistry, graderRegistry, baseline, budget, gatePolicy, corpora, packageJson, packageDigest, sourceDigest } = inputs;
+
+  const activeCatalog = readProfessionalSkillsCatalog({ projectRoot: repoRoot, sourceRoot, view: 'active' });
+  const archive = Object.freeze(renderProfessionalSkillAssets(activeCatalog));
+  const expectedSourceDigest = sha256Jcs(buildProfessionalSkillsManifest(activeCatalog, archive));
+  const activeRows = new Map(activeCatalog.skills.map((row) => [row.skillId, sha256Jcs(row)]));
+  if (sourceDigest !== expectedSourceDigest
+    || sha256Jcs(manifest) !== expectedSourceDigest
+    || sha256Jcs(buildProfessionalSkillsManifest(catalog)) !== expectedSourceDigest
+    || corpora.some(({ catalogRow }) => activeRows.get(catalogRow.skillId) !== sha256Jcs(catalogRow))) {
+    fail(
+      'E_EVALUATION_DIGEST_MISMATCH',
+      'Evaluation inputs do not match the explicitly selected active skill sources.',
+      'Reload evaluation inputs from sourceRoot before grading.',
+      { expected: expectedSourceDigest, actual: sourceDigest },
+    );
+  }
 
   const graders = Object.freeze({
     trigger: graderByName(graderRegistry, 'trigger-decision'),
@@ -260,7 +277,6 @@ export async function runEvaluation({
   const assets = compareGeneratedAssets({ repoRoot });
   const exports = comparePackageExports({ repoRoot, packageJson });
   const packed = comparePackedMembership({ repoRoot, packageJson });
-  const archive = buildDeclaredArchive({ repoRoot });
   const surface = readJson(join(repoRoot, EVALUATION_LOOPBACK_SURFACE_PATH), 'loopback surface');
 
   const cliRoot = createDisposableCliRoot();

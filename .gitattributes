@@ -1,7 +1,5 @@
 # Generated compatibility projections. Edit their canonical sources and run generation.
 adapters/** linguist-generated=true
-packages/pipeline/adapters/** linguist-generated=true
-packages/pipeline/skills/** linguist-generated=true
 packages/pipeline/lib/generated/** linguist-generated=true
 packages/pipeline/registry/generated-skill-assets.json linguist-generated=true
 packages/protocol/src/generated/** linguist-generated=true
@@ -38,12 +36,8 @@ packages/pipeline/fixtures/diagram/** linguist-generated=true
 packages/pipeline/gallery/** linguist-generated=true
 packages/pipeline/references/diagram/** linguist-generated=true
 packages/pipeline/templates/** linguist-generated=true
-packages/pipeline/plugins/** linguist-generated=true
-packages/pipeline/agents/** linguist-generated=true
-packages/pipeline/commands/** linguist-generated=true
 packages/pipeline/docs/generated/** linguist-generated=true
 packages/pipeline/THIRD_PARTY-DIAGRAM-NOTICES.md linguist-generated=true
 packages/cli/lib/host-packages/** linguist-generated=true
 docs/generated/** linguist-generated=true
-conformance/migration/*.json linguist-generated=true
 ecosystem.json linguist-generated=true

@@ -1,6 +1,0 @@
-interface:
-  display_name: "Openplanr"
-  short_description: "Compatibility router for the canonical planr-* OpenPlanr skills."
-  default_prompt: "Use $openplanr to compatibility router for the canonical planr-* OpenPlanr skills."
-policy:
-  allow_implicit_invocation: true

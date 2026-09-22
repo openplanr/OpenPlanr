@@ -19,97 +19,201 @@
     {
       "skillId": "planr-browser-qa",
       "sourceOwner": "skills",
-      "sourceVersion": "2.0.0",
-      "sourceDigest": "sha256:6ea1abe6cc81b04d0418ec5ea354920e10a765685403c492f9a7a282dab69de2",
+      "sourceVersion": "1.0.0",
+      "sourceDigest": "sha256:7ec450ada7f5bfca3e094ef1ab2bd6cedf8706299dae9d6426da5cb98428c776",
       "contracts": {
-        "inputs": [],
+        "inputs": [
+          {
+            "id": "browser-qa-gate",
+            "version": "1.0.0"
+          },
+          {
+            "id": "browser-qa-session",
+            "version": "1.0.0"
+          }
+        ],
         "outputs": [
           {
             "id": "browser-qa-result",
-            "version": "2.0.0"
+            "version": "1.0.0"
           }
         ]
       },
-      "authorityClass": "review-evidence",
+      "authorityClass": "quality-evidence",
       "triggerPolicy": {
         "include": [
-          "Test this page or application in a real browser",
-          "Check routes, forms, mobile viewports, accessibility, console, and network behavior"
+          "test this UI in a real browser",
+          "verify routes, forms, accessibility, console, and network behavior"
         ],
         "exclude": [
-          "Run backend unit tests only",
-          "Review a plan without exercising a browser"
+          "unit-test-only backend work",
+          "requests to approve, land, publish, or release"
         ],
-        "deferTo": []
+        "deferTo": [
+          "planr-ship",
+          "planr-land"
+        ]
       },
-      "cliRequirements": [],
+      "cliRequirements": [
+        {
+          "id": "pipeline-prepare-browser-qa",
+          "argv": [
+            "pipeline",
+            "prepare-browser-qa",
+            "<feature>"
+          ],
+          "requiredOptions": [
+            "--run-id",
+            "--json"
+          ]
+        },
+        {
+          "id": "pipeline-record-browser-qa",
+          "argv": [
+            "pipeline",
+            "record-browser-qa",
+            "<feature>"
+          ],
+          "requiredOptions": [
+            "--run-id",
+            "--generation",
+            "--result-file",
+            "--json"
+          ],
+          "inputOptions": [
+            "--session-file"
+          ]
+        }
+      ],
       "assets": [
         {
           "host": "claude-code",
           "entrypoint": "/planr-pipeline:planr-browser-qa",
           "path": "skills/planr-browser-qa/SKILL.md",
-          "digest": "sha256:6ea1abe6cc81b04d0418ec5ea354920e10a765685403c492f9a7a282dab69de2"
+          "digest": "sha256:7ec450ada7f5bfca3e094ef1ab2bd6cedf8706299dae9d6426da5cb98428c776"
         },
         {
           "host": "codex",
           "entrypoint": "$planr-browser-qa",
           "path": "adapters/codex/skills/planr-browser-qa/SKILL.md",
-          "digest": "sha256:6ea1abe6cc81b04d0418ec5ea354920e10a765685403c492f9a7a282dab69de2"
+          "digest": "sha256:7ec450ada7f5bfca3e094ef1ab2bd6cedf8706299dae9d6426da5cb98428c776"
         },
         {
           "host": "cursor",
           "entrypoint": "planr-browser-qa",
           "path": "adapters/cursor/rules/openplanr-browser-qa.mdc",
-          "digest": "sha256:84c963d6e4a30171db8ee1fb99f7621e1a2c018ba4d42004d18222026e2423ed"
+          "digest": "sha256:381d84cfdfa0a2f3fa6f267a27c8e9bc820cea00e0f4be97a61a12c8f1aab9a6"
         }
       ]
     },
     {
       "skillId": "planr-investigate",
       "sourceOwner": "skills",
-      "sourceVersion": "2.0.0",
-      "sourceDigest": "sha256:2662dc8f9cf6543ad84a96c5d579bbbb8a811ec43205e2ebd69a609a5b59ae2a",
+      "sourceVersion": "1.0.0",
+      "sourceDigest": "sha256:4fc6fdfb7b088ba185eea26ce1e7feb28a6cb469669d53d218a322bc9fea5b55",
       "contracts": {
-        "inputs": [],
+        "inputs": [
+          {
+            "id": "investigation-request",
+            "version": "1.0.0"
+          }
+        ],
         "outputs": [
           {
-            "id": "investigate-result",
-            "version": "2.0.0"
+            "id": "investigation-receipt",
+            "version": "1.0.0"
           }
         ]
       },
-      "authorityClass": "diagnostic",
+      "authorityClass": "diagnose-or-authorized-fix",
       "triggerPolicy": {
         "include": [
-          "Investigate a bug, regression, error, or unexplained behavior",
-          "Reproduce a defect, establish its root cause, or apply a bounded fix",
-          "Investigate why this fails"
+          "diagnose this bug and prove the root cause",
+          "apply a bounded fix from the accepted diagnosis"
         ],
         "exclude": [
-          "Plan a new feature",
-          "Run a broad product review"
+          "unscoped feature implementation",
+          "requests to approve, land, publish, or release"
         ],
-        "deferTo": []
+        "deferTo": [
+          "planr-spec",
+          "planr-ship",
+          "planr-land"
+        ]
       },
-      "cliRequirements": [],
+      "cliRequirements": [
+        {
+          "id": "pipeline-investigate-start",
+          "argv": [
+            "pipeline",
+            "investigate",
+            "start",
+            "<feature>"
+          ],
+          "requiredOptions": [
+            "--request-file",
+            "--json"
+          ]
+        },
+        {
+          "id": "pipeline-investigate-advance",
+          "argv": [
+            "pipeline",
+            "investigate",
+            "advance",
+            "<feature>"
+          ],
+          "requiredOptions": [
+            "--run-id",
+            "--event-file",
+            "--json"
+          ]
+        },
+        {
+          "id": "pipeline-investigate-verify",
+          "argv": [
+            "pipeline",
+            "investigate",
+            "verify",
+            "<feature>"
+          ],
+          "requiredOptions": [
+            "--run-id",
+            "--json"
+          ]
+        },
+        {
+          "id": "pipeline-investigate-finalize",
+          "argv": [
+            "pipeline",
+            "investigate",
+            "finalize",
+            "<feature>"
+          ],
+          "requiredOptions": [
+            "--run-id",
+            "--json"
+          ]
+        }
+      ],
       "assets": [
         {
           "host": "claude-code",
           "entrypoint": "/planr-pipeline:planr-investigate",
           "path": "skills/planr-investigate/SKILL.md",
-          "digest": "sha256:2662dc8f9cf6543ad84a96c5d579bbbb8a811ec43205e2ebd69a609a5b59ae2a"
+          "digest": "sha256:4fc6fdfb7b088ba185eea26ce1e7feb28a6cb469669d53d218a322bc9fea5b55"
         },
         {
           "host": "codex",
           "entrypoint": "$planr-investigate",
           "path": "adapters/codex/skills/planr-investigate/SKILL.md",
-          "digest": "sha256:2662dc8f9cf6543ad84a96c5d579bbbb8a811ec43205e2ebd69a609a5b59ae2a"
+          "digest": "sha256:4fc6fdfb7b088ba185eea26ce1e7feb28a6cb469669d53d218a322bc9fea5b55"
         },
         {
           "host": "cursor",
           "entrypoint": "planr-investigate",
           "path": "adapters/cursor/rules/openplanr-investigate.mdc",
-          "digest": "sha256:10380e74375697898695343c6d85e9f97cb5baaec3edfdf71ed1151eda7c88fa"
+          "digest": "sha256:cf43af8f88bca9fd550eb7a6315946edc5d2fc35ebe77ee40f87b5a7c563114d"
         }
       ]
     },
@@ -117,12 +221,17 @@
       "skillId": "planr-plan-review",
       "sourceOwner": "skills",
       "sourceVersion": "1.0.0",
-      "sourceDigest": "sha256:d168347e76edda7bec993684aa40eee7b05ad4d9389f4487263e39100d9f1623",
+      "sourceDigest": "sha256:a196877214e5b787d19e5f5805159e25f72da1a9ccacf8b89916bfc22bfba37a",
       "contracts": {
-        "inputs": [],
+        "inputs": [
+          {
+            "id": "professional-specification",
+            "version": "1.0.0"
+          }
+        ],
         "outputs": [
           {
-            "id": "plan-review-result",
+            "id": "planning-review-receipt",
             "version": "1.0.0"
           }
         ]
@@ -130,34 +239,75 @@
       "authorityClass": "review-evidence",
       "triggerPolicy": {
         "include": [
-          "Review an implementation plan for product, engineering, design, and developer-experience problems",
-          "Challenge a plan before implementation"
+          "professionally review this prepared plan",
+          "challenge this plan with CEO, engineering, design, and DevEx perspectives"
         ],
         "exclude": [
-          "Implement the plan",
-          "Write a new specification from vague intent"
+          "approve the plan for the owner",
+          "implement, ship, land, publish, or release the plan"
         ],
-        "deferTo": []
+        "deferTo": [
+          "planr-plan",
+          "planr-ship",
+          "planr-land"
+        ]
       },
-      "cliRequirements": [],
+      "cliRequirements": [
+        {
+          "id": "pipeline-prepare-plan-review",
+          "argv": [
+            "pipeline",
+            "prepare-plan-review",
+            "<feature>"
+          ],
+          "requiredOptions": [
+            "--json"
+          ]
+        },
+        {
+          "id": "pipeline-start-plan-review",
+          "argv": [
+            "pipeline",
+            "start-plan-review",
+            "<feature>"
+          ],
+          "requiredOptions": [
+            "--runtime",
+            "--json"
+          ]
+        },
+        {
+          "id": "pipeline-advance-plan-review",
+          "argv": [
+            "pipeline",
+            "advance-plan-review",
+            "<feature>"
+          ],
+          "requiredOptions": [
+            "--run-id",
+            "--event-file",
+            "--json"
+          ]
+        }
+      ],
       "assets": [
         {
           "host": "claude-code",
           "entrypoint": "/planr-pipeline:planr-plan-review",
           "path": "skills/planr-plan-review/SKILL.md",
-          "digest": "sha256:d168347e76edda7bec993684aa40eee7b05ad4d9389f4487263e39100d9f1623"
+          "digest": "sha256:a196877214e5b787d19e5f5805159e25f72da1a9ccacf8b89916bfc22bfba37a"
         },
         {
           "host": "codex",
           "entrypoint": "$planr-plan-review",
           "path": "adapters/codex/skills/planr-plan-review/SKILL.md",
-          "digest": "sha256:d168347e76edda7bec993684aa40eee7b05ad4d9389f4487263e39100d9f1623"
+          "digest": "sha256:a196877214e5b787d19e5f5805159e25f72da1a9ccacf8b89916bfc22bfba37a"
         },
         {
           "host": "cursor",
           "entrypoint": "planr-plan-review",
           "path": "adapters/cursor/rules/openplanr-plan-review.mdc",
-          "digest": "sha256:52cb318ca3fa888124f75950c54b594bde7276a333855130a6919683ea093c2c"
+          "digest": "sha256:fe14e580ee2ae18e67d584b94875936af8996869b412bd6af6b19da7c776d82c"
         }
       ]
     },
@@ -165,12 +315,17 @@
       "skillId": "planr-spec",
       "sourceOwner": "skills",
       "sourceVersion": "1.0.0",
-      "sourceDigest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85",
+      "sourceDigest": "sha256:aaf628d67ed69e5078e4c6321cc2510649a001f255a8716a414f03d8106114c9",
       "contracts": {
-        "inputs": [],
+        "inputs": [
+          {
+            "id": "intent",
+            "version": "1.0.0"
+          }
+        ],
         "outputs": [
           {
-            "id": "spec-result",
+            "id": "professional-specification",
             "version": "1.0.0"
           }
         ]
@@ -178,37 +333,51 @@
       "authorityClass": "planning-write",
       "triggerPolicy": {
         "include": [
-          "Turn vague product or engineering intent into a precise specification",
-          "Clarify requirements and acceptance criteria before planning"
+          "turn this vague idea into a measurable specification",
+          "define scope, evidence, failure modes, and rollback before planning"
         ],
         "exclude": [
-          "Implement an existing specification",
-          "Return project status"
+          "review an existing plan",
+          "implement, ship, land, publish, or release a feature"
         ],
-        "deferTo": []
+        "deferTo": [
+          "planr-plan",
+          "planr-plan-review",
+          "planr-ship",
+          "planr-land"
+        ]
       },
-      "cliRequirements": [],
+      "cliRequirements": [
+        {
+          "id": "spec-create",
+          "argv": [
+            "spec",
+            "<intent-or-file>"
+          ],
+          "requiredOptions": []
+        }
+      ],
       "assets": [
         {
           "host": "claude-code",
           "entrypoint": "/planr-pipeline:planr-spec",
           "path": "skills/planr-spec/SKILL.md",
-          "digest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85"
+          "digest": "sha256:aaf628d67ed69e5078e4c6321cc2510649a001f255a8716a414f03d8106114c9"
         },
         {
           "host": "codex",
           "entrypoint": "$planr-spec",
           "path": "adapters/codex/skills/planr-spec/SKILL.md",
-          "digest": "sha256:7ef9a0c6792194163b44be7eb6ee23517a6efb087e87a607005b0dcb9b697b85"
+          "digest": "sha256:aaf628d67ed69e5078e4c6321cc2510649a001f255a8716a414f03d8106114c9"
         },
         {
           "host": "cursor",
           "entrypoint": "planr-spec",
           "path": "adapters/cursor/rules/openplanr-spec.mdc",
-          "digest": "sha256:a397c56676261974a7acd86b1baef7b5c6e567d5bcfa9b14ee2111a44ee0df83"
+          "digest": "sha256:9299d2da14d1a971abcd66f06aeb56a40c6f8c11a871a303e28f867b4cdfadfd"
         }
       ]
     }
   ],
-  "bundleDigest": "sha256:28f80cbf19b2102c12d9b607e9a80a381ea0a396d2d541f6e88bd38948aa740c"
+  "bundleDigest": "sha256:97124eed2ff441853b2d9121d2360bd271a64c59d74c06db88969288b3fce09a"
 }

@@ -234,7 +234,7 @@
   },
   "scripts": {
     "test": "npm run test:orchestration && npm run test:surface",
-    "test:surface": "npm run test:schema && npm run test:docs && npm run test:design && npm run test:design-engine && npm run test:artifact && npm run test:dashboard && npm run test:evaluation && npm run check:operate-contracts && npm run conformance:operate && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard && npm run conformance:unified-dashboard-absence && npm run conformance:skill-evaluation",
+    "test:surface": "npm run test:schema && npm run test:docs && npm run test:design && npm run test:design-engine && npm run test:artifact && npm run test:dashboard && npm run test:evaluation && npm run check:operate-contracts && npm run conformance:operate && npm run conformance:design && npm run conformance:design-loop && npm run conformance:artifact && npm run conformance:dashboard && npm run conformance:unified-dashboard-absence && npm run conformance:skill-evaluation && npm run conformance:ci",
     "generate:artifact-shell": "node scripts/generate-artifact-shell.mjs",
     "check:artifact-shell": "node scripts/generate-artifact-shell.mjs --check",
     "generate:operate-contracts": "node scripts/generate-operate-contracts.mjs --write",
@@ -310,6 +310,7 @@
     "test:guided-contracts": "node --test tests/schema/guided-interaction-schemas.test.mjs tests/orchestration/guided-interaction-contracts.test.mjs",
     "test:design": "node scripts/run-test-group.mjs tests/design",
     "conformance:design": "node conformance/verify-design-assets.mjs",
-    "conformance:design-handoff": "node conformance/verify-design-handoff-contracts.mjs"
+    "conformance:design-handoff": "node conformance/verify-design-handoff-contracts.mjs",
+    "conformance:ci": "npm run conformance:native-dispatch && npm run conformance:governed-landing && npm run conformance:design-handoff"
   }
 }

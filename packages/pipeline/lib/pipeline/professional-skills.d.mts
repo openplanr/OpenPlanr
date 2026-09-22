@@ -54,16 +54,21 @@ export const PROFESSIONAL_SKILLS_CATALOG_PATH: 'registry/professional-skills.jso
 export const PROFESSIONAL_SKILLS_MANIFEST_PATH: 'conformance/fixtures/professional-skills/generated-assets.json';
 export const PROFESSIONAL_SKILL_IDS: readonly ProfessionalSkillId[];
 export function assertProfessionalSkillsCatalog(catalog: unknown): ProfessionalSkillsCatalog;
-export function readProfessionalSkillsCatalog(options?: {
+export interface ProfessionalSkillsReadOptions {
+  /** Package root containing the bundled registry. Defaults to this installation. */
   projectRoot?: string;
+  /** Bundled compatibility snapshots by default; active requires an explicit sourceRoot. */
   view?: 'active' | 'legacy';
-}): ProfessionalSkillsCatalog;
+  /** Caller-owned source root containing skills/<skillId>/SKILL.md. Never discovered. */
+  sourceRoot?: string;
+}
+export function readProfessionalSkillsCatalog(options?: ProfessionalSkillsReadOptions): ProfessionalSkillsCatalog;
 export function renderProfessionalSkillAssets(catalog: ProfessionalSkillsCatalog): Record<string, string>;
 export function buildProfessionalSkillsManifest(
   catalog: ProfessionalSkillsCatalog,
   assets?: Record<string, string>,
   options?: { cliRequirementsBySkill?: Map<ProfessionalSkillId, ProfessionalSkillCliRequirement[]> },
 ): ProfessionalSkillsManifest;
-export function renderProfessionalSkillsBundle(options?: { projectRoot?: string }): Readonly<Record<string, string>>;
+export function renderProfessionalSkillsBundle(options?: ProfessionalSkillsReadOptions): Readonly<Record<string, string>>;
 export function professionalSkillCliRequirements(catalog: ProfessionalSkillsCatalog): Array<ProfessionalSkillCliRequirement & { skillId: ProfessionalSkillId }>;
 export function professionalSkillDigest(value: string): `sha256:${string}`;

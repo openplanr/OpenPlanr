@@ -28,6 +28,13 @@ export const GENERATOR_STEPS = Object.freeze([
     ]),
   }),
   Object.freeze({
+    id: 'protocol-public-projection',
+    required: true,
+    candidates: Object.freeze([
+      command('scripts/protocol/project-protocol.mjs', ['--write', '--target', 'packages/pipeline'], ['--check', '--target', 'packages/pipeline']),
+    ]),
+  }),
+  Object.freeze({
     id: 'dashboard-contracts',
     required: true,
     candidates: Object.freeze([
@@ -47,13 +54,6 @@ export const GENERATOR_STEPS = Object.freeze([
     required: true,
     candidates: Object.freeze([
       command('packages/artifact/scripts/generate-diagram-assets.mjs', [], ['--check']),
-    ]),
-  }),
-  Object.freeze({
-    id: 'protocol-public-projection',
-    required: true,
-    candidates: Object.freeze([
-      command('scripts/protocol/project-protocol.mjs', ['--write', '--target', 'packages/pipeline'], ['--check', '--target', 'packages/pipeline']),
     ]),
   }),
   Object.freeze({
@@ -97,13 +97,6 @@ export const GENERATOR_STEPS = Object.freeze([
     required: true,
     candidates: Object.freeze([
       command('scripts/marketplace/generate-ecosystem.mjs', ['--write'], ['--check']),
-    ]),
-  }),
-  Object.freeze({
-    id: 'preservation-catalog',
-    required: true,
-    candidates: Object.freeze([
-      command('scripts/migration/generate-preservation-catalog.mjs', ['--write'], ['--check']),
     ]),
   }),
 ]);

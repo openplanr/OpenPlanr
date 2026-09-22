@@ -53,8 +53,6 @@ log('OpenPlanr design-loop conformance (mocked full loop, $0)\n');
 // 0 — orchestration + engine files present
 log('orchestration:');
 for (const rel of [
-  'commands/design-loop.md',
-  'commands/design-review.md',
   'procedures/design-loop-step0-context.md',
   'procedures/design-loop-step1-gate.md',
   'procedures/design-loop-step2-variants.md',
@@ -71,15 +69,13 @@ for (const rel of [
   'docs/design-loop.md',
 ]) assert(existsSync(join(root, rel)), rel);
 
-const loopCommand = readFileSync(join(root, 'commands/design-loop.md'), 'utf8');
-const reviewCommand = readFileSync(join(root, 'commands/design-review.md'), 'utf8');
 const loopBoardProcedure = readFileSync(join(root, 'procedures/design-loop-step3-board.md'), 'utf8');
-assert(loopCommand.includes('planr artifact import') && reviewCommand.includes('planr artifact share'),
-  'design loop/review expose Share + returned-review import through planr');
+assert(loopBoardProcedure.includes('planr artifact import') && loopBoardProcedure.includes('Share** as an optional, explicit control'),
+  'board procedure exposes explicit Share and returned-review import through planr');
 assert(loopBoardProcedure.includes('never wrap') && loopBoardProcedure.includes('never imply approval'),
   'board sharing stays explicit, immutable, non-nested, and separate from approval');
-assert(!loopCommand.includes('planr-pipeline artifact') && !reviewCommand.includes('planr-pipeline artifact'),
-  'design docs never invoke the nested package executable for artifact review');
+assert(!loopBoardProcedure.includes('planr-pipeline artifact'),
+  'board procedure uses the public artifact route');
 
 // 1 — contract + author + check
 log('\ngenerate (claude-svg):');

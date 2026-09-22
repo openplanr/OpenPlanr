@@ -18,7 +18,6 @@ const JOBS = [
       ['git', ['diff', '--exit-code', 'HEAD', '--']],
       ['npm', ['run', 'check:generated']],
       ['npm', ['run', 'check:boundaries']],
-      ['npm', ['run', 'check:preservation']],
       ['npm', ['run', 'check:docs']],
       ['npm', ['run', 'lint']],
       ['npm', ['run', 'build']],

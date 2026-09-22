@@ -1,6 +1,0 @@
-interface:
-  display_name: "Planr Artifact"
-  short_description: "Open, share, import, or export an OpenPlanr HTML artifact…"
-  default_prompt: "Use $planr-artifact to open, share, import, or export an OpenPlanr HTML artifact review. Use when feedback must move between a local artifact and its review board."
-policy:
-  allow_implicit_invocation: true

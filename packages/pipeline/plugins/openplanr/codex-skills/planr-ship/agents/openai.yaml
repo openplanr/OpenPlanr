@@ -1,6 +1,0 @@
-interface:
-  display_name: "Planr Ship"
-  short_description: "Implement an OpenPlanr plan, specification, task, or clearly…"
-  default_prompt: "Use $planr-ship to implement an OpenPlanr plan, specification, task, or clearly stated request end to end in the current repository. Use when the user asks to build, implement, fix, finish, or ship local work."
-policy:
-  allow_implicit_invocation: true

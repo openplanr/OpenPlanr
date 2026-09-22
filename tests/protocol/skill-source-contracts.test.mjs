@@ -52,10 +52,9 @@ test('generated v1.6 and v1.7 registries validate against their contracts and RF
   }
 });
 
-test('projection, preservation, and ecosystem generators share canonical versioned registry descriptors', () => {
+test('projection and ecosystem generators share canonical versioned registry descriptors', () => {
   const consumers = [
     'scripts/protocol/project-protocol.mjs',
-    'scripts/migration/generate-preservation-catalog.mjs',
     'scripts/marketplace/generate-ecosystem.mjs',
   ];
   for (const relativePath of consumers) {

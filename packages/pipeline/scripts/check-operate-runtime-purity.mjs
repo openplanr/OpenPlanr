@@ -19,6 +19,13 @@ import { fileURLToPath } from 'node:url';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
+const DEVELOPMENT_PROJECTION_MANIFESTS = Object.freeze([
+  'lib/generated/protocol-projection.json',
+  'lib/generated/domain-projections/artifact.json',
+  'lib/generated/domain-projections/design.json',
+  'lib/generated/domain-projections/operate.json',
+]);
+
 // A clean development package is assembled from committed source plus this
 // explicit Operate development overlay. This keeps private planning and
 // unrelated dirty files out of the package without implying a release
@@ -33,9 +40,6 @@ export const UNIFIED_DASHBOARD_PROTOCOL_PATHS = Object.freeze([
 const OPERATE_V2_DEVELOPMENT_OVERLAYS = Object.freeze([
   'CHANGELOG.md',
   'README.md',
-  'agents/modes/default/specification.md',
-  'agents/modes/spec-driven/specification.md',
-  'agents/specification-agent.md',
   'conformance/.npmignore',
   'conformance/fixtures/professional-skills/generated-assets.json',
   'conformance/fixtures/operate-adapter-parity/generated-assets.json',
@@ -239,11 +243,6 @@ const OPERATE_V2_DEVELOPMENT_OVERLAYS = Object.freeze([
   'lib/protocol/skill-source-contracts.mjs',
   'package-lock.json',
   'package.json',
-  'plugins/openplanr/agents/specification-agent.md',
-  'plugins/openplanr/codex-skills/planr-plan/SKILL.md',
-  'plugins/openplanr/codex-skills/planr-ship/SKILL.md',
-  'plugins/openplanr/skills/planr-plan/SKILL.md',
-  'plugins/openplanr/skills/planr-ship/SKILL.md',
   'registry/adapters.json',
   'registry/frozen-commands.json',
   'registry/landing-operations.json',
@@ -450,10 +449,37 @@ function copyWithoutSymlinks(source, destination) {
   copyFileSync(source, destination);
 }
 
-function isOverlayPath(path) {
-  return OPERATE_V2_DEVELOPMENT_OVERLAYS.some((allowed) => (
-    path === allowed || path.startsWith(`${allowed}/`)
-  ));
+function assertOverlayParents(root, path) {
+  let current = root;
+  for (const component of path.split('/')) {
+    current = join(current, component);
+    let stat;
+    try { stat = lstatSync(current); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (stat?.isSymbolicLink()) fail(`Development projection contains a symlink: ${path}`);
+  }
+}
+
+function developmentProjectionEntries(source) {
+  const entries = new Map();
+  for (const path of DEVELOPMENT_PROJECTION_MANIFESTS) {
+    assertOverlayParents(source, path);
+    const bytes = readFileSync(join(source, path));
+    const manifest = JSON.parse(bytes);
+    if (!Array.isArray(manifest.entries) || manifest.entries.length === 0) {
+      fail(`Development projection manifest has no entries: ${path}`);
+    }
+    entries.set(path, createHash('sha256').update(bytes).digest('hex'));
+    for (const { target, sha256 } of manifest.entries) {
+      if (typeof target !== 'string' || target.includes('\\') || target.includes(':')
+          || target.split('/').some((part) => !part || part === '.' || part === '..')
+          || USER_OWNED_EXCLUDED_PATHS.includes(target) || !/^[a-f0-9]{64}$/.test(sha256)) {
+        fail(`Invalid development projection entry in ${path}: ${target}`);
+      }
+      if (entries.has(target)) fail(`Duplicate development projection target: ${target}`);
+      entries.set(target, sha256);
+    }
+  }
+  return entries;
 }
 
 function parseStatusPath(line) {
@@ -497,6 +523,7 @@ function removeLegacySnapshotPaths(destination, paths) {
 export function createOperateV2DevelopmentSnapshot(destinationRoot, { sourceRoot = repositoryRoot } = {}) {
   const source = realpathSync(sourceRoot);
   const sourceGit = gitLocation(source);
+  const projectionEntries = developmentProjectionEntries(source);
   mkdirSync(destinationRoot, { recursive: true });
   const destination = realpathSync(destinationRoot);
   const dirtyPaths = listedDirtyPaths(source);
@@ -523,6 +550,20 @@ export function createOperateV2DevelopmentSnapshot(destinationRoot, { sourceRoot
     copyWithoutSymlinks(sourcePath, join(destination, path));
   }
 
+  // Git archives exclude regenerated package surfaces. Copy only the exact
+  // manifest-owned files, keeping the manifest and packaged bytes consistent.
+  for (const [path, sha256] of projectionEntries) {
+    assertOverlayParents(source, path);
+    assertOverlayParents(destination, path);
+    const sourcePath = join(source, path);
+    if (!lstatSync(sourcePath).isFile()) fail(`Development projection is not a regular file: ${path}`);
+    const destinationPath = join(destination, path);
+    copyWithoutSymlinks(sourcePath, destinationPath);
+    if (sha256File(destinationPath) !== sha256) {
+      fail(`Development projection digest mismatch: ${path}. Run npm run generate at the repository root.`);
+    }
+  }
+
   const excludedProof = USER_OWNED_EXCLUDED_PATHS.map((path) => {
     const snapshotPath = join(destination, path);
     const worktreePath = join(source, path);
@@ -545,7 +586,7 @@ export function createOperateV2DevelopmentSnapshot(destinationRoot, { sourceRoot
     source,
     destination,
     dirtyPaths,
-    overlays: [...OPERATE_V2_DEVELOPMENT_OVERLAYS],
+    overlays: [...new Set([...OPERATE_V2_DEVELOPMENT_OVERLAYS, ...projectionEntries.keys()])],
     legacyRemovals,
     excludedProof,
   };
