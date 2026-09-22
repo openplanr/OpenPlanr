@@ -1,0 +1,99 @@
+# Shared diagram editor session
+
+The portable `planr-pipeline/diagram-editor` entry point owns editing state for
+local and future hosted shells. It uses the existing typed edit kernel and one
+semantic/presentation bundle. It contains no filesystem, Design, company identity
+or model client. `planr-pipeline/diagram-owner` is its separate Node-only local
+transport. Both have TypeScript declarations.
+
+These APIs provide editing state and local persistence. Hosts supply the canvas
+controls; authoring CLI commands and the company editor are not yet exposed.
+
+## Local use
+
+```js
+import { createDiagramAuthoringStore } from 'planr-pipeline/diagram-authoring-store';
+import { createDiagramEditorDraft, openDiagramEditorSession } from 'planr-pipeline/diagram-editor';
+
+const store = createDiagramAuthoringStore({ root: process.cwd(), slug: 'checkout' });
+const draft = createDiagramEditorDraft({ diagramId: 'checkout', title: 'Checkout' });
+if (!draft.ok) throw new Error(draft.diagnostics[0].detail);
+const editor = await openDiagramEditorSession({ transport: store, create: draft.bundle });
+// Use editor.submit(command) with the typed authoring vocabulary.
+// An unsaved blank draft is valid; Save initializes the complete bundle.
+await editor.save();
+editor.dispose();
+```
+
+Templates are validated bundles copied with a new diagram identity. Their element
+IDs remain scoped to that new diagram; source-link custody is detached. Clipboard
+copies contain only the selected self-contained semantic/layout fragment, at most
+1,000 objects and 1 MiB. Paste delegates identity remapping and relationship checks
+to the same edit kernel.
+
+## Gesture and view ownership
+
+The session owns one camera `{x, y, scale, fit}` with
+`screen = world * scale + offset`. Selection, collapsed groups, tracing and snap
+preferences stay outside document content. Equal revision refresh is a no-op.
+Subscriptions announce affected IDs without forcing a complete bundle clone on
+every event; shells request `getState()` when they need a detached snapshot.
+
+`beginGesture()` and `previewGesture(command)` preview relative to the original
+content; pointer deltas are absolute deltas from gesture start. Only
+`completeGesture()` adds one transaction and conditional inverse. An invalid
+latest preview cannot commit an earlier valid one. `previewLayout()` uses the same
+explicit preview/commit boundary. `bindDiagramEditorCancellation(editor, target)`
+binds Escape, pointer cancel, lost capture and blur; the shell still owns the
+actual pointer gestures and must remove these listeners when unmounting.
+
+Geometry uses cached stable-ID bounds, labels and connector segments, with
+screen-size tolerance through that camera. Spatial queries do no DOM or full
+geometry scans. Content updates still validate the bundle and scan metadata for
+correct dependency coverage, then resolve only changed objects, descendants and
+incident connectors. Work counters distinguish these costs. A mixed 1,000-element
+fixture verifies candidate reduction and affected updates; it is not an end-user
+latency benchmark or a claim that interactive performance targets have been met.
+
+## Save, conflict and recovery
+
+Only an exact owner acknowledgement marks a revision saved. Pending transactions
+retain their IDs and canonical bytes after uncertain outcomes. A late response
+cannot clear later edits. Retrying an already committed transaction returns its
+original receipt. A historical receipt cannot replace a newer revision already
+observed by the session.
+
+Refresh with a new base while edits or a gesture are pending retains that draft and
+exposes a comparison. Undo/redo use expected-current-value compensation; they never
+restore an old whole-document snapshot over another author's work.
+`useAuthoritative()` deliberately discards a draft and must be offered alongside
+comparison/export by the mounting UI. It cannot run while a save is in flight.
+Derived rendering/export is separate from Save and cannot undo its acknowledgement.
+
+A browser host can use `createDiagramEditorRecovery` with `sessionStorage` and the
+opaque recovery scope returned by its authenticated owner read. Records contain the
+base bundle and exact pending transactions, never owner URLs or tokens. Recovery is
+bounded to 100 transactions and 2 MiB. The host must not substitute a scope taken
+from untrusted document data. Recovery supports refresh within the same owner
+session; restarting the daemon gives a new scope. A blocked or full store reports
+memory-only recovery. Invalid records are retained for inspection, not applied or
+silently replaced. Recovery data is untrusted and never establishes a saved state.
+
+## Owner HTTP boundary
+
+`startDiagramOwner({root, slug})` binds one verified filesystem scope before issuing
+an owner capability. Requests under `/o/{id}/{capability}/api/` provide only bundle
+or transaction data, never a source path. `read`, `initialize`, `commit` and `recover`
+reuse the durable store's base, replay, custody and recovery checks. The existing
+loopback Host/Origin protections apply, with an explicit owner header and bounded
+UTF-8 JSON. Review `/r/` capabilities and shared artifacts cannot access these routes.
+
+The browser's `createDiagramLocalOwnerTransport({apiBase})` requires its exact
+loopback origin, rejects redirects and bounds response bytes. Normal browser Origin
+headers are used for writes. The returned `baseUrl` is an API authority, not a finished
+editor page; the mounting host supplies that shell. Closing the server drains
+in-flight saves.
+
+The local store's documented same-OS-user security limits still apply. No hosted
+identity, production service, package publication or company authorization changes
+are part of this implementation.

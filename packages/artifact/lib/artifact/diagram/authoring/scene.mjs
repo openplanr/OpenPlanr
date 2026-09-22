@@ -206,6 +206,24 @@ function inspectGeometry(elements, diagnostics) {
   for (let a = 0; a < shapes.length; a++) for (let b = a + 1; b < shapes.length; b++) if (overlaps(shapes[a].bounds, shapes[b].bounds)) diagnostics.push(issue('shape-overlap', `Shapes ${shapes[a].id} and ${shapes[b].id} overlap.`, [shapes[a].id, shapes[b].id], 'warning'));
 }
 
+/** Internal shared geometry for rendering and the editor index; inputs are validated. */
+export function resolveDiagramSceneElement(entry, placement, placements, order, emphasisLevel = null, diagnostics = []) {
+  const { collection, value } = entry;
+  const element = { id: value.id, collection, semantic: clone(value), kind: value.kind ?? collection, label: value.label ?? value.text ?? '', description: value.description ?? '', bounds: clone(placement.bounds), savedLabel: clone(placement.label), zIndex: placement.zIndex, order, appearance: clone(placement.appearance), locks: clone(placement.locks), emphasis: emphasisLevel };
+  if (placement.bounds) Object.assign(element, clone(placement.bounds));
+  if (collection === 'relations') Object.assign(element, { from: value.from, to: value.to, direction: value.direction, route: clone(placement.route), points: routePoints(value, placement, placements) });
+  element.text = resolveText(element, diagnostics);
+  element.lines = element.text?.lines ?? [];
+  if (element.points) {
+    element.routePoints = element.points.map(({ x, y }) => [x, y]);
+    element.x1 = element.points[0].x; element.y1 = element.points[0].y;
+    element.x2 = element.points.at(-1).x; element.y2 = element.points.at(-1).y;
+    element.labelBounds = element.text?.bounds ?? null;
+    element.labelLines = element.lines;
+  }
+  return element;
+}
+
 /** Resolve one immutable bundle without relayout or writes to authored geometry. */
 export function resolveDiagramScene(bundle) {
   const checked = validateAuthoringBundle(bundle);
@@ -214,22 +232,7 @@ export function resolveDiagramScene(bundle) {
   const placements = new Map(bundle.presentation.elements.map(value => [value.elementId, value]));
   const emphasis = new Map(bundle.document.emphasis.map(value => [value.targetId, value.level]));
   const diagnostics = [];
-  const elements = bundle.presentation.elements.map((placement, order) => {
-    const { collection, value } = byId.get(placement.elementId);
-    const element = { id: value.id, collection, semantic: clone(value), kind: value.kind ?? collection, label: value.label ?? value.text ?? '', description: value.description ?? '', bounds: clone(placement.bounds), savedLabel: clone(placement.label), zIndex: placement.zIndex, order, appearance: clone(placement.appearance), locks: clone(placement.locks), emphasis: emphasis.get(value.id) ?? null };
-    if (placement.bounds) Object.assign(element, clone(placement.bounds));
-    if (collection === 'relations') Object.assign(element, { from: value.from, to: value.to, direction: value.direction, route: clone(placement.route), points: routePoints(value, placement, placements) });
-    element.text = resolveText(element, diagnostics);
-    element.lines = element.text?.lines ?? [];
-    if (element.points) {
-      element.routePoints = element.points.map(({ x, y }) => [x, y]);
-      element.x1 = element.points[0].x; element.y1 = element.points[0].y;
-      element.x2 = element.points.at(-1).x; element.y2 = element.points.at(-1).y;
-      element.labelBounds = element.text?.bounds ?? null;
-      element.labelLines = element.lines;
-    }
-    return element;
-  }).sort((a, b) => a.zIndex - b.zIndex || a.order - b.order);
+  const elements = bundle.presentation.elements.map((placement, order) => resolveDiagramSceneElement(byId.get(placement.elementId), placement, placements, order, emphasis.get(placement.elementId) ?? null, diagnostics)).sort((a, b) => a.zIndex - b.zIndex || a.order - b.order);
   // Valid bundles can contain more route points than JavaScript permits as
   // function arguments. Accumulate bounds without spreading or flattening them.
   let minimumX = 0, minimumY = 0, maximumX = 0, maximumY = 0;

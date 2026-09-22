@@ -68,3 +68,32 @@ export async function openDiagramArtifact(
     );
   return runtime.startDiagramReview(path.resolve(file), options);
 }
+
+/** Programmatic owner bridge; command registration belongs to the authoring CLI slice. */
+export async function openDiagramOwner(options: {
+  root: string;
+  slug: string;
+  port?: number;
+  env?: Record<string, string | undefined>;
+}): Promise<{
+  ok: true;
+  kind: 'diagram-owner';
+  sessionId: string;
+  recoveryScope: string;
+  baseUrl: string;
+  apiBase: string;
+  capabilities: { read: true; write: true };
+  headers: Record<string, string>;
+  close(): Promise<void>;
+}> {
+  const pipeline = resolvePipelinePackage(false);
+  if (!pipeline) throw new Error('Diagram editing requires the OpenPlanr workflow package.');
+  const runtime = await import(
+    pathToFileURL(path.join(pipeline.root, 'lib/artifact/diagram/editor/local-owner.mjs')).href
+  );
+  if (typeof runtime.startDiagramOwner !== 'function')
+    throw new Error(
+      'The installed workflow package does not support diagram editing. Update OpenPlanr first.',
+    );
+  return runtime.startDiagramOwner({ ...options, root: path.resolve(options.root) });
+}

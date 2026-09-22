@@ -664,6 +664,21 @@ try {
     const exported = await exportAuthoredDiagram(reopened.bundle, options);
     if (!exported.ok || !(await verifyAuthoredDiagramExports(reopened.bundle, options)).ok) throw new Error('Packed authored export failed: ' + JSON.stringify(exported));
     if (fs.readFileSync(path.join(exported.directory, 'diagram.png')).byteLength < 32) throw new Error('Packed PNG was not rasterized');
+    const editorApi = await import('planr-pipeline/diagram-editor');
+    const editor = await editorApi.openDiagramEditorSession({ transport: restarted });
+    const edited = editor.submit({ type: 'rename', id: 'step-one', label: 'Edited from installed package' });
+    if (!edited.ok || !(await editor.save()).ok || editor.getState().saveState !== 'saved') throw new Error('Packed editor save failed');
+    const editorRead = await editorApi.openDiagramEditorSession({ transport: restarted });
+    if (editorRead.getState().bundle.document.nodes[0].label !== 'Edited from installed package') throw new Error('Packed editor reopen failed');
+    if (!editorRead.query({ x: 50, y: 50 }).hits.some(hit => hit.id === 'step-one')) throw new Error('Packed indexed editor hit failed');
+    const { startDiagramOwner } = await import('planr-pipeline/diagram-owner');
+    const owner = await startDiagramOwner(options);
+    try {
+      const response = await fetch(owner.apiBase + 'read', { headers: owner.headers });
+      const state = await response.json();
+      if (response.status !== 200 || state.bundle.bundleDigest !== editorRead.getState().bundle.bundleDigest) throw new Error('Packed owner read failed');
+    } finally { await owner.close(); editor.dispose(); editorRead.dispose(); }
+
   } finally { fs.rmSync(authoredRoot, { recursive: true, force: true }); }
 
   const dashboardPath = fs.realpathSync(require.resolve('openplanr/dashboard'));
@@ -743,6 +758,7 @@ function runExportProof({
 } from 'planr-pipeline/diagram-authoring';
 import { createDiagramAuthoringStore, previewLegacyDiagramMigration } from 'planr-pipeline/diagram-authoring-store';
 import { exportAuthoredDiagram, verifyAuthoredDiagramExports } from 'planr-pipeline/diagram-authoring-export';
+import { createDiagramEditorSession, openDiagramEditorSession, createDiagramEditorDraft, createDiagramEditorRecovery, copyDiagramSelection, pasteDiagramSelection, createDiagramLocalOwnerTransport } from 'planr-pipeline/diagram-editor';
 declare const bundle: DiagramAuthoringBundle;
 const move: DiagramCommand = { type: 'move', ids: ['step-one'], dx: 20, dy: 0 };
 const result = compileDiagramCommand(bundle, move, { transactionId: 'consumer-move' });
@@ -771,6 +787,24 @@ const outputs = await exportAuthoredDiagram(bundle, storageOptions);
 if (outputs.ok) outputs.scene.boxes.map(box => box.bounds?.x);
 await verifyAuthoredDiagramExports(bundle, storageOptions);
 await previewLegacyDiagramMigration(storageOptions);
+const editor = createDiagramEditorSession({ bundle, transport: store });
+await openDiagramEditorSession({ transport: store });
+editor.submit(move); editor.beginGesture(); editor.previewGesture(move); editor.completeGesture();
+editor.setView({ camera: { x: 0, y: 0, scale: 1, fit: null }, selection: ['step-one'] });
+const hits = editor.query({ x: 40, y: 50 });
+if (hits.ok) hits.hits.map(hit => hit.id);
+const draft = createDiagramEditorDraft({ diagramId: 'new-diagram', title: 'Draft' });
+if (draft.ok) editor.refresh(draft.bundle);
+const clipboard = copyDiagramSelection(bundle, ['step-one']);
+if (clipboard.ok) pasteDiagramSelection(bundle, clipboard.value, { idMap: { 'step-one': 'step-two' }, transactionId: 'paste-copy' });
+createDiagramEditorRecovery({ scope: { sessionId: 'verified-owner', diagramId: bundle.diagramId } });
+const ownerTransport = createDiagramLocalOwnerTransport({ apiBase: 'http://127.0.0.1:3000/o/id/token/api/' });
+const ownerRead = await ownerTransport.read();
+if (ownerRead.ok) createDiagramEditorRecovery({ scope: { sessionId: ownerRead.recoveryScope, diagramId: ownerRead.diagramId } });
+// @ts-expect-error Arbitrary camera dimensions are not document content or editor state.
+editor.setView({ camera: { z: 30 } });
+// @ts-expect-error Editor commands retain the typed kernel vocabulary.
+editor.submit({ type: 'execute', script: 'arbitrary' });
 
 // @ts-expect-error Unsupported commands must not become an open record API.
 compileDiagramCommand(bundle, { type: 'evaluate', script: 'arbitrary' }, { transactionId: 'bad-command' });

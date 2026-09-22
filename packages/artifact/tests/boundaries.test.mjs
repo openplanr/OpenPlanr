@@ -50,3 +50,20 @@ test('diagram authoring has a closed browser-safe Artifact and Protocol import g
   // Building this whole graph for the browser also rejects Node builtins, native
   // rasterizers and filesystem-based Protocol loaders before any runtime test.
 });
+
+
+test('portable editor bundles without filesystem, Design, hosted identity or Node adapters', async () => {
+  const requireArtifact = createRequire(new URL('../package.json', import.meta.url));
+  const { build } = requireArtifact('esbuild');
+  const root = resolve(packageRoot, '../..');
+  const result = await build({
+    absWorkingDir: root, entryPoints: [resolve(packageRoot, 'lib/artifact/diagram/editor/index.mjs')],
+    bundle: true, platform: 'browser', format: 'esm', treeShaking: false,
+    write: false, metafile: true, target: 'es2022', logLevel: 'silent',
+  });
+  for (const [file, input] of Object.entries(result.metafile.inputs)) {
+    assert.doesNotMatch(file, /(?:local-owner|review-server|authoring\/(?:store|exports|migration))\.mjs$/u, file);
+    assert.ok(resolve(root, file).startsWith(packageRoot + sep) || resolve(root, file).startsWith(resolve(packageRoot, '../protocol') + sep), file);
+    for (const dependency of input.imports) assert.equal(Boolean(dependency.external), false, dependency.path);
+  }
+});

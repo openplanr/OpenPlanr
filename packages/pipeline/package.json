@@ -178,7 +178,15 @@
       "import": "./lib/operate/evidence-projections-v2.mjs"
     },
     "./schemas/*": "./schemas/*",
-    "./registry/*": "./registry/*"
+    "./registry/*": "./registry/*",
+    "./diagram-editor": {
+      "types": "./lib/artifact/diagram/editor/index.d.mts",
+      "import": "./lib/artifact/diagram/editor/index.mjs"
+    },
+    "./diagram-owner": {
+      "types": "./lib/artifact/diagram/editor/local-owner.d.mts",
+      "import": "./lib/artifact/diagram/editor/local-owner.mjs"
+    }
   },
   "bin": {
     "planr-pipeline": "bin/planr-pipeline.mjs"
