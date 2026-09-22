@@ -1,0 +1,1079 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.13.0/diagram-authoring-bundle.schema.json",
+  "x-openplanr-contract": {
+    "id": "diagram-authoring-bundle",
+    "version": "1.13.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "diagram-authoring-bundle"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.13.0"
+    },
+    "diagramId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "document": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://openplanr.dev/schemas/v1.13.0/diagram-document.schema.json",
+      "x-openplanr-contract": {
+        "id": "diagram-document",
+        "version": "1.13.0"
+      },
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "planr-diagram"
+        },
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "protocolVersion": {
+          "const": "1.13.0"
+        },
+        "diagramId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 4096
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 4096
+        },
+        "audience": {
+          "enum": [
+            "engineer",
+            "executive",
+            "mixed"
+          ]
+        },
+        "grammar": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "enum": [
+                "flowchart",
+                "process",
+                "swimlane",
+                "architecture"
+              ]
+            },
+            "version": {
+              "const": "1.0.0"
+            }
+          },
+          "required": [
+            "id",
+            "version"
+          ]
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "label": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 4096
+              },
+              "kind": {
+                "enum": [
+                  "process",
+                  "start",
+                  "end",
+                  "decision",
+                  "data-store",
+                  "component"
+                ]
+              },
+              "description": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 4096
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "kind",
+              "description"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 4096
+        },
+        "relations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "from": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "to": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "kind": {
+                "enum": [
+                  "association",
+                  "dependency",
+                  "flow",
+                  "message",
+                  "transition"
+                ]
+              },
+              "direction": {
+                "enum": [
+                  "forward",
+                  "both",
+                  "none"
+                ]
+              },
+              "label": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 4096
+                  }
+                ]
+              },
+              "weight": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1000000
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "from",
+              "to",
+              "kind",
+              "direction",
+              "label",
+              "weight"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 8192
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "label": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 4096
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "minItems": 0,
+                "maxItems": 10000,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "members"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 1024
+        },
+        "lanes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "label": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 4096
+              },
+              "members": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "minItems": 0,
+                "maxItems": 10000,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "members"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 256
+        },
+        "events": {
+          "type": "array",
+          "items": false,
+          "minItems": 0,
+          "maxItems": 0
+        },
+        "series": {
+          "type": "array",
+          "items": false,
+          "minItems": 0,
+          "maxItems": 0
+        },
+        "axes": {
+          "type": "array",
+          "items": false,
+          "minItems": 0,
+          "maxItems": 0
+        },
+        "sets": {
+          "type": "array",
+          "items": false,
+          "minItems": 0,
+          "maxItems": 0
+        },
+        "annotations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "text": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 4096
+              },
+              "targetId": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "text",
+              "targetId"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 1024
+        },
+        "emphasis": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "targetId": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "level": {
+                "enum": [
+                  "primary",
+                  "secondary",
+                  "muted"
+                ]
+              }
+            },
+            "required": [
+              "targetId",
+              "level"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 1024
+        },
+        "laneOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "minItems": 0,
+          "maxItems": 10000,
+          "uniqueItems": true
+        },
+        "accessibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 4096
+            },
+            "description": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 4096
+            },
+            "readingOrder": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "minItems": 0,
+              "maxItems": 10000,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "title",
+            "description",
+            "readingOrder"
+          ]
+        },
+        "documentDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "schemaVersion",
+        "protocolVersion",
+        "diagramId",
+        "title",
+        "summary",
+        "audience",
+        "grammar",
+        "nodes",
+        "relations",
+        "groups",
+        "lanes",
+        "events",
+        "series",
+        "axes",
+        "sets",
+        "annotations",
+        "emphasis",
+        "laneOrder",
+        "accessibility",
+        "documentDigest"
+      ]
+    },
+    "presentation": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$id": "https://openplanr.dev/schemas/v1.13.0/diagram-presentation.schema.json",
+      "x-openplanr-contract": {
+        "id": "diagram-presentation",
+        "version": "1.13.0"
+      },
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "diagram-presentation"
+        },
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "protocolVersion": {
+          "const": "1.13.0"
+        },
+        "diagramId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "semanticDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "coordinateSystem": {
+          "const": "global-canvas"
+        },
+        "layout": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "direction": {
+              "enum": [
+                "top-down",
+                "left-right",
+                "right-left",
+                "bottom-up"
+              ]
+            },
+            "detailTier": {
+              "enum": [
+                "simplified",
+                "balanced",
+                "faithful"
+              ]
+            }
+          },
+          "required": [
+            "direction",
+            "detailTier"
+          ]
+        },
+        "theme": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "themeId": {
+              "enum": [
+                "paper",
+                "slate",
+                "midnight"
+              ]
+            },
+            "mode": {
+              "enum": [
+                "light",
+                "dark",
+                "auto"
+              ]
+            }
+          },
+          "required": [
+            "themeId",
+            "mode"
+          ]
+        },
+        "elements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "elementId": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "bounds": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      "y": {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      "width": {
+                        "type": "number",
+                        "minimum": 0.01,
+                        "maximum": 1000000
+                      },
+                      "height": {
+                        "type": "number",
+                        "minimum": 0.01,
+                        "maximum": 1000000
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y",
+                      "width",
+                      "height"
+                    ]
+                  }
+                ]
+              },
+              "route": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "mode": {
+                        "enum": [
+                          "automatic",
+                          "manual"
+                        ]
+                      },
+                      "strategy": {
+                        "enum": [
+                          "straight",
+                          "orthogonal"
+                        ]
+                      },
+                      "from": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "side": {
+                            "enum": [
+                              "top",
+                              "right",
+                              "bottom",
+                              "left"
+                            ]
+                          },
+                          "offset": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          }
+                        },
+                        "required": [
+                          "side",
+                          "offset"
+                        ]
+                      },
+                      "to": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "side": {
+                            "enum": [
+                              "top",
+                              "right",
+                              "bottom",
+                              "left"
+                            ]
+                          },
+                          "offset": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          }
+                        },
+                        "required": [
+                          "side",
+                          "offset"
+                        ]
+                      },
+                      "points": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "properties": {
+                            "x": {
+                              "type": "number",
+                              "minimum": -1000000,
+                              "maximum": 1000000
+                            },
+                            "y": {
+                              "type": "number",
+                              "minimum": -1000000,
+                              "maximum": 1000000
+                            }
+                          },
+                          "required": [
+                            "x",
+                            "y"
+                          ]
+                        },
+                        "minItems": 0,
+                        "maxItems": 256
+                      }
+                    },
+                    "required": [
+                      "mode",
+                      "strategy",
+                      "from",
+                      "to",
+                      "points"
+                    ]
+                  }
+                ]
+              },
+              "label": {
+                "anyOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      "y": {
+                        "type": "number",
+                        "minimum": -1000000,
+                        "maximum": 1000000
+                      },
+                      "width": {
+                        "type": "number",
+                        "minimum": 0.01,
+                        "maximum": 1000000
+                      }
+                    },
+                    "required": [
+                      "x",
+                      "y",
+                      "width"
+                    ]
+                  }
+                ]
+              },
+              "zIndex": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              "appearance": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "shape": {
+                    "enum": [
+                      "rectangle",
+                      "rounded-rectangle",
+                      "ellipse",
+                      "diamond",
+                      "cylinder",
+                      "text",
+                      "container",
+                      "connector"
+                    ]
+                  },
+                  "fill": {
+                    "enum": [
+                      "surface",
+                      "accent",
+                      "success",
+                      "warning",
+                      "danger",
+                      "transparent"
+                    ]
+                  },
+                  "stroke": {
+                    "enum": [
+                      "default",
+                      "accent",
+                      "muted",
+                      "danger",
+                      "none"
+                    ]
+                  },
+                  "strokeWidth": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 16
+                  },
+                  "strokeStyle": {
+                    "enum": [
+                      "solid",
+                      "dashed",
+                      "dotted"
+                    ]
+                  },
+                  "fontSize": {
+                    "type": "integer",
+                    "minimum": 8,
+                    "maximum": 72
+                  },
+                  "textAlign": {
+                    "enum": [
+                      "left",
+                      "center",
+                      "right"
+                    ]
+                  }
+                },
+                "required": [
+                  "shape",
+                  "fill",
+                  "stroke",
+                  "strokeWidth",
+                  "strokeStyle",
+                  "fontSize",
+                  "textAlign"
+                ]
+              },
+              "locks": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "position": {
+                    "type": "boolean"
+                  },
+                  "size": {
+                    "type": "boolean"
+                  },
+                  "route": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "position",
+                  "size",
+                  "route"
+                ]
+              }
+            },
+            "required": [
+              "elementId",
+              "bounds",
+              "route",
+              "label",
+              "zIndex",
+              "appearance",
+              "locks"
+            ]
+          },
+          "minItems": 0,
+          "maxItems": 10000
+        },
+        "presentationDigest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "kind",
+        "schemaVersion",
+        "protocolVersion",
+        "diagramId",
+        "semanticDigest",
+        "coordinateSystem",
+        "layout",
+        "theme",
+        "elements",
+        "presentationDigest"
+      ]
+    },
+    "originalSource": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "format": {
+              "const": "mermaid"
+            },
+            "text": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 1048576
+            },
+            "sourceDigest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            }
+          },
+          "required": [
+            "format",
+            "text",
+            "sourceDigest"
+          ]
+        }
+      ]
+    },
+    "sourceMap": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "$id": "https://openplanr.dev/schemas/v1.13.0/diagram-source-map.schema.json",
+          "x-openplanr-contract": {
+            "id": "diagram-source-map",
+            "version": "1.13.0"
+          },
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "diagram-source-map"
+            },
+            "schemaVersion": {
+              "const": "1.0.0"
+            },
+            "protocolVersion": {
+              "const": "1.13.0"
+            },
+            "diagramId": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "semanticDigest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "sourceDigest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "sourceByteLength": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1048576
+            },
+            "encoding": {
+              "const": "utf-8"
+            },
+            "parser": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                  "maxLength": 64
+                },
+                "version": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              },
+              "required": [
+                "id",
+                "version"
+              ]
+            },
+            "certificationVersion": {
+              "const": "flowchart-copy-v1"
+            },
+            "entries": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "sourceId": {
+                    "anyOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                      }
+                    ]
+                  },
+                  "elementIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "minItems": 0,
+                    "maxItems": 10000,
+                    "uniqueItems": true
+                  },
+                  "range": {
+                    "anyOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "startByte": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1048576
+                          },
+                          "endByte": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1048576
+                          }
+                        },
+                        "required": [
+                          "startByte",
+                          "endByte"
+                        ]
+                      }
+                    ]
+                  },
+                  "construct": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                    "maxLength": 64
+                  },
+                  "confidence": {
+                    "enum": [
+                      "exact",
+                      "ambiguous"
+                    ]
+                  },
+                  "losses": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512
+                    },
+                    "minItems": 0,
+                    "maxItems": 64
+                  }
+                },
+                "required": [
+                  "sourceId",
+                  "elementIds",
+                  "range",
+                  "construct",
+                  "confidence",
+                  "losses"
+                ]
+              },
+              "minItems": 0,
+              "maxItems": 10000
+            }
+          },
+          "required": [
+            "kind",
+            "schemaVersion",
+            "protocolVersion",
+            "diagramId",
+            "semanticDigest",
+            "sourceDigest",
+            "sourceByteLength",
+            "encoding",
+            "parser",
+            "certificationVersion",
+            "entries"
+          ]
+        }
+      ]
+    },
+    "bundleDigest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "diagramId",
+    "document",
+    "presentation",
+    "originalSource",
+    "sourceMap",
+    "bundleDigest"
+  ]
+}

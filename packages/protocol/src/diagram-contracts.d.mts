@@ -15,5 +15,5 @@ export declare const DIAGRAM_GRAMMAR_REGISTRY: Readonly<{
 }>;
 export declare const DIAGRAM_SEMANTIC_PATTERN_REGISTRY: Readonly<Record<string, unknown>>;
 export declare function getDiagramGrammar(grammarId: string): DiagramGrammarRegistryEntry | null;
-export declare function diagramContractUrl(kind: string): URL;
+export declare function diagramContractUrl(kind: string, options?: { protocolVersion?: '1.6.0' | '1.13.0' }): URL;
 export declare function diagramDocumentPath(slug: string): string;

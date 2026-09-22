@@ -1,4 +1,4 @@
-import { DESIGN_HANDOFF_PROTOCOL_VERSION, PROTOCOL_V16_CONTRACTS, PROTOCOL_V111_CONTRACTS, protocolAssetUrl } from '@openplanr/protocol';
+import { DESIGN_HANDOFF_PROTOCOL_VERSION, PROTOCOL_V16_CONTRACTS, PROTOCOL_V111_CONTRACTS, PROTOCOL_V113_CONTRACTS, validateDiagramAuthoringBundle, protocolAssetUrl } from '@openplanr/protocol';
 import * as nodeContracts from '@openplanr/protocol/contracts';
 
 const contracts: Readonly<Record<string, string>> = PROTOCOL_V16_CONTRACTS;
@@ -14,3 +14,10 @@ void contracts;
 void sourceUrl;
 void handoffContracts;
 void handoffUrl;
+
+const authoringContracts: Readonly<Record<string, string>> = PROTOCOL_V113_CONTRACTS;
+const authoringUrl: URL = protocolAssetUrl('diagram-authoring-bundle', { protocolVersion: '1.13.0' });
+const authoringIssues: { path: string; rule: string; detail: string }[] = validateDiagramAuthoringBundle({});
+void authoringContracts;
+void authoringUrl;
+void authoringIssues;

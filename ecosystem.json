@@ -27,7 +27,8 @@
       "1.5.0",
       "1.6.0",
       "1.7.0",
-      "1.8.0"
+      "1.8.0",
+      "1.13.0"
     ],
     "supportedReaders": [
       "1.0.x",
@@ -39,6 +40,7 @@
       "1.6.x",
       "1.7.x",
       "1.8.x",
+      "1.13.x",
       "2.0.x"
     ]
   },
@@ -55,14 +57,14 @@
       "version": "0.49.1",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:8bf2b2857202761525db7f9c6ae5f78bce43243f5d378ef6bef030d571ba667f"
+      "manifestDigest": "sha256:431a0ab56b442f8c5fe3d30dc7114cc0726c3c100d8bafba272a456e7e63b183"
     },
     "protocol": {
       "package": "@openplanr/protocol",
       "version": "0.5.0",
       "path": "packages/protocol",
       "publication": "public",
-      "manifestDigest": "sha256:005fd84b459d0673203781da7693ffb28b379ef73096213fd6df5c2606617730"
+      "manifestDigest": "sha256:04fb6d2205d1e6fecf3ca37a33f59a68cd00c6309407168eaffc865fb704ddbb"
     },
     "operate": {
       "package": "@openplanr/operate",
@@ -76,7 +78,7 @@
       "version": "0.2.3",
       "path": "packages/artifact",
       "publication": "private",
-      "manifestDigest": "sha256:b8c533a331ed22bb2ad1207825f4296d1e07af413b9d3ec125e0d784a5d26ac3"
+      "manifestDigest": "sha256:1da32de2c55a01afde75a5a87fc8507b35a30d45e69fa7a07db882b0d600c62e"
     },
     "design": {
       "package": "@openplanr/design",
@@ -129,7 +131,7 @@
     }
   },
   "publicCompatibility": {
-    "pipelineExportKeys": 40,
+    "pipelineExportKeys": 41,
     "pipelineRootSymbols": 229
   },
   "catalogs": {
@@ -335,7 +337,7 @@
     ],
     "generatedAssets": {
       "path": "adapters/manifests/generated-assets.json",
-      "digest": "sha256:a033b167462109de972836e459290351c86dcaeeb904e091781f98b1c5a64b81",
+      "digest": "sha256:3d051b7f689798361c570fd3292efd269995deebb0506ed32cc2d8e559ac9e33",
       "count": 1805
     }
   },
@@ -356,15 +358,16 @@
       "count": 3
     },
     "additive": {
-      "count": 51,
+      "count": 61,
       "byVersion": {
         "v1.5.0": 13,
         "v1.6.0": 19,
         "v1.7.0": 16,
-        "v1.8.0": 3
+        "v1.8.0": 3,
+        "v1.13.0": 10
       }
     },
-    "total": 252
+    "total": 262
   },
   "registries": {
     "preserved": {
@@ -372,7 +375,7 @@
       "path": "packages/protocol/registry"
     },
     "canonicalCatalogs": {
-      "count": 12,
+      "count": 13,
       "path": "packages/protocol/registries"
     },
     "protocol15Catalogs": {
@@ -385,6 +388,10 @@
     },
     "protocol17Catalogs": {
       "count": 3,
+      "path": "packages/protocol/registries"
+    },
+    "protocol113Catalogs": {
+      "count": 1,
       "path": "packages/protocol/registries"
     },
     "capturedEvaluationContracts": {

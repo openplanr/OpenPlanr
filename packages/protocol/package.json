@@ -83,6 +83,10 @@
     "./enterprise-contracts": {
       "types": "./src/enterprise-contracts.d.mts",
       "import": "./src/enterprise-contracts.mjs"
+    },
+    "./diagram-authoring-contracts": {
+      "types": "./src/diagram-authoring-contracts.d.mts",
+      "import": "./src/diagram-authoring-contracts.mjs"
     }
   },
   "files": [

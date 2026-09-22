@@ -1,0 +1,395 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.13.0/diagram-presentation.schema.json",
+  "x-openplanr-contract": {
+    "id": "diagram-presentation",
+    "version": "1.13.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "diagram-presentation"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.13.0"
+    },
+    "diagramId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "semanticDigest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "coordinateSystem": {
+      "const": "global-canvas"
+    },
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "direction": {
+          "enum": [
+            "top-down",
+            "left-right",
+            "right-left",
+            "bottom-up"
+          ]
+        },
+        "detailTier": {
+          "enum": [
+            "simplified",
+            "balanced",
+            "faithful"
+          ]
+        }
+      },
+      "required": [
+        "direction",
+        "detailTier"
+      ]
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "themeId": {
+          "enum": [
+            "paper",
+            "slate",
+            "midnight"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "light",
+            "dark",
+            "auto"
+          ]
+        }
+      },
+      "required": [
+        "themeId",
+        "mode"
+      ]
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "elementId": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "bounds": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  "width": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 1000000
+                  },
+                  "height": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 1000000
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "width",
+                  "height"
+                ]
+              }
+            ]
+          },
+          "route": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "mode": {
+                    "enum": [
+                      "automatic",
+                      "manual"
+                    ]
+                  },
+                  "strategy": {
+                    "enum": [
+                      "straight",
+                      "orthogonal"
+                    ]
+                  },
+                  "from": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "side": {
+                        "enum": [
+                          "top",
+                          "right",
+                          "bottom",
+                          "left"
+                        ]
+                      },
+                      "offset": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "required": [
+                      "side",
+                      "offset"
+                    ]
+                  },
+                  "to": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "side": {
+                        "enum": [
+                          "top",
+                          "right",
+                          "bottom",
+                          "left"
+                        ]
+                      },
+                      "offset": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "required": [
+                      "side",
+                      "offset"
+                    ]
+                  },
+                  "points": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "x": {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        },
+                        "y": {
+                          "type": "number",
+                          "minimum": -1000000,
+                          "maximum": 1000000
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ]
+                    },
+                    "minItems": 0,
+                    "maxItems": 256
+                  }
+                },
+                "required": [
+                  "mode",
+                  "strategy",
+                  "from",
+                  "to",
+                  "points"
+                ]
+              }
+            ]
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "x": {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  },
+                  "width": {
+                    "type": "number",
+                    "minimum": 0.01,
+                    "maximum": 1000000
+                  }
+                },
+                "required": [
+                  "x",
+                  "y",
+                  "width"
+                ]
+              }
+            ]
+          },
+          "zIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "appearance": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "shape": {
+                "enum": [
+                  "rectangle",
+                  "rounded-rectangle",
+                  "ellipse",
+                  "diamond",
+                  "cylinder",
+                  "text",
+                  "container",
+                  "connector"
+                ]
+              },
+              "fill": {
+                "enum": [
+                  "surface",
+                  "accent",
+                  "success",
+                  "warning",
+                  "danger",
+                  "transparent"
+                ]
+              },
+              "stroke": {
+                "enum": [
+                  "default",
+                  "accent",
+                  "muted",
+                  "danger",
+                  "none"
+                ]
+              },
+              "strokeWidth": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 16
+              },
+              "strokeStyle": {
+                "enum": [
+                  "solid",
+                  "dashed",
+                  "dotted"
+                ]
+              },
+              "fontSize": {
+                "type": "integer",
+                "minimum": 8,
+                "maximum": 72
+              },
+              "textAlign": {
+                "enum": [
+                  "left",
+                  "center",
+                  "right"
+                ]
+              }
+            },
+            "required": [
+              "shape",
+              "fill",
+              "stroke",
+              "strokeWidth",
+              "strokeStyle",
+              "fontSize",
+              "textAlign"
+            ]
+          },
+          "locks": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "position": {
+                "type": "boolean"
+              },
+              "size": {
+                "type": "boolean"
+              },
+              "route": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "position",
+              "size",
+              "route"
+            ]
+          }
+        },
+        "required": [
+          "elementId",
+          "bounds",
+          "route",
+          "label",
+          "zIndex",
+          "appearance",
+          "locks"
+        ]
+      },
+      "minItems": 0,
+      "maxItems": 10000
+    },
+    "presentationDigest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "diagramId",
+    "semanticDigest",
+    "coordinateSystem",
+    "layout",
+    "theme",
+    "elements",
+    "presentationDigest"
+  ]
+}

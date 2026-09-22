@@ -602,6 +602,47 @@ try {
   const { readProfessionalSkillsCatalog } = await import('planr-pipeline/professional-skills');
   const skillCatalog = readProfessionalSkillsCatalog();
   if (!skillCatalog.skills.length) throw new Error('Installed professional skill compatibility catalog is empty');
+  const authoring = await import('planr-pipeline/diagram-authoring');
+  const contracts = await import('@openplanr/protocol/diagram-authoring-contracts');
+  const meta = kind => ({ kind, schemaVersion: '1.0.0', protocolVersion: '1.13.0' });
+  const document = {
+    ...meta('planr-diagram'), diagramId: 'packed-diagram', title: 'Packed consumer', summary: '', audience: 'engineer',
+    grammar: { id: 'flowchart', version: '1.0.0' }, nodes: [], relations: [], groups: [], lanes: [],
+    events: [], series: [], axes: [], sets: [], annotations: [], emphasis: [], laneOrder: [],
+    accessibility: { title: 'Packed consumer', description: '', readingOrder: [] }, documentDigest: '',
+  };
+  document.documentDigest = contracts.diagramDocumentDigest(document);
+  const presentation = {
+    ...meta('diagram-presentation'), diagramId: document.diagramId, semanticDigest: document.documentDigest,
+    coordinateSystem: 'global-canvas', layout: { direction: 'left-right', detailTier: 'balanced' },
+    theme: { themeId: 'paper', mode: 'light' }, elements: [], presentationDigest: '',
+  };
+  presentation.presentationDigest = contracts.diagramPresentationDigest(presentation);
+  const authored = {
+    ...meta('diagram-authoring-bundle'), diagramId: document.diagramId, document, presentation,
+    originalSource: null, sourceMap: null, bundleDigest: '',
+  };
+  authored.bundleDigest = contracts.diagramAuthoringBundleDigest(authored);
+  const original = JSON.stringify(authored);
+  const created = authoring.compileDiagramCommand(authored, {
+    type: 'create',
+    elements: [{ collection: 'nodes', value: { id: 'step-one', label: 'Ready', kind: 'process', description: null } }],
+    presentation: [{
+      elementId: 'step-one', bounds: { x: 20, y: 30, width: 120, height: 60 }, route: null, label: null, zIndex: 0,
+      appearance: { shape: 'rectangle', fill: 'surface', stroke: 'default', strokeWidth: 1, strokeStyle: 'solid', fontSize: 14, textAlign: 'center' },
+      locks: { position: false, size: false, route: false },
+    }],
+  }, { transactionId: 'packed-create' });
+  if (!created.ok || !created.transaction || created.bundle.document.nodes[0]?.id !== 'step-one') {
+    throw new Error('Packed authoring command failed: ' + JSON.stringify(created));
+  }
+  const inverse = authoring.createConditionalInverse(created.bundle, created.inverse, { transactionId: 'packed-undo' });
+  if (!inverse.ok) throw new Error('Packed authoring inverse failed: ' + JSON.stringify(inverse));
+  const undone = authoring.previewDiagramTransaction(created.bundle, inverse.transaction);
+  if (!undone.ok || undone.bundle.bundleDigest !== authored.bundleDigest || JSON.stringify(authored) !== original) {
+    throw new Error('Packed authoring undo did not restore the unchanged input snapshot');
+  }
+
   const dashboardPath = fs.realpathSync(require.resolve('openplanr/dashboard'));
   const verifierPath = fs.realpathSync(require.resolve('openplanr/dashboard-verifier'));
   const openplanrRoot = fs.realpathSync(input.openplanrRoot);
@@ -670,6 +711,35 @@ function runExportProof({
     cwd: project,
     env: environment,
     timeout: 4 * 60 * 1000,
+  });
+  const typesPath = path.join(project, 'diagram-authoring-types.mts');
+  fs.writeFileSync(typesPath, `import {
+  compileDiagramCommand, createConditionalInverse, previewDiagramTransaction, diffDiagramBundles,
+  type DiagramAuthoringBundle, type DiagramCommand, type DiagramEditPreview,
+} from 'planr-pipeline/diagram-authoring';
+declare const bundle: DiagramAuthoringBundle;
+const move: DiagramCommand = { type: 'move', ids: ['step-one'], dx: 20, dy: 0 };
+const result = compileDiagramCommand(bundle, move, { transactionId: 'consumer-move' });
+if (result.ok && result.transaction) {
+  const preview: DiagramEditPreview = result;
+  const inverse = createConditionalInverse(preview.bundle, preview.inverse, { transactionId: 'consumer-undo' });
+  if (inverse.ok) previewDiagramTransaction(preview.bundle, inverse.transaction);
+  const diff = diffDiagramBundles(bundle, preview.bundle);
+  if (diff.ok) diff.presentation.map(change => change.path);
+} else if (!result.ok) result.diagnostics.map(diagnostic => diagnostic.rule);
+compileDiagramCommand(bundle, { type: 'cancel' });
+// @ts-expect-error Unsupported commands must not become an open record API.
+compileDiagramCommand(bundle, { type: 'evaluate', script: 'arbitrary' }, { transactionId: 'bad-command' });
+// @ts-expect-error Movement takes numeric world-coordinate deltas.
+compileDiagramCommand(bundle, { type: 'move', ids: ['step-one'], dx: '20', dy: 0 }, { transactionId: 'bad-delta' });
+`);
+  const typeConfig = path.join(project, 'diagram-authoring-tsconfig.json');
+  writeJson(typeConfig, {
+    compilerOptions: { noEmit: true, strict: true, target: 'ES2022', lib: ['ES2022'], module: 'NodeNext', moduleResolution: 'NodeNext', types: [] },
+    files: [typesPath],
+  });
+  successfulCommand(nodeExecutable, [fileURLToPath(import.meta.resolve('typescript/bin/tsc')), '--project', typeConfig], {
+    cwd: project, env: environment,
   });
   return readJson(outputPath);
 }

@@ -23,6 +23,8 @@ import {
   PROTOCOL_V18_CONTRACT_FILES,
 } from '../../packages/protocol/src/skill-source-contracts.mjs';
 
+import { DIAGRAM_AUTHORING_CONTRACT_FILES } from '../../packages/protocol/src/diagram-authoring-contracts.mjs';
+
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const arguments_ = process.argv.slice(2);
 
@@ -249,8 +251,13 @@ async function buildOutputs() {
   assertEqual(cliManifest.optionalDependencies?.['planr-pipeline'], components.pipeline.version, 'E_ECOSYSTEM_PIPELINE_PIN', 'CLI optional pipeline dependency must be exact and match the in-repo pipeline.');
   assertEqual(cliManifest.bin, { planr: './bin/planr.js', openplanr: './bin/planr.js', opr: './bin/planr.js' }, 'E_ECOSYSTEM_CLI_BINS', 'CLI aliases must resolve to one parser.');
   assertEqual(pipelineManifest.bin, { 'planr-pipeline': 'bin/planr-pipeline.mjs' }, 'E_ECOSYSTEM_PIPELINE_BIN', 'Pipeline binary drifted.');
-  const pipelineExportKeys = Object.keys(pipelineManifest.exports ?? {}).length;
-  assertEqual(pipelineExportKeys, 40, 'E_ECOSYSTEM_PIPELINE_EXPORT_KEYS', 'Public pipeline export-key parity drifted.');
+  const preservedExports = readJson('conformance/packed-surface-baseline.json').baselineExportKeys;
+  const expectedExports = [...preservedExports,
+    './design-lineage', './design-plan-handoff', './design-delivery-status', './diagram-authoring',
+  ].sort();
+  const actualExports = Object.keys(pipelineManifest.exports ?? {}).sort();
+  assertEqual(actualExports, expectedExports, 'E_ECOSYSTEM_PIPELINE_EXPORT_KEYS', 'Public pipeline export-key parity drifted.');
+  const pipelineExportKeys = actualExports.length;
   const rootModule = await import(pathToFileURL(resolve(repoRoot, 'packages/pipeline/lib/pipeline/index.mjs')).href);
   const pipelineRootSymbols = Object.keys(rootModule).length;
   assertEqual(pipelineRootSymbols, 229, 'E_ECOSYSTEM_PIPELINE_ROOT_SYMBOLS', 'Public pipeline root-symbol parity drifted.');
@@ -286,14 +293,15 @@ async function buildOutputs() {
   const evaluationGraders = readJson(evaluationGradersPath);
 
   const schemaPaths = listFiles('packages/protocol/schemas').filter((path) => path.endsWith('.schema.json'));
-  const schemaCounts = Object.fromEntries(['v1.0.0', 'v1.1.0', 'v1.2.0', 'v1.3.0', 'v1.4.0', 'v1.5.0', 'v1.6.0', 'v1.7.0', 'v1.8.0', 'v2.0.0'].map((version) => [version, schemaPaths.filter((path) => path.includes(`/schemas/${version}/`)).length]));
+  const schemaCounts = Object.fromEntries(['v1.0.0', 'v1.1.0', 'v1.2.0', 'v1.3.0', 'v1.4.0', 'v1.5.0', 'v1.6.0', 'v1.7.0', 'v1.8.0', 'v1.13.0', 'v2.0.0'].map((version) => [version, schemaPaths.filter((path) => path.includes(`/schemas/${version}/`)).length]));
   const preservedDistribution = { 'v1.0.0': 12, 'v1.1.0': 34, 'v1.2.0': 25, 'v1.3.0': 5, 'v1.4.0': 15, 'v2.0.0': 89 };
   for (const [version, count] of Object.entries(preservedDistribution)) assertEqual(schemaCounts[version], count, 'E_ECOSYSTEM_SCHEMA_PRESERVATION', `Historical schema count drifted for ${version}.`);
   assertEqual(schemaCounts['v1.5.0'], 13, 'E_ECOSYSTEM_SCHEMA_SUCCESSORS', 'Protocol 1.5 successor schema count drifted.');
   assertEqual(schemaCounts['v1.6.0'], Object.keys(PROTOCOL_V16_CONTRACT_FILES).length + 1, 'E_ECOSYSTEM_SCHEMA_SUCCESSORS_16', 'Protocol 1.6 successor schema count drifted.');
   assertEqual(schemaCounts['v1.7.0'], Object.keys(PROTOCOL_V17_CONTRACT_FILES).length + 1, 'E_ECOSYSTEM_SCHEMA_SUCCESSORS_17', 'Protocol 1.7 successor schema count drifted.');
   assertEqual(schemaCounts['v1.8.0'], Object.keys(PROTOCOL_V18_CONTRACT_FILES).length + 1, 'E_ECOSYSTEM_SCHEMA_SUCCESSORS_18', 'Protocol 1.8 successor schema count drifted.');
-  const additiveSchemaCount = schemaCounts['v1.5.0'] + schemaCounts['v1.6.0'] + schemaCounts['v1.7.0'] + schemaCounts['v1.8.0'];
+  assertEqual(schemaCounts['v1.13.0'], Object.keys(DIAGRAM_AUTHORING_CONTRACT_FILES).length, 'E_ECOSYSTEM_SCHEMA_SUCCESSORS_113', 'Protocol 1.13 authoring schema count drifted.');
+  const additiveSchemaCount = schemaCounts['v1.5.0'] + schemaCounts['v1.6.0'] + schemaCounts['v1.7.0'] + schemaCounts['v1.8.0'] + schemaCounts['v1.13.0'];
   const legacyRegistryPaths = listFiles('packages/protocol/registry').filter((path) => path.endsWith('.json'));
   assertEqual(legacyRegistryPaths.length, 12, 'E_ECOSYSTEM_REGISTRY_PRESERVATION', 'Preserved registry count drifted.');
   const protocolCatalogPaths = listFiles('packages/protocol/registries').filter((path) => path.endsWith('.json'));
@@ -307,10 +315,14 @@ async function buildOutputs() {
   const v17CatalogFileNames = new Set(Object.keys(PROTOCOL_V17_REGISTRIES));
   const protocol16CatalogPaths = protocolCatalogPaths.filter((path) => v16CatalogFileNames.has(path.split('/').at(-1)));
   const protocol17CatalogPaths = protocolCatalogPaths.filter((path) => v17CatalogFileNames.has(path.split('/').at(-1)));
-  const protocol15CatalogPaths = protocolCatalogPaths.filter((path) => !v16CatalogFileNames.has(path.split('/').at(-1)) && !v17CatalogFileNames.has(path.split('/').at(-1)));
+  const protocol113CatalogPaths = protocolCatalogPaths.filter((path) => path.endsWith('/diagram-authoring-capabilities.json'));
+  const protocol15CatalogPaths = protocolCatalogPaths.filter((path) => !v16CatalogFileNames.has(path.split('/').at(-1)) && !v17CatalogFileNames.has(path.split('/').at(-1)) && !protocol113CatalogPaths.includes(path));
   assertEqual(protocol15CatalogPaths.length, 7, 'E_ECOSYSTEM_PROTOCOL_CATALOG_COUNT', 'Protocol 1.5 catalog count drifted.');
   assertEqual(protocol16CatalogPaths.length, Object.keys(DIAGRAM_V16_REGISTRIES).length, 'E_ECOSYSTEM_PROTOCOL16_CATALOG_COUNT', 'Protocol 1.6 catalog count drifted.');
   assertEqual(protocol17CatalogPaths.length, Object.keys(PROTOCOL_V17_REGISTRIES).length, 'E_ECOSYSTEM_PROTOCOL17_CATALOG_COUNT', 'Protocol 1.7 catalog count drifted.');
+
+  assertEqual(protocol113CatalogPaths.length, 1, 'E_ECOSYSTEM_PROTOCOL113_CATALOG_COUNT', 'Protocol 1.13 authoring catalog count drifted.');
+  assertEqual(readJson(protocol113CatalogPaths[0]).protocolVersion, '1.13.0', 'E_ECOSYSTEM_PROTOCOL113_CATALOG', 'Authoring catalog version drifted.');
 
   const artifactShellPath = 'packages/artifact/lib/artifact/ui/generated/artifact-shell-assets.json';
   const artifactShell = readJson(artifactShellPath);
@@ -334,8 +346,8 @@ async function buildOutputs() {
     },
     protocol: {
       current: '1.8.0',
-      additiveVersions: ['1.5.0', '1.6.0', '1.7.0', '1.8.0'],
-      supportedReaders: ['1.0.x', '1.1.x', '1.2.x', '1.3.x', '1.4.x', '1.5.x', '1.6.x', '1.7.x', '1.8.x', '2.0.x'],
+      additiveVersions: ['1.5.0', '1.6.0', '1.7.0', '1.8.0', '1.13.0'],
+      supportedReaders: ['1.0.x', '1.1.x', '1.2.x', '1.3.x', '1.4.x', '1.5.x', '1.6.x', '1.7.x', '1.8.x', '1.13.x', '2.0.x'],
     },
     components,
     compatibility: {
@@ -369,15 +381,16 @@ async function buildOutputs() {
     schemas: {
       preserved: { count: Object.values(preservedDistribution).reduce((sum, count) => sum + count, 0), distribution: preservedDistribution },
       successors: { protocolVersion: '1.8.0', count: schemaCounts['v1.8.0'] },
-      additive: { count: additiveSchemaCount, byVersion: { 'v1.5.0': schemaCounts['v1.5.0'], 'v1.6.0': schemaCounts['v1.6.0'], 'v1.7.0': schemaCounts['v1.7.0'], 'v1.8.0': schemaCounts['v1.8.0'] } },
+      additive: { count: additiveSchemaCount, byVersion: { 'v1.5.0': schemaCounts['v1.5.0'], 'v1.6.0': schemaCounts['v1.6.0'], 'v1.7.0': schemaCounts['v1.7.0'], 'v1.8.0': schemaCounts['v1.8.0'], 'v1.13.0': schemaCounts['v1.13.0'] } },
       total: schemaPaths.length,
     },
     registries: {
       preserved: { count: legacyRegistryPaths.length, path: 'packages/protocol/registry' },
-      canonicalCatalogs: { count: protocol15CatalogPaths.length + protocol16CatalogPaths.length + protocol17CatalogPaths.length, path: 'packages/protocol/registries' },
+      canonicalCatalogs: { count: protocol15CatalogPaths.length + protocol16CatalogPaths.length + protocol17CatalogPaths.length + protocol113CatalogPaths.length, path: 'packages/protocol/registries' },
       protocol15Catalogs: { count: protocol15CatalogPaths.length, path: 'packages/protocol/registries' },
       protocol16Catalogs: { count: protocol16CatalogPaths.length, path: 'packages/protocol/registries' },
       protocol17Catalogs: { count: protocol17CatalogPaths.length, path: 'packages/protocol/registries' },
+      protocol113Catalogs: { count: protocol113CatalogPaths.length, path: 'packages/protocol/registries' },
       capturedEvaluationContracts: {
         lifecycle: 'byte-preserved',
         hostProfiles: { ...digestRef(evaluationHostProfilesPath), registryId: evaluationHostProfiles.registryId, count: evaluationHostProfiles.profiles.length },
@@ -443,6 +456,7 @@ async function buildOutputs() {
     inputs: [
       'scripts/marketplace/generate-ecosystem.mjs',
       'scripts/lib/workspace-release-policy.mjs',
+      'conformance/packed-surface-baseline.json',
       'packages/protocol/src/semver.mjs',
       'package.json',
       ...Object.values(components).filter(({ manifestDigest }) => manifestDigest).map(({ path }) => `${path}/package.json`),

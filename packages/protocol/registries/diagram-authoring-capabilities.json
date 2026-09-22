@@ -1,0 +1,660 @@
+{
+  "kind": "diagram-authoring-capabilities",
+  "schemaVersion": "1.0.0",
+  "protocolVersion": "1.13.0",
+  "version": "1.0.0",
+  "liveCollaboration": false,
+  "profiles": [
+    {
+      "grammarId": "flowchart",
+      "authoring": true,
+      "primitives": [
+        "node",
+        "relation",
+        "group",
+        "annotation",
+        "emphasis"
+      ],
+      "nodeKinds": [
+        "process",
+        "start",
+        "end",
+        "decision",
+        "data-store",
+        "component"
+      ],
+      "relationKinds": [
+        "association",
+        "dependency",
+        "flow",
+        "message",
+        "transition"
+      ],
+      "operations": [
+        "insert-elements",
+        "update-semantics",
+        "remove-elements",
+        "set-membership-order",
+        "set-geometry",
+        "set-appearance-locks"
+      ],
+      "mermaid": {
+        "mode": "copy",
+        "certificationVersion": "flowchart-copy-v1",
+        "constructs": [
+          {
+            "construct": "flowchart-direction",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "flowchart TB/TD/LR/RL/BT maps to presentation layout direction"
+          },
+          {
+            "construct": "explicit-node-id",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Explicit source ID maps through source-map to stable semantic node ID; labels never establish identity"
+          },
+          {
+            "construct": "plain-node-label",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Escaped plain text maps to node label; HTML is inert text and is not executed"
+          },
+          {
+            "construct": "rectangle-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind process and presentation shape rectangle"
+          },
+          {
+            "construct": "rounded-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind process and presentation shape rounded-rectangle"
+          },
+          {
+            "construct": "decision-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind decision and presentation shape diamond"
+          },
+          {
+            "construct": "cylinder-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind data-store and presentation shape cylinder"
+          },
+          {
+            "construct": "directed-edge",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "relation.kind flow and direction forward; source and target IDs are semantic endpoints"
+          },
+          {
+            "construct": "bidirectional-edge",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "relation.kind flow and direction both"
+          },
+          {
+            "construct": "undirected-edge",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "relation.kind association and direction none"
+          },
+          {
+            "construct": "plain-edge-label",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Escaped plain text maps to relation label"
+          },
+          {
+            "construct": "subgraph",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Explicit subgraph ID maps to one semantic group in an acyclic single-parent forest"
+          },
+          {
+            "construct": "lane-semantics",
+            "import": "unsupported",
+            "export": "partial",
+            "semanticRoundTrip": "partial",
+            "mapping": "Mermaid subgraphs do not encode lane identity or explicit lane order"
+          },
+          {
+            "construct": "manual-geometry",
+            "import": "unsupported",
+            "export": "partial",
+            "semanticRoundTrip": "partial",
+            "mapping": "Standard Mermaid does not preserve coordinates, routes, attachments, stacking or locks"
+          },
+          {
+            "construct": "styles-and-directives",
+            "import": "unsupported",
+            "export": "unsupported",
+            "semanticRoundTrip": "unsupported",
+            "mapping": "CSS, classDef, init directives, links, callbacks and HTML labels are outside this certified subset"
+          },
+          {
+            "construct": "unsupported-construct",
+            "import": "unsupported",
+            "export": "unsupported",
+            "semanticRoundTrip": "unsupported",
+            "mapping": "Unrecognized syntax is retained as original source with explicit loss diagnostics"
+          }
+        ],
+        "linkedSource": false
+      }
+    },
+    {
+      "grammarId": "process",
+      "authoring": true,
+      "primitives": [
+        "node",
+        "relation",
+        "group",
+        "lane",
+        "annotation",
+        "emphasis"
+      ],
+      "nodeKinds": [
+        "process",
+        "start",
+        "end",
+        "decision",
+        "data-store",
+        "component"
+      ],
+      "relationKinds": [
+        "association",
+        "dependency",
+        "flow",
+        "message",
+        "transition"
+      ],
+      "operations": [
+        "insert-elements",
+        "update-semantics",
+        "remove-elements",
+        "set-membership-order",
+        "set-geometry",
+        "set-appearance-locks"
+      ],
+      "mermaid": {
+        "mode": "copy",
+        "certificationVersion": "flowchart-copy-v1",
+        "constructs": [
+          {
+            "construct": "flowchart-direction",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "flowchart TB/TD/LR/RL/BT maps to presentation layout direction"
+          },
+          {
+            "construct": "explicit-node-id",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Explicit source ID maps through source-map to stable semantic node ID; labels never establish identity"
+          },
+          {
+            "construct": "plain-node-label",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Escaped plain text maps to node label; HTML is inert text and is not executed"
+          },
+          {
+            "construct": "rectangle-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind process and presentation shape rectangle"
+          },
+          {
+            "construct": "rounded-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind process and presentation shape rounded-rectangle"
+          },
+          {
+            "construct": "decision-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind decision and presentation shape diamond"
+          },
+          {
+            "construct": "cylinder-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind data-store and presentation shape cylinder"
+          },
+          {
+            "construct": "directed-edge",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "relation.kind flow and direction forward; source and target IDs are semantic endpoints"
+          },
+          {
+            "construct": "bidirectional-edge",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "relation.kind flow and direction both"
+          },
+          {
+            "construct": "undirected-edge",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "relation.kind association and direction none"
+          },
+          {
+            "construct": "plain-edge-label",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Escaped plain text maps to relation label"
+          },
+          {
+            "construct": "subgraph",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Explicit subgraph ID maps to one semantic group in an acyclic single-parent forest"
+          },
+          {
+            "construct": "lane-semantics",
+            "import": "unsupported",
+            "export": "partial",
+            "semanticRoundTrip": "partial",
+            "mapping": "Mermaid subgraphs do not encode lane identity or explicit lane order"
+          },
+          {
+            "construct": "manual-geometry",
+            "import": "unsupported",
+            "export": "partial",
+            "semanticRoundTrip": "partial",
+            "mapping": "Standard Mermaid does not preserve coordinates, routes, attachments, stacking or locks"
+          },
+          {
+            "construct": "styles-and-directives",
+            "import": "unsupported",
+            "export": "unsupported",
+            "semanticRoundTrip": "unsupported",
+            "mapping": "CSS, classDef, init directives, links, callbacks and HTML labels are outside this certified subset"
+          },
+          {
+            "construct": "unsupported-construct",
+            "import": "unsupported",
+            "export": "unsupported",
+            "semanticRoundTrip": "unsupported",
+            "mapping": "Unrecognized syntax is retained as original source with explicit loss diagnostics"
+          }
+        ],
+        "linkedSource": false
+      }
+    },
+    {
+      "grammarId": "swimlane",
+      "authoring": true,
+      "primitives": [
+        "node",
+        "relation",
+        "group",
+        "lane",
+        "annotation",
+        "emphasis"
+      ],
+      "nodeKinds": [
+        "process",
+        "start",
+        "end",
+        "decision",
+        "data-store",
+        "component"
+      ],
+      "relationKinds": [
+        "association",
+        "dependency",
+        "flow",
+        "message",
+        "transition"
+      ],
+      "operations": [
+        "insert-elements",
+        "update-semantics",
+        "remove-elements",
+        "set-membership-order",
+        "set-geometry",
+        "set-appearance-locks"
+      ],
+      "mermaid": {
+        "mode": "copy",
+        "certificationVersion": "flowchart-copy-v1",
+        "constructs": [
+          {
+            "construct": "flowchart-direction",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "flowchart TB/TD/LR/RL/BT maps to presentation layout direction"
+          },
+          {
+            "construct": "explicit-node-id",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Explicit source ID maps through source-map to stable semantic node ID; labels never establish identity"
+          },
+          {
+            "construct": "plain-node-label",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Escaped plain text maps to node label; HTML is inert text and is not executed"
+          },
+          {
+            "construct": "rectangle-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind process and presentation shape rectangle"
+          },
+          {
+            "construct": "rounded-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind process and presentation shape rounded-rectangle"
+          },
+          {
+            "construct": "decision-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind decision and presentation shape diamond"
+          },
+          {
+            "construct": "cylinder-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind data-store and presentation shape cylinder"
+          },
+          {
+            "construct": "directed-edge",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "relation.kind flow and direction forward; source and target IDs are semantic endpoints"
+          },
+          {
+            "construct": "bidirectional-edge",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "relation.kind flow and direction both"
+          },
+          {
+            "construct": "undirected-edge",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "relation.kind association and direction none"
+          },
+          {
+            "construct": "plain-edge-label",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Escaped plain text maps to relation label"
+          },
+          {
+            "construct": "subgraph",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Explicit subgraph ID maps to one semantic group in an acyclic single-parent forest"
+          },
+          {
+            "construct": "lane-semantics",
+            "import": "unsupported",
+            "export": "partial",
+            "semanticRoundTrip": "partial",
+            "mapping": "Mermaid subgraphs do not encode lane identity or explicit lane order"
+          },
+          {
+            "construct": "manual-geometry",
+            "import": "unsupported",
+            "export": "partial",
+            "semanticRoundTrip": "partial",
+            "mapping": "Standard Mermaid does not preserve coordinates, routes, attachments, stacking or locks"
+          },
+          {
+            "construct": "styles-and-directives",
+            "import": "unsupported",
+            "export": "unsupported",
+            "semanticRoundTrip": "unsupported",
+            "mapping": "CSS, classDef, init directives, links, callbacks and HTML labels are outside this certified subset"
+          },
+          {
+            "construct": "unsupported-construct",
+            "import": "unsupported",
+            "export": "unsupported",
+            "semanticRoundTrip": "unsupported",
+            "mapping": "Unrecognized syntax is retained as original source with explicit loss diagnostics"
+          }
+        ],
+        "linkedSource": false
+      }
+    },
+    {
+      "grammarId": "architecture",
+      "authoring": true,
+      "primitives": [
+        "node",
+        "relation",
+        "group",
+        "annotation",
+        "emphasis"
+      ],
+      "nodeKinds": [
+        "process",
+        "start",
+        "end",
+        "decision",
+        "data-store",
+        "component"
+      ],
+      "relationKinds": [
+        "association",
+        "dependency",
+        "flow",
+        "message",
+        "transition"
+      ],
+      "operations": [
+        "insert-elements",
+        "update-semantics",
+        "remove-elements",
+        "set-membership-order",
+        "set-geometry",
+        "set-appearance-locks"
+      ],
+      "mermaid": {
+        "mode": "copy",
+        "certificationVersion": "flowchart-copy-v1",
+        "constructs": [
+          {
+            "construct": "flowchart-direction",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "flowchart TB/TD/LR/RL/BT maps to presentation layout direction"
+          },
+          {
+            "construct": "explicit-node-id",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Explicit source ID maps through source-map to stable semantic node ID; labels never establish identity"
+          },
+          {
+            "construct": "plain-node-label",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Escaped plain text maps to node label; HTML is inert text and is not executed"
+          },
+          {
+            "construct": "rectangle-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind process and presentation shape rectangle"
+          },
+          {
+            "construct": "rounded-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind process and presentation shape rounded-rectangle"
+          },
+          {
+            "construct": "decision-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind decision and presentation shape diamond"
+          },
+          {
+            "construct": "cylinder-node",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "node.kind data-store and presentation shape cylinder"
+          },
+          {
+            "construct": "directed-edge",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "relation.kind flow and direction forward; source and target IDs are semantic endpoints"
+          },
+          {
+            "construct": "bidirectional-edge",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "relation.kind flow and direction both"
+          },
+          {
+            "construct": "undirected-edge",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "relation.kind association and direction none"
+          },
+          {
+            "construct": "plain-edge-label",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Escaped plain text maps to relation label"
+          },
+          {
+            "construct": "subgraph",
+            "import": "lossless",
+            "export": "lossless",
+            "semanticRoundTrip": "lossless",
+            "mapping": "Explicit subgraph ID maps to one semantic group in an acyclic single-parent forest"
+          },
+          {
+            "construct": "lane-semantics",
+            "import": "unsupported",
+            "export": "partial",
+            "semanticRoundTrip": "partial",
+            "mapping": "Mermaid subgraphs do not encode lane identity or explicit lane order"
+          },
+          {
+            "construct": "manual-geometry",
+            "import": "unsupported",
+            "export": "partial",
+            "semanticRoundTrip": "partial",
+            "mapping": "Standard Mermaid does not preserve coordinates, routes, attachments, stacking or locks"
+          },
+          {
+            "construct": "styles-and-directives",
+            "import": "unsupported",
+            "export": "unsupported",
+            "semanticRoundTrip": "unsupported",
+            "mapping": "CSS, classDef, init directives, links, callbacks and HTML labels are outside this certified subset"
+          },
+          {
+            "construct": "unsupported-construct",
+            "import": "unsupported",
+            "export": "unsupported",
+            "semanticRoundTrip": "unsupported",
+            "mapping": "Unrecognized syntax is retained as original source with explicit loss diagnostics"
+          }
+        ],
+        "linkedSource": false
+      }
+    }
+  ],
+  "unsupportedGrammars": [
+    "it-current-state",
+    "sequence",
+    "state-machine",
+    "er-data-model",
+    "timeline",
+    "quadrant",
+    "radar",
+    "polar",
+    "loop-flywheel",
+    "nested",
+    "tree",
+    "org-chart",
+    "layer-stack",
+    "venn",
+    "pyramid-funnel",
+    "bar",
+    "treemap",
+    "line",
+    "gantt",
+    "scatter",
+    "high-level",
+    "medallion",
+    "data-flow",
+    "dp-integration",
+    "dp-security-matrix",
+    "sankey",
+    "fishbone",
+    "wardley",
+    "kanban",
+    "user-journey",
+    "deployment",
+    "dependency-graph",
+    "uml-class",
+    "story-map",
+    "database-schema"
+  ]
+}
