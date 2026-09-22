@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -245,4 +245,23 @@ describe('planr diagram public machine surface', () => {
       problem: 'Diagram files differ from their manifest.',
     });
   });
+});
+
+it('opens a scoped diagram owner through the installed runtime service without adding commands', async () => {
+  const { openDiagramOwner } = await import('../../src/services/diagram-artifact-service.js');
+  const project = realpathSync(temporary());
+  const owner = await openDiagramOwner({ root: project, slug: 'offline-owner' });
+  try {
+    const response = await fetch(`${owner.apiBase}read`, { headers: owner.headers });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      ok: true,
+      status: 'absent',
+      diagramId: 'offline-owner',
+      recoveryScope: owner.recoveryScope,
+    });
+    expect((await fetch(`${owner.apiBase}read`)).status).toBe(403);
+  } finally {
+    await owner.close();
+  }
 });

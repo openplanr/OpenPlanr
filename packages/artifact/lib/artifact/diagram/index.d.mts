@@ -118,3 +118,5 @@ export declare function bindDiagramArtifactReview(
   envelope: Record<string, unknown>,
   review: Record<string, unknown>,
 ): Promise<Readonly<Record<string, unknown>>>;
+
+export * from './editor/index.mjs';

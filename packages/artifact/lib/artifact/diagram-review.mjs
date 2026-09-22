@@ -126,3 +126,6 @@ export async function startDiagramReview(file, { port = 0, noOpen = false, openU
       ...(launchError ? { launchError } : {}), close: () => server.close() };
   } catch (error) { await server.close(); throw error; }
 }
+
+// Owner transport is opt-in; opening a diagram for review never grants it.
+export { startDiagramOwner } from './diagram/editor/local-owner.mjs';

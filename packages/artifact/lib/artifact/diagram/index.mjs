@@ -57,3 +57,5 @@ export {
   renderDiagramSvg,
   wrapDiagramLabel,
 } from './rendering/index.mjs';
+
+export * from './editor/index.mjs';

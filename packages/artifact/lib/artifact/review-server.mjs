@@ -429,6 +429,7 @@ export function createArtifactReviewServer({
     throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Artifact review instance id is invalid.');
   }
   const sessions = new Map();
+  const ownerSessions = new Map();
   let port = null;
   let closePromise = null;
   let pendingRegistrations = 0;
@@ -436,7 +437,7 @@ export function createArtifactReviewServer({
   let draining = false;
   let emptyTimer = null;
   const stageRuntime = () => readFileSync(STAGE_RUNTIME_PATH, 'utf8');
-  const idle = () => sessions.size === 0 && pendingRegistrations === 0 && activeRequests === 0;
+  const idle = () => sessions.size === 0 && ownerSessions.size === 0 && pendingRegistrations === 0 && activeRequests === 0;
   const scheduleEmpty = () => {
     if (emptyTimer || draining || typeof onEmpty !== 'function') return;
     emptyTimer = setTimeout(async () => {
@@ -573,6 +574,35 @@ export function createArtifactReviewServer({
           return;
         }
         notFound(res, { head });
+        return;
+      }
+
+      // Owner authority is registered only by a trusted in-process adapter. It
+      // has a separate capability namespace; review registrations cannot opt in.
+      if (segments[0] === 'o') {
+        const owner = safeSessionId(segments[1]) && ownerSessions.get(segments[1]);
+        if (draining || !sessionMatches(owner, segments[2])) {
+          notFound(res, { head });
+          return;
+        }
+        const request = Promise.resolve().then(() => owner.handleRequest({
+          req, segments: segments.slice(3), head,
+          origin: `http://${LOOPBACK_HOST}:${port}`,
+          recoveryScope: owner.recoveryScope,
+        }));
+        owner.pending.add(request);
+        let response;
+        try { response = await request; } finally { owner.pending.delete(request); }
+        if (!response) { notFound(res, { head }); return; }
+        send(res, response.status, JSON.stringify(response.body), {
+          // Rejections may precede body consumption (for example Content-Length
+          // above the limit). Do not reuse a socket containing unread body bytes.
+          ...(response.status >= 400 ? { connection: 'close' } : {}),
+          'content-type': 'application/json; charset=utf-8',
+          'cross-origin-resource-policy': 'same-origin',
+          'content-security-policy': "default-src 'none'; frame-ancestors 'none'",
+          'x-frame-options': 'DENY',
+        }, { head });
         return;
       }
 
@@ -751,6 +781,28 @@ export function createArtifactReviewServer({
     controlToken,
     instanceId,
     sessionCount: () => sessions.size,
+    /** Trusted local authority only; this operation has no HTTP control route. */
+    registerOwnerSession({ handleRequest } = {}) {
+      if (draining || closePromise || typeof handleRequest !== 'function') {
+        throw artifactError(ARTIFACT_ERROR_CODES.LOOPBACK_STATE, 'Local owner session cannot be registered.');
+      }
+      const id = mintCapabilityToken({ bytes: SESSION_ID_BYTES });
+      const owner = {
+        id, capability: mintCapabilityToken({ bytes: SESSION_TOKEN_BYTES }),
+        recoveryScope: `diagram-owner_${id}`, handleRequest, pending: new Set(),
+      };
+      ownerSessions.set(id, owner);
+      return Object.freeze({
+        sessionId: id, capability: owner.capability,
+        recoveryScope: owner.recoveryScope,
+        path: `/o/${id}/${owner.capability}/`,
+        async close() {
+          ownerSessions.delete(id);
+          await Promise.allSettled([...owner.pending]);
+          if (idle()) scheduleEmpty();
+        },
+      });
+    },
     isIdle: idle,
     accepting: () => !draining && !closePromise,
     beginCloseIfIdle() {
@@ -773,6 +825,9 @@ export function createArtifactReviewServer({
       emptyTimer = null;
       closePromise = (async () => {
         sessions.clear();
+        const pendingOwners = [...ownerSessions.values()].flatMap(owner => [...owner.pending]);
+        ownerSessions.clear();
+        await Promise.allSettled(pendingOwners);
         await closeHttpServer(server);
       })();
       return closePromise;
