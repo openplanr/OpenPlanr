@@ -76,7 +76,11 @@ test('Phase 5 packs every declared public operating-loop surface without a priva
   ]) assert.equal(packedFiles.has(required), true, `missing Phase 5 package asset ${required}`);
   for (const path of packedFiles) {
     assert.doesNotMatch(path, /^(?:\.planr\/|tests\/|node_modules\/|\.env(?:\.|\/|$))/);
-    assert.doesNotMatch(path, /(?:legacy|compatibility-v1_4|records-migration|operating-provider-kit)/iu);
+    assert.doesNotMatch(path, /(?:compatibility-v1_4|records-migration|operating-provider-kit)/iu);
+    // Operate retirement does not remove other domains' supported schema readers.
+    if (/^(?:lib\/operate\/|conformance\/fixtures\/operating-runtime-v2\/)/u.test(path)) {
+      assert.doesNotMatch(path, /legacy/iu);
+    }
   }
 
   const consumer = join(temporaryRoot, 'consumer');
