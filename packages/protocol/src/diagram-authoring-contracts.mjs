@@ -151,6 +151,8 @@ const manifestSchema = schema('diagram-manifest', 'diagram-manifest', {
   renderer: closed({ id: token, version: str(64, 1) }),
   outputs: arr(closed({ path: relativePath, mediaType: enumOf('image/svg+xml', 'text/html', 'image/png'), transportDigest: digest, fidelity: fidelitySchema }), 32, 1),
 });
+// Export consumers record the concrete palette version independently of renderer code.
+manifestSchema.properties.theme = closed({ id: token, version: str(64, 1) });
 const mermaidConstruct = closed({ construct: token, import: fidelityValue, export: fidelityValue, semanticRoundTrip: fidelityValue, mapping: str(512, 1) });
 const capabilityProfile = closed({
   grammarId: enumOf('flowchart', 'process', 'swimlane', 'architecture'), authoring: { const: true },

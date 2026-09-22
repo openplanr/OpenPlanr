@@ -383,21 +383,93 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/exports.d.mts",
+      "target": "lib/artifact/diagram/authoring/exports.d.mts",
+      "sha256": "ad43bcb63d2cc085a826b903ad6b6179ccc4ccb1d9b8bc3c217c414e49950382",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/exports.mjs",
+      "target": "lib/artifact/diagram/authoring/exports.mjs",
+      "sha256": "4b430d36ffb8a066b020e29f78977f54cadfd9deed1ac9e39fb65b20e4a01925",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/lib/artifact/diagram/authoring/index.d.mts",
       "target": "lib/artifact/diagram/authoring/index.d.mts",
-      "sha256": "e66ff283c7c02aab9630a8647a734c54af3097a79b902dcfac57c086f061bf62",
+      "sha256": "f200290dd7be21ef222e1ea90bc2b248776615cf46832d2b9cba7e79966b09a2",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/authoring/index.mjs",
       "target": "lib/artifact/diagram/authoring/index.mjs",
-      "sha256": "fe3d0eeac530e5975ae0914a3303bf9ee558a16c8b115e3082c9988db8952600",
+      "sha256": "8b02c3c9e5e8afda911a01b534024ddfb3d9ec7eca800901ad2e76ae7a650a7e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/layout.d.mts",
+      "target": "lib/artifact/diagram/authoring/layout.d.mts",
+      "sha256": "cef4d16f47b0818fb91ff33e97cfb07762953e2d80eeee15c6e8f1f39d5887e8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/layout.mjs",
+      "target": "lib/artifact/diagram/authoring/layout.mjs",
+      "sha256": "cc55cc03c07b159f032ea26078427b460180d4375180d2ba9e1ccf6c50b2140d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/migration.d.mts",
+      "target": "lib/artifact/diagram/authoring/migration.d.mts",
+      "sha256": "9ea2d812857e2b13fe50dab3ed116f3cb04d1b0d2371607566ceb03980da8c93",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/migration.mjs",
+      "target": "lib/artifact/diagram/authoring/migration.mjs",
+      "sha256": "af2263636c6d383c14e59342dddbaa828cab449ac469bac5ff067fa6cfb04b1d",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/authoring/model.mjs",
       "target": "lib/artifact/diagram/authoring/model.mjs",
       "sha256": "61e6ea41aa3d467b04434b1e4f5050cbecbee1835bec035e0462f4be11264dd6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/renderer.d.mts",
+      "target": "lib/artifact/diagram/authoring/renderer.d.mts",
+      "sha256": "1a72200209a9364100870ef8f1283a7bf71d53179a09e3cafc036523b5b7ffed",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/renderer.mjs",
+      "target": "lib/artifact/diagram/authoring/renderer.mjs",
+      "sha256": "6024b2c7327a7ef331f37236f880f1952e71b7496e200ee0acf93c91f1b7a4fb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/scene.d.mts",
+      "target": "lib/artifact/diagram/authoring/scene.d.mts",
+      "sha256": "2bb553fb4d4e917c554e668450e3ec0a4cd03b79aeb925c19e906214ba6a4778",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/scene.mjs",
+      "target": "lib/artifact/diagram/authoring/scene.mjs",
+      "sha256": "b32f125ce893992c949ae6929a42ea75c107dde3b6e89e46639ee0e0370a0591",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/store.d.mts",
+      "target": "lib/artifact/diagram/authoring/store.d.mts",
+      "sha256": "7877e0bc125e2bdaf6576cc3e3edca59384739f03d006b57258fe1725a99bc89",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/authoring/store.mjs",
+      "target": "lib/artifact/diagram/authoring/store.mjs",
+      "sha256": "39882f5ae7840ee560462fc0971df7c1d46a9a0eaad7c59cd0dd5bf377a3f61c",
       "mode": "644"
     },
     {

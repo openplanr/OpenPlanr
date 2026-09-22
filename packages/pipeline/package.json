@@ -42,6 +42,14 @@
       "types": "./lib/artifact/diagram/authoring/index.d.mts",
       "import": "./lib/artifact/diagram/authoring/index.mjs"
     },
+    "./diagram-authoring-store": {
+      "types": "./lib/artifact/diagram/authoring/store.d.mts",
+      "import": "./lib/artifact/diagram/authoring/store.mjs"
+    },
+    "./diagram-authoring-export": {
+      "types": "./lib/artifact/diagram/authoring/exports.d.mts",
+      "import": "./lib/artifact/diagram/authoring/exports.mjs"
+    },
     "./protocol": {
       "types": "./lib/protocol/index.d.ts",
       "import": "./lib/protocol/loader.mjs"

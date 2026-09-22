@@ -298,3 +298,15 @@ test('UTF-8 source and aggregate data limits reject excessive inputs before any 
   const enormous = makeBundle(); enormous.extra = 'x'.repeat(8_388_609);
   failWith('diagram-authoring-bundle', enormous, 'resource-limit');
 });
+
+
+test('authored export manifests accept versioned theme metadata without weakening existing fields', () => {
+  const bundle = makeBundle('flowchart', { source: true });
+  const manifest = makeManifest(bundle);
+  manifest.theme = { id: 'paper', version: '1.0.0' };
+  assert.deepEqual(validate('diagram-manifest', manifest, { bundle }), []);
+  manifest.theme.remoteStylesheet = 'https://invalid.example/style.css';
+  assert.ok(validate('diagram-manifest', manifest, { bundle }).length > 0);
+  delete manifest.theme;
+  assert.deepEqual(validate('diagram-manifest', manifest, { bundle }), []);
+});

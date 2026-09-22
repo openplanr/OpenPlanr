@@ -96,13 +96,13 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.d.mts",
       "target": "lib/protocol/diagram-authoring-contracts.d.mts",
-      "sha256": "d9b18069ab061d14adb3ef74f03b9b2d5b22e81f4726bf2e88fb652c32aaa095",
+      "sha256": "053e8cbec84b2784df8422146cc659f8982c698096861eca8db3ce985672fbf2",
       "mode": "644"
     },
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.mjs",
       "target": "lib/protocol/diagram-authoring-contracts.mjs",
-      "sha256": "9aa6dab55cafb2f111e0a76bc760103a7aaf03793e5d660cb647929c1283b08f",
+      "sha256": "6d8f8593a9aecba1331505489b3b0197d6e07585184a7d3febb6a22b5d1d17cb",
       "mode": "644"
     },
     {
@@ -756,7 +756,7 @@
     {
       "source": "packages/protocol/schemas/v1.13.0/diagram-manifest.schema.json",
       "target": "schemas/v1.13.0/diagram-manifest.schema.json",
-      "sha256": "717e013391e8c6693ea6003632afb73d54dd7b7e2194ed59c78c3c53334f1978",
+      "sha256": "cf2a7e86e86fcd670cff7dadba7aba296f8ca7720c541a04a1124a2c9183b2dc",
       "mode": "644"
     },
     {

@@ -1,6 +1,6 @@
 import {
   compileDiagramCommand, createConditionalInverse, diffDiagramBundles,
-  previewDiagramTransaction, validateAuthoringBundle,
+  previewDiagramTransaction, validateAuthoringBundle, resolveDiagramScene, renderAuthoredDiagramSvg,
 } from '../../lib/artifact/diagram/authoring/index.mjs';
 import { canonicalizeJson } from '../../../protocol/src/canonical-json.mjs';
 import { makeBundle, placement, sealBundle } from '../../../../tests/protocol/fixtures/diagram-authoring.mjs';
@@ -68,7 +68,16 @@ export function evaluateKernelCases() {
     idMap: { 'group-a': 'group-copy', 'group-inner': 'inner-copy', 'node-a': 'node-copy', 'note-a': 'note-copy' },
   }, { transactionId: 'duplicate-group' }), 'duplicate');
   const canceled = compileDiagramCommand(bundle, { type: 'cancel' }, { transactionId: 'canceled-gesture' });
+  const authored = makeBundle('flowchart', { blank: true });
+  authored.document.nodes.push({ id: 'visible-step', label: 'Ready', kind: 'process', description: null });
+  authored.document.accessibility.readingOrder = ['visible-step'];
+  authored.presentation.elements.push(placement('visible-step', 'rounded-rectangle', 90, 70));
+  sealBundle(authored);
+  freezeData(authored);
+  const scene = required(resolveDiagramScene(authored), 'authored scene');
+  const rendered = required(renderAuthoredDiagramSvg(authored), 'authored SVG');
   return {
+    scene, rendered,
     validation, moved, movedAgain, renamed, undo, undone, redo, redone, difference,
     stale, locked, hostile, wrongClass, duplicated, canceled, getterReads,
     originalUnchanged: canonicalizeJson(bundle) === original,
