@@ -19,7 +19,7 @@
       "packages/integrations",
       "apps/dashboard"
     ],
-    "manifestDigest": "sha256:8fdb60b95fbd68996380d5578a0d074351ddcf670dbeb51e52fba5fcaef37483"
+    "manifestDigest": "sha256:980d85bab14db461fc49e91f0d8344f358e7ec275f91d134bcf08b153429278e"
   },
   "protocol": {
     "current": "1.8.0",
@@ -55,7 +55,7 @@
       "version": "0.49.0",
       "path": "packages/pipeline",
       "publication": "public",
-      "manifestDigest": "sha256:71508c72ccaef9daa9252222ee745d687777c621602cb51a38a10c79f60542ad"
+      "manifestDigest": "sha256:353293618339c4765f2a579d2be12e1ee13e03d78d667f226be24f9bf3397335"
     },
     "protocol": {
       "package": "@openplanr/protocol",

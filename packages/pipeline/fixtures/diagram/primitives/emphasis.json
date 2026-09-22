@@ -1,8 +1,0 @@
-{
-  "kind": "diagram-primitive-fixture",
-  "schemaVersion": "1.0.0",
-  "primitive": "emphasis",
-  "grammarId": "architecture",
-  "fixture": "fixtures/diagram/grammars/architecture.planr-diagram.json",
-  "description": "Canonical emphasis primitive example in the architecture grammar."
-}

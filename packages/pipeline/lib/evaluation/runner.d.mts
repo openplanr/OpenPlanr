@@ -76,6 +76,8 @@ export interface EvaluationOutcome {
 
 export interface EvaluationRunOptions {
   repoRoot: string;
+  /** Explicit canonical source root; required even when preloaded inputs are supplied. */
+  sourceRoot: string;
   now: string;
   clock?: () => string;
   waivers?: readonly unknown[];
@@ -93,5 +95,11 @@ export const EVALUATION_BASELINE_PATH: string;
 export const EVALUATION_GATE_POLICY_PATH: string;
 export const EVALUATION_LOOPBACK_SURFACE_PATH: string;
 
-export function loadEvaluationInputs(options: { repoRoot: string }): EvaluationInputs;
+/** Without sourceRoot the default view is legacy; a sourceRoot selects active unless view is legacy. */
+export type EvaluationInputOptions = { repoRoot: string } & (
+  | { sourceRoot: string; view?: 'active' | 'legacy' }
+  | { sourceRoot?: undefined; view?: 'legacy' }
+);
+
+export function loadEvaluationInputs(options: EvaluationInputOptions): EvaluationInputs;
 export function runEvaluation(options: EvaluationRunOptions): Promise<EvaluationOutcome>;

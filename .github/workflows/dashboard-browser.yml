@@ -49,6 +49,8 @@ jobs:
           cache: npm
       - name: Install the root lockfile
         run: npm ci
+      - name: Generate workspace package assets
+        run: npm run generate
       - name: Install the pinned browser
         run: npm exec --workspace=openplanr -- playwright install --with-deps chromium
       - name: Run dashboard browser verification against local workspace packages

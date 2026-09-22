@@ -4,6 +4,54 @@
   "generator": "scripts/protocol/project-protocol.mjs",
   "entries": [
     {
+      "source": "packages/protocol/lib/dashboard/generated/operate-schema-token-codec.mjs",
+      "target": "lib/dashboard/generated/operate-schema-token-codec.mjs",
+      "sha256": "dfd8f5bf819dd6cc84085472116ee43ce47c8a376830599b043bfbeacc64c86a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/operate-experience-audit-display-contract.d.mts",
+      "target": "lib/dashboard/operate-experience-audit-display-contract.d.mts",
+      "sha256": "03f05a71469e4ead5f3ede445cde4bbb4aa15b1ef03e6630900b1d43f6e14d75",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/operate-experience-display-contract.d.mts",
+      "target": "lib/dashboard/operate-experience-display-contract.d.mts",
+      "sha256": "7c1dce4cf8ee4875e34e8f2302892743907275abe15bac0f096c46e1e6c2d405",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/operate-experience-surface-contract.d.mts",
+      "target": "lib/dashboard/operate-experience-surface-contract.d.mts",
+      "sha256": "67316c4f53ed258c6bd006892bfccf718a1e32cde3ad9651b65c34a5d96e494a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/operate-review-contract.d.mts",
+      "target": "lib/dashboard/operate-review-contract.d.mts",
+      "sha256": "2f1d89307457ba8767bab7c5eff2ae34f193deaa0cfd175e97674e5931081232",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/operate-review-payload-safety.d.mts",
+      "target": "lib/dashboard/operate-review-payload-safety.d.mts",
+      "sha256": "24a6c6e9752d871ec4eca1ac0826f9223a3c844201c3d3be2efcdd410719a5f5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/operate-review-payload-safety.mjs",
+      "target": "lib/dashboard/operate-review-payload-safety.mjs",
+      "sha256": "c921a82ef5e4237f1e0878b7b9cbe74c5c71badd08e6ef82fd850f029646557d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/lib/dashboard/operate-review-workspace-projection-v2.d.mts",
+      "target": "lib/dashboard/operate-review-workspace-projection-v2.d.mts",
+      "sha256": "4dcbeecdc1bf417cf2c158866cbac032de60964f463a9ffc04ea3823434829ea",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/projections/pipeline/lib/protocol/canonical-json.mjs",
       "target": "lib/protocol/canonical-json.mjs",
       "sha256": "81b581518afffa6a94787f2c0cd305f9385b2ef56378db6d53e600d41e288cbd",
@@ -136,6 +184,78 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/registry/adapters.json",
+      "target": "registry/adapters.json",
+      "sha256": "4f5c47977aac550ddfc2fc87b8cbaa8258ca96b61b66cd745d466c3f993c8d94",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registry/artifact-theme.json",
+      "target": "registry/artifact-theme.json",
+      "sha256": "c3c79c71d5e594bd1c18647f85a1482b3fa805fc7cb76c8b86da6fc28fa45693",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registry/evaluation-graders.json",
+      "target": "registry/evaluation-graders.json",
+      "sha256": "aae843fe55fa84b1a04e02fef3ed8bbeafe0d8a65b071922013368b7c987a68e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registry/evaluation-host-profiles.json",
+      "target": "registry/evaluation-host-profiles.json",
+      "sha256": "125e755d4c09d9e8949f5bf727a7a69669b4991d2d94d6b36a87eff71d310552",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registry/frozen-commands.json",
+      "target": "registry/frozen-commands.json",
+      "sha256": "2d04417a24536e6ea3a82f0ea5ec2351722701257808a312a5a224dcdc850f60",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registry/landing-operations.json",
+      "target": "registry/landing-operations.json",
+      "sha256": "f8765638680f1a4bfd45ea615e7634965aa21b034ca62b6004550d3e38628238",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registry/landing-workflows.json",
+      "target": "registry/landing-workflows.json",
+      "sha256": "7bff6d6150b6cef7d46603216d4225bc9000f9f286a203c65e668a077b3ead80",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registry/live-evidence-providers.json",
+      "target": "registry/live-evidence-providers.json",
+      "sha256": "d20af36b3b4abda117d1a50e34a93e5b53c48a2a8545c44b225ae1e094e8b74e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registry/operate-v2-contracts.json",
+      "target": "registry/operate-v2-contracts.json",
+      "sha256": "bcd86d29a23e44b7ee605423dfa9a92a2e616c6d34b1ec4a97c6b8c889e77035",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registry/professional-skills.json",
+      "target": "registry/professional-skills.json",
+      "sha256": "76ebfb7eabbce94f46c6943de78c69d231378604dfef33e15886c2b78a11398d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registry/roles.json",
+      "target": "registry/roles.json",
+      "sha256": "d984c27df99e9bfb66b325efb1fc390861557b689cbbec22ea1386a935f51f5a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registry/ship-review-specialists.json",
+      "target": "registry/ship-review-specialists.json",
+      "sha256": "5de54a544c77c1f2b50a040e5cfffd57d194bdfc8d15a6c9cae3f7414c1fae76",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/registries/commands.json",
       "target": "registry/v1.5.0/commands.json",
       "sha256": "65a0195b1116e8ec2380cdbb21178688b8d59865dc6f30f89468fce1a22d8440",
@@ -205,6 +325,282 @@
       "source": "packages/protocol/registries/skill-routing.json",
       "target": "registry/v1.7.0/skill-routing.json",
       "sha256": "bd1d286e32d07fee32b09ea52ae9c5db5f5002741e703e9791516be3cdea1882",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.0.0/design-approved.schema.json",
+      "target": "schemas/v1.0.0/design-approved.schema.json",
+      "sha256": "64f4990ffe6ac8a26fb86d90658df6621989e50aa88606ed0c7efb0f97cf6dda",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.0.0/design-feedback.schema.json",
+      "target": "schemas/v1.0.0/design-feedback.schema.json",
+      "sha256": "de9d07617054f29c9f7ce00d0a10301468cab33e98d9065f1dcca5d6ac521d46",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.0.0/design-manifest.schema.json",
+      "target": "schemas/v1.0.0/design-manifest.schema.json",
+      "sha256": "3a3880f80f0600ec426bd72d490ce5dfd0528c42bf5b6834e0ab0a40d5ca0a5d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.0.0/design-session.schema.json",
+      "target": "schemas/v1.0.0/design-session.schema.json",
+      "sha256": "1c0faa93c0a882819f14117bceebe899bc6be8a477ab72feedf106caea83a0e1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.0.0/graph.schema.json",
+      "target": "schemas/v1.0.0/graph.schema.json",
+      "sha256": "df33eb9b72822e42d6477e8e5f4963a8bc74812c0afe4410d39fd629a7f9d70c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.0.0/pipeline-shipped.schema.json",
+      "target": "schemas/v1.0.0/pipeline-shipped.schema.json",
+      "sha256": "4e4b3e75e6637288b69218d6aaeb969adf53c6e2f729eac2ad61861a334bd97b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.0.0/run-manifest.schema.json",
+      "target": "schemas/v1.0.0/run-manifest.schema.json",
+      "sha256": "b6f04cd6793eaf0904d89920c5f5a0fe73effaf0d611f710605825b14f6eeec4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.0.0/spec.schema.json",
+      "target": "schemas/v1.0.0/spec.schema.json",
+      "sha256": "03b3b54e32cc8d71f310afaba1cb0051b631840e1e0e47d9e16e8458eeb1d57f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.0.0/stack.schema.json",
+      "target": "schemas/v1.0.0/stack.schema.json",
+      "sha256": "32793b9d08c0825e2cc96a81ca78182906cf44a0902d741ec015967737a86110",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.0.0/story.schema.json",
+      "target": "schemas/v1.0.0/story.schema.json",
+      "sha256": "d6e91a20d4cd1c8a79a63f0f50d3e4f3d1a83379ece292361ae2fd8cf4463145",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.0.0/task.schema.json",
+      "target": "schemas/v1.0.0/task.schema.json",
+      "sha256": "4ef50ef97fd0f0d6606c2c66580523452141cce322b9172bf32e05f7bd01e6b3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.0.0/taste-profile.schema.json",
+      "target": "schemas/v1.0.0/taste-profile.schema.json",
+      "sha256": "cd09e5e073c19d6d38e29bb3df270577b963d99edafb172bc45f8f1cf49e70b6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/adapter-registry.schema.json",
+      "target": "schemas/v1.1.0/adapter-registry.schema.json",
+      "sha256": "2538879daf3267a07768ef65f185ef17c58831773cfb4dd926d8ad40e21e41ee",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/artifact-envelope.schema.json",
+      "target": "schemas/v1.1.0/artifact-envelope.schema.json",
+      "sha256": "f14df0e38200e2d73325939de962efb2c6e2c594b86c1d5c12afe55479dabf23",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/artifact-paste.schema.json",
+      "target": "schemas/v1.1.0/artifact-paste.schema.json",
+      "sha256": "b689a07de579018b628ee3383a10aff5f2aee6d31eee7a1527f996a4592b8d4f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/artifact-review.schema.json",
+      "target": "schemas/v1.1.0/artifact-review.schema.json",
+      "sha256": "b4db7b75b694c2aef2a37be2128e4635302f3473e09236aa1f37a33dcf3590b4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/artifact-room-descriptor.schema.json",
+      "target": "schemas/v1.1.0/artifact-room-descriptor.schema.json",
+      "sha256": "5993b332a5b9102699650ef243c7cbd8cbf8bbe6a677ad45e4650d0e301d6b85",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/artifact-room-event.schema.json",
+      "target": "schemas/v1.1.0/artifact-room-event.schema.json",
+      "sha256": "d4ab068b8af41f59fb1cd723a01f3a683f23ef13b8131f37737f432d9186c1bb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/artifact-room-signed-event.schema.json",
+      "target": "schemas/v1.1.0/artifact-room-signed-event.schema.json",
+      "sha256": "a9530fb454a49484e9f26cea0234849e1299844f0ab1fe58477f1524b418f5f4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/artifact-theme.schema.json",
+      "target": "schemas/v1.1.0/artifact-theme.schema.json",
+      "sha256": "e5df076154594ed0de8aef12971c09dd98231ebc4c16b5ce597a76fb81f3cf9c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/browser-qa-gate.schema.json",
+      "target": "schemas/v1.1.0/browser-qa-gate.schema.json",
+      "sha256": "e3bb82813a57aa4a5afc23e214216cabae225340f4f440a5ff849bbf2e9458c9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/browser-qa-result.schema.json",
+      "target": "schemas/v1.1.0/browser-qa-result.schema.json",
+      "sha256": "18914575f53005a230a95632658dcbb5b28f0cad0c74a6175eb620b8a122c676",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/browser-qa-session.schema.json",
+      "target": "schemas/v1.1.0/browser-qa-session.schema.json",
+      "sha256": "83e943da313b05376a2dbd7ae2b88aaf3eab79a18f98a3cf6fbfac5428636119",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/ecosystem-manifest.schema.json",
+      "target": "schemas/v1.1.0/ecosystem-manifest.schema.json",
+      "sha256": "69288636afc2692229e59952417aef7602eb92436478e3e21a991d355584f61a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/investigation-diagnosis.schema.json",
+      "target": "schemas/v1.1.0/investigation-diagnosis.schema.json",
+      "sha256": "e64f3c6894075d1ed70e59c0a1275bfe7630acb0651c1eb806dc03f83324de2f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/investigation-event.schema.json",
+      "target": "schemas/v1.1.0/investigation-event.schema.json",
+      "sha256": "d68e2080986067d658c3e21639ecc9f9439659476bb84e5e8372a783892ad954",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/investigation-experiment.schema.json",
+      "target": "schemas/v1.1.0/investigation-experiment.schema.json",
+      "sha256": "664b4fbdf0e9bc763ad89f4e5e9a352a0784599db3090cecebddef21009e4042",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/investigation-fix.schema.json",
+      "target": "schemas/v1.1.0/investigation-fix.schema.json",
+      "sha256": "7fe78a7a68195e8061998b3479113e8ca888b31689bf6dd7d68c89702e1b5f75",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/investigation-hypothesis.schema.json",
+      "target": "schemas/v1.1.0/investigation-hypothesis.schema.json",
+      "sha256": "0f14e063cc01f23450df125bd0c67b86aa0defdc5c7d8b1ec4b043bcc0a13680",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/investigation-observation.schema.json",
+      "target": "schemas/v1.1.0/investigation-observation.schema.json",
+      "sha256": "cd269049e44d3c37d51cace1e5ec918b2add1267dbabb6ccf81302222c71f3e7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/investigation-receipt.schema.json",
+      "target": "schemas/v1.1.0/investigation-receipt.schema.json",
+      "sha256": "a22ddec4a03460ae44ebe2a29440f6fe16cad8d1ec528654e6767a5571ba9b04",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/investigation-record.schema.json",
+      "target": "schemas/v1.1.0/investigation-record.schema.json",
+      "sha256": "184e604bd74a7b983c814cbd31ae1e3d3d9d39b93d733a6121751942f0345295",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/investigation-request.schema.json",
+      "target": "schemas/v1.1.0/investigation-request.schema.json",
+      "sha256": "08a6a04eb7b28355aaff514658b3c6e1eacbf5161d3e90d33178b255aa99c081",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/planning-review-event.schema.json",
+      "target": "schemas/v1.1.0/planning-review-event.schema.json",
+      "sha256": "17fb99e2f2e4a5eb66db3d3c862198a7d90b3e725122de170f1d71a8d3637896",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/planning-review-receipt.schema.json",
+      "target": "schemas/v1.1.0/planning-review-receipt.schema.json",
+      "sha256": "7407883d5f8962762ad55093913c0d92968ec7346dbb6e95b1935487747a78c6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/planning-review-record.schema.json",
+      "target": "schemas/v1.1.0/planning-review-record.schema.json",
+      "sha256": "4f458efc968826d12995055358c27c019c258566d00c0f643254662bf110c6d9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/planning-review-state.schema.json",
+      "target": "schemas/v1.1.0/planning-review-state.schema.json",
+      "sha256": "a36a2fea406cdcbfaac697ce63805c3da4a34acb156436be59949960bb27f00f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/professional-skills.schema.json",
+      "target": "schemas/v1.1.0/professional-skills.schema.json",
+      "sha256": "d675a76be915e57b1e106ffa036b49c6b3a6e349f0e87e2afea244e8aa287f7d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/professional-specification.schema.json",
+      "target": "schemas/v1.1.0/professional-specification.schema.json",
+      "sha256": "f5c1330e2ec5ec5066fc3be2de676746ebf65b28551374cdd8d6730f409390b5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/provenance-event.schema.json",
+      "target": "schemas/v1.1.0/provenance-event.schema.json",
+      "sha256": "4c19eb8fd2d56a021514bbfdf07e28009b98cf996d8fe24a7d2879199593f79e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/role-registry.schema.json",
+      "target": "schemas/v1.1.0/role-registry.schema.json",
+      "sha256": "4eee824aeddeff56fe365e5b2ee092a9bf922356af6fd2aee35d2e511ce5c2cd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/runtime-lock.schema.json",
+      "target": "schemas/v1.1.0/runtime-lock.schema.json",
+      "sha256": "bb8da266fe1422968f4a59d820cb51ce8dbbd6ecbf207e42eb3c44c8bf66f41c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/ship-closure.schema.json",
+      "target": "schemas/v1.1.0/ship-closure.schema.json",
+      "sha256": "e183f885dcdbfd638482228777a0868c188e45d6553b49326514a55c10c4ec1b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/ship-review-specialist-registry.schema.json",
+      "target": "schemas/v1.1.0/ship-review-specialist-registry.schema.json",
+      "sha256": "0fc3a42fc647c1d1d5123306dd2dce11983c43c45b80d93d6b2920ccc69b6370",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/ship-risk-classification.schema.json",
+      "target": "schemas/v1.1.0/ship-risk-classification.schema.json",
+      "sha256": "9a72bbe5cbc3ef357886e35ddc5bd6de1489e1e1b540355dd8972ee5fe3d0de0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.1.0/specialist-review-result.schema.json",
+      "target": "schemas/v1.1.0/specialist-review-result.schema.json",
+      "sha256": "73995ae5ac74bee2d4cdd77ddd528c3093f2e2465cc3c8d11a30092490783955",
       "mode": "644"
     },
     {
@@ -295,6 +691,360 @@
       "source": "packages/protocol/schemas/v1.12.0/enterprise-sync-state.schema.json",
       "target": "schemas/v1.12.0/enterprise-sync-state.schema.json",
       "sha256": "c5b41d49118b888a2138940b885d653d8affe432c8a94e6e3f772b055bf32f02",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/adapter-registry.schema.json",
+      "target": "schemas/v1.2.0/adapter-registry.schema.json",
+      "sha256": "5f392eb8a742d5ea1b1e634f0a4193f47ed65fe5b2440b89b67c26050447d7d0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/dashboard-bootstrap.schema.json",
+      "target": "schemas/v1.2.0/dashboard-bootstrap.schema.json",
+      "sha256": "3256fc19b8d4c9410bd93b7deb77f025e08cf00d4ecd86af12ad527acb12ce85",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/ecosystem-release-operation.schema.json",
+      "target": "schemas/v1.2.0/ecosystem-release-operation.schema.json",
+      "sha256": "529cc8c453d2ff3b412737f4af91da0faede5f04654f1d18642cda0a6054da7f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/ecosystem-saga.schema.json",
+      "target": "schemas/v1.2.0/ecosystem-saga.schema.json",
+      "sha256": "a4927f6c6c802c8fa85d905938fd10420cd05461f6fd94fdf168394ecb5bd1fb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/evidence-diagnostic.schema.json",
+      "target": "schemas/v1.2.0/evidence-diagnostic.schema.json",
+      "sha256": "d57f4055ef4815fc0f1f6a30a5f25d1f686d4c86245f3bd9166a789da127fee2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/guided-answer-envelope.schema.json",
+      "target": "schemas/v1.2.0/guided-answer-envelope.schema.json",
+      "sha256": "8a63cb14c3eacaa875ae808c9b4e314aa830aa2c488b1868003ac65410cfed8a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/guided-confirmation.schema.json",
+      "target": "schemas/v1.2.0/guided-confirmation.schema.json",
+      "sha256": "ef7adebcd82f73529d8216f801eae2166ce1e78f62066cbfdd97989580248f96",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/guided-question.schema.json",
+      "target": "schemas/v1.2.0/guided-question.schema.json",
+      "sha256": "1c994f0b974c02f201900f8c7139419cc0c334dd6032f805840587ee7c8aeb5d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/guided-questionnaire.schema.json",
+      "target": "schemas/v1.2.0/guided-questionnaire.schema.json",
+      "sha256": "d0b4acfc19693ee2a2fcbc599640e51f01277562ab2d2509d41307a86f2a6e9f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/guided-session.schema.json",
+      "target": "schemas/v1.2.0/guided-session.schema.json",
+      "sha256": "ae58a46812965f6667b73269e2ee8a96a138a40deab294d4c3274fce90a11394",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/landing-confirmation.schema.json",
+      "target": "schemas/v1.2.0/landing-confirmation.schema.json",
+      "sha256": "1a49a450d2f84d066a5c8fed2a19de21a4b26234c0b72f1c908304377effdee1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/landing-event.schema.json",
+      "target": "schemas/v1.2.0/landing-event.schema.json",
+      "sha256": "69757f64736ac05cb93934f413540aeb2bc332e09809e3935d612c23e9fb6431",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/landing-operation-registry.schema.json",
+      "target": "schemas/v1.2.0/landing-operation-registry.schema.json",
+      "sha256": "5e6417690ab9941ebd9e1695fe6ad91042d5437e4985e6e1fc77cbaaf2adba37",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/landing-phase-receipt.schema.json",
+      "target": "schemas/v1.2.0/landing-phase-receipt.schema.json",
+      "sha256": "7e8e1c37d14ee63dc04f396487e06f0ebe503b8f60c9fb1de7400ffffbfdc1c6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/landing-plan.schema.json",
+      "target": "schemas/v1.2.0/landing-plan.schema.json",
+      "sha256": "a4510d83b672783edba87a8ea9dd29b05f2b6c87e7c2834f934fbc566087d99c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/landing-receipt.schema.json",
+      "target": "schemas/v1.2.0/landing-receipt.schema.json",
+      "sha256": "ea2d7053bc6d97f68dfc016f9df3361966f64717d34a95a36f8f1f18c63e918a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/landing-workflow-catalog.schema.json",
+      "target": "schemas/v1.2.0/landing-workflow-catalog.schema.json",
+      "sha256": "af482aacfe418f9fac868f45d18bd8ca2e816de8259ff0f427049cb1e37d5561",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-action-display-workspace.d.mts",
+      "target": "schemas/v1.2.0/operate-action-display-workspace.d.mts",
+      "sha256": "8b7f86816e48b5d00eda79645f9590e8c727cb015a86851913ce33d90c63d640",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-action-display-workspace.mjs",
+      "target": "schemas/v1.2.0/operate-action-display-workspace.mjs",
+      "sha256": "c96d9611be254153992bbb0d143023063f4e20b055ed3ed3b40ea2fb3a361bd3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-action-display-workspace.schema.json",
+      "target": "schemas/v1.2.0/operate-action-display-workspace.schema.json",
+      "sha256": "a7d5ef5f7b5b977983dc900c391d971fd8511110dab90caea8a66952588c106c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-cycle-display-workspace.d.mts",
+      "target": "schemas/v1.2.0/operate-cycle-display-workspace.d.mts",
+      "sha256": "4c572495a2cdd8d7d633a391f0f47de27ca9b005daaf62b8f0fd95e5301e5be7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-cycle-display-workspace.mjs",
+      "target": "schemas/v1.2.0/operate-cycle-display-workspace.mjs",
+      "sha256": "4485af65cfb595a2e6f22962d06873ecc2387522c7041b05c520e07fe09e57ac",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-cycle-display-workspace.schema.json",
+      "target": "schemas/v1.2.0/operate-cycle-display-workspace.schema.json",
+      "sha256": "942e11cbbcee14010926b0cb5729ba2b25582a3af4ed707a511f853c58c07aab",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-executive-board-display-surface.d.mts",
+      "target": "schemas/v1.2.0/operate-executive-board-display-surface.d.mts",
+      "sha256": "647496d973c79af26cde546a35a644d494a3786070c110295485e847d088bc8b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-executive-board-display-surface.mjs",
+      "target": "schemas/v1.2.0/operate-executive-board-display-surface.mjs",
+      "sha256": "f14da0d16aaf2910bda8a26ac1da48383e3aa4c4c1a797234f8f844a6f78f16f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-executive-board-display-surface.schema.json",
+      "target": "schemas/v1.2.0/operate-executive-board-display-surface.schema.json",
+      "sha256": "07719cd6c93cfdc2f1b038fb2371dddcf682d5f5933f204f22c2869d70ed334a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-experience-audit-display-surface.d.mts",
+      "target": "schemas/v1.2.0/operate-experience-audit-display-surface.d.mts",
+      "sha256": "055aac56adc275b321b86561acc9256b465ddb250137bf424cf9c68761c9a53a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-experience-audit-display-surface.mjs",
+      "target": "schemas/v1.2.0/operate-experience-audit-display-surface.mjs",
+      "sha256": "7b92a6a5ac458cc4a6079983b232c81ae4b703aa99f65991ca9638f92b8d35f2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-experience-audit-display-surface.schema.json",
+      "target": "schemas/v1.2.0/operate-experience-audit-display-surface.schema.json",
+      "sha256": "bd884fb6102ff49150b610c8513f8f5f862be3ecbcbccbd586b021cdb6cfb503",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-experience-display-surface.d.mts",
+      "target": "schemas/v1.2.0/operate-experience-display-surface.d.mts",
+      "sha256": "1fea3e63c5a1faf2bd71ce3fb364dfad2cf1306fff64d5ec07a0c1ed23077e82",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-experience-display-surface.mjs",
+      "target": "schemas/v1.2.0/operate-experience-display-surface.mjs",
+      "sha256": "35b824cf6bd4fdd08af755811ed148b25ba54068fab7367a66f6f16833fcae44",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-experience-display-surface.schema.json",
+      "target": "schemas/v1.2.0/operate-experience-display-surface.schema.json",
+      "sha256": "defe23f746710f6cb34bcf6bad3a6d17eec5f6cd60a1a138f360e6b0b193ce13",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-experience-surface.d.mts",
+      "target": "schemas/v1.2.0/operate-experience-surface.d.mts",
+      "sha256": "efd80b3e81e4ad374e48e251bcc2bc21677b9bcb62ffbce73868942daf39595a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-experience-surface.mjs",
+      "target": "schemas/v1.2.0/operate-experience-surface.mjs",
+      "sha256": "cf7a3e52f5e2822be6242d09b1f0de957c5b7d867c8f7ba56b4e0395025caee2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-experience-surface.schema.json",
+      "target": "schemas/v1.2.0/operate-experience-surface.schema.json",
+      "sha256": "352a5d7e7f060c1b8fae0fbf02784cbd388c79efff4dad8a5a3b57163f752d23",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-recovery-display-surface.d.mts",
+      "target": "schemas/v1.2.0/operate-recovery-display-surface.d.mts",
+      "sha256": "6f3ee7a5bca9dd384e942183be57a7083cd86080df17b6f28a4a25a352ec0300",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-recovery-display-surface.mjs",
+      "target": "schemas/v1.2.0/operate-recovery-display-surface.mjs",
+      "sha256": "760bd6d11c13c06b2490f25636c0bf38cb2e611eea5b26a7ffd96357c90931ec",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/operate-recovery-display-surface.schema.json",
+      "target": "schemas/v1.2.0/operate-recovery-display-surface.schema.json",
+      "sha256": "f3eb4d8e89ad22f3faff44db4e21c5491ac75aa1cc48c7aa285b6d0e2fd20172",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.2.0/structured-action.schema.json",
+      "target": "schemas/v1.2.0/structured-action.schema.json",
+      "sha256": "354097be83cd3457b68cbb93ff3148afcd598f030f4b5aa26b59bf4c464edcaa",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.3.0/adapter-registry.schema.json",
+      "target": "schemas/v1.3.0/adapter-registry.schema.json",
+      "sha256": "a55427a13c44e37a678b789731aba91d091aa423a87cfa901fe79c39471462e4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.3.0/ecosystem-manifest.schema.json",
+      "target": "schemas/v1.3.0/ecosystem-manifest.schema.json",
+      "sha256": "aaecc2dbc45eb3c4eb2013c9bb9fe591de0cdc824b07fa5e992653cd585397b6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.3.0/release-compatibility-claim.schema.json",
+      "target": "schemas/v1.3.0/release-compatibility-claim.schema.json",
+      "sha256": "ef73ea13a321ebe0987df89ccaeb8c1e641792daea9ca00b5cf9f7a3531e30c0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.3.0/release-ledger-receipt.schema.json",
+      "target": "schemas/v1.3.0/release-ledger-receipt.schema.json",
+      "sha256": "9ec8639c04a6cbf01b0a516c7ceefe21a3447a345df984dd677c9c7d2c5d6ddb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.3.0/release-ledger.schema.json",
+      "target": "schemas/v1.3.0/release-ledger.schema.json",
+      "sha256": "3d8148d59b3bb902bea6f841bc66e1c899053dc05852bd29fe94974e7fba1bd5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/adapter-registry.schema.json",
+      "target": "schemas/v1.4.0/adapter-registry.schema.json",
+      "sha256": "f80de88035b4fb895d92a5c3a7cfe95296e2b053880c468506e4a55f2070dda1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-aggregate-report.schema.json",
+      "target": "schemas/v1.4.0/evaluation-aggregate-report.schema.json",
+      "sha256": "971ebd558e27e34330a0287505fefe2c48ca9170c3668133a833da98a5c11ff5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-budget.schema.json",
+      "target": "schemas/v1.4.0/evaluation-budget.schema.json",
+      "sha256": "31c6d9dbf906b803dc88fd09ad07595cddca3ddaa93ffed3c54ef4e82dfb5f6d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-corpus.schema.json",
+      "target": "schemas/v1.4.0/evaluation-corpus.schema.json",
+      "sha256": "b0e0d202af3a2bff3721a02a9acf367f1e74f9f0cd831338a5e1f5dfb4d19efa",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-fixture.schema.json",
+      "target": "schemas/v1.4.0/evaluation-fixture.schema.json",
+      "sha256": "54fe417abdf74d4b8b1fdae54af4ea5e7c849df2f72cedf8819dacfb5e530c48",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-gate-policy.schema.json",
+      "target": "schemas/v1.4.0/evaluation-gate-policy.schema.json",
+      "sha256": "d78a2adc82e8fb82d624f5cf1e5984fcd9246eb2b9fc36f22068e54d170148b1",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-grader-registration.schema.json",
+      "target": "schemas/v1.4.0/evaluation-grader-registration.schema.json",
+      "sha256": "8524e8b06c3ec5a06059275445d5c215be29cac584f60a4f640e6423a6b7173c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-grader-registry.schema.json",
+      "target": "schemas/v1.4.0/evaluation-grader-registry.schema.json",
+      "sha256": "8da34d5abce0a8824bab36e330162065b22e698498167801d19f66f4032a38ab",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-host-profile-registry.schema.json",
+      "target": "schemas/v1.4.0/evaluation-host-profile-registry.schema.json",
+      "sha256": "f43718a2e1cec30d9c812cdb73123ac22b262cd4a3b7a414932e96a46e726cff",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-host-profile.schema.json",
+      "target": "schemas/v1.4.0/evaluation-host-profile.schema.json",
+      "sha256": "3b2acde1679b26aa18e747dbcc5ed25d6fb081d20f3067503954f4cbd6a42f32",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-observation.schema.json",
+      "target": "schemas/v1.4.0/evaluation-observation.schema.json",
+      "sha256": "0e2669207520ac3bf228ff787daedaa23c3954b82db8bc2376bf08b8478e6073",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-run-result.schema.json",
+      "target": "schemas/v1.4.0/evaluation-run-result.schema.json",
+      "sha256": "17567933710ea376bbf279e455e96eff79b860090d7603a2f163162e2d4a37d3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-scenario.schema.json",
+      "target": "schemas/v1.4.0/evaluation-scenario.schema.json",
+      "sha256": "975aef16555d749198df7631a7213505e6a586f33b9304e9f76484cce8d6d6f0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/evaluation-waiver.schema.json",
+      "target": "schemas/v1.4.0/evaluation-waiver.schema.json",
+      "sha256": "fd60daba363c51f08ab4f6d554c9b44289e7a6f1dbda49f1dfe5651dca50b284",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.4.0/skill-certification-receipt.schema.json",
+      "target": "schemas/v1.4.0/skill-certification-receipt.schema.json",
+      "sha256": "0373c04796eab010784a7202db36ecb6cd967575d8f54a0cfaecdeaee52f14f8",
       "mode": "644"
     },
     {
@@ -637,6 +1387,552 @@
       "source": "packages/protocol/schemas/v1.9.0/design-workspace-revision.schema.json",
       "target": "schemas/v1.9.0/design-workspace-revision.schema.json",
       "sha256": "9cb7cea43bad0b3a51d608e1e5645539ad7e8a4473b036d288cc8f4996b2a04a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/agent-runtime-manifest.schema.json",
+      "target": "schemas/v2.0.0/agent-runtime-manifest.schema.json",
+      "sha256": "6bb0b5bcd1158eb18b460b84db8739f9dddef2d889b5a90b3d019159597a2ede",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/business-operating-snapshot-projection.schema.json",
+      "target": "schemas/v2.0.0/business-operating-snapshot-projection.schema.json",
+      "sha256": "e5f982db50000e2ba4b010bf090dee130432b3d0923421873bf26db3c6490312",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-allowed-action.schema.json",
+      "target": "schemas/v2.0.0/operate-allowed-action.schema.json",
+      "sha256": "02165283bbcf2e4954a2d6dc4bb2d8f172aaac0e78a5ca8474b509f45d32a4b6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-api-envelope.schema.json",
+      "target": "schemas/v2.0.0/operate-api-envelope.schema.json",
+      "sha256": "d4aa4213533cdb506a594e0355743eea857be23fc8ebce94b51734bed7993a4c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-capability-provider-registration.schema.json",
+      "target": "schemas/v2.0.0/operate-capability-provider-registration.schema.json",
+      "sha256": "1c43d5a1048e118c6b576909c2129ab09cfda344e2af468095ba09fdcf5dd928",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-domain-registration.schema.json",
+      "target": "schemas/v2.0.0/operate-domain-registration.schema.json",
+      "sha256": "e4f2f21a85045480fee0adaa090962cf53e4c083f646f7dd45022a64fd826f50",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-evidence-provider-registration.schema.json",
+      "target": "schemas/v2.0.0/operate-evidence-provider-registration.schema.json",
+      "sha256": "27aaeb3447a20fa8040d261b56aa138ef443cd819407ffd81b6e952467ebf497",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-evidence-resolver-registration.schema.json",
+      "target": "schemas/v2.0.0/operate-evidence-resolver-registration.schema.json",
+      "sha256": "ed27e45d6c0a57f1ee4361d4f0c52e23b0dbd160f1a50ceb63dd089b4c3e1a84",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-executor-registration.schema.json",
+      "target": "schemas/v2.0.0/operate-executor-registration.schema.json",
+      "sha256": "6201b16317b54fe8610f65e8090f35bb110160213b8eff76bb5b4bcd691c1f31",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-experience-live-patch.schema.json",
+      "target": "schemas/v2.0.0/operate-experience-live-patch.schema.json",
+      "sha256": "77dae6e31afd8df4ce96b9d62f876a18b59941a2939d1da57dc67f2d4bf2d3c6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-experience-preview.schema.json",
+      "target": "schemas/v2.0.0/operate-experience-preview.schema.json",
+      "sha256": "244e3accee69de98c143ed2fbcb2e009b480fee65b7aca3f191c3d89cac1d462",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-experience-view.schema.json",
+      "target": "schemas/v2.0.0/operate-experience-view.schema.json",
+      "sha256": "5a65301cb5cc4340b9695f1438572a51d83f87b3032155ed312b201ee17a0c8c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-live-evidence-provider-registration.schema.json",
+      "target": "schemas/v2.0.0/operate-live-evidence-provider-registration.schema.json",
+      "sha256": "065c0f212a58f6e89a36dd3c0a0f5d70cc5d6e914e99635923444b73b34e03c8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-live-evidence-provider-registry.schema.json",
+      "target": "schemas/v2.0.0/operate-live-evidence-provider-registry.schema.json",
+      "sha256": "8d9558e4670e12e7c07648d2d90a892456c9ada9415f3068202970de90763594",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-metric-provider-registration.schema.json",
+      "target": "schemas/v2.0.0/operate-metric-provider-registration.schema.json",
+      "sha256": "ff4d32df5df7e25944b89977a18b482d2a9a4bb458771f26bf3cf2354c0b3cec",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-policy-provider-registration.schema.json",
+      "target": "schemas/v2.0.0/operate-policy-provider-registration.schema.json",
+      "sha256": "666ec7f61705d33637c7e3afbc8dca8f5e9db1bb464678f91da0d391bc020e40",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-review-bound-submission.schema.json",
+      "target": "schemas/v2.0.0/operate-review-bound-submission.schema.json",
+      "sha256": "c3b3ad5d04fd012aa6584f36c5c99a3c3550cd1336c906b1612f7026f47f7ac8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-review-display-workspace.d.mts",
+      "target": "schemas/v2.0.0/operate-review-display-workspace.d.mts",
+      "sha256": "8f968c564414115c6a4c4843be55a1af651ec40af81c26447ab6c6dcd7dc0b46",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-review-display-workspace.mjs",
+      "target": "schemas/v2.0.0/operate-review-display-workspace.mjs",
+      "sha256": "5a46874009aa3ba0ed9e9a19117e6ceca4fd96f12c84e2187e84b7efb36986e8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-review-display-workspace.schema.json",
+      "target": "schemas/v2.0.0/operate-review-display-workspace.schema.json",
+      "sha256": "0b318d41a193ab231a6a198ef59c3e894821dc1f69c74ddaecf65ed2805bf113",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-snapshot-provider-registration.schema.json",
+      "target": "schemas/v2.0.0/operate-snapshot-provider-registration.schema.json",
+      "sha256": "9d4e849f5ce5349059c2f9550c2cd8e79fe2fcead75f5c00f07419a8815e8288",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-tool-call.schema.json",
+      "target": "schemas/v2.0.0/operate-tool-call.schema.json",
+      "sha256": "e2149a889ea8bc85762f51381cdcf2bdbba46e9eb195999421d6749702dbf904",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operate-verification-provider-registration.schema.json",
+      "target": "schemas/v2.0.0/operate-verification-provider-registration.schema.json",
+      "sha256": "b2792d1baf0d4fe1cec2df1aeb70f7046ccaac522e7ba13f444fc66616ced0d9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-action-policy.schema.json",
+      "target": "schemas/v2.0.0/operating-action-policy.schema.json",
+      "sha256": "e6b9c2f4859c91d663fc63e35a77a00b0395c00b92f7dee1931d822e9de114f4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-action-verification-plan.schema.json",
+      "target": "schemas/v2.0.0/operating-action-verification-plan.schema.json",
+      "sha256": "66744f9d707b082467073cd8e5404608f503da38a53109da14451fdd03ca0e64",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-action.schema.json",
+      "target": "schemas/v2.0.0/operating-action.schema.json",
+      "sha256": "90735b7166378bf3a83bcd152996db473096bafdc7dc651fc6aaca7419f7418f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-advisor-result.schema.json",
+      "target": "schemas/v2.0.0/operating-advisor-result.schema.json",
+      "sha256": "5b1148471219da538efd45b7ea6b003e5149a03f9807cbf7ccdbb890af05891b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-approval-record.schema.json",
+      "target": "schemas/v2.0.0/operating-approval-record.schema.json",
+      "sha256": "89eed59544306f795f2a09bc5a72b3f48040dd4b17cebcf7717605978fc8b7df",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-approval-requirement.schema.json",
+      "target": "schemas/v2.0.0/operating-approval-requirement.schema.json",
+      "sha256": "da478923e1c65d58134c8d898425b2ab17cd5faa01768d39c4b87db1d33e5042",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-artifact.schema.json",
+      "target": "schemas/v2.0.0/operating-artifact.schema.json",
+      "sha256": "d7045b75944dfc41637d6908fa823784b422771793535447a758b04aa870b2a9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-assignment.schema.json",
+      "target": "schemas/v2.0.0/operating-assignment.schema.json",
+      "sha256": "f2dd0915afbf3c166858b952a249a3e30ce477d5d51fe6ae74f6c319b0512780",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-assumption.schema.json",
+      "target": "schemas/v2.0.0/operating-assumption.schema.json",
+      "sha256": "75412b9952d39f182984c7816c5807a8f2c0a3410fe17316e1a4ff1bbf4190a3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-capability-availability.schema.json",
+      "target": "schemas/v2.0.0/operating-capability-availability.schema.json",
+      "sha256": "a20b09fb010232f4a86fe67fad684bd36d38e79f26a56b68844afadb66b68192",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-capability-grant.schema.json",
+      "target": "schemas/v2.0.0/operating-capability-grant.schema.json",
+      "sha256": "5a2a2718e9f12de8b8e733464fa12a5de86a92500bf95b323a4bc0ce5a6a2295",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-challenger-review.schema.json",
+      "target": "schemas/v2.0.0/operating-challenger-review.schema.json",
+      "sha256": "1a9449388118e14831dbda0c6676939131b6206b78ba98731e1c85a7d9e743b9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-checkpoint.schema.json",
+      "target": "schemas/v2.0.0/operating-checkpoint.schema.json",
+      "sha256": "40838332a2ee46251c85a95a3e181855c4ef260b1142d2d59edfe861dea49750",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-claim.schema.json",
+      "target": "schemas/v2.0.0/operating-claim.schema.json",
+      "sha256": "26f0bedaba08dc5c59da818d55ac1a63aefb5a49d4c32d5f4b4c4acad97f9fe4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-connector-checkpoint.schema.json",
+      "target": "schemas/v2.0.0/operating-connector-checkpoint.schema.json",
+      "sha256": "ff68f8caf43665376472ac129a000f982ad5baf67f7879ba0d4eb76c0fb2d990",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-context-capture.schema.json",
+      "target": "schemas/v2.0.0/operating-context-capture.schema.json",
+      "sha256": "b665426c6e196870a1dc6dc8413f0474f52d095c4e96316df5638dc12e1248f5",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-cycle-input-binding.schema.json",
+      "target": "schemas/v2.0.0/operating-cycle-input-binding.schema.json",
+      "sha256": "a0a9d92dffcdd018f59612079bf948515fd3e1b4e6e645c7a27cc07d11dcc0d3",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-cycle.schema.json",
+      "target": "schemas/v2.0.0/operating-cycle.schema.json",
+      "sha256": "1ab61b30ff2880efbc47832f0fd14b6b98ff7fc1f5b210337fe2dd4e220e8c7d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-decision-ledger.schema.json",
+      "target": "schemas/v2.0.0/operating-decision-ledger.schema.json",
+      "sha256": "7a2617e0b685c40d2c5c55fae2a21b3ca805c4817470122c3e6eb70f8482cc69",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-decision.schema.json",
+      "target": "schemas/v2.0.0/operating-decision.schema.json",
+      "sha256": "c8fb593149c23c3f2f89c8b8af9af5c123b0b9532ab268261c9b42dc4689162f",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-delivery-evidence.schema.json",
+      "target": "schemas/v2.0.0/operating-delivery-evidence.schema.json",
+      "sha256": "35310dd4e51da857bfaef0d902061a52957f522132a6086e04b5ad46b58f7c58",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-delivery-route.schema.json",
+      "target": "schemas/v2.0.0/operating-delivery-route.schema.json",
+      "sha256": "34a97d9bc4681acc2555c7414a86010d738f974b9f5bb7987e7c78d2b9380e5e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-delta.schema.json",
+      "target": "schemas/v2.0.0/operating-delta.schema.json",
+      "sha256": "7ee71e85c6b03121d7bf4415c712e6dd659b460dbc0a08e32c0f532502f50393",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-domain-projection.schema.json",
+      "target": "schemas/v2.0.0/operating-domain-projection.schema.json",
+      "sha256": "c1f184f3fff5de63f1d97ecefe10dffa3be440f1dfa65c82c54e33562642e43d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-event-trigger.schema.json",
+      "target": "schemas/v2.0.0/operating-event-trigger.schema.json",
+      "sha256": "bea9ca34b22c9f4ab4f40688a6da3cb03ec66cd6e5a21e4a9c33bfdfe14b12d9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-event.schema.json",
+      "target": "schemas/v2.0.0/operating-event.schema.json",
+      "sha256": "b19f266ee0dcd9a6e9dfbefc8a4fe1c57ee15c261a09a1c24c9b411ebaa85cb2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-evidence-candidate.schema.json",
+      "target": "schemas/v2.0.0/operating-evidence-candidate.schema.json",
+      "sha256": "b4a2400cc8eee71cbef100fa652b9344c40354ca20c73f3b4f2ede73af16db81",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-evidence-edge.schema.json",
+      "target": "schemas/v2.0.0/operating-evidence-edge.schema.json",
+      "sha256": "a9569eec302a488437efc31546836668757c18f43cc989e89538954c331387a2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-evidence-graph.schema.json",
+      "target": "schemas/v2.0.0/operating-evidence-graph.schema.json",
+      "sha256": "3c2e2f26f6aee5c6c65ea7702d2c2be1e081a8a3f65db157e7fee89c439ce3e2",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-evidence-observation.schema.json",
+      "target": "schemas/v2.0.0/operating-evidence-observation.schema.json",
+      "sha256": "69b0145a2cdbfca4316b0301228545fdcb8ff46a42d0757967159f720cab0061",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-evidence-ref.schema.json",
+      "target": "schemas/v2.0.0/operating-evidence-ref.schema.json",
+      "sha256": "520dbc6d93ac2d67593dcc49d98b0be6e77f3205fb9a6b76db6557eeccc9e433",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-evidence-resolution.schema.json",
+      "target": "schemas/v2.0.0/operating-evidence-resolution.schema.json",
+      "sha256": "13716c49a38cca957428e24065b7bed467cc5a21614e2fe6a7a8a1f422b5f7e8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-execution-result.schema.json",
+      "target": "schemas/v2.0.0/operating-execution-result.schema.json",
+      "sha256": "763c1f86e56a87edc4e92bf5d923b27d55db0435b8c39da7cca516af50cfa33b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-executive-board.schema.json",
+      "target": "schemas/v2.0.0/operating-executive-board.schema.json",
+      "sha256": "654062c246f97414dd3989f054e37b8376c177bd7597461190fecc4f4c80e5bb",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-finding.schema.json",
+      "target": "schemas/v2.0.0/operating-finding.schema.json",
+      "sha256": "db4264e161b3cef4d42302c08413606ff4749332b214bb42fbfb2452f7eb035c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-governed-operation.schema.json",
+      "target": "schemas/v2.0.0/operating-governed-operation.schema.json",
+      "sha256": "5ca9e77b20aa42378255364b88ea950c6410cf44da374e293b0d886c3462e5dc",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-intelligence-input-bundle.schema.json",
+      "target": "schemas/v2.0.0/operating-intelligence-input-bundle.schema.json",
+      "sha256": "e94886e9076b8d95d8db84720591a4034bc84fbc6445b7fa71b64d57a1b3079e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-intelligence-plan.schema.json",
+      "target": "schemas/v2.0.0/operating-intelligence-plan.schema.json",
+      "sha256": "14d2f5f3f645b2ade79b1176ff9a1c80758a9fd2f00f7e2c4d91f4d112c4c23e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-learning-receipt.schema.json",
+      "target": "schemas/v2.0.0/operating-learning-receipt.schema.json",
+      "sha256": "aec3b39c87335b0f1eac885ab7f2c5e3e73f5babcf9dba4f8d47e05d8841bb84",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-learning.schema.json",
+      "target": "schemas/v2.0.0/operating-learning.schema.json",
+      "sha256": "ff6227b943a2f06fc589eb67cd217ca90916988413865434c16659b72a06ba7e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-live-evidence-consent-record.schema.json",
+      "target": "schemas/v2.0.0/operating-live-evidence-consent-record.schema.json",
+      "sha256": "e7dcb3f3c2d8b28556e0b79cb4beb00e2c3ff3e054a67e90af8dcd4cb9f5d443",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-live-evidence-ingestion.schema.json",
+      "target": "schemas/v2.0.0/operating-live-evidence-ingestion.schema.json",
+      "sha256": "63579268ea91595667cfc654ac43e2e21f0b2f6a42ca36c215de2232cb079623",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-measurement-plan.schema.json",
+      "target": "schemas/v2.0.0/operating-measurement-plan.schema.json",
+      "sha256": "b0d5a50fc4c5fc0d60ed92394801b4cf9995b930984b06700400a5955c60464d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-measurement-schedule-receipt.schema.json",
+      "target": "schemas/v2.0.0/operating-measurement-schedule-receipt.schema.json",
+      "sha256": "82a4cbbe294424ca8babb4ac177bec7e3a7af8a78db34760cfc8d741311c4951",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-measurement-schedule.schema.json",
+      "target": "schemas/v2.0.0/operating-measurement-schedule.schema.json",
+      "sha256": "17b2c62388b80caa73ddc3192d3011938c21f486d8477189bb108d3244c67ac7",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-metric-observation.schema.json",
+      "target": "schemas/v2.0.0/operating-metric-observation.schema.json",
+      "sha256": "2beee93b7d5ea5fe2735e89101471ab535bfe9c03a6d4ec057873cb239b2acd4",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-metric.schema.json",
+      "target": "schemas/v2.0.0/operating-metric.schema.json",
+      "sha256": "c4e1c2e192e89f9b440cff1fb730f1d1d761bc941ab7e2b02b4790b3198730b8",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-model-state.schema.json",
+      "target": "schemas/v2.0.0/operating-model-state.schema.json",
+      "sha256": "c6d905992a36239b6b20e6286acb90606102d562cac951b7938b04387c5e751d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-objective.schema.json",
+      "target": "schemas/v2.0.0/operating-objective.schema.json",
+      "sha256": "6fefe292c4ed12e3dbe6c11dbd0eb4ee8e8aaef5a312abef2c412ce3e9ad562b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-origin.schema.json",
+      "target": "schemas/v2.0.0/operating-origin.schema.json",
+      "sha256": "7c684dcbdeb7534239e1db489bd6dcae2ea83d7beacfa581473ceac3bd9aedba",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-outcome-evaluation.schema.json",
+      "target": "schemas/v2.0.0/operating-outcome-evaluation.schema.json",
+      "sha256": "8aeb9d959a57456a8546727ecf6bc5047746d040df91607bd5fb35513636ce9b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-outcome.schema.json",
+      "target": "schemas/v2.0.0/operating-outcome.schema.json",
+      "sha256": "91e0bf09382edd30e0aa19d320fd4ba736d19cfa2a35ef02eafaea8d1fb770fe",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-planning-proposal.schema.json",
+      "target": "schemas/v2.0.0/operating-planning-proposal.schema.json",
+      "sha256": "ca74cbb57b37bc499b3e999111decdedf13f3dcd4f68c949b3d9226e08283976",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-policy-evaluation.schema.json",
+      "target": "schemas/v2.0.0/operating-policy-evaluation.schema.json",
+      "sha256": "6ef4938742d58cd99a47913881b72537f0f2147543184acb84e9c1ecba73bc28",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-review-read.schema.json",
+      "target": "schemas/v2.0.0/operating-review-read.schema.json",
+      "sha256": "4fc4a69a3412497cad09a7c1bbfa0f75fa7587c037a969e7afcddce470e58c88",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-review-receipt.schema.json",
+      "target": "schemas/v2.0.0/operating-review-receipt.schema.json",
+      "sha256": "801628a2aeaf5f3e7799a13f9eeab7ad90b092b3bc8f22d8a04b0f775bb56bba",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-review.schema.json",
+      "target": "schemas/v2.0.0/operating-review.schema.json",
+      "sha256": "cb063fd9c090211bfb8eb3e2b19c3e87feb1d9fa9aea902deae9a0f07c82fe78",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-risk.schema.json",
+      "target": "schemas/v2.0.0/operating-risk.schema.json",
+      "sha256": "ccfb005907b012611247a46ff4d01832c125de71912f8ac1fa2f50ca3b292b5c",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-rollback-plan.schema.json",
+      "target": "schemas/v2.0.0/operating-rollback-plan.schema.json",
+      "sha256": "e165c536898bf31197d5001fe18484b19ece47711cce60720c11889c41f2b0e0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-rollback-result.schema.json",
+      "target": "schemas/v2.0.0/operating-rollback-result.schema.json",
+      "sha256": "03b150a969e6e75666663e024bb8ac936a1532d9b5dfb4e91e4b284f0faf23f0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-runtime-state.schema.json",
+      "target": "schemas/v2.0.0/operating-runtime-state.schema.json",
+      "sha256": "489466d7dff245b19057343dd14739674d2ea2e87315e962692ea31e345c5b7d",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-scenario.schema.json",
+      "target": "schemas/v2.0.0/operating-scenario.schema.json",
+      "sha256": "db197719b9f5f61008b8ddf88450bf20867d063d2615bfbbeed5a76e1d5134c9",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-snapshot.schema.json",
+      "target": "schemas/v2.0.0/operating-snapshot.schema.json",
+      "sha256": "f2c04193114aea20573f68a9844e4cd49d5e350ee2a3448b33731a7fc667fa9b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-submission.schema.json",
+      "target": "schemas/v2.0.0/operating-submission.schema.json",
+      "sha256": "bc42635599e1e33c709ec712bac592648bc3c8622b4b2c534ed4137ed760a986",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-trace-matrix.schema.json",
+      "target": "schemas/v2.0.0/operating-trace-matrix.schema.json",
+      "sha256": "f0dbcc249eff1069e058160c82ca85cf6a7095b10ddc7b1fd668cefb0b0691cf",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-work-change-set.schema.json",
+      "target": "schemas/v2.0.0/operating-work-change-set.schema.json",
+      "sha256": "8cd3831ac299f496d18dbdb07f3f5f606a83f1edc099b57fa625e3976e7e0da0",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/operating-work-ledger.schema.json",
+      "target": "schemas/v2.0.0/operating-work-ledger.schema.json",
+      "sha256": "d0bfd767344f6c78b84023c5a4f17ed0fd91db0602a8da659efcc874743c70b6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v2.0.0/software-operating-snapshot-projection.schema.json",
+      "target": "schemas/v2.0.0/software-operating-snapshot-projection.schema.json",
+      "sha256": "97488fd706c7c61e6c35d3584a3fe7b36968681b5e2fa283415d20aba730bc74",
       "mode": "644"
     }
   ]

@@ -1,6 +1,0 @@
-interface:
-  display_name: "Planr Design"
-  short_description: "Create or route an OpenPlanr product-design workflow using…"
-  default_prompt: "Use $planr-design to create or route an OpenPlanr product-design workflow using portable board assets. Use for a new UI direction; use the loop or review skills for iteration."
-policy:
-  allow_implicit_invocation: true

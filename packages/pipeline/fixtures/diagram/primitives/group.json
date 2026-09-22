@@ -1,8 +1,0 @@
-{
-  "kind": "diagram-primitive-fixture",
-  "schemaVersion": "1.0.0",
-  "primitive": "group",
-  "grammarId": "nested",
-  "fixture": "fixtures/diagram/grammars/nested.planr-diagram.json",
-  "description": "Canonical group primitive example in the nested grammar."
-}

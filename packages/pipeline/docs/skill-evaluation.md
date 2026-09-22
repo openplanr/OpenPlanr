@@ -6,12 +6,25 @@
 > a version, or performs a release effect.
 
 ```bash
-npm run evaluate:skills                # human summary, exit 1 when blocked
-npm run evaluate:skills -- --json      # strict machine envelope
-npm run evaluate:skills -- --ci        # also emit the redacted CI artifacts
+npm run evaluate:skills -- --source-root ../..         # explicit canonical workspace
+npm run evaluate:skills -- --source-root ../.. --json  # strict machine envelope
+npm run evaluate:skills -- --source-root ../.. --ci    # redacted CI artifacts
 npm run test:evaluation                # unit, property, adversarial, journey suites
 npm run conformance:skill-evaluation   # contract + laboratory conformance
 ```
+
+Run those commands from `packages/pipeline`. The laboratory grades current prompt
+bytes only when `--source-root` explicitly selects the workspace containing
+`skills/<skillId>/SKILL.md`; it never discovers a sibling checkout. The packaged
+`readProfessionalSkillsCatalog()` API defaults to the bundled `legacy` snapshots.
+To inspect current source, pass `{ view: 'active', sourceRoot }` and, when needed,
+`projectRoot` for the package registry. Missing active source is an error, not a
+fallback to historical text. `renderProfessionalSkillsBundle` accepts the same
+options. Active rendering returns bytes in memory; it does not install host files.
+
+The frozen compatibility manifest is checked against bundled legacy snapshots.
+Current installed skills are checked by the workspace's host-distribution tests;
+the historical manifest is not evidence of the current host installation.
 
 ## What a run grades
 
@@ -136,7 +149,7 @@ code, and expiry, and appears in the run summary.
 Pass owners and waivers explicitly:
 
 ```bash
-npm run evaluate:skills -- --owner <identity> --waiver-file <path>
+npm run evaluate:skills -- --source-root ../.. --owner <identity> --waiver-file <path>
 ```
 
 ## What a certified result means

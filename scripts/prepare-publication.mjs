@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -33,6 +33,29 @@ const tracked = new Set(execFileSync('git', ['ls-files', '--cached', '-z'], { cw
 // These are rebuilt and verified by the release workflow from tracked inputs.
 // All other published bytes must have a reviewed source entry in Git.
 const generatedPrefixes = name === 'openplanr' ? ['dist/', 'lib/host-packages/'] : [];
+const generatedFiles = new Map();
+if (name === 'planr-pipeline') {
+  // Recompute expected output from tracked owners before trusting any generated
+  // manifest. A broad lib/ exemption would accidentally admit ignored source.
+  for (const args of [
+    ['packages/protocol/scripts/generate-protocol-assets.mjs', '--check'],
+    ['scripts/protocol/project-protocol.mjs', '--check', '--target', 'packages/pipeline'],
+    ['scripts/domains/project-domains.mjs', '--check', '--target', 'packages/pipeline'],
+  ]) execFileSync(process.execPath, args, { cwd: root, stdio: 'pipe' });
+  for (const file of [
+    'lib/generated/protocol-projection.json',
+    ...['artifact', 'design', 'operate'].map((domain) => `lib/generated/domain-projections/${domain}.json`),
+  ]) {
+    const projection = JSON.parse(readFileSync(join(root, targets[name], file), 'utf8'));
+    for (const entry of projection.entries) {
+      if (typeof entry.target !== 'string' || entry.target.startsWith('/') || entry.target.split('/').some((part) => !part || part === '.' || part === '..')) throw new Error('Unsafe generated package path');
+      const absolute = join(root, targets[name], entry.target);
+      if (createHash('sha256').update(readFileSync(absolute)).digest('hex') !== entry.sha256) throw new Error(`Generated package bytes changed: ${entry.target}`);
+      generatedFiles.set(entry.target, entry.sha256);
+    }
+  }
+}
+
 mkdirSync(output, { recursive: true });
 const packed = JSON.parse(execFileSync('npm', ['pack', '--workspace', name, '--ignore-scripts', '--json', '--pack-destination', output], { cwd: root, encoding: 'utf8' }));
 if (packed.length !== 1 || packed[0].name !== name || packed[0].version !== version) throw new Error('Packed identity mismatch');
@@ -41,9 +64,22 @@ if (!/^[a-zA-Z0-9._-]+\.tgz$/.test(archive.filename) || !Array.isArray(archive.f
 for (const entry of archive.files) {
   const file = entry.path;
   if (typeof file !== 'string' || file.startsWith('/') || file.split('/').some((segment) => segment === '..' || segment === '.')) throw new Error('Unsafe packed file path');
-  if (!tracked.has(`${targets[name]}/${file}`) && !generatedPrefixes.some((prefix) => file.startsWith(prefix))) {
+  if (!tracked.has(`${targets[name]}/${file}`) && !generatedFiles.has(file) && !generatedPrefixes.some((prefix) => file.startsWith(prefix))) {
     throw new Error(`Packed file is not a reviewed source or declared build output: ${file}`);
   }
+}
+// Check the archive itself: ignored build outputs can change while npm packs.
+if (generatedFiles.size) {
+  const extracted = mkdtempSync(join(output, 'inspect-'));
+  try {
+    execFileSync('tar', ['-xzf', join(output, archive.filename), '-C', extracted], { stdio: 'pipe' });
+    for (const [file, digest] of generatedFiles) {
+      const candidate = join(extracted, 'package', file);
+      if (!existsSync(candidate) || createHash('sha256').update(readFileSync(candidate)).digest('hex') !== digest) {
+        throw new Error(`Generated archive bytes changed or missing: ${file}`);
+      }
+    }
+  } finally { rmSync(extracted, { recursive: true, force: true }); }
 }
 assertCleanSource();
 const publicDependencies = {};

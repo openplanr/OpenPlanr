@@ -42,7 +42,7 @@ flowchart TB
 | `apps/dashboard` | Browser code for the local planning and Operate dashboard |
 | `skills/planr-*`, `agents/{po,dev,qa,post-build}` | Canonical skill sources and role definitions |
 | `adapters/`, `conformance/` | Generated host projections; contract verification that runtime code never imports |
-| `evaluation/`, `templates/`, `examples/` | Evaluation custody, shared authoring conventions, Protocol usage examples |
+| `evaluation/`, `examples/` | Evaluation inputs and Protocol usage examples; runtime and authoring templates stay with their owning package |
 
 ## Dependency rules
 
@@ -61,13 +61,14 @@ barrels are rejected at these boundaries; cohesive leaf modules import what they
 
 ## Generation graph
 
-`npm run generate` runs twelve ordered steps (`scripts/generate-all.mjs`): Protocol
-catalogs, dashboard contracts, the artifact shell, diagram assets, the Protocol and
-domain projections into the pipeline package, Operate contracts, landing-workflow
-assets, skill and role host adapters, dashboard package assets, the ecosystem
-marketplace metadata, and finally the preservation catalog. `npm run check:generated`
-replays every step in check mode and rejects stale projections, duplicate writers,
-unsafe or cyclic shared includes, digest drift, and undeclared package assets.
+`npm run generate` runs the ordered steps in `scripts/generate-all.mjs`: skill and
+role host adapters, Protocol catalogs and their pipeline projection, dashboard
+contracts, artifact and diagram assets, domain projections, Operate and landing
+contracts, dashboard
+package assets, and ecosystem marketplace metadata. `npm run check:generated`
+replays those steps in check mode and rejects stale output, conflicting writers,
+unsafe includes, digest drift, and undeclared package assets. The retired
+repository-consolidation catalog is no longer a generation step.
 
 - Edit task-specific behavior only in `skills/planr-*/SKILL.md`; edit reusable policy only
   in a declared file under `skills/shared/`.
@@ -82,9 +83,9 @@ unsafe or cyclic shared includes, digest drift, and undeclared package assets.
 
 The CLI and pipeline distributions keep self-contained compatibility projections, and
 package versions stay independent of schema and document versions. `conformance/`
-verifies the public contracts without being imported by runtime code, and
-`npm run check:preservation` verifies from committed data that every compatibility path
-still has an explicit disposition. [Verifying a release](../PROVENANCE.md) explains how to
+verifies the public contracts without being imported by runtime code. Historical
+consolidation inventories remain recoverable through Git; active package and
+contract tests verify the supported distribution. [Verifying a release](../PROVENANCE.md) explains how to
 check a published version's signature and attestation.
 
 ## Service boundary
@@ -94,3 +95,10 @@ service owns tenant storage, authorization, billing, enterprise administration, 
 deployment operations. Public clients and Protocol contracts may describe those
 capabilities; every hosted permission is enforced server-side. See
 [COMMERCIAL.md](../../COMMERCIAL.md).
+
+## Repository maintenance
+
+The [maintenance decision](repository-maintenance.md) distinguishes canonical
+sources, generated distributions, active compatibility contracts, and retired
+migration evidence. Generated runtime copies are rebuilt during generation and
+packaging; fresh-checkout and isolated-install checks protect the distribution.

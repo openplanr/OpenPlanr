@@ -1,6 +1,0 @@
-interface:
-  display_name: "Planr Status"
-  short_description: "Inspect project delivery or one feature's pipeline status…"
-  default_prompt: "Use $planr-status to inspect project delivery or one feature's pipeline status without changing state. Use when the user asks what is done, pending, blocked, or next."
-policy:
-  allow_implicit_invocation: true

@@ -165,7 +165,8 @@ function legacyCatalogFor(catalog) {
 
 export function readProfessionalSkillsCatalog({
   projectRoot = packageRoot,
-  view = 'active',
+  view = 'legacy',
+  sourceRoot,
 } = {}) {
   const catalog = assertProfessionalSkillsCatalog(JSON.parse(
     readFileSync(resolve(projectRoot, PROFESSIONAL_SKILLS_CATALOG_PATH), 'utf8'),
@@ -174,12 +175,18 @@ export function readProfessionalSkillsCatalog({
   if (view !== 'active') {
     fail('E_PROFESSIONAL_SKILL_VIEW_INVALID', `Unsupported professional skill catalog view ${String(view)}.`);
   }
+  if (typeof sourceRoot !== 'string' || !sourceRoot.trim()) {
+    fail(
+      'E_PROFESSIONAL_SKILL_SOURCE_REQUIRED',
+      'The active catalog requires sourceRoot containing canonical skills/<skillId>/SKILL.md. Use view: legacy for bundled compatibility snapshots.',
+    );
+  }
   const activeSources = new Map();
   const skills = catalog.skills.map((row) => {
     const activeRow = JSON.parse(JSON.stringify(row));
     if (!ACTIVE_SOURCE_SKILL_IDS.has(row.skillId)) return activeRow;
     const path = expectedHostPath(row.skillId, 'claude-code');
-    const absolute = resolve(projectRoot, path);
+    const absolute = resolve(sourceRoot, path);
     if (!existsSync(absolute) || lstatSync(absolute).isSymbolicLink() || !lstatSync(absolute).isFile()) {
       fail('E_PROFESSIONAL_SKILL_SOURCE_INVALID', `Canonical skill source ${path} is missing or unsafe.`, { skillId: row.skillId, path });
     }
@@ -290,12 +297,12 @@ export function buildProfessionalSkillsManifest(
   });
 }
 
-export function renderProfessionalSkillsBundle({ projectRoot = packageRoot } = {}) {
-  const catalog = readProfessionalSkillsCatalog({ projectRoot });
+export function renderProfessionalSkillsBundle({ projectRoot = packageRoot, view = 'legacy', sourceRoot } = {}) {
+  const catalog = readProfessionalSkillsCatalog({ projectRoot, view, sourceRoot });
   const assets = renderProfessionalSkillAssets(catalog);
-  const skillRegistry = JSON.parse(
-    readFileSync(resolve(projectRoot, 'registry/v1.5.0/skills.json'), 'utf8'),
-  );
+  const skillRegistry = view === 'active'
+    ? JSON.parse(readFileSync(resolve(projectRoot, 'registry/v1.5.0/skills.json'), 'utf8'))
+    : { skills: [] };
   const activeRegistrationsBySkill = new Map(
     skillRegistry.skills
       .filter(({ skillId }) => PROFESSIONAL_SKILL_IDS.includes(skillId))

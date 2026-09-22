@@ -18,7 +18,6 @@ import { ENTERPRISE_SCHEMAS } from '../src/enterprise-contracts.mjs';
 import { DESIGN_HANDOFF_SCHEMAS } from '../src/design-handoff-contracts.mjs';
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const workspaceRoot = resolve(packageRoot, '..', '..');
 const check = process.argv.includes('--check');
 const refreshPreservation = process.argv.includes('--refresh-preservation-baseline');
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
@@ -149,18 +148,8 @@ const currentPreservation = {
   }))].sort((left, right) => left.path.localeCompare(right.path)),
 };
 
-const pipelineRoot = join(workspaceRoot, 'packages', 'pipeline');
-if (existsSync(pipelineRoot)) {
-  for (const asset of currentPreservation.assets) {
-    const candidate = join(pipelineRoot, asset.path);
-    if (!existsSync(candidate)) throw new Error(`Preserved source asset is absent: ${asset.path}`);
-    const sourceBytes = readFileSync(candidate);
-    if (`sha256:${sha256Hex(sourceBytes)}` !== asset.digest || sourceBytes.length !== asset.byteLength) {
-      throw new Error(`Preserved source bytes drifted: ${asset.path}`);
-    }
-  }
-}
-
+// Pipeline copies are build outputs. Their equality is checked by the projection
+// generator after this canonical package has been generated, including on a clean clone.
 if (existsSync(preservationPath) && !refreshPreservation) {
   const baseline = JSON.parse(readFileSync(preservationPath, 'utf8'));
   if (JSON.stringify(baseline) !== JSON.stringify(currentPreservation)) {

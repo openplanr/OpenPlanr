@@ -6,16 +6,15 @@ import { GENERATOR_STEPS, resolveGeneratorPlan } from '../../scripts/generate-al
 const expectedOrder = [
   'skill-role-host-adapters',
   'protocol-catalogs',
+  'protocol-public-projection',
   'dashboard-contracts',
   'artifact-shell',
   'diagram-assets',
-  'protocol-public-projection',
   'operate-artifact-design-public-projections',
   'operate-contracts-and-custody',
   'landing-workflow-custody',
   'dashboard-package-assets',
   'ecosystem-marketplace',
-  'preservation-catalog',
 ];
 
 test('the consolidated generator graph has one deterministic bounded order', () => {
@@ -41,9 +40,6 @@ test('check plan selects the isolated dashboard verifier, never the write-mode b
   }
   const dashboard = plan.find(({ id }) => id === 'dashboard-package-assets');
   assert.equal(dashboard.script, 'scripts/dashboard/check-dashboard-assets.mjs');
-  const preservation = plan.find(({ id }) => id === 'preservation-catalog');
-  assert.equal(preservation.status, 'run');
-  assert.equal(preservation.script, 'scripts/migration/generate-preservation-catalog.mjs');
 });
 
 test('write plan selects the canonical dashboard build-and-copy boundary', () => {

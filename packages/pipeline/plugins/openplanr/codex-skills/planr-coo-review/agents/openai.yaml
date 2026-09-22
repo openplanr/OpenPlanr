@@ -1,6 +1,0 @@
-interface:
-  display_name: "Planr Coo Review"
-  short_description: "Produce a grounded operations and customer-health review for an…"
-  default_prompt: "Use $planr-coo-review to produce a grounded operations and customer-health review for an Operate cycle. Use when readiness, service delivery, capacity, or customer health needs a COO lens."
-policy:
-  allow_implicit_invocation: true

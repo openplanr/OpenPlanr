@@ -1,6 +1,0 @@
-interface:
-  display_name: "Planr Cmo Review"
-  short_description: "Produce a grounded market and growth review for an Operate…"
-  default_prompt: "Use $planr-cmo-review to produce a grounded market and growth review for an Operate cycle. Use when acquisition, positioning, demand, retention, or missing measurement needs a CMO lens."
-policy:
-  allow_implicit_invocation: true

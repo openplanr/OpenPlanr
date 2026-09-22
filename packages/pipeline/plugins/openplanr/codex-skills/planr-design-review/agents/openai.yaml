@@ -1,6 +1,0 @@
-interface:
-  display_name: "Planr Design Review"
-  short_description: "Review and revise an existing OpenPlanr design from pinned board…"
-  default_prompt: "Use $planr-design-review to review and revise an existing OpenPlanr design from pinned board feedback. Use when a current design needs focused visual changes rather than new directions."
-policy:
-  allow_implicit_invocation: true

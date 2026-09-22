@@ -1,6 +1,0 @@
-interface:
-  display_name: "Planr Design Loop"
-  short_description: "Explore multiple design directions and collect pinned board…"
-  default_prompt: "Use $planr-design-loop to explore multiple design directions and collect pinned board feedback. Use when the user wants to compare variants and select a direction interactively."
-policy:
-  allow_implicit_invocation: true

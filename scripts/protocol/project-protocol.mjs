@@ -27,51 +27,29 @@ const manifestRelative = 'lib/generated/protocol-projection.json';
 const V16_REGISTRIES = new Set(Object.keys(DIAGRAM_V16_REGISTRIES));
 const V17_REGISTRIES = new Set(Object.keys(PROTOCOL_V17_REGISTRIES));
 
+const DASHBOARD_CONTRACT_FILES = new Set([
+  'generated/operate-schema-token-codec.mjs',
+  'operate-experience-audit-display-contract.d.mts',
+  'operate-experience-display-contract.d.mts',
+  'operate-experience-surface-contract.d.mts',
+  'operate-review-contract.d.mts',
+  'operate-review-payload-safety.d.mts',
+  'operate-review-payload-safety.mjs',
+  'operate-review-workspace-projection-v2.d.mts',
+]);
+
 const mappings = Object.freeze([
   Object.freeze({
     source: 'packages/protocol/projections/pipeline/lib/protocol',
     target: 'lib/protocol',
     rejectExtras: false,
   }),
+  // Every published schema version has one canonical Protocol owner.
+  Object.freeze({ source: 'packages/protocol/schemas', target: 'schemas', rejectExtras: true }),
+  Object.freeze({ source: 'packages/protocol/registry', target: 'registry', rejectExtras: false }),
   Object.freeze({
-    source: 'packages/protocol/schemas/v1.5.0',
-    target: 'schemas/v1.5.0',
-    rejectExtras: true,
-  }),
-  Object.freeze({
-    source: 'packages/protocol/schemas/v1.6.0',
-    target: 'schemas/v1.6.0',
-    rejectExtras: true,
-  }),
-  Object.freeze({
-    source: 'packages/protocol/schemas/v1.7.0',
-    target: 'schemas/v1.7.0',
-    rejectExtras: true,
-  }),
-  Object.freeze({
-    source: 'packages/protocol/schemas/v1.8.0',
-    target: 'schemas/v1.8.0',
-    rejectExtras: true,
-  }),
-  Object.freeze({
-    source: 'packages/protocol/schemas/v1.9.0',
-    target: 'schemas/v1.9.0',
-    rejectExtras: true,
-  }),
-  Object.freeze({
-    source: 'packages/protocol/schemas/v1.10.0',
-    target: 'schemas/v1.10.0',
-    rejectExtras: true,
-  }),
-  Object.freeze({
-    source: 'packages/protocol/schemas/v1.11.0',
-    target: 'schemas/v1.11.0',
-    rejectExtras: true,
-  }),
-  Object.freeze({
-    source: 'packages/protocol/schemas/v1.12.0',
-    target: 'schemas/v1.12.0',
-    rejectExtras: true,
+    source: 'packages/protocol/lib/dashboard', target: 'lib/dashboard', rejectExtras: false,
+    include: (path) => DASHBOARD_CONTRACT_FILES.has(path),
   }),
   Object.freeze({
     source: 'packages/protocol/registries',

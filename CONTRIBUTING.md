@@ -36,7 +36,7 @@ so the CLI's compiled exports exist.
 2. Change the canonical owner first: Protocol contracts, then domain code, then
    downstream CLI, host adapters, and documentation as needed.
 3. Add regression coverage for changed behavior and update user-facing guidance.
-4. Regenerate derived files and include the required projections in the same PR.
+4. Regenerate derived files and include changed tracked manifests in the same PR.
 5. Describe the concrete behavior change, validation results, and limitations.
 
 Use product-oriented branch names such as `fix/diagram-labels` or
@@ -51,6 +51,19 @@ applies to the files you modify, and you represent that you have the right to do
 so. This does not transfer your copyright. If a contribution introduces a new
 license or changes a licensing boundary, discuss it with the maintainers before
 opening the pull request and include the required license and notice files.
+
+## Keep maintenance work tied to behavior
+
+For a new artifact, dependency, check, or abstraction, name its current consumer,
+canonical owner, and the concrete failure it prevents. A manual developer command
+is a consumer even when CI does not call it. Remove obsolete material only after
+tracing imports, generators, package contents, tests, and documented entry points;
+keep evidence of retired migrations in Git history.
+
+Add checks for observable requirements and failures, and reuse existing checks
+before adding another inventory or gate. See the
+[repository maintenance decision](docs/architecture/repository-maintenance.md)
+for canonical ownership and build-time distribution generation.
 
 ## Generated sources
 
@@ -88,9 +101,9 @@ npm run verify
 In a clean verification checkout, run `git diff --exit-code HEAD --` after
 generation and after the build. Ignored local distributions may be created, but
 tracked files must reproduce without changes. During development, review and
-commit intentional source and generated-output changes before applying this gate.
+commit intentional source and tracked manifest changes before applying this gate.
 
-`npm run verify` checks generated assets, boundaries, preservation records, the committed
+`npm run verify` checks generated assets, boundaries, public documentation, the committed
 documentation diagram sets, focused tests, and isolated packed-package behavior. It does not replace the full
 workspace test command or manual/browser checks for UI changes. The CI workflows
 under `.github/workflows/` define their additional runtime and browser coverage.

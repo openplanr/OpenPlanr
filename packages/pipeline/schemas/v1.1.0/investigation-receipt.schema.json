@@ -1,7 +1,0 @@
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://openplanr.dev/schemas/v1.1.0/investigation-receipt.schema.json",
-  "title": "OpenPlanr Protocol 1.1 immutable investigation receipt", "type": "object",
-  "required": ["kind", "schemaVersion", "protocolVersion", "recordType", "runId", "mode", "generation", "state", "requestDigest", "initialBaseline", "currentBaselineDigest", "events", "terminal", "receiptHash"],
-  "properties": { "kind": { "const": "investigation-receipt" }, "schemaVersion": { "const": "1.0.0" }, "protocolVersion": { "const": "1.1.0" }, "recordType": { "const": "receipt" }, "runId": { "type": "string", "pattern": "^inv_[a-f0-9]{32}$" }, "mode": { "enum": ["diagnose", "fix"] }, "generation": { "type": "integer", "minimum": 0 }, "state": { "enum": ["proven", "unknown", "blocked", "passed"] }, "requestDigest": { "$ref": "#/$defs/digest" }, "initialBaseline": { "type": "object" }, "currentBaselineDigest": { "$ref": "#/$defs/digest" }, "events": { "type": "array", "maxItems": 256 }, "terminal": { "type": "object", "additionalProperties": false, "required": ["status", "finalizedAt", "finalBaselineDigest"], "properties": { "status": { "enum": ["proven", "unknown", "blocked", "passed"] }, "finalizedAt": { "type": "string", "format": "date-time" }, "finalBaselineDigest": { "$ref": "#/$defs/digest" } } }, "receiptHash": { "$ref": "#/$defs/digest" } },
-  "$defs": { "digest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" } }
-}

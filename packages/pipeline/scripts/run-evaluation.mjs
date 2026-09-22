@@ -5,7 +5,7 @@
  *
  *   node scripts/run-evaluation.mjs [--json] [--ci] [--out <dir>]
  *                                   [--waiver-file <path>] [--owner <identity>]
- *                                   [--no-browser-adapter]
+ *                                   [--no-browser-adapter] --source-root <canonical-source-root>
  *
  * The run measures and reports. It never edits a graded skill, assigns a
  * version, or performs a release effect.
@@ -25,7 +25,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
 
 const KNOWN_FLAGS = new Set(['--json', '--ci', '--no-browser-adapter']);
-const KNOWN_OPTIONS = new Set(['--out', '--waiver-file', '--owner']);
+const KNOWN_OPTIONS = new Set(['--out', '--waiver-file', '--owner', '--source-root']);
 
 function parseArguments(tokens) {
   const flags = new Set();
@@ -94,6 +94,7 @@ try {
   const { flags, options, owners } = parseArguments(argv);
   const outcome = await runEvaluation({
     repoRoot,
+    sourceRoot: options.has('--source-root') ? resolve(options.get('--source-root')) : undefined,
     now: new Date().toISOString(),
     waivers: loadWaivers(options.get('--waiver-file')),
     owners,

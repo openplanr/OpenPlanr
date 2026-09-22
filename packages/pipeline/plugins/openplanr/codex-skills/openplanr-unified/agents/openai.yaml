@@ -1,6 +1,0 @@
-interface:
-  display_name: "Openplanr Unified"
-  short_description: "Compatibility router for legacy unified OpenPlanr invocations."
-  default_prompt: "Use $openplanr-unified to compatibility router for legacy unified OpenPlanr invocations."
-policy:
-  allow_implicit_invocation: true

@@ -1,34 +1,17 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-// FR2 — the plugin command surface is frozen. registry/frozen-commands.json is the
-// single, closed source of truth for exactly which commands/*.md files may exist.
-// The list is a ceiling, not a cull: it may shrink by attrition but must never grow,
-// so a new workflow is impossible to ship as a command and can only ship as a skill.
-// These assertions fail on ANY drift — an extra file on disk, or a declared file that
-// has gone missing — naming the offending slug so the break is actionable.
+import { readContributionGraph } from '../../../skill-runtime/src/catalog.mjs';
 
-const root = join(fileURLToPath(new URL('.', import.meta.url)), '../..');
-const registryPath = join(root, 'registry/frozen-commands.json');
-const commandsDir = join(root, 'commands');
-
-const registry = JSON.parse(readFileSync(registryPath, 'utf8'));
+// The frozen Protocol registry remains a compatibility contract. Current
+// package-v1 distributions expose workflows as skills and have no command tree.
+const root = fileURLToPath(new URL('../../../..', import.meta.url));
+const registry = JSON.parse(readFileSync(join(root, 'packages/protocol/registry/frozen-commands.json'), 'utf8'));
 
 const FROZEN_ALIAS_SLUGS = ['plan', 'ship', 'design', 'sync', 'dashboard'];
-
-function onDiskSlugs() {
-  return readdirSync(commandsDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
-    .map((entry) => entry.name.slice(0, -'.md'.length))
-    .sort();
-}
-
-function registrySlugs() {
-  return registry.commands.map((entry) => entry.slug).sort();
-}
 
 test('frozen surface: registry is well-formed (8 entries, 5 skill aliases)', () => {
   assert.equal(
@@ -79,28 +62,26 @@ test('frozen surface: registry is well-formed (8 entries, 5 skill aliases)', () 
   assert.equal(new Set(slugs).size, slugs.length, 'frozen registry must not declare duplicate slugs');
 });
 
-test('frozen surface: on-disk commands/*.md set equals the frozen registry set', () => {
-  const disk = onDiskSlugs();
-  const declared = registrySlugs();
+test('current packages expose the frozen workflows as skills without reviving commands', () => {
+  const graph = readContributionGraph({ repoRoot: root });
+  assert.equal(graph.registry.sourceFormat, 'package-v1');
+  assert.deepEqual(graph.frozenCommands.commands, []);
+  assert.deepEqual(graph.aliases.aliases, []);
 
-  // Directional diff #1 — a command file appeared that the freeze does not permit.
-  // This is the guard that makes shipping a new workflow as a command impossible.
-  const extraOnDisk = disk.filter((slug) => !declared.includes(slug));
-  assert.deepEqual(
-    extraOnDisk,
-    [],
-    `commands/ contains file(s) not in the frozen list: ${extraOnDisk.join(', ') || '(none)'}. `
-      + 'The alias surface is frozen — new workflows ship as skills, never as commands.',
-  );
+  const skillIds = new Set(graph.skills.map(({ id }) => id));
+  for (const { slug } of registry.commands) {
+    assert.ok(skillIds.has(`planr-${slug}`), `${slug} must remain available as a canonical skill`);
+  }
 
-  // Directional diff #2 — a frozen command was removed from disk without updating the registry.
-  const missingFromDisk = declared.filter((slug) => !disk.includes(slug));
-  assert.deepEqual(
-    missingFromDisk,
-    [],
-    `frozen registry declares command(s) missing from commands/: ${missingFromDisk.join(', ') || '(none)'}.`,
-  );
-
-  // Exact-set equality (both directions collapsed) as the final backstop.
-  assert.deepEqual(disk, declared, 'on-disk command slug set must exactly equal the frozen registry set');
+  for (const host of ['openai', 'claude', 'cursor']) {
+    const pluginRoot = join(root, 'dist/plugins', host, 'openplanr');
+    assert.ok(existsSync(pluginRoot), `${host} distribution must have been generated`);
+    assert.equal(existsSync(join(pluginRoot, 'commands')), false, `${host} must not revive the retired command surface`);
+    for (const { slug } of registry.commands) {
+      const entrypoint = host === 'cursor'
+        ? join(pluginRoot, 'rules', `planr-${slug}.mdc`)
+        : join(pluginRoot, 'skills', slug, 'SKILL.md');
+      assert.ok(readFileSync(entrypoint, 'utf8').length > 80, `${host} must ship the ${slug} workflow`);
+    }
+  }
 });

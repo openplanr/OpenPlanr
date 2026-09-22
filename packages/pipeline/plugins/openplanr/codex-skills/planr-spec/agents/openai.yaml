@@ -1,6 +1,0 @@
-interface:
-  display_name: "Planr Spec"
-  short_description: "Shape vague product or engineering intent into a clear…"
-  default_prompt: "Use $planr-spec to shape vague product or engineering intent into a clear, measurable Protocol-compatible specification grounded in the current repository. Use when requirements need clarification before planning or implementation."
-policy:
-  allow_implicit_invocation: true

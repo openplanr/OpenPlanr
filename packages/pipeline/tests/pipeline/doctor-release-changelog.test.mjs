@@ -26,14 +26,13 @@ const CHANGELOG = `# Changelog
 /**
  * Build a source-shaped checkout carrying only the files doctor reads, so the
  * release audit runs to completion without a git remote or network access.
+ * Doctor audits the runtime package identity independently of host plugin assets.
  */
 function buildCheckout(version) {
   const checkout = mkdtempSync(join(tmpdir(), 'planr-doctor-changelog-'));
 
   for (const relativePath of [
-    '.claude-plugin',
     'README.md',
-    'commands/sync.md',
     'docs/compatibility-matrix.md',
     'docs/protocol',
     'input/tech/stack.md',
@@ -49,11 +48,6 @@ function buildCheckout(version) {
 
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   writeFileSync(join(checkout, 'package.json'), JSON.stringify({ ...pkg, version }, null, 2));
-  const plugin = JSON.parse(readFileSync(join(root, '.claude-plugin/plugin.json'), 'utf8'));
-  writeFileSync(
-    join(checkout, '.claude-plugin/plugin.json'),
-    JSON.stringify({ ...plugin, version }, null, 2),
-  );
   writeFileSync(join(checkout, 'CHANGELOG.md'), CHANGELOG);
 
   return checkout;
