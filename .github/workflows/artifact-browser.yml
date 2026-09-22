@@ -31,6 +31,8 @@ jobs:
           cache: npm
       - name: Install the root lockfile
         run: npm ci
+      - name: Generate workspace package assets
+        run: npm run generate
       - name: Install the selected browser
         run: npm exec --workspace=planr-pipeline -- playwright install --with-deps ${{ matrix.browser }}
       - name: Run hostile sandbox certification

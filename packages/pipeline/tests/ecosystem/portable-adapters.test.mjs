@@ -4,8 +4,8 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const OPERATE_VALIDATE_NOTE_LINE = /^planr operate validate-note "<absolute-(?:advisor-output|challenger-output|chair-output|board-report-path)>" --profile (?:advisor|challenger|chair|board-report) --contract-version 2\.0\.0 --json$/u;
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../../..');
+const OPERATE_VALIDATE_NOTE_LINE = /^node "<skill-root>\/scripts\/validate-note\.mjs" "<absolute-(?:advisor-output|challenger-output|chair-output|board-report-path)>" --profile (?:advisor|challenger|chair|board-report) --contract-version 2\.0\.0$/u;
 
 function files(dir, out = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -18,10 +18,20 @@ function files(dir, out = []) {
 
 test('Codex and Cursor portable adapters contain no foreign runtime instructions', () => {
   const forbidden = /CLAUDE_PLUGIN_ROOT|\bSonnet\b|\bOpus\b|\/planr-pipeline:/;
-  for (const runtime of ['codex', 'cursor']) {
-    for (const path of files(join(root, 'adapters', runtime))) {
+  const legacySchema = 'packages/protocol/schemas/v1.0.0/design-manifest.schema.json';
+  for (const runtime of ['openai', 'cursor']) {
+    const assets = files(join(root, 'dist/plugins', runtime, 'openplanr'));
+    assert.ok(assets.length > 0, `${runtime}: generated host package must not be empty`);
+    for (const path of assets) {
+      const bytes = readFileSync(path, 'utf8');
+      if (path.replaceAll('\\', '/').endsWith(`/scripts/runtime/${legacySchema}`)) {
+        // Frozen schema descriptions retain historical command names as contract
+        // data. Require exact canonical bytes instead of allowing prompt changes.
+        assert.equal(bytes, readFileSync(join(root, legacySchema), 'utf8'), relative(root, path));
+        continue;
+      }
       assert.doesNotMatch(
-        readFileSync(path, 'utf8'),
+        bytes,
         forbidden,
         `${relative(root, path)} leaks a runtime-specific instruction`,
       );
@@ -31,7 +41,7 @@ test('Codex and Cursor portable adapters contain no foreign runtime instructions
 
 test('the Codex artifact skill routes through planr without executing the nested binary', () => {
   const skill = readFileSync(
-    join(root, 'adapters', 'codex', 'skills', 'planr-artifact', 'SKILL.md'),
+    join(root, 'dist/plugins/openai/openplanr/skills/artifact/SKILL.md'),
     'utf8',
   );
   assert.match(skill, /\bplanr artifact\b/);
@@ -42,8 +52,9 @@ test('the Codex artifact skill routes through planr without executing the nested
 test('Operate clients dispatch lens skills without foreign runtime paths', () => {
   const clients = [
     ['skills/planr-operate/SKILL.md', /name: planr-operate/u],
-    ['adapters/codex/skills/planr-operate/SKILL.md', /name: planr-operate/u],
-    ['adapters/cursor/rules/openplanr-operate.mdc', /^# Operate$/mu],
+    ['dist/plugins/openai/openplanr/skills/operate/SKILL.md', /name: operate/u],
+    ['dist/plugins/claude/openplanr/skills/operate/SKILL.md', /name: operate/u],
+    ['dist/plugins/cursor/openplanr/rules/planr-operate.mdc', /^# Operate$/mu],
   ];
   for (const [relativePath, identity] of clients) {
     const bytes = readFileSync(join(root, relativePath), 'utf8');
@@ -58,19 +69,14 @@ test('Operate clients dispatch lens skills without foreign runtime paths', () =>
     const commandLines = bytes
       .split('\n')
       .map((line) => line.trim())
-      .filter((line) => /^planr operate\b/u.test(line));
+      .filter((line) => /^node\b/u.test(line));
     assert.equal(commandLines.length, 4, `${relativePath}: exact optional validation commands`);
     for (const line of commandLines) {
       assert.match(line, OPERATE_VALIDATE_NOTE_LINE, `${relativePath}: ${line}`);
     }
-    assert.equal(
-      [...bytes.matchAll(/--json\b/gu)].length,
-      commandLines.length,
-      `${relativePath}: --json may appear only on an allowed validation command`,
-    );
     assert.doesNotMatch(
       bytes,
-      /JSON\.parse|\.planr\/products|\/Users\/|\/home\/|\bplanr-pipeline\s+(?:operate|plan|ship)\b|\/planr-pipeline:/u,
+      /JSON\.parse|--json\b|\bplanr operate validate-note\b|\.planr\/products|\/Users\/|\/home\/|\bplanr-pipeline\s+(?:operate|plan|ship)\b|\/planr-pipeline:/u,
       relativePath,
     );
   }
@@ -79,7 +85,7 @@ test('Operate clients dispatch lens skills without foreign runtime paths', () =>
     /CLAUDE_PLUGIN_ROOT|~\/\.claude|\/planr-pipeline:/u,
   );
   assert.doesNotMatch(
-    readFileSync(join(root, clients[2][0]), 'utf8'),
+    readFileSync(join(root, clients[3][0]), 'utf8'),
     /CLAUDE_PLUGIN_ROOT|~\/\.codex|\/planr-pipeline:/u,
   );
 });

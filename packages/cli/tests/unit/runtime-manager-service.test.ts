@@ -41,6 +41,10 @@ const workspaceRoot = fileURLToPath(new URL('../../../../', import.meta.url));
 const cliVersion = JSON.parse(
   readFileSync(join(workspaceRoot, 'packages', 'cli', 'package.json'), 'utf8'),
 ).version as string;
+// Ownership migration depends on the recorded legacy bytes and name, not on a
+// retired installation tree remaining in this checkout.
+const legacyPlanSkill =
+  '---\nname: planr-plan\ndescription: Plan a feature.\n---\n# Legacy Plan skill\n';
 const pipelineRoot = resolvePipelinePackageRoot();
 const pipelineVersion = JSON.parse(readFileSync(join(pipelineRoot, 'package.json'), 'utf8'))
   .version as string;
@@ -303,9 +307,7 @@ describe('runtime setup', () => {
   it('migrates scope-less legacy Codex skill ownership into one global bundle', async () => {
     const skill = join(userHome, '.codex', 'skills', 'planr-plan', 'SKILL.md');
     const migratedSkill = join(userHome, '.codex', 'skills', 'plan', 'SKILL.md');
-    const source = readFileSync(
-      join(pipelineRoot, 'adapters', 'codex', 'skills', 'planr-plan', 'SKILL.md'),
-    );
+    const source = legacyPlanSkill;
     mkdirSync(join(skill, '..'), { recursive: true });
     writeFileSync(skill, source);
     const key = canonicalProjectKey(projectDir);
@@ -355,10 +357,7 @@ describe('runtime setup', () => {
     mkdirSync(secondProject);
     const namespaced = join(userHome, '.codex', 'skills', 'planr-plan', 'SKILL.md');
     const bare = join(userHome, '.codex', 'skills', 'plan', 'SKILL.md');
-    const source = readFileSync(
-      join(pipelineRoot, 'adapters', 'codex', 'skills', 'planr-plan', 'SKILL.md'),
-      'utf8',
-    );
+    const source = legacyPlanSkill;
     const bareSource = source.replace(/^name: planr-plan$/m, 'name: plan');
     mkdirSync(join(namespaced, '..'), { recursive: true });
     mkdirSync(join(bare, '..'), { recursive: true });
