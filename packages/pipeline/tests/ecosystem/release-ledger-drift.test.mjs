@@ -88,7 +88,7 @@ function createPackedWorkspaceProof(workspaceRoot, custody) {
       pipeline: {
         name: pipeline.name,
         version: pipeline.version,
-        exportKeys: 40,
+        exportKeys: Object.keys(pipeline.exports).length,
         generatedSkillPortability: {
           skills: PACKED_WORKSPACE_GENERATED_SKILL_COUNT,
           violations: 0,
@@ -110,7 +110,7 @@ function createPackedWorkspaceProof(workspaceRoot, custody) {
           renderValidation: 'passed',
           checkValidation: 'passed',
         },
-        exportKeys: 40,
+        exportKeys: Object.keys(pipeline.exports).length,
         rootSymbols: 229,
         retiredPipelineOperate: { absenceContracts: 80, removedPaths: 34 },
       },
