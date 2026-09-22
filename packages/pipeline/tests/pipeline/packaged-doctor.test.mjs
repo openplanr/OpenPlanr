@@ -38,6 +38,7 @@ test('the installed package doctor accepts a package release bump without source
     'templates/artifact-review-shell.html',
     'templates/artifact-review-stage.js',
     'templates/diagram-studio.js',
+    'templates/diagram-owner.js',
     'templates/design/design-board-adapter.js',
   ]) {
     copy(join(root, relativePath), join(packageRoot, relativePath));
