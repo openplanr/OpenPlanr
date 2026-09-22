@@ -39,7 +39,7 @@ test('local ecosystem derives component versions and preserved public parity in-
   assert.equal(ecosystem.components.skillRuntime.version, json('packages/skill-runtime/package.json').version);
   assert.equal(ecosystem.compatibility.cliOptionalPipeline.version, json('packages/cli/package.json').optionalDependencies['planr-pipeline']);
   assert.equal(ecosystem.compatibility.cliOptionalPipeline.exact, true);
-  assert.equal(ecosystem.publicCompatibility.pipelineExportKeys, 37);
+  assert.equal(ecosystem.publicCompatibility.pipelineExportKeys, Object.keys(json('packages/pipeline/package.json').exports).length);
   assert.equal(ecosystem.publicCompatibility.pipelineRootSymbols, 229);
   assert.deepEqual(ecosystem.binaries.cli, {
     planr: './bin/planr.js',
@@ -57,8 +57,11 @@ test('catalog, schema, role, skill, and adapter membership is exact', () => {
     'v1.6.0': Object.keys(PROTOCOL_V16_CONTRACT_FILES).length + 1,
     'v1.7.0': Object.keys(PROTOCOL_V17_CONTRACT_FILES).length + 1,
     'v1.8.0': Object.keys(PROTOCOL_V18_CONTRACT_FILES).length + 1,
+    'v1.13.0': 10,
   };
   assert.equal(ecosystem.protocol.current, '1.8.0');
+  assert.ok(ecosystem.protocol.additiveVersions.includes('1.13.0'));
+  assert.ok(ecosystem.protocol.supportedReaders.includes('1.13.x'));
   assert.equal(ecosystem.catalogs.commands.rootCommands, commands.inventory.rootCommandModules);
   assert.equal(ecosystem.catalogs.commands.frozenClaudeDocuments, 8);
   assert.equal(ecosystem.catalogs.skills.count, skills.skills.length);
@@ -84,10 +87,11 @@ test('catalog, schema, role, skill, and adapter membership is exact', () => {
   assert.equal(ecosystem.schemas.successors.count, additiveByVersion['v1.8.0']);
   assert.equal(ecosystem.schemas.additive.count, Object.values(additiveByVersion).reduce((sum, count) => sum + count, 0));
   assert.deepEqual(ecosystem.schemas.additive.byVersion, additiveByVersion);
-  assert.equal(ecosystem.registries.canonicalCatalogs.count, 12);
+  assert.equal(ecosystem.registries.canonicalCatalogs.count, 13);
   assert.equal(ecosystem.registries.protocol15Catalogs.count, 7);
   assert.equal(ecosystem.registries.protocol16Catalogs.count, 2);
   assert.equal(ecosystem.registries.protocol17Catalogs.count, 3);
+  assert.equal(ecosystem.registries.protocol113Catalogs.count, 1);
   assert.equal(ecosystem.catalogs.outputPaths.count, 4);
   assert.equal(
     ecosystem.catalogs.outputPaths.outputCatalogDigest,

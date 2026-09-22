@@ -35,6 +35,18 @@ report, fidelity report, grammar registry, and semantic-pattern registry.
 `diagrams/{slug}/{slug}.planr-diagram.json` path, while grammar fixture and
 reference paths remain package-relative for private and projected consumers.
 
+## Diagram authoring contracts
+
+Protocol 1.13 adds portable semantic/presentation bundles, typed edit
+transactions, source correspondence, fidelity, proposals, publication references
+and an M1 capability catalog. Import the dependency-free validators from
+`@openplanr/protocol/diagram-authoring-contracts`. The existing diagram URL helper
+retains its Protocol 1.6 default; request `{ protocolVersion: '1.13.0' }` for the
+new contracts. Validation does not apply edits or grant hosted access.
+
+See the [authoring contract guide](../../docs/diagrams/authoring-contracts.md) for
+content boundaries, digest coverage and legacy compatibility.
+
 ## Design document contract
 
 The additive `schemas/v1.9.0/design-document.schema.json` defines stable design,

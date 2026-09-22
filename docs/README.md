@@ -20,6 +20,7 @@
 ## Integrate
 
 - [`@openplanr/protocol`](../packages/protocol/README.md): schemas, registries, and validation.
+- [Diagram authoring contracts](diagrams/authoring-contracts.md): portable meaning, presentation, typed edits and compatibility.
 - [`planr-pipeline`](../packages/pipeline/README.md): the delivery pipeline package and its protocol documents.
 - [Generated catalogs](generated/): skills, adapters, ecosystem, and the utility command catalog.
 - [Verifying a release](PROVENANCE.md): how to check the signature, attestation, and bytes of a published version.

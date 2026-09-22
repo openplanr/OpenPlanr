@@ -60,7 +60,7 @@
     {
       "source": "packages/protocol/projections/pipeline/lib/protocol/contracts.mjs",
       "target": "lib/protocol/contracts.mjs",
-      "sha256": "b2976d8db8a43760bbae7272803175a7b10808299667ef02cb2c085e086a7cb3",
+      "sha256": "8ace5176682d0b6e9f83df62a5acf0803bb11166788154130a1272463238e7eb",
       "mode": "644"
     },
     {
@@ -94,9 +94,21 @@
       "mode": "644"
     },
     {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.d.mts",
+      "target": "lib/protocol/diagram-authoring-contracts.d.mts",
+      "sha256": "dacdd19f8f36dc12fdd5642044e02fd430ed853f63dca8a8fa33819ae08a1818",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-authoring-contracts.mjs",
+      "target": "lib/protocol/diagram-authoring-contracts.mjs",
+      "sha256": "a0999832e7472b7ca2b6c08d35e54d4005edcddc3a65f0f076337cf797d20572",
+      "mode": "644"
+    },
+    {
       "source": "packages/protocol/projections/pipeline/lib/protocol/diagram-contracts.mjs",
       "target": "lib/protocol/diagram-contracts.mjs",
-      "sha256": "eea3366cd885643e8f17958df543f862f10bdc8929874436e6dccaaa4a728d0d",
+      "sha256": "08857ca903da297545d7885fe86d64a0f517f6cc55a3e447f1b5d7458c15e31d",
       "mode": "644"
     },
     {
@@ -127,6 +139,12 @@
       "source": "packages/protocol/projections/pipeline/lib/protocol/generated/diagram-registries.mjs",
       "target": "lib/protocol/generated/diagram-registries.mjs",
       "sha256": "89aca6f22b129272178345e45f51577b0e7e7af45df205de602b14b1541dc31a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/projections/pipeline/lib/protocol/generated/legacy-diagram-schema.mjs",
+      "target": "lib/protocol/generated/legacy-diagram-schema.mjs",
+      "sha256": "4e47160c3fe8ee4f5df3c85f71a87d9116c7cb9f77283ce5b3cfceb5850d0013",
       "mode": "644"
     },
     {
@@ -253,6 +271,12 @@
       "source": "packages/protocol/registry/ship-review-specialists.json",
       "target": "registry/ship-review-specialists.json",
       "sha256": "5de54a544c77c1f2b50a040e5cfffd57d194bdfc8d15a6c9cae3f7414c1fae76",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/registries/diagram-authoring-capabilities.json",
+      "target": "registry/v1.13.0/diagram-authoring-capabilities.json",
+      "sha256": "c802c69d5bf14bb067356b281cd97ff30fde8dc74bb2d2caaa401435e799a50c",
       "mode": "644"
     },
     {
@@ -691,6 +715,66 @@
       "source": "packages/protocol/schemas/v1.12.0/enterprise-sync-state.schema.json",
       "target": "schemas/v1.12.0/enterprise-sync-state.schema.json",
       "sha256": "c5b41d49118b888a2138940b885d653d8affe432c8a94e6e3f772b055bf32f02",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.13.0/diagram-authoring-bundle.schema.json",
+      "target": "schemas/v1.13.0/diagram-authoring-bundle.schema.json",
+      "sha256": "9a9c606c431d362335005f5a413f11757c583c99abd892691daed66f8033b069",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.13.0/diagram-authoring-capabilities.schema.json",
+      "target": "schemas/v1.13.0/diagram-authoring-capabilities.schema.json",
+      "sha256": "a792065513b97780c197fe46b6f3948e83ad0a94eaed739c4aaf88d5f249988a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.13.0/diagram-change-proposal.schema.json",
+      "target": "schemas/v1.13.0/diagram-change-proposal.schema.json",
+      "sha256": "b651d617461c35db26b90b46faa2f70174a731054cdad3de373d3e3fda1826f6",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.13.0/diagram-document.schema.json",
+      "target": "schemas/v1.13.0/diagram-document.schema.json",
+      "sha256": "47c4a8dc23716628011cef62c97428d6027c43cfe8986f094e6fcf1d1adc7e9e",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.13.0/diagram-edit-transaction.schema.json",
+      "target": "schemas/v1.13.0/diagram-edit-transaction.schema.json",
+      "sha256": "a3ed4ea35e8005e36824766b6698da9cf57dd02f166bfef11def703bc3819f94",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.13.0/diagram-fidelity-report.schema.json",
+      "target": "schemas/v1.13.0/diagram-fidelity-report.schema.json",
+      "sha256": "2361cb6dadfe7cfd973db06a57f16f514dc8752bb348fac07653afe01fb048bd",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.13.0/diagram-manifest.schema.json",
+      "target": "schemas/v1.13.0/diagram-manifest.schema.json",
+      "sha256": "717e013391e8c6693ea6003632afb73d54dd7b7e2194ed59c78c3c53334f1978",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.13.0/diagram-presentation.schema.json",
+      "target": "schemas/v1.13.0/diagram-presentation.schema.json",
+      "sha256": "1510cfcdc63725e0933ddef7682f0ac676039717e3695a9482adab7618ea7d4a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.13.0/diagram-publication-state.schema.json",
+      "target": "schemas/v1.13.0/diagram-publication-state.schema.json",
+      "sha256": "d7d8b67afe598fa9f3d631cbfcfc1aa3593cfc5e299b3c216e00299bd9fedc25",
+      "mode": "644"
+    },
+    {
+      "source": "packages/protocol/schemas/v1.13.0/diagram-source-map.schema.json",
+      "target": "schemas/v1.13.0/diagram-source-map.schema.json",
+      "sha256": "ee134485fd02f5c42c79cf1940106adcefdcdacfd4e00ff6e11f169668ffef63",
       "mode": "644"
     },
     {

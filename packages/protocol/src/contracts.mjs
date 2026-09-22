@@ -12,6 +12,7 @@ import {
   PROTOCOL_V18_CONTRACT_FILES,
 } from './skill-source-contracts.mjs';
 import { DESIGN_HANDOFF_CONTRACT_FILES } from './design-handoff-contracts.mjs';
+import { DIAGRAM_AUTHORING_CONTRACT_FILES, validateDiagramAuthoringArtifact } from './diagram-authoring-contracts.mjs';
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -155,6 +156,11 @@ const foundationPaths = {
   'diagram-semantic-pattern-registry': { '1.6.0': v16Schema('diagram-semantic-pattern-registry') },
   'diagram-type-registry': { '1.6.0': v16Schema('diagram-type-registry') },
 };
+
+// Authoring successors are additive; preserve every legacy diagram registration.
+for (const [kind, filename] of Object.entries(DIAGRAM_AUTHORING_CONTRACT_FILES)) {
+  foundationPaths[kind] = { ...foundationPaths[kind], '1.13.0': `schemas/v1.13.0/${filename}` };
+}
 
 function compiledOperatePaths() {
   const catalog = OPERATE_CONTRACT_CATALOG_V2;
@@ -891,7 +897,25 @@ function guidedQuestionnaireCompatibilityErrors(value) {
 }
 
 export function validateProtocolArtifact(kind, value, { protocolVersion } = {}) {
-  const version = inferredVersion(kind, value, protocolVersion);
+  const authoringKind = Object.hasOwn(DIAGRAM_AUTHORING_CONTRACT_FILES, kind);
+  let versionInput = value;
+  if (authoringKind && (!protocolVersion || protocolVersion === '1.13.0')) {
+    // Choose the additive validator without executing an envelope accessor.
+    // Its safety preflight owns the resulting located diagnostic.
+    let descriptor;
+    try {
+      descriptor = value !== null && typeof value === 'object'
+        ? Object.getOwnPropertyDescriptor(value, 'protocolVersion') : undefined;
+    } catch {
+      return validateDiagramAuthoringArtifact(kind, value);
+    }
+    if (descriptor && !Object.hasOwn(descriptor, 'value')) return validateDiagramAuthoringArtifact(kind, value);
+    versionInput = { protocolVersion: descriptor?.value };
+  }
+  const version = inferredVersion(kind, versionInput, protocolVersion);
+  if (version === '1.13.0' && authoringKind) {
+    return validateDiagramAuthoringArtifact(kind, value);
+  }
   const resolved = resolveProtocolSchema(kind, { protocolVersion: version });
   const errors = validateResolvedArtifact(value, resolved);
   if (kind === 'guided-questionnaire' && version === '1.2.0') {

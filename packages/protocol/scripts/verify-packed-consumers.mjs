@@ -59,7 +59,8 @@ const nodeOnly = new Set(['./contracts', './operate-experience-live-patch', './l
   .map((key) => `${manifest.name}${key.slice(1)}`));
 const portable = exports.filter(({ name }) => !nodeOnly.has(name));
 const sharedChecks = `
-function check(value, message) { if (!value) throw new Error(message); }
+let checks = 0;
+function check(value, message) { checks++; if (!value) throw new Error(message); }
 const p = modules[0];
 check(p.sha256Jcs({ a: 1 }) === 'sha256:015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862', 'Digest mismatch');
 check(p.verifyDocumentDigest(p.withDocumentDigest({ kind: 'consumer', schemaVersion: '1.0.0' })), 'Document digest mismatch');
@@ -71,7 +72,37 @@ check(refused, 'Malformed enterprise revision accepted');
 const handoff = p.createEnterpriseHandoff({ organizationId: 'acme', projectId: 'project', artifactId: 'diagram', revisionId: 'r1', generatedAt: '2026-09-14T00:00:00.000Z' });
 p.assertEnterpriseHandoff(handoff);
 check(p.renderEnterpriseHandoffMarkdown(handoff).length > 0, 'Handoff export missing');
-const summary = { exports: modules.length, checks: 7 };
+for (const profile of ['flowchart', 'process', 'swimlane', 'architecture']) {
+  const document = {
+    kind: 'planr-diagram', schemaVersion: '1.0.0', protocolVersion: '1.13.0',
+    diagramId: 'consumer-diagram', title: '', summary: '', audience: 'mixed',
+    grammar: { id: profile, version: '1.0.0' },
+    nodes: [], relations: [], groups: [], lanes: [], events: [], series: [], axes: [], sets: [],
+    annotations: [], emphasis: [], laneOrder: [], accessibility: { title: '', description: '', readingOrder: [] },
+  };
+  document.documentDigest = p.diagramDocumentDigest(document);
+  const presentation = {
+    kind: 'diagram-presentation', schemaVersion: '1.0.0', protocolVersion: '1.13.0',
+    diagramId: document.diagramId, semanticDigest: document.documentDigest, coordinateSystem: 'global-canvas',
+    layout: { direction: 'left-right', detailTier: 'balanced' }, theme: { themeId: 'paper', mode: 'light' }, elements: [],
+  };
+  presentation.presentationDigest = p.diagramPresentationDigest(presentation);
+  const authored = {
+    kind: 'diagram-authoring-bundle', schemaVersion: '1.0.0', protocolVersion: '1.13.0',
+    diagramId: document.diagramId, document, presentation, originalSource: null, sourceMap: null,
+  };
+  authored.bundleDigest = p.diagramAuthoringBundleDigest(authored);
+  p.assertDiagramAuthoringBundle(authored);
+  check(p.validateDiagramAuthoringBundle(JSON.parse(JSON.stringify(authored))).length === 0, 'Blank profile rejected: ' + profile);
+  check(p.summarizeDiagramAuthoringContent(authored).hasVisibleContent === false, 'Blank profile invented visible content');
+  const substituted = JSON.parse(JSON.stringify(authored));
+  substituted.presentation.semanticDigest = 'sha256:' + '0'.repeat(64);
+  substituted.presentation.presentationDigest = p.diagramPresentationDigest(substituted.presentation);
+  substituted.bundleDigest = p.diagramAuthoringBundleDigest(substituted);
+  check(p.validateDiagramAuthoringBundle(substituted).some(issue => issue.rule === 'basis'), 'Substituted semantic basis accepted');
+}
+check(p.validateDiagramAuthoringArtifact('diagram-authoring-capabilities', p.DIAGRAM_AUTHORING_CAPABILITIES).length === 0, 'Capability catalog rejected');
+const summary = { exports: modules.length, checks };
 `;
 
 async function runNode() {
@@ -88,7 +119,7 @@ for (const entry of contracts.listProtocolSchemas()) {
   schemas++;
 }
 let assets = 0;
-for (const version of ['1.5.0','1.6.0','1.7.0','1.8.0','1.11.0']) {
+for (const version of ['1.5.0','1.6.0','1.7.0','1.8.0','1.11.0','1.13.0']) {
   for (const kind of Object.keys(modules[0]['PROTOCOL_V' + version.replaceAll('.', '').slice(0,-1) + '_CONTRACTS'])) {
     const url = modules[0].protocolAssetUrl(kind, { protocolVersion: version });
     assert.ok(existsSync(url), String(url));
@@ -117,7 +148,7 @@ async function runBrowser() {
   const runner = `const modules = await Promise.all(${JSON.stringify(portable.map(({ name }) => name))}.map(name => import(name)));
 ${sharedChecks}
 let assets = 0;
-for (const version of ['1.5.0','1.6.0','1.7.0','1.8.0','1.11.0']) {
+for (const version of ['1.5.0','1.6.0','1.7.0','1.8.0','1.11.0','1.13.0']) {
   for (const kind of Object.keys(modules[0]['PROTOCOL_V' + version.replaceAll('.', '').slice(0,-1) + '_CONTRACTS'])) {
     const response = await fetch(modules[0].protocolAssetUrl(kind, { protocolVersion: version }));
     check(response.ok, 'Missing schema asset ' + kind + '@' + version);

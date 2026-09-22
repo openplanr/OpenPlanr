@@ -27,7 +27,7 @@ test('canonical JSON and dependency-free SHA-256 match known vectors', () => {
 });
 
 test('all 180 schemas and 12 registries preserve exact source bytes and modes', () => {
-  const additiveVersions = new Set(['v1.5.0', 'v1.6.0', 'v1.7.0', 'v1.8.0', 'v1.9.0', 'v1.10.0', 'v1.11.0', 'v1.12.0']);
+  const additiveVersions = new Set(['v1.5.0', 'v1.6.0', 'v1.7.0', 'v1.8.0', 'v1.9.0', 'v1.10.0', 'v1.11.0', 'v1.12.0', 'v1.13.0']);
   const schemas = walk(join(protocol, 'schemas')).filter(({ key }) => !additiveVersions.has(key.split('/')[0]) && key.endsWith('.json'));
   const registries = walk(join(protocol, 'registry')).filter(({ key }) => key.endsWith('.json'));
   assert.equal(schemas.length, 180);
@@ -79,7 +79,7 @@ test('generation check is deterministic and package exports are explicit', () =>
   });
   assert.match(output, /Checked \d+ Protocol assets; preserved 180 schemas and 12 registries/);
   const manifest = JSON.parse(readFileSync(join(protocol, 'package.json'), 'utf8'));
-  for (const key of ['.', './errors', './canonical-json', './json-schema', './contracts', './browser-contracts', './diagram-contracts', './design-contracts', './design-handoff-contracts', './workspace-contracts', './enterprise-contracts', './review-experience-contracts', './planning-contracts', './registries', './task-contracts', './schemas/*', './registry/*', './registries/*']) {
+  for (const key of ['.', './errors', './canonical-json', './json-schema', './contracts', './browser-contracts', './diagram-contracts', './diagram-authoring-contracts', './design-contracts', './design-handoff-contracts', './workspace-contracts', './enterprise-contracts', './review-experience-contracts', './planning-contracts', './registries', './task-contracts', './schemas/*', './registry/*', './registries/*']) {
     assert.ok(manifest.exports[key], `missing export ${key}`);
   }
   for (const path of ['src/index.mjs', 'src/canonical-json.mjs', 'src/json-schema.mjs', 'src/registries.mjs', 'src/browser-contracts.mjs']) {
@@ -98,6 +98,12 @@ test('the Protocol root exposes v1.6 contracts while the Node validator subpath 
   assert.equal(JSON.parse(readFileSync(skillSourceUrl, 'utf8'))['x-openplanr-contract'].version, '1.6.0');
   const handoffUrl = rootModule.protocolAssetUrl('design-handoff-readiness', { protocolVersion: '1.11.0' });
   assert.equal(JSON.parse(readFileSync(handoffUrl, 'utf8'))['x-openplanr-contract'].version, '1.11.0');
+  assert.strictEqual(rootModule.PROTOCOL_V113_CONTRACTS, browserModule.PROTOCOL_V113_CONTRACTS);
+  assert.equal(Object.keys(rootModule.PROTOCOL_V113_CONTRACTS).length, 10);
+  assert.throws(() => rootModule.protocolAssetUrl('constructor', { protocolVersion: '1.13.0' }), RangeError);
+  assert.throws(() => rootModule.protocolAssetUrl('diagram-document', { protocolVersion: 'constructor' }), RangeError);
+  const authoringUrl = rootModule.protocolAssetUrl('diagram-authoring-bundle', { protocolVersion: '1.13.0' });
+  assert.equal(JSON.parse(readFileSync(authoringUrl, 'utf8'))['x-openplanr-contract'].version, '1.13.0');
   assert.equal(Object.hasOwn(nodeContracts, 'PROTOCOL_V16_CONTRACTS'), false);
   assert.doesNotMatch(readFileSync(join(protocol, 'src', 'contracts.d.mts'), 'utf8'), /browser-contracts/u);
 

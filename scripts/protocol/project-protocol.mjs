@@ -26,6 +26,7 @@ const manifestRelative = 'lib/generated/protocol-projection.json';
 // catalogs continue to project to registry/v1.5.0.
 const V16_REGISTRIES = new Set(Object.keys(DIAGRAM_V16_REGISTRIES));
 const V17_REGISTRIES = new Set(Object.keys(PROTOCOL_V17_REGISTRIES));
+const V113_REGISTRIES = new Set(['diagram-authoring-capabilities.json']);
 
 const DASHBOARD_CONTRACT_FILES = new Set([
   'generated/operate-schema-token-codec.mjs',
@@ -53,9 +54,15 @@ const mappings = Object.freeze([
   }),
   Object.freeze({
     source: 'packages/protocol/registries',
+    target: 'registry/v1.13.0',
+    rejectExtras: true,
+    include: (path) => V113_REGISTRIES.has(path),
+  }),
+  Object.freeze({
+    source: 'packages/protocol/registries',
     target: 'registry/v1.5.0',
     rejectExtras: true,
-    include: (path) => !V16_REGISTRIES.has(path) && !V17_REGISTRIES.has(path),
+    include: (path) => !V16_REGISTRIES.has(path) && !V17_REGISTRIES.has(path) && !V113_REGISTRIES.has(path),
   }),
   Object.freeze({
     source: 'packages/protocol/registries',

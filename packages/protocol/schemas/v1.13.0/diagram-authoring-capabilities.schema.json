@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openplanr.dev/schemas/v1.13.0/diagram-authoring-capabilities.schema.json",
+  "x-openplanr-contract": {
+    "id": "diagram-authoring-capabilities",
+    "version": "1.13.0"
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "const": "diagram-authoring-capabilities"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "protocolVersion": {
+      "const": "1.13.0"
+    },
+    "version": {
+      "const": "1.0.0"
+    },
+    "liveCollaboration": {
+      "const": false
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "grammarId": {
+            "enum": [
+              "flowchart",
+              "process",
+              "swimlane",
+              "architecture"
+            ]
+          },
+          "authoring": {
+            "const": true
+          },
+          "primitives": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "node",
+                "relation",
+                "group",
+                "lane",
+                "annotation",
+                "emphasis"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 6,
+            "uniqueItems": true
+          },
+          "nodeKinds": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "process",
+                "start",
+                "end",
+                "decision",
+                "data-store",
+                "component"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 6,
+            "uniqueItems": true
+          },
+          "relationKinds": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "association",
+                "dependency",
+                "flow",
+                "message",
+                "transition"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 5,
+            "uniqueItems": true
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "insert-elements",
+                "update-semantics",
+                "remove-elements",
+                "set-membership-order",
+                "set-geometry",
+                "set-appearance-locks"
+              ]
+            },
+            "minItems": 6,
+            "maxItems": 6,
+            "uniqueItems": true
+          },
+          "mermaid": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "const": "copy"
+              },
+              "certificationVersion": {
+                "const": "flowchart-copy-v1"
+              },
+              "constructs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "construct": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+                      "maxLength": 64
+                    },
+                    "import": {
+                      "enum": [
+                        "lossless",
+                        "partial",
+                        "unsupported"
+                      ]
+                    },
+                    "export": {
+                      "enum": [
+                        "lossless",
+                        "partial",
+                        "unsupported"
+                      ]
+                    },
+                    "semanticRoundTrip": {
+                      "enum": [
+                        "lossless",
+                        "partial",
+                        "unsupported"
+                      ]
+                    },
+                    "mapping": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512
+                    }
+                  },
+                  "required": [
+                    "construct",
+                    "import",
+                    "export",
+                    "semanticRoundTrip",
+                    "mapping"
+                  ]
+                },
+                "minItems": 1,
+                "maxItems": 32
+              },
+              "linkedSource": {
+                "const": false
+              }
+            },
+            "required": [
+              "mode",
+              "certificationVersion",
+              "constructs",
+              "linkedSource"
+            ]
+          }
+        },
+        "required": [
+          "grammarId",
+          "authoring",
+          "primitives",
+          "nodeKinds",
+          "relationKinds",
+          "operations",
+          "mermaid"
+        ]
+      },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "unsupportedGrammars": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+        "maxLength": 64
+      },
+      "minItems": 0,
+      "maxItems": 128,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "kind",
+    "schemaVersion",
+    "protocolVersion",
+    "version",
+    "liveCollaboration",
+    "profiles",
+    "unsupportedGrammars"
+  ]
+}

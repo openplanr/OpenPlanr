@@ -12,7 +12,7 @@ import {
   diagramDocumentPath,
   getDiagramGrammar,
 } from '../../packages/protocol/src/diagram-contracts.mjs';
-import { validateProtocolArtifact } from '../../packages/protocol/src/contracts.mjs';
+import { resolveProtocolSchema, validateProtocolArtifact } from '../../packages/protocol/src/contracts.mjs';
 
 const root = resolve(import.meta.dirname, '..', '..');
 const protocol = join(root, 'packages', 'protocol');
@@ -72,4 +72,15 @@ test('canonical diagram schema rejects renderer geometry and undeclared fields',
   const rendererOwned = { ...fixture, nodes: fixture.nodes.map((node, index) => (index === 0 ? { ...node, x: 20 } : node)) };
   assert.ok(validateProtocolArtifact('diagram-document', rendererOwned, { protocolVersion: '1.6.0' })
     .some(({ rule }) => rule === 'additionalProperties'));
+});
+
+test('diagram authoring requires an explicit additive version and preserves legacy lookup', () => {
+  const legacy = diagramContractUrl('diagram-document');
+  const authoring = diagramContractUrl('diagram-document', { protocolVersion: '1.13.0' });
+  assert.match(legacy.pathname, /schemas\/v1\.6\.0\/diagram-document\.schema\.json$/u);
+  assert.match(authoring.pathname, /schemas\/v1\.13\.0\/diagram-document\.schema\.json$/u);
+  assert.equal(resolveProtocolSchema('diagram-document', { protocolVersion: '1.6.0' }).schema.$id, JSON.parse(readFileSync(legacy, 'utf8')).$id);
+  assert.equal(resolveProtocolSchema('diagram-document', { protocolVersion: '1.13.0' }).schema.$id, JSON.parse(readFileSync(authoring, 'utf8')).$id);
+  assert.throws(() => diagramContractUrl('diagram-document', { protocolVersion: '9.0.0' }), RangeError);
+  assert.throws(() => diagramContractUrl('__proto__', { protocolVersion: '1.13.0' }), RangeError);
 });
