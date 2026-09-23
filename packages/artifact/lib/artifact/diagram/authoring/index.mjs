@@ -6,3 +6,4 @@ export { createConditionalInverse } from './undo.mjs';
 export { resolveDiagramScene } from './scene.mjs';
 export { renderAuthoredDiagramSvg } from './renderer.mjs';
 export { previewAutomaticLayout, previewResetRoute } from './layout.mjs';
+export { previewMermaidCopy, adoptMermaidCopy, exportMermaidCopy } from '../source-map.mjs';

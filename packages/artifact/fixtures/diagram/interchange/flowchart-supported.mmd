@@ -1,0 +1,11 @@
+flowchart LR
+%% source comments do not change identities
+subgraph Platform[Platform]
+  A[Receive café]
+  subgraph Data[Data]
+    B[(Store)]
+  end
+end
+C{Approve}
+A --> B
+B <-->|review| C

@@ -251,6 +251,18 @@
       "mode": "644"
     },
     {
+      "source": "packages/artifact/fixtures/diagram/interchange/flowchart-partial.mmd",
+      "target": "fixtures/diagram/interchange/flowchart-partial.mmd",
+      "sha256": "77e8d0f1f6a9f604dd7b4906aa578dd808c1da3eedbc3311083423eaa96c605a",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/fixtures/diagram/interchange/flowchart-supported.mmd",
+      "target": "fixtures/diagram/interchange/flowchart-supported.mmd",
+      "sha256": "221c9ea773377676d50e1ca3cae6136a0626fd42ea507da001c6cb11ec9ccb2d",
+      "mode": "644"
+    },
+    {
       "source": "packages/artifact/fixtures/diagram/primitives/annotation.json",
       "target": "fixtures/diagram/primitives/annotation.json",
       "sha256": "a5e5c07d53edc58d1f3cc7385773e11b265b0546ec4849e645f353a2e5b6a53a",
@@ -397,13 +409,13 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/authoring/index.d.mts",
       "target": "lib/artifact/diagram/authoring/index.d.mts",
-      "sha256": "f200290dd7be21ef222e1ea90bc2b248776615cf46832d2b9cba7e79966b09a2",
+      "sha256": "3aa49e4f449206e58a163d97ec3a547c6c877085c1c58e3ca488d5349ac4353d",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/authoring/index.mjs",
       "target": "lib/artifact/diagram/authoring/index.mjs",
-      "sha256": "8b02c3c9e5e8afda911a01b534024ddfb3d9ec7eca800901ad2e76ae7a650a7e",
+      "sha256": "14eba649f7638ab11b91a49f4e5c23ba5cd874c27a507522e153c027ce2db18e",
       "mode": "644"
     },
     {
@@ -601,13 +613,13 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/index.d.mts",
       "target": "lib/artifact/diagram/index.d.mts",
-      "sha256": "0b616e2dd1332a492eec2daaed4ba37e972bf7c20f31fa733830a2496a0906d2",
+      "sha256": "2c48d1663fdd4e274f99cbb92de3b9777f30098c645f6b1fbfeafb77595d9f3e",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/index.mjs",
       "target": "lib/artifact/diagram/index.mjs",
-      "sha256": "de4e49832c00418d5f9d36eb1a425d28a3f4d3aafebd19d7bcd48660983794c2",
+      "sha256": "28b228b16d002fc9fee594387aafa971d99629108eb6d625970aa4df2f5bad21",
       "mode": "644"
     },
     {
@@ -716,6 +728,12 @@
       "source": "packages/artifact/lib/artifact/diagram/runtime.mjs",
       "target": "lib/artifact/diagram/runtime.mjs",
       "sha256": "de9d893fdae71021d79a1a5704c1c39768e5dd83b6f8dcd0de4ce4779b22332b",
+      "mode": "644"
+    },
+    {
+      "source": "packages/artifact/lib/artifact/diagram/source-map.mjs",
+      "target": "lib/artifact/diagram/source-map.mjs",
+      "sha256": "19691437572cbc8ff40bfb92ad5e08195d5af170803ef34990cf1394c5c1b0f7",
       "mode": "644"
     },
     {

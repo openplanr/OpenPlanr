@@ -120,3 +120,4 @@ export declare function bindDiagramArtifactReview(
 ): Promise<Readonly<Record<string, unknown>>>;
 
 export * from './editor/index.mjs';
+export { previewMermaidCopy, adoptMermaidCopy, exportMermaidCopy } from './authoring/index.mjs';
