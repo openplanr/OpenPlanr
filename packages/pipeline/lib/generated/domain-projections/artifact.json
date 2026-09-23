@@ -733,7 +733,7 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/source-map.mjs",
       "target": "lib/artifact/diagram/source-map.mjs",
-      "sha256": "19691437572cbc8ff40bfb92ad5e08195d5af170803ef34990cf1394c5c1b0f7",
+      "sha256": "cbfc313d3263a33976af57a9768b7f19f232b96b7bb6fe30bc39db88f4b42d09",
       "mode": "644"
     },
     {

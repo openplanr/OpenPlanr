@@ -215,9 +215,43 @@ export function previewMermaidCopy(source, options = {}) {
   };
   document.annotations = clone(previous?.document.annotations ?? []);
   document.emphasis = clone(previous?.document.emphasis ?? []);
-  const groupElements = [...groups.keys()].map((id, i) => placement(id, 'container', { x: 24 + i * 24, y: 24 + i * 24, width: 720, height: 480 }, 0, previous));
-  const nodeElements = [...nodes.values()].map((node, i) => placement(node.id, node.shape, { x: 80 + (i % 4) * 180, y: 80 + Math.floor(i / 4) * 120, width: 144, height: 72 }, 2, previous));
-  const edgeElements = [...edges.keys()].map(id => placement(id, 'connector', null, 1, previous));
+  // A source copy has no coordinates. Keep its first editable layout sparse enough
+  // for labels and routes, then size containers around their actual members.
+  const orderedNodes = [...nodes.values()];
+  const nodesPerRun = Math.min(8, orderedNodes.length);
+  const vertical = header === 'top-down' || header === 'bottom-up';
+  const reverse = header === 'right-left' || header === 'bottom-up';
+  const nodeElements = orderedNodes.map((node, index) => {
+    const run = index % nodesPerRun;
+    const line = Math.floor(index / nodesPerRun);
+    const along = reverse ? nodesPerRun - run - 1 : run;
+    const bounds = vertical
+      ? { x: 100 + line * 320, y: 100 + along * 320, width: node.shape === 'diamond' ? 200 : 180, height: node.shape === 'diamond' ? 104 : 80 }
+      : { x: 100 + along * 420, y: 100 + line * 280, width: node.shape === 'diamond' ? 200 : 180, height: node.shape === 'diamond' ? 104 : 80 };
+    return placement(node.id, node.shape, bounds, 2, previous);
+  });
+  const boundsById = new Map(nodeElements.map(item => [item.elementId, item.bounds]));
+  const groupElements = [];
+  for (const group of [...groups.values()].reverse()) {
+    const members = group.members.map(id => boundsById.get(id)).filter(Boolean);
+    const bounds = members.length ? {
+      x: Math.min(...members.map(item => item.x)) - 44,
+      y: Math.min(...members.map(item => item.y)) - 60,
+      width: Math.max(...members.map(item => item.x + item.width)) - Math.min(...members.map(item => item.x)) + 88,
+      height: Math.max(...members.map(item => item.y + item.height)) - Math.min(...members.map(item => item.y)) + 104,
+    } : { x: 24, y: 24, width: 240, height: 160 };
+    const item = placement(group.id, 'container', bounds, 0, previous);
+    boundsById.set(group.id, item.bounds);
+    groupElements.unshift(item);
+  }
+  const edgeElements = [...edges.keys()].map(id => {
+    const item = placement(id, 'connector', null, 1, previous);
+    if (!previous?.presentation.elements.some(value => value.elementId === id)) {
+      item.route.from.side = vertical ? header === 'bottom-up' ? 'top' : 'bottom' : header === 'right-left' ? 'left' : 'right';
+      item.route.to.side = vertical ? header === 'bottom-up' ? 'bottom' : 'top' : header === 'right-left' ? 'right' : 'left';
+    }
+    return item;
+  });
   const noteElements = document.annotations.map((annotation, i) => previous.presentation.elements.find(item => item.elementId === annotation.id) ?? placement(annotation.id, 'text', { x: 80 + i * 180, y: 560, width: 144, height: 72 }, 3));
   const presentation = { ...meta('diagram-presentation'), diagramId, semanticDigest: '', coordinateSystem: 'global-canvas', layout: { direction: header, detailTier: previous?.presentation.layout.detailTier ?? 'balanced' }, theme: clone(previous?.presentation.theme ?? { themeId: 'paper', mode: 'light' }), elements: [...groupElements, ...edgeElements, ...nodeElements, ...noteElements], presentationDigest: '' };
   const bundle = sealBundle({ ...meta('diagram-authoring-bundle'), diagramId, document, presentation, originalSource: { format: 'mermaid', text: source, sourceDigest }, sourceMap: { ...meta('diagram-source-map'), diagramId, semanticDigest: '', sourceDigest, sourceByteLength: byteLength, encoding: 'utf-8', parser: { id: 'openplanr-mermaid-copy', version: '1.0.0' }, certificationVersion: 'flowchart-copy-v1', entries }, bundleDigest: '' });
