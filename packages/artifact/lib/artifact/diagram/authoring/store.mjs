@@ -297,6 +297,14 @@ export function createDiagramAuthoringStore({ root, slug, maxBundleBytes = DEFAU
       const prior = await loadSnapshot(receipt.baseBytesDigest);
       const replay = previewDiagramTransaction(prior.bundle, pending.transaction);
       if (!replay.ok || !same(snapshot(prior.bundle), receipt.base) || digestBytes(validBundle(replay.bundle)) !== receipt.resultBytesDigest || !same(replay.inverse, receipt.inverse)) fail('CORRUPT', 'Recovery does not reproduce the exact transaction result.');
+    } else if (pending.replacement) {
+      const { expectedBase } = pending.replacement;
+      const prior = await loadSnapshot(receipt.baseBytesDigest);
+      if (!same(snapshot(prior.bundle), receipt.base) ||
+          !same(expectedBase, { byteDigest: receipt.baseBytesDigest, basis: receipt.base }) ||
+          digestBytes(validBundle(pending.replacement.bundle)) !== receipt.resultBytesDigest ||
+          digestBytes(jsonBytes({ replace: pending.replacement.bundle, transactionId: receipt.transactionId, expectedBase })) !== receipt.fingerprint)
+        fail('CORRUPT', 'Pending complete-bundle replacement changed after review.');
     } else if (receipt.base !== null || receipt.baseBytesDigest !== null || digestBytes(jsonBytes({ initialize: bundle, transactionId: receipt.transactionId })) !== receipt.fingerprint) fail('CORRUPT', 'Pending initialization fingerprint changed.');
     const canonicalBytes = await readBytes(canonical, maxBundleBytes, true);
     const observed = canonicalBytes ? digestBytes(canonicalBytes) : null;
@@ -340,8 +348,8 @@ export function createDiagramAuthoringStore({ root, slug, maxBundleBytes = DEFAU
     return current();
   }
 
-  async function writeRequest({ bundle, transaction, transactionId }) {
-    const request = transaction ?? { initialize: bundle, transactionId };
+  async function writeRequest({ bundle, transaction, transactionId, replacement = false, expectedBase }) {
+    const request = transaction ?? (replacement ? { replace: bundle, transactionId, expectedBase } : { initialize: bundle, transactionId });
     const diagnostics = inspectPlainData(request);
     if (diagnostics.length) fail('INVALID', 'The save request must contain inert bounded JSON.', { diagnostics });
     transactionId = transaction ? transaction.transactionId : transactionId;
@@ -365,13 +373,18 @@ export function createDiagramAuthoringStore({ root, slug, maxBundleBytes = DEFAU
       preview = previewDiagramTransaction(before.bundle, transaction);
       if (!preview.ok) fail('INVALID_TRANSACTION', 'The transaction does not apply to the current exact base.', { diagnostics: preview.diagnostics });
       bundle = preview.bundle;
+    } else if (replacement) {
+      if (before.status !== 'ready' ||
+          !same(expectedBase, { byteDigest: before.byteDigest, basis: before.basis }))
+        fail('CHANGED', 'The complete-bundle replacement no longer matches its exact reviewed base.');
     } else if (before.status !== 'absent') fail('COLLISION', 'Initialization never replaces an existing diagram.');
     const bytes = validBundle(bundle);
     await owned({ initialize: true });
     const receipt = { kind: 'diagram-authoring-receipt', version: 1, diagramId: slug, sequence: (before.receipt?.sequence ?? 0) + 1,
       transactionId, fingerprint, base: before.basis ?? null, baseBytesDigest: before.byteDigest ?? null,
       result: snapshot(bundle), resultBytesDigest: digestBytes(bytes), inverse: preview?.inverse ?? null };
-    const pending = { kind: 'diagram-authoring-pending', version: 1, transactionId, fingerprint, baseBytesDigest: receipt.baseBytesDigest, transaction: transaction ?? null, receipt };
+    const pending = { kind: 'diagram-authoring-pending', version: 1, transactionId, fingerprint, baseBytesDigest: receipt.baseBytesDigest, transaction: transaction ?? null,
+      ...(replacement ? { replacement: { bundle, expectedBase } } : {}), receipt };
     const pendingBytes = jsonBytes(pending);
     if (pendingBytes.length > metadataLimit) fail('CAPACITY', 'Recovery metadata exceeds its bounded capacity.');
     await immutable(snapshotPath(receipt.resultBytesDigest), bytes);
@@ -408,6 +421,10 @@ export function createDiagramAuthoringStore({ root, slug, maxBundleBytes = DEFAU
       return previewDiagramTransaction(state.bundle, transaction);
     }),
     commit: transaction => captured(transaction, transaction => writeRequest({ transaction })),
+    commitSnapshot: (bundle, identity = {}) => captured({ bundle, identity }, value => writeRequest({
+      bundle: value.bundle, transactionId: value.identity.transactionId,
+      replacement: true, expectedBase: value.identity.expectedBase,
+    })),
     recover: (options = {}) => captured(options, recoverInternal),
     readSnapshot: byteDigest => locked(async () => { if (!await owned()) fail('MISSING', 'The diagram has no snapshot history.'); return (await loadSnapshot(byteDigest)).bundle; }),
     history: ({ limit = 100, beforeSequence = Infinity } = {}) => locked(async () => {

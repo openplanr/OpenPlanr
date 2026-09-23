@@ -13,7 +13,7 @@ a browser editor, hosted storage, Mermaid conversion, or live collaboration.
 | Import | Consumer | Behavior |
 | --- | --- | --- |
 | `planr-pipeline/diagram-authoring` | Browser, Worker, Node | Validate and preview edits; resolve the authored scene; render SVG; preview selected layout and route reset |
-| `planr-pipeline/diagram-authoring-store` | Local Node adapter | Read, initialize, preview, commit and recover a canonical bundle; inspect history and legacy migration |
+| `planr-pipeline/diagram-authoring-store` | Local Node adapter | Read, initialize, preview, commit typed edits or an exact-base reviewed successor, and recover a canonical bundle; inspect history and legacy migration |
 | `planr-pipeline/diagram-authoring-export` | Local Node adapter | Export and verify an immutable bundle snapshot using the packaged offline rasterizer |
 
 ## Save and recover
@@ -35,7 +35,10 @@ its identifier for different content fails. Operational errors carry a stable
 bundle before constructing another edit.
 
 Only `status: 'saved'` acknowledges a completed write. If the result is `unknown`,
-call `store.recover` with its transaction identity, then read again. Do not label
+call `store.recover` with its transaction identity, then read again. A reviewed
+complete successor from company sync uses `store.commitSnapshot(bundle, {
+transactionId, expectedBase: { byteDigest, basis } })`; it rejects a changed
+base and writes through the same journal and receipt path. Do not label
 pending work Saved or regenerate it over the existing source. An unknown external
 change is retained for inspection. Immutable snapshots and transaction metadata
 support recovery and history; they are not alternate editable documents.

@@ -59,6 +59,25 @@ test('complete snapshots, exact retry receipts and conditional undo survive stor
   assert.equal((await readdir(join(root, 'diagrams', 'checkout', '.authoring', 'snapshots'))).length, 2, 'undo reuses the exact immutable snapshot');
 });
 
+test('reviewed complete successor commits retain custody and recover exactly after interruption', async t => {
+  const { root, store, bundle, result: first } = await initialized(t);
+  const change = compileDiagramCommand(bundle, { type: 'move', ids: ['node-b'], dx: 20, dy: 0 }, { transactionId: 'move-for-review' });
+  assert.equal(change.ok, true);
+  const expectedBase = { byteDigest: first.receipt.resultBytesDigest, basis: first.receipt.result };
+  const interrupted = create(root, { faultInjector: phase => { if (phase === 'after-replacement') throw new Error('interrupted replacement'); } });
+  const uncertain = await interrupted.commitSnapshot(change.bundle, { transactionId: 'company-successor', expectedBase });
+  assert.equal(uncertain.ok, false);
+  assert.equal(uncertain.status, 'unknown');
+  const recovered = await create(root).recover({ transactionId: 'company-successor', fingerprint: uncertain.fingerprint });
+  assert.equal(recovered.status, 'saved');
+  assert.deepEqual(recovered.bundle, change.bundle);
+  assert.deepEqual((await create(root).read()).bundle, change.bundle);
+  const replay = await store.commitSnapshot(change.bundle, { transactionId: 'company-successor', expectedBase });
+  assert.equal(replay.replayed, true);
+  await rejectsCode(store.commitSnapshot(bundle, { transactionId: 'stale-successor', expectedBase }), 'CHANGED');
+  assert.deepEqual((await store.read()).bundle, change.bundle);
+});
+
 test('each interrupted durability boundary remains unacknowledged until exact recovery', async t => {
   for (const phase of ['before-journal', 'after-journal', 'after-temporary-flush', 'after-replacement', 'after-receipt', 'after-head', 'before-acknowledgement']) {
     await t.test(phase, async t => {

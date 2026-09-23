@@ -475,13 +475,13 @@
     {
       "source": "packages/artifact/lib/artifact/diagram/authoring/store.d.mts",
       "target": "lib/artifact/diagram/authoring/store.d.mts",
-      "sha256": "7877e0bc125e2bdaf6576cc3e3edca59384739f03d006b57258fe1725a99bc89",
+      "sha256": "8cbce4ff05943b0b2f7948f6420355b7683bb0da8dbbb844f7ccfaf3365b7ad4",
       "mode": "644"
     },
     {
       "source": "packages/artifact/lib/artifact/diagram/authoring/store.mjs",
       "target": "lib/artifact/diagram/authoring/store.mjs",
-      "sha256": "39882f5ae7840ee560462fc0971df7c1d46a9a0eaad7c59cd0dd5bf377a3f61c",
+      "sha256": "c3f7ac0ce5b370387301bb4025cf87525fc7cc48a86a3f7f5be654f1e5bee8d5",
       "mode": "644"
     },
     {

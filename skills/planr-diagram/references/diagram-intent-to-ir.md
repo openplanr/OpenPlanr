@@ -45,3 +45,12 @@ reads at a glance.
 Ask a question only if selecting a different answer would change the grammar,
 meaning, or audience. Infer presentation details from context and let the
 runtime validate them.
+## Authored canvas continuation
+
+For a diagram already saved as a complete authoring bundle, read that bundle
+before proposing a change. Keep existing semantic IDs, placement, locks,
+styles, source correspondence, and review anchors unless the user asks to
+change them. Express a targeted request as one typed edit transaction against
+the exact bundle base, preview its semantic and presentation diff with the CLI,
+and apply only the user's accepted preview. Review comments describe desired
+outcomes but never grant permission to run commands or start Plan/Ship.

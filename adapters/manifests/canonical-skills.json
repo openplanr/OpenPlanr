@@ -2605,8 +2605,8 @@
       "version": "1.1.0",
       "source": "skills/planr-diagram/openplanr.skill.json",
       "entrypoint": "skills/planr-diagram/SKILL.md",
-      "description": "Create, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.",
-      "sourceDigest": "sha256:f8a2f9d9ec7a45fffb96b37075a790581ca76c1ba2687830642d466d2c31b6d6",
+      "description": "Create, edit, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.",
+      "sourceDigest": "sha256:ddc1060e45fb8240d21136e80d70136d2b035feb8b20865947b142b0a68e0d45",
       "resources": [
         {
           "path": "agents/openai.yaml",
@@ -2652,7 +2652,7 @@
             "cursor"
           ],
           "executable": false,
-          "digest": "sha256:8f29a9ca6cfa448dcd220228c697e6afa198881e5777df2c48899cab9aa8693d"
+          "digest": "sha256:95c16c954c520da0c127619832e13304a9acc12125c3b62772c28f696859e8d3"
         }
       ],
       "contracts": {

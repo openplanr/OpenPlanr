@@ -14,6 +14,11 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { resolveCompanyAccessToken } from './company-auth-service.js';
 import { CompanySyncError, normalizeCompanyOrigin } from './company-common.js';
+import {
+  adoptDiagramBundle,
+  canonicalDiagramTarget,
+  commitReviewedDiagramSuccessor,
+} from './diagram-authoring-service.js';
 import { resolvePipelinePackage } from './pipeline-package-service.js';
 
 export {
@@ -45,6 +50,8 @@ export interface CompanyPreview {
   kind: 'diagram' | 'design' | 'plan' | 'document';
   contentType: string;
   contentDigest: string;
+  /** Canonical local bytes can differ from the immutable remote revision's bytes after adoption. */
+  localContentDigest?: string;
   byteLength: number;
   createdAt: string;
   artifactId?: string;
@@ -69,6 +76,8 @@ interface CompanyPushPreview extends CompanyBinding {
   operationId: string;
   publishedRevisionId?: string;
 }
+const expectedLocalDigest = (binding: CompanyBinding): string =>
+  binding.localContentDigest ?? binding.contentDigest;
 type CompanyLayout = Record<string, { x: number; y: number }>;
 interface PendingApplication {
   schemaVersion: '1.0.0';
@@ -262,6 +271,7 @@ async function loadState(root: string, section: string, key: string): Promise<Co
     data.id !== key ||
     typeof data.contentDigest !== 'string' ||
     !/^[a-f0-9]{64}$/.test(data.contentDigest) ||
+    (data.localContentDigest !== undefined && !isDigest(data.localContentDigest)) ||
     typeof data.filePath !== 'string' ||
     typeof data.title !== 'string' ||
     !data.title.trim() ||
@@ -432,6 +442,34 @@ function checkContent(content: string) {
       'This artifact appears to contain credentials. Remove them before sharing.',
     );
 }
+async function diagramAuthoringRuntime() {
+  const pipeline = resolvePipelinePackage(true);
+  if (!pipeline) return fail('E_COMPANY_RUNTIME', 'The diagram authoring runtime is unavailable.');
+  const runtime = await import(
+    pathToFileURL(path.join(pipeline.root, 'lib/artifact/diagram/authoring/index.mjs')).href
+  );
+  if (
+    typeof runtime.validateAuthoringBundle !== 'function' ||
+    typeof runtime.diffDiagramBundles !== 'function'
+  )
+    return fail(
+      'E_COMPANY_RUNTIME',
+      'The installed workflow package does not support complete diagram bundles.',
+    );
+  return runtime;
+}
+async function assertCompleteDiagramBundle(content: unknown, filePath?: string) {
+  const checked = (await diagramAuthoringRuntime()).validateAuthoringBundle(content);
+  if (!checked.ok)
+    return fail('E_COMPANY_AUTHORING', 'The complete diagram bundle is invalid or unsupported.');
+  const bundle = content as { diagramId: string };
+  if (
+    filePath &&
+    filePath !== `diagrams/${bundle.diagramId}/${bundle.diagramId}.planr-diagram-bundle.json`
+  )
+    return fail('E_COMPANY_SCOPE', 'Publish the canonical diagram-authoring-bundle file.');
+  return bundle;
+}
 interface PreparedCompanyContent {
   content: string;
   contentType: string;
@@ -474,6 +512,20 @@ async function prepareCompanyContent(
     return fail('E_COMPANY_TYPE', 'Publish a JSON, Markdown, SVG, or HTML artifact.');
   const original = await readArtifactFile(file);
   checkContent(original);
+  if (source.kind === 'diagram' && extension === '.json') {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(original);
+    } catch {
+      /* Legacy JSON validation remains at its domain boundary. */
+    }
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      (parsed as { kind?: unknown }).kind === 'diagram-authoring-bundle'
+    )
+      await assertCompleteDiagramBundle(parsed, source.filePath);
+  }
   let isDesignDocument = false;
   if (source.kind === 'design' && extension === '.json') {
     try {
@@ -896,7 +948,7 @@ export async function companyBindingStatus(root: string, bindingId: string) {
     return fail('E_COMPANY_RESPONSE', 'The remote artifact does not match its local binding.');
   id(remote.headRevisionId);
   const localChanged =
-    hash(current) !== binding.contentDigest || !sameSourceManifest(binding, prepared);
+    hash(current) !== expectedLocalDigest(binding) || !sameSourceManifest(binding, prepared);
   const remoteChanged = remote.headRevisionId !== binding.revisionId;
   return {
     ok: true,
@@ -1063,6 +1115,200 @@ async function remoteRevisionContent(
     );
   return content;
 }
+
+export async function previewCompanyDiagramAdoption(
+  root: string,
+  options: {
+    apiUrl: string;
+    projectId: string;
+    artifactId: string;
+    revisionId: string;
+    filePath: string;
+  },
+) {
+  const apiUrl = normalizeCompanyOrigin(options.apiUrl);
+  const projectId = id(options.projectId);
+  const artifactId = id(options.artifactId);
+  const revisionId = id(options.revisionId);
+  assertSafeRelativePath(options.filePath);
+  const target = await canonicalDiagramTarget(root, options.filePath);
+  const remote = await companyApi<{
+    artifact: { id: string; organizationId: string; projectId: string; kind: string };
+  }>(apiUrl, `/v1/projects/${projectId}/artifacts/${artifactId}`);
+  if (
+    remote?.artifact?.id !== artifactId ||
+    remote.artifact.projectId !== projectId ||
+    remote.artifact.kind !== 'diagram'
+  )
+    return fail(
+      'E_COMPANY_SCOPE',
+      'The selected artifact is not a diagram in this company project.',
+    );
+  const organizationId = id(remote.artifact.organizationId);
+  const provisional = { apiUrl, organizationId, projectId, artifactId } as CompanyBinding;
+  const revision = await findRemoteRevision(provisional, revisionId);
+  if (revision.contentType !== 'application/json')
+    return fail('E_COMPANY_TYPE', 'Adoption requires a complete JSON diagram bundle.');
+  const content = await remoteRevisionContent(provisional, revision);
+  let bundle: unknown;
+  try {
+    bundle = JSON.parse(content);
+  } catch {
+    return fail('E_COMPANY_AUTHORING', 'The selected revision is not a JSON diagram bundle.');
+  }
+  if (
+    !bundle ||
+    typeof bundle !== 'object' ||
+    (bundle as { kind?: unknown }).kind !== 'diagram-authoring-bundle'
+  )
+    return fail(
+      'E_COMPANY_AUTHORING',
+      'The selected revision is not a complete diagram-authoring-bundle.',
+    );
+  await assertCompleteDiagramBundle(bundle, options.filePath);
+  if ((bundle as { diagramId: string }).diagramId !== target.slug)
+    return fail(
+      'E_COMPANY_SCOPE',
+      'The selected revision identity does not match the local diagram path.',
+    );
+  const previewToken = hash(
+    JSON.stringify([
+      apiUrl,
+      organizationId,
+      projectId,
+      artifactId,
+      revisionId,
+      revision.contentDigest,
+      options.filePath,
+    ]),
+  );
+  let collision = false;
+  try {
+    const info = await lstat(target.file);
+    collision =
+      !info.isFile() ||
+      info.isSymbolicLink() ||
+      hash(await readArtifactFile(target.file)) !== hash(JSON.stringify(bundle, null, 2) + '\n');
+    if (!collision) {
+      // Matching loose bytes are not enough: only the authoring store can own a bundle.
+      const owner = await lstat(
+        path.join(path.dirname(target.file), '.authoring', 'owner.json'),
+      ).catch((error: NodeJS.ErrnoException) => {
+        if (error.code === 'ENOENT') return null;
+        throw error;
+      });
+      collision = !owner?.isFile() || owner.isSymbolicLink();
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    const entries = await readdir(path.dirname(target.file)).catch(
+      (directoryError: NodeJS.ErrnoException) => {
+        if (directoryError.code === 'ENOENT') return [];
+        throw directoryError;
+      },
+    );
+    collision = entries.length > 0;
+  }
+  return {
+    ok: true as const,
+    action: 'company.adopt-preview',
+    status: collision ? ('collision' as const) : ('preview' as const),
+    organizationId,
+    projectId,
+    artifactId,
+    revisionId,
+    remoteContentDigest: revision.contentDigest,
+    remoteByteLength: revision.byteLength,
+    localPath: options.filePath,
+    localCollision: collision,
+    previewToken: collision ? null : previewToken,
+    bundle,
+    notice: collision
+      ? 'The local target already differs. Resolve the collision before adopting; no file was changed.'
+      : 'Review this exact company revision and target, then explicitly accept its preview token. Pull remains an inspection-only operation.',
+  };
+}
+
+export async function adoptCompanyDiagramRevision(
+  root: string,
+  options: {
+    apiUrl: string;
+    projectId: string;
+    artifactId: string;
+    revisionId: string;
+    filePath: string;
+    accept: string;
+  },
+) {
+  const preview = await previewCompanyDiagramAdoption(root, options);
+  const previewToken = preview.previewToken;
+  if (!previewToken || previewToken !== options.accept)
+    return fail(
+      'E_COMPANY_CONFLICT',
+      'The selected revision, scope, or local target no longer matches the reviewed adoption preview.',
+    );
+  return withBindingLock(root, previewToken, async () => {
+    const candidateLocalDigest = hash(JSON.stringify(preview.bundle, null, 2) + '\n');
+    let prior: CompanyBinding | undefined;
+    try {
+      prior = (await loadState(root, 'bindings', previewToken)) as CompanyBinding;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    if (
+      prior &&
+      (prior.organizationId !== preview.organizationId ||
+        prior.projectId !== preview.projectId ||
+        prior.artifactId !== preview.artifactId ||
+        prior.revisionId !== preview.revisionId ||
+        prior.filePath !== options.filePath ||
+        prior.contentDigest !== preview.remoteContentDigest ||
+        expectedLocalDigest(prior) !== candidateLocalDigest)
+    )
+      return fail(
+        'E_COMPANY_STATE',
+        'Existing adoption binding conflicts with the reviewed revision.',
+      );
+    const adopted = await adoptDiagramBundle(
+      root,
+      options.filePath,
+      preview.bundle as { diagramId: string; bundleDigest: string },
+      preview.remoteContentDigest,
+    );
+    const localContent = await readArtifactFile(await safeFile(root, options.filePath));
+    const binding: CompanyBinding = {
+      schemaVersion: '1.0.0',
+      id: previewToken,
+      apiUrl: normalizeCompanyOrigin(options.apiUrl),
+      organizationId: preview.organizationId,
+      projectId: preview.projectId,
+      artifactId: preview.artifactId,
+      revisionId: preview.revisionId,
+      filePath: options.filePath,
+      title: (preview.bundle as { document: { title: string } }).document.title,
+      kind: 'diagram',
+      contentType: 'application/json',
+      contentDigest: preview.remoteContentDigest,
+      localContentDigest: hash(localContent),
+      byteLength: preview.remoteByteLength,
+      createdAt: new Date().toISOString(),
+    };
+    if (!prior) await saveState(root, 'bindings', binding.id, binding);
+    return {
+      ok: true as const,
+      action: 'company.adopt',
+      status: adopted.replayed ? 'already-adopted' : 'synchronized',
+      bindingId: binding.id,
+      organizationId: binding.organizationId,
+      projectId: binding.projectId,
+      artifactId: binding.artifactId,
+      revisionId: binding.revisionId,
+      filePath: binding.filePath,
+      remoteContentDigest: binding.contentDigest,
+      localContentDigest: binding.localContentDigest,
+    };
+  });
+}
 export async function previewCompanyPull(
   root: string,
   bindingId: string,
@@ -1110,7 +1356,8 @@ export async function previewCompanyPull(
       preview,
       content,
       comparison: {
-        localChanged: localDigest !== publicationSourceDigest(binding.contentDigest, binding),
+        localChanged:
+          localDigest !== publicationSourceDigest(expectedLocalDigest(binding), binding),
         localMissing: localDigest === null,
         remoteChanged: remoteHeadRevisionId !== binding.revisionId,
       },
@@ -1286,12 +1533,73 @@ export async function previewCompanyProposal(root: string, bindingId: string, pr
       'Local or remote content changed. Compare revisions before applying.',
     );
   const content = await readArtifactFile(await safeFile(root, binding.filePath));
-  if (hash(content) !== binding.contentDigest)
+  if (hash(content) !== expectedLocalDigest(binding))
     return fail(
       'E_COMPANY_CONFLICT',
       'The local file changed while preparing the preview. Compare revisions before applying.',
     );
   const original = JSON.parse(content);
+  if (original?.kind === 'diagram-authoring-bundle') {
+    await assertCompleteDiagramBundle(original, binding.filePath);
+    const replacement =
+      Array.isArray(proposal.operations) && proposal.operations.length === 1
+        ? (proposal.operations[0] as { op?: string; content?: unknown })
+        : null;
+    if (replacement?.op !== 'replace-document')
+      return fail(
+        'E_COMPANY_AUTHORING',
+        'Complete diagram bundles require one reviewed successor bundle proposal.',
+      );
+    const successor = replacement.content as {
+      diagramId: string;
+      originalSource?: { sourceDigest: string } | null;
+      sourceMap?: unknown;
+    };
+    await assertCompleteDiagramBundle(successor, binding.filePath);
+    const runtime = await diagramAuthoringRuntime();
+    const diff = runtime.diffDiagramBundles(original, successor);
+    if (!diff.ok)
+      return fail(
+        'E_COMPANY_AUTHORING',
+        'The successor bundle could not be compared with its exact base.',
+      );
+    const baseLayout = await loadLayout(root, bindingId);
+    if (Object.keys(baseLayout).length)
+      return fail(
+        'E_COMPANY_AUTHORING',
+        'An authored bundle cannot carry a separate legacy layout.',
+      );
+    const rendered = JSON.stringify(successor, null, 2) + '\n';
+    if (Buffer.byteLength(rendered) > MAX_BYTES)
+      return fail('E_COMPANY_SIZE', 'The proposed bundle exceeds the 1 MiB company limit.');
+    checkContent(rendered);
+    return {
+      ok: true,
+      action: 'company.proposal-preview',
+      bindingId,
+      proposalId,
+      summary: proposal.summary,
+      filePath: binding.filePath,
+      baseRevisionId: binding.revisionId,
+      baseDigest: expectedLocalDigest(binding),
+      baseLayoutDigest: layoutDigest(baseLayout),
+      document: successor,
+      layout: baseLayout,
+      semanticChanged: hash(rendered) !== expectedLocalDigest(binding),
+      layoutChanged: false,
+      changes: {
+        semantic: diff.semantic,
+        presentation: diff.presentation,
+        source: {
+          originalBytesChanged:
+            original.originalSource?.sourceDigest !== successor.originalSource?.sourceDigest,
+          correspondenceChanged:
+            hash(JSON.stringify(original.sourceMap)) !== hash(JSON.stringify(successor.sourceMap)),
+        },
+      },
+      before: original,
+    };
+  }
   if (original.kind !== 'planr-diagram')
     return fail(
       'E_COMPANY_AUTHORING',
@@ -1328,7 +1636,7 @@ export async function previewCompanyProposal(root: string, bindingId: string, pr
     summary: proposal.summary,
     filePath: binding.filePath,
     baseRevisionId: binding.revisionId,
-    baseDigest: binding.contentDigest,
+    baseDigest: expectedLocalDigest(binding),
     baseLayoutDigest: layoutDigest(baseLayout),
     document,
     layout: transformed.layout ?? {},
@@ -1387,7 +1695,7 @@ async function resumePendingApplication(
     pending.projectId !== binding.projectId ||
     pending.artifactId !== binding.artifactId ||
     pending.baseRevisionId !== binding.revisionId ||
-    pending.baseDigest !== binding.contentDigest ||
+    pending.baseDigest !== expectedLocalDigest(binding) ||
     !isDigest(pending.baseDigest) ||
     !isDigest(pending.resultDigest) ||
     !isDigest(pending.baseLayoutDigest) ||
@@ -1414,6 +1722,29 @@ async function resumePendingApplication(
     pending.layoutChanged !== (pending.baseLayoutDigest !== pending.resultLayoutDigest)
   )
     return fail('E_COMPANY_STATE', 'Pending application content failed its digest check.');
+  const original = JSON.parse(backup);
+  const authored = original?.kind === 'diagram-authoring-bundle';
+  if (authored) {
+    await assertCompleteDiagramBundle(original, binding.filePath);
+    const successor = JSON.parse(staged);
+    await assertCompleteDiagramBundle(successor, binding.filePath);
+    if (pending.layoutChanged)
+      return fail('E_COMPANY_AUTHORING', 'A complete bundle cannot apply a separate layout.');
+    await commitReviewedDiagramSuccessor(
+      root,
+      binding.filePath,
+      successor,
+      `company-${hash(`${binding.id}:${pending.proposalId}`).slice(0, 40)}`,
+      {
+        byteDigest: `sha256:${pending.baseDigest}`,
+        basis: {
+          bundleDigest: original.bundleDigest,
+          semanticDigest: original.document.documentDigest,
+          presentationDigest: original.presentation.presentationDigest,
+        },
+      },
+    );
+  }
   const inspect = async () => {
     const sourceDigest = hash(await readArtifactFile(await safeFile(root, binding.filePath)));
     const currentLayoutDigest = layoutDigest(await loadLayout(root, binding.id));
@@ -1433,6 +1764,11 @@ async function resumePendingApplication(
   };
   let state = await inspect();
   if (state.sourceDigest !== pending.resultDigest) {
+    if (authored)
+      return fail(
+        'E_COMPANY_CONFLICT',
+        'The reviewed complete bundle was not committed by the authoring store.',
+      );
     const target = await safeFile(root, binding.filePath);
     await replaceDurably(target, staged, (await lstat(target)).mode & 0o777, async () => {
       const latest = await inspect();
@@ -1621,6 +1957,7 @@ export async function previewCompanyPush(root: string, bindingId: string) {
       ...binding,
       ...source,
       contentDigest: hash(content),
+      localContentDigest: hash(content),
       byteLength: Buffer.byteLength(content),
       createdAt: new Date().toISOString(),
       operationId: randomUUID(),
@@ -1630,7 +1967,8 @@ export async function previewCompanyPush(root: string, bindingId: string) {
       ok: true,
       action: 'company.push-preview',
       status:
-        preview.contentDigest === binding.contentDigest && sameSourceManifest(binding, prepared)
+        preview.contentDigest === expectedLocalDigest(binding) &&
+        sameSourceManifest(binding, prepared)
           ? 'unchanged'
           : 'preview',
       bindingId,
@@ -1697,7 +2035,7 @@ export async function pushCompanyBinding(root: string, bindingId: string) {
         'E_COMPANY_CONFLICT',
         'The binding changed after this preview. Review a new update preview.',
       );
-    if (preview.contentDigest === binding.contentDigest) {
+    if (preview.contentDigest === expectedLocalDigest(binding)) {
       // A reviewed source-only change (for example JSON whitespace) needs no new hosted
       // revision, but its exact local source manifest becomes the accepted baseline.
       await saveState(root, 'bindings', bindingId, {

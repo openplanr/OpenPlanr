@@ -967,12 +967,12 @@
       "skillId": "planr-diagram",
       "projectedName": "diagram",
       "invocation": "$planr:diagram",
-      "description": "Create, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.",
+      "description": "Create, edit, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.",
       "entrypoint": "skills/diagram/SKILL.md",
       "assets": [
         {
           "path": "skills/diagram/SKILL.md",
-          "digest": "sha256:e18886cf87e504fd6720a3e4c4a9f76f32ae3ff5e11800a5cf690dd6aeebaa16"
+          "digest": "sha256:c60ac43750eea0c7fdb30a64d7553b766ce6ae54636e737264166ff5215b7d74"
         },
         {
           "path": "skills/diagram/openplanr.skill.json",
@@ -992,7 +992,7 @@
         },
         {
           "path": "skills/diagram/references/diagram-intent-to-ir.md",
-          "digest": "sha256:8f29a9ca6cfa448dcd220228c697e6afa198881e5777df2c48899cab9aa8693d"
+          "digest": "sha256:95c16c954c520da0c127619832e13304a9acc12125c3b62772c28f696859e8d3"
         }
       ]
     },

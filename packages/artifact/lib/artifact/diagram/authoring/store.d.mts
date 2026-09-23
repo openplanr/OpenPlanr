@@ -62,6 +62,11 @@ export interface DiagramAuthoringStore {
   initialize(bundle: DiagramAuthoringBundle, identity: { transactionId: string }): Promise<DiagramStoreSaveResult>;
   preview(transaction: DiagramEditTransaction): Promise<DiagramPreviewResult | DiagramStoreUnknown>;
   commit(transaction: DiagramEditTransaction): Promise<DiagramStoreSaveResult>;
+  /** Explicit reviewed successor; refuses any change to the exact complete-file base. */
+  commitSnapshot(bundle: DiagramAuthoringBundle, identity: {
+    transactionId: string;
+    expectedBase: { byteDigest: string; basis: DiagramStoreBasis };
+  }): Promise<DiagramStoreSaveResult>;
   recover(identity?: { transactionId?: string; fingerprint?: string }): Promise<DiagramStoreSaved | DiagramStoreReadResult | { ok: true; status: 'not-found'; transactionId: string }>;
   /** Exact complete-file identity from a receipt, not the semantic bundle digest. */
   readSnapshot(byteDigest: string): Promise<DiagramAuthoringBundle>;
