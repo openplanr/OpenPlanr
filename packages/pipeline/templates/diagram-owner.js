@@ -7175,7 +7175,7 @@
     root.replaceChildren(shell);
     const $ = (selector) => shell.querySelector(selector);
     const bar = $(".de-bar"), barStart = $(".de-bar-start .de-command-group"), barCenter = $(".de-bar-center .de-command-group"), barEnd = $(".de-bar-end .de-command-group");
-    const saveState = $(".de-save-state"), leftTabs = $(".de-rail-tabs"), leftBody = $(".de-left-content");
+    const saveState = $(".de-save-state"), leftTabs = $(".de-rail-tabs");
     const outlinePane = $(".de-outline-pane"), shapesPane = $(".de-shapes-pane"), stageRegion = $(".de-stage");
     const rightTabs = $(".de-right-tabs"), propertiesPane = $(".de-properties-pane"), reviewPane = $(".de-review-pane"), stage = $(".de-canvas"), svg = $("[data-editor-svg]");
     const world = $("[data-world]"), overlays = $("[data-overlays]"), empty = $(".de-empty"), footer = $(".de-stage-footer");
