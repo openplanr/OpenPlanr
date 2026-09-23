@@ -3906,7 +3906,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       {
         "skillId": "planr-diagram",
         "skillVersion": "1.1.0",
-        "description": "Create, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.",
+        "description": "Create, edit, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.",
         "lifecycle": "active",
         "authorityClass": "artifact-authoring",
         "source": "skills/planr-diagram/openplanr.skill.json",
@@ -4767,7 +4767,7 @@ export const CANONICAL_REGISTRIES = deepFreeze({
       }
     ],
     "compatibilityAliases": [],
-    "documentDigest": "sha256:0da63b57a763dda5fb771e48109adb301e20c1f3bea6c423dc77361f421a4562"
+    "documentDigest": "sha256:b1abd9ebb9b724c02ec359e67ec05ebefb38d5b5a64ed04b415fce41b58de5cc"
   },
   "outputs.json": {
     "kind": "output-catalog",

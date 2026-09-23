@@ -980,7 +980,7 @@
         },
         {
           "path": "skills/diagram/agents/openai.yaml",
-          "digest": "sha256:a5a62e262287e3ac81397cb8af780497400c767a2b99976c57dfa0d0ceb789f7"
+          "digest": "sha256:fc767c50c5fa524f42951cf8f70dc0200332a85b0375d050ae2e5df14d0ae109"
         },
         {
           "path": "skills/diagram/references/diagram-document.md",

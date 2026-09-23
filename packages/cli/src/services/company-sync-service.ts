@@ -1153,8 +1153,8 @@ export async function previewCompanyDiagramAdoption(
   let bundle: unknown;
   try {
     bundle = JSON.parse(content);
-  } catch {
-    return fail('E_COMPANY_AUTHORING', 'The selected revision is not a JSON diagram bundle.');
+  } catch (cause) {
+    return fail('E_COMPANY_AUTHORING', 'The selected revision is not a JSON diagram bundle.', cause);
   }
   if (
     !bundle ||

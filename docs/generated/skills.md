@@ -148,7 +148,7 @@ Review and revise an existing product design using stable board pins and scoped 
 
 ## `planr-diagram`
 
-Create, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.
+Create, edit, inspect, verify, or rerender professional offline diagrams. Use for architecture, process, sequence, data, state, or relationship visuals from intent or source.
 
 - Select for: Create a professional diagram from English intent or Mermaid; Inspect, verify, preview, or rerender an OpenPlanr diagram set.
 - Defer for: Create a product interface design; Open a generic artifact that is not a diagram.

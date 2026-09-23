@@ -2616,7 +2616,7 @@
             "chatgpt"
           ],
           "executable": false,
-          "digest": "sha256:5b9f1f52830a3b3564af617e58568c592451cf7c86cbab55a641f9319e636a1d"
+          "digest": "sha256:891982dbce770b2696f10cd10f2216f19158ed6b3cd93ea730bb1c571c299d23"
         },
         {
           "path": "references/diagram-document.md",
