@@ -119,7 +119,12 @@ test('Changesets versions the actual pending notes, updates exact pins, and gene
       assert.equal(manifests.get(path).version, release.newVersion);
       const notes = readFileSync(join(directory, path, 'CHANGELOG.md'), 'utf8');
       assert.ok(notes.includes(`## ${release.newVersion}`), `${release.name} changelog misses its released version`);
-      assert.ok(notes.length > 50, `${release.name} changelog is empty`);
+      // Changesets also bumps dependents to refresh exact dependency pins.
+      // Those releases have no direct change note and may have a bare heading.
+      if (release.changesets.length > 0) {
+        const currentNotes = notes.split(`## ${release.newVersion}`)[1]?.split(/\n## /u)[0].trim() ?? '';
+        assert.ok(currentNotes.length > 50, `${release.name} changelog is empty`);
+      }
     }
     const workflowMigration = planned.changesets.find(changeset => changeset.id === 'host-native-workflow-migration');
     if (workflowMigration) {
